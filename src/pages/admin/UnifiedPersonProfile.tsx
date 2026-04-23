@@ -54,7 +54,6 @@ import {
   Cake,
   Briefcase,
   CalendarDays,
-  Wallet,
   ShieldCheck,
   ShieldOff,
   FileText,
@@ -104,6 +103,7 @@ export default function UnifiedPersonProfile() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<Record<string, string>>({});
   const [inviteOpen, setInviteOpen] = useState(false);
   const [archiveOpen, setArchiveOpen] = useState(false);
@@ -250,19 +250,51 @@ export default function UnifiedPersonProfile() {
   }, [employee, readiness, band]);
 
   // ── Handlers ────────────────────────────────────────────────────────────
+  // Fields that must NEVER be updated through the inline hero edit.
+  // Keeps PostgREST from rejecting payloads that include identifiers /
+  // server-managed columns and protects against accidental tenant moves.
+  const PROTECTED_FIELDS = new Set([
+    "id", "company_id", "user_id", "created_at", "updated_at",
+    "deleted_at", "auth_user_id", "employer_identification",
+  ]);
+
   const handleSave = async () => {
-    if (!employee) return;
+    if (!employee || saving) return;
+    setSaving(true);
     try {
+      // Build a safe diff: only fields that exist on the original record,
+      // excluding protected ones, and only sending the changed values.
+      const updates: Record<string, any> = {};
+      for (const [key, value] of Object.entries(form)) {
+        if (PROTECTED_FIELDS.has(key)) continue;
+        if (!(key in employee)) continue;
+        const original = employee[key];
+        const normalized = value === "" ? null : value;
+        const originalNormalized = original == null ? null : String(original);
+        const nextNormalized = normalized == null ? null : String(normalized);
+        if (originalNormalized !== nextNormalized) {
+          updates[key] = normalized;
+        }
+      }
+
+      if (Object.keys(updates).length === 0) {
+        setIsEditing(false);
+        toast({ title: "No changes to save" });
+        return;
+      }
+
       const { error } = await (supabase as any)
         .from("employees")
-        .update(form)
+        .update(updates)
         .eq("id", employee.id);
       if (error) throw error;
-      setEmployee((prev) => (prev ? { ...prev, ...form } : prev));
+      setEmployee((prev) => (prev ? { ...prev, ...updates } : prev));
       setIsEditing(false);
-      toast({ title: "Saved" });
+      toast({ title: "Changes saved" });
     } catch (e: any) {
-      toast({ title: "Could not save", description: e?.message, variant: "destructive" });
+      toast({ title: "Could not save", description: e?.message ?? "Unknown error", variant: "destructive" });
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -331,9 +363,9 @@ export default function UnifiedPersonProfile() {
       {
         key: "payroll",
         label: "Last clock-in",
-        icon: Wallet,
+        icon: Clock,
         value: lastPayrollDate ? safeDistance(lastPayrollDate) : "—",
-        hint: lastPayrollDate ? "From time-entries" : "No time-entries yet",
+        hint: lastPayrollDate ? "From time entries" : "No time entries yet",
         tone: lastPayrollDate ? "default" : "muted",
       },
       {
@@ -522,14 +554,23 @@ export default function UnifiedPersonProfile() {
               <div className="flex items-center gap-1.5 flex-wrap">
                 {isEditing ? (
                   <>
-                    <Button size="sm" className="h-8 text-xs" onClick={handleSave}>
-                      Save
+                    <Button size="sm" className="h-8 text-xs" onClick={handleSave} disabled={saving}>
+                      {saving ? "Saving…" : "Save changes"}
                     </Button>
                     <Button
                       size="sm"
                       variant="ghost"
                       className="h-8 text-xs"
-                      onClick={() => setIsEditing(false)}
+                      onClick={() => {
+                        // Reset form to original employee values on cancel
+                        if (employee) {
+                          setForm(Object.fromEntries(
+                            Object.entries(employee).map(([k, v]) => [k, v == null ? "" : String(v)])
+                          ));
+                        }
+                        setIsEditing(false);
+                      }}
+                      disabled={saving}
                     >
                       Cancel
                     </Button>

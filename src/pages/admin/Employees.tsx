@@ -1193,14 +1193,14 @@ export default function Employees() {
 
       {/* Edit Dialog */}
       <Dialog open={editOpen} onOpenChange={(v) => { setEditOpen(v); if (!v) setEditingEmployee(null); }}>
-        <DialogContent className="max-w-md"><DialogHeader><DialogTitle>Edit employee</DialogTitle><DialogDescription>Update employee information</DialogDescription></DialogHeader><EmployeeForm fields={CONNECTEAM_FIELDS} form={form} setForm={setForm} loading={loading} onSubmit={handleUpdate} submitLabel="Save changes" /></DialogContent>
+        <DialogContent className="max-w-md"><DialogHeader><DialogTitle>Edit worker</DialogTitle><DialogDescription>Update worker information</DialogDescription></DialogHeader><EmployeeForm fields={CONNECTEAM_FIELDS} form={form} setForm={setForm} loading={loading} onSubmit={handleUpdate} submitLabel="Save changes" /></DialogContent>
       </Dialog>
 
       {/* Delete Confirmation */}
       <PasswordConfirmDialog
         open={passwordOpen}
         onOpenChange={(v) => { setPasswordOpen(v); if (!v) setDeleteTarget(null); }}
-        title="Delete employee"
+        title="Delete worker"
         description={`${deleteTarget?.first_name} ${deleteTarget?.last_name} will be permanently deleted.`}
         onConfirm={handleDelete}
       />
@@ -1233,7 +1233,7 @@ export default function Employees() {
 
       {/* Audit */}
       <div className="mt-6">
-        <AuditPanel entityType="employee" title="Employee activity" hideViews compact />
+        <AuditPanel entityType="employee" title="Worker activity" hideViews compact />
       </div>
 
       {/* Onboarding Settings Sheet */}
