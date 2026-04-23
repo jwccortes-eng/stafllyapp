@@ -259,12 +259,12 @@ const T = {
 };
 
 const ACTION_CARDS = [
-  { key: "update_data" as Step, icon: UserCog, accent: "from-blue-500 to-cyan-500" },
-  { key: "pending" as Step, icon: AlertCircle, accent: "from-amber-500 to-orange-500" },
-  { key: "request" as Step, icon: Send, accent: "from-violet-500 to-fuchsia-500" },
-  { key: "comment" as Step, icon: MessageSquare, accent: "from-emerald-500 to-teal-500" },
-  { key: "payments" as Step, icon: Wallet, accent: "from-rose-500 to-pink-500" },
-  { key: "profile" as Step, icon: IdCard, accent: "from-indigo-500 to-purple-500" },
+  { key: "update_data" as Step, icon: UserCog, iconWrap: "bg-primary/12 text-primary" },
+  { key: "pending" as Step, icon: AlertCircle, iconWrap: "bg-accent/15 text-accent-foreground" },
+  { key: "request" as Step, icon: Send, iconWrap: "bg-secondary text-secondary-foreground" },
+  { key: "comment" as Step, icon: MessageSquare, iconWrap: "bg-primary/10 text-primary" },
+  { key: "payments" as Step, icon: Wallet, iconWrap: "bg-accent/12 text-accent-foreground" },
+  { key: "profile" as Step, icon: IdCard, iconWrap: "bg-secondary text-secondary-foreground" },
 ];
 
 const CATEGORIES: InquiryCategory[] = ["payments", "documents", "profile", "schedule", "support", "other"];
@@ -682,7 +682,7 @@ export default function FrontDesk() {
               </Card>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {ACTION_CARDS.map(({ key, icon: Icon, accent }) => {
+                {ACTION_CARDS.map(({ key, icon: Icon, iconWrap }) => {
                   const meta = (t.actions as any)[key];
                   const isPending = key === "pending" && summary.pending_total > 0;
                   return (
@@ -696,11 +696,11 @@ export default function FrontDesk() {
                       className="group text-left p-6 rounded-3xl border-2 border-border bg-card hover:border-primary/60 hover:shadow-lg active:scale-[0.98] transition-all"
                     >
                       <div className="flex items-start gap-4">
-                        <div className={cn(
-                          "h-12 w-12 rounded-2xl bg-gradient-to-br flex items-center justify-center shadow-md flex-shrink-0",
-                          accent
-                        )}>
-                          <Icon className="h-6 w-6 text-white" />
+                          <div className={cn(
+                           "h-12 w-12 rounded-2xl flex items-center justify-center shadow-md flex-shrink-0",
+                           iconWrap
+                         )}>
+                           <Icon className="h-6 w-6" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
