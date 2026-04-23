@@ -79,14 +79,7 @@ export default function CompanyUsersDialog({ companyId, companyName, open, onOpe
 
     const assignedHereIds = new Set(cuData.map(cu => cu.user_id));
 
-    // 2) ALL company_users rows (any company) — to know who already belongs to another tenant
-    const { data: allMemberships } = await supabase
-      .from("company_users")
-      .select("user_id");
-
-    const usersInAnyCompany = new Set((allMemberships ?? []).map(m => m.user_id));
-
-    // 3) Profiles for assigned users (to render the table)
+    // 2) Profiles for assigned users (to render the table)
     const assignedUserIds = Array.from(assignedHereIds);
     const { data: assignedProfiles } = assignedUserIds.length
       ? await supabase
@@ -108,16 +101,25 @@ export default function CompanyUsersDialog({ companyId, companyName, open, onOpe
 
     setCompanyUsers(users);
 
-    // 4) Available = profiles NOT in any company yet (strict tenant isolation).
-    //    Users already linked to another tenant must NOT appear here, even if not in this one.
-    const { data: allProfiles } = await supabase
-      .from("profiles")
-      .select("user_id, email, full_name");
+    // 3) Available = profiles NOT linked to ANY company (strict tenant isolation).
+    //    We MUST resolve this server-side: client-side `company_users` reads are
+    //    restricted by RLS to the companies the caller manages, so users from
+    //    other tenants would otherwise look "free" and leak into the dropdown.
+    const { data: unassigned, error: rpcErr } = await supabase
+      .rpc("list_unassigned_profiles");
 
-    const available = (allProfiles ?? [])
-      .filter(p => !usersInAnyCompany.has(p.user_id))
-      .map(p => ({ user_id: p.user_id, email: p.email ?? "", full_name: p.full_name ?? "" }));
-    setAvailableUsers(available);
+    if (rpcErr) {
+      setAvailableUsers([]);
+      return;
+    }
+
+    setAvailableUsers(
+      (unassigned ?? []).map((p: any) => ({
+        user_id: p.user_id,
+        email: p.email ?? "",
+        full_name: p.full_name ?? "",
+      }))
+    );
   };
 
   useEffect(() => {
