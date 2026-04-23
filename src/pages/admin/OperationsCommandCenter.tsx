@@ -34,6 +34,7 @@ import { OpsWorkforcePanel } from "@/components/operations/OpsWorkforcePanel";
 import { OpsBroadcastDialog, type BroadcastIntent } from "@/components/operations/OpsBroadcastDialog";
 import { AutoDispatchPanel } from "@/components/operations/AutoDispatchPanel";
 import { PostShiftRatingDialog, type PostShiftRatingMode } from "@/components/operations/PostShiftRatingDialog";
+import { FrontDeskWidget } from "@/components/front-desk/FrontDeskWidget";
 
 // ─── Types ───
 interface ShiftRow {
@@ -440,6 +441,9 @@ export default function OperationsCommandCenter() {
         <KpiCard value={totalAlerts} label="Alertas activas" accent={totalAlerts > 0 ? "deduction" : "muted"} size="sm" icon={<Bell className="h-3.5 w-3.5 text-deduction" />} />
         <KpiCard value={criticalShifts} label="Turnos críticos" accent={criticalShifts > 0 ? "deduction" : "muted"} size="sm" icon={<XCircle className="h-3.5 w-3.5 text-deduction" />} />
       </div>
+
+      {/* ─── Front Desk widget ─── */}
+      <FrontDeskWidget />
 
       {/* ─── View tabs (Operations · Live Map) + Quick Actions ─── */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "ops" | "map")} className="space-y-3">

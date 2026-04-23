@@ -288,6 +288,7 @@ function App() {
                 <Route path="kiosk-devices" element={<CompanyRequiredGuard><KioskDevices /></CompanyRequiredGuard>} />
                 <Route path="shift-ops" element={<CompanyRequiredGuard><ShiftOperations /></CompanyRequiredGuard>} />
                 <Route path="ops-center" element={<CompanyRequiredGuard><OperationsCommandCenter /></CompanyRequiredGuard>} />
+                <Route path="front-desk-reports" element={<CompanyRequiredGuard><FrontDeskReports /></CompanyRequiredGuard>} />
                 <Route path="compensation-validation" element={<CompanyRequiredGuard><CompensationValidation /></CompanyRequiredGuard>} />
                 <Route path="payroll-pilot-close" element={<CompanyRequiredGuard><PayrollPilotClose /></CompanyRequiredGuard>} />
                 <Route path="payroll-mappings" element={<CompanyRequiredGuard><PayrollMappings /></CompanyRequiredGuard>} />
