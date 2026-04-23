@@ -603,9 +603,16 @@ export default function Employees() {
     return differenceInDays(new Date(), d) <= 14;
   };
 
+  // Helper: invitation in a failure state (failed / bounced / dlq).
+  const isInviteFailed = (e: EmployeeRecord) => {
+    const inv = invitations[e.id];
+    return !!inv && isInviteStatusFailure(inv.status);
+  };
+
   const statusCounts = {
     active: employees.filter(e => e.is_active !== false && !!e.user_id).length,
     invited: employees.filter(e => e.is_active !== false && !e.user_id && !!invitations[e.id]).length,
+    failed: employees.filter(e => e.is_active !== false && !e.user_id && isInviteFailed(e)).length,
     pending: employees.filter(e => e.is_active !== false && !e.user_id && !invitations[e.id]).length,
     inactive: employees.filter(e => e.is_active === false).length,
     "missing-docs": employees.filter(isMissingDocs).length,
