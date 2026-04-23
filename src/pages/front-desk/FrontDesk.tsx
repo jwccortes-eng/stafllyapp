@@ -693,6 +693,14 @@ export default function FrontDesk() {
                 {currentTime.toLocaleDateString([], { weekday: "short", day: "numeric", month: "short" })}
               </p>
             </div>
+            {/* Persistent ticket badge while a case is open */}
+            {activeCase?.case_code && (
+              <TicketBadge
+                caseCode={activeCase.case_code}
+                status={activeCase.status}
+                className="hidden md:inline-flex"
+              />
+            )}
           </div>
 
           <div className="flex items-center gap-2">
