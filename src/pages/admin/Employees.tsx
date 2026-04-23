@@ -40,6 +40,7 @@ import { PremiumPageHeader, type PremiumPageHeaderKpi } from "@/components/ui/pr
 import { PremiumFilterBar, type ActiveFilterChip } from "@/components/ui/premium-filter-bar";
 import { PremiumAvatar, type PremiumAvatarStatus } from "@/components/ui/premium-avatar";
 import { ViewSwitcher, type ViewMode } from "@/components/ui/view-switcher";
+import { SortIndicator } from "@/components/ui/sort-indicator";
 import { useUrlFilters } from "@/hooks/useUrlFilters";
 import { useSortPreference } from "@/hooks/useSortPreference";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
@@ -1156,9 +1157,14 @@ export default function Employees() {
         /* ─── Compact List ─── */
         <div className="rounded-xl border border-border/50 bg-card overflow-hidden divide-y divide-border/40">
           {filtered.map(e => {
+            // Surface "incomplete" workers (no phone or no PIN) with the same
+            // attention-grabbing tone as missing-docs so they're operable at a glance.
+            const isIncomplete =
+              e.is_active !== false &&
+              (!(e.phone_number ?? "").toString().replace(/\D/g, "") || !(e.access_pin ?? "").toString().trim());
             const status: PremiumAvatarStatus = e.is_active === false
               ? "inactive"
-              : isMissingDocs(e) ? "missing-docs"
+              : isMissingDocs(e) || isIncomplete ? "missing-docs"
               : isNew(e) ? "new"
               : !e.user_id ? "pending"
               : "active";
