@@ -32,6 +32,7 @@ import {
   type SelfUpdatePayload,
 } from "@/hooks/useFrontDesk";
 import { NumericKeypad } from "@/components/front-desk/NumericKeypad";
+import { AttractMode } from "@/components/front-desk/AttractMode";
 
 type Step =
   | "welcome"
@@ -51,6 +52,7 @@ type Lang = "es" | "en";
 type CompleteKind = "request" | "comment" | "update";
 
 const INACTIVITY_MS = 120_000;
+const ATTRACT_IDLE_MS = 45_000; // welcome screen → attract mode after 45s idle
 
 const T = {
   es: {
@@ -291,7 +293,9 @@ export default function FrontDesk() {
   const [paymentsLoaded, setPaymentsLoaded] = useState(false);
   const [completeKind, setCompleteKind] = useState<CompleteKind>("request");
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [attract, setAttract] = useState(true);
   const inactivityRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const attractRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Form state for direct self-update
   const [formValues, setFormValues] = useState<SelfUpdatePayload>({});
@@ -316,9 +320,12 @@ export default function FrontDesk() {
     setPaymentsLoaded(false);
     setFormValues({});
     setFormErrors({});
+    // After resetting from any active session, return to attract mode so the
+    // next visitor sees a clean welcome and no leftover data.
+    setAttract(true);
   }, []);
 
-  // Inactivity reset
+  // Inactivity reset (during an active session)
   useEffect(() => {
     if (step === "welcome") return;
     if (inactivityRef.current) clearTimeout(inactivityRef.current);
@@ -330,6 +337,17 @@ export default function FrontDesk() {
       if (inactivityRef.current) clearTimeout(inactivityRef.current);
     };
   }, [step, phone, message, formValues, resetAll, lang]);
+
+  // Attract mode: when sitting on the welcome screen, slide into the attract
+  // loop after ATTRACT_IDLE_MS so the kiosk never looks abandoned.
+  useEffect(() => {
+    if (step !== "welcome" || attract) return;
+    if (attractRef.current) clearTimeout(attractRef.current);
+    attractRef.current = setTimeout(() => setAttract(true), ATTRACT_IDLE_MS);
+    return () => {
+      if (attractRef.current) clearTimeout(attractRef.current);
+    };
+  }, [step, attract]);
 
   const seedFormFromEmployee = useCallback((emp: FrontDeskEmployee) => {
     setFormValues({
@@ -456,6 +474,16 @@ export default function FrontDesk() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/40 flex flex-col">
+      {/* Premium attract / idle screen — dismissed on any interaction */}
+      {attract && (
+        <AttractMode
+          lang={lang}
+          onDismiss={() => {
+            setAttract(false);
+            if (step === "welcome") setStep("phone");
+          }}
+        />
+      )}
       {/* Header */}
       <header className="border-b border-border/60 bg-card/80 backdrop-blur-md sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">

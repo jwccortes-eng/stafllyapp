@@ -101,6 +101,7 @@ const Attendance = lazy(() => import("./pages/admin/Attendance"));
 const QualityDashboard = lazy(() => import("./pages/admin/QualityDashboard"));
 const KioskClock = lazy(() => import("./pages/kiosk/KioskClock"));
 const FrontDesk = lazy(() => import("./pages/front-desk/FrontDesk"));
+import { FrontDeskGuard } from "./components/front-desk/FrontDeskGuard";
 const FrontDeskReports = lazy(() => import("./pages/admin/FrontDeskReports"));
 const MigrationCommandCenter = lazy(() => import("./pages/admin/MigrationCommandCenter"));
 const CompanyMigration = lazy(() => import("./pages/admin/CompanyMigration"));
@@ -198,7 +199,14 @@ function App() {
               <Route path="/manual" element={<UserManual />} />
               <Route path="/passport/:slug" element={<PublicPassport />} />
               <Route path="/kiosk" element={<KioskClock />} />
-              <Route path="/front-desk" element={<FrontDesk />} />
+              <Route
+                path="/front-desk"
+                element={
+                  <FrontDeskGuard>
+                    <FrontDesk />
+                  </FrontDeskGuard>
+                }
+              />
               <Route path="/apply/:slug" element={<Apply />} />
               <Route path="/join/:inviteCode" element={<JoinCompany />} />
               <Route path="/invite" element={<AcceptInvite />} />
