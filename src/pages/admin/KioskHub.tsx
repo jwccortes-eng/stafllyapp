@@ -21,6 +21,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { APP_BASE_URL } from "@/lib/app-url";
 import { useCompany } from "@/hooks/useCompany";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,6 +38,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Monitor, Plus, Pencil, Trash2, Copy, Check, ExternalLink,
   Clock, Activity, MapPin, Smartphone,
@@ -290,11 +292,12 @@ export default function KioskHub() {
                       <li key={e.id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-muted/30 transition-colors">
                         <Badge
                           variant="outline"
-                          className={`text-[10px] font-medium ${
+                          className={cn(
+                            "text-[10px] font-medium",
                             e.type === "clock_in"
-                              ? "border-emerald-300 bg-emerald-50 text-emerald-800"
-                              : "border-rose-300 bg-rose-50 text-rose-800"
-                          }`}
+                              ? "border-earning/30 bg-earning/10 text-earning"
+                              : "border-deduction/30 bg-deduction/10 text-deduction",
+                          )}
                         >
                           {e.type === "clock_in" ? "IN" : "OUT"}
                         </Badge>
@@ -364,21 +367,48 @@ export default function KioskHub() {
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center justify-end gap-1">
-                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => copyKioskUrl(d)}>
-                              {copied === d.id ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(d)}>
-                              <Pencil className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-destructive"
-                              onClick={() => setDeleteTarget(d)}
-                              aria-label={`Delete kiosk ${d.name}`}
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={() => copyKioskUrl(d)}
+                                  aria-label={`Copy kiosk URL for ${d.name}`}
+                                >
+                                  {copied === d.id ? <Check className="h-3.5 w-3.5 text-earning" /> : <Copy className="h-3.5 w-3.5" />}
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>{copied === d.id ? "Copied!" : "Copy kiosk URL"}</TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={() => openEdit(d)}
+                                  aria-label={`Edit kiosk ${d.name}`}
+                                >
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Edit kiosk</TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-destructive"
+                                  onClick={() => setDeleteTarget(d)}
+                                  aria-label={`Delete kiosk ${d.name}`}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Delete kiosk</TooltipContent>
+                            </Tooltip>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -456,7 +486,7 @@ function Kpi({
   icon: any; label: string; value: number | string; tone?: "default" | "success" | "muted";
 }) {
   const toneClass =
-    tone === "success" ? "text-emerald-600 dark:text-emerald-400"
+    tone === "success" ? "text-earning"
     : tone === "muted" ? "text-muted-foreground"
     : "text-foreground";
   return (
