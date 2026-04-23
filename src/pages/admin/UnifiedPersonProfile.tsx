@@ -685,9 +685,9 @@ export default function UnifiedPersonProfile() {
 
       {/* ─── READINESS GAPS ─── */}
       {(readiness.missingPersonal.length > 0 || readiness.missingDocuments.length > 0) && (
-        <Card className="border-amber-500/30 bg-amber-500/[0.03]">
+        <Card className="border-warning/30 bg-warning/[0.04]">
           <CardContent className="p-3">
-            <div className="flex items-center gap-2 text-xs font-semibold text-amber-700 dark:text-amber-400">
+            <div className="flex items-center gap-2 text-xs font-semibold text-warning">
               <ShieldOff className="h-3.5 w-3.5" />
               Readiness gaps
               <span className="ml-auto text-[10px] font-normal text-muted-foreground">
@@ -697,7 +697,7 @@ export default function UnifiedPersonProfile() {
             <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
               {readiness.missingPersonal.slice(0, 6).map((field) => (
                 <div key={`p-${field}`} className="flex items-center gap-1.5">
-                  <span className="h-1 w-1 rounded-full bg-amber-500" />
+                  <span className="h-1 w-1 rounded-full bg-warning" />
                   <span className="capitalize">Personal: {field.replace(/_/g, " ")}</span>
                 </div>
               ))}
@@ -796,7 +796,7 @@ export default function UnifiedPersonProfile() {
                     {String(v.visit_type ?? "").replace(/_/g, " ")}
                   </span>
                   {v.pending_count > 0 && (
-                    <Badge variant="outline" className="text-[9px] border-amber-300 bg-amber-50 text-amber-800">
+                    <Badge variant="outline" className="text-[9px] border-warning/30 bg-warning/10 text-warning">
                       {v.pending_count} pending
                     </Badge>
                   )}
