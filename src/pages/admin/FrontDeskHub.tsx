@@ -165,9 +165,9 @@ export default function FrontDeskHub() {
                   </TabsList>
                 </Tabs>
                 <Button variant="outline" size="sm" asChild>
-                  <Link to="/front-desk" target="_blank">
+                  <a href="/front-desk" target="_blank" rel="noopener">
                     <ExternalLink className="h-3.5 w-3.5 mr-1.5" /> Open Front Desk
-                  </Link>
+                  </a>
                 </Button>
               </div>
             </div>
