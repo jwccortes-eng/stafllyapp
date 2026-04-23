@@ -1057,24 +1057,33 @@ export default function Employees() {
           onRetry={fetchEmployees}
         />
       ) : filtered.length === 0 ? (
-        <EmptyState
-          icon={Users}
-          title={hiddenBySearch > 0 ? `${hiddenBySearch} match${hiddenBySearch === 1 ? "" : "es"} in another tab` : "No workers yet"}
-          description={
-            hiddenBySearch > 0
-              ? `There ${hiddenBySearch === 1 ? "is" : "are"} ${hiddenBySearch} worker${hiddenBySearch === 1 ? "" : "s"} matching "${search}" outside the current tab.`
-              : search
-              ? "Try a different term or clear the search."
-              : "Use 'Quick add' to create your first worker and optionally send them an invite."
-          }
-          actionLabel={hiddenBySearch > 0 ? "View in All" : (!search ? "Quick add" : undefined)}
-          onAction={
-            hiddenBySearch > 0
-              ? () => setStatusTab("all")
-              : (!search ? () => setQuickAddOpen(true) : undefined)
-          }
-        />
-      ) : viewMode === "compact" ? (
+        statusTab === "failed" ? (
+          <EmptyState
+            icon={CheckCircle2}
+            title="No failed invitations 🎉"
+            description="The activation backlog is clean. New failures will appear here automatically when an invitation bounces or hits DLQ."
+            actionLabel="View pending activation"
+            onAction={() => setStatusTab("pending")}
+          />
+        ) : (
+          <EmptyState
+            icon={Users}
+            title={hiddenBySearch > 0 ? `${hiddenBySearch} match${hiddenBySearch === 1 ? "" : "es"} in another tab` : "No workers yet"}
+            description={
+              hiddenBySearch > 0
+                ? `There ${hiddenBySearch === 1 ? "is" : "are"} ${hiddenBySearch} worker${hiddenBySearch === 1 ? "" : "s"} matching "${search}" outside the current tab.`
+                : search
+                ? "Try a different term or clear the search."
+                : "Use 'Quick add' to create your first worker and optionally send them an invite."
+            }
+            actionLabel={hiddenBySearch > 0 ? "View in All" : (!search ? "Quick add" : undefined)}
+            onAction={
+              hiddenBySearch > 0
+                ? () => setStatusTab("all")
+                : (!search ? () => setQuickAddOpen(true) : undefined)
+            }
+          />
+        )
         /* ─── Compact List ─── */
         <div className="rounded-xl border border-border/50 bg-card overflow-hidden divide-y divide-border/40">
           {filtered.map(e => {
