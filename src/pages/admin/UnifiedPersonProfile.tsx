@@ -702,24 +702,31 @@ export default function UnifiedPersonProfile() {
                     </a>
                   </Button>
                 )}
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-8 text-xs"
-                  onClick={() => {
-                    if (employee.is_active === false) {
-                      toggleActive();
-                    } else {
-                      setArchiveOpen(true);
-                    }
-                  }}
-                >
-                  {employee.is_active === false ? (
-                    <><UserCheck className="h-3.5 w-3.5 mr-1.5" /> Activate</>
-                  ) : (
-                    <><Archive className="h-3.5 w-3.5 mr-1.5" /> Archive</>
-                  )}
-                </Button>
+                {(() => {
+                  const isInactive = employee.is_active === false;
+                  const decision = isInactive ? canActivateWorker(employee) : canArchiveWorker(employee);
+                  return (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-8 text-xs"
+                      onClick={() => {
+                        if (isInactive) {
+                          toggleActive();
+                        } else {
+                          setArchiveOpen(true);
+                        }
+                      }}
+                      title={isInactive ? "Reactivate to enable invites and shifts" : decision.reason ?? "Archive worker"}
+                    >
+                      {isInactive ? (
+                        <><UserCheck className="h-3.5 w-3.5 mr-1.5" /> Activate</>
+                      ) : (
+                        <><Archive className="h-3.5 w-3.5 mr-1.5" /> Archive</>
+                      )}
+                    </Button>
+                  );
+                })()}
 
                 {/* Inline invitation status hint — discreet, single line */}
                 {invitation && !isEditing && (
