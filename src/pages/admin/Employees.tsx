@@ -917,7 +917,7 @@ export default function Employees() {
             return (
               <div
                 key={e.id}
-                onClick={() => openDetailSheet(e)}
+                onClick={() => navigate(`/app/people/${e.id}`)}
                 className={cn(
                   "flex items-center gap-3 px-3 py-2 hover:bg-accent/30 transition-colors cursor-pointer",
                   !e.is_active && "opacity-50"
@@ -948,7 +948,7 @@ export default function Employees() {
             return (
               <div
                 key={e.id}
-                onClick={() => openDetailSheet(e)}
+                onClick={() => navigate(`/app/people/${e.id}`)}
                 className={cn(
                   "group relative rounded-xl border border-border/40 bg-card p-3 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer",
                   !e.is_active && "opacity-40"
@@ -1006,7 +1006,7 @@ export default function Employees() {
                     "group hover:bg-accent/30 transition-colors cursor-pointer h-10",
                     !e.is_active && "opacity-35"
                   )}
-                  onClick={() => openDetailSheet(e)}
+                  onClick={() => navigate(`/app/people/${e.id}`)}
                 >
                   <TableCell className="py-1 pl-3 pr-0">
                     <EmployeeAvatar firstName={e.first_name ?? ""} lastName={e.last_name ?? ""} avatarUrl={e.avatar_url} gender={e.gender} size="sm" />
@@ -1111,7 +1111,8 @@ export default function Employees() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-44">
-                        <DropdownMenuItem onClick={() => openDetailSheet(e)} className="text-xs"><Eye className="h-3.5 w-3.5 mr-2" />View details</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => navigate(`/app/people/${e.id}`)} className="text-xs"><Eye className="h-3.5 w-3.5 mr-2" />Open full profile</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => openDetailSheet(e)} className="text-xs"><Pencil className="h-3.5 w-3.5 mr-2" />Quick edit</DropdownMenuItem>
                         <DropdownMenuItem onClick={() => { setViewEmployee(e); setInviteOpen(true); }} className="text-xs"><Send className="h-3.5 w-3.5 mr-2" />Invite</DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={() => toggleActive(e)} className="text-xs">
