@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { toNumOrFallback } from "@/lib/numeric-input";
 
 const CompanyFinancialPolicies = lazy(() => import("@/components/advances/CompanyFinancialPolicies"));
 const CompensationMatrixTab = lazy(() => import("@/components/compensation/CompensationMatrixTab"));

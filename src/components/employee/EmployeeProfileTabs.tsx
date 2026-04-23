@@ -13,6 +13,8 @@ import { EmployeeAvailabilitySection } from "@/components/EmployeeAvailabilitySe
 import { formatPersonName, formatDisplayText } from "@/lib/format-helpers";
 import { format, parseISO, formatDistanceToNow, isValid } from "date-fns";
 import { openEmployeeDocument } from "@/lib/employee-documents";
+import { toNumOrNull } from "@/lib/numeric-input";
+import { toast } from "sonner";
 
 /** Safe date formatter — returns fallback on invalid/missing values */
 function safeFormat(dateStr: string | null | undefined, fmt: string, fallback = "—"): string {

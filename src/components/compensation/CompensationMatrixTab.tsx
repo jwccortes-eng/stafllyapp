@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Pencil, Save, X, Plus, History, Loader2, Download } from "lucide-react";
+import { toNumOrNull } from "@/lib/numeric-input";
 import { format } from "date-fns";
 
 const RATE_SOURCE_LABELS: Record<string, string> = {
