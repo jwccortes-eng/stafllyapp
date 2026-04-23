@@ -74,6 +74,13 @@ export default function Directory() {
 
   return (
     <div>
+      <div className="px-4 sm:px-6 pt-4">
+        <LegacyDeprecationBanner
+          replacementHref="/app/employees"
+          replacementLabel="Worker Hub"
+          description="Worker Hub incluye búsqueda, contactos, estado en línea y perfil maestro de cada persona en una sola vista."
+        />
+      </div>
       <PageHeader
         variant="1"
         icon={Users}
