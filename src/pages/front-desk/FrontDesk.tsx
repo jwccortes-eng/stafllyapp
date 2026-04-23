@@ -33,6 +33,7 @@ import {
 } from "@/hooks/useFrontDesk";
 import { NumericKeypad } from "@/components/front-desk/NumericKeypad";
 import { AttractMode } from "@/components/front-desk/AttractMode";
+import { FrontDeskBackdrop } from "@/components/front-desk/FrontDeskArtwork";
 
 type Step =
   | "welcome"
@@ -473,7 +474,9 @@ export default function FrontDesk() {
   const goHub = () => setStep("hub");
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/40 flex flex-col">
+    <div className="relative min-h-screen overflow-hidden bg-background flex flex-col">
+      <FrontDeskBackdrop />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-background/10 via-background/40 to-background/85" />
       {/* Premium attract / idle screen — dismissed on any interaction */}
       {attract && (
         <AttractMode
@@ -485,7 +488,7 @@ export default function FrontDesk() {
         />
       )}
       {/* Header */}
-      <header className="border-b border-border/60 bg-card/80 backdrop-blur-md sticky top-0 z-10">
+      <header className="border-b border-border/60 bg-card/60 backdrop-blur-xl sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <StaflyLogo size={28} />
@@ -522,12 +525,12 @@ export default function FrontDesk() {
         </div>
       </header>
 
-      <main className="flex-1 flex items-start justify-center px-4 py-6 sm:py-10">
+      <main className="relative z-[1] flex-1 flex items-start justify-center px-4 py-6 sm:py-10">
         <div className="w-full max-w-3xl">
 
           {/* ============ WELCOME ============ */}
           {step === "welcome" && (
-            <Card className="p-10 sm:p-16 text-center shadow-xl border-2 border-border/60 rounded-3xl bg-gradient-to-br from-card to-card/80">
+            <Card className="border-border/50 bg-card/68 p-10 text-center shadow-xl backdrop-blur-xl sm:p-16 rounded-3xl">
               <div className="mx-auto mb-6 h-20 w-20 rounded-3xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-lg shadow-primary/30">
                 <Sparkles className="h-10 w-10 text-primary-foreground" />
               </div>
@@ -546,11 +549,11 @@ export default function FrontDesk() {
 
           {/* ============ PHONE ============ */}
           {step === "phone" && (
-            <Card className="p-6 sm:p-10 shadow-xl rounded-3xl border-2">
+            <Card className="rounded-3xl border border-border/50 bg-card/72 p-6 shadow-xl backdrop-blur-xl sm:p-10">
               <div className="text-center mb-6">
                 <h2 className="text-2xl font-bold mb-2">{t.enterPhone}</h2>
                 <p className="text-sm text-muted-foreground mb-4">{t.enterPhoneSub}</p>
-                <div className="mx-auto inline-flex items-center gap-3 px-6 py-4 bg-muted/40 rounded-2xl border-2 border-dashed min-w-[260px]">
+                <div className="mx-auto inline-flex min-w-[260px] items-center gap-3 rounded-2xl border border-border/70 bg-background/55 px-6 py-4 shadow-sm backdrop-blur-sm">
                   <Phone className="h-5 w-5 text-muted-foreground" />
                   <span className="text-2xl font-mono tracking-wider">{phone || "—"}</span>
                 </div>
