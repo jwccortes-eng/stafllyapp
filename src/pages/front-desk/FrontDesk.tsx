@@ -293,7 +293,9 @@ export default function FrontDesk() {
   const [paymentsLoaded, setPaymentsLoaded] = useState(false);
   const [completeKind, setCompleteKind] = useState<CompleteKind>("request");
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [attract, setAttract] = useState(true);
   const inactivityRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const attractRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Form state for direct self-update
   const [formValues, setFormValues] = useState<SelfUpdatePayload>({});
