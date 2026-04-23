@@ -1198,16 +1198,39 @@ export default function Employees() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.map((e) => (
+              {filtered.map((e) => {
+                const rowSelected = selectedIds.has(e.id);
+                const rowFailed = isInviteFailed(e);
+                return (
                 <TableRow
                   key={e.id}
                   className={cn(
                     "group hover:bg-accent/30 transition-colors cursor-pointer h-10",
-                    !e.is_active && "opacity-35"
+                    !e.is_active && "opacity-35",
+                    rowSelected && "bg-primary/[0.04]"
                   )}
                   onClick={() => navigate(`/app/employees/${e.id}`)}
                 >
-                  <TableCell className="py-1 pl-3 pr-0">
+                  <TableCell className="py-1 pl-3 pr-0" onClick={ev => ev.stopPropagation()}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="inline-flex">
+                          <Checkbox
+                            aria-label={rowFailed ? `Select ${e.first_name} ${e.last_name} for re-invite` : `Selection only enabled for failed invitations`}
+                            checked={rowSelected}
+                            disabled={!rowFailed}
+                            onCheckedChange={() => toggleRowSelected(e.id)}
+                          />
+                        </span>
+                      </TooltipTrigger>
+                      {!rowFailed && (
+                        <TooltipContent side="right" className="text-xs max-w-[220px]">
+                          Bulk re-invite is limited to workers whose last invitation failed.
+                        </TooltipContent>
+                      )}
+                    </Tooltip>
+                  </TableCell>
+                  <TableCell className="py-1 pl-2 pr-0">
                     <EmployeeAvatar firstName={e.first_name ?? ""} lastName={e.last_name ?? ""} avatarUrl={e.avatar_url} gender={e.gender} size="sm" />
                   </TableCell>
                   <TableCell className="py-1">
