@@ -656,6 +656,9 @@ export default function ImportSchedule() {
         unmatchedEmployees: Array.from(unmatchedEmployeesSet),
         matchedClients,
         unmatchedClients: Array.from(unmatchedClientsSet),
+        reconciledShifts,
+        reconciledAssignments,
+        skippedExistingAssignments,
       };
       setSummary(summaryData);
 
@@ -667,6 +670,9 @@ export default function ImportSchedule() {
         : "";
       const unavailMsg = totalUnavailable > 0 ? ` · ${totalUnavailable} indisponibilidades` : "";
       const dupMsg = skippedDuplicates > 0 ? ` · ${skippedDuplicates} duplicados omitidos` : "";
+      const reconciledMsg = (reconciledShifts > 0 || reconciledAssignments > 0)
+        ? ` · ${reconciledShifts} turnos reconciliados, ${reconciledAssignments} asignaciones nuevas (${skippedExistingAssignments} ya existían)`
+        : "";
 
       // ── Record this import to prevent duplicate file uploads ──
       const recordedFileNames = files.length > 0 ? files.map(f => f.name) : (file ? [file.name] : []);
