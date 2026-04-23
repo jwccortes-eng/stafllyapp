@@ -196,6 +196,7 @@ export default function Employees() {
   );
 
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
 
   // Open create dialog when navigated with ?create=1
