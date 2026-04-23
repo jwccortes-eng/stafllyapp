@@ -1149,7 +1149,36 @@ export default function Employees() {
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/30 h-8">
-                <TableHead className="w-8 pl-3 pr-0"></TableHead>
+                {(() => {
+                  const failedInView = filtered.filter(isInviteFailed);
+                  const allFailedSelected = failedInView.length > 0 && failedInView.every(e => selectedIds.has(e.id));
+                  const someFailedSelected = failedInView.some(e => selectedIds.has(e.id));
+                  return (
+                    <TableHead className="w-8 pl-3 pr-0">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="inline-flex">
+                            <Checkbox
+                              aria-label="Select all failed invitations in view"
+                              checked={allFailedSelected ? true : (someFailedSelected ? "indeterminate" : false)}
+                              disabled={failedInView.length === 0}
+                              onCheckedChange={(c) => {
+                                if (c) selectAllInList(failedInView.map(e => e.id));
+                                else clearSelection();
+                              }}
+                            />
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent side="right" className="text-xs max-w-[220px]">
+                          {failedInView.length === 0
+                            ? "No failed invitations in this view"
+                            : `Select all ${failedInView.length} failed invitation${failedInView.length === 1 ? "" : "s"}`}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TableHead>
+                  );
+                })()}
+                <TableHead className="w-8 pl-2 pr-0"></TableHead>
                 <TableHead className="text-[10px]">Name</TableHead>
                 {visibleColumns.includes("employer_identification") && <TableHead className="text-[10px] w-[70px]">ID</TableHead>}
                 {visibleColumns.includes("phone_number") && <TableHead className="hidden sm:table-cell text-[10px]">Phone</TableHead>}
