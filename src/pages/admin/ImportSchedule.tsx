@@ -353,25 +353,114 @@ export default function ImportSchedule() {
       let unmatchedClientsSet = new Set<string>();
 
       // ── Fetch existing shifts for deduplication (composite key) ──
+      // Store shift_id + slots so we can reconcile assignments for shifts that already exist.
       setImportProgress({ current: 0, total: filteredGroups.length, phase: "Verificando duplicados..." });
-      const existingShiftKeys = new Set<string>();
+      const existingShiftMap = new Map<string, { id: string; slots: number }>();
       {
         const { data: existingShifts } = await supabase
           .from("scheduled_shifts")
-          .select("shift_code, date, start_time, end_time")
+          .select("id, shift_code, date, start_time, end_time, slots")
           .eq("company_id", selectedCompanyId)
           .is("deleted_at", null)
           .gte("date", filterFrom || "1900-01-01")
           .lte("date", filterTo || "2100-12-31");
         (existingShifts ?? []).forEach(s => {
-          // Composite key using stored shift_code (already numeric)
           const key = `${s.shift_code || ""}|${s.date}|${s.start_time?.slice(0,5)}|${s.end_time?.slice(0,5)}`;
-          existingShiftKeys.add(key);
+          existingShiftMap.set(key, { id: s.id, slots: s.slots ?? 1 });
         });
       }
 
       const BATCH_SIZE = 10;
-      let skippedDuplicates = 0;
+      let skippedDuplicates = 0; // legacy counter — kept but no longer incremented (we now reconcile)
+      let reconciledShifts = 0;
+      let reconciledAssignments = 0;
+      let skippedExistingAssignments = 0;
+
+      // Helper: reconcile a single existing shift (idempotent assignment merge)
+      const reconcileExistingShift = async (
+        existingShiftId: string,
+        existingSlots: number,
+        group: ShiftGroup,
+      ) => {
+        // Track client/employee match stats just like fresh inserts
+        const clientId = matchClient(group.job);
+        if (clientId) matchedClients++;
+        else if (group.job) unmatchedClientsSet.add(group.job);
+
+        const realEmployees = group.employees.filter(e => !/^system\s/i.test(e));
+
+        // Resolve employee IDs from this group
+        type Resolved = { empId: string; status: string };
+        const resolved: Resolved[] = [];
+        for (let ei = 0; ei < group.employees.length; ei++) {
+          const empName = group.employees[ei];
+          if (/^system\s/i.test(empName)) continue;
+          const empId = empMap.get(empName.toLowerCase());
+          if (!empId) {
+            unmatchedEmployeesSet.add(empName);
+            continue;
+          }
+          matchedEmployees++;
+          const empStatus = (group.employeeStatuses[ei] || "").toLowerCase();
+          const statusMap: Record<string, string> = { accept: "accepted", decline: "rejected" };
+          resolved.push({ empId, status: statusMap[empStatus] ?? "accepted" });
+        }
+
+        if (resolved.length === 0) {
+          reconciledShifts++;
+          return;
+        }
+
+        // Fetch existing assignments for this shift (active only)
+        const { data: existingAssigns } = await supabase
+          .from("shift_assignments")
+          .select("id, employee_id, status")
+          .eq("shift_id", existingShiftId);
+
+        const existingByEmp = new Map<string, { id: string; status: string }>();
+        (existingAssigns ?? []).forEach(a => {
+          existingByEmp.set(a.employee_id, { id: a.id, status: a.status });
+        });
+
+        // Insert missing assignments one-by-one (overlap trigger may reject some)
+        for (const r of resolved) {
+          const existing = existingByEmp.get(r.empId);
+          if (existing) {
+            // Already assigned — only promote pending → accepted/rejected if Excel says so
+            if (existing.status === "pending" && (r.status === "accepted" || r.status === "rejected")) {
+              const { error: updErr } = await supabase
+                .from("shift_assignments")
+                .update({ status: r.status })
+                .eq("id", existing.id);
+              if (!updErr) reconciledAssignments++;
+              else skippedExistingAssignments++;
+            } else {
+              skippedExistingAssignments++;
+            }
+            continue;
+          }
+          try {
+            const { error } = await supabase.from("shift_assignments").insert({
+              company_id: selectedCompanyId,
+              shift_id: existingShiftId,
+              employee_id: r.empId,
+              status: r.status,
+            });
+            if (!error) reconciledAssignments++;
+          } catch { /* skip overlap */ }
+        }
+
+        // Grow slots only if the Excel brings more real employees than current capacity
+        if (realEmployees.length > existingSlots) {
+          await supabase
+            .from("scheduled_shifts")
+            .update({ slots: realEmployees.length })
+            .eq("id", existingShiftId);
+        }
+
+        reconciledShifts++;
+      };
+
       for (let batchStart = 0; batchStart < filteredGroups.length; batchStart += BATCH_SIZE) {
         const batch = filteredGroups.slice(batchStart, batchStart + BATCH_SIZE);
 
@@ -381,15 +470,17 @@ export default function ImportSchedule() {
           phase: `Importando turnos ${batchStart + 1}-${Math.min(batchStart + BATCH_SIZE, filteredGroups.length)}...`,
         });
 
-        // Filter out duplicates from this batch
+        // Split: existing (reconcile) vs new (insert)
         const newBatch: typeof batch = [];
         const shiftPayloads: any[] = [];
         for (const group of batch) {
           // Composite dedup key using cleaned numeric code to match what's stored in DB
           const numericCodeForDedup = group.shiftCode ? group.shiftCode.match(/^(\d+)/)?.[1] || group.shiftCode : "";
           const dedupKey = `${numericCodeForDedup}|${group.date}|${group.startTime}|${group.endTime}`;
-          if (existingShiftKeys.has(dedupKey)) {
-            skippedDuplicates++;
+          const existing = existingShiftMap.get(dedupKey);
+          if (existing) {
+            // FIX #1: do NOT skip — reconcile assignments idempotently
+            await reconcileExistingShift(existing.id, existing.slots, group);
             continue;
           }
 
@@ -447,10 +538,13 @@ export default function ImportSchedule() {
             pay_type: isWeekendJob ? "daily" : "hourly",
           });
           newBatch.push(group);
-          existingShiftKeys.add(`${numericCode || ""}|${group.date}|${group.startTime}|${group.endTime}`);
+          existingShiftMap.set(`${numericCode || ""}|${group.date}|${group.startTime}|${group.endTime}`, { id: "__pending__", slots: realEmployees.length || 1 });
         }
 
-        if (shiftPayloads.length === 0) continue;
+        if (shiftPayloads.length === 0) {
+          await new Promise(resolve => setTimeout(resolve, 30));
+          continue;
+        }
 
         const { data: insertedShifts, error: shiftErr } = await supabase
           .from("scheduled_shifts")
