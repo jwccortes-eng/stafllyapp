@@ -698,7 +698,7 @@ export default function ImportSchedule() {
 
       setResult({
         success: true,
-        message: `Importación completada: ${totalShifts} turnos, ${totalAssignments} asignaciones${createdMsg}${unmatchedMsg}${unavailMsg}${dupMsg}.`,
+        message: `Importación completada: ${totalShifts} turnos, ${totalAssignments} asignaciones${createdMsg}${unmatchedMsg}${unavailMsg}${dupMsg}${reconciledMsg}.`,
       });
       setStep(4);
     } catch (err: any) {
