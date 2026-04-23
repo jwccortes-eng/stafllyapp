@@ -21,7 +21,9 @@ import AuditPanel from "@/components/audit/AuditPanel";
 import {
   Receipt, Plus, Loader2, Search, MoreHorizontal, Send, Eye,
   CheckCircle2, XCircle, DollarSign, FileText, Download, Printer,
+  AlertTriangle, ArrowRight,
 } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const STATUS_CFG: Record<string, { label: string; color: string }> = {
   draft: { label: "Borrador", color: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400" },
@@ -114,7 +116,7 @@ export default function Invoices() {
     if (newStatus === "paid") updates.paid_at = new Date().toISOString();
     if (newStatus === "approved") { updates.approved_by = user?.id; updates.approved_at = new Date().toISOString(); }
     if (newStatus === "voided") { updates.voided_by = user?.id; updates.voided_at = new Date().toISOString(); }
-    const { error } = await supabase.from("invoices").update(updates).eq("id", id);
+    const { error } = await supabase.from("legacy_invoices").update(updates).eq("id", id);
     if (error) { toast.error(error.message); return; }
     toast.success(`Estado actualizado`);
     loadData();
@@ -222,6 +224,22 @@ export default function Invoices() {
           </Dialog>
         }
       />
+
+      {/* Legacy / Zoho migration banner */}
+      <div className="rounded-xl border border-warning/30 bg-warning/5 p-3 flex items-start gap-3">
+        <AlertTriangle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
+        <div className="flex-1 text-xs">
+          <p className="font-semibold text-foreground">Legacy invoices · Zoho migration</p>
+          <p className="text-muted-foreground mt-0.5">
+            This page shows historical invoices migrated from Zoho. New invoicing should be created in the new Tenant Invoicing module.
+          </p>
+        </div>
+        <Button asChild variant="outline" size="sm" className="h-7 text-xs gap-1.5 shrink-0">
+          <Link to="/app/invoicing/invoices">
+            Go to new Invoicing <ArrowRight className="h-3 w-3" />
+          </Link>
+        </Button>
+      </div>
 
       {/* KPIs */}
       <div className="grid grid-cols-3 gap-3">
