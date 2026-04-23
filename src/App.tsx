@@ -100,6 +100,8 @@ const KioskDevices = lazy(() => import("./pages/admin/KioskDevices"));
 const Attendance = lazy(() => import("./pages/admin/Attendance"));
 const QualityDashboard = lazy(() => import("./pages/admin/QualityDashboard"));
 const KioskClock = lazy(() => import("./pages/kiosk/KioskClock"));
+const FrontDesk = lazy(() => import("./pages/front-desk/FrontDesk"));
+const FrontDeskReports = lazy(() => import("./pages/admin/FrontDeskReports"));
 const MigrationCommandCenter = lazy(() => import("./pages/admin/MigrationCommandCenter"));
 const CompanyMigration = lazy(() => import("./pages/admin/CompanyMigration"));
 const ReconciliationReport = lazy(() => import("./pages/admin/ReconciliationReport"));
