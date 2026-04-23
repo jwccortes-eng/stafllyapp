@@ -68,6 +68,7 @@ const ActivityLog = lazy(() => import("./pages/admin/ActivityLog"));
 const OnboardingWizard = lazy(() => import("./pages/admin/OnboardingWizard"));
 const EmployeeOnboarding = lazy(() => import("./pages/admin/EmployeeOnboarding"));
 const Workforce = lazy(() => import("./pages/admin/Workforce"));
+const UnifiedPersonProfile = lazy(() => import("./pages/admin/UnifiedPersonProfile"));
 const Permissions = lazy(() => import("./pages/admin/Permissions"));
 const CompanyConfig = lazy(() => import("./pages/admin/CompanyConfig"));
 const Automations = lazy(() => import("./pages/admin/Automations"));
@@ -221,6 +222,9 @@ function App() {
                 <Route path="employees" element={<CompanyRequiredGuard><Employees /></CompanyRequiredGuard>} />
                 <Route path="workforce" element={<CompanyRequiredGuard><Workforce /></CompanyRequiredGuard>} />
                 <Route path="employees/:id/onboarding" element={<CompanyRequiredGuard><EmployeeOnboarding /></CompanyRequiredGuard>} />
+                {/* Unified Person Profile — canonical People OS route + retro-compat alias */}
+                <Route path="people/:id" element={<CompanyRequiredGuard><UnifiedPersonProfile /></CompanyRequiredGuard>} />
+                <Route path="employees/:id" element={<CompanyRequiredGuard><UnifiedPersonProfile /></CompanyRequiredGuard>} />
                 <Route path="periods" element={<CompanyRequiredGuard><ModuleGate moduleKey="periods"><PayPeriods /></ModuleGate></CompanyRequiredGuard>} />
                 <Route path="import" element={<CompanyRequiredGuard><ModuleGate moduleKey="import"><ImportConnecteam /></ModuleGate></CompanyRequiredGuard>} />
                 <Route path="concepts" element={<CompanyRequiredGuard><Concepts /></CompanyRequiredGuard>} />
