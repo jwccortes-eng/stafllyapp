@@ -149,7 +149,7 @@ export default function TimeClock() {
                 <Settings className="h-4 w-4" />
                 Config. de nómina
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate("/app/kiosk-devices")} className="gap-2 text-sm">
+              <DropdownMenuItem onClick={() => navigate("/app/kiosk")} className="gap-2 text-sm">
                 <Monitor className="h-4 w-4" />
                 Terminales kiosk
               </DropdownMenuItem>
