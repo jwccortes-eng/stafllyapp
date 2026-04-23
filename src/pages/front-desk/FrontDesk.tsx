@@ -729,6 +729,12 @@ export default function FrontDesk() {
 
       <main className="relative z-[1] flex-1 flex items-start justify-center px-4 py-6 sm:py-10">
         <div className="w-full max-w-3xl">
+          {/* Mobile ticket badge */}
+          {activeCase?.case_code && step !== "complete" && (
+            <div className="mb-4 flex justify-center md:hidden">
+              <TicketBadge caseCode={activeCase.case_code} status={activeCase.status} />
+            </div>
+          )}
 
           {/* ============ WELCOME ============ */}
           {step === "welcome" && (
