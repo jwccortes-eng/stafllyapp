@@ -29,6 +29,10 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -84,6 +88,7 @@ export default function KioskHub() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<KioskDevice | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<KioskDevice | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
 
   // Form
@@ -178,9 +183,9 @@ export default function KioskHub() {
   };
 
   const handleDelete = async (d: KioskDevice) => {
-    if (!confirm(`Delete kiosk "${d.name}"?`)) return;
     await kioskFetch(`kiosk_devices?id=eq.${d.id}`, { method: "DELETE" });
     toast({ title: "Kiosk removed" });
+    setDeleteTarget(null);
     fetchDevices();
   };
 
@@ -249,8 +254,19 @@ export default function KioskHub() {
                   <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                 </div>
               ) : todayEvents.length === 0 ? (
-                <div className="text-center py-12 text-sm text-muted-foreground">
-                  No kiosk activity today yet.
+                <div className="flex flex-col items-center justify-center gap-2 py-12 px-6 text-center">
+                  <div className="rounded-full bg-muted/40 p-3">
+                    <Activity className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                  <p className="text-sm font-medium">No kiosk activity today</p>
+                  <p className="text-xs text-muted-foreground max-w-xs">
+                    Open the public kiosk on your tablet so workers can start clocking in.
+                  </p>
+                  <Button variant="outline" size="sm" asChild className="mt-1">
+                    <a href={`${APP_BASE_URL}/kiosk`} target="_blank" rel="noopener">
+                      <ExternalLink className="h-3.5 w-3.5 mr-1.5" /> Open Kiosk
+                    </a>
+                  </Button>
                 </div>
               ) : (
                 <ul className="divide-y divide-border/40">
@@ -275,7 +291,7 @@ export default function KioskHub() {
                           {e.type === "clock_in" ? "IN" : "OUT"}
                         </Badge>
                         <Link
-                          to={`/app/people/${e.employee_id}`}
+                          to={`/app/employees/${e.employee_id}`}
                           className="font-medium text-sm hover:underline truncate"
                         >
                           {fullName}
@@ -346,7 +362,13 @@ export default function KioskHub() {
                             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(d)}>
                               <Pencil className="h-3.5 w-3.5" />
                             </Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDelete(d)}>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-destructive"
+                              onClick={() => setDeleteTarget(d)}
+                              aria-label={`Delete kiosk ${d.name}`}
+                            >
                               <Trash2 className="h-3.5 w-3.5" />
                             </Button>
                           </div>
@@ -394,6 +416,28 @@ export default function KioskHub() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* ─── DELETE CONFIRM ─── */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete kiosk?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently remove <span className="font-semibold text-foreground">"{deleteTarget?.name}"</span>.
+              Workers using this device URL will no longer be able to clock in from it.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => deleteTarget && handleDelete(deleteTarget)}
+            >
+              Delete kiosk
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

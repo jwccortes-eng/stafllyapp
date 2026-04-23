@@ -248,7 +248,7 @@ function VisitsList({
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <Link
-                            to={`/app/people/${v.employee_id}`}
+                            to={`/app/employees/${v.employee_id}`}
                             className="font-semibold text-sm truncate hover:underline"
                           >
                             {v.employees ? `${v.employees.first_name} ${v.employees.last_name}` : "—"}
@@ -278,8 +278,9 @@ function VisitsList({
                         )}
                       </div>
                       <Link
-                        to={`/app/people/${v.employee_id}`}
+                        to={`/app/employees/${v.employee_id}`}
                         className="text-muted-foreground hover:text-primary transition-colors self-center"
+                        aria-label="Open worker profile"
                       >
                         <ChevronRight className="h-4 w-4" />
                       </Link>
