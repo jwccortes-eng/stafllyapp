@@ -32,6 +32,7 @@ import {
   type SelfUpdatePayload,
 } from "@/hooks/useFrontDesk";
 import { NumericKeypad } from "@/components/front-desk/NumericKeypad";
+import { AttractMode } from "@/components/front-desk/AttractMode";
 
 type Step =
   | "welcome"
@@ -51,6 +52,7 @@ type Lang = "es" | "en";
 type CompleteKind = "request" | "comment" | "update";
 
 const INACTIVITY_MS = 120_000;
+const ATTRACT_IDLE_MS = 45_000; // welcome screen → attract mode after 45s idle
 
 const T = {
   es: {
