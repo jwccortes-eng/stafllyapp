@@ -539,29 +539,96 @@ export default function Employees() {
 
   const uniqueRoles = [...new Set(employees.map(e => e.employee_role).filter(Boolean))];
   const uniqueGroups = [...new Set(employees.map(e => e.groups).filter(Boolean))];
-  const activeFilterCount = [filterRole !== "all", filterGroup !== "all"].filter(Boolean).length;
-  const clearFilters = () => { setFilterRole("all"); setFilterGroup("all"); };
+
+  // Helpers for the expanded operational tabs.
+  const isMissingDocs = (e: EmployeeRecord) =>
+    e.is_active !== false && e.onboarding_status && e.onboarding_status !== "complete";
+  const isDriver = (e: EmployeeRecord) => {
+    // Honor driver-detection rule: legacy `has_car` text wins over `can_drive` boolean.
+    const hc = (e.has_car ?? "").toString().toLowerCase().trim();
+    if (hc === "yes" || hc === "sí" || hc === "si" || hc === "true") return true;
+    if (hc === "no" || hc === "false") return false;
+    return !!e.can_drive;
+  };
+  const lastActivityDate = (e: EmployeeRecord): Date | null => {
+    const raw = e.last_login || e.updated_at;
+    if (!raw) return null;
+    const d = parseISO(raw);
+    return isValid(d) ? d : null;
+  };
+  const isNoActivity = (e: EmployeeRecord) => {
+    if (e.is_active === false) return false;
+    const d = lastActivityDate(e);
+    if (!d) return true;
+    return differenceInDays(new Date(), d) > 30;
+  };
+  const isNew = (e: EmployeeRecord) => {
+    const raw = e.created_at;
+    if (!raw) return false;
+    const d = parseISO(raw);
+    if (!isValid(d)) return false;
+    return differenceInDays(new Date(), d) <= 14;
+  };
 
   const statusCounts = {
     active: employees.filter(e => e.is_active !== false && !!e.user_id).length,
     invited: employees.filter(e => e.is_active !== false && !e.user_id && !!invitations[e.id]).length,
     pending: employees.filter(e => e.is_active !== false && !e.user_id && !invitations[e.id]).length,
     inactive: employees.filter(e => e.is_active === false).length,
+    "missing-docs": employees.filter(isMissingDocs).length,
+    drivers: employees.filter(isDriver).length,
+    "no-activity": employees.filter(isNoActivity).length,
+    new: employees.filter(isNew).length,
     all: employees.length,
   };
 
-  const filtered = employees.filter((e) => {
+  const matchesStatusTab = (e: EmployeeRecord, tab: StatusTab) => {
+    switch (tab) {
+      case "all": return true;
+      case "active": return e.is_active !== false && !!e.user_id;
+      case "invited": return e.is_active !== false && !e.user_id && !!invitations[e.id];
+      case "pending": return e.is_active !== false && !e.user_id && !invitations[e.id];
+      case "inactive": return e.is_active === false;
+      case "missing-docs": return isMissingDocs(e);
+      case "drivers": return isDriver(e);
+      case "no-activity": return isNoActivity(e);
+      case "new": return isNew(e);
+      default: return true;
+    }
+  };
+
+  const baseFiltered = employees.filter((e) => {
     const haystack = `${e.first_name ?? ""} ${e.last_name ?? ""} ${e.email ?? ""} ${e.phone_number ?? ""} ${e.employer_identification ?? ""}`.toLowerCase();
     const matchesSearch = haystack.includes(search.toLowerCase());
-    const matchesStatus = statusTab === "all" ? true
-      : statusTab === "active" ? (e.is_active !== false && !!e.user_id)
-      : statusTab === "invited" ? (e.is_active !== false && !e.user_id && !!invitations[e.id])
-      : statusTab === "inactive" ? e.is_active === false
-      : (e.is_active !== false && !e.user_id && !invitations[e.id]);
     const matchesRole = filterRole === "all" || e.employee_role === filterRole;
     const matchesGroup = filterGroup === "all" || e.groups === filterGroup;
-    return matchesSearch && matchesStatus && matchesRole && matchesGroup;
+    return matchesSearch && matchesStatusTab(e, statusTab) && matchesRole && matchesGroup;
   });
+
+  // Persisted sort applied to the filtered list.
+  const filtered = [...baseFiltered].sort((a, b) => {
+    const dir = sort.direction === "asc" ? 1 : -1;
+    if (sort.key === "name") {
+      const an = `${a.first_name ?? ""} ${a.last_name ?? ""}`.trim().toLowerCase();
+      const bn = `${b.first_name ?? ""} ${b.last_name ?? ""}`.trim().toLowerCase();
+      return an.localeCompare(bn) * dir;
+    }
+    if (sort.key === "code") {
+      return String(a.employer_identification ?? "").localeCompare(String(b.employer_identification ?? ""), undefined, { numeric: true }) * dir;
+    }
+    if (sort.key === "role") {
+      return String(a.employee_role ?? "").localeCompare(String(b.employee_role ?? "")) * dir;
+    }
+    if (sort.key === "last_activity") {
+      const ad = lastActivityDate(a)?.getTime() ?? 0;
+      const bd = lastActivityDate(b)?.getTime() ?? 0;
+      return (ad - bd) * dir;
+    }
+    return 0;
+  });
+
+  const activeFilterCount = [filterRole !== "all", filterGroup !== "all"].filter(Boolean).length;
+  const clearFilters = () => { setFilterRole("all"); setFilterGroup("all"); };
 
   // When the user searches and gets 0 results in the current tab, but there ARE
   // matches in other tabs, surface that so they don't think the employee is missing.
