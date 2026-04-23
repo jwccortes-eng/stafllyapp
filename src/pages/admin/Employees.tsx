@@ -256,6 +256,16 @@ export default function Employees() {
   const { visibleColumns, savePreferences } = useColumnPreferences("employees");
   const { toast } = useToast();
 
+  // Quick action: copy active invite token as a shareable activation link.
+  const copyInviteLink = async (token: string) => {
+    try {
+      await navigator.clipboard.writeText(inviteUrl(token));
+      toast({ title: "Invite link copied", description: "Paste it into any channel to share." });
+    } catch {
+      toast({ title: "Could not copy link", variant: "destructive" });
+    }
+  };
+
   const handleBulkPortalInvite = async () => {
     if (!selectedCompanyId) return;
     setBulkInviting(true);
