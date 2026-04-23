@@ -107,6 +107,7 @@ export default function UnifiedPersonProfile() {
   const [form, setForm] = useState<Record<string, string>>({});
   const [inviteOpen, setInviteOpen] = useState(false);
   const [archiveOpen, setArchiveOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<string>("info");
 
   // Snapshot data
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
