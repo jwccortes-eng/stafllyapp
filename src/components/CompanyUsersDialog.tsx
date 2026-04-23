@@ -26,10 +26,17 @@ interface CompanyUser {
   full_name: string;
 }
 
+interface Membership {
+  company_id: string;
+  company_name: string;
+  role: string;
+}
+
 interface AvailableUser {
   user_id: string;
   email: string;
   full_name: string;
+  memberships: Membership[];
 }
 
 const ROLE_OPTIONS = [
@@ -101,12 +108,13 @@ export default function CompanyUsersDialog({ companyId, companyName, open, onOpe
 
     setCompanyUsers(users);
 
-    // 3) Available = profiles NOT linked to ANY company (strict tenant isolation).
-    //    We MUST resolve this server-side: client-side `company_users` reads are
-    //    restricted by RLS to the companies the caller manages, so users from
-    //    other tenants would otherwise look "free" and leak into the dropdown.
-    const { data: unassigned, error: rpcErr } = await supabase
-      .rpc("list_unassigned_profiles");
+    // 3) Eligible users for THIS company. Server-side helper resolves
+    //    cross-tenant memberships (RLS would otherwise hide them) so the
+    //    picker can show clear context: "Sin empresa" vs "En otras empresas".
+    //    Strict isolation is preserved: assignment still writes only to
+    //    company_users with the active company_id.
+    const { data: eligible, error: rpcErr } = await supabase
+      .rpc("get_eligible_users_for_company", { _company_id: companyId });
 
     if (rpcErr) {
       setAvailableUsers([]);
@@ -114,10 +122,11 @@ export default function CompanyUsersDialog({ companyId, companyName, open, onOpe
     }
 
     setAvailableUsers(
-      (unassigned ?? []).map((p: any) => ({
+      (eligible ?? []).map((p: any) => ({
         user_id: p.user_id,
         email: p.email ?? "",
         full_name: p.full_name ?? "",
+        memberships: Array.isArray(p.memberships) ? p.memberships : [],
       }))
     );
   };
