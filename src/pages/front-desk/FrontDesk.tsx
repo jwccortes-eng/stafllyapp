@@ -50,6 +50,7 @@ type Step =
   | "phone"
   | "select_profile"
   | "not_found"
+  | "intake"
   | "hub"
   | "update_data"
   | "pending"
@@ -57,6 +58,9 @@ type Step =
   | "comment"
   | "payments"
   | "profile"
+  | "photo_capture"
+  | "resolution"
+  | "rating"
   | "complete";
 
 type Lang = "es" | "en";
