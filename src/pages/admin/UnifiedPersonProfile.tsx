@@ -61,6 +61,7 @@ import {
   Activity as ActivityIcon,
   Clock,
   ExternalLink,
+  ContactRound,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -117,6 +118,7 @@ export default function UnifiedPersonProfile() {
     shifts: 0, lateCount: 0, noShowCount: 0,
   });
   const [lastPayrollDate, setLastPayrollDate] = useState<string | null>(null);
+  const [frontDeskVisits, setFrontDeskVisits] = useState<any[]>([]);
 
   const { invitations, refetch: refetchInvitations, logInvitation } = useEmployeeInvitations(selectedCompanyId ?? null);
   const readiness = useEmployeeReadiness(id ?? null);
