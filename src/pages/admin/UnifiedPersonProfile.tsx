@@ -222,6 +222,7 @@ export default function UnifiedPersonProfile() {
 
       const lastPay = (payrollRes.data ?? [])[0] as any;
       setLastPayrollDate(lastPay?.clock_in ?? null);
+      setFrontDeskVisits((visitsRes.data ?? []) as any[]);
     })();
     return () => { cancelled = true; };
   }, [id, employee]);
@@ -343,10 +344,24 @@ export default function UnifiedPersonProfile() {
         hint: recentActivity[0]?.action ?? undefined,
         tone: recentActivity.length > 0 ? "default" : "muted",
       },
+      {
+        key: "front-desk",
+        label: "Front Desk",
+        icon: ContactRound,
+        value: frontDeskVisits.length > 0
+          ? `${frontDeskVisits.length} visit${frontDeskVisits.length === 1 ? "" : "s"}`
+          : "—",
+        hint: frontDeskVisits[0]?.checked_in_at
+          ? `Last ${safeDistance(frontDeskVisits[0].checked_in_at)}`
+          : "No office visits yet",
+        tone: frontDeskVisits.some((v: any) => v.status === "pending_followup")
+          ? "warning"
+          : frontDeskVisits.length > 0 ? "default" : "muted",
+      },
     ];
   }, [
     employee, invitations, portalActive, readiness, docsCount, attendance30d,
-    lastPayrollDate, recentActivity, band,
+    lastPayrollDate, recentActivity, band, frontDeskVisits,
   ]);
 
   // ── Loading / Error states ──────────────────────────────────────────────
