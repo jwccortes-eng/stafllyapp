@@ -294,7 +294,11 @@ function initials(e: FrontDeskEmployee | null): string {
 }
 
 export default function FrontDesk() {
-  const { lookupByPhone, selectEmployee, updateSelf, createInquiry, listPayments, loading } = useFrontDesk();
+  const {
+    lookupByPhone, selectEmployee, updateSelf, createInquiry, listPayments,
+    startVisit, closeVisit, captureKioskPhoto,
+    loading,
+  } = useFrontDesk();
 
   const [step, setStep] = useState<Step>("welcome");
   const [lang, setLang] = useState<Lang>("es");
@@ -309,6 +313,15 @@ export default function FrontDesk() {
   const [completeKind, setCompleteKind] = useState<CompleteKind>("request");
   const [currentTime, setCurrentTime] = useState(new Date());
   const [attract, setAttract] = useState(true);
+
+  // ===== Phase 2: CRM case state =====
+  const [activeCase, setActiveCase] = useState<ActiveCase | null>(null);
+  const [pendingResolution, setPendingResolution] = useState<FinalResolution | null>(null);
+  const [pendingNote, setPendingNote] = useState<string | undefined>(undefined);
+  const [closedCase, setClosedCase] = useState<
+    (ActiveCase & { rating?: RatingValue; resolution?: FinalResolution }) | null
+  >(null);
+
   const inactivityRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const attractRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
