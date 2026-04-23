@@ -883,19 +883,23 @@ export default function Employees() {
 
       {/* ─── Content ─── */}
       {initialLoading ? (
-        <div className="space-y-1">{[1,2,3,4,5,6,7,8].map(i => <div key={i} className="animate-pulse bg-muted rounded-lg h-11" />)}</div>
+        <PageSkeleton variant="table" />
       ) : fetchError ? (
-        <ErrorBlock compact onRetry={fetchEmployees} />
+        <ErrorBlock
+          title="Couldn't load workers"
+          message="We couldn't reach the workers list. Check your connection and try again."
+          onRetry={fetchEmployees}
+        />
       ) : filtered.length === 0 ? (
         <EmptyState
           icon={Users}
-          title={hiddenBySearch > 0 ? `${hiddenBySearch} match${hiddenBySearch === 1 ? "" : "es"} in another tab` : "No employees"}
+          title={hiddenBySearch > 0 ? `${hiddenBySearch} match${hiddenBySearch === 1 ? "" : "es"} in another tab` : "No workers yet"}
           description={
             hiddenBySearch > 0
-              ? `There are ${hiddenBySearch} employee${hiddenBySearch === 1 ? "" : "s"} matching "${search}" outside the current tab.`
+              ? `There ${hiddenBySearch === 1 ? "is" : "are"} ${hiddenBySearch} worker${hiddenBySearch === 1 ? "" : "s"} matching "${search}" outside the current tab.`
               : search
-              ? "Try a different term"
-              : "Use 'Quick add' to create and optionally invite your first employee"
+              ? "Try a different term or clear the search."
+              : "Use 'Quick add' to create your first worker and optionally send them an invite."
           }
           actionLabel={hiddenBySearch > 0 ? "View in All" : (!search ? "Quick add" : undefined)}
           onAction={
