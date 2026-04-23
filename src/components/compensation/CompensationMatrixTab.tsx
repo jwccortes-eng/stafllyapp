@@ -321,11 +321,11 @@ export default function CompensationMatrixTab() {
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <div><Label className="text-xs">Tarifa hora ($)</Label><Input type="number" value={addForm.default_hourly_rate ?? ""} onChange={e => setAddForm(f => ({ ...f, default_hourly_rate: e.target.value }))} /></div>
-              <div><Label className="text-xs">Tarifa día ($)</Label><Input type="number" value={addForm.default_daily_rate ?? ""} onChange={e => setAddForm(f => ({ ...f, default_daily_rate: e.target.value }))} /></div>
-              <div><Label className="text-xs">½ día ($)</Label><Input type="number" value={addForm.default_half_day_rate ?? ""} onChange={e => setAddForm(f => ({ ...f, default_half_day_rate: e.target.value }))} /></div>
-              <div><Label className="text-xs">Ride regular ($)</Label><Input type="number" value={addForm.default_ride_rate_regular ?? ""} onChange={e => setAddForm(f => ({ ...f, default_ride_rate_regular: e.target.value }))} /></div>
-              <div><Label className="text-xs">Ride especial ($)</Label><Input type="number" value={addForm.default_ride_rate_special ?? ""} onChange={e => setAddForm(f => ({ ...f, default_ride_rate_special: e.target.value }))} /></div>
+              <div><Label className="text-xs">Tarifa hora ($)</Label><Input type="number" min="0" step="0.01" value={addForm.default_hourly_rate ?? ""} onChange={e => setAddForm(f => ({ ...f, default_hourly_rate: e.target.value }))} /></div>
+              <div><Label className="text-xs">Tarifa día ($)</Label><Input type="number" min="0" step="0.01" value={addForm.default_daily_rate ?? ""} onChange={e => setAddForm(f => ({ ...f, default_daily_rate: e.target.value }))} /></div>
+              <div><Label className="text-xs">½ día ($)</Label><Input type="number" min="0" step="0.01" value={addForm.default_half_day_rate ?? ""} onChange={e => setAddForm(f => ({ ...f, default_half_day_rate: e.target.value }))} /></div>
+              <div><Label className="text-xs">Ride regular ($)</Label><Input type="number" min="0" step="0.01" value={addForm.default_ride_rate_regular ?? ""} onChange={e => setAddForm(f => ({ ...f, default_ride_rate_regular: e.target.value }))} /></div>
+              <div><Label className="text-xs">Ride especial ($)</Label><Input type="number" min="0" step="0.01" value={addForm.default_ride_rate_special ?? ""} onChange={e => setAddForm(f => ({ ...f, default_ride_rate_special: e.target.value }))} /></div>
             </div>
           </div>
           <DialogFooter>
@@ -335,18 +335,18 @@ export default function CompensationMatrixTab() {
               try {
                 await upsertProfile(addForm.employee_id, {
                   payment_mode: addForm.payment_mode as PaymentMode,
-                  default_hourly_rate: addForm.default_hourly_rate ? Number(addForm.default_hourly_rate) : null,
-                  default_daily_rate: addForm.default_daily_rate ? Number(addForm.default_daily_rate) : null,
-                  default_half_day_rate: addForm.default_half_day_rate ? Number(addForm.default_half_day_rate) : null,
-                  default_ride_rate_regular: addForm.default_ride_rate_regular ? Number(addForm.default_ride_rate_regular) : null,
-                  default_ride_rate_special: addForm.default_ride_rate_special ? Number(addForm.default_ride_rate_special) : null,
+                  default_hourly_rate: toNumOrNull(addForm.default_hourly_rate),
+                  default_daily_rate: toNumOrNull(addForm.default_daily_rate),
+                  default_half_day_rate: toNumOrNull(addForm.default_half_day_rate),
+                  default_ride_rate_regular: toNumOrNull(addForm.default_ride_rate_regular),
+                  default_ride_rate_special: toNumOrNull(addForm.default_ride_rate_special),
                   effective_from: addForm.effective_from,
                   rate_source: "employee_custom" as any,
                 });
                 toast.success("Perfil creado");
                 setShowAddDialog(false);
               } catch (e: any) {
-                toast.error(e.message);
+                toast.error(e.message ?? "Error al crear el perfil");
               }
               setSaving(false);
             }}>

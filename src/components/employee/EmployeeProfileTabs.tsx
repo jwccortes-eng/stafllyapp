@@ -257,16 +257,25 @@ function PayTab({ employee, companyId }: { employee: EmployeeRecord; companyId: 
   useEffect(() => { fetchRates(); fetchConcepts(); }, [employee.id, companyId]);
 
   const handleAdd = async () => {
-    if (!formConceptId || !formRate) return;
+    if (!formConceptId) return;
+    const rateNum = toNumOrNull(formRate);
+    if (rateNum === null || rateNum < 0) { toast.error("Tarifa inválida"); return; }
     setSaving(true);
-    await supabase.from("concept_employee_rates").insert({ employee_id: employee.id, concept_id: formConceptId, rate: parseFloat(formRate) });
-    setSaving(false); setAdding(false); setFormConceptId(""); setFormRate(""); fetchRates();
+    const { error } = await supabase.from("concept_employee_rates").insert({ employee_id: employee.id, concept_id: formConceptId, rate: rateNum });
+    setSaving(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Tarifa agregada");
+    setAdding(false); setFormConceptId(""); setFormRate(""); fetchRates();
   };
   const handleUpdate = async (id: string) => {
-    if (!formRate) return;
+    const rateNum = toNumOrNull(formRate);
+    if (rateNum === null || rateNum < 0) { toast.error("Tarifa inválida"); return; }
     setSaving(true);
-    await supabase.from("concept_employee_rates").update({ rate: parseFloat(formRate) }).eq("id", id);
-    setSaving(false); setEditingId(null); setFormRate(""); fetchRates();
+    const { error } = await supabase.from("concept_employee_rates").update({ rate: rateNum }).eq("id", id);
+    setSaving(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Tarifa actualizada");
+    setEditingId(null); setFormRate(""); fetchRates();
   };
   const handleDelete = async (id: string) => { await supabase.from("concept_employee_rates").delete().eq("id", id); fetchRates(); };
   const startEdit = (r: any) => { setEditingId(r.id); setFormRate(r.rate.toString()); };
