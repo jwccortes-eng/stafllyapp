@@ -54,6 +54,9 @@ interface ImportSummary {
   unmatchedEmployees: string[];
   matchedClients: number;
   unmatchedClients: string[];
+  reconciledShifts: number;
+  reconciledAssignments: number;
+  skippedExistingAssignments: number;
 }
 
 /**
