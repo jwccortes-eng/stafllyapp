@@ -488,6 +488,17 @@ export default function FrontDesk() {
     }
   };
 
+  // Hybrid input — physical keyboard + on-screen keypad share the same source of truth.
+  const phonePad = usePhonePadInput({
+    value: phone,
+    setValue: setPhone,
+    maxLength: 15,
+    minSubmitLength: 7,
+    enabled: step === "phone" && !loading,
+    onSubmit: () => { void handleLookup(); },
+    onCancel: resetAll,
+  });
+
   const handlePickProfile = async (id: string) => {
     try {
       const res = await selectEmployee(id);
