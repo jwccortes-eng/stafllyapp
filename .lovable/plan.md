@@ -1,115 +1,107 @@
-# Plan: Tenant Invoicing (Billing) — Stafly
 
-> Módulo independiente de payroll para que cada empresa facture a sus propios clientes.
-> **Reglas absolutas**: no romper shifts/attendance/payroll, multi-tenant estricto por `company_id`, calidad SaaS premium (Stripe + Linear + QuickBooks).
 
----
+# Premium-Gold Retouch — Phased Plan
 
-## Decisiones acordadas
-
-| Decisión | Elección |
-|---|---|
-| Alcance MVP | Plan por fases (este documento) |
-| Generación de blocks | **Híbrido**: auto cuando shift tiene `billing_client_id` + `billing_location_id` resueltos; botón manual "Generate" como fallback |
-| Relación con clients | **Tabla nueva `billing_clients`** con `operational_client_id` opcional (FK nullable a `clients.id`) |
-| Acceso | **Pro+ con feature flag por empresa** vía `company_modules.module = 'tenant_invoicing'` |
+This is a large ecosystem-wide refactor. To avoid breaking the platform and to deliver real product value, I propose splitting it into **4 incremental iterations**. This plan covers **Iteration 1 (foundation + Workers hub)**, with the rest scoped for follow-ups so each iteration ships clean and verified.
 
 ---
 
-## Arquitectura
+## Iteration 1 — Visual Foundation + Workers Hub (this round)
 
+The goal: build the design primitives once, then ship the most-used module (Workers) on top of them. Everything else reuses these primitives in later iterations.
+
+### A. Design system primitives (new shared components)
+
+Create a small set of premium-gold components in `src/components/ui/` that all modules will reuse:
+
+1. **`PremiumAvatar`** — replaces ad-hoc avatar usage.
+   - Real photo as protagonist when `avatar_url` exists.
+   - Elegant initials fallback (deterministic neutral gradient, refined typography).
+   - Status ring + corner badges (active, pending, new, missing-docs, driver).
+   - Sizes: `xs / sm / md / lg / xl`.
+   - Backwards-compatible wrapper around current `EmployeeAvatar` so nothing breaks.
+
+2. **`PremiumFilterBar`** — unified filter pattern.
+   - Search + quick filter chips + advanced popover + active-filter chips with × + reset + result counter + export button slot.
+   - URL search-param persistence (opt-in via `paramKey`).
+   - Built on existing `AdvancedFilters` + `DataTableToolbar`, doesn't replace them; offers the canonical premium combination.
+
+3. **`PremiumTable`** — opinionated wrapper over current `Table`.
+   - Sticky header, zebra-off, refined row hover/selected, right-aligned numerics, sort indicators, column-visibility hook.
+   - Density toggle (comfortable / compact).
+
+4. **`ViewSwitcher`** — table / cards / compact list toggle (icon segmented control).
+
+5. **`PremiumPageHeader`** (light extension of existing `PageHeader`) — adds: breadcrumb slot, subtle eyebrow, primary action + overflow, optional KPI strip below.
+
+6. **`SortIndicator` + `useSortPreference`** — consistent sort UI + per-module persisted sort.
+
+No existing component is removed. New primitives live alongside current ones to keep the no-regression policy intact.
+
+### B. Workers module (`/app/employees`) — premium hub
+
+Refactor `src/pages/admin/Employees.tsx` rendering layer (no business-logic change, no schema change):
+
+- **Header**: PremiumPageHeader with KPI strip (Total / Active / Pending activation / Missing documents / Drivers).
+- **Tabs**: All · Active · Pending activation · New · Missing documents · Drivers · No recent activity · Payroll issues · Attendance issues. Counts shown inline.
+- **PremiumFilterBar**: search, quick chips (status, worker_type, has_car), advanced (company, role, portal status, documents status, last activity range, borough, tags, source). URL-persisted.
+- **ViewSwitcher**: Table / Cards / Compact list.
+- **PremiumTable columns** (default visible, rest togglable): Avatar · Name · Code · Worker type · Status · Portal · Documents · Phone · Borough · Drives · Last activity · Next shift · Actions.
+- **Card view**: photo-first card with status ring, key chips, quick actions (Call, WhatsApp, Open profile, Invite, Archive).
+- **Avatars**: switch to `PremiumAvatar` everywhere in Workers.
+- **Export filtered view**: CSV of currently filtered + visible columns (reuses `ReportActionsBar`).
+- **Default sort**: alphabetical with persisted user override.
+
+### C. Multi-tenant guardrails (touched files only)
+
+While editing Workers and the new primitives, ensure every React Query key in those files includes `selectedCompanyId`. No global audit in this iteration — only files we open.
+
+### D. Out of scope for Iteration 1 (planned for next iterations)
+
+- **Iteration 2**: Apply primitives to **Shifts**, **Attendance**, **Payroll Periods/Reports**, **Documents**. Add Import wizard pattern (mapping → preview → validate → summary → retry) starting with Workers import.
+- **Iteration 3**: Apply primitives to **Applications**, **Front Desk reports**, **Kiosk Devices**, **Service Requests**. Calendar/timeline view for Shifts.
+- **Iteration 4**: Apply primitives to **Clients**, **Billing**, **Invoices**, **Parceros community/providers**. Navigation reorganization (Core Operations / Growth & Intake / Commercial / Community / Control) with sidebar group cleanup and removal of dead/redundant entries (e.g. duplicated `staffing-requests` vs `service-requests`, dual `payroll-recon` entries).
+
+Navigation cleanup is deferred to Iteration 4 because reorganizing the sidebar globally before the modules behind it look premium would worsen perception, not improve it.
+
+---
+
+## Constraints honored
+
+- No payroll calculations changed.
+- No backend contracts/endpoints changed.
+- No DB schema changes.
+- No removal of existing components — new primitives live next to old ones.
+- All current routes keep working.
+- Tenant scoping reinforced only in files touched (avoiding the high-regression risk of a global sweep).
+
+---
+
+## Files to create (Iteration 1)
+
+```text
+src/components/ui/premium-avatar.tsx
+src/components/ui/premium-filter-bar.tsx
+src/components/ui/premium-table.tsx
+src/components/ui/view-switcher.tsx
+src/components/ui/premium-page-header.tsx
+src/components/ui/sort-indicator.tsx
+src/hooks/useSortPreference.ts
+src/hooks/useUrlFilters.ts
 ```
-Shifts (operación)
-  └─ approval (status=approved)
-       └─ Hybrid generator (edge function)
-            ├─ Auto si shift.client_id mapea a billing_client + billing_location
-            └─ Manual button para shifts sin mapeo
-       └─ billable_service_blocks (status=pending)
-            └─ Admin review/adjust
-                 └─ status=approved
-                      └─ Selección en Create Invoice
-                           └─ invoice_lines (source_service_block_id)
-                                └─ block.source_status='invoiced' (lock)
-                                     └─ invoice draft → finalized → sent → paid
-                                          └─ invoice_payments + activity_log
+
+## Files to modify (Iteration 1)
+
+```text
+src/pages/admin/Employees.tsx          (render layer + tabs + filters + views)
+src/components/employee/*               (avatar usage swap to PremiumAvatar where safe)
 ```
 
-**Aislamiento total**: cero cambios en `shifts`, `time_entries`, `pay_periods`, `period_base_pay`, `movements`. El módulo solo **lee** de operación; escribe únicamente en sus propias tablas.
-
 ---
 
-## Fases
+## Deliverable for this round
 
-### **Fase 1 — Schema + RLS + Module gate** ✅ COMPLETADA
+A working `/app/employees` that feels premium-gold (header + KPIs + tabs + advanced filters + 3 views + photo-first cards + export), powered by reusable primitives that the next iterations will plug into Shifts, Attendance, Payroll, etc.
 
-Migración aplicada con éxito:
-- 8 tablas nuevas con RLS estricto multi-tenant por `company_id`
-- 7 enums (`billable_unit`, `service_block_source_type/status`, `invoice_status`, `invoice_line_type`, `invoice_payment_method`, `invoice_activity_action`)
-- Triggers seguros: `updated_at` en todas las tablas, `assign_invoice_number` per-company con advisory locks, `log_invoice_activity` append-only
-- Limpieza preliminar: prototipo legacy renombrado (`invoices` → `legacy_invoices`, `invoice_line_items` → `legacy_invoice_line_items`); `Invoices.tsx` y `Dashboard.tsx` actualizados
-- Módulo `tenant_invoicing` registrado en `MODULE_PLAN_MAP` (requiere Pro+)
-- Schema 100% pasivo: cero acoplamiento con shifts/attendance/payroll
+After you approve, I'll implement Iteration 1 and then ask you to validate before moving on to Iteration 2.
 
-### **Fase 2 — Billing Clients & Locations** ✅ COMPLETADA
-
-Implementado:
-- Hooks: `useBillingClients` (list/create/update/setActive) y `useBillingClientLocations` (list/create/update/setActive)
-- Página `/app/invoicing/clients` con tabla premium, búsqueda, filtros activo/archivado/todos, drawer lateral (Sheet)
-- Drawer con tabs Datos / Ubicaciones — gestor de locations integrado vía `BillingClientLocationsManager`
-- Vínculo opcional con cliente operativo (Combobox searchable, mismo `company_id`)
-- Sidebar: nueva sección "Invoicing" con entrada "Billing Clients" gated por `tenant_invoicing`
-- ModuleGate aplicado en la ruta
-- Cero impacto en payroll / attendance / shifts / dashboard / operational clients
-
-### **Fase 3 — Generador de Service Blocks (híbrido)** ✅ COMPLETADA
-
-Implementado:
-- Migración: `billing_client_locations.is_default` (boolean) + índice único parcial (1 default por billing client) + índices de soporte
-- Edge function `billing-generate-service-blocks` (lee shifts/time_entries aprobados, resuelve mapeo, calcula qty por `billable_unit`, idempotente vía `shift_group_id`)
-- Hook `useBillableServiceBlocks` (list filtrado, generate, update con recalculo de amount, setStatus)
-- Página `/app/invoicing/service-blocks` con tabs Pending/Approved/Invoiced/Discarded, filtros (rango, billing client), botón "Generate from operations" con modal, tabla premium, edit sheet, acciones approve/discard
-- Reportes de skip detallados por motivo: `missing_billing_client`, `missing_billing_location`, `missing_rate`, `missing_attendance_data`, `already_invoiced`, `ambiguous_mapping`
-- Idempotencia fuerte: si existe block con `shift_group_id=shift.id` y status `approved`/`invoiced` → skip; si `pending` → update seguro
-
-**Decisiones registradas:**
-- ✅ `is_default` añadido a `billing_client_locations` (resolver fallback de location)
-- ⏸️ NO se crea aún tabla explícita de mapping `operational_locations → billing_client_locations`. La heurística actual (default location, o única activa) cubre el 80% de casos. Se evaluará en Fase 5+ si surgen escenarios multi-location ambiguos recurrentes.
-
-
-### **Fase 4 — Create Invoice + Invoice Lines** ✅ COMPLETADA
-
-Implementado:
-- Hooks: `useInvoices` (list/delete con liberación de blocks), `useInvoice` (detail + lines + setStatus), `useCreateInvoiceFromBlocks` (transaccional con rollback y lock idempotente de blocks → `invoiced` + `invoice_id`)
-- Página `/app/invoicing/invoices` con KPIs (outstanding, overdue, paid, count), filtros (status, client, search), tabla premium, eliminar borradores
-- Página `/app/invoicing/invoices/new` builder en 5 secciones: Header, Service Blocks Selector (solo `approved` + `invoice_id IS NULL`), Lines preview, Notes/Payment, Summary
-- Página `/app/invoicing/invoices/:id` detail con metadata, lines, totales, transiciones de estado (draft → issued → sent, reopen, void)
-- Sidebar: "Invoices" como entrada principal con badge `new`; orden Invoices · Service Blocks · Billing Clients
-- Garantías: no se permiten blocks `discarded` ni `invoiced`; mismatch de cliente bloqueado; rollback completo si falla insert de lines o lock de blocks; validación per-company en cada query
-
-### **Fase 5 — Invoice Detail + Estados**
-
-Detail split (metadata+activity_log | preview PDF). Lista con KPIs. Estados: draft → finalized → sent → partially_paid → paid, overdue, void. Activity log automático.
-
-### **Fase 6 — PDF Export + Payment Tracking**
-
-Edge function `billing-invoice-pdf`. Registro de pagos. Email opcional con PDF.
-
-### **Fase 7+ (futuro)**
-
-Recurrencia, statements, multi-currency real, Stripe Invoicing como cobro, tax engine, importer Zoho.
-
----
-
-## Garantías de no-regresión
-
-- ❌ Cero modificaciones a tablas/hooks de operación
-- ✅ Solo se añade FK `operational_client_id` desde `billing_clients` → `clients` (lectura)
-- ✅ Lectura de operación vía edge function dedicada, nunca acoplada a triggers de la operación
-- ✅ ModuleGate `tenant_invoicing` aísla la UI completa
-- ✅ Multi-tenant estricto: RLS por `company_id` + helper `user_company_ids`
-
----
-
-## Próximo paso
-
-Aprobar este plan → ejecutar **Fase 1** (migración del schema + RLS + módulo en gating). Sin UI, sin riesgo.
