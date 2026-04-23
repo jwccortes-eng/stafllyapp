@@ -176,7 +176,7 @@ Deno.serve(async (req) => {
 
     // ============= UPDATE SELF (employee edits allowed fields directly) =============
     if (action === "update_self") {
-      const { employee_id, updates, language, device_id } = body;
+      const { employee_id, updates, language, device_id, visit_id } = body;
       if (!employee_id || !updates) {
         return jsonResp({ error: "employee_id y updates requeridos" }, 400);
       }
@@ -236,25 +236,51 @@ Deno.serve(async (req) => {
 
       if (updErr) return jsonResp({ error: updErr.message }, 500);
 
-      // Audit trail: log a closed visit summarising the self-update.
-      // device_id column is UUID — only forward valid UUIDs, drop free-text labels.
+      // device_id column is UUID — only forward valid UUIDs.
       const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       const safeDeviceId =
         typeof device_id === "string" && UUID_RE.test(device_id) ? device_id : null;
 
-      const { error: auditErr } = await adminClient.from("office_visits").insert({
-        employee_id,
-        company_id: current.company_id,
-        visit_type: "update_data",
-        visit_detail: `Self-update from kiosk: ${changed.map((c) => c.field).join(", ")}`,
-        updates_made: changed,
-        status: "resolved",
-        channel: "front_desk_kiosk",
-        language: language || "es",
-        device_id: safeDeviceId,
-        checked_out_at: new Date().toISOString(),
-      });
-      if (auditErr) console.error("update_self audit insert failed", auditErr);
+      // If a CRM case is open, append to its timeline. Otherwise create a
+      // standalone audit visit (legacy behavior, e.g. quick edits w/o intake).
+      if (visit_id && UUID_RE.test(visit_id)) {
+        const { data: v } = await adminClient
+          .from("office_visits")
+          .select("activity_timeline, updates_made")
+          .eq("id", visit_id)
+          .maybeSingle();
+        const prevTimeline = Array.isArray(v?.activity_timeline) ? v!.activity_timeline : [];
+        const prevUpdates = Array.isArray(v?.updates_made) ? v!.updates_made : [];
+        await adminClient
+          .from("office_visits")
+          .update({
+            updates_made: [...prevUpdates, ...changed],
+            activity_timeline: [
+              ...prevTimeline,
+              { at: new Date().toISOString(), kind: "self_update", fields: changed.map((c) => c.field) },
+            ],
+          })
+          .eq("id", visit_id);
+      } else {
+        const { error: auditErr } = await adminClient.from("office_visits").insert({
+          employee_id,
+          company_id: current.company_id,
+          visit_type: "update_data",
+          visit_detail: `Self-update from kiosk: ${changed.map((c) => c.field).join(", ")}`,
+          updates_made: changed,
+          intake_reason: "update_data",
+          status: "resolved",
+          final_resolution: "resolved",
+          channel: "front_desk_kiosk",
+          language: language || "es",
+          device_id: safeDeviceId,
+          checked_out_at: new Date().toISOString(),
+          activity_timeline: [
+            { at: new Date().toISOString(), kind: "self_update", fields: changed.map((c) => c.field) },
+          ],
+        });
+        if (auditErr) console.error("update_self audit insert failed", auditErr);
+      }
 
       const { data: company } = await adminClient
         .from("companies")
