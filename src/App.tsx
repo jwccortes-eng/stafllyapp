@@ -97,13 +97,13 @@ const AIWorkforce = lazy(() => import("./pages/admin/AIWorkforce"));
 const LiveMap = lazy(() => import("./pages/admin/LiveMap"));
 const Leaderboard = lazy(() => import("./pages/admin/Leaderboard"));
 const WorkerPassport = lazy(() => import("./pages/admin/WorkerPassport"));
-const KioskDevices = lazy(() => import("./pages/admin/KioskDevices"));
+// KioskDevices removed from router — kiosk-devices route now redirects to /app/kiosk (KioskHub)
 const KioskHub = lazy(() => import("./pages/admin/KioskHub"));
 const Attendance = lazy(() => import("./pages/admin/Attendance"));
 const QualityDashboard = lazy(() => import("./pages/admin/QualityDashboard"));
 const KioskClock = lazy(() => import("./pages/kiosk/KioskClock"));
 const FrontDesk = lazy(() => import("./pages/front-desk/FrontDesk"));
-const FrontDeskReports = lazy(() => import("./pages/admin/FrontDeskReports"));
+// FrontDeskReports removed from router — front-desk-reports route now redirects to /app/front-desk (FrontDeskHub)
 const FrontDeskHub = lazy(() => import("./pages/admin/FrontDeskHub"));
 const MigrationCommandCenter = lazy(() => import("./pages/admin/MigrationCommandCenter"));
 const CompanyMigration = lazy(() => import("./pages/admin/CompanyMigration"));
