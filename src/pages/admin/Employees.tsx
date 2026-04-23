@@ -862,6 +862,11 @@ export default function Employees() {
         {([
           { key: "active" as const, label: "Active", count: statusCounts.active },
           { key: "invited" as const, label: "Invited", count: statusCounts.invited },
+          // Surface the failure backlog right next to "Invited" so it's actionable.
+          // Hidden when zero to avoid noise in healthy tenants.
+          ...(statusCounts.failed > 0
+            ? [{ key: "failed" as const, label: "Invite failed", count: statusCounts.failed, tone: "destructive" as const }]
+            : []),
           { key: "pending" as const, label: "Pending activation", count: statusCounts.pending },
           { key: "new" as const, label: "New", count: statusCounts.new },
           { key: "missing-docs" as const, label: "Missing docs", count: statusCounts["missing-docs"] },
@@ -869,7 +874,37 @@ export default function Employees() {
           { key: "no-activity" as const, label: "No recent activity", count: statusCounts["no-activity"] },
           { key: "inactive" as const, label: "Inactive", count: statusCounts.inactive },
           { key: "all" as const, label: "All", count: statusCounts.all },
-        ]).map(tab => (
+        ]).map(tab => {
+          const isActive = statusTab === tab.key;
+          const isDestructive = (tab as any).tone === "destructive";
+          return (
+            <button
+              key={tab.key}
+              onClick={() => setStatusTab(tab.key)}
+              className={cn(
+                "px-3 py-2 text-xs font-medium border-b-2 transition-colors -mb-px whitespace-nowrap",
+                isActive
+                  ? isDestructive
+                    ? "border-destructive text-destructive"
+                    : "border-primary text-primary"
+                  : isDestructive && !isActive
+                    ? "border-transparent text-destructive/80 hover:text-destructive hover:border-destructive/40"
+                    : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
+              )}
+            >
+              {tab.label}
+              <span className={cn(
+                "ml-1.5 text-[10px] font-bold tabular-nums px-1.5 py-0.5 rounded-md",
+                isActive
+                  ? isDestructive ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary"
+                  : isDestructive
+                    ? "bg-destructive/10 text-destructive"
+                    : "bg-muted text-muted-foreground",
+              )}>{tab.count}</span>
+            </button>
+          );
+        })}
+      </div>
           <button
             key={tab.key}
             onClick={() => setStatusTab(tab.key)}
