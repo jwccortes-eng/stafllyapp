@@ -496,9 +496,14 @@ export default function UnifiedPersonProfile() {
                     </a>
                   )}
                   {employee.address && (
-                    <span className="inline-flex items-center gap-1">
+                    <a
+                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(employee.address)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 hover:text-foreground"
+                    >
                       <MapPin className="h-3.5 w-3.5" /> {employee.address}
-                    </span>
+                    </a>
                   )}
                   {employee.start_date && (
                     <span className="inline-flex items-center gap-1">
@@ -563,7 +568,13 @@ export default function UnifiedPersonProfile() {
                   size="sm"
                   variant="ghost"
                   className="h-8 text-xs"
-                  onClick={toggleActive}
+                  onClick={() => {
+                    if (employee.is_active === false) {
+                      toggleActive();
+                    } else {
+                      setArchiveOpen(true);
+                    }
+                  }}
                 >
                   {employee.is_active === false ? (
                     <><UserCheck className="h-3.5 w-3.5 mr-1.5" /> Activate</>

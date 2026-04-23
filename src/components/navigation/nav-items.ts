@@ -36,7 +36,7 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
   { id: "payroll-settings", to: "/app/payroll-settings", icon: Settings2, label: "Payroll Settings", module: null, section: "Management" },
   { id: "w9", to: "/app/w9", icon: FileText, label: "W-9", module: "employees", section: "Tax" },
   { id: "1099", to: "/app/1099", icon: FileText, label: "1099-NEC", module: "employees", section: "Tax" },
-  { id: "employees", to: "/app/employees", icon: Users, label: "Employees", module: "employees", section: "Management" },
+  { id: "employees", to: "/app/employees", icon: Users, label: "Workers", module: "employees", section: "Management" },
   { id: "directory", to: "/app/directory", icon: ContactRound, label: "Directory", module: "employees", section: "Operations" },
   { id: "concepts", to: "/app/concepts", icon: Tags, label: "Concepts", module: "concepts", section: "Management" },
   { id: "announcements", to: "/app/announcements", icon: Megaphone, label: "Announcements", module: "announcements", section: "Operations" },
