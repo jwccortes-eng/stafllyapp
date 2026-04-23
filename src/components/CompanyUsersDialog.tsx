@@ -69,6 +69,7 @@ export default function CompanyUsersDialog({ companyId, companyName, open, onOpe
   const fetchCompanyUsers = async () => {
     if (!companyId) return;
 
+    // 1) Users currently assigned to THIS company
     const { data: cuData } = await supabase
       .from("company_users")
       .select("id, user_id, role")
@@ -76,13 +77,26 @@ export default function CompanyUsersDialog({ companyId, companyName, open, onOpe
 
     if (!cuData) return;
 
-    // Get profiles for these users
-    const { data: profiles } = await supabase
-      .from("profiles")
-      .select("user_id, email, full_name");
+    const assignedHereIds = new Set(cuData.map(cu => cu.user_id));
+
+    // 2) ALL company_users rows (any company) — to know who already belongs to another tenant
+    const { data: allMemberships } = await supabase
+      .from("company_users")
+      .select("user_id");
+
+    const usersInAnyCompany = new Set((allMemberships ?? []).map(m => m.user_id));
+
+    // 3) Profiles for assigned users (to render the table)
+    const assignedUserIds = Array.from(assignedHereIds);
+    const { data: assignedProfiles } = assignedUserIds.length
+      ? await supabase
+          .from("profiles")
+          .select("user_id, email, full_name")
+          .in("user_id", assignedUserIds)
+      : { data: [] as Array<{ user_id: string; email: string | null; full_name: string | null }> };
 
     const users: CompanyUser[] = cuData.map(cu => {
-      const profile = profiles?.find(p => p.user_id === cu.user_id);
+      const profile = assignedProfiles?.find(p => p.user_id === cu.user_id);
       return {
         id: cu.id,
         user_id: cu.user_id,
@@ -94,10 +108,14 @@ export default function CompanyUsersDialog({ companyId, companyName, open, onOpe
 
     setCompanyUsers(users);
 
-    // Available users = all profiles NOT already in this company
-    const assignedIds = new Set(cuData.map(cu => cu.user_id));
-    const available = (profiles ?? [])
-      .filter(p => !assignedIds.has(p.user_id))
+    // 4) Available = profiles NOT in any company yet (strict tenant isolation).
+    //    Users already linked to another tenant must NOT appear here, even if not in this one.
+    const { data: allProfiles } = await supabase
+      .from("profiles")
+      .select("user_id, email, full_name");
+
+    const available = (allProfiles ?? [])
+      .filter(p => !usersInAnyCompany.has(p.user_id))
       .map(p => ({ user_id: p.user_id, email: p.email ?? "", full_name: p.full_name ?? "" }));
     setAvailableUsers(available);
   };
@@ -251,11 +269,11 @@ export default function CompanyUsersDialog({ companyId, companyName, open, onOpe
                 <Label className="text-xs">Usuario</Label>
                 <Select value={selectedUserId} onValueChange={setSelectedUserId}>
                   <SelectTrigger className="h-9 text-sm">
-                    <SelectValue placeholder="Seleccionar usuario" />
+                    <SelectValue placeholder="Seleccionar usuario sin empresa" />
                   </SelectTrigger>
                   <SelectContent>
                     {availableUsers.length === 0 ? (
-                      <SelectItem value="__none" disabled>No hay usuarios disponibles</SelectItem>
+                      <SelectItem value="__none" disabled>No hay usuarios libres para asignar</SelectItem>
                     ) : (
                       availableUsers.map(u => (
                         <SelectItem key={u.user_id} value={u.user_id}>
@@ -265,6 +283,9 @@ export default function CompanyUsersDialog({ companyId, companyName, open, onOpe
                     )}
                   </SelectContent>
                 </Select>
+                <p className="text-[10px] text-muted-foreground">
+                  Solo se listan usuarios que aún no pertenecen a ninguna empresa. Para mover un usuario desde otra empresa, hazlo desde su empresa actual.
+                </p>
               </div>
               <div className="w-32 space-y-1">
                 <Label className="text-xs">Rol</Label>
