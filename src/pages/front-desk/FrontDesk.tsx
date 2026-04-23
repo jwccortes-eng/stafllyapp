@@ -34,6 +34,7 @@ import {
 import { NumericKeypad } from "@/components/front-desk/NumericKeypad";
 import { AttractMode } from "@/components/front-desk/AttractMode";
 import { FrontDeskBackdrop } from "@/components/front-desk/FrontDeskArtwork";
+import { ensureFrontDeskBundleFresh } from "@/lib/front-desk-cache-bust";
 
 type Step =
   | "welcome"
