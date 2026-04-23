@@ -1113,6 +1113,26 @@ export default function Employees() {
             actionLabel="View pending activation"
             onAction={() => setStatusTab("pending")}
           />
+        ) : statusTab === "pending" && employees.length > 0 && !search ? (
+          <EmptyState
+            icon={CheckCircle2}
+            title="Nothing pending"
+            description="Every active worker has either accessed the portal or has an invitation in flight. Use 'Quick add' to onboard someone new."
+            actionLabel="Quick add"
+            onAction={() => setQuickAddOpen(true)}
+          />
+        ) : statusTab === "inactive" && employees.length > 0 && !search ? (
+          <EmptyState
+            icon={UserCheck}
+            title="No archived workers"
+            description="Workers you archive will appear here. Archived workers can be reactivated at any time."
+          />
+        ) : statusTab === "missing-docs" && employees.length > 0 && !search ? (
+          <EmptyState
+            icon={CheckCircle2}
+            title="All workers have their documents 🎉"
+            description="Onboarding requirements are complete across the active roster."
+          />
         ) : (
           <EmptyState
             icon={Users}
