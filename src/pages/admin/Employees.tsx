@@ -1257,11 +1257,33 @@ export default function Employees() {
                   );
                 })()}
                 <TableHead className="w-8 pl-2 pr-0"></TableHead>
-                <TableHead className="text-[10px]">Name</TableHead>
-                {visibleColumns.includes("employer_identification") && <TableHead className="text-[10px] w-[70px]">ID</TableHead>}
+                <TableHead
+                  className="text-[10px] cursor-pointer select-none hover:bg-muted/40 transition-colors"
+                  onClick={() => onSort("name")}
+                  aria-sort={sort.key === "name" ? (sort.direction === "asc" ? "ascending" : "descending") : "none"}
+                >
+                  <span className="inline-flex items-center gap-1">Name <SortIndicator direction={directionFor("name")} /></span>
+                </TableHead>
+                {visibleColumns.includes("employer_identification") && (
+                  <TableHead
+                    className="text-[10px] w-[70px] cursor-pointer select-none hover:bg-muted/40 transition-colors"
+                    onClick={() => onSort("code")}
+                    aria-sort={sort.key === "code" ? (sort.direction === "asc" ? "ascending" : "descending") : "none"}
+                  >
+                    <span className="inline-flex items-center gap-1">ID <SortIndicator direction={directionFor("code")} /></span>
+                  </TableHead>
+                )}
                 {visibleColumns.includes("phone_number") && <TableHead className="hidden sm:table-cell text-[10px]">Phone</TableHead>}
                 {visibleColumns.includes("email") && <TableHead className="hidden md:table-cell text-[10px]">Email</TableHead>}
-                {visibleColumns.includes("employee_role") && <TableHead className="hidden lg:table-cell text-[10px]">Role</TableHead>}
+                {visibleColumns.includes("employee_role") && (
+                  <TableHead
+                    className="hidden lg:table-cell text-[10px] cursor-pointer select-none hover:bg-muted/40 transition-colors"
+                    onClick={() => onSort("role")}
+                    aria-sort={sort.key === "role" ? (sort.direction === "asc" ? "ascending" : "descending") : "none"}
+                  >
+                    <span className="inline-flex items-center gap-1">Role <SortIndicator direction={directionFor("role")} /></span>
+                  </TableHead>
+                )}
                 {visibleColumns.includes("groups") && <TableHead className="hidden xl:table-cell text-[10px]">Group</TableHead>}
                 {visibleColumns.includes("onboarding_status") && <TableHead className="hidden lg:table-cell text-[10px]">Onboarding</TableHead>}
                 {visibleColumns.includes("address_city") && <TableHead className="hidden xl:table-cell text-[10px]">City</TableHead>}
@@ -1271,7 +1293,15 @@ export default function Employees() {
                 {visibleColumns.includes("english_level") && <TableHead className="hidden xl:table-cell text-[10px]">English</TableHead>}
                 {visibleColumns.includes("start_date") && <TableHead className="hidden xl:table-cell text-[10px]">Start</TableHead>}
                 {visibleColumns.includes("status") && <TableHead className="text-[10px] w-[80px]">Status</TableHead>}
-                {visibleColumns.includes("last_login") && <TableHead className="hidden lg:table-cell text-[10px] w-[80px]">Last login</TableHead>}
+                {visibleColumns.includes("last_login") && (
+                  <TableHead
+                    className="hidden lg:table-cell text-[10px] w-[80px] cursor-pointer select-none hover:bg-muted/40 transition-colors"
+                    onClick={() => onSort("last_activity")}
+                    aria-sort={sort.key === "last_activity" ? (sort.direction === "asc" ? "ascending" : "descending") : "none"}
+                  >
+                    <span className="inline-flex items-center gap-1">Last login <SortIndicator direction={directionFor("last_activity")} /></span>
+                  </TableHead>
+                )}
                 <TableHead className="w-8 pr-3"></TableHead>
               </TableRow>
             </TableHeader>
