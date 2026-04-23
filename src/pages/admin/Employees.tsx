@@ -1165,10 +1165,31 @@ export default function Employees() {
               >
                 Open full profile →
               </Button>
-              <Button variant={isEditing ? "default" : "outline"} size="sm" className="h-7 text-xs" onClick={() => { if (isEditing) handleSaveFromSheet(); else setIsEditing(true); }} disabled={loading}>
-                 {isEditing ? (loading ? "Saving…" : "✓ Save") : <><Pencil className="h-3 w-3 mr-1" />Quick edit</>}
-              </Button>
-              {isEditing && <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setIsEditing(false)}>Cancel</Button>}
+              {!isEditing ? (
+                <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setIsEditing(true)} disabled={loading}>
+                  <Pencil className="h-3 w-3 mr-1" />Quick edit
+                </Button>
+              ) : (
+                <>
+                  <Button variant="default" size="sm" className="h-7 text-xs" onClick={handleSaveFromSheet} disabled={loading}>
+                    {loading ? "Saving…" : "Save"}
+                  </Button>
+                  <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => {
+                    // Reset form to original employee values on cancel
+                    if (viewEmployee) {
+                      const f: Record<string, string> = {};
+                      CONNECTEAM_FIELDS.forEach(field => { f[field.key] = viewEmployee[field.key] ?? ""; });
+                      setForm(f);
+                    }
+                    setIsEditing(false);
+                  }} disabled={loading}>
+                    Cancel
+                  </Button>
+                  <Badge variant="outline" className="h-6 gap-1 border-warning/40 bg-warning/10 text-warning text-[9px] px-1.5">
+                    <Pencil className="h-2.5 w-2.5" /> Editing
+                  </Badge>
+                </>
+              )}
               <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setInviteOpen(true)}><Send className="h-3 w-3 mr-1" />Invite</Button>
               <div className="ml-auto flex items-center gap-0.5">
                 <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => { if (viewEmployee) toggleActive(viewEmployee); }}>
