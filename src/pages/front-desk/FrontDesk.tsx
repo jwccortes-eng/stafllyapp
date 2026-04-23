@@ -370,10 +370,67 @@ export default function FrontDesk() {
     setPaymentsLoaded(false);
     setFormValues({});
     setFormErrors({});
+    setActiveCase(null);
+    setPendingResolution(null);
+    setPendingNote(undefined);
+    setClosedCase(null);
     // After resetting from any active session, return to attract mode so the
     // next visitor sees a clean welcome and no leftover data.
     setAttract(true);
   }, []);
+
+  /** Open a CRM case after the intake reason is selected. */
+  const handlePickIntake = async (reason: IntakeReason) => {
+    if (!employee) return;
+    try {
+      const opened = await startVisit({
+        employee_id: employee.id,
+        intake_reason: reason,
+        language: lang,
+      });
+      setActiveCase(opened);
+      // Route directly into the relevant action when possible.
+      if (reason === "update_data") {
+        seedFormFromEmployee(employee);
+        setStep("update_data");
+      } else if (reason === "check_pending") {
+        setStep("pending");
+      } else if (reason === "payment_issue") {
+        setCategory("payments");
+        setMessage("");
+        setStep("request");
+      } else if (reason === "documents_help") {
+        setCategory("documents");
+        setMessage("");
+        setStep("request");
+      } else if (reason === "portal_help") {
+        setCategory("support");
+        setMessage("");
+        setStep("request");
+      } else if (reason === "leave_request") {
+        setCategory("support");
+        setMessage("");
+        setStep("request");
+      } else if (reason === "leave_comment") {
+        setCategory("support");
+        setMessage("");
+        setStep("comment");
+      } else if (reason === "pickup_check") {
+        setStep("payments");
+        if (!paymentsLoaded) {
+          try {
+            const rows = await listPayments({ employee_id: employee.id });
+            setPayments(rows);
+            setPaymentsLoaded(true);
+          } catch { setPaymentsLoaded(true); }
+        }
+      } else {
+        setStep("hub");
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Error");
+    }
+  };
 
   // Inactivity reset (during an active session)
   useEffect(() => {
@@ -421,7 +478,7 @@ export default function FrontDesk() {
       if (res.employee && res.summary) {
         setEmployee(res.employee);
         setSummary(res.summary);
-        setStep("hub");
+        setStep("intake");
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Error";
@@ -436,7 +493,7 @@ export default function FrontDesk() {
       setEmployee(res.employee);
       setSummary(res.summary);
       setMatches([]);
-      setStep("hub");
+      setStep("intake");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Error");
     }
@@ -483,15 +540,96 @@ export default function FrontDesk() {
     });
 
     if (Object.keys(updates).length === 0) {
-      toast.info(t.noChanges);
-      return;
+      // Even with no field changes, advance the kiosk flow toward photo step.
+      if (!employee.avatar_url) return setStep("photo_capture");
+      return setStep("resolution");
     }
 
     try {
-      const res = await updateSelf({ employee_id: employee.id, updates, language: lang });
+      const res = await updateSelf({
+        employee_id: employee.id,
+        updates,
+        language: lang,
+        visit_id: activeCase?.id,
+      });
       setEmployee(res.employee);
       setSummary(res.summary);
       setCompleteKind("update");
+      // Offer photo capture right after a successful update if missing.
+      if (!res.employee.avatar_url) {
+        setStep("photo_capture");
+      } else {
+        setStep("resolution");
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Error");
+    }
+  };
+
+  /** Save photo captured in the kiosk and continue to resolution. */
+  const handleSavePhoto = async (base64: string) => {
+    if (!employee) return;
+    try {
+      const res = await captureKioskPhoto({
+        employee_id: employee.id,
+        photo_base64: base64,
+        visit_id: activeCase?.id,
+      });
+      setEmployee(res.employee);
+      toast.success(lang === "es" ? "Foto guardada" : "Photo saved");
+      setStep("resolution");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Error");
+    }
+  };
+
+  /** From resolution → rating step. */
+  const handlePickResolution = (resolution: FinalResolution, note?: string) => {
+    setPendingResolution(resolution);
+    setPendingNote(note);
+    setStep("rating");
+  };
+
+  /** Submit final rating + close the case. */
+  const handleSubmitRating = async (rating: RatingValue, comment?: string) => {
+    if (!activeCase) {
+      // Defensive: if no case, just go to complete.
+      setStep("complete");
+      return;
+    }
+    try {
+      const closed = await closeVisit({
+        visit_id: activeCase.id,
+        final_resolution: pendingResolution ?? "resolved",
+        resolution_note: pendingNote,
+        rating,
+        rating_comment: comment,
+      });
+      setClosedCase({
+        ...activeCase,
+        ...closed,
+        rating,
+        resolution: pendingResolution ?? "resolved",
+      });
+      setStep("complete");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Error");
+    }
+  };
+
+  const handleSkipRating = async () => {
+    if (!activeCase) return setStep("complete");
+    try {
+      const closed = await closeVisit({
+        visit_id: activeCase.id,
+        final_resolution: pendingResolution ?? "resolved",
+        resolution_note: pendingNote,
+      });
+      setClosedCase({
+        ...activeCase,
+        ...closed,
+        resolution: pendingResolution ?? "resolved",
+      });
       setStep("complete");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Error");
