@@ -11,7 +11,7 @@ import {
   Loader2, ArrowLeft, ArrowRight, X, Phone, Sparkles,
   UserCog, AlertCircle, Send, MessageSquare, Wallet, IdCard,
   CheckCircle2, Mail, MapPin, ShieldAlert, Building2,
-  Users, RefreshCw, Lock,
+  Users, RefreshCw, Lock, Clock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
