@@ -36,9 +36,10 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Monitor, Plus, Pencil, Trash2, Copy, Check, ExternalLink,
-  Clock, Activity, MapPin, Loader2, Smartphone,
+  Clock, Activity, MapPin, Smartphone,
 } from "lucide-react";
 
 interface KioskDevice {
@@ -250,9 +251,16 @@ export default function KioskHub() {
             </CardHeader>
             <CardContent className="p-0">
               {loadingEvents ? (
-                <div className="flex items-center justify-center py-12">
-                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                </div>
+                <ul className="divide-y divide-border/40">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <li key={i} className="flex items-center gap-3 px-4 py-2.5">
+                      <Skeleton className="h-5 w-10 rounded-md" />
+                      <Skeleton className="h-4 w-40" />
+                      <Skeleton className="ml-auto h-3 w-12" />
+                      <Skeleton className="h-5 w-20 rounded-md" />
+                    </li>
+                  ))}
+                </ul>
               ) : todayEvents.length === 0 ? (
                 <div className="flex flex-col items-center justify-center gap-2 py-12 px-6 text-center">
                   <div className="rounded-full bg-muted/40 p-3">
