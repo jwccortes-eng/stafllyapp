@@ -626,7 +626,10 @@ export default function Employees() {
     switch (tab) {
       case "all": return true;
       case "active": return e.is_active !== false && !!e.user_id;
+      // `invited` keeps its inclusive meaning (any invitation record, healthy or failed)
+      // to avoid breaking saved URLs and operator muscle memory.
       case "invited": return e.is_active !== false && !e.user_id && !!invitations[e.id];
+      case "failed": return e.is_active !== false && !e.user_id && isInviteFailed(e);
       case "pending": return e.is_active !== false && !e.user_id && !invitations[e.id];
       case "inactive": return e.is_active === false;
       case "missing-docs": return isMissingDocs(e);
