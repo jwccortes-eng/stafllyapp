@@ -202,7 +202,7 @@ export default function Employees() {
   });
   const search = urlFilters.q;
   const setSearch = (v: string) => setFilter({ q: v });
-  type StatusTab = "active" | "invited" | "inactive" | "pending" | "all" | "missing-docs" | "drivers" | "no-activity" | "new";
+  type StatusTab = "active" | "invited" | "failed" | "inactive" | "pending" | "all" | "missing-docs" | "drivers" | "no-activity" | "new";
   const statusTab = (urlFilters.status as StatusTab) || "active";
   const setStatusTab = (v: StatusTab) => setFilter({ status: v });
   const filterRole = urlFilters.role;
