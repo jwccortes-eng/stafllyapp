@@ -29,8 +29,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
-  ContactRound, ExternalLink, Loader2, Users, Star, AlertCircle,
+  ContactRound, ExternalLink, Users, Star, AlertCircle,
   Clock, TrendingUp, Inbox, ChevronRight,
 } from "lucide-react";
 
@@ -222,11 +223,36 @@ function VisitsList({
       </CardHeader>
       <CardContent className="p-0">
         {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-          </div>
+          <ul className="divide-y divide-border/40">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <li key={i} className="px-4 py-3 flex items-start gap-3">
+                <Skeleton className="h-9 w-9 rounded-full shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Skeleton className="h-3.5 w-32" />
+                    <Skeleton className="h-3.5 w-16 rounded-full" />
+                  </div>
+                  <Skeleton className="h-3 w-2/3" />
+                </div>
+                <Skeleton className="h-4 w-4 self-center" />
+              </li>
+            ))}
+          </ul>
         ) : visits.length === 0 ? (
-          <div className="text-center py-12 text-sm text-muted-foreground">{emptyText}</div>
+          <div className="flex flex-col items-center justify-center gap-2 py-12 px-6 text-center">
+            <div className="rounded-full bg-muted/40 p-3">
+              <Inbox className="h-5 w-5 text-muted-foreground" />
+            </div>
+            <p className="text-sm font-medium">{emptyText}</p>
+            <p className="text-xs text-muted-foreground max-w-xs">
+              Visits will show up here as workers check in from the Front Desk tablet.
+            </p>
+            <Button variant="outline" size="sm" asChild className="mt-1">
+              <a href="/front-desk" target="_blank" rel="noopener">
+                <ExternalLink className="h-3.5 w-3.5 mr-1.5" /> Open Front Desk
+              </a>
+            </Button>
+          </div>
         ) : (
           <ScrollArea className="h-[520px]">
             <ul className="divide-y divide-border/40">

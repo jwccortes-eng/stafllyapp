@@ -883,19 +883,23 @@ export default function Employees() {
 
       {/* ─── Content ─── */}
       {initialLoading ? (
-        <div className="space-y-1">{[1,2,3,4,5,6,7,8].map(i => <div key={i} className="animate-pulse bg-muted rounded-lg h-11" />)}</div>
+        <PageSkeleton variant="table" />
       ) : fetchError ? (
-        <ErrorBlock compact onRetry={fetchEmployees} />
+        <ErrorBlock
+          title="Couldn't load workers"
+          message="We couldn't reach the workers list. Check your connection and try again."
+          onRetry={fetchEmployees}
+        />
       ) : filtered.length === 0 ? (
         <EmptyState
           icon={Users}
-          title={hiddenBySearch > 0 ? `${hiddenBySearch} match${hiddenBySearch === 1 ? "" : "es"} in another tab` : "No employees"}
+          title={hiddenBySearch > 0 ? `${hiddenBySearch} match${hiddenBySearch === 1 ? "" : "es"} in another tab` : "No workers yet"}
           description={
             hiddenBySearch > 0
-              ? `There are ${hiddenBySearch} employee${hiddenBySearch === 1 ? "" : "s"} matching "${search}" outside the current tab.`
+              ? `There ${hiddenBySearch === 1 ? "is" : "are"} ${hiddenBySearch} worker${hiddenBySearch === 1 ? "" : "s"} matching "${search}" outside the current tab.`
               : search
-              ? "Try a different term"
-              : "Use 'Quick add' to create and optionally invite your first employee"
+              ? "Try a different term or clear the search."
+              : "Use 'Quick add' to create your first worker and optionally send them an invite."
           }
           actionLabel={hiddenBySearch > 0 ? "View in All" : (!search ? "Quick add" : undefined)}
           onAction={
@@ -917,7 +921,7 @@ export default function Employees() {
             return (
               <div
                 key={e.id}
-                onClick={() => navigate(`/app/people/${e.id}`)}
+                onClick={() => navigate(`/app/employees/${e.id}`)}
                 className={cn(
                   "flex items-center gap-3 px-3 py-2 hover:bg-accent/30 transition-colors cursor-pointer",
                   !e.is_active && "opacity-50"
@@ -948,7 +952,7 @@ export default function Employees() {
             return (
               <div
                 key={e.id}
-                onClick={() => navigate(`/app/people/${e.id}`)}
+                onClick={() => navigate(`/app/employees/${e.id}`)}
                 className={cn(
                   "group relative rounded-xl border border-border/40 bg-card p-3 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer",
                   !e.is_active && "opacity-40"
@@ -1006,7 +1010,7 @@ export default function Employees() {
                     "group hover:bg-accent/30 transition-colors cursor-pointer h-10",
                     !e.is_active && "opacity-35"
                   )}
-                  onClick={() => navigate(`/app/people/${e.id}`)}
+                  onClick={() => navigate(`/app/employees/${e.id}`)}
                 >
                   <TableCell className="py-1 pl-3 pr-0">
                     <EmployeeAvatar firstName={e.first_name ?? ""} lastName={e.last_name ?? ""} avatarUrl={e.avatar_url} gender={e.gender} size="sm" />
@@ -1111,7 +1115,7 @@ export default function Employees() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-44">
-                        <DropdownMenuItem onClick={() => navigate(`/app/people/${e.id}`)} className="text-xs"><Eye className="h-3.5 w-3.5 mr-2" />Open full profile</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => navigate(`/app/employees/${e.id}`)} className="text-xs"><Eye className="h-3.5 w-3.5 mr-2" />Open full profile</DropdownMenuItem>
                         <DropdownMenuItem onClick={() => openDetailSheet(e)} className="text-xs"><Pencil className="h-3.5 w-3.5 mr-2" />Quick edit</DropdownMenuItem>
                         <DropdownMenuItem onClick={() => { setViewEmployee(e); setInviteOpen(true); }} className="text-xs"><Send className="h-3.5 w-3.5 mr-2" />Invite</DropdownMenuItem>
                         <DropdownMenuSeparator />
@@ -1157,7 +1161,7 @@ export default function Employees() {
                 variant="default"
                 size="sm"
                 className="h-7 text-xs gap-1"
-                onClick={() => { if (viewEmployee) { const id = viewEmployee.id; setViewEmployee(null); navigate(`/app/people/${id}`); } }}
+                onClick={() => { if (viewEmployee) { const id = viewEmployee.id; setViewEmployee(null); navigate(`/app/employees/${id}`); } }}
               >
                 Open full profile →
               </Button>
