@@ -668,141 +668,162 @@ export default function Employees() {
     setLoading(false);
   };
 
-  const visibleFields = CONNECTEAM_FIELDS.filter(f => isPrivileged || !SENSITIVE_FIELD_KEYS.has(f.key));
+  // KPI strip for the premium header.
+  const kpis: PremiumPageHeaderKpi[] = [
+    { label: "Total", value: statusCounts.all, onClick: () => setStatusTab("all"), active: statusTab === "all" },
+    { label: "Active", value: statusCounts.active, accent: "success", onClick: () => setStatusTab("active"), active: statusTab === "active" },
+    { label: "Pending activation", value: statusCounts.pending, accent: statusCounts.pending > 0 ? "warning" : "default", onClick: () => setStatusTab("pending"), active: statusTab === "pending" },
+    { label: "Missing docs", value: statusCounts["missing-docs"], accent: statusCounts["missing-docs"] > 0 ? "destructive" : "default", onClick: () => setStatusTab("missing-docs"), active: statusTab === "missing-docs" },
+    { label: "Drivers", value: statusCounts.drivers, accent: "primary", onClick: () => setStatusTab("drivers"), active: statusTab === "drivers" },
+  ];
+
+  // Active filter chips (chips show as removable pills under the search bar).
+  const activeChips: ActiveFilterChip[] = [
+    ...(filterRole !== "all" ? [{ key: "role", label: <>Role: <strong className="ml-0.5">{formatDisplayText(filterRole, "label")}</strong></>, onRemove: () => setFilterRole("all") }] : []),
+    ...(filterGroup !== "all" ? [{ key: "group", label: <>Group: <strong className="ml-0.5">{filterGroup}</strong></>, onRemove: () => setFilterGroup("all") }] : []),
+  ];
 
   return (
     <div className="space-y-3">
-      {/* ─── Header ─── */}
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div>
-           <h1 className="text-xl font-bold font-heading tracking-tight">Employees</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">{employees.length} registered · {statusCounts.active} active · {statusCounts.invited > 0 ? <span className="text-primary font-medium">{statusCounts.invited} invited</span> : null}{statusCounts.invited > 0 && statusCounts.pending > 0 ? " · " : ""}{statusCounts.pending > 0 ? <span className="text-warning font-medium">{statusCounts.pending} no portal</span> : null}</p>
-          {/* ─── DEBUG: Company context badge (temporary migration tool) ─── */}
-          {selectedCompany && (
-            <div className="mt-1 inline-flex items-center gap-1.5 rounded-md border border-border/50 bg-muted/40 px-2 py-0.5 text-[9px] font-mono text-muted-foreground">
-              <Building2 className="h-3 w-3" />
-              <span className="font-semibold text-foreground">{selectedCompany.name}</span>
-              <span className="text-muted-foreground/60">({selectedCompanyId?.slice(0, 8)}…)</span>
-            </div>
-          )}
-        </div>
-        <div className="flex gap-1.5 flex-wrap">
-          {isPrivileged && (
-            <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => setCampaignOpen(true)}>
-              <Rocket className="h-3.5 w-3.5 mr-1.5" />
-              Activation Campaign
+      {/* ─── Premium Header + KPI strip ─── */}
+      <PremiumPageHeader
+        title="Workers"
+        icon={Users}
+        subtitle={
+          <span className="inline-flex items-center gap-2 flex-wrap">
+            <span>{employees.length} registered</span>
+            {selectedCompany && (
+              <span className="inline-flex items-center gap-1.5 rounded-md border border-border/50 bg-muted/40 px-2 py-0.5 text-[9px] font-mono text-muted-foreground">
+                <Building2 className="h-3 w-3" />
+                <span className="font-semibold text-foreground">{selectedCompany.name}</span>
+              </span>
+            )}
+          </span>
+        }
+        kpis={kpis}
+        rightSlot={
+          <>
+            {isPrivileged && (
+              <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => setCampaignOpen(true)}>
+                <Rocket className="h-3.5 w-3.5 mr-1.5" />
+                Activation Campaign
+              </Button>
+            )}
+            <BulkRateAssignment />
+            <Button variant="outline" size="sm" className="h-8 text-xs" onClick={handleExport} disabled={filtered.length === 0}>
+              <Download className="h-3.5 w-3.5 mr-1.5" />Export
             </Button>
-          )}
-          <BulkRateAssignment />
-          <Button variant="outline" size="sm" className="h-8 text-xs" onClick={handleExport} disabled={filtered.length === 0}>
-            <Download className="h-3.5 w-3.5 mr-1.5" />Export
-          </Button>
-          {/* Update Dialog */}
-          <Dialog open={updateOpen} onOpenChange={(v) => { setUpdateOpen(v); if (!v) resetUpdate(); }}>
-            <DialogTrigger asChild>
-              <Button variant="outline" size="sm" className="h-8 text-xs"><ArrowUpDown className="h-3.5 w-3.5 mr-1.5" />Update</Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Update employee data</DialogTitle>
-                <DialogDescription>Upload an Excel or CSV file to update information</DialogDescription>
-              </DialogHeader>
-              {updateStep === "upload" && (
-                <div className="space-y-4">
-                  <Tabs defaultValue="full" onValueChange={(v) => setUpdateMode(v as "diff" | "full")}>
-                     <TabsList className="grid w-full grid-cols-2"><TabsTrigger value="full">Full replace</TabsTrigger><TabsTrigger value="diff">Changes only</TabsTrigger></TabsList>
-                    <TabsContent value="full"><p className="text-sm text-muted-foreground mb-3">Replaces <strong>all fields</strong> of the employee with the file data.</p></TabsContent>
-                    <TabsContent value="diff"><p className="text-sm text-muted-foreground mb-3">Only updates fields that are <strong>different</strong>.</p></TabsContent>
-                  </Tabs>
-                  <div className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/50 transition-colors">
-                    <RefreshCw className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
-                    <p className="text-sm text-muted-foreground mb-3">Upload the file with updated data</p>
-                    <input type="file" accept=".xls,.xlsx,.csv,.txt" onChange={handleUpdateFile} className="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-primary file:text-primary-foreground file:font-medium hover:file:bg-primary/90 cursor-pointer" />
+            {/* Update Dialog */}
+            <Dialog open={updateOpen} onOpenChange={(v) => { setUpdateOpen(v); if (!v) resetUpdate(); }}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm" className="h-8 text-xs"><ArrowUpDown className="h-3.5 w-3.5 mr-1.5" />Update</Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Update employee data</DialogTitle>
+                  <DialogDescription>Upload an Excel or CSV file to update information</DialogDescription>
+                </DialogHeader>
+                {updateStep === "upload" && (
+                  <div className="space-y-4">
+                    <Tabs defaultValue="full" onValueChange={(v) => setUpdateMode(v as "diff" | "full")}>
+                      <TabsList className="grid w-full grid-cols-2"><TabsTrigger value="full">Full replace</TabsTrigger><TabsTrigger value="diff">Changes only</TabsTrigger></TabsList>
+                      <TabsContent value="full"><p className="text-sm text-muted-foreground mb-3">Replaces <strong>all fields</strong> of the employee with the file data.</p></TabsContent>
+                      <TabsContent value="diff"><p className="text-sm text-muted-foreground mb-3">Only updates fields that are <strong>different</strong>.</p></TabsContent>
+                    </Tabs>
+                    <div className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/50 transition-colors">
+                      <RefreshCw className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
+                      <p className="text-sm text-muted-foreground mb-3">Upload the file with updated data</p>
+                      <input type="file" accept=".xls,.xlsx,.csv,.txt" onChange={handleUpdateFile} className="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-primary file:text-primary-foreground file:font-medium hover:file:bg-primary/90 cursor-pointer" />
+                    </div>
                   </div>
-                </div>
-              )}
-              {updateStep === "preview" && (
-                <div className="space-y-4">
-                  {updateDiffs.length === 0 ? (
-                    <div className="text-center py-8"><CheckCircle2 className="h-12 w-12 text-primary mx-auto mb-4" /><p className="text-lg font-medium">No changes found</p><Button className="mt-4" onClick={() => { setUpdateOpen(false); resetUpdate(); }}>Close</Button></div>
-                  ) : (
-                    <>
-                      <div className="flex gap-2 text-sm items-center flex-wrap">
-                        <Badge variant="outline" className="bg-chart-4/10 text-chart-4 border-chart-4/20">{updateDiffs.filter(d => !d.employeeId.startsWith("__new__")).length} to update</Badge>
-                        {updateDiffs.some(d => d.employeeId.startsWith("__new__")) && <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">{updateDiffs.filter(d => d.employeeId.startsWith("__new__")).length} new</Badge>}
-                      </div>
-                      <div className="max-h-[50vh] overflow-y-auto space-y-3">
-                        {updateDiffs.map((diff, idx) => (
-                          <div key={diff.employeeId} className={`border rounded-lg p-3 transition-opacity ${!diff.selected ? 'opacity-40' : ''}`}>
-                            <div className="flex items-center gap-3 mb-2">
-                              <Checkbox checked={diff.selected} onCheckedChange={() => toggleDiffSelected(idx)} />
-                              <span className="font-medium text-sm">{diff.name}</span>
-                              <Badge variant="secondary" className="text-xs">{diff.changes.length} fields</Badge>
+                )}
+                {updateStep === "preview" && (
+                  <div className="space-y-4">
+                    {updateDiffs.length === 0 ? (
+                      <div className="text-center py-8"><CheckCircle2 className="h-12 w-12 text-primary mx-auto mb-4" /><p className="text-lg font-medium">No changes found</p><Button className="mt-4" onClick={() => { setUpdateOpen(false); resetUpdate(); }}>Close</Button></div>
+                    ) : (
+                      <>
+                        <div className="flex gap-2 text-sm items-center flex-wrap">
+                          <Badge variant="outline" className="bg-chart-4/10 text-chart-4 border-chart-4/20">{updateDiffs.filter(d => !d.employeeId.startsWith("__new__")).length} to update</Badge>
+                          {updateDiffs.some(d => d.employeeId.startsWith("__new__")) && <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">{updateDiffs.filter(d => d.employeeId.startsWith("__new__")).length} new</Badge>}
+                        </div>
+                        <div className="max-h-[50vh] overflow-y-auto space-y-3">
+                          {updateDiffs.map((diff, idx) => (
+                            <div key={diff.employeeId} className={`border rounded-lg p-3 transition-opacity ${!diff.selected ? 'opacity-40' : ''}`}>
+                              <div className="flex items-center gap-3 mb-2">
+                                <Checkbox checked={diff.selected} onCheckedChange={() => toggleDiffSelected(idx)} />
+                                <span className="font-medium text-sm">{diff.name}</span>
+                                <Badge variant="secondary" className="text-xs">{diff.changes.length} fields</Badge>
+                              </div>
+                              <div className="ml-7 space-y-1 max-h-32 overflow-y-auto">
+                                {diff.changes.map(c => (
+                                  <div key={c.field} className="flex items-center gap-2 text-xs">
+                                    <span className="text-muted-foreground w-28 shrink-0">{c.label}:</span>
+                                    {c.oldVal !== "—" && <><span className="text-destructive/70 line-through max-w-[30%] truncate">{c.oldVal}</span><span>→</span></>}
+                                    <span className="text-primary font-medium max-w-[40%] truncate">{c.newVal}</span>
+                                  </div>
+                                ))}
+                              </div>
                             </div>
-                            <div className="ml-7 space-y-1 max-h-32 overflow-y-auto">
-                              {diff.changes.map(c => (
-                                <div key={c.field} className="flex items-center gap-2 text-xs">
-                                  <span className="text-muted-foreground w-28 shrink-0">{c.label}:</span>
-                                  {c.oldVal !== "—" && <><span className="text-destructive/70 line-through max-w-[30%] truncate">{c.oldVal}</span><span>→</span></>}
-                                  <span className="text-primary font-medium max-w-[40%] truncate">{c.newVal}</span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                      <div className="flex gap-2"><Button variant="outline" onClick={resetUpdate}>Cancel</Button><Button onClick={executeUpdateDiffs} disabled={updating || updateDiffs.every(d => !d.selected)}>{updating ? "Processing..." : `Apply to ${updateDiffs.filter(d => d.selected).length}`}</Button></div>
-                    </>
-                  )}
-                </div>
-              )}
-              {updateStep === "done" && updateResult && (
-                <div className="text-center py-6"><CheckCircle2 className="h-12 w-12 text-primary mx-auto mb-4" /><p className="text-lg font-medium">{updateResult.updated > 0 && `${updateResult.updated} updated`}{updateResult.created && updateResult.created > 0 && ` · ${updateResult.created} created`}</p><Button className="mt-4" onClick={() => { setUpdateOpen(false); resetUpdate(); }}>Close</Button></div>
-              )}
-            </DialogContent>
-          </Dialog>
-          {/* Import Dialog */}
-          <Dialog open={importOpen} onOpenChange={(v) => { setImportOpen(v); if (!v) resetImport(); }}>
-            <DialogTrigger asChild><Button variant="outline" size="sm" className="h-8 text-xs"><Upload className="h-3.5 w-3.5 mr-1.5" />Import</Button></DialogTrigger>
-            <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
-              <DialogHeader><DialogTitle>Import Employees</DialogTitle><DialogDescription>Only creates new records, does not update existing ones</DialogDescription></DialogHeader>
-              {importStep === "upload" && (
-                <div className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/50 transition-colors">
-                  <FileSpreadsheet className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
-                  <p className="text-sm text-muted-foreground mb-3">Upload the exported file (Excel or CSV)</p>
-                  <input type="file" accept=".xls,.xlsx,.csv,.txt" onChange={handleImportFile} className="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-primary file:text-primary-foreground file:font-medium hover:file:bg-primary/90 cursor-pointer" />
-                </div>
-              )}
-              {importStep === "preview" && (
-                <div className="space-y-4">
-                   <div className="flex gap-3 text-sm"><span className="bg-primary/10 text-primary px-3 py-1 rounded-full font-medium">{importPreview.filter(r => !r.exists).length} new</span><span className="bg-muted text-muted-foreground px-3 py-1 rounded-full font-medium">{importPreview.filter(r => r.exists).length} already exist</span></div>
-                  <div className="max-h-60 overflow-y-auto border rounded-lg"><Table><TableHeader><TableRow><TableHead className="text-xs">Name</TableHead><TableHead className="text-xs">Phone</TableHead><TableHead className="text-xs">Status</TableHead></TableRow></TableHeader><TableBody>{importPreview.map((r, i) => (<TableRow key={i} className={r.exists ? "opacity-50" : ""}><TableCell className="text-xs font-medium">{r.first_name} {r.last_name}</TableCell><TableCell className="text-xs">{r.phone_number || "—"}</TableCell><TableCell><span className={`text-xs px-2 py-0.5 rounded-full ${r.exists ? "bg-muted text-muted-foreground" : "bg-primary/10 text-primary"}`}>{r.exists ? "Exists" : "New"}</span></TableCell></TableRow>))}</TableBody></Table></div>
-                  <div className="flex gap-2"><Button variant="outline" onClick={resetImport}>Cancel</Button><Button onClick={executeImport} disabled={importing || importPreview.every(r => r.exists)}>{importing ? "Importing..." : `Import ${importPreview.filter(r => !r.exists).length}`}</Button></div>
-                </div>
-              )}
-              {importStep === "done" && importResult && (<div className="text-center py-6"><CheckCircle2 className="h-12 w-12 text-primary mx-auto mb-4" /><p className="text-lg font-medium">{importResult.created} employees created</p><Button className="mt-4" onClick={() => { setImportOpen(false); resetImport(); }}>Close</Button></div>)}
-            </DialogContent>
-          </Dialog>
-          <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (v) setForm(emptyForm()); }}>
-            <DialogTrigger asChild><Button disabled={atEmployeeLimit} size="sm" className="h-8 text-xs"><Plus className="h-3.5 w-3.5 mr-1.5" />New (full form)</Button></DialogTrigger>
-            <DialogContent className="max-w-md"><DialogHeader><DialogTitle>New Employee</DialogTitle><DialogDescription>Enter the new employee's information</DialogDescription></DialogHeader>{atEmployeeLimit ? <UpgradeBanner feature={`Limit of ${limits.maxEmployees} employees`} /> : <EmployeeForm fields={visibleFields} form={form} setForm={setForm} loading={loading} onSubmit={handleCreate} submitLabel="Create" />}</DialogContent>
-          </Dialog>
-          <Button size="sm" variant="default" className="h-8 text-xs" disabled={atEmployeeLimit} onClick={() => setQuickAddOpen(true)}>
-            <UserPlus className="h-3.5 w-3.5 mr-1.5" />Quick add
-          </Button>
-          <QuickAddInviteWizard open={quickAddOpen} onOpenChange={setQuickAddOpen} onEmployeeCreated={() => fetchEmployees()} />
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setOnboardingSettingsOpen(true)} title="Onboarding settings">
-            <Settings2 className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
+                          ))}
+                        </div>
+                        <div className="flex gap-2"><Button variant="outline" onClick={resetUpdate}>Cancel</Button><Button onClick={executeUpdateDiffs} disabled={updating || updateDiffs.every(d => !d.selected)}>{updating ? "Processing..." : `Apply to ${updateDiffs.filter(d => d.selected).length}`}</Button></div>
+                      </>
+                    )}
+                  </div>
+                )}
+                {updateStep === "done" && updateResult && (
+                  <div className="text-center py-6"><CheckCircle2 className="h-12 w-12 text-primary mx-auto mb-4" /><p className="text-lg font-medium">{updateResult.updated > 0 && `${updateResult.updated} updated`}{updateResult.created && updateResult.created > 0 && ` · ${updateResult.created} created`}</p><Button className="mt-4" onClick={() => { setUpdateOpen(false); resetUpdate(); }}>Close</Button></div>
+                )}
+              </DialogContent>
+            </Dialog>
+            {/* Import Dialog */}
+            <Dialog open={importOpen} onOpenChange={(v) => { setImportOpen(v); if (!v) resetImport(); }}>
+              <DialogTrigger asChild><Button variant="outline" size="sm" className="h-8 text-xs"><Upload className="h-3.5 w-3.5 mr-1.5" />Import</Button></DialogTrigger>
+              <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+                <DialogHeader><DialogTitle>Import Employees</DialogTitle><DialogDescription>Only creates new records, does not update existing ones</DialogDescription></DialogHeader>
+                {importStep === "upload" && (
+                  <div className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/50 transition-colors">
+                    <FileSpreadsheet className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
+                    <p className="text-sm text-muted-foreground mb-3">Upload the exported file (Excel or CSV)</p>
+                    <input type="file" accept=".xls,.xlsx,.csv,.txt" onChange={handleImportFile} className="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-primary file:text-primary-foreground file:font-medium hover:file:bg-primary/90 cursor-pointer" />
+                  </div>
+                )}
+                {importStep === "preview" && (
+                  <div className="space-y-4">
+                    <div className="flex gap-3 text-sm"><span className="bg-primary/10 text-primary px-3 py-1 rounded-full font-medium">{importPreview.filter(r => !r.exists).length} new</span><span className="bg-muted text-muted-foreground px-3 py-1 rounded-full font-medium">{importPreview.filter(r => r.exists).length} already exist</span></div>
+                    <div className="max-h-60 overflow-y-auto border rounded-lg"><Table><TableHeader><TableRow><TableHead className="text-xs">Name</TableHead><TableHead className="text-xs">Phone</TableHead><TableHead className="text-xs">Status</TableHead></TableRow></TableHeader><TableBody>{importPreview.map((r, i) => (<TableRow key={i} className={r.exists ? "opacity-50" : ""}><TableCell className="text-xs font-medium">{r.first_name} {r.last_name}</TableCell><TableCell className="text-xs">{r.phone_number || "—"}</TableCell><TableCell><span className={`text-xs px-2 py-0.5 rounded-full ${r.exists ? "bg-muted text-muted-foreground" : "bg-primary/10 text-primary"}`}>{r.exists ? "Exists" : "New"}</span></TableCell></TableRow>))}</TableBody></Table></div>
+                    <div className="flex gap-2"><Button variant="outline" onClick={resetImport}>Cancel</Button><Button onClick={executeImport} disabled={importing || importPreview.every(r => r.exists)}>{importing ? "Importing..." : `Import ${importPreview.filter(r => !r.exists).length}`}</Button></div>
+                  </div>
+                )}
+                {importStep === "done" && importResult && (<div className="text-center py-6"><CheckCircle2 className="h-12 w-12 text-primary mx-auto mb-4" /><p className="text-lg font-medium">{importResult.created} employees created</p><Button className="mt-4" onClick={() => { setImportOpen(false); resetImport(); }}>Close</Button></div>)}
+              </DialogContent>
+            </Dialog>
+            <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (v) setForm(emptyForm()); }}>
+              <DialogTrigger asChild><Button disabled={atEmployeeLimit} size="sm" className="h-8 text-xs"><Plus className="h-3.5 w-3.5 mr-1.5" />New (full form)</Button></DialogTrigger>
+              <DialogContent className="max-w-md"><DialogHeader><DialogTitle>New Employee</DialogTitle><DialogDescription>Enter the new employee's information</DialogDescription></DialogHeader>{atEmployeeLimit ? <UpgradeBanner feature={`Limit of ${limits.maxEmployees} employees`} /> : <EmployeeForm fields={visibleFields} form={form} setForm={setForm} loading={loading} onSubmit={handleCreate} submitLabel="Create" />}</DialogContent>
+            </Dialog>
+            <Button size="sm" variant="default" className="h-8 text-xs" disabled={atEmployeeLimit} onClick={() => setQuickAddOpen(true)}>
+              <UserPlus className="h-3.5 w-3.5 mr-1.5" />Quick add
+            </Button>
+            <QuickAddInviteWizard open={quickAddOpen} onOpenChange={setQuickAddOpen} onEmployeeCreated={() => fetchEmployees()} />
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setOnboardingSettingsOpen(true)} title="Onboarding settings">
+              <Settings2 className="h-4 w-4" />
+            </Button>
+          </>
+        }
+      />
 
       {/* ─── Status Tabs ─── */}
-      <div className="flex items-center gap-0.5 border-b border-border/40">
+      <div className="flex items-center gap-0.5 border-b border-border/40 overflow-x-auto">
         {([
-          { key: "active" as const, label: "Portal active", count: statusCounts.active },
+          { key: "active" as const, label: "Active", count: statusCounts.active },
           { key: "invited" as const, label: "Invited", count: statusCounts.invited },
-          { key: "pending" as const, label: "No portal", count: statusCounts.pending },
+          { key: "pending" as const, label: "Pending activation", count: statusCounts.pending },
+          { key: "new" as const, label: "New", count: statusCounts.new },
+          { key: "missing-docs" as const, label: "Missing docs", count: statusCounts["missing-docs"] },
+          { key: "drivers" as const, label: "Drivers", count: statusCounts.drivers },
+          { key: "no-activity" as const, label: "No recent activity", count: statusCounts["no-activity"] },
           { key: "inactive" as const, label: "Inactive", count: statusCounts.inactive },
           { key: "all" as const, label: "All", count: statusCounts.all },
         ]).map(tab => (
@@ -810,7 +831,7 @@ export default function Employees() {
             key={tab.key}
             onClick={() => setStatusTab(tab.key)}
             className={cn(
-              "px-3 py-2 text-xs font-medium border-b-2 transition-colors -mb-px",
+              "px-3 py-2 text-xs font-medium border-b-2 transition-colors -mb-px whitespace-nowrap",
               statusTab === tab.key
                 ? "border-primary text-primary"
                 : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
@@ -820,42 +841,44 @@ export default function Employees() {
             <span className={cn(
               "ml-1.5 text-[10px] font-bold tabular-nums px-1.5 py-0.5 rounded-md",
               statusTab === tab.key ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground",
-              tab.key === "pending" && tab.count > 0 && statusTab !== tab.key && "bg-primary/10 text-primary"
             )}>{tab.count}</span>
           </button>
         ))}
       </div>
 
-      {/* ─── Search + Filters ─── */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <div className="relative flex-1 min-w-[200px] max-w-sm">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/50" />
-          <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search name, email, phone…" className="pl-8 h-8 text-xs" />
-        </div>
-        {uniqueRoles.length > 0 && (
-          <Select value={filterRole} onValueChange={setFilterRole}>
-             <SelectTrigger className="w-[130px] h-8 text-xs"><SelectValue placeholder="Role" /></SelectTrigger>
-            <SelectContent><SelectItem value="all">All roles</SelectItem>{uniqueRoles.map(r => (<SelectItem key={r} value={r}>{formatDisplayText(r, "label")}</SelectItem>))}</SelectContent>
-          </Select>
-        )}
-        {uniqueGroups.length > 0 && (
-          <Select value={filterGroup} onValueChange={setFilterGroup}>
-             <SelectTrigger className="w-[130px] h-8 text-xs"><SelectValue placeholder="Group" /></SelectTrigger>
-            <SelectContent><SelectItem value="all">All groups</SelectItem>{uniqueGroups.map(g => (<SelectItem key={g} value={g}>{g}</SelectItem>))}</SelectContent>
-          </Select>
-        )}
-        {activeFilterCount > 0 && <Button variant="ghost" size="sm" className="h-8 text-xs text-muted-foreground px-2" onClick={clearFilters}><X className="h-3 w-3 mr-1" />Clear</Button>}
-        <div className="ml-auto flex items-center gap-1.5">
-          <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setColPrefsOpen(true)}>
-            <Settings2 className="h-3.5 w-3.5 text-muted-foreground" />
-          </Button>
-          <span className="text-[10px] text-muted-foreground tabular-nums">{filtered.length}</span>
-          <div className="flex items-center rounded-lg border border-border/30 overflow-hidden">
-            <button className={cn("h-7 w-7 flex items-center justify-center transition-colors", viewMode === "list" ? "bg-primary/10 text-primary" : "text-muted-foreground/40 hover:bg-muted/50")} onClick={() => setViewMode("list")}><List className="h-3 w-3" /></button>
-            <button className={cn("h-7 w-7 flex items-center justify-center transition-colors", viewMode === "grid" ? "bg-primary/10 text-primary" : "text-muted-foreground/40 hover:bg-muted/50")} onClick={() => setViewMode("grid")}><LayoutGrid className="h-3 w-3" /></button>
-          </div>
-        </div>
-      </div>
+      {/* ─── Premium Filter Bar ─── */}
+      <PremiumFilterBar
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Search name, email, phone, code…"
+        quickFilters={
+          <>
+            {uniqueRoles.length > 0 && (
+              <Select value={filterRole} onValueChange={setFilterRole}>
+                <SelectTrigger className="w-[130px] h-8 text-xs"><SelectValue placeholder="Role" /></SelectTrigger>
+                <SelectContent><SelectItem value="all">All roles</SelectItem>{uniqueRoles.map(r => (<SelectItem key={r} value={r}>{formatDisplayText(r, "label")}</SelectItem>))}</SelectContent>
+              </Select>
+            )}
+            {uniqueGroups.length > 0 && (
+              <Select value={filterGroup} onValueChange={setFilterGroup}>
+                <SelectTrigger className="w-[130px] h-8 text-xs"><SelectValue placeholder="Group" /></SelectTrigger>
+                <SelectContent><SelectItem value="all">All groups</SelectItem>{uniqueGroups.map(g => (<SelectItem key={g} value={g}>{g}</SelectItem>))}</SelectContent>
+              </Select>
+            )}
+          </>
+        }
+        activeChips={activeChips}
+        resultCount={filtered.length}
+        onReset={clearFilters}
+        rightSlot={
+          <>
+            <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setColPrefsOpen(true)} title="Column preferences">
+              <Settings2 className="h-3.5 w-3.5 text-muted-foreground" />
+            </Button>
+            <ViewSwitcher value={viewMode} onChange={setViewMode} />
+          </>
+        }
+      />
 
       {/* ─── Content ─── */}
       {initialLoading ? (
@@ -865,27 +888,91 @@ export default function Employees() {
       ) : filtered.length === 0 ? (
         <EmptyState
           icon={Users}
-          title={hiddenBySearch > 0 ? `${hiddenBySearch} match${hiddenBySearch === 1 ? "" : "es"} en otra pestaña` : "No employees"}
+          title={hiddenBySearch > 0 ? `${hiddenBySearch} match${hiddenBySearch === 1 ? "" : "es"} in another tab` : "No employees"}
           description={
             hiddenBySearch > 0
-              ? `Hay ${hiddenBySearch} empleado${hiddenBySearch === 1 ? "" : "s"} que coincide${hiddenBySearch === 1 ? "" : "n"} con "${search}" pero no está${hiddenBySearch === 1 ? "" : "n"} en la pestaña actual.`
+              ? `There are ${hiddenBySearch} employee${hiddenBySearch === 1 ? "" : "s"} matching "${search}" outside the current tab.`
               : search
               ? "Try a different term"
               : "Use 'Quick add' to create and optionally invite your first employee"
           }
-          actionLabel={hiddenBySearch > 0 ? "Ver en Todos" : (!search ? "Quick add" : undefined)}
+          actionLabel={hiddenBySearch > 0 ? "View in All" : (!search ? "Quick add" : undefined)}
           onAction={
             hiddenBySearch > 0
               ? () => setStatusTab("all")
               : (!search ? () => setQuickAddOpen(true) : undefined)
           }
         />
-      ) : viewMode === "grid" ? (
-        /* ─── Grid View ─── */
+      ) : viewMode === "compact" ? (
+        /* ─── Compact List ─── */
+        <div className="rounded-xl border border-border/50 bg-card overflow-hidden divide-y divide-border/40">
+          {filtered.map(e => {
+            const status: PremiumAvatarStatus = e.is_active === false
+              ? "inactive"
+              : isMissingDocs(e) ? "missing-docs"
+              : isNew(e) ? "new"
+              : !e.user_id ? "pending"
+              : "active";
+            return (
+              <div
+                key={e.id}
+                onClick={() => openDetailSheet(e)}
+                className={cn(
+                  "flex items-center gap-3 px-3 py-2 hover:bg-accent/30 transition-colors cursor-pointer",
+                  !e.is_active && "opacity-50"
+                )}
+              >
+                <PremiumAvatar firstName={e.first_name} lastName={e.last_name} avatarUrl={e.avatar_url} size="sm" status={status} />
+                <span className="text-xs font-semibold flex-1 truncate">{formatPersonName(`${e.first_name} ${e.last_name}`)}</span>
+                {e.employer_identification && <span className="text-[10px] font-mono text-muted-foreground hidden sm:inline">#{e.employer_identification}</span>}
+                {e.phone_number && <span className="text-[10px] text-muted-foreground hidden md:inline">{e.phone_number}</span>}
+                {isDriver(e) && <Car className="h-3 w-3 text-sky-500 shrink-0" aria-label="Driver" />}
+                <EmpStatusBadge employee={e} invitation={invitations[e.id]} />
+              </div>
+            );
+          })}
+        </div>
+      ) : viewMode === "cards" ? (
+        /* ─── Cards View ─── */
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
           {filtered.map(e => {
             const phone = e.phone_number?.replace(/[^+\d]/g, "") ?? "";
+            const status: PremiumAvatarStatus = e.is_active === false
+              ? "inactive"
+              : isMissingDocs(e) ? "missing-docs"
+              : isNew(e) ? "new"
+              : isDriver(e) ? "driver"
+              : !e.user_id ? "pending"
+              : "active";
             return (
+              <div
+                key={e.id}
+                onClick={() => openDetailSheet(e)}
+                className={cn(
+                  "group relative rounded-xl border border-border/40 bg-card p-3 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer",
+                  !e.is_active && "opacity-40"
+                )}
+              >
+                <div className="flex items-start gap-3">
+                  <PremiumAvatar firstName={e.first_name} lastName={e.last_name} avatarUrl={e.avatar_url} size="lg" status={status} />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-bold truncate leading-tight">{formatPersonName(`${e.first_name} ${e.last_name}`)}</p>
+                    {e.employee_role && <span className="inline-block mt-0.5 px-1.5 py-0.5 rounded text-[9px] font-semibold bg-primary/8 text-primary">{formatDisplayText(e.employee_role, "label")}</span>}
+                    <div className="mt-1.5 space-y-0.5">
+                      {e.phone_number && <p className="text-[10px] text-muted-foreground truncate flex items-center gap-1"><Phone className="h-2.5 w-2.5" />{e.phone_number}</p>}
+                      {e.email && <p className="text-[10px] text-muted-foreground truncate flex items-center gap-1"><Mail className="h-2.5 w-2.5" />{e.email}</p>}
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-2 flex items-center justify-between">
+                  <EmpStatusBadge employee={e} invitation={invitations[e.id]} showInvite onInvite={() => { setViewEmployee(e); setInviteOpen(true); }} />
+                  {e.access_pin && <span className="text-[9px] text-muted-foreground/50 font-mono">PIN: {e.access_pin}</span>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
               <div
                 key={e.id}
                 onClick={() => openDetailSheet(e)}
