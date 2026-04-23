@@ -33,6 +33,7 @@ import {
 } from "@/hooks/useFrontDesk";
 import { NumericKeypad } from "@/components/front-desk/NumericKeypad";
 import { AttractMode } from "@/components/front-desk/AttractMode";
+import { FrontDeskBackdrop } from "@/components/front-desk/FrontDeskArtwork";
 
 type Step =
   | "welcome"
@@ -258,12 +259,12 @@ const T = {
 };
 
 const ACTION_CARDS = [
-  { key: "update_data" as Step, icon: UserCog, accent: "from-blue-500 to-cyan-500" },
-  { key: "pending" as Step, icon: AlertCircle, accent: "from-amber-500 to-orange-500" },
-  { key: "request" as Step, icon: Send, accent: "from-violet-500 to-fuchsia-500" },
-  { key: "comment" as Step, icon: MessageSquare, accent: "from-emerald-500 to-teal-500" },
-  { key: "payments" as Step, icon: Wallet, accent: "from-rose-500 to-pink-500" },
-  { key: "profile" as Step, icon: IdCard, accent: "from-indigo-500 to-purple-500" },
+  { key: "update_data" as Step, icon: UserCog, iconWrap: "bg-primary/12 text-primary" },
+  { key: "pending" as Step, icon: AlertCircle, iconWrap: "bg-accent/15 text-accent-foreground" },
+  { key: "request" as Step, icon: Send, iconWrap: "bg-secondary text-secondary-foreground" },
+  { key: "comment" as Step, icon: MessageSquare, iconWrap: "bg-primary/10 text-primary" },
+  { key: "payments" as Step, icon: Wallet, iconWrap: "bg-accent/12 text-accent-foreground" },
+  { key: "profile" as Step, icon: IdCard, iconWrap: "bg-secondary text-secondary-foreground" },
 ];
 
 const CATEGORIES: InquiryCategory[] = ["payments", "documents", "profile", "schedule", "support", "other"];
@@ -473,7 +474,9 @@ export default function FrontDesk() {
   const goHub = () => setStep("hub");
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/40 flex flex-col">
+    <div className="relative min-h-screen overflow-hidden bg-background flex flex-col">
+      <FrontDeskBackdrop />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-background/10 via-background/40 to-background/85" />
       {/* Premium attract / idle screen — dismissed on any interaction */}
       {attract && (
         <AttractMode
@@ -485,7 +488,7 @@ export default function FrontDesk() {
         />
       )}
       {/* Header */}
-      <header className="border-b border-border/60 bg-card/80 backdrop-blur-md sticky top-0 z-10">
+      <header className="border-b border-border/60 bg-card/60 backdrop-blur-xl sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <StaflyLogo size={28} />
@@ -522,12 +525,12 @@ export default function FrontDesk() {
         </div>
       </header>
 
-      <main className="flex-1 flex items-start justify-center px-4 py-6 sm:py-10">
+      <main className="relative z-[1] flex-1 flex items-start justify-center px-4 py-6 sm:py-10">
         <div className="w-full max-w-3xl">
 
           {/* ============ WELCOME ============ */}
           {step === "welcome" && (
-            <Card className="p-10 sm:p-16 text-center shadow-xl border-2 border-border/60 rounded-3xl bg-gradient-to-br from-card to-card/80">
+            <Card className="border-border/50 bg-card/68 p-10 text-center shadow-xl backdrop-blur-xl sm:p-16 rounded-3xl">
               <div className="mx-auto mb-6 h-20 w-20 rounded-3xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-lg shadow-primary/30">
                 <Sparkles className="h-10 w-10 text-primary-foreground" />
               </div>
@@ -546,11 +549,11 @@ export default function FrontDesk() {
 
           {/* ============ PHONE ============ */}
           {step === "phone" && (
-            <Card className="p-6 sm:p-10 shadow-xl rounded-3xl border-2">
+            <Card className="rounded-3xl border border-border/50 bg-card/72 p-6 shadow-xl backdrop-blur-xl sm:p-10">
               <div className="text-center mb-6">
                 <h2 className="text-2xl font-bold mb-2">{t.enterPhone}</h2>
                 <p className="text-sm text-muted-foreground mb-4">{t.enterPhoneSub}</p>
-                <div className="mx-auto inline-flex items-center gap-3 px-6 py-4 bg-muted/40 rounded-2xl border-2 border-dashed min-w-[260px]">
+                <div className="mx-auto inline-flex min-w-[260px] items-center gap-3 rounded-2xl border border-border/70 bg-background/55 px-6 py-4 shadow-sm backdrop-blur-sm">
                   <Phone className="h-5 w-5 text-muted-foreground" />
                   <span className="text-2xl font-mono tracking-wider">{phone || "—"}</span>
                 </div>
@@ -679,7 +682,7 @@ export default function FrontDesk() {
               </Card>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {ACTION_CARDS.map(({ key, icon: Icon, accent }) => {
+                {ACTION_CARDS.map(({ key, icon: Icon, iconWrap }) => {
                   const meta = (t.actions as any)[key];
                   const isPending = key === "pending" && summary.pending_total > 0;
                   return (
@@ -693,11 +696,11 @@ export default function FrontDesk() {
                       className="group text-left p-6 rounded-3xl border-2 border-border bg-card hover:border-primary/60 hover:shadow-lg active:scale-[0.98] transition-all"
                     >
                       <div className="flex items-start gap-4">
-                        <div className={cn(
-                          "h-12 w-12 rounded-2xl bg-gradient-to-br flex items-center justify-center shadow-md flex-shrink-0",
-                          accent
-                        )}>
-                          <Icon className="h-6 w-6 text-white" />
+                          <div className={cn(
+                           "h-12 w-12 rounded-2xl flex items-center justify-center shadow-md flex-shrink-0",
+                           iconWrap
+                         )}>
+                           <Icon className="h-6 w-6" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">

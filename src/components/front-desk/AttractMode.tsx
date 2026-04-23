@@ -13,6 +13,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Sparkles, Hand } from "lucide-react";
 import { StaflyLogo } from "@/components/brand/StaflyBrand";
+import { FrontDeskAttractGallery } from "@/components/front-desk/FrontDeskArtwork";
 
 interface AttractModeProps {
   onDismiss: () => void;
@@ -92,6 +93,8 @@ export function AttractMode({
       className="fixed inset-0 z-50 cursor-pointer overflow-hidden bg-background"
       aria-label={t.tap}
     >
+      <FrontDeskAttractGallery activeIndex={rotIndex} />
+
       {/* Background video (optional) */}
       {videoOk && (
         <video
@@ -102,12 +105,12 @@ export function AttractMode({
           playsInline
           autoPlay
           onError={() => setVideoOk(false)}
-          className="absolute inset-0 h-full w-full object-cover opacity-50"
+          className="absolute inset-0 h-full w-full object-cover opacity-30 mix-blend-screen"
         />
       )}
 
       {/* Animated gradient fallback / overlay layer */}
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/30 via-background to-primary/10" />
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/18 via-background/70 to-accent/10" />
       <div className="absolute inset-0 opacity-70">
         <div className="absolute -top-32 -left-32 h-[36rem] w-[36rem] rounded-full bg-primary/30 blur-3xl animate-pulse" />
         <div
@@ -132,7 +135,7 @@ export function AttractMode({
 
       {/* Content */}
       <div className="relative z-10 flex h-full flex-col items-center justify-center px-6 text-center">
-        <div className="mb-6 flex items-center gap-3 rounded-full border border-border/60 bg-card/70 px-5 py-2 backdrop-blur-md shadow-sm">
+        <div className="mb-6 flex items-center gap-3 rounded-full border border-border/60 bg-card/55 px-5 py-2 backdrop-blur-md shadow-sm">
           <StaflyLogo size={22} />
           <span className="text-xs font-semibold tracking-wider uppercase text-muted-foreground">
             {t.brand}
@@ -161,7 +164,7 @@ export function AttractMode({
         </div>
 
         {/* Tap hint */}
-        <div className="inline-flex items-center gap-3 rounded-full border-2 border-primary/30 bg-card/60 px-6 py-3 backdrop-blur-md shadow-lg">
+        <div className="inline-flex items-center gap-3 rounded-full border-2 border-primary/30 bg-card/45 px-6 py-3 backdrop-blur-md shadow-lg">
           <Hand className="h-5 w-5 text-primary animate-bounce" />
           <span className="text-sm sm:text-base font-semibold">{t.tap}</span>
         </div>
