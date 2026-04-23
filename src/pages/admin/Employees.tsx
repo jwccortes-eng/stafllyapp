@@ -343,7 +343,7 @@ export default function Employees() {
 
   const emptyForm = () => Object.fromEntries(CONNECTEAM_FIELDS.map(f => [f.key, ""]));
 
-
+  const fetchEmployees = async () => {
     if (!selectedCompanyId) return;
     setFetchError(false);
     try {
