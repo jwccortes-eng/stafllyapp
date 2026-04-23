@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { Camera, CheckCircle2, Clock, LogIn, LogOut, XCircle, Delete, ArrowLeft, Loader2 } from "lucide-react";
 import { StaflyLogo } from "@/components/brand/StaflyBrand";
+import { usePhonePadInput } from "@/hooks/usePhonePadInput";
 
 type Step = "phone" | "pin" | "camera" | "processing" | "success" | "error";
 
