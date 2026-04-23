@@ -11,10 +11,19 @@ export interface FrontDeskEmployee {
   avatar_url: string | null;
   user_id: string | null;
   company_id: string;
+  company_name?: string | null;
   employee_role: string | null;
   emergency_contact_name: string | null;
   emergency_contact_phone: string | null;
   is_active: boolean;
+}
+
+export interface SelfUpdatePayload {
+  phone_number?: string;
+  email?: string;
+  address?: string;
+  emergency_contact_name?: string;
+  emergency_contact_phone?: string;
 }
 
 export interface PendingItem {
@@ -83,7 +92,12 @@ export function useFrontDesk() {
       });
       if (fnErr) throw new Error(fnErr.message);
       if (data?.error) throw new Error(data.error);
-      return data as { employee: FrontDeskEmployee; summary: FrontDeskSummary };
+      return data as {
+        employee?: FrontDeskEmployee;
+        summary?: FrontDeskSummary;
+        matches: FrontDeskEmployee[];
+        multiple?: boolean;
+      };
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Error desconocido";
       setError(msg);
@@ -93,8 +107,45 @@ export function useFrontDesk() {
     }
   }, []);
 
+  const selectEmployee = useCallback(async (employee_id: string) => {
+    setLoading(true);
+    try {
+      const { data, error: fnErr } = await supabase.functions.invoke("front-desk-checkin", {
+        body: { action: "select_employee", employee_id },
+      });
+      if (fnErr) throw new Error(fnErr.message);
+      if (data?.error) throw new Error(data.error);
+      return data as { employee: FrontDeskEmployee; summary: FrontDeskSummary };
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const updateSelf = useCallback(async (params: {
+    employee_id: string;
+    updates: SelfUpdatePayload;
+    language?: string;
+  }) => {
+    setLoading(true);
+    try {
+      const { data, error: fnErr } = await supabase.functions.invoke("front-desk-checkin", {
+        body: { action: "update_self", ...params },
+      });
+      if (fnErr) throw new Error(fnErr.message);
+      if (data?.error) throw new Error(data.error);
+      return data as {
+        employee: FrontDeskEmployee;
+        summary: FrontDeskSummary;
+        changed: Array<{ field: string; old: string | null; new: string | null }>;
+      };
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   const createInquiry = useCallback(async (params: {
-    phone: string;
+    phone?: string;
+    employee_id?: string;
     category: InquiryCategory;
     message: string;
     inquiry_kind: "request" | "comment";
@@ -113,11 +164,11 @@ export function useFrontDesk() {
     }
   }, []);
 
-  const listPayments = useCallback(async (phone: string) => {
+  const listPayments = useCallback(async (params: { phone?: string; employee_id?: string }) => {
     setLoading(true);
     try {
       const { data, error: fnErr } = await supabase.functions.invoke("front-desk-checkin", {
-        body: { action: "list_payments", phone },
+        body: { action: "list_payments", ...params },
       });
       if (fnErr) throw new Error(fnErr.message);
       return (data?.payments ?? []) as PaymentRow[];
@@ -195,6 +246,8 @@ export function useFrontDesk() {
     loading,
     error,
     lookupByPhone,
+    selectEmployee,
+    updateSelf,
     lookupEmployee,
     createInquiry,
     listPayments,
