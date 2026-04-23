@@ -226,11 +226,11 @@ export default function Invoices() {
       />
 
       {/* Legacy / Zoho migration banner */}
-      <div className="rounded-xl border border-amber-200 dark:border-amber-900/40 bg-amber-50/60 dark:bg-amber-950/20 p-3 flex items-start gap-3">
-        <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+      <div className="rounded-xl border border-warning/30 bg-warning/5 p-3 flex items-start gap-3">
+        <AlertTriangle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
         <div className="flex-1 text-xs">
-          <p className="font-semibold text-amber-900 dark:text-amber-200">Legacy invoices · Zoho migration</p>
-          <p className="text-amber-800/80 dark:text-amber-300/70 mt-0.5">
+          <p className="font-semibold text-foreground">Legacy invoices · Zoho migration</p>
+          <p className="text-muted-foreground mt-0.5">
             This page shows historical invoices migrated from Zoho. New invoicing should be created in the new Tenant Invoicing module.
           </p>
         </div>
