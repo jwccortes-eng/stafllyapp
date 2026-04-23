@@ -87,7 +87,31 @@ export function useBillableServiceBlocks(filters: {
           body: { company_id: selectedCompanyId, ...input },
         },
       );
-      if (error) throw error;
+      if (error) {
+        // Surface the real edge-function error body (otherwise users only see "non-2xx status code")
+        let detail = error.message ?? "Unknown error";
+        try {
+          const ctx: any = (error as any).context;
+          if (ctx?.body) {
+            const parsed = typeof ctx.body === "string" ? JSON.parse(ctx.body) : ctx.body;
+            if (parsed?.error) detail = parsed.error;
+          } else if ((error as any).response) {
+            const txt = await (error as any).response.text?.();
+            if (txt) {
+              try { detail = JSON.parse(txt).error ?? txt; } catch { detail = txt; }
+            }
+          }
+        } catch { /* keep generic message */ }
+        // Map known cases to friendlier copy
+        if (/tenant_invoicing module not enabled/i.test(detail)) {
+          detail = "El módulo de facturación (tenant_invoicing) no está activo para esta empresa. Actívalo desde Admin → Modules.";
+        } else if (/Admin privileges required/i.test(detail)) {
+          detail = "Necesitas permisos de admin/owner para generar bloques de servicio.";
+        } else if (/Not a member of company/i.test(detail)) {
+          detail = "No perteneces a esta empresa.";
+        }
+        throw new Error(detail);
+      }
       return data as GenerationResult;
     },
     onSuccess: (res) => {
