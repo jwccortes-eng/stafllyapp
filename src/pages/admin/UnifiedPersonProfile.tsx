@@ -163,7 +163,7 @@ export default function UnifiedPersonProfile() {
     let cancelled = false;
     const sb = supabase as any;
     (async () => {
-      const [docsRes, activityRes, shiftsRes, payrollRes] = await Promise.all([
+      const [docsRes, activityRes, shiftsRes, payrollRes, visitsRes] = await Promise.all([
         sb.from("employee_documents").select("review_status").eq("employee_id", id),
         sb
           .from("activity_log")
@@ -184,6 +184,12 @@ export default function UnifiedPersonProfile() {
           .eq("employee_id", id)
           .order("clock_in", { ascending: false })
           .limit(1),
+        sb
+          .from("office_visits")
+          .select("id, visit_type, status, rating, rating_score, checked_in_at, case_code, pending_count, visit_detail")
+          .eq("employee_id", id)
+          .order("checked_in_at", { ascending: false })
+          .limit(8),
       ]);
       if (cancelled) return;
 
