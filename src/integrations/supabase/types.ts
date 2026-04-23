@@ -4130,6 +4130,39 @@ export type Database = {
           },
         ]
       }
+      front_desk_case_sequences: {
+        Row: {
+          company_id: string
+          last_number: number
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          last_number?: number
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          last_number?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "front_desk_case_sequences_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "front_desk_case_sequences_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       front_desk_devices: {
         Row: {
           company_id: string
@@ -7129,8 +7162,12 @@ export type Database = {
       }
       office_visits: {
         Row: {
+          activity_timeline: Json
+          assigned_admin_id: string | null
           attendant_name: string | null
           attended_by: string | null
+          case_code: string | null
+          case_number: number | null
           channel: string
           checked_in_at: string
           checked_out_at: string | null
@@ -7140,15 +7177,27 @@ export type Database = {
           documents_uploaded: number
           duration_seconds: number | null
           employee_id: string
+          escalated_from_admin_id: string | null
+          escalated_to_admin_id: string | null
+          escalation_history: Json
+          final_resolution:
+            | Database["public"]["Enums"]["front_desk_resolution"]
+            | null
           id: string
+          intake_reason:
+            | Database["public"]["Enums"]["front_desk_intake_reason"]
+            | null
           language: string
           pending_count: number | null
           pending_items: Json | null
+          photo_captured_in_kiosk: boolean
           photo_taken: boolean
+          photo_url_captured: string | null
           rating: Database["public"]["Enums"]["office_visit_rating"] | null
           rating_comment: string | null
           rating_score: number | null
           rating_submitted_at: string | null
+          resolution_note: string | null
           status: Database["public"]["Enums"]["office_visit_status"]
           updated_at: string
           updates_made: Json | null
@@ -7156,8 +7205,12 @@ export type Database = {
           visit_type: Database["public"]["Enums"]["office_visit_type"]
         }
         Insert: {
+          activity_timeline?: Json
+          assigned_admin_id?: string | null
           attendant_name?: string | null
           attended_by?: string | null
+          case_code?: string | null
+          case_number?: number | null
           channel?: string
           checked_in_at?: string
           checked_out_at?: string | null
@@ -7167,15 +7220,27 @@ export type Database = {
           documents_uploaded?: number
           duration_seconds?: number | null
           employee_id: string
+          escalated_from_admin_id?: string | null
+          escalated_to_admin_id?: string | null
+          escalation_history?: Json
+          final_resolution?:
+            | Database["public"]["Enums"]["front_desk_resolution"]
+            | null
           id?: string
+          intake_reason?:
+            | Database["public"]["Enums"]["front_desk_intake_reason"]
+            | null
           language?: string
           pending_count?: number | null
           pending_items?: Json | null
+          photo_captured_in_kiosk?: boolean
           photo_taken?: boolean
+          photo_url_captured?: string | null
           rating?: Database["public"]["Enums"]["office_visit_rating"] | null
           rating_comment?: string | null
           rating_score?: number | null
           rating_submitted_at?: string | null
+          resolution_note?: string | null
           status?: Database["public"]["Enums"]["office_visit_status"]
           updated_at?: string
           updates_made?: Json | null
@@ -7183,8 +7248,12 @@ export type Database = {
           visit_type?: Database["public"]["Enums"]["office_visit_type"]
         }
         Update: {
+          activity_timeline?: Json
+          assigned_admin_id?: string | null
           attendant_name?: string | null
           attended_by?: string | null
+          case_code?: string | null
+          case_number?: number | null
           channel?: string
           checked_in_at?: string
           checked_out_at?: string | null
@@ -7194,15 +7263,27 @@ export type Database = {
           documents_uploaded?: number
           duration_seconds?: number | null
           employee_id?: string
+          escalated_from_admin_id?: string | null
+          escalated_to_admin_id?: string | null
+          escalation_history?: Json
+          final_resolution?:
+            | Database["public"]["Enums"]["front_desk_resolution"]
+            | null
           id?: string
+          intake_reason?:
+            | Database["public"]["Enums"]["front_desk_intake_reason"]
+            | null
           language?: string
           pending_count?: number | null
           pending_items?: Json | null
+          photo_captured_in_kiosk?: boolean
           photo_taken?: boolean
+          photo_url_captured?: string | null
           rating?: Database["public"]["Enums"]["office_visit_rating"] | null
           rating_comment?: string | null
           rating_score?: number | null
           rating_submitted_at?: string | null
+          resolution_note?: string | null
           status?: Database["public"]["Enums"]["office_visit_status"]
           updated_at?: string
           updates_made?: Json | null
@@ -14779,6 +14860,21 @@ export type Database = {
         | "refund"
         | "writeoff"
         | "repayment_outside_payroll"
+      front_desk_intake_reason:
+        | "update_data"
+        | "check_pending"
+        | "payment_issue"
+        | "documents_help"
+        | "portal_help"
+        | "leave_request"
+        | "leave_comment"
+        | "pickup_check"
+        | "other"
+      front_desk_resolution:
+        | "resolved"
+        | "pending_followup"
+        | "escalated"
+        | "cancelled"
       interpreted_payment_type:
         | "hourly"
         | "daily"
@@ -14850,6 +14946,7 @@ export type Database = {
         | "pending_followup"
         | "requires_admin_review"
         | "cancelled"
+        | "escalated"
       office_visit_type:
         | "pickup_check"
         | "update_data"
@@ -15255,6 +15352,23 @@ export const Constants = {
         "writeoff",
         "repayment_outside_payroll",
       ],
+      front_desk_intake_reason: [
+        "update_data",
+        "check_pending",
+        "payment_issue",
+        "documents_help",
+        "portal_help",
+        "leave_request",
+        "leave_comment",
+        "pickup_check",
+        "other",
+      ],
+      front_desk_resolution: [
+        "resolved",
+        "pending_followup",
+        "escalated",
+        "cancelled",
+      ],
       interpreted_payment_type: [
         "hourly",
         "daily",
@@ -15334,6 +15448,7 @@ export const Constants = {
         "pending_followup",
         "requires_admin_review",
         "cancelled",
+        "escalated",
       ],
       office_visit_type: [
         "pickup_check",
