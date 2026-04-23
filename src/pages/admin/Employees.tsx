@@ -1153,8 +1153,16 @@ export default function Employees() {
             </div>
             {/* Actions bar */}
             <div className="flex items-center gap-1.5 mt-3">
+              <Button
+                variant="default"
+                size="sm"
+                className="h-7 text-xs gap-1"
+                onClick={() => { if (viewEmployee) { const id = viewEmployee.id; setViewEmployee(null); navigate(`/app/people/${id}`); } }}
+              >
+                Open full profile →
+              </Button>
               <Button variant={isEditing ? "default" : "outline"} size="sm" className="h-7 text-xs" onClick={() => { if (isEditing) handleSaveFromSheet(); else setIsEditing(true); }} disabled={loading}>
-                 {isEditing ? (loading ? "Saving…" : "✓ Save") : <><Pencil className="h-3 w-3 mr-1" />Edit</>}
+                 {isEditing ? (loading ? "Saving…" : "✓ Save") : <><Pencil className="h-3 w-3 mr-1" />Quick edit</>}
               </Button>
               {isEditing && <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setIsEditing(false)}>Cancel</Button>}
               <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setInviteOpen(true)}><Send className="h-3 w-3 mr-1" />Invite</Button>
