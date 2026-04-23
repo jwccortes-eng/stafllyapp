@@ -120,6 +120,7 @@ const Applications = lazy(() => import("./pages/admin/Applications"));
 const ApplicationSettings = lazy(() => import("./pages/admin/ApplicationSettings"));
 const UpgradeRequests = lazy(() => import("./pages/admin/UpgradeRequests"));
 const InvoicingClients = lazy(() => import("./pages/admin/InvoicingClients"));
+const InvoicingClientsImport = lazy(() => import("./pages/admin/InvoicingClientsImport"));
 const InvoicingServiceBlocks = lazy(() => import("./pages/admin/InvoicingServiceBlocks"));
 const InvoicingInvoices = lazy(() => import("./pages/admin/InvoicingInvoices"));
 const InvoicingInvoiceNew = lazy(() => import("./pages/admin/InvoicingInvoiceNew"));
