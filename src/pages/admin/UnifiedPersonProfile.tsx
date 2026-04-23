@@ -61,6 +61,7 @@ import {
   Activity as ActivityIcon,
   Clock,
   ExternalLink,
+  ContactRound,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -117,6 +118,7 @@ export default function UnifiedPersonProfile() {
     shifts: 0, lateCount: 0, noShowCount: 0,
   });
   const [lastPayrollDate, setLastPayrollDate] = useState<string | null>(null);
+  const [frontDeskVisits, setFrontDeskVisits] = useState<any[]>([]);
 
   const { invitations, refetch: refetchInvitations, logInvitation } = useEmployeeInvitations(selectedCompanyId ?? null);
   const readiness = useEmployeeReadiness(id ?? null);
@@ -161,7 +163,7 @@ export default function UnifiedPersonProfile() {
     let cancelled = false;
     const sb = supabase as any;
     (async () => {
-      const [docsRes, activityRes, shiftsRes, payrollRes] = await Promise.all([
+      const [docsRes, activityRes, shiftsRes, payrollRes, visitsRes] = await Promise.all([
         sb.from("employee_documents").select("review_status").eq("employee_id", id),
         sb
           .from("activity_log")
@@ -182,6 +184,12 @@ export default function UnifiedPersonProfile() {
           .eq("employee_id", id)
           .order("clock_in", { ascending: false })
           .limit(1),
+        sb
+          .from("office_visits")
+          .select("id, visit_type, status, rating, rating_score, checked_in_at, case_code, pending_count, visit_detail")
+          .eq("employee_id", id)
+          .order("checked_in_at", { ascending: false })
+          .limit(8),
       ]);
       if (cancelled) return;
 
@@ -214,6 +222,7 @@ export default function UnifiedPersonProfile() {
 
       const lastPay = (payrollRes.data ?? [])[0] as any;
       setLastPayrollDate(lastPay?.clock_in ?? null);
+      setFrontDeskVisits((visitsRes.data ?? []) as any[]);
     })();
     return () => { cancelled = true; };
   }, [id, employee]);
@@ -335,10 +344,24 @@ export default function UnifiedPersonProfile() {
         hint: recentActivity[0]?.action ?? undefined,
         tone: recentActivity.length > 0 ? "default" : "muted",
       },
+      {
+        key: "front-desk",
+        label: "Front Desk",
+        icon: ContactRound,
+        value: frontDeskVisits.length > 0
+          ? `${frontDeskVisits.length} visit${frontDeskVisits.length === 1 ? "" : "s"}`
+          : "—",
+        hint: frontDeskVisits[0]?.checked_in_at
+          ? `Last ${safeDistance(frontDeskVisits[0].checked_in_at)}`
+          : "No office visits yet",
+        tone: frontDeskVisits.some((v: any) => v.status === "pending_followup")
+          ? "warning"
+          : frontDeskVisits.length > 0 ? "default" : "muted",
+      },
     ];
   }, [
     employee, invitations, portalActive, readiness, docsCount, attendance30d,
-    lastPayrollDate, recentActivity, band,
+    lastPayrollDate, recentActivity, band, frontDeskVisits,
   ]);
 
   // ── Loading / Error states ──────────────────────────────────────────────
@@ -654,6 +677,48 @@ export default function UnifiedPersonProfile() {
                   )}
                   <Badge variant="outline" className="ml-auto text-[9px] capitalize">
                     {s.status ?? "scheduled"}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ─── FRONT DESK HISTORY ─── */}
+      {frontDeskVisits.length > 0 && (
+        <Card className="border-border/50">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground inline-flex items-center gap-1.5">
+                <ContactRound className="h-3.5 w-3.5" /> Front Desk history
+              </div>
+              <Link
+                to="/app/front-desk"
+                className="text-[11px] text-primary hover:underline inline-flex items-center gap-1"
+              >
+                Open Front Desk <ExternalLink className="h-3 w-3" />
+              </Link>
+            </div>
+            <div className="divide-y divide-border/40">
+              {frontDeskVisits.slice(0, 6).map((v: any) => (
+                <div key={v.id} className="flex items-center gap-2 py-2 text-xs">
+                  {v.case_code && (
+                    <Badge variant="outline" className="text-[9px] font-mono">{v.case_code}</Badge>
+                  )}
+                  <span className="text-muted-foreground tabular-nums shrink-0">
+                    {new Date(v.checked_in_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                  </span>
+                  <span className="text-muted-foreground truncate">
+                    {String(v.visit_type ?? "").replace(/_/g, " ")}
+                  </span>
+                  {v.pending_count > 0 && (
+                    <Badge variant="outline" className="text-[9px] border-amber-300 bg-amber-50 text-amber-800">
+                      {v.pending_count} pending
+                    </Badge>
+                  )}
+                  <Badge variant="outline" className="ml-auto text-[9px] capitalize">
+                    {String(v.status ?? "").replace(/_/g, " ")}
                   </Badge>
                 </div>
               ))}

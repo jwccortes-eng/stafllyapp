@@ -10,6 +10,7 @@ import {
   Inbox, Wrench, Lock, Sparkles, ClipboardList, Receipt, Brain,
   Map as MapIcon, ContactRound, Award, GitCompareArrows,
   FileText, Bell, UserPlus, Star, ArrowLeftRight, Globe, ShieldCheck,
+  Monitor, Radio, UserPlus2, Banknote,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
@@ -36,37 +37,47 @@ interface LinkDef {
   roles?: string[];
 }
 
-/* ── Company-scoped links ── */
+/* ── Company-scoped links — organized by OS layers ── */
 const COMPANY_LINKS: LinkDef[] = [
-  // MAIN — core daily operations
-  { to: "/app", icon: LayoutDashboard, label: "Dashboard", module: null, end: true, section: "Main" },
-  { to: "/app/shifts", icon: CalendarDays, label: "Shifts", module: "shifts", section: "Main" },
-  { to: "/app/timeclock", icon: Clock, label: "Time Clock", module: "shifts", section: "Main" },
-  { to: "/app/employees", icon: Users, label: "Workers", module: "employees", section: "Main" },
-  { to: "/app/workforce", icon: ShieldCheck, label: "Workforce", module: "employees", section: "Main", badge: "new" },
-  { to: "/app/clients", icon: Building2, label: "Clients", module: "clients", section: "Main" },
-  { to: "/app/locations", icon: MapPin, label: "Locations", module: "locations", section: "Main" },
-  { to: "/app/quality", icon: Star, label: "Reviews", module: null, section: "Main" },
+  // HOME
+  { to: "/app", icon: LayoutDashboard, label: "Dashboard", module: null, end: true, section: "Home" },
+  { to: "/app/ops-center", icon: Radio, label: "Ops Center", module: null, section: "Home" },
 
-  // PAYROLL — payroll & finance
+  // PEOPLE OS — identity, activation, attention
+  { to: "/app/employees", icon: Users, label: "Workers", module: "employees", section: "People OS" },
+  { to: "/app/applications", icon: UserPlus2, label: "Applications", module: null, section: "People OS" },
+  { to: "/app/invite", icon: UserPlus, label: "Activation", module: null, section: "People OS" },
+  { to: "/app/kiosk", icon: Monitor, label: "Kiosk", module: null, section: "People OS" },
+  { to: "/app/front-desk", icon: ContactRound, label: "Front Desk", module: null, section: "People OS" },
+
+  // OPERATIONS OS — daily execution
+  { to: "/app/shifts", icon: CalendarDays, label: "Shifts", module: "shifts", section: "Operations OS" },
+  { to: "/app/timeclock", icon: Clock, label: "Time Clock", module: "shifts", section: "Operations OS" },
+  { to: "/app/attendance", icon: ShieldCheck, label: "Attendance", module: null, section: "Operations OS" },
+  { to: "/app/live-map", icon: MapIcon, label: "Live Map", module: null, section: "Operations OS" },
+  { to: "/app/locations", icon: MapPin, label: "Locations", module: "locations", section: "Operations OS" },
+  { to: "/app/requests", icon: Inbox, label: "Requests", module: null, section: "Operations OS", badge: "tickets" },
+  { to: "/app/announcements", icon: Megaphone, label: "Announcements", module: "announcements", section: "Operations OS" },
+  { to: "/app/chat", icon: MessageCircle, label: "Chat", module: null, section: "Operations OS" },
+
+  // GROWTH & REVENUE OS — commercial side
+  { to: "/app/clients", icon: Building2, label: "Clients", module: "clients", section: "Growth & Revenue OS" },
+  { to: "/app/invoicing/invoices", icon: FileText, label: "Invoices", module: "tenant_invoicing", section: "Growth & Revenue OS" },
+  { to: "/app/invoicing/service-blocks", icon: ClipboardList, label: "Service Blocks", module: "tenant_invoicing", section: "Growth & Revenue OS" },
+  { to: "/app/invoicing/clients", icon: Receipt, label: "Billing Clients", module: "tenant_invoicing", section: "Growth & Revenue OS" },
+  { to: "/app/quality", icon: Star, label: "Reviews", module: null, section: "Growth & Revenue OS" },
+
+  // PAYROLL
   { to: "/app/periods", icon: CalendarDays, label: "Periods", module: "periods", section: "Payroll" },
-  { to: "/app/compensation-validation", icon: Receipt, label: "Compensation", module: null, section: "Payroll" },
+  { to: "/app/compensation-validation", icon: DollarSign, label: "Compensation", module: null, section: "Payroll" },
   { to: "/app/movements", icon: DollarSign, label: "Adjustments", module: "movements", section: "Payroll" },
+  { to: "/app/advances-loans", icon: Banknote, label: "Advances", module: null, section: "Payroll" },
   { to: "/app/concepts", icon: Tags, label: "Concepts", module: "concepts", section: "Payroll" },
   { to: "/app/payroll-reconciliation", icon: GitCompareArrows, label: "Reconciliation", module: null, section: "Payroll" },
   { to: "/app/summary", icon: FileSpreadsheet, label: "Reports", module: "summary", section: "Payroll" },
 
-  // INVOICING — tenant billing to their own clients
-  { to: "/app/invoicing/invoices", icon: FileText, label: "Invoices", module: "tenant_invoicing", section: "Invoicing", badge: "new" },
-  { to: "/app/invoicing/service-blocks", icon: ClipboardList, label: "Service Blocks", module: "tenant_invoicing", section: "Invoicing" },
-  { to: "/app/invoicing/clients", icon: Receipt, label: "Billing Clients", module: "tenant_invoicing", section: "Invoicing" },
-
-  // MORE — communication, monitoring & config
-  { to: "/app/announcements", icon: Megaphone, label: "Announcements", module: "announcements", section: "More" },
-  { to: "/app/chat", icon: MessageCircle, label: "Chat", module: null, section: "More" },
-  { to: "/app/live-map", icon: MapIcon, label: "Live Map", module: null, section: "More" },
+  // MORE
   { to: "/app/notifications", icon: Bell, label: "Notifications", module: null, section: "More" },
-  { to: "/app/requests", icon: Inbox, label: "Tickets", module: null, section: "More", badge: "tickets" },
   { to: "/app/payroll-settings", icon: Settings2, label: "Settings", module: null, section: "More" },
   { to: "/app/migration", icon: ArrowLeftRight, label: "Migration", module: null, section: "More", roles: ["developer", "owner"] },
 ];
@@ -83,7 +94,7 @@ const GLOBAL_LINKS: LinkDef[] = [
   { to: "/app/system-health", icon: BarChart3, label: "System", module: null, section: "Tools" },
 ];
 
-const COMPANY_SECTION_ORDER = ["Main", "Payroll", "Invoicing", "More"];
+const COMPANY_SECTION_ORDER = ["Home", "People OS", "Operations OS", "Growth & Revenue OS", "Payroll", "More"];
 const GLOBAL_SECTION_ORDER = ["Platform", "Tools"];
 
 export default function AdminSidebar() {

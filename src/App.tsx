@@ -98,11 +98,13 @@ const LiveMap = lazy(() => import("./pages/admin/LiveMap"));
 const Leaderboard = lazy(() => import("./pages/admin/Leaderboard"));
 const WorkerPassport = lazy(() => import("./pages/admin/WorkerPassport"));
 const KioskDevices = lazy(() => import("./pages/admin/KioskDevices"));
+const KioskHub = lazy(() => import("./pages/admin/KioskHub"));
 const Attendance = lazy(() => import("./pages/admin/Attendance"));
 const QualityDashboard = lazy(() => import("./pages/admin/QualityDashboard"));
 const KioskClock = lazy(() => import("./pages/kiosk/KioskClock"));
 const FrontDesk = lazy(() => import("./pages/front-desk/FrontDesk"));
 const FrontDeskReports = lazy(() => import("./pages/admin/FrontDeskReports"));
+const FrontDeskHub = lazy(() => import("./pages/admin/FrontDeskHub"));
 const MigrationCommandCenter = lazy(() => import("./pages/admin/MigrationCommandCenter"));
 const CompanyMigration = lazy(() => import("./pages/admin/CompanyMigration"));
 const ReconciliationReport = lazy(() => import("./pages/admin/ReconciliationReport"));
@@ -292,9 +294,11 @@ function App() {
                 <Route path="staged-reconciliation" element={<CompanyRequiredGuard><StagedReconciliation /></CompanyRequiredGuard>} />
                 <Route path="advances-loans" element={<CompanyRequiredGuard><AdvancesLoans /></CompanyRequiredGuard>} />
                 <Route path="kiosk-devices" element={<CompanyRequiredGuard><KioskDevices /></CompanyRequiredGuard>} />
+                <Route path="kiosk" element={<CompanyRequiredGuard><KioskHub /></CompanyRequiredGuard>} />
                 <Route path="shift-ops" element={<CompanyRequiredGuard><ShiftOperations /></CompanyRequiredGuard>} />
                 <Route path="ops-center" element={<CompanyRequiredGuard><OperationsCommandCenter /></CompanyRequiredGuard>} />
                 <Route path="front-desk-reports" element={<CompanyRequiredGuard><FrontDeskReports /></CompanyRequiredGuard>} />
+                <Route path="front-desk" element={<CompanyRequiredGuard><FrontDeskHub /></CompanyRequiredGuard>} />
                 <Route path="compensation-validation" element={<CompanyRequiredGuard><CompensationValidation /></CompanyRequiredGuard>} />
                 <Route path="payroll-pilot-close" element={<CompanyRequiredGuard><PayrollPilotClose /></CompanyRequiredGuard>} />
                 <Route path="payroll-mappings" element={<CompanyRequiredGuard><PayrollMappings /></CompanyRequiredGuard>} />
