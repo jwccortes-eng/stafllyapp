@@ -298,6 +298,30 @@ export default function UnifiedPersonProfile() {
     }
   };
 
+  // Keyboard shortcuts: Cmd/Ctrl+S to save, Esc to cancel — only while editing.
+  useEffect(() => {
+    if (!isEditing) return;
+    const onKey = (ev: KeyboardEvent) => {
+      const isMac = navigator.platform.toUpperCase().includes("MAC");
+      const meta = isMac ? ev.metaKey : ev.ctrlKey;
+      if (meta && ev.key.toLowerCase() === "s") {
+        ev.preventDefault();
+        handleSave();
+      } else if (ev.key === "Escape") {
+        ev.preventDefault();
+        if (employee) {
+          setForm(Object.fromEntries(
+            Object.entries(employee).map(([k, v]) => [k, v == null ? "" : String(v)])
+          ));
+        }
+        setIsEditing(false);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEditing, employee, form, saving]);
+
   const toggleActive = async () => {
     if (!employee) return;
     const next = !employee.is_active;
@@ -444,6 +468,13 @@ export default function UnifiedPersonProfile() {
         </Button>
         <span className="text-muted-foreground/40">/</span>
         <span className="font-medium text-foreground truncate">{fullName}</span>
+        {isEditing && (
+          <Badge variant="outline" className="ml-2 gap-1.5 border-warning/40 bg-warning/10 text-warning text-[10px]">
+            <Pencil className="h-2.5 w-2.5" />
+            Editing
+            <span className="opacity-60 hidden sm:inline">· ⌘S to save · Esc to cancel</span>
+          </Badge>
+        )}
       </div>
 
       {/* ─── HERO ─── */}
