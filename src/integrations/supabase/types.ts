@@ -3807,6 +3807,7 @@ export type Database = {
           created_from_reconciliation: boolean | null
           date_added: string | null
           date_of_birth: string | null
+          deleted_at: string | null
           direct_manager: string | null
           driver_licence: string | null
           email: string | null
@@ -3870,6 +3871,7 @@ export type Database = {
           created_from_reconciliation?: boolean | null
           date_added?: string | null
           date_of_birth?: string | null
+          deleted_at?: string | null
           direct_manager?: string | null
           driver_licence?: string | null
           email?: string | null
@@ -3933,6 +3935,7 @@ export type Database = {
           created_from_reconciliation?: boolean | null
           date_added?: string | null
           date_of_birth?: string | null
+          deleted_at?: string | null
           direct_manager?: string | null
           driver_licence?: string | null
           email?: string | null
