@@ -484,20 +484,47 @@ Deno.serve(async (req) => {
         });
       }
 
-      const { data: roleData } = await callerClient
+      if (!employee_id) {
+        return new Response(JSON.stringify({ error: "employee_id requerido" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Authorize: global developer/owner/admin OR company-level admin/owner of the target employee's company
+      const { data: roleData } = await adminClient
         .from("user_roles")
         .select("role")
         .eq("user_id", caller.id);
       const callerRoles = (roleData ?? []).map((r: any) => r.role);
-      if (!callerRoles.includes("owner") && !callerRoles.includes("admin")) {
-        return new Response(JSON.stringify({ error: "Solo admins pueden generar PINs" }), {
-          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+      const isGlobalPrivileged =
+        callerRoles.includes("developer") ||
+        callerRoles.includes("owner") ||
+        callerRoles.includes("admin");
+
+      let isCompanyAdmin = false;
+      if (!isGlobalPrivileged) {
+        const { data: targetEmp } = await adminClient
+          .from("employees")
+          .select("company_id")
+          .eq("id", employee_id)
+          .maybeSingle();
+        if (targetEmp?.company_id) {
+          const { data: companyRole } = await adminClient
+            .from("company_users")
+            .select("role")
+            .eq("user_id", caller.id)
+            .eq("company_id", targetEmp.company_id)
+            .maybeSingle();
+          isCompanyAdmin =
+            companyRole?.role === "admin" ||
+            companyRole?.role === "company_owner" ||
+            companyRole?.role === "owner";
+        }
       }
 
-      if (!employee_id) {
-        return new Response(JSON.stringify({ error: "employee_id requerido" }), {
-          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      if (!isGlobalPrivileged && !isCompanyAdmin) {
+        return new Response(JSON.stringify({ error: "Solo admins pueden generar PINs" }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
