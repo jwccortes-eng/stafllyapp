@@ -7,7 +7,16 @@ const corsHeaders = {
 };
 
 interface CheckinPayload {
-  action: "lookup" | "lookup_phone" | "create_visit" | "update_visit" | "submit_rating" | "create_inquiry" | "list_payments";
+  action:
+    | "lookup"
+    | "lookup_phone"
+    | "select_employee"
+    | "update_self"
+    | "create_visit"
+    | "update_visit"
+    | "submit_rating"
+    | "create_inquiry"
+    | "list_payments";
   phone?: string;
   pin?: string;
   category?: string;
@@ -27,6 +36,14 @@ interface CheckinPayload {
   device_id?: string;
   attended_by?: string;
   attendant_name?: string;
+  // Self-update payload
+  updates?: {
+    phone_number?: string;
+    email?: string;
+    address?: string;
+    emergency_contact_name?: string;
+    emergency_contact_phone?: string;
+  };
 }
 
 const RATING_TO_SCORE: Record<string, number> = {
@@ -35,6 +52,18 @@ const RATING_TO_SCORE: Record<string, number> = {
   regular: 2,
   bad: 1,
 };
+
+// Whitelist of fields the employee can edit themselves from the kiosk.
+const SELF_EDITABLE_FIELDS = [
+  "phone_number",
+  "email",
+  "address",
+  "emergency_contact_name",
+  "emergency_contact_phone",
+] as const;
+
+const EMPLOYEE_SELECT =
+  "id, first_name, last_name, phone_number, is_active, user_id, company_id, avatar_url, email, address, employee_role, emergency_contact_name, emergency_contact_phone";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -49,7 +78,7 @@ Deno.serve(async (req) => {
     const body = (await req.json()) as CheckinPayload;
     const { action } = body;
 
-    // ============= LOOKUP BY PHONE ONLY (assistant flow, no PIN) =============
+    // ============= LOOKUP BY PHONE (returns one or many matches) =============
     if (action === "lookup_phone" || action === "lookup") {
       const { phone } = body;
       if (!phone) return jsonResp({ error: "Ingresa tu número de teléfono" }, 400);
@@ -69,38 +98,184 @@ Deno.serve(async (req) => {
         return jsonResp({ error: `Demasiados intentos. Intenta en ${minutesLeft} min.` }, 429);
       }
 
+      // Find ALL active employees for this phone (multi-tenant safe).
+      const { data: employees } = await adminClient
+        .from("employees")
+        .select(EMPLOYEE_SELECT)
+        .eq("phone_number", cleanPhone)
+        .eq("is_active", true);
+
+      if (!employees || employees.length === 0) {
+        await recordFailed(adminClient, cleanPhone);
+        return jsonResp(
+          { error: "No encontramos un perfil con ese número. Pide ayuda al equipo." },
+          404,
+        );
+      }
+
+      await adminClient.from("auth_rate_limits").delete().eq("phone_number", cleanPhone);
+
+      // Enrich with company name for the picker.
+      const companyIds = [...new Set(employees.map((e: any) => e.company_id).filter(Boolean))];
+      const { data: companies } = await adminClient
+        .from("companies")
+        .select("id, name")
+        .in("id", companyIds);
+      const companyMap = new Map((companies ?? []).map((c: any) => [c.id, c.name]));
+      const enriched = employees.map((e: any) => ({
+        ...e,
+        company_name: companyMap.get(e.company_id) ?? null,
+      }));
+
+      // Single match → return employee + summary directly.
+      if (enriched.length === 1) {
+        const summary = await buildEmployeeSummary(adminClient, enriched[0]);
+        return jsonResp({ success: true, employee: enriched[0], summary, matches: enriched });
+      }
+
+      // Multiple matches → frontend shows a profile picker.
+      return jsonResp({ success: true, multiple: true, matches: enriched });
+    }
+
+    // ============= SELECT EMPLOYEE (after picker on multi-match) =============
+    if (action === "select_employee") {
+      const { employee_id } = body;
+      if (!employee_id) return jsonResp({ error: "employee_id requerido" }, 400);
+
       const { data: employee } = await adminClient
         .from("employees")
-        .select(
-          "id, first_name, last_name, phone_number, is_active, user_id, company_id, avatar_url, email, address, employee_role, emergency_contact_name, emergency_contact_phone"
-        )
-        .eq("phone_number", cleanPhone)
+        .select(EMPLOYEE_SELECT)
+        .eq("id", employee_id)
         .maybeSingle();
 
-      if (!employee) {
-        await recordFailed(adminClient, cleanPhone);
-        return jsonResp({ error: "No encontramos un perfil con ese número. Pide ayuda al equipo." }, 404);
-      }
+      if (!employee) return jsonResp({ error: "Empleado no encontrado" }, 404);
       if (!employee.is_active) {
         return jsonResp({ error: "Tu cuenta está inactiva. Contacta al administrador." }, 403);
       }
 
-      await adminClient.from("auth_rate_limits").delete().eq("phone_number", cleanPhone);
-      const summary = await buildEmployeeSummary(adminClient, employee);
-      return jsonResp({ success: true, employee, summary });
+      const { data: company } = await adminClient
+        .from("companies")
+        .select("name")
+        .eq("id", employee.company_id)
+        .maybeSingle();
+
+      const enriched = { ...employee, company_name: company?.name ?? null };
+      const summary = await buildEmployeeSummary(adminClient, enriched);
+      return jsonResp({ success: true, employee: enriched, summary });
+    }
+
+    // ============= UPDATE SELF (employee edits allowed fields directly) =============
+    if (action === "update_self") {
+      const { employee_id, updates, language, device_id } = body;
+      if (!employee_id || !updates) {
+        return jsonResp({ error: "employee_id y updates requeridos" }, 400);
+      }
+
+      // Validate + whitelist fields.
+      const sanitized: Record<string, string | null> = {};
+      const changed: Array<{ field: string; old: string | null; new: string | null }> = [];
+
+      const { data: current } = await adminClient
+        .from("employees")
+        .select(EMPLOYEE_SELECT)
+        .eq("id", employee_id)
+        .maybeSingle();
+      if (!current) return jsonResp({ error: "Empleado no encontrado" }, 404);
+
+      for (const field of SELF_EDITABLE_FIELDS) {
+        if (!(field in updates)) continue;
+        const raw = (updates as any)[field];
+        let value: string | null = raw == null || raw === "" ? null : String(raw).trim();
+
+        // Per-field validation
+        if (value !== null) {
+          if (field === "phone_number") {
+            value = value.replace(/[^\d+]/g, "").slice(0, 20);
+            if (value.length < 7) {
+              return jsonResp({ error: "Teléfono inválido" }, 400);
+            }
+          } else if (field === "email") {
+            value = value.toLowerCase().slice(0, 255);
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+              return jsonResp({ error: "Correo electrónico inválido" }, 400);
+            }
+          } else if (field === "emergency_contact_phone") {
+            value = value.replace(/[^\d+]/g, "").slice(0, 20);
+          } else {
+            value = value.slice(0, 500);
+          }
+        }
+
+        const old = (current as any)[field] ?? null;
+        if ((old ?? null) !== (value ?? null)) {
+          sanitized[field] = value;
+          changed.push({ field, old, new: value });
+        }
+      }
+
+      if (changed.length === 0) {
+        return jsonResp({ success: true, changed: [], employee: current });
+      }
+
+      const { data: updated, error: updErr } = await adminClient
+        .from("employees")
+        .update(sanitized)
+        .eq("id", employee_id)
+        .select(EMPLOYEE_SELECT)
+        .single();
+
+      if (updErr) return jsonResp({ error: updErr.message }, 500);
+
+      // Audit trail: log a closed visit summarising the self-update.
+      await adminClient.from("office_visits").insert({
+        employee_id,
+        company_id: current.company_id,
+        visit_type: "update_data",
+        visit_detail: `Self-update from kiosk: ${changed.map((c) => c.field).join(", ")}`,
+        updates_made: changed,
+        status: "resolved",
+        channel: "front_desk_kiosk",
+        language: language || "es",
+        device_id: device_id || null,
+        checked_out_at: new Date().toISOString(),
+      });
+
+      const { data: company } = await adminClient
+        .from("companies")
+        .select("name")
+        .eq("id", updated.company_id)
+        .maybeSingle();
+
+      const enriched = { ...updated, company_name: company?.name ?? null };
+      const summary = await buildEmployeeSummary(adminClient, enriched);
+      return jsonResp({ success: true, changed, employee: enriched, summary });
     }
 
     // ============= CREATE INQUIRY (request or comment) =============
     if (action === "create_inquiry") {
-      const { phone, category, message, inquiry_kind, language } = body;
-      if (!phone || !message) return jsonResp({ error: "Teléfono y mensaje son requeridos" }, 400);
+      const { phone, category, message, inquiry_kind, language, employee_id } = body;
+      if (!message) return jsonResp({ error: "Mensaje requerido" }, 400);
 
-      const cleanPhone = phone.replace(/[^\d+]/g, "").slice(0, 20);
-      const { data: employee } = await adminClient
-        .from("employees")
-        .select("id, company_id")
-        .eq("phone_number", cleanPhone)
-        .maybeSingle();
+      let employee: any = null;
+
+      // Prefer explicit employee_id (multi-tenant safe), fall back to phone lookup.
+      if (employee_id) {
+        const { data } = await adminClient
+          .from("employees")
+          .select("id, company_id")
+          .eq("id", employee_id)
+          .maybeSingle();
+        employee = data;
+      } else if (phone) {
+        const cleanPhone = phone.replace(/[^\d+]/g, "").slice(0, 20);
+        const { data } = await adminClient
+          .from("employees")
+          .select("id, company_id")
+          .eq("phone_number", cleanPhone)
+          .maybeSingle();
+        employee = data;
+      }
+
       if (!employee) return jsonResp({ error: "Empleado no encontrado" }, 404);
 
       const safeCategory = (category || "other").toString().slice(0, 50);
@@ -129,27 +304,31 @@ Deno.serve(async (req) => {
 
     // ============= LIST PAYMENTS =============
     if (action === "list_payments") {
-      const { phone } = body;
-      if (!phone) return jsonResp({ error: "Teléfono requerido" }, 400);
-      const cleanPhone = phone.replace(/[^\d+]/g, "").slice(0, 20);
-      const { data: employee } = await adminClient
-        .from("employees")
-        .select("id")
-        .eq("phone_number", cleanPhone)
-        .maybeSingle();
-      if (!employee) return jsonResp({ payments: [] });
+      const { phone, employee_id } = body;
+      let empId: string | null = employee_id ?? null;
+
+      if (!empId && phone) {
+        const cleanPhone = phone.replace(/[^\d+]/g, "").slice(0, 20);
+        const { data: emp } = await adminClient
+          .from("employees")
+          .select("id")
+          .eq("phone_number", cleanPhone)
+          .maybeSingle();
+        empId = emp?.id ?? null;
+      }
+      if (!empId) return jsonResp({ payments: [] });
 
       const { data: rows } = await adminClient
         .from("normalized_payroll_rows")
         .select("work_date, total_pay, total_hours, pay_type")
-        .eq("matched_employee_id", employee.id)
+        .eq("matched_employee_id", empId)
         .order("work_date", { ascending: false })
         .limit(10);
 
       return jsonResp({ payments: rows || [] });
     }
 
-    // ============= CREATE VISIT =============
+    // ============= CREATE VISIT (legacy) =============
     if (action === "create_visit") {
       const { employee_id, visit_type, visit_detail, pending_items, language, device_id, attended_by, attendant_name } = body;
       if (!employee_id || !visit_type) {
@@ -186,7 +365,7 @@ Deno.serve(async (req) => {
       return jsonResp({ success: true, visit_id: visit.id });
     }
 
-    // ============= UPDATE VISIT =============
+    // ============= UPDATE VISIT (legacy) =============
     if (action === "update_visit") {
       const { visit_id, status, updates_made, visit_detail } = body;
       if (!visit_id) return jsonResp({ error: "visit_id requerido" }, 400);
@@ -205,7 +384,7 @@ Deno.serve(async (req) => {
       return jsonResp({ success: true });
     }
 
-    // ============= SUBMIT RATING + CHECKOUT =============
+    // ============= SUBMIT RATING + CHECKOUT (legacy) =============
     if (action === "submit_rating") {
       const { visit_id, rating, rating_comment, status } = body;
       if (!visit_id) return jsonResp({ error: "visit_id requerido" }, 400);
@@ -285,24 +464,19 @@ async function recordFailed(adminClient: any, phone: string) {
 async function buildEmployeeSummary(adminClient: any, employee: any) {
   const pending: Array<{ key: string; label: string; severity: "high" | "medium" | "low" }> = [];
 
-  // Photo
   if (!employee.avatar_url) {
     pending.push({ key: "missing_photo", label: "Falta foto de perfil", severity: "medium" });
   }
-  // Email
   if (!employee.email) {
     pending.push({ key: "missing_email", label: "Falta correo electrónico", severity: "medium" });
   }
-  // Address
   if (!employee.address) {
     pending.push({ key: "missing_address", label: "Falta dirección", severity: "low" });
   }
-  // Emergency contact
   if (!employee.emergency_contact_name || !employee.emergency_contact_phone) {
     pending.push({ key: "missing_emergency", label: "Falta contacto de emergencia", severity: "high" });
   }
 
-  // Portal status
   let portalStatus: "active" | "pending" | "none" = "none";
   if (employee.user_id) {
     portalStatus = "active";
@@ -324,7 +498,6 @@ async function buildEmployeeSummary(adminClient: any, employee: any) {
     }
   }
 
-  // Documents (employee_documents)
   let docsStatus: "complete" | "incomplete" | "rejected" | "pending_review" = "complete";
   let docsCount = { approved: 0, pending: 0, rejected: 0, missing: 0 };
   try {
@@ -352,10 +525,9 @@ async function buildEmployeeSummary(adminClient: any, employee: any) {
       pending.push({ key: "pending_docs", label: `${docsCount.pending} documento(s) en revisión`, severity: "low" });
     }
   } catch {
-    // Table may not exist for older companies
+    // Optional table
   }
 
-  // Last office visit
   const { data: lastVisit } = await adminClient
     .from("office_visits")
     .select("checked_in_at, visit_type")
@@ -364,7 +536,6 @@ async function buildEmployeeSummary(adminClient: any, employee: any) {
     .limit(1)
     .maybeSingle();
 
-  // Profile completeness score
   const profileFields = [
     employee.first_name,
     employee.last_name,

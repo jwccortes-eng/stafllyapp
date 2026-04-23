@@ -1,22 +1,25 @@
 /**
- * Stafly Front Desk — Employee Help Assistant for tablet/office.
+ * Stafly Front Desk — Premium Help Assistant Kiosk for employees.
  *
- * Phone-only access. After identification, employees access a hub with
- * 6 self-service options: update data, pending items, request, comment,
- * payments, profile.
+ * Phone-only access (no PIN). Supports multi-tenant phone matches via a
+ * profile picker. After identification, employees access a 6-card hub:
+ * direct self-service edit, pending items, request, comment, payments,
+ * profile.
  */
 import { useState, useEffect, useRef, useCallback } from "react";
 import {
   Loader2, ArrowLeft, ArrowRight, X, Phone, Sparkles,
   UserCog, AlertCircle, Send, MessageSquare, Wallet, IdCard,
-  CheckCircle2, Mail, MapPin, ShieldAlert, Camera, FileText,
-  Building2, Clock,
+  CheckCircle2, Mail, MapPin, ShieldAlert, Building2,
+  Users, RefreshCw, Lock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { FormField } from "@/components/ui/form-field";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { StaflyLogo } from "@/components/brand/StaflyBrand";
@@ -26,12 +29,15 @@ import {
   type FrontDeskSummary,
   type InquiryCategory,
   type PaymentRow,
+  type SelfUpdatePayload,
 } from "@/hooks/useFrontDesk";
 import { NumericKeypad } from "@/components/front-desk/NumericKeypad";
 
 type Step =
   | "welcome"
   | "phone"
+  | "select_profile"
+  | "not_found"
   | "hub"
   | "update_data"
   | "pending"
@@ -42,6 +48,7 @@ type Step =
   | "complete";
 
 type Lang = "es" | "en";
+type CompleteKind = "request" | "comment" | "update";
 
 const INACTIVITY_MS = 120_000;
 
@@ -57,11 +64,20 @@ const T = {
     back: "Atrás",
     cancel: "Cancelar",
     finish: "Finalizar",
+    save: "Guardar cambios",
+    saving: "Guardando…",
     hello: "Hola",
     helloSub: "¿En qué te ayudamos hoy?",
     notYou: "No soy yo",
     pendingBadge: "pendiente",
     pendingBadgePlural: "pendientes",
+    selectProfileTitle: "Encontramos varios perfiles",
+    selectProfileSub: "Selecciona el perfil al que deseas ingresar",
+    notFoundTitle: "No encontramos tu perfil",
+    notFoundSub: "Verifica el número o pide ayuda al equipo",
+    tryAgain: "Intentar de nuevo",
+    leaveRequest: "Dejar una solicitud",
+    leaveComment: "Dejar un comentario",
     actions: {
       update_data: { title: "Actualizar mis datos", desc: "Teléfono, dirección, contacto de emergencia" },
       pending: { title: "Consultar pendientes", desc: "Documentos o información por completar" },
@@ -71,7 +87,22 @@ const T = {
       profile: { title: "Ver mi perfil", desc: "Datos completos de tu cuenta" },
     },
     updateDataTitle: "Actualizar mis datos",
-    updateDataSub: "Para actualizar tu información, envíanos una solicitud y te contactamos.",
+    updateDataSub: "Edita directamente la información permitida. Los cambios se guardan al instante.",
+    fields: {
+      phone_number: "Teléfono",
+      email: "Correo electrónico",
+      address: "Dirección",
+      emergency_contact_name: "Contacto de emergencia",
+      emergency_contact_phone: "Teléfono del contacto",
+    },
+    lockedTitle: "Datos protegidos",
+    lockedSub: "Estos campos requieren ayuda del equipo administrativo",
+    lockedFields: {
+      company: "Empresa",
+      role: "Rol interno",
+      payroll: "Datos de nómina",
+    },
+    requestChange: "Solicitar cambio",
     pendingTitle: "Tus pendientes",
     noPending: "Todo en orden — no tienes pendientes",
     paymentsTitle: "Mis pagos recientes",
@@ -88,18 +119,21 @@ const T = {
     sending: "Enviando…",
     sentTitle: "¡Mensaje enviado!",
     sentSub: "Nuestro equipo lo revisará pronto",
+    updatedTitle: "¡Datos actualizados!",
+    updatedSub: "Tu información se guardó correctamente",
     completeTitle: "¡Gracias por tu visita!",
     completeSub: "Hasta pronto",
     newSession: "Nueva sesión",
+    backHome: "Volver al inicio",
     actNow: "Resolver",
     helpRequest: "Pedir ayuda",
-    notFoundCta: "Dejar una solicitud sin perfil",
     profile: {
       name: "Nombre",
       phone: "Teléfono",
       email: "Correo",
       address: "Dirección",
       role: "Rol",
+      company: "Empresa",
       emergency: "Contacto emergencia",
       portal: "Portal",
       portal_active: "Activo",
@@ -115,6 +149,9 @@ const T = {
       schedule: "Horarios o turnos",
       other: "Otro",
     } as Record<InquiryCategory, string>,
+    invalidEmail: "Correo electrónico inválido",
+    invalidPhone: "Teléfono inválido",
+    noChanges: "No hay cambios para guardar",
   },
   en: {
     appName: "Front Desk",
@@ -127,11 +164,20 @@ const T = {
     back: "Back",
     cancel: "Cancel",
     finish: "Finish",
+    save: "Save changes",
+    saving: "Saving…",
     hello: "Hi",
     helloSub: "How can we help today?",
     notYou: "Not me",
     pendingBadge: "pending",
     pendingBadgePlural: "pending",
+    selectProfileTitle: "We found multiple profiles",
+    selectProfileSub: "Select the profile you want to access",
+    notFoundTitle: "We couldn't find your profile",
+    notFoundSub: "Check the number or ask the team for help",
+    tryAgain: "Try again",
+    leaveRequest: "Leave a request",
+    leaveComment: "Leave a comment",
     actions: {
       update_data: { title: "Update my info", desc: "Phone, address, emergency contact" },
       pending: { title: "Check pending items", desc: "Missing documents or info" },
@@ -141,7 +187,22 @@ const T = {
       profile: { title: "View my profile", desc: "Your full account info" },
     },
     updateDataTitle: "Update my info",
-    updateDataSub: "To update your data, send us a request and we'll get in touch.",
+    updateDataSub: "Edit your allowed information directly. Changes are saved instantly.",
+    fields: {
+      phone_number: "Phone",
+      email: "Email",
+      address: "Address",
+      emergency_contact_name: "Emergency contact",
+      emergency_contact_phone: "Contact phone",
+    },
+    lockedTitle: "Protected fields",
+    lockedSub: "These fields require help from the admin team",
+    lockedFields: {
+      company: "Company",
+      role: "Internal role",
+      payroll: "Payroll data",
+    },
+    requestChange: "Request change",
     pendingTitle: "Your pending items",
     noPending: "All set — no pending items",
     paymentsTitle: "My recent payments",
@@ -158,18 +219,21 @@ const T = {
     sending: "Sending…",
     sentTitle: "Message sent!",
     sentSub: "Our team will review it soon",
+    updatedTitle: "Info updated!",
+    updatedSub: "Your information was saved successfully",
     completeTitle: "Thanks for your visit!",
     completeSub: "See you soon",
     newSession: "New session",
+    backHome: "Back to home",
     actNow: "Resolve",
     helpRequest: "Get help",
-    notFoundCta: "Send a request without profile",
     profile: {
       name: "Name",
       phone: "Phone",
       email: "Email",
       address: "Address",
       role: "Role",
+      company: "Company",
       emergency: "Emergency contact",
       portal: "Portal",
       portal_active: "Active",
@@ -185,6 +249,9 @@ const T = {
       schedule: "Schedule or shifts",
       other: "Other",
     } as Record<InquiryCategory, string>,
+    invalidEmail: "Invalid email address",
+    invalidPhone: "Invalid phone number",
+    noChanges: "No changes to save",
   },
 };
 
@@ -210,19 +277,25 @@ function initials(e: FrontDeskEmployee | null): string {
 }
 
 export default function FrontDesk() {
-  const { lookupByPhone, createInquiry, listPayments, loading } = useFrontDesk();
+  const { lookupByPhone, selectEmployee, updateSelf, createInquiry, listPayments, loading } = useFrontDesk();
 
   const [step, setStep] = useState<Step>("welcome");
   const [lang, setLang] = useState<Lang>("es");
   const [phone, setPhone] = useState("");
   const [employee, setEmployee] = useState<FrontDeskEmployee | null>(null);
   const [summary, setSummary] = useState<FrontDeskSummary | null>(null);
+  const [matches, setMatches] = useState<FrontDeskEmployee[]>([]);
   const [category, setCategory] = useState<InquiryCategory>("support");
   const [message, setMessage] = useState("");
   const [payments, setPayments] = useState<PaymentRow[]>([]);
   const [paymentsLoaded, setPaymentsLoaded] = useState(false);
+  const [completeKind, setCompleteKind] = useState<CompleteKind>("request");
   const [currentTime, setCurrentTime] = useState(new Date());
   const inactivityRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Form state for direct self-update
+  const [formValues, setFormValues] = useState<SelfUpdatePayload>({});
+  const [formErrors, setFormErrors] = useState<Partial<Record<keyof SelfUpdatePayload, string>>>({});
 
   const t = T[lang];
 
@@ -236,10 +309,13 @@ export default function FrontDesk() {
     setPhone("");
     setEmployee(null);
     setSummary(null);
+    setMatches([]);
     setCategory("support");
     setMessage("");
     setPayments([]);
     setPaymentsLoaded(false);
+    setFormValues({});
+    setFormErrors({});
   }, []);
 
   // Inactivity reset
@@ -253,13 +329,45 @@ export default function FrontDesk() {
     return () => {
       if (inactivityRef.current) clearTimeout(inactivityRef.current);
     };
-  }, [step, phone, message, resetAll, lang]);
+  }, [step, phone, message, formValues, resetAll, lang]);
+
+  const seedFormFromEmployee = useCallback((emp: FrontDeskEmployee) => {
+    setFormValues({
+      phone_number: emp.phone_number ?? "",
+      email: emp.email ?? "",
+      address: emp.address ?? "",
+      emergency_contact_name: emp.emergency_contact_name ?? "",
+      emergency_contact_phone: emp.emergency_contact_phone ?? "",
+    });
+    setFormErrors({});
+  }, []);
 
   const handleLookup = async () => {
     try {
       const res = await lookupByPhone(phone);
+      if (res.multiple) {
+        setMatches(res.matches);
+        setStep("select_profile");
+        return;
+      }
+      if (res.employee && res.summary) {
+        setEmployee(res.employee);
+        setSummary(res.summary);
+        setStep("hub");
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Error";
+      toast.error(msg);
+      setStep("not_found");
+    }
+  };
+
+  const handlePickProfile = async (id: string) => {
+    try {
+      const res = await selectEmployee(id);
       setEmployee(res.employee);
       setSummary(res.summary);
+      setMatches([]);
       setStep("hub");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Error");
@@ -268,13 +376,57 @@ export default function FrontDesk() {
 
   const handleOpenPayments = async () => {
     setStep("payments");
-    if (paymentsLoaded) return;
+    if (paymentsLoaded || !employee) return;
     try {
-      const rows = await listPayments(phone);
+      const rows = await listPayments({ employee_id: employee.id });
       setPayments(rows);
       setPaymentsLoaded(true);
     } catch {
       setPaymentsLoaded(true);
+    }
+  };
+
+  const handleOpenUpdate = () => {
+    if (employee) seedFormFromEmployee(employee);
+    setStep("update_data");
+  };
+
+  const handleSaveSelf = async () => {
+    if (!employee) return;
+    // Validate
+    const errs: Partial<Record<keyof SelfUpdatePayload, string>> = {};
+    if (formValues.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formValues.email.trim())) {
+      errs.email = t.invalidEmail;
+    }
+    if (formValues.phone_number && formValues.phone_number.replace(/\D/g, "").length < 7) {
+      errs.phone_number = t.invalidPhone;
+    }
+    if (Object.keys(errs).length > 0) {
+      setFormErrors(errs);
+      return;
+    }
+
+    // Compute changed fields only
+    const updates: SelfUpdatePayload = {};
+    (Object.keys(formValues) as Array<keyof SelfUpdatePayload>).forEach((k) => {
+      const next = (formValues[k] ?? "").toString().trim();
+      const prev = ((employee as any)[k] ?? "").toString().trim();
+      if (next !== prev) (updates as any)[k] = next;
+    });
+
+    if (Object.keys(updates).length === 0) {
+      toast.info(t.noChanges);
+      return;
+    }
+
+    try {
+      const res = await updateSelf({ employee_id: employee.id, updates, language: lang });
+      setEmployee(res.employee);
+      setSummary(res.summary);
+      setCompleteKind("update");
+      setStep("complete");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Error");
     }
   };
 
@@ -285,15 +437,16 @@ export default function FrontDesk() {
     }
     try {
       await createInquiry({
-        phone,
+        employee_id: employee?.id,
+        phone: employee ? undefined : phone,
         category,
         message: message.trim(),
         inquiry_kind: kind,
         language: lang,
       });
       setMessage("");
+      setCompleteKind(kind);
       setStep("complete");
-      setTimeout(resetAll, 5000);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Error");
     }
@@ -399,6 +552,73 @@ export default function FrontDesk() {
             </Card>
           )}
 
+          {/* ============ SELECT PROFILE (multi-tenant) ============ */}
+          {step === "select_profile" && (
+            <Card className="p-6 sm:p-8 rounded-3xl border-2 shadow-xl">
+              <div className="text-center mb-6">
+                <div className="mx-auto mb-4 h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center">
+                  <Users className="h-7 w-7 text-primary" />
+                </div>
+                <h2 className="text-2xl font-bold mb-1">{t.selectProfileTitle}</h2>
+                <p className="text-sm text-muted-foreground">{t.selectProfileSub}</p>
+              </div>
+              <div className="space-y-3">
+                {matches.map((m) => (
+                  <button
+                    key={m.id}
+                    onClick={() => handlePickProfile(m.id)}
+                    disabled={loading}
+                    className="w-full flex items-center gap-4 p-4 rounded-2xl border-2 border-border bg-card hover:border-primary/60 hover:shadow-md active:scale-[0.99] transition-all text-left disabled:opacity-50"
+                  >
+                    <Avatar className="h-14 w-14 ring-2 ring-primary/20">
+                      <AvatarImage src={m.avatar_url ?? undefined} />
+                      <AvatarFallback className="font-semibold bg-primary/10 text-primary">
+                        {initials(m)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-base truncate">{fullName(m)}</p>
+                      <p className="text-xs text-muted-foreground truncate flex items-center gap-1.5 mt-0.5">
+                        <Building2 className="h-3 w-3" /> {m.company_name ?? "—"}
+                      </p>
+                      {m.employee_role && (
+                        <p className="text-xs text-muted-foreground truncate mt-0.5">{m.employee_role}</p>
+                      )}
+                    </div>
+                    <ArrowRight className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                  </button>
+                ))}
+              </div>
+              <div className="mt-6 text-center">
+                <Button variant="ghost" onClick={resetAll} className="h-10">
+                  <ArrowLeft className="h-4 w-4 mr-1" /> {t.cancel}
+                </Button>
+              </div>
+            </Card>
+          )}
+
+          {/* ============ NOT FOUND ============ */}
+          {step === "not_found" && (
+            <Card className="p-8 sm:p-12 text-center shadow-xl rounded-3xl border-2">
+              <div className="mx-auto mb-5 h-16 w-16 rounded-2xl bg-amber-500/10 flex items-center justify-center">
+                <AlertCircle className="h-8 w-8 text-amber-600" />
+              </div>
+              <h2 className="text-2xl font-bold mb-2">{t.notFoundTitle}</h2>
+              <p className="text-muted-foreground mb-8 max-w-md mx-auto">{t.notFoundSub}</p>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <Button variant="outline" onClick={() => { setPhone(""); setStep("phone"); }} className="h-12 px-6 rounded-xl">
+                  <RefreshCw className="h-4 w-4 mr-2" /> {t.tryAgain}
+                </Button>
+                <Button
+                  onClick={() => { setCategory("support"); setMessage(""); setStep("request"); }}
+                  className="h-12 px-6 rounded-xl"
+                >
+                  <Send className="h-4 w-4 mr-2" /> {t.leaveRequest}
+                </Button>
+              </div>
+            </Card>
+          )}
+
           {/* ============ HUB ============ */}
           {step === "hub" && employee && summary && (
             <div className="space-y-6">
@@ -413,7 +633,14 @@ export default function FrontDesk() {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-muted-foreground">{t.hello},</p>
                     <h2 className="text-2xl font-bold truncate">{fullName(employee)}</h2>
-                    <p className="text-sm text-muted-foreground mt-0.5">{t.helloSub}</p>
+                    <p className="text-sm text-muted-foreground mt-0.5 flex items-center gap-1.5">
+                      {employee.company_name && (
+                        <>
+                          <Building2 className="h-3.5 w-3.5" />
+                          <span className="truncate">{employee.company_name}</span>
+                        </>
+                      )}
+                    </p>
                   </div>
                   {summary.pending_total > 0 && (
                     <Badge className="bg-amber-500/15 text-amber-700 hover:bg-amber-500/20 border-amber-500/30 dark:text-amber-300 px-3 py-1.5 rounded-full">
@@ -432,6 +659,7 @@ export default function FrontDesk() {
                       key={key}
                       onClick={() => {
                         if (key === "payments") return handleOpenPayments();
+                        if (key === "update_data") return handleOpenUpdate();
                         setStep(key);
                       }}
                       className="group text-left p-6 rounded-3xl border-2 border-border bg-card hover:border-primary/60 hover:shadow-lg active:scale-[0.98] transition-all"
@@ -460,17 +688,112 @@ export default function FrontDesk() {
             </div>
           )}
 
-          {/* ============ UPDATE DATA ============ */}
-          {step === "update_data" && (
-            <SectionCard title={t.updateDataTitle} onBack={goHub} t={t}>
-              <p className="text-muted-foreground mb-6">{t.updateDataSub}</p>
-              <Button
-                size="lg"
-                className="w-full h-12 rounded-xl"
-                onClick={() => { setCategory("profile"); setStep("request"); }}
-              >
-                <Send className="h-4 w-4 mr-2" /> {t.actions.request.title}
-              </Button>
+          {/* ============ UPDATE DATA (direct edit) ============ */}
+          {step === "update_data" && employee && (
+            <SectionCard title={t.updateDataTitle} subtitle={t.updateDataSub} onBack={goHub} t={t}>
+              <div className="space-y-5">
+                <FormField
+                  label={t.fields.phone_number}
+                  htmlFor="phone_number"
+                  error={formErrors.phone_number}
+                >
+                  <Input
+                    id="phone_number"
+                    inputMode="tel"
+                    value={formValues.phone_number ?? ""}
+                    onChange={(e) => setFormValues((v) => ({ ...v, phone_number: e.target.value }))}
+                    className="h-12 text-base"
+                    placeholder="—"
+                  />
+                </FormField>
+
+                <FormField
+                  label={t.fields.email}
+                  htmlFor="email"
+                  error={formErrors.email}
+                >
+                  <Input
+                    id="email"
+                    type="email"
+                    inputMode="email"
+                    value={formValues.email ?? ""}
+                    onChange={(e) => setFormValues((v) => ({ ...v, email: e.target.value }))}
+                    className="h-12 text-base"
+                    placeholder="—"
+                  />
+                </FormField>
+
+                <FormField label={t.fields.address} htmlFor="address">
+                  <Input
+                    id="address"
+                    value={formValues.address ?? ""}
+                    onChange={(e) => setFormValues((v) => ({ ...v, address: e.target.value }))}
+                    className="h-12 text-base"
+                    placeholder="—"
+                  />
+                </FormField>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <FormField label={t.fields.emergency_contact_name} htmlFor="ec_name">
+                    <Input
+                      id="ec_name"
+                      value={formValues.emergency_contact_name ?? ""}
+                      onChange={(e) => setFormValues((v) => ({ ...v, emergency_contact_name: e.target.value }))}
+                      className="h-12 text-base"
+                      placeholder="—"
+                    />
+                  </FormField>
+                  <FormField label={t.fields.emergency_contact_phone} htmlFor="ec_phone">
+                    <Input
+                      id="ec_phone"
+                      inputMode="tel"
+                      value={formValues.emergency_contact_phone ?? ""}
+                      onChange={(e) => setFormValues((v) => ({ ...v, emergency_contact_phone: e.target.value }))}
+                      className="h-12 text-base"
+                      placeholder="—"
+                    />
+                  </FormField>
+                </div>
+
+                {/* Locked fields explanation */}
+                <div className="mt-2 p-4 rounded-2xl border-2 border-dashed border-border bg-muted/30">
+                  <div className="flex items-start gap-3 mb-3">
+                    <Lock className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-semibold text-sm">{t.lockedTitle}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{t.lockedSub}</p>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {Object.values(t.lockedFields).map((label) => (
+                      <span key={label} className="text-xs px-2.5 py-1 rounded-full bg-muted border border-border text-muted-foreground">
+                        {label}
+                      </span>
+                    ))}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="rounded-xl"
+                    onClick={() => { setCategory("profile"); setMessage(""); setStep("request"); }}
+                  >
+                    <Send className="h-3.5 w-3.5 mr-2" /> {t.requestChange}
+                  </Button>
+                </div>
+
+                <Button
+                  size="lg"
+                  className="w-full h-13 rounded-xl mt-2"
+                  onClick={handleSaveSelf}
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> {t.saving}</>
+                  ) : (
+                    <><CheckCircle2 className="h-4 w-4 mr-2" /> {t.save}</>
+                  )}
+                </Button>
+              </div>
             </SectionCard>
           )}
 
@@ -481,34 +804,43 @@ export default function FrontDesk() {
                 <EmptyState icon={CheckCircle2} title={t.noPending} accent="success" />
               ) : (
                 <ul className="space-y-3">
-                  {summary.pending_items.map((item) => (
-                    <li
-                      key={item.key}
-                      className={cn(
-                        "flex items-start justify-between gap-3 p-4 rounded-2xl border-2",
-                        item.severity === "high" ? "bg-rose-500/5 border-rose-500/30" :
-                        item.severity === "medium" ? "bg-amber-500/5 border-amber-500/30" :
-                        "bg-muted/40 border-border"
-                      )}
-                    >
-                      <div className="flex items-start gap-3">
-                        <ShieldAlert className={cn(
-                          "h-5 w-5 mt-0.5 flex-shrink-0",
-                          item.severity === "high" ? "text-rose-600" :
-                          item.severity === "medium" ? "text-amber-600" : "text-muted-foreground"
-                        )} />
-                        <span className="text-sm font-medium">{item.label}</span>
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="rounded-xl flex-shrink-0"
-                        onClick={() => { setCategory("support"); setMessage(item.label); setStep("request"); }}
+                  {summary.pending_items.map((item) => {
+                    // Items the user can fix directly via update_data form
+                    const directlyFixable = ["missing_email", "missing_address", "missing_emergency"].includes(item.key);
+                    return (
+                      <li
+                        key={item.key}
+                        className={cn(
+                          "flex items-start justify-between gap-3 p-4 rounded-2xl border-2",
+                          item.severity === "high" ? "bg-rose-500/5 border-rose-500/30" :
+                          item.severity === "medium" ? "bg-amber-500/5 border-amber-500/30" :
+                          "bg-muted/40 border-border"
+                        )}
                       >
-                        {t.actNow}
-                      </Button>
-                    </li>
-                  ))}
+                        <div className="flex items-start gap-3">
+                          <ShieldAlert className={cn(
+                            "h-5 w-5 mt-0.5 flex-shrink-0",
+                            item.severity === "high" ? "text-rose-600" :
+                            item.severity === "medium" ? "text-amber-600" : "text-muted-foreground"
+                          )} />
+                          <span className="text-sm font-medium">{item.label}</span>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="rounded-xl flex-shrink-0"
+                          onClick={() => {
+                            if (directlyFixable) return handleOpenUpdate();
+                            setCategory("support");
+                            setMessage(item.label);
+                            setStep("request");
+                          }}
+                        >
+                          {directlyFixable ? t.actNow : t.helpRequest}
+                        </Button>
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </SectionCard>
@@ -519,7 +851,7 @@ export default function FrontDesk() {
             <SectionCard
               title={step === "request" ? t.requestTitle : t.commentTitle}
               subtitle={step === "request" ? t.requestSub : t.commentSub}
-              onBack={goHub}
+              onBack={employee ? goHub : resetAll}
               t={t}
             >
               <div className="space-y-5">
@@ -558,7 +890,7 @@ export default function FrontDesk() {
                   size="lg"
                   className="w-full h-13 rounded-xl"
                   onClick={() => handleSend(step === "request" ? "request" : "comment")}
-                  disabled={loading || !message.trim()}
+                  disabled={loading || !message.trim() || !employee}
                 >
                   {loading ? (
                     <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> {t.sending}</>
@@ -566,6 +898,11 @@ export default function FrontDesk() {
                     <><Send className="h-4 w-4 mr-2" /> {t.send}</>
                   )}
                 </Button>
+                {!employee && (
+                  <p className="text-xs text-muted-foreground text-center">
+                    {lang === "es" ? "Identifícate primero para enviar." : "Identify yourself first to send."}
+                  </p>
+                )}
               </div>
             </SectionCard>
           )}
@@ -636,8 +973,11 @@ export default function FrontDesk() {
                   value={employee.emergency_contact_name ? `${employee.emergency_contact_name} · ${employee.emergency_contact_phone ?? ""}` : null}
                   missingText={t.profile.missing}
                 />
+                {employee.company_name && (
+                  <ProfileRow icon={Building2} label={t.profile.company} value={employee.company_name} />
+                )}
                 <ProfileRow
-                  icon={Building2}
+                  icon={IdCard}
                   label={t.profile.portal}
                   value={
                     summary.portal_status === "active" ? t.profile.portal_active :
@@ -646,6 +986,14 @@ export default function FrontDesk() {
                   }
                 />
               </dl>
+
+              <Button
+                variant="outline"
+                className="w-full mt-6 h-12 rounded-xl"
+                onClick={handleOpenUpdate}
+              >
+                <UserCog className="h-4 w-4 mr-2" /> {t.actions.update_data.title}
+              </Button>
             </SectionCard>
           )}
 
@@ -655,11 +1003,27 @@ export default function FrontDesk() {
               <div className="mx-auto mb-6 h-20 w-20 rounded-3xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/30">
                 <CheckCircle2 className="h-10 w-10 text-white" />
               </div>
-              <h2 className="text-3xl font-bold mb-2">{t.sentTitle}</h2>
-              <p className="text-lg text-muted-foreground mb-8">{t.sentSub}</p>
-              <Button size="lg" onClick={resetAll} className="h-12 px-8 rounded-xl">
-                {t.newSession}
-              </Button>
+              <h2 className="text-3xl font-bold mb-2">
+                {completeKind === "update" ? t.updatedTitle : t.sentTitle}
+              </h2>
+              <p className="text-lg text-muted-foreground mb-8">
+                {completeKind === "update" ? t.updatedSub : t.sentSub}
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                {employee && (
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    onClick={goHub}
+                    className="h-12 px-6 rounded-xl"
+                  >
+                    <ArrowLeft className="h-4 w-4 mr-2" /> {t.backHome}
+                  </Button>
+                )}
+                <Button size="lg" onClick={resetAll} className="h-12 px-8 rounded-xl">
+                  {t.newSession}
+                </Button>
+              </div>
             </Card>
           )}
         </div>
