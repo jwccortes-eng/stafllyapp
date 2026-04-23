@@ -1179,7 +1179,7 @@ export default function Employees() {
 
       {/* Edit Dialog */}
       <Dialog open={editOpen} onOpenChange={(v) => { setEditOpen(v); if (!v) setEditingEmployee(null); }}>
-        <DialogContent className="max-w-md"><DialogHeader><DialogTitle>Edit employee</DialogTitle><DialogDescription>Update employee information</DialogDescription></DialogHeader><EmployeeForm fields={visibleFields} form={form} setForm={setForm} loading={loading} onSubmit={handleUpdate} submitLabel="Save changes" /></DialogContent>
+        <DialogContent className="max-w-md"><DialogHeader><DialogTitle>Edit employee</DialogTitle><DialogDescription>Update employee information</DialogDescription></DialogHeader><EmployeeForm fields={CONNECTEAM_FIELDS} form={form} setForm={setForm} loading={loading} onSubmit={handleUpdate} submitLabel="Save changes" /></DialogContent>
       </Dialog>
 
       {/* Delete Confirmation */}
