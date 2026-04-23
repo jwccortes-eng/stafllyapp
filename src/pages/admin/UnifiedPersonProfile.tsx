@@ -1,13 +1,13 @@
 /**
- * UnifiedPersonProfile (/app/people/:id and alias /app/employees/:id)
+ * UnifiedPersonProfile (`/app/people/:id` and alias `/app/employees/:id`)
  *
  * Master page for a single person in the People OS layer.
  *
  * Architecture decision (Sub-entrega 2):
- *   - This page is the canonical place to view a person's full operational identity.
- *   - It REUSES the existing EmployeeProfileTabs (583 LoC of pay/compensation/
+ *   - Canonical place to view a person's full operational identity.
+ *   - REUSES the existing `EmployeeProfileTabs` (583 LoC of pay/compensation/
  *     advances/reviews/access logic) — no rewrite, no risk to business logic.
- *   - It WRAPS that with: a premium Hero, a Snapshot strip (portal/docs/readiness/
+ *   - WRAPS that with: a premium Hero, a Snapshot strip (portal/docs/readiness/
  *     attendance/payroll/last activity), and an Actions bar.
  *   - Worker Hub Sheet still works for quick edits, but row clicks now route here.
  *
@@ -51,17 +51,16 @@ import {
   Pencil,
   Archive,
   UserCheck,
-  Briefcase,
   Cake,
+  Briefcase,
+  CalendarDays,
   Wallet,
   ShieldCheck,
   ShieldOff,
   FileText,
   Activity as ActivityIcon,
   Clock,
-  Loader2,
   ExternalLink,
-  CalendarDays,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -153,41 +152,42 @@ export default function UnifiedPersonProfile() {
   }, [id]);
 
   // ── Snapshot data fetch (parallel, low-cost) ────────────────────────────
+  // Column names match the live schema:
+  //   scheduled_shifts.date, time_entries.clock_in
+  // We cast supabase to `any` for the parallel fetch to dodge TS deep-instantiation
+  // on the very large generated types.
   useEffect(() => {
     if (!id || !employee) return;
     let cancelled = false;
+    const sb = supabase as any;
     (async () => {
       const [docsRes, activityRes, shiftsRes, payrollRes] = await Promise.all([
-        supabase
-          .from("employee_documents" as any)
-          .select("review_status")
-          .eq("employee_id", id),
-        supabase
+        sb.from("employee_documents").select("review_status").eq("employee_id", id),
+        sb
           .from("activity_log")
           .select("id, action, entity_type, created_at, details")
           .eq("entity_id", id)
           .eq("entity_type", "employee")
           .order("created_at", { ascending: false })
           .limit(8),
-        supabase
+        sb
           .from("scheduled_shifts")
-          .select("id, scheduled_date, start_time, end_time, status, location_label")
+          .select("id, date, start_time, end_time, status, title")
           .eq("employee_id", id)
-          .order("scheduled_date", { ascending: false })
+          .order("date", { ascending: false })
           .limit(6),
-        supabase
+        sb
           .from("time_entries")
-          .select("worked_date")
+          .select("clock_in")
           .eq("employee_id", id)
-          .order("worked_date", { ascending: false })
+          .order("clock_in", { ascending: false })
           .limit(1),
       ]);
       if (cancelled) return;
 
-      // Docs aggregation
       const docs = (docsRes.data ?? []) as any[];
       const docAgg = docs.reduce(
-        (acc, d) => {
+        (acc: { approved: number; pending: number; rejected: number }, d: any) => {
           if (d.review_status === "approved") acc.approved++;
           else if (d.review_status === "pending") acc.pending++;
           else if (d.review_status === "rejected") acc.rejected++;
@@ -197,24 +197,23 @@ export default function UnifiedPersonProfile() {
       );
       setDocsCount(docAgg);
 
-      setRecentActivity(activityRes.data ?? []);
-      const shifts = shiftsRes.data ?? [];
+      setRecentActivity((activityRes.data ?? []) as any[]);
+      const shifts = (shiftsRes.data ?? []) as any[];
       setRecentShifts(shifts);
 
-      // Attendance: 30d derived from shifts list (cheap signal — no payroll math).
       const cutoff = Date.now() - 30 * 24 * 3600 * 1000;
-      const recent = shifts.filter((s) => {
-        const d = s.scheduled_date ? new Date(s.scheduled_date).getTime() : 0;
+      const recent = shifts.filter((s: any) => {
+        const d = s.date ? new Date(s.date).getTime() : 0;
         return d >= cutoff;
       });
       setAttendance30d({
         shifts: recent.length,
-        lateCount: recent.filter((s) => String(s.status).toLowerCase() === "late").length,
-        noShowCount: recent.filter((s) => String(s.status).toLowerCase() === "no_show").length,
+        lateCount: recent.filter((s: any) => String(s.status).toLowerCase() === "late").length,
+        noShowCount: recent.filter((s: any) => String(s.status).toLowerCase() === "no_show").length,
       });
 
-      const lastPay = (payrollRes.data ?? [])[0];
-      setLastPayrollDate(lastPay?.worked_date ?? null);
+      const lastPay = (payrollRes.data ?? [])[0] as any;
+      setLastPayrollDate(lastPay?.clock_in ?? null);
     })();
     return () => { cancelled = true; };
   }, [id, employee]);
@@ -232,7 +231,6 @@ export default function UnifiedPersonProfile() {
         hasPhoto,
       });
 
-  // ── Avatar status (visual ring) ─────────────────────────────────────────
   const avatarStatus: PremiumAvatarStatus = useMemo(() => {
     if (!employee) return null;
     if (employee.is_active === false) return "inactive";
@@ -246,9 +244,9 @@ export default function UnifiedPersonProfile() {
   const handleSave = async () => {
     if (!employee) return;
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from("employees")
-        .update(form as any)
+        .update(form)
         .eq("id", employee.id);
       if (error) throw error;
       setEmployee((prev) => (prev ? { ...prev, ...form } : prev));
@@ -262,7 +260,10 @@ export default function UnifiedPersonProfile() {
   const toggleActive = async () => {
     if (!employee) return;
     const next = !employee.is_active;
-    const { error } = await supabase.from("employees").update({ is_active: next } as any).eq("id", employee.id);
+    const { error } = await (supabase as any)
+      .from("employees")
+      .update({ is_active: next })
+      .eq("id", employee.id);
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
       return;
@@ -281,7 +282,7 @@ export default function UnifiedPersonProfile() {
         label: "Portal",
         icon: portalActive ? ShieldCheck : ShieldOff,
         value: portalActive ? "Active" : "Inactive",
-        hint: invitation?.last_invited_at ? `Invited ${safeDistance(invitation.last_invited_at)}` : undefined,
+        hint: invitation?.sent_at ? `Invited ${safeDistance(invitation.sent_at)}` : undefined,
         tone: portalActive ? "success" : "muted",
       },
       {
@@ -301,7 +302,7 @@ export default function UnifiedPersonProfile() {
         label: "Readiness",
         icon: ShieldCheck,
         value: `${readiness.progressPct}%`,
-        hint: readiness.completedRequirements + "/" + readiness.totalRequirements + " items",
+        hint: `${readiness.completedRequirements}/${readiness.totalRequirements} items`,
         tone: band === "ready" ? "success" : band === "needs-attention" ? "warning" : "destructive",
       },
       {
@@ -320,10 +321,10 @@ export default function UnifiedPersonProfile() {
       },
       {
         key: "payroll",
-        label: "Last payroll",
+        label: "Last clock-in",
         icon: Wallet,
         value: lastPayrollDate ? safeDistance(lastPayrollDate) : "—",
-        hint: lastPayrollDate ? "Last time-entry recorded" : "No time-entries yet",
+        hint: lastPayrollDate ? "From time-entries" : "No time-entries yet",
         tone: lastPayrollDate ? "default" : "muted",
       },
       {
@@ -357,16 +358,16 @@ export default function UnifiedPersonProfile() {
 
   if (error || !employee) {
     return (
-      <div className="p-4">
+      <div className="p-4 space-y-3">
         <ErrorBlock
           title="Unable to load person"
           message={error ?? "Unknown error"}
-          action={
-            <Button variant="outline" onClick={() => navigate("/app/employees")}>
-              <ArrowLeft className="h-4 w-4 mr-1.5" /> Back to Worker Hub
-            </Button>
-          }
         />
+        <div className="flex justify-center">
+          <Button variant="outline" onClick={() => navigate("/app/employees")}>
+            <ArrowLeft className="h-4 w-4 mr-1.5" /> Back to Worker Hub
+          </Button>
+        </div>
       </div>
     );
   }
@@ -530,7 +531,7 @@ export default function UnifiedPersonProfile() {
                     className="h-8 text-xs"
                     asChild
                   >
-                    <a href={`https://wa.me/${String(employee.phone_number).replace(/[^\\d]/g, "")}`} target="_blank" rel="noopener noreferrer">
+                    <a href={`https://wa.me/${String(employee.phone_number).replace(/[^\d]/g, "")}`} target="_blank" rel="noopener noreferrer">
                       <Phone className="h-3.5 w-3.5 mr-1.5" /> WhatsApp
                     </a>
                   </Button>
@@ -576,7 +577,7 @@ export default function UnifiedPersonProfile() {
         })}
       </div>
 
-      {/* ─── READINESS GAPS (visible quick scan) ─── */}
+      {/* ─── READINESS GAPS ─── */}
       {(readiness.missingPersonal.length > 0 || readiness.missingDocuments.length > 0) && (
         <Card className="border-amber-500/30 bg-amber-500/[0.03]">
           <CardContent className="p-3">
@@ -627,7 +628,7 @@ export default function UnifiedPersonProfile() {
         </Card>
       )}
 
-      {/* ─── RECENT SHIFTS sidebar (compact) ─── */}
+      {/* ─── RECENT SHIFTS ─── */}
       {recentShifts.length > 0 && (
         <Card className="border-border/50">
           <CardContent className="p-4">
@@ -643,13 +644,13 @@ export default function UnifiedPersonProfile() {
               </Link>
             </div>
             <div className="divide-y divide-border/40">
-              {recentShifts.slice(0, 5).map((s) => (
+              {recentShifts.slice(0, 5).map((s: any) => (
                 <div key={s.id} className="flex items-center gap-3 py-2 text-xs">
                   <CalendarDays className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                  <span className="font-medium tabular-nums">{s.scheduled_date}</span>
+                  <span className="font-medium tabular-nums">{s.date}</span>
                   <span className="text-muted-foreground">{s.start_time}–{s.end_time}</span>
-                  {s.location_label && (
-                    <span className="text-muted-foreground truncate">· {s.location_label}</span>
+                  {s.title && (
+                    <span className="text-muted-foreground truncate">· {s.title}</span>
                   )}
                   <Badge variant="outline" className="ml-auto text-[9px] capitalize">
                     {s.status ?? "scheduled"}
