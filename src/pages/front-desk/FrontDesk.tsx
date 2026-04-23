@@ -1,12 +1,17 @@
 /**
- * Stafly Front Desk — Tablet kiosk for office check-ins.
+ * Stafly Front Desk — Employee Help Assistant for tablet/office.
  *
- * Flow: welcome → phone → pin → summary → visit type → service action → rating → complete
- * Auto-resets after success or 90s of inactivity.
+ * Phone-only access. After identification, employees access a hub with
+ * 6 self-service options: update data, pending items, request, comment,
+ * payments, profile.
  */
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
-import { Loader2, ArrowLeft, ArrowRight, X, Phone, Lock } from "lucide-react";
+import {
+  Loader2, ArrowLeft, ArrowRight, X, Phone, Sparkles,
+  UserCog, AlertCircle, Send, MessageSquare, Wallet, IdCard,
+  CheckCircle2, Mail, MapPin, ShieldAlert, Camera, FileText,
+  Building2, Clock,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -15,147 +20,226 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { StaflyLogo } from "@/components/brand/StaflyBrand";
-import { useFrontDesk, type FrontDeskEmployee, type FrontDeskSummary, type VisitType, type RatingValue, VISIT_TYPES, getVisitTypeMeta } from "@/hooks/useFrontDesk";
-import { FrontDeskStepper } from "@/components/front-desk/FrontDeskStepper";
+import {
+  useFrontDesk,
+  type FrontDeskEmployee,
+  type FrontDeskSummary,
+  type InquiryCategory,
+  type PaymentRow,
+} from "@/hooks/useFrontDesk";
 import { NumericKeypad } from "@/components/front-desk/NumericKeypad";
 
-type Step = "welcome" | "phone" | "pin" | "summary" | "visit_type" | "in_service" | "rating" | "complete";
+type Step =
+  | "welcome"
+  | "phone"
+  | "hub"
+  | "update_data"
+  | "pending"
+  | "request"
+  | "comment"
+  | "payments"
+  | "profile"
+  | "complete";
+
 type Lang = "es" | "en";
 
-const INACTIVITY_MS = 90_000;
-
-const STEP_ORDER: Step[] = ["phone", "summary", "visit_type", "in_service", "rating"];
+const INACTIVITY_MS = 120_000;
 
 const T = {
   es: {
-    welcome: "Bienvenido a Stafly Front Desk",
-    welcomeSub: "Atención presencial para nuestro equipo",
-    start: "Empezar",
+    appName: "Front Desk",
+    welcome: "Hola, estamos aquí para ayudarte",
+    welcomeSub: "Consulta tu información o realiza una solicitud en segundos",
+    start: "Comenzar",
     enterPhone: "Ingresa tu número de teléfono",
-    enterPin: "Ingresa tu PIN de acceso",
-    pinHint: "Tu PIN tiene 4 dígitos",
+    enterPhoneSub: "Te identificaremos para ofrecerte ayuda personalizada",
     continue: "Continuar",
     back: "Atrás",
     cancel: "Cancelar",
-    summaryTitle: "Hola",
-    pendingTitle: "Pendientes detectados",
-    noPending: "Todo en orden — sin pendientes",
-    portalActive: "Portal activo",
-    portalPending: "Invitación pendiente",
-    portalNone: "Sin acceso al portal",
-    profileComplete: "Perfil completo",
-    profileIncomplete: "Perfil",
-    docsComplete: "Documentos OK",
-    docsRejected: "Documentos rechazados",
-    docsPending: "Docs en revisión",
-    docsIncomplete: "Faltan documentos",
-    visitTypeTitle: "¿Por qué visitas hoy?",
-    visitTypeSub: "Selecciona el motivo principal",
-    inServiceTitle: "Atención en curso",
-    inServiceSub: "Cuando termines, califica el servicio",
-    detailLabel: "Detalle (opcional)",
-    detailPlaceholder: "Notas o detalles adicionales...",
-    finishVisit: "Terminar visita",
-    requireFollowup: "Requiere seguimiento",
-    ratingTitle: "¿Cómo fue tu atención hoy?",
-    ratingSub: "Tu opinión nos ayuda a mejorar",
-    ratingComment: "¿Qué podemos mejorar? (opcional)",
-    submitRating: "Enviar y terminar",
-    skipRating: "Saltar y terminar",
+    finish: "Finalizar",
+    hello: "Hola",
+    helloSub: "¿En qué te ayudamos hoy?",
+    notYou: "No soy yo",
+    pendingBadge: "pendiente",
+    pendingBadgePlural: "pendientes",
+    actions: {
+      update_data: { title: "Actualizar mis datos", desc: "Teléfono, dirección, contacto de emergencia" },
+      pending: { title: "Consultar pendientes", desc: "Documentos o información por completar" },
+      request: { title: "Hacer una solicitud", desc: "Pide algo al equipo administrativo" },
+      comment: { title: "Dejar un comentario", desc: "Sugerencias, dudas o feedback" },
+      payments: { title: "Revisar mis pagos", desc: "Historial reciente y estado" },
+      profile: { title: "Ver mi perfil", desc: "Datos completos de tu cuenta" },
+    },
+    updateDataTitle: "Actualizar mis datos",
+    updateDataSub: "Para actualizar tu información, envíanos una solicitud y te contactamos.",
+    pendingTitle: "Tus pendientes",
+    noPending: "Todo en orden — no tienes pendientes",
+    paymentsTitle: "Mis pagos recientes",
+    noPayments: "No hay pagos registrados todavía",
+    profileTitle: "Mi perfil",
+    requestTitle: "Hacer una solicitud",
+    requestSub: "Cuéntanos qué necesitas",
+    commentTitle: "Dejar un comentario",
+    commentSub: "Tu opinión nos ayuda a mejorar",
+    selectCategory: "¿Sobre qué tema?",
+    messageLabel: "Mensaje",
+    messagePlaceholder: "Escribe tu mensaje…",
+    send: "Enviar",
+    sending: "Enviando…",
+    sentTitle: "¡Mensaje enviado!",
+    sentSub: "Nuestro equipo lo revisará pronto",
     completeTitle: "¡Gracias por tu visita!",
     completeSub: "Hasta pronto",
-    newVisit: "Nueva visita",
-    excellent: "Excelente",
-    good: "Buena",
-    regular: "Regular",
-    bad: "Mala",
-    invalid: "Datos incorrectos",
+    newSession: "Nueva sesión",
+    actNow: "Resolver",
+    helpRequest: "Pedir ayuda",
+    notFoundCta: "Dejar una solicitud sin perfil",
+    profile: {
+      name: "Nombre",
+      phone: "Teléfono",
+      email: "Correo",
+      address: "Dirección",
+      role: "Rol",
+      emergency: "Contacto emergencia",
+      portal: "Portal",
+      portal_active: "Activo",
+      portal_pending: "Invitación pendiente",
+      portal_none: "No activado",
+      missing: "Pendiente",
+    },
+    categories: {
+      payments: "Pagos",
+      documents: "Documentos",
+      profile: "Perfil",
+      support: "Soporte general",
+      schedule: "Horarios o turnos",
+      other: "Otro",
+    } as Record<InquiryCategory, string>,
   },
   en: {
-    welcome: "Welcome to Stafly Front Desk",
-    welcomeSub: "In-person support for our team",
+    appName: "Front Desk",
+    welcome: "Hi, we're here to help",
+    welcomeSub: "Check your info or request something in seconds",
     start: "Start",
     enterPhone: "Enter your phone number",
-    enterPin: "Enter your access PIN",
-    pinHint: "Your PIN has 4 digits",
+    enterPhoneSub: "We'll identify you for personalized help",
     continue: "Continue",
     back: "Back",
     cancel: "Cancel",
-    summaryTitle: "Hello",
-    pendingTitle: "Pending items detected",
+    finish: "Finish",
+    hello: "Hi",
+    helloSub: "How can we help today?",
+    notYou: "Not me",
+    pendingBadge: "pending",
+    pendingBadgePlural: "pending",
+    actions: {
+      update_data: { title: "Update my info", desc: "Phone, address, emergency contact" },
+      pending: { title: "Check pending items", desc: "Missing documents or info" },
+      request: { title: "Make a request", desc: "Ask the admin team for something" },
+      comment: { title: "Leave a comment", desc: "Suggestions, questions or feedback" },
+      payments: { title: "Review my payments", desc: "Recent history and status" },
+      profile: { title: "View my profile", desc: "Your full account info" },
+    },
+    updateDataTitle: "Update my info",
+    updateDataSub: "To update your data, send us a request and we'll get in touch.",
+    pendingTitle: "Your pending items",
     noPending: "All set — no pending items",
-    portalActive: "Portal active",
-    portalPending: "Invitation pending",
-    portalNone: "No portal access",
-    profileComplete: "Profile complete",
-    profileIncomplete: "Profile",
-    docsComplete: "Documents OK",
-    docsRejected: "Documents rejected",
-    docsPending: "Docs in review",
-    docsIncomplete: "Missing documents",
-    visitTypeTitle: "Why are you here today?",
-    visitTypeSub: "Pick the main reason",
-    inServiceTitle: "Visit in progress",
-    inServiceSub: "When done, please rate the service",
-    detailLabel: "Detail (optional)",
-    detailPlaceholder: "Notes or extra context...",
-    finishVisit: "Finish visit",
-    requireFollowup: "Needs follow-up",
-    ratingTitle: "How was your visit today?",
-    ratingSub: "Your feedback helps us improve",
-    ratingComment: "What could we improve? (optional)",
-    submitRating: "Submit & finish",
-    skipRating: "Skip & finish",
+    paymentsTitle: "My recent payments",
+    noPayments: "No payments registered yet",
+    profileTitle: "My profile",
+    requestTitle: "Make a request",
+    requestSub: "Tell us what you need",
+    commentTitle: "Leave a comment",
+    commentSub: "Your feedback helps us improve",
+    selectCategory: "What topic?",
+    messageLabel: "Message",
+    messagePlaceholder: "Type your message…",
+    send: "Send",
+    sending: "Sending…",
+    sentTitle: "Message sent!",
+    sentSub: "Our team will review it soon",
     completeTitle: "Thanks for your visit!",
     completeSub: "See you soon",
-    newVisit: "New visit",
-    excellent: "Excellent",
-    good: "Good",
-    regular: "Regular",
-    bad: "Bad",
-    invalid: "Invalid credentials",
+    newSession: "New session",
+    actNow: "Resolve",
+    helpRequest: "Get help",
+    notFoundCta: "Send a request without profile",
+    profile: {
+      name: "Name",
+      phone: "Phone",
+      email: "Email",
+      address: "Address",
+      role: "Role",
+      emergency: "Emergency contact",
+      portal: "Portal",
+      portal_active: "Active",
+      portal_pending: "Invitation pending",
+      portal_none: "Not activated",
+      missing: "Pending",
+    },
+    categories: {
+      payments: "Payments",
+      documents: "Documents",
+      profile: "Profile",
+      support: "General support",
+      schedule: "Schedule or shifts",
+      other: "Other",
+    } as Record<InquiryCategory, string>,
   },
 };
 
+const ACTION_CARDS = [
+  { key: "update_data" as Step, icon: UserCog, accent: "from-blue-500 to-cyan-500" },
+  { key: "pending" as Step, icon: AlertCircle, accent: "from-amber-500 to-orange-500" },
+  { key: "request" as Step, icon: Send, accent: "from-violet-500 to-fuchsia-500" },
+  { key: "comment" as Step, icon: MessageSquare, accent: "from-emerald-500 to-teal-500" },
+  { key: "payments" as Step, icon: Wallet, accent: "from-rose-500 to-pink-500" },
+  { key: "profile" as Step, icon: IdCard, accent: "from-indigo-500 to-purple-500" },
+];
+
+const CATEGORIES: InquiryCategory[] = ["payments", "documents", "profile", "schedule", "support", "other"];
+
+function fullName(e: FrontDeskEmployee | null): string {
+  if (!e) return "";
+  return `${e.first_name ?? ""} ${e.last_name ?? ""}`.trim();
+}
+
+function initials(e: FrontDeskEmployee | null): string {
+  if (!e) return "?";
+  return `${e.first_name?.[0] ?? ""}${e.last_name?.[0] ?? ""}`.toUpperCase() || "?";
+}
+
 export default function FrontDesk() {
-  const navigate = useNavigate();
-  const { lookupEmployee, createVisit, submitRating, loading } = useFrontDesk();
+  const { lookupByPhone, createInquiry, listPayments, loading } = useFrontDesk();
 
   const [step, setStep] = useState<Step>("welcome");
   const [lang, setLang] = useState<Lang>("es");
   const [phone, setPhone] = useState("");
-  const [pin, setPin] = useState("");
   const [employee, setEmployee] = useState<FrontDeskEmployee | null>(null);
   const [summary, setSummary] = useState<FrontDeskSummary | null>(null);
-  const [visitType, setVisitType] = useState<VisitType | null>(null);
-  const [visitDetail, setVisitDetail] = useState("");
-  const [visitId, setVisitId] = useState<string | null>(null);
-  const [rating, setRating] = useState<RatingValue | null>(null);
-  const [ratingComment, setRatingComment] = useState("");
-  const [needsFollowup, setNeedsFollowup] = useState(false);
+  const [category, setCategory] = useState<InquiryCategory>("support");
+  const [message, setMessage] = useState("");
+  const [payments, setPayments] = useState<PaymentRow[]>([]);
+  const [paymentsLoaded, setPaymentsLoaded] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   const inactivityRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const t = T[lang];
 
-  // Live clock
   useEffect(() => {
-    const id = setInterval(() => setCurrentTime(new Date()), 1000);
+    const id = setInterval(() => setCurrentTime(new Date()), 30_000);
     return () => clearInterval(id);
   }, []);
 
   const resetAll = useCallback(() => {
     setStep("welcome");
     setPhone("");
-    setPin("");
     setEmployee(null);
     setSummary(null);
-    setVisitType(null);
-    setVisitDetail("");
-    setVisitId(null);
-    setRating(null);
-    setRatingComment("");
-    setNeedsFollowup(false);
+    setCategory("support");
+    setMessage("");
+    setPayments([]);
+    setPaymentsLoaded(false);
   }, []);
 
   // Inactivity reset
@@ -169,73 +253,63 @@ export default function FrontDesk() {
     return () => {
       if (inactivityRef.current) clearTimeout(inactivityRef.current);
     };
-  }, [step, phone, pin, visitType, rating, resetAll, lang]);
+  }, [step, phone, message, resetAll, lang]);
 
-  const stepIndex = STEP_ORDER.indexOf(step as any);
-  const showStepper = stepIndex >= 0;
-
-  // === ACTIONS ===
   const handleLookup = async () => {
     try {
-      const res = await lookupEmployee(phone, pin);
+      const res = await lookupByPhone(phone);
       setEmployee(res.employee);
       setSummary(res.summary);
-      setStep("summary");
+      setStep("hub");
     } catch (err) {
-      const msg = err instanceof Error ? err.message : t.invalid;
-      toast.error(msg);
-      setPin("");
+      toast.error(err instanceof Error ? err.message : "Error");
     }
   };
 
-  const handleSelectVisitType = async (type: VisitType) => {
-    if (!employee) return;
-    setVisitType(type);
+  const handleOpenPayments = async () => {
+    setStep("payments");
+    if (paymentsLoaded) return;
     try {
-      const id = await createVisit({
-        employee_id: employee.id,
-        visit_type: type,
-        pending_items: summary?.pending_items,
+      const rows = await listPayments(phone);
+      setPayments(rows);
+      setPaymentsLoaded(true);
+    } catch {
+      setPaymentsLoaded(true);
+    }
+  };
+
+  const handleSend = async (kind: "request" | "comment") => {
+    if (!message.trim()) {
+      toast.error(lang === "es" ? "Escribe un mensaje" : "Write a message");
+      return;
+    }
+    try {
+      await createInquiry({
+        phone,
+        category,
+        message: message.trim(),
+        inquiry_kind: kind,
         language: lang,
       });
-      setVisitId(id);
-      setStep("in_service");
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Error");
-    }
-  };
-
-  const handleFinishService = () => {
-    setStep("rating");
-  };
-
-  const handleSubmitRating = async (skipRating = false) => {
-    if (!visitId) return;
-    try {
-      await submitRating({
-        visit_id: visitId,
-        rating: skipRating ? undefined : rating ?? undefined,
-        rating_comment: ratingComment || undefined,
-        status: needsFollowup ? "pending_followup" : "resolved",
-      });
+      setMessage("");
       setStep("complete");
-      // Auto-reset after 6s
-      setTimeout(resetAll, 6000);
+      setTimeout(resetAll, 5000);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Error");
     }
   };
 
-  // === RENDERS ===
+  const goHub = () => setStep("hub");
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/30 flex flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/40 flex flex-col">
       {/* Header */}
-      <header className="border-b bg-card/60 backdrop-blur sticky top-0 z-10">
+      <header className="border-b border-border/60 bg-card/80 backdrop-blur-md sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <StaflyLogo size={28} />
             <div className="hidden sm:block border-l border-border/60 pl-3">
-              <p className="text-sm font-semibold leading-tight">Front Desk</p>
+              <p className="text-sm font-semibold leading-tight">{t.appName}</p>
               <p className="text-xs text-muted-foreground">
                 {currentTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} ·{" "}
                 {currentTime.toLocaleDateString([], { weekday: "short", day: "numeric", month: "short" })}
@@ -245,24 +319,18 @@ export default function FrontDesk() {
 
           <div className="flex items-center gap-2">
             <div className="inline-flex rounded-full bg-muted p-1 text-xs font-medium">
-              <button
-                onClick={() => setLang("es")}
-                className={cn(
-                  "px-3 py-1 rounded-full transition-colors",
-                  lang === "es" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"
-                )}
-              >
-                ES
-              </button>
-              <button
-                onClick={() => setLang("en")}
-                className={cn(
-                  "px-3 py-1 rounded-full transition-colors",
-                  lang === "en" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"
-                )}
-              >
-                EN
-              </button>
+              {(["es", "en"] as Lang[]).map((l) => (
+                <button
+                  key={l}
+                  onClick={() => setLang(l)}
+                  className={cn(
+                    "px-3 py-1 rounded-full transition-colors uppercase",
+                    lang === l ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"
+                  )}
+                >
+                  {l}
+                </button>
+              ))}
             </div>
             {step !== "welcome" && step !== "complete" && (
               <Button variant="ghost" size="sm" onClick={resetAll}>
@@ -271,39 +339,39 @@ export default function FrontDesk() {
             )}
           </div>
         </div>
-        {showStepper && (
-          <FrontDeskStepper
-            steps={STEP_ORDER.map((s) => ({ key: s, label: s }))}
-            currentIndex={stepIndex}
-          />
-        )}
       </header>
 
       <main className="flex-1 flex items-start justify-center px-4 py-6 sm:py-10">
         <div className="w-full max-w-3xl">
+
+          {/* ============ WELCOME ============ */}
           {step === "welcome" && (
-            <Card className="p-10 sm:p-16 text-center shadow-lg border-2">
-              <div className="mx-auto mb-6 h-20 w-20 rounded-3xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-lg">
-                <Phone className="h-10 w-10 text-primary-foreground" />
+            <Card className="p-10 sm:p-16 text-center shadow-xl border-2 border-border/60 rounded-3xl bg-gradient-to-br from-card to-card/80">
+              <div className="mx-auto mb-6 h-20 w-20 rounded-3xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-lg shadow-primary/30">
+                <Sparkles className="h-10 w-10 text-primary-foreground" />
               </div>
-              <h1 className="text-3xl sm:text-4xl font-bold mb-3">{t.welcome}</h1>
-              <p className="text-lg text-muted-foreground mb-10">{t.welcomeSub}</p>
-              <Button size="lg" className="h-14 px-10 text-base rounded-2xl" onClick={() => setStep("phone")}>
+              <h1 className="text-3xl sm:text-4xl font-bold mb-3 tracking-tight">{t.welcome}</h1>
+              <p className="text-lg text-muted-foreground mb-10 max-w-md mx-auto">{t.welcomeSub}</p>
+              <Button
+                size="lg"
+                className="h-14 px-10 text-base rounded-2xl shadow-md"
+                onClick={() => setStep("phone")}
+              >
                 {t.start}
                 <ArrowRight className="h-5 w-5 ml-2" />
               </Button>
             </Card>
           )}
 
+          {/* ============ PHONE ============ */}
           {step === "phone" && (
-            <Card className="p-6 sm:p-10 shadow-lg">
+            <Card className="p-6 sm:p-10 shadow-xl rounded-3xl border-2">
               <div className="text-center mb-6">
                 <h2 className="text-2xl font-bold mb-2">{t.enterPhone}</h2>
-                <div className="mx-auto mt-4 inline-flex items-center gap-3 px-6 py-3 bg-muted/50 rounded-2xl border-2 border-dashed min-w-[200px]">
+                <p className="text-sm text-muted-foreground mb-4">{t.enterPhoneSub}</p>
+                <div className="mx-auto inline-flex items-center gap-3 px-6 py-4 bg-muted/40 rounded-2xl border-2 border-dashed min-w-[260px]">
                   <Phone className="h-5 w-5 text-muted-foreground" />
-                  <span className="text-2xl font-mono tracking-wider">
-                    {phone || "—"}
-                  </span>
+                  <span className="text-2xl font-mono tracking-wider">{phone || "—"}</span>
                 </div>
               </div>
               <div className="max-w-sm mx-auto">
@@ -318,50 +386,8 @@ export default function FrontDesk() {
                   <ArrowLeft className="h-4 w-4 mr-1" /> {t.cancel}
                 </Button>
                 <Button
-                  onClick={() => setStep("pin")}
-                  disabled={phone.length < 7}
-                  className="h-12 px-8 rounded-xl"
-                  size="lg"
-                >
-                  {t.continue} <ArrowRight className="h-4 w-4 ml-1" />
-                </Button>
-              </div>
-            </Card>
-          )}
-
-          {step === "pin" && (
-            <Card className="p-6 sm:p-10 shadow-lg">
-              <div className="text-center mb-6">
-                <h2 className="text-2xl font-bold mb-2">{t.enterPin}</h2>
-                <p className="text-sm text-muted-foreground mb-4">{t.pinHint}</p>
-                <div className="flex gap-2 justify-center mb-2">
-                  {[0, 1, 2, 3].map((i) => (
-                    <div
-                      key={i}
-                      className={cn(
-                        "h-12 w-12 rounded-xl border-2 flex items-center justify-center text-2xl font-bold",
-                        pin.length > i ? "bg-primary border-primary text-primary-foreground" : "border-border bg-muted/30"
-                      )}
-                    >
-                      {pin[i] ? "•" : ""}
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="max-w-sm mx-auto">
-                <NumericKeypad
-                  onDigit={(d) => setPin((p) => (p.length < 6 ? p + d : p))}
-                  onBackspace={() => setPin((p) => p.slice(0, -1))}
-                  onClear={() => setPin("")}
-                />
-              </div>
-              <div className="flex gap-3 mt-6 justify-center">
-                <Button variant="ghost" onClick={() => setStep("phone")} className="h-12 px-6">
-                  <ArrowLeft className="h-4 w-4 mr-1" /> {t.back}
-                </Button>
-                <Button
                   onClick={handleLookup}
-                  disabled={pin.length < 4 || loading}
+                  disabled={phone.length < 7 || loading}
                   className="h-12 px-8 rounded-xl"
                   size="lg"
                 >
@@ -373,151 +399,266 @@ export default function FrontDesk() {
             </Card>
           )}
 
-          {step === "summary" && employee && summary && (
-            <SummaryStep
-              t={t}
-              employee={employee}
-              summary={summary}
-              onContinue={() => setStep("visit_type")}
-            />
-          )}
-
-          {step === "visit_type" && (
-            <Card className="p-6 sm:p-10 shadow-lg">
-              <div className="text-center mb-8">
-                <h2 className="text-2xl font-bold mb-1">{t.visitTypeTitle}</h2>
-                <p className="text-sm text-muted-foreground">{t.visitTypeSub}</p>
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {VISIT_TYPES.map((vt) => (
-                  <button
-                    key={vt.key}
-                    onClick={() => handleSelectVisitType(vt.key)}
-                    disabled={loading}
-                    className="group p-5 rounded-2xl border-2 border-border bg-card hover:border-primary hover:shadow-md active:scale-95 transition-all text-left disabled:opacity-50"
-                  >
-                    <div className="text-3xl mb-2">{vt.icon}</div>
-                    <div className="font-semibold text-sm leading-tight">
-                      {lang === "es" ? vt.labelEs : vt.labelEn}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </Card>
-          )}
-
-          {step === "in_service" && employee && visitType && (
-            <Card className="p-6 sm:p-10 shadow-lg">
-              <div className="text-center mb-6">
-                <div className="inline-block px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium mb-3">
-                  {getVisitTypeMeta(visitType).icon} {lang === "es" ? getVisitTypeMeta(visitType).labelEs : getVisitTypeMeta(visitType).labelEn}
+          {/* ============ HUB ============ */}
+          {step === "hub" && employee && summary && (
+            <div className="space-y-6">
+              <Card className="p-6 sm:p-8 rounded-3xl border-2 shadow-md bg-gradient-to-br from-card to-primary/5">
+                <div className="flex items-center gap-4">
+                  <Avatar className="h-16 w-16 ring-2 ring-primary/30">
+                    <AvatarImage src={employee.avatar_url ?? undefined} />
+                    <AvatarFallback className="text-lg font-semibold bg-primary/10 text-primary">
+                      {initials(employee)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-muted-foreground">{t.hello},</p>
+                    <h2 className="text-2xl font-bold truncate">{fullName(employee)}</h2>
+                    <p className="text-sm text-muted-foreground mt-0.5">{t.helloSub}</p>
+                  </div>
+                  {summary.pending_total > 0 && (
+                    <Badge className="bg-amber-500/15 text-amber-700 hover:bg-amber-500/20 border-amber-500/30 dark:text-amber-300 px-3 py-1.5 rounded-full">
+                      {summary.pending_total} {summary.pending_total === 1 ? t.pendingBadge : t.pendingBadgePlural}
+                    </Badge>
+                  )}
                 </div>
-                <h2 className="text-2xl font-bold mb-1">{t.inServiceTitle}</h2>
-                <p className="text-sm text-muted-foreground">{t.inServiceSub}</p>
-              </div>
+              </Card>
 
-              <div className="space-y-4 max-w-lg mx-auto">
-                <div>
-                  <label className="text-sm font-medium mb-2 block">{t.detailLabel}</label>
-                  <Textarea
-                    value={visitDetail}
-                    onChange={(e) => setVisitDetail(e.target.value)}
-                    placeholder={t.detailPlaceholder}
-                    rows={3}
-                    className="resize-none"
-                  />
-                </div>
-
-                <label className="flex items-center gap-3 p-4 rounded-xl border-2 border-dashed cursor-pointer hover:border-primary/50 transition-colors">
-                  <input
-                    type="checkbox"
-                    checked={needsFollowup}
-                    onChange={(e) => setNeedsFollowup(e.target.checked)}
-                    className="h-5 w-5 rounded border-border text-primary"
-                  />
-                  <span className="font-medium">{t.requireFollowup}</span>
-                </label>
-              </div>
-
-              <div className="flex justify-center mt-8">
-                <Button
-                  onClick={handleFinishService}
-                  size="lg"
-                  className="h-14 px-10 rounded-xl text-base"
-                >
-                  {t.finishVisit} <ArrowRight className="h-5 w-5 ml-2" />
-                </Button>
-              </div>
-            </Card>
-          )}
-
-          {step === "rating" && (
-            <Card className="p-6 sm:p-10 shadow-lg">
-              <div className="text-center mb-8">
-                <h2 className="text-2xl font-bold mb-1">{t.ratingTitle}</h2>
-                <p className="text-sm text-muted-foreground">{t.ratingSub}</p>
-              </div>
-
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-2xl mx-auto mb-6">
-                {(["excellent", "good", "regular", "bad"] as RatingValue[]).map((r) => {
-                  const meta = {
-                    excellent: { emoji: "🤩", label: t.excellent, ring: "ring-emerald-400 bg-emerald-50" },
-                    good: { emoji: "🙂", label: t.good, ring: "ring-blue-400 bg-blue-50" },
-                    regular: { emoji: "😐", label: t.regular, ring: "ring-amber-400 bg-amber-50" },
-                    bad: { emoji: "😞", label: t.bad, ring: "ring-rose-400 bg-rose-50" },
-                  }[r];
-                  const selected = rating === r;
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {ACTION_CARDS.map(({ key, icon: Icon, accent }) => {
+                  const meta = (t.actions as any)[key];
+                  const isPending = key === "pending" && summary.pending_total > 0;
                   return (
                     <button
-                      key={r}
-                      onClick={() => setRating(r)}
-                      className={cn(
-                        "p-5 rounded-2xl border-2 border-border bg-card hover:border-primary/50 active:scale-95 transition-all",
-                        selected && `border-transparent ring-4 ${meta.ring}`
-                      )}
+                      key={key}
+                      onClick={() => {
+                        if (key === "payments") return handleOpenPayments();
+                        setStep(key);
+                      }}
+                      className="group text-left p-6 rounded-3xl border-2 border-border bg-card hover:border-primary/60 hover:shadow-lg active:scale-[0.98] transition-all"
                     >
-                      <div className="text-4xl mb-2">{meta.emoji}</div>
-                      <div className="font-semibold text-sm">{meta.label}</div>
+                      <div className="flex items-start gap-4">
+                        <div className={cn(
+                          "h-12 w-12 rounded-2xl bg-gradient-to-br flex items-center justify-center shadow-md flex-shrink-0",
+                          accent
+                        )}>
+                          <Icon className="h-6 w-6 text-white" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-semibold text-base leading-tight">{meta.title}</h3>
+                            {isPending && (
+                              <span className="inline-flex h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
+                            )}
+                          </div>
+                          <p className="text-sm text-muted-foreground mt-1 leading-snug">{meta.desc}</p>
+                        </div>
+                      </div>
                     </button>
                   );
                 })}
               </div>
-
-              <div className="max-w-lg mx-auto">
-                <label className="text-sm font-medium mb-2 block">{t.ratingComment}</label>
-                <Textarea
-                  value={ratingComment}
-                  onChange={(e) => setRatingComment(e.target.value)}
-                  rows={2}
-                  className="resize-none"
-                />
-              </div>
-
-              <div className="flex gap-3 justify-center mt-8">
-                <Button variant="ghost" onClick={() => handleSubmitRating(true)} disabled={loading}>
-                  {t.skipRating}
-                </Button>
-                <Button
-                  onClick={() => handleSubmitRating(false)}
-                  disabled={loading}
-                  size="lg"
-                  className="h-14 px-10 rounded-xl"
-                >
-                  {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : t.submitRating}
-                </Button>
-              </div>
-            </Card>
+            </div>
           )}
 
-          {step === "complete" && (
-            <Card className="p-10 sm:p-16 text-center shadow-lg">
-              <div className="mx-auto mb-6 h-20 w-20 rounded-3xl bg-emerald-500 flex items-center justify-center shadow-lg">
-                <span className="text-4xl">✓</span>
+          {/* ============ UPDATE DATA ============ */}
+          {step === "update_data" && (
+            <SectionCard title={t.updateDataTitle} onBack={goHub} t={t}>
+              <p className="text-muted-foreground mb-6">{t.updateDataSub}</p>
+              <Button
+                size="lg"
+                className="w-full h-12 rounded-xl"
+                onClick={() => { setCategory("profile"); setStep("request"); }}
+              >
+                <Send className="h-4 w-4 mr-2" /> {t.actions.request.title}
+              </Button>
+            </SectionCard>
+          )}
+
+          {/* ============ PENDING ============ */}
+          {step === "pending" && summary && (
+            <SectionCard title={t.pendingTitle} onBack={goHub} t={t}>
+              {summary.pending_total === 0 ? (
+                <EmptyState icon={CheckCircle2} title={t.noPending} accent="success" />
+              ) : (
+                <ul className="space-y-3">
+                  {summary.pending_items.map((item) => (
+                    <li
+                      key={item.key}
+                      className={cn(
+                        "flex items-start justify-between gap-3 p-4 rounded-2xl border-2",
+                        item.severity === "high" ? "bg-rose-500/5 border-rose-500/30" :
+                        item.severity === "medium" ? "bg-amber-500/5 border-amber-500/30" :
+                        "bg-muted/40 border-border"
+                      )}
+                    >
+                      <div className="flex items-start gap-3">
+                        <ShieldAlert className={cn(
+                          "h-5 w-5 mt-0.5 flex-shrink-0",
+                          item.severity === "high" ? "text-rose-600" :
+                          item.severity === "medium" ? "text-amber-600" : "text-muted-foreground"
+                        )} />
+                        <span className="text-sm font-medium">{item.label}</span>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="rounded-xl flex-shrink-0"
+                        onClick={() => { setCategory("support"); setMessage(item.label); setStep("request"); }}
+                      >
+                        {t.actNow}
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </SectionCard>
+          )}
+
+          {/* ============ REQUEST / COMMENT ============ */}
+          {(step === "request" || step === "comment") && (
+            <SectionCard
+              title={step === "request" ? t.requestTitle : t.commentTitle}
+              subtitle={step === "request" ? t.requestSub : t.commentSub}
+              onBack={goHub}
+              t={t}
+            >
+              <div className="space-y-5">
+                <div>
+                  <label className="text-sm font-semibold mb-3 block">{t.selectCategory}</label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {CATEGORIES.map((cat) => (
+                      <button
+                        key={cat}
+                        onClick={() => setCategory(cat)}
+                        className={cn(
+                          "px-4 py-3 rounded-xl border-2 text-sm font-medium transition-all",
+                          category === cat
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-border bg-card hover:border-primary/40"
+                        )}
+                      >
+                        {t.categories[cat]}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-sm font-semibold mb-2 block">{t.messageLabel}</label>
+                  <Textarea
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    placeholder={t.messagePlaceholder}
+                    rows={5}
+                    className="resize-none rounded-xl text-base"
+                  />
+                </div>
+
+                <Button
+                  size="lg"
+                  className="w-full h-13 rounded-xl"
+                  onClick={() => handleSend(step === "request" ? "request" : "comment")}
+                  disabled={loading || !message.trim()}
+                >
+                  {loading ? (
+                    <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> {t.sending}</>
+                  ) : (
+                    <><Send className="h-4 w-4 mr-2" /> {t.send}</>
+                  )}
+                </Button>
               </div>
-              <h2 className="text-3xl font-bold mb-2">{t.completeTitle}</h2>
-              <p className="text-lg text-muted-foreground mb-8">{t.completeSub}</p>
-              <Button size="lg" variant="outline" onClick={resetAll} className="h-12 px-8 rounded-xl">
-                {t.newVisit}
+            </SectionCard>
+          )}
+
+          {/* ============ PAYMENTS ============ */}
+          {step === "payments" && (
+            <SectionCard title={t.paymentsTitle} onBack={goHub} t={t}>
+              {!paymentsLoaded ? (
+                <div className="flex justify-center py-12">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : payments.length === 0 ? (
+                <EmptyState icon={Wallet} title={t.noPayments} />
+              ) : (
+                <ul className="divide-y divide-border/60">
+                  {payments.map((p, i) => (
+                    <li key={i} className="flex items-center justify-between py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                          <Wallet className="h-5 w-5 text-emerald-600" />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-sm">
+                            {p.work_date ? new Date(p.work_date).toLocaleDateString(lang, {
+                              day: "numeric", month: "short", year: "numeric"
+                            }) : "—"}
+                          </p>
+                          <p className="text-xs text-muted-foreground capitalize">
+                            {p.pay_type ?? ""} {p.total_hours ? `· ${p.total_hours}h` : ""}
+                          </p>
+                        </div>
+                      </div>
+                      <p className="font-bold text-base tabular-nums">
+                        {p.total_pay != null ? `$${Number(p.total_pay).toFixed(2)}` : "—"}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </SectionCard>
+          )}
+
+          {/* ============ PROFILE ============ */}
+          {step === "profile" && employee && summary && (
+            <SectionCard title={t.profileTitle} onBack={goHub} t={t}>
+              <div className="flex items-center gap-4 mb-6 p-4 rounded-2xl bg-muted/40">
+                <Avatar className="h-16 w-16 ring-2 ring-primary/30">
+                  <AvatarImage src={employee.avatar_url ?? undefined} />
+                  <AvatarFallback className="text-lg font-semibold bg-primary/10 text-primary">
+                    {initials(employee)}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <h3 className="font-bold text-lg">{fullName(employee)}</h3>
+                  {employee.employee_role && (
+                    <p className="text-sm text-muted-foreground">{employee.employee_role}</p>
+                  )}
+                </div>
+              </div>
+
+              <dl className="space-y-3">
+                <ProfileRow icon={Phone} label={t.profile.phone} value={employee.phone_number} />
+                <ProfileRow icon={Mail} label={t.profile.email} value={employee.email} missingText={t.profile.missing} />
+                <ProfileRow icon={MapPin} label={t.profile.address} value={employee.address} missingText={t.profile.missing} />
+                <ProfileRow
+                  icon={ShieldAlert}
+                  label={t.profile.emergency}
+                  value={employee.emergency_contact_name ? `${employee.emergency_contact_name} · ${employee.emergency_contact_phone ?? ""}` : null}
+                  missingText={t.profile.missing}
+                />
+                <ProfileRow
+                  icon={Building2}
+                  label={t.profile.portal}
+                  value={
+                    summary.portal_status === "active" ? t.profile.portal_active :
+                    summary.portal_status === "pending" ? t.profile.portal_pending :
+                    t.profile.portal_none
+                  }
+                />
+              </dl>
+            </SectionCard>
+          )}
+
+          {/* ============ COMPLETE ============ */}
+          {step === "complete" && (
+            <Card className="p-10 sm:p-16 text-center shadow-xl rounded-3xl border-2 border-emerald-500/30 bg-gradient-to-br from-emerald-500/5 to-card">
+              <div className="mx-auto mb-6 h-20 w-20 rounded-3xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/30">
+                <CheckCircle2 className="h-10 w-10 text-white" />
+              </div>
+              <h2 className="text-3xl font-bold mb-2">{t.sentTitle}</h2>
+              <p className="text-lg text-muted-foreground mb-8">{t.sentSub}</p>
+              <Button size="lg" onClick={resetAll} className="h-12 px-8 rounded-xl">
+                {t.newSession}
               </Button>
             </Card>
           )}
@@ -527,117 +668,90 @@ export default function FrontDesk() {
   );
 }
 
-// === Summary sub-component ===
-function SummaryStep({
+// ============================================================
+// Sub-components
+// ============================================================
+
+function SectionCard({
+  title,
+  subtitle,
+  onBack,
+  children,
   t,
-  employee,
-  summary,
-  onContinue,
 }: {
-  t: typeof T.es;
-  employee: FrontDeskEmployee;
-  summary: FrontDeskSummary;
-  onContinue: () => void;
+  title: string;
+  subtitle?: string;
+  onBack: () => void;
+  children: React.ReactNode;
+  t: typeof T["es"];
 }) {
-  const initials = `${employee.first_name?.[0] ?? ""}${employee.last_name?.[0] ?? ""}`.toUpperCase();
-  const portalLabel = summary.portal_status === "active" ? t.portalActive : summary.portal_status === "pending" ? t.portalPending : t.portalNone;
-  const portalTone = summary.portal_status === "active" ? "bg-emerald-100 text-emerald-800 border-emerald-200" : summary.portal_status === "pending" ? "bg-amber-100 text-amber-800 border-amber-200" : "bg-rose-100 text-rose-800 border-rose-200";
-
   return (
-    <div className="space-y-4">
-      <Card className="p-6 sm:p-8 shadow-lg">
-        <div className="flex items-center gap-5">
-          <Avatar className="h-20 w-20 border-2 border-primary/20">
-            {employee.avatar_url ? <AvatarImage src={employee.avatar_url} /> : null}
-            <AvatarFallback className="text-2xl bg-primary/10 text-primary font-bold">{initials}</AvatarFallback>
-          </Avatar>
-          <div className="flex-1">
-            <p className="text-sm text-muted-foreground">{t.summaryTitle},</p>
-            <h2 className="text-2xl font-bold mb-1">
-              {employee.first_name} {employee.last_name}
-            </h2>
-            <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-              <span>{employee.phone_number}</span>
-              {employee.email && <span>· {employee.email}</span>}
-              {employee.employee_role && <span>· {employee.employee_role}</span>}
-            </div>
-          </div>
-        </div>
-      </Card>
-
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <StatusTile
-          label={t.portalActive.split(" ")[0]}
-          value={portalLabel}
-          tone={portalTone}
-        />
-        <StatusTile
-          label="Profile"
-          value={`${summary.profile_completeness}%`}
-          tone={summary.profile_completeness === 100 ? "bg-emerald-100 text-emerald-800 border-emerald-200" : "bg-amber-100 text-amber-800 border-amber-200"}
-        />
-        <StatusTile
-          label="Docs"
-          value={
-            summary.documents_status === "rejected" ? t.docsRejected :
-            summary.documents_status === "pending_review" ? t.docsPending :
-            summary.documents_status === "complete" ? t.docsComplete : t.docsIncomplete
-          }
-          tone={
-            summary.documents_status === "complete" ? "bg-emerald-100 text-emerald-800 border-emerald-200" :
-            summary.documents_status === "rejected" ? "bg-rose-100 text-rose-800 border-rose-200" :
-            "bg-amber-100 text-amber-800 border-amber-200"
-          }
-        />
-        <StatusTile
-          label="Pendientes"
-          value={String(summary.pending_total)}
-          tone={summary.pending_total === 0 ? "bg-emerald-100 text-emerald-800 border-emerald-200" : "bg-amber-100 text-amber-800 border-amber-200"}
-        />
-      </div>
-
-      {summary.pending_items.length > 0 && (
-        <Card className="p-5">
-          <p className="text-sm font-semibold mb-3">{t.pendingTitle}</p>
-          <div className="flex flex-wrap gap-2">
-            {summary.pending_items.map((item) => (
-              <Badge
-                key={item.key}
-                variant="outline"
-                className={cn(
-                  "px-3 py-1.5 text-xs font-medium rounded-full border",
-                  item.severity === "high" && "bg-rose-50 text-rose-800 border-rose-200",
-                  item.severity === "medium" && "bg-amber-50 text-amber-800 border-amber-200",
-                  item.severity === "low" && "bg-blue-50 text-blue-800 border-blue-200"
-                )}
-              >
-                {item.label}
-              </Badge>
-            ))}
-          </div>
-        </Card>
-      )}
-
-      {summary.pending_total === 0 && (
-        <Card className="p-5 bg-emerald-50/50 border-emerald-200">
-          <p className="text-sm text-emerald-800 font-medium">✓ {t.noPending}</p>
-        </Card>
-      )}
-
-      <div className="flex justify-end pt-2">
-        <Button onClick={onContinue} size="lg" className="h-14 px-8 rounded-xl">
-          {t.continue} <ArrowRight className="h-5 w-5 ml-2" />
+    <Card className="p-6 sm:p-8 rounded-3xl border-2 shadow-md">
+      <div className="flex items-center gap-3 mb-6">
+        <Button variant="ghost" size="icon" onClick={onBack} className="rounded-xl flex-shrink-0">
+          <ArrowLeft className="h-5 w-5" />
         </Button>
+        <div className="flex-1 min-w-0">
+          <h2 className="text-xl sm:text-2xl font-bold tracking-tight truncate">{title}</h2>
+          {subtitle && <p className="text-sm text-muted-foreground mt-0.5">{subtitle}</p>}
+        </div>
       </div>
+      {children}
+    </Card>
+  );
+}
+
+function EmptyState({
+  icon: Icon,
+  title,
+  accent,
+}: {
+  icon: typeof CheckCircle2;
+  title: string;
+  accent?: "success";
+}) {
+  return (
+    <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+      <div className={cn(
+        "h-16 w-16 rounded-2xl flex items-center justify-center mb-4",
+        accent === "success" ? "bg-emerald-500/10" : "bg-muted"
+      )}>
+        <Icon className={cn(
+          "h-8 w-8",
+          accent === "success" ? "text-emerald-600" : "text-muted-foreground"
+        )} />
+      </div>
+      <p className="font-semibold text-base">{title}</p>
     </div>
   );
 }
 
-function StatusTile({ label, value, tone }: { label: string; value: string; tone: string }) {
+function ProfileRow({
+  icon: Icon,
+  label,
+  value,
+  missingText,
+}: {
+  icon: typeof Phone;
+  label: string;
+  value: string | null | undefined;
+  missingText?: string;
+}) {
+  const isMissing = !value;
   return (
-    <div className={cn("p-4 rounded-2xl border", tone)}>
-      <div className="text-[10px] uppercase font-semibold tracking-wider opacity-70">{label}</div>
-      <div className="text-sm font-bold mt-1 leading-tight">{value}</div>
+    <div className="flex items-center gap-3 p-3 rounded-xl border border-border/60 bg-card">
+      <div className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+        <Icon className="h-4 w-4 text-muted-foreground" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <dt className="text-xs text-muted-foreground">{label}</dt>
+        <dd className={cn(
+          "text-sm font-medium truncate",
+          isMissing && "text-amber-600 italic"
+        )}>
+          {value || missingText || "—"}
+        </dd>
+      </div>
     </div>
   );
 }
