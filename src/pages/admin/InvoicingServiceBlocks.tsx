@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useCompany } from "@/hooks/useCompany";
+import { supabase } from "@/integrations/supabase/client";
 import {
   useBillableServiceBlocks,
   type ServiceBlockStatus,
@@ -69,12 +70,34 @@ export default function InvoicingServiceBlocks() {
       client_id: billingClientFilter === "all" ? null : billingClientFilter,
     });
 
-  const counts = useMemo(() => {
-    const base: Record<ServiceBlockStatus, number> = {
-      pending: 0, approved: 0, adjusted: 0, discarded: 0, invoiced: 0,
-    };
-    return base;
-  }, []);
+  const [counts, setCounts] = useState<Record<ServiceBlockStatus, number>>({
+    pending: 0, approved: 0, adjusted: 0, discarded: 0, invoiced: 0,
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadCounts() {
+      if (!selectedCompanyId) return;
+      let q = supabase
+        .from("billable_service_blocks")
+        .select("source_status")
+        .eq("company_id", selectedCompanyId)
+        .gte("service_date", dateFrom)
+        .lte("service_date", dateTo);
+      if (billingClientFilter !== "all") q = q.eq("client_id", billingClientFilter);
+      const { data, error } = await q;
+      if (cancelled || error || !data) return;
+      const next: Record<ServiceBlockStatus, number> = {
+        pending: 0, approved: 0, adjusted: 0, discarded: 0, invoiced: 0,
+      };
+      for (const row of data as { source_status: ServiceBlockStatus }[]) {
+        if (next[row.source_status] !== undefined) next[row.source_status] += 1;
+      }
+      setCounts(next);
+    }
+    loadCounts();
+    return () => { cancelled = true; };
+  }, [selectedCompanyId, dateFrom, dateTo, billingClientFilter, blocks.length]);
 
   const totalAmount = useMemo(
     () => blocks.reduce((s, b) => s + Number(b.amount ?? 0), 0),
