@@ -291,7 +291,56 @@ export default function Employees() {
     }
   };
 
-  const emptyForm = () => Object.fromEntries(CONNECTEAM_FIELDS.map(f => [f.key, ""]));
+  // ─── Selection helpers (per-row checkboxes for bulk actions) ─────────────
+  const toggleRowSelected = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+  const clearSelection = () => setSelectedIds(new Set());
+  const selectAllInList = (ids: string[]) => setSelectedIds(new Set(ids));
+
+  /**
+   * Bulk re-invite — re-sends invitations only for currently selected workers
+   * whose latest invitation is in a failure state (failed / bounced / dlq).
+   * Reuses the existing `bulk-portal-invite` edge function with `employee_ids`.
+   */
+  const handleBulkReinviteSelected = async () => {
+    if (!selectedCompanyId) return;
+    const failedIds = Array.from(selectedIds).filter(id => {
+      const emp = employees.find(e => e.id === id);
+      return emp ? isInviteFailed(emp) : false;
+    });
+    if (failedIds.length === 0) {
+      toast({
+        title: "Nothing to re-invite",
+        description: "Select workers whose last invitation failed, bounced or hit DLQ.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setBulkReinviting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("bulk-portal-invite", {
+        body: { company_id: selectedCompanyId, employee_ids: failedIds },
+      });
+      if (error) { toast({ title: "Re-invite failed", description: "Could not resend invitations", variant: "destructive" }); return; }
+      if (data?.error) { toast({ title: "Re-invite failed", description: data.error, variant: "destructive" }); return; }
+      toast({
+        title: `Re-invited ${data.emails_sent ?? failedIds.length} workers ✅`,
+        description: `${data.processed ?? failedIds.length} processed${data.skipped > 0 ? `, ${data.skipped} skipped` : ""}`,
+      });
+      clearSelection();
+      await Promise.all([fetchEmployees(), refetchInvitations()]);
+    } catch (e: any) {
+      toast({ title: "Re-invite failed", description: e?.message || "Connection error", variant: "destructive" });
+    } finally {
+      setBulkReinviting(false);
+    }
+  };
+
 
   const fetchEmployees = async () => {
     if (!selectedCompanyId) return;
