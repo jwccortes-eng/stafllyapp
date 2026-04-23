@@ -80,6 +80,8 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
   const hasEmail = !!employee.email;
 
   const [companyMismatch, setCompanyMismatch] = useState(false);
+  // Worker is archived/deactivated — block all send actions, keep view-only affordances.
+  const isInactive = employee.is_active === false;
 
   // Reset livePin when dialog opens/closes
   useEffect(() => {
@@ -490,6 +492,19 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
             <div className="rounded-lg border border-border/40 bg-muted/30 px-3 py-1.5 text-[10px] flex items-center gap-2">
               <Shield className="h-3 w-3 text-muted-foreground/60 shrink-0" />
               <span className="text-muted-foreground">Empresa: <span className="font-semibold text-foreground">{companyName}</span></span>
+            </div>
+          )}
+
+          {/* Inactive worker — block sends but keep visible token/link affordances */}
+          {isInactive && !companyMismatch && (
+            <div className="rounded-lg border border-warning/40 bg-warning/5 px-3 py-2 text-[11px] flex items-start gap-2">
+              <AlertTriangle className="h-3.5 w-3.5 text-warning shrink-0 mt-0.5" />
+              <div className="space-y-0.5">
+                <p className="font-semibold text-warning">Worker is archived</p>
+                <p className="text-muted-foreground">
+                  Reactivate this worker before sending an invitation. You can still copy an existing invite link below for reference.
+                </p>
+              </div>
             </div>
           )}
 

@@ -127,7 +127,7 @@ interface UpdateDiff {
 import { PortalAccessBadge } from "@/components/employee/PortalAccessBadge";
 import type { InvitationMap } from "@/hooks/useEmployeeInvitations";
 import { inviteUrl } from "@/lib/app-url";
-import { isInviteStatusFailure } from "@/lib/invitation-status";
+
 
 function EmpStatusBadge({
   employee,
