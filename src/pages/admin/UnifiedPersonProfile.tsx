@@ -685,33 +685,76 @@ export default function UnifiedPersonProfile() {
       </div>
 
       {/* ─── READINESS GAPS ─── */}
-      {(readiness.missingPersonal.length > 0 || readiness.missingDocuments.length > 0) && (
-        <Card className="border-warning/30 bg-warning/[0.04]">
-          <CardContent className="p-3">
-            <div className="flex items-center gap-2 text-xs font-semibold text-warning">
-              <ShieldOff className="h-3.5 w-3.5" />
-              Readiness gaps
-              <span className="ml-auto text-[10px] font-normal text-muted-foreground">
-                {readiness.completedRequirements}/{readiness.totalRequirements} complete
-              </span>
-            </div>
-            <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
-              {readiness.missingPersonal.slice(0, 6).map((field) => (
-                <div key={`p-${field}`} className="flex items-center gap-1.5">
-                  <span className="h-1 w-1 rounded-full bg-warning" />
-                  <span className="capitalize">Personal: {field.replace(/_/g, " ")}</span>
-                </div>
-              ))}
-              {readiness.missingDocuments.slice(0, 6).map((d) => (
-                <div key={`d-${d.category}`} className="flex items-center gap-1.5">
-                  <span className="h-1 w-1 rounded-full bg-destructive" />
-                  <span>Document: {d.label}</span>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {(readiness.missingPersonal.length > 0 || readiness.missingDocuments.length > 0) && (() => {
+        const personalCount = readiness.missingPersonal.length;
+        const docsCount = readiness.missingDocuments.length;
+        // Resolve target: docs tab if any document missing, otherwise info tab.
+        const resolveTarget = docsCount > 0 ? "docs" : "info";
+        const resolveLabel = docsCount > 0
+          ? (personalCount > 0 ? "Resolve gaps · Documents first" : "Upload documents")
+          : "Complete personal info";
+        return (
+          <Card className="border-warning/30 bg-warning/[0.04]">
+            <CardContent className="p-3">
+              <div className="flex items-center gap-2 text-xs font-semibold text-warning">
+                <ShieldOff className="h-3.5 w-3.5" />
+                Readiness gaps
+                <span className="ml-auto text-[10px] font-normal text-muted-foreground tabular-nums">
+                  {readiness.completedRequirements}/{readiness.totalRequirements} complete · {readiness.progressPct}%
+                </span>
+              </div>
+
+              {/* Progress bar */}
+              <div className="mt-2 h-1.5 w-full rounded-full bg-warning/15 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-warning transition-all duration-500 ease-out"
+                  style={{ width: `${readiness.progressPct}%` }}
+                />
+              </div>
+
+              <div className="mt-2.5 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
+                {readiness.missingPersonal.slice(0, 6).map((field) => (
+                  <div key={`p-${field}`} className="flex items-center gap-1.5">
+                    <span className="h-1 w-1 rounded-full bg-warning" />
+                    <span className="capitalize">Personal: {field.replace(/_/g, " ")}</span>
+                  </div>
+                ))}
+                {readiness.missingDocuments.slice(0, 6).map((d) => (
+                  <div key={`d-${d.category}`} className="flex items-center gap-1.5">
+                    <span className="h-1 w-1 rounded-full bg-destructive" />
+                    <span>Document: {d.label}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Quick action */}
+              <div className="mt-3 flex items-center justify-between gap-2 pt-2 border-t border-warning/15">
+                <span className="text-[10.5px] text-muted-foreground/80">
+                  {personalCount + docsCount} item{personalCount + docsCount === 1 ? "" : "s"} pending
+                  {docsCount > 0 && personalCount > 0 ? " · documents block onboarding first" : ""}
+                </span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-[11px] border-warning/40 text-warning hover:bg-warning/10 hover:text-warning gap-1.5"
+                  onClick={() => {
+                    setActiveTab(resolveTarget);
+                    if (resolveTarget === "info" && !isEditing) setIsEditing(true);
+                    requestAnimationFrame(() => {
+                      document
+                        .querySelector('[data-state="active"][role="tabpanel"]')
+                        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+                    });
+                  }}
+                >
+                  {resolveLabel}
+                  <ExternalLink className="h-3 w-3" />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })()}
 
       {/* ─── DEEP TABS (existing logic, unchanged) ─── */}
       {selectedCompanyId && (
