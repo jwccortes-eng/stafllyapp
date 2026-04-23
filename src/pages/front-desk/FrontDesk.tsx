@@ -320,6 +320,9 @@ export default function FrontDesk() {
     setPaymentsLoaded(false);
     setFormValues({});
     setFormErrors({});
+    // After resetting from any active session, return to attract mode so the
+    // next visitor sees a clean welcome and no leftover data.
+    setAttract(true);
   }, []);
 
   // Inactivity reset
