@@ -40,6 +40,7 @@ import { PremiumPageHeader, type PremiumPageHeaderKpi } from "@/components/ui/pr
 import { PremiumFilterBar, type ActiveFilterChip } from "@/components/ui/premium-filter-bar";
 import { PremiumAvatar, type PremiumAvatarStatus } from "@/components/ui/premium-avatar";
 import { ViewSwitcher, type ViewMode } from "@/components/ui/view-switcher";
+import { SortIndicator } from "@/components/ui/sort-indicator";
 import { useUrlFilters } from "@/hooks/useUrlFilters";
 import { useSortPreference } from "@/hooks/useSortPreference";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
@@ -940,7 +941,13 @@ export default function Employees() {
         }
       />
 
-      {/* ─── Status Tabs ─── */}
+      {/* ─── Status Tabs ───
+          Tone hints (visual priority for problem backlogs):
+            • destructive → blocks operation right now (failed invites)
+            • warning     → needs attention soon (missing docs, inactive backlog)
+            • neutral     → informational
+          A tab only adopts a non-neutral tone when its count > 0, so healthy
+          tenants keep a calm UI and stressed tenants get a glanceable alert. */}
       <div className="flex items-center gap-0.5 border-b border-border/40 overflow-x-auto">
         {([
           { key: "active" as const, label: "Active", count: statusCounts.active },
@@ -952,14 +959,21 @@ export default function Employees() {
             : []),
           { key: "pending" as const, label: "Pending activation", count: statusCounts.pending },
           { key: "new" as const, label: "New", count: statusCounts.new },
-          { key: "missing-docs" as const, label: "Missing docs", count: statusCounts["missing-docs"] },
+          {
+            key: "missing-docs" as const,
+            label: "Missing docs",
+            count: statusCounts["missing-docs"],
+            tone: statusCounts["missing-docs"] > 0 ? ("warning" as const) : undefined,
+          },
           { key: "drivers" as const, label: "Drivers", count: statusCounts.drivers },
           { key: "no-activity" as const, label: "No recent activity", count: statusCounts["no-activity"] },
           { key: "inactive" as const, label: "Inactive", count: statusCounts.inactive },
           { key: "all" as const, label: "All", count: statusCounts.all },
         ]).map(tab => {
           const isActive = statusTab === tab.key;
-          const isDestructive = (tab as any).tone === "destructive";
+          const tone = (tab as any).tone as "destructive" | "warning" | undefined;
+          const isDestructive = tone === "destructive";
+          const isWarning = tone === "warning";
           return (
             <button
               key={tab.key}
@@ -969,20 +983,30 @@ export default function Employees() {
                 isActive
                   ? isDestructive
                     ? "border-destructive text-destructive"
-                    : "border-primary text-primary"
-                  : isDestructive && !isActive
+                    : isWarning
+                      ? "border-warning text-warning"
+                      : "border-primary text-primary"
+                  : isDestructive
                     ? "border-transparent text-destructive/80 hover:text-destructive hover:border-destructive/40"
-                    : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
+                    : isWarning
+                      ? "border-transparent text-warning/80 hover:text-warning hover:border-warning/40"
+                      : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
               )}
             >
               {tab.label}
               <span className={cn(
                 "ml-1.5 text-[10px] font-bold tabular-nums px-1.5 py-0.5 rounded-md",
                 isActive
-                  ? isDestructive ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary"
+                  ? isDestructive
+                    ? "bg-destructive/10 text-destructive"
+                    : isWarning
+                      ? "bg-warning/15 text-warning"
+                      : "bg-primary/10 text-primary"
                   : isDestructive
                     ? "bg-destructive/10 text-destructive"
-                    : "bg-muted text-muted-foreground",
+                    : isWarning
+                      ? "bg-warning/15 text-warning"
+                      : "bg-muted text-muted-foreground",
               )}>{tab.count}</span>
             </button>
           );
@@ -1090,6 +1114,26 @@ export default function Employees() {
             actionLabel="View pending activation"
             onAction={() => setStatusTab("pending")}
           />
+        ) : statusTab === "pending" && employees.length > 0 && !search ? (
+          <EmptyState
+            icon={CheckCircle2}
+            title="Nothing pending"
+            description="Every active worker has either accessed the portal or has an invitation in flight. Use 'Quick add' to onboard someone new."
+            actionLabel="Quick add"
+            onAction={() => setQuickAddOpen(true)}
+          />
+        ) : statusTab === "inactive" && employees.length > 0 && !search ? (
+          <EmptyState
+            icon={UserCheck}
+            title="No archived workers"
+            description="Workers you archive will appear here. Archived workers can be reactivated at any time."
+          />
+        ) : statusTab === "missing-docs" && employees.length > 0 && !search ? (
+          <EmptyState
+            icon={CheckCircle2}
+            title="All workers have their documents 🎉"
+            description="Onboarding requirements are complete across the active roster."
+          />
         ) : (
           <EmptyState
             icon={Users}
@@ -1113,9 +1157,14 @@ export default function Employees() {
         /* ─── Compact List ─── */
         <div className="rounded-xl border border-border/50 bg-card overflow-hidden divide-y divide-border/40">
           {filtered.map(e => {
+            // Surface "incomplete" workers (no phone or no PIN) with the same
+            // attention-grabbing tone as missing-docs so they're operable at a glance.
+            const isIncomplete =
+              e.is_active !== false &&
+              (!(e.phone_number ?? "").toString().replace(/\D/g, "") || !(e.access_pin ?? "").toString().trim());
             const status: PremiumAvatarStatus = e.is_active === false
               ? "inactive"
-              : isMissingDocs(e) ? "missing-docs"
+              : isMissingDocs(e) || isIncomplete ? "missing-docs"
               : isNew(e) ? "new"
               : !e.user_id ? "pending"
               : "active";
@@ -1214,11 +1263,33 @@ export default function Employees() {
                   );
                 })()}
                 <TableHead className="w-8 pl-2 pr-0"></TableHead>
-                <TableHead className="text-[10px]">Name</TableHead>
-                {visibleColumns.includes("employer_identification") && <TableHead className="text-[10px] w-[70px]">ID</TableHead>}
+                <TableHead
+                  className="text-[10px] cursor-pointer select-none hover:bg-muted/40 transition-colors"
+                  onClick={() => onSort("name")}
+                  aria-sort={sort.key === "name" ? (sort.direction === "asc" ? "ascending" : "descending") : "none"}
+                >
+                  <span className="inline-flex items-center gap-1">Name <SortIndicator direction={directionFor("name")} /></span>
+                </TableHead>
+                {visibleColumns.includes("employer_identification") && (
+                  <TableHead
+                    className="text-[10px] w-[70px] cursor-pointer select-none hover:bg-muted/40 transition-colors"
+                    onClick={() => onSort("code")}
+                    aria-sort={sort.key === "code" ? (sort.direction === "asc" ? "ascending" : "descending") : "none"}
+                  >
+                    <span className="inline-flex items-center gap-1">ID <SortIndicator direction={directionFor("code")} /></span>
+                  </TableHead>
+                )}
                 {visibleColumns.includes("phone_number") && <TableHead className="hidden sm:table-cell text-[10px]">Phone</TableHead>}
                 {visibleColumns.includes("email") && <TableHead className="hidden md:table-cell text-[10px]">Email</TableHead>}
-                {visibleColumns.includes("employee_role") && <TableHead className="hidden lg:table-cell text-[10px]">Role</TableHead>}
+                {visibleColumns.includes("employee_role") && (
+                  <TableHead
+                    className="hidden lg:table-cell text-[10px] cursor-pointer select-none hover:bg-muted/40 transition-colors"
+                    onClick={() => onSort("role")}
+                    aria-sort={sort.key === "role" ? (sort.direction === "asc" ? "ascending" : "descending") : "none"}
+                  >
+                    <span className="inline-flex items-center gap-1">Role <SortIndicator direction={directionFor("role")} /></span>
+                  </TableHead>
+                )}
                 {visibleColumns.includes("groups") && <TableHead className="hidden xl:table-cell text-[10px]">Group</TableHead>}
                 {visibleColumns.includes("onboarding_status") && <TableHead className="hidden lg:table-cell text-[10px]">Onboarding</TableHead>}
                 {visibleColumns.includes("address_city") && <TableHead className="hidden xl:table-cell text-[10px]">City</TableHead>}
@@ -1228,7 +1299,15 @@ export default function Employees() {
                 {visibleColumns.includes("english_level") && <TableHead className="hidden xl:table-cell text-[10px]">English</TableHead>}
                 {visibleColumns.includes("start_date") && <TableHead className="hidden xl:table-cell text-[10px]">Start</TableHead>}
                 {visibleColumns.includes("status") && <TableHead className="text-[10px] w-[80px]">Status</TableHead>}
-                {visibleColumns.includes("last_login") && <TableHead className="hidden lg:table-cell text-[10px] w-[80px]">Last login</TableHead>}
+                {visibleColumns.includes("last_login") && (
+                  <TableHead
+                    className="hidden lg:table-cell text-[10px] w-[80px] cursor-pointer select-none hover:bg-muted/40 transition-colors"
+                    onClick={() => onSort("last_activity")}
+                    aria-sort={sort.key === "last_activity" ? (sort.direction === "asc" ? "ascending" : "descending") : "none"}
+                  >
+                    <span className="inline-flex items-center gap-1">Last login <SortIndicator direction={directionFor("last_activity")} /></span>
+                  </TableHead>
+                )}
                 <TableHead className="w-8 pr-3"></TableHead>
               </TableRow>
             </TableHeader>

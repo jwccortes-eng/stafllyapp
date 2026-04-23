@@ -831,7 +831,9 @@ export default function UnifiedPersonProfile() {
               <div className="mt-3 flex items-center justify-between gap-2 pt-2 border-t border-warning/15">
                 <span className="text-[10.5px] text-muted-foreground/80">
                   {personalCount + docsCount} item{personalCount + docsCount === 1 ? "" : "s"} pending
-                  {docsCount > 0 && personalCount > 0 ? " · documents block onboarding first" : ""}
+                  {docsCount > 0 && personalCount > 0
+                    ? " · documents block onboarding first"
+                    : " · required to be assigned to shifts"}
                 </span>
                 <Button
                   size="sm"
