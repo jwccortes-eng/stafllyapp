@@ -58,7 +58,7 @@ import { BulkRateAssignment } from "@/components/employee/BulkRateAssignment";
 import { EmployeeInviteDialog } from "@/components/employee/EmployeeInviteDialog";
 import { QuickAddInviteWizard } from "@/components/employee/QuickAddInviteWizard";
 import { useEmployeeInvitations } from "@/hooks/useEmployeeInvitations";
-import { canInviteWorker } from "@/lib/worker-actions";
+import { canInviteWorker, isWorkerInviteFailed } from "@/lib/worker-actions";
 import { useSubscription } from "@/hooks/useSubscription";
 import UpgradeBanner from "@/components/billing/UpgradeBanner";
 import { formatDistanceToNow, parseISO, isValid, differenceInDays } from "date-fns";
@@ -127,7 +127,7 @@ interface UpdateDiff {
 import { PortalAccessBadge } from "@/components/employee/PortalAccessBadge";
 import type { InvitationMap } from "@/hooks/useEmployeeInvitations";
 import { inviteUrl } from "@/lib/app-url";
-import { isInviteStatusFailure } from "@/lib/invitation-status";
+
 
 function EmpStatusBadge({
   employee,
@@ -687,10 +687,10 @@ export default function Employees() {
   };
 
   // Helper: invitation in a failure state (failed / bounced / dlq).
-  const isInviteFailed = (e: EmployeeRecord) => {
-    const inv = invitations[e.id];
-    return !!inv && isInviteStatusFailure(inv.status);
-  };
+  // Delegates to the central `isWorkerInviteFailed` helper so the rule lives
+  // in a single place (`src/lib/worker-actions.ts`) and matches the bulk-action
+  // and per-row enforcement used elsewhere.
+  const isInviteFailed = (e: EmployeeRecord) => isWorkerInviteFailed(e, invitations[e.id]);
 
   const statusCounts = {
     active: employees.filter(e => e.is_active !== false && !!e.user_id).length,
