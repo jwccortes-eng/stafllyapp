@@ -16,7 +16,12 @@ interface CheckinPayload {
     | "update_visit"
     | "submit_rating"
     | "create_inquiry"
-    | "list_payments";
+    | "list_payments"
+    // ====== Phase 2: CRM evolution ======
+    | "start_visit"          // Open a case after intake reason is selected
+    | "close_visit"          // Final resolution + status + rating + note
+    | "capture_kiosk_photo"  // Save base64 photo to employee avatar
+    | "get_visit";           // Re-fetch a case (timeline, escalation, etc.)
   phone?: string;
   pin?: string;
   category?: string;
@@ -44,6 +49,11 @@ interface CheckinPayload {
     emergency_contact_name?: string;
     emergency_contact_phone?: string;
   };
+  // ====== Phase 2 fields ======
+  intake_reason?: string;       // front_desk_intake_reason enum value
+  final_resolution?: string;    // 'resolved' | 'pending_followup' | 'escalated' | 'cancelled'
+  resolution_note?: string;
+  photo_base64?: string;        // data URL or raw base64 (jpeg/png)
 }
 
 const RATING_TO_SCORE: Record<string, number> = {
