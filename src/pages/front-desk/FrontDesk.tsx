@@ -1278,35 +1278,61 @@ export default function FrontDesk() {
             </SectionCard>
           )}
 
-          {/* ============ COMPLETE ============ */}
-          {step === "complete" && (
-            <Card className="p-10 sm:p-16 text-center shadow-xl rounded-3xl border-2 border-emerald-500/30 bg-gradient-to-br from-emerald-500/5 to-card">
-              <div className="mx-auto mb-6 h-20 w-20 rounded-3xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/30">
-                <CheckCircle2 className="h-10 w-10 text-white" />
-              </div>
-              <h2 className="text-3xl font-bold mb-2">
-                {completeKind === "update" ? t.updatedTitle : t.sentTitle}
-              </h2>
-              <p className="text-lg text-muted-foreground mb-8">
-                {completeKind === "update" ? t.updatedSub : t.sentSub}
-              </p>
-              <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                {employee && (
-                  <Button
-                    variant="outline"
-                    size="lg"
-                    onClick={goHub}
-                    className="h-12 px-6 rounded-xl"
-                  >
-                    <ArrowLeft className="h-4 w-4 mr-2" /> {t.backHome}
-                  </Button>
+          {/* ============ COMPLETE (premium with case + status) ============ */}
+          {step === "complete" && (() => {
+            const isPending = closedCase?.resolution === "pending_followup";
+            const accent = isPending
+              ? "border-amber-500/30 bg-gradient-to-br from-amber-500/5 to-card"
+              : "border-emerald-500/30 bg-gradient-to-br from-emerald-500/5 to-card";
+            const iconBg = isPending
+              ? "bg-gradient-to-br from-amber-500 to-orange-500 shadow-amber-500/30"
+              : "bg-gradient-to-br from-emerald-500 to-teal-500 shadow-emerald-500/30";
+            const Icon = isPending ? Clock : CheckCircle2;
+            const title = closedCase
+              ? isPending
+                ? lang === "es" ? "Caso registrado" : "Case registered"
+                : lang === "es" ? "¡Listo!" : "All done!"
+              : completeKind === "update" ? t.updatedTitle : t.sentTitle;
+            const subtitle = closedCase
+              ? isPending
+                ? lang === "es"
+                  ? "Nuestro equipo continuará el seguimiento contigo."
+                  : "Our team will continue the follow-up with you."
+                : lang === "es"
+                  ? "Gracias por tu visita. Nos vemos pronto."
+                  : "Thanks for your visit. See you soon."
+              : completeKind === "update" ? t.updatedSub : t.sentSub;
+            return (
+              <Card className={cn("p-10 sm:p-14 text-center shadow-xl rounded-3xl border-2", accent)}>
+                <div className={cn("mx-auto mb-6 h-20 w-20 rounded-3xl flex items-center justify-center shadow-lg", iconBg)}>
+                  <Icon className="h-10 w-10 text-white" />
+                </div>
+                {closedCase?.case_code && (
+                  <div className="mb-5 flex justify-center">
+                    <TicketBadge caseCode={closedCase.case_code} />
+                  </div>
                 )}
-                <Button size="lg" onClick={resetAll} className="h-12 px-8 rounded-xl">
-                  {t.newSession}
-                </Button>
-              </div>
-            </Card>
-          )}
+                <h2 className="text-3xl font-bold mb-2 tracking-tight">{title}</h2>
+                <p className="text-lg text-muted-foreground mb-8 max-w-md mx-auto">{subtitle}</p>
+                {closedCase && (
+                  <div className="mb-8 inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/60 px-4 py-2 text-sm">
+                    <span className="text-muted-foreground">{lang === "es" ? "Estado:" : "Status:"}</span>
+                    <span className={cn("font-semibold", isPending ? "text-amber-600" : "text-emerald-600")}>
+                      {isPending
+                        ? (lang === "es" ? "Pendiente de seguimiento" : "Pending follow-up")
+                        : (lang === "es" ? "Resuelto" : "Resolved")}
+                    </span>
+                  </div>
+                )}
+                <div className="flex justify-center">
+                  <Button size="lg" onClick={resetAll} className="h-12 px-8 rounded-xl">
+                    {t.newSession}
+                  </Button>
+                </div>
+              </Card>
+            );
+          })()}
+
         </div>
       </main>
     </div>
