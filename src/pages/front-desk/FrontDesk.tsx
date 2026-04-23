@@ -474,6 +474,16 @@ export default function FrontDesk() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/40 flex flex-col">
+      {/* Premium attract / idle screen — dismissed on any interaction */}
+      {attract && (
+        <AttractMode
+          lang={lang}
+          onDismiss={() => {
+            setAttract(false);
+            if (step === "welcome") setStep("phone");
+          }}
+        />
+      )}
       {/* Header */}
       <header className="border-b border-border/60 bg-card/80 backdrop-blur-md sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
