@@ -302,7 +302,7 @@ export default function Employees() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (atEmployeeLimit) {
-      toast({ title: "Limit reached", description: `Your ${limits.label} plan allows up to ${limits.maxEmployees} active employees. Upgrade your plan to add more.`, variant: "destructive" });
+      toast({ title: "Limit reached", description: `Your ${limits.label} plan allows up to ${limits.maxEmployees} active workers. Upgrade your plan to add more.`, variant: "destructive" });
       return;
     }
     setLoading(true);
@@ -721,7 +721,7 @@ export default function Employees() {
               </DialogTrigger>
               <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
                 <DialogHeader>
-                  <DialogTitle>Update employee data</DialogTitle>
+                  <DialogTitle>Update worker data</DialogTitle>
                   <DialogDescription>Upload an Excel or CSV file to update information</DialogDescription>
                 </DialogHeader>
                 {updateStep === "upload" && (
@@ -782,7 +782,7 @@ export default function Employees() {
             <Dialog open={importOpen} onOpenChange={(v) => { setImportOpen(v); if (!v) resetImport(); }}>
               <DialogTrigger asChild><Button variant="outline" size="sm" className="h-8 text-xs"><Upload className="h-3.5 w-3.5 mr-1.5" />Import</Button></DialogTrigger>
               <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
-                <DialogHeader><DialogTitle>Import Employees</DialogTitle><DialogDescription>Only creates new records, does not update existing ones</DialogDescription></DialogHeader>
+                <DialogHeader><DialogTitle>Import Workers</DialogTitle><DialogDescription>Only creates new records, does not update existing ones</DialogDescription></DialogHeader>
                 {importStep === "upload" && (
                   <div className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/50 transition-colors">
                     <FileSpreadsheet className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
@@ -797,12 +797,12 @@ export default function Employees() {
                     <div className="flex gap-2"><Button variant="outline" onClick={resetImport}>Cancel</Button><Button onClick={executeImport} disabled={importing || importPreview.every(r => r.exists)}>{importing ? "Importing..." : `Import ${importPreview.filter(r => !r.exists).length}`}</Button></div>
                   </div>
                 )}
-                {importStep === "done" && importResult && (<div className="text-center py-6"><CheckCircle2 className="h-12 w-12 text-primary mx-auto mb-4" /><p className="text-lg font-medium">{importResult.created} employees created</p><Button className="mt-4" onClick={() => { setImportOpen(false); resetImport(); }}>Close</Button></div>)}
+                {importStep === "done" && importResult && (<div className="text-center py-6"><CheckCircle2 className="h-12 w-12 text-primary mx-auto mb-4" /><p className="text-lg font-medium">{importResult.created} workers created</p><Button className="mt-4" onClick={() => { setImportOpen(false); resetImport(); }}>Close</Button></div>)}
               </DialogContent>
             </Dialog>
             <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (v) setForm(emptyForm()); }}>
               <DialogTrigger asChild><Button disabled={atEmployeeLimit} size="sm" className="h-8 text-xs"><Plus className="h-3.5 w-3.5 mr-1.5" />New (full form)</Button></DialogTrigger>
-              <DialogContent className="max-w-md"><DialogHeader><DialogTitle>New Employee</DialogTitle><DialogDescription>Enter the new employee's information</DialogDescription></DialogHeader>{atEmployeeLimit ? <UpgradeBanner feature={`Limit of ${limits.maxEmployees} employees`} /> : <EmployeeForm fields={CONNECTEAM_FIELDS} form={form} setForm={setForm} loading={loading} onSubmit={handleCreate} submitLabel="Create" />}</DialogContent>
+              <DialogContent className="max-w-md"><DialogHeader><DialogTitle>New Worker</DialogTitle><DialogDescription>Enter the new worker's information</DialogDescription></DialogHeader>{atEmployeeLimit ? <UpgradeBanner feature={`Limit of ${limits.maxEmployees} active workers`} /> : <EmployeeForm fields={CONNECTEAM_FIELDS} form={form} setForm={setForm} loading={loading} onSubmit={handleCreate} submitLabel="Create" />}</DialogContent>
             </Dialog>
             <Button size="sm" variant="default" className="h-8 text-xs" disabled={atEmployeeLimit} onClick={() => setQuickAddOpen(true)}>
               <UserPlus className="h-3.5 w-3.5 mr-1.5" />Quick add

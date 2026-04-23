@@ -388,7 +388,7 @@ export default function UnifiedPersonProfile() {
         />
         <div className="flex justify-center">
           <Button variant="outline" onClick={() => navigate("/app/employees")}>
-            <ArrowLeft className="h-4 w-4 mr-1.5" /> Back to Worker Hub
+            <ArrowLeft className="h-4 w-4 mr-1.5" /> Back to Workers
           </Button>
         </div>
       </div>
@@ -408,7 +408,7 @@ export default function UnifiedPersonProfile() {
           className="h-7 px-2 text-xs gap-1.5"
           onClick={() => navigate("/app/employees")}
         >
-          <ArrowLeft className="h-3.5 w-3.5" /> Worker Hub
+          <ArrowLeft className="h-3.5 w-3.5" /> Workers
         </Button>
         <span className="text-muted-foreground/40">/</span>
         <span className="font-medium text-foreground truncate">{fullName}</span>
