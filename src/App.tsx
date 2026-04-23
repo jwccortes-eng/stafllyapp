@@ -198,6 +198,7 @@ function App() {
               <Route path="/manual" element={<UserManual />} />
               <Route path="/passport/:slug" element={<PublicPassport />} />
               <Route path="/kiosk" element={<KioskClock />} />
+              <Route path="/front-desk" element={<FrontDesk />} />
               <Route path="/apply/:slug" element={<Apply />} />
               <Route path="/join/:inviteCode" element={<JoinCompany />} />
               <Route path="/invite" element={<AcceptInvite />} />
