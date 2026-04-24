@@ -836,11 +836,33 @@ function DuplicateGroupCard({
               <CardTitle className="text-base">
                 {group.members.length} matching records
               </CardTitle>
+              {group.strength === "strong" ? (
+                <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 gap-1">
+                  Strong signal
+                </Badge>
+              ) : group.strength === "weak" ? (
+                <Badge variant="outline" className="bg-warning/10 text-warning border-warning/20 gap-1">
+                  Weak signal · name only
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="bg-muted text-muted-foreground border-border gap-1">
+                  Shared contact only
+                </Badge>
+              )}
               {group.matchKeys.map((k) => (
                 <Badge key={k} variant="outline" className="gap-1 font-normal">
                   {MATCH_ICON[k]} {MATCH_LABEL[k]}
                 </Badge>
               ))}
+              {group.sharedEmails.length > 0 && (
+                <Badge
+                  variant="outline"
+                  className="gap-1 bg-muted text-muted-foreground border-border font-normal"
+                  title={`Shared/generic email present: ${group.sharedEmails.join(", ")}`}
+                >
+                  <Mail className="h-3 w-3" /> Shared contact
+                </Badge>
+              )}
               {group.reviewState === "flagged_pending_consolidation" && (
                 <Badge variant="outline" className="bg-deduction/10 text-deduction border-deduction/20 gap-1">
                   <Flag className="h-3 w-3" /> Pending consolidation
