@@ -29,6 +29,17 @@ import {
   type AssignmentFailure,
   type AssignmentFailureType,
 } from "@/lib/import/assignment-failures";
+import {
+  buildShiftHash,
+  createImportBatch,
+  persistRawRows,
+  persistNormalizedRows,
+  upsertShiftMapping,
+  finalizeImportBatch,
+  failImportBatch,
+  type RawShiftRow,
+  type NormalizedRowInput,
+} from "@/lib/import/schedule-traceability";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const ACCEPTED_EXTENSIONS = ".xls,.xlsx,.csv";
