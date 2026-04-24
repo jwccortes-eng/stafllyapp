@@ -183,6 +183,9 @@ export default function ImportSchedule() {
   const [filterFrom, setFilterFrom] = useState("");
   const [filterTo, setFilterTo] = useState("");
 
+  // Step 4: filter for the Blocked assignments panel
+  const [blockedFilter, setBlockedFilter] = useState<AssignmentFailureType | "all">("all");
+
   /** Process a single workbook sheet and return parsed groups + unavailability */
   const parseSheetData = (wb: SafeWorkbook, sheetName: string) => {
     const ws = getSheet(wb, sheetName);
