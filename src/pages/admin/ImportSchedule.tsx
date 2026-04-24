@@ -921,6 +921,18 @@ export default function ImportSchedule() {
             </Card>
           )}
 
+          {/* Aux mapping status */}
+          {auxFileName && (
+            <Card className="p-3 border-primary/30 bg-primary/5">
+              <div className="flex items-center gap-2 text-xs">
+                <Users className="h-3.5 w-3.5 text-primary" />
+                <span className="font-medium">Mapa auxiliar activo:</span>
+                <span className="text-muted-foreground">{auxFileName} · {auxUsers.length} usuarios</span>
+                <span className="text-muted-foreground ml-auto">Matching enriquecido por phone/email/Connecteam ID.</span>
+              </div>
+            </Card>
+          )}
+
           {/* Summary cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <Card className="p-4">
