@@ -24,6 +24,7 @@ import { ShiftPostReviewsSection } from "@/components/reviews/ShiftPostReviewsSe
 import { ShiftRidesPanel } from "./ShiftRidesPanel";
 import { ShiftShareMenu } from "./ShiftShareMenu";
 import { ShiftAttendancePanel } from "./ShiftAttendancePanel";
+import { UnstaffedAlert } from "./UnstaffedAlert";
 import { ShiftChatPanel } from "./ShiftChatPanel";
 import ShiftLiveMapPanel from "./ShiftLiveMapPanel";
 import type { AvailabilityConfig, AvailabilityOverride } from "@/hooks/useEmployeeAvailability";
@@ -449,6 +450,15 @@ export function ShiftDetailDialog({
               {shiftAssignments.length}/{slotsNum}
             </span>
           </div>
+        </div>
+
+        {/* ── Unstaffed import alert (FASE 1: visibilidad de imports rotos) ── */}
+        <div className="px-4 pt-3">
+          <UnstaffedAlert
+            shift={shift}
+            assignmentCount={shiftAssignments.length}
+            variant="detail"
+          />
         </div>
 
         {/* ── TAB BAR — 4 primary visible + overflow ── */}
