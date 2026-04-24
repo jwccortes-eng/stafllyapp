@@ -21,6 +21,9 @@ import { parseConnecteamFile } from "@/lib/connecteam-parser";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const ACCEPTED_EXTENSIONS = ".xls,.xlsx,.csv";
+const TARGET_SHIFT_CODE = "45678";
+const TARGET_CLIENT_NAME = "chef kaufman";
+const TARGET_DATES = new Set(["2026-04-24", "2026-04-25", "2026-04-26"]);
 
 // Schedule Export column names from Connecteam
 const SCHEDULE_HEADERS = [
@@ -159,7 +162,6 @@ export default function ImportSchedule() {
   const [importProgress, setImportProgress] = useState<{ current: number; total: number; phase: string } | null>(null);
   const [parsingFiles, setParsingFiles] = useState(false);
   const [duplicateFileWarning, setDuplicateFileWarning] = useState<string[] | null>(null);
-  const [forceReimport, setForceReimport] = useState(false);
   // Optional auxiliary file: Connecteam Users export → enriches matching with phone/email/Connecteam ID
   const [auxUsers, setAuxUsers] = useState<AuxUserRecord[]>([]);
   const [auxFileName, setAuxFileName] = useState<string | null>(null);
@@ -314,7 +316,7 @@ export default function ImportSchedule() {
     return true;
   });
 
-  const handleImport = async () => {
+  const handleImport = async (options?: { force?: boolean }) => {
     if (!selectedCompanyId) {
       console.warn("[ImportSchedule] handleImport blocked: no selectedCompanyId");
       toast({ title: "Sin empresa seleccionada", description: "Selecciona una empresa antes de importar.", variant: "destructive" });
@@ -343,7 +345,7 @@ export default function ImportSchedule() {
       const importedFiles: string[] = setting?.value ? (Array.isArray(setting.value) ? setting.value as string[] : []) : [];
       const fileNames = files.length > 0 ? files.map(f => f.name) : (file ? [file.name] : []);
       const alreadyImported = fileNames.filter(n => importedFiles.includes(n));
-      if (alreadyImported.length > 0 && !forceReimport) {
+      if (alreadyImported.length > 0 && !options?.force) {
         console.info("[ImportSchedule] Duplicate file detected, prompting for reconciliation:", alreadyImported);
         setDuplicateFileWarning(alreadyImported);
         setImporting(false);
