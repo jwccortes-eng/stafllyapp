@@ -1004,6 +1004,12 @@ export default function ImportSchedule() {
         await new Promise(resolve => setTimeout(resolve, 30));
       }
 
+      // ── Fase 4: persist normalized rows accumulated during the import ──
+      if (batchId && normalizedRowsAcc.length > 0) {
+        setImportProgress({ current: filteredGroups.length, total: filteredGroups.length, phase: "Guardando filas normalizadas..." });
+        await persistNormalizedRows(batchId, selectedCompanyId, normalizedRowsAcc);
+      }
+
       // Handle unavailability records
       setImportProgress({ current: filteredGroups.length, total: filteredGroups.length, phase: "Procesando indisponibilidades..." });
       let totalUnavailable = 0;
