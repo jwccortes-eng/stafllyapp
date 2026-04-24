@@ -11343,6 +11343,7 @@ export type Database = {
           driver_employee_id: string | null
           end_time: string
           id: string
+          import_batch_id: string | null
           job_site_location_id: string | null
           location_id: string | null
           meeting_point: string | null
@@ -11382,6 +11383,7 @@ export type Database = {
           driver_employee_id?: string | null
           end_time: string
           id?: string
+          import_batch_id?: string | null
           job_site_location_id?: string | null
           location_id?: string | null
           meeting_point?: string | null
@@ -11421,6 +11423,7 @@ export type Database = {
           driver_employee_id?: string | null
           end_time?: string
           id?: string
+          import_batch_id?: string | null
           job_site_location_id?: string | null
           location_id?: string | null
           meeting_point?: string | null
@@ -11485,6 +11488,13 @@ export type Database = {
             columns: ["driver_employee_id"]
             isOneToOne: false
             referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scheduled_shifts_import_batch_id_fkey"
+            columns: ["import_batch_id"]
+            isOneToOne: false
+            referencedRelation: "import_batches"
             referencedColumns: ["id"]
           },
           {
@@ -11931,6 +11941,7 @@ export type Database = {
           created_at: string
           employee_id: string
           id: string
+          import_batch_id: string | null
           last_notified_at: string | null
           rejected_at: string | null
           rejection_reason: string | null
@@ -11949,6 +11960,7 @@ export type Database = {
           created_at?: string
           employee_id: string
           id?: string
+          import_batch_id?: string | null
           last_notified_at?: string | null
           rejected_at?: string | null
           rejection_reason?: string | null
@@ -11967,6 +11979,7 @@ export type Database = {
           created_at?: string
           employee_id?: string
           id?: string
+          import_batch_id?: string | null
           last_notified_at?: string | null
           rejected_at?: string | null
           rejection_reason?: string | null
@@ -12004,6 +12017,13 @@ export type Database = {
             columns: ["employee_id"]
             isOneToOne: false
             referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_assignments_import_batch_id_fkey"
+            columns: ["import_batch_id"]
+            isOneToOne: false
+            referencedRelation: "import_batches"
             referencedColumns: ["id"]
           },
           {
