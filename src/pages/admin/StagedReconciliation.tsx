@@ -1,6 +1,13 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
-import { getDefaultPayPeriod, sortPeriodsDesc } from "@/lib/pay-period-helpers";
+import {
+  getDefaultPayPeriod,
+  sortPeriodsDesc,
+  isFuturePeriod,
+  isCurrentPeriod,
+  isSpecialPeriod,
+  isPastPeriod,
+} from "@/lib/pay-period-helpers";
 import { useCompany } from "@/hooks/useCompany";
 import { useReconciliationPeriod } from "@/hooks/useReconciliationPeriod";
 import { useAuth } from "@/hooks/useAuth";
@@ -349,9 +356,25 @@ export default function StagedReconciliation() {
     setSelectedBatchPayPeriodId(getDefaultPayPeriod(payPeriods)?.id || "");
   }, [showBatchDialog, payPeriods, selectedBatchPayPeriodId]);
 
+  // ── Future period guard (Quality Staff incident — never act on a period
+  //    whose start_date is in the future without strong confirmation). ──
+  const activeIsFuture = !!activePeriod && isFuturePeriod(activePeriod);
+  const activeIsCurrent = !!activePeriod && isCurrentPeriod(activePeriod);
+  const activeIsSpecial = !!activePeriod && isSpecialPeriod(activePeriod);
+
+  const confirmFutureAction = useCallback((actionLabel: string) => {
+    if (!activeIsFuture) return true;
+    const msg =
+      `⚠️ Estás por ejecutar "${actionLabel}" sobre un periodo FUTURO ` +
+      `(${activePeriod?.period_start} → ${activePeriod?.period_end}). ` +
+      `Esto puede contaminar payroll/reconciliation. ¿Confirmas que deseas continuar?`;
+    return typeof window !== "undefined" && window.confirm(msg);
+  }, [activeIsFuture, activePeriod?.period_start, activePeriod?.period_end]);
+
   // ── Reprocess period ──
   const handleReprocessPeriod = async () => {
     if (!activePeriod) return;
+    if (!confirmFutureAction("Reprocesar periodo")) return;
     setReprocessing(true);
     await generateFinalRecords(activePeriod.id);
     await logJournal("reprocess", "Periodo reprocesado", `Clasificación y mappings reaplicados`);
@@ -362,12 +385,14 @@ export default function StagedReconciliation() {
   // ── Core actions with journal logging ──
   const handleGenerateRecords = async () => {
     if (!activePeriod) return;
+    if (!confirmFutureAction("Generar registros finales")) return;
     await generateFinalRecords(activePeriod.id);
     await logJournal("matching", "Registros finales generados", `${finalRecords.length} empleados`);
   };
 
   const handleApprovePeriod = async () => {
     if (!activePeriod) return;
+    if (!confirmFutureAction("Aprobar periodo")) return;
     // Determine closure method: if no clocks, mark as truth_validation
     const closureMethod = activePeriod.total_clocks === 0 ? "truth_validation" : "matching";
     await updatePeriodStatus(activePeriod.id, "approved");
@@ -381,6 +406,7 @@ export default function StagedReconciliation() {
 
   const handlePostPeriod = async () => {
     if (!activePeriod) return;
+    if (!confirmFutureAction("Publicar periodo")) return;
     setPublishing(true);
     const success = await postFinalRecords(activePeriod.id);
     if (success) await logJournal("publish", "Periodo publicado a producción");
@@ -389,6 +415,7 @@ export default function StagedReconciliation() {
 
   const handleLockPeriod = async () => {
     if (!activePeriod) return;
+    if (!confirmFutureAction("Cerrar y bloquear periodo")) return;
     await updatePeriodStatus(activePeriod.id, "locked");
     await logJournal("lock", "Periodo cerrado y bloqueado");
     toast({ title: "Periodo cerrado y bloqueado" });
@@ -402,6 +429,7 @@ export default function StagedReconciliation() {
 
   const handleRunValidation = async (isDryRun: boolean, uat: Record<string, boolean>, notes?: string) => {
     if (!activePeriod) return null;
+    if (!isDryRun && !confirmFutureAction("Validar y publicar")) return null;
     const result = await runValidation(activePeriod.id, isDryRun, uat, employeeMap, notes);
     await logJournal("validation", isDryRun ? "Dry-run ejecutado" : "Validación ejecutada", `Confianza: ${result?.confidence_score}%`);
     return result;
@@ -498,6 +526,19 @@ export default function StagedReconciliation() {
           </Button>
         }
       />
+
+      {/* ── Future-period guard banner (Quality Staff incident) ── */}
+      {activeIsFuture && (
+        <Alert variant="destructive" className="border-amber-500/40 bg-amber-500/10 text-amber-900 dark:text-amber-200">
+          <ShieldAlert className="h-4 w-4" />
+          <AlertDescription className="text-sm">
+            <strong>Periodo futuro seleccionado.</strong>{" "}
+            Este periodo ({activePeriod?.period_start} → {activePeriod?.period_end}) aún no ha comenzado.
+            Las acciones de reprocesar, aprobar, validar, publicar o cerrar requerirán confirmación adicional.
+            Para operaciones normales, selecciona el periodo actual o el más reciente cerrado.
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* ── Period Selector Bar ── */}
       <Card className="border-primary/20">
@@ -632,6 +673,23 @@ export default function StagedReconciliation() {
               <Badge variant="outline" className="gap-1.5 shrink-0 border-primary/40 text-primary bg-primary/5 text-xs font-medium px-3 py-1">
                 <Target className="h-3.5 w-3.5" />
                 {reconPeriodLabel(activePeriod)}
+              </Badge>
+            )}
+
+            {/* Temporal kind badge: Actual / Futuro / Pasado / Especial */}
+            {activeIsCurrent && (
+              <Badge variant="outline" className="text-[11px] border-emerald-500/50 text-emerald-700 bg-emerald-500/10">
+                Actual
+              </Badge>
+            )}
+            {activeIsFuture && (
+              <Badge variant="outline" className="text-[11px] border-amber-500/60 text-amber-700 bg-amber-500/10">
+                Futuro
+              </Badge>
+            )}
+            {activeIsSpecial && (
+              <Badge variant="outline" className="text-[11px] border-purple-500/50 text-purple-700 bg-purple-500/10">
+                Especial
               </Badge>
             )}
 
