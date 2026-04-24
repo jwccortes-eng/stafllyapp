@@ -134,6 +134,8 @@ interface DuplicateGroup {
   members: EmployeeRecord[];
   suggestedMasterId: string;
   reviewState: ReviewState | null;
+  strength: GroupStrength;          // strong / weak / shared_contact
+  sharedEmails: string[];           // emails flagged as shared contact within the group
 }
 
 type ReviewState = "reviewed" | "flagged_pending_consolidation";
