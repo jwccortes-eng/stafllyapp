@@ -54,6 +54,7 @@ const Directory = lazy(() => import("./pages/admin/Directory"));
 const Clients = lazy(() => import("./pages/admin/Clients"));
 const Locations = lazy(() => import("./pages/admin/Locations"));
 const ImportSchedule = lazy(() => import("./pages/admin/ImportSchedule"));
+const BackfillShift = lazy(() => import("./pages/admin/BackfillShift"));
 const ImportTimeClock = lazy(() => import("./pages/admin/ImportTimeClock"));
 const ImportPayrollExtras = lazy(() => import("./pages/admin/ImportPayrollExtras"));
 const BulkImportShifts = lazy(() => import("./pages/admin/BulkImportShifts"));
@@ -245,6 +246,7 @@ function App() {
                 <Route path="locations" element={<CompanyRequiredGuard><ModuleGate moduleKey="locations"><Locations /></ModuleGate></CompanyRequiredGuard>} />
                 <Route path="shifts" element={<CompanyRequiredGuard><Shifts /></CompanyRequiredGuard>} />
                 <Route path="import-schedule" element={<CompanyRequiredGuard><ModuleGate moduleKey="import"><ImportSchedule /></ModuleGate></CompanyRequiredGuard>} />
+                <Route path="backfill-shift/:shiftCode" element={<CompanyRequiredGuard><BackfillShift /></CompanyRequiredGuard>} />
                 <Route path="import-timeclock" element={<CompanyRequiredGuard><ModuleGate moduleKey="import"><ImportTimeClock /></ModuleGate></CompanyRequiredGuard>} />
                 <Route path="import-extras" element={<CompanyRequiredGuard><ModuleGate moduleKey="import"><ImportPayrollExtras /></ModuleGate></CompanyRequiredGuard>} />
                 <Route path="bulk-import-shifts" element={<CompanyRequiredGuard><BulkImportShifts /></CompanyRequiredGuard>} />
