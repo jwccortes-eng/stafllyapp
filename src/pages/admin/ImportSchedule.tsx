@@ -16,11 +16,14 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format, parse } from "date-fns";
 import PasswordConfirmDialog from "@/components/PasswordConfirmDialog";
-import { EmployeeResolver, type AuxUserRecord, type AmbiguousMatch, type MatchTelemetry } from "@/lib/employee-matcher";
+import { EmployeeResolver, normalizeName, type AuxUserRecord, type AmbiguousMatch, type MatchMethod, type MatchTelemetry } from "@/lib/employee-matcher";
 import { parseConnecteamFile } from "@/lib/connecteam-parser";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const ACCEPTED_EXTENSIONS = ".xls,.xlsx,.csv";
+const TARGET_SHIFT_CODE = "45678";
+const TARGET_CLIENT_NAME = "chef kaufman";
+const TARGET_DATES = new Set(["2026-04-24", "2026-04-25", "2026-04-26"]);
 
 // Schedule Export column names from Connecteam
 const SCHEDULE_HEADERS = [
@@ -62,6 +65,35 @@ interface ImportSummary {
   matchTelemetry: MatchTelemetry;
   ambiguousMatches: AmbiguousMatch[];
   auxUsersLoaded: number;
+  targetGroupCount: number;
+  targetShiftDiagnostics: TargetShiftDiagnostic[];
+}
+
+interface TargetShiftEmployeeDiagnostic {
+  rawName: string;
+  normalizedName: string;
+  statusFromExcel: string;
+  matchMethod: MatchMethod | null;
+  employeeId: string | null;
+  ambiguous: boolean;
+  unmatched: boolean;
+  insertAttempt: "yes" | "no";
+  assignmentResult: string;
+  reason: string | null;
+}
+
+interface TargetShiftDiagnostic {
+  date: string;
+  shiftCode: string;
+  job: string;
+  groupKey: string;
+  dedupKeyExcel: string;
+  dedupKeyDb: string | null;
+  existingShiftId: string | null;
+  enteredReconcile: boolean;
+  employees: string[];
+  employeeStatuses: string[];
+  employeesDiagnostic: TargetShiftEmployeeDiagnostic[];
 }
 
 /**
@@ -130,7 +162,6 @@ export default function ImportSchedule() {
   const [importProgress, setImportProgress] = useState<{ current: number; total: number; phase: string } | null>(null);
   const [parsingFiles, setParsingFiles] = useState(false);
   const [duplicateFileWarning, setDuplicateFileWarning] = useState<string[] | null>(null);
-  const [forceReimport, setForceReimport] = useState(false);
   // Optional auxiliary file: Connecteam Users export → enriches matching with phone/email/Connecteam ID
   const [auxUsers, setAuxUsers] = useState<AuxUserRecord[]>([]);
   const [auxFileName, setAuxFileName] = useState<string | null>(null);
@@ -285,7 +316,7 @@ export default function ImportSchedule() {
     return true;
   });
 
-  const handleImport = async () => {
+  const handleImport = async (options?: { force?: boolean }) => {
     if (!selectedCompanyId) {
       console.warn("[ImportSchedule] handleImport blocked: no selectedCompanyId");
       toast({ title: "Sin empresa seleccionada", description: "Selecciona una empresa antes de importar.", variant: "destructive" });
@@ -314,7 +345,7 @@ export default function ImportSchedule() {
       const importedFiles: string[] = setting?.value ? (Array.isArray(setting.value) ? setting.value as string[] : []) : [];
       const fileNames = files.length > 0 ? files.map(f => f.name) : (file ? [file.name] : []);
       const alreadyImported = fileNames.filter(n => importedFiles.includes(n));
-      if (alreadyImported.length > 0 && !forceReimport) {
+      if (alreadyImported.length > 0 && !options?.force) {
         console.info("[ImportSchedule] Duplicate file detected, prompting for reconciliation:", alreadyImported);
         setDuplicateFileWarning(alreadyImported);
         setImporting(false);
@@ -374,13 +405,15 @@ export default function ImportSchedule() {
         }
       }
 
-      // ── Auto-create employees ONLY when there's no plausible match (no ambiguous, no fuzzy hit) ──
-      // Pre-resolve every name in the file to populate the resolver's telemetry/ambiguous state.
-      // We auto-create only when resolveByName returns null AND the name was not flagged
-      // as ambiguous (i.e. truly unknown person). Ambiguous names go to the review list.
-      setImportProgress({ current: 0, total: filteredGroups.length, phase: "Creando empleados nuevos..." });
+      // Pre-resolve every name in the file to populate telemetry/ambiguous state.
+      // Auto-create is intentionally disabled: unmatched names must stay in review.
+      setImportProgress({ current: 0, total: filteredGroups.length, phase: "Resolviendo empleados..." });
       const allEmpNames = new Set(filteredGroups.flatMap(g => g.employees));
-      let createdEmployees = 0;
+      const targetGroups = filteredGroups.filter(g => {
+        const numericCode = g.shiftCode ? g.shiftCode.match(/^(\d+)/)?.[1] || g.shiftCode : "";
+        return numericCode === TARGET_SHIFT_CODE && TARGET_DATES.has(g.date) && g.job.trim().toLowerCase() === TARGET_CLIENT_NAME;
+      });
+      const targetDiagnostics = new Map<string, TargetShiftDiagnostic>();
       // Cache resolution per name to avoid double-counting telemetry.
       const resolveCache = new Map<string, { id: string | null; ambiguous: boolean }>();
       const resolveOnce = (name: string): { id: string | null; ambiguous: boolean } => {
@@ -396,31 +429,7 @@ export default function ImportSchedule() {
 
       for (const empName of allEmpNames) {
         if (/^system\s/i.test(empName)) continue;
-        const r = resolveOnce(empName);
-        if (r.id) continue;            // matched (any method)
-        if (r.ambiguous) continue;     // do NOT auto-create ambiguous matches
-        const parsed = parseName(empName);
-        if (!parsed) continue;
-        const { data: newEmp } = await supabase.from("employees").insert({
-          company_id: selectedCompanyId,
-          first_name: parsed.first,
-          last_name: parsed.last,
-          is_active: true,
-        } as any).select("id, first_name, last_name, phone_number, email, employer_identification, connecteam_employee_id").single();
-        if (newEmp) {
-          // Inject into the resolver's index so subsequent lookups find it via exact_name.
-          empList.push(newEmp as any);
-          // Rebuild index incrementally: easiest is to recreate the resolver, but doing so
-          // would reset telemetry. Instead we patch the maps directly.
-          const display = `${newEmp.first_name ?? ""} ${newEmp.last_name ?? ""}`.trim();
-          // Use the same normalizer indirectly via resolver internals.
-          // Simpler: clear cache for this name so next call goes through resolver and hits exact_name.
-          resolveCache.delete(empName);
-          // Push into the underlying name index so the resolver finds it.
-          // We rely on EmployeeResolver internals being mutable.
-          (resolver as any).empIndex.allNames.push({ id: newEmp.id, norm: display.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim(), display });
-          createdEmployees++;
-        }
+        resolveOnce(empName);
       }
 
       let totalShifts = 0;
@@ -445,6 +454,25 @@ export default function ImportSchedule() {
         (existingShifts ?? []).forEach(s => {
           const key = `${s.shift_code || ""}|${s.date}|${s.start_time?.slice(0,5)}|${s.end_time?.slice(0,5)}`;
           existingShiftMap.set(key, { id: s.id, slots: s.slots ?? 1 });
+        });
+      }
+
+      for (const group of targetGroups) {
+        const numericCode = group.shiftCode ? group.shiftCode.match(/^(\d+)/)?.[1] || group.shiftCode : "";
+        const dedupKeyExcel = `${numericCode}|${group.date}|${group.startTime}|${group.endTime}`;
+        const existing = existingShiftMap.get(dedupKeyExcel);
+        targetDiagnostics.set(group.key, {
+          date: group.date,
+          shiftCode: numericCode,
+          job: group.job,
+          groupKey: group.key,
+          dedupKeyExcel,
+          dedupKeyDb: existing ? dedupKeyExcel : null,
+          existingShiftId: existing?.id ?? null,
+          enteredReconcile: false,
+          employees: [...group.employees],
+          employeeStatuses: [...group.employeeStatuses],
+          employeesDiagnostic: [],
         });
       }
 
@@ -740,12 +768,15 @@ export default function ImportSchedule() {
         matchTelemetry: { ...resolver.telemetry },
         ambiguousMatches: [...resolver.ambiguous],
         auxUsersLoaded: auxUsers.length,
+        targetGroupCount: targetGroups.length,
+        targetShiftDiagnostics: Array.from(targetDiagnostics.values()),
       };
       setSummary(summaryData);
       console.info("[ImportSchedule] Match telemetry:", resolver.telemetry, "ambiguous:", resolver.ambiguous.length);
 
-      const createdMsg = (createdClients + createdEmployees) > 0
-        ? ` · ${createdClients} clientes y ${createdEmployees} empleados creados`
+      const createdEmployees = 0;
+      const createdMsg = createdClients > 0
+        ? ` · ${createdClients} clientes creados`
         : "";
       const unmatchedMsg = summaryData.unmatchedEmployees.length > 0
         ? ` · ${summaryData.unmatchedEmployees.length} empleados no encontrados`
@@ -782,7 +813,6 @@ export default function ImportSchedule() {
         success: true,
         message: `Importación completada: ${totalShifts} turnos, ${totalAssignments} asignaciones${createdMsg}${unmatchedMsg}${unavailMsg}${dupMsg}${reconciledMsg}.`,
       });
-      setForceReimport(false); // require explicit confirmation for the next re-import
       setStep(4);
     } catch (err: any) {
       console.error("[ImportSchedule] Import failed:", err);
@@ -1072,10 +1102,10 @@ export default function ImportSchedule() {
                 Esto creará turnos nuevos y reconciliará asignaciones faltantes en turnos existentes. Operación idempotente: no duplica datos.
               </p>
               <div className="flex gap-2 shrink-0">
-                <Button variant="outline" size="sm" onClick={() => { setStep(1); setFile(null); setFiles([]); setWorkbook(null); setShiftGroups([]); setResult(null); setForceReimport(false); }}>
+                <Button variant="outline" size="sm" onClick={() => { setStep(1); setFile(null); setFiles([]); setWorkbook(null); setShiftGroups([]); setResult(null); }}>
                   ← Cambiar archivos
                 </Button>
-                <Button size="sm" onClick={handleImport} disabled={importing || filteredGroups.length === 0}>
+                <Button size="sm" onClick={() => void handleImport()} disabled={importing || filteredGroups.length === 0}>
                   {importing ? "Procesando…" : `Procesar importación (${filteredGroups.length})`}
                 </Button>
               </div>
@@ -1104,9 +1134,7 @@ export default function ImportSchedule() {
                 <AlertDialogAction
                   onClick={() => {
                     setDuplicateFileWarning(null);
-                    setForceReimport(true);
-                    // Re-trigger immediately with the override
-                    setTimeout(() => { handleImport(); }, 0);
+                    void handleImport({ force: true });
                   }}
                 >
                   Re-procesar y reconciliar
