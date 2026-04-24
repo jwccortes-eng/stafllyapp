@@ -768,12 +768,15 @@ export default function ImportSchedule() {
         matchTelemetry: { ...resolver.telemetry },
         ambiguousMatches: [...resolver.ambiguous],
         auxUsersLoaded: auxUsers.length,
+        targetGroupCount: targetGroups.length,
+        targetShiftDiagnostics: Array.from(targetDiagnostics.values()),
       };
       setSummary(summaryData);
       console.info("[ImportSchedule] Match telemetry:", resolver.telemetry, "ambiguous:", resolver.ambiguous.length);
 
-      const createdMsg = (createdClients + createdEmployees) > 0
-        ? ` · ${createdClients} clientes y ${createdEmployees} empleados creados`
+      const createdEmployees = 0;
+      const createdMsg = createdClients > 0
+        ? ` · ${createdClients} clientes creados`
         : "";
       const unmatchedMsg = summaryData.unmatchedEmployees.length > 0
         ? ` · ${summaryData.unmatchedEmployees.length} empleados no encontrados`
@@ -810,7 +813,6 @@ export default function ImportSchedule() {
         success: true,
         message: `Importación completada: ${totalShifts} turnos, ${totalAssignments} asignaciones${createdMsg}${unmatchedMsg}${unavailMsg}${dupMsg}${reconciledMsg}.`,
       });
-      setForceReimport(false); // require explicit confirmation for the next re-import
       setStep(4);
     } catch (err: any) {
       console.error("[ImportSchedule] Import failed:", err);
