@@ -243,6 +243,7 @@ export default function StagedReconciliation() {
     const best = getDefaultPayPeriod(periods);
     if (best) {
       setActivePeriod(best);
+      setManuallySelected(false);
       loadFinalRecords(best.id);
       loadClosingReceipt(best.id);
     }
