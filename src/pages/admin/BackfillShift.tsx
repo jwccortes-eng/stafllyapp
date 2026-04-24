@@ -24,7 +24,7 @@
  * Route: /app/backfill-shift/:shiftCode (admin only via AdminLayout).
  */
 import { useEffect, useMemo, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -34,6 +34,7 @@ import { useCompany } from "@/hooks/useCompany";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { normalizeName } from "@/lib/employee-matcher";
+import { safeLocalStorage } from "@/lib/safe-storage";
 
 // Hard-coded roster from Connecteam for this specific shift code. The page is
 // generic per shiftCode but the roster is tied to the operational case the user
@@ -85,8 +86,35 @@ const fmtCandidate = (e: EmployeeRow) => {
 
 export default function BackfillShift() {
   const { shiftCode = "" } = useParams<{ shiftCode: string }>();
-  const { selectedCompanyId } = useCompany();
+  const { selectedCompanyId, companies, switchCompany, loading: companyLoading } = useCompany();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  // DEBUG: temporary log per request
+  console.log("BackfillShift company:", selectedCompanyId);
+
+  // Context guard: if we lost company context (e.g. fell into GLOBAL mode for
+  // dev/owner roles), try to restore it from ?company= or localStorage BEFORE
+  // rendering. Never auto-switch to GLOBAL — redirect to /app/shifts instead.
+  const [contextChecked, setContextChecked] = useState(false);
+  useEffect(() => {
+    if (companyLoading) return;
+    if (selectedCompanyId) {
+      setContextChecked(true);
+      return;
+    }
+    const fromUrl = searchParams.get("company");
+    const fromStorage = safeLocalStorage.getItem("selectedCompanyId");
+    const candidate = fromUrl || fromStorage;
+    if (candidate && companies.some((c) => c.id === candidate)) {
+      switchCompany(candidate);
+      // Wait for next render with restored context.
+      return;
+    }
+    // No way to recover — go back to shifts without touching context.
+    toast.error("No company context. Open this page from a company.");
+    navigate("/app/shifts", { replace: true });
+  }, [companyLoading, selectedCompanyId, companies, switchCompany, searchParams, navigate]);
 
   const [loading, setLoading] = useState(true);
   const [shifts, setShifts] = useState<ShiftRow[]>([]);
@@ -258,14 +286,10 @@ export default function BackfillShift() {
     setExecuting(false);
   };
 
-  if (!selectedCompanyId) {
+  if (!selectedCompanyId || !contextChecked) {
     return (
-      <div className="p-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Select a company first</CardTitle>
-          </CardHeader>
-        </Card>
+      <div className="p-6 flex items-center gap-2 text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin" /> Restoring company context…
       </div>
     );
   }
