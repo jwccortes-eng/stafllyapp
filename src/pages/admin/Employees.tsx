@@ -1041,6 +1041,65 @@ export default function Employees() {
         }
       />
 
+      {/* ─── Data Quality Card (admin/owner/developer only) ───
+          Visible entry point to the duplicate detector. Shown here (not just
+          in the header rightSlot) to guarantee discoverability even when the
+          header action row overflows on smaller viewports. */}
+      {isPrivileged && (
+        <Card
+          className="border-warning/20 bg-gradient-to-r from-warning/5 via-card to-card hover:border-warning/40 transition-colors cursor-pointer group"
+          onClick={() => navigate("/app/workers/duplicates")}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              navigate("/app/workers/duplicates");
+            }
+          }}
+        >
+          <CardContent className="p-3 flex items-center gap-3">
+            <div className="h-9 w-9 rounded-lg bg-warning/10 text-warning flex items-center justify-center shrink-0">
+              <UserSearch className="h-4 w-4" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold text-foreground">Data quality</span>
+                {strongDuplicateCount > 0 ? (
+                  <Badge
+                    variant="outline"
+                    className="h-5 px-1.5 bg-warning/10 text-warning border-warning/30 text-[10px] font-semibold"
+                  >
+                    {strongDuplicateCount} {strongDuplicateCount === 1 ? "group" : "groups"}
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="h-5 px-1.5 text-[10px] text-muted-foreground border-border">
+                    clean
+                  </Badge>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                {strongDuplicateCount > 0
+                  ? "Possible duplicate workers detected. Review before they contaminate shifts or payroll."
+                  : "No strong duplicate signals in the current view. Run a deep scan anytime."}
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 text-xs shrink-0 group-hover:border-warning/40 group-hover:text-warning"
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate("/app/workers/duplicates");
+              }}
+            >
+              <UserSearch className="h-3.5 w-3.5 mr-1.5" />
+              Detect duplicates
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       {/* ─── Status Tabs ───
           Tone hints (visual priority for problem backlogs):
             • destructive → blocks operation right now (failed invites)
