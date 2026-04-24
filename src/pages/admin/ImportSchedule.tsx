@@ -715,6 +715,7 @@ export default function ImportSchedule() {
         success: true,
         message: `Importación completada: ${totalShifts} turnos, ${totalAssignments} asignaciones${createdMsg}${unmatchedMsg}${unavailMsg}${dupMsg}${reconciledMsg}.`,
       });
+      setForceReimport(false); // require explicit confirmation for the next re-import
       setStep(4);
     } catch (err: any) {
       console.error("[ImportSchedule] Import failed:", err);
