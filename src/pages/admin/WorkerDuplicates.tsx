@@ -65,6 +65,42 @@ import { normalizePhone } from "@/lib/phone";
 
 type MatchKey = "phone" | "email" | "name" | "employer_id";
 
+type GroupStrength = "strong" | "weak" | "shared_contact";
+
+/**
+ * Generic / shared email patterns. These are used by operators as placeholders
+ * (or shared inboxes) and MUST NOT generate a duplicate group on their own.
+ * Members are still surfaced with a "shared contact" badge for transparency.
+ */
+const SHARED_EMAIL_EXACT = new Set<string>([
+  "qualitystaff@gmail.com",
+  "noemail",
+  "noemail@noemail.com",
+  "test@test.com",
+]);
+const SHARED_EMAIL_PATTERNS: RegExp[] = [
+  /^test/i,
+  /^example/i,
+  /@example\./i,
+  /^admin@/i,
+  /^info@/i,
+  /^staffing@/i,
+  /^office@/i,
+  /^support@/i,
+  /^noemail/i,
+];
+
+/** Threshold: any email used by >= N employees is treated as a shared contact. */
+const SHARED_EMAIL_USAGE_THRESHOLD = 5;
+
+function isSharedEmail(email: string, usageCount: number): boolean {
+  if (!email) return true;
+  if (SHARED_EMAIL_EXACT.has(email)) return true;
+  if (SHARED_EMAIL_PATTERNS.some((re) => re.test(email))) return true;
+  if (usageCount >= SHARED_EMAIL_USAGE_THRESHOLD) return true;
+  return false;
+}
+
 interface EmployeeRecord {
   id: string;
   first_name: string | null;
@@ -98,6 +134,8 @@ interface DuplicateGroup {
   members: EmployeeRecord[];
   suggestedMasterId: string;
   reviewState: ReviewState | null;
+  strength: GroupStrength;          // strong / weak / shared_contact
+  sharedEmails: string[];           // emails flagged as shared contact within the group
 }
 
 type ReviewState = "reviewed" | "flagged_pending_consolidation";
@@ -171,6 +209,7 @@ export default function WorkerDuplicates() {
   const [search, setSearch] = useState("");
   const [matchTypeFilter, setMatchTypeFilter] = useState<MatchKey | "all">("all");
   const [reviewFilter, setReviewFilter] = useState<"all" | "open" | "reviewed" | "flagged">("open");
+  const [strengthFilter, setStrengthFilter] = useState<"strong" | "with_weak" | "with_shared">("strong");
   const [savingKey, setSavingKey] = useState<string | null>(null);
 
   // ── Fetch ────────────────────────────────────────────────────────────────
@@ -329,6 +368,13 @@ export default function WorkerDuplicates() {
 
     // Build buckets per strategy
     const buckets = new Map<string, EmployeeRecord[]>();
+    // Pre-pass: how many employees use each email (active OR inactive — we want
+    // to detect shared inboxes regardless of historical activity).
+    const emailUsage = new Map<string, number>();
+    for (const e of employees) {
+      const email = normEmail(e.email);
+      if (email) emailUsage.set(email, (emailUsage.get(email) ?? 0) + 1);
+    }
 
     function add(key: string, e: EmployeeRecord) {
       const cur = buckets.get(key);
@@ -341,7 +387,10 @@ export default function WorkerDuplicates() {
       if (phone) add(`phone:${phone}`, e);
 
       const email = normEmail(e.email);
-      if (email) add(`email:${email}`, e);
+      // Skip shared/generic emails — they are never used to coalesce a group.
+      if (email && !isSharedEmail(email, emailUsage.get(email) ?? 0)) {
+        add(`email:${email}`, e);
+      }
 
       const name = normName(e.first_name, e.last_name);
       if (name && name.includes(" ")) add(`name:${name}`, e);
@@ -351,7 +400,7 @@ export default function WorkerDuplicates() {
     }
 
     // Coalesce buckets that share members → one logical group.
-    const memberToGroup = new Map<string, Set<string>>(); // employee_id → set of bucket keys
+    const memberToGroup = new Map<string, Set<string>>();
     for (const [bucketKey, members] of buckets) {
       if (members.length < 2) continue;
       for (const m of members) {
@@ -361,7 +410,6 @@ export default function WorkerDuplicates() {
       }
     }
 
-    // Union-find-ish: walk each duplicate bucket, merge by overlapping members.
     const visited = new Set<string>();
     const result: DuplicateGroup[] = [];
 
@@ -369,7 +417,6 @@ export default function WorkerDuplicates() {
       if (members.length < 2) continue;
       if (visited.has(bucketKey)) continue;
 
-      // Walk transitively
       const queue = [bucketKey];
       const groupBuckets = new Set<string>();
       const groupMembers = new Map<string, EmployeeRecord>();
@@ -397,6 +444,25 @@ export default function WorkerDuplicates() {
         if (sampleValues.length < 3) sampleValues.push(value);
       }
 
+      // Strength classification:
+      //   strong       → at least one strong signal (phone / email / employer_id)
+      //   weak         → only name-based match
+      //   shared_contact → reserved for groups whose only signal would have been
+      //                    a generic email (already filtered above, kept for
+      //                    semantics in case future weak signals are added).
+      const strongKeys: MatchKey[] = ["phone", "email", "employer_id"];
+      const hasStrong = Array.from(matchKeys).some((k) => strongKeys.includes(k));
+      const strength: GroupStrength = hasStrong ? "strong" : "weak";
+
+      // Per-member shared-email annotations (for the badge in the row).
+      const sharedEmails: string[] = [];
+      for (const m of memberArr) {
+        const em = normEmail(m.email);
+        if (em && isSharedEmail(em, emailUsage.get(em) ?? 0)) {
+          if (!sharedEmails.includes(em)) sharedEmails.push(em);
+        }
+      }
+
       const groupKey = `dup:${memberArr.map((x) => x.id).sort().join(",")}`;
       result.push({
         key: groupKey,
@@ -405,11 +471,17 @@ export default function WorkerDuplicates() {
         members: memberArr,
         suggestedMasterId: pickSuggestedMaster(memberArr, metrics),
         reviewState: reviews.get(groupKey)?.state ?? null,
+        strength,
+        sharedEmails,
       });
     }
 
-    // Sort: open groups first, then by member count desc.
     result.sort((a, b) => {
+      // Strong groups first, then open before reviewed, then more members first.
+      const strengthRank = { strong: 0, weak: 1, shared_contact: 2 } as const;
+      const sa = strengthRank[a.strength];
+      const sb = strengthRank[b.strength];
+      if (sa !== sb) return sa - sb;
       const aOpen = a.reviewState ? 1 : 0;
       const bOpen = b.reviewState ? 1 : 0;
       if (aOpen !== bOpen) return aOpen - bOpen;
@@ -440,6 +512,13 @@ export default function WorkerDuplicates() {
   const filteredActive = useMemo(() => {
     const term = search.trim().toLowerCase();
     return activeGroups.filter((g) => {
+      // Strength gating:
+      //   strong       → only strong groups
+      //   with_weak    → strong + weak (name-only)
+      //   with_shared  → everything (also surfaces shared-contact-only members)
+      if (strengthFilter === "strong" && g.strength !== "strong") return false;
+      if (strengthFilter === "with_weak" && g.strength === "shared_contact") return false;
+      // with_shared: no strength filter applied
       if (matchTypeFilter !== "all" && !g.matchKeys.includes(matchTypeFilter)) return false;
       if (reviewFilter === "open" && g.reviewState) return false;
       if (reviewFilter === "reviewed" && g.reviewState !== "reviewed") return false;
@@ -457,21 +536,35 @@ export default function WorkerDuplicates() {
         return fields.some((f) => (f ?? "").toString().toLowerCase().includes(term));
       });
     });
-  }, [activeGroups, matchTypeFilter, reviewFilter, search]);
+  }, [activeGroups, matchTypeFilter, reviewFilter, strengthFilter, search]);
 
   const kpis = useMemo(() => {
-    const open = activeGroups.filter((g) => !g.reviewState).length;
-    const flagged = activeGroups.filter((g) => g.reviewState === "flagged_pending_consolidation").length;
-    const reviewed = activeGroups.filter((g) => g.reviewState === "reviewed").length;
-    const employeesAffected = activeGroups.reduce((acc, g) => acc + g.members.length, 0);
-    return { open, flagged, reviewed, employeesAffected, historical: historicalGroups.length };
+    const strongActive = activeGroups.filter((g) => g.strength === "strong");
+    const weakActive = activeGroups.filter((g) => g.strength === "weak");
+    const open = strongActive.filter((g) => !g.reviewState).length;
+    const flagged = strongActive.filter((g) => g.reviewState === "flagged_pending_consolidation").length;
+    const reviewed = strongActive.filter((g) => g.reviewState === "reviewed").length;
+    const employeesAffected = strongActive.reduce((acc, g) => acc + g.members.length, 0);
+    return {
+      open,
+      flagged,
+      reviewed,
+      employeesAffected,
+      historical: historicalGroups.length,
+      strong: strongActive.length,
+      weak: weakActive.length,
+    };
   }, [activeGroups, historicalGroups]);
 
   // ── Actions ──────────────────────────────────────────────────────────────
   async function copyReport(g: DuplicateGroup) {
     const lines: string[] = [];
     lines.push(`Duplicate group: ${g.matchValue}`);
+    lines.push(`Strength: ${g.strength}`);
     lines.push(`Match strategies: ${g.matchKeys.join(", ")}`);
+    if (g.sharedEmails.length > 0) {
+      lines.push(`Shared/generic emails: ${g.sharedEmails.join(", ")}`);
+    }
     lines.push(`Suggested master: ${g.suggestedMasterId}`);
     lines.push("");
     for (const m of g.members) {
@@ -577,12 +670,13 @@ export default function WorkerDuplicates() {
       />
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <KpiCard label="Open groups" value={kpis.open} tone="warning" icon={<AlertTriangle className="h-4 w-4" />} />
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+        <KpiCard label="Strong groups" value={kpis.strong} tone="warning" icon={<AlertTriangle className="h-4 w-4" />} />
+        <KpiCard label="Weak (name only)" value={kpis.weak} tone="muted" icon={<Users className="h-4 w-4" />} />
+        <KpiCard label="Open" value={kpis.open} tone="warning" icon={<AlertTriangle className="h-4 w-4" />} />
         <KpiCard label="Flagged" value={kpis.flagged} tone="deduction" icon={<Flag className="h-4 w-4" />} />
         <KpiCard label="Reviewed" value={kpis.reviewed} tone="earning" icon={<CheckCircle2 className="h-4 w-4" />} />
-        <KpiCard label="Employees affected" value={kpis.employeesAffected} tone="muted" icon={<Users className="h-4 w-4" />} />
-        <KpiCard label="Historical (resolved)" value={kpis.historical} tone="muted" icon={<History className="h-4 w-4" />} />
+        <KpiCard label="Historical" value={kpis.historical} tone="muted" icon={<History className="h-4 w-4" />} />
       </div>
 
       <Tabs defaultValue="active" className="space-y-4">
@@ -599,7 +693,7 @@ export default function WorkerDuplicates() {
                 <Filter className="h-4 w-4" /> Filters
               </CardTitle>
             </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <CardContent className="grid grid-cols-1 md:grid-cols-4 gap-3">
               <div className="relative">
                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -609,6 +703,14 @@ export default function WorkerDuplicates() {
                   onChange={(e) => setSearch(e.target.value)}
                 />
               </div>
+              <Select value={strengthFilter} onValueChange={(v) => setStrengthFilter(v as typeof strengthFilter)}>
+                <SelectTrigger><SelectValue placeholder="Signal strength" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="strong">Strong only (phone / email / employer ID)</SelectItem>
+                  <SelectItem value="with_weak">Include weak (name-only)</SelectItem>
+                  <SelectItem value="with_shared">Include shared contacts</SelectItem>
+                </SelectContent>
+              </Select>
               <Select value={matchTypeFilter} onValueChange={(v) => setMatchTypeFilter(v as MatchKey | "all")}>
                 <SelectTrigger><SelectValue placeholder="Match type" /></SelectTrigger>
                 <SelectContent>
@@ -739,11 +841,33 @@ function DuplicateGroupCard({
               <CardTitle className="text-base">
                 {group.members.length} matching records
               </CardTitle>
+              {group.strength === "strong" ? (
+                <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 gap-1">
+                  Strong signal
+                </Badge>
+              ) : group.strength === "weak" ? (
+                <Badge variant="outline" className="bg-warning/10 text-warning border-warning/20 gap-1">
+                  Weak signal · name only
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="bg-muted text-muted-foreground border-border gap-1">
+                  Shared contact only
+                </Badge>
+              )}
               {group.matchKeys.map((k) => (
                 <Badge key={k} variant="outline" className="gap-1 font-normal">
                   {MATCH_ICON[k]} {MATCH_LABEL[k]}
                 </Badge>
               ))}
+              {group.sharedEmails.length > 0 && (
+                <Badge
+                  variant="outline"
+                  className="gap-1 bg-muted text-muted-foreground border-border font-normal"
+                  title={`Shared/generic email present: ${group.sharedEmails.join(", ")}`}
+                >
+                  <Mail className="h-3 w-3" /> Shared contact
+                </Badge>
+              )}
               {group.reviewState === "flagged_pending_consolidation" && (
                 <Badge variant="outline" className="bg-deduction/10 text-deduction border-deduction/20 gap-1">
                   <Flag className="h-3 w-3" /> Pending consolidation
@@ -835,8 +959,13 @@ function DuplicateGroupCard({
                     </td>
                     <td className="px-3 py-2">
                       <div className="text-xs">{m.phone_number ?? "—"}</div>
-                      <div className="text-[11px] text-muted-foreground truncate max-w-[200px]">
-                        {m.email ?? "—"}
+                      <div className="text-[11px] text-muted-foreground truncate max-w-[220px] flex items-center gap-1">
+                        <span className="truncate">{m.email ?? "—"}</span>
+                        {m.email && group.sharedEmails.includes(normEmail(m.email)) && (
+                          <Badge variant="outline" className="bg-muted text-muted-foreground border-border text-[9px] px-1 py-0 h-4">
+                            shared
+                          </Badge>
+                        )}
                       </div>
                     </td>
                     <td className="px-3 py-2">
