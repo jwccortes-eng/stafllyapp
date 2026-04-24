@@ -98,20 +98,35 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { data: roleData } = await callerClient.from("user_roles").select("role").eq("user_id", caller.id);
-    const callerRoles = (roleData ?? []).map((r: any) => r.role);
-    if (!callerRoles.includes("owner") && !callerRoles.includes("admin") && !callerRoles.includes("developer")) {
-      return new Response(JSON.stringify({ error: "Only admins can send activation emails" }), {
-        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
     const body = await req.json();
     const { company_id, employee_ids, send_email = true } = body;
 
     if (!company_id) {
       return new Response(JSON.stringify({ error: "company_id required" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Authorization: allow either a global privileged role (owner/admin/developer)
+    // OR a company-scoped admin/owner membership for the target company.
+    const ELEVATED_GLOBAL = new Set(["owner", "admin", "developer"]);
+    const ELEVATED_COMPANY = new Set(["owner", "company_owner", "admin"]);
+
+    const [{ data: roleData }, { data: membershipData }] = await Promise.all([
+      adminClient.from("user_roles").select("role").eq("user_id", caller.id),
+      adminClient
+        .from("company_users")
+        .select("role")
+        .eq("user_id", caller.id)
+        .eq("company_id", company_id),
+    ]);
+
+    const hasGlobal = (roleData ?? []).some((r: any) => ELEVATED_GLOBAL.has(r.role));
+    const hasCompany = (membershipData ?? []).some((m: any) => ELEVATED_COMPANY.has(m.role));
+
+    if (!hasGlobal && !hasCompany) {
+      return new Response(JSON.stringify({ error: "Only admins can send activation emails" }), {
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
