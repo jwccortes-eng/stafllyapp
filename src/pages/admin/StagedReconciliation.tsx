@@ -54,6 +54,11 @@ import PeriodNotes from "@/components/reconciliation/PeriodNotes";
 import StabilizationPriorities from "@/components/reconciliation/StabilizationPriorities";
 import PayrollTruthValidation from "@/components/reconciliation/PayrollTruthValidation";
 import DataIntegrityAudit from "@/components/reconciliation/DataIntegrityAudit";
+import {
+  StatusBadge,
+  FutureLockBadge,
+  ManualFutureNotice,
+} from "@/components/reconciliation/PeriodStatusBadges";
 import type { PeriodStatus } from "@/hooks/useReconciliationPeriod";
 import { formatPeriodLabel } from "@/lib/format-helpers";
 
@@ -168,6 +173,10 @@ export default function StagedReconciliation() {
   const [periodSearch, setPeriodSearch] = useState("");
   const [batchSearch, setBatchSearch] = useState("");
   const [selectedBatchPayPeriodId, setSelectedBatchPayPeriodId] = useState("");
+  // Tracks whether the currently active period was chosen explicitly by the
+  // admin (vs picked by the safe-default selector). Used to surface the
+  // "manual future selection" warning banner.
+  const [manuallySelected, setManuallySelected] = useState(false);
 
   // ── Load employees ──
   useEffect(() => {
@@ -234,6 +243,7 @@ export default function StagedReconciliation() {
     const best = getDefaultPayPeriod(periods);
     if (best) {
       setActivePeriod(best);
+      setManuallySelected(false);
       loadFinalRecords(best.id);
       loadClosingReceipt(best.id);
     }
@@ -279,6 +289,7 @@ export default function StagedReconciliation() {
     const existing = periods.find(p => p.period_id === ppId);
     if (existing) {
       setActivePeriod(existing);
+      setManuallySelected(true);
       loadFinalRecords(existing.id);
       loadClosingReceipt(existing.id);
       setTab("closedesk");
@@ -290,6 +301,7 @@ export default function StagedReconciliation() {
     const p = await createPeriod(label, pp.start_date, pp.end_date, ppId);
     if (p) {
       setActivePeriod(p);
+      setManuallySelected(true);
       setTab("closedesk");
       setShowBatchDialog(false);
     }
@@ -297,6 +309,7 @@ export default function StagedReconciliation() {
 
   const handleSelectPeriod = (p: PeriodStatus) => {
     setActivePeriod(p);
+    setManuallySelected(true);
     loadFinalRecords(p.id);
     loadClosingReceipt(p.id);
     setTab("closedesk");
@@ -683,8 +696,13 @@ export default function StagedReconciliation() {
               </Badge>
             )}
             {activeIsFuture && (
-              <Badge variant="outline" className="text-[11px] border-amber-500/60 text-amber-700 bg-amber-500/10">
-                Futuro
+              <Badge variant="outline" className="text-[11px] border-amber-500/60 text-amber-700 bg-amber-500/10 gap-1">
+                <Lock className="h-3 w-3" /> Futuro
+              </Badge>
+            )}
+            {activePeriod && !activeIsCurrent && !activeIsFuture && (
+              <Badge variant="outline" className="text-[11px] border-muted-foreground/30 text-muted-foreground bg-muted/40">
+                Pasado
               </Badge>
             )}
             {activeIsSpecial && (
@@ -693,16 +711,29 @@ export default function StagedReconciliation() {
               </Badge>
             )}
 
+            {/* Operational status badge: Abierto / En revisión / Pendiente / Cerrado / Pagado */}
+            {activePeriod && <StatusBadge status={activePeriod.status} />}
+
             <Badge variant="outline" className="text-[11px]">
               Reconciliation Batch Mode
             </Badge>
 
-            {/* Reprocess button */}
+            {/* Reprocess button — visually flagged as locked when period is future */}
             {activePeriod && !isLocked && (
-              <Button size="sm" variant="outline" className="gap-1 shrink-0" onClick={handleReprocessPeriod} disabled={reprocessing}>
-                <RefreshCw className={`h-3.5 w-3.5 ${reprocessing ? "animate-spin" : ""}`} />
-                {reprocessing ? "Reprocesando..." : "Reprocesar período"}
-              </Button>
+              <div className="flex items-center gap-1 shrink-0">
+                <Button
+                  size="sm"
+                  variant={activeIsFuture ? "destructive" : "outline"}
+                  className="gap-1"
+                  onClick={handleReprocessPeriod}
+                  disabled={reprocessing}
+                  title={activeIsFuture ? "Acción crítica sobre periodo futuro — requerirá confirmación fuerte" : undefined}
+                >
+                  {activeIsFuture ? <Lock className="h-3.5 w-3.5" /> : <RefreshCw className={`h-3.5 w-3.5 ${reprocessing ? "animate-spin" : ""}`} />}
+                  {reprocessing ? "Reprocesando..." : "Reprocesar período"}
+                </Button>
+                <FutureLockBadge show={activeIsFuture} />
+              </div>
             )}
 
             {/* Period stats */}
@@ -728,6 +759,12 @@ export default function StagedReconciliation() {
           </AlertDescription>
         </Alert>
       )}
+
+      {/* ── Manual future-period notice (visible only when admin manually picks a future period) ── */}
+      <ManualFutureNotice
+        show={!!activePeriod && activeIsFuture && manuallySelected}
+        periodLabel={activePeriod ? reconPeriodLabel(activePeriod) : undefined}
+      />
 
       {/* ── Active Period Workflow Bar ── */}
       {activePeriod && (
@@ -882,6 +919,14 @@ export default function StagedReconciliation() {
 
         <TabsContent value="import">
           {activePeriod && <ActivePeriodBar period={activePeriod} isLocked={!!isLocked} />}
+          {activeIsFuture && (
+            <Alert className="border-amber-500/40 bg-amber-50/70 dark:bg-amber-950/20 mb-3">
+              <Lock className="h-4 w-4 text-amber-600" />
+              <AlertDescription className="text-xs">
+                <strong>Período futuro.</strong> Cargar el Payroll Truth File aquí no está recomendado: los datos no corresponden todavía al período operativo real.
+              </AlertDescription>
+            </Alert>
+          )}
           {isLocked ? (
             <NoPeriodPlaceholder icon={Lock} text="Este periodo está cerrado. No se permiten nuevas importaciones." />
           ) : (
@@ -941,9 +986,18 @@ export default function StagedReconciliation() {
               <div className="flex items-center justify-between">
                 <ActivePeriodBar period={activePeriod} isLocked={!!isLocked} />
                 {!isLocked && (
-                  <Button size="sm" onClick={handleGenerateRecords}>
-                    <ArrowRight className="h-4 w-4 mr-1" /> Generar Registros Finales
-                  </Button>
+                  <div className="flex items-center gap-1.5">
+                    <FutureLockBadge show={activeIsFuture} />
+                    <Button
+                      size="sm"
+                      variant={activeIsFuture ? "destructive" : "default"}
+                      onClick={handleGenerateRecords}
+                      title={activeIsFuture ? "Acción crítica sobre periodo futuro — requerirá confirmación fuerte" : undefined}
+                    >
+                      {activeIsFuture ? <Lock className="h-4 w-4 mr-1" /> : <ArrowRight className="h-4 w-4 mr-1" />}
+                      Generar Registros Finales
+                    </Button>
+                  </div>
                 )}
               </div>
               <EmployeePeriodReconciliation
@@ -1098,6 +1152,14 @@ export default function StagedReconciliation() {
         </TabsContent>
 
         <TabsContent value="payroll-truth">
+          {activeIsFuture && (
+            <Alert className="border-amber-500/40 bg-amber-50/70 dark:bg-amber-950/20 mb-3">
+              <Lock className="h-4 w-4 text-amber-600" />
+              <AlertDescription className="text-xs">
+                <strong>Período futuro.</strong> Reconciliar contra Payroll Truth en un período futuro puede contaminar los datos reales. Cualquier acción crítica pedirá confirmación adicional.
+              </AlertDescription>
+            </Alert>
+          )}
           <PayrollTruthValidation
             companyId={selectedCompanyId}
             periodStatusId={activePeriod?.id}
