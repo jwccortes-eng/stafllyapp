@@ -560,7 +560,11 @@ export default function WorkerDuplicates() {
   async function copyReport(g: DuplicateGroup) {
     const lines: string[] = [];
     lines.push(`Duplicate group: ${g.matchValue}`);
+    lines.push(`Strength: ${g.strength}`);
     lines.push(`Match strategies: ${g.matchKeys.join(", ")}`);
+    if (g.sharedEmails.length > 0) {
+      lines.push(`Shared/generic emails: ${g.sharedEmails.join(", ")}`);
+    }
     lines.push(`Suggested master: ${g.suggestedMasterId}`);
     lines.push("");
     for (const m of g.members) {
