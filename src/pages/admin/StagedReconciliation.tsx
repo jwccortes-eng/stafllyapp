@@ -676,6 +676,23 @@ export default function StagedReconciliation() {
               </Badge>
             )}
 
+            {/* Temporal kind badge: Actual / Futuro / Pasado / Especial */}
+            {activeIsCurrent && (
+              <Badge variant="outline" className="text-[11px] border-emerald-500/50 text-emerald-700 bg-emerald-500/10">
+                Actual
+              </Badge>
+            )}
+            {activeIsFuture && (
+              <Badge variant="outline" className="text-[11px] border-amber-500/60 text-amber-700 bg-amber-500/10">
+                Futuro
+              </Badge>
+            )}
+            {activeIsSpecial && (
+              <Badge variant="outline" className="text-[11px] border-purple-500/50 text-purple-700 bg-purple-500/10">
+                Especial
+              </Badge>
+            )}
+
             <Badge variant="outline" className="text-[11px]">
               Reconciliation Batch Mode
             </Badge>
