@@ -47,6 +47,22 @@ const ACTIVE_STATUSES = new Set([
   "not_closed",
 ]);
 
+/**
+ * Subset of ACTIVE_STATUSES that represent operationally OPEN past periods
+ * (still actionable by admins). Used to prioritize selection within past
+ * periods over locked/posted/closed ones.
+ */
+const OPEN_PAST_STATUSES = new Set([
+  "open",
+  "reviewing",
+  "needs_attention",
+  "pending",
+  "draft",
+  "reopened",
+  "not_closed",
+  "review",
+]);
+
 /** Period types that should be flagged as "special" in the UI. */
 const SPECIAL_TYPES = new Set(["special", "event", "passover", "holiday"]);
 
