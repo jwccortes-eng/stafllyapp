@@ -1161,6 +1161,62 @@ export default function ImportSchedule() {
             </div>
           )}
 
+          {/* Match telemetry — how each employee was resolved */}
+          {summary && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm">Cómo se emparejaron los empleados</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                  <div className="rounded-lg border p-2"><p className="text-muted-foreground">Por Connecteam ID / external</p><p className="text-lg font-bold tabular-nums">{summary.matchTelemetry.external_id}</p></div>
+                  <div className="rounded-lg border p-2"><p className="text-muted-foreground">Por phone (aux)</p><p className="text-lg font-bold tabular-nums">{summary.matchTelemetry.phone}</p></div>
+                  <div className="rounded-lg border p-2"><p className="text-muted-foreground">Por email (aux)</p><p className="text-lg font-bold tabular-nums">{summary.matchTelemetry.email}</p></div>
+                  <div className="rounded-lg border p-2"><p className="text-muted-foreground">Aux bridge (Users export)</p><p className="text-lg font-bold tabular-nums">{summary.matchTelemetry.aux_bridge}</p></div>
+                  <div className="rounded-lg border p-2"><p className="text-muted-foreground">Por nombre exacto</p><p className="text-lg font-bold tabular-nums">{summary.matchTelemetry.exact_name}</p></div>
+                  <div className="rounded-lg border p-2"><p className="text-muted-foreground">Por nombre invertido</p><p className="text-lg font-bold tabular-nums">{summary.matchTelemetry.reversed_name}</p></div>
+                  <div className="rounded-lg border p-2"><p className="text-muted-foreground">Fuzzy (cercano único)</p><p className="text-lg font-bold tabular-nums">{summary.matchTelemetry.fuzzy_name}</p></div>
+                  <div className="rounded-lg border p-2"><p className="text-muted-foreground">No encontrados</p><p className="text-lg font-bold tabular-nums text-warning">{summary.matchTelemetry.unmatched}</p></div>
+                </div>
+                {summary.auxUsersLoaded === 0 && (
+                  <p className="text-[11px] text-muted-foreground mt-3">
+                    Tip: sube el export de <strong>Users</strong> de Connecteam en el Paso 1 para activar matching por phone, email y Connecteam ID.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {summary && summary.ambiguousMatches.length > 0 && (
+            <Card className="border-warning/30 bg-warning/5">
+              <CardHeader>
+                <CardTitle className="text-sm">Matches ambiguos para revisar ({summary.ambiguousMatches.length})</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <p className="text-xs text-muted-foreground">
+                  Estos nombres del archivo pudieron coincidir con más de un empleado. <strong>No</strong> se crearon ni asignaron — revisa manualmente.
+                </p>
+                <div className="space-y-1.5">
+                  {summary.ambiguousMatches.slice(0, 30).map((a, i) => (
+                    <div key={i} className="text-xs border rounded p-2">
+                      <p className="font-medium">{a.rawName}</p>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {a.candidates.map((c, j) => (
+                          <Badge key={j} variant="outline" className="text-[10px]">
+                            {c.display} <span className="ml-1 text-muted-foreground">({c.method})</span>
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                  {summary.ambiguousMatches.length > 30 && (
+                    <p className="text-[11px] text-muted-foreground">… y {summary.ambiguousMatches.length - 30} más</p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {summary && summary.unmatchedEmployees.length > 0 && (
             <Card>
               <CardHeader><CardTitle className="text-sm text-warning">Empleados no encontrados ({summary.unmatchedEmployees.length})</CardTitle></CardHeader>
