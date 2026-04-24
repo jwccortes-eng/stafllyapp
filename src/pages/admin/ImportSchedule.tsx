@@ -18,6 +18,17 @@ import { format, parse } from "date-fns";
 import PasswordConfirmDialog from "@/components/PasswordConfirmDialog";
 import { EmployeeResolver, normalizeName, type AuxUserRecord, type AmbiguousMatch, type MatchMethod, type MatchTelemetry } from "@/lib/employee-matcher";
 import { parseConnecteamFile } from "@/lib/connecteam-parser";
+import {
+  buildFailure,
+  classifySupabaseError,
+  failuresToCsv,
+  failuresToText,
+  groupFailuresByShift,
+  FAILURE_TYPE_LABELS,
+  FAILURE_TYPE_HINTS,
+  type AssignmentFailure,
+  type AssignmentFailureType,
+} from "@/lib/import/assignment-failures";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const ACCEPTED_EXTENSIONS = ".xls,.xlsx,.csv";
