@@ -696,8 +696,13 @@ export default function StagedReconciliation() {
               </Badge>
             )}
             {activeIsFuture && (
-              <Badge variant="outline" className="text-[11px] border-amber-500/60 text-amber-700 bg-amber-500/10">
-                Futuro
+              <Badge variant="outline" className="text-[11px] border-amber-500/60 text-amber-700 bg-amber-500/10 gap-1">
+                <Lock className="h-3 w-3" /> Futuro
+              </Badge>
+            )}
+            {activePeriod && !activeIsCurrent && !activeIsFuture && (
+              <Badge variant="outline" className="text-[11px] border-muted-foreground/30 text-muted-foreground bg-muted/40">
+                Pasado
               </Badge>
             )}
             {activeIsSpecial && (
@@ -706,16 +711,29 @@ export default function StagedReconciliation() {
               </Badge>
             )}
 
+            {/* Operational status badge: Abierto / En revisión / Pendiente / Cerrado / Pagado */}
+            {activePeriod && <StatusBadge status={activePeriod.status} />}
+
             <Badge variant="outline" className="text-[11px]">
               Reconciliation Batch Mode
             </Badge>
 
-            {/* Reprocess button */}
+            {/* Reprocess button — visually flagged as locked when period is future */}
             {activePeriod && !isLocked && (
-              <Button size="sm" variant="outline" className="gap-1 shrink-0" onClick={handleReprocessPeriod} disabled={reprocessing}>
-                <RefreshCw className={`h-3.5 w-3.5 ${reprocessing ? "animate-spin" : ""}`} />
-                {reprocessing ? "Reprocesando..." : "Reprocesar período"}
-              </Button>
+              <div className="flex items-center gap-1 shrink-0">
+                <Button
+                  size="sm"
+                  variant={activeIsFuture ? "destructive" : "outline"}
+                  className="gap-1"
+                  onClick={handleReprocessPeriod}
+                  disabled={reprocessing}
+                  title={activeIsFuture ? "Acción crítica sobre periodo futuro — requerirá confirmación fuerte" : undefined}
+                >
+                  {activeIsFuture ? <Lock className="h-3.5 w-3.5" /> : <RefreshCw className={`h-3.5 w-3.5 ${reprocessing ? "animate-spin" : ""}`} />}
+                  {reprocessing ? "Reprocesando..." : "Reprocesar período"}
+                </Button>
+                <FutureLockBadge show={activeIsFuture} />
+              </div>
             )}
 
             {/* Period stats */}
