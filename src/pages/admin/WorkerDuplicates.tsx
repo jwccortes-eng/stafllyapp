@@ -959,8 +959,13 @@ function DuplicateGroupCard({
                     </td>
                     <td className="px-3 py-2">
                       <div className="text-xs">{m.phone_number ?? "—"}</div>
-                      <div className="text-[11px] text-muted-foreground truncate max-w-[200px]">
-                        {m.email ?? "—"}
+                      <div className="text-[11px] text-muted-foreground truncate max-w-[220px] flex items-center gap-1">
+                        <span className="truncate">{m.email ?? "—"}</span>
+                        {m.email && group.sharedEmails.includes(normEmail(m.email)) && (
+                          <Badge variant="outline" className="bg-muted text-muted-foreground border-border text-[9px] px-1 py-0 h-4">
+                            shared
+                          </Badge>
+                        )}
                       </div>
                     </td>
                     <td className="px-3 py-2">
