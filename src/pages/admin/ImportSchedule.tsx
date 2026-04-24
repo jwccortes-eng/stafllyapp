@@ -1147,10 +1147,8 @@ export default function ImportSchedule() {
     } catch (err: any) {
       console.error("[ImportSchedule] Import failed:", err);
       // Mark the batch as failed so it doesn't appear as a successful import
-      // (the batchId variable is in scope thanks to closure over the try block).
       try {
-        // @ts-ignore — batchId may be undefined if creation failed early
-        if (typeof batchId !== "undefined" && batchId) await failImportBatch(batchId, err?.message ?? String(err));
+        if (batchIdForCatch) await failImportBatch(batchIdForCatch, err?.message ?? String(err));
       } catch { /* ignore secondary errors */ }
       setResult({ success: false, message: getUserFriendlyError(err) });
       setStep(4); // ensure user sees the result/error screen instead of being stuck on Step 3
