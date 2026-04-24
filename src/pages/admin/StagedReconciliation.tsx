@@ -289,6 +289,7 @@ export default function StagedReconciliation() {
     const existing = periods.find(p => p.period_id === ppId);
     if (existing) {
       setActivePeriod(existing);
+      setManuallySelected(true);
       loadFinalRecords(existing.id);
       loadClosingReceipt(existing.id);
       setTab("closedesk");
@@ -300,6 +301,7 @@ export default function StagedReconciliation() {
     const p = await createPeriod(label, pp.start_date, pp.end_date, ppId);
     if (p) {
       setActivePeriod(p);
+      setManuallySelected(true);
       setTab("closedesk");
       setShowBatchDialog(false);
     }
