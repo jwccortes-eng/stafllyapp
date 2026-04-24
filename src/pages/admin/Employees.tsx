@@ -189,8 +189,36 @@ function EmployeeForm({ fields, form, setForm, loading, onSubmit, submitLabel }:
 export default function Employees() {
   usePageView("Employees");
   const { selectedCompanyId, selectedCompany } = useCompany();
-  const { role } = useAuth();
-  const isPrivileged = role === 'developer' || role === 'owner' || role === 'admin';
+  const { role, allRoles, canAccessAdmin } = useAuth();
+  // Effective privilege: trust either the resolved highest-priority role OR the
+  // company-membership-derived `canAccessAdmin` flag (covers cases where the
+  // global role resolves to "user" but the user is admin/owner inside the
+  // currently selected company).
+  const isPrivileged =
+    role === 'developer' ||
+    role === 'owner' ||
+    role === 'company_owner' ||
+    role === 'admin' ||
+    allRoles.has('developer') ||
+    allRoles.has('owner') ||
+    allRoles.has('company_owner') ||
+    allRoles.has('admin') ||
+    canAccessAdmin;
+
+  // Diagnostic log (safe — no PII). Helps confirm why the duplicates entry
+  // does or doesn't show in the current company context.
+  useEffect(() => {
+    if (import.meta.env.DEV) {
+      // eslint-disable-next-line no-console
+      console.log("Workers duplicates access", {
+        role,
+        allRoles: Array.from(allRoles),
+        canAccessAdmin,
+        isPrivileged,
+        selectedCompanyId,
+      });
+    }
+  }, [role, allRoles, canAccessAdmin, isPrivileged, selectedCompanyId]);
   const { canAddEmployees, limits, plan } = useSubscription();
   const { config: onboardingConfig, updateConfig: updateOnboardingConfig, loading: onboardingConfigLoading } = useOnboardingConfig();
   const { invitations, logInvitation, refetch: refetchInvitations } = useEmployeeInvitations(selectedCompanyId ?? null);
