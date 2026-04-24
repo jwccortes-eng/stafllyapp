@@ -689,7 +689,8 @@ export default function ImportSchedule() {
               shift_id: existingShiftId,
               employee_id: r.empId,
               status: r.status,
-            });
+              import_batch_id: batchId,
+            } as any);
             if (diagRow) diagRow.insertAttempt = "yes";
             if (!error) {
               reconciledAssignments++;
