@@ -405,13 +405,15 @@ export default function ImportSchedule() {
         }
       }
 
-      // ── Auto-create employees ONLY when there's no plausible match (no ambiguous, no fuzzy hit) ──
-      // Pre-resolve every name in the file to populate the resolver's telemetry/ambiguous state.
-      // We auto-create only when resolveByName returns null AND the name was not flagged
-      // as ambiguous (i.e. truly unknown person). Ambiguous names go to the review list.
-      setImportProgress({ current: 0, total: filteredGroups.length, phase: "Creando empleados nuevos..." });
+      // Pre-resolve every name in the file to populate telemetry/ambiguous state.
+      // Auto-create is intentionally disabled: unmatched names must stay in review.
+      setImportProgress({ current: 0, total: filteredGroups.length, phase: "Resolviendo empleados..." });
       const allEmpNames = new Set(filteredGroups.flatMap(g => g.employees));
-      let createdEmployees = 0;
+      const targetGroups = filteredGroups.filter(g => {
+        const numericCode = g.shiftCode ? g.shiftCode.match(/^(\d+)/)?.[1] || g.shiftCode : "";
+        return numericCode === TARGET_SHIFT_CODE && TARGET_DATES.has(g.date) && g.job.trim().toLowerCase() === TARGET_CLIENT_NAME;
+      });
+      const targetDiagnostics = new Map<string, TargetShiftDiagnostic>();
       // Cache resolution per name to avoid double-counting telemetry.
       const resolveCache = new Map<string, { id: string | null; ambiguous: boolean }>();
       const resolveOnce = (name: string): { id: string | null; ambiguous: boolean } => {
@@ -427,31 +429,7 @@ export default function ImportSchedule() {
 
       for (const empName of allEmpNames) {
         if (/^system\s/i.test(empName)) continue;
-        const r = resolveOnce(empName);
-        if (r.id) continue;            // matched (any method)
-        if (r.ambiguous) continue;     // do NOT auto-create ambiguous matches
-        const parsed = parseName(empName);
-        if (!parsed) continue;
-        const { data: newEmp } = await supabase.from("employees").insert({
-          company_id: selectedCompanyId,
-          first_name: parsed.first,
-          last_name: parsed.last,
-          is_active: true,
-        } as any).select("id, first_name, last_name, phone_number, email, employer_identification, connecteam_employee_id").single();
-        if (newEmp) {
-          // Inject into the resolver's index so subsequent lookups find it via exact_name.
-          empList.push(newEmp as any);
-          // Rebuild index incrementally: easiest is to recreate the resolver, but doing so
-          // would reset telemetry. Instead we patch the maps directly.
-          const display = `${newEmp.first_name ?? ""} ${newEmp.last_name ?? ""}`.trim();
-          // Use the same normalizer indirectly via resolver internals.
-          // Simpler: clear cache for this name so next call goes through resolver and hits exact_name.
-          resolveCache.delete(empName);
-          // Push into the underlying name index so the resolver finds it.
-          // We rely on EmployeeResolver internals being mutable.
-          (resolver as any).empIndex.allNames.push({ id: newEmp.id, norm: display.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim(), display });
-          createdEmployees++;
-        }
+        resolveOnce(empName);
       }
 
       let totalShifts = 0;
@@ -476,6 +454,25 @@ export default function ImportSchedule() {
         (existingShifts ?? []).forEach(s => {
           const key = `${s.shift_code || ""}|${s.date}|${s.start_time?.slice(0,5)}|${s.end_time?.slice(0,5)}`;
           existingShiftMap.set(key, { id: s.id, slots: s.slots ?? 1 });
+        });
+      }
+
+      for (const group of targetGroups) {
+        const numericCode = group.shiftCode ? group.shiftCode.match(/^(\d+)/)?.[1] || group.shiftCode : "";
+        const dedupKeyExcel = `${numericCode}|${group.date}|${group.startTime}|${group.endTime}`;
+        const existing = existingShiftMap.get(dedupKeyExcel);
+        targetDiagnostics.set(group.key, {
+          date: group.date,
+          shiftCode: numericCode,
+          job: group.job,
+          groupKey: group.key,
+          dedupKeyExcel,
+          dedupKeyDb: existing ? dedupKeyExcel : null,
+          existingShiftId: existing?.id ?? null,
+          enteredReconcile: false,
+          employees: [...group.employees],
+          employeeStatuses: [...group.employeeStatuses],
+          employeesDiagnostic: [],
         });
       }
 
