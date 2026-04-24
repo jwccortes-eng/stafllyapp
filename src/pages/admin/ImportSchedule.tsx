@@ -761,6 +761,8 @@ export default function ImportSchedule() {
 
         // Create assignments for each shift in the batch
         const assignmentPayloads: any[] = [];
+        // Parallel meta array — same index → same payload — for failure attribution
+        const assignmentMeta: Array<{ group: ShiftGroup; rawName: string; method: MatchMethod | null }> = [];
         for (let i = 0; i < newBatch.length; i++) {
           const group = newBatch[i];
           const shift = insertedShifts[i];
@@ -772,6 +774,16 @@ export default function ImportSchedule() {
             const r = resolveOnce(empName);
             if (!r.id) {
               unmatchedEmployeesSet.add(empName);
+              assignmentFailures.push(buildFailure({
+                ...failureCtx(group),
+                raw_employee_name: empName,
+                employee_id: null,
+                match_method: null,
+                failure_type: r.ambiguous ? "ambiguous_employee" : "unmatched_employee",
+                error_message: r.ambiguous
+                  ? "Ambiguous match — multiple workers matched this name."
+                  : "No worker matched this name in the directory.",
+              }));
               continue;
             }
             matchedEmployees++;
@@ -784,6 +796,7 @@ export default function ImportSchedule() {
               employee_id: r.id,
               status: assignStatus,
             });
+            assignmentMeta.push({ group, rawName: empName, method: r.method });
           }
         }
 
@@ -795,12 +808,36 @@ export default function ImportSchedule() {
             .select("id");
 
           if (assignErr) {
-            // If batch fails (overlap trigger), fall back to one-by-one
-            for (const payload of assignmentPayloads) {
+            // Batch failed (overlap, not_ready, dup, etc.) — retry one-by-one to capture
+            // the exact failure_type per assignment.
+            for (let pi = 0; pi < assignmentPayloads.length; pi++) {
+              const payload = assignmentPayloads[pi];
+              const meta = assignmentMeta[pi];
               try {
                 const { error } = await supabase.from("shift_assignments").insert(payload);
-                if (!error) totalAssignments++;
-              } catch { /* skip overlap */ }
+                if (!error) {
+                  totalAssignments++;
+                } else {
+                  assignmentFailures.push(buildFailure({
+                    ...failureCtx(meta.group),
+                    raw_employee_name: meta.rawName,
+                    employee_id: payload.employee_id,
+                    match_method: meta.method,
+                    failure_type: classifySupabaseError(error.message),
+                    error_message: error.message,
+                  }));
+                }
+              } catch (ex: any) {
+                const exMsg = ex?.message ?? String(ex);
+                assignmentFailures.push(buildFailure({
+                  ...failureCtx(meta.group),
+                  raw_employee_name: meta.rawName,
+                  employee_id: payload.employee_id,
+                  match_method: meta.method,
+                  failure_type: classifySupabaseError(exMsg),
+                  error_message: exMsg,
+                }));
+              }
             }
           } else {
             totalAssignments += assignResult?.length ?? 0;
