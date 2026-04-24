@@ -16,6 +16,8 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format, parse } from "date-fns";
 import PasswordConfirmDialog from "@/components/PasswordConfirmDialog";
+import { EmployeeResolver, type AuxUserRecord, type AmbiguousMatch, type MatchTelemetry } from "@/lib/employee-matcher";
+import { parseConnecteamFile } from "@/lib/connecteam-parser";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const ACCEPTED_EXTENSIONS = ".xls,.xlsx,.csv";
@@ -57,6 +59,9 @@ interface ImportSummary {
   reconciledShifts: number;
   reconciledAssignments: number;
   skippedExistingAssignments: number;
+  matchTelemetry: MatchTelemetry;
+  ambiguousMatches: AmbiguousMatch[];
+  auxUsersLoaded: number;
 }
 
 /**
