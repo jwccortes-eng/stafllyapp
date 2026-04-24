@@ -488,6 +488,15 @@ export default function ImportSchedule() {
         existingSlots: number,
         group: ShiftGroup,
       ) => {
+        // ── Targeted instrumentation for shift_code = 45678 ──
+        const numericCodeForDiag = group.shiftCode ? group.shiftCode.match(/^(\d+)/)?.[1] || group.shiftCode : "";
+        const isTarget = numericCodeForDiag === TARGET_SHIFT_CODE && TARGET_DATES.has(group.date);
+        const diag = isTarget ? targetDiagnostics.get(group.key) ?? null : null;
+        if (diag) {
+          diag.enteredReconcile = true;
+          diag.existingShiftId = existingShiftId;
+          diag.dedupKeyDb = `${numericCodeForDiag}|${group.date}|${group.startTime}|${group.endTime}`;
+        }
         // Track client/employee match stats just like fresh inserts
         const clientId = matchClient(group.job);
         if (clientId) matchedClients++;
@@ -496,20 +505,39 @@ export default function ImportSchedule() {
         const realEmployees = group.employees.filter(e => !/^system\s/i.test(e));
 
         // Resolve employee IDs from this group
-        type Resolved = { empId: string; status: string };
+        type Resolved = { empId: string; status: string; rawName: string };
         const resolved: Resolved[] = [];
         for (let ei = 0; ei < group.employees.length; ei++) {
           const empName = group.employees[ei];
-          if (/^system\s/i.test(empName)) continue;
+          const statusRaw = (group.employeeStatuses[ei] || "").trim();
+          if (/^system\s/i.test(empName)) {
+            if (diag) diag.employeesDiagnostic.push({
+              rawName: empName, normalizedName: normalizeName(empName), statusFromExcel: statusRaw,
+              matchMethod: null, employeeId: null, ambiguous: false, unmatched: false,
+              insertAttempt: "no", assignmentResult: "skipped", reason: "system user",
+            });
+            continue;
+          }
           const r = resolveOnce(empName);
           if (!r.id) {
             unmatchedEmployeesSet.add(empName);
+            if (diag) diag.employeesDiagnostic.push({
+              rawName: empName, normalizedName: normalizeName(empName), statusFromExcel: statusRaw,
+              matchMethod: null, employeeId: null, ambiguous: r.ambiguous, unmatched: !r.ambiguous,
+              insertAttempt: "no", assignmentResult: "skipped",
+              reason: r.ambiguous ? "ambiguous match — not auto-resolved" : "no employee match (resolveByName=null)",
+            });
             continue;
           }
           matchedEmployees++;
           const empStatus = (group.employeeStatuses[ei] || "").toLowerCase();
           const statusMap: Record<string, string> = { accept: "accepted", decline: "rejected" };
-          resolved.push({ empId: r.id, status: statusMap[empStatus] ?? "accepted" });
+          resolved.push({ empId: r.id, status: statusMap[empStatus] ?? "accepted", rawName: empName });
+          if (diag) diag.employeesDiagnostic.push({
+            rawName: empName, normalizedName: normalizeName(empName), statusFromExcel: statusRaw,
+            matchMethod: r.method, employeeId: r.id, ambiguous: false, unmatched: false,
+            insertAttempt: "no", assignmentResult: "pending", reason: null,
+          });
         }
 
         if (resolved.length === 0) {
@@ -531,6 +559,7 @@ export default function ImportSchedule() {
         // Insert missing assignments one-by-one (overlap trigger may reject some)
         for (const r of resolved) {
           const existing = existingByEmp.get(r.empId);
+          const diagRow = diag?.employeesDiagnostic.find(d => d.employeeId === r.empId && d.assignmentResult === "pending");
           if (existing) {
             // Already assigned — only promote pending → accepted/rejected if Excel says so
             if (existing.status === "pending" && (r.status === "accepted" || r.status === "rejected")) {
@@ -538,10 +567,16 @@ export default function ImportSchedule() {
                 .from("shift_assignments")
                 .update({ status: r.status })
                 .eq("id", existing.id);
-              if (!updErr) reconciledAssignments++;
-              else skippedExistingAssignments++;
+              if (!updErr) {
+                reconciledAssignments++;
+                if (diagRow) { diagRow.insertAttempt = "no"; diagRow.assignmentResult = "updated"; diagRow.reason = `pending → ${r.status}`; }
+              } else {
+                skippedExistingAssignments++;
+                if (diagRow) { diagRow.insertAttempt = "no"; diagRow.assignmentResult = "update_error"; diagRow.reason = updErr.message; }
+              }
             } else {
               skippedExistingAssignments++;
+              if (diagRow) { diagRow.insertAttempt = "no"; diagRow.assignmentResult = "skipped_existing"; diagRow.reason = `already ${existing.status}`; }
             }
             continue;
           }
@@ -552,8 +587,16 @@ export default function ImportSchedule() {
               employee_id: r.empId,
               status: r.status,
             });
-            if (!error) reconciledAssignments++;
-          } catch { /* skip overlap */ }
+            if (diagRow) diagRow.insertAttempt = "yes";
+            if (!error) {
+              reconciledAssignments++;
+              if (diagRow) { diagRow.assignmentResult = "inserted"; diagRow.reason = null; }
+            } else {
+              if (diagRow) { diagRow.assignmentResult = "insert_error"; diagRow.reason = error.message; }
+            }
+          } catch (ex: any) {
+            if (diagRow) { diagRow.insertAttempt = "yes"; diagRow.assignmentResult = "insert_exception"; diagRow.reason = ex?.message ?? String(ex); }
+          }
         }
 
         // Grow slots only if the Excel brings more real employees than current capacity
