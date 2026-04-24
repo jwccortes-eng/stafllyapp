@@ -527,6 +527,19 @@ export default function StagedReconciliation() {
         }
       />
 
+      {/* ── Future-period guard banner (Quality Staff incident) ── */}
+      {activeIsFuture && (
+        <Alert variant="destructive" className="border-amber-500/40 bg-amber-500/10 text-amber-900 dark:text-amber-200">
+          <ShieldAlert className="h-4 w-4" />
+          <AlertDescription className="text-sm">
+            <strong>Periodo futuro seleccionado.</strong>{" "}
+            Este periodo ({activePeriod?.period_start} → {activePeriod?.period_end}) aún no ha comenzado.
+            Las acciones de reprocesar, aprobar, validar, publicar o cerrar requerirán confirmación adicional.
+            Para operaciones normales, selecciona el periodo actual o el más reciente cerrado.
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* ── Period Selector Bar ── */}
       <Card className="border-primary/20">
         <CardContent className="py-3 px-4">
