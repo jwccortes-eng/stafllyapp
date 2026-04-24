@@ -902,6 +902,7 @@ export default function ImportSchedule() {
         auxUsersLoaded: auxUsers.length,
         targetGroupCount: targetGroups.length,
         targetShiftDiagnostics: Array.from(targetDiagnostics.values()),
+        assignmentFailures,
       };
       setSummary(summaryData);
       console.info("[ImportSchedule] Match telemetry:", resolver.telemetry, "ambiguous:", resolver.ambiguous.length);
