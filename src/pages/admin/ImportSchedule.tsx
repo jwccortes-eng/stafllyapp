@@ -1121,6 +1121,20 @@ export default function ImportSchedule() {
       const baseMsg = blocked > 0
         ? `Importación finalizada con advertencias: ${totalCreated} asignaciones creadas, ${blocked} bloqueadas.`
         : `Importación completada: ${totalShifts} turnos, ${totalAssignments} asignaciones${createdMsg}${unmatchedMsg}${unavailMsg}${dupMsg}${reconciledMsg}.`;
+
+      // ── Fase 4: finalize the import_batch with the final counters ──
+      if (batchId) {
+        await finalizeImportBatch(batchId, {
+          shiftsCreated: totalShifts,
+          shiftsReconciled: reconciledShifts,
+          assignmentsCreated: totalAssignments + reconciledAssignments,
+          duplicatesSkipped: skippedDuplicates,
+          clientsCreated: createdClients,
+          unmatchedEmployees: Array.from(unmatchedEmployeesSet),
+          warnings: assignmentFailures.slice(0, 50),
+        });
+      }
+
       setResult({
         success: blocked === 0,
         message: baseMsg,
@@ -1128,6 +1142,12 @@ export default function ImportSchedule() {
       setStep(4);
     } catch (err: any) {
       console.error("[ImportSchedule] Import failed:", err);
+      // Mark the batch as failed so it doesn't appear as a successful import
+      // (the batchId variable is in scope thanks to closure over the try block).
+      try {
+        // @ts-ignore — batchId may be undefined if creation failed early
+        if (typeof batchId !== "undefined" && batchId) await failImportBatch(batchId, err?.message ?? String(err));
+      } catch { /* ignore secondary errors */ }
       setResult({ success: false, message: getUserFriendlyError(err) });
       setStep(4); // ensure user sees the result/error screen instead of being stuck on Step 3
       toast({ title: "Error", description: getUserFriendlyError(err), variant: "destructive" });
