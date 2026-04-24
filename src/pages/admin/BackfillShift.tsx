@@ -86,8 +86,35 @@ const fmtCandidate = (e: EmployeeRow) => {
 
 export default function BackfillShift() {
   const { shiftCode = "" } = useParams<{ shiftCode: string }>();
-  const { selectedCompanyId } = useCompany();
+  const { selectedCompanyId, companies, switchCompany, loading: companyLoading } = useCompany();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  // DEBUG: temporary log per request
+  console.log("BackfillShift company:", selectedCompanyId);
+
+  // Context guard: if we lost company context (e.g. fell into GLOBAL mode for
+  // dev/owner roles), try to restore it from ?company= or localStorage BEFORE
+  // rendering. Never auto-switch to GLOBAL — redirect to /app/shifts instead.
+  const [contextChecked, setContextChecked] = useState(false);
+  useEffect(() => {
+    if (companyLoading) return;
+    if (selectedCompanyId) {
+      setContextChecked(true);
+      return;
+    }
+    const fromUrl = searchParams.get("company");
+    const fromStorage = safeLocalStorage.getItem("selectedCompanyId");
+    const candidate = fromUrl || fromStorage;
+    if (candidate && companies.some((c) => c.id === candidate)) {
+      switchCompany(candidate);
+      // Wait for next render with restored context.
+      return;
+    }
+    // No way to recover — go back to shifts without touching context.
+    toast.error("No company context. Open this page from a company.");
+    navigate("/app/shifts", { replace: true });
+  }, [companyLoading, selectedCompanyId, companies, switchCompany, searchParams, navigate]);
 
   const [loading, setLoading] = useState(true);
   const [shifts, setShifts] = useState<ShiftRow[]>([]);
