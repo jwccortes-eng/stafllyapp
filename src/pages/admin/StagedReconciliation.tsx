@@ -978,9 +978,18 @@ export default function StagedReconciliation() {
               <div className="flex items-center justify-between">
                 <ActivePeriodBar period={activePeriod} isLocked={!!isLocked} />
                 {!isLocked && (
-                  <Button size="sm" onClick={handleGenerateRecords}>
-                    <ArrowRight className="h-4 w-4 mr-1" /> Generar Registros Finales
-                  </Button>
+                  <div className="flex items-center gap-1.5">
+                    <FutureLockBadge show={activeIsFuture} />
+                    <Button
+                      size="sm"
+                      variant={activeIsFuture ? "destructive" : "default"}
+                      onClick={handleGenerateRecords}
+                      title={activeIsFuture ? "Acción crítica sobre periodo futuro — requerirá confirmación fuerte" : undefined}
+                    >
+                      {activeIsFuture ? <Lock className="h-4 w-4 mr-1" /> : <ArrowRight className="h-4 w-4 mr-1" />}
+                      Generar Registros Finales
+                    </Button>
+                  </div>
                 )}
               </div>
               <EmployeePeriodReconciliation
