@@ -1270,6 +1270,68 @@ export default function ImportSchedule() {
             </Card>
           )}
 
+          {summary && summary.targetShiftDiagnostics.length > 0 && (
+            <Card className="border-primary/30 bg-primary/5">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm">Diagnóstico focalizado · shift_code 45678 ({summary.targetShiftDiagnostics.length} grupos)</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-[11px] text-muted-foreground">
+                  Instrumentación temporal. Para cada grupo del Excel cuyo <code>shift_code=45678</code> y fecha está en 2026-04-24/25/26, se registra:
+                  qué dedupKey generó, si entró a <code>reconcileExistingShift</code>, y por empleado el método de match, intento de insert y error exacto.
+                </p>
+                {summary.targetShiftDiagnostics.map((d, i) => (
+                  <div key={i} className="space-y-2 border rounded-lg p-3 bg-background">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
+                      <div><p className="text-muted-foreground">Fecha</p><p className="font-mono">{d.date}</p></div>
+                      <div><p className="text-muted-foreground">Job</p><p className="font-medium truncate" title={d.job}>{d.job || "—"}</p></div>
+                      <div><p className="text-muted-foreground">dedupKey Excel</p><p className="font-mono break-all">{d.dedupKeyExcel}</p></div>
+                      <div><p className="text-muted-foreground">dedupKey DB</p><p className="font-mono break-all">{d.dedupKeyDb ?? "—"}</p></div>
+                      <div><p className="text-muted-foreground">existingShiftId</p><p className="font-mono break-all">{d.existingShiftId ?? "—"}</p></div>
+                      <div><p className="text-muted-foreground">Entró a reconcile</p><p className="font-mono">{d.enteredReconcile ? "yes" : "no"}</p></div>
+                      <div><p className="text-muted-foreground">Empleados (Excel)</p><p className="font-mono">{d.employees.length}</p></div>
+                      <div><p className="text-muted-foreground">Diagnosticados</p><p className="font-mono">{d.employeesDiagnostic.length}</p></div>
+                    </div>
+                    {d.employeesDiagnostic.length > 0 ? (
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="text-[10px]">Raw name</TableHead>
+                              <TableHead className="text-[10px]">Normalized</TableHead>
+                              <TableHead className="text-[10px]">Status Excel</TableHead>
+                              <TableHead className="text-[10px]">Match method</TableHead>
+                              <TableHead className="text-[10px]">employee_id</TableHead>
+                              <TableHead className="text-[10px]">Insert?</TableHead>
+                              <TableHead className="text-[10px]">Result</TableHead>
+                              <TableHead className="text-[10px]">Reason / error</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {d.employeesDiagnostic.map((e, j) => (
+                              <TableRow key={j}>
+                                <TableCell className="text-[10px] font-medium">{e.rawName}</TableCell>
+                                <TableCell className="text-[10px] font-mono text-muted-foreground">{e.normalizedName}</TableCell>
+                                <TableCell className="text-[10px]">{e.statusFromExcel || "—"}</TableCell>
+                                <TableCell className="text-[10px]">{e.matchMethod ?? "—"}</TableCell>
+                                <TableCell className="text-[10px] font-mono break-all">{e.employeeId ?? "—"}</TableCell>
+                                <TableCell className="text-[10px]">{e.insertAttempt}</TableCell>
+                                <TableCell className="text-[10px]">{e.assignmentResult}</TableCell>
+                                <TableCell className="text-[10px] text-muted-foreground break-all">{e.reason ?? "—"}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    ) : (
+                      <p className="text-[11px] text-muted-foreground italic">Sin filas de diagnóstico (no entró a reconcile o el Excel no traía empleados).</p>
+                    )}
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+
           {summary && summary.ambiguousMatches.length > 0 && (
             <Card className="border-warning/30 bg-warning/5">
               <CardHeader>
