@@ -688,7 +688,7 @@ export default function WorkerDuplicates() {
                 <Filter className="h-4 w-4" /> Filters
               </CardTitle>
             </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <CardContent className="grid grid-cols-1 md:grid-cols-4 gap-3">
               <div className="relative">
                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -698,6 +698,14 @@ export default function WorkerDuplicates() {
                   onChange={(e) => setSearch(e.target.value)}
                 />
               </div>
+              <Select value={strengthFilter} onValueChange={(v) => setStrengthFilter(v as typeof strengthFilter)}>
+                <SelectTrigger><SelectValue placeholder="Signal strength" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="strong">Strong only (phone / email / employer ID)</SelectItem>
+                  <SelectItem value="with_weak">Include weak (name-only)</SelectItem>
+                  <SelectItem value="with_shared">Include shared contacts</SelectItem>
+                </SelectContent>
+              </Select>
               <Select value={matchTypeFilter} onValueChange={(v) => setMatchTypeFilter(v as MatchKey | "all")}>
                 <SelectTrigger><SelectValue placeholder="Match type" /></SelectTrigger>
                 <SelectContent>
