@@ -106,12 +106,12 @@ Deno.serve(async (req) => {
     return importResult;
   } catch (e) {
     console.error("migration-schedule-sync error:", e);
-    return json({ error: "Error interno", details: e.message }, 500);
+    return json({ error: "Error interno", details: (e as Error).message }, 500);
   }
 });
 
 async function importRaw(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   companyId: string,
   rows: Record<string, unknown>[],
   userId: string,
@@ -164,7 +164,7 @@ async function importRaw(
 
 // ─── Schedule Processing ─────────────────────────────────────────
 async function processScheduleRaw(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   companyId: string,
   userId: string,
   rows: Record<string, unknown>[],
@@ -331,7 +331,7 @@ async function processScheduleRaw(
 
 // ─── Timeclock Processing ────────────────────────────────────────
 async function processTimeclockRaw(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   companyId: string,
   userId: string,
   rows: Record<string, unknown>[],
@@ -407,7 +407,7 @@ async function processTimeclockRaw(
 
 // ─── Payroll Processing ──────────────────────────────────────────
 async function processPayrollRaw(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   companyId: string,
   userId: string,
   rows: Record<string, unknown>[],
@@ -482,7 +482,7 @@ async function processPayrollRaw(
 
 // ─── Legacy: Process Shifts from raw imports ─────────────────────
 async function processShifts(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   companyId: string,
   userId: string,
 ) {
@@ -505,7 +505,7 @@ async function processShifts(
 
 // ─── Stats ───────────────────────────────────────────────────────
 async function getStats(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   companyId: string,
 ) {
   const [rawRes, mappingRes, shiftsRes] = await Promise.all([
@@ -526,7 +526,7 @@ async function getStats(
 
 // ─── Resync All Periods ──────────────────────────────────────────
 async function resyncAllPeriods(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   companyId: string,
   userId: string,
 ) {
