@@ -65,6 +65,42 @@ import { normalizePhone } from "@/lib/phone";
 
 type MatchKey = "phone" | "email" | "name" | "employer_id";
 
+type GroupStrength = "strong" | "weak" | "shared_contact";
+
+/**
+ * Generic / shared email patterns. These are used by operators as placeholders
+ * (or shared inboxes) and MUST NOT generate a duplicate group on their own.
+ * Members are still surfaced with a "shared contact" badge for transparency.
+ */
+const SHARED_EMAIL_EXACT = new Set<string>([
+  "qualitystaff@gmail.com",
+  "noemail",
+  "noemail@noemail.com",
+  "test@test.com",
+]);
+const SHARED_EMAIL_PATTERNS: RegExp[] = [
+  /^test/i,
+  /^example/i,
+  /@example\./i,
+  /^admin@/i,
+  /^info@/i,
+  /^staffing@/i,
+  /^office@/i,
+  /^support@/i,
+  /^noemail/i,
+];
+
+/** Threshold: any email used by >= N employees is treated as a shared contact. */
+const SHARED_EMAIL_USAGE_THRESHOLD = 5;
+
+function isSharedEmail(email: string, usageCount: number): boolean {
+  if (!email) return true;
+  if (SHARED_EMAIL_EXACT.has(email)) return true;
+  if (SHARED_EMAIL_PATTERNS.some((re) => re.test(email))) return true;
+  if (usageCount >= SHARED_EMAIL_USAGE_THRESHOLD) return true;
+  return false;
+}
+
 interface EmployeeRecord {
   id: string;
   first_name: string | null;
