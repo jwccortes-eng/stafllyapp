@@ -1102,10 +1102,10 @@ export default function ImportSchedule() {
                 Esto creará turnos nuevos y reconciliará asignaciones faltantes en turnos existentes. Operación idempotente: no duplica datos.
               </p>
               <div className="flex gap-2 shrink-0">
-                <Button variant="outline" size="sm" onClick={() => { setStep(1); setFile(null); setFiles([]); setWorkbook(null); setShiftGroups([]); setResult(null); setForceReimport(false); }}>
+                <Button variant="outline" size="sm" onClick={() => { setStep(1); setFile(null); setFiles([]); setWorkbook(null); setShiftGroups([]); setResult(null); }}>
                   ← Cambiar archivos
                 </Button>
-                <Button size="sm" onClick={handleImport} disabled={importing || filteredGroups.length === 0}>
+                <Button size="sm" onClick={() => void handleImport()} disabled={importing || filteredGroups.length === 0}>
                   {importing ? "Procesando…" : `Procesar importación (${filteredGroups.length})`}
                 </Button>
               </div>
@@ -1134,9 +1134,7 @@ export default function ImportSchedule() {
                 <AlertDialogAction
                   onClick={() => {
                     setDuplicateFileWarning(null);
-                    setForceReimport(true);
-                    // Re-trigger immediately with the override
-                    setTimeout(() => { handleImport(); }, 0);
+                    void handleImport({ force: true });
                   }}
                 >
                   Re-procesar y reconciliar
