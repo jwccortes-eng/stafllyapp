@@ -16,6 +16,8 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format, parse } from "date-fns";
 import PasswordConfirmDialog from "@/components/PasswordConfirmDialog";
+import { EmployeeResolver, type AuxUserRecord, type AmbiguousMatch, type MatchTelemetry } from "@/lib/employee-matcher";
+import { parseConnecteamFile } from "@/lib/connecteam-parser";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const ACCEPTED_EXTENSIONS = ".xls,.xlsx,.csv";
@@ -57,6 +59,9 @@ interface ImportSummary {
   reconciledShifts: number;
   reconciledAssignments: number;
   skippedExistingAssignments: number;
+  matchTelemetry: MatchTelemetry;
+  ambiguousMatches: AmbiguousMatch[];
+  auxUsersLoaded: number;
 }
 
 /**
@@ -126,6 +131,10 @@ export default function ImportSchedule() {
   const [parsingFiles, setParsingFiles] = useState(false);
   const [duplicateFileWarning, setDuplicateFileWarning] = useState<string[] | null>(null);
   const [forceReimport, setForceReimport] = useState(false);
+  // Optional auxiliary file: Connecteam Users export → enriches matching with phone/email/Connecteam ID
+  const [auxUsers, setAuxUsers] = useState<AuxUserRecord[]>([]);
+  const [auxFileName, setAuxFileName] = useState<string | null>(null);
+  const [parsingAux, setParsingAux] = useState(false);
 
   // Filter dates if the range is large
   const [filterFrom, setFilterFrom] = useState("");
@@ -249,6 +258,27 @@ export default function ImportSchedule() {
     setStep(3);
   }, [toast]);
 
+  /** Optional: load Connecteam Users export to enrich matching with phone/email/Connecteam ID. */
+  const handleAuxUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    setParsingAux(true);
+    try {
+      const buf = await f.arrayBuffer();
+      const parsed = await parseConnecteamFile(buf, f.name);
+      setAuxUsers(parsed as AuxUserRecord[]);
+      setAuxFileName(f.name);
+      toast({
+        title: "Mapa auxiliar cargado",
+        description: `${parsed.length} usuarios disponibles para matching enriquecido (phone/email/Connecteam ID).`,
+      });
+    } catch (err: any) {
+      console.error("[ImportSchedule] aux parse failed:", err);
+      toast({ title: "Error parseando mapa auxiliar", description: getUserFriendlyError(err), variant: "destructive" });
+    }
+    setParsingAux(false);
+  }, [toast]);
+
   const filteredGroups = shiftGroups.filter(g => {
     if (filterFrom && g.date < filterFrom) return false;
     if (filterTo && g.date > filterTo) return false;
@@ -293,18 +323,23 @@ export default function ImportSchedule() {
       }
 
       // Fetch employees and clients for matching
+      // Pull richer columns so the resolver can match by phone / email / external IDs
+      // when an auxiliary Connecteam Users export is provided.
       setImportProgress({ current: 0, total: filteredGroups.length, phase: "Cargando maestros..." });
       const [{ data: employees }, { data: clients }] = await Promise.all([
-        supabase.from("employees").select("id, first_name, last_name").eq("company_id", selectedCompanyId),
+        supabase
+          .from("employees")
+          .select("id, first_name, last_name, phone_number, email, employer_identification, connecteam_employee_id")
+          .eq("company_id", selectedCompanyId),
         supabase.from("clients").select("id, name").eq("company_id", selectedCompanyId).is("deleted_at", null),
       ]);
       const empList = employees ?? [];
       const clientList = clients ?? [];
 
-      const empMap = new Map<string, string>();
-      empList.forEach(e => {
-        empMap.set(`${e.first_name} ${e.last_name}`.toLowerCase(), e.id);
-      });
+      // Robust resolver: priorities = aux_bridge → exact_name → reversed_name → fuzzy.
+      // Aux records (if any) come from the optional Connecteam Users export the
+      // operator uploaded in Step 1 and bridge name → phone/email/Connecteam ID → empId.
+      const resolver = new EmployeeResolver(empList, auxUsers.length > 0 ? auxUsers : null);
 
       const clientMap = new Map<string, string>();
       clientList.forEach(c => clientMap.set(c.name.toLowerCase(), c.id));
@@ -339,23 +374,51 @@ export default function ImportSchedule() {
         }
       }
 
-      // ── Auto-create unmatched employees ──
+      // ── Auto-create employees ONLY when there's no plausible match (no ambiguous, no fuzzy hit) ──
+      // Pre-resolve every name in the file to populate the resolver's telemetry/ambiguous state.
+      // We auto-create only when resolveByName returns null AND the name was not flagged
+      // as ambiguous (i.e. truly unknown person). Ambiguous names go to the review list.
       setImportProgress({ current: 0, total: filteredGroups.length, phase: "Creando empleados nuevos..." });
       const allEmpNames = new Set(filteredGroups.flatMap(g => g.employees));
       let createdEmployees = 0;
+      // Cache resolution per name to avoid double-counting telemetry.
+      const resolveCache = new Map<string, { id: string | null; ambiguous: boolean }>();
+      const resolveOnce = (name: string): { id: string | null; ambiguous: boolean } => {
+        const cached = resolveCache.get(name);
+        if (cached) return cached;
+        const ambiguousBefore = resolver.ambiguous.length;
+        const r = resolver.resolveByName(name);
+        const ambiguousAfter = resolver.ambiguous.length;
+        const result = { id: r?.employeeId ?? null, ambiguous: ambiguousAfter > ambiguousBefore };
+        resolveCache.set(name, result);
+        return result;
+      };
+
       for (const empName of allEmpNames) {
-        if (empMap.has(empName.toLowerCase())) continue;
+        if (/^system\s/i.test(empName)) continue;
+        const r = resolveOnce(empName);
+        if (r.id) continue;            // matched (any method)
+        if (r.ambiguous) continue;     // do NOT auto-create ambiguous matches
         const parsed = parseName(empName);
         if (!parsed) continue;
-        if (/^system\s/i.test(empName)) continue;
         const { data: newEmp } = await supabase.from("employees").insert({
           company_id: selectedCompanyId,
           first_name: parsed.first,
           last_name: parsed.last,
           is_active: true,
-        } as any).select("id").single();
+        } as any).select("id, first_name, last_name, phone_number, email, employer_identification, connecteam_employee_id").single();
         if (newEmp) {
-          empMap.set(empName.toLowerCase(), newEmp.id);
+          // Inject into the resolver's index so subsequent lookups find it via exact_name.
+          empList.push(newEmp as any);
+          // Rebuild index incrementally: easiest is to recreate the resolver, but doing so
+          // would reset telemetry. Instead we patch the maps directly.
+          const display = `${newEmp.first_name ?? ""} ${newEmp.last_name ?? ""}`.trim();
+          // Use the same normalizer indirectly via resolver internals.
+          // Simpler: clear cache for this name so next call goes through resolver and hits exact_name.
+          resolveCache.delete(empName);
+          // Push into the underlying name index so the resolver finds it.
+          // We rely on EmployeeResolver internals being mutable.
+          (resolver as any).empIndex.allNames.push({ id: newEmp.id, norm: display.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim(), display });
           createdEmployees++;
         }
       }
@@ -410,15 +473,15 @@ export default function ImportSchedule() {
         for (let ei = 0; ei < group.employees.length; ei++) {
           const empName = group.employees[ei];
           if (/^system\s/i.test(empName)) continue;
-          const empId = empMap.get(empName.toLowerCase());
-          if (!empId) {
+          const r = resolveOnce(empName);
+          if (!r.id) {
             unmatchedEmployeesSet.add(empName);
             continue;
           }
           matchedEmployees++;
           const empStatus = (group.employeeStatuses[ei] || "").toLowerCase();
           const statusMap: Record<string, string> = { accept: "accepted", decline: "rejected" };
-          resolved.push({ empId, status: statusMap[empStatus] ?? "accepted" });
+          resolved.push({ empId: r.id, status: statusMap[empStatus] ?? "accepted" });
         }
 
         if (resolved.length === 0) {
@@ -583,8 +646,8 @@ export default function ImportSchedule() {
           for (let ei = 0; ei < group.employees.length; ei++) {
             const empName = group.employees[ei];
             if (/^system\s/i.test(empName)) continue;
-            const empId = empMap.get(empName.toLowerCase());
-            if (!empId) {
+            const r = resolveOnce(empName);
+            if (!r.id) {
               unmatchedEmployeesSet.add(empName);
               continue;
             }
@@ -595,7 +658,7 @@ export default function ImportSchedule() {
             assignmentPayloads.push({
               company_id: selectedCompanyId,
               shift_id: shift.id,
-              employee_id: empId,
+              employee_id: r.id,
               status: assignStatus,
             });
           }
@@ -639,10 +702,10 @@ export default function ImportSchedule() {
       for (const u of filteredUnavail) {
         const name = parseName(u.name);
         if (!name) continue;
-        const empId = empMap.get(`${name.first} ${name.last}`.toLowerCase());
-        if (!empId) continue;
+        const r = resolveOnce(`${name.first} ${name.last}`);
+        if (!r.id) continue;
         unavailPayloads.push({
-          employee_id: empId,
+          employee_id: r.id,
           company_id: selectedCompanyId,
           date: u.date,
           is_available: false,
@@ -674,8 +737,12 @@ export default function ImportSchedule() {
         reconciledShifts,
         reconciledAssignments,
         skippedExistingAssignments,
+        matchTelemetry: { ...resolver.telemetry },
+        ambiguousMatches: [...resolver.ambiguous],
+        auxUsersLoaded: auxUsers.length,
       };
       setSummary(summaryData);
+      console.info("[ImportSchedule] Match telemetry:", resolver.telemetry, "ambiguous:", resolver.ambiguous.length);
 
       const createdMsg = (createdClients + createdEmployees) > 0
         ? ` · ${createdClients} clientes y ${createdEmployees} empleados creados`
@@ -798,6 +865,39 @@ export default function ImportSchedule() {
                 )}
               </div>
             </div>
+
+            {/* Optional: Connecteam Users export → enriches matching */}
+            <div className="rounded-xl border border-dashed border-border p-4 bg-muted/30">
+              <div className="flex items-start gap-3">
+                <Users className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium">Mapa auxiliar (opcional)</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Sube el export de <strong>Users</strong> de Connecteam para matchear empleados por phone, email o Connecteam ID además del nombre. Recomendado cuando hay variaciones de nombre.
+                  </p>
+                  {auxFileName ? (
+                    <div className="mt-2 flex items-center gap-2">
+                      <Badge variant="secondary" className="text-[10px]">
+                        <CheckCircle2 className="h-3 w-3 mr-1" />
+                        {auxFileName} · {auxUsers.length} usuarios
+                      </Badge>
+                      <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={() => { setAuxUsers([]); setAuxFileName(null); }}>
+                        Quitar
+                      </Button>
+                    </div>
+                  ) : parsingAux ? (
+                    <p className="text-xs text-muted-foreground mt-2 animate-pulse">Procesando…</p>
+                  ) : (
+                    <input
+                      type="file"
+                      accept={ACCEPTED_EXTENSIONS}
+                      onChange={handleAuxUpload}
+                      className="block mt-2 text-xs text-muted-foreground file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border file:border-border file:bg-background file:text-foreground file:font-medium hover:file:bg-muted cursor-pointer"
+                    />
+                  )}
+                </div>
+              </div>
+            </div>
           </CardContent>
         </Card>
       )}
@@ -817,6 +917,18 @@ export default function ImportSchedule() {
                     <FileSpreadsheet className="h-3 w-3 mr-1" />{f.name}
                   </Badge>
                 ))}
+              </div>
+            </Card>
+          )}
+
+          {/* Aux mapping status */}
+          {auxFileName && (
+            <Card className="p-3 border-primary/30 bg-primary/5">
+              <div className="flex items-center gap-2 text-xs">
+                <Users className="h-3.5 w-3.5 text-primary" />
+                <span className="font-medium">Mapa auxiliar activo:</span>
+                <span className="text-muted-foreground">{auxFileName} · {auxUsers.length} usuarios</span>
+                <span className="text-muted-foreground ml-auto">Matching enriquecido por phone/email/Connecteam ID.</span>
               </div>
             </Card>
           )}
@@ -1047,6 +1159,62 @@ export default function ImportSchedule() {
                 <p className="text-xs text-muted-foreground">Ya existían (omitidas)</p>
               </Card>
             </div>
+          )}
+
+          {/* Match telemetry — how each employee was resolved */}
+          {summary && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm">Cómo se emparejaron los empleados</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                  <div className="rounded-lg border p-2"><p className="text-muted-foreground">Por Connecteam ID / external</p><p className="text-lg font-bold tabular-nums">{summary.matchTelemetry.external_id}</p></div>
+                  <div className="rounded-lg border p-2"><p className="text-muted-foreground">Por phone (aux)</p><p className="text-lg font-bold tabular-nums">{summary.matchTelemetry.phone}</p></div>
+                  <div className="rounded-lg border p-2"><p className="text-muted-foreground">Por email (aux)</p><p className="text-lg font-bold tabular-nums">{summary.matchTelemetry.email}</p></div>
+                  <div className="rounded-lg border p-2"><p className="text-muted-foreground">Aux bridge (Users export)</p><p className="text-lg font-bold tabular-nums">{summary.matchTelemetry.aux_bridge}</p></div>
+                  <div className="rounded-lg border p-2"><p className="text-muted-foreground">Por nombre exacto</p><p className="text-lg font-bold tabular-nums">{summary.matchTelemetry.exact_name}</p></div>
+                  <div className="rounded-lg border p-2"><p className="text-muted-foreground">Por nombre invertido</p><p className="text-lg font-bold tabular-nums">{summary.matchTelemetry.reversed_name}</p></div>
+                  <div className="rounded-lg border p-2"><p className="text-muted-foreground">Fuzzy (cercano único)</p><p className="text-lg font-bold tabular-nums">{summary.matchTelemetry.fuzzy_name}</p></div>
+                  <div className="rounded-lg border p-2"><p className="text-muted-foreground">No encontrados</p><p className="text-lg font-bold tabular-nums text-warning">{summary.matchTelemetry.unmatched}</p></div>
+                </div>
+                {summary.auxUsersLoaded === 0 && (
+                  <p className="text-[11px] text-muted-foreground mt-3">
+                    Tip: sube el export de <strong>Users</strong> de Connecteam en el Paso 1 para activar matching por phone, email y Connecteam ID.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {summary && summary.ambiguousMatches.length > 0 && (
+            <Card className="border-warning/30 bg-warning/5">
+              <CardHeader>
+                <CardTitle className="text-sm">Matches ambiguos para revisar ({summary.ambiguousMatches.length})</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <p className="text-xs text-muted-foreground">
+                  Estos nombres del archivo pudieron coincidir con más de un empleado. <strong>No</strong> se crearon ni asignaron — revisa manualmente.
+                </p>
+                <div className="space-y-1.5">
+                  {summary.ambiguousMatches.slice(0, 30).map((a, i) => (
+                    <div key={i} className="text-xs border rounded p-2">
+                      <p className="font-medium">{a.rawName}</p>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {a.candidates.map((c, j) => (
+                          <Badge key={j} variant="outline" className="text-[10px]">
+                            {c.display} <span className="ml-1 text-muted-foreground">({c.method})</span>
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                  {summary.ambiguousMatches.length > 30 && (
+                    <p className="text-[11px] text-muted-foreground">… y {summary.ambiguousMatches.length - 30} más</p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
           )}
 
           {summary && summary.unmatchedEmployees.length > 0 && (
