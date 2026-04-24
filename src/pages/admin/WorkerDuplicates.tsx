@@ -512,6 +512,13 @@ export default function WorkerDuplicates() {
   const filteredActive = useMemo(() => {
     const term = search.trim().toLowerCase();
     return activeGroups.filter((g) => {
+      // Strength gating:
+      //   strong       → only strong groups
+      //   with_weak    → strong + weak (name-only)
+      //   with_shared  → everything (also surfaces shared-contact-only members)
+      if (strengthFilter === "strong" && g.strength !== "strong") return false;
+      if (strengthFilter === "with_weak" && g.strength === "shared_contact") return false;
+      // with_shared: no strength filter applied
       if (matchTypeFilter !== "all" && !g.matchKeys.includes(matchTypeFilter)) return false;
       if (reviewFilter === "open" && g.reviewState) return false;
       if (reviewFilter === "reviewed" && g.reviewState !== "reviewed") return false;
@@ -529,14 +536,24 @@ export default function WorkerDuplicates() {
         return fields.some((f) => (f ?? "").toString().toLowerCase().includes(term));
       });
     });
-  }, [activeGroups, matchTypeFilter, reviewFilter, search]);
+  }, [activeGroups, matchTypeFilter, reviewFilter, strengthFilter, search]);
 
   const kpis = useMemo(() => {
-    const open = activeGroups.filter((g) => !g.reviewState).length;
-    const flagged = activeGroups.filter((g) => g.reviewState === "flagged_pending_consolidation").length;
-    const reviewed = activeGroups.filter((g) => g.reviewState === "reviewed").length;
-    const employeesAffected = activeGroups.reduce((acc, g) => acc + g.members.length, 0);
-    return { open, flagged, reviewed, employeesAffected, historical: historicalGroups.length };
+    const strongActive = activeGroups.filter((g) => g.strength === "strong");
+    const weakActive = activeGroups.filter((g) => g.strength === "weak");
+    const open = strongActive.filter((g) => !g.reviewState).length;
+    const flagged = strongActive.filter((g) => g.reviewState === "flagged_pending_consolidation").length;
+    const reviewed = strongActive.filter((g) => g.reviewState === "reviewed").length;
+    const employeesAffected = strongActive.reduce((acc, g) => acc + g.members.length, 0);
+    return {
+      open,
+      flagged,
+      reviewed,
+      employeesAffected,
+      historical: historicalGroups.length,
+      strong: strongActive.length,
+      weak: weakActive.length,
+    };
   }, [activeGroups, historicalGroups]);
 
   // ── Actions ──────────────────────────────────────────────────────────────
