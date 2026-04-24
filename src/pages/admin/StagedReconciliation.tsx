@@ -919,6 +919,14 @@ export default function StagedReconciliation() {
 
         <TabsContent value="import">
           {activePeriod && <ActivePeriodBar period={activePeriod} isLocked={!!isLocked} />}
+          {activeIsFuture && (
+            <Alert className="border-amber-500/40 bg-amber-50/70 dark:bg-amber-950/20 mb-3">
+              <Lock className="h-4 w-4 text-amber-600" />
+              <AlertDescription className="text-xs">
+                <strong>Período futuro.</strong> Cargar el Payroll Truth File aquí no está recomendado: los datos no corresponden todavía al período operativo real.
+              </AlertDescription>
+            </Alert>
+          )}
           {isLocked ? (
             <NoPeriodPlaceholder icon={Lock} text="Este periodo está cerrado. No se permiten nuevas importaciones." />
           ) : (
