@@ -124,6 +124,8 @@ export default function ImportSchedule() {
   const [deletePasswordOpen, setDeletePasswordOpen] = useState(false);
   const [importProgress, setImportProgress] = useState<{ current: number; total: number; phase: string } | null>(null);
   const [parsingFiles, setParsingFiles] = useState(false);
+  const [duplicateFileWarning, setDuplicateFileWarning] = useState<string[] | null>(null);
+  const [forceReimport, setForceReimport] = useState(false);
 
   // Filter dates if the range is large
   const [filterFrom, setFilterFrom] = useState("");
