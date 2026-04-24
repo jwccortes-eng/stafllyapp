@@ -1301,18 +1301,40 @@ export default function ImportSchedule() {
       {/* Step 4: Result */}
       {step === 4 && result && (
         <div className="space-y-4">
-          <Card className={result.success ? "border-emerald-200 bg-emerald-50/50 dark:border-emerald-900 dark:bg-emerald-950/20" : "border-destructive/30 bg-destructive/5"}>
-            <CardContent className="p-6">
-              <div className="flex items-start gap-3">
-                {result.success ? <CheckCircle2 className="h-6 w-6 text-emerald-600 shrink-0 mt-0.5" /> : <AlertCircle className="h-6 w-6 text-destructive shrink-0 mt-0.5" />}
-                <div>
-                  <p className="font-semibold text-sm">{result.success ? "Importación exitosa" : "Error en importación"}</p>
-                  <p className="text-sm text-muted-foreground mt-1">{result.message}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
+          {(() => {
+            const blocked = summary?.assignmentFailures.length ?? 0;
+            const isError = !result.success && blocked === 0;
+            const isWarn = blocked > 0;
+            const cardCls = isError
+              ? "border-destructive/30 bg-destructive/5"
+              : isWarn
+                ? "border-warning/30 bg-warning/5"
+                : "border-emerald-200 bg-emerald-50/50 dark:border-emerald-900 dark:bg-emerald-950/20";
+            const iconCls = isError
+              ? "h-6 w-6 text-destructive shrink-0 mt-0.5"
+              : isWarn
+                ? "h-6 w-6 text-warning shrink-0 mt-0.5"
+                : "h-6 w-6 text-emerald-600 shrink-0 mt-0.5";
+            const Icon = isError || isWarn ? AlertCircle : CheckCircle2;
+            const title = isError
+              ? "Error en importación"
+              : isWarn
+                ? "Importación finalizada con advertencias"
+                : "Importación exitosa";
+            return (
+              <Card className={cardCls}>
+                <CardContent className="p-6">
+                  <div className="flex items-start gap-3">
+                    <Icon className={iconCls} />
+                    <div>
+                      <p className="font-semibold text-sm">{title}</p>
+                      <p className="text-sm text-muted-foreground mt-1">{result.message}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })()}
           {summary && (
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               <Card className="p-4 text-center">
