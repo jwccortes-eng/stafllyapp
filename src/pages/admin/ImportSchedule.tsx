@@ -415,14 +415,14 @@ export default function ImportSchedule() {
       });
       const targetDiagnostics = new Map<string, TargetShiftDiagnostic>();
       // Cache resolution per name to avoid double-counting telemetry.
-      const resolveCache = new Map<string, { id: string | null; ambiguous: boolean }>();
-      const resolveOnce = (name: string): { id: string | null; ambiguous: boolean } => {
+      const resolveCache = new Map<string, { id: string | null; ambiguous: boolean; method: MatchMethod | null }>();
+      const resolveOnce = (name: string): { id: string | null; ambiguous: boolean; method: MatchMethod | null } => {
         const cached = resolveCache.get(name);
         if (cached) return cached;
         const ambiguousBefore = resolver.ambiguous.length;
         const r = resolver.resolveByName(name);
         const ambiguousAfter = resolver.ambiguous.length;
-        const result = { id: r?.employeeId ?? null, ambiguous: ambiguousAfter > ambiguousBefore };
+        const result = { id: r?.employeeId ?? null, ambiguous: ambiguousAfter > ambiguousBefore, method: r?.method ?? null };
         resolveCache.set(name, result);
         return result;
       };
