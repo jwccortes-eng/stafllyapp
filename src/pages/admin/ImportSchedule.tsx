@@ -357,6 +357,9 @@ export default function ImportSchedule() {
     setResult(null);
     setImportProgress({ current: 0, total: filteredGroups.length, phase: "Preparando..." });
 
+    // Hoisted so the catch block can mark the batch as failed.
+    let batchIdForCatch: string | null = null;
+
     try {
       // ── Check for duplicate file upload using company_settings ──
       // Post-FIX #1: re-uploading the same file is now SAFE because reconciliation
