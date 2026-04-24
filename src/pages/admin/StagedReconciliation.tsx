@@ -1152,6 +1152,14 @@ export default function StagedReconciliation() {
         </TabsContent>
 
         <TabsContent value="payroll-truth">
+          {activeIsFuture && (
+            <Alert className="border-amber-500/40 bg-amber-50/70 dark:bg-amber-950/20 mb-3">
+              <Lock className="h-4 w-4 text-amber-600" />
+              <AlertDescription className="text-xs">
+                <strong>Período futuro.</strong> Reconciliar contra Payroll Truth en un período futuro puede contaminar los datos reales. Cualquier acción crítica pedirá confirmación adicional.
+              </AlertDescription>
+            </Alert>
+          )}
           <PayrollTruthValidation
             companyId={selectedCompanyId}
             periodStatusId={activePeriod?.id}
