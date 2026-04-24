@@ -920,14 +920,18 @@ export default function ImportSchedule() {
             </CardContent>
           </Card>
 
-          <div className="flex gap-3">
-            <Button variant="outline" onClick={() => { setStep(1); setFile(null); setFiles([]); setWorkbook(null); setShiftGroups([]); }}>
-              ← Cambiar archivos
-            </Button>
-            <Button onClick={handleImport} disabled={importing || filteredGroups.length === 0}>
-              {importing ? "Importando…" : `Importar ${filteredGroups.length} turnos`}
-            </Button>
-          </div>
+          {/* Inline error if Step 3 produced a result without advancing (legacy guard, etc.) */}
+          {result && !result.success && (
+            <Card className="border-destructive/30 bg-destructive/5">
+              <CardContent className="p-4 flex items-start gap-3">
+                <AlertCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+                <div className="text-sm">
+                  <p className="font-semibold">No se pudo procesar</p>
+                  <p className="text-muted-foreground mt-1">{result.message}</p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Progress bar */}
           {importProgress && (
@@ -944,6 +948,59 @@ export default function ImportSchedule() {
               </div>
             </Card>
           )}
+
+          {/* Spacer so sticky bar never covers content */}
+          <div className="h-24" />
+
+          {/* Sticky action bar */}
+          <div className="sticky bottom-0 -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 z-10">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+              <p className="text-xs text-muted-foreground flex-1">
+                Esto creará turnos nuevos y reconciliará asignaciones faltantes en turnos existentes. Operación idempotente: no duplica datos.
+              </p>
+              <div className="flex gap-2 shrink-0">
+                <Button variant="outline" size="sm" onClick={() => { setStep(1); setFile(null); setFiles([]); setWorkbook(null); setShiftGroups([]); setResult(null); setForceReimport(false); }}>
+                  ← Cambiar archivos
+                </Button>
+                <Button size="sm" onClick={handleImport} disabled={importing || filteredGroups.length === 0}>
+                  {importing ? "Procesando…" : `Procesar importación (${filteredGroups.length})`}
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Duplicate-file confirmation dialog */}
+          <AlertDialog open={!!duplicateFileWarning} onOpenChange={(open) => { if (!open) setDuplicateFileWarning(null); }}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Archivo ya importado anteriormente</AlertDialogTitle>
+                <AlertDialogDescription className="space-y-2">
+                  <span className="block">
+                    Detectamos que ya importaste {duplicateFileWarning?.length === 1 ? "este archivo" : "estos archivos"}:
+                  </span>
+                  <span className="block font-mono text-xs bg-muted rounded px-2 py-1">
+                    {duplicateFileWarning?.join(", ")}
+                  </span>
+                  <span className="block">
+                    Re-procesarlo es <strong>seguro</strong>: no se duplican turnos ni asignaciones. Solo se crearán los turnos nuevos y se reconciliarán las asignaciones faltantes en los turnos existentes (útil para corregir turnos huérfanos sin empleados asignados).
+                  </span>
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel onClick={() => setDuplicateFileWarning(null)}>Cancelar</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => {
+                    setDuplicateFileWarning(null);
+                    setForceReimport(true);
+                    // Re-trigger immediately with the override
+                    setTimeout(() => { handleImport(); }, 0);
+                  }}
+                >
+                  Re-procesar y reconciliar
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       )}
 
