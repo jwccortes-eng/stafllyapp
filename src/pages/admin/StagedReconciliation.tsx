@@ -356,9 +356,25 @@ export default function StagedReconciliation() {
     setSelectedBatchPayPeriodId(getDefaultPayPeriod(payPeriods)?.id || "");
   }, [showBatchDialog, payPeriods, selectedBatchPayPeriodId]);
 
+  // ── Future period guard (Quality Staff incident — never act on a period
+  //    whose start_date is in the future without strong confirmation). ──
+  const activeIsFuture = !!activePeriod && isFuturePeriod(activePeriod);
+  const activeIsCurrent = !!activePeriod && isCurrentPeriod(activePeriod);
+  const activeIsSpecial = !!activePeriod && isSpecialPeriod(activePeriod);
+
+  const confirmFutureAction = useCallback((actionLabel: string) => {
+    if (!activeIsFuture) return true;
+    const msg =
+      `⚠️ Estás por ejecutar "${actionLabel}" sobre un periodo FUTURO ` +
+      `(${activePeriod?.period_start} → ${activePeriod?.period_end}). ` +
+      `Esto puede contaminar payroll/reconciliation. ¿Confirmas que deseas continuar?`;
+    return typeof window !== "undefined" && window.confirm(msg);
+  }, [activeIsFuture, activePeriod?.period_start, activePeriod?.period_end]);
+
   // ── Reprocess period ──
   const handleReprocessPeriod = async () => {
     if (!activePeriod) return;
+    if (!confirmFutureAction("Reprocesar periodo")) return;
     setReprocessing(true);
     await generateFinalRecords(activePeriod.id);
     await logJournal("reprocess", "Periodo reprocesado", `Clasificación y mappings reaplicados`);
