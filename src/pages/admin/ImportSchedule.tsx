@@ -1364,6 +1364,142 @@ export default function ImportSchedule() {
             </div>
           )}
 
+          {/* ── Blocked assignments panel ── */}
+          {summary && summary.assignmentFailures.length > 0 && (() => {
+            const all = summary.assignmentFailures;
+            const counts = all.reduce<Record<AssignmentFailureType, number>>((acc, f) => {
+              acc[f.failure_type] = (acc[f.failure_type] ?? 0) + 1;
+              return acc;
+            }, { employee_not_ready: 0, unmatched_employee: 0, ambiguous_employee: 0, duplicate_assignment: 0, overlap: 0, db_error: 0 });
+            const filtered = blockedFilter === "all" ? all : all.filter(f => f.failure_type === blockedFilter);
+            const grouped = groupFailuresByShift(filtered);
+            const filterChips: Array<{ key: AssignmentFailureType | "all"; label: string; count: number }> = [
+              { key: "all", label: "All", count: all.length },
+              ...(Object.entries(counts) as Array<[AssignmentFailureType, number]>)
+                .filter(([, n]) => n > 0)
+                .map(([k, n]) => ({ key: k, label: FAILURE_TYPE_LABELS[k], count: n })),
+            ];
+            const onCopy = async () => {
+              try {
+                await navigator.clipboard.writeText(failuresToText(all));
+                toast({ title: "Reporte copiado", description: `${all.length} bloqueos en el portapapeles.` });
+              } catch {
+                toast({ title: "No se pudo copiar", variant: "destructive" });
+              }
+            };
+            const onExport = () => {
+              const csv = failuresToCsv(all);
+              const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = `blocked-assignments-${new Date().toISOString().slice(0, 10)}.csv`;
+              document.body.appendChild(a);
+              a.click();
+              document.body.removeChild(a);
+              URL.revokeObjectURL(url);
+            };
+            return (
+              <Card className="border-warning/30 bg-warning/5">
+                <CardHeader className="pb-3">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <CardTitle className="text-sm flex items-center gap-2">
+                        <AlertCircle className="h-4 w-4 text-warning" />
+                        Assignments bloqueados ({all.length})
+                      </CardTitle>
+                      <p className="text-[11px] text-muted-foreground mt-1">
+                        Estas asignaciones <strong>no se crearon</strong>. Cada fila incluye la causa exacta y la acción sugerida.
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="outline" onClick={onCopy}>Copiar reporte</Button>
+                      <Button size="sm" variant="outline" onClick={onExport}>Exportar CSV</Button>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Filter chips */}
+                  <div className="flex flex-wrap gap-1.5">
+                    {filterChips.map(c => (
+                      <button
+                        key={c.key}
+                        type="button"
+                        onClick={() => setBlockedFilter(c.key)}
+                        className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
+                          blockedFilter === c.key
+                            ? "bg-warning text-warning-foreground border-warning"
+                            : "bg-background text-foreground border-border hover:bg-muted"
+                        }`}
+                      >
+                        {c.label} <span className="tabular-nums opacity-70">· {c.count}</span>
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Grouped by shift */}
+                  {grouped.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">Sin bloqueos para el filtro seleccionado.</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {grouped.map(g => (
+                        <div key={g.key} className="rounded-lg border bg-background">
+                          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 px-3 py-2 border-b bg-muted/40">
+                            <span className="font-mono text-xs font-semibold">#{g.shift_code || "—"}</span>
+                            <span className="text-xs text-muted-foreground">{g.date} · {g.start_time}–{g.end_time}</span>
+                            <span className="text-xs font-medium truncate" title={g.client}>{g.client || "—"}</span>
+                            <Badge variant="outline" className="ml-auto text-[10px]">{g.items.length} bloqueado(s)</Badge>
+                          </div>
+                          <div className="overflow-x-auto">
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead className="text-[10px]">Empleado (Excel)</TableHead>
+                                  <TableHead className="text-[10px]">employee_id</TableHead>
+                                  <TableHead className="text-[10px]">Match</TableHead>
+                                  <TableHead className="text-[10px]">Tipo</TableHead>
+                                  <TableHead className="text-[10px]">Mensaje DB</TableHead>
+                                  <TableHead className="text-[10px]">Acción sugerida</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {g.items.map((f, i) => (
+                                  <TableRow key={i}>
+                                    <TableCell className="text-[11px] font-medium">{f.raw_employee_name}</TableCell>
+                                    <TableCell className="text-[10px] font-mono break-all text-muted-foreground">{f.employee_id ?? "—"}</TableCell>
+                                    <TableCell className="text-[10px]">{f.match_method ?? "—"}</TableCell>
+                                    <TableCell className="text-[10px]">
+                                      <Badge
+                                        variant="outline"
+                                        className={
+                                          f.failure_type === "employee_not_ready" ? "border-warning/40 text-warning"
+                                          : f.failure_type === "duplicate_assignment" ? "border-muted-foreground/30 text-muted-foreground"
+                                          : "border-destructive/30 text-destructive"
+                                        }
+                                      >
+                                        {FAILURE_TYPE_LABELS[f.failure_type]}
+                                      </Badge>
+                                    </TableCell>
+                                    <TableCell className="text-[10px] text-muted-foreground break-all max-w-[280px]">{f.error_message}</TableCell>
+                                    <TableCell className="text-[10px] break-words max-w-[260px]">{f.suggested_action}</TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <p className="text-[10px] text-muted-foreground">
+                    Reporte informativo. No hace bypass de reglas — los overrides operativos se gestionan por separado.
+                  </p>
+                </CardContent>
+              </Card>
+            );
+          })()}
+
           {/* Match telemetry — how each employee was resolved */}
           {summary && (
             <Card>
