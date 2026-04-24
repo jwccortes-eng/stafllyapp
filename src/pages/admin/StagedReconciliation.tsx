@@ -385,12 +385,14 @@ export default function StagedReconciliation() {
   // ── Core actions with journal logging ──
   const handleGenerateRecords = async () => {
     if (!activePeriod) return;
+    if (!confirmFutureAction("Generar registros finales")) return;
     await generateFinalRecords(activePeriod.id);
     await logJournal("matching", "Registros finales generados", `${finalRecords.length} empleados`);
   };
 
   const handleApprovePeriod = async () => {
     if (!activePeriod) return;
+    if (!confirmFutureAction("Aprobar periodo")) return;
     // Determine closure method: if no clocks, mark as truth_validation
     const closureMethod = activePeriod.total_clocks === 0 ? "truth_validation" : "matching";
     await updatePeriodStatus(activePeriod.id, "approved");
@@ -404,6 +406,7 @@ export default function StagedReconciliation() {
 
   const handlePostPeriod = async () => {
     if (!activePeriod) return;
+    if (!confirmFutureAction("Publicar periodo")) return;
     setPublishing(true);
     const success = await postFinalRecords(activePeriod.id);
     if (success) await logJournal("publish", "Periodo publicado a producción");
@@ -412,6 +415,7 @@ export default function StagedReconciliation() {
 
   const handleLockPeriod = async () => {
     if (!activePeriod) return;
+    if (!confirmFutureAction("Cerrar y bloquear periodo")) return;
     await updatePeriodStatus(activePeriod.id, "locked");
     await logJournal("lock", "Periodo cerrado y bloqueado");
     toast({ title: "Periodo cerrado y bloqueado" });
@@ -425,6 +429,7 @@ export default function StagedReconciliation() {
 
   const handleRunValidation = async (isDryRun: boolean, uat: Record<string, boolean>, notes?: string) => {
     if (!activePeriod) return null;
+    if (!isDryRun && !confirmFutureAction("Validar y publicar")) return null;
     const result = await runValidation(activePeriod.id, isDryRun, uat, employeeMap, notes);
     await logJournal("validation", isDryRun ? "Dry-run ejecutado" : "Validación ejecutada", `Confianza: ${result?.confidence_score}%`);
     return result;
