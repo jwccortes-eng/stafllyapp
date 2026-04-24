@@ -16,7 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format, parse } from "date-fns";
 import PasswordConfirmDialog from "@/components/PasswordConfirmDialog";
-import { EmployeeResolver, type AuxUserRecord, type AmbiguousMatch, type MatchTelemetry } from "@/lib/employee-matcher";
+import { EmployeeResolver, normalizeName, type AuxUserRecord, type AmbiguousMatch, type MatchMethod, type MatchTelemetry } from "@/lib/employee-matcher";
 import { parseConnecteamFile } from "@/lib/connecteam-parser";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -62,6 +62,35 @@ interface ImportSummary {
   matchTelemetry: MatchTelemetry;
   ambiguousMatches: AmbiguousMatch[];
   auxUsersLoaded: number;
+  targetGroupCount: number;
+  targetShiftDiagnostics: TargetShiftDiagnostic[];
+}
+
+interface TargetShiftEmployeeDiagnostic {
+  rawName: string;
+  normalizedName: string;
+  statusFromExcel: string;
+  matchMethod: MatchMethod | null;
+  employeeId: string | null;
+  ambiguous: boolean;
+  unmatched: boolean;
+  insertAttempt: "yes" | "no";
+  assignmentResult: string;
+  reason: string | null;
+}
+
+interface TargetShiftDiagnostic {
+  date: string;
+  shiftCode: string;
+  job: string;
+  groupKey: string;
+  dedupKeyExcel: string;
+  dedupKeyDb: string | null;
+  existingShiftId: string | null;
+  enteredReconcile: boolean;
+  employees: string[];
+  employeeStatuses: string[];
+  employeesDiagnostic: TargetShiftEmployeeDiagnostic[];
 }
 
 /**
