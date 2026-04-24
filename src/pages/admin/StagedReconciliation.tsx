@@ -173,6 +173,10 @@ export default function StagedReconciliation() {
   const [periodSearch, setPeriodSearch] = useState("");
   const [batchSearch, setBatchSearch] = useState("");
   const [selectedBatchPayPeriodId, setSelectedBatchPayPeriodId] = useState("");
+  // Tracks whether the currently active period was chosen explicitly by the
+  // admin (vs picked by the safe-default selector). Used to surface the
+  // "manual future selection" warning banner.
+  const [manuallySelected, setManuallySelected] = useState(false);
 
   // ── Load employees ──
   useEffect(() => {
