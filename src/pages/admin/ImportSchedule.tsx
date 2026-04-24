@@ -18,6 +18,17 @@ import { format, parse } from "date-fns";
 import PasswordConfirmDialog from "@/components/PasswordConfirmDialog";
 import { EmployeeResolver, normalizeName, type AuxUserRecord, type AmbiguousMatch, type MatchMethod, type MatchTelemetry } from "@/lib/employee-matcher";
 import { parseConnecteamFile } from "@/lib/connecteam-parser";
+import {
+  buildFailure,
+  classifySupabaseError,
+  failuresToCsv,
+  failuresToText,
+  groupFailuresByShift,
+  FAILURE_TYPE_LABELS,
+  FAILURE_TYPE_HINTS,
+  type AssignmentFailure,
+  type AssignmentFailureType,
+} from "@/lib/import/assignment-failures";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const ACCEPTED_EXTENSIONS = ".xls,.xlsx,.csv";
@@ -67,6 +78,7 @@ interface ImportSummary {
   auxUsersLoaded: number;
   targetGroupCount: number;
   targetShiftDiagnostics: TargetShiftDiagnostic[];
+  assignmentFailures: AssignmentFailure[];
 }
 
 interface TargetShiftEmployeeDiagnostic {
@@ -170,6 +182,9 @@ export default function ImportSchedule() {
   // Filter dates if the range is large
   const [filterFrom, setFilterFrom] = useState("");
   const [filterTo, setFilterTo] = useState("");
+
+  // Step 4: filter for the Blocked assignments panel
+  const [blockedFilter, setBlockedFilter] = useState<AssignmentFailureType | "all">("all");
 
   /** Process a single workbook sheet and return parsed groups + unavailability */
   const parseSheetData = (wb: SafeWorkbook, sheetName: string) => {
@@ -438,6 +453,19 @@ export default function ImportSchedule() {
       let unmatchedEmployeesSet = new Set<string>();
       let matchedClients = 0;
       let unmatchedClientsSet = new Set<string>();
+      const assignmentFailures: AssignmentFailure[] = [];
+
+      /** Helper: build the shift-context fields from a ShiftGroup. */
+      const failureCtx = (group: ShiftGroup) => {
+        const numericCode = group.shiftCode ? group.shiftCode.match(/^(\d+)/)?.[1] || group.shiftCode : "";
+        return {
+          shift_code: numericCode,
+          date: group.date,
+          start_time: group.startTime,
+          end_time: group.endTime,
+          client: group.job,
+        };
+      };
 
       // ── Fetch existing shifts for deduplication (composite key) ──
       // Store shift_id + slots so we can reconcile assignments for shifts that already exist.
@@ -521,6 +549,16 @@ export default function ImportSchedule() {
           const r = resolveOnce(empName);
           if (!r.id) {
             unmatchedEmployeesSet.add(empName);
+            assignmentFailures.push(buildFailure({
+              ...failureCtx(group),
+              raw_employee_name: empName,
+              employee_id: null,
+              match_method: null,
+              failure_type: r.ambiguous ? "ambiguous_employee" : "unmatched_employee",
+              error_message: r.ambiguous
+                ? "Ambiguous match — multiple workers matched this name."
+                : "No worker matched this name in the directory.",
+            }));
             if (diag) diag.employeesDiagnostic.push({
               rawName: empName, normalizedName: normalizeName(empName), statusFromExcel: statusRaw,
               matchMethod: null, employeeId: null, ambiguous: r.ambiguous, unmatched: !r.ambiguous,
@@ -593,9 +631,26 @@ export default function ImportSchedule() {
               if (diagRow) { diagRow.assignmentResult = "inserted"; diagRow.reason = null; }
             } else {
               if (diagRow) { diagRow.assignmentResult = "insert_error"; diagRow.reason = error.message; }
+              assignmentFailures.push(buildFailure({
+                ...failureCtx(group),
+                raw_employee_name: r.rawName,
+                employee_id: r.empId,
+                match_method: diagRow?.matchMethod ?? null,
+                failure_type: classifySupabaseError(error.message),
+                error_message: error.message,
+              }));
             }
           } catch (ex: any) {
-            if (diagRow) { diagRow.insertAttempt = "yes"; diagRow.assignmentResult = "insert_exception"; diagRow.reason = ex?.message ?? String(ex); }
+            const exMsg = ex?.message ?? String(ex);
+            if (diagRow) { diagRow.insertAttempt = "yes"; diagRow.assignmentResult = "insert_exception"; diagRow.reason = exMsg; }
+            assignmentFailures.push(buildFailure({
+              ...failureCtx(group),
+              raw_employee_name: r.rawName,
+              employee_id: r.empId,
+              match_method: diagRow?.matchMethod ?? null,
+              failure_type: classifySupabaseError(exMsg),
+              error_message: exMsg,
+            }));
           }
         }
 
@@ -709,6 +764,8 @@ export default function ImportSchedule() {
 
         // Create assignments for each shift in the batch
         const assignmentPayloads: any[] = [];
+        // Parallel meta array — same index → same payload — for failure attribution
+        const assignmentMeta: Array<{ group: ShiftGroup; rawName: string; method: MatchMethod | null }> = [];
         for (let i = 0; i < newBatch.length; i++) {
           const group = newBatch[i];
           const shift = insertedShifts[i];
@@ -720,6 +777,16 @@ export default function ImportSchedule() {
             const r = resolveOnce(empName);
             if (!r.id) {
               unmatchedEmployeesSet.add(empName);
+              assignmentFailures.push(buildFailure({
+                ...failureCtx(group),
+                raw_employee_name: empName,
+                employee_id: null,
+                match_method: null,
+                failure_type: r.ambiguous ? "ambiguous_employee" : "unmatched_employee",
+                error_message: r.ambiguous
+                  ? "Ambiguous match — multiple workers matched this name."
+                  : "No worker matched this name in the directory.",
+              }));
               continue;
             }
             matchedEmployees++;
@@ -732,6 +799,7 @@ export default function ImportSchedule() {
               employee_id: r.id,
               status: assignStatus,
             });
+            assignmentMeta.push({ group, rawName: empName, method: r.method });
           }
         }
 
@@ -743,12 +811,36 @@ export default function ImportSchedule() {
             .select("id");
 
           if (assignErr) {
-            // If batch fails (overlap trigger), fall back to one-by-one
-            for (const payload of assignmentPayloads) {
+            // Batch failed (overlap, not_ready, dup, etc.) — retry one-by-one to capture
+            // the exact failure_type per assignment.
+            for (let pi = 0; pi < assignmentPayloads.length; pi++) {
+              const payload = assignmentPayloads[pi];
+              const meta = assignmentMeta[pi];
               try {
                 const { error } = await supabase.from("shift_assignments").insert(payload);
-                if (!error) totalAssignments++;
-              } catch { /* skip overlap */ }
+                if (!error) {
+                  totalAssignments++;
+                } else {
+                  assignmentFailures.push(buildFailure({
+                    ...failureCtx(meta.group),
+                    raw_employee_name: meta.rawName,
+                    employee_id: payload.employee_id,
+                    match_method: meta.method,
+                    failure_type: classifySupabaseError(error.message),
+                    error_message: error.message,
+                  }));
+                }
+              } catch (ex: any) {
+                const exMsg = ex?.message ?? String(ex);
+                assignmentFailures.push(buildFailure({
+                  ...failureCtx(meta.group),
+                  raw_employee_name: meta.rawName,
+                  employee_id: payload.employee_id,
+                  match_method: meta.method,
+                  failure_type: classifySupabaseError(exMsg),
+                  error_message: exMsg,
+                }));
+              }
             }
           } else {
             totalAssignments += assignResult?.length ?? 0;
@@ -813,6 +905,7 @@ export default function ImportSchedule() {
         auxUsersLoaded: auxUsers.length,
         targetGroupCount: targetGroups.length,
         targetShiftDiagnostics: Array.from(targetDiagnostics.values()),
+        assignmentFailures,
       };
       setSummary(summaryData);
       console.info("[ImportSchedule] Match telemetry:", resolver.telemetry, "ambiguous:", resolver.ambiguous.length);
@@ -864,9 +957,14 @@ export default function ImportSchedule() {
         }
       }
 
+      const totalCreated = totalAssignments + reconciledAssignments;
+      const blocked = assignmentFailures.length;
+      const baseMsg = blocked > 0
+        ? `Importación finalizada con advertencias: ${totalCreated} asignaciones creadas, ${blocked} bloqueadas.`
+        : `Importación completada: ${totalShifts} turnos, ${totalAssignments} asignaciones${createdMsg}${unmatchedMsg}${unavailMsg}${dupMsg}${reconciledMsg}.`;
       setResult({
-        success: true,
-        message: `Importación completada: ${totalShifts} turnos, ${totalAssignments} asignaciones${createdMsg}${unmatchedMsg}${unavailMsg}${dupMsg}${reconciledMsg}.`,
+        success: blocked === 0,
+        message: baseMsg,
       });
       setStep(4);
     } catch (err: any) {
@@ -1203,18 +1301,40 @@ export default function ImportSchedule() {
       {/* Step 4: Result */}
       {step === 4 && result && (
         <div className="space-y-4">
-          <Card className={result.success ? "border-emerald-200 bg-emerald-50/50 dark:border-emerald-900 dark:bg-emerald-950/20" : "border-destructive/30 bg-destructive/5"}>
-            <CardContent className="p-6">
-              <div className="flex items-start gap-3">
-                {result.success ? <CheckCircle2 className="h-6 w-6 text-emerald-600 shrink-0 mt-0.5" /> : <AlertCircle className="h-6 w-6 text-destructive shrink-0 mt-0.5" />}
-                <div>
-                  <p className="font-semibold text-sm">{result.success ? "Importación exitosa" : "Error en importación"}</p>
-                  <p className="text-sm text-muted-foreground mt-1">{result.message}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
+          {(() => {
+            const blocked = summary?.assignmentFailures.length ?? 0;
+            const isError = !result.success && blocked === 0;
+            const isWarn = blocked > 0;
+            const cardCls = isError
+              ? "border-destructive/30 bg-destructive/5"
+              : isWarn
+                ? "border-warning/30 bg-warning/5"
+                : "border-emerald-200 bg-emerald-50/50 dark:border-emerald-900 dark:bg-emerald-950/20";
+            const iconCls = isError
+              ? "h-6 w-6 text-destructive shrink-0 mt-0.5"
+              : isWarn
+                ? "h-6 w-6 text-warning shrink-0 mt-0.5"
+                : "h-6 w-6 text-emerald-600 shrink-0 mt-0.5";
+            const Icon = isError || isWarn ? AlertCircle : CheckCircle2;
+            const title = isError
+              ? "Error en importación"
+              : isWarn
+                ? "Importación finalizada con advertencias"
+                : "Importación exitosa";
+            return (
+              <Card className={cardCls}>
+                <CardContent className="p-6">
+                  <div className="flex items-start gap-3">
+                    <Icon className={iconCls} />
+                    <div>
+                      <p className="font-semibold text-sm">{title}</p>
+                      <p className="text-sm text-muted-foreground mt-1">{result.message}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })()}
           {summary && (
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               <Card className="p-4 text-center">
@@ -1243,6 +1363,142 @@ export default function ImportSchedule() {
               </Card>
             </div>
           )}
+
+          {/* ── Blocked assignments panel ── */}
+          {summary && summary.assignmentFailures.length > 0 && (() => {
+            const all = summary.assignmentFailures;
+            const counts = all.reduce<Record<AssignmentFailureType, number>>((acc, f) => {
+              acc[f.failure_type] = (acc[f.failure_type] ?? 0) + 1;
+              return acc;
+            }, { employee_not_ready: 0, unmatched_employee: 0, ambiguous_employee: 0, duplicate_assignment: 0, overlap: 0, db_error: 0 });
+            const filtered = blockedFilter === "all" ? all : all.filter(f => f.failure_type === blockedFilter);
+            const grouped = groupFailuresByShift(filtered);
+            const filterChips: Array<{ key: AssignmentFailureType | "all"; label: string; count: number }> = [
+              { key: "all", label: "All", count: all.length },
+              ...(Object.entries(counts) as Array<[AssignmentFailureType, number]>)
+                .filter(([, n]) => n > 0)
+                .map(([k, n]) => ({ key: k, label: FAILURE_TYPE_LABELS[k], count: n })),
+            ];
+            const onCopy = async () => {
+              try {
+                await navigator.clipboard.writeText(failuresToText(all));
+                toast({ title: "Reporte copiado", description: `${all.length} bloqueos en el portapapeles.` });
+              } catch {
+                toast({ title: "No se pudo copiar", variant: "destructive" });
+              }
+            };
+            const onExport = () => {
+              const csv = failuresToCsv(all);
+              const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = `blocked-assignments-${new Date().toISOString().slice(0, 10)}.csv`;
+              document.body.appendChild(a);
+              a.click();
+              document.body.removeChild(a);
+              URL.revokeObjectURL(url);
+            };
+            return (
+              <Card className="border-warning/30 bg-warning/5">
+                <CardHeader className="pb-3">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <CardTitle className="text-sm flex items-center gap-2">
+                        <AlertCircle className="h-4 w-4 text-warning" />
+                        Assignments bloqueados ({all.length})
+                      </CardTitle>
+                      <p className="text-[11px] text-muted-foreground mt-1">
+                        Estas asignaciones <strong>no se crearon</strong>. Cada fila incluye la causa exacta y la acción sugerida.
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="outline" onClick={onCopy}>Copiar reporte</Button>
+                      <Button size="sm" variant="outline" onClick={onExport}>Exportar CSV</Button>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Filter chips */}
+                  <div className="flex flex-wrap gap-1.5">
+                    {filterChips.map(c => (
+                      <button
+                        key={c.key}
+                        type="button"
+                        onClick={() => setBlockedFilter(c.key)}
+                        className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
+                          blockedFilter === c.key
+                            ? "bg-warning text-warning-foreground border-warning"
+                            : "bg-background text-foreground border-border hover:bg-muted"
+                        }`}
+                      >
+                        {c.label} <span className="tabular-nums opacity-70">· {c.count}</span>
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Grouped by shift */}
+                  {grouped.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">Sin bloqueos para el filtro seleccionado.</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {grouped.map(g => (
+                        <div key={g.key} className="rounded-lg border bg-background">
+                          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 px-3 py-2 border-b bg-muted/40">
+                            <span className="font-mono text-xs font-semibold">#{g.shift_code || "—"}</span>
+                            <span className="text-xs text-muted-foreground">{g.date} · {g.start_time}–{g.end_time}</span>
+                            <span className="text-xs font-medium truncate" title={g.client}>{g.client || "—"}</span>
+                            <Badge variant="outline" className="ml-auto text-[10px]">{g.items.length} bloqueado(s)</Badge>
+                          </div>
+                          <div className="overflow-x-auto">
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead className="text-[10px]">Empleado (Excel)</TableHead>
+                                  <TableHead className="text-[10px]">employee_id</TableHead>
+                                  <TableHead className="text-[10px]">Match</TableHead>
+                                  <TableHead className="text-[10px]">Tipo</TableHead>
+                                  <TableHead className="text-[10px]">Mensaje DB</TableHead>
+                                  <TableHead className="text-[10px]">Acción sugerida</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {g.items.map((f, i) => (
+                                  <TableRow key={i}>
+                                    <TableCell className="text-[11px] font-medium">{f.raw_employee_name}</TableCell>
+                                    <TableCell className="text-[10px] font-mono break-all text-muted-foreground">{f.employee_id ?? "—"}</TableCell>
+                                    <TableCell className="text-[10px]">{f.match_method ?? "—"}</TableCell>
+                                    <TableCell className="text-[10px]">
+                                      <Badge
+                                        variant="outline"
+                                        className={
+                                          f.failure_type === "employee_not_ready" ? "border-warning/40 text-warning"
+                                          : f.failure_type === "duplicate_assignment" ? "border-muted-foreground/30 text-muted-foreground"
+                                          : "border-destructive/30 text-destructive"
+                                        }
+                                      >
+                                        {FAILURE_TYPE_LABELS[f.failure_type]}
+                                      </Badge>
+                                    </TableCell>
+                                    <TableCell className="text-[10px] text-muted-foreground break-all max-w-[280px]">{f.error_message}</TableCell>
+                                    <TableCell className="text-[10px] break-words max-w-[260px]">{f.suggested_action}</TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <p className="text-[10px] text-muted-foreground">
+                    Reporte informativo. No hace bypass de reglas — los overrides operativos se gestionan por separado.
+                  </p>
+                </CardContent>
+              </Card>
+            );
+          })()}
 
           {/* Match telemetry — how each employee was resolved */}
           {summary && (
