@@ -258,6 +258,27 @@ export default function ImportSchedule() {
     setStep(3);
   }, [toast]);
 
+  /** Optional: load Connecteam Users export to enrich matching with phone/email/Connecteam ID. */
+  const handleAuxUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    setParsingAux(true);
+    try {
+      const buf = await f.arrayBuffer();
+      const parsed = await parseConnecteamFile(buf, f.name);
+      setAuxUsers(parsed as AuxUserRecord[]);
+      setAuxFileName(f.name);
+      toast({
+        title: "Mapa auxiliar cargado",
+        description: `${parsed.length} usuarios disponibles para matching enriquecido (phone/email/Connecteam ID).`,
+      });
+    } catch (err: any) {
+      console.error("[ImportSchedule] aux parse failed:", err);
+      toast({ title: "Error parseando mapa auxiliar", description: getUserFriendlyError(err), variant: "destructive" });
+    }
+    setParsingAux(false);
+  }, [toast]);
+
   const filteredGroups = shiftGroups.filter(g => {
     if (filterFrom && g.date < filterFrom) return false;
     if (filterTo && g.date > filterTo) return false;
