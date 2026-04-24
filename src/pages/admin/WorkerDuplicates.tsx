@@ -368,6 +368,13 @@ export default function WorkerDuplicates() {
 
     // Build buckets per strategy
     const buckets = new Map<string, EmployeeRecord[]>();
+    // Pre-pass: how many employees use each email (active OR inactive — we want
+    // to detect shared inboxes regardless of historical activity).
+    const emailUsage = new Map<string, number>();
+    for (const e of employees) {
+      const email = normEmail(e.email);
+      if (email) emailUsage.set(email, (emailUsage.get(email) ?? 0) + 1);
+    }
 
     function add(key: string, e: EmployeeRecord) {
       const cur = buckets.get(key);
@@ -380,7 +387,10 @@ export default function WorkerDuplicates() {
       if (phone) add(`phone:${phone}`, e);
 
       const email = normEmail(e.email);
-      if (email) add(`email:${email}`, e);
+      // Skip shared/generic emails — they are never used to coalesce a group.
+      if (email && !isSharedEmail(email, emailUsage.get(email) ?? 0)) {
+        add(`email:${email}`, e);
+      }
 
       const name = normName(e.first_name, e.last_name);
       if (name && name.includes(" ")) add(`name:${name}`, e);
@@ -390,7 +400,7 @@ export default function WorkerDuplicates() {
     }
 
     // Coalesce buckets that share members → one logical group.
-    const memberToGroup = new Map<string, Set<string>>(); // employee_id → set of bucket keys
+    const memberToGroup = new Map<string, Set<string>>();
     for (const [bucketKey, members] of buckets) {
       if (members.length < 2) continue;
       for (const m of members) {
@@ -400,7 +410,6 @@ export default function WorkerDuplicates() {
       }
     }
 
-    // Union-find-ish: walk each duplicate bucket, merge by overlapping members.
     const visited = new Set<string>();
     const result: DuplicateGroup[] = [];
 
@@ -408,7 +417,6 @@ export default function WorkerDuplicates() {
       if (members.length < 2) continue;
       if (visited.has(bucketKey)) continue;
 
-      // Walk transitively
       const queue = [bucketKey];
       const groupBuckets = new Set<string>();
       const groupMembers = new Map<string, EmployeeRecord>();
@@ -436,6 +444,25 @@ export default function WorkerDuplicates() {
         if (sampleValues.length < 3) sampleValues.push(value);
       }
 
+      // Strength classification:
+      //   strong       → at least one strong signal (phone / email / employer_id)
+      //   weak         → only name-based match
+      //   shared_contact → reserved for groups whose only signal would have been
+      //                    a generic email (already filtered above, kept for
+      //                    semantics in case future weak signals are added).
+      const strongKeys: MatchKey[] = ["phone", "email", "employer_id"];
+      const hasStrong = Array.from(matchKeys).some((k) => strongKeys.includes(k));
+      const strength: GroupStrength = hasStrong ? "strong" : "weak";
+
+      // Per-member shared-email annotations (for the badge in the row).
+      const sharedEmails: string[] = [];
+      for (const m of memberArr) {
+        const em = normEmail(m.email);
+        if (em && isSharedEmail(em, emailUsage.get(em) ?? 0)) {
+          if (!sharedEmails.includes(em)) sharedEmails.push(em);
+        }
+      }
+
       const groupKey = `dup:${memberArr.map((x) => x.id).sort().join(",")}`;
       result.push({
         key: groupKey,
@@ -444,11 +471,17 @@ export default function WorkerDuplicates() {
         members: memberArr,
         suggestedMasterId: pickSuggestedMaster(memberArr, metrics),
         reviewState: reviews.get(groupKey)?.state ?? null,
+        strength,
+        sharedEmails,
       });
     }
 
-    // Sort: open groups first, then by member count desc.
     result.sort((a, b) => {
+      // Strong groups first, then open before reviewed, then more members first.
+      const strengthRank = { strong: 0, weak: 1, shared_contact: 2 } as const;
+      const sa = strengthRank[a.strength];
+      const sb = strengthRank[b.strength];
+      if (sa !== sb) return sa - sb;
       const aOpen = a.reviewState ? 1 : 0;
       const bOpen = b.reviewState ? 1 : 0;
       if (aOpen !== bOpen) return aOpen - bOpen;
