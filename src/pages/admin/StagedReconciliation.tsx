@@ -54,6 +54,11 @@ import PeriodNotes from "@/components/reconciliation/PeriodNotes";
 import StabilizationPriorities from "@/components/reconciliation/StabilizationPriorities";
 import PayrollTruthValidation from "@/components/reconciliation/PayrollTruthValidation";
 import DataIntegrityAudit from "@/components/reconciliation/DataIntegrityAudit";
+import {
+  StatusBadge,
+  FutureLockBadge,
+  ManualFutureNotice,
+} from "@/components/reconciliation/PeriodStatusBadges";
 import type { PeriodStatus } from "@/hooks/useReconciliationPeriod";
 import { formatPeriodLabel } from "@/lib/format-helpers";
 
