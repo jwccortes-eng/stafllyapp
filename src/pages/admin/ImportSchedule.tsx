@@ -546,6 +546,16 @@ export default function ImportSchedule() {
           const r = resolveOnce(empName);
           if (!r.id) {
             unmatchedEmployeesSet.add(empName);
+            assignmentFailures.push(buildFailure({
+              ...failureCtx(group),
+              raw_employee_name: empName,
+              employee_id: null,
+              match_method: null,
+              failure_type: r.ambiguous ? "ambiguous_employee" : "unmatched_employee",
+              error_message: r.ambiguous
+                ? "Ambiguous match — multiple workers matched this name."
+                : "No worker matched this name in the directory.",
+            }));
             if (diag) diag.employeesDiagnostic.push({
               rawName: empName, normalizedName: normalizeName(empName), statusFromExcel: statusRaw,
               matchMethod: null, employeeId: null, ambiguous: r.ambiguous, unmatched: !r.ambiguous,
