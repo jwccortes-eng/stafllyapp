@@ -131,6 +131,10 @@ export default function ImportSchedule() {
   const [parsingFiles, setParsingFiles] = useState(false);
   const [duplicateFileWarning, setDuplicateFileWarning] = useState<string[] | null>(null);
   const [forceReimport, setForceReimport] = useState(false);
+  // Optional auxiliary file: Connecteam Users export → enriches matching with phone/email/Connecteam ID
+  const [auxUsers, setAuxUsers] = useState<AuxUserRecord[]>([]);
+  const [auxFileName, setAuxFileName] = useState<string | null>(null);
+  const [parsingAux, setParsingAux] = useState(false);
 
   // Filter dates if the range is large
   const [filterFrom, setFilterFrom] = useState("");
