@@ -452,15 +452,15 @@ export default function ImportSchedule() {
         for (let ei = 0; ei < group.employees.length; ei++) {
           const empName = group.employees[ei];
           if (/^system\s/i.test(empName)) continue;
-          const empId = empMap.get(empName.toLowerCase());
-          if (!empId) {
+          const r = resolveOnce(empName);
+          if (!r.id) {
             unmatchedEmployeesSet.add(empName);
             continue;
           }
           matchedEmployees++;
           const empStatus = (group.employeeStatuses[ei] || "").toLowerCase();
           const statusMap: Record<string, string> = { accept: "accepted", decline: "rejected" };
-          resolved.push({ empId, status: statusMap[empStatus] ?? "accepted" });
+          resolved.push({ empId: r.id, status: statusMap[empStatus] ?? "accepted" });
         }
 
         if (resolved.length === 0) {
@@ -681,10 +681,10 @@ export default function ImportSchedule() {
       for (const u of filteredUnavail) {
         const name = parseName(u.name);
         if (!name) continue;
-        const empId = empMap.get(`${name.first} ${name.last}`.toLowerCase());
-        if (!empId) continue;
+        const r = resolveOnce(`${name.first} ${name.last}`);
+        if (!r.id) continue;
         unavailPayloads.push({
-          employee_id: empId,
+          employee_id: r.id,
           company_id: selectedCompanyId,
           date: u.date,
           is_available: false,
