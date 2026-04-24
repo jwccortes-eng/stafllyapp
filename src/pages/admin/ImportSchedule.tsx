@@ -720,12 +720,53 @@ export default function ImportSchedule() {
           }
         }
 
-        // Grow slots only if the Excel brings more real employees than current capacity
-        if (realEmployees.length > existingSlots) {
-          await supabase
-            .from("scheduled_shifts")
-            .update({ slots: realEmployees.length })
-            .eq("id", existingShiftId);
+        // Grow slots only if the Excel brings more real employees than current capacity.
+        // Always stamp traceability fields (idempotent — safe on every reconcile pass).
+        const numericCodeForHash = group.shiftCode ? group.shiftCode.match(/^(\d+)/)?.[1] || group.shiftCode : "";
+        const reconHash = buildShiftHash(selectedCompanyId, numericCodeForHash, group.date, group.startTime, group.endTime);
+        const updatePayload: any = {
+          reconciliation_hash: reconHash,
+        };
+        if (batchId) updatePayload.import_batch_id = batchId;
+        if (realEmployees.length > existingSlots) updatePayload.slots = realEmployees.length;
+        await supabase
+          .from("scheduled_shifts")
+          .update(updatePayload)
+          .eq("id", existingShiftId);
+
+        // Mapping + normalized rows (one per resolved employee + one per unmatched name)
+        if (batchId) {
+          await upsertShiftMapping(selectedCompanyId, {
+            reconciliationHash: reconHash,
+            staflyShiftId: existingShiftId,
+            matchStatus: "reconciled",
+            rawRowId: rawRowIdForGroup(group),
+            rawData: { job: group.job, employees: group.employees },
+          });
+          const rrid = rawRowIdForGroup(group);
+          if (rrid) {
+            for (let ei = 0; ei < group.employees.length; ei++) {
+              const empName = group.employees[ei];
+              if (/^system\s/i.test(empName)) continue;
+              const r = resolveOnce(empName);
+              normalizedRowsAcc.push({
+                rawRowId: rrid,
+                matchedEmployeeId: r.id,
+                employeeNameRaw: empName,
+                employeeNameNormalized: normalizeName(empName),
+                matchConfidence: r.id ? 1 : 0,
+                matchMethod: r.method ?? null,
+                workDate: group.date,
+                startTime: group.startTime,
+                endTime: group.endTime,
+                shiftTitle: group.job,
+                externalShiftId: numericCodeForHash,
+                clientName: group.job,
+                payType: "hourly",
+                status: r.id ? "matched" : (r.ambiguous ? "ambiguous" : "unmatched"),
+              });
+            }
+          }
         }
 
         reconciledShifts++;
