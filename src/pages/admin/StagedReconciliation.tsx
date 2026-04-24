@@ -760,6 +760,12 @@ export default function StagedReconciliation() {
         </Alert>
       )}
 
+      {/* ── Manual future-period notice (visible only when admin manually picks a future period) ── */}
+      <ManualFutureNotice
+        show={!!activePeriod && activeIsFuture && manuallySelected}
+        periodLabel={activePeriod ? reconPeriodLabel(activePeriod) : undefined}
+      />
+
       {/* ── Active Period Workflow Bar ── */}
       {activePeriod && (
         <div className="flex flex-col gap-2">
