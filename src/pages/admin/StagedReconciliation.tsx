@@ -1,6 +1,13 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
-import { getDefaultPayPeriod, sortPeriodsDesc } from "@/lib/pay-period-helpers";
+import {
+  getDefaultPayPeriod,
+  sortPeriodsDesc,
+  isFuturePeriod,
+  isCurrentPeriod,
+  isSpecialPeriod,
+  isPastPeriod,
+} from "@/lib/pay-period-helpers";
 import { useCompany } from "@/hooks/useCompany";
 import { useReconciliationPeriod } from "@/hooks/useReconciliationPeriod";
 import { useAuth } from "@/hooks/useAuth";
