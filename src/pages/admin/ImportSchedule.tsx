@@ -415,14 +415,14 @@ export default function ImportSchedule() {
       });
       const targetDiagnostics = new Map<string, TargetShiftDiagnostic>();
       // Cache resolution per name to avoid double-counting telemetry.
-      const resolveCache = new Map<string, { id: string | null; ambiguous: boolean }>();
-      const resolveOnce = (name: string): { id: string | null; ambiguous: boolean } => {
+      const resolveCache = new Map<string, { id: string | null; ambiguous: boolean; method: MatchMethod | null }>();
+      const resolveOnce = (name: string): { id: string | null; ambiguous: boolean; method: MatchMethod | null } => {
         const cached = resolveCache.get(name);
         if (cached) return cached;
         const ambiguousBefore = resolver.ambiguous.length;
         const r = resolver.resolveByName(name);
         const ambiguousAfter = resolver.ambiguous.length;
-        const result = { id: r?.employeeId ?? null, ambiguous: ambiguousAfter > ambiguousBefore };
+        const result = { id: r?.employeeId ?? null, ambiguous: ambiguousAfter > ambiguousBefore, method: r?.method ?? null };
         resolveCache.set(name, result);
         return result;
       };
@@ -488,6 +488,15 @@ export default function ImportSchedule() {
         existingSlots: number,
         group: ShiftGroup,
       ) => {
+        // ── Targeted instrumentation for shift_code = 45678 ──
+        const numericCodeForDiag = group.shiftCode ? group.shiftCode.match(/^(\d+)/)?.[1] || group.shiftCode : "";
+        const isTarget = numericCodeForDiag === TARGET_SHIFT_CODE && TARGET_DATES.has(group.date);
+        const diag = isTarget ? targetDiagnostics.get(group.key) ?? null : null;
+        if (diag) {
+          diag.enteredReconcile = true;
+          diag.existingShiftId = existingShiftId;
+          diag.dedupKeyDb = `${numericCodeForDiag}|${group.date}|${group.startTime}|${group.endTime}`;
+        }
         // Track client/employee match stats just like fresh inserts
         const clientId = matchClient(group.job);
         if (clientId) matchedClients++;
@@ -496,20 +505,39 @@ export default function ImportSchedule() {
         const realEmployees = group.employees.filter(e => !/^system\s/i.test(e));
 
         // Resolve employee IDs from this group
-        type Resolved = { empId: string; status: string };
+        type Resolved = { empId: string; status: string; rawName: string };
         const resolved: Resolved[] = [];
         for (let ei = 0; ei < group.employees.length; ei++) {
           const empName = group.employees[ei];
-          if (/^system\s/i.test(empName)) continue;
+          const statusRaw = (group.employeeStatuses[ei] || "").trim();
+          if (/^system\s/i.test(empName)) {
+            if (diag) diag.employeesDiagnostic.push({
+              rawName: empName, normalizedName: normalizeName(empName), statusFromExcel: statusRaw,
+              matchMethod: null, employeeId: null, ambiguous: false, unmatched: false,
+              insertAttempt: "no", assignmentResult: "skipped", reason: "system user",
+            });
+            continue;
+          }
           const r = resolveOnce(empName);
           if (!r.id) {
             unmatchedEmployeesSet.add(empName);
+            if (diag) diag.employeesDiagnostic.push({
+              rawName: empName, normalizedName: normalizeName(empName), statusFromExcel: statusRaw,
+              matchMethod: null, employeeId: null, ambiguous: r.ambiguous, unmatched: !r.ambiguous,
+              insertAttempt: "no", assignmentResult: "skipped",
+              reason: r.ambiguous ? "ambiguous match — not auto-resolved" : "no employee match (resolveByName=null)",
+            });
             continue;
           }
           matchedEmployees++;
           const empStatus = (group.employeeStatuses[ei] || "").toLowerCase();
           const statusMap: Record<string, string> = { accept: "accepted", decline: "rejected" };
-          resolved.push({ empId: r.id, status: statusMap[empStatus] ?? "accepted" });
+          resolved.push({ empId: r.id, status: statusMap[empStatus] ?? "accepted", rawName: empName });
+          if (diag) diag.employeesDiagnostic.push({
+            rawName: empName, normalizedName: normalizeName(empName), statusFromExcel: statusRaw,
+            matchMethod: r.method, employeeId: r.id, ambiguous: false, unmatched: false,
+            insertAttempt: "no", assignmentResult: "pending", reason: null,
+          });
         }
 
         if (resolved.length === 0) {
@@ -531,6 +559,7 @@ export default function ImportSchedule() {
         // Insert missing assignments one-by-one (overlap trigger may reject some)
         for (const r of resolved) {
           const existing = existingByEmp.get(r.empId);
+          const diagRow = diag?.employeesDiagnostic.find(d => d.employeeId === r.empId && d.assignmentResult === "pending");
           if (existing) {
             // Already assigned — only promote pending → accepted/rejected if Excel says so
             if (existing.status === "pending" && (r.status === "accepted" || r.status === "rejected")) {
@@ -538,10 +567,16 @@ export default function ImportSchedule() {
                 .from("shift_assignments")
                 .update({ status: r.status })
                 .eq("id", existing.id);
-              if (!updErr) reconciledAssignments++;
-              else skippedExistingAssignments++;
+              if (!updErr) {
+                reconciledAssignments++;
+                if (diagRow) { diagRow.insertAttempt = "no"; diagRow.assignmentResult = "updated"; diagRow.reason = `pending → ${r.status}`; }
+              } else {
+                skippedExistingAssignments++;
+                if (diagRow) { diagRow.insertAttempt = "no"; diagRow.assignmentResult = "update_error"; diagRow.reason = updErr.message; }
+              }
             } else {
               skippedExistingAssignments++;
+              if (diagRow) { diagRow.insertAttempt = "no"; diagRow.assignmentResult = "skipped_existing"; diagRow.reason = `already ${existing.status}`; }
             }
             continue;
           }
@@ -552,8 +587,16 @@ export default function ImportSchedule() {
               employee_id: r.empId,
               status: r.status,
             });
-            if (!error) reconciledAssignments++;
-          } catch { /* skip overlap */ }
+            if (diagRow) diagRow.insertAttempt = "yes";
+            if (!error) {
+              reconciledAssignments++;
+              if (diagRow) { diagRow.assignmentResult = "inserted"; diagRow.reason = null; }
+            } else {
+              if (diagRow) { diagRow.assignmentResult = "insert_error"; diagRow.reason = error.message; }
+            }
+          } catch (ex: any) {
+            if (diagRow) { diagRow.insertAttempt = "yes"; diagRow.assignmentResult = "insert_exception"; diagRow.reason = ex?.message ?? String(ex); }
+          }
         }
 
         // Grow slots only if the Excel brings more real employees than current capacity
@@ -773,6 +816,18 @@ export default function ImportSchedule() {
       };
       setSummary(summaryData);
       console.info("[ImportSchedule] Match telemetry:", resolver.telemetry, "ambiguous:", resolver.ambiguous.length);
+
+      // ── Targeted console.table for shift_code 45678 ──
+      if (summaryData.targetShiftDiagnostics.length > 0) {
+        console.info(`[ImportSchedule][45678] groups detected: ${summaryData.targetShiftDiagnostics.length}`);
+        for (const d of summaryData.targetShiftDiagnostics) {
+          console.info(`[ImportSchedule][45678] ${d.date} ${d.job} | dedupKeyExcel=${d.dedupKeyExcel} | dedupKeyDb=${d.dedupKeyDb ?? "—"} | existingShiftId=${d.existingShiftId ?? "—"} | enteredReconcile=${d.enteredReconcile} | employees(${d.employees.length})`);
+          // eslint-disable-next-line no-console
+          console.table(d.employeesDiagnostic);
+        }
+      } else {
+        console.warn("[ImportSchedule][45678] No target groups found in parsed file (shift_code 45678 + target dates).");
+      }
 
       const createdEmployees = 0;
       const createdMsg = createdClients > 0
@@ -1211,6 +1266,68 @@ export default function ImportSchedule() {
                     Tip: sube el export de <strong>Users</strong> de Connecteam en el Paso 1 para activar matching por phone, email y Connecteam ID.
                   </p>
                 )}
+              </CardContent>
+            </Card>
+          )}
+
+          {summary && summary.targetShiftDiagnostics.length > 0 && (
+            <Card className="border-primary/30 bg-primary/5">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm">Diagnóstico focalizado · shift_code 45678 ({summary.targetShiftDiagnostics.length} grupos)</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-[11px] text-muted-foreground">
+                  Instrumentación temporal. Para cada grupo del Excel cuyo <code>shift_code=45678</code> y fecha está en 2026-04-24/25/26, se registra:
+                  qué dedupKey generó, si entró a <code>reconcileExistingShift</code>, y por empleado el método de match, intento de insert y error exacto.
+                </p>
+                {summary.targetShiftDiagnostics.map((d, i) => (
+                  <div key={i} className="space-y-2 border rounded-lg p-3 bg-background">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
+                      <div><p className="text-muted-foreground">Fecha</p><p className="font-mono">{d.date}</p></div>
+                      <div><p className="text-muted-foreground">Job</p><p className="font-medium truncate" title={d.job}>{d.job || "—"}</p></div>
+                      <div><p className="text-muted-foreground">dedupKey Excel</p><p className="font-mono break-all">{d.dedupKeyExcel}</p></div>
+                      <div><p className="text-muted-foreground">dedupKey DB</p><p className="font-mono break-all">{d.dedupKeyDb ?? "—"}</p></div>
+                      <div><p className="text-muted-foreground">existingShiftId</p><p className="font-mono break-all">{d.existingShiftId ?? "—"}</p></div>
+                      <div><p className="text-muted-foreground">Entró a reconcile</p><p className="font-mono">{d.enteredReconcile ? "yes" : "no"}</p></div>
+                      <div><p className="text-muted-foreground">Empleados (Excel)</p><p className="font-mono">{d.employees.length}</p></div>
+                      <div><p className="text-muted-foreground">Diagnosticados</p><p className="font-mono">{d.employeesDiagnostic.length}</p></div>
+                    </div>
+                    {d.employeesDiagnostic.length > 0 ? (
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="text-[10px]">Raw name</TableHead>
+                              <TableHead className="text-[10px]">Normalized</TableHead>
+                              <TableHead className="text-[10px]">Status Excel</TableHead>
+                              <TableHead className="text-[10px]">Match method</TableHead>
+                              <TableHead className="text-[10px]">employee_id</TableHead>
+                              <TableHead className="text-[10px]">Insert?</TableHead>
+                              <TableHead className="text-[10px]">Result</TableHead>
+                              <TableHead className="text-[10px]">Reason / error</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {d.employeesDiagnostic.map((e, j) => (
+                              <TableRow key={j}>
+                                <TableCell className="text-[10px] font-medium">{e.rawName}</TableCell>
+                                <TableCell className="text-[10px] font-mono text-muted-foreground">{e.normalizedName}</TableCell>
+                                <TableCell className="text-[10px]">{e.statusFromExcel || "—"}</TableCell>
+                                <TableCell className="text-[10px]">{e.matchMethod ?? "—"}</TableCell>
+                                <TableCell className="text-[10px] font-mono break-all">{e.employeeId ?? "—"}</TableCell>
+                                <TableCell className="text-[10px]">{e.insertAttempt}</TableCell>
+                                <TableCell className="text-[10px]">{e.assignmentResult}</TableCell>
+                                <TableCell className="text-[10px] text-muted-foreground break-all">{e.reason ?? "—"}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    ) : (
+                      <p className="text-[11px] text-muted-foreground italic">Sin filas de diagnóstico (no entró a reconcile o el Excel no traía empleados).</p>
+                    )}
+                  </div>
+                ))}
               </CardContent>
             </Card>
           )}
