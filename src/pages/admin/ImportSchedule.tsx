@@ -450,6 +450,19 @@ export default function ImportSchedule() {
       let unmatchedEmployeesSet = new Set<string>();
       let matchedClients = 0;
       let unmatchedClientsSet = new Set<string>();
+      const assignmentFailures: AssignmentFailure[] = [];
+
+      /** Helper: build the shift-context fields from a ShiftGroup. */
+      const failureCtx = (group: ShiftGroup) => {
+        const numericCode = group.shiftCode ? group.shiftCode.match(/^(\d+)/)?.[1] || group.shiftCode : "";
+        return {
+          shift_code: numericCode,
+          date: group.date,
+          start_time: group.startTime,
+          end_time: group.endTime,
+          client: group.job,
+        };
+      };
 
       // ── Fetch existing shifts for deduplication (composite key) ──
       // Store shift_id + slots so we can reconcile assignments for shifts that already exist.
