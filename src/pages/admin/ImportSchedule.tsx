@@ -628,9 +628,26 @@ export default function ImportSchedule() {
               if (diagRow) { diagRow.assignmentResult = "inserted"; diagRow.reason = null; }
             } else {
               if (diagRow) { diagRow.assignmentResult = "insert_error"; diagRow.reason = error.message; }
+              assignmentFailures.push(buildFailure({
+                ...failureCtx(group),
+                raw_employee_name: r.rawName,
+                employee_id: r.empId,
+                match_method: diagRow?.matchMethod ?? null,
+                failure_type: classifySupabaseError(error.message),
+                error_message: error.message,
+              }));
             }
           } catch (ex: any) {
-            if (diagRow) { diagRow.insertAttempt = "yes"; diagRow.assignmentResult = "insert_exception"; diagRow.reason = ex?.message ?? String(ex); }
+            const exMsg = ex?.message ?? String(ex);
+            if (diagRow) { diagRow.insertAttempt = "yes"; diagRow.assignmentResult = "insert_exception"; diagRow.reason = exMsg; }
+            assignmentFailures.push(buildFailure({
+              ...failureCtx(group),
+              raw_employee_name: r.rawName,
+              employee_id: r.empId,
+              match_method: diagRow?.matchMethod ?? null,
+              failure_type: classifySupabaseError(exMsg),
+              error_message: exMsg,
+            }));
           }
         }
 
