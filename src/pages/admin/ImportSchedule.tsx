@@ -954,9 +954,14 @@ export default function ImportSchedule() {
         }
       }
 
+      const totalCreated = totalAssignments + reconciledAssignments;
+      const blocked = assignmentFailures.length;
+      const baseMsg = blocked > 0
+        ? `Importación finalizada con advertencias: ${totalCreated} asignaciones creadas, ${blocked} bloqueadas.`
+        : `Importación completada: ${totalShifts} turnos, ${totalAssignments} asignaciones${createdMsg}${unmatchedMsg}${unavailMsg}${dupMsg}${reconciledMsg}.`;
       setResult({
-        success: true,
-        message: `Importación completada: ${totalShifts} turnos, ${totalAssignments} asignaciones${createdMsg}${unmatchedMsg}${unavailMsg}${dupMsg}${reconciledMsg}.`,
+        success: blocked === 0,
+        message: baseMsg,
       });
       setStep(4);
     } catch (err: any) {
