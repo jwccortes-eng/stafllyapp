@@ -397,6 +397,7 @@ export default function ImportSchedule() {
             dateRangeTo: filterTo || null,
           })
         : null;
+      batchIdForCatch = batchId;
       if (!batchId) {
         console.warn("[ImportSchedule] No batch_id created — proceeding without traceability persistence");
       }
