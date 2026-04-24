@@ -6,6 +6,7 @@ import { EmployeeAvatarGroup } from "@/components/ui/employee-avatar-group";
 import { OpsStatusChip, type OpsStatusTone } from "@/components/operations/OpsStatusChip";
 import type { Shift } from "./types";
 import { getClientColor, formatShiftCode } from "./types";
+import { UnstaffedAlert } from "./UnstaffedAlert";
 
 export interface AssignedEmployee {
   firstName: string;
@@ -240,6 +241,14 @@ export function ShiftCard({
             {assignedNames.length > 3 && ` +${assignedNames.length - 3}`}
           </p>
         ) : null}
+
+        {/* Row 5.5 — Unstaffed import alert (highest-priority visibility) */}
+        <UnstaffedAlert
+          shift={shift}
+          assignmentCount={assignmentCount}
+          variant="card"
+          className="mt-1.5"
+        />
 
         {/* Row 6 — coverage warning, only when off target */}
         {coverageStatus && coverageStatus.percent < 100 && coverageStatus.missing > 0 && (
