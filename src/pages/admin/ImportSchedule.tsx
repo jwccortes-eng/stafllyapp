@@ -256,24 +256,37 @@ export default function ImportSchedule() {
   });
 
   const handleImport = async () => {
-    if (!selectedCompanyId || filteredGroups.length === 0) return;
+    if (!selectedCompanyId) {
+      console.warn("[ImportSchedule] handleImport blocked: no selectedCompanyId");
+      toast({ title: "Sin empresa seleccionada", description: "Selecciona una empresa antes de importar.", variant: "destructive" });
+      return;
+    }
+    if (filteredGroups.length === 0) {
+      console.warn("[ImportSchedule] handleImport blocked: filteredGroups is empty");
+      toast({ title: "Nada para importar", description: "No hay turnos en el rango seleccionado.", variant: "destructive" });
+      return;
+    }
     setImporting(true);
     setResult(null);
     setImportProgress({ current: 0, total: filteredGroups.length, phase: "Preparando..." });
 
     try {
       // ── Check for duplicate file upload using company_settings ──
+      // Post-FIX #1: re-uploading the same file is now SAFE because reconciliation
+      // is idempotent. We surface a warning + require explicit confirmation
+      // (forceReimport) instead of hard-blocking, so users can fix orphan shifts.
       const { data: setting } = await supabase
         .from("company_settings")
         .select("value")
         .eq("company_id", selectedCompanyId)
         .eq("key", "imported_schedule_files")
-        .single();
+        .maybeSingle();
       const importedFiles: string[] = setting?.value ? (Array.isArray(setting.value) ? setting.value as string[] : []) : [];
       const fileNames = files.length > 0 ? files.map(f => f.name) : (file ? [file.name] : []);
       const alreadyImported = fileNames.filter(n => importedFiles.includes(n));
-      if (alreadyImported.length > 0) {
-        setResult({ success: false, message: `Archivo(s) ya importado(s): ${alreadyImported.join(", ")}. Usa archivos diferentes o elimina la importación anterior.` });
+      if (alreadyImported.length > 0 && !forceReimport) {
+        console.info("[ImportSchedule] Duplicate file detected, prompting for reconciliation:", alreadyImported);
+        setDuplicateFileWarning(alreadyImported);
         setImporting(false);
         setImportProgress(null);
         return;
