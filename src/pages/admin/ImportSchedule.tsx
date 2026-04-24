@@ -302,18 +302,23 @@ export default function ImportSchedule() {
       }
 
       // Fetch employees and clients for matching
+      // Pull richer columns so the resolver can match by phone / email / external IDs
+      // when an auxiliary Connecteam Users export is provided.
       setImportProgress({ current: 0, total: filteredGroups.length, phase: "Cargando maestros..." });
       const [{ data: employees }, { data: clients }] = await Promise.all([
-        supabase.from("employees").select("id, first_name, last_name").eq("company_id", selectedCompanyId),
+        supabase
+          .from("employees")
+          .select("id, first_name, last_name, phone_number, email, employer_identification, connecteam_employee_id")
+          .eq("company_id", selectedCompanyId),
         supabase.from("clients").select("id, name").eq("company_id", selectedCompanyId).is("deleted_at", null),
       ]);
       const empList = employees ?? [];
       const clientList = clients ?? [];
 
-      const empMap = new Map<string, string>();
-      empList.forEach(e => {
-        empMap.set(`${e.first_name} ${e.last_name}`.toLowerCase(), e.id);
-      });
+      // Robust resolver: priorities = aux_bridge → exact_name → reversed_name → fuzzy.
+      // Aux records (if any) come from the optional Connecteam Users export the
+      // operator uploaded in Step 1 and bridge name → phone/email/Connecteam ID → empId.
+      const resolver = new EmployeeResolver(empList, auxUsers.length > 0 ? auxUsers : null);
 
       const clientMap = new Map<string, string>();
       clientList.forEach(c => clientMap.set(c.name.toLowerCase(), c.id));
@@ -348,23 +353,51 @@ export default function ImportSchedule() {
         }
       }
 
-      // ── Auto-create unmatched employees ──
+      // ── Auto-create employees ONLY when there's no plausible match (no ambiguous, no fuzzy hit) ──
+      // Pre-resolve every name in the file to populate the resolver's telemetry/ambiguous state.
+      // We auto-create only when resolveByName returns null AND the name was not flagged
+      // as ambiguous (i.e. truly unknown person). Ambiguous names go to the review list.
       setImportProgress({ current: 0, total: filteredGroups.length, phase: "Creando empleados nuevos..." });
       const allEmpNames = new Set(filteredGroups.flatMap(g => g.employees));
       let createdEmployees = 0;
+      // Cache resolution per name to avoid double-counting telemetry.
+      const resolveCache = new Map<string, { id: string | null; ambiguous: boolean }>();
+      const resolveOnce = (name: string): { id: string | null; ambiguous: boolean } => {
+        const cached = resolveCache.get(name);
+        if (cached) return cached;
+        const ambiguousBefore = resolver.ambiguous.length;
+        const r = resolver.resolveByName(name);
+        const ambiguousAfter = resolver.ambiguous.length;
+        const result = { id: r?.employeeId ?? null, ambiguous: ambiguousAfter > ambiguousBefore };
+        resolveCache.set(name, result);
+        return result;
+      };
+
       for (const empName of allEmpNames) {
-        if (empMap.has(empName.toLowerCase())) continue;
+        if (/^system\s/i.test(empName)) continue;
+        const r = resolveOnce(empName);
+        if (r.id) continue;            // matched (any method)
+        if (r.ambiguous) continue;     // do NOT auto-create ambiguous matches
         const parsed = parseName(empName);
         if (!parsed) continue;
-        if (/^system\s/i.test(empName)) continue;
         const { data: newEmp } = await supabase.from("employees").insert({
           company_id: selectedCompanyId,
           first_name: parsed.first,
           last_name: parsed.last,
           is_active: true,
-        } as any).select("id").single();
+        } as any).select("id, first_name, last_name, phone_number, email, employer_identification, connecteam_employee_id").single();
         if (newEmp) {
-          empMap.set(empName.toLowerCase(), newEmp.id);
+          // Inject into the resolver's index so subsequent lookups find it via exact_name.
+          empList.push(newEmp as any);
+          // Rebuild index incrementally: easiest is to recreate the resolver, but doing so
+          // would reset telemetry. Instead we patch the maps directly.
+          const display = `${newEmp.first_name ?? ""} ${newEmp.last_name ?? ""}`.trim();
+          // Use the same normalizer indirectly via resolver internals.
+          // Simpler: clear cache for this name so next call goes through resolver and hits exact_name.
+          resolveCache.delete(empName);
+          // Push into the underlying name index so the resolver finds it.
+          // We rely on EmployeeResolver internals being mutable.
+          (resolver as any).empIndex.allNames.push({ id: newEmp.id, norm: display.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim(), display });
           createdEmployees++;
         }
       }
