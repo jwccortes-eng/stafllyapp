@@ -625,8 +625,8 @@ export default function ImportSchedule() {
           for (let ei = 0; ei < group.employees.length; ei++) {
             const empName = group.employees[ei];
             if (/^system\s/i.test(empName)) continue;
-            const empId = empMap.get(empName.toLowerCase());
-            if (!empId) {
+            const r = resolveOnce(empName);
+            if (!r.id) {
               unmatchedEmployeesSet.add(empName);
               continue;
             }
@@ -637,7 +637,7 @@ export default function ImportSchedule() {
             assignmentPayloads.push({
               company_id: selectedCompanyId,
               shift_id: shift.id,
-              employee_id: empId,
+              employee_id: r.id,
               status: assignStatus,
             });
           }
