@@ -865,6 +865,39 @@ export default function ImportSchedule() {
                 )}
               </div>
             </div>
+
+            {/* Optional: Connecteam Users export → enriches matching */}
+            <div className="rounded-xl border border-dashed border-border p-4 bg-muted/30">
+              <div className="flex items-start gap-3">
+                <Users className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium">Mapa auxiliar (opcional)</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Sube el export de <strong>Users</strong> de Connecteam para matchear empleados por phone, email o Connecteam ID además del nombre. Recomendado cuando hay variaciones de nombre.
+                  </p>
+                  {auxFileName ? (
+                    <div className="mt-2 flex items-center gap-2">
+                      <Badge variant="secondary" className="text-[10px]">
+                        <CheckCircle2 className="h-3 w-3 mr-1" />
+                        {auxFileName} · {auxUsers.length} usuarios
+                      </Badge>
+                      <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={() => { setAuxUsers([]); setAuxFileName(null); }}>
+                        Quitar
+                      </Button>
+                    </div>
+                  ) : parsingAux ? (
+                    <p className="text-xs text-muted-foreground mt-2 animate-pulse">Procesando…</p>
+                  ) : (
+                    <input
+                      type="file"
+                      accept={ACCEPTED_EXTENSIONS}
+                      onChange={handleAuxUpload}
+                      className="block mt-2 text-xs text-muted-foreground file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border file:border-border file:bg-background file:text-foreground file:font-medium hover:file:bg-muted cursor-pointer"
+                    />
+                  )}
+                </div>
+              </div>
+            </div>
           </CardContent>
         </Card>
       )}
