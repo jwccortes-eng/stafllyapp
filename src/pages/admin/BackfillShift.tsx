@@ -24,7 +24,7 @@
  * Route: /app/backfill-shift/:shiftCode (admin only via AdminLayout).
  */
 import { useEffect, useMemo, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -34,6 +34,7 @@ import { useCompany } from "@/hooks/useCompany";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { normalizeName } from "@/lib/employee-matcher";
+import { safeLocalStorage } from "@/lib/safe-storage";
 
 // Hard-coded roster from Connecteam for this specific shift code. The page is
 // generic per shiftCode but the roster is tied to the operational case the user
