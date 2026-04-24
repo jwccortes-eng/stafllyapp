@@ -141,13 +141,19 @@ export function getDefaultPayPeriod<T extends PayPeriodLike>(
   );
   if (containing) return containing;
 
-  // 3. Most recent PAST period (end_date <= today), preferring active statuses.
+  // 3. Most recent PAST period (end_date <= today).
+  //    Priority within past periods:
+  //      a) Operationally OPEN past periods (open, reviewing, needs_attention,
+  //         pending, draft, reopened, not_closed, review) — most recent first.
+  //      b) Otherwise the most recent past period, even if locked/posted/closed.
   //    This guarantees we never auto-select a future period.
   const past = periods.filter((p) => getEnd(p) <= ref && getEnd(p) !== "");
   if (past.length > 0) {
     const sortedPast = [...past].sort((a, b) => getEnd(b).localeCompare(getEnd(a)));
-    const activePast = sortedPast.find((p) => ACTIVE_STATUSES.has(p.status || ""));
-    return activePast ?? sortedPast[0];
+    const openPast = sortedPast.find((p) =>
+      OPEN_PAST_STATUSES.has((p.status || "").toLowerCase()),
+    );
+    return openPast ?? sortedPast[0];
   }
 
   // 4. Last resort: only future periods exist. Do NOT auto-select — return null.
