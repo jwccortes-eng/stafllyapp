@@ -717,7 +717,9 @@ export default function ImportSchedule() {
       });
       setStep(4);
     } catch (err: any) {
+      console.error("[ImportSchedule] Import failed:", err);
       setResult({ success: false, message: getUserFriendlyError(err) });
+      setStep(4); // ensure user sees the result/error screen instead of being stuck on Step 3
       toast({ title: "Error", description: getUserFriendlyError(err), variant: "destructive" });
     }
 
