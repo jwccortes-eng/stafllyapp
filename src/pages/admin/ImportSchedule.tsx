@@ -379,6 +379,60 @@ export default function ImportSchedule() {
         return;
       }
 
+      // ── Fase 4: Create import_batch + persist raw source rows BEFORE touching shifts ──
+      // This guarantees that even if employee matching fails or the import crashes mid-way,
+      // the original Connecteam rows are recoverable from raw_schedule_import_rows.
+      setImportProgress({ current: 0, total: filteredGroups.length, phase: "Registrando batch de importación..." });
+      const { data: { user } } = await supabase.auth.getUser();
+      const fileNameForBatch = files[0]?.name ?? file?.name ?? null;
+      const batchId = user?.id
+        ? await createImportBatch({
+            companyId: selectedCompanyId,
+            createdBy: user.id,
+            fileName: fileNameForBatch,
+            dateRangeFrom: filterFrom || null,
+            dateRangeTo: filterTo || null,
+          })
+        : null;
+      if (!batchId) {
+        console.warn("[ImportSchedule] No batch_id created — proceeding without traceability persistence");
+      }
+
+      // Persist raw rows for every shift group we are about to process.
+      // rawRowMap: shiftHash → raw_row_id (used later when writing normalized rows + mapping).
+      let rawRowMap = new Map<string, string>();
+      if (batchId) {
+        setImportProgress({ current: 0, total: filteredGroups.length, phase: "Guardando filas originales..." });
+        const rawRows: RawShiftRow[] = filteredGroups.map(g => {
+          const numericCode = g.shiftCode ? g.shiftCode.match(/^(\d+)/)?.[1] || g.shiftCode : "";
+          return {
+            shift_code: numericCode,
+            date: g.date,
+            start_time: g.startTime,
+            end_time: g.endTime,
+            job: g.job,
+            sub_item: g.subItem,
+            address: g.address,
+            note: g.note,
+            tags: g.tags,
+            status: g.status,
+            employees: g.employees,
+            employee_statuses: g.employeeStatuses,
+          };
+        });
+        rawRowMap = await persistRawRows(batchId, selectedCompanyId, rawRows);
+      }
+
+      // Helper to look up raw_row_id for a ShiftGroup by composite key
+      const rawRowIdForGroup = (group: ShiftGroup): string | null => {
+        const numericCode = group.shiftCode ? group.shiftCode.match(/^(\d+)/)?.[1] || group.shiftCode : "";
+        const hash = buildShiftHash(selectedCompanyId, numericCode, group.date, group.startTime, group.endTime);
+        return rawRowMap.get(hash) ?? null;
+      };
+
+      // Collected normalized rows — written in batch at the end of the import.
+      const normalizedRowsAcc: NormalizedRowInput[] = [];
+
       // Fetch employees and clients for matching
       // Pull richer columns so the resolver can match by phone / email / external IDs
       // when an auxiliary Connecteam Users export is provided.
