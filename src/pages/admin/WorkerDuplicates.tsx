@@ -209,6 +209,7 @@ export default function WorkerDuplicates() {
   const [search, setSearch] = useState("");
   const [matchTypeFilter, setMatchTypeFilter] = useState<MatchKey | "all">("all");
   const [reviewFilter, setReviewFilter] = useState<"all" | "open" | "reviewed" | "flagged">("open");
+  const [strengthFilter, setStrengthFilter] = useState<"strong" | "with_weak" | "with_shared">("strong");
   const [savingKey, setSavingKey] = useState<string | null>(null);
 
   // ── Fetch ────────────────────────────────────────────────────────────────
