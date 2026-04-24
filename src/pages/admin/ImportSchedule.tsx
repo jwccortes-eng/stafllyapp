@@ -833,6 +833,7 @@ export default function ImportSchedule() {
             }
           }
 
+          const reconHash = buildShiftHash(selectedCompanyId, numericCode || "", group.date, group.startTime, group.endTime);
           shiftPayloads.push({
             company_id: selectedCompanyId,
             title: title.trim(),
@@ -847,6 +848,10 @@ export default function ImportSchedule() {
             slots: realEmployees.length || 1,
             claimable: false,
             pay_type: isWeekendJob ? "daily" : "hourly",
+            // Fase 4 traceability stamps
+            reconciliation_hash: reconHash,
+            created_by: user?.id ?? null,
+            ...(batchId ? { import_batch_id: batchId } : {}),
           });
           newBatch.push(group);
           existingShiftMap.set(`${numericCode || ""}|${group.date}|${group.startTime}|${group.endTime}`, { id: "__pending__", slots: realEmployees.length || 1 });
