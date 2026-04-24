@@ -716,8 +716,12 @@ export default function ImportSchedule() {
         reconciledShifts,
         reconciledAssignments,
         skippedExistingAssignments,
+        matchTelemetry: { ...resolver.telemetry },
+        ambiguousMatches: [...resolver.ambiguous],
+        auxUsersLoaded: auxUsers.length,
       };
       setSummary(summaryData);
+      console.info("[ImportSchedule] Match telemetry:", resolver.telemetry, "ambiguous:", resolver.ambiguous.length);
 
       const createdMsg = (createdClients + createdEmployees) > 0
         ? ` · ${createdClients} clientes y ${createdEmployees} empleados creados`
