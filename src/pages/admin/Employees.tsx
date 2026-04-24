@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { usePageView } from "@/hooks/useAuditLog";
 import AuditPanel from "@/components/audit/AuditPanel";
@@ -33,7 +33,8 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Plus, Search, Upload, FileSpreadsheet, CheckCircle2, MoreHorizontal, Pencil, Trash2, UserX, UserCheck, Eye, RefreshCw, ArrowUpDown, Users, Download, X, Phone, Mail, LayoutGrid, List, MessageCircle, Send, Loader2, Clock, Shield, KeyRound, Settings2, Archive, Hash, Building2, UserPlus, Rocket, Car, FileWarning, RotateCw } from "lucide-react";
+import { Plus, Search, Upload, FileSpreadsheet, CheckCircle2, MoreHorizontal, Pencil, Trash2, UserX, UserCheck, Eye, RefreshCw, ArrowUpDown, Users, Download, X, Phone, Mail, LayoutGrid, List, MessageCircle, Send, Loader2, Clock, Shield, KeyRound, Settings2, Archive, Hash, Building2, UserPlus, Rocket, Car, FileWarning, RotateCw, Copy as CopyIcon, UserSearch } from "lucide-react";
+import { normalizePhone } from "@/lib/phone";
 import { BulkActionsBar } from "@/components/ui/bulk-actions-bar";
 import { PageHeader } from "@/components/ui/page-header";
 import { PremiumPageHeader, type PremiumPageHeaderKpi } from "@/components/ui/premium-page-header";
@@ -804,6 +805,57 @@ export default function Employees() {
     { label: "Drivers", value: statusCounts.drivers, accent: "primary", onClick: () => setStatusTab("drivers"), active: statusTab === "drivers" },
   ];
 
+  // ── Strong duplicate signal count (lightweight, mirrors WorkerDuplicates filters) ──
+  const strongDuplicateCount = useMemo(() => {
+    if (!isPrivileged || employees.length === 0) return 0;
+    const SHARED_EXACT = new Set(["qualitystaff@gmail.com", "noemail", "noemail@noemail.com", "test@test.com"]);
+    const SHARED_RE = /^(test|example|admin@|info@|staffing@|office@|support@|noemail)|@example\./i;
+    const emailUsage = new Map<string, number>();
+    for (const e of employees) {
+      const em = (e.email ?? "").trim().toLowerCase();
+      if (em) emailUsage.set(em, (emailUsage.get(em) ?? 0) + 1);
+    }
+    const isShared = (em: string) =>
+      !em || SHARED_EXACT.has(em) || SHARED_RE.test(em) || (emailUsage.get(em) ?? 0) >= 5;
+
+    const dupMembers = new Set<string>();
+    const phoneMap = new Map<string, string[]>();
+    const emailMap = new Map<string, string[]>();
+    const eidMap = new Map<string, string[]>();
+    for (const e of employees) {
+      const phone = normalizePhone((e as any).phone_number);
+      if (phone) {
+        const arr = phoneMap.get(phone) ?? [];
+        arr.push(e.id);
+        phoneMap.set(phone, arr);
+      }
+      const em = (e.email ?? "").trim().toLowerCase();
+      if (em && !isShared(em)) {
+        const arr = emailMap.get(em) ?? [];
+        arr.push(e.id);
+        emailMap.set(em, arr);
+      }
+      const eid = ((e as any).employer_identification ?? "").trim().toLowerCase();
+      if (eid) {
+        const arr = eidMap.get(eid) ?? [];
+        arr.push(e.id);
+        eidMap.set(eid, arr);
+      }
+    }
+    let groups = 0;
+    for (const m of [phoneMap, emailMap, eidMap]) {
+      for (const ids of m.values()) {
+        if (ids.length > 1) {
+          groups += 1;
+          ids.forEach((id) => dupMembers.add(id));
+        }
+      }
+    }
+    // Approximation: number of strong buckets (some may coalesce into the same logical group;
+    // the dashboard shows the exact transitive count).
+    return groups;
+  }, [employees, isPrivileged]);
+
   // Active filter chips (chips show as removable pills under the search bar).
   const activeChips: ActiveFilterChip[] = [
     ...(filterRole !== "all" ? [{ key: "role", label: <>Role: <strong className="ml-0.5">{formatDisplayText(filterRole, "label")}</strong></>, onRemove: () => setFilterRole("all") }] : []),
@@ -834,6 +886,26 @@ export default function Employees() {
               <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => setCampaignOpen(true)}>
                 <Rocket className="h-3.5 w-3.5 mr-1.5" />
                 Activation Campaign
+              </Button>
+            )}
+            {isPrivileged && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs relative"
+                onClick={() => navigate("/app/workers/duplicates")}
+                title="Detect possible duplicate workers"
+              >
+                <UserSearch className="h-3.5 w-3.5 mr-1.5" />
+                Detect duplicates
+                {strongDuplicateCount > 0 && (
+                  <Badge
+                    variant="outline"
+                    className="ml-1.5 h-5 px-1.5 bg-warning/10 text-warning border-warning/30 text-[10px] font-semibold"
+                  >
+                    {strongDuplicateCount}
+                  </Badge>
+                )}
               </Button>
             )}
             <BulkRateAssignment />
