@@ -29,6 +29,17 @@ import {
   type AssignmentFailure,
   type AssignmentFailureType,
 } from "@/lib/import/assignment-failures";
+import {
+  buildShiftHash,
+  createImportBatch,
+  persistRawRows,
+  persistNormalizedRows,
+  upsertShiftMapping,
+  finalizeImportBatch,
+  failImportBatch,
+  type RawShiftRow,
+  type NormalizedRowInput,
+} from "@/lib/import/schedule-traceability";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const ACCEPTED_EXTENSIONS = ".xls,.xlsx,.csv";
@@ -346,6 +357,9 @@ export default function ImportSchedule() {
     setResult(null);
     setImportProgress({ current: 0, total: filteredGroups.length, phase: "Preparando..." });
 
+    // Hoisted so the catch block can mark the batch as failed.
+    let batchIdForCatch: string | null = null;
+
     try {
       // ── Check for duplicate file upload using company_settings ──
       // Post-FIX #1: re-uploading the same file is now SAFE because reconciliation
@@ -367,6 +381,61 @@ export default function ImportSchedule() {
         setImportProgress(null);
         return;
       }
+
+      // ── Fase 4: Create import_batch + persist raw source rows BEFORE touching shifts ──
+      // This guarantees that even if employee matching fails or the import crashes mid-way,
+      // the original Connecteam rows are recoverable from raw_schedule_import_rows.
+      setImportProgress({ current: 0, total: filteredGroups.length, phase: "Registrando batch de importación..." });
+      const { data: { user } } = await supabase.auth.getUser();
+      const fileNameForBatch = files[0]?.name ?? file?.name ?? null;
+      const batchId = user?.id
+        ? await createImportBatch({
+            companyId: selectedCompanyId,
+            createdBy: user.id,
+            fileName: fileNameForBatch,
+            dateRangeFrom: filterFrom || null,
+            dateRangeTo: filterTo || null,
+          })
+        : null;
+      batchIdForCatch = batchId;
+      if (!batchId) {
+        console.warn("[ImportSchedule] No batch_id created — proceeding without traceability persistence");
+      }
+
+      // Persist raw rows for every shift group we are about to process.
+      // rawRowMap: shiftHash → raw_row_id (used later when writing normalized rows + mapping).
+      let rawRowMap = new Map<string, string>();
+      if (batchId) {
+        setImportProgress({ current: 0, total: filteredGroups.length, phase: "Guardando filas originales..." });
+        const rawRows: RawShiftRow[] = filteredGroups.map(g => {
+          const numericCode = g.shiftCode ? g.shiftCode.match(/^(\d+)/)?.[1] || g.shiftCode : "";
+          return {
+            shift_code: numericCode,
+            date: g.date,
+            start_time: g.startTime,
+            end_time: g.endTime,
+            job: g.job,
+            sub_item: g.subItem,
+            address: g.address,
+            note: g.note,
+            tags: g.tags,
+            status: g.status,
+            employees: g.employees,
+            employee_statuses: g.employeeStatuses,
+          };
+        });
+        rawRowMap = await persistRawRows(batchId, selectedCompanyId, rawRows);
+      }
+
+      // Helper to look up raw_row_id for a ShiftGroup by composite key
+      const rawRowIdForGroup = (group: ShiftGroup): string | null => {
+        const numericCode = group.shiftCode ? group.shiftCode.match(/^(\d+)/)?.[1] || group.shiftCode : "";
+        const hash = buildShiftHash(selectedCompanyId, numericCode, group.date, group.startTime, group.endTime);
+        return rawRowMap.get(hash) ?? null;
+      };
+
+      // Collected normalized rows — written in batch at the end of the import.
+      const normalizedRowsAcc: NormalizedRowInput[] = [];
 
       // Fetch employees and clients for matching
       // Pull richer columns so the resolver can match by phone / email / external IDs
@@ -624,7 +693,8 @@ export default function ImportSchedule() {
               shift_id: existingShiftId,
               employee_id: r.empId,
               status: r.status,
-            });
+              import_batch_id: batchId,
+            } as any);
             if (diagRow) diagRow.insertAttempt = "yes";
             if (!error) {
               reconciledAssignments++;
@@ -654,12 +724,53 @@ export default function ImportSchedule() {
           }
         }
 
-        // Grow slots only if the Excel brings more real employees than current capacity
-        if (realEmployees.length > existingSlots) {
-          await supabase
-            .from("scheduled_shifts")
-            .update({ slots: realEmployees.length })
-            .eq("id", existingShiftId);
+        // Grow slots only if the Excel brings more real employees than current capacity.
+        // Always stamp traceability fields (idempotent — safe on every reconcile pass).
+        const numericCodeForHash = group.shiftCode ? group.shiftCode.match(/^(\d+)/)?.[1] || group.shiftCode : "";
+        const reconHash = buildShiftHash(selectedCompanyId, numericCodeForHash, group.date, group.startTime, group.endTime);
+        const updatePayload: any = {
+          reconciliation_hash: reconHash,
+        };
+        if (batchId) updatePayload.import_batch_id = batchId;
+        if (realEmployees.length > existingSlots) updatePayload.slots = realEmployees.length;
+        await supabase
+          .from("scheduled_shifts")
+          .update(updatePayload)
+          .eq("id", existingShiftId);
+
+        // Mapping + normalized rows (one per resolved employee + one per unmatched name)
+        if (batchId) {
+          await upsertShiftMapping(selectedCompanyId, {
+            reconciliationHash: reconHash,
+            staflyShiftId: existingShiftId,
+            matchStatus: "reconciled",
+            rawRowId: rawRowIdForGroup(group),
+            rawData: { job: group.job, employees: group.employees },
+          });
+          const rrid = rawRowIdForGroup(group);
+          if (rrid) {
+            for (let ei = 0; ei < group.employees.length; ei++) {
+              const empName = group.employees[ei];
+              if (/^system\s/i.test(empName)) continue;
+              const r = resolveOnce(empName);
+              normalizedRowsAcc.push({
+                rawRowId: rrid,
+                matchedEmployeeId: r.id,
+                employeeNameRaw: empName,
+                employeeNameNormalized: normalizeName(empName),
+                matchConfidence: r.id ? 1 : 0,
+                matchMethod: r.method ?? null,
+                workDate: group.date,
+                startTime: group.startTime,
+                endTime: group.endTime,
+                shiftTitle: group.job,
+                externalShiftId: numericCodeForHash,
+                clientName: group.job,
+                payType: "hourly",
+                status: r.id ? "matched" : (r.ambiguous ? "ambiguous" : "unmatched"),
+              });
+            }
+          }
         }
 
         reconciledShifts++;
@@ -726,6 +837,7 @@ export default function ImportSchedule() {
             }
           }
 
+          const reconHash = buildShiftHash(selectedCompanyId, numericCode || "", group.date, group.startTime, group.endTime);
           shiftPayloads.push({
             company_id: selectedCompanyId,
             title: title.trim(),
@@ -740,6 +852,10 @@ export default function ImportSchedule() {
             slots: realEmployees.length || 1,
             claimable: false,
             pay_type: isWeekendJob ? "daily" : "hourly",
+            // Fase 4 traceability stamps
+            reconciliation_hash: reconHash,
+            created_by: user?.id ?? null,
+            ...(batchId ? { import_batch_id: batchId } : {}),
           });
           newBatch.push(group);
           existingShiftMap.set(`${numericCode || ""}|${group.date}|${group.startTime}|${group.endTime}`, { id: "__pending__", slots: realEmployees.length || 1 });
@@ -762,6 +878,24 @@ export default function ImportSchedule() {
 
         totalShifts += insertedShifts.length;
 
+        // ── Fase 4: write mapping rows for each newly inserted shift ──
+        if (batchId) {
+          for (let mi = 0; mi < newBatch.length; mi++) {
+            const g = newBatch[mi];
+            const sh = insertedShifts[mi];
+            if (!sh) continue;
+            const numericCodeM = g.shiftCode ? g.shiftCode.match(/^(\d+)/)?.[1] || g.shiftCode : "";
+            const reconHashM = buildShiftHash(selectedCompanyId, numericCodeM, g.date, g.startTime, g.endTime);
+            await upsertShiftMapping(selectedCompanyId, {
+              reconciliationHash: reconHashM,
+              staflyShiftId: sh.id,
+              matchStatus: "created",
+              rawRowId: rawRowIdForGroup(g),
+              rawData: { job: g.job, employees: g.employees },
+            });
+          }
+        }
+
         // Create assignments for each shift in the batch
         const assignmentPayloads: any[] = [];
         // Parallel meta array — same index → same payload — for failure attribution
@@ -770,11 +904,33 @@ export default function ImportSchedule() {
           const group = newBatch[i];
           const shift = insertedShifts[i];
           if (!shift) continue;
+          const numericCodeN = group.shiftCode ? group.shiftCode.match(/^(\d+)/)?.[1] || group.shiftCode : "";
+          const rrid = rawRowIdForGroup(group);
 
           for (let ei = 0; ei < group.employees.length; ei++) {
             const empName = group.employees[ei];
             if (/^system\s/i.test(empName)) continue;
             const r = resolveOnce(empName);
+            // Persist a normalized row for EVERY name in the source — matched or not.
+            // This is the key Fase 4 invariant: never lose a name from the file.
+            if (rrid) {
+              normalizedRowsAcc.push({
+                rawRowId: rrid,
+                matchedEmployeeId: r.id,
+                employeeNameRaw: empName,
+                employeeNameNormalized: normalizeName(empName),
+                matchConfidence: r.id ? 1 : 0,
+                matchMethod: r.method ?? null,
+                workDate: group.date,
+                startTime: group.startTime,
+                endTime: group.endTime,
+                shiftTitle: group.job,
+                externalShiftId: numericCodeN,
+                clientName: group.job,
+                payType: "hourly",
+                status: r.id ? "matched" : (r.ambiguous ? "ambiguous" : "unmatched"),
+              });
+            }
             if (!r.id) {
               unmatchedEmployeesSet.add(empName);
               assignmentFailures.push(buildFailure({
@@ -798,6 +954,7 @@ export default function ImportSchedule() {
               shift_id: shift.id,
               employee_id: r.id,
               status: assignStatus,
+              ...(batchId ? { import_batch_id: batchId } : {}),
             });
             assignmentMeta.push({ group, rawName: empName, method: r.method });
           }
@@ -849,6 +1006,12 @@ export default function ImportSchedule() {
 
         // Yield to UI thread
         await new Promise(resolve => setTimeout(resolve, 30));
+      }
+
+      // ── Fase 4: persist normalized rows accumulated during the import ──
+      if (batchId && normalizedRowsAcc.length > 0) {
+        setImportProgress({ current: filteredGroups.length, total: filteredGroups.length, phase: "Guardando filas normalizadas..." });
+        await persistNormalizedRows(batchId, selectedCompanyId, normalizedRowsAcc);
       }
 
       // Handle unavailability records
@@ -962,6 +1125,20 @@ export default function ImportSchedule() {
       const baseMsg = blocked > 0
         ? `Importación finalizada con advertencias: ${totalCreated} asignaciones creadas, ${blocked} bloqueadas.`
         : `Importación completada: ${totalShifts} turnos, ${totalAssignments} asignaciones${createdMsg}${unmatchedMsg}${unavailMsg}${dupMsg}${reconciledMsg}.`;
+
+      // ── Fase 4: finalize the import_batch with the final counters ──
+      if (batchId) {
+        await finalizeImportBatch(batchId, {
+          shiftsCreated: totalShifts,
+          shiftsReconciled: reconciledShifts,
+          assignmentsCreated: totalAssignments + reconciledAssignments,
+          duplicatesSkipped: skippedDuplicates,
+          clientsCreated: createdClients,
+          unmatchedEmployees: Array.from(unmatchedEmployeesSet),
+          warnings: assignmentFailures.slice(0, 50),
+        });
+      }
+
       setResult({
         success: blocked === 0,
         message: baseMsg,
@@ -969,6 +1146,10 @@ export default function ImportSchedule() {
       setStep(4);
     } catch (err: any) {
       console.error("[ImportSchedule] Import failed:", err);
+      // Mark the batch as failed so it doesn't appear as a successful import
+      try {
+        if (batchIdForCatch) await failImportBatch(batchIdForCatch, err?.message ?? String(err));
+      } catch { /* ignore secondary errors */ }
       setResult({ success: false, message: getUserFriendlyError(err) });
       setStep(4); // ensure user sees the result/error screen instead of being stuck on Step 3
       toast({ title: "Error", description: getUserFriendlyError(err), variant: "destructive" });
