@@ -817,6 +817,18 @@ export default function ImportSchedule() {
       setSummary(summaryData);
       console.info("[ImportSchedule] Match telemetry:", resolver.telemetry, "ambiguous:", resolver.ambiguous.length);
 
+      // ── Targeted console.table for shift_code 45678 ──
+      if (summaryData.targetShiftDiagnostics.length > 0) {
+        console.info(`[ImportSchedule][45678] groups detected: ${summaryData.targetShiftDiagnostics.length}`);
+        for (const d of summaryData.targetShiftDiagnostics) {
+          console.info(`[ImportSchedule][45678] ${d.date} ${d.job} | dedupKeyExcel=${d.dedupKeyExcel} | dedupKeyDb=${d.dedupKeyDb ?? "—"} | existingShiftId=${d.existingShiftId ?? "—"} | enteredReconcile=${d.enteredReconcile} | employees(${d.employees.length})`);
+          // eslint-disable-next-line no-console
+          console.table(d.employeesDiagnostic);
+        }
+      } else {
+        console.warn("[ImportSchedule][45678] No target groups found in parsed file (shift_code 45678 + target dates).");
+      }
+
       const createdEmployees = 0;
       const createdMsg = createdClients > 0
         ? ` · ${createdClients} clientes creados`
