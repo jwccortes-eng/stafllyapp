@@ -78,6 +78,7 @@ interface ImportSummary {
   auxUsersLoaded: number;
   targetGroupCount: number;
   targetShiftDiagnostics: TargetShiftDiagnostic[];
+  assignmentFailures: AssignmentFailure[];
 }
 
 interface TargetShiftEmployeeDiagnostic {
