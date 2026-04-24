@@ -286,14 +286,10 @@ export default function BackfillShift() {
     setExecuting(false);
   };
 
-  if (!selectedCompanyId) {
+  if (!selectedCompanyId || !contextChecked) {
     return (
-      <div className="p-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Select a company first</CardTitle>
-          </CardHeader>
-        </Card>
+      <div className="p-6 flex items-center gap-2 text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin" /> Restoring company context…
       </div>
     );
   }
