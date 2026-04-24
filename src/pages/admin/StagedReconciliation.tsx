@@ -307,6 +307,7 @@ export default function StagedReconciliation() {
 
   const handleSelectPeriod = (p: PeriodStatus) => {
     setActivePeriod(p);
+    setManuallySelected(true);
     loadFinalRecords(p.id);
     loadClosingReceipt(p.id);
     setTab("closedesk");
