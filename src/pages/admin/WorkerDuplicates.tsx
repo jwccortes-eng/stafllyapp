@@ -666,12 +666,13 @@ export default function WorkerDuplicates() {
       />
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <KpiCard label="Open groups" value={kpis.open} tone="warning" icon={<AlertTriangle className="h-4 w-4" />} />
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+        <KpiCard label="Strong groups" value={kpis.strong} tone="warning" icon={<AlertTriangle className="h-4 w-4" />} />
+        <KpiCard label="Weak (name only)" value={kpis.weak} tone="muted" icon={<Users className="h-4 w-4" />} />
+        <KpiCard label="Open" value={kpis.open} tone="warning" icon={<AlertTriangle className="h-4 w-4" />} />
         <KpiCard label="Flagged" value={kpis.flagged} tone="deduction" icon={<Flag className="h-4 w-4" />} />
         <KpiCard label="Reviewed" value={kpis.reviewed} tone="earning" icon={<CheckCircle2 className="h-4 w-4" />} />
-        <KpiCard label="Employees affected" value={kpis.employeesAffected} tone="muted" icon={<Users className="h-4 w-4" />} />
-        <KpiCard label="Historical (resolved)" value={kpis.historical} tone="muted" icon={<History className="h-4 w-4" />} />
+        <KpiCard label="Historical" value={kpis.historical} tone="muted" icon={<History className="h-4 w-4" />} />
       </div>
 
       <Tabs defaultValue="active" className="space-y-4">
