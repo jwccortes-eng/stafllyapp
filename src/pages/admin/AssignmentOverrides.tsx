@@ -416,7 +416,7 @@ export default function AssignmentOverrides() {
       <PageHeader
         title="Assignment Overrides"
         description="Audited operational bypasses of the employee-readiness rule. View only — create from the affected shift."
-        icon={<ShieldAlert className="h-5 w-5" />}
+        icon={ShieldAlert}
       />
 
       {/* KPIs */}

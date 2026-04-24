@@ -88,6 +88,7 @@ const DiscrepancyReport = lazy(() => import("./pages/admin/DiscrepancyReport"));
 const ComparisonReport = lazy(() => import("./pages/admin/ComparisonReport"));
 const ContractorW9 = lazy(() => import("./pages/admin/ContractorW9"));
 const TaxForms1099 = lazy(() => import("./pages/admin/TaxForms1099"));
+const AssignmentOverrides = lazy(() => import("./pages/admin/AssignmentOverrides"));
 const ImportInactiveEmployees = lazy(() => import("./pages/admin/ImportInactiveEmployees"));
 const UnpaidShiftsReport = lazy(() => import("./pages/admin/UnpaidShiftsReport"));
 const StaffingRequests = lazy(() => import("./pages/admin/StaffingRequests"));
@@ -260,6 +261,8 @@ function App() {
                 <Route path="activity" element={<ActivityLog />} />
                 <Route path="onboarding" element={<CompanyRequiredGuard><OnboardingWizard /></CompanyRequiredGuard>} />
                 <Route path="permissions" element={<CompanyRequiredGuard><Permissions /></CompanyRequiredGuard>} />
+                <Route path="assignment-overrides" element={<CompanyRequiredGuard><AssignmentOverrides /></CompanyRequiredGuard>} />
+                <Route path="admin/assignment-overrides" element={<CompanyRequiredGuard><AssignmentOverrides /></CompanyRequiredGuard>} />
                 <Route path="company-config" element={<CompanyRequiredGuard><CompanyConfig /></CompanyRequiredGuard>} />
                 <Route path="automations" element={<CompanyRequiredGuard><ModuleGate moduleKey="automations"><Automations /></ModuleGate></CompanyRequiredGuard>} />
                 <Route path="payroll-settings" element={<CompanyRequiredGuard><PayrollSettings /></CompanyRequiredGuard>} />
