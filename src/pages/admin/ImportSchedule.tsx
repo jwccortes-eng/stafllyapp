@@ -874,6 +874,24 @@ export default function ImportSchedule() {
 
         totalShifts += insertedShifts.length;
 
+        // ── Fase 4: write mapping rows for each newly inserted shift ──
+        if (batchId) {
+          for (let mi = 0; mi < newBatch.length; mi++) {
+            const g = newBatch[mi];
+            const sh = insertedShifts[mi];
+            if (!sh) continue;
+            const numericCodeM = g.shiftCode ? g.shiftCode.match(/^(\d+)/)?.[1] || g.shiftCode : "";
+            const reconHashM = buildShiftHash(selectedCompanyId, numericCodeM, g.date, g.startTime, g.endTime);
+            await upsertShiftMapping(selectedCompanyId, {
+              reconciliationHash: reconHashM,
+              staflyShiftId: sh.id,
+              matchStatus: "created",
+              rawRowId: rawRowIdForGroup(g),
+              rawData: { job: g.job, employees: g.employees },
+            });
+          }
+        }
+
         // Create assignments for each shift in the batch
         const assignmentPayloads: any[] = [];
         // Parallel meta array — same index → same payload — for failure attribution
@@ -882,11 +900,33 @@ export default function ImportSchedule() {
           const group = newBatch[i];
           const shift = insertedShifts[i];
           if (!shift) continue;
+          const numericCodeN = group.shiftCode ? group.shiftCode.match(/^(\d+)/)?.[1] || group.shiftCode : "";
+          const rrid = rawRowIdForGroup(group);
 
           for (let ei = 0; ei < group.employees.length; ei++) {
             const empName = group.employees[ei];
             if (/^system\s/i.test(empName)) continue;
             const r = resolveOnce(empName);
+            // Persist a normalized row for EVERY name in the source — matched or not.
+            // This is the key Fase 4 invariant: never lose a name from the file.
+            if (rrid) {
+              normalizedRowsAcc.push({
+                rawRowId: rrid,
+                matchedEmployeeId: r.id,
+                employeeNameRaw: empName,
+                employeeNameNormalized: normalizeName(empName),
+                matchConfidence: r.id ? 1 : 0,
+                matchMethod: r.method ?? null,
+                workDate: group.date,
+                startTime: group.startTime,
+                endTime: group.endTime,
+                shiftTitle: group.job,
+                externalShiftId: numericCodeN,
+                clientName: group.job,
+                payType: "hourly",
+                status: r.id ? "matched" : (r.ambiguous ? "ambiguous" : "unmatched"),
+              });
+            }
             if (!r.id) {
               unmatchedEmployeesSet.add(empName);
               assignmentFailures.push(buildFailure({
@@ -910,6 +950,7 @@ export default function ImportSchedule() {
               shift_id: shift.id,
               employee_id: r.id,
               status: assignStatus,
+              ...(batchId ? { import_batch_id: batchId } : {}),
             });
             assignmentMeta.push({ group, rawName: empName, method: r.method });
           }
