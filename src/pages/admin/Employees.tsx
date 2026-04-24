@@ -888,6 +888,26 @@ export default function Employees() {
                 Activation Campaign
               </Button>
             )}
+            {isPrivileged && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs relative"
+                onClick={() => navigate("/app/workers/duplicates")}
+                title="Detect possible duplicate workers"
+              >
+                <UserSearch className="h-3.5 w-3.5 mr-1.5" />
+                Detect duplicates
+                {strongDuplicateCount > 0 && (
+                  <Badge
+                    variant="outline"
+                    className="ml-1.5 h-5 px-1.5 bg-warning/10 text-warning border-warning/30 text-[10px] font-semibold"
+                  >
+                    {strongDuplicateCount}
+                  </Badge>
+                )}
+              </Button>
+            )}
             <BulkRateAssignment />
             <Button variant="outline" size="sm" className="h-8 text-xs" onClick={handleExport} disabled={filtered.length === 0}>
               <Download className="h-3.5 w-3.5 mr-1.5" />Export
