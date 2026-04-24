@@ -11847,6 +11847,81 @@ export type Database = {
           },
         ]
       }
+      shift_assignment_admin_overrides: {
+        Row: {
+          company_id: string
+          created_at: string
+          created_by: string
+          employee_id: string
+          expires_at: string | null
+          id: string
+          reason: string
+          revoked_at: string | null
+          revoked_by: string | null
+          shift_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          created_by: string
+          employee_id: string
+          expires_at?: string | null
+          id?: string
+          reason: string
+          revoked_at?: string | null
+          revoked_by?: string | null
+          shift_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          created_by?: string
+          employee_id?: string
+          expires_at?: string | null
+          id?: string
+          reason?: string
+          revoked_at?: string | null
+          revoked_by?: string | null
+          shift_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shift_assignment_admin_overrides_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_assignment_admin_overrides_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_assignment_admin_overrides_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_assignment_admin_overrides_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_assignment_admin_overrides_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "scheduled_shifts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shift_assignments: {
         Row: {
           accepted_at: string | null
@@ -14651,6 +14726,10 @@ export type Database = {
       }
       has_action_permission: {
         Args: { _action: string; _company_id: string; _user_id: string }
+        Returns: boolean
+      }
+      has_active_assignment_override: {
+        Args: { _employee_id: string; _shift_id: string }
         Returns: boolean
       }
       has_company_role: {
