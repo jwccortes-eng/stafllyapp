@@ -30,6 +30,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -189,8 +190,36 @@ function EmployeeForm({ fields, form, setForm, loading, onSubmit, submitLabel }:
 export default function Employees() {
   usePageView("Employees");
   const { selectedCompanyId, selectedCompany } = useCompany();
-  const { role } = useAuth();
-  const isPrivileged = role === 'developer' || role === 'owner' || role === 'admin';
+  const { role, allRoles, canAccessAdmin } = useAuth();
+  // Effective privilege: trust either the resolved highest-priority role OR the
+  // company-membership-derived `canAccessAdmin` flag (covers cases where the
+  // global role resolves to "user" but the user is admin/owner inside the
+  // currently selected company).
+  const isPrivileged =
+    role === 'developer' ||
+    role === 'owner' ||
+    role === 'company_owner' ||
+    role === 'admin' ||
+    allRoles.has('developer') ||
+    allRoles.has('owner') ||
+    allRoles.has('company_owner') ||
+    allRoles.has('admin') ||
+    canAccessAdmin;
+
+  // Diagnostic log (safe — no PII). Helps confirm why the duplicates entry
+  // does or doesn't show in the current company context.
+  useEffect(() => {
+    if (import.meta.env.DEV) {
+      // eslint-disable-next-line no-console
+      console.log("Workers duplicates access", {
+        role,
+        allRoles: Array.from(allRoles),
+        canAccessAdmin,
+        isPrivileged,
+        selectedCompanyId,
+      });
+    }
+  }, [role, allRoles, canAccessAdmin, isPrivileged, selectedCompanyId]);
   const { canAddEmployees, limits, plan } = useSubscription();
   const { config: onboardingConfig, updateConfig: updateOnboardingConfig, loading: onboardingConfigLoading } = useOnboardingConfig();
   const { invitations, logInvitation, refetch: refetchInvitations } = useEmployeeInvitations(selectedCompanyId ?? null);
@@ -1012,6 +1041,65 @@ export default function Employees() {
           </>
         }
       />
+
+      {/* ─── Data Quality Card (admin/owner/developer only) ───
+          Visible entry point to the duplicate detector. Shown here (not just
+          in the header rightSlot) to guarantee discoverability even when the
+          header action row overflows on smaller viewports. */}
+      {isPrivileged && (
+        <Card
+          className="border-warning/20 bg-gradient-to-r from-warning/5 via-card to-card hover:border-warning/40 transition-colors cursor-pointer group"
+          onClick={() => navigate("/app/workers/duplicates")}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              navigate("/app/workers/duplicates");
+            }
+          }}
+        >
+          <CardContent className="p-3 flex items-center gap-3">
+            <div className="h-9 w-9 rounded-lg bg-warning/10 text-warning flex items-center justify-center shrink-0">
+              <UserSearch className="h-4 w-4" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold text-foreground">Data quality</span>
+                {strongDuplicateCount > 0 ? (
+                  <Badge
+                    variant="outline"
+                    className="h-5 px-1.5 bg-warning/10 text-warning border-warning/30 text-[10px] font-semibold"
+                  >
+                    {strongDuplicateCount} {strongDuplicateCount === 1 ? "group" : "groups"}
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="h-5 px-1.5 text-[10px] text-muted-foreground border-border">
+                    clean
+                  </Badge>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                {strongDuplicateCount > 0
+                  ? "Possible duplicate workers detected. Review before they contaminate shifts or payroll."
+                  : "No strong duplicate signals in the current view. Run a deep scan anytime."}
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 text-xs shrink-0 group-hover:border-warning/40 group-hover:text-warning"
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate("/app/workers/duplicates");
+              }}
+            >
+              <UserSearch className="h-3.5 w-3.5 mr-1.5" />
+              Detect duplicates
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* ─── Status Tabs ───
           Tone hints (visual priority for problem backlogs):
