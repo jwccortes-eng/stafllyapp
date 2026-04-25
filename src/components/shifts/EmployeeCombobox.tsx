@@ -90,10 +90,14 @@ export function EmployeeCombobox({
   }, [employees, shiftDate, availabilityConfigs, availabilityOverrides]);
 
   const getGroup = (emp: Employee): GroupKey => {
+    if (emp.is_active === false) return "inactive";
     if (unavailableMap.has(emp.id)) return "blocked";
     if (conflictMap.has(emp.id)) return "warning";
     return "ready";
   };
+
+  // Possible-duplicate hints (phone / email / normalized name) — UI surfacing only.
+  const dupHints = useMemo(() => computeDuplicateHints(employees), [employees]);
 
   // Compute assignment frequency from all assignments (same date range proxy)
   const assignmentFreq = useMemo(() => {
