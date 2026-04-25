@@ -1166,6 +1166,7 @@ export default function ImportSchedule() {
       try {
         if (batchIdForCatch) await failImportBatch(batchIdForCatch, err?.message ?? String(err));
       } catch { /* ignore secondary errors */ }
+      setSummary(prev => prev ? { ...prev, batchStatus: "failed" } : prev);
       setResult({ success: false, message: getUserFriendlyError(err) });
       setStep(4); // ensure user sees the result/error screen instead of being stuck on Step 3
       toast({ title: "Error", description: getUserFriendlyError(err), variant: "destructive" });
