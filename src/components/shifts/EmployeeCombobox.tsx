@@ -49,10 +49,17 @@ function getConflicts(
 }
 
 type QuickFilter = "all" | "available" | "drivers" | "no-conflict";
-type GroupKey = "ready" | "warning" | "blocked";
+type GroupKey = "ready" | "warning" | "blocked" | "inactive";
 
 import { isEmployeeDriver } from "./types";
 const isDriver = (e: Employee) => isEmployeeDriver(e);
+
+/** Profile readiness derived from `employees.profile_status` (best-effort, UI hint only). */
+function isProfileIncomplete(e: Employee): boolean {
+  const ps = e.profile_status;
+  if (!ps) return false;
+  return ps !== "ready" && ps !== "active";
+}
 
 export function EmployeeCombobox({
   employees, selected, onToggle, shifts = [], assignments = [], shiftDate, shiftStart, shiftEnd,
