@@ -310,7 +310,11 @@ export default function Shifts() {
     const [clientsRes, locsRes, empsRes] = await Promise.all([
       supabase.from("clients").select("id, name").eq("company_id", selectedCompanyId).is("deleted_at", null),
       supabase.from("locations").select("id, name, address, client_id, default_pay_type, default_clock_method, require_car, default_instructions").eq("company_id", selectedCompanyId).is("deleted_at", null),
-      supabase.from("employees").select("id, first_name, last_name, phone_number, avatar_url, gender, employee_role, groups, user_id, has_car, can_drive").eq("company_id", selectedCompanyId).eq("is_active", true),
+      // Include inactive workers so the selector can render them disabled with a clear "Inactive" badge.
+      // Multi-tenant remains strict — `company_id` filter is mandatory.
+      supabase.from("employees")
+        .select("id, first_name, last_name, phone_number, email, avatar_url, gender, employee_role, groups, user_id, has_car, can_drive, is_active, employer_identification, profile_status, onboarding_status")
+        .eq("company_id", selectedCompanyId),
     ]);
     setClients((clientsRes.data ?? []) as SelectOption[]);
     setLocations((locsRes.data ?? []) as any[]);
