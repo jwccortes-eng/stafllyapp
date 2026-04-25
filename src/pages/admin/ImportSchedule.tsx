@@ -1161,14 +1161,18 @@ export default function ImportSchedule() {
       }
 
       if (unavailPayloads.length > 0) {
-        for (let i = 0; i < unavailPayloads.length; i += 50) {
-          const batch = unavailPayloads.slice(i, i + 50);
-          try {
-            const { data } = await supabase.from("employee_availability_overrides")
-              .upsert(batch as any, { onConflict: "employee_id,date" })
-              .select("id");
-            totalUnavailable += data?.length ?? batch.length;
-          } catch { /* skip */ }
+        if (isDryRun) {
+          totalUnavailable = unavailPayloads.length;
+        } else {
+          for (let i = 0; i < unavailPayloads.length; i += 50) {
+            const batch = unavailPayloads.slice(i, i + 50);
+            try {
+              const { data } = await supabase.from("employee_availability_overrides")
+                .upsert(batch as any, { onConflict: "employee_id,date" })
+                .select("id");
+              totalUnavailable += data?.length ?? batch.length;
+            } catch { /* skip */ }
+          }
         }
       }
 
