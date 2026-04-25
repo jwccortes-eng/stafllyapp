@@ -482,6 +482,17 @@ export default function ImportSchedule() {
       if (!batchId) {
         console.warn("[ImportSchedule] No batch_id created — proceeding without traceability persistence");
       }
+      // Stamp the batch as a dry-run audit so it cannot be confused with a live import.
+      if (batchId && isDryRun) {
+        const lockedSummary = lockedPeriods.map(p => `${p.start_date}→${p.end_date}:${p.status}`).join(", ");
+        await supabase
+          .from("import_batches")
+          .update({
+            status: "dry_run",
+            audit_notes: `Dry-run audit (no writes). Locked periods overlapping range: ${lockedSummary || "none"}.`,
+          })
+          .eq("id", batchId);
+      }
 
       // Persist raw rows for every shift group we are about to process.
       // rawRowMap: shiftHash → raw_row_id (used later when writing normalized rows + mapping).
