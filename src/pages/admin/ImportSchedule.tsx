@@ -1668,14 +1668,30 @@ export default function ImportSchedule() {
           <div className="sticky bottom-0 -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 z-10">
             <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
               <p className="text-xs text-muted-foreground flex-1">
-                Esto creará turnos nuevos y reconciliará asignaciones faltantes en turnos existentes. Operación idempotente: no duplica datos.
+                {dryRun
+                  ? "Modo Auditoría: se ejecuta el matching completo y se guarda la trazabilidad, pero NO se escriben turnos, asignaciones, indisponibilidades ni nómina."
+                  : "Esto creará turnos nuevos y reconciliará asignaciones faltantes en turnos existentes. Operación idempotente: no duplica datos."}
               </p>
-              <div className="flex gap-2 shrink-0">
+              <div className="flex flex-wrap gap-2 shrink-0">
                 <Button variant="outline" size="sm" onClick={() => { setStep(1); setFile(null); setFiles([]); setWorkbook(null); setShiftGroups([]); setResult(null); }}>
                   ← Cambiar archivos
                 </Button>
-                <Button size="sm" onClick={() => void handleImport()} disabled={importing || filteredGroups.length === 0}>
-                  {importing ? "Procesando…" : `Procesar importación (${filteredGroups.length})`}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => void handleImport({ dryRun: true })}
+                  disabled={importing || filteredGroups.length === 0}
+                  title="Ejecuta auditoría completa sin escribir en la base de datos"
+                >
+                  {importing && dryRun ? "Auditando…" : `Auditar (dry-run) (${filteredGroups.length})`}
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => void handleImport({ dryRun: false })}
+                  disabled={importing || filteredGroups.length === 0 || (hasLockedPeriods && !dryRun)}
+                  title={hasLockedPeriods ? "Hay periodos bloqueados — usa el modo Auditoría" : ""}
+                >
+                  {importing && !dryRun ? "Procesando…" : `Procesar importación (${filteredGroups.length})`}
                 </Button>
               </div>
             </div>
