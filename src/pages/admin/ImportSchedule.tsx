@@ -396,7 +396,11 @@ export default function ImportSchedule() {
           console.warn("[ImportSchedule] pay_periods lock check failed:", error.message);
           setLockedPeriods([]);
         } else {
-          setLockedPeriods((data ?? []) as LockedPeriod[]);
+          const found = (data ?? []) as LockedPeriod[];
+          setLockedPeriods(found);
+          // Auto-suggest dry-run when locked periods are present so the operator
+          // doesn't accidentally try to write to closed/paid payroll.
+          if (found.length > 0) setDryRun(true);
         }
       } finally {
         if (!cancelled) setPeriodsLoading(false);
