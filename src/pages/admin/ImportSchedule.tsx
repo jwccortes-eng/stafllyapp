@@ -368,6 +368,45 @@ export default function ImportSchedule() {
     return true;
   });
 
+  // Effective range for safety checks: prefer manual filter, fall back to file range.
+  const effectiveRangeFrom = filterFrom || dateRange?.from || null;
+  const effectiveRangeTo = filterTo || dateRange?.to || null;
+
+  // Detect pay periods that overlap the import range and are non-mutable.
+  // We BLOCK live writes against closed/published/paid periods unless dry-run.
+  useEffect(() => {
+    if (!selectedCompanyId || !effectiveRangeFrom || !effectiveRangeTo) {
+      setLockedPeriods([]);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      setPeriodsLoading(true);
+      try {
+        // Overlap = period.start <= rangeTo AND period.end >= rangeFrom
+        const { data, error } = await supabase
+          .from("pay_periods")
+          .select("id, start_date, end_date, status")
+          .eq("company_id", selectedCompanyId)
+          .lte("start_date", effectiveRangeTo)
+          .gte("end_date", effectiveRangeFrom)
+          .in("status", ["closed", "published", "paid"]);
+        if (cancelled) return;
+        if (error) {
+          console.warn("[ImportSchedule] pay_periods lock check failed:", error.message);
+          setLockedPeriods([]);
+        } else {
+          setLockedPeriods((data ?? []) as LockedPeriod[]);
+        }
+      } finally {
+        if (!cancelled) setPeriodsLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [selectedCompanyId, effectiveRangeFrom, effectiveRangeTo]);
+
+  const hasLockedPeriods = lockedPeriods.length > 0;
+
   const handleImport = async (options?: { force?: boolean }) => {
     if (!selectedCompanyId) {
       console.warn("[ImportSchedule] handleImport blocked: no selectedCompanyId");
