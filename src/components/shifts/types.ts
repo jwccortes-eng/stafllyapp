@@ -46,6 +46,12 @@ export interface Employee {
   /** Authoritative driver flag — boolean column on employees. */
   can_drive?: boolean | null;
   is_active?: boolean;
+  /** Stable per-company identifier shown in the worker selector. */
+  employer_identification?: string | null;
+  /** Profile readiness — drives "Incomplete profile" badge in the selector. */
+  profile_status?: "incomplete" | "pending_documents" | "ready" | "active" | null;
+  /** Onboarding lifecycle (text in DB). */
+  onboarding_status?: string | null;
 }
 
 /**
