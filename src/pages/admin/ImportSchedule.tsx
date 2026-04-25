@@ -836,10 +836,12 @@ export default function ImportSchedule() {
         };
         if (batchId) updatePayload.import_batch_id = batchId;
         if (realEmployees.length > existingSlots) updatePayload.slots = realEmployees.length;
-        await supabase
-          .from("scheduled_shifts")
-          .update(updatePayload)
-          .eq("id", existingShiftId);
+        if (!isDryRun) {
+          await supabase
+            .from("scheduled_shifts")
+            .update(updatePayload)
+            .eq("id", existingShiftId);
+        }
 
         // Mapping + normalized rows (one per resolved employee + one per unmatched name)
         if (batchId) {
