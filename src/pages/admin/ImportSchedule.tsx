@@ -1254,9 +1254,10 @@ export default function ImportSchedule() {
 
       const totalCreated = totalAssignments + reconciledAssignments;
       const blocked = assignmentFailures.length;
+      const dryPrefix = isDryRun ? "Auditoría (sin escribir): " : "";
       const baseMsg = blocked > 0
-        ? `Importación finalizada con advertencias: ${totalCreated} asignaciones creadas, ${blocked} bloqueadas.`
-        : `Importación completada: ${totalShifts} turnos, ${totalAssignments} asignaciones${createdMsg}${unmatchedMsg}${unavailMsg}${dupMsg}${reconciledMsg}.`;
+        ? `${dryPrefix}${totalCreated} asignaciones ${isDryRun ? "simuladas" : "creadas"}, ${blocked} bloqueadas.`
+        : `${dryPrefix}${totalShifts} turnos${isDryRun ? " simulados" : ""}, ${totalAssignments} asignaciones${isDryRun ? " simuladas" : ""}${createdMsg}${unmatchedMsg}${unavailMsg}${dupMsg}${reconciledMsg}.`;
 
       // ── Fase 4: finalize the import_batch with the final counters ──
       if (batchId) {
@@ -1269,6 +1270,13 @@ export default function ImportSchedule() {
           unmatchedEmployees: Array.from(unmatchedEmployeesSet),
           warnings: assignmentFailures.slice(0, 50),
         });
+        // Restore the dry-run marker after finalize() defaulted status to "completed".
+        if (isDryRun) {
+          await supabase
+            .from("import_batches")
+            .update({ status: "dry_run" })
+            .eq("id", batchId);
+        }
       }
       setSummary(prev => prev ? { ...prev, batchStatus: "completed" } : prev);
 
