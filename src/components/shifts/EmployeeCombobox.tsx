@@ -6,9 +6,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
-import { Search, AlertTriangle, X, CalendarOff, Car, Zap, UserCheck } from "lucide-react";
+import { Search, AlertTriangle, X, CalendarOff, Car, Zap, UserCheck, ShieldAlert, PauseCircle, Copy } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { isEmployeeAvailable, type AvailabilityConfig, type AvailabilityOverride } from "@/hooks/useEmployeeAvailability";
+import { computeDuplicateHints } from "@/lib/employee-duplicate-hints";
 import type { Employee, Shift, Assignment } from "./types";
 
 interface EmployeeComboboxProps {
@@ -48,10 +49,17 @@ function getConflicts(
 }
 
 type QuickFilter = "all" | "available" | "drivers" | "no-conflict";
-type GroupKey = "ready" | "warning" | "blocked";
+type GroupKey = "ready" | "warning" | "blocked" | "inactive";
 
 import { isEmployeeDriver } from "./types";
 const isDriver = (e: Employee) => isEmployeeDriver(e);
+
+/** Profile readiness derived from `employees.profile_status` (best-effort, UI hint only). */
+function isProfileIncomplete(e: Employee): boolean {
+  const ps = e.profile_status;
+  if (!ps) return false;
+  return ps !== "ready" && ps !== "active";
+}
 
 export function EmployeeCombobox({
   employees, selected, onToggle, shifts = [], assignments = [], shiftDate, shiftStart, shiftEnd,
@@ -82,10 +90,14 @@ export function EmployeeCombobox({
   }, [employees, shiftDate, availabilityConfigs, availabilityOverrides]);
 
   const getGroup = (emp: Employee): GroupKey => {
+    if (emp.is_active === false) return "inactive";
     if (unavailableMap.has(emp.id)) return "blocked";
     if (conflictMap.has(emp.id)) return "warning";
     return "ready";
   };
+
+  // Possible-duplicate hints (phone / email / normalized name) — UI surfacing only.
+  const dupHints = useMemo(() => computeDuplicateHints(employees), [employees]);
 
   // Compute assignment frequency from all assignments (same date range proxy)
   const assignmentFreq = useMemo(() => {
@@ -110,22 +122,24 @@ export function EmployeeCombobox({
     return list;
   }, [employees, search, quickFilter, unavailableMap, conflictMap]);
 
-  // Smart sort with scoring: selected → ready (score) → warning → blocked
+  // Smart sort with scoring: selected → ready (active+portal+complete) → warning → blocked → inactive
   const sorted = useMemo(() => {
     const normalizedShiftGroup = shiftGroup?.toLowerCase().trim();
 
     const score = (emp: Employee): number => {
       if (selected.includes(emp.id)) return -1000;
       const g = getGroup(emp);
-      let s = g === "ready" ? 0 : g === "warning" ? 500 : 1000;
+      let s = g === "ready" ? 0 : g === "warning" ? 500 : g === "blocked" ? 1000 : 2000;
 
-      // Within ready: boost same group, drivers when needed, frequent workers
+      // Within ready: prefer portal-active + profile-complete + employer_id + frequent + same group
       if (g === "ready") {
         if (requiresDriver && isDriver(emp)) s -= 50;
         if (normalizedShiftGroup && emp.groups?.toLowerCase().includes(normalizedShiftGroup)) s -= 30;
         const freq = assignmentFreq.get(emp.id) || 0;
         s -= Math.min(freq * 5, 25); // frequent workers get up to -25
-        if (emp.user_id) s -= 10; // onboarded workers preferred
+        if (emp.user_id) s -= 20; // portal-active preferred
+        if (!isProfileIncomplete(emp)) s -= 15; // profile complete preferred
+        if (emp.employer_identification) s -= 5; // has stable identifier
       }
       return s;
     };
@@ -135,6 +149,9 @@ export function EmployeeCombobox({
 
   const selectedEmps = employees.filter(e => selected.includes(e.id));
   const handleToggle = (id: string) => {
+    // Inactive workers cannot be (re)assigned from the selector.
+    const target = employees.find(e => e.id === id);
+    if (target?.is_active === false && !selected.includes(id)) return;
     if (availabilityBlockMode === "hard" && unavailableMap.has(id) && !selected.includes(id)) return;
     onToggle(id);
   };
@@ -278,9 +295,14 @@ export function EmployeeCombobox({
               const hasConflict = !!conflicts?.length;
               const unavailableReason = unavailableMap.get(emp.id);
               const isUnavailable = !!unavailableReason;
-              const isHardBlocked = isUnavailable && availabilityBlockMode === "hard" && !isSelected;
+              const isInactive = emp.is_active === false;
+              const isHardBlocked =
+                isInactive ||
+                (isUnavailable && availabilityBlockMode === "hard" && !isSelected);
               const empIsDriver = isDriver(emp);
               const group = getGroup(emp);
+              const profileIncomplete = isProfileIncomplete(emp);
+              const dupReason = dupHints.reasonById.get(emp.id);
 
               let groupHeader: React.ReactNode = null;
               if (!isSelected && groupBreaks.has(emp.id)) {
@@ -288,6 +310,7 @@ export function EmployeeCombobox({
                   ready: { label: `Available · ${readyCount}`, color: "text-earning", icon: <UserCheck className="h-2.5 w-2.5" /> },
                   warning: { label: "Warning", color: "text-warning", icon: <AlertTriangle className="h-2.5 w-2.5" /> },
                   blocked: { label: "Unavailable", color: "text-destructive", icon: <CalendarOff className="h-2.5 w-2.5" /> },
+                  inactive: { label: "Inactive", color: "text-muted-foreground", icon: <PauseCircle className="h-2.5 w-2.5" /> },
                 };
                 const g = labels[group];
                 groupHeader = (
@@ -303,10 +326,11 @@ export function EmployeeCombobox({
                   <label
                     className={cn(
                       "flex items-center gap-2 px-2 py-1.5 text-xs transition-colors border-b border-border/10 last:border-0",
-                      isHardBlocked ? "cursor-not-allowed opacity-35" : "cursor-pointer",
+                      isHardBlocked ? "cursor-not-allowed opacity-40" : "cursor-pointer",
                       isSelected ? "bg-primary/[0.07]" : "hover:bg-accent/50",
                       hasConflict && !isSelected && "bg-warning/[0.04]",
-                      isUnavailable && !hasConflict && !isSelected && "bg-destructive/[0.03]",
+                      isUnavailable && !hasConflict && !isSelected && !isInactive && "bg-destructive/[0.03]",
+                      isInactive && !isSelected && "bg-muted/30",
                     )}
                   >
                     <Checkbox
@@ -318,10 +342,22 @@ export function EmployeeCombobox({
                       avatarUrl={emp.avatar_url} gender={emp.gender} size="xs"
                     />
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1">
-                        <span className={cn("font-semibold text-[11px] truncate", isUnavailable && !isSelected && "text-muted-foreground")}>
+                      <div className="flex items-center gap-1 flex-wrap">
+                        <span className={cn("font-semibold text-[11px] truncate", (isUnavailable || isInactive) && !isSelected && "text-muted-foreground")}>
                           {formatPersonName(emp.first_name)} {formatPersonName(emp.last_name)}
                         </span>
+                        {emp.employer_identification && (
+                          <TooltipProvider delayDuration={200}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="h-3.5 px-1 rounded bg-muted/70 text-muted-foreground text-[7px] font-mono shrink-0 cursor-default">
+                                  #{emp.employer_identification}
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="text-[10px]">Employee ID</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
                         {empIsDriver && (
                           <span className={cn(
                             "h-3.5 px-1 rounded text-[7px] font-bold flex items-center gap-0.5 shrink-0",
@@ -331,29 +367,77 @@ export function EmployeeCombobox({
                           </span>
                         )}
                         {emp.employee_role && (
-                          <span className="h-3.5 px-1 rounded bg-muted text-muted-foreground text-[7px] font-medium truncate max-w-[50px] shrink-0">
+                          <span className="h-3.5 px-1 rounded bg-muted text-muted-foreground text-[7px] font-medium truncate max-w-[60px] shrink-0">
                             {formatDisplayText(emp.employee_role, "label")}
                           </span>
                         )}
-                        {!emp.user_id && (
+                        {/* Portal status — Active / Pending / No portal */}
+                        {emp.user_id ? (
+                          <span className="h-3.5 px-1 rounded bg-earning/10 text-earning text-[7px] font-bold shrink-0">Portal</span>
+                        ) : (
                           <TooltipProvider delayDuration={200}>
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <span className="h-3.5 px-1 rounded bg-warning/10 text-warning text-[7px] font-bold shrink-0 cursor-default">No portal</span>
+                                <span className="h-3.5 px-1 rounded bg-muted text-muted-foreground text-[7px] font-bold shrink-0 cursor-default">No portal</span>
                               </TooltipTrigger>
-                              <TooltipContent side="top" className="text-[10px]">No active portal account</TooltipContent>
+                              <TooltipContent side="top" className="text-[10px]">
+                                Portal not yet activated. Worker can still be assigned (pending).
+                              </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
                         )}
+                        {/* Profile readiness — operator hint, never blocks pending assignment */}
+                        {profileIncomplete && (
+                          <TooltipProvider delayDuration={200}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="h-3.5 px-1 rounded bg-warning/15 text-warning text-[7px] font-bold flex items-center gap-0.5 shrink-0 cursor-default">
+                                  <ShieldAlert className="h-2 w-2" /> Incomplete profile
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="text-[10px] max-w-[220px]">
+                                Can be assigned in pending state, but the worker must complete onboarding before confirming or clocking in.
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+                        {/* Possible duplicate hint */}
+                        {dupReason && (
+                          <TooltipProvider delayDuration={200}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="h-3.5 px-1 rounded bg-deduction/10 text-deduction text-[7px] font-bold flex items-center gap-0.5 shrink-0 cursor-default">
+                                  <Copy className="h-2 w-2" /> Possible duplicate
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="text-[10px] max-w-[220px]">
+                                {dupReason} as another worker. Verify before assigning.
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+                        {isInactive && (
+                          <span className="h-3.5 px-1 rounded bg-muted text-muted-foreground text-[7px] font-bold shrink-0">Inactive</span>
+                        )}
                       </div>
-                      {isUnavailable && (
+                      {(emp.phone_number || emp.email) && !isInactive && (
+                        <p className="text-[8px] text-muted-foreground mt-0.5 truncate">
+                          {emp.phone_number ?? ""}{emp.phone_number && emp.email ? " · " : ""}{emp.email ?? ""}
+                        </p>
+                      )}
+                      {isUnavailable && !isInactive && (
                         <p className="text-[8px] text-destructive flex items-center gap-0.5 mt-0.5 truncate">
                           <CalendarOff className="h-2 w-2 shrink-0" /> {unavailableReason}
                         </p>
                       )}
-                      {hasConflict && !isUnavailable && (
+                      {hasConflict && !isUnavailable && !isInactive && (
                         <p className="text-[8px] text-warning flex items-center gap-0.5 mt-0.5 truncate">
                           <AlertTriangle className="h-2 w-2 shrink-0" /> {conflicts![0].shiftTitle} ({conflicts![0].time})
+                        </p>
+                      )}
+                      {isInactive && (
+                        <p className="text-[8px] text-muted-foreground mt-0.5 truncate">
+                          Reactivate this worker before assigning.
                         </p>
                       )}
                     </div>
