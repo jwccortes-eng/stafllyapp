@@ -176,6 +176,7 @@ function parseName(raw: string): { first: string; last: string } | null {
 export default function ImportSchedule() {
   const { selectedCompanyId } = useCompany();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [files, setFiles] = useState<File[]>([]);
   const [file, setFile] = useState<File | null>(null);
   const [workbook, setWorkbook] = useState<SafeWorkbook | null>(null);
