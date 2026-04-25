@@ -1467,10 +1467,10 @@ export default function ImportSchedule() {
             </Card>
           </div>
 
-          {/* Date filter */}
+          {/* Date filter + safety presets */}
           {dateRange && (
             <Card>
-              <CardContent className="p-4">
+              <CardContent className="p-4 space-y-3">
                 <div className="flex flex-wrap items-end gap-4">
                   <div>
                     <Label className="text-xs">Desde</Label>
@@ -1484,6 +1484,95 @@ export default function ImportSchedule() {
                     Archivo: {dateRange.from} → {dateRange.to}
                   </p>
                 </div>
+                {/* Quick range presets — phased reimport plan */}
+                <div className="flex flex-wrap gap-2 items-center">
+                  <span className="text-xs text-muted-foreground">Rangos rápidos:</span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={() => { setFilterFrom("2026-04-22"); setFilterTo("2026-04-28"); }}
+                  >
+                    Semana Apr 22–28
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={() => { setFilterFrom("2026-04-01"); setFilterTo("2026-04-30"); }}
+                  >
+                    Abril completo
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={() => { setFilterFrom(""); setFilterTo(""); }}
+                  >
+                    Limpiar filtro
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Payroll lock safety panel */}
+          {effectiveRangeFrom && effectiveRangeTo && (
+            <Card className={hasLockedPeriods ? "border-amber-500/40 bg-amber-500/5" : "border-emerald-500/30 bg-emerald-500/5"}>
+              <CardContent className="p-4 flex items-start gap-3">
+                {hasLockedPeriods ? (
+                  <Lock className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+                ) : (
+                  <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5" />
+                )}
+                <div className="text-sm space-y-1 flex-1">
+                  {periodsLoading ? (
+                    <p className="text-muted-foreground">Verificando periodos de nómina…</p>
+                  ) : hasLockedPeriods ? (
+                    <>
+                      <p className="font-semibold">Hay periodos de nómina bloqueados en este rango</p>
+                      <ul className="text-xs text-muted-foreground space-y-0.5 list-disc list-inside">
+                        {lockedPeriods.map(p => (
+                          <li key={p.id}>
+                            {p.start_date} → {p.end_date} <Badge variant="outline" className="ml-1 text-[10px]">{p.status}</Badge>
+                          </li>
+                        ))}
+                      </ul>
+                      <p className="text-xs">
+                        No puedes ejecutar un import en vivo sobre periodos cerrados/publicados/pagados.
+                        Usa <strong>Auditoría (sin escribir)</strong> para revisar qué se importaría sin tocar nómina.
+                      </p>
+                    </>
+                  ) : (
+                    <p>Sin periodos cerrados en este rango — el import en vivo es seguro.</p>
+                  )}
+                </div>
+                <label className="flex items-center gap-2 text-xs cursor-pointer shrink-0">
+                  <input
+                    type="checkbox"
+                    checked={dryRun}
+                    onChange={e => setDryRun(e.target.checked)}
+                    className="h-4 w-4"
+                  />
+                  Modo Auditoría (dry-run)
+                </label>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Informational notice for SYSTEM placeholders (System 1 / 2 / 3 …) */}
+          {filteredGroups.some(g => g.employees.some(e => /^system\s/i.test(e))) && (
+            <Card className="border-blue-500/30 bg-blue-500/5">
+              <CardContent className="p-3 flex items-start gap-2 text-xs">
+                <Info className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
+                <p>
+                  Detectados marcadores <strong>System 1/2/3…</strong> en el archivo. Se conservan como
+                  información en la trazabilidad pero <strong>nunca</strong> se crean empleados ficticios
+                  ni asignaciones para ellos.
+                </p>
               </CardContent>
             </Card>
           )}
