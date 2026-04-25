@@ -122,22 +122,24 @@ export function EmployeeCombobox({
     return list;
   }, [employees, search, quickFilter, unavailableMap, conflictMap]);
 
-  // Smart sort with scoring: selected → ready (score) → warning → blocked
+  // Smart sort with scoring: selected → ready (active+portal+complete) → warning → blocked → inactive
   const sorted = useMemo(() => {
     const normalizedShiftGroup = shiftGroup?.toLowerCase().trim();
 
     const score = (emp: Employee): number => {
       if (selected.includes(emp.id)) return -1000;
       const g = getGroup(emp);
-      let s = g === "ready" ? 0 : g === "warning" ? 500 : 1000;
+      let s = g === "ready" ? 0 : g === "warning" ? 500 : g === "blocked" ? 1000 : 2000;
 
-      // Within ready: boost same group, drivers when needed, frequent workers
+      // Within ready: prefer portal-active + profile-complete + employer_id + frequent + same group
       if (g === "ready") {
         if (requiresDriver && isDriver(emp)) s -= 50;
         if (normalizedShiftGroup && emp.groups?.toLowerCase().includes(normalizedShiftGroup)) s -= 30;
         const freq = assignmentFreq.get(emp.id) || 0;
         s -= Math.min(freq * 5, 25); // frequent workers get up to -25
-        if (emp.user_id) s -= 10; // onboarded workers preferred
+        if (emp.user_id) s -= 20; // portal-active preferred
+        if (!isProfileIncomplete(emp)) s -= 15; // profile complete preferred
+        if (emp.employer_identification) s -= 5; // has stable identifier
       }
       return s;
     };
@@ -147,6 +149,9 @@ export function EmployeeCombobox({
 
   const selectedEmps = employees.filter(e => selected.includes(e.id));
   const handleToggle = (id: string) => {
+    // Inactive workers cannot be (re)assigned from the selector.
+    const target = employees.find(e => e.id === id);
+    if (target?.is_active === false && !selected.includes(id)) return;
     if (availabilityBlockMode === "hard" && unavailableMap.has(id) && !selected.includes(id)) return;
     onToggle(id);
   };
