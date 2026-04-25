@@ -784,6 +784,12 @@ export default function ImportSchedule() {
             }
             continue;
           }
+          if (isDryRun) {
+            // Dry-run: count what we WOULD do without writing.
+            reconciledAssignments++;
+            if (diagRow) { diagRow.insertAttempt = "no"; diagRow.assignmentResult = "would_insert"; diagRow.reason = "dry-run: assignment not written"; }
+            continue;
+          }
           try {
             const { error } = await supabase.from("shift_assignments").insert({
               company_id: selectedCompanyId,
