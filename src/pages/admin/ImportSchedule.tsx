@@ -90,6 +90,14 @@ interface ImportSummary {
   targetGroupCount: number;
   targetShiftDiagnostics: TargetShiftDiagnostic[];
   assignmentFailures: AssignmentFailure[];
+  /** Fase 4.1 — traceability surface */
+  batchId: string | null;
+  batchStatus: "completed" | "failed" | "in_progress";
+  totalRowsProcessed: number;
+  shiftsCreated: number;
+  shiftsUpdated: number;
+  /** Per-row review records (matched + unmatched + ambiguous) for CSV export */
+  normalizedRows: NormalizedRowInput[];
 }
 
 interface TargetShiftEmployeeDiagnostic {
