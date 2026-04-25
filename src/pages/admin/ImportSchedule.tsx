@@ -455,7 +455,7 @@ export default function ImportSchedule() {
       const importedFiles: string[] = setting?.value ? (Array.isArray(setting.value) ? setting.value as string[] : []) : [];
       const fileNames = files.length > 0 ? files.map(f => f.name) : (file ? [file.name] : []);
       const alreadyImported = fileNames.filter(n => importedFiles.includes(n));
-      if (alreadyImported.length > 0 && !options?.force) {
+      if (alreadyImported.length > 0 && !options?.force && !isDryRun) {
         console.info("[ImportSchedule] Duplicate file detected, prompting for reconciliation:", alreadyImported);
         setDuplicateFileWarning(alreadyImported);
         setImporting(false);
