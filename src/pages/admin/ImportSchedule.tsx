@@ -207,6 +207,22 @@ export default function ImportSchedule() {
   // Step 4: filter for the Blocked assignments panel
   const [blockedFilter, setBlockedFilter] = useState<AssignmentFailureType | "all">("all");
 
+  // ── Phase plan: dry-run + payroll lock detection ──
+  // Dry-run runs full matching/diagnostics + persists trazabilidad (import_batch,
+  // raw_schedule_import_rows, normalized_schedule_rows) but never touches
+  // scheduled_shifts / shift_assignments / availability / company_settings.
+  // Used for auditing closed/published/paid pay periods (Jan–Mar) without
+  // mutating payroll.
+  const [dryRun, setDryRun] = useState(false);
+  type LockedPeriod = {
+    id: string;
+    start_date: string;
+    end_date: string;
+    status: string; // 'closed' | 'published' | 'paid'
+  };
+  const [lockedPeriods, setLockedPeriods] = useState<LockedPeriod[]>([]);
+  const [periodsLoading, setPeriodsLoading] = useState(false);
+
   /** Process a single workbook sheet and return parsed groups + unavailability */
   const parseSheetData = (wb: SafeWorkbook, sheetName: string) => {
     const ws = getSheet(wb, sheetName);
@@ -352,7 +368,51 @@ export default function ImportSchedule() {
     return true;
   });
 
-  const handleImport = async (options?: { force?: boolean }) => {
+  // Effective range for safety checks: prefer manual filter, fall back to file range.
+  const effectiveRangeFrom = filterFrom || dateRange?.from || null;
+  const effectiveRangeTo = filterTo || dateRange?.to || null;
+
+  // Detect pay periods that overlap the import range and are non-mutable.
+  // We BLOCK live writes against closed/published/paid periods unless dry-run.
+  useEffect(() => {
+    if (!selectedCompanyId || !effectiveRangeFrom || !effectiveRangeTo) {
+      setLockedPeriods([]);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      setPeriodsLoading(true);
+      try {
+        // Overlap = period.start <= rangeTo AND period.end >= rangeFrom
+        const { data, error } = await supabase
+          .from("pay_periods")
+          .select("id, start_date, end_date, status")
+          .eq("company_id", selectedCompanyId)
+          .lte("start_date", effectiveRangeTo)
+          .gte("end_date", effectiveRangeFrom)
+          .in("status", ["closed", "published", "paid"]);
+        if (cancelled) return;
+        if (error) {
+          console.warn("[ImportSchedule] pay_periods lock check failed:", error.message);
+          setLockedPeriods([]);
+        } else {
+          const found = (data ?? []) as LockedPeriod[];
+          setLockedPeriods(found);
+          // Auto-suggest dry-run when locked periods are present so the operator
+          // doesn't accidentally try to write to closed/paid payroll.
+          if (found.length > 0) setDryRun(true);
+        }
+      } finally {
+        if (!cancelled) setPeriodsLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [selectedCompanyId, effectiveRangeFrom, effectiveRangeTo]);
+
+  const hasLockedPeriods = lockedPeriods.length > 0;
+
+  const handleImport = async (options?: { force?: boolean; dryRun?: boolean }) => {
+    const isDryRun = options?.dryRun ?? dryRun;
     if (!selectedCompanyId) {
       console.warn("[ImportSchedule] handleImport blocked: no selectedCompanyId");
       toast({ title: "Sin empresa seleccionada", description: "Selecciona una empresa antes de importar.", variant: "destructive" });
@@ -363,9 +423,24 @@ export default function ImportSchedule() {
       toast({ title: "Nada para importar", description: "No hay turnos en el rango seleccionado.", variant: "destructive" });
       return;
     }
+
+    // ── Payroll-lock guard ──
+    // If any pay period that overlaps the import range is closed/published/paid,
+    // we DO NOT allow live writes. The operator must either narrow the range to
+    // open periods, or run the import in audit (dry-run) mode.
+    if (hasLockedPeriods && !isDryRun) {
+      console.warn("[ImportSchedule] handleImport blocked: locked pay periods overlap range", lockedPeriods);
+      toast({
+        title: "Periodos de nómina bloqueados",
+        description: `${lockedPeriods.length} periodo(s) en este rango están cerrados/publicados/pagados. Usa el modo Auditoría (dry-run) o ajusta el rango.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     setImporting(true);
     setResult(null);
-    setImportProgress({ current: 0, total: filteredGroups.length, phase: "Preparando..." });
+    setImportProgress({ current: 0, total: filteredGroups.length, phase: isDryRun ? "Auditoría: preparando…" : "Preparando..." });
 
     // Hoisted so the catch block can mark the batch as failed.
     let batchIdForCatch: string | null = null;
@@ -384,7 +459,7 @@ export default function ImportSchedule() {
       const importedFiles: string[] = setting?.value ? (Array.isArray(setting.value) ? setting.value as string[] : []) : [];
       const fileNames = files.length > 0 ? files.map(f => f.name) : (file ? [file.name] : []);
       const alreadyImported = fileNames.filter(n => importedFiles.includes(n));
-      if (alreadyImported.length > 0 && !options?.force) {
+      if (alreadyImported.length > 0 && !options?.force && !isDryRun) {
         console.info("[ImportSchedule] Duplicate file detected, prompting for reconciliation:", alreadyImported);
         setDuplicateFileWarning(alreadyImported);
         setImporting(false);
@@ -410,6 +485,17 @@ export default function ImportSchedule() {
       batchIdForCatch = batchId;
       if (!batchId) {
         console.warn("[ImportSchedule] No batch_id created — proceeding without traceability persistence");
+      }
+      // Stamp the batch as a dry-run audit so it cannot be confused with a live import.
+      if (batchId && isDryRun) {
+        const lockedSummary = lockedPeriods.map(p => `${p.start_date}→${p.end_date}:${p.status}`).join(", ");
+        await supabase
+          .from("import_batches")
+          .update({
+            status: "dry_run",
+            audit_notes: `Dry-run audit (no writes). Locked periods overlapping range: ${lockedSummary || "none"}.`,
+          })
+          .eq("id", batchId);
       }
 
       // Persist raw rows for every shift group we are about to process.
@@ -680,21 +766,32 @@ export default function ImportSchedule() {
           if (existing) {
             // Already assigned — only promote pending → accepted/rejected if Excel says so
             if (existing.status === "pending" && (r.status === "accepted" || r.status === "rejected")) {
-              const { error: updErr } = await supabase
-                .from("shift_assignments")
-                .update({ status: r.status })
-                .eq("id", existing.id);
-              if (!updErr) {
+              if (isDryRun) {
                 reconciledAssignments++;
-                if (diagRow) { diagRow.insertAttempt = "no"; diagRow.assignmentResult = "updated"; diagRow.reason = `pending → ${r.status}`; }
+                if (diagRow) { diagRow.insertAttempt = "no"; diagRow.assignmentResult = "would_update"; diagRow.reason = `dry-run: pending → ${r.status}`; }
               } else {
-                skippedExistingAssignments++;
-                if (diagRow) { diagRow.insertAttempt = "no"; diagRow.assignmentResult = "update_error"; diagRow.reason = updErr.message; }
+                const { error: updErr } = await supabase
+                  .from("shift_assignments")
+                  .update({ status: r.status })
+                  .eq("id", existing.id);
+                if (!updErr) {
+                  reconciledAssignments++;
+                  if (diagRow) { diagRow.insertAttempt = "no"; diagRow.assignmentResult = "updated"; diagRow.reason = `pending → ${r.status}`; }
+                } else {
+                  skippedExistingAssignments++;
+                  if (diagRow) { diagRow.insertAttempt = "no"; diagRow.assignmentResult = "update_error"; diagRow.reason = updErr.message; }
+                }
               }
             } else {
               skippedExistingAssignments++;
               if (diagRow) { diagRow.insertAttempt = "no"; diagRow.assignmentResult = "skipped_existing"; diagRow.reason = `already ${existing.status}`; }
             }
+            continue;
+          }
+          if (isDryRun) {
+            // Dry-run: count what we WOULD do without writing.
+            reconciledAssignments++;
+            if (diagRow) { diagRow.insertAttempt = "no"; diagRow.assignmentResult = "would_insert"; diagRow.reason = "dry-run: assignment not written"; }
             continue;
           }
           try {
@@ -743,10 +840,12 @@ export default function ImportSchedule() {
         };
         if (batchId) updatePayload.import_batch_id = batchId;
         if (realEmployees.length > existingSlots) updatePayload.slots = realEmployees.length;
-        await supabase
-          .from("scheduled_shifts")
-          .update(updatePayload)
-          .eq("id", existingShiftId);
+        if (!isDryRun) {
+          await supabase
+            .from("scheduled_shifts")
+            .update(updatePayload)
+            .eq("id", existingShiftId);
+        }
 
         // Mapping + normalized rows (one per resolved employee + one per unmatched name)
         if (batchId) {
@@ -876,20 +975,30 @@ export default function ImportSchedule() {
           continue;
         }
 
-        const { data: insertedShifts, error: shiftErr } = await supabase
-          .from("scheduled_shifts")
-          .insert(shiftPayloads)
-          .select("id");
-
-        if (shiftErr || !insertedShifts) {
-          console.error("Batch shift insert error:", shiftErr);
-          continue;
+        // ── Insert (or simulate, in dry-run) the new shifts ──
+        let insertedShifts: { id: string }[] | null = null;
+        if (isDryRun) {
+          // Synthesize placeholder IDs so downstream loops keep working without DB writes.
+          insertedShifts = shiftPayloads.map((_, idx) => ({
+            id: `__dry_${batchStart}_${idx}__`,
+          }));
+        } else {
+          const { data, error: shiftErr } = await supabase
+            .from("scheduled_shifts")
+            .insert(shiftPayloads)
+            .select("id");
+          if (shiftErr || !data) {
+            console.error("Batch shift insert error:", shiftErr);
+            continue;
+          }
+          insertedShifts = data;
         }
 
         totalShifts += insertedShifts.length;
 
         // ── Fase 4: write mapping rows for each newly inserted shift ──
-        if (batchId) {
+        // Skipped in dry-run because we have no real shift IDs to point to.
+        if (batchId && !isDryRun) {
           for (let mi = 0; mi < newBatch.length; mi++) {
             const g = newBatch[mi];
             const sh = insertedShifts[mi];
@@ -972,45 +1081,50 @@ export default function ImportSchedule() {
 
         // Insert assignments in sub-batches to handle overlap errors gracefully
         if (assignmentPayloads.length > 0) {
-          const { data: assignResult, error: assignErr } = await supabase
-            .from("shift_assignments")
-            .insert(assignmentPayloads)
-            .select("id");
+          if (isDryRun) {
+            // Dry-run: count what we WOULD create, but don't write.
+            totalAssignments += assignmentPayloads.length;
+          } else {
+            const { data: assignResult, error: assignErr } = await supabase
+              .from("shift_assignments")
+              .insert(assignmentPayloads)
+              .select("id");
 
-          if (assignErr) {
-            // Batch failed (overlap, not_ready, dup, etc.) — retry one-by-one to capture
-            // the exact failure_type per assignment.
-            for (let pi = 0; pi < assignmentPayloads.length; pi++) {
-              const payload = assignmentPayloads[pi];
-              const meta = assignmentMeta[pi];
-              try {
-                const { error } = await supabase.from("shift_assignments").insert(payload);
-                if (!error) {
-                  totalAssignments++;
-                } else {
+            if (assignErr) {
+              // Batch failed (overlap, not_ready, dup, etc.) — retry one-by-one to capture
+              // the exact failure_type per assignment.
+              for (let pi = 0; pi < assignmentPayloads.length; pi++) {
+                const payload = assignmentPayloads[pi];
+                const meta = assignmentMeta[pi];
+                try {
+                  const { error } = await supabase.from("shift_assignments").insert(payload);
+                  if (!error) {
+                    totalAssignments++;
+                  } else {
+                    assignmentFailures.push(buildFailure({
+                      ...failureCtx(meta.group),
+                      raw_employee_name: meta.rawName,
+                      employee_id: payload.employee_id,
+                      match_method: meta.method,
+                      failure_type: classifySupabaseError(error.message),
+                      error_message: error.message,
+                    }));
+                  }
+                } catch (ex: any) {
+                  const exMsg = ex?.message ?? String(ex);
                   assignmentFailures.push(buildFailure({
                     ...failureCtx(meta.group),
                     raw_employee_name: meta.rawName,
                     employee_id: payload.employee_id,
                     match_method: meta.method,
-                    failure_type: classifySupabaseError(error.message),
-                    error_message: error.message,
+                    failure_type: classifySupabaseError(exMsg),
+                    error_message: exMsg,
                   }));
                 }
-              } catch (ex: any) {
-                const exMsg = ex?.message ?? String(ex);
-                assignmentFailures.push(buildFailure({
-                  ...failureCtx(meta.group),
-                  raw_employee_name: meta.rawName,
-                  employee_id: payload.employee_id,
-                  match_method: meta.method,
-                  failure_type: classifySupabaseError(exMsg),
-                  error_message: exMsg,
-                }));
               }
+            } else {
+              totalAssignments += assignResult?.length ?? 0;
             }
-          } else {
-            totalAssignments += assignResult?.length ?? 0;
           }
         }
 
@@ -1051,14 +1165,18 @@ export default function ImportSchedule() {
       }
 
       if (unavailPayloads.length > 0) {
-        for (let i = 0; i < unavailPayloads.length; i += 50) {
-          const batch = unavailPayloads.slice(i, i + 50);
-          try {
-            const { data } = await supabase.from("employee_availability_overrides")
-              .upsert(batch as any, { onConflict: "employee_id,date" })
-              .select("id");
-            totalUnavailable += data?.length ?? batch.length;
-          } catch { /* skip */ }
+        if (isDryRun) {
+          totalUnavailable = unavailPayloads.length;
+        } else {
+          for (let i = 0; i < unavailPayloads.length; i += 50) {
+            const batch = unavailPayloads.slice(i, i + 50);
+            try {
+              const { data } = await supabase.from("employee_availability_overrides")
+                .upsert(batch as any, { onConflict: "employee_id,date" })
+                .select("id");
+              totalUnavailable += data?.length ?? batch.length;
+            } catch { /* skip */ }
+          }
         }
       }
 
@@ -1116,8 +1234,9 @@ export default function ImportSchedule() {
         : "";
 
       // ── Record this import to prevent duplicate file uploads ──
+      // Skipped in dry-run: an audit must not "consume" the file name.
       const recordedFileNames = files.length > 0 ? files.map(f => f.name) : (file ? [file.name] : []);
-      if (recordedFileNames.length > 0) {
+      if (recordedFileNames.length > 0 && !isDryRun) {
         const { data: existingSetting } = await supabase
           .from("company_settings")
           .select("id, value")
@@ -1139,9 +1258,10 @@ export default function ImportSchedule() {
 
       const totalCreated = totalAssignments + reconciledAssignments;
       const blocked = assignmentFailures.length;
+      const dryPrefix = isDryRun ? "Auditoría (sin escribir): " : "";
       const baseMsg = blocked > 0
-        ? `Importación finalizada con advertencias: ${totalCreated} asignaciones creadas, ${blocked} bloqueadas.`
-        : `Importación completada: ${totalShifts} turnos, ${totalAssignments} asignaciones${createdMsg}${unmatchedMsg}${unavailMsg}${dupMsg}${reconciledMsg}.`;
+        ? `${dryPrefix}${totalCreated} asignaciones ${isDryRun ? "simuladas" : "creadas"}, ${blocked} bloqueadas.`
+        : `${dryPrefix}${totalShifts} turnos${isDryRun ? " simulados" : ""}, ${totalAssignments} asignaciones${isDryRun ? " simuladas" : ""}${createdMsg}${unmatchedMsg}${unavailMsg}${dupMsg}${reconciledMsg}.`;
 
       // ── Fase 4: finalize the import_batch with the final counters ──
       if (batchId) {
@@ -1154,6 +1274,13 @@ export default function ImportSchedule() {
           unmatchedEmployees: Array.from(unmatchedEmployeesSet),
           warnings: assignmentFailures.slice(0, 50),
         });
+        // Restore the dry-run marker after finalize() defaulted status to "completed".
+        if (isDryRun) {
+          await supabase
+            .from("import_batches")
+            .update({ status: "dry_run" })
+            .eq("id", batchId);
+        }
       }
       setSummary(prev => prev ? { ...prev, batchStatus: "completed" } : prev);
 
@@ -1344,10 +1471,10 @@ export default function ImportSchedule() {
             </Card>
           </div>
 
-          {/* Date filter */}
+          {/* Date filter + safety presets */}
           {dateRange && (
             <Card>
-              <CardContent className="p-4">
+              <CardContent className="p-4 space-y-3">
                 <div className="flex flex-wrap items-end gap-4">
                   <div>
                     <Label className="text-xs">Desde</Label>
@@ -1361,6 +1488,95 @@ export default function ImportSchedule() {
                     Archivo: {dateRange.from} → {dateRange.to}
                   </p>
                 </div>
+                {/* Quick range presets — phased reimport plan */}
+                <div className="flex flex-wrap gap-2 items-center">
+                  <span className="text-xs text-muted-foreground">Rangos rápidos:</span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={() => { setFilterFrom("2026-04-22"); setFilterTo("2026-04-28"); }}
+                  >
+                    Semana Apr 22–28
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={() => { setFilterFrom("2026-04-01"); setFilterTo("2026-04-30"); }}
+                  >
+                    Abril completo
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={() => { setFilterFrom(""); setFilterTo(""); }}
+                  >
+                    Limpiar filtro
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Payroll lock safety panel */}
+          {effectiveRangeFrom && effectiveRangeTo && (
+            <Card className={hasLockedPeriods ? "border-amber-500/40 bg-amber-500/5" : "border-emerald-500/30 bg-emerald-500/5"}>
+              <CardContent className="p-4 flex items-start gap-3">
+                {hasLockedPeriods ? (
+                  <Lock className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+                ) : (
+                  <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5" />
+                )}
+                <div className="text-sm space-y-1 flex-1">
+                  {periodsLoading ? (
+                    <p className="text-muted-foreground">Verificando periodos de nómina…</p>
+                  ) : hasLockedPeriods ? (
+                    <>
+                      <p className="font-semibold">Hay periodos de nómina bloqueados en este rango</p>
+                      <ul className="text-xs text-muted-foreground space-y-0.5 list-disc list-inside">
+                        {lockedPeriods.map(p => (
+                          <li key={p.id}>
+                            {p.start_date} → {p.end_date} <Badge variant="outline" className="ml-1 text-[10px]">{p.status}</Badge>
+                          </li>
+                        ))}
+                      </ul>
+                      <p className="text-xs">
+                        No puedes ejecutar un import en vivo sobre periodos cerrados/publicados/pagados.
+                        Usa <strong>Auditoría (sin escribir)</strong> para revisar qué se importaría sin tocar nómina.
+                      </p>
+                    </>
+                  ) : (
+                    <p>Sin periodos cerrados en este rango — el import en vivo es seguro.</p>
+                  )}
+                </div>
+                <label className="flex items-center gap-2 text-xs cursor-pointer shrink-0">
+                  <input
+                    type="checkbox"
+                    checked={dryRun}
+                    onChange={e => setDryRun(e.target.checked)}
+                    className="h-4 w-4"
+                  />
+                  Modo Auditoría (dry-run)
+                </label>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Informational notice for SYSTEM placeholders (System 1 / 2 / 3 …) */}
+          {filteredGroups.some(g => g.employees.some(e => /^system\s/i.test(e))) && (
+            <Card className="border-blue-500/30 bg-blue-500/5">
+              <CardContent className="p-3 flex items-start gap-2 text-xs">
+                <Info className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
+                <p>
+                  Detectados marcadores <strong>System 1/2/3…</strong> en el archivo. Se conservan como
+                  información en la trazabilidad pero <strong>nunca</strong> se crean empleados ficticios
+                  ni asignaciones para ellos.
+                </p>
               </CardContent>
             </Card>
           )}
@@ -1452,14 +1668,30 @@ export default function ImportSchedule() {
           <div className="sticky bottom-0 -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 z-10">
             <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
               <p className="text-xs text-muted-foreground flex-1">
-                Esto creará turnos nuevos y reconciliará asignaciones faltantes en turnos existentes. Operación idempotente: no duplica datos.
+                {dryRun
+                  ? "Modo Auditoría: se ejecuta el matching completo y se guarda la trazabilidad, pero NO se escriben turnos, asignaciones, indisponibilidades ni nómina."
+                  : "Esto creará turnos nuevos y reconciliará asignaciones faltantes en turnos existentes. Operación idempotente: no duplica datos."}
               </p>
-              <div className="flex gap-2 shrink-0">
+              <div className="flex flex-wrap gap-2 shrink-0">
                 <Button variant="outline" size="sm" onClick={() => { setStep(1); setFile(null); setFiles([]); setWorkbook(null); setShiftGroups([]); setResult(null); }}>
                   ← Cambiar archivos
                 </Button>
-                <Button size="sm" onClick={() => void handleImport()} disabled={importing || filteredGroups.length === 0}>
-                  {importing ? "Procesando…" : `Procesar importación (${filteredGroups.length})`}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => void handleImport({ dryRun: true })}
+                  disabled={importing || filteredGroups.length === 0}
+                  title="Ejecuta auditoría completa sin escribir en la base de datos"
+                >
+                  {importing && dryRun ? "Auditando…" : `Auditar (dry-run) (${filteredGroups.length})`}
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => void handleImport({ dryRun: false })}
+                  disabled={importing || filteredGroups.length === 0 || (hasLockedPeriods && !dryRun)}
+                  title={hasLockedPeriods ? "Hay periodos bloqueados — usa el modo Auditoría" : ""}
+                >
+                  {importing && !dryRun ? "Procesando…" : `Procesar importación (${filteredGroups.length})`}
                 </Button>
               </div>
             </div>
