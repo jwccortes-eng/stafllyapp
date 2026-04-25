@@ -6,9 +6,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
-import { Search, AlertTriangle, X, CalendarOff, Car, Zap, UserCheck } from "lucide-react";
+import { Search, AlertTriangle, X, CalendarOff, Car, Zap, UserCheck, ShieldAlert, PauseCircle, Copy } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { isEmployeeAvailable, type AvailabilityConfig, type AvailabilityOverride } from "@/hooks/useEmployeeAvailability";
+import { computeDuplicateHints } from "@/lib/employee-duplicate-hints";
 import type { Employee, Shift, Assignment } from "./types";
 
 interface EmployeeComboboxProps {
