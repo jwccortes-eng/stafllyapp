@@ -1077,6 +1077,13 @@ export default function ImportSchedule() {
         targetGroupCount: targetGroups.length,
         targetShiftDiagnostics: Array.from(targetDiagnostics.values()),
         assignmentFailures,
+        // Fase 4.1
+        batchId,
+        batchStatus: "in_progress",
+        totalRowsProcessed: filteredGroups.length,
+        shiftsCreated: totalShifts,
+        shiftsUpdated: reconciledShifts,
+        normalizedRows: normalizedRowsAcc,
       };
       setSummary(summaryData);
       console.info("[ImportSchedule] Match telemetry:", resolver.telemetry, "ambiguous:", resolver.ambiguous.length);
