@@ -207,6 +207,22 @@ export default function ImportSchedule() {
   // Step 4: filter for the Blocked assignments panel
   const [blockedFilter, setBlockedFilter] = useState<AssignmentFailureType | "all">("all");
 
+  // ── Phase plan: dry-run + payroll lock detection ──
+  // Dry-run runs full matching/diagnostics + persists trazabilidad (import_batch,
+  // raw_schedule_import_rows, normalized_schedule_rows) but never touches
+  // scheduled_shifts / shift_assignments / availability / company_settings.
+  // Used for auditing closed/published/paid pay periods (Jan–Mar) without
+  // mutating payroll.
+  const [dryRun, setDryRun] = useState(false);
+  type LockedPeriod = {
+    id: string;
+    start_date: string;
+    end_date: string;
+    status: string; // 'closed' | 'published' | 'paid'
+  };
+  const [lockedPeriods, setLockedPeriods] = useState<LockedPeriod[]>([]);
+  const [periodsLoading, setPeriodsLoading] = useState(false);
+
   /** Process a single workbook sheet and return parsed groups + unavailability */
   const parseSheetData = (wb: SafeWorkbook, sheetName: string) => {
     const ws = getSheet(wb, sheetName);
