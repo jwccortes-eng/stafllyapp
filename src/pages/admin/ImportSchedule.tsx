@@ -1535,6 +1535,182 @@ export default function ImportSchedule() {
               </Card>
             );
           })()}
+
+          {/* ── Fase 4.1: Premium traceability panel ────────────────────── */}
+          {summary && (() => {
+            const ambiguousCount = summary.ambiguousMatches.length;
+            const unmatchedCount = summary.unmatchedEmployees.length;
+            const matchedCount = summary.matchedEmployees;
+            const needsReview = ambiguousCount + unmatchedCount;
+            const status = summary.batchStatus;
+            const statusBadge =
+              status === "failed"
+                ? { label: "Failed", cls: "bg-destructive/10 text-destructive border-destructive/30" }
+                : status === "in_progress"
+                  ? { label: "In progress", cls: "bg-muted text-muted-foreground border-border" }
+                  : needsReview > 0
+                    ? { label: "Completed · needs review", cls: "bg-warning/10 text-warning border-warning/30" }
+                    : { label: "Completed", cls: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30" };
+
+            const downloadUnmatchedCsv = () => {
+              const reviewRows = summary.normalizedRows.filter(r => /match_status=(unmatched|ambiguous)/.test(r.notes ?? ""));
+              if (reviewRows.length === 0) {
+                toast({ title: "No hay filas para revisar", description: "Todos los empleados quedaron emparejados." });
+                return;
+              }
+              const headers = [
+                "employee_name_raw",
+                "shift_code",
+                "work_date",
+                "start_time",
+                "end_time",
+                "client_name_raw",
+                "match_status",
+                "notes",
+              ];
+              const escape = (v: string) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+              const lines = [headers.join(",")];
+              for (const r of reviewRows) {
+                const status = /match_status=ambiguous/.test(r.notes ?? "") ? "ambiguous" : "unmatched";
+                lines.push([
+                  r.employeeNameRaw,
+                  r.externalShiftId,
+                  r.workDate,
+                  r.startTime,
+                  r.endTime,
+                  r.clientName,
+                  status,
+                  (r.notes ?? "").replace(/\s*\|\s*match_status=\w+/, "").trim(),
+                ].map(escape).join(","));
+              }
+              const blob = new Blob(["\uFEFF" + lines.join("\n")], { type: "text/csv;charset=utf-8;" });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = `unmatched_${summary.batchId ?? "import"}_${new Date().toISOString().slice(0, 10)}.csv`;
+              a.click();
+              URL.revokeObjectURL(url);
+              toast({ title: "CSV descargado", description: `${reviewRows.length} filas para revisión.` });
+            };
+
+            const goToOrphanShifts = () => {
+              const params = new URLSearchParams();
+              if (summary.batchId) params.set("import_batch", summary.batchId);
+              params.set("review", "needs_review");
+              navigate(`/app/shifts?${params.toString()}`);
+            };
+
+            return (
+              <Card className="border-primary/20 bg-gradient-to-br from-background to-muted/30">
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between gap-3 flex-wrap">
+                    <div>
+                      <CardTitle className="text-base">Resumen del import</CardTitle>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Trazabilidad completa del lote. Toda fila importada quedó persistida y es recuperable.
+                      </p>
+                    </div>
+                    <Badge variant="outline" className={`text-[11px] ${statusBadge.cls}`}>
+                      {statusBadge.label}
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Big-number tiles */}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+                    <div className="rounded-lg border bg-background p-3">
+                      <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Filas procesadas</p>
+                      <p className="text-2xl font-bold tabular-nums mt-1">{summary.totalRowsProcessed}</p>
+                    </div>
+                    <div className="rounded-lg border bg-background p-3">
+                      <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Shifts creados</p>
+                      <p className="text-2xl font-bold tabular-nums text-primary mt-1">{summary.shiftsCreated}</p>
+                    </div>
+                    <div className="rounded-lg border bg-background p-3">
+                      <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Shifts actualizados</p>
+                      <p className="text-2xl font-bold tabular-nums mt-1">{summary.shiftsUpdated}</p>
+                    </div>
+                    <div className="rounded-lg border bg-background p-3">
+                      <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Asignaciones</p>
+                      <p className="text-2xl font-bold tabular-nums text-primary mt-1">{summary.totalAssignments + summary.reconciledAssignments}</p>
+                    </div>
+                    <div className="rounded-lg border bg-background p-3">
+                      <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Matched</p>
+                      <p className="text-2xl font-bold tabular-nums text-emerald-600 dark:text-emerald-400 mt-1">{matchedCount}</p>
+                    </div>
+                    <div className="rounded-lg border bg-background p-3">
+                      <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Necesita revisión</p>
+                      <p className={`text-2xl font-bold tabular-nums mt-1 ${needsReview > 0 ? "text-warning" : "text-muted-foreground"}`}>{needsReview}</p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">
+                        {unmatchedCount} unmatched · {ambiguousCount} ambiguous
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Batch identity strip */}
+                  <div className="flex items-center justify-between gap-3 rounded-md border bg-muted/40 px-3 py-2 flex-wrap">
+                    <div className="text-[11px] text-muted-foreground">
+                      Batch ID:{" "}
+                      <code className="font-mono text-foreground break-all">{summary.batchId ?? "—"}</code>
+                    </div>
+                    <div className="text-[11px] text-muted-foreground">
+                      Source: <span className="text-foreground">connecteam_schedule</span>
+                    </div>
+                  </div>
+
+                  {/* Needs review banner */}
+                  {needsReview > 0 && (
+                    <div className="flex items-start gap-3 rounded-lg border border-warning/30 bg-warning/5 p-3">
+                      <AlertTriangle className="h-5 w-5 text-warning shrink-0 mt-0.5" />
+                      <div className="flex-1 text-sm">
+                        <p className="font-medium text-warning">Hay {needsReview} trabajadores que requieren revisión manual</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Estos nombres venían en el archivo pero <strong>no</strong> fueron asignados automáticamente
+                          (no hubo match seguro o el nombre era ambiguo). Los turnos sí se crearon — falta asignar al worker correcto.
+                          Descarga el CSV para revisarlos o ve directamente a los turnos.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Action row */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Button
+                      variant={needsReview > 0 ? "default" : "outline"}
+                      size="sm"
+                      onClick={downloadUnmatchedCsv}
+                      disabled={needsReview === 0}
+                    >
+                      <Download className="h-4 w-4 mr-1.5" />
+                      Download unmatched.csv
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={goToOrphanShifts}>
+                      Go to orphan shifts
+                      <ArrowRight className="h-4 w-4 ml-1.5" />
+                    </Button>
+                    {summary.batchId && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          navigator.clipboard.writeText(summary.batchId!);
+                          toast({ title: "Batch ID copiado" });
+                        }}
+                      >
+                        Copiar batch ID
+                      </Button>
+                    )}
+                  </div>
+
+                  <p className="text-[10px] text-muted-foreground">
+                    Toda fila del archivo se guardó en raw + normalized rows con su <code>batch_id</code>. Si necesitas
+                    re-procesar, el lote es reversible y trazable por <code>reconciliation_hash</code>.
+                  </p>
+                </CardContent>
+              </Card>
+            );
+          })()}
+
           {summary && (
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               <Card className="p-4 text-center">
