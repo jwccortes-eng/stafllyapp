@@ -419,9 +419,24 @@ export default function ImportSchedule() {
       toast({ title: "Nada para importar", description: "No hay turnos en el rango seleccionado.", variant: "destructive" });
       return;
     }
+
+    // ── Payroll-lock guard ──
+    // If any pay period that overlaps the import range is closed/published/paid,
+    // we DO NOT allow live writes. The operator must either narrow the range to
+    // open periods, or run the import in audit (dry-run) mode.
+    if (hasLockedPeriods && !isDryRun) {
+      console.warn("[ImportSchedule] handleImport blocked: locked pay periods overlap range", lockedPeriods);
+      toast({
+        title: "Periodos de nómina bloqueados",
+        description: `${lockedPeriods.length} periodo(s) en este rango están cerrados/publicados/pagados. Usa el modo Auditoría (dry-run) o ajusta el rango.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     setImporting(true);
     setResult(null);
-    setImportProgress({ current: 0, total: filteredGroups.length, phase: "Preparando..." });
+    setImportProgress({ current: 0, total: filteredGroups.length, phase: isDryRun ? "Auditoría: preparando…" : "Preparando..." });
 
     // Hoisted so the catch block can mark the batch as failed.
     let batchIdForCatch: string | null = null;
