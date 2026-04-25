@@ -1230,8 +1230,9 @@ export default function ImportSchedule() {
         : "";
 
       // ── Record this import to prevent duplicate file uploads ──
+      // Skipped in dry-run: an audit must not "consume" the file name.
       const recordedFileNames = files.length > 0 ? files.map(f => f.name) : (file ? [file.name] : []);
-      if (recordedFileNames.length > 0) {
+      if (recordedFileNames.length > 0 && !isDryRun) {
         const { data: existingSetting } = await supabase
           .from("company_settings")
           .select("id, value")
