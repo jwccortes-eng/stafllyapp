@@ -762,16 +762,21 @@ export default function ImportSchedule() {
           if (existing) {
             // Already assigned — only promote pending → accepted/rejected if Excel says so
             if (existing.status === "pending" && (r.status === "accepted" || r.status === "rejected")) {
-              const { error: updErr } = await supabase
-                .from("shift_assignments")
-                .update({ status: r.status })
-                .eq("id", existing.id);
-              if (!updErr) {
+              if (isDryRun) {
                 reconciledAssignments++;
-                if (diagRow) { diagRow.insertAttempt = "no"; diagRow.assignmentResult = "updated"; diagRow.reason = `pending → ${r.status}`; }
+                if (diagRow) { diagRow.insertAttempt = "no"; diagRow.assignmentResult = "would_update"; diagRow.reason = `dry-run: pending → ${r.status}`; }
               } else {
-                skippedExistingAssignments++;
-                if (diagRow) { diagRow.insertAttempt = "no"; diagRow.assignmentResult = "update_error"; diagRow.reason = updErr.message; }
+                const { error: updErr } = await supabase
+                  .from("shift_assignments")
+                  .update({ status: r.status })
+                  .eq("id", existing.id);
+                if (!updErr) {
+                  reconciledAssignments++;
+                  if (diagRow) { diagRow.insertAttempt = "no"; diagRow.assignmentResult = "updated"; diagRow.reason = `pending → ${r.status}`; }
+                } else {
+                  skippedExistingAssignments++;
+                  if (diagRow) { diagRow.insertAttempt = "no"; diagRow.assignmentResult = "update_error"; diagRow.reason = updErr.message; }
+                }
               }
             } else {
               skippedExistingAssignments++;
