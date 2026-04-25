@@ -971,20 +971,30 @@ export default function ImportSchedule() {
           continue;
         }
 
-        const { data: insertedShifts, error: shiftErr } = await supabase
-          .from("scheduled_shifts")
-          .insert(shiftPayloads)
-          .select("id");
-
-        if (shiftErr || !insertedShifts) {
-          console.error("Batch shift insert error:", shiftErr);
-          continue;
+        // ── Insert (or simulate, in dry-run) the new shifts ──
+        let insertedShifts: { id: string }[] | null = null;
+        if (isDryRun) {
+          // Synthesize placeholder IDs so downstream loops keep working without DB writes.
+          insertedShifts = shiftPayloads.map((_, idx) => ({
+            id: `__dry_${batchStart}_${idx}__`,
+          }));
+        } else {
+          const { data, error: shiftErr } = await supabase
+            .from("scheduled_shifts")
+            .insert(shiftPayloads)
+            .select("id");
+          if (shiftErr || !data) {
+            console.error("Batch shift insert error:", shiftErr);
+            continue;
+          }
+          insertedShifts = data;
         }
 
         totalShifts += insertedShifts.length;
 
         // ── Fase 4: write mapping rows for each newly inserted shift ──
-        if (batchId) {
+        // Skipped in dry-run because we have no real shift IDs to point to.
+        if (batchId && !isDryRun) {
           for (let mi = 0; mi < newBatch.length; mi++) {
             const g = newBatch[mi];
             const sh = insertedShifts[mi];
