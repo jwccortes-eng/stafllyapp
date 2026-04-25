@@ -407,7 +407,8 @@ export default function ImportSchedule() {
 
   const hasLockedPeriods = lockedPeriods.length > 0;
 
-  const handleImport = async (options?: { force?: boolean }) => {
+  const handleImport = async (options?: { force?: boolean; dryRun?: boolean }) => {
+    const isDryRun = options?.dryRun ?? dryRun;
     if (!selectedCompanyId) {
       console.warn("[ImportSchedule] handleImport blocked: no selectedCompanyId");
       toast({ title: "Sin empresa seleccionada", description: "Selecciona una empresa antes de importar.", variant: "destructive" });
