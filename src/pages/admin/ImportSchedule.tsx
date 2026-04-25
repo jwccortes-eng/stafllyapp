@@ -1153,6 +1153,7 @@ export default function ImportSchedule() {
           warnings: assignmentFailures.slice(0, 50),
         });
       }
+      setSummary(prev => prev ? { ...prev, batchStatus: "completed" } : prev);
 
       setResult({
         success: blocked === 0,
