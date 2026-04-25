@@ -3827,6 +3827,7 @@ export type Database = {
           languages: string[] | null
           last_login: string | null
           last_name: string
+          merged_into_employee_id: string | null
           must_change_pin: boolean
           onboarding_completed_at: string | null
           onboarding_status: string | null
@@ -3891,6 +3892,7 @@ export type Database = {
           languages?: string[] | null
           last_login?: string | null
           last_name: string
+          merged_into_employee_id?: string | null
           must_change_pin?: boolean
           onboarding_completed_at?: string | null
           onboarding_status?: string | null
@@ -3955,6 +3957,7 @@ export type Database = {
           languages?: string[] | null
           last_login?: string | null
           last_name?: string
+          merged_into_employee_id?: string | null
           must_change_pin?: boolean
           onboarding_completed_at?: string | null
           onboarding_status?: string | null
@@ -3988,6 +3991,20 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employees_merged_into_employee_id_fkey"
+            columns: ["merged_into_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employees_merged_into_employee_id_fkey"
+            columns: ["merged_into_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
             referencedColumns: ["id"]
           },
         ]
@@ -14686,11 +14703,23 @@ export type Database = {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
       }
+      employee_has_locked_payroll: {
+        Args: { _employee_id: string }
+        Returns: boolean
+      }
       enqueue_email: {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
       expire_old_invitations: { Args: never; Returns: number }
+      find_employee_duplicate_groups: {
+        Args: { _company_id: string }
+        Returns: {
+          employee_ids: string[]
+          group_key: string
+          match_type: string
+        }[]
+      }
       generate_shift_link_token: { Args: never; Returns: string }
       generate_shift_review_requests: {
         Args: { _shift_id: string }
@@ -14810,6 +14839,15 @@ export type Database = {
         Args: { _fields: string[]; _record_id: string; _table_name: string }
         Returns: undefined
       }
+      merge_employees: {
+        Args: {
+          _confirm_master_name: string
+          _duplicate_ids: string[]
+          _master_id: string
+          _reason?: string
+        }
+        Returns: Json
+      }
       move_to_dlq: {
         Args: {
           dlq_name: string
@@ -14847,6 +14885,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      unaccent_safe: { Args: { _input: string }; Returns: string }
       update_invitation_status_by_token: {
         Args: { _new_status: string; _token: string }
         Returns: boolean

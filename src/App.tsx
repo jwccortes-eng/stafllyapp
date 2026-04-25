@@ -50,6 +50,7 @@ const UsersPage = lazy(() => import("./pages/admin/Users"));
 const CompaniesPage = lazy(() => import("./pages/admin/Companies"));
 const OwnerDashboard = lazy(() => import("./pages/admin/OwnerDashboard"));
 const InviteEmployees = lazy(() => import("./pages/admin/InviteEmployees"));
+const EmployeeMerge = lazy(() => import("./pages/admin/EmployeeMerge"));
 const Directory = lazy(() => import("./pages/admin/Directory"));
 const Clients = lazy(() => import("./pages/admin/Clients"));
 const Locations = lazy(() => import("./pages/admin/Locations"));
@@ -226,6 +227,7 @@ function App() {
               <Route path="/app" element={<AdminLayout />}>
                 <Route index element={<AdminDashboard />} />
                 <Route path="employees" element={<CompanyRequiredGuard><Employees /></CompanyRequiredGuard>} />
+                <Route path="employees/merge" element={<CompanyRequiredGuard><EmployeeMerge /></CompanyRequiredGuard>} />
                 <Route path="workforce" element={<CompanyRequiredGuard><Workforce /></CompanyRequiredGuard>} />
                 <Route path="employees/:id/onboarding" element={<CompanyRequiredGuard><EmployeeOnboarding /></CompanyRequiredGuard>} />
                 {/* Unified Person Profile — canonical People OS route + retro-compat alias */}
