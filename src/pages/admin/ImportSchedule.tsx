@@ -1077,45 +1077,50 @@ export default function ImportSchedule() {
 
         // Insert assignments in sub-batches to handle overlap errors gracefully
         if (assignmentPayloads.length > 0) {
-          const { data: assignResult, error: assignErr } = await supabase
-            .from("shift_assignments")
-            .insert(assignmentPayloads)
-            .select("id");
+          if (isDryRun) {
+            // Dry-run: count what we WOULD create, but don't write.
+            totalAssignments += assignmentPayloads.length;
+          } else {
+            const { data: assignResult, error: assignErr } = await supabase
+              .from("shift_assignments")
+              .insert(assignmentPayloads)
+              .select("id");
 
-          if (assignErr) {
-            // Batch failed (overlap, not_ready, dup, etc.) — retry one-by-one to capture
-            // the exact failure_type per assignment.
-            for (let pi = 0; pi < assignmentPayloads.length; pi++) {
-              const payload = assignmentPayloads[pi];
-              const meta = assignmentMeta[pi];
-              try {
-                const { error } = await supabase.from("shift_assignments").insert(payload);
-                if (!error) {
-                  totalAssignments++;
-                } else {
+            if (assignErr) {
+              // Batch failed (overlap, not_ready, dup, etc.) — retry one-by-one to capture
+              // the exact failure_type per assignment.
+              for (let pi = 0; pi < assignmentPayloads.length; pi++) {
+                const payload = assignmentPayloads[pi];
+                const meta = assignmentMeta[pi];
+                try {
+                  const { error } = await supabase.from("shift_assignments").insert(payload);
+                  if (!error) {
+                    totalAssignments++;
+                  } else {
+                    assignmentFailures.push(buildFailure({
+                      ...failureCtx(meta.group),
+                      raw_employee_name: meta.rawName,
+                      employee_id: payload.employee_id,
+                      match_method: meta.method,
+                      failure_type: classifySupabaseError(error.message),
+                      error_message: error.message,
+                    }));
+                  }
+                } catch (ex: any) {
+                  const exMsg = ex?.message ?? String(ex);
                   assignmentFailures.push(buildFailure({
                     ...failureCtx(meta.group),
                     raw_employee_name: meta.rawName,
                     employee_id: payload.employee_id,
                     match_method: meta.method,
-                    failure_type: classifySupabaseError(error.message),
-                    error_message: error.message,
+                    failure_type: classifySupabaseError(exMsg),
+                    error_message: exMsg,
                   }));
                 }
-              } catch (ex: any) {
-                const exMsg = ex?.message ?? String(ex);
-                assignmentFailures.push(buildFailure({
-                  ...failureCtx(meta.group),
-                  raw_employee_name: meta.rawName,
-                  employee_id: payload.employee_id,
-                  match_method: meta.method,
-                  failure_type: classifySupabaseError(exMsg),
-                  error_message: exMsg,
-                }));
               }
+            } else {
+              totalAssignments += assignResult?.length ?? 0;
             }
-          } else {
-            totalAssignments += assignResult?.length ?? 0;
           }
         }
 
