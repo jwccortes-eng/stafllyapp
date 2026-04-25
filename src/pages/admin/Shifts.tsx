@@ -910,16 +910,69 @@ export default function Shifts() {
       company_id: selectedCompanyId,
       shift_id: shiftId,
       employee_id: eid,
+      // Always start as "pending" — the relaxed readiness trigger allows
+      // pending state for workers whose profile is still incomplete.
+      // Confirmation/clock-in will re-check readiness later.
       status: "pending",
       role_slot_id: slotByEmployee?.[eid] ?? null,
     }));
     const { error } = await supabase.from("shift_assignments").insert(assigns as any);
-    if (error) { toast.error(error.message); return; }
+    if (error) {
+      // Map raw DB errors to operator-friendly messages.
+      const msg = (error.message ?? "").toString();
+      let humanMsg = "No se pudo asignar al trabajador. Inténtalo de nuevo.";
+      if (msg.includes("EMPLOYEE_INACTIVE")) {
+        humanMsg = "Este trabajador está archivado/inactivo. Reactívalo antes de asignarlo.";
+      } else if (msg.includes("EMPLOYEE_WRONG_COMPANY")) {
+        humanMsg = "Este trabajador no pertenece a esta compañía. No se puede asignar.";
+      } else if (msg.includes("EMPLOYEE_NOT_FOUND")) {
+        humanMsg = "El trabajador ya no existe en la base de datos.";
+      } else if (msg.includes("EMPLOYEE_NOT_READY")) {
+        // Should not happen for status='pending' anymore, but kept as safety net.
+        humanMsg = "El perfil del trabajador está incompleto y aún no puede confirmar este turno.";
+      } else if (msg.toLowerCase().includes("duplicate") || msg.includes("23505")) {
+        humanMsg = "Este trabajador ya está asignado a este turno.";
+      } else if (msg.toLowerCase().includes("overlap") || msg.includes("23P01")) {
+        humanMsg = "Este trabajador tiene otro turno que se solapa con este horario.";
+      }
+      toast.error(humanMsg);
+      return;
+    }
 
     const shift = shifts.find(s => s.id === shiftId);
     await logShiftActivity("asignar_empleados", shiftId, null, { employee_ids: employeeIds }, {
       count: employeeIds.length,
     });
+
+    // Audit any assignment created for a worker with an incomplete profile,
+    // so the operator's bypass is traceable. Best-effort — never blocks the flow.
+    try {
+      const incompleteWorkers = employees.filter(
+        e => employeeIds.includes(e.id) &&
+          e.profile_status &&
+          e.profile_status !== "ready" &&
+          e.profile_status !== "active",
+      );
+      if (incompleteWorkers.length > 0) {
+        await supabase.from("activity_log").insert(
+          incompleteWorkers.map(w => ({
+            user_id: user?.id ?? null,
+            company_id: selectedCompanyId,
+            action: "assignment_created_with_incomplete_profile",
+            entity_type: "shift_assignment",
+            entity_id: shiftId,
+            details: {
+              shift_id: shiftId,
+              employee_id: w.id,
+              employee_name: `${w.first_name ?? ""} ${w.last_name ?? ""}`.trim(),
+              profile_status: w.profile_status,
+              onboarding_status: w.onboarding_status ?? null,
+              has_portal: !!w.user_id,
+            },
+          })) as any,
+        );
+      }
+    } catch { /* swallow audit errors — never block assignment */ }
 
     // Notify newly assigned employees
     if (shift) {
