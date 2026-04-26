@@ -273,6 +273,10 @@ function CompanyCommandCenter({
   switchCompany: (id: string | null) => void;
 }) {
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const cancelledRef = useRef(false);
   const [data, setData] = useState({
     employeesTotal: 0,
     employeesActive: 0,
@@ -294,10 +298,10 @@ function CompanyCommandCenter({
     hasShifts: false,
   });
 
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      setLoading(true);
+  const load = useCallback(async (mode: "initial" | "refresh") => {
+    if (mode === "initial") setLoading(true);
+    else setRefreshing(true);
+    try {
       const today = todayStr();
       const in7 = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
 
@@ -377,7 +381,7 @@ function CompanyCommandCenter({
         .eq("company_id", companyId)
         .in("status", ["sent", "delivered", "queued"]);
 
-      if (cancelled) return;
+      if (cancelledRef.current) return;
       setData({
         employeesTotal: safeCount(empTotal),
         employeesActive: safeCount(empActive),
@@ -398,14 +402,27 @@ function CompanyCommandCenter({
         activeLocations: safeCount(locations),
         hasShifts: safeCount(anyShift) > 0,
       });
-      setLoading(false);
-    }
-    load().catch((e) => {
+      setLastUpdatedAt(new Date());
+      setLoadError(null);
+    } catch (e: any) {
       console.warn("[CommandCenter] load failed:", e);
-      setLoading(false);
-    });
-    return () => { cancelled = true; };
+      // Keep previous data on failure — only surface a discreet warning.
+      if (!cancelledRef.current) {
+        setLoadError(e?.message ?? "No se pudieron actualizar los datos");
+      }
+    } finally {
+      if (!cancelledRef.current) {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    }
   }, [companyId]);
+
+  useEffect(() => {
+    cancelledRef.current = false;
+    void load("initial");
+    return () => { cancelledRef.current = true; };
+  }, [load]);
 
   // ── Build pulses ────────────────────────────────────────────────────────
   const activationPct = pctOf(data.employeesActive, data.employeesTotal);
