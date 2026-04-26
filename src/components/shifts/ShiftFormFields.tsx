@@ -705,32 +705,77 @@ export function ShiftFormFields({
 
       {/* ── 5. PAGO ── */}
       <SectionCard icon={CreditCard} title="Pago" step={5}>
-        <Select
-          value={v.payType}
-          onValueChange={(val) => {
-            const newPayType = val as "hourly" | "daily";
-            const currentDefault = defaultAttendanceModeForPayType(v.payType);
-            const patch: any = { payType: newPayType };
-            if (v.attendanceMode === currentDefault) {
-              patch.attendanceMode = defaultAttendanceModeForPayType(newPayType);
-            }
-            onChange(patch);
-          }}
-        >
-          <SelectTrigger className="h-9 text-sm">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="hourly">⏱ Por hora (reloj)</SelectItem>
-            <SelectItem value="daily">📅 Por día (tarifa fija)</SelectItem>
-          </SelectContent>
-        </Select>
-        {v.payType === "daily" && (
-          <div className="space-y-2">
-            <p className="text-[10px] text-muted-foreground">Tarifa diaria automática al consolidar.</p>
+        {/* Toggle override + sugerencia del cliente/location */}
+        {(() => {
+          const selectedLoc = v.locationId ? locations.find((l) => l.id === v.locationId) : null;
+          const clientSuggestion = selectedLoc?.default_pay_type as "hourly" | "daily" | undefined;
+          const suggestionLabel = clientSuggestion === "daily" ? "📅 Por día" : clientSuggestion === "hourly" ? "⏱ Por hora" : null;
+
+          return (
+            <div className="rounded-lg border border-border bg-card p-2.5 space-y-2">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <CreditCard className="h-3.5 w-3.5 text-foreground" />
+                    <span className="text-[12px] font-semibold text-foreground">Override de pago para este turno</span>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">
+                    {v.payOverride
+                      ? "Override activo — los valores definidos abajo aplican solo a este turno."
+                      : "Este turno usa la regla base del perfil del empleado."}
+                  </p>
+                </div>
+                <Switch
+                  checked={v.payOverride}
+                  onCheckedChange={(checked) => onChange({ payOverride: !!checked })}
+                  aria-label="Activar override de pago para este turno"
+                />
+              </div>
+              {suggestionLabel && !v.payOverride && (
+                <div className="flex items-center gap-1.5 pt-1 border-t border-border/60">
+                  <span className="text-[10px] text-muted-foreground">Sugerencia del cliente:</span>
+                  <Badge variant="outline" className="text-[10px] h-5 px-1.5">{suggestionLabel}</Badge>
+                  <span className="text-[10px] text-muted-foreground/60">(no se aplica automáticamente)</span>
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* Campos de pago — visibles siempre, pero deshabilitados cuando override OFF */}
+        <div className={cn("space-y-2 transition-opacity", !v.payOverride && "opacity-60")}>
+          <div>
+            <Label className="text-[11px] text-muted-foreground font-medium">Tipo de pago</Label>
+            <Select
+              value={v.payType}
+              disabled={!v.payOverride}
+              onValueChange={(val) => {
+                const newPayType = val as "hourly" | "daily";
+                const currentDefault = defaultAttendanceModeForPayType(v.payType);
+                const patch: any = { payType: newPayType };
+                if (v.attendanceMode === currentDefault) {
+                  patch.attendanceMode = defaultAttendanceModeForPayType(newPayType);
+                }
+                onChange(patch);
+              }}
+            >
+              <SelectTrigger className="h-9 text-sm mt-1">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="hourly">⏱ Por hora (reloj)</SelectItem>
+                <SelectItem value="daily">📅 Por día (tarifa fija)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          {v.payType === "daily" && (
             <div>
               <Label className="text-[11px] text-muted-foreground font-medium">Jornada</Label>
-              <Select value={v.dayType} onValueChange={(val) => onChange({ dayType: val as "full_day" | "half_day" })}>
+              <Select
+                value={v.dayType}
+                disabled={!v.payOverride}
+                onValueChange={(val) => onChange({ dayType: val as "full_day" | "half_day" })}
+              >
                 <SelectTrigger className="h-9 text-sm mt-1">
                   <SelectValue />
                 </SelectTrigger>
@@ -739,12 +784,15 @@ export function ShiftFormFields({
                   <SelectItem value="half_day">🌤️ Medio día</SelectItem>
                 </SelectContent>
               </Select>
-              <p className="text-[10px] text-muted-foreground/60 mt-0.5">
-                Editable después de la creación, incluso después del turno.
-              </p>
+              {v.payOverride && (
+                <p className="text-[10px] text-muted-foreground/60 mt-0.5">
+                  Editable después de la creación, incluso después del turno.
+                </p>
+              )}
             </div>
-          </div>
-        )}
+          )}
+        </div>
+
         {/* Hint de jerarquía de pago — 3 viñetas explícitas */}
         <div className="rounded-lg bg-primary/5 border border-primary/15 p-2.5 space-y-1.5">
           <div className="flex items-center gap-1.5">
