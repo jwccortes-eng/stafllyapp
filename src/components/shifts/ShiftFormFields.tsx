@@ -1086,6 +1086,12 @@ export function shiftToFormState(shift: Shift): ShiftFormState {
     specialInstructions: s.special_instructions ?? "",
     payType: (s.pay_type as "hourly" | "daily") ?? "hourly",
     dayType: (s.day_type as "full_day" | "half_day") ?? "full_day",
+    // Phase 2 #1: EDIT initializes toggle ON if shift was previously persisted with pay_type
+    // (legacy behavior: every existing shift had pay_type, so toggle defaults to ON to preserve current behavior).
+    // The new pay_override column is read first; falls back to "any pay_type present" for legacy rows.
+    payOverride: s.pay_override === true || s.pay_override === false
+      ? !!s.pay_override
+      : s.pay_type !== undefined && s.pay_type !== null,
     shiftAdminId: s.shift_admin_id ?? "",
     clockMethod: (s.clock_method as "mobile" | "kiosk" | "both") ?? "both",
     attendanceMode:
