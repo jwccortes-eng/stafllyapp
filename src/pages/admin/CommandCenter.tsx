@@ -323,14 +323,14 @@ function CompanyCommandCenter({
           .eq("company_id", companyId).eq("status", "pending"),
         supabase.from("time_entries").select("id", { count: "exact", head: true })
           .eq("company_id", companyId).gte("clock_in_time", `${today}T00:00:00`),
-        supabase.from("worker_duplicate_candidates").select("id", { count: "exact", head: true })
-          .eq("company_id", companyId).eq("status", "pending"),
+        // worker_duplicate_candidates table not present in this project — return 0
+        Promise.resolve({ count: 0 } as any),
         supabase.from("employee_invitations").select("id", { count: "exact", head: true })
           .eq("company_id", companyId).eq("status", "failed"),
         supabase.from("pay_periods").select("id", { count: "exact", head: true })
           .eq("company_id", companyId).eq("status", "open"),
         supabase.from("service_requests").select("id", { count: "exact", head: true })
-          .eq("company_id", companyId).in("status", ["new", "open", "pending"]),
+          .eq("company_id", companyId).in("status", ["new", "reviewing", "approved_for_scheduling"]),
         supabase.from("clients").select("id", { count: "exact", head: true })
           .eq("company_id", companyId).eq("is_active", true),
         supabase.from("locations").select("id", { count: "exact", head: true })
