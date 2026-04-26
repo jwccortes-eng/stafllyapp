@@ -528,6 +528,7 @@ export default function Shifts() {
       created_by: user?.id,
       pay_type: payType,
       day_type: payType === "daily" ? dayType : "full_day",
+      pay_override: payOverride, // Phase 2 #1: capture explicit override intent
       shift_admin_id: shiftAdminId || null,
       transportation_required: transportRequired,
       car_capacity: parseInt(carCapacity) || 4,
