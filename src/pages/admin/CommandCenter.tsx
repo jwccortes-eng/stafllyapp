@@ -596,11 +596,25 @@ function CompanyCommandCenter({
         <div className="absolute -right-16 -top-16 h-48 w-48 rounded-full bg-primary/5 blur-3xl" />
         <div className="relative flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="space-y-2">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
               <Radio className="h-3.5 w-3.5" />
               <span>Command Center</span>
               <span>·</span>
               <span>{format(new Date(), "EEE d MMM · HH:mm")}</span>
+              {lastUpdatedAt && (
+                <>
+                  <span>·</span>
+                  <span>Last updated: {format(lastUpdatedAt, "HH:mm")}</span>
+                </>
+              )}
+              {refreshing && (
+                <>
+                  <span>·</span>
+                  <span className="inline-flex items-center gap-1 text-primary">
+                    <RefreshCw className="h-3 w-3 animate-spin" /> Actualizando…
+                  </span>
+                </>
+              )}
             </div>
             <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
               {greeting}, {displayName}
@@ -620,21 +634,39 @@ function CompanyCommandCenter({
                 </>
               )}
             </div>
-          </div>
-          <div
-            className={cn(
-              "flex items-center gap-2 rounded-lg border px-3 py-2 text-sm",
-              allGood
-                ? "border-emerald-500/30 bg-emerald-500/5 text-emerald-700 dark:text-emerald-400"
-                : "border-amber-500/30 bg-amber-500/5 text-amber-700 dark:text-amber-400",
+            {loadError && (
+              <div className="mt-2 inline-flex items-center gap-2 rounded-md border border-amber-500/30 bg-amber-500/5 px-2 py-1 text-xs text-amber-700 dark:text-amber-400">
+                <AlertTriangle className="h-3 w-3" />
+                <span>No se pudo actualizar. Mostrando últimos datos disponibles.</span>
+              </div>
             )}
-          >
-            {allGood ? <Sparkles className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
-            <span className="font-medium">
-              {allGood
-                ? "Tu operación está bajo control"
-                : `${issuesCount} ${issuesCount === 1 ? "área requiere" : "áreas requieren"} atención`}
-            </span>
+          </div>
+          <div className="flex flex-col items-stretch gap-2 md:items-end">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void load("refresh")}
+              disabled={loading || refreshing}
+              className="gap-2"
+            >
+              <RefreshCw className={cn("h-3.5 w-3.5", refreshing && "animate-spin")} />
+              Refresh
+            </Button>
+            <div
+              className={cn(
+                "flex items-center gap-2 rounded-lg border px-3 py-2 text-sm",
+                allGood
+                  ? "border-emerald-500/30 bg-emerald-500/5 text-emerald-700 dark:text-emerald-400"
+                  : "border-amber-500/30 bg-amber-500/5 text-amber-700 dark:text-amber-400",
+              )}
+            >
+              {allGood ? <Sparkles className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
+              <span className="font-medium">
+                {allGood
+                  ? "Tu operación está bajo control"
+                  : `${issuesCount} ${issuesCount === 1 ? "área requiere" : "áreas requieren"} atención`}
+              </span>
+            </div>
           </div>
         </div>
       </div>
