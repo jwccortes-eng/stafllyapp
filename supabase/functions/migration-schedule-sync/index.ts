@@ -209,7 +209,7 @@ async function processScheduleRaw(
     .select("id, reconciliation_hash")
     .eq("company_id", companyId)
     .not("reconciliation_hash", "is", null);
-  const existingHashes = new Set((existingShifts ?? []).map(s => s.reconciliation_hash));
+  const existingHashes = new Set((existingShifts ?? []).map((s: any) => s.reconciliation_hash));
 
   // Group rows into shifts (skip availability rows without Shift title)
   type ShiftGroup = {
