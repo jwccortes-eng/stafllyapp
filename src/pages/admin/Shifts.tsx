@@ -212,6 +212,8 @@ export default function Shifts() {
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [payType, setPayType] = useState<"hourly" | "daily">("hourly");
   const [dayType, setDayType] = useState<"full_day" | "half_day">("full_day");
+  // Phase 2 #1: explicit per-shift pay override toggle. CREATE defaults to OFF.
+  const [payOverride, setPayOverride] = useState<boolean>(false);
   const [shiftAdminId, setShiftAdminId] = useState("");
   const [transportRequired, setTransportRequired] = useState(false);
   const [carCapacity, setCarCapacity] = useState("4");
@@ -386,7 +388,7 @@ export default function Shifts() {
     setClientId(""); setLocationId(""); setNotes("");
     setClaimable(shiftsConfig.allow_claims ? false : false); setSelectedEmployees([]);
     setMeetingPoint(""); setSpecialInstructions(""); setPayType("hourly");
-    setDayType("full_day"); setShiftAdminId("");
+    setDayType("full_day"); setPayOverride(false); setShiftAdminId("");
     setTransportRequired(false); setCarCapacity("4"); setTransportNotes(""); setDriverEmployeeId("");
     setClockMethod("both");
     setAttendanceMode("clock"); setMeetingTime("");
@@ -452,7 +454,7 @@ export default function Shifts() {
       const loc = locations.find(l => l.id === id) as any;
       if (loc) {
         if (loc.address) setMeetingPoint(loc.address);
-        if (loc.default_pay_type) setPayType(loc.default_pay_type as "hourly" | "daily");
+        // Phase 2 #1: client/location no longer auto-fills payType. Shown as suggestion only in Pago section.
         if (loc.default_clock_method) {
           setClockMethod(loc.default_clock_method as "mobile" | "kiosk" | "both");
         }
@@ -526,6 +528,7 @@ export default function Shifts() {
       created_by: user?.id,
       pay_type: payType,
       day_type: payType === "daily" ? dayType : "full_day",
+      pay_override: payOverride, // Phase 2 #1: capture explicit override intent
       shift_admin_id: shiftAdminId || null,
       transportation_required: transportRequired,
       car_capacity: parseInt(carCapacity) || 4,
@@ -1508,7 +1511,7 @@ export default function Shifts() {
                 title, date, startTime, endTime, slots,
                 clientId, locationId, notes, claimable,
                 meetingPoint, specialInstructions,
-                payType, dayType, shiftAdminId, clockMethod,
+                payType, dayType, payOverride, shiftAdminId, clockMethod,
                 attendanceMode, meetingTime,
                 transportRequired, carCapacity, transportNotes, driverEmployeeId,
                 selectedEmployees,
@@ -1528,6 +1531,7 @@ export default function Shifts() {
                 if (patch.specialInstructions !== undefined) setSpecialInstructions(patch.specialInstructions);
                 if (patch.payType !== undefined) setPayType(patch.payType);
                 if (patch.dayType !== undefined) setDayType(patch.dayType);
+                if (patch.payOverride !== undefined) setPayOverride(patch.payOverride);
                 if (patch.shiftAdminId !== undefined) setShiftAdminId(patch.shiftAdminId);
                 if (patch.clockMethod !== undefined) setClockMethod(patch.clockMethod);
                 if (patch.attendanceMode !== undefined) setAttendanceMode(patch.attendanceMode);

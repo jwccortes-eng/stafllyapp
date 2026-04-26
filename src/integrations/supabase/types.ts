@@ -12937,6 +12937,7 @@ export type Database = {
           import_id: string | null
           job_code: string | null
           manager_notes: string | null
+          pay_override: boolean
           period_id: string
           ride: string | null
           scheduled_shift_title: string | null
@@ -12968,6 +12969,7 @@ export type Database = {
           import_id?: string | null
           job_code?: string | null
           manager_notes?: string | null
+          pay_override?: boolean
           period_id: string
           ride?: string | null
           scheduled_shift_title?: string | null
@@ -12999,6 +13001,7 @@ export type Database = {
           import_id?: string | null
           job_code?: string | null
           manager_notes?: string | null
+          pay_override?: boolean
           period_id?: string
           ride?: string | null
           scheduled_shift_title?: string | null
