@@ -79,6 +79,8 @@ export interface ShiftFormState {
   specialInstructions: string;
   payType: "hourly" | "daily";
   dayType: "full_day" | "half_day";
+  /** Phase 2 #1: explicit per-shift pay override intent. OFF = inherit from employee profile (UI-level). */
+  payOverride: boolean;
   shiftAdminId: string;
   clockMethod: "mobile" | "kiosk" | "both";
   /** Operational attendance mode (clock vs arrival vs hybrid). */
