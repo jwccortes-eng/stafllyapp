@@ -209,7 +209,7 @@ async function processScheduleRaw(
     .select("id, reconciliation_hash")
     .eq("company_id", companyId)
     .not("reconciliation_hash", "is", null);
-  const existingHashes = new Set((existingShifts ?? []).map(s => s.reconciliation_hash));
+  const existingHashes = new Set((existingShifts ?? []).map((s: any) => s.reconciliation_hash));
 
   // Group rows into shifts (skip availability rows without Shift title)
   type ShiftGroup = {
@@ -498,7 +498,7 @@ async function processShifts(
   if (rawErr) return json({ error: rawErr.message }, 500);
   if (!rawRecords?.length) return json({ error: "No raw schedule records found" }, 400);
 
-  const rows = rawRecords.map(r => r.raw_payload as Record<string, unknown>);
+  const rows = rawRecords.map((r: any) => r.raw_payload as Record<string, unknown>);
   const result = await processScheduleRaw(supabase, companyId, userId, rows);
   return json({ success: true, raw_records: rawRecords.length, ...result });
 }
@@ -691,7 +691,7 @@ async function resyncAllPeriods(
 
     // ── STAFLY TOTALS: from period_base_pay + movements ──
     // Find matching pay_period by date range overlap
-    const matchingPayPeriod = (payPeriods ?? []).find(pp =>
+    const matchingPayPeriod = (payPeriods ?? []).find((pp: any) =>
       pp.start_date <= weekEnd && pp.end_date >= weekStart
     );
 
@@ -715,9 +715,9 @@ async function resyncAllPeriods(
       const baseRows = periodBase ?? [];
       const movRows = periodMov ?? [];
 
-      const baseSum = baseRows.reduce((s, bp) => s + (Number(bp.base_total_pay) || 0), 0);
-      const hoursSum = baseRows.reduce((s, bp) => s + (Number(bp.total_work_hours) || 0), 0);
-      const movSum = movRows.reduce((s, mv) => s + (Number(mv.total_value) || 0), 0);
+      const baseSum = baseRows.reduce((s: number, bp: any) => s + (Number(bp.base_total_pay) || 0), 0);
+      const hoursSum = baseRows.reduce((s: number, bp: any) => s + (Number(bp.total_work_hours) || 0), 0);
+      const movSum = movRows.reduce((s: number, mv: any) => s + (Number(mv.total_value) || 0), 0);
 
       sfGross = baseSum + movSum;
       sfHours = hoursSum;
