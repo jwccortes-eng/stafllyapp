@@ -22,6 +22,7 @@ export interface NavItem {
 /* ── Admin / Manager nav items ── */
 export const ADMIN_NAV_ITEMS: NavItem[] = [
   { id: "dashboard", to: "/app", icon: LayoutDashboard, label: "Dashboard", module: null, end: true, section: "Home" },
+  { id: "command-center", to: "/app/command-center", icon: Radio, label: "Command Center", module: null, section: "Home" },
   { id: "ops-center", to: "/app/ops-center", icon: Radio, label: "Ops Center", module: "shifts", section: "Operations" },
   { id: "front-desk", to: "/app/front-desk", icon: ContactRound, label: "Front Desk", module: null, section: "Operations" },
   { id: "shifts", to: "/app/shifts", icon: CalendarDays, label: "Shifts", module: "shifts", section: "Operations" },

@@ -80,6 +80,7 @@ const Pricing = lazy(() => import("./pages/admin/Pricing"));
 const Billing = lazy(() => import("./pages/admin/Billing"));
 const SystemHealth = lazy(() => import("./pages/admin/SystemHealth"));
 const Implementations = lazy(() => import("./pages/admin/Implementations"));
+const CommandCenter = lazy(() => import("./pages/admin/CommandCenter"));
 const NotificationTemplates = lazy(() => import("./pages/admin/NotificationTemplates"));
 const NotificationsPage = lazy(() => import("./pages/admin/Notifications"));
 const Requests = lazy(() => import("./pages/admin/Requests"));
@@ -226,6 +227,7 @@ function App() {
               {/* Admin routes */}
               <Route path="/app" element={<AdminLayout />}>
                 <Route index element={<AdminDashboard />} />
+                <Route path="command-center" element={<CommandCenter />} />
                 <Route path="employees" element={<CompanyRequiredGuard><Employees /></CompanyRequiredGuard>} />
                 <Route path="employees/merge" element={<CompanyRequiredGuard><EmployeeMerge /></CompanyRequiredGuard>} />
                 <Route path="workforce" element={<CompanyRequiredGuard><Workforce /></CompanyRequiredGuard>} />
