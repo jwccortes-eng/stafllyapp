@@ -79,6 +79,20 @@ Deno.serve(async (req) => {
     // Use service role client to enqueue email via pgmq
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
+    // Get/create unsubscribe token (REQUIRED by Lovable Email API for transactional)
+    let unsubscribeToken: string | null = null;
+    {
+      const { data: tokenData, error: tokenErr } = await adminClient.rpc(
+        "get_or_create_unsubscribe_token",
+        { p_email: to }
+      );
+      if (tokenErr) {
+        console.error("Failed to get unsubscribe token", { to, error: tokenErr.message });
+      } else {
+        unsubscribeToken = tokenData as string;
+      }
+    }
+
     const payload: Record<string, unknown> = {
       queued_at: new Date().toISOString(),
       to,
@@ -91,6 +105,7 @@ Deno.serve(async (req) => {
       label: "invite_email",
       message_id: messageId,
       idempotency_key: idempotencyKey,
+      unsubscribe_token: unsubscribeToken,
       // NO run_id — the Lovable API creates a transactional run inline
       // when idempotency_key + purpose:transactional are present
     };

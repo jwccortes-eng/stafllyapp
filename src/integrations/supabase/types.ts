@@ -14765,6 +14765,10 @@ export type Database = {
           status: string
         }[]
       }
+      get_or_create_unsubscribe_token: {
+        Args: { p_email: string }
+        Returns: string
+      }
       get_profile_status: {
         Args: { _employee_id: string }
         Returns: Database["public"]["Enums"]["employee_profile_status"]

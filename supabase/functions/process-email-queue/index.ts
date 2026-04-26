@@ -296,49 +296,30 @@ Deno.serve(async (req) => {
       }
 
       try {
-        // Prefer Lovable Email API whenever the api key is configured.
-        // For transactional sends without a run_id, the Lovable API creates a
-        // run inline when purpose:"transactional" + idempotency_key are present.
-        // Resend is only used as a last-resort fallback for specific errors,
-        // since Resend is in test mode and only allows sends to the account owner.
-        if (apiKey) {
-          try {
-            await sendLovableEmail(
-              {
-                run_id: payload.run_id,
-                to: payload.to,
-                from: payload.from,
-                sender_domain: payload.sender_domain,
-                subject: payload.subject,
-                html: payload.html,
-                text: payload.text,
-                purpose: payload.purpose,
-                label: payload.label,
-                idempotency_key: payload.idempotency_key,
-                unsubscribe_token: payload.unsubscribe_token,
-                message_id: payload.message_id,
-              },
-              // sendUrl is optional — when LOVABLE_SEND_URL is not set, the library
-              // falls back to the default Lovable API endpoint (https://api.lovable.dev).
-              // Set LOVABLE_SEND_URL as a Supabase secret to override (e.g. for local dev).
-              { apiKey, sendUrl: Deno.env.get('LOVABLE_SEND_URL') }
-            )
-          } catch (providerError) {
-            if (!resendApiKey || !canUseResendFallback(providerError)) {
-              throw providerError
-            }
-            console.warn('Falling back to Resend after Lovable error', {
-              message_id: payload.message_id,
-              error: providerError instanceof Error ? providerError.message : String(providerError),
-            })
-            await sendWithResend(payload, resendApiKey)
-          }
-        } else {
-          if (!resendApiKey) {
-            throw new Error('No email provider configured (LOVABLE_API_KEY and RESEND_API_KEY both missing)')
-          }
-          await sendWithResend(payload, resendApiKey)
+        // Use Lovable Email API exclusively. Resend fallback removed because
+        // it sent from onboarding@resend.dev (Resend test mode), which only
+        // delivers to the API key owner — never to actual recipients.
+        if (!apiKey) {
+          throw new Error('LOVABLE_API_KEY not configured — cannot send email')
         }
+
+        await sendLovableEmail(
+          {
+            run_id: payload.run_id,
+            to: payload.to,
+            from: payload.from,
+            sender_domain: payload.sender_domain,
+            subject: payload.subject,
+            html: payload.html,
+            text: payload.text,
+            purpose: payload.purpose,
+            label: payload.label,
+            idempotency_key: payload.idempotency_key,
+            unsubscribe_token: payload.unsubscribe_token,
+            message_id: payload.message_id,
+          },
+          { apiKey, sendUrl: Deno.env.get('LOVABLE_SEND_URL') }
+        )
 
         // Log success
         await supabase.from('email_send_log').insert({

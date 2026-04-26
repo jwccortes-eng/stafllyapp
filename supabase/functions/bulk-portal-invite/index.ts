@@ -287,6 +287,18 @@ Deno.serve(async (req) => {
             const messageId = crypto.randomUUID();
             const idempotencyKey = `bulk-activation-${emp.id}-${Date.now()}`;
 
+            // Get/create unsubscribe token (REQUIRED by Lovable Email API for transactional)
+            let unsubscribeToken: string | null = null;
+            const { data: tokenData, error: tokenErr } = await adminClient.rpc(
+              "get_or_create_unsubscribe_token",
+              { p_email: emp.email }
+            );
+            if (tokenErr) {
+              console.error(`Failed to get unsubscribe token for ${emp.email}`, tokenErr.message);
+            } else {
+              unsubscribeToken = tokenData as string;
+            }
+
             const { error: enqueueErr } = await adminClient.rpc("enqueue_email", {
               queue_name: "transactional_emails",
               payload: {
@@ -301,6 +313,7 @@ Deno.serve(async (req) => {
                 label: "portal_activation",
                 message_id: messageId,
                 idempotency_key: idempotencyKey,
+                unsubscribe_token: unsubscribeToken,
               },
             });
 
