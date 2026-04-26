@@ -1511,7 +1511,7 @@ export default function Shifts() {
                 title, date, startTime, endTime, slots,
                 clientId, locationId, notes, claimable,
                 meetingPoint, specialInstructions,
-                payType, dayType, shiftAdminId, clockMethod,
+                payType, dayType, payOverride, shiftAdminId, clockMethod,
                 attendanceMode, meetingTime,
                 transportRequired, carCapacity, transportNotes, driverEmployeeId,
                 selectedEmployees,
