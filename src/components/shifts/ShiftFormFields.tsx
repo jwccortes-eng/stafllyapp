@@ -283,6 +283,43 @@ export function ShiftFormFields({
     !!v.shiftAdminId && shiftAssignedIds.length > 0 && !shiftAssignedIds.includes(v.shiftAdminId);
   const driverMissing = v.transportRequired && !v.driverEmployeeId;
   const noLocation = !v.locationId && !v.meetingPoint.trim() && !v.meetingPointLocationId && !v.jobSiteLocationId;
+  const noTeam = showEmployeePicker && shiftAssignedIds.length === 0 && !v.claimable;
+
+  // Real same-day schedule conflicts: empleados ya asignados a otro turno el mismo día
+  // que se solapa con este horario. Solo informativo (no bloquea).
+  const conflictNames: string[] = [];
+  if (v.date && v.startTime && v.endTime && shiftAssignedIds.length > 0) {
+    const sStart = v.startTime;
+    const sEnd = v.endTime;
+    const currentShiftId = mode === "edit" && shift ? shift.id : null;
+    for (const empId of shiftAssignedIds) {
+      const otherAssignments = assignments.filter(
+        (a) =>
+          a.employee_id === empId &&
+          a.shift_id !== currentShiftId &&
+          a.status !== "rejected" &&
+          a.status !== "removed",
+      );
+      for (const oa of otherAssignments) {
+        const other = shifts.find((sh) => sh.id === oa.shift_id);
+        if (!other || (other as any).date !== v.date) continue;
+        const oStart = ((other as any).start_time ?? "").slice(0, 5);
+        const oEnd = ((other as any).end_time ?? "").slice(0, 5);
+        if (oStart && oEnd && oStart < sEnd && oEnd > sStart) {
+          const emp = employees.find((e) => e.id === empId);
+          const name = emp ? `${emp.first_name} ${emp.last_name}` : "Empleado";
+          if (!conflictNames.includes(name)) conflictNames.push(name);
+          break;
+        }
+      }
+    }
+  }
+  const hasConflicts = conflictNames.length > 0;
+
+  // Override de pago: si el shift tiene un pay_type/day_type explícito, ya está overrideando.
+  const payOverrideActive = mode === "edit" && shift
+    ? (shift as any).pay_type !== undefined && (shift as any).pay_type !== null
+    : false;
 
   return (
     <div className="space-y-3">
