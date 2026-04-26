@@ -654,6 +654,9 @@ export function ShiftFormFields({
               availabilityOverrides={availabilityOverrides}
               availabilityBlockMode="warning"
               onAddNewEmployee={onAddNewEmployee}
+              requiresDriver={v.transportRequired}
+              showBulkActions={v.transportRequired || (slotsNum > 0 && v.selectedEmployees.length < slotsNum)}
+              remainingSlots={Math.max(slotsNum - v.selectedEmployees.length, 0)}
             />
             <p className="text-[10px] text-muted-foreground/60">
               Selecciona ahora o déjalo abierto si vas a publicar como reclamable.
