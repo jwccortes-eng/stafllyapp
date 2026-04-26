@@ -274,8 +274,10 @@ export function ShiftFormFields({
         : v.selectedEmployees,
     [mode, shift, assignments, v.selectedEmployees],
   );
-  const adminCandidates =
-    shiftAssignedIds.length > 0 ? employees.filter((e) => shiftAssignedIds.includes(e.id)) : employees;
+  const adminCandidates = useMemo(
+    () => (shiftAssignedIds.length > 0 ? employees.filter((e) => shiftAssignedIds.includes(e.id)) : employees),
+    [shiftAssignedIds, employees],
+  );
 
   const toggleEmployee = (id: string) => {
     const isSelected = v.selectedEmployees.includes(id);
