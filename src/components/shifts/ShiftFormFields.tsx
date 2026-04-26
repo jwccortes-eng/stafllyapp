@@ -1093,7 +1093,7 @@ export function ShiftFormFields({
           )}
 
           {/* ── Listo ── */}
-          {!adminMissing && !adminInvalid && v.date && !noLocation && !driverMissing && !noTeam && !hasConflicts && (
+          {!adminMissing && !adminInvalid && v.date && !noLocation && !driverMissing && !driversShortage && !noTeam && !hasConflicts && (
             <div className="flex items-start gap-1.5 text-[11px] text-[hsl(142_76%_36%)] font-medium">
               <CheckCircle2 className="h-3 w-3 shrink-0 mt-0.5" /> Todo en orden — listo para guardar.
             </div>
