@@ -288,6 +288,23 @@ export function ShiftFormFields({
   const adminInvalid =
     !!v.shiftAdminId && shiftAssignedIds.length > 0 && !shiftAssignedIds.includes(v.shiftAdminId);
   const driverMissing = v.transportRequired && !v.driverEmployeeId;
+
+  // ── Phase 2 #3: drivers dentro del equipo asignado ────────────────────
+  // El driver_employee_id solo cuenta si también está en selectedEmployees (no duplicar conteos).
+  const teamDriverIds = new Set(
+    shiftAssignedIds.filter((id) => {
+      const emp = employees.find((e) => e.id === id);
+      return emp ? isEmployeeDriver(emp) : false;
+    }),
+  );
+  if (v.driverEmployeeId && shiftAssignedIds.includes(v.driverEmployeeId)) {
+    teamDriverIds.add(v.driverEmployeeId);
+  }
+  const driversInTeam = teamDriverIds.size;
+  const driversShortage =
+    v.transportRequired && shiftAssignedIds.length > 0 && driversInTeam < ridesNeeded;
+  const capacityOverSlots =
+    v.transportRequired && slotsNum > 0 && capacityNum * ridesNeeded > slotsNum && capacityNum > slotsNum;
   const noLocation = !v.locationId && !v.meetingPoint.trim() && !v.meetingPointLocationId && !v.jobSiteLocationId;
   const noTeam = showEmployeePicker && shiftAssignedIds.length === 0 && !v.claimable;
 
