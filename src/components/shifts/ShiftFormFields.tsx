@@ -263,13 +263,17 @@ export function ShiftFormFields({
     }
   };
 
-  // Admin candidate logic — when employees are assigned, restrict to that pool
-  const shiftAssignedIds =
-    mode === "edit" && shift
-      ? assignments
-          .filter((a) => a.shift_id === shift.id && a.status !== "rejected" && a.status !== "removed")
-          .map((a) => a.employee_id)
-      : v.selectedEmployees;
+  // Admin candidate logic — when employees are assigned, restrict to that pool.
+  // Memoizado para no recorrer assignments en cada keypress.
+  const shiftAssignedIds = useMemo(
+    () =>
+      mode === "edit" && shift
+        ? assignments
+            .filter((a) => a.shift_id === shift.id && a.status !== "rejected" && a.status !== "removed")
+            .map((a) => a.employee_id)
+        : v.selectedEmployees,
+    [mode, shift, assignments, v.selectedEmployees],
+  );
   const adminCandidates =
     shiftAssignedIds.length > 0 ? employees.filter((e) => shiftAssignedIds.includes(e.id)) : employees;
 
