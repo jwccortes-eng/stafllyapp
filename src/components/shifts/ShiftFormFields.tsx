@@ -281,6 +281,7 @@ export function ShiftFormFields({
   };
 
   // ── Computed summary signals ────────────────────────────────────────────
+  // Default por vehículo = 5 (regla del producto).
   const slotsNum = parseInt(v.slots) || 0;
   const capacityNum = parseInt(v.carCapacity) || 5;
   const ridesNeeded = v.transportRequired ? Math.ceil(Math.max(slotsNum, 1) / Math.max(capacityNum, 1)) : 0;
@@ -290,31 +291,49 @@ export function ShiftFormFields({
   const driverMissing = v.transportRequired && !v.driverEmployeeId;
 
   // ── Phase 2 #3: drivers dentro del equipo asignado ────────────────────
-  // El driver_employee_id solo cuenta si también está en selectedEmployees (no duplicar conteos).
-  const teamDriverIds = new Set(
-    shiftAssignedIds.filter((id) => {
-      const emp = employees.find((e) => e.id === id);
-      return emp ? isEmployeeDriver(emp) : false;
-    }),
-  );
-  if (v.driverEmployeeId && shiftAssignedIds.includes(v.driverEmployeeId)) {
-    teamDriverIds.add(v.driverEmployeeId);
-  }
-  const driversInTeam = teamDriverIds.size;
+  // Memoizado: solo recalcula si cambia la lista de empleados asignados,
+  // el catálogo de empleados o el conductor explícito. NO se recalcula
+  // mientras el admin escribe en title/notes/etc.
+  const assignedKey = shiftAssignedIds.join(",");
+  const driversInTeam = useMemo(() => {
+    const ids = new Set(
+      shiftAssignedIds.filter((id) => {
+        const emp = employees.find((e) => e.id === id);
+        return emp ? isEmployeeDriver(emp) : false;
+      }),
+    );
+    if (v.driverEmployeeId && shiftAssignedIds.includes(v.driverEmployeeId)) {
+      ids.add(v.driverEmployeeId);
+    }
+    return ids.size;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [assignedKey, employees, v.driverEmployeeId]);
+
   const driversShortage =
     v.transportRequired && shiftAssignedIds.length > 0 && driversInTeam < ridesNeeded;
-  const capacityOverSlots =
-    v.transportRequired && slotsNum > 0 && capacityNum * ridesNeeded > slotsNum && capacityNum > slotsNum;
+
+  // FIX (regresión #1): solo alertar cuando la capacidad real sea INSUFICIENTE
+  // para mover a las personas. Si capacity_por_vehículo >= slots, un solo carro
+  // basta y NO debe haber warning. Esta señal queda como "capacidad insuficiente"
+  // y solo se activa si vehículos*capacidad < personas. Se mantiene la variable
+  // por compatibilidad pero ahora representa "shortage real".
+  const capacityShortage =
+    v.transportRequired && slotsNum > 0 && capacityNum * ridesNeeded < slotsNum;
+  // Alias legacy (ya no señaliza "capacidad excede plazas")
+  const capacityOverSlots = false;
+
   const noLocation = !v.locationId && !v.meetingPoint.trim() && !v.meetingPointLocationId && !v.jobSiteLocationId;
   const noTeam = showEmployeePicker && shiftAssignedIds.length === 0 && !v.claimable;
 
   // Real same-day schedule conflicts: empleados ya asignados a otro turno el mismo día
-  // que se solapa con este horario. Solo informativo (no bloquea).
-  const conflictNames: string[] = [];
-  if (v.date && v.startTime && v.endTime && shiftAssignedIds.length > 0) {
+  // que se solapa con este horario. Memoizado para no recorrer shifts/assignments
+  // en cada keypress de campos de texto libre (title/notes/etc.).
+  const currentShiftId = mode === "edit" && shift ? shift.id : null;
+  const conflictNames = useMemo<string[]>(() => {
+    const names: string[] = [];
+    if (!v.date || !v.startTime || !v.endTime || shiftAssignedIds.length === 0) return names;
     const sStart = v.startTime;
     const sEnd = v.endTime;
-    const currentShiftId = mode === "edit" && shift ? shift.id : null;
     for (const empId of shiftAssignedIds) {
       const otherAssignments = assignments.filter(
         (a) =>
@@ -331,12 +350,14 @@ export function ShiftFormFields({
         if (oStart && oEnd && oStart < sEnd && oEnd > sStart) {
           const emp = employees.find((e) => e.id === empId);
           const name = emp ? `${emp.first_name} ${emp.last_name}` : "Empleado";
-          if (!conflictNames.includes(name)) conflictNames.push(name);
+          if (!names.includes(name)) names.push(name);
           break;
         }
       }
     }
-  }
+    return names;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [assignedKey, v.date, v.startTime, v.endTime, currentShiftId, shifts, assignments, employees]);
   const hasConflicts = conflictNames.length > 0;
 
   // Override de pago: refleja el toggle del form (Phase 2 #1).
