@@ -78,22 +78,30 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
 
     let list: Company[] = [];
 
-    if (role === 'developer' || role === 'owner') {
-      const { data } = await supabase
-        .from("companies")
-        .select("id, name, slug, is_active, invite_code, brand_color, logo_url")
-        .order("name");
-      list = (data as Company[]) ?? [];
-    } else {
-      const { data } = await supabase
-        .from("company_users")
-        .select("company_id, companies(id, name, slug, is_active, brand_color, logo_url)")
-        .eq("user_id", user.id);
-
-      list = ((data ?? [])
-        .map((cu: any) => cu.companies)
-        .filter(Boolean) as Company[])
-        .sort((a, b) => a.name.localeCompare(b.name));
+    try {
+      if (role === 'developer' || role === 'owner') {
+        const { data, error } = await supabase
+          .from("companies")
+          .select("id, name, slug, is_active, invite_code, brand_color, logo_url")
+          .order("name");
+        if (error) throw error;
+        list = (data as Company[]) ?? [];
+      } else {
+        const { data, error } = await supabase
+          .from("company_users")
+          .select("company_id, companies(id, name, slug, is_active, brand_color, logo_url)")
+          .eq("user_id", user.id);
+        if (error) throw error;
+        list = ((data ?? [])
+          .map((cu: any) => cu.companies)
+          .filter(Boolean) as Company[])
+          .sort((a, b) => a.name.localeCompare(b.name));
+      }
+    } catch (err) {
+      // Don't blow up the UI on transient/permission errors — leave the
+      // user with whatever they had cached and let the consumer decide.
+      console.error("[useCompany] fetchCompanies failed:", err);
+      list = [];
     }
 
     setCompanies(list);
@@ -103,9 +111,23 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
     const currentSelection = safeLocalStorage.getItem("selectedCompanyId");
 
     if (canUseGlobalMode) {
-      // Developer/owner: start in global mode unless user manually switched this session
-      if (!manuallySelected) {
+      // Developer/owner: respect a valid stored selection if it still belongs
+      // to an accessible company; otherwise drop to global mode (don't keep
+      // a stale id pointing at an inaccessible tenant).
+      const validStored = currentSelection && list.some(c => c.id === currentSelection)
+        ? currentSelection
+        : null;
+      if (manuallySelected) {
+        // User just switched this session — keep their choice if valid.
+        if (!validStored && selectedCompanyId !== null) {
+          setSelectedCompanyIdRaw(null);
+          safeLocalStorage.removeItem("selectedCompanyId");
+        }
+      } else if (validStored) {
+        setSelectedCompanyIdRaw(validStored);
+      } else {
         setSelectedCompanyIdRaw(null);
+        safeLocalStorage.removeItem("selectedCompanyId");
       }
     } else {
       // Regular users MUST have a company context.
@@ -117,11 +139,16 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
       if (validStored) {
         setSelectedCompanyIdRaw(validStored);
       } else if (list.length > 0) {
+        // Stored id pointed to an inaccessible/missing company — clean it up.
+        if (currentSelection && currentSelection !== list[0].id) {
+          safeLocalStorage.removeItem("selectedCompanyId");
+        }
         const first = list[0].id;
         setSelectedCompanyIdRaw(first);
         safeLocalStorage.setItem("selectedCompanyId", first);
       } else {
         setSelectedCompanyIdRaw(null);
+        safeLocalStorage.removeItem("selectedCompanyId");
       }
     }
 
