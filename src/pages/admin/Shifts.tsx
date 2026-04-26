@@ -1531,6 +1531,7 @@ export default function Shifts() {
                 if (patch.specialInstructions !== undefined) setSpecialInstructions(patch.specialInstructions);
                 if (patch.payType !== undefined) setPayType(patch.payType);
                 if (patch.dayType !== undefined) setDayType(patch.dayType);
+                if (patch.payOverride !== undefined) setPayOverride(patch.payOverride);
                 if (patch.shiftAdminId !== undefined) setShiftAdminId(patch.shiftAdminId);
                 if (patch.clockMethod !== undefined) setClockMethod(patch.clockMethod);
                 if (patch.attendanceMode !== undefined) setAttendanceMode(patch.attendanceMode);
