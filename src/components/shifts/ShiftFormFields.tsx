@@ -1123,6 +1123,8 @@ export function formStateToShiftPayload(s: ShiftFormState, allowClaims: boolean)
     special_instructions: s.specialInstructions.trim() || null,
     pay_type: s.payType,
     day_type: s.payType === "daily" ? s.dayType : "full_day",
+    // Phase 2 #1: persist explicit override intent. Currently NOT consumed by payroll engine — captured for future use.
+    pay_override: !!s.payOverride,
     shift_admin_id: s.shiftAdminId || null,
     clock_method: s.clockMethod,
     attendance_mode: s.attendanceMode,
