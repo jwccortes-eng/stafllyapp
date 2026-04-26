@@ -723,8 +723,9 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ error: "Acción no válida" }), {
       status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (err) {
-    return new Response(JSON.stringify({ error: "Error interno del servidor" }), {
+  } catch (err: any) {
+    console.error("[employee-auth] internal error:", err?.message, err?.stack);
+    return new Response(JSON.stringify({ error: "Error interno del servidor", code: "internal_error", detail: err?.message }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
