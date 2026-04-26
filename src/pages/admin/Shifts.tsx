@@ -212,6 +212,8 @@ export default function Shifts() {
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [payType, setPayType] = useState<"hourly" | "daily">("hourly");
   const [dayType, setDayType] = useState<"full_day" | "half_day">("full_day");
+  // Phase 2 #1: explicit per-shift pay override toggle. CREATE defaults to OFF.
+  const [payOverride, setPayOverride] = useState<boolean>(false);
   const [shiftAdminId, setShiftAdminId] = useState("");
   const [transportRequired, setTransportRequired] = useState(false);
   const [carCapacity, setCarCapacity] = useState("4");
