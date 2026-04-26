@@ -318,13 +318,13 @@ function CompanyCommandCenter({
       ]);
       const [empTotal, empActive, shiftsToday, shiftsUpcoming, pendConf, timeToday] = batchA;
 
-      const batchB = await Promise.all([
+      const batchB = await Promise.all<any>([
         supabase.from("employee_invitations").select("id", { count: "exact", head: true })
           .eq("company_id", companyId).eq("status", "failed"),
         supabase.from("pay_periods").select("id", { count: "exact", head: true })
           .eq("company_id", companyId).eq("status", "open"),
         supabase.from("service_requests").select("id", { count: "exact", head: true })
-          .eq("company_id", companyId).in("status", ["new", "reviewing", "approved_for_scheduling"]),
+          .eq("company_id", companyId).in("status", ["new", "reviewing", "approved_for_scheduling"] as any),
         supabase.from("clients").select("id", { count: "exact", head: true })
           .eq("company_id", companyId).eq("is_active", true),
         supabase.from("locations").select("id", { count: "exact", head: true })
