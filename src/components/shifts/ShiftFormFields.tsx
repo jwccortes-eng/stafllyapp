@@ -480,7 +480,9 @@ export function ShiftFormFields({
           </p>
         </div>
 
-        {/* Premium structured locations (Phase 1B): Job site + Meeting point estructurados */}
+        {/* Premium structured locations (Phase 1B): Job site + Meeting point estructurados.
+            Va inmediatamente después del select de ubicación; el texto libre y las
+            indicaciones quedan estrictamente al final del bloque. */}
         {companyId && (
           <ShiftLocationsSection
             companyId={companyId}
@@ -496,32 +498,38 @@ export function ShiftFormFields({
           />
         )}
 
-        <div>
-          <Label className="text-[11px] text-muted-foreground font-medium flex items-center gap-1">
-            <Compass className="h-3 w-3" /> Punto de encuentro / Meeting point
-          </Label>
-          <Input
-            value={v.meetingPoint}
-            onChange={(e) => onChange({ meetingPoint: e.target.value })}
-            placeholder="Dirección, link de Google Maps o lugar..."
-            className="h-9 text-sm mt-1"
-          />
-          <p className="text-[10px] text-muted-foreground/60 mt-0.5">
-            Dónde se reúne el equipo antes de operar. Pegar links de Google Maps con parser automático llega en Fase 2.
-          </p>
-        </div>
+        {/* ── Final del bloque Lugar: Meeting point + Directions ── */}
+        <div className="pt-2 mt-1 border-t border-border/20 space-y-3">
+          <div className="text-[10px] uppercase tracking-wide text-muted-foreground/70 font-semibold">
+            Logística del equipo
+          </div>
+          <div>
+            <Label className="text-[11px] text-muted-foreground font-medium flex items-center gap-1">
+              <Compass className="h-3 w-3" /> Punto de encuentro / Meeting point
+            </Label>
+            <Input
+              value={v.meetingPoint}
+              onChange={(e) => onChange({ meetingPoint: e.target.value })}
+              placeholder="Dirección, link de Google Maps o lugar..."
+              className="h-9 text-sm mt-1"
+            />
+            <p className="text-[10px] text-muted-foreground/60 mt-0.5">
+              Dónde se reúne el equipo antes de operar. Parser de Google Maps llega en Fase 2.
+            </p>
+          </div>
 
-        <div>
-          <Label className="text-[11px] text-muted-foreground font-medium flex items-center gap-1">
-            <FileText className="h-3 w-3" /> Indicaciones para llegar / Directions
-          </Label>
-          <Textarea
-            value={v.specialInstructions}
-            onChange={(e) => onChange({ specialInstructions: e.target.value })}
-            rows={2}
-            placeholder="Ej: Entrar por la puerta lateral, parking en sótano 2..."
-            className="text-sm resize-none mt-1"
-          />
+          <div>
+            <Label className="text-[11px] text-muted-foreground font-medium flex items-center gap-1">
+              <FileText className="h-3 w-3" /> Indicaciones para llegar / Directions
+            </Label>
+            <Textarea
+              value={v.specialInstructions}
+              onChange={(e) => onChange({ specialInstructions: e.target.value })}
+              rows={2}
+              placeholder="Ej: Entrar por la puerta lateral, parking en sótano 2..."
+              className="text-sm resize-none mt-1"
+            />
+          </div>
         </div>
       </SectionCard>
 
