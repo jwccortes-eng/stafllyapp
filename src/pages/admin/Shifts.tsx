@@ -1044,7 +1044,10 @@ export default function Shifts() {
 
   const handleDuplicateToDay = async (shiftData: any, targetDate: string) => {
     if (!canEdit || !selectedCompanyId) return;
-    // Don't duplicate to the same date with same time
+    // Phase 2 #2.1: copy full operational structure (status=draft) WITHOUT
+    // assignments, QR recipients, or driver_employee_id. Driver is a person,
+    // not a structural property of the shift — copying it would create a false
+    // sense that transport is resolved.
     const { error, data: newShift } = await supabase.from("scheduled_shifts").insert({
       company_id: selectedCompanyId,
       title: shiftData.title,
@@ -1056,16 +1059,25 @@ export default function Shifts() {
       location_id: shiftData.location_id || null,
       notes: shiftData.notes || null,
       claimable: shiftData.claimable ?? false,
+      meeting_point: shiftData.meeting_point || null,
+      special_instructions: shiftData.special_instructions || null,
+      pay_type: shiftData.pay_type || "hourly",
+      day_type: shiftData.day_type || "full_day",
+      pay_override: shiftData.pay_override ?? false,
+      attendance_mode: shiftData.attendance_mode || null,
+      clock_method: shiftData.clock_method || "both",
+      transportation_required: shiftData.transportation_required ?? false,
+      car_capacity: shiftData.car_capacity ?? 5,
+      transportation_notes: shiftData.transportation_notes || null,
+      shift_admin_id: shiftData.shift_admin_id || null,
+      meeting_point_location_id: shiftData.meeting_point_location_id || null,
+      job_site_location_id: shiftData.job_site_location_id || null,
+      // Explicitly NOT copied: driver_employee_id, assignments, QR recipients
       status: "draft",
       created_by: user?.id,
-      pay_type: shiftData.pay_type || "hourly",
     } as any).select("id, shift_code").single();
 
     if (error) { toast.error(error.message); return; }
-
-    // Title stays clean on duplicate — `shift_code` is the single source of truth.
-    // (Older legacy titles may still carry a `#code ` prefix; the importer + create
-    // flows no longer add it. A one-shot DB cleanup stripped historical contamination.)
 
     if (newShift) {
       await logShiftActivity("duplicar_turno", newShift.id, null, {
@@ -1073,7 +1085,12 @@ export default function Shifts() {
       });
     }
 
-    toast.success(`Turno duplicado al ${new Date(targetDate + "T12:00:00").toLocaleDateString("es", { weekday: "short", day: "numeric", month: "short" })}`);
+    const niceDate = new Date(targetDate + "T12:00:00").toLocaleDateString("es", {
+      weekday: "short", day: "numeric", month: "short",
+    });
+    toast.success(`Turno duplicado al ${niceDate} como borrador.`, {
+      description: "Asigna empleados para activar.",
+    });
     loadData();
   };
 
@@ -1108,14 +1125,24 @@ export default function Shifts() {
         location_id: s.location_id || null,
         notes: s.notes || null,
         claimable: s.claimable ?? false,
-        status: "draft",
-        created_by: user?.id,
-        pay_type: raw.pay_type || "hourly",
+        // Phase 2 #2.2: align fields with handleDuplicateToDay (#2.1).
         meeting_point: raw.meeting_point || null,
         special_instructions: raw.special_instructions || null,
+        pay_type: raw.pay_type || "hourly",
+        day_type: raw.day_type || "full_day",
+        pay_override: raw.pay_override ?? false,
+        attendance_mode: raw.attendance_mode || null,
+        clock_method: raw.clock_method || "both",
         transportation_required: raw.transportation_required ?? false,
-        car_capacity: raw.car_capacity ?? 4,
+        car_capacity: raw.car_capacity ?? 5,
         transportation_notes: raw.transportation_notes || null,
+        shift_admin_id: raw.shift_admin_id || null,
+        meeting_point_location_id: raw.meeting_point_location_id || null,
+        job_site_location_id: raw.job_site_location_id || null,
+        // Explicitly NOT copied: driver_employee_id, QR recipients
+        // Assignments handled separately below, gated by shifts_config.copy_week_assignments
+        status: "draft",
+        created_by: user?.id,
       } as any).select("id, shift_code").single();
       if (error) continue;
       if (newShift?.shift_code) {
@@ -1146,7 +1173,12 @@ export default function Shifts() {
       created++;
     }
     const weekLabel = `${format(nextWeekStart, "MMM d")}–${format(addDays(nextWeekStart, 6), "MMM d")}`;
-    toast.success(`${created} shifts copied to ${weekLabel} as drafts`);
+    // Phase 2 #2.2: make assignment-copy behavior visible in the toast.
+    toast.success(`${created} turnos duplicados a ${weekLabel} como borrador.`, {
+      description: shiftsConfig.copy_week_assignments
+        ? "Asignaciones copiadas como pending — los empleados deben aceptar."
+        : "Sin asignaciones copiadas. Asigna empleados para activar.",
+    });
     setCopyingWeek(false);
     loadData();
   };
@@ -1346,8 +1378,28 @@ export default function Shifts() {
               </div>
             )}
             {viewMode === "week" && (
-              <Button variant="outline" size="sm" className="h-8 text-[11px] px-3 gap-1.5 rounded-xl" onClick={handleCopyWeek} disabled={copyingWeek}>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 text-[11px] px-3 gap-1.5 rounded-xl"
+                onClick={handleCopyWeek}
+                disabled={copyingWeek}
+                title={
+                  shiftsConfig.copy_week_assignments
+                    ? "Copy week → also copies assignments as pending (workers must accept). Toggle in Shifts settings."
+                    : "Copy week → copies shifts only (no assignments). Toggle in Shifts settings."
+                }
+              >
                 {copyingWeek ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Copy className="h-3.5 w-3.5" />} Copy week
+                <span
+                  className={`ml-1 text-[9px] font-medium px-1.5 py-0.5 rounded ${
+                    shiftsConfig.copy_week_assignments
+                      ? "bg-primary/10 text-primary"
+                      : "bg-muted text-muted-foreground"
+                  }`}
+                >
+                  {shiftsConfig.copy_week_assignments ? "+ asignaciones" : "solo turnos"}
+                </span>
               </Button>
             )}
             <Button variant="outline" size="sm" className="h-8 text-[11px] px-3 gap-1.5 rounded-xl" onClick={handlePublishAll} disabled={bulkPublishing}>
