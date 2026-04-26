@@ -301,16 +301,8 @@ function CompanyCommandCenter({
       const today = todayStr();
       const in7 = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
 
-      // All counts use head:true to avoid pulling rows. company_id scopes everything.
-      const [
-        empTotal, empActive,
-        shiftsToday, shiftsUpcoming,
-        pendConf,
-        timeToday,
-        dup, failedInv, openPeriods,
-        openTickets, clients, locations,
-        anyShift,
-      ] = await Promise.all([
+      // Split into smaller Promise.all batches to avoid TS deep-instantiation.
+      const batchA = await Promise.all([
         supabase.from("employees").select("id", { count: "exact", head: true })
           .eq("company_id", companyId).eq("is_active", true),
         supabase.from("employees").select("id", { count: "exact", head: true })
@@ -323,8 +315,10 @@ function CompanyCommandCenter({
           .eq("company_id", companyId).eq("status", "pending"),
         supabase.from("time_entries").select("id", { count: "exact", head: true })
           .eq("company_id", companyId).gte("clock_in_time", `${today}T00:00:00`),
-        // worker_duplicate_candidates table not present in this project — return 0
-        Promise.resolve({ count: 0 } as any),
+      ]);
+      const [empTotal, empActive, shiftsToday, shiftsUpcoming, pendConf, timeToday] = batchA;
+
+      const batchB = await Promise.all([
         supabase.from("employee_invitations").select("id", { count: "exact", head: true })
           .eq("company_id", companyId).eq("status", "failed"),
         supabase.from("pay_periods").select("id", { count: "exact", head: true })
@@ -338,6 +332,8 @@ function CompanyCommandCenter({
         supabase.from("scheduled_shifts").select("id", { count: "exact", head: true })
           .eq("company_id", companyId).is("deleted_at", null),
       ]);
+      const [failedInv, openPeriods, openTickets, clients, locations, anyShift] = batchB;
+      const dup = { count: 0 }; // worker_duplicate_candidates table not present
 
       // Derived: covered shifts today (need shift_ids first to avoid heavy join)
       let coveredToday = 0;
