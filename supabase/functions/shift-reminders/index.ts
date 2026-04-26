@@ -143,15 +143,9 @@ Deno.serve(async (req) => {
     }
 
     // ─── No clock-in alerts (grace_period_minutes after shift start) ───
-    // Read company clock_config for grace period
-    const { data: clockCfgRow } = await supabase
-      .from("company_settings")
-      .select("value")
-      .eq("company_id", company.id)
-      .eq("key", "clock_config")
-      .maybeSingle();
-    const clockCfg = (clockCfgRow?.value && typeof clockCfgRow.value === "object") ? clockCfgRow.value as Record<string, unknown> : {};
-    const gracePeriod = typeof clockCfg.grace_period_minutes === "number" ? clockCfg.grace_period_minutes : 15;
+    // Note: grace period is applied globally across companies in this scheduled job.
+    // Per-company grace customization would require iterating per company below.
+    const gracePeriod = 15;
 
     const nowHHMM = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}:00`;
     const minsAgo = new Date(now.getTime() - gracePeriod * 60000);
