@@ -1046,10 +1046,30 @@ export function ShiftFormFields({
               <span>Transporte activado pero <span className="font-semibold">sin conductor</span> asignado.</span>
             </div>
           )}
+          {/* Phase 2 #3.2: alerta fuerte cuando faltan drivers en el equipo asignado */}
+          {driversShortage && (
+            <div className="flex items-start gap-1.5 text-[11px] text-destructive">
+              <AlertTriangle className="h-3 w-3 shrink-0 mt-0.5" />
+              <span>
+                <span className="font-semibold">Faltan conductores en el equipo</span>:{" "}
+                {driversInTeam} asignado{driversInTeam === 1 ? "" : "s"} de {ridesNeeded} necesario{ridesNeeded === 1 ? "" : "s"} para cubrir el transporte.
+              </span>
+            </div>
+          )}
           {v.transportRequired && shiftAssignedIds.length > capacityNum * ridesNeeded && (
             <div className="flex items-start gap-1.5 text-[11px] text-[hsl(var(--status-pending))]">
               <AlertTriangle className="h-3 w-3 shrink-0 mt-0.5" />
               <span>El equipo asignado <span className="font-semibold">excede la capacidad</span> del transporte calculado.</span>
+            </div>
+          )}
+          {/* Phase 2 #3.3: warning informativo si capacidad por vehículo > plazas del turno */}
+          {capacityOverSlots && (
+            <div className="flex items-start gap-1.5 text-[11px] text-[hsl(var(--status-pending))]">
+              <AlertTriangle className="h-3 w-3 shrink-0 mt-0.5" />
+              <span>
+                La <span className="font-semibold">capacidad por vehículo ({capacityNum})</span> supera las{" "}
+                <span className="font-semibold">{slotsNum} plazas</span> del turno. Verifica si es intencional.
+              </span>
             </div>
           )}
           {hasConflicts && (
