@@ -189,7 +189,7 @@ Deno.serve(async (req) => {
 // ── Push to Parceros /sync-worker-passport ──────────────────────
 
 async function pushWorkerPassportToParceros(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   parcerosBaseUrl: string,
   parcerosApiKey: string,
   workerProfileId: string,
@@ -257,7 +257,7 @@ async function pushWorkerPassportToParceros(
 // ── Payload builder (unchanged logic, builds internal rich payload) ──
 
 async function buildWorkerPayload(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   workerProfileId: string
 ): Promise<ParcerosSyncPayload | null> {
   const { data: wp } = await supabase
