@@ -1125,14 +1125,24 @@ export default function Shifts() {
         location_id: s.location_id || null,
         notes: s.notes || null,
         claimable: s.claimable ?? false,
-        status: "draft",
-        created_by: user?.id,
-        pay_type: raw.pay_type || "hourly",
+        // Phase 2 #2.2: align fields with handleDuplicateToDay (#2.1).
         meeting_point: raw.meeting_point || null,
         special_instructions: raw.special_instructions || null,
+        pay_type: raw.pay_type || "hourly",
+        day_type: raw.day_type || "full_day",
+        pay_override: raw.pay_override ?? false,
+        attendance_mode: raw.attendance_mode || null,
+        clock_method: raw.clock_method || "both",
         transportation_required: raw.transportation_required ?? false,
-        car_capacity: raw.car_capacity ?? 4,
+        car_capacity: raw.car_capacity ?? 5,
         transportation_notes: raw.transportation_notes || null,
+        shift_admin_id: raw.shift_admin_id || null,
+        meeting_point_location_id: raw.meeting_point_location_id || null,
+        job_site_location_id: raw.job_site_location_id || null,
+        // Explicitly NOT copied: driver_employee_id, QR recipients
+        // Assignments handled separately below, gated by shifts_config.copy_week_assignments
+        status: "draft",
+        created_by: user?.id,
       } as any).select("id, shift_code").single();
       if (error) continue;
       if (newShift?.shift_code) {
