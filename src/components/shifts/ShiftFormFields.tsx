@@ -1087,13 +1087,14 @@ export function ShiftFormFields({
               <span>El equipo asignado <span className="font-semibold">excede la capacidad</span> del transporte calculado.</span>
             </div>
           )}
-          {/* Phase 2 #3.3: warning informativo si capacidad por vehículo > plazas del turno */}
-          {capacityOverSlots && (
-            <div className="flex items-start gap-1.5 text-[11px] text-[hsl(var(--status-pending))]">
+          {/* FIX regresión #1: alerta SOLO si la capacidad real es insuficiente
+              (vehículos × capacidad < personas). Antes alertaba cuando
+              capacidad_por_vehículo > slots, lo cual no es un problema. */}
+          {capacityShortage && (
+            <div className="flex items-start gap-1.5 text-[11px] text-[hsl(var(--status-error))]">
               <AlertTriangle className="h-3 w-3 shrink-0 mt-0.5" />
               <span>
-                La <span className="font-semibold">capacidad por vehículo ({capacityNum})</span> supera las{" "}
-                <span className="font-semibold">{slotsNum} plazas</span> del turno. Verifica si es intencional.
+                <span className="font-semibold">Capacidad insuficiente</span>: {ridesNeeded} vehículo(s) × {capacityNum} = {ridesNeeded * capacityNum} asientos, pero hay <span className="font-semibold">{slotsNum} personas</span>. Aumenta la capacidad por vehículo o agrega rutas.
               </span>
             </div>
           )}
