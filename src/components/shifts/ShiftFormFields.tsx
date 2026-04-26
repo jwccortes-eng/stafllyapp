@@ -1055,6 +1055,7 @@ export const EMPTY_SHIFT_FORM_STATE: ShiftFormState = {
   specialInstructions: "",
   payType: "hourly",
   dayType: "full_day",
+  payOverride: false, // Phase 2 #1: CREATE defaults to OFF (use employee profile rate).
   shiftAdminId: "",
   clockMethod: "both",
   attendanceMode: "clock",
