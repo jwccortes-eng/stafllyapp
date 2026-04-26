@@ -227,7 +227,8 @@ export function ShiftFormFields({
       const loc = locations.find((l) => l.id === id);
       if (loc) {
         if (loc.address) patch.meetingPoint = loc.address;
-        if (loc.default_pay_type) patch.payType = loc.default_pay_type as "hourly" | "daily";
+        // Phase 2 #1: client/location no longer auto-fills payType.
+        // The default_pay_type is shown only as a visual suggestion in the Pago section.
         if (loc.default_clock_method) patch.clockMethod = loc.default_clock_method as any;
         if (loc.require_car) patch.transportRequired = true;
         if (loc.default_instructions) patch.specialInstructions = loc.default_instructions;
