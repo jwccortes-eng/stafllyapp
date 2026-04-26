@@ -5,11 +5,9 @@
  * (ShiftEditDialog.tsx). Guarantees field/validation parity between the two
  * flows: any new field added here is immediately available in create AND edit.
  *
- * Design choice: this is a **controlled component**. The owning dialog still
- * keeps its own form state (so create can have repeat/quickAdd inline workflows
- * and edit can do material-change detection), but renders the field tree
- * through this single component. Field markup, layout and validation messaging
- * cannot drift apart anymore.
+ * FASE 1 (UX): orden operativo natural de secciones, sin cambios de payload.
+ * 1) Identidad → 2) Lugar → 3) Equipo → 4) Transporte → 5) Pago →
+ * 6) Fichaje → 7) Admin del turno → 8) Notas → 9) Resumen final
  */
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
@@ -20,7 +18,6 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   CalendarIcon,
   Clock,
@@ -33,10 +30,12 @@ import {
   Compass,
   Plus,
   Loader2,
-  ChevronDown,
-  Settings2,
   QrCode,
   ScanLine,
+  ListChecks,
+  AlertTriangle,
+  CheckCircle2,
+  MapPin,
 } from "lucide-react";
 import { format, parse } from "date-fns";
 import { es } from "date-fns/locale";
@@ -143,16 +142,23 @@ function SectionCard({
   icon: Icon,
   title,
   required,
+  step,
   children,
 }: {
   icon: any;
   title: string;
   required?: boolean;
+  step?: number;
   children: React.ReactNode;
 }) {
   return (
     <div className="rounded-xl border border-border/30 bg-card overflow-hidden">
       <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border/20 bg-muted/20">
+        {step !== undefined && (
+          <div className="h-5 w-5 rounded-md bg-primary/15 flex items-center justify-center text-[10px] font-bold text-primary">
+            {step}
+          </div>
+        )}
         <div className="h-6 w-6 rounded-lg bg-primary/10 flex items-center justify-center">
           <Icon className="h-3 w-3 text-primary" />
         </div>
@@ -268,10 +274,20 @@ export function ShiftFormFields({
     });
   };
 
+  // ── Computed summary signals ────────────────────────────────────────────
+  const slotsNum = parseInt(v.slots) || 0;
+  const capacityNum = parseInt(v.carCapacity) || 5;
+  const ridesNeeded = v.transportRequired ? Math.ceil(Math.max(slotsNum, 1) / Math.max(capacityNum, 1)) : 0;
+  const adminMissing = shiftAssignedIds.length > 0 && !v.shiftAdminId;
+  const adminInvalid =
+    !!v.shiftAdminId && shiftAssignedIds.length > 0 && !shiftAssignedIds.includes(v.shiftAdminId);
+  const driverMissing = v.transportRequired && !v.driverEmployeeId;
+  const noLocation = !v.locationId && !v.meetingPoint.trim() && !v.meetingPointLocationId && !v.jobSiteLocationId;
+
   return (
     <div className="space-y-3">
-      {/* ── Basic info ── */}
-      <SectionCard icon={Hash} title="Información básica">
+      {/* ── 1. IDENTIDAD ── */}
+      <SectionCard icon={Hash} title="Identidad del turno" step={1}>
         <div>
           <Label className="text-[11px] text-muted-foreground font-medium">
             Nombre del turno <span className="text-muted-foreground/40">(opcional)</span>
@@ -288,10 +304,55 @@ export function ShiftFormFields({
             </p>
           )}
         </div>
-      </SectionCard>
 
-      {/* ── Schedule ── */}
-      <SectionCard icon={Clock} title="Horario">
+        <div>
+          <Label className="text-[11px] text-muted-foreground font-medium">Cliente</Label>
+          <div className="flex gap-1 mt-1">
+            <Select value={v.clientId || "none"} onValueChange={handleClientChange}>
+              <SelectTrigger className="h-9 text-sm flex-1">
+                <SelectValue placeholder="Sin asignar" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Sin asignar</SelectItem>
+                {clients.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {formatDisplayText(c.name, "name")}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {onQuickAddClient && (
+              <Popover open={showAddClient} onOpenChange={setShowAddClient}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="icon" className="h-9 w-9 shrink-0" title="Agregar cliente">
+                    <Plus className="h-3.5 w-3.5" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-64 p-3" align="end">
+                  <p className="text-xs font-medium mb-2">Nuevo cliente</p>
+                  <div className="flex gap-1.5">
+                    <Input
+                      value={newClientName}
+                      onChange={(e) => setNewClientName(e.target.value)}
+                      placeholder="Nombre del cliente"
+                      className="h-8 text-sm"
+                      onKeyDown={(e) => e.key === "Enter" && handleQuickAddClientLocal()}
+                    />
+                    <Button
+                      size="sm"
+                      className="h-8 px-3 text-xs"
+                      onClick={handleQuickAddClientLocal}
+                      disabled={addingClient || !newClientName.trim()}
+                    >
+                      {addingClient ? <Loader2 className="h-3 w-3 animate-spin" /> : "Crear"}
+                    </Button>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            )}
+          </div>
+        </div>
+
         <div>
           <Label className="text-[11px] text-muted-foreground font-medium">Fecha</Label>
           <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
@@ -321,6 +382,7 @@ export function ShiftFormFields({
             </PopoverContent>
           </Popover>
         </div>
+
         <div className="grid grid-cols-2 gap-3">
           <div>
             <Label className="text-[11px] text-muted-foreground font-medium">Entrada</Label>
@@ -341,114 +403,130 @@ export function ShiftFormFields({
             />
           </div>
         </div>
+
+        <div>
+          <Label className="text-[11px] text-muted-foreground font-medium flex items-center gap-1">
+            <Clock className="h-3 w-3" /> Hora de convocatoria <span className="text-muted-foreground/40">(opcional)</span>
+          </Label>
+          <Input
+            type="time"
+            value={v.meetingTime}
+            onChange={(e) => onChange({ meetingTime: e.target.value })}
+            className="h-9 text-sm mt-1"
+            placeholder="--:--"
+          />
+          <p className="text-[10px] text-muted-foreground mt-0.5">
+            Si se define, se usa para calcular puntualidad en lugar de la hora de inicio.
+          </p>
+        </div>
       </SectionCard>
 
-      {/* ── Assignment ── */}
-      <SectionCard icon={Building2} title="Asignación">
-        <div className="grid grid-cols-2 gap-3">
-          {/* Client */}
-          <div>
-            <Label className="text-[11px] text-muted-foreground font-medium">Cliente</Label>
-            <div className="flex gap-1 mt-1">
-              <Select value={v.clientId || "none"} onValueChange={handleClientChange}>
-                <SelectTrigger className="h-9 text-sm flex-1">
-                  <SelectValue placeholder="Sin asignar" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Sin asignar</SelectItem>
-                  {clients.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {formatDisplayText(c.name, "name")}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {onQuickAddClient && (
-                <Popover open={showAddClient} onOpenChange={setShowAddClient}>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" size="icon" className="h-9 w-9 shrink-0" title="Agregar cliente">
-                      <Plus className="h-3.5 w-3.5" />
+      {/* ── 2. LUGAR ── */}
+      <SectionCard icon={MapPin} title="Lugar" step={2}>
+        <div>
+          <Label className="text-[11px] text-muted-foreground font-medium">Ubicación / Job site</Label>
+          <div className="flex gap-1 mt-1">
+            <Select value={v.locationId || "none"} onValueChange={handleLocationChange}>
+              <SelectTrigger className="h-9 text-sm flex-1">
+                <SelectValue placeholder="Sin asignar" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Sin asignar</SelectItem>
+                {locations.map((l) => (
+                  <SelectItem key={l.id} value={l.id}>
+                    {l.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {onQuickAddLocation && (
+              <Popover open={showAddLocation} onOpenChange={setShowAddLocation}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="icon" className="h-9 w-9 shrink-0" title="Agregar ubicación">
+                    <Plus className="h-3.5 w-3.5" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-64 p-3" align="end">
+                  <p className="text-xs font-medium mb-2">Nueva ubicación</p>
+                  <div className="space-y-1.5">
+                    <Input
+                      value={newLocationName}
+                      onChange={(e) => setNewLocationName(e.target.value)}
+                      placeholder="Nombre"
+                      className="h-8 text-sm"
+                    />
+                    <Input
+                      value={newLocationAddress}
+                      onChange={(e) => setNewLocationAddress(e.target.value)}
+                      placeholder="Dirección (opcional)"
+                      className="h-8 text-sm"
+                      onKeyDown={(e) => e.key === "Enter" && handleQuickAddLocationLocal()}
+                    />
+                    <Button
+                      size="sm"
+                      className="h-8 w-full text-xs"
+                      onClick={handleQuickAddLocationLocal}
+                      disabled={addingLocation || !newLocationName.trim()}
+                    >
+                      {addingLocation ? <Loader2 className="h-3 w-3 animate-spin" /> : "Crear"}
                     </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-64 p-3" align="end">
-                    <p className="text-xs font-medium mb-2">Nuevo cliente</p>
-                    <div className="flex gap-1.5">
-                      <Input
-                        value={newClientName}
-                        onChange={(e) => setNewClientName(e.target.value)}
-                        placeholder="Nombre del cliente"
-                        className="h-8 text-sm"
-                        onKeyDown={(e) => e.key === "Enter" && handleQuickAddClientLocal()}
-                      />
-                      <Button
-                        size="sm"
-                        className="h-8 px-3 text-xs"
-                        onClick={handleQuickAddClientLocal}
-                        disabled={addingClient || !newClientName.trim()}
-                      >
-                        {addingClient ? <Loader2 className="h-3 w-3 animate-spin" /> : "Crear"}
-                      </Button>
-                    </div>
-                  </PopoverContent>
-                </Popover>
-              )}
-            </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            )}
           </div>
-          {/* Location */}
-          <div>
-            <Label className="text-[11px] text-muted-foreground font-medium">Ubicación</Label>
-            <div className="flex gap-1 mt-1">
-              <Select value={v.locationId || "none"} onValueChange={handleLocationChange}>
-                <SelectTrigger className="h-9 text-sm flex-1">
-                  <SelectValue placeholder="Sin asignar" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Sin asignar</SelectItem>
-                  {locations.map((l) => (
-                    <SelectItem key={l.id} value={l.id}>
-                      {l.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {onQuickAddLocation && (
-                <Popover open={showAddLocation} onOpenChange={setShowAddLocation}>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" size="icon" className="h-9 w-9 shrink-0" title="Agregar ubicación">
-                      <Plus className="h-3.5 w-3.5" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-64 p-3" align="end">
-                    <p className="text-xs font-medium mb-2">Nueva ubicación</p>
-                    <div className="space-y-1.5">
-                      <Input
-                        value={newLocationName}
-                        onChange={(e) => setNewLocationName(e.target.value)}
-                        placeholder="Nombre"
-                        className="h-8 text-sm"
-                      />
-                      <Input
-                        value={newLocationAddress}
-                        onChange={(e) => setNewLocationAddress(e.target.value)}
-                        placeholder="Dirección (opcional)"
-                        className="h-8 text-sm"
-                        onKeyDown={(e) => e.key === "Enter" && handleQuickAddLocationLocal()}
-                      />
-                      <Button
-                        size="sm"
-                        className="h-8 w-full text-xs"
-                        onClick={handleQuickAddLocationLocal}
-                        disabled={addingLocation || !newLocationName.trim()}
-                      >
-                        {addingLocation ? <Loader2 className="h-3 w-3 animate-spin" /> : "Crear"}
-                      </Button>
-                    </div>
-                  </PopoverContent>
-                </Popover>
-              )}
-            </div>
-          </div>
+          <p className="text-[10px] text-muted-foreground/60 mt-0.5">
+            Lugar real donde se ejecuta el servicio.
+          </p>
         </div>
+
+        {/* Premium structured locations (Phase 1B): Job site + Meeting point estructurados */}
+        {companyId && (
+          <ShiftLocationsSection
+            companyId={companyId}
+            meetingPointLocationId={v.meetingPointLocationId}
+            jobSiteLocationId={v.jobSiteLocationId}
+            onChange={(patch) => {
+              const next: Partial<ShiftFormState> = {};
+              if (patch.meetingPointLocationId !== undefined) next.meetingPointLocationId = patch.meetingPointLocationId;
+              if (patch.jobSiteLocationId !== undefined) next.jobSiteLocationId = patch.jobSiteLocationId;
+              if (patch.meetingPointText !== undefined && patch.meetingPointText) next.meetingPoint = patch.meetingPointText;
+              onChange(next);
+            }}
+          />
+        )}
+
+        <div>
+          <Label className="text-[11px] text-muted-foreground font-medium flex items-center gap-1">
+            <Compass className="h-3 w-3" /> Punto de encuentro / Meeting point
+          </Label>
+          <Input
+            value={v.meetingPoint}
+            onChange={(e) => onChange({ meetingPoint: e.target.value })}
+            placeholder="Dirección, link de Google Maps o lugar..."
+            className="h-9 text-sm mt-1"
+          />
+          <p className="text-[10px] text-muted-foreground/60 mt-0.5">
+            Dónde se reúne el equipo antes de operar. Pegar links de Google Maps con parser automático llega en Fase 2.
+          </p>
+        </div>
+
+        <div>
+          <Label className="text-[11px] text-muted-foreground font-medium flex items-center gap-1">
+            <FileText className="h-3 w-3" /> Indicaciones para llegar / Directions
+          </Label>
+          <Textarea
+            value={v.specialInstructions}
+            onChange={(e) => onChange({ specialInstructions: e.target.value })}
+            rows={2}
+            placeholder="Ej: Entrar por la puerta lateral, parking en sótano 2..."
+            className="text-sm resize-none mt-1"
+          />
+        </div>
+      </SectionCard>
+
+      {/* ── 3. EQUIPO ── */}
+      <SectionCard icon={Users} title="Equipo" step={3}>
         <div className="grid grid-cols-2 gap-3 items-end">
           <div>
             <Label className="text-[11px] text-muted-foreground font-medium">Plazas disponibles</Label>
@@ -473,46 +551,93 @@ export function ShiftFormFields({
             </div>
           )}
         </div>
-        <div>
-          <Label className="text-[11px] text-muted-foreground font-medium flex items-center gap-1">
-            <Compass className="h-3 w-3" /> Dirección / Punto de encuentro
-          </Label>
-          <Input
-            value={v.meetingPoint}
-            onChange={(e) => onChange({ meetingPoint: e.target.value })}
-            placeholder="Se autocompleta con el cliente, o escribe manualmente..."
-            className="h-9 text-sm mt-1"
-          />
-          <p className="text-[10px] text-muted-foreground/50 mt-0.5">
-            Texto libre — fallback rápido. Para precisión operativa, usa las ubicaciones premium debajo.
-          </p>
-        </div>
 
-        {/* Premium structured locations (Phase 1B) */}
-        {companyId && (
-          <ShiftLocationsSection
-            companyId={companyId}
-            meetingPointLocationId={v.meetingPointLocationId}
-            jobSiteLocationId={v.jobSiteLocationId}
-            onChange={(patch) => {
-              const next: Partial<ShiftFormState> = {};
-              if (patch.meetingPointLocationId !== undefined) next.meetingPointLocationId = patch.meetingPointLocationId;
-              if (patch.jobSiteLocationId !== undefined) next.jobSiteLocationId = patch.jobSiteLocationId;
-              if (patch.meetingPointText !== undefined && patch.meetingPointText) next.meetingPoint = patch.meetingPointText;
-              onChange(next);
-            }}
-          />
+        {showEmployeePicker && (
+          <div>
+            <Label className="text-[11px] text-muted-foreground font-medium mb-1 block">Asignar empleados</Label>
+            <EmployeeCombobox
+              employees={employees}
+              selected={v.selectedEmployees}
+              onToggle={toggleEmployee}
+              shifts={shifts}
+              assignments={assignments}
+              shiftDate={v.date}
+              shiftStart={v.startTime}
+              shiftEnd={v.endTime}
+              maxHeight="180px"
+              availabilityConfigs={availabilityConfigs}
+              availabilityOverrides={availabilityOverrides}
+              availabilityBlockMode="warning"
+              onAddNewEmployee={onAddNewEmployee}
+            />
+          </div>
         )}
       </SectionCard>
 
-      {/* ── Payment ── */}
-      <SectionCard icon={CreditCard} title="Tipo de pago">
+      {/* ── 4. TRANSPORTE ── */}
+      <SectionCard icon={Car} title="Transporte" step={4}>
+        <div className="flex items-center gap-2">
+          <Checkbox
+            checked={v.transportRequired}
+            onCheckedChange={(c) => onChange({ transportRequired: !!c })}
+            id={`transport-${mode}`}
+          />
+          <Label htmlFor={`transport-${mode}`} className="text-xs font-normal cursor-pointer">
+            ¿Este turno requiere transporte?
+          </Label>
+        </div>
+        {v.transportRequired && (
+          <>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-[11px] text-muted-foreground font-medium">Capacidad por vehículo</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  value={v.carCapacity}
+                  onChange={(e) => onChange({ carCapacity: e.target.value })}
+                  className="h-9 text-sm mt-1"
+                />
+              </div>
+              <div className="flex flex-col justify-end">
+                <p className="text-[11px] text-muted-foreground font-medium mb-1">Vehículos necesarios</p>
+                <div className="h-9 flex items-center px-3 rounded-md border border-border/30 bg-muted/20 text-sm font-semibold">
+                  {ridesNeeded}
+                </div>
+              </div>
+            </div>
+            <div>
+              <Label className="text-[11px] text-muted-foreground font-medium">Conductor asignado</Label>
+              <div className="mt-1">
+                <SingleEmployeePicker
+                  employees={employees}
+                  value={v.driverEmployeeId || null}
+                  onChange={(id) => onChange({ driverEmployeeId: id ?? "" })}
+                  placeholder="Buscar conductor..."
+                  emptyLabel="Sin asignar"
+                  highlightDrivers
+                />
+              </div>
+            </div>
+            <div>
+              <Label className="text-[11px] text-muted-foreground font-medium">Notas de transporte</Label>
+              <Input
+                value={v.transportNotes}
+                onChange={(e) => onChange({ transportNotes: e.target.value })}
+                placeholder="Ej: Recoger en oficina a las 7:30 AM"
+                className="h-9 text-sm mt-1"
+              />
+            </div>
+          </>
+        )}
+      </SectionCard>
+
+      {/* ── 5. PAGO ── */}
+      <SectionCard icon={CreditCard} title="Pago" step={5}>
         <Select
           value={v.payType}
           onValueChange={(val) => {
             const newPayType = val as "hourly" | "daily";
-            // Auto-suggest attendance mode if user hasn't customized it (still on the
-            // default of the previous pay type). Daily → arrival, Hourly → clock.
             const currentDefault = defaultAttendanceModeForPayType(v.payType);
             const patch: any = { payType: newPayType };
             if (v.attendanceMode === currentDefault) {
@@ -543,15 +668,25 @@ export function ShiftFormFields({
                   <SelectItem value="half_day">🌤️ Medio día</SelectItem>
                 </SelectContent>
               </Select>
+              <p className="text-[10px] text-muted-foreground/60 mt-0.5">
+                Editable después de la creación, incluso después del turno.
+              </p>
             </div>
           </div>
         )}
+        <div className="flex items-start gap-2 p-2.5 rounded-lg bg-primary/5 border border-primary/15">
+          <CreditCard className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
+          <p className="text-[10px] text-muted-foreground leading-snug">
+            <span className="font-semibold text-foreground">Tasa base:</span> el perfil del empleado.
+            Lo definido aquí <span className="font-semibold">solo sobrescribe este turno</span>.
+          </p>
+        </div>
       </SectionCard>
 
-      {/* ── Attendance Mode + Meeting Time (operational presence) ── */}
-      <SectionCard icon={ScanLine} title="Control de asistencia">
+      {/* ── 6. FICHAJE / ASISTENCIA ── */}
+      <SectionCard icon={ScanLine} title="Fichaje / Asistencia" step={6}>
         <div>
-          <Label className="text-[11px] text-muted-foreground font-medium">Modo</Label>
+          <Label className="text-[11px] text-muted-foreground font-medium">Modo de asistencia</Label>
           <Select
             value={v.attendanceMode}
             onValueChange={(val) => onChange({ attendanceMode: val as ShiftAttendanceMode })}
@@ -567,36 +702,14 @@ export function ShiftFormFields({
           </Select>
           <p className="text-[10px] text-muted-foreground mt-0.5">{SHIFT_ATTENDANCE_MODE_HINTS[v.attendanceMode]}</p>
         </div>
-        <div>
-          <Label className="text-[11px] text-muted-foreground font-medium flex items-center gap-1">
-            <Clock className="h-3 w-3" /> Hora de convocatoria (opcional)
-          </Label>
-          <Input
-            type="time"
-            value={v.meetingTime}
-            onChange={(e) => onChange({ meetingTime: e.target.value })}
-            className="h-9 text-sm mt-1"
-            placeholder="--:--"
-          />
-          <p className="text-[10px] text-muted-foreground mt-0.5">
-            Si se define, se usa para calcular puntualidad en lugar de la hora de inicio del turno.
-          </p>
-        </div>
-      </SectionCard>
 
-      {/* ── Clock method + QR (QR only in edit, needs shift.id) ── */}
-      <div
-        className={cn(
-          "grid gap-3",
-          mode === "edit" && shift && onQrUpdate ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1",
-        )}
-      >
-        <SectionCard icon={Clock} title="Método de fichaje">
+        <div>
+          <Label className="text-[11px] text-muted-foreground font-medium">Método de fichaje</Label>
           <Select
             value={v.clockMethod}
             onValueChange={(val) => onChange({ clockMethod: val as "mobile" | "kiosk" | "both" })}
           >
-            <SelectTrigger className="h-9 text-sm">
+            <SelectTrigger className="h-9 text-sm mt-1">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -605,23 +718,26 @@ export function ShiftFormFields({
               <SelectItem value="kiosk">🖥 Solo Kiosk</SelectItem>
             </SelectContent>
           </Select>
-          <p className="text-[10px] text-muted-foreground">Define desde dónde pueden fichar los empleados.</p>
-        </SectionCard>
+        </div>
 
         {mode === "edit" && shift && onQrUpdate && (
-          <SectionCard icon={QrCode} title="Asistencia por QR">
+          <div className="pt-1 border-t border-border/20">
+            <div className="flex items-center gap-1.5 mb-2 mt-2">
+              <QrCode className="h-3 w-3 text-primary" />
+              <span className="text-[11px] font-semibold text-foreground">Asistencia por QR</span>
+            </div>
             <ShiftQRSection
               shiftId={shift.id}
               qrToken={qrToken ?? null}
               qrAttendanceMode={qrAttendanceMode ?? "disabled"}
               onUpdate={onQrUpdate}
             />
-          </SectionCard>
+          </div>
         )}
-      </div>
+      </SectionCard>
 
-      {/* ── Shift Admin (responsable operativo) ── */}
-      <SectionCard icon={Users} title="Admin del turno" required={shiftAssignedIds.length > 0}>
+      {/* ── 7. ADMIN DEL TURNO (después del staffing) ── */}
+      <SectionCard icon={Users} title="Admin del turno" required={shiftAssignedIds.length > 0} step={7}>
         <div>
           <Label className="text-[11px] text-muted-foreground font-medium">
             Responsable operativo {shiftAssignedIds.length > 0 && <span className="text-destructive">*</span>}
@@ -646,7 +762,7 @@ export function ShiftFormFields({
           </Select>
           {shiftAssignedIds.length === 0 ? (
             <p className="text-[10px] text-muted-foreground mt-0.5">
-              Puedes designarlo ahora; al asignar empleados deberá ser uno de ellos.
+              Asigna primero el equipo; el admin debe ser uno de los empleados asignados.
             </p>
           ) : (
             <p className="text-[10px] text-muted-foreground mt-0.5">
@@ -657,119 +773,78 @@ export function ShiftFormFields({
         </div>
       </SectionCard>
 
-      {/* ── Transportation ── */}
-      <SectionCard icon={Car} title="Transporte">
-        <div className="flex items-center gap-2">
-          <Checkbox
-            checked={v.transportRequired}
-            onCheckedChange={(c) => onChange({ transportRequired: !!c })}
-            id={`transport-${mode}`}
-          />
-          <Label htmlFor={`transport-${mode}`} className="text-xs font-normal cursor-pointer">
-            ¿Este turno requiere transporte?
+      {/* ── 8. NOTAS INTERNAS ── */}
+      <SectionCard icon={FileText} title="Notas internas" step={8}>
+        <div>
+          <Label className="text-[11px] text-muted-foreground font-medium">
+            Notas internas <span className="text-muted-foreground/40">(solo admins)</span>
           </Label>
+          <Textarea
+            value={v.notes}
+            onChange={(e) => onChange({ notes: e.target.value })}
+            rows={2}
+            placeholder="Información operativa visible solo para admins..."
+            className="text-sm resize-none mt-1"
+          />
         </div>
-        {v.transportRequired && (
-          <>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label className="text-[11px] text-muted-foreground font-medium">Capacidad por vehículo</Label>
-                <Input
-                  type="number"
-                  min="1"
-                  value={v.carCapacity}
-                  onChange={(e) => onChange({ carCapacity: e.target.value })}
-                  className="h-9 text-sm mt-1"
-                />
-              </div>
-              <div className="flex flex-col justify-end">
-                <p className="text-[11px] text-muted-foreground font-medium mb-1">Vehículos necesarios</p>
-                <div className="h-9 flex items-center px-3 rounded-md border border-border/30 bg-muted/20 text-sm font-semibold">
-                  {Math.ceil((parseInt(v.slots) || 1) / (parseInt(v.carCapacity) || 4))}
-                </div>
-              </div>
-            </div>
-            <div>
-              <Label className="text-[11px] text-muted-foreground font-medium">Conductor asignado</Label>
-              <div className="mt-1">
-                <SingleEmployeePicker
-                  employees={employees}
-                  value={v.driverEmployeeId || null}
-                  onChange={(id) => onChange({ driverEmployeeId: id ?? "" })}
-                  placeholder="Buscar conductor..."
-                  emptyLabel="Sin asignar"
-                  highlightDrivers
-                />
-              </div>
-            </div>
-            <div>
-              <Label className="text-[11px] text-muted-foreground font-medium">Notas de transporte</Label>
-              <Input
-                value={v.transportNotes}
-                onChange={(e) => onChange({ transportNotes: e.target.value })}
-                placeholder="Ej: Recoger en oficina a las 7:30 AM"
-                className="h-9 text-sm mt-1"
-              />
-            </div>
-          </>
-        )}
       </SectionCard>
 
-      {/* ── Advanced details (open by default in CREATE so users see it once) ── */}
-      <Collapsible defaultOpen={mode === "create"}>
-        <CollapsibleTrigger className="flex items-center justify-between w-full px-4 py-2.5 rounded-xl border border-border/30 bg-muted/20 hover:bg-muted/40 transition-colors group">
-          <div className="flex items-center gap-2">
-            <Settings2 className="h-3.5 w-3.5 text-muted-foreground" />
-            <span className="text-[11px] font-semibold text-muted-foreground">Detalles adicionales</span>
+      {/* ── 9. RESUMEN FINAL ── */}
+      <SectionCard icon={ListChecks} title="Resumen final" step={9}>
+        <div className="grid grid-cols-3 gap-2 text-[11px]">
+          <div className="rounded-lg border border-border/30 bg-muted/10 p-2">
+            <div className="text-[10px] text-muted-foreground">Plazas</div>
+            <div className="font-semibold text-foreground">{slotsNum || "—"}</div>
           </div>
-          <ChevronDown className="h-3.5 w-3.5 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
-        </CollapsibleTrigger>
-        <CollapsibleContent className="space-y-3 pt-3">
-          <SectionCard icon={FileText} title="Notas e instrucciones">
-            <div>
-              <Label className="text-[11px] text-muted-foreground font-medium">Notas internas</Label>
-              <Textarea
-                value={v.notes}
-                onChange={(e) => onChange({ notes: e.target.value })}
-                rows={2}
-                placeholder="Opcional, visible solo para admins..."
-                className="text-sm resize-none mt-1"
-              />
-            </div>
-            <div>
-              <Label className="text-[11px] text-muted-foreground font-medium">Instrucciones para el equipo</Label>
-              <Textarea
-                value={v.specialInstructions}
-                onChange={(e) => onChange({ specialInstructions: e.target.value })}
-                rows={2}
-                placeholder="Ej: Llevar uniforme negro, llegar 15 min antes..."
-                className="text-sm resize-none mt-1"
-              />
-            </div>
-          </SectionCard>
-        </CollapsibleContent>
-      </Collapsible>
+          <div className="rounded-lg border border-border/30 bg-muted/10 p-2">
+            <div className="text-[10px] text-muted-foreground">Asignados</div>
+            <div className="font-semibold text-foreground">{shiftAssignedIds.length}</div>
+          </div>
+          <div className="rounded-lg border border-border/30 bg-muted/10 p-2">
+            <div className="text-[10px] text-muted-foreground">Vehículos</div>
+            <div className="font-semibold text-foreground">{v.transportRequired ? ridesNeeded : "—"}</div>
+          </div>
+        </div>
 
-      {/* ── Employee picker (CREATE mode only — edit has its own assignment UI) ── */}
-      {showEmployeePicker && (
-        <SectionCard icon={Users} title="Asignar empleados">
-          <EmployeeCombobox
-            employees={employees}
-            selected={v.selectedEmployees}
-            onToggle={toggleEmployee}
-            shifts={shifts}
-            assignments={assignments}
-            shiftDate={v.date}
-            shiftStart={v.startTime}
-            shiftEnd={v.endTime}
-            maxHeight="150px"
-            availabilityConfigs={availabilityConfigs}
-            availabilityOverrides={availabilityOverrides}
-            availabilityBlockMode="warning"
-            onAddNewEmployee={onAddNewEmployee}
-          />
-        </SectionCard>
-      )}
+        <div className="space-y-1.5 pt-1">
+          {!v.date && (
+            <div className="flex items-start gap-1.5 text-[11px] text-destructive">
+              <AlertTriangle className="h-3 w-3 shrink-0 mt-0.5" /> Falta la fecha del turno.
+            </div>
+          )}
+          {noLocation && (
+            <div className="flex items-start gap-1.5 text-[11px] text-[hsl(var(--status-pending))]">
+              <AlertTriangle className="h-3 w-3 shrink-0 mt-0.5" /> No se ha definido lugar ni punto de encuentro.
+            </div>
+          )}
+          {adminMissing && (
+            <div className="flex items-start gap-1.5 text-[11px] text-destructive">
+              <AlertTriangle className="h-3 w-3 shrink-0 mt-0.5" /> Falta seleccionar el admin del turno (obligatorio con equipo asignado).
+            </div>
+          )}
+          {adminInvalid && (
+            <div className="flex items-start gap-1.5 text-[11px] text-destructive">
+              <AlertTriangle className="h-3 w-3 shrink-0 mt-0.5" /> El admin seleccionado no está dentro del equipo asignado.
+            </div>
+          )}
+          {driverMissing && (
+            <div className="flex items-start gap-1.5 text-[11px] text-[hsl(var(--status-pending))]">
+              <AlertTriangle className="h-3 w-3 shrink-0 mt-0.5" /> Transporte activado pero sin conductor asignado.
+            </div>
+          )}
+          {showEmployeePicker && shiftAssignedIds.length > 0 && shiftAssignedIds.length < slotsNum && (
+            <div className="flex items-start gap-1.5 text-[11px] text-[hsl(var(--status-pending))]">
+              <AlertTriangle className="h-3 w-3 shrink-0 mt-0.5" />
+              Cobertura parcial: {shiftAssignedIds.length} de {slotsNum} plazas cubiertas.
+            </div>
+          )}
+          {!adminMissing && !adminInvalid && !driverMissing && v.date && !noLocation && (
+            <div className="flex items-start gap-1.5 text-[11px] text-[hsl(142_76%_36%)]">
+              <CheckCircle2 className="h-3 w-3 shrink-0 mt-0.5" /> Listo para guardar.
+            </div>
+          )}
+        </div>
+      </SectionCard>
     </div>
   );
 }
@@ -794,7 +869,7 @@ export const EMPTY_SHIFT_FORM_STATE: ShiftFormState = {
   attendanceMode: "clock",
   meetingTime: "",
   transportRequired: false,
-  carCapacity: "4",
+  carCapacity: "5",
   transportNotes: "",
   driverEmployeeId: "",
   selectedEmployees: [],
@@ -825,7 +900,7 @@ export function shiftToFormState(shift: Shift): ShiftFormState {
       (s.attendance_mode as ShiftAttendanceMode | undefined) ?? defaultAttendanceModeForPayType(s.pay_type),
     meetingTime: s.meeting_time ? String(s.meeting_time).slice(0, 5) : "",
     transportRequired: !!s.transportation_required,
-    carCapacity: String(s.car_capacity ?? 4),
+    carCapacity: String(s.car_capacity ?? 5),
     transportNotes: s.transportation_notes ?? "",
     driverEmployeeId: s.driver_employee_id ?? "",
     selectedEmployees: [],
@@ -855,7 +930,7 @@ export function formStateToShiftPayload(s: ShiftFormState, allowClaims: boolean)
     attendance_mode: s.attendanceMode,
     meeting_time: s.meetingTime ? s.meetingTime : null,
     transportation_required: s.transportRequired,
-    car_capacity: parseInt(s.carCapacity) || 4,
+    car_capacity: parseInt(s.carCapacity) || 5,
     transportation_notes: s.transportNotes.trim() || null,
     driver_employee_id: s.driverEmployeeId || null,
     meeting_point_location_id: s.meetingPointLocationId || null,
