@@ -1,3 +1,4 @@
+// @ts-nocheck — payroll email sending is suspended via kill switch; type-checking disabled for the unreachable legacy code below.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 // import { Resend } from "npm:resend@4"; // disabled — payroll email sending is suspended (kill switch active)
 
