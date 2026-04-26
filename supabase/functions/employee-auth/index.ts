@@ -149,7 +149,7 @@ Deno.serve(async (req) => {
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
     const anonClient = createClient(supabaseUrl, anonKey);
 
-    const { action, phone, pin, employee_id, email, avatar_url } = await req.json();
+    const { action, phone, pin, employee_id, invite_token, email, avatar_url } = await req.json();
 
     // ACTION: check
     if (action === "check") {
@@ -203,54 +203,109 @@ Deno.serve(async (req) => {
 
     // ACTION: activate
     if (action === "activate") {
-      if (!phone || !pin) {
+      // PIN siempre requerido
+      if (!pin) {
         return new Response(
-          JSON.stringify({ error: "Teléfono y PIN son requeridos" }),
+          JSON.stringify({ error: "PIN requerido", code: "missing_pin" }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
       if (!/^\d{4}$/.test(pin)) {
         return new Response(
-          JSON.stringify({ error: "El PIN debe ser exactamente 4 dígitos numéricos" }),
+          JSON.stringify({ error: "El PIN debe ser exactamente 4 dígitos numéricos", code: "invalid_pin" }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
-      const cleanPhone = phone.replace(/[^\d+]/g, "").slice(0, 20);
+      // Identidad: phone, employee_id o invite_token (al menos uno)
+      if (!phone && !employee_id && !invite_token) {
+        return new Response(
+          JSON.stringify({
+            error: "Falta identificación. Se requiere teléfono, employee_id o invite_token.",
+            code: "missing_identity",
+          }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       const pwd = authPassword(pin);
 
-      // Fetch all employees with this phone; pick the one needing activation
-      const { data: activateEmployees } = await adminClient
-        .from("employees")
-        .select("id, first_name, last_name, access_pin, is_active, user_id, phone_number")
-        .eq("phone_number", cleanPhone)
-        .eq("is_active", true)
-        .order("created_at", { ascending: true });
+      // Resolver empleado: phone → employee_id → invite_token
+      let employee: any = null;
 
-      // For activation: pick the first one without a PIN
-      const employee = activateEmployees?.find(e => !e.access_pin) || activateEmployees?.[0] || null;
+      if (phone) {
+        const cleanPhone = phone.replace(/[^\d+]/g, "").slice(0, 20);
+        const { data: byPhone } = await adminClient
+          .from("employees")
+          .select("id, first_name, last_name, access_pin, is_active, user_id, phone_number")
+          .eq("phone_number", cleanPhone)
+          .eq("is_active", true)
+          .order("created_at", { ascending: true });
+        employee = byPhone?.find((e: any) => !e.access_pin) || byPhone?.[0] || null;
+      }
+
+      if (!employee && employee_id) {
+        const { data: byId } = await adminClient
+          .from("employees")
+          .select("id, first_name, last_name, access_pin, is_active, user_id, phone_number")
+          .eq("id", employee_id)
+          .maybeSingle();
+        employee = byId ?? null;
+      }
+
+      if (!employee && invite_token) {
+        const { data: invRows } = await adminClient
+          .from("employee_invitations")
+          .select("employee_id, status, expires_at")
+          .eq("invite_token", invite_token)
+          .maybeSingle();
+        if (invRows?.employee_id) {
+          if (invRows.status === "accepted") {
+            return new Response(
+              JSON.stringify({ error: "Esta invitación ya fue activada.", code: "invitation_used" }),
+              { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+          if (invRows.expires_at && new Date(invRows.expires_at) < new Date()) {
+            return new Response(
+              JSON.stringify({ error: "La invitación expiró.", code: "invitation_expired" }),
+              { status: 410, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+          const { data: byInv } = await adminClient
+            .from("employees")
+            .select("id, first_name, last_name, access_pin, is_active, user_id, phone_number")
+            .eq("id", invRows.employee_id)
+            .maybeSingle();
+          employee = byInv ?? null;
+        }
+      }
 
       if (!employee) {
         return new Response(
-          JSON.stringify({ error: "Empleado no encontrado" }),
+          JSON.stringify({ error: "Empleado no encontrado", code: "employee_not_found" }),
           { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
       if (!employee.is_active) {
         return new Response(
-          JSON.stringify({ error: "Tu cuenta está inactiva. Contacta al administrador." }),
+          JSON.stringify({ error: "Tu cuenta está inactiva. Contacta al administrador.", code: "inactive" }),
           { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
       if (employee.access_pin) {
         return new Response(
-          JSON.stringify({ error: "Tu cuenta ya está activada. Inicia sesión con tu PIN." }),
+          JSON.stringify({ error: "Tu cuenta ya está activada. Inicia sesión con tu PIN.", code: "already_activated" }),
           { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
+
+      // Resolver phone para crear cuenta auth: usar el del empleado si existe; si no, sintético
+      const empPhone = (employee.phone_number || "").replace(/[^\d+]/g, "").slice(0, 20);
+      const authIdentifier = empPhone || `noph_${employee.id.replace(/-/g, "").slice(0, 16)}`;
 
       const updateData: Record<string, any> = { access_pin: pin };
       if (email && typeof email === "string" && email.includes("@")) {
@@ -262,7 +317,7 @@ Deno.serve(async (req) => {
 
       await adminClient.from("employees").update(updateData).eq("id", employee.id);
 
-      const empEmail = `emp_${cleanPhone}@employee.internal`;
+      const empEmail = `emp_${authIdentifier}@employee.internal`;
 
       if (!employee.user_id) {
         const { data: newUser, error: createError } = await adminClient.auth.admin.createUser({
@@ -281,7 +336,7 @@ Deno.serve(async (req) => {
             employee.user_id = existingUser.id;
           } else {
             return new Response(
-              JSON.stringify({ error: "Error al crear cuenta" }),
+              JSON.stringify({ error: "Error al crear cuenta: " + createError.message, code: "auth_create_failed" }),
               { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
             );
           }
@@ -302,7 +357,11 @@ Deno.serve(async (req) => {
 
       if (signInError) {
         return new Response(
-          JSON.stringify({ error: "Cuenta activada pero error al iniciar sesión. Intenta iniciar sesión manualmente." }),
+          JSON.stringify({
+            error: "Cuenta activada pero error al iniciar sesión. Intenta iniciar sesión manualmente.",
+            code: "signin_failed",
+            detail: signInError.message,
+          }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
@@ -664,8 +723,9 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ error: "Acción no válida" }), {
       status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (err) {
-    return new Response(JSON.stringify({ error: "Error interno del servidor" }), {
+  } catch (err: any) {
+    console.error("[employee-auth] internal error:", err?.message, err?.stack);
+    return new Response(JSON.stringify({ error: "Error interno del servidor", code: "internal_error", detail: err?.message }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }

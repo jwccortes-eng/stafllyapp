@@ -309,6 +309,18 @@ export default function ActivateAccount() {
     setError("");
 
     try {
+      // Pre-flight: errores específicos visibles antes de tocar backend
+      if (!pin || pin.length !== 4) {
+        setError("Missing PIN. Go back and create a 4-digit PIN.");
+        setBusy(false);
+        return;
+      }
+      if (profileForm.has_vehicle && (!driverLicenseFile || !vehicleRegFile)) {
+        setError("Driver's license and vehicle registration are required when you have a vehicle.");
+        setBusy(false);
+        return;
+      }
+
       await saveProgress();
 
       // Upload vehicle documents if required
@@ -317,13 +329,45 @@ export default function ActivateAccount() {
         if (!docsOk) { setBusy(false); return; }
       }
 
-      // Activate first to get an authenticated session — required by storage RLS
+      // Activate — pass phone if known, plus employee_id and invite_token as fallbacks
       const { data, error: fnErr } = await supabase.functions.invoke("employee-auth", {
-        body: { action: "activate", phone: invite.employee_phone, pin },
+        body: {
+          action: "activate",
+          phone: invite.employee_phone || undefined,
+          employee_id: invite.employee_id,
+          invite_token: token,
+          pin,
+        },
       });
 
       if (fnErr || data?.error) {
-        setError(data?.error || "Activation error. Please try again.");
+        const code = data?.code as string | undefined;
+        const backendMsg = data?.error as string | undefined;
+        const detail = data?.detail as string | undefined;
+
+        const friendly: Record<string, string> = {
+          missing_pin: "Missing PIN. Go back and create a 4-digit PIN.",
+          invalid_pin: "PIN must be exactly 4 digits.",
+          missing_identity:
+            "We couldn't identify your account. Your invitation link may be incomplete — request a new one.",
+          employee_not_found:
+            "Employee record not found. Ask your administrator to verify your invitation.",
+          inactive: "Your account is inactive. Contact your administrator.",
+          already_activated: "This account is already activated. Sign in with your phone and PIN.",
+          invitation_used: "This invitation has already been used.",
+          invitation_expired: "This invitation has expired. Request a new one.",
+          auth_create_failed: "We couldn't create your login account. Try again or contact support.",
+          signin_failed: "Account activated, but sign-in failed. Go to sign-in and try manually.",
+          internal_error: "Server error during activation. Please try again in a moment.",
+        };
+
+        const msg =
+          (code && friendly[code]) ||
+          backendMsg ||
+          fnErr?.message ||
+          "Activation failed. Please try again.";
+
+        setError(detail ? `${msg} (${detail})` : msg);
         setBusy(false);
         return;
       }
@@ -373,7 +417,7 @@ export default function ActivateAccount() {
 
       setWizardStep("ready");
     } catch (err: any) {
-      setError(err?.message || "Unexpected error.");
+      setError(err?.message || "Unexpected error during activation.");
     } finally {
       setBusy(false);
     }
