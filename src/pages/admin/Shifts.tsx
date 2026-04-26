@@ -454,7 +454,7 @@ export default function Shifts() {
       const loc = locations.find(l => l.id === id) as any;
       if (loc) {
         if (loc.address) setMeetingPoint(loc.address);
-        if (loc.default_pay_type) setPayType(loc.default_pay_type as "hourly" | "daily");
+        // Phase 2 #1: client/location no longer auto-fills payType. Shown as suggestion only in Pago section.
         if (loc.default_clock_method) {
           setClockMethod(loc.default_clock_method as "mobile" | "kiosk" | "both");
         }
