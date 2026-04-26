@@ -11,7 +11,7 @@
  * (developer/owner with no company), we render an aggregated summary across
  * accessible companies plus a per-company mini-pulse selector.
  */
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useCompany } from "@/hooks/useCompany";
 import { useAuth } from "@/hooks/useAuth";
@@ -28,7 +28,7 @@ import {
   Activity, Users, CalendarDays, Clock, ShieldCheck, Building2,
   Upload, GitMerge, DollarSign, MapPin, Inbox, Settings2,
   ArrowRight, AlertTriangle, CheckCircle2, ChevronRight, Sparkles,
-  UserPlus, Mail, Layers, Radio,
+  UserPlus, Mail, Layers, Radio, RefreshCw,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────
