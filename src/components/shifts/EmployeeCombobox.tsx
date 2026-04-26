@@ -172,9 +172,14 @@ export function EmployeeCombobox({
   };
 
   const selectDrivers = () => {
+    // Phase 2 #3.5: respeta plazas restantes — no sobreasignar.
+    const limit = remainingSlots ?? Infinity;
+    let added = 0;
     for (const emp of sorted) {
+      if (added >= limit) break;
       if (selected.includes(emp.id) || !isDriver(emp) || getGroup(emp) === "blocked") continue;
       onToggle(emp.id);
+      added++;
     }
   };
 
