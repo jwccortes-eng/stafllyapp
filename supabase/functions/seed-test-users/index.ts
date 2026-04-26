@@ -86,7 +86,7 @@ serve(async (req) => {
       if (existing) {
         userId = existing.id;
         // Update password
-        await adminClient.auth.admin.updateUser(userId, { password: PASSWORD });
+        await (adminClient.auth.admin as any).updateUserById(userId, { password: PASSWORD });
         results.push({ email: testUser.email, status: "updated", user_id: userId });
       } else {
         const { data: newUser, error } = await adminClient.auth.admin.createUser({
@@ -155,9 +155,9 @@ serve(async (req) => {
     return new Response(JSON.stringify({ success: true, results, companies: companies.length }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (e) {
+  } catch (e: any) {
     console.error("seed-test-users error:", e);
-    return new Response(JSON.stringify({ error: e.message }), {
+    return new Response(JSON.stringify({ error: e?.message ?? String(e) }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }

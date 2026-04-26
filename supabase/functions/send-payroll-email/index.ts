@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { Resend } from "npm:resend@4";
+// import { Resend } from "npm:resend@4"; // disabled — payroll email sending is suspended (kill switch active)
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
