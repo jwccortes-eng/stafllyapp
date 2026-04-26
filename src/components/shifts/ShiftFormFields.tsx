@@ -871,56 +871,115 @@ export function ShiftFormFields({
 
       {/* ── 9. RESUMEN FINAL ── */}
       <SectionCard icon={ListChecks} title="Resumen final" step={9}>
+        {/* KPIs operativos */}
         <div className="grid grid-cols-3 gap-2 text-[11px]">
           <div className="rounded-lg border border-border/30 bg-muted/10 p-2">
             <div className="text-[10px] text-muted-foreground">Plazas</div>
-            <div className="font-semibold text-foreground">{slotsNum || "—"}</div>
+            <div className="font-semibold text-foreground text-base leading-none mt-0.5">{slotsNum || "—"}</div>
           </div>
-          <div className="rounded-lg border border-border/30 bg-muted/10 p-2">
-            <div className="text-[10px] text-muted-foreground">Asignados</div>
-            <div className="font-semibold text-foreground">{shiftAssignedIds.length}</div>
+          <div
+            className={cn(
+              "rounded-lg border p-2",
+              shiftAssignedIds.length === 0
+                ? "border-border/30 bg-muted/10"
+                : shiftAssignedIds.length >= slotsNum
+                  ? "border-[hsl(142_76%_36%/0.3)] bg-[hsl(142_76%_36%/0.06)]"
+                  : "border-[hsl(var(--status-pending)/0.3)] bg-[hsl(var(--status-pending)/0.06)]",
+            )}
+          >
+            <div className="text-[10px] text-muted-foreground">Cobertura</div>
+            <div className="font-semibold text-foreground text-base leading-none mt-0.5">
+              {shiftAssignedIds.length}/{slotsNum || 1}
+            </div>
           </div>
           <div className="rounded-lg border border-border/30 bg-muted/10 p-2">
             <div className="text-[10px] text-muted-foreground">Vehículos</div>
-            <div className="font-semibold text-foreground">{v.transportRequired ? ridesNeeded : "—"}</div>
+            <div className="font-semibold text-foreground text-base leading-none mt-0.5">
+              {v.transportRequired ? ridesNeeded : "—"}
+            </div>
           </div>
         </div>
 
+        {/* Validaciones agrupadas: bloqueantes (rojas) primero, advertencias (ámbar) después */}
         <div className="space-y-1.5 pt-1">
+          {/* ── Bloqueantes ── */}
           {!v.date && (
             <div className="flex items-start gap-1.5 text-[11px] text-destructive">
-              <AlertTriangle className="h-3 w-3 shrink-0 mt-0.5" /> Falta la fecha del turno.
-            </div>
-          )}
-          {noLocation && (
-            <div className="flex items-start gap-1.5 text-[11px] text-[hsl(var(--status-pending))]">
-              <AlertTriangle className="h-3 w-3 shrink-0 mt-0.5" /> No se ha definido lugar ni punto de encuentro.
+              <AlertTriangle className="h-3 w-3 shrink-0 mt-0.5" />
+              <span><span className="font-semibold">Falta la fecha</span> del turno.</span>
             </div>
           )}
           {adminMissing && (
             <div className="flex items-start gap-1.5 text-[11px] text-destructive">
-              <AlertTriangle className="h-3 w-3 shrink-0 mt-0.5" /> Falta seleccionar el admin del turno (obligatorio con equipo asignado).
+              <AlertTriangle className="h-3 w-3 shrink-0 mt-0.5" />
+              <span><span className="font-semibold">Falta el admin del turno</span> (obligatorio con equipo asignado).</span>
             </div>
           )}
           {adminInvalid && (
             <div className="flex items-start gap-1.5 text-[11px] text-destructive">
-              <AlertTriangle className="h-3 w-3 shrink-0 mt-0.5" /> El admin seleccionado no está dentro del equipo asignado.
+              <AlertTriangle className="h-3 w-3 shrink-0 mt-0.5" />
+              <span>El <span className="font-semibold">admin seleccionado</span> no está dentro del equipo asignado.</span>
             </div>
           )}
-          {driverMissing && (
+
+          {/* ── Advertencias ── */}
+          {noLocation && (
             <div className="flex items-start gap-1.5 text-[11px] text-[hsl(var(--status-pending))]">
-              <AlertTriangle className="h-3 w-3 shrink-0 mt-0.5" /> Transporte activado pero sin conductor asignado.
+              <AlertTriangle className="h-3 w-3 shrink-0 mt-0.5" />
+              <span>Sin <span className="font-semibold">lugar ni punto de encuentro</span> definidos.</span>
+            </div>
+          )}
+          {noTeam && (
+            <div className="flex items-start gap-1.5 text-[11px] text-[hsl(var(--status-pending))]">
+              <AlertTriangle className="h-3 w-3 shrink-0 mt-0.5" />
+              <span>Turno <span className="font-semibold">sin equipo</span> y no es reclamable. Quedará sin cubrir.</span>
             </div>
           )}
           {showEmployeePicker && shiftAssignedIds.length > 0 && shiftAssignedIds.length < slotsNum && (
             <div className="flex items-start gap-1.5 text-[11px] text-[hsl(var(--status-pending))]">
               <AlertTriangle className="h-3 w-3 shrink-0 mt-0.5" />
-              Cobertura parcial: {shiftAssignedIds.length} de {slotsNum} plazas cubiertas.
+              <span>
+                Cobertura parcial: <span className="font-semibold">{shiftAssignedIds.length} de {slotsNum}</span> plazas
+                {!v.claimable && " — activa “Permitir reclamo” o asigna más empleados"}.
+              </span>
             </div>
           )}
-          {!adminMissing && !adminInvalid && !driverMissing && v.date && !noLocation && (
-            <div className="flex items-start gap-1.5 text-[11px] text-[hsl(142_76%_36%)]">
-              <CheckCircle2 className="h-3 w-3 shrink-0 mt-0.5" /> Listo para guardar.
+          {driverMissing && (
+            <div className="flex items-start gap-1.5 text-[11px] text-[hsl(var(--status-pending))]">
+              <AlertTriangle className="h-3 w-3 shrink-0 mt-0.5" />
+              <span>Transporte activado pero <span className="font-semibold">sin conductor</span> asignado.</span>
+            </div>
+          )}
+          {v.transportRequired && shiftAssignedIds.length > capacityNum * ridesNeeded && (
+            <div className="flex items-start gap-1.5 text-[11px] text-[hsl(var(--status-pending))]">
+              <AlertTriangle className="h-3 w-3 shrink-0 mt-0.5" />
+              <span>El equipo asignado <span className="font-semibold">excede la capacidad</span> del transporte calculado.</span>
+            </div>
+          )}
+          {hasConflicts && (
+            <div className="flex items-start gap-1.5 text-[11px] text-[hsl(var(--status-pending))]">
+              <AlertTriangle className="h-3 w-3 shrink-0 mt-0.5" />
+              <span>
+                <span className="font-semibold">Conflicto de horario</span>:
+                {" "}{conflictNames.slice(0, 3).join(", ")}
+                {conflictNames.length > 3 && ` y ${conflictNames.length - 3} más`}
+                {" "}ya tienen otro turno solapado este día.
+              </span>
+            </div>
+          )}
+
+          {/* ── Info contextual ── */}
+          {payOverrideActive && mode === "edit" && (
+            <div className="flex items-start gap-1.5 text-[11px] text-muted-foreground">
+              <CreditCard className="h-3 w-3 shrink-0 mt-0.5" />
+              <span>Este turno usa <span className="font-semibold">override de pago</span> ({v.payType === "daily" ? `por día · ${v.dayType === "full_day" ? "día completo" : "medio día"}` : "por hora"}). El perfil base no se modifica.</span>
+            </div>
+          )}
+
+          {/* ── Listo ── */}
+          {!adminMissing && !adminInvalid && v.date && !noLocation && !driverMissing && !noTeam && !hasConflicts && (
+            <div className="flex items-start gap-1.5 text-[11px] text-[hsl(142_76%_36%)] font-medium">
+              <CheckCircle2 className="h-3 w-3 shrink-0 mt-0.5" /> Todo en orden — listo para guardar.
             </div>
           )}
         </div>
