@@ -388,7 +388,7 @@ export default function Shifts() {
     setClientId(""); setLocationId(""); setNotes("");
     setClaimable(shiftsConfig.allow_claims ? false : false); setSelectedEmployees([]);
     setMeetingPoint(""); setSpecialInstructions(""); setPayType("hourly");
-    setDayType("full_day"); setShiftAdminId("");
+    setDayType("full_day"); setPayOverride(false); setShiftAdminId("");
     setTransportRequired(false); setCarCapacity("4"); setTransportNotes(""); setDriverEmployeeId("");
     setClockMethod("both");
     setAttendanceMode("clock"); setMeetingTime("");
