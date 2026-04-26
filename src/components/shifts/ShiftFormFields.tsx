@@ -321,10 +321,9 @@ export function ShiftFormFields({
   }
   const hasConflicts = conflictNames.length > 0;
 
-  // Override de pago: si el shift tiene un pay_type/day_type explícito, ya está overrideando.
-  const payOverrideActive = mode === "edit" && shift
-    ? (shift as any).pay_type !== undefined && (shift as any).pay_type !== null
-    : false;
+  // Override de pago: refleja el toggle del form (Phase 2 #1).
+  // En EDIT mode, el toggle se inicializa a true si el shift ya tenía pay_type persistido (ver shiftToFormState).
+  const payOverrideActive = v.payOverride;
 
   return (
     <div className="space-y-3">
