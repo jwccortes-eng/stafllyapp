@@ -535,6 +535,7 @@ export function ShiftFormFields({
 
       {/* ── 3. EQUIPO ── */}
       <SectionCard icon={Users} title="Equipo" step={3}>
+        {/* Meta-config arriba: cuántas plazas y si se permite reclamo */}
         <div className="grid grid-cols-2 gap-3 items-end">
           <div>
             <Label className="text-[11px] text-muted-foreground font-medium">Plazas disponibles</Label>
@@ -554,15 +555,32 @@ export function ShiftFormFields({
                 id={`claimable-${mode}`}
               />
               <Label htmlFor={`claimable-${mode}`} className="text-xs font-normal cursor-pointer">
-                Permitir reclamo
+                Permitir reclamo abierto
               </Label>
             </div>
           )}
         </div>
 
+        {/* Picker prominente: separador visual + label fuerte + cobertura en vivo */}
         {showEmployeePicker && (
-          <div>
-            <Label className="text-[11px] text-muted-foreground font-medium mb-1 block">Asignar empleados</Label>
+          <div className="pt-2 mt-1 border-t border-border/20 space-y-2">
+            <div className="flex items-center justify-between">
+              <Label className="text-[11px] uppercase tracking-wide font-semibold text-foreground">
+                Asignar empleados
+              </Label>
+              <span
+                className={cn(
+                  "text-[10px] font-semibold px-2 py-0.5 rounded-full",
+                  v.selectedEmployees.length === 0
+                    ? "bg-muted text-muted-foreground"
+                    : v.selectedEmployees.length >= slotsNum
+                      ? "bg-[hsl(142_76%_36%/0.12)] text-[hsl(142_76%_36%)]"
+                      : "bg-[hsl(var(--status-pending)/0.12)] text-[hsl(var(--status-pending))]",
+                )}
+              >
+                {v.selectedEmployees.length}/{slotsNum || 1} cubiertos
+              </span>
+            </div>
             <EmployeeCombobox
               employees={employees}
               selected={v.selectedEmployees}
@@ -572,12 +590,15 @@ export function ShiftFormFields({
               shiftDate={v.date}
               shiftStart={v.startTime}
               shiftEnd={v.endTime}
-              maxHeight="180px"
+              maxHeight="200px"
               availabilityConfigs={availabilityConfigs}
               availabilityOverrides={availabilityOverrides}
               availabilityBlockMode="warning"
               onAddNewEmployee={onAddNewEmployee}
             />
+            <p className="text-[10px] text-muted-foreground/60">
+              Selecciona ahora o déjalo abierto si vas a publicar como reclamable.
+            </p>
           </div>
         )}
       </SectionCard>
