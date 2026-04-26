@@ -318,22 +318,23 @@ function CompanyCommandCenter({
       ]);
       const [empTotal, empActive, shiftsToday, shiftsUpcoming, pendConf, timeToday] = batchA;
 
-      const batchB = await Promise.all<any>([
-        supabase.from("employee_invitations").select("id", { count: "exact", head: true })
+      // Cast supabase calls to `any` to avoid TS2589 deep instantiation across many tables.
+      const sb: any = supabase;
+      const [failedInv, openPeriods, openTickets, clients, locations, anyShift] = await Promise.all<any>([
+        sb.from("employee_invitations").select("id", { count: "exact", head: true })
           .eq("company_id", companyId).eq("status", "failed"),
-        supabase.from("pay_periods").select("id", { count: "exact", head: true })
+        sb.from("pay_periods").select("id", { count: "exact", head: true })
           .eq("company_id", companyId).eq("status", "open"),
-        supabase.from("service_requests").select("id", { count: "exact", head: true })
-          .eq("company_id", companyId).in("status", ["new", "reviewing", "approved_for_scheduling"] as any),
-        supabase.from("clients").select("id", { count: "exact", head: true })
+        sb.from("service_requests").select("id", { count: "exact", head: true })
+          .eq("company_id", companyId).in("status", ["new", "reviewing", "approved_for_scheduling"]),
+        sb.from("clients").select("id", { count: "exact", head: true })
           .eq("company_id", companyId).eq("is_active", true),
-        supabase.from("locations").select("id", { count: "exact", head: true })
+        sb.from("locations").select("id", { count: "exact", head: true })
           .eq("company_id", companyId).eq("is_active", true),
-        supabase.from("scheduled_shifts").select("id", { count: "exact", head: true })
+        sb.from("scheduled_shifts").select("id", { count: "exact", head: true })
           .eq("company_id", companyId).is("deleted_at", null),
       ]);
-      const [failedInv, openPeriods, openTickets, clients, locations, anyShift] = batchB;
-      const dup = { count: 0 }; // worker_duplicate_candidates table not present
+      const dup = { count: 0 }; // worker_duplicate_candidates table not present in this project
 
       // Derived: covered shifts today (need shift_ids first to avoid heavy join)
       let coveredToday = 0;
