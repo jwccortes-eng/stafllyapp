@@ -697,6 +697,29 @@ export function ShiftFormFields({
                 </div>
               </div>
             </div>
+            {/* Phase 2 #3.4: hint visual de cobertura de drivers en el equipo asignado */}
+            {shiftAssignedIds.length > 0 && (
+              <div
+                className={cn(
+                  "flex items-center gap-1.5 text-[11px] rounded-md border px-2 py-1.5",
+                  driversShortage
+                    ? "border-destructive/40 bg-destructive/5 text-destructive"
+                    : "border-border/40 bg-muted/20 text-muted-foreground",
+                )}
+              >
+                <Car className="h-3 w-3 shrink-0" />
+                <span>
+                  <span className="font-semibold text-foreground">{driversInTeam}</span> de{" "}
+                  <span className="font-semibold text-foreground">{shiftAssignedIds.length}</span>{" "}
+                  empleados asignados pueden manejar
+                  {ridesNeeded > 0 && (
+                    <>
+                      {" "}· se necesitan <span className="font-semibold text-foreground">{ridesNeeded}</span>
+                    </>
+                  )}
+                </span>
+              </div>
+            )}
             <div>
               <Label className="text-[11px] text-muted-foreground font-medium">Conductor asignado</Label>
               <div className="mt-1">
