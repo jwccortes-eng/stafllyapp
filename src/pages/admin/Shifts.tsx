@@ -1173,7 +1173,12 @@ export default function Shifts() {
       created++;
     }
     const weekLabel = `${format(nextWeekStart, "MMM d")}–${format(addDays(nextWeekStart, 6), "MMM d")}`;
-    toast.success(`${created} shifts copied to ${weekLabel} as drafts`);
+    // Phase 2 #2.2: make assignment-copy behavior visible in the toast.
+    toast.success(`${created} turnos duplicados a ${weekLabel} como borrador.`, {
+      description: shiftsConfig.copy_week_assignments
+        ? "Asignaciones copiadas como pending — los empleados deben aceptar."
+        : "Sin asignaciones copiadas. Asigna empleados para activar.",
+    });
     setCopyingWeek(false);
     loadData();
   };
