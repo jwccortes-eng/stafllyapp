@@ -755,23 +755,28 @@ function GlobalCommandCenter({
   greeting: string;
 }) {
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const cancelledRef = useRef(false);
   const [totals, setTotals] = useState({ workers: 0, shiftsToday: 0, openPeriods: 0, companies: 0 });
   const [perCompany, setPerCompany] = useState<Array<{
     id: string; name: string; slug: string; workers: number; shiftsToday: number; openPeriods: number;
   }>>([]);
 
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      setLoading(true);
+  const load = useCallback(async (mode: "initial" | "refresh") => {
+    if (mode === "initial") setLoading(true);
+    else setRefreshing(true);
+    try {
       const today = todayStr();
       const companyIds = companies.map((c) => c.id);
 
       if (companyIds.length === 0) {
-        if (!cancelled) {
+        if (!cancelledRef.current) {
           setTotals({ workers: 0, shiftsToday: 0, openPeriods: 0, companies: 0 });
           setPerCompany([]);
-          setLoading(false);
+          setLastUpdatedAt(new Date());
+          setLoadError(null);
         }
         return;
       }
@@ -799,7 +804,7 @@ function GlobalCommandCenter({
         openPeriods: periodByCo.get(c.id) ?? 0,
       })).sort((a, b) => b.shiftsToday - a.shiftsToday);
 
-      if (cancelled) return;
+      if (cancelledRef.current) return;
       setPerCompany(rows);
       setTotals({
         workers: emps?.length ?? 0,
@@ -807,30 +812,78 @@ function GlobalCommandCenter({
         openPeriods: periods?.length ?? 0,
         companies: companies.length,
       });
-      setLoading(false);
+      setLastUpdatedAt(new Date());
+      setLoadError(null);
+    } catch (e: any) {
+      console.warn("[CommandCenter Global] failed:", e);
+      // Keep previous data — surface only a discreet warning.
+      if (!cancelledRef.current) {
+        setLoadError(e?.message ?? "No se pudieron actualizar los datos");
+      }
+    } finally {
+      if (!cancelledRef.current) {
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
-    load().catch((e) => { console.warn("[CommandCenter Global] failed:", e); setLoading(false); });
-    return () => { cancelled = true; };
   }, [companies]);
+
+  useEffect(() => {
+    cancelledRef.current = false;
+    void load("initial");
+    return () => { cancelledRef.current = true; };
+  }, [load]);
 
   return (
     <div className="mx-auto max-w-7xl space-y-6 p-4 md:p-6">
       {/* Hero */}
       <div className="relative overflow-hidden rounded-xl border border-border bg-gradient-to-br from-card via-card to-muted/30 p-5 md:p-6">
         <div className="absolute -right-16 -top-16 h-48 w-48 rounded-full bg-primary/5 blur-3xl" />
-        <div className="relative space-y-2">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Radio className="h-3.5 w-3.5" />
-            <span>Command Center · Vista global</span>
-            <span>·</span>
-            <span>{format(new Date(), "EEE d MMM · HH:mm")}</span>
+        <div className="relative flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+              <Radio className="h-3.5 w-3.5" />
+              <span>Command Center · Vista global</span>
+              <span>·</span>
+              <span>{format(new Date(), "EEE d MMM · HH:mm")}</span>
+              {lastUpdatedAt && (
+                <>
+                  <span>·</span>
+                  <span>Last updated: {format(lastUpdatedAt, "HH:mm")}</span>
+                </>
+              )}
+              {refreshing && (
+                <>
+                  <span>·</span>
+                  <span className="inline-flex items-center gap-1 text-primary">
+                    <RefreshCw className="h-3 w-3 animate-spin" /> Actualizando…
+                  </span>
+                </>
+              )}
+            </div>
+            <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
+              {greeting}, {displayName}
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Resumen agregado de {totals.companies} compañía{totals.companies === 1 ? "" : "s"} accesibles.
+            </p>
+            {loadError && (
+              <div className="mt-1 inline-flex items-center gap-2 rounded-md border border-amber-500/30 bg-amber-500/5 px-2 py-1 text-xs text-amber-700 dark:text-amber-400">
+                <AlertTriangle className="h-3 w-3" />
+                <span>No se pudo actualizar. Mostrando últimos datos disponibles.</span>
+              </div>
+            )}
           </div>
-          <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
-            {greeting}, {displayName}
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Resumen agregado de {totals.companies} compañía{totals.companies === 1 ? "" : "s"} accesibles.
-          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => void load("refresh")}
+            disabled={loading || refreshing}
+            className="gap-2 md:self-start"
+          >
+            <RefreshCw className={cn("h-3.5 w-3.5", refreshing && "animate-spin")} />
+            Refresh
+          </Button>
         </div>
       </div>
 
