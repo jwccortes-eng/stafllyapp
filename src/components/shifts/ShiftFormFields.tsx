@@ -47,6 +47,7 @@ import { SingleEmployeePicker } from "./SingleEmployeePicker";
 import { EmployeeCombobox } from "./EmployeeCombobox";
 import { ShiftQRSection } from "./ShiftQRSection";
 import ShiftLocationsSection from "./ShiftLocationsSection";
+import { isEmployeeDriver } from "./types";
 import type { Employee, SelectOption, Shift, Assignment } from "./types";
 import {
   SHIFT_ATTENDANCE_MODE_LABELS,
@@ -287,6 +288,23 @@ export function ShiftFormFields({
   const adminInvalid =
     !!v.shiftAdminId && shiftAssignedIds.length > 0 && !shiftAssignedIds.includes(v.shiftAdminId);
   const driverMissing = v.transportRequired && !v.driverEmployeeId;
+
+  // ── Phase 2 #3: drivers dentro del equipo asignado ────────────────────
+  // El driver_employee_id solo cuenta si también está en selectedEmployees (no duplicar conteos).
+  const teamDriverIds = new Set(
+    shiftAssignedIds.filter((id) => {
+      const emp = employees.find((e) => e.id === id);
+      return emp ? isEmployeeDriver(emp) : false;
+    }),
+  );
+  if (v.driverEmployeeId && shiftAssignedIds.includes(v.driverEmployeeId)) {
+    teamDriverIds.add(v.driverEmployeeId);
+  }
+  const driversInTeam = teamDriverIds.size;
+  const driversShortage =
+    v.transportRequired && shiftAssignedIds.length > 0 && driversInTeam < ridesNeeded;
+  const capacityOverSlots =
+    v.transportRequired && slotsNum > 0 && capacityNum * ridesNeeded > slotsNum && capacityNum > slotsNum;
   const noLocation = !v.locationId && !v.meetingPoint.trim() && !v.meetingPointLocationId && !v.jobSiteLocationId;
   const noTeam = showEmployeePicker && shiftAssignedIds.length === 0 && !v.claimable;
 
@@ -636,6 +654,9 @@ export function ShiftFormFields({
               availabilityOverrides={availabilityOverrides}
               availabilityBlockMode="warning"
               onAddNewEmployee={onAddNewEmployee}
+              requiresDriver={v.transportRequired}
+              showBulkActions={v.transportRequired || (slotsNum > 0 && v.selectedEmployees.length < slotsNum)}
+              remainingSlots={Math.max(slotsNum - v.selectedEmployees.length, 0)}
             />
             <p className="text-[10px] text-muted-foreground/60">
               Selecciona ahora o déjalo abierto si vas a publicar como reclamable.
@@ -676,6 +697,29 @@ export function ShiftFormFields({
                 </div>
               </div>
             </div>
+            {/* Phase 2 #3.4: hint visual de cobertura de drivers en el equipo asignado */}
+            {shiftAssignedIds.length > 0 && (
+              <div
+                className={cn(
+                  "flex items-center gap-1.5 text-[11px] rounded-md border px-2 py-1.5",
+                  driversShortage
+                    ? "border-destructive/40 bg-destructive/5 text-destructive"
+                    : "border-border/40 bg-muted/20 text-muted-foreground",
+                )}
+              >
+                <Car className="h-3 w-3 shrink-0" />
+                <span>
+                  <span className="font-semibold text-foreground">{driversInTeam}</span> de{" "}
+                  <span className="font-semibold text-foreground">{shiftAssignedIds.length}</span>{" "}
+                  empleados asignados pueden manejar
+                  {ridesNeeded > 0 && (
+                    <>
+                      {" "}· se necesitan <span className="font-semibold text-foreground">{ridesNeeded}</span>
+                    </>
+                  )}
+                </span>
+              </div>
+            )}
             <div>
               <Label className="text-[11px] text-muted-foreground font-medium">Conductor asignado</Label>
               <div className="mt-1">
@@ -1002,10 +1046,30 @@ export function ShiftFormFields({
               <span>Transporte activado pero <span className="font-semibold">sin conductor</span> asignado.</span>
             </div>
           )}
+          {/* Phase 2 #3.2: alerta fuerte cuando faltan drivers en el equipo asignado */}
+          {driversShortage && (
+            <div className="flex items-start gap-1.5 text-[11px] text-destructive">
+              <AlertTriangle className="h-3 w-3 shrink-0 mt-0.5" />
+              <span>
+                <span className="font-semibold">Faltan conductores en el equipo</span>:{" "}
+                {driversInTeam} asignado{driversInTeam === 1 ? "" : "s"} de {ridesNeeded} necesario{ridesNeeded === 1 ? "" : "s"} para cubrir el transporte.
+              </span>
+            </div>
+          )}
           {v.transportRequired && shiftAssignedIds.length > capacityNum * ridesNeeded && (
             <div className="flex items-start gap-1.5 text-[11px] text-[hsl(var(--status-pending))]">
               <AlertTriangle className="h-3 w-3 shrink-0 mt-0.5" />
               <span>El equipo asignado <span className="font-semibold">excede la capacidad</span> del transporte calculado.</span>
+            </div>
+          )}
+          {/* Phase 2 #3.3: warning informativo si capacidad por vehículo > plazas del turno */}
+          {capacityOverSlots && (
+            <div className="flex items-start gap-1.5 text-[11px] text-[hsl(var(--status-pending))]">
+              <AlertTriangle className="h-3 w-3 shrink-0 mt-0.5" />
+              <span>
+                La <span className="font-semibold">capacidad por vehículo ({capacityNum})</span> supera las{" "}
+                <span className="font-semibold">{slotsNum} plazas</span> del turno. Verifica si es intencional.
+              </span>
             </div>
           )}
           {hasConflicts && (
@@ -1029,7 +1093,7 @@ export function ShiftFormFields({
           )}
 
           {/* ── Listo ── */}
-          {!adminMissing && !adminInvalid && v.date && !noLocation && !driverMissing && !noTeam && !hasConflicts && (
+          {!adminMissing && !adminInvalid && v.date && !noLocation && !driverMissing && !driversShortage && !noTeam && !hasConflicts && (
             <div className="flex items-start gap-1.5 text-[11px] text-[hsl(142_76%_36%)] font-medium">
               <CheckCircle2 className="h-3 w-3 shrink-0 mt-0.5" /> Todo en orden — listo para guardar.
             </div>
