@@ -216,7 +216,7 @@ export default function Shifts() {
   const [payOverride, setPayOverride] = useState<boolean>(false);
   const [shiftAdminId, setShiftAdminId] = useState("");
   const [transportRequired, setTransportRequired] = useState(false);
-  const [carCapacity, setCarCapacity] = useState("4");
+  const [carCapacity, setCarCapacity] = useState("5");
   const [transportNotes, setTransportNotes] = useState("");
   const [driverEmployeeId, setDriverEmployeeId] = useState("");
   const [clockMethod, setClockMethod] = useState<"mobile" | "kiosk" | "both">("both");
@@ -389,7 +389,7 @@ export default function Shifts() {
     setClaimable(shiftsConfig.allow_claims ? false : false); setSelectedEmployees([]);
     setMeetingPoint(""); setSpecialInstructions(""); setPayType("hourly");
     setDayType("full_day"); setPayOverride(false); setShiftAdminId("");
-    setTransportRequired(false); setCarCapacity("4"); setTransportNotes(""); setDriverEmployeeId("");
+    setTransportRequired(false); setCarCapacity("5"); setTransportNotes(""); setDriverEmployeeId("");
     setClockMethod("both");
     setAttendanceMode("clock"); setMeetingTime("");
     setMeetingPointLocationId(null); setJobSiteLocationId(null);
@@ -531,7 +531,7 @@ export default function Shifts() {
       pay_override: payOverride, // Phase 2 #1: capture explicit override intent
       shift_admin_id: shiftAdminId || null,
       transportation_required: transportRequired,
-      car_capacity: parseInt(carCapacity) || 4,
+      car_capacity: parseInt(carCapacity) || 5,
       transportation_notes: transportNotes.trim() || null,
       driver_employee_id: driverEmployeeId || null,
       clock_method: clockMethod,
@@ -1674,7 +1674,7 @@ export default function Shifts() {
                   <p><span className="font-medium">Ubicación:</span> {locations.find(l => l.id === locationId)?.name || "Sin asignar"}</p>
                   <p><span className="font-medium">Plazas:</span> {slots}</p>
                   <p><span className="font-medium">Empleados:</span> {selectedEmployees.length > 0 ? `${selectedEmployees.length} seleccionados` : "Ninguno"}</p>
-                  {transportRequired && <p><span className="font-medium">Transporte:</span> Requerido • {Math.ceil((parseInt(slots) || 1) / (parseInt(carCapacity) || 4))} vehículo(s) • Conductor: {driverEmployeeId ? employees.find(e => e.id === driverEmployeeId)?.first_name || "Asignado" : "⚠️ Sin asignar"}</p>}
+                  {transportRequired && <p><span className="font-medium">Transporte:</span> Requerido • {Math.ceil((parseInt(slots) || 1) / (parseInt(carCapacity) || 5))} vehículo(s) • Conductor: {driverEmployeeId ? employees.find(e => e.id === driverEmployeeId)?.first_name || "Asignado" : "⚠️ Sin asignar"}</p>}
                   <p><span className="font-medium">Admin turno:</span> {shiftAdminId ? employees.find(e => e.id === shiftAdminId)?.first_name || "Asignado" : "⚠️ Sin asignar"}</p>
                   {claimable && <p><span className="font-medium">Reclamable:</span> Sí</p>}
                   {notes && <p><span className="font-medium">Notas:</span> {notes}</p>}

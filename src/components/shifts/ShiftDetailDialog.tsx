@@ -1158,7 +1158,7 @@ export function ShiftDetailDialog({
                         clientName, locationName, meetingPoint: (shift as any).meeting_point || null,
                         transportRequired: (shift as any).transportation_required || false,
                         transportNotes: (shift as any).transportation_notes || null,
-                        carsNeeded: Math.ceil(shiftAssigns.length / ((shift as any).car_capacity || 4)),
+                        carsNeeded: Math.ceil(shiftAssigns.length / ((shift as any).car_capacity || 5)),
                         employees: assignedEmps, supervisorName: null,
                       });
                     });
