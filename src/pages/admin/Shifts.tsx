@@ -1378,8 +1378,28 @@ export default function Shifts() {
               </div>
             )}
             {viewMode === "week" && (
-              <Button variant="outline" size="sm" className="h-8 text-[11px] px-3 gap-1.5 rounded-xl" onClick={handleCopyWeek} disabled={copyingWeek}>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 text-[11px] px-3 gap-1.5 rounded-xl"
+                onClick={handleCopyWeek}
+                disabled={copyingWeek}
+                title={
+                  shiftsConfig.copy_week_assignments
+                    ? "Copy week → also copies assignments as pending (workers must accept). Toggle in Shifts settings."
+                    : "Copy week → copies shifts only (no assignments). Toggle in Shifts settings."
+                }
+              >
                 {copyingWeek ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Copy className="h-3.5 w-3.5" />} Copy week
+                <span
+                  className={`ml-1 text-[9px] font-medium px-1.5 py-0.5 rounded ${
+                    shiftsConfig.copy_week_assignments
+                      ? "bg-primary/10 text-primary"
+                      : "bg-muted text-muted-foreground"
+                  }`}
+                >
+                  {shiftsConfig.copy_week_assignments ? "+ asignaciones" : "solo turnos"}
+                </span>
               </Button>
             )}
             <Button variant="outline" size="sm" className="h-8 text-[11px] px-3 gap-1.5 rounded-xl" onClick={handlePublishAll} disabled={bulkPublishing}>
