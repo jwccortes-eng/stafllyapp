@@ -703,12 +703,26 @@ export function ShiftFormFields({
             </div>
           </div>
         )}
-        <div className="flex items-start gap-2 p-2.5 rounded-lg bg-primary/5 border border-primary/15">
-          <CreditCard className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
-          <p className="text-[10px] text-muted-foreground leading-snug">
-            <span className="font-semibold text-foreground">Tasa base:</span> el perfil del empleado.
-            Lo definido aquí <span className="font-semibold">solo sobrescribe este turno</span>.
-          </p>
+        {/* Hint de jerarquía de pago — 3 viñetas explícitas */}
+        <div className="rounded-lg bg-primary/5 border border-primary/15 p-2.5 space-y-1.5">
+          <div className="flex items-center gap-1.5">
+            <CreditCard className="h-3.5 w-3.5 text-primary" />
+            <span className="text-[11px] font-semibold text-foreground">Jerarquía de pago al worker</span>
+          </div>
+          <ul className="space-y-1 text-[10px] leading-snug">
+            <li className="flex gap-1.5">
+              <span className="text-[hsl(142_76%_36%)] font-bold">1.</span>
+              <span><span className="font-semibold text-foreground">Perfil del empleado</span> = tasa base. Es la fuente de verdad.</span>
+            </li>
+            <li className="flex gap-1.5">
+              <span className="text-primary font-bold">2.</span>
+              <span><span className="font-semibold text-foreground">Este turno</span> = override excepcional, solo aplica aquí.</span>
+            </li>
+            <li className="flex gap-1.5">
+              <span className="text-muted-foreground font-bold">3.</span>
+              <span><span className="font-semibold text-foreground">Cliente</span> nunca define payroll del worker — solo billing.</span>
+            </li>
+          </ul>
         </div>
       </SectionCard>
 
