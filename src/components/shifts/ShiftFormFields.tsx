@@ -1091,7 +1091,7 @@ export function ShiftFormFields({
               (vehículos × capacidad < personas). Antes alertaba cuando
               capacidad_por_vehículo > slots, lo cual no es un problema. */}
           {capacityShortage && (
-            <div className="flex items-start gap-1.5 text-[11px] text-[hsl(var(--status-error))]">
+            <div className="flex items-start gap-1.5 text-[11px] text-destructive">
               <AlertTriangle className="h-3 w-3 shrink-0 mt-0.5" />
               <span>
                 <span className="font-semibold">Capacidad insuficiente</span>: {ridesNeeded} vehículo(s) × {capacityNum} = {ridesNeeded * capacityNum} asientos, pero hay <span className="font-semibold">{slotsNum} personas</span>. Aumenta la capacidad por vehículo o agrega rutas.
