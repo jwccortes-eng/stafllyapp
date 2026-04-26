@@ -9,7 +9,7 @@
  * 1) Identidad → 2) Lugar → 3) Equipo → 4) Transporte → 5) Pago →
  * 6) Fichaje → 7) Admin del turno → 8) Notas → 9) Resumen final
  */
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
