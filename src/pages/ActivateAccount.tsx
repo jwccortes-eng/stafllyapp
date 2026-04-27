@@ -202,6 +202,23 @@ export default function ActivateAccount() {
       if (empErr) { console.error("[activate] employee rpc failed", empErr); setPageState("invalid"); return; }
       if (!emp) { console.warn("[activate] employee rpc returned no rows (invite may be stale or token mismatch)"); setPageState("invalid"); return; }
 
+      // Self-heal: if the employee already has a login (user_id + access_pin),
+      // treat the link as used regardless of the invitation row's stale status.
+      // This prevents a finished worker from being dropped back into the wizard
+      // when they reopen the link they originally activated with.
+      const alreadyHasLogin = !!(emp as any).user_id && !!(emp as any).access_pin;
+      if (alreadyHasLogin) {
+        console.info("[activate] employee already has login — marking invite accepted and routing to sign in");
+        if (data.status !== "accepted") {
+          await (supabase.rpc("update_invitation_status_by_token", {
+            _token: token,
+            _new_status: "accepted",
+          }) as any);
+        }
+        setPageState("used");
+        return;
+      }
+
       // Only mark the invite as 'opened' once we know the data layer is healthy.
       if (!markedOpened.current && data.status !== "opened" && data.status !== "accepted") {
         markedOpened.current = true;
