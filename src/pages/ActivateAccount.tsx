@@ -169,8 +169,11 @@ export default function ActivateAccount() {
 
       if (fetchErr) { console.error("[activate] invite rpc failed", fetchErr); setPageState("invalid"); return; }
       if (!data) { console.warn("[activate] no invitation row for token"); setPageState("invalid"); return; }
-      if (data.status === "revoked") { setPageState("invalid"); return; }
+      if (data.status === "superseded") { setPageState("superseded"); return; }
+      if (data.status === "revoked") { setPageState("superseded"); return; }
       if (data.status === "accepted") { setPageState("used"); return; }
+      // If a newer invitation exists for the same employee/company, treat this one as superseded
+      if (data.has_newer === true) { setPageState("superseded"); return; }
 
       if (data.expires_at && new Date(data.expires_at) < new Date()) {
         if (data.status !== "expired") {
