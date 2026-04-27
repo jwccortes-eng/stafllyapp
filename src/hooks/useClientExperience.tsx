@@ -262,9 +262,9 @@ export function useSendMessage() {
 
 // ─── Service requests (extended) ──────────────────────────────────────────
 export function useClientServiceRequests(filter?: {
-  status?: string;
+  status?: ServiceRequestRow["status"];
   clientId?: string;
-  priority?: string;
+  priority?: ServiceRequestRow["priority"];
   search?: string;
 }) {
   const { selectedCompanyId } = useCompany();
