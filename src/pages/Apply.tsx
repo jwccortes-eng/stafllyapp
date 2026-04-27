@@ -136,40 +136,27 @@ export default function Apply() {
       setError(null);
       setApplicationDisabledCompany(null);
 
-      const { data: coCheck, error } = await supabase
-        .from("companies_public")
-        .select("id, name, logo_url, brand_color, slug, application_intro, application_cover_url, is_active, application_enabled")
-        .eq("slug", normalizedSlug)
-        .maybeSingle();
+      const { data: exactRows, error } = await supabase
+        .rpc("get_public_company_by_slug", { _slug: normalizedSlug });
+      const coCheck = Array.isArray(exactRows) ? exactRows[0] ?? null : (exactRows as any) ?? null;
 
       if (error) {
         setCompany(null);
-        setError(error.message);
+        setError("Esta aplicación no está disponible o el enlace no es válido.");
         setLoading(false);
         return;
       }
 
       if (!coCheck) {
-        const { data: fuzzy } = await supabase
-          .from("companies_public")
-          .select("id, name, slug, is_active, application_enabled")
-          .ilike("slug", `%${normalizedSlug.replace(/-/g, "%")}%`)
-          .eq("is_active", true)
-          .limit(1)
-          .maybeSingle();
-        if (fuzzy && fuzzy.application_enabled) {
+        const { data: fuzzyRows } = await supabase
+          .rpc("find_public_company_fuzzy", { _slug: normalizedSlug });
+        const fuzzy = Array.isArray(fuzzyRows) ? fuzzyRows[0] ?? null : (fuzzyRows as any) ?? null;
+        if (fuzzy && fuzzy.slug) {
           window.location.replace(`/apply/${fuzzy.slug}`);
           return;
         }
         setCompany(null);
-        setError(`No encontramos la empresa. Verifica el enlace o contacta a tu administrador.`);
-        setLoading(false);
-        return;
-      }
-
-      if (!coCheck.is_active || !coCheck.application_enabled) {
-        setCompany(null);
-        setApplicationDisabledCompany(coCheck.name);
+        setError(`Esta aplicación no está disponible o el enlace no es válido.`);
         setLoading(false);
         return;
       }
