@@ -140,7 +140,7 @@ export default function ClientExperienceContacts() {
 
 function ContactDialog({ onClose }: { onClose: () => void }) {
   const upsert = useUpsertClientContact();
-  const { data: clients = [] } = useBillingClients();
+  const { clients = [] } = useBillingClients();
   const [form, setForm] = useState({
     client_id: "",
     name: "",
