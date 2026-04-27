@@ -108,6 +108,7 @@ export default function ActivateAccount() {
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
   const markedOpened = useRef(false);
+  const { toast } = useToast();
 
   const [pageState, setPageState] = useState<PageState>("loading");
   const [invite, setInvite] = useState<InviteData | null>(null);
@@ -205,10 +206,12 @@ export default function ActivateAccount() {
         return;
       }
 
+      const companyName = data.company_name?.trim() || data.company_slug?.trim() || "Company";
+
       // Fetch branding from the INVITATION's company
       const { data: co } = await supabase
         .from("companies")
-        .select("name, logo_url, brand_color")
+        .select("name, logo_url, brand_color, slug")
         .eq("id", invitationCompanyId)
         .single();
 
@@ -247,7 +250,8 @@ export default function ActivateAccount() {
       setInvite({
         ...data,
         company_id: invitationCompanyId,
-        company_name: co?.name ?? "",
+        company_name: co?.name?.trim() || companyName,
+        company_slug: co?.slug ?? data.company_slug ?? null,
         company_logo: co?.logo_url ?? null,
         brand_color: co?.brand_color ?? null,
         employee_name: `${emp.first_name ?? ""} ${emp.last_name ?? ""}`.trim(),
@@ -313,11 +317,21 @@ export default function ActivateAccount() {
     !!addr.state &&
     !!addr.postal_code &&
     addr.postal_code.replace(/\D/g, "").length >= 5;
-  const isEmergencyNameValid =
-    emergencyName.length >= 3 && /[A-Za-zÀ-ÿ]/.test(emergencyName);
-  const isEmergencyPhoneValid = emergencyPhoneDigits.length >= 10;
+  const isEmergencyNameValid = isRealEmergencyContactName(emergencyName);
+  const isEmergencyPhoneValid = isValidUsPhone(profileForm.emergency_contact_phone);
   const isDetailsValid = isEmergencyNameValid && isEmergencyPhoneValid;
   const isDocsValid = !profileForm.has_vehicle || (!!driverLicenseFile && !!vehicleRegFile);
+
+  useEffect(() => {
+    console.info("[activate] current wizard step", wizardStep);
+  }, [wizardStep]);
+
+  useEffect(() => {
+    if (wizardStep === "address") {
+      console.info("[activate] address valid", isAddressValid);
+      console.info("[activate] address_structured", profileForm.address_structured);
+    }
+  }, [wizardStep, isAddressValid, profileForm.address_structured]);
 
   // ─── Save progress ───
   const saveProgress = async () => {
