@@ -43,6 +43,7 @@ const STATUS_CONFIG: Record<InviteDeliveryStatus, { label: string; color: string
   bounced: { label: "Rebotado", color: "bg-destructive/10 text-destructive", icon: AlertCircle, description: "Email rebotó (dirección inválida)" },
   dlq: { label: "DLQ", color: "bg-destructive/10 text-destructive", icon: AlertCircle, description: "El email agotó sus reintentos y pasó a cola muerta" },
   resent: { label: "Reenviado", color: "bg-primary/10 text-primary", icon: RefreshCw, description: "Invitación reenviada" },
+  superseded: { label: "Reemplazado", color: "bg-muted text-muted-foreground", icon: RefreshCw, description: "Esta invitación fue reemplazada por una más reciente" } as any,
 };
 
 export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSent, inviteToken: initialToken }: Props) {
