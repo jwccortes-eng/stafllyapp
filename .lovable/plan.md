@@ -1,172 +1,153 @@
+## Rediseño del formulario de Shift (Create / Edit)
 
-# Plan: Mejora del formulario de creación/edición de turnos
+Objetivo: convertir el formulario en una experiencia full-screen tipo Stripe/Linear, con jerarquía clara (Job Site protagonista, Meeting Points separados, Transporte como sub-bloque), aprovechando todo el ancho en desktop, manteniendo el wizard vertical en mobile, y eliminando el lag al escribir.
 
-Reorganización integral en 3 fases siguiendo tu prioridad. Modo **estricto de no regresión**: payroll, attendance, reconciliation, imports, multi-tenant y notifications existentes no se tocan.
-
----
-
-## Lo que ya existe hoy (verificado en código)
-
-- `ShiftFormFields.tsx` — fuente única de verdad usada por create y edit (864 líneas, 1 archivo)
-- Secciones actuales: Información básica → Horario → Asignación (cliente/ubicación/plazas/dirección) → Pago → Asistencia → Fichaje + QR → Admin del turno → Transporte → Detalles adicionales → Picker de empleados
-- Repeat funciona como **clonado de filas independientes** (no hay `series_id` en DB)
-- QR ya es por turno (`shift.qr_token`, `shift.qr_attendance_mode`)
-- `default_pay_type`, `default_clock_method`, `require_car`, `default_instructions` ya se heredan de `client_locations`
-- `EmployeeCombobox` ya muestra duplicados, conflictos de horario y disponibilidad
-
-## Lo que NO existe y hay que construir
-
-- Reordenar bloques al orden operativo natural que pediste
-- Mover Admin del turno **después** de staffing
-- Capacidad por vehículo default = **5** (hoy es 4)
-- Pegar **link de Google Maps** y parsear address/lat/lng
-- Duplicar turno con opción "estructura / +staff / +admins+drivers"
-- Series reales (`series_id`) con scope de edición "este / este y futuros / todos"
-- Override de pago a nivel shift, dejando el perfil como fuente única
-- Recipientes múltiples del QR (más allá del shift_admin)
-- Estrellas / badges / alertas operativas en `EmployeeCombobox`
-- "Aceptar todos los turnos de la serie" en el portal del worker
-- Resumen automático del día siguiente
+Sin cambios de schema, sin tocar payroll/attendance/compensation/reconciliación, sin romper contratos: `formStateToShiftPayload` / `shiftToFormState` no cambian sus firmas ni los nombres de columna.
 
 ---
 
-## FASE 1 — Reorganización UX del formulario (sin lógica nueva)
+### 1. Causa raíz del lag (la pieza más importante)
 
-**Objetivo:** mismo contenido y mismo payload de DB, mejor orden y claridad.
+Hoy `Shifts.tsx` mantiene **~25 piezas de `useState` separadas** (`title`, `notes`, `meetingPoint`, etc.) en la página que también renderiza todo el calendario, miles de shifts y assignments. Cada keystroke en el diálogo de creación llama un `setX` del padre → re-renderiza toda la página de turnos → re-pasa props nuevas a `ShiftFormFields` → recalcula efectos.
 
-### 1.1 Nuevo orden de secciones en `ShiftFormFields.tsx`
+**Fix estructural**:
+
+- Consolidar todos los campos del create en un solo `useState<ShiftFormState>` (igual a `EMPTY_SHIFT_FORM_STATE`) dentro de un nuevo wrapper `<CreateShiftDialog>` extraído de `Shifts.tsx`. La página solo conserva `createOpen` + `prefill` y pasa callbacks estables (`useCallback`).
+- El nuevo `<CreateShiftDialog>` y `<ShiftEditDialog>` envuelven al `<ShiftFormFields>` y son los únicos que se re-renderizan al teclear.
+- Aplicar `React.memo` a las nuevas subsecciones (ver punto 3) con comparadores selectivos para que escribir en "Notas internas" no re-renderize Transporte ni el Resumen, y viceversa.
+- Mantener `useMemo` ya existente en `shiftAssignedIds`, `driversInTeam`, `conflictNames`, `adminCandidates`.
+
+Resultado esperado: tipear en título / notas / meeting point / job site notes se siente inmediato porque solo el subcomponente correspondiente re-renderiza.
+
+---
+
+### 2. Nuevo layout full-screen
+
+Crear un nuevo componente `ShiftFormShell` (`src/components/shifts/ShiftFormShell.tsx`) que:
+
+- Usa `Dialog` con `max-w-[1200px] w-[96vw] h-[92vh] p-0` en desktop.
+- En `< lg` se comporta como antes (un panel scrolleable).
+- Header sticky superior con: título ("Nuevo turno" / "Editar turno"), chips de cliente + fecha/hora cuando ya están definidos, botón Cancelar + botón Guardar / Crear.
+- Body con grid `lg:grid-cols-[1fr_360px]`:
 
 ```text
-1. Identidad        → título, cliente, fecha, horario, hora de convocatoria
-2. Lugar            → Job site, Meeting point, Directions, parser de Google Maps link
-3. Equipo           → plazas, asignar empleados (combobox), claimable
-4. Transporte       → required, capacidad (default 5), drivers, notas
-5. Pago             → hourly | day_pay (full/half), nota: "perfil = base, este turno = override"
-6. Fichaje          → attendance mode, clock method, QR, recipientes del QR
-7. Admin del turno  → ahora DESPUÉS del equipo (validación: debe estar asignado)
-8. Notas            → notas internas + instrucciones para el equipo (siempre visibles, no detrás de collapsible)
-9. Resumen final    → cobertura, rides estimados, validaciones, conflictos
+┌──────────────────────────── header sticky ────────────────────────────┐
+│ Nuevo turno · [Cliente] · [Vie 25 abr · 08:00–17:00]   Cancelar  Guardar │
+├──────────────────────────────────┬────────────────────────────────────┤
+│ FORM (scroll)                    │ RESUMEN (sticky)                    │
+│  · Información principal         │  · Título / Cliente / Fecha         │
+│  · Job Site (card protagonista)  │  · Plazas / Cobertura               │
+│  · Logística (Transporte +       │  · Job Site                         │
+│      Meeting points anidados)    │  · Transporte ON/OFF                │
+│  · Detalles avanzados ▾          │  · Drivers                          │
+│                                  │  · Meeting points                   │
+│                                  │  · Estado de capacidad              │
+└──────────────────────────────────┴────────────────────────────────────┘
 ```
 
-### 1.2 Cambios visuales puntuales
-
-- Renombrar labels:
-  - "Dirección / Punto de encuentro" → desdoblar en **Job site** (dónde se trabaja) y **Meeting point** (dónde se reúnen)
-  - "Notas internas" se queda; "Instrucciones para el equipo" sale del collapsible
-- Capacidad por vehículo default: `4 → 5` en `EMPTY_SHIFT_FORM_STATE`
-- Bloque Pago: añadir hint visible *"Tasa base: perfil del empleado. Este turno puede sobrescribirla."*
-- Nuevo bloque "Resumen final" al cierre con: nº plazas, nº rides estimados, lista de conflictos detectados, advertencia si falta admin.
-
-### 1.3 Sin cambios de payload
-
-Todas las columnas de DB y el `formStateToShiftPayload()` permanecen iguales en esta fase. Solo cambia la UI.
+El `ShiftFormShell` recibe el form-state y los handlers, decide layout, y monta dentro un nuevo `ShiftFormBody` que organiza las secciones nuevas.
 
 ---
 
-## FASE 2 — Reglas y comportamiento
+### 3. Reorganización del contenido en secciones memoizadas
 
-### 2.1 Parser de Google Maps en Job site / Meeting point
+Reemplazar las 9 `SectionCard` actuales por bloques temáticos. Cada uno es un componente `React.memo` separado en `src/components/shifts/form/` y solo recibe lo que necesita:
 
-Componente nuevo `MapsLinkInput` aceptando:
-- URL `maps.google.com`, `goo.gl/maps`, `maps.app.goo.gl` → extraer lat/lng del path o query, llamar a Mapbox reverse geocoding (ya hay `mapbox-geocoding.ts` y `useMapboxToken`) para obtener `formatted_address` + `place_name`
-- Texto libre → caer al `searchAddresses()` con autocomplete existente
-- Resultado se vuelca a `meeting_point` (texto) y opcionalmente crea o referencia un `client_location`
+- `ShiftBasicInfoSection` → Título, Cliente, Fecha, Entrada/Salida, Hora de convocatoria, Plazas, Tipo de pago + Override (toggle).
+- `JobSiteSection` (card protagonista, borde acentuado, fondo levemente destacado):
+  - Subtítulo: "Dirección principal donde se realizará el trabajo."
+  - Selector de Location guardada + autocomplete premium (`LocationPicker` reutilizado del `ShiftLocationsSection` actual, mostrando solo el bloque de **job site**).
+  - Nombre del lugar, dirección formateada, botón "Abrir en Google Maps" cuando hay coords/dirección válida.
+  - Notas visibles para el trabajador (mapeadas a `special_instructions`, mantenemos el nombre de columna).
+  - **Sin** campos de meeting point en esta card.
+- `TransportationSection` (siempre visible como card secundaria, contenido condicional):
+  - Toggle "¿Este turno requiere transporte?".
+  - Si OFF: muestra solo un estado informativo discreto: "Activa transporte si necesitas coordinar puntos de encuentro o drivers." Y los Meeting Points quedan colapsados en su propia card (ver siguiente).
+  - Si ON: capacidad por vehículo (default 5), vehículos necesarios, hint de drivers en equipo, conductor asignado, notas de transporte.
+  - Warning de capacidad solo cuando `capacityNum * ridesNeeded < slotsNum` (regla ya corregida — se mantiene). Mensaje: "Capacidad insuficiente: necesitas N vehículos para cubrir X personas con capacidad de Y por vehículo."
+  - Si capacidad cubierta: chip discreto verde "Capacidad cubierta" (opcional, sin contaminar).
+- `MeetingPointsSection`:
+  - Subtítulo: "Lugares donde los trabajadores se reúnen antes de ir al Job Site."
+  - Si Transporte OFF: card colapsada con la pista informativa.
+  - Si Transporte ON: meeting point principal (legacy `meeting_point` text + autocomplete del `ShiftLocationsSection` para `meeting_point_location_id`), botón "Abrir en Google Maps" cuando hay dirección. (Por ahora 1 meeting point, los múltiples puntos quedan fuera de scope para no tocar schema.)
+- `TeamSection`:
+  - Asignar empleados (combobox actual con `requiresDriver`, hint de drivers, etc.).
+  - Admin del turno (sigue siendo obligatorio cuando hay equipo).
+- `AdvancedDetailsSection` (`<Collapsible>` cerrado por defecto):
+  - Notas internas (solo admins).
+  - Método de fichaje, Modo de asistencia, QR (solo edit).
+  - Permitir reclamo abierto.
+- `ShiftSummaryPanel` (panel derecho sticky en desktop, oculto en mobile):
+  - Renderiza KPIs ya calculados (Plazas, Cobertura, Vehículos), validaciones bloqueantes y advertencias, "Capacidad cubierta" verde, "Faltan drivers" rojo, etc. — exactamente las mismas reglas del bloque "Resumen final" actual, pero como panel lateral en vez de sección apilada.
 
-### 2.2 Series reales con scope de edición
-
-**Migración nueva:**
-- `shifts.series_id uuid null` + índice
-- Nullable, sin tocar filas existentes (compatibilidad total con import-schedule, payroll, etc.)
-
-Al crear con repeat habilitado: generar `series_id = gen_random_uuid()` y aplicarlo a todas las instancias (hoy ya se generan N filas; solo añadimos el id).
-
-Al editar un turno con `series_id`, el dialog pregunta el scope:
-- **Solo este turno** (comportamiento actual)
-- **Este y los futuros** (`UPDATE … WHERE series_id = ? AND date >= ?`)
-- **Toda la serie** (`UPDATE … WHERE series_id = ?`)
-
-Aplicado solo a campos seguros: título, horario, ubicación, instrucciones, transporte, pago, attendance. **No** se replican asignaciones ni QR tokens.
-
-### 2.3 Duplicar turno con opciones
-
-Hoy `Shifts.tsx:1044` ya tiene un duplicate básico. Reemplazar por dialog con 3 opciones:
-- Estructura (campos del shift)
-- Estructura + staff asignado
-- Estructura + staff + admin + driver
-
-### 2.4 Override de pago — fuente única
-
-**Decisión de producto a implementar:**
-- `employee_compensation` = base
-- `shifts.pay_type` / `shifts.day_type` = override **solo de este turno**
-- `client_locations.default_pay_type` deja de aplicarse silenciosamente al campo pay_type del shift (sigue como hint visible, no auto-asignado a payroll del worker)
-
-Cambio mínimo en payroll: ya respeta el shift override, no requiere migración.
-
-### 2.5 Recipientes múltiples del QR
-
-Hoy solo el `shift_admin_id` recibe el QR. Añadir tabla `shift_qr_recipients (shift_id, employee_id, role)` y selector multi-empleado en la sección QR del edit dialog. RLS: company-scoped igual que el resto.
-
-### 2.6 Capacidad de vehículo y rides estimados visibles
-
-Ya hay cálculo en formularios; subirlo al "Resumen final" + validación si `transport_required && drivers_asignados < rides_necesarios`.
-
-### 2.7 EmployeeCombobox enriquecido
-
-Añadir, junto al nombre:
-- ⭐ rating (existe `useEmployeeReputation`)
-- 🚗 driver badge (`isEmployeeDriver()`)
-- 🔴/🟡 alertas: documentos faltantes, no-show risk, conflictos cercanos
-- Conflicto de serie: si ya está asignado en otra fecha de la misma `series_id`
+Cada sección recibe solo el subset de campos que necesita y un `onChange(patch)` estable. Con `React.memo` + comparación por referencia esto evita recomputar todo en cada tecla.
 
 ---
 
-## FASE 3 — Automatizaciones y aceptación masiva
+### 4. Estado del Resumen / "Todo en orden"
 
-### 3.1 "Aceptar todos los turnos de la serie"
+Mantener exactamente la regla actual:
 
-En el portal del worker, en el dialog de aceptación:
-- Si el turno tiene `series_id` y hay otros turnos pendientes con el mismo `series_id` asignados al mismo employee, mostrar opción "Aceptar también los X turnos restantes de esta serie".
-
-### 3.2 Resumen automático del día siguiente
-
-Edge function programada (`pg_cron`) `next-day-summary`:
-- Corre cada noche por empresa
-- Genera resumen por empleado: turnos del día siguiente, hora, lugar, transporte
-- Canal según `company_config.notification_channels`: app push / email / WhatsApp / SMS
-- Configurable on/off en company settings
-
-### 3.3 Live map y ETA
-
-Ya existe `useShiftLiveMap` y `ShiftLiveMapPanel`. Validar que funcione end-to-end (no requiere build nuevo, solo QA).
+- No bloquea el guardado técnicamente (botón Guardar sigue habilitado salvo por las validaciones duras existentes: falta fecha, falta admin con equipo, admin no asignado).
+- No muestra "Todo en orden — listo para guardar" si hay shortage de drivers o capacidad insuficiente.
+- `driver_employee_id` solo cuenta como driver si está dentro de `selectedEmployees` (ya implementado, se conserva).
 
 ---
 
-## Lo que NO se toca (modo estricto)
+### 5. Defaults / compatibilidad
 
-- payroll engine (`payroll-consolidate`, `payroll-interpreter`, mappings)
-- attendance resolver y kiosk
-- reconciliación (Truth File, matching engine)
-- import-schedule, bulk-import-shifts, connecteam-parser
-- multi-tenant scoping
-- estructura de notifications existentes
-- Activación / invitaciones (recién cerrado)
+- `carCapacity` default = `"5"` en `EMPTY_SHIFT_FORM_STATE` (ya está) — se confirma en `Shifts.tsx` y `ShiftDetailDialog.tsx`.
+- Crear, editar y duplicar siguen funcionando (la duplicación llama al mismo `resetForm` + `setCreateOpen`).
+- Shifts existentes con datos legacy se siguen mapeando vía `shiftToFormState` sin cambios.
+- `formStateToShiftPayload` no cambia.
 
 ---
 
-## Entregables por fase
+### 6. QA antes de cerrar
 
-| Fase | Entregable | Riesgo |
-|------|-----------|--------|
-| 1 | Form reorganizado, capacidad default 5, hints nuevos | Bajo — solo UI |
-| 2 | series_id, parser maps, duplicate dialog, QR recipients, override clarificado | Medio — 1 migración aditiva |
-| 3 | Aceptar serie, edge function next-day-summary, QA del live map | Bajo — features aislados |
+Casos a verificar en preview:
+
+1. Plazas=3 / capacidad=5 / transporte ON → sin warning + chip verde "Capacidad cubierta".
+2. Plazas=8 / capacidad=5 / transporte ON con 1 driver → warning rojo "necesitas 2 vehículos".
+3. Turno nuevo desde cero → capacidad por vehículo = 5.
+4. Tipear rápido en título, notas, meeting point, job site notes → sin lag.
+5. Job Site se entiende como dirección del trabajo; meeting points están en card aparte.
+6. Desktop ≥ 1280px usa todo el ancho con panel resumen a la derecha.
+7. Transporte OFF → meeting points no contaminan el formulario.
+8. Transporte ON → capacidad, drivers y meeting points aparecen ordenados.
+9. Editar un shift existente con `meeting_point` legacy → se ve correctamente en MeetingPointsSection sin duplicarse en JobSite.
+10. Duplicar turno desde calendario → abre el create dialog con los mismos defaults.
 
 ---
 
-## Antes de implementar — 2 confirmaciones rápidas
+### Archivos que se crean / modifican
 
-1. **Fase 2.4 (pago):** ¿confirmas que `client_locations.default_pay_type` deja de auto-rellenar el campo pay_type del shift? (hoy sí lo hace en `handleLocationChange`). Sigue mostrándose como info, pero el operador debe elegir explícito.
-2. **Fase 2.5 (QR recipients):** ¿quieres tabla nueva o prefieres array `text[]` en `shifts.qr_recipient_employee_ids`? La tabla es más limpia y RLS-friendly; el array es más rápido de implementar.
+Nuevos:
 
-Si confirmas, arrancamos con **Fase 1 completa** en una sola tanda (es solo UI, riesgo bajo) y dejamos Fase 2 y 3 como tandas separadas.
+- `src/components/shifts/ShiftFormShell.tsx` — modal full-screen + header sticky + grid 2 columnas + panel resumen.
+- `src/components/shifts/form/ShiftBasicInfoSection.tsx`
+- `src/components/shifts/form/JobSiteSection.tsx`
+- `src/components/shifts/form/TransportationSection.tsx`
+- `src/components/shifts/form/MeetingPointsSection.tsx`
+- `src/components/shifts/form/TeamSection.tsx`
+- `src/components/shifts/form/AdvancedDetailsSection.tsx`
+- `src/components/shifts/form/ShiftSummaryPanel.tsx`
+- `src/components/shifts/CreateShiftDialog.tsx` — extrae el create dialog de `Shifts.tsx`, dueña del `useState<ShiftFormState>` consolidado.
+
+Modificados:
+
+- `src/components/shifts/ShiftFormFields.tsx` → se convierte en orquestador delgado que monta las nuevas secciones (manteniendo export de `EMPTY_SHIFT_FORM_STATE`, `shiftToFormState`, `formStateToShiftPayload`, `ShiftFormState`, `LocationOption` y `ShiftFormFieldsProps` para no romper imports).
+- `src/components/shifts/ShiftEditDialog.tsx` → usa el nuevo `ShiftFormShell` para el layout full-screen; lógica interna intacta.
+- `src/pages/admin/Shifts.tsx` → reemplaza el bloque inline `<Dialog>...<ShiftFormFields .../>` por `<CreateShiftDialog>` y elimina los ~25 `useState` individuales del create (los reemplaza por un solo `prefill` para el quick-create desde el calendario).
+
+No se crea ni modifica ningún archivo de payroll, attendance, compensation ni reconciliación. No se ejecutan migraciones de base de datos.
+
+---
+
+### Notas técnicas (para el equipo)
+
+- Riesgo principal: extraer el state del create dialog de `Shifts.tsx` cambia cómo se hidrata el `prefill` desde el calendario (`handleQuickCreate`, `handleAddShiftFromCalendar`, `handleOpenFullWithPrefill`). Se conserva la API exponiendo `<CreateShiftDialog open prefill onOpenChange onCreated />` y mapeando el `prefill` → `ShiftFormState` parcial al abrir.
+- El header sticky reutiliza tokens de `border`, `bg-card`, `bg-background/95 backdrop-blur` para mantener consistencia con el resto del SaaS.
+- El panel resumen es `position: sticky; top: 0` dentro de la columna derecha con `overflow-y: auto` propio.
+- El autocomplete premium del Job Site reutiliza el `LocationPicker` ya integrado en `ShiftLocationsSection` — no se crea otro componente de mapas.
+- "Abrir en Google Maps" usa `https://www.google.com/maps/search/?api=1&query=` con coords si existen, o con la dirección formateada como fallback.
