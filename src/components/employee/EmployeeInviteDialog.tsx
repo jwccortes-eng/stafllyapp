@@ -255,15 +255,37 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
       .select("id, invite_token, status, sent_at, channel")
       .single() as any;
     if (!error && data) {
+      // Supersede any prior active invitations for this employee/company so old links stop working
+      await (supabase.rpc("supersede_employee_invitations", {
+        _employee_id: employee.id,
+        _company_id: selectedCompanyId,
+        _keep_invite_id: data.id,
+      }) as any);
       setLiveToken(data.invite_token);
       setInviteStatus(data.status);
       setInviteSentAt(data.sent_at);
       setInviteId(data.id);
       setAttempts(0);
       setProviderMessageId(null);
-      toast({ title: "Nueva invitación generada" });
+      toast({
+        title: "Nueva invitación generada",
+        description: "Los enlaces anteriores dejaron de funcionar. Comparte el nuevo enlace.",
+      });
+    } else if (error) {
+      toast({ title: "No se pudo generar", description: error.message, variant: "destructive" });
     }
     setCreatingInvite(false);
+  };
+
+  const isLinkActiveForSend = (): boolean => {
+    if (!liveToken) return false;
+    if (["expired", "revoked", "superseded", "accepted", "failed", "bounced", "dlq"].includes(inviteStatus)) return false;
+    return true;
+  };
+
+  const openActivation = () => {
+    if (!inviteLink) return;
+    window.open(inviteLink, "_blank", "noopener,noreferrer");
   };
 
   const generatePin = async () => {
