@@ -654,10 +654,19 @@ export default function ActivateAccount() {
   }
 
   // ─── Wizard ───
+  // Footer visibility: hide on welcome/pin/ready (those steps have their own custom action UX)
+  const showWizardFooter = wizardStep !== "welcome" && wizardStep !== "pin" && wizardStep !== "ready";
+  const isPhotoStep = wizardStep === "photo";
+  const nextDisabled =
+    (wizardStep === "personal" && !isPersonalValid) ||
+    (wizardStep === "address" && !isAddressValid) ||
+    (wizardStep === "details" && !isDetailsValid) ||
+    (wizardStep === "documents" && !isDocsValid);
+
   return (
-    <div className="min-h-[100dvh] flex items-center justify-center bg-gradient-to-b from-background to-muted/20 p-4">
-      <div className="w-full max-w-md">
-        <div className="bg-card rounded-3xl border border-border/50 shadow-xl overflow-hidden">
+    <div className="min-h-[100dvh] flex items-start sm:items-center justify-center bg-gradient-to-b from-background to-muted/20 p-3 sm:p-4">
+      <div className="w-full max-w-md flex flex-col" style={{ maxHeight: "calc(100dvh - 1.5rem)" }}>
+        <div className="bg-card rounded-3xl border border-border/50 shadow-xl overflow-hidden flex flex-col flex-1 min-h-0">
           {/* Company header */}
           <div className="bg-gradient-to-br from-primary/[0.06] to-transparent px-6 pt-6 pb-4 flex flex-col items-center gap-2 border-b border-border/30">
             {invite?.company_logo ? (
