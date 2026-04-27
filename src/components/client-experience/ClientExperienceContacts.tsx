@@ -142,7 +142,22 @@ export default function ClientExperienceContacts() {
 
 function ContactDialog({ onClose }: { onClose: () => void }) {
   const upsert = useUpsertClientContact();
-  const { clients = [] } = useBillingClients();
+  const { selectedCompanyId } = useCompany();
+  const clientsQ = useQuery({
+    queryKey: ["client-experience-operational-clients", selectedCompanyId],
+    enabled: !!selectedCompanyId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("clients")
+        .select("id, name, status")
+        .eq("company_id", selectedCompanyId!)
+        .is("deleted_at", null)
+        .order("name", { ascending: true });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+  const clients = clientsQ.data ?? [];
   const [form, setForm] = useState({
     client_id: "",
     name: "",
@@ -167,6 +182,8 @@ function ContactDialog({ onClose }: { onClose: () => void }) {
     onClose();
   };
 
+  const noClients = !clientsQ.isLoading && !clientsQ.error && clients.length === 0;
+
   return (
     <DialogContent className="max-w-md">
       <DialogHeader>
@@ -178,9 +195,20 @@ function ContactDialog({ onClose }: { onClose: () => void }) {
           <Select
             value={form.client_id}
             onValueChange={(v) => setForm((f) => ({ ...f, client_id: v }))}
+            disabled={clientsQ.isLoading || noClients || !!clientsQ.error}
           >
             <SelectTrigger className="h-9 text-sm">
-              <SelectValue placeholder="Select client" />
+              <SelectValue
+                placeholder={
+                  clientsQ.isLoading
+                    ? "Loading clients…"
+                    : clientsQ.error
+                      ? "Failed to load clients"
+                      : noClients
+                        ? "No clients found"
+                        : "Select client"
+                }
+              />
             </SelectTrigger>
             <SelectContent>
               {clients.map((c) => (
@@ -190,6 +218,16 @@ function ContactDialog({ onClose }: { onClose: () => void }) {
               ))}
             </SelectContent>
           </Select>
+          {clientsQ.error && (
+            <p className="text-[11px] text-destructive">
+              Could not load clients. Refresh and try again.
+            </p>
+          )}
+          {noClients && (
+            <p className="text-[11px] text-muted-foreground">
+              No clients found. Create a client first in the Clients module.
+            </p>
+          )}
         </div>
         <div className="space-y-1">
           <Label className="text-xs">Name</Label>
