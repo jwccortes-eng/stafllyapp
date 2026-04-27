@@ -12,7 +12,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useOnboardingConfig } from "@/hooks/useOnboardingConfig";
 import { isInviteStatusFailure, isInviteStatusInFlight, mapEmailLogStatusToInviteStatus, type InviteDeliveryStatus } from "@/lib/invitation-status";
 import { buildWhatsAppTargets, normalizePhone } from "@/lib/phone";
-import { Send, MessageCircle, Phone, Copy, Check, Mail, Smartphone, CheckCircle2, AlertTriangle, Link2, Loader2, RefreshCw, Clock, Shield, KeyRound, XCircle, AlertCircle, MailCheck, MailX } from "lucide-react";
+import { Send, MessageCircle, Phone, Copy, Check, Mail, Smartphone, CheckCircle2, AlertTriangle, Link2, Loader2, RefreshCw, Clock, Shield, KeyRound, XCircle, AlertCircle, MailCheck, MailX, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { portalAuthUrl, inviteUrl } from "@/lib/app-url";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
