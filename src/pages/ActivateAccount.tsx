@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { ScrollArea } from "@/components/ui/scroll-area";
+
 import { Badge } from "@/components/ui/badge";
 import {
   Loader2, CheckCircle2, XCircle, Clock, Shield, Camera, ArrowRight, ArrowLeft,
@@ -654,12 +654,21 @@ export default function ActivateAccount() {
   }
 
   // ─── Wizard ───
+  // Footer visibility: hide on welcome/pin/ready (those steps have their own custom action UX)
+  const showWizardFooter = wizardStep !== "welcome" && wizardStep !== "pin" && wizardStep !== "ready";
+  const isPhotoStep = wizardStep === "photo";
+  const nextDisabled =
+    (wizardStep === "personal" && !isPersonalValid) ||
+    (wizardStep === "address" && !isAddressValid) ||
+    (wizardStep === "details" && !isDetailsValid) ||
+    (wizardStep === "documents" && !isDocsValid);
+
   return (
-    <div className="min-h-[100dvh] flex items-center justify-center bg-gradient-to-b from-background to-muted/20 p-4">
-      <div className="w-full max-w-md">
-        <div className="bg-card rounded-3xl border border-border/50 shadow-xl overflow-hidden">
+    <div className="min-h-[100dvh] flex items-start sm:items-center justify-center bg-gradient-to-b from-background to-muted/20 p-3 sm:p-4">
+      <div className="w-full max-w-md flex flex-col" style={{ maxHeight: "calc(100dvh - 1.5rem)" }}>
+        <div className="bg-card rounded-3xl border border-border/50 shadow-xl overflow-hidden flex flex-col flex-1 min-h-0">
           {/* Company header */}
-          <div className="bg-gradient-to-br from-primary/[0.06] to-transparent px-6 pt-6 pb-4 flex flex-col items-center gap-2 border-b border-border/30">
+          <div className="shrink-0 bg-gradient-to-br from-primary/[0.06] to-transparent px-6 pt-6 pb-4 flex flex-col items-center gap-2 border-b border-border/30">
             {invite?.company_logo ? (
               <img src={invite.company_logo} alt="" className="h-12 w-12 rounded-xl object-cover shadow-md" />
             ) : (
@@ -686,7 +695,7 @@ export default function ActivateAccount() {
 
           {/* Progress bar */}
           {wizardStep !== "ready" && (
-            <div className="px-6 pt-4">
+            <div className="shrink-0 px-6 pt-4">
               <div className="flex items-center gap-1">
                 {progressSteps.map((s, i) => (
                   <div key={s} className={cn("h-1 rounded-full flex-1 transition-all duration-500", i <= stepIndex ? "bg-primary" : "bg-border")} />
@@ -696,7 +705,7 @@ export default function ActivateAccount() {
             </div>
           )}
 
-          <ScrollArea className="max-h-[65vh]">
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
             <div className="px-6 py-6 space-y-5">
               {/* ── STEP: Welcome ── */}
               {wizardStep === "welcome" && invite && (
@@ -807,10 +816,6 @@ export default function ActivateAccount() {
                       <p className="text-[9px] text-muted-foreground/60">Only the last 4 digits are stored. Your information is protected.</p>
                     </div>
                   </div>
-                  <div className="flex gap-2 pt-1">
-                    <Button variant="outline" onClick={goBack} className="h-10 rounded-xl gap-1"><ArrowLeft className="h-4 w-4" /> Back</Button>
-                    <Button onClick={goNext} disabled={!isPersonalValid} className="flex-1 h-10 rounded-xl gap-1">Next <ArrowRight className="h-4 w-4" /></Button>
-                  </div>
                 </div>
               )}
 
@@ -848,10 +853,6 @@ export default function ActivateAccount() {
                       Complete address, city, state and ZIP to continue.
                     </p>
                   )}
-                  <div className="flex gap-2 pt-1">
-                    <Button variant="outline" onClick={goBack} className="h-10 rounded-xl gap-1"><ArrowLeft className="h-4 w-4" /> Back</Button>
-                    <Button onClick={goNext} disabled={!isAddressValid} className="flex-1 h-10 rounded-xl gap-1">Next <ArrowRight className="h-4 w-4" /></Button>
-                  </div>
                 </div>
               )}
 
@@ -948,10 +949,6 @@ export default function ActivateAccount() {
                       </div>
                     )}
                   </div>
-                  <div className="flex gap-2 pt-1">
-                    <Button variant="outline" onClick={goBack} className="h-10 rounded-xl gap-1"><ArrowLeft className="h-4 w-4" /> Back</Button>
-                    <Button onClick={goNext} disabled={!isDetailsValid} className="flex-1 h-10 rounded-xl gap-1">Next <ArrowRight className="h-4 w-4" /></Button>
-                  </div>
                 </div>
               )}
 
@@ -1028,10 +1025,6 @@ export default function ActivateAccount() {
 
                   {error && <p className="text-xs text-destructive text-center">{error}</p>}
 
-                  <div className="flex gap-2 pt-1">
-                    <Button variant="outline" onClick={goBack} className="h-10 rounded-xl gap-1"><ArrowLeft className="h-4 w-4" /> Back</Button>
-                    <Button onClick={goNext} disabled={!isDocsValid} className="flex-1 h-10 rounded-xl gap-1">Next <ArrowRight className="h-4 w-4" /></Button>
-                  </div>
                 </div>
               )}
 
@@ -1067,12 +1060,6 @@ export default function ActivateAccount() {
                     <p>✓ Good lighting</p>
                   </div>
 
-                  <div className="flex gap-2">
-                    <Button variant="outline" onClick={goBack} className="h-10 rounded-xl gap-1"><ArrowLeft className="h-4 w-4" /> Back</Button>
-                    <Button onClick={handleActivate} disabled={!avatarPreview || busy} className="flex-1 h-12 rounded-xl text-base font-semibold gap-2">
-                      {busy ? <><Loader2 className="h-4 w-4 animate-spin" /> Activating...</> : <>Activate my account <ArrowRight className="h-4 w-4" /></>}
-                    </Button>
-                  </div>
                 </div>
               )}
 
@@ -1103,10 +1090,45 @@ export default function ActivateAccount() {
                 </div>
               )}
             </div>
-          </ScrollArea>
+          </div>
+
+          {/* Sticky footer with primary actions — always visible */}
+          {showWizardFooter && (
+            <div
+              className="shrink-0 border-t border-border/40 bg-card px-6 pt-3 pb-3"
+              style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
+            >
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={goBack}
+                  className="h-11 rounded-xl gap-1 px-4"
+                >
+                  <ArrowLeft className="h-4 w-4" /> Back
+                </Button>
+                {isPhotoStep ? (
+                  <Button
+                    onClick={handleActivate}
+                    disabled={!avatarPreview || busy}
+                    className="flex-1 h-11 rounded-xl text-base font-semibold gap-2"
+                  >
+                    {busy ? <><Loader2 className="h-4 w-4 animate-spin" /> Activating...</> : <>Activate my account <ArrowRight className="h-4 w-4" /></>}
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={goNext}
+                    disabled={nextDisabled}
+                    className="flex-1 h-11 rounded-xl text-base font-semibold gap-1"
+                  >
+                    Next <ArrowRight className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
-        <p className="text-center text-[10px] text-muted-foreground/40 mt-4">Powered by Stafly</p>
+        <p className="shrink-0 text-center text-[10px] text-muted-foreground/40 mt-2">Powered by Stafly</p>
       </div>
     </div>
   );
