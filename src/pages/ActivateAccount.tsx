@@ -57,7 +57,14 @@ interface InviteData {
   employee_email: string;
 }
 
-const REQUIRED_STEP_COPY = "PIN → Profile → Home Address → Details → Photo";
+const STEP_LABELS: Record<Exclude<WizardStep, "welcome" | "ready">, string> = {
+  pin: "PIN",
+  personal: "Profile",
+  address: "Home Address",
+  details: "Details",
+  documents: "Documents",
+  photo: "Photo",
+};
 
 function normalizeEmergencyName(value: string): string {
   return value.trim().replace(/\s+/g, " ");
@@ -140,8 +147,10 @@ export default function ActivateAccount() {
 
   // Dynamic steps based on has_vehicle
   const steps = profileForm.has_vehicle ? STEPS_WITH_DOCS : BASE_STEPS;
-  const stepIndex = steps.indexOf(wizardStep);
-  const totalVisibleSteps = steps.filter(s => s !== "ready").length;
+  const progressSteps = steps.filter((s): s is Exclude<WizardStep, "welcome" | "ready"> => s !== "welcome" && s !== "ready");
+  const stepIndex = progressSteps.indexOf(wizardStep as Exclude<WizardStep, "welcome" | "ready">);
+  const totalVisibleSteps = progressSteps.length;
+  const requiredStepCopy = progressSteps.map((step) => STEP_LABELS[step]).join(" → ");
 
   const updateForm = (key: keyof ProfileForm, value: any) => {
     setProfileForm(prev => ({ ...prev, [key]: value }));
@@ -658,11 +667,11 @@ export default function ActivateAccount() {
           {wizardStep !== "ready" && (
             <div className="px-6 pt-4">
               <div className="flex items-center gap-1">
-                {steps.filter(s => s !== "ready").map((s, i) => (
+                {progressSteps.map((s, i) => (
                   <div key={s} className={cn("h-1 rounded-full flex-1 transition-all duration-500", i <= stepIndex ? "bg-primary" : "bg-border")} />
                 ))}
               </div>
-              <p className="text-[10px] text-muted-foreground mt-1.5 text-right">Step {stepIndex + 1} of {totalVisibleSteps}</p>
+              <p className="text-[10px] text-muted-foreground mt-1.5 text-right">Step {Math.max(stepIndex + 1, 1)} of {totalVisibleSteps}</p>
             </div>
           )}
 
@@ -698,7 +707,7 @@ export default function ActivateAccount() {
                       <KeyRound className="h-4 w-4 text-muted-foreground shrink-0" />
                       <div className="flex-1 min-w-0">
                         <p className="text-[10px] text-muted-foreground">Required steps</p>
-                        <p className="text-sm font-medium text-foreground">{REQUIRED_STEP_COPY}</p>
+                        <p className="text-sm font-medium text-foreground">{requiredStepCopy}</p>
                       </div>
                     </div>
                   </div>
