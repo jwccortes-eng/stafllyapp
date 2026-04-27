@@ -67,7 +67,7 @@ import {
   CheckCircle2,
   RotateCw,
 } from "lucide-react";
-import { isInviteStatusFailure, isInviteStatusInFlight } from "@/lib/invitation-status";
+import { isInviteStatusFailure } from "@/lib/invitation-status";
 import { cn } from "@/lib/utils";
 
 type EmployeeRecord = Record<string, any>;
