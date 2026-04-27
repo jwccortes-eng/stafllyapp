@@ -1112,10 +1112,45 @@ export default function ActivateAccount() {
                 </div>
               )}
             </div>
-          </ScrollArea>
+          </div>
+
+          {/* Sticky footer with primary actions — always visible */}
+          {showWizardFooter && (
+            <div
+              className="shrink-0 border-t border-border/40 bg-card px-6 pt-3 pb-3"
+              style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
+            >
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={goBack}
+                  className="h-11 rounded-xl gap-1 px-4"
+                >
+                  <ArrowLeft className="h-4 w-4" /> Back
+                </Button>
+                {isPhotoStep ? (
+                  <Button
+                    onClick={handleActivate}
+                    disabled={!avatarPreview || busy}
+                    className="flex-1 h-11 rounded-xl text-base font-semibold gap-2"
+                  >
+                    {busy ? <><Loader2 className="h-4 w-4 animate-spin" /> Activating...</> : <>Activate my account <ArrowRight className="h-4 w-4" /></>}
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={goNext}
+                    disabled={nextDisabled}
+                    className="flex-1 h-11 rounded-xl text-base font-semibold gap-1"
+                  >
+                    Next <ArrowRight className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
-        <p className="text-center text-[10px] text-muted-foreground/40 mt-4">Powered by Stafly</p>
+        <p className="shrink-0 text-center text-[10px] text-muted-foreground/40 mt-2">Powered by Stafly</p>
       </div>
     </div>
   );
