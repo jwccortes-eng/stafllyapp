@@ -17,6 +17,12 @@ import {
   FileText, Upload, AlertTriangle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PremiumAddressField } from "@/components/address";
+import {
+  normalizeFromLegacyColumns,
+  recomputeDerived,
+  type StructuredAddress,
+} from "@/lib/address";
 
 type PageState = "loading" | "valid" | "expired" | "used" | "invalid";
 type WizardStep = "welcome" | "pin" | "personal" | "address" | "details" | "documents" | "photo" | "ready";
