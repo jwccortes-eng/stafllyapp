@@ -1060,12 +1060,6 @@ export default function ActivateAccount() {
                     <p>✓ Good lighting</p>
                   </div>
 
-                  <div className="flex gap-2">
-                    <Button variant="outline" onClick={goBack} className="h-10 rounded-xl gap-1"><ArrowLeft className="h-4 w-4" /> Back</Button>
-                    <Button onClick={handleActivate} disabled={!avatarPreview || busy} className="flex-1 h-12 rounded-xl text-base font-semibold gap-2">
-                      {busy ? <><Loader2 className="h-4 w-4 animate-spin" /> Activating...</> : <>Activate my account <ArrowRight className="h-4 w-4" /></>}
-                    </Button>
-                  </div>
                 </div>
               )}
 
