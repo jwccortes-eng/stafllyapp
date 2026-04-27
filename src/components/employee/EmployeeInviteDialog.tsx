@@ -211,6 +211,12 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
         .single() as any;
 
       if (!cancelled && !error && data) {
+        // Supersede any older active invitations so we keep a single live link per worker/company
+        await (supabase.rpc("supersede_employee_invitations", {
+          _employee_id: employee.id,
+          _company_id: selectedCompanyId,
+          _keep_invite_id: data.id,
+        }) as any);
         setLiveToken(data.invite_token);
         setInviteStatus(data.status);
         setInviteSentAt(data.sent_at);
