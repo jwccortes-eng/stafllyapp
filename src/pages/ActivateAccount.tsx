@@ -695,7 +695,7 @@ export default function ActivateAccount() {
 
           {/* Progress bar */}
           {wizardStep !== "ready" && (
-            <div className="px-6 pt-4">
+            <div className="shrink-0 px-6 pt-4">
               <div className="flex items-center gap-1">
                 {progressSteps.map((s, i) => (
                   <div key={s} className={cn("h-1 rounded-full flex-1 transition-all duration-500", i <= stepIndex ? "bg-primary" : "bg-border")} />
@@ -705,7 +705,7 @@ export default function ActivateAccount() {
             </div>
           )}
 
-          <ScrollArea className="max-h-[65vh]">
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
             <div className="px-6 py-6 space-y-5">
               {/* ── STEP: Welcome ── */}
               {wizardStep === "welcome" && invite && (
