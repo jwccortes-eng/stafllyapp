@@ -275,17 +275,24 @@ function ContactDialog({ onClose }: { onClose: () => void }) {
           />
         </div>
       </div>
-      <DialogFooter>
-        <Button variant="ghost" onClick={onClose} size="sm">
-          Cancel
-        </Button>
-        <Button
-          onClick={handleSubmit}
-          disabled={!form.client_id || !form.name.trim() || upsert.isPending}
-          size="sm"
-        >
-          {upsert.isPending ? "Saving…" : "Save contact"}
-        </Button>
+      <DialogFooter className="flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        {(!form.client_id || !form.name.trim()) && (
+          <p className="text-[11px] text-muted-foreground sm:mr-auto">
+            {!form.client_id ? "Select a client to continue." : "Enter a contact name to continue."}
+          </p>
+        )}
+        <div className="flex gap-2 sm:ml-auto">
+          <Button variant="ghost" onClick={onClose} size="sm">
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSubmit}
+            disabled={!form.client_id || !form.name.trim() || upsert.isPending}
+            size="sm"
+          >
+            {upsert.isPending ? "Saving…" : "Save contact"}
+          </Button>
+        </div>
       </DialogFooter>
     </DialogContent>
   );
