@@ -74,7 +74,144 @@ const FIELD_LABELS: Record<string, string> = {
   notes: "Notas", claimable: "Reclamable", status: "Estado",
 };
 
-export default function Shifts() {
+
+// Local create-shift dialog component. Wraps the new ShiftFormShell with the
+// summary panel computed from useShiftFormSignals. Defined inline so we don't
+// have to extract the page's create-state into a new file.
+function CreateShiftDialogInline(props: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  formState: ShiftFormState;
+  onPatch: (patch: Partial<ShiftFormState>) => void;
+  clients: SelectOption[];
+  locations: any[];
+  employees: Employee[];
+  shifts: Shift[];
+  assignments: Assignment[];
+  availabilityConfigs?: any[];
+  availabilityOverrides?: any[];
+  allowClaims: boolean;
+  selectedCompanyId: string | null;
+  saving: boolean;
+  repeatConfig: RepeatConfig;
+  onRepeatChange: (c: RepeatConfig) => void;
+  onRequestSave: () => void;
+  onAddNewEmployee: () => void;
+  onClientCreated: (id: string, name: string) => void;
+  onLocationCreated: (id: string, name: string, address: string) => void;
+}) {
+  const v = props.formState;
+  const signals = useShiftFormSignals({
+    v,
+    mode: "create",
+    shift: null,
+    employees: props.employees,
+    shifts: props.shifts,
+    assignments: props.assignments,
+    clients: props.clients,
+    locations: props.locations,
+    showEmployeePicker: true,
+  });
+  const payTypeLabel =
+    v.payType === "daily"
+      ? `por día · ${v.dayType === "full_day" ? "día completo" : "medio día"}`
+      : "por hora";
+
+  const summary = (
+    <ShiftSummaryPanel
+      mode="create"
+      title={v.title}
+      clientName={signals.clientName}
+      date={v.date}
+      startTime={v.startTime}
+      endTime={v.endTime}
+      slotsNum={signals.slotsNum}
+      assignedCount={signals.assignedCount}
+      ridesNeeded={signals.ridesNeeded}
+      transportRequired={v.transportRequired}
+      driversInTeam={signals.driversInTeam}
+      jobSiteLabel={signals.jobSiteLabel}
+      meetingPointLabel={signals.meetingPointLabel}
+      dateMissing={!v.date}
+      adminMissing={signals.adminMissing}
+      adminInvalid={signals.adminInvalid}
+      noLocation={signals.noLocation}
+      noTeam={signals.noTeam}
+      driverMissing={signals.driverMissing}
+      driversShortage={signals.driversShortage}
+      capacityShortage={signals.capacityShortage}
+      hasConflicts={signals.hasConflicts}
+      conflictNames={signals.conflictNames}
+      payOverrideActive={signals.payOverrideActive}
+      payTypeLabel={payTypeLabel}
+    />
+  );
+
+  return (
+    <ShiftFormShell
+      open={props.open}
+      onOpenChange={props.onOpenChange}
+      mode="create"
+      clientName={signals.clientName}
+      date={v.date}
+      startTime={v.startTime}
+      endTime={v.endTime}
+      saving={props.saving}
+      saveDisabled={!v.date}
+      saveLabel="Revisar y crear"
+      onSave={props.onRequestSave}
+      summary={summary}
+    >
+      <ShiftFormFields
+        mode="create"
+        companyId={props.selectedCompanyId}
+        value={v}
+        onChange={props.onPatch}
+        clients={props.clients}
+        locations={props.locations}
+        employees={props.employees}
+        shifts={props.shifts}
+        assignments={props.assignments}
+        availabilityConfigs={props.availabilityConfigs}
+        availabilityOverrides={props.availabilityOverrides}
+        allowClaims={props.allowClaims}
+        showEmployeePicker
+        renderInlineSummary={false}
+        onAddNewEmployee={props.onAddNewEmployee}
+        onQuickAddClient={async (name) => {
+          if (!props.selectedCompanyId) return;
+          const { data, error } = await supabase.from("clients").insert({
+            company_id: props.selectedCompanyId, name,
+          } as any).select("id").single();
+          if (error) { toast.error(error.message); return; }
+          if (data) {
+            props.onClientCreated(data.id, name);
+            toast.success(`Cliente "${name}" creado`);
+          }
+        }}
+        onQuickAddLocation={async (name, address) => {
+          if (!props.selectedCompanyId) return;
+          const { data, error } = await supabase.from("locations").insert({
+            company_id: props.selectedCompanyId, name,
+            address: address || null,
+          } as any).select("id").single();
+          if (error) { toast.error(error.message); return; }
+          if (data) {
+            props.onLocationCreated(data.id, name, address);
+            toast.success(`Ubicación "${name}" creada`);
+          }
+        }}
+      />
+      <ShiftRepeatSection
+        shiftDate={v.date}
+        config={props.repeatConfig}
+        onChange={props.onRepeatChange}
+      />
+    </ShiftFormShell>
+  );
+}
+
+
   usePageView("Programación");
   const navigate = useNavigate();
   const { role, hasModuleAccess, user } = useAuth();
