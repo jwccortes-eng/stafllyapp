@@ -347,10 +347,20 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
   };
 
   const copyInviteLink = async () => {
-    if (!inviteLink) return;
+    if (!inviteLink || !isLinkActiveForSend()) {
+      toast({
+        title: "Enlace no disponible",
+        description: "Genera una nueva invitación para obtener un enlace válido.",
+        variant: "destructive",
+      });
+      return;
+    }
     await navigator.clipboard.writeText(inviteLink);
     setLinkCopied(true);
-    toast({ title: "Enlace copiado", description: inviteLink });
+    toast({
+      title: "Enlace copiado",
+      description: "Este enlace es el único activo. Reenviar lo invalidará.",
+    });
     setTimeout(() => setLinkCopied(false), 2000);
   };
 
