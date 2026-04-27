@@ -764,12 +764,32 @@ export default function ActivateAccount() {
                   </div>
                   <div className="space-y-3">
                     <div className="space-y-1">
-                      <Label className="text-xs">Emergency contact <span className="text-destructive">*</span></Label>
-                      <Input value={profileForm.emergency_contact_name} onChange={e => updateForm("emergency_contact_name", e.target.value)} placeholder="Contact name" className="h-9 text-sm" />
+                      <Label className="text-xs">Emergency contact name <span className="text-destructive">*</span></Label>
+                      <Input
+                        value={profileForm.emergency_contact_name}
+                        onChange={e => updateForm("emergency_contact_name", e.target.value)}
+                        placeholder="Full name"
+                        autoComplete="name"
+                        className="h-9 text-sm"
+                      />
+                      {profileForm.emergency_contact_name.trim().length > 0 && !isEmergencyNameValid && (
+                        <p className="text-[10px] text-destructive">Enter a valid contact name (at least 3 letters).</p>
+                      )}
                     </div>
                     <div className="space-y-1">
                       <Label className="text-xs">Emergency phone <span className="text-destructive">*</span></Label>
-                      <Input value={profileForm.emergency_contact_phone} onChange={e => updateForm("emergency_contact_phone", e.target.value)} placeholder="+1 (305) 555-0123" className="h-9 text-sm" />
+                      <Input
+                        type="tel"
+                        inputMode="tel"
+                        value={profileForm.emergency_contact_phone}
+                        onChange={e => updateForm("emergency_contact_phone", e.target.value)}
+                        placeholder="+1 (305) 555-0123"
+                        autoComplete="tel"
+                        className="h-9 text-sm"
+                      />
+                      {profileForm.emergency_contact_phone.trim().length > 0 && !isEmergencyPhoneValid && (
+                        <p className="text-[10px] text-destructive">Enter a valid 10-digit emergency phone number.</p>
+                      )}
                     </div>
 
                     {/* Languages */}
