@@ -211,7 +211,7 @@ function CreateShiftDialogInline(props: {
   );
 }
 
-
+export default function Shifts() {
   usePageView("Programación");
   const navigate = useNavigate();
   const { role, hasModuleAccess, user } = useAuth();
