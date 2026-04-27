@@ -25,7 +25,7 @@ import {
   type StructuredAddress,
 } from "@/lib/address";
 
-type PageState = "loading" | "valid" | "expired" | "used" | "invalid";
+type PageState = "loading" | "valid" | "expired" | "used" | "invalid" | "superseded";
 type WizardStep = "welcome" | "pin" | "personal" | "address" | "details" | "documents" | "photo" | "ready";
 
 const BASE_STEPS: WizardStep[] = ["welcome", "pin", "personal", "address", "details", "photo", "ready"];
@@ -169,8 +169,11 @@ export default function ActivateAccount() {
 
       if (fetchErr) { console.error("[activate] invite rpc failed", fetchErr); setPageState("invalid"); return; }
       if (!data) { console.warn("[activate] no invitation row for token"); setPageState("invalid"); return; }
-      if (data.status === "revoked") { setPageState("invalid"); return; }
+      if (data.status === "superseded") { setPageState("superseded"); return; }
+      if (data.status === "revoked") { setPageState("superseded"); return; }
       if (data.status === "accepted") { setPageState("used"); return; }
+      // If a newer invitation exists for the same employee/company, treat this one as superseded
+      if (data.has_newer === true) { setPageState("superseded"); return; }
 
       if (data.expires_at && new Date(data.expires_at) < new Date()) {
         if (data.status !== "expired") {
@@ -610,18 +613,23 @@ export default function ActivateAccount() {
     const configs: Record<string, { icon: React.ReactNode; title: string; desc: string }> = {
       invalid: {
         icon: <XCircle className="h-8 w-8 text-destructive" />,
-        title: "Invalid link",
-        desc: "This activation link is not valid. Please request a new one from your administrator.",
+        title: "Link not valid",
+        desc: "This link is not valid. Make sure you opened the full link, or ask your administrator for a new one.",
       },
       expired: {
         icon: <Clock className="h-8 w-8 text-warning" />,
         title: "Link expired",
-        desc: "This link has expired. Ask your administrator to send a new one.",
+        desc: "This link has expired. Ask your administrator to send you a new one.",
+      },
+      superseded: {
+        icon: <Clock className="h-8 w-8 text-warning" />,
+        title: "Link replaced",
+        desc: "This link was replaced by a more recent one. Use the latest link you received, or ask your administrator for a new one.",
       },
       used: {
         icon: <CheckCircle2 className="h-8 w-8 text-earning" />,
         title: "Account already activated",
-        desc: "Your account has already been activated. Sign in with your phone and PIN.",
+        desc: "This link was already used. You can sign in with your phone and PIN.",
       },
     };
     const cfg = configs[pageState] ?? configs.invalid;

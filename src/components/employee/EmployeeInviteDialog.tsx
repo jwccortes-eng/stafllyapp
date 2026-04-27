@@ -12,7 +12,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useOnboardingConfig } from "@/hooks/useOnboardingConfig";
 import { isInviteStatusFailure, isInviteStatusInFlight, mapEmailLogStatusToInviteStatus, type InviteDeliveryStatus } from "@/lib/invitation-status";
 import { buildWhatsAppTargets, normalizePhone } from "@/lib/phone";
-import { Send, MessageCircle, Phone, Copy, Check, Mail, Smartphone, CheckCircle2, AlertTriangle, Link2, Loader2, RefreshCw, Clock, Shield, KeyRound, XCircle, AlertCircle, MailCheck, MailX } from "lucide-react";
+import { Send, MessageCircle, Phone, Copy, Check, Mail, Smartphone, CheckCircle2, AlertTriangle, Link2, Loader2, RefreshCw, Clock, Shield, KeyRound, XCircle, AlertCircle, MailCheck, MailX, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { portalAuthUrl, inviteUrl } from "@/lib/app-url";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
@@ -43,6 +43,7 @@ const STATUS_CONFIG: Record<InviteDeliveryStatus, { label: string; color: string
   bounced: { label: "Rebotado", color: "bg-destructive/10 text-destructive", icon: AlertCircle, description: "Email rebotó (dirección inválida)" },
   dlq: { label: "DLQ", color: "bg-destructive/10 text-destructive", icon: AlertCircle, description: "El email agotó sus reintentos y pasó a cola muerta" },
   resent: { label: "Reenviado", color: "bg-primary/10 text-primary", icon: RefreshCw, description: "Invitación reenviada" },
+  superseded: { label: "Reemplazado", color: "bg-muted text-muted-foreground", icon: RefreshCw, description: "Esta invitación fue reemplazada por una más reciente" },
 };
 
 export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSent, inviteToken: initialToken }: Props) {
@@ -210,6 +211,12 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
         .single() as any;
 
       if (!cancelled && !error && data) {
+        // Supersede any older active invitations so we keep a single live link per worker/company
+        await (supabase.rpc("supersede_employee_invitations", {
+          _employee_id: employee.id,
+          _company_id: selectedCompanyId,
+          _keep_invite_id: data.id,
+        }) as any);
         setLiveToken(data.invite_token);
         setInviteStatus(data.status);
         setInviteSentAt(data.sent_at);
@@ -254,15 +261,37 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
       .select("id, invite_token, status, sent_at, channel")
       .single() as any;
     if (!error && data) {
+      // Supersede any prior active invitations for this employee/company so old links stop working
+      await (supabase.rpc("supersede_employee_invitations", {
+        _employee_id: employee.id,
+        _company_id: selectedCompanyId,
+        _keep_invite_id: data.id,
+      }) as any);
       setLiveToken(data.invite_token);
       setInviteStatus(data.status);
       setInviteSentAt(data.sent_at);
       setInviteId(data.id);
       setAttempts(0);
       setProviderMessageId(null);
-      toast({ title: "Nueva invitación generada" });
+      toast({
+        title: "Nueva invitación generada",
+        description: "Los enlaces anteriores dejaron de funcionar. Comparte el nuevo enlace.",
+      });
+    } else if (error) {
+      toast({ title: "No se pudo generar", description: error.message, variant: "destructive" });
     }
     setCreatingInvite(false);
+  };
+
+  const isLinkActiveForSend = (): boolean => {
+    if (!liveToken) return false;
+    if (["expired", "revoked", "superseded", "accepted", "failed", "bounced", "dlq"].includes(inviteStatus)) return false;
+    return true;
+  };
+
+  const openActivation = () => {
+    if (!inviteLink) return;
+    window.open(inviteLink, "_blank", "noopener,noreferrer");
   };
 
   const generatePin = async () => {
@@ -318,10 +347,20 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
   };
 
   const copyInviteLink = async () => {
-    if (!inviteLink) return;
+    if (!inviteLink || !isLinkActiveForSend()) {
+      toast({
+        title: "Enlace no disponible",
+        description: "Genera una nueva invitación para obtener un enlace válido.",
+        variant: "destructive",
+      });
+      return;
+    }
     await navigator.clipboard.writeText(inviteLink);
     setLinkCopied(true);
-    toast({ title: "Enlace copiado", description: inviteLink });
+    toast({
+      title: "Enlace copiado",
+      description: "Este enlace es el único activo. Reenviar lo invalidará.",
+    });
     setTimeout(() => setLinkCopied(false), 2000);
   };
 
@@ -610,6 +649,9 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
                 <div className="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/[0.03] p-2.5">
                   <Link2 className="h-4 w-4 text-primary shrink-0" />
                   <span className="text-[10px] text-muted-foreground truncate flex-1">{inviteLink}</span>
+                  <Button variant="outline" size="sm" className="h-7 text-[9px] shrink-0 px-2" onClick={openActivation} title="Open activation link in a new tab">
+                    <ExternalLink className="h-3 w-3" />
+                  </Button>
                   <Button variant="outline" size="sm" className={cn("h-7 text-[9px] shrink-0", linkCopied && "border-[hsl(var(--earning)/0.5)] text-[hsl(var(--earning))]")} onClick={copyInviteLink}>
                     {linkCopied ? <><Check className="h-3 w-3 mr-1" />Copiado</> : <><Copy className="h-3 w-3 mr-1" />Copiar</>}
                   </Button>

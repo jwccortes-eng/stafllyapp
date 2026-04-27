@@ -14794,6 +14794,7 @@ export type Database = {
           employee_last_name: string
           employee_phone: string
           expires_at: string
+          has_newer: boolean
           id: string
           invite_token: string
           opened_at: string
@@ -14937,6 +14938,14 @@ export type Database = {
           _entity_type: Database["public"]["Enums"]["review_entity_type"]
         }
         Returns: undefined
+      }
+      supersede_employee_invitations: {
+        Args: {
+          _company_id: string
+          _employee_id: string
+          _keep_invite_id: string
+        }
+        Returns: number
       }
       unaccent_safe: { Args: { _input: string }; Returns: string }
       update_invitation_status_by_token: {
