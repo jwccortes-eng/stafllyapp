@@ -668,7 +668,7 @@ export default function ActivateAccount() {
       <div className="w-full max-w-md flex flex-col" style={{ maxHeight: "calc(100dvh - 1.5rem)" }}>
         <div className="bg-card rounded-3xl border border-border/50 shadow-xl overflow-hidden flex flex-col flex-1 min-h-0">
           {/* Company header */}
-          <div className="bg-gradient-to-br from-primary/[0.06] to-transparent px-6 pt-6 pb-4 flex flex-col items-center gap-2 border-b border-border/30">
+          <div className="shrink-0 bg-gradient-to-br from-primary/[0.06] to-transparent px-6 pt-6 pb-4 flex flex-col items-center gap-2 border-b border-border/30">
             {invite?.company_logo ? (
               <img src={invite.company_logo} alt="" className="h-12 w-12 rounded-xl object-cover shadow-md" />
             ) : (
