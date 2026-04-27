@@ -25,7 +25,7 @@ import {
   type StructuredAddress,
 } from "@/lib/address";
 
-type PageState = "loading" | "valid" | "expired" | "used" | "invalid";
+type PageState = "loading" | "valid" | "expired" | "used" | "invalid" | "superseded";
 type WizardStep = "welcome" | "pin" | "personal" | "address" | "details" | "documents" | "photo" | "ready";
 
 const BASE_STEPS: WizardStep[] = ["welcome", "pin", "personal", "address", "details", "photo", "ready"];
