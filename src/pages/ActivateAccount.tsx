@@ -718,32 +718,35 @@ export default function ActivateAccount() {
                 <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
                   <div className="text-center space-y-1">
                     <MapPin className="h-5 w-5 text-primary mx-auto" />
-                    <h2 className="text-lg font-bold">Address</h2>
-                    <p className="text-xs text-muted-foreground">Full address required</p>
+                    <h2 className="text-lg font-bold">Home address</h2>
+                    <p className="text-xs text-muted-foreground">
+                      This helps us organize zones, transportation and meeting points.
+                    </p>
                   </div>
-                  <div className="space-y-3">
-                    <div className="space-y-1">
-                      <Label className="text-xs">Address <span className="text-destructive">*</span></Label>
-                      <Input value={profileForm.address_line} onChange={e => updateForm("address_line", e.target.value)} placeholder="123 Main St, Apt 4" className="h-9 text-sm" />
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1">
-                        <Label className="text-xs">City <span className="text-destructive">*</span></Label>
-                        <Input value={profileForm.address_city} onChange={e => updateForm("address_city", e.target.value)} placeholder="Miami" className="h-9 text-sm" />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs">State <span className="text-destructive">*</span></Label>
-                        <Select value={profileForm.address_state} onValueChange={v => updateForm("address_state", v)}>
-                          <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="State" /></SelectTrigger>
-                          <SelectContent>{US_STATES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs">ZIP Code <span className="text-destructive">*</span></Label>
-                      <Input value={profileForm.address_zip} onChange={e => updateForm("address_zip", e.target.value.replace(/\D/g, "").slice(0, 5))} placeholder="33101" maxLength={5} className="h-9 text-sm w-32" />
-                    </div>
-                  </div>
+                  <PremiumAddressField
+                    value={profileForm.address_structured}
+                    onChange={(next) =>
+                      setProfileForm((prev) => ({
+                        ...prev,
+                        address_structured: next,
+                        address_line: next?.address_line1 ?? prev.address_line,
+                        address_city: next?.city ?? prev.address_city,
+                        address_state: next?.state ?? prev.address_state,
+                        address_zip: next?.postal_code ?? prev.address_zip,
+                      }))
+                    }
+                    label="Home address"
+                    helper="Start typing your street and pick a suggestion. You can also enter it manually."
+                    placeholder="Start typing your address…"
+                    required
+                    country="US"
+                    compact
+                  />
+                  {!isAddressValid && profileForm.address_structured && (
+                    <p className="text-[11px] text-amber-600 dark:text-amber-400">
+                      Complete address, city, state and ZIP to continue.
+                    </p>
+                  )}
                   <div className="flex gap-2 pt-1">
                     <Button variant="outline" onClick={goBack} className="h-10 rounded-xl gap-1"><ArrowLeft className="h-4 w-4" /> Back</Button>
                     <Button onClick={goNext} disabled={!isAddressValid} className="flex-1 h-10 rounded-xl gap-1">Next <ArrowRight className="h-4 w-4" /></Button>
