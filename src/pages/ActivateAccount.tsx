@@ -566,7 +566,7 @@ export default function ActivateAccount() {
                 <Building2 className="h-6 w-6 text-primary" />
               </div>
             )}
-            <span className="text-xs font-semibold text-muted-foreground tracking-wide">{invite?.company_name}</span>
+            <span className="text-xs font-semibold text-muted-foreground tracking-wide">{invite?.company_name?.trim() || "Company"}</span>
 
             {/* ─── DEBUG: Company Scoping Validation (temporary migration tool) ─── */}
             {invite && (
