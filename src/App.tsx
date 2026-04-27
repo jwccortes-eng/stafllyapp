@@ -96,6 +96,7 @@ const ImportInactiveEmployees = lazy(() => import("./pages/admin/ImportInactiveE
 const UnpaidShiftsReport = lazy(() => import("./pages/admin/UnpaidShiftsReport"));
 const StaffingRequests = lazy(() => import("./pages/admin/StaffingRequests"));
 const ServiceRequests = lazy(() => import("./pages/admin/ServiceRequests"));
+const ClientExperience = lazy(() => import("./pages/admin/ClientExperience"));
 const InvoicesPage = lazy(() => import("./pages/admin/Invoices"));
 const ServiceCategories = lazy(() => import("./pages/admin/ServiceCategories"));
 const AIWorkforce = lazy(() => import("./pages/admin/AIWorkforce"));
