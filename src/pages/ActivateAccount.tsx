@@ -466,10 +466,31 @@ export default function ActivateAccount() {
         },
       });
 
+      // When the edge function returns a non-2xx status, supabase-js puts the
+      // error in fnErr and leaves data null. The real JSON body lives on
+      // fnErr.context (a Response). Parse it so we can surface code/error/detail.
+      let parsedErr: { error?: string; code?: string; detail?: string } | null = null;
+      if (fnErr) {
+        const ctx: any = (fnErr as any)?.context;
+        if (ctx && typeof ctx.clone === "function") {
+          try {
+            parsedErr = await ctx.clone().json();
+          } catch {
+            try {
+              const txt = await ctx.clone().text();
+              parsedErr = { error: txt };
+            } catch {
+              parsedErr = null;
+            }
+          }
+        }
+        console.error("[activate] edge function error", { fnErr, parsedErr });
+      }
+
       if (fnErr || data?.error) {
-        const code = data?.code as string | undefined;
-        const backendMsg = data?.error as string | undefined;
-        const detail = data?.detail as string | undefined;
+        const code = (parsedErr?.code ?? data?.code) as string | undefined;
+        const backendMsg = (parsedErr?.error ?? data?.error) as string | undefined;
+        const detail = (parsedErr?.detail ?? data?.detail) as string | undefined;
 
         const friendly: Record<string, string> = {
           missing_pin: "Missing PIN. Go back and create a 4-digit PIN.",
