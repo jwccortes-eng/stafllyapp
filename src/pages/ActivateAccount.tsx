@@ -121,11 +121,15 @@ export default function ActivateAccount() {
     if (!token) { setPageState("invalid"); return; }
 
     (async () => {
+      console.info("[activate] token received:", token);
       const { data: inviteRows, error: fetchErr } = await (supabase
         .rpc("get_invitation_by_token", { _token: token }) as any);
       const data = Array.isArray(inviteRows) ? inviteRows[0] : inviteRows;
+      console.info("[activate] invite rpc result:", { error: fetchErr?.message, status: data?.status, expires_at: data?.expires_at, employee_id: data?.employee_id });
 
-      if (fetchErr || !data) { setPageState("invalid"); return; }
+      if (fetchErr) { console.error("[activate] invite rpc failed", fetchErr); setPageState("invalid"); return; }
+      if (!data) { console.warn("[activate] no invitation row for token"); setPageState("invalid"); return; }
+      if (data.status === "revoked") { setPageState("invalid"); return; }
       if (data.status === "accepted") { setPageState("used"); return; }
 
       if (data.expires_at && new Date(data.expires_at) < new Date()) {
@@ -138,6 +142,24 @@ export default function ActivateAccount() {
         setPageState("expired"); return;
       }
 
+      // SECURITY: Use invitation's company_id as authoritative source
+      const invitationCompanyId = data.company_id;
+      if (!invitationCompanyId) { console.error("[activate] invite missing company_id"); setPageState("invalid"); return; }
+
+      // Use security-definer RPC to bypass RLS (activation page is unauthenticated).
+      // IMPORTANT: call BEFORE marking the invite as 'opened', so a transient
+      // RPC failure doesn't leave the invitation in a half-consumed state.
+      const { data: empRows, error: empErr } = await supabase.rpc("get_employee_for_activation", {
+        _employee_id: data.employee_id,
+        _invite_token: token,
+      });
+      const emp = Array.isArray(empRows) ? empRows[0] : empRows;
+      console.info("[activate] employee rpc result:", { error: empErr?.message, found: !!emp, has_user_id: !!(emp as any)?.user_id, onboarding_status: (emp as any)?.onboarding_status });
+
+      if (empErr) { console.error("[activate] employee rpc failed", empErr); setPageState("invalid"); return; }
+      if (!emp) { console.warn("[activate] employee rpc returned no rows (invite may be stale or token mismatch)"); setPageState("invalid"); return; }
+
+      // Only mark the invite as 'opened' once we know the data layer is healthy.
       if (!markedOpened.current && data.status !== "opened" && data.status !== "accepted") {
         markedOpened.current = true;
         await (supabase.rpc("update_invitation_status_by_token", {
@@ -145,19 +167,6 @@ export default function ActivateAccount() {
           _new_status: "opened",
         }) as any);
       }
-
-      // SECURITY: Use invitation's company_id as authoritative source
-      const invitationCompanyId = data.company_id;
-      if (!invitationCompanyId) { setPageState("invalid"); return; }
-
-      // Use security-definer RPC to bypass RLS (activation page is unauthenticated)
-      const { data: empRows } = await supabase.rpc("get_employee_for_activation", {
-        _employee_id: data.employee_id,
-        _invite_token: token,
-      });
-      const emp = Array.isArray(empRows) ? empRows[0] : empRows;
-
-      if (!emp) { setPageState("invalid"); return; }
 
       // SECURITY: Validate employee belongs to the invitation's company
       if (emp.company_id !== invitationCompanyId) {
