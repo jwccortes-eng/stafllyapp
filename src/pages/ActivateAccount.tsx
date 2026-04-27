@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PremiumAddressField } from "@/components/address";
+import { useToast } from "@/hooks/use-toast";
 import {
   normalizeFromLegacyColumns,
   recomputeDerived,
@@ -46,6 +47,7 @@ interface InviteData {
   expires_at: string | null;
   company_id: string;
   company_name: string;
+  company_slug?: string | null;
   company_logo: string | null;
   brand_color: string | null;
   employee_name: string;
@@ -53,6 +55,41 @@ interface InviteData {
   employee_first_name: string;
   employee_last_name: string;
   employee_email: string;
+}
+
+const STEP_LABELS: Record<Exclude<WizardStep, "welcome" | "ready">, string> = {
+  pin: "PIN",
+  personal: "Profile",
+  address: "Home Address",
+  details: "Details",
+  documents: "Documents",
+  photo: "Photo",
+};
+
+function normalizeEmergencyName(value: string): string {
+  return value.trim().replace(/\s+/g, " ");
+}
+
+function isRealEmergencyContactName(value: string): boolean {
+  const v = normalizeEmergencyName(value);
+  if (v.length < 3) return false;
+  if (!/[A-Za-zÀ-ÿ]/.test(v)) return false;
+
+  const banned = new Set(["dd", "aa", "test", "gold", "none", "n/a", "na"]);
+  if (banned.has(v.toLowerCase())) return false;
+
+  const letters = v.replace(/[^A-Za-zÀ-ÿ]/g, "");
+  if (letters.length < 3) return false;
+
+  return true;
+}
+
+function isValidUsPhone(value: string): boolean {
+  const digits = value.replace(/\D/g, "");
+  if (digits.length !== 10 && !(digits.length === 11 && digits.startsWith("1"))) return false;
+  const normalized = digits.length === 11 ? digits.slice(1) : digits;
+  if (/^(\d)\1{9}$/.test(normalized)) return false;
+  return true;
 }
 
 interface ProfileForm {
@@ -78,6 +115,7 @@ export default function ActivateAccount() {
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
   const markedOpened = useRef(false);
+  const { toast } = useToast();
 
   const [pageState, setPageState] = useState<PageState>("loading");
   const [invite, setInvite] = useState<InviteData | null>(null);
@@ -109,8 +147,10 @@ export default function ActivateAccount() {
 
   // Dynamic steps based on has_vehicle
   const steps = profileForm.has_vehicle ? STEPS_WITH_DOCS : BASE_STEPS;
-  const stepIndex = steps.indexOf(wizardStep);
-  const totalVisibleSteps = steps.filter(s => s !== "ready").length;
+  const progressSteps = steps.filter((s): s is Exclude<WizardStep, "welcome" | "ready"> => s !== "welcome" && s !== "ready");
+  const stepIndex = progressSteps.indexOf(wizardStep as Exclude<WizardStep, "welcome" | "ready">);
+  const totalVisibleSteps = progressSteps.length;
+  const requiredStepCopy = progressSteps.map((step) => STEP_LABELS[step]).join(" → ");
 
   const updateForm = (key: keyof ProfileForm, value: any) => {
     setProfileForm(prev => ({ ...prev, [key]: value }));
@@ -175,10 +215,12 @@ export default function ActivateAccount() {
         return;
       }
 
+      const companyName = data.company_name?.trim() || data.company_slug?.trim() || "Company";
+
       // Fetch branding from the INVITATION's company
       const { data: co } = await supabase
         .from("companies")
-        .select("name, logo_url, brand_color")
+        .select("name, logo_url, brand_color, slug")
         .eq("id", invitationCompanyId)
         .single();
 
@@ -217,7 +259,8 @@ export default function ActivateAccount() {
       setInvite({
         ...data,
         company_id: invitationCompanyId,
-        company_name: co?.name ?? "",
+        company_name: co?.name?.trim() || companyName,
+        company_slug: co?.slug ?? data.company_slug ?? null,
         company_logo: co?.logo_url ?? null,
         brand_color: co?.brand_color ?? null,
         employee_name: `${emp.first_name ?? ""} ${emp.last_name ?? ""}`.trim(),
@@ -283,11 +326,21 @@ export default function ActivateAccount() {
     !!addr.state &&
     !!addr.postal_code &&
     addr.postal_code.replace(/\D/g, "").length >= 5;
-  const isEmergencyNameValid =
-    emergencyName.length >= 3 && /[A-Za-zÀ-ÿ]/.test(emergencyName);
-  const isEmergencyPhoneValid = emergencyPhoneDigits.length >= 10;
+  const isEmergencyNameValid = isRealEmergencyContactName(emergencyName);
+  const isEmergencyPhoneValid = isValidUsPhone(profileForm.emergency_contact_phone);
   const isDetailsValid = isEmergencyNameValid && isEmergencyPhoneValid;
   const isDocsValid = !profileForm.has_vehicle || (!!driverLicenseFile && !!vehicleRegFile);
+
+  useEffect(() => {
+    console.info("[activate] current wizard step", wizardStep);
+  }, [wizardStep]);
+
+  useEffect(() => {
+    if (wizardStep === "address") {
+      console.info("[activate] address valid", isAddressValid);
+      console.info("[activate] address_structured", profileForm.address_structured);
+    }
+  }, [wizardStep, isAddressValid, profileForm.address_structured]);
 
   // ─── Save progress ───
   const saveProgress = async () => {
@@ -506,6 +559,24 @@ export default function ActivateAccount() {
   };
 
   const goNext = async () => {
+    if (wizardStep === "address" && !isAddressValid) {
+      setError("Complete your home address before continuing.");
+      toast({ title: "Home address required", description: "Complete address, city, state and ZIP to continue.", variant: "destructive" });
+      return;
+    }
+
+    if (wizardStep === "details" && !isDetailsValid) {
+      setError("Complete a real emergency contact name and a valid emergency phone number.");
+      toast({
+        title: "Emergency contact required",
+        description: !isEmergencyNameValid
+          ? "Enter a real emergency contact name."
+          : "Enter a valid 10-digit emergency phone number.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const idx = steps.indexOf(wizardStep);
     if (["personal", "address", "details"].includes(wizardStep)) {
       await saveProgress();
@@ -575,7 +646,7 @@ export default function ActivateAccount() {
                 <Building2 className="h-6 w-6 text-primary" />
               </div>
             )}
-            <span className="text-xs font-semibold text-muted-foreground tracking-wide">{invite?.company_name?.trim() || "Company"}</span>
+            <span className="text-xs font-semibold text-muted-foreground tracking-wide">{invite?.company_name?.trim() || invite?.company_slug?.trim() || "Company"}</span>
 
             {/* ─── DEBUG: Company Scoping Validation (temporary migration tool) ─── */}
             {invite && (
@@ -584,7 +655,7 @@ export default function ActivateAccount() {
                   <Shield className="h-3 w-3" /> Company validation
                 </div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Inv. company_id</span><span className="text-foreground">{invite.company_id?.slice(0, 8)}…</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Company name</span><span className="text-foreground font-semibold">{invite.company_name}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Company name</span><span className="text-foreground font-semibold">{invite.company_name?.trim() || invite.company_slug?.trim() || "Company"}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">employee_id</span><span className="text-foreground">{invite.employee_id?.slice(0, 8)}…</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">invite_token</span><span className="text-foreground">{token?.slice(0, 12)}…</span></div>
                 <div className="flex justify-between items-center"><span className="text-muted-foreground">Validation</span><span className="flex items-center gap-1 text-[hsl(var(--earning))] font-bold"><CheckCircle2 className="h-3 w-3" /> Match ✅</span></div>
@@ -596,11 +667,11 @@ export default function ActivateAccount() {
           {wizardStep !== "ready" && (
             <div className="px-6 pt-4">
               <div className="flex items-center gap-1">
-                {steps.filter(s => s !== "ready").map((s, i) => (
+                {progressSteps.map((s, i) => (
                   <div key={s} className={cn("h-1 rounded-full flex-1 transition-all duration-500", i <= stepIndex ? "bg-primary" : "bg-border")} />
                 ))}
               </div>
-              <p className="text-[10px] text-muted-foreground mt-1.5 text-right">Step {stepIndex + 1} of {totalVisibleSteps}</p>
+              <p className="text-[10px] text-muted-foreground mt-1.5 text-right">Step {Math.max(stepIndex + 1, 1)} of {totalVisibleSteps}</p>
             </div>
           )}
 
@@ -622,7 +693,7 @@ export default function ActivateAccount() {
                       <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
                       <div className="flex-1 min-w-0">
                         <p className="text-[10px] text-muted-foreground">Company</p>
-                        <p className="text-sm font-semibold text-foreground truncate">{invite.company_name?.trim() || "Company"}</p>
+                        <p className="text-sm font-semibold text-foreground truncate">{invite.company_name?.trim() || invite.company_slug?.trim() || "Company"}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3 px-4 py-3">
@@ -636,7 +707,7 @@ export default function ActivateAccount() {
                       <KeyRound className="h-4 w-4 text-muted-foreground shrink-0" />
                       <div className="flex-1 min-w-0">
                         <p className="text-[10px] text-muted-foreground">Required steps</p>
-                        <p className="text-sm font-medium text-foreground">PIN → Profile → Address → Details → Photo</p>
+                        <p className="text-sm font-medium text-foreground">{requiredStepCopy}</p>
                       </div>
                     </div>
                   </div>
@@ -781,8 +852,8 @@ export default function ActivateAccount() {
                         autoComplete="name"
                         className="h-9 text-sm"
                       />
-                      {profileForm.emergency_contact_name.trim().length > 0 && !isEmergencyNameValid && (
-                        <p className="text-[10px] text-destructive">Enter a valid contact name (at least 3 letters).</p>
+                        {profileForm.emergency_contact_name.trim().length > 0 && !isEmergencyNameValid && (
+                          <p className="text-[10px] text-destructive">Enter a real emergency contact name.</p>
                       )}
                     </div>
                     <div className="space-y-1">

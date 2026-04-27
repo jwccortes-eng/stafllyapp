@@ -14773,9 +14773,15 @@ export type Database = {
         Args: { _token: string }
         Returns: {
           company_id: string
+          company_name: string
+          company_slug: string
+          employee_first_name: string
           employee_id: string
+          employee_last_name: string
+          employee_phone: string
           expires_at: string
           id: string
+          invite_token: string
           opened_at: string
           status: string
         }[]
