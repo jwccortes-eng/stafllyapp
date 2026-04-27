@@ -46,6 +46,7 @@ import { ReputationAdminPanel } from "@/components/reviews/ReputationAdminPanel"
 import { WorkerProfileTab } from "@/components/employee/WorkerProfileTab";
 import { useWorkerProfile } from "@/hooks/useWorkerProfile";
 import EmployeeAdvancesTab from "@/components/advances/EmployeeAdvancesTab";
+import { EmployeeAddressSection } from "@/components/employee/EmployeeAddressSection";
 import { useToast } from "@/hooks/use-toast";
 
 const EmployeeCompensationTab = lazy(() => import("@/components/compensation/EmployeeCompensationTab"));
@@ -62,8 +63,8 @@ const PERSONAL_FIELDS = [
   { key: "country_code", label: "Código país", icon: MapPin },
   { key: "gender", label: "Género", icon: User },
   { key: "birthday", label: "Cumpleaños", icon: Cake },
-  { key: "address", label: "Dirección", icon: Home },
-  { key: "county", label: "Condado", icon: MapPin },
+  // Address moved to EmployeeAddressSection (premium field). Legacy "address"
+  // and "county" columns are kept in DB and synced from there.
 ];
 
 const EMPLOYMENT_FIELDS = [
@@ -196,10 +197,11 @@ function VehicleDocumentsSection({ employeeId }: { employeeId: string }) {
 }
 
 /* ── Info Tab — compact ── */
-function InfoTab({ employee, isEditing, form, setForm, isPrivileged }: {
+function InfoTab({ employee, isEditing, form, setForm, isPrivileged, onEmployeeUpdate }: {
   employee: EmployeeRecord; isEditing: boolean; form: Record<string, string>;
   setForm: (fn: (prev: Record<string, string>) => Record<string, string>) => void;
   isPrivileged: boolean;
+  onEmployeeUpdate?: (patch: Partial<EmployeeRecord>) => void;
 }) {
   const SENSITIVE = new Set(["access_pin", "driver_licence", "has_car", "country_code", "english_level"]);
   const filteredEmployment = EMPLOYMENT_FIELDS.filter(f => isPrivileged || !SENSITIVE.has(f.key));
@@ -216,6 +218,15 @@ function InfoTab({ employee, isEditing, form, setForm, isPrivileged }: {
           </CardContent>
         </Card>
       </div>
+
+      {/* Premium address field — replaces the old free-text "Dirección" row.
+          Persists as JSONB (address_structured) AND syncs legacy columns. */}
+      <EmployeeAddressSection
+        employee={employee}
+        isEditing={isEditing}
+        onEmployeeUpdate={onEmployeeUpdate}
+      />
+
       <div>
         <h3 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50 mb-1.5">Empleo</h3>
         <Card className="rounded-lg border-border/30">
@@ -575,7 +586,7 @@ export function EmployeeProfileTabs({
         </TabsTrigger>
       </TabsList>
 
-      <TabsContent value="info" className="mt-0"><InfoTab employee={employee} isEditing={isEditing} form={form} setForm={setForm} isPrivileged={isPrivileged} /></TabsContent>
+      <TabsContent value="info" className="mt-0"><InfoTab employee={employee} isEditing={isEditing} form={form} setForm={setForm} isPrivileged={isPrivileged} onEmployeeUpdate={onEmployeeUpdate} /></TabsContent>
       <TabsContent value="profile" className="mt-0"><WorkerProfileTab employeeId={employee.id} readOnly={!isEditing} /></TabsContent>
       <TabsContent value="reputation" className="mt-0">
         <div className="space-y-3">
