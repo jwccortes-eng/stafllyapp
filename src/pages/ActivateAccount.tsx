@@ -263,22 +263,54 @@ export default function ActivateAccount() {
 
   // ─── Validation ───
   const isPersonalValid = profileForm.first_name.trim() && profileForm.last_name.trim() && profileForm.email.trim() && profileForm.date_of_birth && profileForm.ssn.replace(/\D/g, "").length >= 4;
-  const isAddressValid = profileForm.address_line.trim() && profileForm.address_city.trim() && profileForm.address_state && profileForm.address_zip.trim().length >= 5;
-  const isDetailsValid = profileForm.emergency_contact_name.trim() && profileForm.emergency_contact_phone.trim();
+  // ─── Validation ───
+  const addr = profileForm.address_structured;
+  const emergencyName = profileForm.emergency_contact_name.trim();
+  const emergencyPhoneDigits = profileForm.emergency_contact_phone.replace(/\D/g, "");
+  const isAddressValid =
+    !!addr &&
+    !!(addr.formatted_address || addr.address_line1) &&
+    !!addr.city &&
+    !!addr.state &&
+    !!addr.postal_code &&
+    addr.postal_code.replace(/\D/g, "").length >= 5;
+  const isEmergencyNameValid =
+    emergencyName.length >= 3 && /[A-Za-zÀ-ÿ]/.test(emergencyName);
+  const isEmergencyPhoneValid = emergencyPhoneDigits.length >= 10;
+  const isDetailsValid = isEmergencyNameValid && isEmergencyPhoneValid;
   const isDocsValid = !profileForm.has_vehicle || (!!driverLicenseFile && !!vehicleRegFile);
 
   // ─── Save progress ───
   const saveProgress = async () => {
     if (!invite) return;
+    const sa = profileForm.address_structured;
+
+    // Build legacy fallback so anything still reading plain `address` works.
+    const legacyAddressText =
+      sa?.formatted_address?.trim() ||
+      [profileForm.address_line, profileForm.address_city, profileForm.address_state, profileForm.address_zip]
+        .map((s) => (s ?? "").trim())
+        .filter(Boolean)
+        .join(", ") ||
+      profileForm.address_line.trim() ||
+      null;
+
     const updates: Record<string, any> = {
       first_name: profileForm.first_name.trim(),
       last_name: profileForm.last_name.trim(),
       email: profileForm.email.trim() || null,
       date_of_birth: profileForm.date_of_birth || null,
-      address_line: profileForm.address_line.trim() || null,
-      address_city: profileForm.address_city.trim() || null,
-      address_state: profileForm.address_state || null,
-      address_zip: profileForm.address_zip.trim() || null,
+      // Premium structured address (JSONB)
+      address_structured: sa ?? null,
+      // Legacy text/columns kept in sync for payroll/exports/etc.
+      address: legacyAddressText,
+      address_line: sa?.address_line1 ?? (profileForm.address_line.trim() || null),
+      address_city: sa?.city ?? (profileForm.address_city.trim() || null),
+      address_state: sa?.state ?? (profileForm.address_state || null),
+      address_zip: sa?.postal_code ?? (profileForm.address_zip.trim() || null),
+      county: sa?.county ?? null,
+      approx_latitude: sa?.latitude ?? null,
+      approx_longitude: sa?.longitude ?? null,
       emergency_contact_name: profileForm.emergency_contact_name.trim() || null,
       emergency_contact_phone: profileForm.emergency_contact_phone.trim() || null,
       can_drive: profileForm.can_drive,
