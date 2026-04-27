@@ -613,7 +613,7 @@ export default function ActivateAccount() {
                       <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
                       <div className="flex-1 min-w-0">
                         <p className="text-[10px] text-muted-foreground">Company</p>
-                        <p className="text-sm font-semibold text-foreground truncate">{invite.company_name}</p>
+                        <p className="text-sm font-semibold text-foreground truncate">{invite.company_name?.trim() || "Company"}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3 px-4 py-3">
