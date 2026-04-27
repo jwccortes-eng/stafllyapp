@@ -9,6 +9,7 @@ export type InviteDeliveryStatus =
   | "accepted"
   | "expired"
   | "revoked"
+  | "superseded"
   | "failed"
   | "bounced"
   | "dlq"
