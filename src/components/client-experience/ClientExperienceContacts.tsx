@@ -8,7 +8,9 @@ import {
   useUpsertClientContact,
   type ClientContact,
 } from "@/hooks/useClientExperience";
-import { useBillingClients } from "@/hooks/useBillingClients";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useCompany } from "@/hooks/useCompany";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -140,7 +142,22 @@ export default function ClientExperienceContacts() {
 
 function ContactDialog({ onClose }: { onClose: () => void }) {
   const upsert = useUpsertClientContact();
-  const { clients = [] } = useBillingClients();
+  const { selectedCompanyId } = useCompany();
+  const clientsQ = useQuery({
+    queryKey: ["client-experience-operational-clients", selectedCompanyId],
+    enabled: !!selectedCompanyId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("clients")
+        .select("id, name, status")
+        .eq("company_id", selectedCompanyId!)
+        .is("deleted_at", null)
+        .order("name", { ascending: true });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+  const clients = clientsQ.data ?? [];
   const [form, setForm] = useState({
     client_id: "",
     name: "",
@@ -165,6 +182,8 @@ function ContactDialog({ onClose }: { onClose: () => void }) {
     onClose();
   };
 
+  const noClients = !clientsQ.isLoading && !clientsQ.error && clients.length === 0;
+
   return (
     <DialogContent className="max-w-md">
       <DialogHeader>
@@ -176,9 +195,20 @@ function ContactDialog({ onClose }: { onClose: () => void }) {
           <Select
             value={form.client_id}
             onValueChange={(v) => setForm((f) => ({ ...f, client_id: v }))}
+            disabled={clientsQ.isLoading || noClients || !!clientsQ.error}
           >
             <SelectTrigger className="h-9 text-sm">
-              <SelectValue placeholder="Select client" />
+              <SelectValue
+                placeholder={
+                  clientsQ.isLoading
+                    ? "Loading clients…"
+                    : clientsQ.error
+                      ? "Failed to load clients"
+                      : noClients
+                        ? "No clients found"
+                        : "Select client"
+                }
+              />
             </SelectTrigger>
             <SelectContent>
               {clients.map((c) => (
@@ -188,6 +218,16 @@ function ContactDialog({ onClose }: { onClose: () => void }) {
               ))}
             </SelectContent>
           </Select>
+          {clientsQ.error && (
+            <p className="text-[11px] text-destructive">
+              Could not load clients. Refresh and try again.
+            </p>
+          )}
+          {noClients && (
+            <p className="text-[11px] text-muted-foreground">
+              No clients found. Create a client first in the Clients module.
+            </p>
+          )}
         </div>
         <div className="space-y-1">
           <Label className="text-xs">Name</Label>
@@ -235,17 +275,24 @@ function ContactDialog({ onClose }: { onClose: () => void }) {
           />
         </div>
       </div>
-      <DialogFooter>
-        <Button variant="ghost" onClick={onClose} size="sm">
-          Cancel
-        </Button>
-        <Button
-          onClick={handleSubmit}
-          disabled={!form.client_id || !form.name.trim() || upsert.isPending}
-          size="sm"
-        >
-          {upsert.isPending ? "Saving…" : "Save contact"}
-        </Button>
+      <DialogFooter className="flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        {(!form.client_id || !form.name.trim()) && (
+          <p className="text-[11px] text-muted-foreground sm:mr-auto">
+            {!form.client_id ? "Select a client to continue." : "Enter a contact name to continue."}
+          </p>
+        )}
+        <div className="flex gap-2 sm:ml-auto">
+          <Button variant="ghost" onClick={onClose} size="sm">
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSubmit}
+            disabled={!form.client_id || !form.name.trim() || upsert.isPending}
+            size="sm"
+          >
+            {upsert.isPending ? "Saving…" : "Save contact"}
+          </Button>
+        </div>
       </DialogFooter>
     </DialogContent>
   );
