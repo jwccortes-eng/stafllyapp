@@ -971,6 +971,200 @@ export type Database = {
         }
         Relationships: []
       }
+      client_contacts: {
+        Row: {
+          client_id: string
+          company_id: string
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          email: string | null
+          id: string
+          is_primary: boolean
+          last_login_at: string | null
+          name: string
+          notes: string | null
+          phone: string | null
+          portal_status: Database["public"]["Enums"]["client_contact_portal_status"]
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          email?: string | null
+          id?: string
+          is_primary?: boolean
+          last_login_at?: string | null
+          name: string
+          notes?: string | null
+          phone?: string | null
+          portal_status?: Database["public"]["Enums"]["client_contact_portal_status"]
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          email?: string | null
+          id?: string
+          is_primary?: boolean
+          last_login_at?: string | null
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          portal_status?: Database["public"]["Enums"]["client_contact_portal_status"]
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_contacts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_conversation_threads: {
+        Row: {
+          client_id: string
+          company_id: string
+          context: Database["public"]["Enums"]["client_thread_context"]
+          created_at: string
+          created_by: string | null
+          id: string
+          is_open: boolean
+          last_message_at: string | null
+          last_message_preview: string | null
+          last_message_sender:
+            | Database["public"]["Enums"]["client_message_sender"]
+            | null
+          service_request_id: string | null
+          subject: string | null
+          unread_admin_count: number
+          unread_client_count: number
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          company_id: string
+          context?: Database["public"]["Enums"]["client_thread_context"]
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_open?: boolean
+          last_message_at?: string | null
+          last_message_preview?: string | null
+          last_message_sender?:
+            | Database["public"]["Enums"]["client_message_sender"]
+            | null
+          service_request_id?: string | null
+          subject?: string | null
+          unread_admin_count?: number
+          unread_client_count?: number
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          company_id?: string
+          context?: Database["public"]["Enums"]["client_thread_context"]
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_open?: boolean
+          last_message_at?: string | null
+          last_message_preview?: string | null
+          last_message_sender?:
+            | Database["public"]["Enums"]["client_message_sender"]
+            | null
+          service_request_id?: string | null
+          subject?: string | null
+          unread_admin_count?: number
+          unread_client_count?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_conversation_threads_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_conversation_threads_service_request_id_fkey"
+            columns: ["service_request_id"]
+            isOneToOne: false
+            referencedRelation: "service_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_messages: {
+        Row: {
+          attachments: Json | null
+          body: string
+          company_id: string
+          created_at: string
+          id: string
+          read_at: string | null
+          sender_contact_id: string | null
+          sender_type: Database["public"]["Enums"]["client_message_sender"]
+          sender_user_id: string | null
+          thread_id: string
+          visibility: Database["public"]["Enums"]["client_message_visibility"]
+        }
+        Insert: {
+          attachments?: Json | null
+          body: string
+          company_id: string
+          created_at?: string
+          id?: string
+          read_at?: string | null
+          sender_contact_id?: string | null
+          sender_type: Database["public"]["Enums"]["client_message_sender"]
+          sender_user_id?: string | null
+          thread_id: string
+          visibility?: Database["public"]["Enums"]["client_message_visibility"]
+        }
+        Update: {
+          attachments?: Json | null
+          body?: string
+          company_id?: string
+          created_at?: string
+          id?: string
+          read_at?: string | null
+          sender_contact_id?: string | null
+          sender_type?: Database["public"]["Enums"]["client_message_sender"]
+          sender_user_id?: string | null
+          thread_id?: string
+          visibility?: Database["public"]["Enums"]["client_message_visibility"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_messages_sender_contact_id_fkey"
+            columns: ["sender_contact_id"]
+            isOneToOne: false
+            referencedRelation: "client_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_messages_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "client_conversation_threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           company_id: string
@@ -11784,20 +11978,28 @@ export type Database = {
           company_id: string
           created_at: string
           created_by: string | null
+          description: string | null
           end_time: string | null
           gender_requirement: Database["public"]["Enums"]["service_request_gender_req"]
+          headcount_requested: number | null
           id: string
+          location_id: string | null
           location_name: string | null
           notes: string | null
           onsite_contact_name: string | null
           onsite_contact_phone: string | null
+          priority: Database["public"]["Enums"]["service_request_priority"]
           request_channel: Database["public"]["Enums"]["service_request_channel"]
           request_code: string
           request_date: string
+          request_type: Database["public"]["Enums"]["service_request_type"]
+          requested_by_contact_id: string | null
+          roles_requested: Json | null
           service_address: string | null
           service_date: string
           start_time: string | null
           status: Database["public"]["Enums"]["service_request_status"]
+          title: string | null
           updated_at: string
           updated_by: string | null
         }
@@ -11810,20 +12012,28 @@ export type Database = {
           company_id: string
           created_at?: string
           created_by?: string | null
+          description?: string | null
           end_time?: string | null
           gender_requirement?: Database["public"]["Enums"]["service_request_gender_req"]
+          headcount_requested?: number | null
           id?: string
+          location_id?: string | null
           location_name?: string | null
           notes?: string | null
           onsite_contact_name?: string | null
           onsite_contact_phone?: string | null
+          priority?: Database["public"]["Enums"]["service_request_priority"]
           request_channel?: Database["public"]["Enums"]["service_request_channel"]
           request_code: string
           request_date?: string
+          request_type?: Database["public"]["Enums"]["service_request_type"]
+          requested_by_contact_id?: string | null
+          roles_requested?: Json | null
           service_address?: string | null
           service_date: string
           start_time?: string | null
           status?: Database["public"]["Enums"]["service_request_status"]
+          title?: string | null
           updated_at?: string
           updated_by?: string | null
         }
@@ -11836,20 +12046,28 @@ export type Database = {
           company_id?: string
           created_at?: string
           created_by?: string | null
+          description?: string | null
           end_time?: string | null
           gender_requirement?: Database["public"]["Enums"]["service_request_gender_req"]
+          headcount_requested?: number | null
           id?: string
+          location_id?: string | null
           location_name?: string | null
           notes?: string | null
           onsite_contact_name?: string | null
           onsite_contact_phone?: string | null
+          priority?: Database["public"]["Enums"]["service_request_priority"]
           request_channel?: Database["public"]["Enums"]["service_request_channel"]
           request_code?: string
           request_date?: string
+          request_type?: Database["public"]["Enums"]["service_request_type"]
+          requested_by_contact_id?: string | null
+          roles_requested?: Json | null
           service_address?: string | null
           service_date?: string
           start_time?: string | null
           status?: Database["public"]["Enums"]["service_request_status"]
+          title?: string | null
           updated_at?: string
           updated_by?: string | null
         }
@@ -11873,6 +12091,20 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_requests_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_requests_requested_by_contact_id_fkey"
+            columns: ["requested_by_contact_id"]
+            isOneToOne: false
+            referencedRelation: "client_contacts"
             referencedColumns: ["id"]
           },
         ]
@@ -14976,6 +15208,10 @@ export type Database = {
         | "supervisor"
       billable_unit: "hour" | "day" | "flat"
       calc_mode: "quantity_x_rate" | "manual_value" | "hybrid"
+      client_contact_portal_status: "invited" | "active" | "disabled"
+      client_message_sender: "admin" | "client" | "system"
+      client_message_visibility: "client_visible" | "internal_only"
+      client_thread_context: "client_general" | "service_request"
       comp_action_type:
         | "created"
         | "updated"
@@ -15261,6 +15497,7 @@ export type Database = {
         | "client_link"
         | "email"
       service_request_gender_req: "none" | "men_only" | "women_only"
+      service_request_priority: "low" | "normal" | "high" | "urgent"
       service_request_role_type:
         | "waiter"
         | "captain"
@@ -15278,6 +15515,14 @@ export type Database = {
         | "ready_for_billing"
         | "invoiced"
         | "cancelled"
+      service_request_type:
+        | "staffing_request"
+        | "schedule_change"
+        | "cancellation"
+        | "extra_workers"
+        | "issue_report"
+        | "billing_question"
+        | "general_message"
       service_zone_type: "radius" | "polygon" | "city" | "county" | "state"
       staffing_request_status:
         | "draft"
@@ -15455,6 +15700,10 @@ export const Constants = {
       ],
       billable_unit: ["hour", "day", "flat"],
       calc_mode: ["quantity_x_rate", "manual_value", "hybrid"],
+      client_contact_portal_status: ["invited", "active", "disabled"],
+      client_message_sender: ["admin", "client", "system"],
+      client_message_visibility: ["client_visible", "internal_only"],
+      client_thread_context: ["client_general", "service_request"],
       comp_action_type: [
         "created",
         "updated",
@@ -15776,6 +16025,7 @@ export const Constants = {
         "email",
       ],
       service_request_gender_req: ["none", "men_only", "women_only"],
+      service_request_priority: ["low", "normal", "high", "urgent"],
       service_request_role_type: [
         "waiter",
         "captain",
@@ -15794,6 +16044,15 @@ export const Constants = {
         "ready_for_billing",
         "invoiced",
         "cancelled",
+      ],
+      service_request_type: [
+        "staffing_request",
+        "schedule_change",
+        "cancellation",
+        "extra_workers",
+        "issue_report",
+        "billing_question",
+        "general_message",
       ],
       service_zone_type: ["radius", "polygon", "city", "county", "state"],
       staffing_request_status: [
