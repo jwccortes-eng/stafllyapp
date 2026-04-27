@@ -197,10 +197,11 @@ function VehicleDocumentsSection({ employeeId }: { employeeId: string }) {
 }
 
 /* ── Info Tab — compact ── */
-function InfoTab({ employee, isEditing, form, setForm, isPrivileged }: {
+function InfoTab({ employee, isEditing, form, setForm, isPrivileged, onEmployeeUpdate }: {
   employee: EmployeeRecord; isEditing: boolean; form: Record<string, string>;
   setForm: (fn: (prev: Record<string, string>) => Record<string, string>) => void;
   isPrivileged: boolean;
+  onEmployeeUpdate?: (patch: Partial<EmployeeRecord>) => void;
 }) {
   const SENSITIVE = new Set(["access_pin", "driver_licence", "has_car", "country_code", "english_level"]);
   const filteredEmployment = EMPLOYMENT_FIELDS.filter(f => isPrivileged || !SENSITIVE.has(f.key));
@@ -217,6 +218,15 @@ function InfoTab({ employee, isEditing, form, setForm, isPrivileged }: {
           </CardContent>
         </Card>
       </div>
+
+      {/* Premium address field — replaces the old free-text "Dirección" row.
+          Persists as JSONB (address_structured) AND syncs legacy columns. */}
+      <EmployeeAddressSection
+        employee={employee}
+        isEditing={isEditing}
+        onEmployeeUpdate={onEmployeeUpdate}
+      />
+
       <div>
         <h3 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50 mb-1.5">Empleo</h3>
         <Card className="rounded-lg border-border/30">
