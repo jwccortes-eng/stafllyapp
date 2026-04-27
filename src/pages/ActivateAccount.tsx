@@ -1025,10 +1025,6 @@ export default function ActivateAccount() {
 
                   {error && <p className="text-xs text-destructive text-center">{error}</p>}
 
-                  <div className="flex gap-2 pt-1">
-                    <Button variant="outline" onClick={goBack} className="h-10 rounded-xl gap-1"><ArrowLeft className="h-4 w-4" /> Back</Button>
-                    <Button onClick={goNext} disabled={!isDocsValid} className="flex-1 h-10 rounded-xl gap-1">Next <ArrowRight className="h-4 w-4" /></Button>
-                  </div>
                 </div>
               )}
 
