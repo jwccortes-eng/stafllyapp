@@ -3791,6 +3791,7 @@ export type Database = {
           address_city: string | null
           address_line: string | null
           address_state: string | null
+          address_structured: Json | null
           address_zip: string | null
           approx_latitude: number | null
           approx_longitude: number | null
@@ -3856,6 +3857,7 @@ export type Database = {
           address_city?: string | null
           address_line?: string | null
           address_state?: string | null
+          address_structured?: Json | null
           address_zip?: string | null
           approx_latitude?: number | null
           approx_longitude?: number | null
@@ -3921,6 +3923,7 @@ export type Database = {
           address_city?: string | null
           address_line?: string | null
           address_state?: string | null
+          address_structured?: Json | null
           address_zip?: string | null
           approx_latitude?: number | null
           approx_longitude?: number | null
