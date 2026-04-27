@@ -72,7 +72,16 @@ export type ServiceRequestRow = {
     | "billing_question"
     | "general_message";
   priority: "low" | "normal" | "high" | "urgent";
-  status: string;
+  status:
+    | "new"
+    | "reviewing"
+    | "approved_for_scheduling"
+    | "converted_to_shift"
+    | "in_progress"
+    | "ready_for_billing"
+    | "pending_closure_review"
+    | "invoiced"
+    | "cancelled";
   service_date: string | null;
   start_time: string | null;
   end_time: string | null;
