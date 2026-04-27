@@ -624,9 +624,12 @@ export default function UnifiedPersonProfile() {
                   </Button>
                 )}
 
-                {/* Invite / Resend — label and tone reflect current state */}
+                {/* Invite / Resend — label and tone reflect current state.
+                    NOTE: We intentionally do NOT show a "Sending…" loading state here.
+                    Statuses like "queued"/"sent" are persisted email-provider states,
+                    not UI loading flags — using them here would lock the button
+                    indefinitely. The actual sending UX lives inside the invite dialog. */}
                 {(() => {
-                  const inFlight = invitation && isInviteStatusInFlight(invitation.status);
                   const failed = invitation && isInviteStatusFailure(invitation.status);
                   const accepted = invitation?.accepted_at || portalActive;
                   const everSent = !!invitation?.sent_at;
@@ -640,7 +643,7 @@ export default function UnifiedPersonProfile() {
                   let label = "Invite";
                   let Icon = Send;
                   if (employee.is_active === false) { label = "Reactivate first"; }
-                  else if (failed) { label = "Re-invite"; Icon = RotateCw; }
+                  else if (failed) { label = "Retry invite"; Icon = RotateCw; }
                   else if (accepted) { label = "Resend invite"; Icon = Send; }
                   else if (everSent) { label = "Resend invite"; Icon = RotateCw; }
 
@@ -653,9 +656,8 @@ export default function UnifiedPersonProfile() {
                         failed && "border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive",
                       )}
                       onClick={() => setInviteOpen(true)}
-                      disabled={!!inFlight || !inviteDecision.allowed}
+                      disabled={!inviteDecision.allowed}
                       title={
-                        inFlight ? "Invitation is in flight…" :
                         !inviteDecision.allowed ? inviteDecision.reason :
                         failed ? `Last attempt failed${invitation?.bounce_reason ? ` — ${invitation.bounce_reason}` : ""}` :
                         accepted ? "Worker is already active — send a fresh invite if needed" :
@@ -664,30 +666,48 @@ export default function UnifiedPersonProfile() {
                       }
                     >
                       <Icon className="h-3.5 w-3.5 mr-1.5" />
-                      {inFlight ? "Sending…" : label}
+                      {label}
                     </Button>
                   );
                 })()}
 
-                {/* Copy invite link — only when an active token exists and not yet accepted */}
+                {/* Copy invite link & Open activation — only when an active token exists and not yet accepted */}
                 {invitation?.invite_token && !invitation.accepted_at && !portalActive && (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-8 text-xs"
-                    onClick={async () => {
-                      try {
-                        const { inviteUrl } = await import("@/lib/app-url");
-                        await navigator.clipboard.writeText(inviteUrl(invitation.invite_token!));
-                        toast({ title: "Invite link copied", description: "Paste it into any channel to share." });
-                      } catch {
-                        toast({ title: "Could not copy link", variant: "destructive" });
-                      }
-                    }}
-                    title="Copy a shareable activation link"
-                  >
-                    <Link2 className="h-3.5 w-3.5 mr-1.5" /> Copy link
-                  </Button>
+                  <>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-8 text-xs"
+                      onClick={async () => {
+                        try {
+                          const { inviteUrl } = await import("@/lib/app-url");
+                          await navigator.clipboard.writeText(inviteUrl(invitation.invite_token!));
+                          toast({ title: "Invite link copied", description: "This is the only active link. Resending will invalidate it." });
+                        } catch {
+                          toast({ title: "Could not copy link", variant: "destructive" });
+                        }
+                      }}
+                      title="Copy the current activation link"
+                    >
+                      <Link2 className="h-3.5 w-3.5 mr-1.5" /> Copy link
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-8 text-xs"
+                      onClick={async () => {
+                        try {
+                          const { inviteUrl } = await import("@/lib/app-url");
+                          window.open(inviteUrl(invitation.invite_token!), "_blank", "noopener,noreferrer");
+                        } catch {
+                          toast({ title: "Could not open link", variant: "destructive" });
+                        }
+                      }}
+                      title="Open the activation page in a new tab"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5 mr-1.5" /> Open
+                    </Button>
+                  </>
                 )}
 
                 {employee.phone_number && (
