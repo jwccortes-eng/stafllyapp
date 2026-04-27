@@ -101,7 +101,7 @@ interface SinglePickerProps {
   onSelect: (id: string | null, formattedAddress: string | null) => void;
 }
 
-function SingleLocationPicker({
+export function SingleLocationPicker({
   label,
   icon: Icon,
   helper,
