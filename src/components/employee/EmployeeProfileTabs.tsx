@@ -46,6 +46,7 @@ import { ReputationAdminPanel } from "@/components/reviews/ReputationAdminPanel"
 import { WorkerProfileTab } from "@/components/employee/WorkerProfileTab";
 import { useWorkerProfile } from "@/hooks/useWorkerProfile";
 import EmployeeAdvancesTab from "@/components/advances/EmployeeAdvancesTab";
+import { EmployeeAddressSection } from "@/components/employee/EmployeeAddressSection";
 import { useToast } from "@/hooks/use-toast";
 
 const EmployeeCompensationTab = lazy(() => import("@/components/compensation/EmployeeCompensationTab"));
@@ -62,8 +63,8 @@ const PERSONAL_FIELDS = [
   { key: "country_code", label: "Código país", icon: MapPin },
   { key: "gender", label: "Género", icon: User },
   { key: "birthday", label: "Cumpleaños", icon: Cake },
-  { key: "address", label: "Dirección", icon: Home },
-  { key: "county", label: "Condado", icon: MapPin },
+  // Address moved to EmployeeAddressSection (premium field). Legacy "address"
+  // and "county" columns are kept in DB and synced from there.
 ];
 
 const EMPLOYMENT_FIELDS = [
