@@ -77,7 +77,7 @@ export default function ClientExperienceRequests() {
           <SelectContent>
             {STATUS_OPTS.map((s) => (
               <SelectItem key={s} value={s} className="text-xs capitalize">
-                {s.replaceAll("_", " ")}
+                {s.replace(/_/g, " ")}
               </SelectItem>
             ))}
           </SelectContent>
@@ -157,7 +157,7 @@ export default function ClientExperienceRequests() {
                       </p>
                     </div>
                     <Badge variant="outline" className="text-[10px] capitalize whitespace-nowrap">
-                      {r.status.replaceAll("_", " ")}
+                      {r.status.replace(/_/g, " ")}
                     </Badge>
                   </div>
                 </button>
@@ -204,7 +204,7 @@ function RequestDetail({ request }: { request: ServiceRequestRow }) {
             {request.title ?? request.request_code}
           </p>
           <Badge variant="outline" className="text-[10px] capitalize">
-            {request.status.replaceAll("_", " ")}
+            {request.status.replace(/_/g, " ")}
           </Badge>
         </div>
         <p className="text-[11px] text-muted-foreground">
@@ -223,7 +223,7 @@ function RequestDetail({ request }: { request: ServiceRequestRow }) {
         )}
 
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Type" value={request.request_type.replaceAll("_", " ")} />
+          <Field label="Type" value={request.request_type.replace(/_/g, " ")} />
           <Field label="Priority" value={request.priority} />
           <Field label="Service date" value={request.service_date ?? "—"} />
           <Field
@@ -266,7 +266,7 @@ function RequestDetail({ request }: { request: ServiceRequestRow }) {
                 disabled={update.isPending}
                 onClick={() => update.mutate({ id: request.id, patch: { status: s } })}
               >
-                {s.replaceAll("_", " ")}
+                {s.replace(/_/g, " ")}
               </Button>
             ))}
           </div>
