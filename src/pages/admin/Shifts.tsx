@@ -1544,120 +1544,72 @@ export default function Shifts() {
         </button>
       )}
 
-      {/* ── Create Shift Dialog ── */}
-      <Dialog open={createOpen} onOpenChange={(o) => { setCreateOpen(o); if (!o) resetForm(); }}>
-        <DialogContent className="max-w-lg max-h-[88vh] p-0 gap-0 overflow-hidden flex flex-col rounded-2xl border-border/30 shadow-xl">
-          {/* Hero header */}
-          <div className="relative px-5 pt-5 pb-4 overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-primary/5 -translate-y-12 translate-x-12 blur-2xl" />
-            <div className="relative z-10">
-              <h2 className="text-base font-bold font-heading">Nuevo turno</h2>
-              <p className="text-[11px] text-muted-foreground">Configura los detalles del turno</p>
-            </div>
-          </div>
+      {/* ── Create Shift Dialog (full-screen shell) ── */}
+      <CreateShiftDialogInline
+        open={createOpen}
+        onOpenChange={(o) => { setCreateOpen(o); if (!o) resetForm(); }}
+        formState={{
+          title, date, startTime, endTime, slots,
+          clientId, locationId, notes, claimable,
+          meetingPoint, specialInstructions,
+          payType, dayType, payOverride, shiftAdminId, clockMethod,
+          attendanceMode, meetingTime,
+          transportRequired, carCapacity, transportNotes, driverEmployeeId,
+          selectedEmployees,
+          meetingPointLocationId, jobSiteLocationId,
+        }}
+        onPatch={(patch) => {
+          if (patch.title !== undefined) setTitle(patch.title);
+          if (patch.date !== undefined) setDate(patch.date);
+          if (patch.startTime !== undefined) setStartTime(patch.startTime);
+          if (patch.endTime !== undefined) setEndTime(patch.endTime);
+          if (patch.slots !== undefined) setSlots(patch.slots);
+          if (patch.clientId !== undefined) setClientId(patch.clientId);
+          if (patch.locationId !== undefined) setLocationId(patch.locationId);
+          if (patch.notes !== undefined) setNotes(patch.notes);
+          if (patch.claimable !== undefined) setClaimable(patch.claimable);
+          if (patch.meetingPoint !== undefined) setMeetingPoint(patch.meetingPoint);
+          if (patch.specialInstructions !== undefined) setSpecialInstructions(patch.specialInstructions);
+          if (patch.payType !== undefined) setPayType(patch.payType);
+          if (patch.dayType !== undefined) setDayType(patch.dayType);
+          if (patch.payOverride !== undefined) setPayOverride(patch.payOverride);
+          if (patch.shiftAdminId !== undefined) setShiftAdminId(patch.shiftAdminId);
+          if (patch.clockMethod !== undefined) setClockMethod(patch.clockMethod);
+          if (patch.attendanceMode !== undefined) setAttendanceMode(patch.attendanceMode);
+          if (patch.meetingTime !== undefined) setMeetingTime(patch.meetingTime);
+          if (patch.transportRequired !== undefined) setTransportRequired(patch.transportRequired);
+          if (patch.carCapacity !== undefined) setCarCapacity(patch.carCapacity);
+          if (patch.transportNotes !== undefined) setTransportNotes(patch.transportNotes);
+          if (patch.driverEmployeeId !== undefined) setDriverEmployeeId(patch.driverEmployeeId);
+          if (patch.selectedEmployees !== undefined) setSelectedEmployees(patch.selectedEmployees);
+          if (patch.meetingPointLocationId !== undefined) setMeetingPointLocationId(patch.meetingPointLocationId);
+          if (patch.jobSiteLocationId !== undefined) setJobSiteLocationId(patch.jobSiteLocationId);
+        }}
+        clients={clients}
+        locations={locations}
+        employees={employees}
+        shifts={shifts}
+        assignments={assignments}
+        availabilityConfigs={availConfigs}
+        availabilityOverrides={availOverrides}
+        allowClaims={shiftsConfig.allow_claims}
+        selectedCompanyId={selectedCompanyId}
+        saving={saving}
+        repeatConfig={repeatConfig}
+        onRepeatChange={setRepeatConfig}
+        onRequestSave={() => setConfirmOpen(true)}
+        onAddNewEmployee={() => setQuickAddOpen(true)}
+        onClientCreated={(id, name) => {
+          setClients(prev => [...prev, { id, name }]);
+          setClientId(id);
+        }}
+        onLocationCreated={(id, name, address) => {
+          setLocations(prev => [...prev, { id, name, address, client_id: clientId || null }]);
+          setLocationId(id);
+          if (address) setMeetingPoint(address);
+        }}
+      />
 
-          {/* Scrollable body — uses the shared ShiftFormFields component for create/edit parity */}
-          <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-3">
-            <ShiftFormFields
-              mode="create"
-              companyId={selectedCompanyId}
-              value={{
-                title, date, startTime, endTime, slots,
-                clientId, locationId, notes, claimable,
-                meetingPoint, specialInstructions,
-                payType, dayType, payOverride, shiftAdminId, clockMethod,
-                attendanceMode, meetingTime,
-                transportRequired, carCapacity, transportNotes, driverEmployeeId,
-                selectedEmployees,
-                meetingPointLocationId, jobSiteLocationId,
-              }}
-              onChange={(patch) => {
-                if (patch.title !== undefined) setTitle(patch.title);
-                if (patch.date !== undefined) setDate(patch.date);
-                if (patch.startTime !== undefined) setStartTime(patch.startTime);
-                if (patch.endTime !== undefined) setEndTime(patch.endTime);
-                if (patch.slots !== undefined) setSlots(patch.slots);
-                if (patch.clientId !== undefined) setClientId(patch.clientId);
-                if (patch.locationId !== undefined) setLocationId(patch.locationId);
-                if (patch.notes !== undefined) setNotes(patch.notes);
-                if (patch.claimable !== undefined) setClaimable(patch.claimable);
-                if (patch.meetingPoint !== undefined) setMeetingPoint(patch.meetingPoint);
-                if (patch.specialInstructions !== undefined) setSpecialInstructions(patch.specialInstructions);
-                if (patch.payType !== undefined) setPayType(patch.payType);
-                if (patch.dayType !== undefined) setDayType(patch.dayType);
-                if (patch.payOverride !== undefined) setPayOverride(patch.payOverride);
-                if (patch.shiftAdminId !== undefined) setShiftAdminId(patch.shiftAdminId);
-                if (patch.clockMethod !== undefined) setClockMethod(patch.clockMethod);
-                if (patch.attendanceMode !== undefined) setAttendanceMode(patch.attendanceMode);
-                if (patch.meetingTime !== undefined) setMeetingTime(patch.meetingTime);
-                if (patch.transportRequired !== undefined) {
-                  setTransportRequired(patch.transportRequired);
-                  if (patch.transportRequired && !transportRequired) {
-                    // mirror old toast behavior when location auto-enables transport via ShiftFormFields
-                  }
-                }
-                if (patch.carCapacity !== undefined) setCarCapacity(patch.carCapacity);
-                if (patch.transportNotes !== undefined) setTransportNotes(patch.transportNotes);
-                if (patch.driverEmployeeId !== undefined) setDriverEmployeeId(patch.driverEmployeeId);
-                if (patch.selectedEmployees !== undefined) setSelectedEmployees(patch.selectedEmployees);
-                if (patch.meetingPointLocationId !== undefined) setMeetingPointLocationId(patch.meetingPointLocationId);
-                if (patch.jobSiteLocationId !== undefined) setJobSiteLocationId(patch.jobSiteLocationId);
-              }}
-              clients={clients}
-              locations={locations}
-              employees={employees}
-              shifts={shifts}
-              assignments={assignments}
-              availabilityConfigs={availConfigs}
-              availabilityOverrides={availOverrides}
-              allowClaims={shiftsConfig.allow_claims}
-              onQuickAddClient={async (name) => {
-                if (!selectedCompanyId) return;
-                const { data, error } = await supabase.from("clients").insert({
-                  company_id: selectedCompanyId, name,
-                } as any).select("id").single();
-                if (error) { toast.error(error.message); return; }
-                if (data) {
-                  setClients(prev => [...prev, { id: data.id, name }]);
-                  setClientId(data.id);
-                  toast.success(`Cliente "${name}" creado`);
-                }
-              }}
-              onQuickAddLocation={async (name, address) => {
-                if (!selectedCompanyId) return;
-                const { data, error } = await supabase.from("locations").insert({
-                  company_id: selectedCompanyId, name,
-                  address: address || null,
-                  client_id: clientId || null,
-                } as any).select("id").single();
-                if (error) { toast.error(error.message); return; }
-                if (data) {
-                  setLocations(prev => [...prev, { id: data.id, name, address, client_id: clientId || null }]);
-                  setLocationId(data.id);
-                  if (address) setMeetingPoint(address);
-                  toast.success(`Ubicación "${name}" creada`);
-                }
-              }}
-              onAddNewEmployee={() => setQuickAddOpen(true)}
-              showEmployeePicker
-            />
-
-            {/* Section: Repeat (create-only — not part of the shared edit/create model) */}
-            <ShiftRepeatSection
-              shiftDate={date}
-              config={repeatConfig}
-              onChange={setRepeatConfig}
-            />
-          </div>
-
-          {/* Footer */}
-          <div className="px-4 py-3 border-t border-border/30 bg-muted/10">
-            <Button onClick={() => setConfirmOpen(true)} disabled={saving || !date} className="w-full h-10 text-sm gap-2 rounded-xl font-semibold">
-              Revisar y crear turno
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* Pre-submit confirmation */}
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
