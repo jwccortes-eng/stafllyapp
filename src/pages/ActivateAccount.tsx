@@ -550,6 +550,24 @@ export default function ActivateAccount() {
   };
 
   const goNext = async () => {
+    if (wizardStep === "address" && !isAddressValid) {
+      setError("Complete your home address before continuing.");
+      toast({ title: "Home address required", description: "Complete address, city, state and ZIP to continue.", variant: "destructive" });
+      return;
+    }
+
+    if (wizardStep === "details" && !isDetailsValid) {
+      setError("Complete a real emergency contact name and a valid emergency phone number.");
+      toast({
+        title: "Emergency contact required",
+        description: !isEmergencyNameValid
+          ? "Enter a real emergency contact name."
+          : "Enter a valid 10-digit emergency phone number.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const idx = steps.indexOf(wizardStep);
     if (["personal", "address", "details"].includes(wizardStep)) {
       await saveProgress();
@@ -619,7 +637,7 @@ export default function ActivateAccount() {
                 <Building2 className="h-6 w-6 text-primary" />
               </div>
             )}
-            <span className="text-xs font-semibold text-muted-foreground tracking-wide">{invite?.company_name?.trim() || "Company"}</span>
+            <span className="text-xs font-semibold text-muted-foreground tracking-wide">{invite?.company_name?.trim() || invite?.company_slug?.trim() || "Company"}</span>
 
             {/* ─── DEBUG: Company Scoping Validation (temporary migration tool) ─── */}
             {invite && (
@@ -628,7 +646,7 @@ export default function ActivateAccount() {
                   <Shield className="h-3 w-3" /> Company validation
                 </div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Inv. company_id</span><span className="text-foreground">{invite.company_id?.slice(0, 8)}…</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Company name</span><span className="text-foreground font-semibold">{invite.company_name}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Company name</span><span className="text-foreground font-semibold">{invite.company_name?.trim() || invite.company_slug?.trim() || "Company"}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">employee_id</span><span className="text-foreground">{invite.employee_id?.slice(0, 8)}…</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">invite_token</span><span className="text-foreground">{token?.slice(0, 12)}…</span></div>
                 <div className="flex justify-between items-center"><span className="text-muted-foreground">Validation</span><span className="flex items-center gap-1 text-[hsl(var(--earning))] font-bold"><CheckCircle2 className="h-3 w-3" /> Match ✅</span></div>
@@ -666,7 +684,7 @@ export default function ActivateAccount() {
                       <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
                       <div className="flex-1 min-w-0">
                         <p className="text-[10px] text-muted-foreground">Company</p>
-                        <p className="text-sm font-semibold text-foreground truncate">{invite.company_name?.trim() || "Company"}</p>
+                        <p className="text-sm font-semibold text-foreground truncate">{invite.company_name?.trim() || invite.company_slug?.trim() || "Company"}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3 px-4 py-3">
@@ -680,7 +698,7 @@ export default function ActivateAccount() {
                       <KeyRound className="h-4 w-4 text-muted-foreground shrink-0" />
                       <div className="flex-1 min-w-0">
                         <p className="text-[10px] text-muted-foreground">Required steps</p>
-                        <p className="text-sm font-medium text-foreground">PIN → Profile → Address → Details → Photo</p>
+                        <p className="text-sm font-medium text-foreground">{REQUIRED_STEP_COPY}</p>
                       </div>
                     </div>
                   </div>
@@ -825,8 +843,8 @@ export default function ActivateAccount() {
                         autoComplete="name"
                         className="h-9 text-sm"
                       />
-                      {profileForm.emergency_contact_name.trim().length > 0 && !isEmergencyNameValid && (
-                        <p className="text-[10px] text-destructive">Enter a valid contact name (at least 3 letters).</p>
+                        {profileForm.emergency_contact_name.trim().length > 0 && !isEmergencyNameValid && (
+                          <p className="text-[10px] text-destructive">Enter a real emergency contact name.</p>
                       )}
                     </div>
                     <div className="space-y-1">
