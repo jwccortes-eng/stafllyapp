@@ -92,6 +92,7 @@ export default function ActivateAccount() {
   const [profileForm, setProfileForm] = useState<ProfileForm>({
     first_name: "", last_name: "", email: "", date_of_birth: "",
     address_line: "", address_city: "", address_state: "", address_zip: "",
+    address_structured: null,
     languages: [], emergency_contact_name: "", emergency_contact_phone: "",
     can_drive: false, has_vehicle: false, ssn: "",
   });
