@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PremiumAddressField } from "@/components/address";
+import { useToast } from "@/hooks/use-toast";
 import {
   normalizeFromLegacyColumns,
   recomputeDerived,
@@ -46,6 +47,7 @@ interface InviteData {
   expires_at: string | null;
   company_id: string;
   company_name: string;
+  company_slug?: string | null;
   company_logo: string | null;
   brand_color: string | null;
   employee_name: string;
@@ -53,6 +55,34 @@ interface InviteData {
   employee_first_name: string;
   employee_last_name: string;
   employee_email: string;
+}
+
+const REQUIRED_STEP_COPY = "PIN → Profile → Home Address → Details → Photo";
+
+function normalizeEmergencyName(value: string): string {
+  return value.trim().replace(/\s+/g, " ");
+}
+
+function isRealEmergencyContactName(value: string): boolean {
+  const v = normalizeEmergencyName(value);
+  if (v.length < 3) return false;
+  if (!/[A-Za-zÀ-ÿ]/.test(v)) return false;
+
+  const banned = new Set(["dd", "aa", "test", "gold", "none", "n/a", "na"]);
+  if (banned.has(v.toLowerCase())) return false;
+
+  const letters = v.replace(/[^A-Za-zÀ-ÿ]/g, "");
+  if (letters.length < 3) return false;
+
+  return true;
+}
+
+function isValidUsPhone(value: string): boolean {
+  const digits = value.replace(/\D/g, "");
+  if (digits.length !== 10 && !(digits.length === 11 && digits.startsWith("1"))) return false;
+  const normalized = digits.length === 11 ? digits.slice(1) : digits;
+  if (/^(\d)\1{9}$/.test(normalized)) return false;
+  return true;
 }
 
 interface ProfileForm {
