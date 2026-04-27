@@ -296,7 +296,10 @@ Deno.serve(async (req) => {
         );
       }
 
-      if (employee.access_pin) {
+      // "Already activated" = real linked auth user. A legacy/seed access_pin
+      // without a user_id is NOT a real activation; the invite flow must be
+      // allowed to overwrite it and create the auth user.
+      if (employee.user_id && employee.access_pin) {
         return new Response(
           JSON.stringify({ error: "Tu cuenta ya está activada. Inicia sesión con tu PIN.", code: "already_activated" }),
           { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
