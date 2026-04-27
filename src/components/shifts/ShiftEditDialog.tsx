@@ -1,17 +1,18 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { toast } from "sonner";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Loader2, Save, X, AlertCircle } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import {
   ShiftFormFields,
   EMPTY_SHIFT_FORM_STATE,
   shiftToFormState,
   formStateToShiftPayload,
+  useShiftFormSignals,
   type ShiftFormState,
   type LocationOption,
 } from "./ShiftFormFields";
-import type { Shift, SelectOption, Employee } from "./types";
+import { ShiftFormShell } from "./ShiftFormShell";
+import { ShiftSummaryPanel } from "./form/ShiftSummaryPanel";
+import type { Shift, SelectOption, Employee, Assignment } from "./types";
 
 interface ShiftEditDialogProps {
   shift: Shift | null;
@@ -20,14 +21,22 @@ interface ShiftEditDialogProps {
   clients: SelectOption[];
   locations: LocationOption[];
   employees?: Employee[];
-  assignments?: { shift_id: string; employee_id: string; status: string }[];
+  assignments?: Assignment[];
   onSave: (shiftId: string, updates: Partial<Shift> & Record<string, any>, oldShift: Shift) => Promise<void>;
   /** When false, hides the claimable checkbox */
   allowClaims?: boolean;
 }
 
 export function ShiftEditDialog({
-  shift, open, onOpenChange, clients, locations, employees = [], assignments = [], onSave, allowClaims = true,
+  shift,
+  open,
+  onOpenChange,
+  clients,
+  locations,
+  employees = [],
+  assignments = [],
+  onSave,
+  allowClaims = true,
 }: ShiftEditDialogProps) {
   const [form, setForm] = useState<ShiftFormState>(EMPTY_SHIFT_FORM_STATE);
   const [qrAttendanceMode, setQrAttendanceMode] = useState("disabled");
@@ -43,13 +52,20 @@ export function ShiftEditDialog({
     }
   }, [shift, open]);
 
-  if (!shift) return null;
-  if (shift.status === "locked") return null;
+  // Derived signals — recomputed only when their slice of state changes.
+  const signals = useShiftFormSignals({
+    v: form,
+    mode: "edit",
+    shift,
+    employees,
+    shifts: [],
+    assignments,
+    clients,
+    locations,
+    showEmployeePicker: false,
+  });
 
-  // Compute assigned employee IDs for admin validation
-  const shiftAssignedIds = assignments
-    .filter(a => a.shift_id === shift.id && a.status !== "rejected" && a.status !== "removed")
-    .map(a => a.employee_id);
+  const shiftAssignedIds = signals.shiftAssignedIds;
   const adminIsAssigned = !form.shiftAdminId || shiftAssignedIds.includes(form.shiftAdminId);
   const adminMissing = !form.shiftAdminId && shiftAssignedIds.length > 0;
   const adminError = adminMissing
@@ -59,19 +75,26 @@ export function ShiftEditDialog({
         : null);
 
   // Detect material changes that would require re-acceptance
-  const s = shift as any;
-  const hasMaterialChange =
-    form.date !== s.date ||
-    form.startTime !== s.start_time?.slice(0, 5) ||
-    form.endTime !== s.end_time?.slice(0, 5) ||
-    form.locationId !== (s.location_id || "") ||
-    form.title.trim() !== (s.title || "") ||
-    form.meetingPoint.trim() !== (s.meeting_point || "") ||
-    form.notes.trim() !== (s.notes || "") ||
-    form.specialInstructions.trim() !== (s.special_instructions || "") ||
-    form.payType !== (s.pay_type || "hourly");
+  const hasMaterialChange = useMemo(() => {
+    if (!shift) return false;
+    const s = shift as any;
+    return (
+      form.date !== s.date ||
+      form.startTime !== s.start_time?.slice(0, 5) ||
+      form.endTime !== s.end_time?.slice(0, 5) ||
+      form.locationId !== (s.location_id || "") ||
+      form.title.trim() !== (s.title || "") ||
+      form.meetingPoint.trim() !== (s.meeting_point || "") ||
+      form.notes.trim() !== (s.notes || "") ||
+      form.specialInstructions.trim() !== (s.special_instructions || "") ||
+      form.payType !== (s.pay_type || "hourly")
+    );
+  }, [shift, form]);
 
   const hasAcceptedAssignments = shiftAssignedIds.length > 0;
+
+  if (!shift) return null;
+  if (shift.status === "locked") return null;
 
   const handleSave = async () => {
     if (!form.date) return;
@@ -93,66 +116,87 @@ export function ShiftEditDialog({
     }
   };
 
+  const payTypeLabel =
+    form.payType === "daily"
+      ? `por día · ${form.dayType === "full_day" ? "día completo" : "medio día"}`
+      : "por hora";
+
+  const summary = (
+    <ShiftSummaryPanel
+      mode="edit"
+      title={form.title}
+      clientName={signals.clientName}
+      date={form.date}
+      startTime={form.startTime}
+      endTime={form.endTime}
+      slotsNum={signals.slotsNum}
+      assignedCount={signals.assignedCount}
+      ridesNeeded={signals.ridesNeeded}
+      transportRequired={form.transportRequired}
+      driversInTeam={signals.driversInTeam}
+      jobSiteLabel={signals.jobSiteLabel}
+      meetingPointLabel={signals.meetingPointLabel}
+      dateMissing={!form.date}
+      adminMissing={signals.adminMissing}
+      adminInvalid={signals.adminInvalid}
+      noLocation={signals.noLocation}
+      noTeam={signals.noTeam}
+      driverMissing={signals.driverMissing}
+      driversShortage={signals.driversShortage}
+      capacityShortage={signals.capacityShortage}
+      hasConflicts={signals.hasConflicts}
+      conflictNames={signals.conflictNames}
+      payOverrideActive={signals.payOverrideActive}
+      payTypeLabel={payTypeLabel}
+    />
+  );
+
+  const footerBanner =
+    hasMaterialChange && hasAcceptedAssignments ? (
+      <div className="flex items-start gap-2 p-2.5 rounded-xl bg-[hsl(var(--status-pending)/0.08)] border border-[hsl(var(--status-pending)/0.2)]">
+        <AlertCircle className="h-4 w-4 text-[hsl(var(--status-pending))] shrink-0 mt-0.5" />
+        <p className="text-[11px] text-[hsl(var(--status-pending))] font-medium leading-snug">
+          Este cambio requerirá nueva aceptación de los {shiftAssignedIds.length} empleado
+          {shiftAssignedIds.length > 1 ? "s" : ""} asignado{shiftAssignedIds.length > 1 ? "s" : ""}.
+        </p>
+      </div>
+    ) : null;
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[88vh] p-0 gap-0 overflow-hidden flex flex-col rounded-2xl border-border/30 shadow-xl">
-        {/* Hero header */}
-        <div className="relative px-5 pt-5 pb-4 overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-primary/5 -translate-y-12 translate-x-12 blur-2xl" />
-          <div className="relative z-10">
-            <div className="flex items-center justify-between mb-1">
-              <h2 className="text-base font-bold font-[var(--font-heading)]">Editar turno</h2>
-              <button onClick={() => onOpenChange(false)} className="h-7 w-7 rounded-full bg-muted/50 flex items-center justify-center hover:bg-muted transition-colors">
-                <X className="h-3.5 w-3.5 text-muted-foreground" />
-              </button>
-            </div>
-            <p className="text-[11px] text-muted-foreground">Modifica los detalles del turno</p>
-          </div>
-        </div>
-
-        {/* Scrollable body — uses the shared ShiftFormFields component */}
-        <div className="flex-1 overflow-y-auto px-4 pb-4">
-          <ShiftFormFields
-            mode="edit"
-            companyId={(shift as any).company_id ?? null}
-            value={form}
-            onChange={(patch) => setForm(prev => ({ ...prev, ...patch }))}
-            clients={clients}
-            locations={locations}
-            employees={employees}
-            assignments={assignments as any}
-            allowClaims={allowClaims}
-            shift={shift}
-            qrAttendanceMode={qrAttendanceMode}
-            qrToken={qrToken}
-            onQrUpdate={(updates) => {
-              if (updates.qr_attendance_mode !== undefined) setQrAttendanceMode(updates.qr_attendance_mode);
-              if (updates.qr_token !== undefined) setQrToken(updates.qr_token);
-            }}
-            adminError={adminError}
-          />
-        </div>
-
-        {/* Footer */}
-        <div className="px-4 py-3 border-t border-border/30 bg-muted/10 space-y-2">
-          {hasMaterialChange && hasAcceptedAssignments && (
-            <div className="flex items-start gap-2 p-2.5 rounded-xl bg-[hsl(var(--status-pending)/0.08)] border border-[hsl(var(--status-pending)/0.2)]">
-              <AlertCircle className="h-4 w-4 text-[hsl(var(--status-pending))] shrink-0 mt-0.5" />
-              <p className="text-[11px] text-[hsl(var(--status-pending))] font-medium leading-snug">
-                Este cambio requerirá nueva aceptación de los {shiftAssignedIds.length} empleado{shiftAssignedIds.length > 1 ? "s" : ""} asignado{shiftAssignedIds.length > 1 ? "s" : ""}.
-              </p>
-            </div>
-          )}
-          <Button
-            onClick={handleSave}
-            disabled={saving || !form.date || (shiftAssignedIds.length > 0 && (!form.shiftAdminId || !adminIsAssigned))}
-            className="w-full h-10 text-sm gap-2 rounded-xl font-semibold"
-          >
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-            Guardar cambios
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+    <ShiftFormShell
+      open={open}
+      onOpenChange={onOpenChange}
+      mode="edit"
+      clientName={signals.clientName}
+      date={form.date}
+      startTime={form.startTime}
+      endTime={form.endTime}
+      onSave={handleSave}
+      saving={saving}
+      saveDisabled={!form.date || (shiftAssignedIds.length > 0 && (!form.shiftAdminId || !adminIsAssigned))}
+      footerBanner={footerBanner}
+      summary={summary}
+    >
+      <ShiftFormFields
+        mode="edit"
+        companyId={(shift as any).company_id ?? null}
+        value={form}
+        onChange={(patch) => setForm((prev) => ({ ...prev, ...patch }))}
+        clients={clients}
+        locations={locations}
+        employees={employees}
+        assignments={assignments}
+        allowClaims={allowClaims}
+        shift={shift}
+        qrAttendanceMode={qrAttendanceMode}
+        qrToken={qrToken}
+        onQrUpdate={(updates) => {
+          if (updates.qr_attendance_mode !== undefined) setQrAttendanceMode(updates.qr_attendance_mode);
+          if (updates.qr_token !== undefined) setQrToken(updates.qr_token);
+        }}
+        adminError={adminError}
+        renderInlineSummary={false}
+      />
+    </ShiftFormShell>
   );
 }
