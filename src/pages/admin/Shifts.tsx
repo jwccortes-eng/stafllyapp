@@ -47,7 +47,9 @@ import { EmployeeCombobox } from "@/components/shifts/EmployeeCombobox";
 import { ShiftRepeatSection, DEFAULT_REPEAT, computeRepeatDates, type RepeatConfig } from "@/components/shifts/ShiftRepeatSection";
 import { QuickCreatePopover } from "@/components/shifts/QuickCreatePopover";
 import { QuickAddInviteWizard } from "@/components/employee/QuickAddInviteWizard";
-import { ShiftFormFields, type ShiftFormState } from "@/components/shifts/ShiftFormFields";
+import { ShiftFormFields, useShiftFormSignals, type ShiftFormState } from "@/components/shifts/ShiftFormFields";
+import { ShiftFormShell } from "@/components/shifts/ShiftFormShell";
+import { ShiftSummaryPanel } from "@/components/shifts/form/ShiftSummaryPanel";
 import type { Shift, Assignment, SelectOption, Employee, ViewMode } from "@/components/shifts/types";
 
 // Fields that affect ALL assigned employees (broadcast notification)
