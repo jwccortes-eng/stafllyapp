@@ -96,6 +96,7 @@ const ImportInactiveEmployees = lazy(() => import("./pages/admin/ImportInactiveE
 const UnpaidShiftsReport = lazy(() => import("./pages/admin/UnpaidShiftsReport"));
 const StaffingRequests = lazy(() => import("./pages/admin/StaffingRequests"));
 const ServiceRequests = lazy(() => import("./pages/admin/ServiceRequests"));
+const ClientExperience = lazy(() => import("./pages/admin/ClientExperience"));
 const InvoicesPage = lazy(() => import("./pages/admin/Invoices"));
 const ServiceCategories = lazy(() => import("./pages/admin/ServiceCategories"));
 const AIWorkforce = lazy(() => import("./pages/admin/AIWorkforce"));
@@ -293,7 +294,8 @@ function App() {
                 <Route path="staffing-requests" element={<CompanyRequiredGuard><StaffingRequests /></CompanyRequiredGuard>} />
                <Route path="service-requests" element={<CompanyRequiredGuard><ServiceRequests /></CompanyRequiredGuard>} />
                {/* Canonical alias — operational entry point of the business flow */}
-               <Route path="requests" element={<CompanyRequiredGuard><ServiceRequests /></CompanyRequiredGuard>} />
+                <Route path="requests" element={<CompanyRequiredGuard><ServiceRequests /></CompanyRequiredGuard>} />
+                <Route path="client-experience" element={<CompanyRequiredGuard><ClientExperience /></CompanyRequiredGuard>} />
                 <Route path="invoices" element={<CompanyRequiredGuard><InvoicesPage /></CompanyRequiredGuard>} />
                 <Route path="service-categories" element={<CompanyRequiredGuard><ServiceCategories /></CompanyRequiredGuard>} />
                 <Route path="ai-workforce" element={<CompanyRequiredGuard><AIWorkforce /></CompanyRequiredGuard>} />
