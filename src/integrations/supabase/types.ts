@@ -14726,6 +14726,20 @@ export type Database = {
           match_type: string
         }[]
       }
+      find_public_company_fuzzy: {
+        Args: { _slug: string }
+        Returns: {
+          application_cover_url: string
+          application_enabled: boolean
+          application_intro: string
+          brand_color: string
+          id: string
+          is_active: boolean
+          logo_url: string
+          name: string
+          slug: string
+        }[]
+      }
       generate_shift_link_token: { Args: never; Returns: string }
       generate_shift_review_requests: {
         Args: { _shift_id: string }
@@ -14793,6 +14807,20 @@ export type Database = {
       get_profile_status: {
         Args: { _employee_id: string }
         Returns: Database["public"]["Enums"]["employee_profile_status"]
+      }
+      get_public_company_by_slug: {
+        Args: { _slug: string }
+        Returns: {
+          application_cover_url: string
+          application_enabled: boolean
+          application_intro: string
+          brand_color: string
+          id: string
+          is_active: boolean
+          logo_url: string
+          name: string
+          slug: string
+        }[]
       }
       get_required_documents_for_company: {
         Args: { _company_id: string }
