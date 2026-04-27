@@ -294,7 +294,8 @@ function App() {
                 <Route path="staffing-requests" element={<CompanyRequiredGuard><StaffingRequests /></CompanyRequiredGuard>} />
                <Route path="service-requests" element={<CompanyRequiredGuard><ServiceRequests /></CompanyRequiredGuard>} />
                {/* Canonical alias — operational entry point of the business flow */}
-               <Route path="requests" element={<CompanyRequiredGuard><ServiceRequests /></CompanyRequiredGuard>} />
+                <Route path="requests" element={<CompanyRequiredGuard><ServiceRequests /></CompanyRequiredGuard>} />
+                <Route path="client-experience" element={<CompanyRequiredGuard><ClientExperience /></CompanyRequiredGuard>} />
                 <Route path="invoices" element={<CompanyRequiredGuard><InvoicesPage /></CompanyRequiredGuard>} />
                 <Route path="service-categories" element={<CompanyRequiredGuard><ServiceCategories /></CompanyRequiredGuard>} />
                 <Route path="ai-workforce" element={<CompanyRequiredGuard><AIWorkforce /></CompanyRequiredGuard>} />
