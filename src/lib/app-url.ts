@@ -26,8 +26,18 @@ export function applyUrl(slug: string): string {
   return `${APP_BASE_URL}/apply/${slug}`;
 }
 
+/**
+ * Canonical invitation link.
+ *
+ * NOTE: Always returns the premium activation wizard at `/activate/:token`,
+ * never the legacy `/invite?token=` flow (which only flips a flag and does
+ * NOT create the auth user / PIN — it leaves employees unable to sign in).
+ *
+ * The legacy `/invite` route is still mounted in the router and redirects
+ * to `/activate/:token`, so old links sent over WhatsApp keep working.
+ */
 export function inviteUrl(token: string): string {
-  return `${APP_BASE_URL}/invite?token=${token}`;
+  return `${APP_BASE_URL}/activate/${token}`;
 }
 
 export function portalAuthUrl(): string {
