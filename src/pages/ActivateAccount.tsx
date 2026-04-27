@@ -17,6 +17,12 @@ import {
   FileText, Upload, AlertTriangle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PremiumAddressField } from "@/components/address";
+import {
+  normalizeFromLegacyColumns,
+  recomputeDerived,
+  type StructuredAddress,
+} from "@/lib/address";
 
 type PageState = "loading" | "valid" | "expired" | "used" | "invalid";
 type WizardStep = "welcome" | "pin" | "personal" | "address" | "details" | "documents" | "photo" | "ready";
@@ -58,6 +64,8 @@ interface ProfileForm {
   address_city: string;
   address_state: string;
   address_zip: string;
+  /** Premium structured address — source of truth for the wizard. */
+  address_structured: StructuredAddress | null;
   languages: string[];
   emergency_contact_name: string;
   emergency_contact_phone: string;
@@ -84,6 +92,7 @@ export default function ActivateAccount() {
   const [profileForm, setProfileForm] = useState<ProfileForm>({
     first_name: "", last_name: "", email: "", date_of_birth: "",
     address_line: "", address_city: "", address_state: "", address_zip: "",
+    address_structured: null,
     languages: [], emergency_contact_name: "", emergency_contact_phone: "",
     can_drive: false, has_vehicle: false, ssn: "",
   });
@@ -166,11 +175,34 @@ export default function ActivateAccount() {
 
       if (emp.avatar_url) setAvatarPreview(emp.avatar_url);
 
+      // Hydrate address: prefer JSONB, fall back to legacy columns.
+      const storedStructured = (emp as any).address_structured as StructuredAddress | null | undefined;
+      let hydratedAddress: StructuredAddress | null = null;
+      if (storedStructured && typeof storedStructured === "object" && storedStructured.formatted_address) {
+        hydratedAddress = recomputeDerived(storedStructured);
+      } else {
+        hydratedAddress = normalizeFromLegacyColumns({
+          address_line: (emp as any).address_line ?? null,
+          address_city: (emp as any).address_city ?? null,
+          address_state: (emp as any).address_state ?? null,
+          address_zip: (emp as any).address_zip ?? null,
+          address: (emp as any).address ?? null,
+          county: (emp as any).county ?? null,
+          latitude: (emp as any).approx_latitude ?? null,
+          longitude: (emp as any).approx_longitude ?? null,
+        });
+      }
+
       setProfileForm(prev => ({
         ...prev,
         first_name: emp.first_name ?? "",
         last_name: emp.last_name ?? "",
         email: emp.email ?? "",
+        address_line: (emp as any).address_line ?? hydratedAddress?.address_line1 ?? "",
+        address_city: (emp as any).address_city ?? hydratedAddress?.city ?? "",
+        address_state: (emp as any).address_state ?? hydratedAddress?.state ?? "",
+        address_zip: (emp as any).address_zip ?? hydratedAddress?.postal_code ?? "",
+        address_structured: hydratedAddress,
       }));
 
       setInvite({
@@ -231,22 +263,54 @@ export default function ActivateAccount() {
 
   // ─── Validation ───
   const isPersonalValid = profileForm.first_name.trim() && profileForm.last_name.trim() && profileForm.email.trim() && profileForm.date_of_birth && profileForm.ssn.replace(/\D/g, "").length >= 4;
-  const isAddressValid = profileForm.address_line.trim() && profileForm.address_city.trim() && profileForm.address_state && profileForm.address_zip.trim().length >= 5;
-  const isDetailsValid = profileForm.emergency_contact_name.trim() && profileForm.emergency_contact_phone.trim();
+  // ─── Validation ───
+  const addr = profileForm.address_structured;
+  const emergencyName = profileForm.emergency_contact_name.trim();
+  const emergencyPhoneDigits = profileForm.emergency_contact_phone.replace(/\D/g, "");
+  const isAddressValid =
+    !!addr &&
+    !!(addr.formatted_address || addr.address_line1) &&
+    !!addr.city &&
+    !!addr.state &&
+    !!addr.postal_code &&
+    addr.postal_code.replace(/\D/g, "").length >= 5;
+  const isEmergencyNameValid =
+    emergencyName.length >= 3 && /[A-Za-zÀ-ÿ]/.test(emergencyName);
+  const isEmergencyPhoneValid = emergencyPhoneDigits.length >= 10;
+  const isDetailsValid = isEmergencyNameValid && isEmergencyPhoneValid;
   const isDocsValid = !profileForm.has_vehicle || (!!driverLicenseFile && !!vehicleRegFile);
 
   // ─── Save progress ───
   const saveProgress = async () => {
     if (!invite) return;
+    const sa = profileForm.address_structured;
+
+    // Build legacy fallback so anything still reading plain `address` works.
+    const legacyAddressText =
+      sa?.formatted_address?.trim() ||
+      [profileForm.address_line, profileForm.address_city, profileForm.address_state, profileForm.address_zip]
+        .map((s) => (s ?? "").trim())
+        .filter(Boolean)
+        .join(", ") ||
+      profileForm.address_line.trim() ||
+      null;
+
     const updates: Record<string, any> = {
       first_name: profileForm.first_name.trim(),
       last_name: profileForm.last_name.trim(),
       email: profileForm.email.trim() || null,
       date_of_birth: profileForm.date_of_birth || null,
-      address_line: profileForm.address_line.trim() || null,
-      address_city: profileForm.address_city.trim() || null,
-      address_state: profileForm.address_state || null,
-      address_zip: profileForm.address_zip.trim() || null,
+      // Premium structured address (JSONB)
+      address_structured: sa ?? null,
+      // Legacy text/columns kept in sync for payroll/exports/etc.
+      address: legacyAddressText,
+      address_line: sa?.address_line1 ?? (profileForm.address_line.trim() || null),
+      address_city: sa?.city ?? (profileForm.address_city.trim() || null),
+      address_state: sa?.state ?? (profileForm.address_state || null),
+      address_zip: sa?.postal_code ?? (profileForm.address_zip.trim() || null),
+      county: sa?.county ?? null,
+      approx_latitude: sa?.latitude ?? null,
+      approx_longitude: sa?.longitude ?? null,
       emergency_contact_name: profileForm.emergency_contact_name.trim() || null,
       emergency_contact_phone: profileForm.emergency_contact_phone.trim() || null,
       can_drive: profileForm.can_drive,
@@ -502,7 +566,7 @@ export default function ActivateAccount() {
                 <Building2 className="h-6 w-6 text-primary" />
               </div>
             )}
-            <span className="text-xs font-semibold text-muted-foreground tracking-wide">{invite?.company_name}</span>
+            <span className="text-xs font-semibold text-muted-foreground tracking-wide">{invite?.company_name?.trim() || "Company"}</span>
 
             {/* ─── DEBUG: Company Scoping Validation (temporary migration tool) ─── */}
             {invite && (
@@ -549,7 +613,7 @@ export default function ActivateAccount() {
                       <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
                       <div className="flex-1 min-w-0">
                         <p className="text-[10px] text-muted-foreground">Company</p>
-                        <p className="text-sm font-semibold text-foreground truncate">{invite.company_name}</p>
+                        <p className="text-sm font-semibold text-foreground truncate">{invite.company_name?.trim() || "Company"}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3 px-4 py-3">
@@ -654,32 +718,35 @@ export default function ActivateAccount() {
                 <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
                   <div className="text-center space-y-1">
                     <MapPin className="h-5 w-5 text-primary mx-auto" />
-                    <h2 className="text-lg font-bold">Address</h2>
-                    <p className="text-xs text-muted-foreground">Full address required</p>
+                    <h2 className="text-lg font-bold">Home address</h2>
+                    <p className="text-xs text-muted-foreground">
+                      This helps us organize zones, transportation and meeting points.
+                    </p>
                   </div>
-                  <div className="space-y-3">
-                    <div className="space-y-1">
-                      <Label className="text-xs">Address <span className="text-destructive">*</span></Label>
-                      <Input value={profileForm.address_line} onChange={e => updateForm("address_line", e.target.value)} placeholder="123 Main St, Apt 4" className="h-9 text-sm" />
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1">
-                        <Label className="text-xs">City <span className="text-destructive">*</span></Label>
-                        <Input value={profileForm.address_city} onChange={e => updateForm("address_city", e.target.value)} placeholder="Miami" className="h-9 text-sm" />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs">State <span className="text-destructive">*</span></Label>
-                        <Select value={profileForm.address_state} onValueChange={v => updateForm("address_state", v)}>
-                          <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="State" /></SelectTrigger>
-                          <SelectContent>{US_STATES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs">ZIP Code <span className="text-destructive">*</span></Label>
-                      <Input value={profileForm.address_zip} onChange={e => updateForm("address_zip", e.target.value.replace(/\D/g, "").slice(0, 5))} placeholder="33101" maxLength={5} className="h-9 text-sm w-32" />
-                    </div>
-                  </div>
+                  <PremiumAddressField
+                    value={profileForm.address_structured}
+                    onChange={(next) =>
+                      setProfileForm((prev) => ({
+                        ...prev,
+                        address_structured: next,
+                        address_line: next?.address_line1 ?? prev.address_line,
+                        address_city: next?.city ?? prev.address_city,
+                        address_state: next?.state ?? prev.address_state,
+                        address_zip: next?.postal_code ?? prev.address_zip,
+                      }))
+                    }
+                    label="Home address"
+                    helper="Start typing your street and pick a suggestion. You can also enter it manually."
+                    placeholder="Start typing your address…"
+                    required
+                    country="US"
+                    compact
+                  />
+                  {!isAddressValid && profileForm.address_structured && (
+                    <p className="text-[11px] text-amber-600 dark:text-amber-400">
+                      Complete address, city, state and ZIP to continue.
+                    </p>
+                  )}
                   <div className="flex gap-2 pt-1">
                     <Button variant="outline" onClick={goBack} className="h-10 rounded-xl gap-1"><ArrowLeft className="h-4 w-4" /> Back</Button>
                     <Button onClick={goNext} disabled={!isAddressValid} className="flex-1 h-10 rounded-xl gap-1">Next <ArrowRight className="h-4 w-4" /></Button>
@@ -697,12 +764,32 @@ export default function ActivateAccount() {
                   </div>
                   <div className="space-y-3">
                     <div className="space-y-1">
-                      <Label className="text-xs">Emergency contact <span className="text-destructive">*</span></Label>
-                      <Input value={profileForm.emergency_contact_name} onChange={e => updateForm("emergency_contact_name", e.target.value)} placeholder="Contact name" className="h-9 text-sm" />
+                      <Label className="text-xs">Emergency contact name <span className="text-destructive">*</span></Label>
+                      <Input
+                        value={profileForm.emergency_contact_name}
+                        onChange={e => updateForm("emergency_contact_name", e.target.value)}
+                        placeholder="Full name"
+                        autoComplete="name"
+                        className="h-9 text-sm"
+                      />
+                      {profileForm.emergency_contact_name.trim().length > 0 && !isEmergencyNameValid && (
+                        <p className="text-[10px] text-destructive">Enter a valid contact name (at least 3 letters).</p>
+                      )}
                     </div>
                     <div className="space-y-1">
                       <Label className="text-xs">Emergency phone <span className="text-destructive">*</span></Label>
-                      <Input value={profileForm.emergency_contact_phone} onChange={e => updateForm("emergency_contact_phone", e.target.value)} placeholder="+1 (305) 555-0123" className="h-9 text-sm" />
+                      <Input
+                        type="tel"
+                        inputMode="tel"
+                        value={profileForm.emergency_contact_phone}
+                        onChange={e => updateForm("emergency_contact_phone", e.target.value)}
+                        placeholder="+1 (305) 555-0123"
+                        autoComplete="tel"
+                        className="h-9 text-sm"
+                      />
+                      {profileForm.emergency_contact_phone.trim().length > 0 && !isEmergencyPhoneValid && (
+                        <p className="text-[10px] text-destructive">Enter a valid 10-digit emergency phone number.</p>
+                      )}
                     </div>
 
                     {/* Languages */}

@@ -14752,8 +14752,17 @@ export type Database = {
       get_employee_for_activation: {
         Args: { _employee_id: string; _invite_token: string }
         Returns: {
+          address: string
+          address_city: string
+          address_line: string
+          address_state: string
+          address_structured: Json
+          address_zip: string
+          approx_latitude: number
+          approx_longitude: number
           avatar_url: string
           company_id: string
+          county: string
           email: string
           first_name: string
           last_name: string
