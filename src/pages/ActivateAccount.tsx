@@ -64,6 +64,8 @@ interface ProfileForm {
   address_city: string;
   address_state: string;
   address_zip: string;
+  /** Premium structured address — source of truth for the wizard. */
+  address_structured: StructuredAddress | null;
   languages: string[];
   emergency_contact_name: string;
   emergency_contact_phone: string;
