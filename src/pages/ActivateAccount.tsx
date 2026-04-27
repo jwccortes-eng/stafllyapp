@@ -175,11 +175,34 @@ export default function ActivateAccount() {
 
       if (emp.avatar_url) setAvatarPreview(emp.avatar_url);
 
+      // Hydrate address: prefer JSONB, fall back to legacy columns.
+      const storedStructured = (emp as any).address_structured as StructuredAddress | null | undefined;
+      let hydratedAddress: StructuredAddress | null = null;
+      if (storedStructured && typeof storedStructured === "object" && storedStructured.formatted_address) {
+        hydratedAddress = recomputeDerived(storedStructured);
+      } else {
+        hydratedAddress = normalizeFromLegacyColumns({
+          address_line: (emp as any).address_line ?? null,
+          address_city: (emp as any).address_city ?? null,
+          address_state: (emp as any).address_state ?? null,
+          address_zip: (emp as any).address_zip ?? null,
+          address: (emp as any).address ?? null,
+          county: (emp as any).county ?? null,
+          latitude: (emp as any).approx_latitude ?? null,
+          longitude: (emp as any).approx_longitude ?? null,
+        });
+      }
+
       setProfileForm(prev => ({
         ...prev,
         first_name: emp.first_name ?? "",
         last_name: emp.last_name ?? "",
         email: emp.email ?? "",
+        address_line: (emp as any).address_line ?? hydratedAddress?.address_line1 ?? "",
+        address_city: (emp as any).address_city ?? hydratedAddress?.city ?? "",
+        address_state: (emp as any).address_state ?? hydratedAddress?.state ?? "",
+        address_zip: (emp as any).address_zip ?? hydratedAddress?.postal_code ?? "",
+        address_structured: hydratedAddress,
       }));
 
       setInvite({
