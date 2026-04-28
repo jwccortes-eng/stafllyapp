@@ -122,7 +122,7 @@ export function EmployeeCombobox({
           `${e.first_name} ${e.last_name}`,
           e.phone_number ?? "",
           (e.phone_number ?? "").replace(/\D/g, ""),
-          (e as any).email ?? "",
+          e.email ?? "",
           e.employee_role ?? "",
           e.groups ?? "",
           e.employer_identification ?? "",
