@@ -267,22 +267,45 @@ export function ShiftDetailDialog({
   const shiftAssignments = assignments.filter(a => a.shift_id === shift.id);
   const assignedIds = new Set(shiftAssignments.map(a => a.employee_id));
   const unassigned = employees.filter(e => !assignedIds.has(e.id));
-  const johnyId = "90db5d68-ec73-4ccd-bec9-fdc46e42362e";
-  const johnyInEmployees = employees.find(e => e.id === johnyId) ?? null;
-  const johnyByLastName = employees.filter(e => e.last_name?.toLowerCase().includes("munera"));
-  const johnyInUnassigned = unassigned.find(e => e.id === johnyId) ?? null;
-  const debugSearchQueries = ["mune", "#145", "munera", "jhionny", "johny"] as const;
-  const debugSearches = Object.fromEntries(
-    debugSearchQueries.map((query) => [
-      query,
-      searchEmployees(unassigned, query).slice(0, 5).map((e) => ({
-        id: e.id,
-        label: `${e.first_name ?? ""} ${e.last_name ?? ""}${e.employer_identification ? ` #${e.employer_identification}` : ""}`.trim(),
-        matchedBy: e.__match.matchedBy,
-        score: e.__match.score,
-      })),
-    ]),
-  );
+  // Debug probe (only computed when developer/owner/admin opens with `?debug=1`).
+  // `debugWorker` accepts a UUID or an `employer_identification` (e.g. `145` / `#145`).
+  const { debugMode, debugWorker } = useDebugMode();
+  const debugProbe = debugMode ? (() => {
+    const probe = debugWorker?.toLowerCase() ?? null;
+    const matched = probe
+      ? employees.find(e =>
+          e.id.toLowerCase() === probe ||
+          String((e as any).employer_identification ?? "").toLowerCase() === probe,
+        ) ?? null
+      : null;
+    const matchedId = matched?.id ?? null;
+    const debugSearchQueries = debugWorker ? [debugWorker] : [];
+    const debugSearches = Object.fromEntries(
+      debugSearchQueries.map((query) => [
+        query,
+        searchEmployees(unassigned, query).slice(0, 5).map((e) => ({
+          id: e.id,
+          label: `${e.first_name ?? ""} ${e.last_name ?? ""}${e.employer_identification ? ` #${e.employer_identification}` : ""}`.trim(),
+          matchedBy: e.__match.matchedBy,
+          score: e.__match.score,
+        })),
+      ]),
+    );
+    return {
+      matched,
+      matchedId,
+      debugSearches,
+      flags: {
+        matchedLabel: matched ? `${matched.first_name ?? ""} ${matched.last_name ?? ""} #${(matched as any).employer_identification ?? "—"}`.trim() : null,
+        inEmployees: !!matched,
+        inAssigned: matchedId ? assignedIds.has(matchedId) : false,
+        inUnassigned: matchedId ? unassigned.some(e => e.id === matchedId) : false,
+        conflict: null as string | null,
+        unavailable: null as string | null,
+      },
+    };
+  })() : null;
+
   const location = locations.find(l => l.id === shift.location_id);
   const client = clients.find(c => c.id === shift.client_id);
   const hoursLabel = calcHours(shift.start_time.slice(0, 5), shift.end_time.slice(0, 5));
