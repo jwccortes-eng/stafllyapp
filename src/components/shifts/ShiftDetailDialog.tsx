@@ -279,13 +279,13 @@ export function ShiftDetailDialog({
     }
   }, [shift, open, loadRequests, loadRoleSlots]);
 
-  if (!shift) return null;
-
-  const isLocked = shift.status === "locked";
-  const effectiveCanEdit = canEdit && !isLocked;
+  // IMPORTANT: All hooks MUST be called before any early return to satisfy
+  // React's Rules of Hooks. `shift` may be null while the drawer is closing —
+  // we guard each memo body instead of returning early above them.
+  const shiftId = shift?.id ?? null;
   const shiftAssignments = useMemo(
-    () => assignments.filter(a => a.shift_id === shift.id),
-    [assignments, shift.id]
+    () => (shiftId ? assignments.filter(a => a.shift_id === shiftId) : []),
+    [assignments, shiftId]
   );
   const assignedIds = useMemo(
     () => new Set(shiftAssignments.map(a => a.employee_id)),
@@ -298,6 +298,10 @@ export function ShiftDetailDialog({
   // Debug probe (only computed when developer/owner/admin opens with `?debug=1`).
   // `debugWorker` accepts a UUID or an `employer_identification` (e.g. `145` / `#145`).
   const { debugMode, debugWorker } = useDebugMode();
+
+  // Compute debug probe BEFORE the `if (!shift)` early return so the
+  // following `useEffect` (also above the return) can depend on it without
+  // breaking Rules of Hooks. It's a pure calc, not a hook.
   const debugProbe = debugMode ? (() => {
     const probe = debugWorker?.toLowerCase() ?? null;
     const matched = probe
@@ -333,6 +337,27 @@ export function ShiftDetailDialog({
       },
     };
   })() : null;
+
+  // Debug logger — must live above the early return to keep hook order stable.
+  useEffect(() => {
+    if (!open || !showAddPanel || !debugMode || !shift) return;
+    console.debug("[ShiftAssignDebug]", {
+      selectedCompanyId,
+      companyName: selectedCompany?.name ?? null,
+      shiftCompanyId: (shift as any)?.company_id ?? null,
+      employeesLength: employees.length,
+      assignedCount: assignedIds.size,
+      unassignedLength: unassigned.length,
+      debugWorker,
+      probe: debugProbe?.flags,
+      probeSearches: debugProbe?.debugSearches,
+    });
+  }, [open, showAddPanel, debugMode, selectedCompanyId, selectedCompany?.name, shift, employees.length, assignedIds, unassigned.length, debugWorker, debugProbe]);
+
+  if (!shift) return null;
+
+  const isLocked = shift.status === "locked";
+  const effectiveCanEdit = canEdit && !isLocked;
 
   const location = locations.find(l => l.id === shift.location_id);
   const client = clients.find(c => c.id === shift.client_id);
@@ -431,20 +456,8 @@ export function ShiftDetailDialog({
   const statusLabel = shift.status === "published" ? "Publicado" : shift.status === "draft" ? "Borrador" : shift.status === "locked" ? "Bloqueado" : shift.status;
   const pendingRequests = requests.filter(r => r.status === "pending").length;
 
-  useEffect(() => {
-    if (!open || !showAddPanel || !debugMode) return;
-    console.debug("[ShiftAssignDebug]", {
-      selectedCompanyId,
-      companyName: selectedCompany?.name ?? null,
-      shiftCompanyId: (shift as any)?.company_id ?? null,
-      employeesLength: employees.length,
-      assignedCount: assignedIds.size,
-      unassignedLength: unassigned.length,
-      debugWorker,
-      probe: debugProbe?.flags,
-      probeSearches: debugProbe?.debugSearches,
-    });
-  }, [open, showAddPanel, debugMode, selectedCompanyId, selectedCompany?.name, shift, employees.length, assignedIds, unassigned.length, debugWorker, debugProbe]);
+  // Moved above the `if (!shift) return null` early return below — see top of component.
+
 
   return (
     <>
