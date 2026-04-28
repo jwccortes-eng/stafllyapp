@@ -51,6 +51,7 @@ import { ShiftFormFields, useShiftFormSignals, type ShiftFormState } from "@/com
 import { ShiftFormShell } from "@/components/shifts/ShiftFormShell";
 import { ShiftSummaryPanel } from "@/components/shifts/form/ShiftSummaryPanel";
 import type { Shift, Assignment, SelectOption, Employee, ViewMode } from "@/components/shifts/types";
+import { formatShiftCode } from "@/components/shifts/types";
 
 // Fields that affect ALL assigned employees (broadcast notification)
 const BROADCAST_FIELDS = ["date", "start_time", "end_time", "location_id", "client_id"];
