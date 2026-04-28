@@ -24,6 +24,7 @@ import {
   recomputeDerived,
   type StructuredAddress,
 } from "@/lib/address";
+import { queryClient } from "@/lib/query-client";
 
 type PageState = "loading" | "valid" | "expired" | "used" | "invalid" | "superseded";
 type WizardStep = "welcome" | "pin" | "personal" | "address" | "details" | "documents" | "photo" | "ready";
@@ -541,6 +542,13 @@ export default function ActivateAccount() {
         return;
       }
 
+      const activationAudit = {
+        employee_id: invite.employee_id,
+        company_id: invite.company_id,
+        old_profile: initialProfileSnapshotRef.current,
+        new_profile: buildActivationProfilePayload(),
+      };
+
       await saveProgress();
 
       // Upload vehicle documents if required
@@ -557,6 +565,7 @@ export default function ActivateAccount() {
           employee_id: invite.employee_id,
           invite_token: token,
           pin,
+          activation_audit: activationAudit,
         },
       });
 
@@ -655,6 +664,8 @@ export default function ActivateAccount() {
           ...(avatarUrl ? { avatar_url: avatarUrl } : {}),
         } as any)
         .eq("id", invite.employee_id);
+
+      await queryClient.invalidateQueries();
 
       // Clear any temporary wizard state from storage
       try {
@@ -1195,7 +1206,7 @@ export default function ActivateAccount() {
                       Taking you to your portal in {redirectCountdown}…
                     </p>
                   )}
-                  <Button onClick={() => navigate("/portal", { replace: true })} className="w-full h-12 rounded-xl text-base font-semibold gap-2">
+                  <Button onClick={goToPortalWithFallback} className="w-full h-12 rounded-xl text-base font-semibold gap-2">
                     Go to my portal <ArrowRight className="h-4 w-4" />
                   </Button>
 
