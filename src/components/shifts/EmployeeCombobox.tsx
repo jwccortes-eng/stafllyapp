@@ -172,7 +172,8 @@ export function EmployeeCombobox({
   // Smart sort: when searching, relevance score dominates so the most precise
   // match (exact ID/phone, then last name, then first name, then phonetic) leads.
   // When NOT searching, group-based ranking (ready/warning/blocked/inactive) leads.
-  const isSearching = search.trim().length > 0;
+  // Use deferredSearch so sort/filter stay consistent with the deferred score map.
+  const isSearching = deferredSearch.trim().length > 0;
   const sorted = useMemo(() => {
     const normalizedShiftGroup = shiftGroup?.toLowerCase().trim();
 
