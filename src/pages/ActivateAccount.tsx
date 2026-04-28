@@ -24,6 +24,7 @@ import {
   recomputeDerived,
   type StructuredAddress,
 } from "@/lib/address";
+import { queryClient } from "@/lib/query-client";
 
 type PageState = "loading" | "valid" | "expired" | "used" | "invalid" | "superseded";
 type WizardStep = "welcome" | "pin" | "personal" | "address" | "details" | "documents" | "photo" | "ready";
@@ -115,6 +116,8 @@ export default function ActivateAccount() {
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
   const markedOpened = useRef(false);
+  const initialProfileSnapshotRef = useRef<Record<string, any> | null>(null);
+  const redirectAttemptRef = useRef<number | null>(null);
   const { toast } = useToast();
 
   const [pageState, setPageState] = useState<PageState>("loading");
@@ -157,19 +160,57 @@ export default function ActivateAccount() {
     setProfileForm(prev => ({ ...prev, [key]: value }));
   };
 
+  const buildActivationProfilePayload = () => {
+    const sa = profileForm.address_structured;
+    return {
+      first_name: profileForm.first_name.trim() || null,
+      last_name: profileForm.last_name.trim() || null,
+      email: profileForm.email.trim() || null,
+      date_of_birth: profileForm.date_of_birth || null,
+      address: sa?.formatted_address?.trim() || profileForm.address_line.trim() || null,
+      address_line: sa?.address_line1 ?? (profileForm.address_line.trim() || null),
+      address_city: sa?.city ?? (profileForm.address_city.trim() || null),
+      address_state: sa?.state ?? (profileForm.address_state || null),
+      address_zip: sa?.postal_code ?? (profileForm.address_zip.trim() || null),
+      address_structured: sa ?? null,
+      emergency_contact_name: profileForm.emergency_contact_name.trim() || null,
+      emergency_contact_phone: profileForm.emergency_contact_phone.trim() || null,
+      can_drive: profileForm.can_drive,
+      has_vehicle: profileForm.has_vehicle,
+      languages: profileForm.languages.length > 0 ? profileForm.languages : null,
+      ssn_last4: profileForm.ssn.trim() ? profileForm.ssn.replace(/\D/g, "").slice(-4) : null,
+    };
+  };
+
+  const goToPortalWithFallback = () => {
+    window.clearTimeout(redirectAttemptRef.current ?? undefined);
+    navigate("/portal", { replace: true });
+    redirectAttemptRef.current = window.setTimeout(() => {
+      if (window.location.pathname.startsWith("/activate")) {
+        window.location.assign("/portal");
+      }
+    }, 2000);
+  };
+
   // ─── Auto-redirect to portal after activation ───
   useEffect(() => {
     if (wizardStep !== "ready") return;
     setRedirectCountdown(3);
+    const initialDelay = window.setTimeout(async () => {
+      const { data } = await supabase.auth.getSession();
+      console.info("[activate] ready redirect", {
+        hasSession: !!data.session,
+        pathname: window.location.pathname,
+      });
+      goToPortalWithFallback();
+    }, 1000);
     const tick = setInterval(() => {
       setRedirectCountdown((c) => (c === null ? null : c - 1));
     }, 1000);
-    const redirect = setTimeout(() => {
-      navigate("/portal", { replace: true });
-    }, 3000);
     return () => {
+      clearTimeout(initialDelay);
       clearInterval(tick);
-      clearTimeout(redirect);
+      window.clearTimeout(redirectAttemptRef.current ?? undefined);
     };
   }, [wizardStep, navigate]);
 
@@ -291,6 +332,24 @@ export default function ActivateAccount() {
         address_zip: (emp as any).address_zip ?? hydratedAddress?.postal_code ?? "",
         address_structured: hydratedAddress,
       }));
+      initialProfileSnapshotRef.current = {
+        first_name: emp.first_name ?? null,
+        last_name: emp.last_name ?? null,
+        email: emp.email ?? null,
+        date_of_birth: (emp as any).date_of_birth ?? null,
+        address: (emp as any).address ?? null,
+        address_line: (emp as any).address_line ?? null,
+        address_city: (emp as any).address_city ?? null,
+        address_state: (emp as any).address_state ?? null,
+        address_zip: (emp as any).address_zip ?? null,
+        address_structured: hydratedAddress,
+        emergency_contact_name: (emp as any).emergency_contact_name ?? null,
+        emergency_contact_phone: (emp as any).emergency_contact_phone ?? null,
+        can_drive: (emp as any).can_drive ?? false,
+        has_vehicle: (emp as any).has_vehicle ?? false,
+        languages: (emp as any).languages ?? null,
+        ssn_last4: (emp as any).ssn_last4 ?? null,
+      };
 
       setInvite({
         ...data,
@@ -483,6 +542,13 @@ export default function ActivateAccount() {
         return;
       }
 
+      const activationAudit = {
+        employee_id: invite.employee_id,
+        company_id: invite.company_id,
+        old_profile: initialProfileSnapshotRef.current,
+        new_profile: buildActivationProfilePayload(),
+      };
+
       await saveProgress();
 
       // Upload vehicle documents if required
@@ -499,6 +565,7 @@ export default function ActivateAccount() {
           employee_id: invite.employee_id,
           invite_token: token,
           pin,
+          activation_audit: activationAudit,
         },
       });
 
@@ -597,6 +664,8 @@ export default function ActivateAccount() {
           ...(avatarUrl ? { avatar_url: avatarUrl } : {}),
         } as any)
         .eq("id", invite.employee_id);
+
+      await queryClient.invalidateQueries();
 
       // Clear any temporary wizard state from storage
       try {
@@ -1137,7 +1206,7 @@ export default function ActivateAccount() {
                       Taking you to your portal in {redirectCountdown}…
                     </p>
                   )}
-                  <Button onClick={() => navigate("/portal", { replace: true })} className="w-full h-12 rounded-xl text-base font-semibold gap-2">
+                  <Button onClick={goToPortalWithFallback} className="w-full h-12 rounded-xl text-base font-semibold gap-2">
                     Go to my portal <ArrowRight className="h-4 w-4" />
                   </Button>
 
