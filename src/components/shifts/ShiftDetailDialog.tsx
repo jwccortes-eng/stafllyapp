@@ -283,9 +283,18 @@ export function ShiftDetailDialog({
 
   const isLocked = shift.status === "locked";
   const effectiveCanEdit = canEdit && !isLocked;
-  const shiftAssignments = assignments.filter(a => a.shift_id === shift.id);
-  const assignedIds = new Set(shiftAssignments.map(a => a.employee_id));
-  const unassigned = employees.filter(e => !assignedIds.has(e.id));
+  const shiftAssignments = useMemo(
+    () => assignments.filter(a => a.shift_id === shift.id),
+    [assignments, shift.id]
+  );
+  const assignedIds = useMemo(
+    () => new Set(shiftAssignments.map(a => a.employee_id)),
+    [shiftAssignments]
+  );
+  const unassigned = useMemo(
+    () => employees.filter(e => !assignedIds.has(e.id)),
+    [employees, assignedIds]
+  );
   // Debug probe (only computed when developer/owner/admin opens with `?debug=1`).
   // `debugWorker` accepts a UUID or an `employer_identification` (e.g. `145` / `#145`).
   const { debugMode, debugWorker } = useDebugMode();

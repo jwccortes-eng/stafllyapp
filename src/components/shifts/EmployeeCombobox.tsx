@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useDeferredValue } from "react";
 import { UserPlus } from "lucide-react";
 import { formatPersonName, formatDisplayText } from "@/lib/format-helpers";
 import { Input } from "@/components/ui/input";
