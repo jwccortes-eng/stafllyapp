@@ -145,30 +145,42 @@ export function EmployeeCombobox({
     return list;
   }, [employees, search, matchScoreById, quickFilter, unavailableMap, conflictMap]);
 
-  // Smart sort with scoring: selected → ready (active+portal+complete) → warning → blocked → inactive
+  // Smart sort: when searching, relevance score dominates so the most precise
+  // match (exact ID/phone, then last name, then first name, then phonetic) leads.
+  // When NOT searching, group-based ranking (ready/warning/blocked/inactive) leads.
+  const isSearching = search.trim().length > 0;
   const sorted = useMemo(() => {
     const normalizedShiftGroup = shiftGroup?.toLowerCase().trim();
 
     const score = (emp: Employee): number => {
       if (selected.includes(emp.id)) return -1000;
+
+      if (isSearching) {
+        // Primary key: relevance from searchEmployees (lower = better, 0..120).
+        // Secondary nudge: small group penalty so a perfect match still beats
+        // a fuzzy phonetic ready worker but we don't surface inactive on top.
+        const rel = matchScoreById.get(emp.id) ?? 999;
+        const g = getGroup(emp);
+        const groupNudge = g === "ready" ? 0 : g === "warning" ? 5 : g === "blocked" ? 10 : 20;
+        return rel + groupNudge;
+      }
+
       const g = getGroup(emp);
       let s = g === "ready" ? 0 : g === "warning" ? 500 : g === "blocked" ? 1000 : 2000;
-
-      // Within ready: prefer portal-active + profile-complete + employer_id + frequent + same group
       if (g === "ready") {
         if (requiresDriver && isDriver(emp)) s -= 50;
         if (normalizedShiftGroup && emp.groups?.toLowerCase().includes(normalizedShiftGroup)) s -= 30;
         const freq = assignmentFreq.get(emp.id) || 0;
-        s -= Math.min(freq * 5, 25); // frequent workers get up to -25
-        if (emp.user_id) s -= 20; // portal-active preferred
-        if (!isProfileIncomplete(emp)) s -= 15; // profile complete preferred
-        if (emp.employer_identification) s -= 5; // has stable identifier
+        s -= Math.min(freq * 5, 25);
+        if (emp.user_id) s -= 20;
+        if (!isProfileIncomplete(emp)) s -= 15;
+        if (emp.employer_identification) s -= 5;
       }
       return s;
     };
 
     return [...filtered].sort((a, b) => score(a) - score(b) || `${a.first_name}`.localeCompare(`${b.first_name}`));
-  }, [filtered, selected, unavailableMap, conflictMap, requiresDriver, shiftGroup, assignmentFreq]);
+  }, [filtered, selected, unavailableMap, conflictMap, requiresDriver, shiftGroup, assignmentFreq, isSearching, matchScoreById]);
 
   const selectedEmps = employees.filter(e => selected.includes(e.id));
   const handleToggle = (id: string) => {
