@@ -35,8 +35,13 @@ const STATUS_TONE: Record<ClientContact["portal_status"], string> = {
   disabled: "bg-muted text-muted-foreground",
 };
 
-export default function ClientExperienceContacts() {
-  const { data: contacts = [], isLoading } = useClientContacts();
+interface Props {
+  /** When set, scopes contacts and the create dialog to a single client. */
+  clientId?: string;
+}
+
+export default function ClientExperienceContacts({ clientId }: Props = {}) {
+  const { data: contacts = [], isLoading } = useClientContacts(clientId);
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
 
@@ -69,7 +74,7 @@ export default function ClientExperienceContacts() {
               <Plus className="h-3.5 w-3.5" /> New contact
             </Button>
           </DialogTrigger>
-          <ContactDialog onClose={() => setOpen(false)} />
+          <ContactDialog onClose={() => setOpen(false)} lockedClientId={clientId} />
         </Dialog>
       </div>
 
@@ -140,7 +145,7 @@ export default function ClientExperienceContacts() {
   );
 }
 
-function ContactDialog({ onClose }: { onClose: () => void }) {
+function ContactDialog({ onClose, lockedClientId }: { onClose: () => void; lockedClientId?: string }) {
   const upsert = useUpsertClientContact();
   const { selectedCompanyId } = useCompany();
   const clientsQ = useQuery({
@@ -159,7 +164,7 @@ function ContactDialog({ onClose }: { onClose: () => void }) {
   });
   const clients = clientsQ.data ?? [];
   const [form, setForm] = useState({
-    client_id: "",
+    client_id: lockedClientId ?? "",
     name: "",
     email: "",
     phone: "",
