@@ -37,6 +37,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
+import { useDebugMode } from "@/hooks/useDebugMode";
 import { toast } from "sonner";
 import type { Shift, Assignment, Employee, SelectOption } from "./types";
 import { formatShiftCode, getClientColor, isEmployeeDriver } from "./types";
@@ -267,22 +268,45 @@ export function ShiftDetailDialog({
   const shiftAssignments = assignments.filter(a => a.shift_id === shift.id);
   const assignedIds = new Set(shiftAssignments.map(a => a.employee_id));
   const unassigned = employees.filter(e => !assignedIds.has(e.id));
-  const johnyId = "90db5d68-ec73-4ccd-bec9-fdc46e42362e";
-  const johnyInEmployees = employees.find(e => e.id === johnyId) ?? null;
-  const johnyByLastName = employees.filter(e => e.last_name?.toLowerCase().includes("munera"));
-  const johnyInUnassigned = unassigned.find(e => e.id === johnyId) ?? null;
-  const debugSearchQueries = ["mune", "#145", "munera", "jhionny", "johny"] as const;
-  const debugSearches = Object.fromEntries(
-    debugSearchQueries.map((query) => [
-      query,
-      searchEmployees(unassigned, query).slice(0, 5).map((e) => ({
-        id: e.id,
-        label: `${e.first_name ?? ""} ${e.last_name ?? ""}${e.employer_identification ? ` #${e.employer_identification}` : ""}`.trim(),
-        matchedBy: e.__match.matchedBy,
-        score: e.__match.score,
-      })),
-    ]),
-  );
+  // Debug probe (only computed when developer/owner/admin opens with `?debug=1`).
+  // `debugWorker` accepts a UUID or an `employer_identification` (e.g. `145` / `#145`).
+  const { debugMode, debugWorker } = useDebugMode();
+  const debugProbe = debugMode ? (() => {
+    const probe = debugWorker?.toLowerCase() ?? null;
+    const matched = probe
+      ? employees.find(e =>
+          e.id.toLowerCase() === probe ||
+          String((e as any).employer_identification ?? "").toLowerCase() === probe,
+        ) ?? null
+      : null;
+    const matchedId = matched?.id ?? null;
+    const debugSearchQueries = debugWorker ? [debugWorker] : [];
+    const debugSearches = Object.fromEntries(
+      debugSearchQueries.map((query) => [
+        query,
+        searchEmployees(unassigned, query).slice(0, 5).map((e) => ({
+          id: e.id,
+          label: `${e.first_name ?? ""} ${e.last_name ?? ""}${e.employer_identification ? ` #${e.employer_identification}` : ""}`.trim(),
+          matchedBy: e.__match.matchedBy,
+          score: e.__match.score,
+        })),
+      ]),
+    );
+    return {
+      matched,
+      matchedId,
+      debugSearches,
+      flags: {
+        matchedLabel: matched ? `${matched.first_name ?? ""} ${matched.last_name ?? ""} #${(matched as any).employer_identification ?? "—"}`.trim() : null,
+        inEmployees: !!matched,
+        inAssigned: matchedId ? assignedIds.has(matchedId) : false,
+        inUnassigned: matchedId ? unassigned.some(e => e.id === matchedId) : false,
+        conflict: null as string | null,
+        unavailable: null as string | null,
+      },
+    };
+  })() : null;
+
   const location = locations.find(l => l.id === shift.location_id);
   const client = clients.find(c => c.id === shift.client_id);
   const hoursLabel = calcHours(shift.start_time.slice(0, 5), shift.end_time.slice(0, 5));
@@ -381,26 +405,19 @@ export function ShiftDetailDialog({
   const pendingRequests = requests.filter(r => r.status === "pending").length;
 
   useEffect(() => {
-    if (!open || !showAddPanel) return;
+    if (!open || !showAddPanel || !debugMode) return;
     console.debug("[ShiftAssignDebug]", {
       selectedCompanyId,
       companyName: selectedCompany?.name ?? null,
       shiftCompanyId: (shift as any)?.company_id ?? null,
       employeesLength: employees.length,
-      johnyInEmployees,
-      muneraMatchesInEmployees: johnyByLastName.map((e) => ({ id: e.id, name: `${e.first_name} ${e.last_name}` })),
-      assignedIds: Array.from(assignedIds),
-      johnyInAssigned: assignedIds.has(johnyId),
+      assignedCount: assignedIds.size,
       unassignedLength: unassigned.length,
-      johnyInUnassigned,
-      searchMune: debugSearches.mune,
-      search145: debugSearches["#145"],
-      quickFilterDefault: "all",
-      johnyConflict: null,
-      johnyUnavailable: null,
-      visualFilterHiding: !johnyInUnassigned ? null : "none",
+      debugWorker,
+      probe: debugProbe?.flags,
+      probeSearches: debugProbe?.debugSearches,
     });
-  }, [open, showAddPanel, selectedCompanyId, selectedCompany?.name, shift, employees.length, johnyInEmployees, johnyByLastName, assignedIds, unassigned.length, johnyInUnassigned, debugSearches]);
+  }, [open, showAddPanel, debugMode, selectedCompanyId, selectedCompany?.name, shift, employees.length, assignedIds, unassigned.length, debugWorker, debugProbe]);
 
   return (
     <>
@@ -985,17 +1002,11 @@ export function ShiftDetailDialog({
                           employeesLoaded: employees.length,
                           unassignedCount: unassigned.length,
                           assignedIds: Array.from(assignedIds),
-                          johnyEmployeeId: johnyId,
-                          debugSearches,
-                          debugFlags: {
-                            johnyInEmployees: !!johnyInEmployees,
-                            johnyInAssigned: assignedIds.has(johnyId),
-                            johnyInUnassigned: !!johnyInUnassigned,
-                            johnyConflict: null,
-                            johnyUnavailable: null,
-                            visualFilterHiding: johnyInUnassigned ? null : null,
-                          },
                         }}
+                        debugMode={debugMode}
+                        debugWorker={debugWorker}
+                        debugSearches={debugProbe?.debugSearches}
+                        debugWorkerFlags={debugProbe?.flags}
                       />
                       {selected.length > 0 && (
                         <Button size="sm" onClick={handleAdd} className="w-full h-7 text-[10px] rounded-lg gap-1">

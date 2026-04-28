@@ -34,7 +34,8 @@ interface EmployeeComboboxProps {
   shiftGroup?: string | null;
   /** Show "+ Add new employee" option and callback when selected */
   onAddNewEmployee?: () => void;
-  /** Optional context for the diagnostic banner shown when employees=[] or filter empties out. */
+  /** Optional context for the diagnostic banner shown when employees=[] or filter empties out.
+   *  Always-on (admin-friendly empty state). The full debug panel is gated by `debugMode`. */
   debugContext?: {
     selectedCompanyId?: string | null;
     companyName?: string | null;
@@ -42,16 +43,22 @@ interface EmployeeComboboxProps {
     employeesLoaded?: number;
     unassignedCount?: number;
     assignedIds?: string[];
-    johnyEmployeeId?: string;
-    debugSearches?: Record<string, Array<{ id: string; label: string; matchedBy: MatchResult["matchedBy"]; score: number }>>;
-    debugFlags?: {
-      johnyInEmployees?: boolean;
-      johnyInAssigned?: boolean;
-      johnyInUnassigned?: boolean;
-      johnyConflict?: string | null;
-      johnyUnavailable?: string | null;
-      visualFilterHiding?: string | null;
-    };
+  };
+  /** When true (caller is in `?debug=1` mode AND authorized role), render the
+   *  collapsible "Debug assignment" panel with metrics + optional worker probe. */
+  debugMode?: boolean;
+  /** Optional worker probe (UUID or employer_identification). Scoped diagnostics. */
+  debugWorker?: string | null;
+  /** Pre-computed search probes when `debugMode` is on. */
+  debugSearches?: Record<string, Array<{ id: string; label: string; matchedBy: MatchResult["matchedBy"]; score: number }>>;
+  /** Pre-computed worker-probe results (only meaningful when `debugWorker` is set). */
+  debugWorkerFlags?: {
+    inEmployees?: boolean;
+    inAssigned?: boolean;
+    inUnassigned?: boolean;
+    conflict?: string | null;
+    unavailable?: string | null;
+    matchedLabel?: string | null;
   };
 }
 
@@ -86,6 +93,7 @@ export function EmployeeCombobox({
   maxHeight = "220px", showChips = true, availabilityConfigs = [], availabilityOverrides = [],
   availabilityBlockMode = "warning", showBulkActions = false, remainingSlots, requiresDriver = false,
   shiftGroup, onAddNewEmployee, debugContext,
+  debugMode = false, debugWorker = null, debugSearches, debugWorkerFlags,
 }: EmployeeComboboxProps) {
   const [search, setSearch] = useState("");
   const [quickFilter, setQuickFilter] = useState<QuickFilter>("all");
@@ -335,45 +343,49 @@ export function EmployeeCombobox({
         )}
       </div>
 
-      {debugContext && (
-        <div className="rounded-lg bg-muted/40 border border-border/40 p-2 text-[10px] font-mono text-muted-foreground space-y-0.5">
-          <div className="grid grid-cols-2 gap-x-3 gap-y-0.5">
-            <div className="flex justify-between gap-2"><span className="opacity-60">selectedCompanyId</span><span className="truncate">{debugContext.selectedCompanyId ?? "null"}</span></div>
-            <div className="flex justify-between gap-2"><span className="opacity-60">companyName</span><span className="truncate">{debugContext.companyName ?? "—"}</span></div>
-            <div className="flex justify-between gap-2"><span className="opacity-60">shift.company_id</span><span className="truncate">{debugContext.shiftCompanyId ?? "—"}</span></div>
-            <div className="flex justify-between gap-2"><span className="opacity-60">quickFilter</span><span>{quickFilter}</span></div>
-            <div className="flex justify-between gap-2"><span className="opacity-60">employeesLoaded</span><span>{debugContext.employeesLoaded ?? employees.length}</span></div>
-            <div className="flex justify-between gap-2"><span className="opacity-60">employees.length</span><span>{employees.length}</span></div>
-            <div className="flex justify-between gap-2"><span className="opacity-60">filteredCount</span><span>{filtered.length}</span></div>
-            <div className="flex justify-between gap-2"><span className="opacity-60">unassignedCount</span><span>{debugContext.unassignedCount ?? employees.length}</span></div>
-            <div className="flex justify-between gap-2"><span className="opacity-60">selectedCount</span><span>{selected.length}</span></div>
-            <div className="flex justify-between gap-2"><span className="opacity-60">assignedIds</span><span>{debugContext.assignedIds?.length ?? 0}</span></div>
-            <div className="flex justify-between gap-2"><span className="opacity-60">Johny in employees</span><span>{debugContext.debugFlags?.johnyInEmployees ? "yes" : "no"}</span></div>
-            <div className="flex justify-between gap-2"><span className="opacity-60">Johny in assigned</span><span>{debugContext.debugFlags?.johnyInAssigned ? "yes" : "no"}</span></div>
-            <div className="flex justify-between gap-2"><span className="opacity-60">Johny in unassigned</span><span>{debugContext.debugFlags?.johnyInUnassigned ? "yes" : "no"}</span></div>
-            <div className="flex justify-between gap-2"><span className="opacity-60">Johny conflict</span><span className="truncate">{debugContext.debugFlags?.johnyConflict ?? "no"}</span></div>
-            <div className="flex justify-between gap-2"><span className="opacity-60">Johny unavailable</span><span className="truncate">{debugContext.debugFlags?.johnyUnavailable ?? "no"}</span></div>
-          </div>
-          {debugContext.debugFlags?.visualFilterHiding && (
-            <p className="pt-1 text-[10px] text-warning leading-snug font-sans">
-              Filtro visual activo ocultando a Johny: {debugContext.debugFlags.visualFilterHiding}
-            </p>
-          )}
-          {debugContext.debugSearches && (
-            <div className="pt-1 space-y-0.5">
-              {Object.entries(debugContext.debugSearches).map(([query, hits]) => (
-                <div key={query} className="flex gap-2">
-                  <span className="opacity-60 shrink-0">search {query}</span>
-                  <span className="truncate">
-                    {hits.length > 0
-                      ? hits.map((hit) => `${hit.label} [${hit.matchedBy}:${hit.score}]`).join(" · ")
-                      : "0 hits"}
-                  </span>
-                </div>
-              ))}
+      {debugMode && debugContext && (
+        <details className="rounded-lg bg-muted/40 border border-border/40 text-[10px] font-mono text-muted-foreground">
+          <summary className="cursor-pointer px-2 py-1 select-none font-sans text-[11px] font-semibold text-foreground/70">
+            Debug assignment {debugWorker ? `· worker=${debugWorker}` : ""}
+          </summary>
+          <div className="p-2 space-y-1">
+            <div className="grid grid-cols-2 gap-x-3 gap-y-0.5">
+              <div className="flex justify-between gap-2"><span className="opacity-60">selectedCompanyId</span><span className="truncate">{debugContext.selectedCompanyId ?? "null"}</span></div>
+              <div className="flex justify-between gap-2"><span className="opacity-60">companyName</span><span className="truncate">{debugContext.companyName ?? "—"}</span></div>
+              <div className="flex justify-between gap-2"><span className="opacity-60">shift.company_id</span><span className="truncate">{debugContext.shiftCompanyId ?? "—"}</span></div>
+              <div className="flex justify-between gap-2"><span className="opacity-60">quickFilter</span><span>{quickFilter}</span></div>
+              <div className="flex justify-between gap-2"><span className="opacity-60">employeesLoaded</span><span>{debugContext.employeesLoaded ?? employees.length}</span></div>
+              <div className="flex justify-between gap-2"><span className="opacity-60">filteredCount</span><span>{filtered.length}</span></div>
+              <div className="flex justify-between gap-2"><span className="opacity-60">unassignedCount</span><span>{debugContext.unassignedCount ?? employees.length}</span></div>
+              <div className="flex justify-between gap-2"><span className="opacity-60">assignedCount</span><span>{debugContext.assignedIds?.length ?? 0}</span></div>
+              <div className="flex justify-between gap-2"><span className="opacity-60">selectedCount</span><span>{selected.length}</span></div>
             </div>
-          )}
-        </div>
+            {debugWorker && debugWorkerFlags && (
+              <div className="pt-1 mt-1 border-t border-border/40 grid grid-cols-2 gap-x-3 gap-y-0.5">
+                <div className="flex justify-between gap-2"><span className="opacity-60">match</span><span className="truncate">{debugWorkerFlags.matchedLabel ?? "—"}</span></div>
+                <div className="flex justify-between gap-2"><span className="opacity-60">in employees</span><span>{debugWorkerFlags.inEmployees ? "yes" : "no"}</span></div>
+                <div className="flex justify-between gap-2"><span className="opacity-60">in assigned</span><span>{debugWorkerFlags.inAssigned ? "yes" : "no"}</span></div>
+                <div className="flex justify-between gap-2"><span className="opacity-60">in unassigned</span><span>{debugWorkerFlags.inUnassigned ? "yes" : "no"}</span></div>
+                <div className="flex justify-between gap-2"><span className="opacity-60">conflict</span><span className="truncate">{debugWorkerFlags.conflict ?? "no"}</span></div>
+                <div className="flex justify-between gap-2"><span className="opacity-60">unavailable</span><span className="truncate">{debugWorkerFlags.unavailable ?? "no"}</span></div>
+              </div>
+            )}
+            {debugSearches && Object.keys(debugSearches).length > 0 && (
+              <div className="pt-1 mt-1 border-t border-border/40 space-y-0.5">
+                {Object.entries(debugSearches).map(([query, hits]) => (
+                  <div key={query} className="flex gap-2">
+                    <span className="opacity-60 shrink-0">search {query}</span>
+                    <span className="truncate">
+                      {hits.length > 0
+                        ? hits.map((hit) => `${hit.label} [${hit.matchedBy}:${hit.score}]`).join(" · ")
+                        : "0 hits"}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </details>
       )}
 
       {/* Employee list */}
