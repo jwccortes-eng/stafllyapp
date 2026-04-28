@@ -51,6 +51,7 @@ import { ShiftFormFields, useShiftFormSignals, type ShiftFormState } from "@/com
 import { ShiftFormShell } from "@/components/shifts/ShiftFormShell";
 import { ShiftSummaryPanel } from "@/components/shifts/form/ShiftSummaryPanel";
 import type { Shift, Assignment, SelectOption, Employee, ViewMode } from "@/components/shifts/types";
+import { formatShiftCode } from "@/components/shifts/types";
 
 // Fields that affect ALL assigned employees (broadcast notification)
 const BROADCAST_FIELDS = ["date", "start_time", "end_time", "location_id", "client_id"];
@@ -1007,10 +1008,20 @@ export default function Shifts() {
   };
 
   // --- Bulk publish all draft shifts in current view ---
+  // Uses the publish_shift_draft RPC per shift so the publication lifecycle
+  // (publication_status, published_at, published_by, draft reservations) stays
+  // consistent with single-publish. Failures are reported per-shift instead of
+  // aborting the whole batch.
   const [bulkPublishing, setBulkPublishing] = useState(false);
   const handlePublishAll = async () => {
-    let draftShifts = filteredShifts.filter(s => s.status !== "published" && s.status !== "locked");
+    // Only true drafts — never re-publish already-published shifts (avoids
+    // duplicate notifications) and never touch locked ones.
+    const draftShifts = filteredShifts.filter(s => {
+      const pub = (s as any).publication_status ?? "published";
+      return pub === "draft" && s.status !== "locked";
+    });
     if (draftShifts.length === 0) { toast.info("No hay turnos borrador para publicar"); return; }
+
     // require_shift_admin gate for bulk publish
     if (shiftsConfig.require_shift_admin) {
       const blocked = draftShifts.filter(s => !(s as any).shift_admin_id);
@@ -1019,16 +1030,45 @@ export default function Shifts() {
         return;
       }
     }
+
     setBulkPublishing(true);
-    const ids = draftShifts.map(s => s.id);
-    const { error } = await supabase.from("scheduled_shifts")
-      .update({ status: "published" } as any)
-      .in("id", ids);
-    if (error) { toast.error(error.message); setBulkPublishing(false); return; }
+    const succeeded: Shift[] = [];
+    const failed: { shift: Shift; reason: string }[] = [];
 
+    // Sequential to keep error attribution clean and avoid hammering the RPC.
     for (const shift of draftShifts) {
-      await logShiftActivity("publicar_turno", shift.id, { status: shift.status }, { status: "published" });
+      const { error: rpcError } = await supabase.rpc(
+        "publish_shift_draft" as any,
+        { _shift_id: shift.id }
+      );
+      if (rpcError) {
+        // Surface validation reasons (PUBLISH_VALIDATION_FAILED: field1,field2)
+        // verbatim so the operator knows what to fix.
+        failed.push({ shift, reason: rpcError.message });
+        continue;
+      }
 
+      // Keep the legacy `status` column in sync for downstream UI/filters.
+      // The RPC owns publication_status/published_at/published_by/reservations.
+      const { error: statusError } = await supabase
+        .from("scheduled_shifts")
+        .update({ status: "published" } as any)
+        .eq("id", shift.id);
+      if (statusError) {
+        failed.push({ shift, reason: statusError.message });
+        continue;
+      }
+
+      await logShiftActivity(
+        "publicar_turno",
+        shift.id,
+        { status: shift.status, publication_status: (shift as any).publication_status ?? null },
+        { status: "published", publication_status: "published" }
+      );
+
+      // Notifications — the DB trigger blocks worker notifications while a
+      // shift is in draft, so this is the single source of "shift published"
+      // notifications (no duplicates).
       const shiftAssigns = assignments.filter(a => a.shift_id === shift.id);
       const employeeIds = shiftAssigns.map(a => a.employee_id);
 
@@ -1065,10 +1105,26 @@ export default function Shifts() {
           );
         }
       }
+
+      succeeded.push(shift);
     }
 
-    toast.success(`${ids.length} turno(s) publicados`);
     setBulkPublishing(false);
+
+    if (succeeded.length > 0) {
+      toast.success(`${succeeded.length} turno(s) publicados`);
+    }
+    if (failed.length > 0) {
+      // Compact, actionable summary. Each entry: "#code — reason".
+      const details = failed
+        .slice(0, 5)
+        .map(f => `#${formatShiftCode(f.shift.shift_code) ?? f.shift.id.slice(0, 6)}: ${f.reason}`)
+        .join("\n");
+      const more = failed.length > 5 ? `\n…y ${failed.length - 5} más` : "";
+      toast.error(`${failed.length} turno(s) no se publicaron`, { description: details + more });
+      console.warn("[bulk-publish] failures", failed);
+    }
+
     loadData();
   };
 
