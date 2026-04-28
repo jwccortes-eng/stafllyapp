@@ -1,153 +1,153 @@
-## Rediseño del formulario de Shift (Create / Edit)
+# Plan: Clients OS Premium + Stafly Platform Hub Lite
 
-Objetivo: convertir el formulario en una experiencia full-screen tipo Stripe/Linear, con jerarquía clara (Job Site protagonista, Meeting Points separados, Transporte como sub-bloque), aprovechando todo el ancho en desktop, manteniendo el wizard vertical en mobile, y eliminando el lag al escribir.
-
-Sin cambios de schema, sin tocar payroll/attendance/compensation/reconciliación, sin romper contratos: `formStateToShiftPayload` / `shiftToFormState` no cambian sus firmas ni los nombres de columna.
+> Auditoría + plan faseado. **No se implementa código todavía**, esperar aprobación.
 
 ---
 
-### 1. Causa raíz del lag (la pieza más importante)
+## 1. Auditoría
 
-Hoy `Shifts.tsx` mantiene **~25 piezas de `useState` separadas** (`title`, `notes`, `meetingPoint`, etc.) en la página que también renderiza todo el calendario, miles de shifts y assignments. Cada keystroke en el diálogo de creación llama un `setX` del padre → re-renderiza toda la página de turnos → re-pasa props nuevas a `ShiftFormFields` → recalcula efectos.
+### 1.1 Módulo actual `/app/clients`
 
-**Fix estructural**:
+- **Página**: `src/pages/admin/Clients.tsx` (~680 LOC, monolítica).
+- **Tabla**: `public.clients` (operativos del tenant). También usa `public.client_locations` para sub-locaciones.
+- **Hooks**: `useAuth` (rol/permisos), `useCompany` (tenant scoping). Sin hook propio — todas las queries son inline (`supabase.from("clients")...`).
+- **Routing**: NO hay ruta de detalle. Todo vive en el listado; "editar" abre un `Dialog` modal sobre la misma página. **No existe `/app/clients/:clientId`**.
+- **Multi-tenant**: ✅ filtra por `company_id = selectedCompanyId` en todos los queries (`select`, `insert`, `update`, soft-delete). Gating por `<ModuleGate moduleKey="clients">` en `App.tsx:252`. Permisos por `hasModuleAccess("clients", "edit"|"delete")`.
+- **UI actual**: header + búsqueda + toggle grid/list + dialog crear/editar + soft-delete (`deleted_at`). Sin KPIs, sin filtros avanzados, sin tabs por cliente.
 
-- Consolidar todos los campos del create en un solo `useState<ShiftFormState>` (igual a `EMPTY_SHIFT_FORM_STATE`) dentro de un nuevo wrapper `<CreateShiftDialog>` extraído de `Shifts.tsx`. La página solo conserva `createOpen` + `prefill` y pasa callbacks estables (`useCallback`).
-- El nuevo `<CreateShiftDialog>` y `<ShiftEditDialog>` envuelven al `<ShiftFormFields>` y son los únicos que se re-renderizan al teclear.
-- Aplicar `React.memo` a las nuevas subsecciones (ver punto 3) con comparadores selectivos para que escribir en "Notas internas" no re-renderize Transporte ni el Resumen, y viceversa.
-- Mantener `useMemo` ya existente en `shiftAssignedIds`, `driversInTeam`, `conflictNames`, `adminCandidates`.
+### 1.2 Módulo `/app/client-experience` (Fase 1 ya entregada)
 
-Resultado esperado: tipear en título / notas / meeting point / job site notes se siente inmediato porque solo el subcomponente correspondiente re-renderiza.
+- **Página**: `src/pages/admin/ClientExperience.tsx` con 3 tabs: Inbox / Requests / Contacts.
+- **Componentes**: `src/components/client-experience/{Inbox,Requests,Contacts}.tsx`.
+- **Hook**: `src/hooks/useClientExperience.tsx` (CRUD scoped por `selectedCompanyId`).
+- **Tablas**: `client_contacts`, `client_conversation_threads`, `client_messages`, y extensión de `service_requests` (con `requested_by_contact_id`, `title`, `priority`, etc.).
+- **Trigger**: `sync_thread_on_message` mantiene `last_message_at` y unread counters.
+- **Reutilización en Clients OS**: el detalle de cliente puede embeber estos componentes filtrados por `clientId` (Contacts, Requests, Conversations tabs) sin duplicar lógica ni tablas.
 
----
+### 1.3 Vistas globales / developer
 
-### 2. Nuevo layout full-screen
-
-Crear un nuevo componente `ShiftFormShell` (`src/components/shifts/ShiftFormShell.tsx`) que:
-
-- Usa `Dialog` con `max-w-[1200px] w-[96vw] h-[92vh] p-0` en desktop.
-- En `< lg` se comporta como antes (un panel scrolleable).
-- Header sticky superior con: título ("Nuevo turno" / "Editar turno"), chips de cliente + fecha/hora cuando ya están definidos, botón Cancelar + botón Guardar / Crear.
-- Body con grid `lg:grid-cols-[1fr_360px]`:
-
-```text
-┌──────────────────────────── header sticky ────────────────────────────┐
-│ Nuevo turno · [Cliente] · [Vie 25 abr · 08:00–17:00]   Cancelar  Guardar │
-├──────────────────────────────────┬────────────────────────────────────┤
-│ FORM (scroll)                    │ RESUMEN (sticky)                    │
-│  · Información principal         │  · Título / Cliente / Fecha         │
-│  · Job Site (card protagonista)  │  · Plazas / Cobertura               │
-│  · Logística (Transporte +       │  · Job Site                         │
-│      Meeting points anidados)    │  · Transporte ON/OFF                │
-│  · Detalles avanzados ▾          │  · Drivers                          │
-│                                  │  · Meeting points                   │
-│                                  │  · Estado de capacidad              │
-└──────────────────────────────────┴────────────────────────────────────┘
-```
-
-El `ShiftFormShell` recibe el form-state y los handlers, decide layout, y monta dentro un nuevo `ShiftFormBody` que organiza las secciones nuevas.
+- **`/app/companies`** (`Companies.tsx`, ~727 LOC): admin de tenants — crear, editar, sandbox sync, usuarios, módulos. Pesada.
+- **`/app/global`** → `OwnerDashboard.tsx` (~675 LOC): KPIs globales cross-tenant (employees, periods, imports, movements, top earners). Más analítica que operativa.
+- **Selector de company**: `useCompany` (`src/hooks/useCompany.tsx`).
+  - `selectedCompanyId` persiste en `localStorage` (regla en memoria: nunca clobber en re-render).
+  - `isGlobalMode = selectedCompanyId === null` y solo aplica a roles `developer | owner` (`GLOBAL_MODE_ROLES`).
+  - Owners/devs aterrizan en Global Mode por defecto.
+- **Roles disponibles**: `developer`, `owner`, `admin`, `manager`, `worker` (entre otros). Solo `developer | owner` califican para vistas tipo Platform.
+- **Gap**: no existe una vista *operativa ligera* tipo "mis tenants Stafly activos" — `Companies` y `OwnerDashboard` son demasiado pesadas y mezclan administración con métricas.
 
 ---
 
-### 3. Reorganización del contenido en secciones memoizadas
+## 2. Plan faseado
 
-Reemplazar las 9 `SectionCard` actuales por bloques temáticos. Cada uno es un componente `React.memo` separado en `src/components/shifts/form/` y solo recibe lo que necesita:
+### FASE A — Clients OS Premium (`/app/clients`)
 
-- `ShiftBasicInfoSection` → Título, Cliente, Fecha, Entrada/Salida, Hora de convocatoria, Plazas, Tipo de pago + Override (toggle).
-- `JobSiteSection` (card protagonista, borde acentuado, fondo levemente destacado):
-  - Subtítulo: "Dirección principal donde se realizará el trabajo."
-  - Selector de Location guardada + autocomplete premium (`LocationPicker` reutilizado del `ShiftLocationsSection` actual, mostrando solo el bloque de **job site**).
-  - Nombre del lugar, dirección formateada, botón "Abrir en Google Maps" cuando hay coords/dirección válida.
-  - Notas visibles para el trabajador (mapeadas a `special_instructions`, mantenemos el nombre de columna).
-  - **Sin** campos de meeting point en esta card.
-- `TransportationSection` (siempre visible como card secundaria, contenido condicional):
-  - Toggle "¿Este turno requiere transporte?".
-  - Si OFF: muestra solo un estado informativo discreto: "Activa transporte si necesitas coordinar puntos de encuentro o drivers." Y los Meeting Points quedan colapsados en su propia card (ver siguiente).
-  - Si ON: capacidad por vehículo (default 5), vehículos necesarios, hint de drivers en equipo, conductor asignado, notas de transporte.
-  - Warning de capacidad solo cuando `capacityNum * ridesNeeded < slotsNum` (regla ya corregida — se mantiene). Mensaje: "Capacidad insuficiente: necesitas N vehículos para cubrir X personas con capacidad de Y por vehículo."
-  - Si capacidad cubierta: chip discreto verde "Capacidad cubierta" (opcional, sin contaminar).
-- `MeetingPointsSection`:
-  - Subtítulo: "Lugares donde los trabajadores se reúnen antes de ir al Job Site."
-  - Si Transporte OFF: card colapsada con la pista informativa.
-  - Si Transporte ON: meeting point principal (legacy `meeting_point` text + autocomplete del `ShiftLocationsSection` para `meeting_point_location_id`), botón "Abrir en Google Maps" cuando hay dirección. (Por ahora 1 meeting point, los múltiples puntos quedan fuera de scope para no tocar schema.)
-- `TeamSection`:
-  - Asignar empleados (combobox actual con `requiresDriver`, hint de drivers, etc.).
-  - Admin del turno (sigue siendo obligatorio cuando hay equipo).
-- `AdvancedDetailsSection` (`<Collapsible>` cerrado por defecto):
-  - Notas internas (solo admins).
-  - Método de fichaje, Modo de asistencia, QR (solo edit).
-  - Permitir reclamo abierto.
-- `ShiftSummaryPanel` (panel derecho sticky en desktop, oculto en mobile):
-  - Renderiza KPIs ya calculados (Plazas, Cobertura, Vehículos), validaciones bloqueantes y advertencias, "Capacidad cubierta" verde, "Faltan drivers" rojo, etc. — exactamente las mismas reglas del bloque "Resumen final" actual, pero como panel lateral en vez de sección apilada.
+Objetivo: convertir el listado plano en un centro premium operativo del tenant, con perfil por cliente.
 
-Cada sección recibe solo el subset de campos que necesita y un `onChange(patch)` estable. Con `React.memo` + comparación por referencia esto evita recomputar todo en cada tecla.
+**A.1 — Listado premium** (refactor `Clients.tsx`)
+- Header ejecutivo con nombre del tenant, contador total y CTA "New client".
+- KPIs (`KpiCard` ya existe): Active clients, With open requests, Unread conversations, New this month.
+- Búsqueda + filtros (status, has open requests, sort A-Z / recent / activity).
+- Toggle Cards / Table (ya existe — pulir).
+- Quick actions por card: Open profile, Call, Email, WhatsApp, New request.
+- Click en card → navega a `/app/clients/:clientId`.
 
----
+**A.2 — Perfil de cliente** (nuevo `src/pages/admin/ClientProfile.tsx` + ruta `clients/:clientId`)
+Tabs:
+1. **Overview** — KPIs por cliente, contactos primarios, último contacto, próximos shifts.
+2. **Contacts** — embebe `ClientExperienceContacts` filtrado por `clientId`.
+3. **Requests** — embebe `ClientExperienceRequests` filtrado por `clientId`.
+4. **Conversations** — embebe `ClientExperienceInbox` filtrado por `clientId`.
+5. **Locations** — gestión de `client_locations`.
+6. **Services** — placeholder Fase A.2 (lectura de `service_categories` asignados, sin escritura compleja).
+7. **Billing** — link de solo lectura a `billing_clients` / invoices del cliente (sin tocar lógica).
+8. **Notes** — campo `clients.notes` editable.
+9. **Activity** — feed de eventos recientes (requests creados, mensajes, locations agregadas).
 
-### 4. Estado del Resumen / "Todo en orden"
+**A.3 — Refactor a hook**
+- Extraer queries inline a `src/hooks/useClients.tsx` (lista + detalle), siempre scoped por `selectedCompanyId`.
+- Mantener tipos `Client`, `ClientLocation` exportados.
 
-Mantener exactamente la regla actual:
+**Sin cambios de schema en Fase A.** Todo se construye sobre `clients`, `client_locations`, `client_contacts`, `client_conversation_threads`, `client_messages`, `service_requests` ya existentes.
 
-- No bloquea el guardado técnicamente (botón Guardar sigue habilitado salvo por las validaciones duras existentes: falta fecha, falta admin con equipo, admin no asignado).
-- No muestra "Todo en orden — listo para guardar" si hay shortage de drivers o capacidad insuficiente.
-- `driver_employee_id` solo cuenta como driver si está dentro de `selectedEmployees` (ya implementado, se conserva).
+### FASE B — Stafly Platform Hub Lite (`/app/platform`)
 
----
+Objetivo: vista global ligera **solo para developer/owner** con los tenants activos de Stafly.
 
-### 5. Defaults / compatibilidad
+- Nueva ruta `/app/platform` → nueva página `src/pages/admin/PlatformHub.tsx`.
+- **Gating duro**: si `role !== "developer" && role !== "owner"` → `<Navigate to="/app" replace />`.
+- Por ahora muestra solo **Quality Staff by Keury** y **JKitchen Staff** (filtrado por nombre/slug en query a `companies`, no hardcoded — usar lista configurable en constante `STAFLY_ACTIVE_TENANTS`).
+- Cards premium por tenant con métricas básicas (queries paralelas por tenant):
+  - Workers activos (`employees` count).
+  - Pending activations (`employee_invitations` status `pending|opened`).
+  - Applications pending (`applications` status `new|reviewing`).
+  - Clients (`clients` count).
+  - Open requests (`service_requests` status abierta).
+  - Upcoming shifts (próximos 7 días).
+- Quick actions por tenant:
+  - **Open tenant** → `setSelectedCompanyId(tenant.id)` + navega a `/app`.
+  - Workers → `/app/employees`, Applications → `/app/applications`, Clients OS → `/app/clients`, Client Experience → `/app/client-experience`, Shifts → `/app/shifts`.
+  - (Cada quick action setea `selectedCompanyId` antes de navegar.)
+- Entrada en sidebar **solo visible** para `developer | owner` (sección nueva "Stafly Platform").
 
-- `carCapacity` default = `"5"` en `EMPTY_SHIFT_FORM_STATE` (ya está) — se confirma en `Shifts.tsx` y `ShiftDetailDialog.tsx`.
-- Crear, editar y duplicar siguen funcionando (la duplicación llama al mismo `resetForm` + `setCreateOpen`).
-- Shifts existentes con datos legacy se siguen mapeando vía `shiftToFormState` sin cambios.
-- `formStateToShiftPayload` no cambia.
-
----
-
-### 6. QA antes de cerrar
-
-Casos a verificar en preview:
-
-1. Plazas=3 / capacidad=5 / transporte ON → sin warning + chip verde "Capacidad cubierta".
-2. Plazas=8 / capacidad=5 / transporte ON con 1 driver → warning rojo "necesitas 2 vehículos".
-3. Turno nuevo desde cero → capacidad por vehículo = 5.
-4. Tipear rápido en título, notas, meeting point, job site notes → sin lag.
-5. Job Site se entiende como dirección del trabajo; meeting points están en card aparte.
-6. Desktop ≥ 1280px usa todo el ancho con panel resumen a la derecha.
-7. Transporte OFF → meeting points no contaminan el formulario.
-8. Transporte ON → capacidad, drivers y meeting points aparecen ordenados.
-9. Editar un shift existente con `meeting_point` legacy → se ve correctamente en MeetingPointsSection sin duplicarse en JobSite.
-10. Duplicar turno desde calendario → abre el create dialog con los mismos defaults.
+**Sin tocar `/app/companies` ni `/app/global`** — Platform Hub Lite es un complemento operativo, no un reemplazo.
 
 ---
 
-### Archivos que se crean / modifican
+## 3. Archivos a tocar
 
-Nuevos:
+### Fase A
+- ✏️ `src/pages/admin/Clients.tsx` — refactor a listado premium + KPIs + filtros + navegación a perfil.
+- 🆕 `src/pages/admin/ClientProfile.tsx` — perfil tabs.
+- 🆕 `src/hooks/useClients.tsx` — queries scoped multi-tenant.
+- 🆕 `src/components/clients/ClientKpis.tsx`, `ClientFiltersBar.tsx`, `ClientCard.tsx` (extraer del monolito).
+- ✏️ `src/components/client-experience/ClientExperienceContacts.tsx` — aceptar prop opcional `clientId` para filtrar.
+- ✏️ `src/components/client-experience/ClientExperienceRequests.tsx` — idem.
+- ✏️ `src/components/client-experience/ClientExperienceInbox.tsx` — idem.
+- ✏️ `src/App.tsx` — agregar ruta `clients/:clientId`.
 
-- `src/components/shifts/ShiftFormShell.tsx` — modal full-screen + header sticky + grid 2 columnas + panel resumen.
-- `src/components/shifts/form/ShiftBasicInfoSection.tsx`
-- `src/components/shifts/form/JobSiteSection.tsx`
-- `src/components/shifts/form/TransportationSection.tsx`
-- `src/components/shifts/form/MeetingPointsSection.tsx`
-- `src/components/shifts/form/TeamSection.tsx`
-- `src/components/shifts/form/AdvancedDetailsSection.tsx`
-- `src/components/shifts/form/ShiftSummaryPanel.tsx`
-- `src/components/shifts/CreateShiftDialog.tsx` — extrae el create dialog de `Shifts.tsx`, dueña del `useState<ShiftFormState>` consolidado.
+### Fase B
+- 🆕 `src/pages/admin/PlatformHub.tsx`.
+- 🆕 `src/hooks/usePlatformTenants.tsx` — métricas por tenant (developer/owner only).
+- ✏️ `src/App.tsx` — registrar ruta `/app/platform` con guard de rol.
+- ✏️ `src/components/AdminSidebar.tsx` y `src/components/navigation/nav-items.ts` — entry "Platform" visible solo para `developer | owner`.
 
-Modificados:
-
-- `src/components/shifts/ShiftFormFields.tsx` → se convierte en orquestador delgado que monta las nuevas secciones (manteniendo export de `EMPTY_SHIFT_FORM_STATE`, `shiftToFormState`, `formStateToShiftPayload`, `ShiftFormState`, `LocationOption` y `ShiftFormFieldsProps` para no romper imports).
-- `src/components/shifts/ShiftEditDialog.tsx` → usa el nuevo `ShiftFormShell` para el layout full-screen; lógica interna intacta.
-- `src/pages/admin/Shifts.tsx` → reemplaza el bloque inline `<Dialog>...<ShiftFormFields .../>` por `<CreateShiftDialog>` y elimina los ~25 `useState` individuales del create (los reemplaza por un solo `prefill` para el quick-create desde el calendario).
-
-No se crea ni modifica ningún archivo de payroll, attendance, compensation ni reconciliación. No se ejecutan migraciones de base de datos.
+**No se tocan:** payroll, attendance, clock-in/out, shifts core, billing/invoices core, RLS, portal cliente público, login cliente.
 
 ---
 
-### Notas técnicas (para el equipo)
+## 4. Riesgos detectados
 
-- Riesgo principal: extraer el state del create dialog de `Shifts.tsx` cambia cómo se hidrata el `prefill` desde el calendario (`handleQuickCreate`, `handleAddShiftFromCalendar`, `handleOpenFullWithPrefill`). Se conserva la API exponiendo `<CreateShiftDialog open prefill onOpenChange onCreated />` y mapeando el `prefill` → `ShiftFormState` parcial al abrir.
-- El header sticky reutiliza tokens de `border`, `bg-card`, `bg-background/95 backdrop-blur` para mantener consistencia con el resto del SaaS.
-- El panel resumen es `position: sticky; top: 0` dentro de la columna derecha con `overflow-y: auto` propio.
-- El autocomplete premium del Job Site reutiliza el `LocationPicker` ya integrado en `ShiftLocationsSection` — no se crea otro componente de mapas.
-- "Abrir en Google Maps" usa `https://www.google.com/maps/search/?api=1&query=` con coords si existen, o con la dirección formateada como fallback.
+1. **Reutilización de componentes Client Experience**: hoy esperan filtrar por `selectedCompanyId` global. Hay que hacerlos polimórficos (`clientId` opcional) sin romper la página `/app/client-experience` actual. **Mitigación**: prop opcional con default a comportamiento actual.
+2. **Métricas en Platform Hub**: ejecutar 6 queries × N tenants puede pesar. **Mitigación**: una sola RPC `platform_tenant_stats` o queries en paralelo con `Promise.all` cacheadas con React Query (staleTime 60s). Empezar con queries directas, migrar a RPC si hace falta.
+3. **Switch de tenant desde Platform Hub**: setear `selectedCompanyId` y navegar puede chocar con la regla "trust localStorage" en `useCompany`. **Mitigación**: usar `setSelectedCompanyId(id)` (que ya persiste en localStorage) antes de `navigate()`, y NO durante render.
+4. **Gating de rol Platform**: si un admin entra por URL directa, debe redirigir. **Mitigación**: guard en el componente (no solo en sidebar).
+5. **Sin ruta de detalle hoy**: cualquier link externo o legacy a `/app/clients/:id` no existe — es feature nueva, no regresión.
+6. **TypeScript**: extraer hook `useClients` requiere mover tipos sin romper imports actuales en `Clients.tsx`. **Mitigación**: re-exportar tipos desde el hook.
+
+---
+
+## 5. Recomendación de orden
+
+**Implementar primero Fase A.1 + A.2 (Clients OS Premium con perfil)**, porque:
+- Resuelve la falta crítica de perfil de cliente (hoy todo es modal).
+- Cierra el ciclo con Client Experience (Fase 1 ya entregada) sin duplicar tablas.
+- Es 100% dentro del tenant actual → cero riesgo cross-tenant.
+- Platform Hub Lite (Fase B) se puede entregar en un segundo PR pequeño porque su superficie es menor y solo para 2 roles.
+
+**Sub-orden sugerido dentro de Fase A:**
+1. Hook `useClients` + tipos.
+2. Hacer polimórficos los 3 componentes de Client Experience (prop `clientId?`).
+3. Página `ClientProfile` con tabs Overview / Contacts / Requests / Conversations / Locations / Notes (las "ligeras" primero).
+4. Ruta `/app/clients/:clientId` + navegación desde el listado.
+5. Refactor del listado: KPIs, filtros, quick actions, sort.
+6. Tabs Services / Billing / Activity (solo lectura, livianos).
+
+Después: **Fase B** en una segunda iteración.
+
+---
+
+## 6. Pendiente de aprobación
+
+- ¿Aprobar este plan tal cual?
+- ¿Empezar por A.1 + A.2 como se recomienda, o prefieres que arranque por Platform Hub Lite (B) primero?
+- ¿Qué métrica falta o sobra en las cards de tenant del Platform Hub?
