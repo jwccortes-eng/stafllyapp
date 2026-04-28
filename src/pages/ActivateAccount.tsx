@@ -127,6 +127,7 @@ export default function ActivateAccount() {
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [redirectCountdown, setRedirectCountdown] = useState<number | null>(null);
   const [profileForm, setProfileForm] = useState<ProfileForm>({
     first_name: "", last_name: "", email: "", date_of_birth: "",
     address_line: "", address_city: "", address_state: "", address_zip: "",
