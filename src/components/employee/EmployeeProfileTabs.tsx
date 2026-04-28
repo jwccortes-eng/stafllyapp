@@ -509,7 +509,9 @@ function DocumentsTab({ employee, companyId }: { employee: EmployeeRecord; compa
                     <Badge className={cn("text-[9px] shrink-0", badgeCls)}>{badgeLabel}</Badge>
                     <div className="flex items-center gap-0.5 shrink-0">
                       <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => openEmployeeDocument(doc.file_url)}><Download className="h-2.5 w-2.5" /></Button>
-                      <Button size="icon" variant="ghost" className="h-6 w-6 text-destructive" onClick={() => handleDelete(doc)}><Trash2 className="h-2.5 w-2.5" /></Button>
+                      {!doc._readonly && (
+                        <Button size="icon" variant="ghost" className="h-6 w-6 text-destructive" onClick={() => handleDelete(doc)}><Trash2 className="h-2.5 w-2.5" /></Button>
+                      )}
                     </div>
                   </div>
                   {rs === "rejected" && doc.rejection_reason && (
@@ -517,18 +519,20 @@ function DocumentsTab({ employee, companyId }: { employee: EmployeeRecord; compa
                       <span className="font-bold">Motivo:</span> {doc.rejection_reason}
                     </p>
                   )}
-                  <div className="flex items-center gap-1.5 pl-5">
-                    {rs !== "approved" && (
-                      <Button size="sm" variant="outline" className="h-6 text-[10px] gap-1 border-earning/30 text-earning hover:bg-earning/10" onClick={() => handleApprove(doc)}>
-                        Aprobar
-                      </Button>
-                    )}
-                    {rs !== "rejected" && (
-                      <Button size="sm" variant="outline" className="h-6 text-[10px] gap-1 border-deduction/30 text-deduction hover:bg-deduction/10" onClick={() => handleReject(doc)}>
-                        Rechazar
-                      </Button>
-                    )}
-                  </div>
+                  {!doc._readonly && (
+                    <div className="flex items-center gap-1.5 pl-5">
+                      {rs !== "approved" && (
+                        <Button size="sm" variant="outline" className="h-6 text-[10px] gap-1 border-earning/30 text-earning hover:bg-earning/10" onClick={() => handleApprove(doc)}>
+                          Aprobar
+                        </Button>
+                      )}
+                      {rs !== "rejected" && (
+                        <Button size="sm" variant="outline" className="h-6 text-[10px] gap-1 border-deduction/30 text-deduction hover:bg-deduction/10" onClick={() => handleReject(doc)}>
+                          Rechazar
+                        </Button>
+                      )}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             );
