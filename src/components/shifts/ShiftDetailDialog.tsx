@@ -436,20 +436,8 @@ export function ShiftDetailDialog({
   const statusLabel = shift.status === "published" ? "Publicado" : shift.status === "draft" ? "Borrador" : shift.status === "locked" ? "Bloqueado" : shift.status;
   const pendingRequests = requests.filter(r => r.status === "pending").length;
 
-  useEffect(() => {
-    if (!open || !showAddPanel || !debugMode) return;
-    console.debug("[ShiftAssignDebug]", {
-      selectedCompanyId,
-      companyName: selectedCompany?.name ?? null,
-      shiftCompanyId: (shift as any)?.company_id ?? null,
-      employeesLength: employees.length,
-      assignedCount: assignedIds.size,
-      unassignedLength: unassigned.length,
-      debugWorker,
-      probe: debugProbe?.flags,
-      probeSearches: debugProbe?.debugSearches,
-    });
-  }, [open, showAddPanel, debugMode, selectedCompanyId, selectedCompany?.name, shift, employees.length, assignedIds, unassigned.length, debugWorker, debugProbe]);
+  // Moved above the `if (!shift) return null` early return below — see top of component.
+
 
   return (
     <>
