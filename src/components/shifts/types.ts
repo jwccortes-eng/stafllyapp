@@ -18,10 +18,12 @@ export interface Shift {
   shift_code?: string | null;
 }
 
-/** Treat missing publication_status as 'published' for backwards compatibility. */
-export function isDraftShift(s: Pick<Shift, "publication_status">): boolean {
-  return (s.publication_status ?? "published") === "draft";
-}
+/**
+ * Re-exported from the canonical guards module so call-sites that already
+ * import { isDraftShift } from "@/components/shifts/types" keep working.
+ * The single source of truth lives in `src/lib/shifts/shift-guards.ts`.
+ */
+export { isDraftShift } from "@/lib/shifts/shift-guards";
 
 export function formatShiftCode(code: string | null | undefined): string {
   if (!code) return "—";
