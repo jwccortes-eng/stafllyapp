@@ -69,6 +69,9 @@ export function phoneticKey(input: string): string {
   s = s.replace(/ph/g, "f");
   if (s.length > 3) s = s.replace(/y$/, "");
   s = s.replace(/(.)\1+/g, "$1"); // collapse repeated chars
+  // Drop ALL remaining 'h' — handles "Johny" vs "jhionny" vs "jhonny" vs
+  // "johnny" all collapsing to the same key. 'ph' was already handled above.
+  s = s.replace(/h/g, "");
   if (s.length <= 1) return s;
   const head = s[0];
   const tail = s.slice(1).replace(/[aeiou]/g, "");
