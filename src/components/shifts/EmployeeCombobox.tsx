@@ -34,7 +34,8 @@ interface EmployeeComboboxProps {
   shiftGroup?: string | null;
   /** Show "+ Add new employee" option and callback when selected */
   onAddNewEmployee?: () => void;
-  /** Optional context for the diagnostic banner shown when employees=[] or filter empties out. */
+  /** Optional context for the diagnostic banner shown when employees=[] or filter empties out.
+   *  Always-on (admin-friendly empty state). The full debug panel is gated by `debugMode`. */
   debugContext?: {
     selectedCompanyId?: string | null;
     companyName?: string | null;
@@ -42,16 +43,22 @@ interface EmployeeComboboxProps {
     employeesLoaded?: number;
     unassignedCount?: number;
     assignedIds?: string[];
-    johnyEmployeeId?: string;
-    debugSearches?: Record<string, Array<{ id: string; label: string; matchedBy: MatchResult["matchedBy"]; score: number }>>;
-    debugFlags?: {
-      johnyInEmployees?: boolean;
-      johnyInAssigned?: boolean;
-      johnyInUnassigned?: boolean;
-      johnyConflict?: string | null;
-      johnyUnavailable?: string | null;
-      visualFilterHiding?: string | null;
-    };
+  };
+  /** When true (caller is in `?debug=1` mode AND authorized role), render the
+   *  collapsible "Debug assignment" panel with metrics + optional worker probe. */
+  debugMode?: boolean;
+  /** Optional worker probe (UUID or employer_identification). Scoped diagnostics. */
+  debugWorker?: string | null;
+  /** Pre-computed search probes when `debugMode` is on. */
+  debugSearches?: Record<string, Array<{ id: string; label: string; matchedBy: MatchResult["matchedBy"]; score: number }>>;
+  /** Pre-computed worker-probe results (only meaningful when `debugWorker` is set). */
+  debugWorkerFlags?: {
+    inEmployees?: boolean;
+    inAssigned?: boolean;
+    inUnassigned?: boolean;
+    conflict?: string | null;
+    unavailable?: string | null;
+    matchedLabel?: string | null;
   };
 }
 
