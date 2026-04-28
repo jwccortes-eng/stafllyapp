@@ -47,6 +47,7 @@ import { WorkerProfileTab } from "@/components/employee/WorkerProfileTab";
 import { useWorkerProfile } from "@/hooks/useWorkerProfile";
 import EmployeeAdvancesTab from "@/components/advances/EmployeeAdvancesTab";
 import { EmployeeAddressSection } from "@/components/employee/EmployeeAddressSection";
+import { PortalOnboardingPanel } from "@/components/employee/PortalOnboardingPanel";
 import { useToast } from "@/hooks/use-toast";
 
 const EmployeeCompensationTab = lazy(() => import("@/components/compensation/EmployeeCompensationTab"));
@@ -197,17 +198,27 @@ function VehicleDocumentsSection({ employeeId }: { employeeId: string }) {
 }
 
 /* ── Info Tab — compact ── */
-function InfoTab({ employee, isEditing, form, setForm, isPrivileged, onEmployeeUpdate }: {
-  employee: EmployeeRecord; isEditing: boolean; form: Record<string, string>;
+function InfoTab({ employee, companyId, isEditing, form, setForm, isPrivileged, onEmployeeUpdate, onJumpToDocuments }: {
+  employee: EmployeeRecord; companyId: string; isEditing: boolean; form: Record<string, string>;
   setForm: (fn: (prev: Record<string, string>) => Record<string, string>) => void;
   isPrivileged: boolean;
   onEmployeeUpdate?: (patch: Partial<EmployeeRecord>) => void;
+  onJumpToDocuments?: () => void;
 }) {
   const SENSITIVE = new Set(["access_pin", "driver_licence", "has_car", "country_code", "english_level"]);
   const filteredEmployment = EMPLOYMENT_FIELDS.filter(f => isPrivileged || !SENSITIVE.has(f.key));
 
   return (
     <div className="space-y-4">
+      {/* Premium compact panel: portal access, onboarding, last activation update. */}
+      {isPrivileged && companyId && (
+        <PortalOnboardingPanel
+          employeeId={employee.id}
+          companyId={companyId}
+          onJumpToDocuments={onJumpToDocuments}
+        />
+      )}
+
       <div>
         <h3 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50 mb-1.5">Personal</h3>
         <Card className="rounded-lg border-border/30">
@@ -382,11 +393,32 @@ function DocumentsTab({ employee, companyId }: { employee: EmployeeRecord; compa
   const { toast } = useToast();
 
   const fetchDocs = async () => {
-    const [{ data: w9Data }, { data: docsData }] = await Promise.all([
+    const [{ data: w9Data }, { data: docsData }, { data: onbDocsData }] = await Promise.all([
       supabase.from("contractor_w9").select("id, status, legal_name, tax_classification, tin_last4, submitted_at, reviewed_at").eq("employee_id", employee.id).eq("company_id", companyId).maybeSingle(),
       supabase.from("employee_documents" as any).select("*").eq("employee_id", employee.id).eq("company_id", companyId).order("created_at", { ascending: false }),
+      supabase.from("employee_onboarding_documents" as any).select("*").eq("employee_id", employee.id).eq("company_id", companyId).order("created_at", { ascending: false }),
     ]);
-    setW9(w9Data); setDocs((docsData as any[]) ?? []); setLoading(false);
+    // Normalize onboarding documents into the same shape DocumentsTab renders.
+    // These rows come from the activation wizard (driver_license, vehicle_registration, …).
+    const ONB_LABELS: Record<string, string> = {
+      driver_license: "Driver's license",
+      vehicle_registration: "Vehicle registration",
+    };
+    const normalizedOnb = ((onbDocsData as any[]) ?? []).map((d) => ({
+      id: `onb-${d.id}`,
+      name: d.file_name || ONB_LABELS[d.document_type] || d.document_type,
+      file_url: d.file_url,
+      file_size: null,
+      category: ONB_LABELS[d.document_type] || d.document_type,
+      created_at: d.created_at,
+      review_status: d.status === "approved" ? "approved" : d.status === "rejected" ? "rejected" : "pending",
+      rejection_reason: d.rejection_reason ?? null,
+      _readonly: true, // uploaded by the worker via activation; admins use VehicleDocumentsSection / dedicated review
+    }));
+    const merged = [...((docsData as any[]) ?? []), ...normalizedOnb].sort((a, b) =>
+      String(b.created_at ?? "").localeCompare(String(a.created_at ?? "")),
+    );
+    setW9(w9Data); setDocs(merged); setLoading(false);
   };
   useEffect(() => { fetchDocs(); }, [employee.id, companyId]);
 
@@ -477,7 +509,9 @@ function DocumentsTab({ employee, companyId }: { employee: EmployeeRecord; compa
                     <Badge className={cn("text-[9px] shrink-0", badgeCls)}>{badgeLabel}</Badge>
                     <div className="flex items-center gap-0.5 shrink-0">
                       <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => openEmployeeDocument(doc.file_url)}><Download className="h-2.5 w-2.5" /></Button>
-                      <Button size="icon" variant="ghost" className="h-6 w-6 text-destructive" onClick={() => handleDelete(doc)}><Trash2 className="h-2.5 w-2.5" /></Button>
+                      {!doc._readonly && (
+                        <Button size="icon" variant="ghost" className="h-6 w-6 text-destructive" onClick={() => handleDelete(doc)}><Trash2 className="h-2.5 w-2.5" /></Button>
+                      )}
                     </div>
                   </div>
                   {rs === "rejected" && doc.rejection_reason && (
@@ -485,18 +519,20 @@ function DocumentsTab({ employee, companyId }: { employee: EmployeeRecord; compa
                       <span className="font-bold">Motivo:</span> {doc.rejection_reason}
                     </p>
                   )}
-                  <div className="flex items-center gap-1.5 pl-5">
-                    {rs !== "approved" && (
-                      <Button size="sm" variant="outline" className="h-6 text-[10px] gap-1 border-earning/30 text-earning hover:bg-earning/10" onClick={() => handleApprove(doc)}>
-                        Aprobar
-                      </Button>
-                    )}
-                    {rs !== "rejected" && (
-                      <Button size="sm" variant="outline" className="h-6 text-[10px] gap-1 border-deduction/30 text-deduction hover:bg-deduction/10" onClick={() => handleReject(doc)}>
-                        Rechazar
-                      </Button>
-                    )}
-                  </div>
+                  {!doc._readonly && (
+                    <div className="flex items-center gap-1.5 pl-5">
+                      {rs !== "approved" && (
+                        <Button size="sm" variant="outline" className="h-6 text-[10px] gap-1 border-earning/30 text-earning hover:bg-earning/10" onClick={() => handleApprove(doc)}>
+                          Aprobar
+                        </Button>
+                      )}
+                      {rs !== "rejected" && (
+                        <Button size="sm" variant="outline" className="h-6 text-[10px] gap-1 border-deduction/30 text-deduction hover:bg-deduction/10" onClick={() => handleReject(doc)}>
+                          Rechazar
+                        </Button>
+                      )}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             );
@@ -586,7 +622,7 @@ export function EmployeeProfileTabs({
         </TabsTrigger>
       </TabsList>
 
-      <TabsContent value="info" className="mt-0"><InfoTab employee={employee} isEditing={isEditing} form={form} setForm={setForm} isPrivileged={isPrivileged} onEmployeeUpdate={onEmployeeUpdate} /></TabsContent>
+      <TabsContent value="info" className="mt-0"><InfoTab employee={employee} companyId={companyId} isEditing={isEditing} form={form} setForm={setForm} isPrivileged={isPrivileged} onEmployeeUpdate={onEmployeeUpdate} onJumpToDocuments={onTabChange ? () => onTabChange("docs") : undefined} /></TabsContent>
       <TabsContent value="profile" className="mt-0"><WorkerProfileTab employeeId={employee.id} readOnly={!isEditing} /></TabsContent>
       <TabsContent value="reputation" className="mt-0">
         <div className="space-y-3">
