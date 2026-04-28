@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import AuditPanel from "@/components/audit/AuditPanel";
 import { cn } from "@/lib/utils";
 import { formatPersonName, formatDisplayText } from "@/lib/format-helpers";
@@ -21,12 +21,13 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import {
   Plus, Search, Building2, Loader2, Trash2, RotateCcw, Pencil,
-  LayoutGrid, List, Download, Phone, Mail, MessageCircle, Filter, X, Users, MapPin, Car
+  LayoutGrid, List, Download, Phone, Mail, MessageCircle, Filter, X, Users, MapPin, Car, ExternalLink
 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { ReportActionsBar } from "@/components/ui/report-actions-bar";
 import { ClientAvatar } from "@/components/ui/client-avatar";
 import { EmptyState } from "@/components/ui/empty-state";
+import { KpiCard } from "@/components/ui/kpi-card";
 
 interface Client {
   id: string;
@@ -56,6 +57,7 @@ type ViewMode = "grid" | "list";
 export default function Clients() {
   const { role, hasModuleAccess } = useAuth();
   const { selectedCompanyId } = useCompany();
+  const navigate = useNavigate();
   const canEdit = role === "owner" || role === "admin" || hasModuleAccess("clients", "edit");
   const canDelete = role === "owner" || role === "admin" || hasModuleAccess("clients", "delete");
 
