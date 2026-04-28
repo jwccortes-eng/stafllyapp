@@ -369,6 +369,117 @@ Deno.serve(async (req) => {
         );
       }
 
+      // ─── Persist activation audit + notify admins (best-effort) ───
+      try {
+        // Re-read employee with company context for audit/notification scoping
+        const { data: empFull } = await adminClient
+          .from("employees")
+          .select("id, company_id, first_name, last_name, onboarding_status")
+          .eq("id", employee.id)
+          .maybeSingle();
+
+        const companyId = empFull?.company_id ?? null;
+        const empName = `${empFull?.first_name ?? employee.first_name ?? ""} ${empFull?.last_name ?? employee.last_name ?? ""}`.trim();
+
+        // Canonical: write "complete" (admin UI uses this), guards accept both.
+        if (companyId) {
+          await adminClient.from("employees").update({
+            onboarding_status: "complete",
+            onboarding_completed_at: new Date().toISOString(),
+            portal_access_enabled: true,
+            updated_at: new Date().toISOString(),
+          }).eq("id", employee.id);
+        }
+
+        // Sanitize incoming activation_audit. Never trust full SSN; only allow safe fields.
+        const ALLOWED_FIELDS = new Set([
+          "first_name","last_name","email","date_of_birth",
+          "address","address_line","address_city","address_state","address_zip","address_structured",
+          "emergency_contact_name","emergency_contact_phone",
+          "can_drive","has_vehicle","languages","ssn_last4",
+        ]);
+        const sanitize = (obj: any): Record<string, any> => {
+          if (!obj || typeof obj !== "object") return {};
+          const out: Record<string, any> = {};
+          for (const [k, v] of Object.entries(obj)) {
+            if (ALLOWED_FIELDS.has(k)) out[k] = v;
+          }
+          // Hard guard: never persist full SSN
+          delete (out as any).ssn;
+          return out;
+        };
+
+        let oldProfile: Record<string, any> = {};
+        let newProfile: Record<string, any> = {};
+        const changed: string[] = [];
+        if (activation_audit && typeof activation_audit === "object") {
+          // Validate cross-tenant integrity of submitted audit
+          const auditEmpId = (activation_audit as any).employee_id;
+          const auditCompanyId = (activation_audit as any).company_id;
+          const empOk = !auditEmpId || auditEmpId === employee.id;
+          const coOk = !auditCompanyId || !companyId || auditCompanyId === companyId;
+          if (empOk && coOk) {
+            oldProfile = sanitize((activation_audit as any).old_profile);
+            newProfile = sanitize((activation_audit as any).new_profile);
+            const keys = new Set([...Object.keys(oldProfile), ...Object.keys(newProfile)]);
+            for (const k of keys) {
+              const a = JSON.stringify(oldProfile[k] ?? null);
+              const b = JSON.stringify(newProfile[k] ?? null);
+              if (a !== b) changed.push(k);
+            }
+          }
+        }
+
+        if (companyId) {
+          // Activity log entry (admins/owners can read via RLS)
+          await adminClient.from("activity_log").insert({
+            user_id: employee.user_id,
+            company_id: companyId,
+            action: "employee_profile_updated_during_activation",
+            entity_type: "employee",
+            entity_id: employee.id,
+            old_data: oldProfile,
+            new_data: newProfile,
+            details: {
+              source: "activation",
+              employee_name: empName,
+              changed_fields: changed,
+              onboarding_status: "complete",
+            },
+          });
+
+          // Notify company admins/owners
+          const { data: admins } = await adminClient
+            .from("company_users")
+            .select("user_id")
+            .eq("company_id", companyId)
+            .in("role", ["admin", "company_owner", "owner"]);
+
+          const recipientIds = Array.from(new Set((admins ?? []).map((a: any) => a.user_id).filter(Boolean)));
+          if (recipientIds.length > 0) {
+            const rows = recipientIds.map((uid) => ({
+              company_id: companyId,
+              recipient_id: uid,
+              recipient_type: "user",
+              type: "employee_profile_updated",
+              title: "Worker profile updated",
+              body: `${empName || "A worker"} updated their profile during portal activation.`,
+              metadata: {
+                employee_id: employee.id,
+                company_id: companyId,
+                source: "activation",
+                changed_fields: changed,
+                onboarding_status: "complete",
+              },
+            }));
+            await adminClient.from("notifications").insert(rows);
+          }
+        }
+      } catch (auditErr) {
+        // Never block activation on audit failures
+        console.error("[activate] audit/notification persistence failed", auditErr);
+      }
+
       return new Response(
         JSON.stringify({
           success: true,
