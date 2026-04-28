@@ -597,7 +597,7 @@ export function EmployeeProfileTabs({
         </TabsTrigger>
       </TabsList>
 
-      <TabsContent value="info" className="mt-0"><InfoTab employee={employee} isEditing={isEditing} form={form} setForm={setForm} isPrivileged={isPrivileged} onEmployeeUpdate={onEmployeeUpdate} /></TabsContent>
+      <TabsContent value="info" className="mt-0"><InfoTab employee={employee} companyId={companyId} isEditing={isEditing} form={form} setForm={setForm} isPrivileged={isPrivileged} onEmployeeUpdate={onEmployeeUpdate} onJumpToDocuments={onTabChange ? () => onTabChange("docs") : undefined} /></TabsContent>
       <TabsContent value="profile" className="mt-0"><WorkerProfileTab employeeId={employee.id} readOnly={!isEditing} /></TabsContent>
       <TabsContent value="reputation" className="mt-0">
         <div className="space-y-3">
