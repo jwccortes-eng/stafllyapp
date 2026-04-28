@@ -11565,6 +11565,7 @@ export type Database = {
           meeting_time: string | null
           notes: string | null
           operational_version: number
+          pay_override: boolean
           pay_type: string
           qr_attendance_mode: string
           qr_token: string | null
@@ -11605,6 +11606,7 @@ export type Database = {
           meeting_time?: string | null
           notes?: string | null
           operational_version?: number
+          pay_override?: boolean
           pay_type?: string
           qr_attendance_mode?: string
           qr_token?: string | null
@@ -11645,6 +11647,7 @@ export type Database = {
           meeting_time?: string | null
           notes?: string | null
           operational_version?: number
+          pay_override?: boolean
           pay_type?: string
           qr_attendance_mode?: string
           qr_token?: string | null
