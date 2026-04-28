@@ -107,7 +107,9 @@ export default function EmployeeDashboard() {
         .select("status, scheduled_shifts!inner (id, title, date, start_time, end_time, status, meeting_point, locations (name), clients (name))")
         .eq("employee_id", employeeId)
         .eq("company_id", emp.company_id)
+        .eq("is_draft_reservation", false)
         .not("status", "in", "(removed,rejected)")
+        .eq("scheduled_shifts.publication_status", "published")
         .not("scheduled_shifts.status", "in", "(cancelled,canceled)")
         .is("scheduled_shifts.deleted_at", null)
         .gte("scheduled_shifts.date", today).order("created_at", { ascending: true }).limit(5),

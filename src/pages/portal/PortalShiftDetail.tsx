@@ -65,9 +65,9 @@ export default function PortalShiftDetail() {
     const { data: s } = await supabase
       .from("scheduled_shifts")
       .select(`id, title, date, start_time, end_time, notes, meeting_point, special_instructions,
-               slots, claimable, status, shift_code, deleted_at,
+               slots, claimable, status, shift_code, deleted_at, publication_status,
                locations (name, address), clients (name),
-               shift_assignments (id, employee_id, status)`)
+               shift_assignments (id, employee_id, status, is_draft_reservation)`)
       .eq("id", shiftId)
       .maybeSingle();
 
@@ -76,8 +76,20 @@ export default function PortalShiftDetail() {
       return;
     }
 
-    const assignments = ((s as any).shift_assignments ?? []) as { employee_id: string; status: string }[];
-    const activeAssignments = assignments.filter(a => a.status !== "removed" && a.status !== "rejected");
+    // Drafts / cancelled / archived must never expose detail to a worker.
+    // Treat as "no longer available" using the existing "deleted" UX state.
+    const pubStatus = (s as any).publication_status ?? "published";
+    if (pubStatus !== "published") {
+      setState("deleted");
+      return;
+    }
+
+    const assignments = ((s as any).shift_assignments ?? []) as { employee_id: string; status: string; is_draft_reservation?: boolean }[];
+    // Exclude draft reservations from the active set so a placeholder doesn't
+    // appear as someone else's claim or as my own assignment.
+    const activeAssignments = assignments.filter(
+      a => a.status !== "removed" && a.status !== "rejected" && a.is_draft_reservation !== true
+    );
     const myAssignment = activeAssignments.find(a => a.employee_id === employeeId);
 
     const detail: ShiftDetail = {
