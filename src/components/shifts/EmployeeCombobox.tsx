@@ -10,6 +10,7 @@ import { Search, AlertTriangle, X, CalendarOff, Car, Zap, UserCheck, ShieldAlert
 import { cn } from "@/lib/utils";
 import { isEmployeeAvailable, type AvailabilityConfig, type AvailabilityOverride } from "@/hooks/useEmployeeAvailability";
 import { computeDuplicateHints } from "@/lib/employee-duplicate-hints";
+import { searchEmployees, type MatchResult } from "@/lib/employee-search";
 import type { Employee, Shift, Assignment } from "./types";
 
 interface EmployeeComboboxProps {
