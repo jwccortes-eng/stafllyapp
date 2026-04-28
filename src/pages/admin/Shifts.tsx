@@ -354,6 +354,7 @@ export default function Shifts() {
   const [specialInstructions, setSpecialInstructions] = useState("");
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
+  const [draftSaving, setDraftSaving] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [payType, setPayType] = useState<"hourly" | "daily">("hourly");
