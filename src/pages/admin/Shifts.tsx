@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
 import { useEmployeeAvailability } from "@/hooks/useEmployeeAvailability";
+import { useEmployeeRoster } from "@/hooks/useEmployeeRoster";
 import { usePayrollConfig } from "@/hooks/usePayrollConfig";
 import { useShiftsConfig } from "@/hooks/useShiftsConfig";
 import { ModuleSettingsSheet } from "@/components/settings/ModuleSettingsSheet";
