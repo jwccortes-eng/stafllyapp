@@ -324,9 +324,53 @@ export function EmployeeCombobox({
       {/* Employee list */}
       <div className="border rounded-xl overflow-y-auto" style={{ maxHeight }}>
         {sorted.length === 0 && !onAddNewEmployee ? (
-          <p className="text-xs text-muted-foreground p-3 text-center">
-            {search ? "No results" : "No employees"}
-          </p>
+          <div className="p-3 space-y-2">
+            <p className="text-xs text-muted-foreground text-center">
+              {search ? "No results" : "No employees"}
+            </p>
+            {/* Admin-friendly diagnostic when the list is empty.
+                Helps disambiguate: empty roster vs filter mismatch vs tenant scope. */}
+            {(employees.length === 0 || (search && filtered.length === 0)) && (
+              <div className="rounded-lg bg-muted/40 border border-border/40 p-2 text-[10px] font-mono text-muted-foreground space-y-0.5">
+                <div className="flex justify-between gap-2">
+                  <span className="opacity-60">company</span>
+                  <span className="truncate" title={debugContext?.selectedCompanyId ?? ""}>
+                    {debugContext?.companyName ?? "—"}
+                  </span>
+                </div>
+                <div className="flex justify-between gap-2">
+                  <span className="opacity-60">companyId</span>
+                  <span className="truncate" title={debugContext?.selectedCompanyId ?? ""}>
+                    {debugContext?.selectedCompanyId
+                      ? `${debugContext.selectedCompanyId.slice(0, 8)}…`
+                      : "global / null"}
+                  </span>
+                </div>
+                <div className="flex justify-between gap-2">
+                  <span className="opacity-60">employeesLoaded</span>
+                  <span>{employees.length}</span>
+                </div>
+                <div className="flex justify-between gap-2">
+                  <span className="opacity-60">filteredCount</span>
+                  <span>{filtered.length}</span>
+                </div>
+                <div className="flex justify-between gap-2">
+                  <span className="opacity-60">selectedCount</span>
+                  <span>{selected.length}</span>
+                </div>
+                {employees.length === 0 && (
+                  <p className="pt-1 text-[10px] text-warning leading-snug font-sans">
+                    Roster vacío para esta compañía. Verifica el contexto multi-tenant.
+                  </p>
+                )}
+                {employees.length > 0 && search && filtered.length === 0 && (
+                  <p className="pt-1 text-[10px] text-warning leading-snug font-sans">
+                    Hay {employees.length} workers cargados pero ninguno matchea "{search}".
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
         ) : (
           <>
             {sorted.map(emp => {
