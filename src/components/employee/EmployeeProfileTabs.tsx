@@ -198,17 +198,27 @@ function VehicleDocumentsSection({ employeeId }: { employeeId: string }) {
 }
 
 /* ── Info Tab — compact ── */
-function InfoTab({ employee, isEditing, form, setForm, isPrivileged, onEmployeeUpdate }: {
-  employee: EmployeeRecord; isEditing: boolean; form: Record<string, string>;
+function InfoTab({ employee, companyId, isEditing, form, setForm, isPrivileged, onEmployeeUpdate, onJumpToDocuments }: {
+  employee: EmployeeRecord; companyId: string; isEditing: boolean; form: Record<string, string>;
   setForm: (fn: (prev: Record<string, string>) => Record<string, string>) => void;
   isPrivileged: boolean;
   onEmployeeUpdate?: (patch: Partial<EmployeeRecord>) => void;
+  onJumpToDocuments?: () => void;
 }) {
   const SENSITIVE = new Set(["access_pin", "driver_licence", "has_car", "country_code", "english_level"]);
   const filteredEmployment = EMPLOYMENT_FIELDS.filter(f => isPrivileged || !SENSITIVE.has(f.key));
 
   return (
     <div className="space-y-4">
+      {/* Premium compact panel: portal access, onboarding, last activation update. */}
+      {isPrivileged && companyId && (
+        <PortalOnboardingPanel
+          employeeId={employee.id}
+          companyId={companyId}
+          onJumpToDocuments={onJumpToDocuments}
+        />
+      )}
+
       <div>
         <h3 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50 mb-1.5">Personal</h3>
         <Card className="rounded-lg border-border/30">
