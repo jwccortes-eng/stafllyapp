@@ -289,7 +289,10 @@ export default function Shifts() {
   const hasLoadedOnce = useRef(false);
   const [clients, setClients] = useState<SelectOption[]>([]);
   const [locations, setLocations] = useState<(SelectOption & { address?: string; client_id?: string | null })[]>([]);
-  const [employees, setEmployees] = useState<Employee[]>([]);
+  // Employees roster — single source of truth, paginated, never truncated at 1k.
+  // Hidden-by-status workers (incomplete profile, pending onboarding, no portal) are NOT excluded here.
+  const employeeRoster = useEmployeeRoster(selectedCompanyId, "shifts");
+  const employees = employeeRoster.employees;
   const [createOpen, setCreateOpen] = useState(false);
 
   // Open create dialog when navigated with ?create=1
