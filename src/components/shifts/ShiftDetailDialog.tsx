@@ -52,9 +52,16 @@ import { useDebugMode } from "@/hooks/useDebugMode";
 import { toast } from "sonner";
 import type { Shift, Assignment, Employee, SelectOption } from "./types";
 import { formatShiftCode, getClientColor, isEmployeeDriver } from "./types";
-import { SendNotificationDialog } from "./SendNotificationDialog";
-import { ShiftCommentsPanel } from "./ShiftCommentsPanel";
-import { ShiftAuditTrail } from "./ShiftAuditTrail";
+
+const SendNotificationDialog = lazy(() =>
+  import("./SendNotificationDialog").then(m => ({ default: m.SendNotificationDialog })),
+);
+const ShiftCommentsPanel = lazy(() =>
+  import("./ShiftCommentsPanel").then(m => ({ default: m.ShiftCommentsPanel })),
+);
+const ShiftAuditTrail = lazy(() =>
+  import("./ShiftAuditTrail").then(m => ({ default: m.ShiftAuditTrail })),
+);
 import { ShiftRoleSlotsTeamPanel } from "./ShiftRoleSlotsTeamPanel";
 import { GenerateBillingBlockButton } from "./GenerateBillingBlockButton";
 import {
