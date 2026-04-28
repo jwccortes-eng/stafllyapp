@@ -37,49 +37,49 @@ interface LinkDef {
   roles?: string[];
 }
 
-/* ── Company-scoped links — organized by OS layers ── */
+/* ── Company-scoped links — Stafly Gold sections ── */
 const COMPANY_LINKS: LinkDef[] = [
-  // HOME
-  { to: "/app", icon: LayoutDashboard, label: "Dashboard", module: null, end: true, section: "Home" },
-  { to: "/app/ops-center", icon: Radio, label: "Ops Center", module: null, section: "Home" },
+  // COMMAND CENTER
+  { to: "/app", icon: LayoutDashboard, label: "Dashboard", module: null, end: true, section: "Command Center" },
+  { to: "/app/ops-center", icon: Radio, label: "Operations", module: null, section: "Command Center" },
+  { to: "/app/shifts", icon: CalendarDays, label: "Scheduling", module: "shifts", section: "Command Center" },
+  { to: "/app/live-map", icon: MapIcon, label: "Live Map", module: null, section: "Command Center" },
 
-  // PEOPLE OS — identity, activation, attention
-  { to: "/app/employees", icon: Users, label: "Workers", module: "employees", section: "People OS" },
-  { to: "/app/applications", icon: UserPlus2, label: "Applications", module: null, section: "People OS" },
-  { to: "/app/invite", icon: UserPlus, label: "Activation", module: null, section: "People OS" },
-  { to: "/app/kiosk", icon: Monitor, label: "Kiosk", module: null, section: "People OS" },
-  { to: "/app/front-desk", icon: ContactRound, label: "Front Desk", module: null, section: "People OS" },
+  // WORKFORCE
+  { to: "/app/employees", icon: Users, label: "Workers", module: "employees", section: "Workforce" },
+  { to: "/app/timeclock", icon: Clock, label: "Time Clock", module: "shifts", section: "Workforce" },
+  { to: "/app/attendance", icon: ShieldCheck, label: "Attendance", module: null, section: "Workforce" },
+  { to: "/app/applications", icon: UserPlus2, label: "Applications", module: null, section: "Workforce" },
+  { to: "/app/invite", icon: UserPlus, label: "Invitations", module: null, section: "Workforce" },
+  { to: "/app/kiosk", icon: Monitor, label: "Kiosk", module: null, section: "Workforce" },
+  { to: "/app/front-desk", icon: ContactRound, label: "Front Desk", module: null, section: "Workforce" },
 
-  // OPERATIONS OS — daily execution
-  { to: "/app/shifts", icon: CalendarDays, label: "Shifts", module: "shifts", section: "Operations OS" },
-  { to: "/app/timeclock", icon: Clock, label: "Time Clock", module: "shifts", section: "Operations OS" },
-  { to: "/app/attendance", icon: ShieldCheck, label: "Attendance", module: null, section: "Operations OS" },
-  { to: "/app/live-map", icon: MapIcon, label: "Live Map", module: null, section: "Operations OS" },
-  { to: "/app/locations", icon: MapPin, label: "Locations", module: "locations", section: "Operations OS" },
-  { to: "/app/requests", icon: Inbox, label: "Requests", module: null, section: "Operations OS", badge: "tickets" },
-  { to: "/app/announcements", icon: Megaphone, label: "Announcements", module: "announcements", section: "Operations OS" },
-  { to: "/app/chat", icon: MessageCircle, label: "Chat", module: null, section: "Operations OS" },
+  // JOBS & CLIENTS
+  { to: "/app/clients", icon: Building2, label: "Clients", module: "clients", section: "Jobs & Clients" },
+  { to: "/app/locations", icon: MapPin, label: "Locations", module: "locations", section: "Jobs & Clients" },
+  { to: "/app/requests", icon: Inbox, label: "Service Requests", module: null, section: "Jobs & Clients", badge: "tickets" },
 
-  // GROWTH & REVENUE OS — commercial side
-  { to: "/app/clients", icon: Building2, label: "Clients", module: "clients", section: "Growth & Revenue OS" },
-  { to: "/app/invoicing/invoices", icon: FileText, label: "Invoices", module: "tenant_invoicing", section: "Growth & Revenue OS" },
-  { to: "/app/invoicing/service-blocks", icon: ClipboardList, label: "Service Blocks", module: "tenant_invoicing", section: "Growth & Revenue OS" },
-  { to: "/app/invoicing/clients", icon: Receipt, label: "Billing Clients", module: "tenant_invoicing", section: "Growth & Revenue OS" },
-  { to: "/app/quality", icon: Star, label: "Reviews", module: null, section: "Growth & Revenue OS" },
+  // PAYROLL & BILLING
+  { to: "/app/periods", icon: CalendarDays, label: "Payroll", module: "periods", section: "Payroll & Billing" },
+  { to: "/app/compensation-validation", icon: DollarSign, label: "Compensation", module: null, section: "Payroll & Billing" },
+  { to: "/app/movements", icon: DollarSign, label: "Adjustments", module: "movements", section: "Payroll & Billing" },
+  { to: "/app/advances-loans", icon: Banknote, label: "Advances", module: null, section: "Payroll & Billing" },
+  { to: "/app/concepts", icon: Tags, label: "Concepts", module: "concepts", section: "Payroll & Billing" },
+  { to: "/app/payroll-reconciliation", icon: GitCompareArrows, label: "Reconciliation", module: null, section: "Payroll & Billing" },
+  { to: "/app/summary", icon: FileSpreadsheet, label: "Reports", module: "summary", section: "Payroll & Billing" },
+  { to: "/app/invoicing/invoices", icon: FileText, label: "Invoices", module: "tenant_invoicing", section: "Payroll & Billing" },
+  { to: "/app/invoicing/service-blocks", icon: ClipboardList, label: "Service Blocks", module: "tenant_invoicing", section: "Payroll & Billing" },
+  { to: "/app/invoicing/clients", icon: Receipt, label: "Billing Clients", module: "tenant_invoicing", section: "Payroll & Billing" },
 
-  // PAYROLL
-  { to: "/app/periods", icon: CalendarDays, label: "Periods", module: "periods", section: "Payroll" },
-  { to: "/app/compensation-validation", icon: DollarSign, label: "Compensation", module: null, section: "Payroll" },
-  { to: "/app/movements", icon: DollarSign, label: "Adjustments", module: "movements", section: "Payroll" },
-  { to: "/app/advances-loans", icon: Banknote, label: "Advances", module: null, section: "Payroll" },
-  { to: "/app/concepts", icon: Tags, label: "Concepts", module: "concepts", section: "Payroll" },
-  { to: "/app/payroll-reconciliation", icon: GitCompareArrows, label: "Reconciliation", module: null, section: "Payroll" },
-  { to: "/app/summary", icon: FileSpreadsheet, label: "Reports", module: "summary", section: "Payroll" },
+  // COMMUNICATION
+  { to: "/app/announcements", icon: Megaphone, label: "Announcements", module: "announcements", section: "Communication" },
+  { to: "/app/chat", icon: MessageCircle, label: "Messages", module: null, section: "Communication" },
+  { to: "/app/notifications", icon: Bell, label: "Notifications", module: null, section: "Communication" },
+  { to: "/app/quality", icon: Star, label: "Reviews", module: null, section: "Communication" },
 
-  // MORE
-  { to: "/app/notifications", icon: Bell, label: "Notifications", module: null, section: "More" },
-  { to: "/app/payroll-settings", icon: Settings2, label: "Settings", module: null, section: "More" },
-  { to: "/app/migration", icon: ArrowLeftRight, label: "Migration", module: null, section: "More", roles: ["developer", "owner"] },
+  // SYSTEM
+  { to: "/app/payroll-settings", icon: Settings2, label: "Settings", module: null, section: "System" },
+  { to: "/app/migration", icon: ArrowLeftRight, label: "Migration", module: null, section: "System", roles: ["developer", "owner"] },
 ];
 
 /* ── Global/Platform-level links (developer/owner only) ── */
@@ -89,13 +89,13 @@ const GLOBAL_LINKS: LinkDef[] = [
   { to: "/app/directory", icon: Users, label: "Directory", module: null, section: "Platform" },
   { to: "/app/activity", icon: FileText, label: "Activity", module: null, section: "Platform" },
   { to: "/app/notifications", icon: Bell, label: "Notifications", module: null, section: "Platform" },
-  { to: "/app/admin", icon: Wrench, label: "Administration", module: null, section: "Tools" },
-  { to: "/app/billing", icon: Receipt, label: "Billing", module: null, section: "Tools" },
-  { to: "/app/system-health", icon: BarChart3, label: "System", module: null, section: "Tools" },
+  { to: "/app/admin", icon: Wrench, label: "Administration", module: null, section: "System" },
+  { to: "/app/billing", icon: Receipt, label: "Billing", module: null, section: "System" },
+  { to: "/app/system-health", icon: BarChart3, label: "System Health", module: null, section: "System" },
 ];
 
-const COMPANY_SECTION_ORDER = ["Home", "People OS", "Operations OS", "Growth & Revenue OS", "Payroll", "More"];
-const GLOBAL_SECTION_ORDER = ["Platform", "Tools"];
+const COMPANY_SECTION_ORDER = ["Command Center", "Workforce", "Jobs & Clients", "Payroll & Billing", "Communication", "System"];
+const GLOBAL_SECTION_ORDER = ["Platform", "System"];
 
 export default function AdminSidebar() {
   const { signOut, role, hasModuleAccess, user, fullName } = useAuth();
@@ -207,22 +207,22 @@ export default function AdminSidebar() {
           data-active={active || undefined}
           className={cn(
             "sidebar-link",
-            collapsed ? "justify-center px-2 py-2.5" : "px-3 py-[7px]",
+            collapsed ? "justify-center px-2 py-2.5" : "px-3 py-2",
             locked
-              ? "text-foreground/20 cursor-pointer hover:bg-accent/20"
+              ? "text-sidebar-foreground/25 cursor-pointer hover:bg-sidebar-accent/30"
               : active ? "sidebar-link-active" : "sidebar-link-idle"
           )}
         >
           {active && !locked && (
-            <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-4 rounded-r-full bg-primary transition-all" />
+            <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-sidebar-primary transition-all" />
           )}
           <div className="relative flex items-center justify-center">
             {locked ? (
-              <Lock className="h-[17px] w-[17px] shrink-0 text-foreground/20" />
+              <Lock className="h-[17px] w-[17px] shrink-0 text-sidebar-foreground/25" />
             ) : (
               <link.icon className={cn(
                 "h-[17px] w-[17px] shrink-0 transition-colors duration-200",
-                active ? "text-primary" : "text-foreground/35 group-hover/link:text-foreground/70"
+                active ? "text-sidebar-primary" : "text-sidebar-foreground/45 group-hover/link:text-sidebar-foreground/85"
               )} />
             )}
             {collapsed && badge > 0 && !locked && (
@@ -231,14 +231,14 @@ export default function AdminSidebar() {
           </div>
           {!collapsed && (
             <>
-              <span className={cn("flex-1 truncate leading-tight", locked && "line-through decoration-foreground/15")}>{link.label}</span>
+              <span className={cn("flex-1 truncate leading-tight", locked && "line-through decoration-sidebar-foreground/20")}>{link.label}</span>
               {locked && requiredPlan && (
-                <span className="ml-auto shrink-0 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-primary/[0.08] text-primary">
+                <span className="ml-auto shrink-0 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-sidebar-primary/15 text-sidebar-primary">
                   {requiredPlan}
                 </span>
               )}
               {!locked && badge > 0 && (
-                <span className="ml-auto shrink-0 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-destructive/[0.1] text-destructive text-[10px] font-bold tabular-nums px-1">
+                <span className="ml-auto shrink-0 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-destructive/20 text-destructive text-[10px] font-bold tabular-nums px-1">
                   {badge > 99 ? "99+" : badge}
                 </span>
               )}
@@ -267,11 +267,11 @@ export default function AdminSidebar() {
     return linkContent;
   };
 
-  const renderSection = (section: { label: string; links: LinkDef[] }) => {
+  const renderSection = (section: { label: string; links: LinkDef[] }, idx: number) => {
     if (collapsed) {
       return (
         <div key={section.label} className="space-y-0.5">
-          <div className="border-t border-border/20 my-2.5" />
+          {idx > 0 && <div className="sidebar-divider" />}
           {section.links.map(l => renderLink(l))}
         </div>
       );
@@ -282,23 +282,23 @@ export default function AdminSidebar() {
 
     return (
       <Collapsible key={section.label} open={isOpen} onOpenChange={() => toggleSection(section.label)}>
-        <CollapsibleTrigger className="flex items-center justify-between w-full px-3 py-1.5 group/section cursor-pointer mt-4 first:mt-0">
-          <span className="text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground/40 group-hover/section:text-muted-foreground/60 transition-colors select-none">
+        <CollapsibleTrigger className="flex items-center justify-between w-full px-3 pt-4 pb-1.5 group/section cursor-pointer first:pt-2">
+          <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-sidebar-foreground/40 group-hover/section:text-sidebar-foreground/65 transition-colors select-none">
             {section.label}
           </span>
           <div className="flex items-center gap-1.5">
             {!isOpen && sectionBadge > 0 && (
-              <span className="min-w-[16px] h-[16px] flex items-center justify-center rounded-full bg-destructive/[0.1] text-destructive text-[9px] font-bold px-1 tabular-nums">
+              <span className="min-w-[16px] h-[16px] flex items-center justify-center rounded-full bg-destructive/20 text-destructive text-[9px] font-bold px-1 tabular-nums">
                 {sectionBadge}
               </span>
             )}
             <ChevronDown className={cn(
-              "h-3 w-3 text-muted-foreground/20 transition-transform duration-300 ease-in-out",
+              "h-3 w-3 text-sidebar-foreground/30 transition-transform duration-300 ease-in-out",
               isOpen && "rotate-180"
             )} />
           </div>
         </CollapsibleTrigger>
-        <CollapsibleContent className="space-y-0.5 mt-0.5 overflow-hidden data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up">
+        <CollapsibleContent className="space-y-1 mt-1 overflow-hidden data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up">
           {section.links.map(l => renderLink(l))}
         </CollapsibleContent>
       </Collapsible>
@@ -306,40 +306,44 @@ export default function AdminSidebar() {
   };
 
   return (
-    <aside className={cn(
-      "fixed inset-y-0 left-0 z-30 flex flex-col transition-all duration-300 ease-in-out",
-      "bg-card border-r border-border/60",
-      collapsed ? "w-[60px]" : "w-[240px]",
-    )}>
+    <aside
+      data-stafly-sidebar
+      className={cn(
+        "fixed inset-y-0 left-0 z-30 flex flex-col transition-all duration-300 ease-in-out",
+        "border-r border-sidebar-border/60 dark",
+        "bg-sidebar text-sidebar-foreground",
+        collapsed ? "w-[68px]" : "w-[256px]",
+      )}
+    >
       {/* ── Brand + Company Switcher ── */}
       <div className={cn(
-        "shrink-0 border-b border-border/40",
-        collapsed ? "px-2 py-3 flex justify-center" : "px-3 py-3"
+        "shrink-0 border-b border-sidebar-border/40",
+        collapsed ? "px-2 py-3.5 flex justify-center" : "px-3 py-3.5"
       )}>
         <CompanySwitcher collapsed={collapsed} />
       </div>
 
       {/* ── Global mode banner ── */}
       {isGlobalMode && !collapsed && (
-        <div className="mx-3 mt-3 rounded-xl border border-accent bg-accent/30 px-3 py-2 shrink-0">
+        <div className="mx-3 mt-3 rounded-xl border border-sidebar-primary/30 bg-sidebar-primary/10 px-3 py-2 shrink-0">
           <div className="flex items-center gap-2">
-            <Globe className="h-3.5 w-3.5 text-accent-foreground" />
-            <span className="text-[11px] font-bold text-accent-foreground">Global Mode</span>
+            <Globe className="h-3.5 w-3.5 text-sidebar-primary" />
+            <span className="text-[11px] font-bold text-sidebar-primary">Global Mode</span>
           </div>
-          <p className="text-[10px] text-muted-foreground mt-0.5 leading-tight">
+          <p className="text-[10px] text-sidebar-foreground/55 mt-0.5 leading-tight">
             Select a company to operate in context.
           </p>
         </div>
       )}
 
       {/* ── Navigation ── */}
-      <nav className="flex-1 px-2 py-2 space-y-0.5 overflow-y-auto scrollbar-thin">
-        {visibleSections.map(renderSection)}
+      <nav className="flex-1 px-2 py-2 space-y-0.5 overflow-y-auto sidebar-scroll">
+        {visibleSections.map((s, i) => renderSection(s, i))}
 
         {/* Admin link only in company mode for owners */}
         {!isGlobalMode && isOwner && (
           <>
-            <div className="border-t border-border/20 my-2.5" />
+            <div className="sidebar-divider" />
             {renderLink({ to: "/app/admin", icon: Wrench, label: "Administration", module: null, section: "", end: true })}
           </>
         )}
@@ -347,19 +351,19 @@ export default function AdminSidebar() {
 
       {/* Trial banner */}
       {isTrial && trialDaysLeft !== null && !collapsed && !isGlobalMode && (
-        <div className="mx-3 mb-2 rounded-xl border border-primary/15 bg-primary/[0.05] px-3 py-2.5 shrink-0">
+        <div className="mx-3 mb-2 rounded-xl border border-sidebar-primary/25 bg-sidebar-primary/10 px-3 py-2.5 shrink-0">
           <div className="flex items-center gap-2 mb-1">
-            <Sparkles className="h-3.5 w-3.5 text-primary" />
-            <span className="text-[11px] font-bold text-primary">Pro Trial</span>
+            <Sparkles className="h-3.5 w-3.5 text-sidebar-primary" />
+            <span className="text-[11px] font-bold text-sidebar-primary">Pro Trial</span>
           </div>
-          <p className="text-[10px] text-muted-foreground leading-tight">
+          <p className="text-[10px] text-sidebar-foreground/60 leading-tight">
             {trialDaysLeft > 0
               ? `${trialDaysLeft} day${trialDaysLeft !== 1 ? 's' : ''} left in trial.`
               : 'Your trial has expired.'}
           </p>
           <button
             onClick={() => navigate("/app/pricing")}
-            className="mt-1.5 text-[10px] font-semibold text-primary hover:underline"
+            className="mt-1.5 text-[10px] font-semibold text-sidebar-primary hover:underline"
           >
             View plans →
           </button>
@@ -367,13 +371,13 @@ export default function AdminSidebar() {
       )}
 
       {/* ── Collapse toggle ── */}
-      <div className="px-2 py-2 border-t border-border/40 shrink-0">
+      <div className="px-2 py-2 border-t border-sidebar-border/40 shrink-0">
         <Tooltip delayDuration={0}>
           <TooltipTrigger asChild>
             <button
               onClick={() => setCollapsed(!collapsed)}
               className={cn(
-                "flex items-center justify-center rounded-xl text-muted-foreground/50 hover:bg-accent/40 hover:text-foreground transition-all duration-200 w-full h-8",
+                "flex items-center justify-center rounded-lg text-sidebar-foreground/55 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground transition-all duration-200 w-full h-8",
                 !collapsed && "gap-2 px-3 justify-start"
               )}
             >
