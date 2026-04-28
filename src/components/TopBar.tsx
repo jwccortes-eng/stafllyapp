@@ -40,8 +40,8 @@ export default function TopBar({ collapsed }: { collapsed: boolean }) {
   return (
     <header
       className={cn(
-        "sticky top-0 z-20 h-14 flex items-center justify-between gap-4 px-6 border-b border-border/60 bg-card/80 backdrop-blur-xl transition-all duration-300",
-        collapsed ? "ml-[60px]" : "ml-[240px]"
+        "sticky top-0 z-20 h-16 flex items-center justify-between gap-4 px-7 lg:px-10 border-b border-border/50 bg-background/85 backdrop-blur-xl transition-all duration-300",
+        collapsed ? "ml-[68px]" : "ml-[256px]"
       )}
     >
       {/* Left: Context badge + Search */}
