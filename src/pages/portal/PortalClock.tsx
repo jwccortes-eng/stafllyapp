@@ -142,10 +142,14 @@ export default function PortalClock() {
         .eq("employee_id", employeeId).gte("clock_in", dayStart).lte("clock_in", dayEnd)
         .order("clock_in", { ascending: false }),
       // Hide soft-deleted shifts (see src/lib/shifts/visibility.ts)
+      // Hide drafts and draft reservations (see src/lib/shifts/shift-guards.ts):
+      // a draft must NEVER allow clock-in or generate time_entries.
       supabase.from("shift_assignments")
         .select("shift_id, status, scheduled_shifts!inner(id, title, start_time, end_time, shift_code, date, pay_type, attendance_mode, qr_attendance_mode, qr_token, locations(name), clients(name))")
         .eq("employee_id", employeeId).eq("scheduled_shifts.date", todayStr)
+        .eq("is_draft_reservation", false)
         .is("scheduled_shifts.deleted_at", null)
+        .eq("scheduled_shifts.publication_status", "published")
         .not("scheduled_shifts.status", "in", "(cancelled,canceled)")
         .in("status", ["confirmed", "pending"]),
     ]);

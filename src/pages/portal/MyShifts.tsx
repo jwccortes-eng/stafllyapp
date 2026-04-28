@@ -90,7 +90,9 @@ export default function MyShifts() {
       .select(`id, status, response_status, accepted_shift_version, scheduled_shifts!inner (id, title, date, start_time, end_time, notes, status, slots, shift_code, meeting_point, special_instructions, company_id, operational_version, locations (name), clients (name))`)
       .eq("employee_id", employeeId)
       .eq("company_id", emp.company_id)
+      .eq("is_draft_reservation", false)
       .is("scheduled_shifts.deleted_at", null)
+      .eq("scheduled_shifts.publication_status", "published")
       .not("scheduled_shifts.status", "in", "(cancelled,canceled)")
       .not("status", "in", "(removed,rejected)")
       .order("created_at", { ascending: false });
