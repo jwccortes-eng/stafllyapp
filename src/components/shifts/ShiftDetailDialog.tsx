@@ -1168,35 +1168,47 @@ export function ShiftDetailDialog({
             </div>
 
           ) : tab === "attendance" ? (
-            <ShiftAttendancePanel shiftId={shift.id} companyId={selectedCompanyId!} assignments={assignments} employees={employees} canManage={effectiveCanEdit} shiftAdminId={(shift as any)?.shift_admin_id} />
+            <Suspense fallback={<PanelSkeleton label="Asistencia" />}>
+              <ShiftAttendancePanel shiftId={shift.id} companyId={selectedCompanyId!} assignments={assignments} employees={employees} canManage={effectiveCanEdit} shiftAdminId={(shift as any)?.shift_admin_id} />
+            </Suspense>
           ) : tab === "livemap" ? (
-            <ShiftLiveMapPanel
-              shiftId={shift.id}
-              companyId={selectedCompanyId!}
-              isActiveShift
-              canEdit={effectiveCanEdit}
-              onSetJobSite={() => { onOpenChange(false); onEdit(shift); }}
-            />
+            <Suspense fallback={<PanelSkeleton label="Live map" />}>
+              <ShiftLiveMapPanel
+                shiftId={shift.id}
+                companyId={selectedCompanyId!}
+                isActiveShift
+                canEdit={effectiveCanEdit}
+                onSetJobSite={() => { onOpenChange(false); onEdit(shift); }}
+              />
+            </Suspense>
           ) : tab === "comments" ? (
-            <ShiftCommentsPanel shiftId={shift.id} companyId={selectedCompanyId!} employees={employees} />
+            <Suspense fallback={<PanelSkeleton label="Notas" />}>
+              <ShiftCommentsPanel shiftId={shift.id} companyId={selectedCompanyId!} employees={employees} />
+            </Suspense>
           ) : tab === "chat" ? (
-            <ShiftChatPanel shiftId={shift.id} shiftDate={shift.date} companyId={selectedCompanyId!} />
+            <Suspense fallback={<PanelSkeleton label="Chat" />}>
+              <ShiftChatPanel shiftId={shift.id} shiftDate={shift.date} companyId={selectedCompanyId!} />
+            </Suspense>
           ) : tab === "rides" ? (
-            <ShiftRidesPanel
-              shiftId={shift.id}
-              companyId={selectedCompanyId!}
-              assignments={assignments}
-              employees={employees}
-              canEdit={effectiveCanEdit}
-              shiftContext={{
-                title: shift.title || "Turno",
-                date: shift.date,
-                start_time: shift.start_time,
-                shift_link_token: (shift as Shift & { shift_link_token?: string | null }).shift_link_token,
-              }}
-            />
+            <Suspense fallback={<PanelSkeleton label="Rides" />}>
+              <ShiftRidesPanel
+                shiftId={shift.id}
+                companyId={selectedCompanyId!}
+                assignments={assignments}
+                employees={employees}
+                canEdit={effectiveCanEdit}
+                shiftContext={{
+                  title: shift.title || "Turno",
+                  date: shift.date,
+                  start_time: shift.start_time,
+                  shift_link_token: (shift as Shift & { shift_link_token?: string | null }).shift_link_token,
+                }}
+              />
+            </Suspense>
           ) : tab === "audit" ? (
-            <ShiftAuditTrail shiftId={shift.id} />
+            <Suspense fallback={<PanelSkeleton label="Historial" />}>
+              <ShiftAuditTrail shiftId={shift.id} />
+            </Suspense>
           ) : null}
         </OpsSheetBody>
         {rejectReqId && (
@@ -1400,7 +1412,11 @@ export function ShiftDetailDialog({
       </AlertDialogContent>
     </AlertDialog>
 
-    <SendNotificationDialog open={notifyOpen} onOpenChange={setNotifyOpen} shift={shift} assignments={assignments} employees={employees} />
+    {notifyOpen && (
+      <Suspense fallback={null}>
+        <SendNotificationDialog open={notifyOpen} onOpenChange={setNotifyOpen} shift={shift} assignments={assignments} employees={employees} />
+      </Suspense>
+    )}
     </>
   );
 }
