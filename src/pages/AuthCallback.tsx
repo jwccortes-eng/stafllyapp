@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
+import { isOnboardingComplete } from "@/lib/onboarding";
 
 type CallbackState = "processing" | "success" | "error";
 
@@ -151,8 +152,8 @@ export default function AuthCallback() {
       return;
     }
 
-    // Check onboarding
-    if (emp && emp.onboarding_status !== 'completed') {
+    // Check onboarding — accept both legacy "complete" and "completed"
+    if (emp && !isOnboardingComplete(emp.onboarding_status)) {
       log("Onboarding incomplete, checking for invitation...");
       // Try to find any invitation token for this employee
       const { data: anyInvite } = await supabase
