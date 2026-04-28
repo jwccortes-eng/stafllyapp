@@ -591,7 +591,7 @@ export function ShiftDetailDialog({
                 const requiresCar = !!(shift as any).transportation_required;
                 const hasDriver = shiftAssignments.some(a => {
                   const emp = employees.find(e => e.id === a.employee_id);
-                  return emp && (emp.has_car === "Yes" || emp.has_car === "true" || emp.has_car === "Sí") && a.status !== "rejected";
+                  return emp && isEmployeeDriver(emp) && a.status !== "rejected";
                 });
                 const noPortalCount = shiftAssignments.filter(a => {
                   const emp = employees.find(e => e.id === a.employee_id);
