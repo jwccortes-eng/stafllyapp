@@ -681,7 +681,9 @@ export default function ActivateAccount() {
               <div className="h-16 w-16 rounded-2xl bg-muted/50 flex items-center justify-center">{cfg.icon}</div>
               <h2 className="text-xl font-bold text-foreground">{cfg.title}</h2>
               <p className="text-sm text-muted-foreground max-w-[280px]">{cfg.desc}</p>
-              <Button onClick={() => navigate("/auth")} className="w-full h-12 rounded-xl mt-2">Go to sign in</Button>
+              <Button onClick={() => navigate(pageState === "used" ? "/portal" : "/auth", { replace: true })} className="w-full h-12 rounded-xl mt-2">
+                {pageState === "used" ? "Go to worker login" : "Go to sign in"}
+              </Button>
             </div>
           </div>
         </div>
