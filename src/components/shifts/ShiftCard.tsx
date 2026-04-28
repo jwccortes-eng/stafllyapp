@@ -42,6 +42,9 @@ function getShiftTone(
 ): { tone: OpsStatusTone; label: string } {
   const totalSlots = shift.slots ?? 1;
 
+  // Drafts dominate the visual: planning artifact, not operational reality.
+  if (isDraftShift(shift)) return { tone: "muted", label: "Borrador" };
+
   if (shift.status === "locked") return { tone: "muted", label: "Bloqueado" };
   if (shift.status === "cancelled" || shift.status === "canceled")
     return { tone: "critical", label: "Cancelado" };
