@@ -93,6 +93,7 @@ export function EmployeeCombobox({
   maxHeight = "220px", showChips = true, availabilityConfigs = [], availabilityOverrides = [],
   availabilityBlockMode = "warning", showBulkActions = false, remainingSlots, requiresDriver = false,
   shiftGroup, onAddNewEmployee, debugContext,
+  debugMode = false, debugWorker = null, debugSearches, debugWorkerFlags,
 }: EmployeeComboboxProps) {
   const [search, setSearch] = useState("");
   const [quickFilter, setQuickFilter] = useState<QuickFilter>("all");
