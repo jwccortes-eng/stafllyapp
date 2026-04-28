@@ -5,7 +5,7 @@ import { es } from "date-fns/locale";
 import { EmployeeAvatarGroup } from "@/components/ui/employee-avatar-group";
 import { OpsStatusChip, type OpsStatusTone } from "@/components/operations/OpsStatusChip";
 import type { Shift } from "./types";
-import { getClientColor, formatShiftCode } from "./types";
+import { getClientColor, formatShiftCode, isDraftShift } from "./types";
 import { UnstaffedAlert } from "./UnstaffedAlert";
 
 export interface AssignedEmployee {
