@@ -37,6 +37,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
+import { useDebugMode } from "@/hooks/useDebugMode";
 import { toast } from "sonner";
 import type { Shift, Assignment, Employee, SelectOption } from "./types";
 import { formatShiftCode, getClientColor, isEmployeeDriver } from "./types";
@@ -404,26 +405,19 @@ export function ShiftDetailDialog({
   const pendingRequests = requests.filter(r => r.status === "pending").length;
 
   useEffect(() => {
-    if (!open || !showAddPanel) return;
+    if (!open || !showAddPanel || !debugMode) return;
     console.debug("[ShiftAssignDebug]", {
       selectedCompanyId,
       companyName: selectedCompany?.name ?? null,
       shiftCompanyId: (shift as any)?.company_id ?? null,
       employeesLength: employees.length,
-      johnyInEmployees,
-      muneraMatchesInEmployees: johnyByLastName.map((e) => ({ id: e.id, name: `${e.first_name} ${e.last_name}` })),
-      assignedIds: Array.from(assignedIds),
-      johnyInAssigned: assignedIds.has(johnyId),
+      assignedCount: assignedIds.size,
       unassignedLength: unassigned.length,
-      johnyInUnassigned,
-      searchMune: debugSearches.mune,
-      search145: debugSearches["#145"],
-      quickFilterDefault: "all",
-      johnyConflict: null,
-      johnyUnavailable: null,
-      visualFilterHiding: !johnyInUnassigned ? null : "none",
+      debugWorker,
+      probe: debugProbe?.flags,
+      probeSearches: debugProbe?.debugSearches,
     });
-  }, [open, showAddPanel, selectedCompanyId, selectedCompany?.name, shift, employees.length, johnyInEmployees, johnyByLastName, assignedIds, unassigned.length, johnyInUnassigned, debugSearches]);
+  }, [open, showAddPanel, debugMode, selectedCompanyId, selectedCompany?.name, shift, employees.length, assignedIds, unassigned.length, debugWorker, debugProbe]);
 
   return (
     <>
@@ -1008,17 +1002,11 @@ export function ShiftDetailDialog({
                           employeesLoaded: employees.length,
                           unassignedCount: unassigned.length,
                           assignedIds: Array.from(assignedIds),
-                          johnyEmployeeId: johnyId,
-                          debugSearches,
-                          debugFlags: {
-                            johnyInEmployees: !!johnyInEmployees,
-                            johnyInAssigned: assignedIds.has(johnyId),
-                            johnyInUnassigned: !!johnyInUnassigned,
-                            johnyConflict: null,
-                            johnyUnavailable: null,
-                            visualFilterHiding: johnyInUnassigned ? null : null,
-                          },
                         }}
+                        debugMode={debugMode}
+                        debugWorker={debugWorker}
+                        debugSearches={debugProbe?.debugSearches}
+                        debugWorkerFlags={debugProbe?.flags}
                       />
                       {selected.length > 0 && (
                         <Button size="sm" onClick={handleAdd} className="w-full h-7 text-[10px] rounded-lg gap-1">
