@@ -606,10 +606,16 @@ export default function Clients() {
                       </a>
                     </>
                   )}
+                  <button
+                    onClick={() => navigate(`/app/clients/${c.id}`)}
+                    className="flex-1 min-w-[3.5rem] flex items-center justify-center gap-1 py-1.5 rounded-xl text-[10px] font-semibold bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                  >
+                    <ExternalLink className="h-3 w-3 shrink-0" /> Open
+                  </button>
                   {canEdit && !c.deleted_at && (
                     <button
                       onClick={() => openEdit(c)}
-                      className="flex-1 min-w-[3.5rem] flex items-center justify-center gap-1 py-1.5 rounded-xl text-[10px] font-semibold bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                      className="flex-1 min-w-[3.5rem] flex items-center justify-center gap-1 py-1.5 rounded-xl text-[10px] font-semibold bg-muted/40 text-foreground hover:bg-muted/70 transition-colors"
                     >
                       <Pencil className="h-3 w-3 shrink-0" /> Editar
                     </button>
@@ -650,8 +656,12 @@ export default function Clients() {
           {filtered.map((c, idx) => (
             <div
               key={c.id}
+              role="button"
+              tabIndex={0}
+              onClick={() => navigate(`/app/clients/${c.id}`)}
+              onKeyDown={(e) => { if (e.key === "Enter") navigate(`/app/clients/${c.id}`); }}
               className={cn(
-                "grid grid-cols-[1fr_140px_160px_140px_100px_100px] gap-2 px-4 py-3 items-center text-xs hover:bg-muted/20 transition-colors",
+                "grid grid-cols-[1fr_140px_160px_140px_100px_100px] gap-2 px-4 py-3 items-center text-xs hover:bg-muted/30 transition-colors cursor-pointer",
                 idx < filtered.length - 1 && "border-b border-border/10",
                 c.deleted_at && "opacity-60"
               )}
@@ -675,19 +685,22 @@ export default function Clients() {
                   {c.deleted_at ? "Archivado" : c.status === "active" ? "Activo" : "Inactivo"}
                 </span>
               </span>
-              <div className="flex items-center gap-1 justify-end">
+              <div className="flex items-center gap-1 justify-end" onClick={(e) => e.stopPropagation()}>
+                <button onClick={() => navigate(`/app/clients/${c.id}`)} className="p-1.5 rounded-lg hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors" title="Open profile">
+                  <ExternalLink className="h-3.5 w-3.5" />
+                </button>
                 {canEdit && !c.deleted_at && (
-                  <button onClick={() => openEdit(c)} className="p-1.5 rounded-lg hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors">
+                  <button onClick={() => openEdit(c)} className="p-1.5 rounded-lg hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors" title="Edit">
                     <Pencil className="h-3.5 w-3.5" />
                   </button>
                 )}
                 {canDelete && !c.deleted_at && (
-                  <button onClick={() => handleArchive(c.id)} className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors">
+                  <button onClick={() => handleArchive(c.id)} className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors" title="Archive">
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
                 )}
                 {c.deleted_at && canEdit && (
-                  <button onClick={() => handleRestore(c.id)} className="p-1.5 rounded-lg hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors">
+                  <button onClick={() => handleRestore(c.id)} className="p-1.5 rounded-lg hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors" title="Restore">
                     <RotateCcw className="h-3.5 w-3.5" />
                   </button>
                 )}
