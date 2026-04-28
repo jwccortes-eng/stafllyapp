@@ -464,7 +464,8 @@ export default function Shifts() {
       // Multi-tenant remains strict — `company_id` filter is mandatory.
       supabase.from("employees")
         .select("id, first_name, last_name, phone_number, email, avatar_url, gender, employee_role, groups, user_id, has_car, can_drive, is_active, employer_identification, profile_status, onboarding_status")
-        .eq("company_id", selectedCompanyId),
+        .eq("company_id", selectedCompanyId)
+        .is("deleted_at", null),
     ]);
     setClients((clientsRes.data ?? []) as SelectOption[]);
     setLocations((locsRes.data ?? []) as any[]);

@@ -38,7 +38,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
 import { toast } from "sonner";
 import type { Shift, Assignment, Employee, SelectOption } from "./types";
-import { formatShiftCode, getClientColor } from "./types";
+import { formatShiftCode, getClientColor, isEmployeeDriver } from "./types";
 import { SendNotificationDialog } from "./SendNotificationDialog";
 import { ShiftCommentsPanel } from "./ShiftCommentsPanel";
 import { ShiftAuditTrail } from "./ShiftAuditTrail";
@@ -591,7 +591,7 @@ export function ShiftDetailDialog({
                 const requiresCar = !!(shift as any).transportation_required;
                 const hasDriver = shiftAssignments.some(a => {
                   const emp = employees.find(e => e.id === a.employee_id);
-                  return emp && (emp.has_car === "Yes" || emp.has_car === "true" || emp.has_car === "Sí") && a.status !== "rejected";
+                  return emp && isEmployeeDriver(emp) && a.status !== "rejected";
                 });
                 const noPortalCount = shiftAssignments.filter(a => {
                   const emp = employees.find(e => e.id === a.employee_id);
@@ -678,17 +678,31 @@ export function ShiftDetailDialog({
                 />
               )}
 
-              {/* ── Role slots: Driver + Admin + Lead ── */}
+              {/* ── Role slots: Admin + Driver (highlighted summary) ──
+                   These are NOT duplicate rows — they surface the people
+                   playing special roles inside the assigned roster below. */}
               {(() => {
                 const requiresCar = !!(shift as any).transportation_required;
-                const driverAssigns = shiftAssignments.filter(a => {
-                  const emp = employees.find(e => e.id === a.employee_id);
-                  return emp && (emp.has_car === "Yes" || emp.has_car === "true" || emp.has_car === "Sí") && a.status !== "rejected";
+                const driverAssigns = shiftAssignments.filter((a) => {
+                  const emp = employees.find((e) => e.id === a.employee_id);
+                  // Use the canonical helper so legacy text ("Yes, I have a Car")
+                  // and the boolean `can_drive` flag both resolve correctly.
+                  return emp && isEmployeeDriver(emp) && a.status !== "rejected";
                 });
+                // Workers assigned but NOT eligible to drive — used to explain
+                // the "Sin conductor" alert clearly when transport is required.
+                const nonDriverAssignedNames = shiftAssignments
+                  .filter((a) => a.status !== "rejected")
+                  .map((a) => employees.find((e) => e.id === a.employee_id))
+                  .filter((e): e is Employee => !!e && !isEmployeeDriver(e))
+                  .map((e) => `${e.first_name} ${e.last_name}`);
 
                 return (
                   <div className="rounded-xl border border-border/20 bg-muted/10 p-2 space-y-1">
-                    <p className="text-[8px] font-bold text-muted-foreground uppercase tracking-wider px-1">Roles</p>
+                    <div className="flex items-center justify-between px-1">
+                      <p className="text-[8px] font-bold text-muted-foreground uppercase tracking-wider">Roles destacados</p>
+                      <p className="text-[8px] text-muted-foreground/70">Resumen — el equipo completo aparece abajo</p>
+                    </div>
                     {/* Admin slot — always visible */}
                     {(() => {
                       const adminId = (shift as any)?.shift_admin_id;
@@ -697,12 +711,12 @@ export function ShiftDetailDialog({
                         <div className="flex items-center gap-2 px-2 py-1 rounded-lg bg-primary/[0.06] border border-primary/20">
                           <EmployeeAvatar firstName={adminEmp.first_name} lastName={adminEmp.last_name} avatarUrl={adminEmp.avatar_url} gender={adminEmp.gender} size="xs" />
                           <span className="text-[10px] font-semibold flex-1 truncate">{adminEmp.first_name} {adminEmp.last_name}</span>
-                          <span className="text-[7px] font-bold text-primary bg-primary/10 px-1 rounded">ADMIN</span>
+                          <span className="text-[7px] font-bold text-primary bg-primary/10 px-1 rounded">RESPONSABLE</span>
                         </div>
                       ) : (
                         <div className="flex items-center gap-2 px-2 py-1 rounded-lg border border-dashed border-warning/30 bg-warning/[0.03]">
                           <ShieldCheck className="h-3 w-3 text-warning/50" />
-                          <span className="text-[9px] text-warning font-medium">Sin admin — seleccionar en edición</span>
+                          <span className="text-[9px] text-warning font-medium">Sin responsable — seleccionar en edición</span>
                         </div>
                       );
                     })()}
@@ -714,13 +728,47 @@ export function ShiftDetailDialog({
                           <div key={a.id} className="flex items-center gap-2 px-2 py-1 rounded-lg bg-earning/[0.06] border border-earning/20">
                             <EmployeeAvatar firstName={emp.first_name} lastName={emp.last_name} avatarUrl={emp.avatar_url} gender={emp.gender} size="xs" />
                             <span className="text-[10px] font-semibold flex-1 truncate">{emp.first_name} {emp.last_name}</span>
-                            <span className="text-[7px] font-bold text-earning bg-earning/10 px-1 rounded">DRIVER</span>
+                            <span className="text-[7px] font-bold text-earning bg-earning/10 px-1 rounded">CONDUCTOR</span>
                           </div>
                         );
                       }) : (
-                        <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg border border-dashed border-destructive/30 bg-destructive/[0.03]">
-                          <Car className="h-3 w-3 text-destructive/50" />
-                          <span className="text-[9px] text-destructive font-medium">Sin conductor — requerido</span>
+                        <div className="rounded-lg border border-dashed border-destructive/30 bg-destructive/[0.04] p-2 space-y-1.5">
+                          <div className="flex items-center gap-2">
+                            <Car className="h-3 w-3 text-destructive/60 shrink-0" />
+                            <span className="text-[10px] text-destructive font-semibold">Sin conductor — transporte requerido</span>
+                          </div>
+                          {nonDriverAssignedNames.length > 0 ? (
+                            <p className="text-[9px] text-muted-foreground leading-snug">
+                              {nonDriverAssignedNames.length === 1
+                                ? `${nonDriverAssignedNames[0]} está asignado como worker, pero no figura como conductor.`
+                                : `${nonDriverAssignedNames.length} workers asignados — ninguno está marcado como conductor.`}
+                              {" "}Marca a alguien como conductor en su perfil, agrega un driver, o ajusta el transporte.
+                            </p>
+                          ) : (
+                            <p className="text-[9px] text-muted-foreground leading-snug">
+                              Asigna un worker que pueda manejar, o desactiva "transporte requerido" en la edición del turno.
+                            </p>
+                          )}
+                          {effectiveCanEdit && (
+                            <div className="flex flex-wrap gap-1 pt-0.5">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-6 text-[9px] px-2 rounded-md border-destructive/30 text-destructive hover:bg-destructive/5"
+                                onClick={() => { onOpenChange(false); onEdit(shift); }}
+                              >
+                                Editar transporte
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-6 text-[9px] px-2 rounded-md"
+                                onClick={() => setShowAddPanel(true)}
+                              >
+                                <UserPlus className="h-2.5 w-2.5 mr-1" /> Agregar conductor
+                              </Button>
+                            </div>
+                          )}
                         </div>
                       )
                     )}
@@ -734,7 +782,7 @@ export function ShiftDetailDialog({
                   {shiftAssignments.map(a => {
                     const emp = employees.find(e => e.id === a.employee_id);
                     if (!emp) return null;
-                    const empIsDriver = emp.has_car === "Yes" || emp.has_car === "true" || emp.has_car === "Sí";
+                    const empIsDriver = isEmployeeDriver(emp);
                     const noPortal = !emp.user_id;
                     return (
                       <div
