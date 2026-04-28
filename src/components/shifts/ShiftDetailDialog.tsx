@@ -1439,3 +1439,14 @@ function InfoRow({ icon: Icon, label, value, empty }: { icon: any; label: string
     </div>
   );
 }
+
+// ── Premium skeleton shown while a lazy panel chunk is loading ──
+function PanelSkeleton({ label }: { label: string }) {
+  return (
+    <div className="space-y-3 animate-pulse" aria-busy="true" aria-label={`Cargando ${label}`}>
+      <div className="h-4 w-32 rounded bg-muted/60" />
+      <div className="h-24 w-full rounded-xl bg-muted/40" />
+      <div className="h-24 w-full rounded-xl bg-muted/30" />
+    </div>
+  );
+}
