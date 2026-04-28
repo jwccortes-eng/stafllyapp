@@ -127,6 +127,7 @@ export default function ActivateAccount() {
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [redirectCountdown, setRedirectCountdown] = useState<number | null>(null);
   const [profileForm, setProfileForm] = useState<ProfileForm>({
     first_name: "", last_name: "", email: "", date_of_birth: "",
     address_line: "", address_city: "", address_state: "", address_zip: "",
@@ -156,7 +157,22 @@ export default function ActivateAccount() {
     setProfileForm(prev => ({ ...prev, [key]: value }));
   };
 
-  // ─── Load invite ───
+  // ─── Auto-redirect to portal after activation ───
+  useEffect(() => {
+    if (wizardStep !== "ready") return;
+    setRedirectCountdown(3);
+    const tick = setInterval(() => {
+      setRedirectCountdown((c) => (c === null ? null : c - 1));
+    }, 1000);
+    const redirect = setTimeout(() => {
+      navigate("/portal", { replace: true });
+    }, 3000);
+    return () => {
+      clearInterval(tick);
+      clearTimeout(redirect);
+    };
+  }, [wizardStep, navigate]);
+
   useEffect(() => {
     if (!token) { setPageState("invalid"); return; }
 
@@ -582,6 +598,11 @@ export default function ActivateAccount() {
         } as any)
         .eq("id", invite.employee_id);
 
+      // Clear any temporary wizard state from storage
+      try {
+        sessionStorage.removeItem(`activate:${token}`);
+        localStorage.removeItem(`activate:${token}`);
+      } catch {}
       setWizardStep("ready");
     } catch (err: any) {
       setError(err?.message || "Unexpected error during activation.");
@@ -660,7 +681,9 @@ export default function ActivateAccount() {
               <div className="h-16 w-16 rounded-2xl bg-muted/50 flex items-center justify-center">{cfg.icon}</div>
               <h2 className="text-xl font-bold text-foreground">{cfg.title}</h2>
               <p className="text-sm text-muted-foreground max-w-[280px]">{cfg.desc}</p>
-              <Button onClick={() => navigate("/auth")} className="w-full h-12 rounded-xl mt-2">Go to sign in</Button>
+              <Button onClick={() => navigate(pageState === "used" ? "/portal" : "/auth", { replace: true })} className="w-full h-12 rounded-xl mt-2">
+                {pageState === "used" ? "Go to worker login" : "Go to sign in"}
+              </Button>
             </div>
           </div>
         </div>
@@ -1095,8 +1118,8 @@ export default function ActivateAccount() {
                     <CheckCircle2 className="h-10 w-10 text-white" />
                   </div>
                   <div className="space-y-1">
-                    <h2 className="text-xl font-bold text-foreground">You're all set! 🎉</h2>
-                    <p className="text-sm text-muted-foreground">Your portal is activated. You can now view shifts, confirm attendance and chat with your team.</p>
+                    <h2 className="text-xl font-bold text-foreground">Your account is ready 🎉</h2>
+                    <p className="text-sm text-muted-foreground">You can now sign in with your phone and PIN.</p>
                   </div>
                   <div className="rounded-xl border border-earning/20 bg-earning/5 p-4 space-y-2 text-left">
                     <p className="text-xs font-semibold text-foreground flex items-center gap-1.5">
@@ -1109,9 +1132,15 @@ export default function ActivateAccount() {
                       <p>• View payments and announcements</p>
                     </div>
                   </div>
-                  <Button onClick={() => navigate("/portal")} className="w-full h-12 rounded-xl text-base font-semibold gap-2">
+                  {redirectCountdown !== null && redirectCountdown > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      Taking you to your portal in {redirectCountdown}…
+                    </p>
+                  )}
+                  <Button onClick={() => navigate("/portal", { replace: true })} className="w-full h-12 rounded-xl text-base font-semibold gap-2">
                     Go to my portal <ArrowRight className="h-4 w-4" />
                   </Button>
+
                 </div>
               )}
             </div>
