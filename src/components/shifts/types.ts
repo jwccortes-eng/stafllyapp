@@ -1,3 +1,5 @@
+export type ShiftPublicationStatus = "draft" | "published" | "cancelled" | "archived";
+
 export interface Shift {
   id: string;
   title: string;
@@ -5,12 +7,20 @@ export interface Shift {
   start_time: string;
   end_time: string;
   status: string;
+  /** Lifecycle separated from operational status. Drafts never notify
+   *  workers, never feed payroll/attendance, never appear on the portal. */
+  publication_status?: ShiftPublicationStatus;
   slots: number | null;
   client_id: string | null;
   location_id: string | null;
   notes: string | null;
   claimable: boolean;
   shift_code?: string | null;
+}
+
+/** Treat missing publication_status as 'published' for backwards compatibility. */
+export function isDraftShift(s: Pick<Shift, "publication_status">): boolean {
+  return (s.publication_status ?? "published") === "draft";
 }
 
 export function formatShiftCode(code: string | null | undefined): string {
