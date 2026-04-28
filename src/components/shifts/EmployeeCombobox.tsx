@@ -96,6 +96,8 @@ export function EmployeeCombobox({
   debugMode = false, debugWorker = null, debugSearches, debugWorkerFlags,
 }: EmployeeComboboxProps) {
   const [search, setSearch] = useState("");
+  // React 18 native debouncing: keeps input snappy while heavy filtering uses the deferred value.
+  const deferredSearch = useDeferredValue(search);
   const [quickFilter, setQuickFilter] = useState<QuickFilter>("all");
 
   const conflictMap = useMemo(() => {
@@ -140,32 +142,32 @@ export function EmployeeCombobox({
   // primary path, plus exact ID/phone shortcuts and a soft phonetic alias
   // fallback for common name variants (jhionny/jhonny/johnny → Johny).
   // See src/lib/employee-search.ts.
-  const matchScoreById = useMemo(() => {
-    const map = new Map<string, number>();
-    if (!search.trim()) return map;
-    const scored = searchEmployees(employees, search);
-    for (const e of scored) map.set(e.id, e.__match.score);
-    return map;
-  }, [employees, search]);
-
-  const matchedByMap = useMemo(() => {
-    const map = new Map<string, MatchResult["matchedBy"]>();
-    if (!search.trim()) return map;
-    const scored = searchEmployees(employees, search);
-    for (const e of scored) map.set(e.id, e.__match.matchedBy);
-    return map;
-  }, [employees, search]);
+  // Single pass over searchEmployees: derive both the score map and the matchedBy map
+  // from one computation. Uses deferredSearch to avoid blocking input on large rosters.
+  const searchMaps = useMemo(() => {
+    const scoreMap = new Map<string, number>();
+    const matchedBy = new Map<string, MatchResult["matchedBy"]>();
+    if (!deferredSearch.trim()) return { scoreMap, matchedBy };
+    const scored = searchEmployees(employees, deferredSearch);
+    for (const e of scored) {
+      scoreMap.set(e.id, e.__match.score);
+      matchedBy.set(e.id, e.__match.matchedBy);
+    }
+    return { scoreMap, matchedBy };
+  }, [employees, deferredSearch]);
+  const matchScoreById = searchMaps.scoreMap;
+  const matchedByMap = searchMaps.matchedBy;
 
   const filtered = useMemo(() => {
     let list = employees;
-    if (search.trim()) {
+    if (deferredSearch.trim()) {
       list = list.filter((e) => matchScoreById.has(e.id));
     }
     if (quickFilter === "available") list = list.filter(e => getGroup(e) === "ready");
     else if (quickFilter === "drivers") list = list.filter(e => isDriver(e));
     else if (quickFilter === "no-conflict") list = list.filter(e => !conflictMap.has(e.id));
     return list;
-  }, [employees, search, matchScoreById, quickFilter, unavailableMap, conflictMap]);
+  }, [employees, deferredSearch, matchScoreById, quickFilter, unavailableMap, conflictMap]);
 
   // Smart sort: when searching, relevance score dominates so the most precise
   // match (exact ID/phone, then last name, then first name, then phonetic) leads.
