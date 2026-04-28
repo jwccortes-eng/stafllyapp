@@ -1789,9 +1789,12 @@ export default function Shifts() {
         allowClaims={shiftsConfig.allow_claims}
         selectedCompanyId={selectedCompanyId}
         saving={saving}
+        draftSaving={draftSaving}
+        isDirty={Boolean(title.trim() || selectedEmployees.length > 0 || notes.trim() || clientId || locationId)}
         repeatConfig={repeatConfig}
         onRepeatChange={setRepeatConfig}
         onRequestSave={() => setConfirmOpen(true)}
+        onSaveDraft={handleSaveDraft}
         onAddNewEmployee={() => setQuickAddOpen(true)}
         onClientCreated={(id, name) => {
           setClients(prev => [...prev, { id, name }]);
