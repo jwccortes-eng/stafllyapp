@@ -114,36 +114,36 @@ export function EmployeeCombobox({
     return freq;
   }, [assignments]);
 
+  // Flexible, safe relevance search. Keeps token-AND substring matching as the
+  // primary path, plus exact ID/phone shortcuts and a soft phonetic alias
+  // fallback for common name variants (jhionny/jhonny/johnny → Johny).
+  // See src/lib/employee-search.ts.
+  const matchScoreById = useMemo(() => {
+    const map = new Map<string, number>();
+    if (!search.trim()) return map;
+    const scored = searchEmployees(employees, search);
+    for (const e of scored) map.set(e.id, e.__match.score);
+    return map;
+  }, [employees, search]);
+
+  const matchedByMap = useMemo(() => {
+    const map = new Map<string, MatchResult["matchedBy"]>();
+    if (!search.trim()) return map;
+    const scored = searchEmployees(employees, search);
+    for (const e of scored) map.set(e.id, e.__match.matchedBy);
+    return map;
+  }, [employees, search]);
+
   const filtered = useMemo(() => {
     let list = employees;
     if (search.trim()) {
-      // Flexible search: tokenized so "mune ang" still matches "Angel Munera",
-      // and so leading/extra spaces never collapse rows. Includes email,
-      // employer_identification (e.g. #1205) and the joined full name.
-      const tokens = search.toLowerCase().split(/\s+/).filter(Boolean);
-      list = list.filter((e) => {
-        const haystack = [
-          e.first_name,
-          e.last_name,
-          `${e.first_name} ${e.last_name}`,
-          e.phone_number ?? "",
-          (e.phone_number ?? "").replace(/\D/g, ""),
-          e.email ?? "",
-          e.employee_role ?? "",
-          e.groups ?? "",
-          e.employer_identification ?? "",
-          `#${e.employer_identification ?? ""}`,
-        ]
-          .join(" ")
-          .toLowerCase();
-        return tokens.every((t) => haystack.includes(t));
-      });
+      list = list.filter((e) => matchScoreById.has(e.id));
     }
     if (quickFilter === "available") list = list.filter(e => getGroup(e) === "ready");
     else if (quickFilter === "drivers") list = list.filter(e => isDriver(e));
     else if (quickFilter === "no-conflict") list = list.filter(e => !conflictMap.has(e.id));
     return list;
-  }, [employees, search, quickFilter, unavailableMap, conflictMap]);
+  }, [employees, search, matchScoreById, quickFilter, unavailableMap, conflictMap]);
 
   // Smart sort with scoring: selected → ready (active+portal+complete) → warning → blocked → inactive
   const sorted = useMemo(() => {
