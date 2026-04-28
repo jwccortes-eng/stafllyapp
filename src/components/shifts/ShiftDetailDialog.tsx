@@ -782,7 +782,7 @@ export function ShiftDetailDialog({
                   {shiftAssignments.map(a => {
                     const emp = employees.find(e => e.id === a.employee_id);
                     if (!emp) return null;
-                    const empIsDriver = emp.has_car === "Yes" || emp.has_car === "true" || emp.has_car === "Sí";
+                    const empIsDriver = isEmployeeDriver(emp);
                     const noPortal = !emp.user_id;
                     return (
                       <div
