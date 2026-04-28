@@ -78,8 +78,8 @@ export function useCompensationAdoption() {
 
   // Fetch rows for selected batch
   const { data: batchRows, isLoading: loadingRows } = useQuery({
-    queryKey: ["adoption-batch-rows", selectedBatchId],
-    enabled: !!selectedBatchId,
+    queryKey: ["adoption-batch-rows", selectedCompanyId, selectedBatchId],
+    enabled: !!selectedBatchId && !!selectedCompanyId,
     queryFn: async () => {
       const { data } = await supabase
         .from("reconciliation_employee_rows")

@@ -121,7 +121,7 @@ export default function Applications() {
   });
 
   const { data: events = [] } = useQuery({
-    queryKey: ["application-events", selected?.id],
+    queryKey: ["application-events", selectedCompanyId, selected?.id],
     enabled: !!selected,
     queryFn: async () => {
       const { data } = await supabase
@@ -135,7 +135,7 @@ export default function Applications() {
 
   // Duplicate candidates
   const { data: duplicates = [] } = useQuery({
-    queryKey: ["duplicate-candidates", selected?.id, selected?.phone],
+    queryKey: ["duplicate-candidates", selectedCompanyId, selected?.id, selected?.phone],
     enabled: !!selected,
     queryFn: async () => {
       if (!selected) return [];
