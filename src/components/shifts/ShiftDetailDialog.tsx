@@ -21,12 +21,23 @@ import {
 } from "lucide-react";
 import { ShiftReviewButton } from "@/components/reviews/ShiftReviewButton";
 import { ShiftPostReviewsSection } from "@/components/reviews/ShiftPostReviewsSection";
-import { ShiftRidesPanel } from "./ShiftRidesPanel";
+// Heavy panels — lazy-loaded so the drawer opens fast and only pays for the
+// JS chunks the user actually navigates to. Keeps realtime/queries intact;
+// each panel only mounts when its tab/dialog opens.
+import { lazy, Suspense } from "react";
 import { ShiftShareMenu } from "./ShiftShareMenu";
-import { ShiftAttendancePanel } from "./ShiftAttendancePanel";
 import { UnstaffedAlert } from "./UnstaffedAlert";
-import { ShiftChatPanel } from "./ShiftChatPanel";
-import ShiftLiveMapPanel from "./ShiftLiveMapPanel";
+
+const ShiftRidesPanel = lazy(() =>
+  import("./ShiftRidesPanel").then(m => ({ default: m.ShiftRidesPanel })),
+);
+const ShiftAttendancePanel = lazy(() =>
+  import("./ShiftAttendancePanel").then(m => ({ default: m.ShiftAttendancePanel })),
+);
+const ShiftChatPanel = lazy(() =>
+  import("./ShiftChatPanel").then(m => ({ default: m.ShiftChatPanel })),
+);
+const ShiftLiveMapPanel = lazy(() => import("./ShiftLiveMapPanel"));
 import type { AvailabilityConfig, AvailabilityOverride } from "@/hooks/useEmployeeAvailability";
 import { cn } from "@/lib/utils";
 import { formatDisplayText } from "@/lib/format-helpers";
