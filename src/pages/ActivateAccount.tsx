@@ -504,17 +504,20 @@ export default function ActivateAccount() {
       const licenseUrl = await uploadDoc(driverLicenseFile, "driver_license");
       const regUrl = await uploadDoc(vehicleRegFile, "vehicle_registration");
 
-      // Save document records
+      // Save document records via secure RPC (validates invite token + employee/company linkage)
       for (const doc of [
         { document_type: "driver_license", file_url: licenseUrl, file_name: driverLicenseFile.name },
         { document_type: "vehicle_registration", file_url: regUrl, file_name: vehicleRegFile.name },
       ]) {
-        await supabase.from("employee_onboarding_documents" as any).upsert({
-          employee_id: invite.employee_id,
-          company_id: invite.company_id,
-          ...doc,
-          status: "pending",
-        } as any, { onConflict: "employee_id,document_type" });
+        const { error: rpcErr } = await supabase.rpc("register_onboarding_document" as any, {
+          _invite_token: token,
+          _employee_id: invite.employee_id,
+          _company_id: invite.company_id,
+          _document_type: doc.document_type,
+          _file_url: doc.file_url,
+          _file_name: doc.file_name,
+        } as any);
+        if (rpcErr) throw rpcErr;
       }
       return true;
     } catch (err: any) {
