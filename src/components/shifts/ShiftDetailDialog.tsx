@@ -38,7 +38,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
 import { toast } from "sonner";
 import type { Shift, Assignment, Employee, SelectOption } from "./types";
-import { formatShiftCode, getClientColor } from "./types";
+import { formatShiftCode, getClientColor, isEmployeeDriver } from "./types";
 import { SendNotificationDialog } from "./SendNotificationDialog";
 import { ShiftCommentsPanel } from "./ShiftCommentsPanel";
 import { ShiftAuditTrail } from "./ShiftAuditTrail";
