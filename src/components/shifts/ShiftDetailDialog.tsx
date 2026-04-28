@@ -21,12 +21,23 @@ import {
 } from "lucide-react";
 import { ShiftReviewButton } from "@/components/reviews/ShiftReviewButton";
 import { ShiftPostReviewsSection } from "@/components/reviews/ShiftPostReviewsSection";
-import { ShiftRidesPanel } from "./ShiftRidesPanel";
+// Heavy panels — lazy-loaded so the drawer opens fast and only pays for the
+// JS chunks the user actually navigates to. Keeps realtime/queries intact;
+// each panel only mounts when its tab/dialog opens.
+import { lazy, Suspense } from "react";
 import { ShiftShareMenu } from "./ShiftShareMenu";
-import { ShiftAttendancePanel } from "./ShiftAttendancePanel";
 import { UnstaffedAlert } from "./UnstaffedAlert";
-import { ShiftChatPanel } from "./ShiftChatPanel";
-import ShiftLiveMapPanel from "./ShiftLiveMapPanel";
+
+const ShiftRidesPanel = lazy(() =>
+  import("./ShiftRidesPanel").then(m => ({ default: m.ShiftRidesPanel })),
+);
+const ShiftAttendancePanel = lazy(() =>
+  import("./ShiftAttendancePanel").then(m => ({ default: m.ShiftAttendancePanel })),
+);
+const ShiftChatPanel = lazy(() =>
+  import("./ShiftChatPanel").then(m => ({ default: m.ShiftChatPanel })),
+);
+const ShiftLiveMapPanel = lazy(() => import("./ShiftLiveMapPanel"));
 import type { AvailabilityConfig, AvailabilityOverride } from "@/hooks/useEmployeeAvailability";
 import { cn } from "@/lib/utils";
 import { formatDisplayText } from "@/lib/format-helpers";
@@ -41,9 +52,16 @@ import { useDebugMode } from "@/hooks/useDebugMode";
 import { toast } from "sonner";
 import type { Shift, Assignment, Employee, SelectOption } from "./types";
 import { formatShiftCode, getClientColor, isEmployeeDriver } from "./types";
-import { SendNotificationDialog } from "./SendNotificationDialog";
-import { ShiftCommentsPanel } from "./ShiftCommentsPanel";
-import { ShiftAuditTrail } from "./ShiftAuditTrail";
+
+const SendNotificationDialog = lazy(() =>
+  import("./SendNotificationDialog").then(m => ({ default: m.SendNotificationDialog })),
+);
+const ShiftCommentsPanel = lazy(() =>
+  import("./ShiftCommentsPanel").then(m => ({ default: m.ShiftCommentsPanel })),
+);
+const ShiftAuditTrail = lazy(() =>
+  import("./ShiftAuditTrail").then(m => ({ default: m.ShiftAuditTrail })),
+);
 import { ShiftRoleSlotsTeamPanel } from "./ShiftRoleSlotsTeamPanel";
 import { GenerateBillingBlockButton } from "./GenerateBillingBlockButton";
 import {
@@ -1150,35 +1168,47 @@ export function ShiftDetailDialog({
             </div>
 
           ) : tab === "attendance" ? (
-            <ShiftAttendancePanel shiftId={shift.id} companyId={selectedCompanyId!} assignments={assignments} employees={employees} canManage={effectiveCanEdit} shiftAdminId={(shift as any)?.shift_admin_id} />
+            <Suspense fallback={<PanelSkeleton label="Asistencia" />}>
+              <ShiftAttendancePanel shiftId={shift.id} companyId={selectedCompanyId!} assignments={assignments} employees={employees} canManage={effectiveCanEdit} shiftAdminId={(shift as any)?.shift_admin_id} />
+            </Suspense>
           ) : tab === "livemap" ? (
-            <ShiftLiveMapPanel
-              shiftId={shift.id}
-              companyId={selectedCompanyId!}
-              isActiveShift
-              canEdit={effectiveCanEdit}
-              onSetJobSite={() => { onOpenChange(false); onEdit(shift); }}
-            />
+            <Suspense fallback={<PanelSkeleton label="Live map" />}>
+              <ShiftLiveMapPanel
+                shiftId={shift.id}
+                companyId={selectedCompanyId!}
+                isActiveShift
+                canEdit={effectiveCanEdit}
+                onSetJobSite={() => { onOpenChange(false); onEdit(shift); }}
+              />
+            </Suspense>
           ) : tab === "comments" ? (
-            <ShiftCommentsPanel shiftId={shift.id} companyId={selectedCompanyId!} employees={employees} />
+            <Suspense fallback={<PanelSkeleton label="Notas" />}>
+              <ShiftCommentsPanel shiftId={shift.id} companyId={selectedCompanyId!} employees={employees} />
+            </Suspense>
           ) : tab === "chat" ? (
-            <ShiftChatPanel shiftId={shift.id} shiftDate={shift.date} companyId={selectedCompanyId!} />
+            <Suspense fallback={<PanelSkeleton label="Chat" />}>
+              <ShiftChatPanel shiftId={shift.id} shiftDate={shift.date} companyId={selectedCompanyId!} />
+            </Suspense>
           ) : tab === "rides" ? (
-            <ShiftRidesPanel
-              shiftId={shift.id}
-              companyId={selectedCompanyId!}
-              assignments={assignments}
-              employees={employees}
-              canEdit={effectiveCanEdit}
-              shiftContext={{
-                title: shift.title || "Turno",
-                date: shift.date,
-                start_time: shift.start_time,
-                shift_link_token: (shift as Shift & { shift_link_token?: string | null }).shift_link_token,
-              }}
-            />
+            <Suspense fallback={<PanelSkeleton label="Rides" />}>
+              <ShiftRidesPanel
+                shiftId={shift.id}
+                companyId={selectedCompanyId!}
+                assignments={assignments}
+                employees={employees}
+                canEdit={effectiveCanEdit}
+                shiftContext={{
+                  title: shift.title || "Turno",
+                  date: shift.date,
+                  start_time: shift.start_time,
+                  shift_link_token: (shift as Shift & { shift_link_token?: string | null }).shift_link_token,
+                }}
+              />
+            </Suspense>
           ) : tab === "audit" ? (
-            <ShiftAuditTrail shiftId={shift.id} />
+            <Suspense fallback={<PanelSkeleton label="Historial" />}>
+              <ShiftAuditTrail shiftId={shift.id} />
+            </Suspense>
           ) : null}
         </OpsSheetBody>
         {rejectReqId && (
@@ -1382,7 +1412,11 @@ export function ShiftDetailDialog({
       </AlertDialogContent>
     </AlertDialog>
 
-    <SendNotificationDialog open={notifyOpen} onOpenChange={setNotifyOpen} shift={shift} assignments={assignments} employees={employees} />
+    {notifyOpen && (
+      <Suspense fallback={null}>
+        <SendNotificationDialog open={notifyOpen} onOpenChange={setNotifyOpen} shift={shift} assignments={assignments} employees={employees} />
+      </Suspense>
+    )}
     </>
   );
 }
@@ -1402,6 +1436,17 @@ function InfoRow({ icon: Icon, label, value, empty }: { icon: any; label: string
           <p className="text-xs text-muted-foreground/50 italic">{empty || "—"}</p>
         )}
       </div>
+    </div>
+  );
+}
+
+// ── Premium skeleton shown while a lazy panel chunk is loading ──
+function PanelSkeleton({ label }: { label: string }) {
+  return (
+    <div className="space-y-3 animate-pulse" aria-busy="true" aria-label={`Cargando ${label}`}>
+      <div className="h-4 w-32 rounded bg-muted/60" />
+      <div className="h-24 w-full rounded-xl bg-muted/40" />
+      <div className="h-24 w-full rounded-xl bg-muted/30" />
     </div>
   );
 }
