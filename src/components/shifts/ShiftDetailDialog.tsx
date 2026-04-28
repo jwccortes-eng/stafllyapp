@@ -279,13 +279,13 @@ export function ShiftDetailDialog({
     }
   }, [shift, open, loadRequests, loadRoleSlots]);
 
-  if (!shift) return null;
-
-  const isLocked = shift.status === "locked";
-  const effectiveCanEdit = canEdit && !isLocked;
+  // IMPORTANT: All hooks MUST be called before any early return to satisfy
+  // React's Rules of Hooks. `shift` may be null while the drawer is closing —
+  // we guard each memo body instead of returning early above them.
+  const shiftId = shift?.id ?? null;
   const shiftAssignments = useMemo(
-    () => assignments.filter(a => a.shift_id === shift.id),
-    [assignments, shift.id]
+    () => (shiftId ? assignments.filter(a => a.shift_id === shiftId) : []),
+    [assignments, shiftId]
   );
   const assignedIds = useMemo(
     () => new Set(shiftAssignments.map(a => a.employee_id)),
@@ -298,6 +298,11 @@ export function ShiftDetailDialog({
   // Debug probe (only computed when developer/owner/admin opens with `?debug=1`).
   // `debugWorker` accepts a UUID or an `employer_identification` (e.g. `145` / `#145`).
   const { debugMode, debugWorker } = useDebugMode();
+
+  if (!shift) return null;
+
+  const isLocked = shift.status === "locked";
+  const effectiveCanEdit = canEdit && !isLocked;
   const debugProbe = debugMode ? (() => {
     const probe = debugWorker?.toLowerCase() ?? null;
     const matched = probe
