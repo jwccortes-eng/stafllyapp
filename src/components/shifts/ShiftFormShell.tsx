@@ -73,15 +73,39 @@ export function ShiftFormShell({
   saving,
   saveLabel,
   saveDisabled,
+  onSaveDraft,
+  draftLabel,
+  draftSaving,
+  isDirty,
   footerBanner,
   children,
   summary,
 }: Props) {
   const headerTitle = mode === "create" ? "Nuevo turno" : "Editar turno";
-  const defaultSaveLabel = mode === "create" ? "Crear turno" : "Guardar cambios";
+  const defaultSaveLabel = mode === "create"
+    ? (onSaveDraft ? "Publish" : "Crear turno")
+    : "Guardar cambios";
+  const [confirmCloseOpen, setConfirmCloseOpen] = useState(false);
+
+  const requestClose = () => {
+    if (isDirty) {
+      setConfirmCloseOpen(true);
+    } else {
+      onOpenChange(false);
+    }
+  };
+
+  const handleDialogChange = (next: boolean) => {
+    if (!next && isDirty) {
+      setConfirmCloseOpen(true);
+      return;
+    }
+    onOpenChange(next);
+  };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <>
+    <Dialog open={open} onOpenChange={handleDialogChange}>
       <DialogContent
         className={cn(
           "p-0 gap-0 overflow-hidden flex flex-col rounded-2xl border-border/30 shadow-xl",
@@ -124,18 +148,35 @@ export function ShiftFormShell({
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => onOpenChange(false)}
+              onClick={requestClose}
               className="h-9 text-xs gap-1"
             >
               <X className="h-3.5 w-3.5" /> Cancelar
             </Button>
+            {onSaveDraft && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => void onSaveDraft()}
+                disabled={draftSaving || saving}
+                className="h-9 text-xs gap-1.5 font-medium px-3"
+                title="Guardar como borrador — no se notifica a los workers"
+              >
+                {draftSaving
+                  ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  : <FileText className="h-3.5 w-3.5" />}
+                {draftLabel ?? "Save draft"}
+              </Button>
+            )}
             <Button
               onClick={() => void onSave()}
-              disabled={saving || saveDisabled}
+              disabled={saving || saveDisabled || draftSaving}
               size="sm"
               className="h-9 text-xs gap-1.5 font-semibold px-4"
             >
-              {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+              {saving
+                ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                : (onSaveDraft ? <Send className="h-3.5 w-3.5" /> : <Save className="h-3.5 w-3.5" />)}
               {saveLabel ?? defaultSaveLabel}
             </Button>
           </div>
@@ -166,5 +207,38 @@ export function ShiftFormShell({
         </div>
       </DialogContent>
     </Dialog>
+
+    <AlertDialog open={confirmCloseOpen} onOpenChange={setConfirmCloseOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>¿Descartar cambios?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Tienes cambios sin guardar en este turno. Si cierras ahora se perderán.
+            {onSaveDraft && " Puedes guardarlo como borrador para retomarlo después."}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter className="gap-2">
+          <AlertDialogCancel>Seguir editando</AlertDialogCancel>
+          {onSaveDraft && (
+            <Button
+              variant="outline"
+              onClick={async () => {
+                setConfirmCloseOpen(false);
+                await onSaveDraft();
+              }}
+            >
+              <FileText className="h-3.5 w-3.5 mr-1.5" /> Guardar borrador
+            </Button>
+          )}
+          <AlertDialogAction
+            onClick={() => { setConfirmCloseOpen(false); onOpenChange(false); }}
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          >
+            Descartar
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }
