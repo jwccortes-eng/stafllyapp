@@ -1116,8 +1116,8 @@ export default function ActivateAccount() {
                     <CheckCircle2 className="h-10 w-10 text-white" />
                   </div>
                   <div className="space-y-1">
-                    <h2 className="text-xl font-bold text-foreground">You're all set! 🎉</h2>
-                    <p className="text-sm text-muted-foreground">Your portal is activated. You can now view shifts, confirm attendance and chat with your team.</p>
+                    <h2 className="text-xl font-bold text-foreground">Your account is ready 🎉</h2>
+                    <p className="text-sm text-muted-foreground">You can now sign in with your phone and PIN.</p>
                   </div>
                   <div className="rounded-xl border border-earning/20 bg-earning/5 p-4 space-y-2 text-left">
                     <p className="text-xs font-semibold text-foreground flex items-center gap-1.5">
@@ -1130,9 +1130,15 @@ export default function ActivateAccount() {
                       <p>• View payments and announcements</p>
                     </div>
                   </div>
-                  <Button onClick={() => navigate("/portal")} className="w-full h-12 rounded-xl text-base font-semibold gap-2">
+                  {redirectCountdown !== null && redirectCountdown > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      Taking you to your portal in {redirectCountdown}…
+                    </p>
+                  )}
+                  <Button onClick={() => navigate("/portal", { replace: true })} className="w-full h-12 rounded-xl text-base font-semibold gap-2">
                     Go to my portal <ArrowRight className="h-4 w-4" />
                   </Button>
+
                 </div>
               )}
             </div>
