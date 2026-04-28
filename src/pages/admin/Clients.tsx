@@ -443,6 +443,16 @@ export default function Clients() {
         />
       )}
 
+      {/* KPI strip */}
+      {!loading && clients.length > 0 && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+          <KpiCard size="sm" accent="primary" icon={<Building2 className="h-3.5 w-3.5" />} value={stats.active} label="Active clients" />
+          <KpiCard size="sm" accent="muted" icon={<Mail className="h-3.5 w-3.5" />} value={stats.withEmail} label="With email" />
+          <KpiCard size="sm" accent="muted" icon={<Phone className="h-3.5 w-3.5" />} value={stats.withPhone} label="With phone" />
+          <KpiCard size="sm" accent="muted" icon={<Trash2 className="h-3.5 w-3.5" />} value={stats.archived} label="Archived" />
+        </div>
+      )}
+
       {/* Advanced toolbar */}
       <div className="flex items-center gap-2 flex-wrap mb-6">
         {/* Search */}
