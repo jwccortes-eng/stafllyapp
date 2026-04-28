@@ -393,11 +393,32 @@ function DocumentsTab({ employee, companyId }: { employee: EmployeeRecord; compa
   const { toast } = useToast();
 
   const fetchDocs = async () => {
-    const [{ data: w9Data }, { data: docsData }] = await Promise.all([
+    const [{ data: w9Data }, { data: docsData }, { data: onbDocsData }] = await Promise.all([
       supabase.from("contractor_w9").select("id, status, legal_name, tax_classification, tin_last4, submitted_at, reviewed_at").eq("employee_id", employee.id).eq("company_id", companyId).maybeSingle(),
       supabase.from("employee_documents" as any).select("*").eq("employee_id", employee.id).eq("company_id", companyId).order("created_at", { ascending: false }),
+      supabase.from("employee_onboarding_documents" as any).select("*").eq("employee_id", employee.id).eq("company_id", companyId).order("created_at", { ascending: false }),
     ]);
-    setW9(w9Data); setDocs((docsData as any[]) ?? []); setLoading(false);
+    // Normalize onboarding documents into the same shape DocumentsTab renders.
+    // These rows come from the activation wizard (driver_license, vehicle_registration, …).
+    const ONB_LABELS: Record<string, string> = {
+      driver_license: "Driver's license",
+      vehicle_registration: "Vehicle registration",
+    };
+    const normalizedOnb = ((onbDocsData as any[]) ?? []).map((d) => ({
+      id: `onb-${d.id}`,
+      name: d.file_name || ONB_LABELS[d.document_type] || d.document_type,
+      file_url: d.file_url,
+      file_size: null,
+      category: ONB_LABELS[d.document_type] || d.document_type,
+      created_at: d.created_at,
+      review_status: d.status === "approved" ? "approved" : d.status === "rejected" ? "rejected" : "pending",
+      rejection_reason: d.rejection_reason ?? null,
+      _readonly: true, // uploaded by the worker via activation; admins use VehicleDocumentsSection / dedicated review
+    }));
+    const merged = [...((docsData as any[]) ?? []), ...normalizedOnb].sort((a, b) =>
+      String(b.created_at ?? "").localeCompare(String(a.created_at ?? "")),
+    );
+    setW9(w9Data); setDocs(merged); setLoading(false);
   };
   useEffect(() => { fetchDocs(); }, [employee.id, companyId]);
 
