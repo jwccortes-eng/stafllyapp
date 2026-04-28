@@ -11567,6 +11567,9 @@ export type Database = {
           operational_version: number
           pay_override: boolean
           pay_type: string
+          publication_status: Database["public"]["Enums"]["shift_publication_status"]
+          published_at: string | null
+          published_by: string | null
           qr_attendance_mode: string
           qr_token: string | null
           reconciliation_hash: string | null
@@ -11608,6 +11611,9 @@ export type Database = {
           operational_version?: number
           pay_override?: boolean
           pay_type?: string
+          publication_status?: Database["public"]["Enums"]["shift_publication_status"]
+          published_at?: string | null
+          published_by?: string | null
           qr_attendance_mode?: string
           qr_token?: string | null
           reconciliation_hash?: string | null
@@ -11649,6 +11655,9 @@ export type Database = {
           operational_version?: number
           pay_override?: boolean
           pay_type?: string
+          publication_status?: Database["public"]["Enums"]["shift_publication_status"]
+          published_at?: string | null
+          published_by?: string | null
           qr_attendance_mode?: string
           qr_token?: string | null
           reconciliation_hash?: string | null
@@ -12197,6 +12206,7 @@ export type Database = {
           employee_id: string
           id: string
           import_batch_id: string | null
+          is_draft_reservation: boolean
           last_notified_at: string | null
           rejected_at: string | null
           rejection_reason: string | null
@@ -12216,6 +12226,7 @@ export type Database = {
           employee_id: string
           id?: string
           import_batch_id?: string | null
+          is_draft_reservation?: boolean
           last_notified_at?: string | null
           rejected_at?: string | null
           rejection_reason?: string | null
@@ -12235,6 +12246,7 @@ export type Database = {
           employee_id?: string
           id?: string
           import_batch_id?: string | null
+          is_draft_reservation?: boolean
           last_notified_at?: string | null
           rejected_at?: string | null
           rejection_reason?: string | null
@@ -15154,6 +15166,7 @@ export type Database = {
           sampling_reason: string
         }[]
       }
+      publish_shift_draft: { Args: { _shift_id: string }; Returns: Json }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
         Returns: {
@@ -15538,6 +15551,7 @@ export type Database = {
         | "billing_question"
         | "general_message"
       service_zone_type: "radius" | "polygon" | "city" | "county" | "state"
+      shift_publication_status: "draft" | "published" | "cancelled" | "archived"
       staffing_request_status:
         | "draft"
         | "submitted"
@@ -16069,6 +16083,7 @@ export const Constants = {
         "general_message",
       ],
       service_zone_type: ["radius", "polygon", "city", "county", "state"],
+      shift_publication_status: ["draft", "published", "cancelled", "archived"],
       staffing_request_status: [
         "draft",
         "submitted",

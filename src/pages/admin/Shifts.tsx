@@ -93,9 +93,12 @@ function CreateShiftDialogInline(props: {
   allowClaims: boolean;
   selectedCompanyId: string | null;
   saving: boolean;
+  draftSaving: boolean;
+  isDirty: boolean;
   repeatConfig: RepeatConfig;
   onRepeatChange: (c: RepeatConfig) => void;
   onRequestSave: () => void;
+  onSaveDraft: () => void;
   onAddNewEmployee: () => void;
   onClientCreated: (id: string, name: string) => void;
   onLocationCreated: (id: string, name: string, address: string) => void;
@@ -157,9 +160,13 @@ function CreateShiftDialogInline(props: {
       startTime={v.startTime}
       endTime={v.endTime}
       saving={props.saving}
+      draftSaving={props.draftSaving}
+      isDirty={props.isDirty}
       saveDisabled={!v.date}
-      saveLabel="Revisar y crear"
+      saveLabel="Publish"
+      draftLabel="Save draft"
       onSave={props.onRequestSave}
+      onSaveDraft={props.onSaveDraft}
       summary={summary}
     >
       <ShiftFormFields
@@ -347,6 +354,7 @@ export default function Shifts() {
   const [specialInstructions, setSpecialInstructions] = useState("");
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
+  const [draftSaving, setDraftSaving] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [payType, setPayType] = useState<"hourly" | "daily">("hourly");
@@ -386,9 +394,9 @@ export default function Shifts() {
       result = result.filter(s => !assignments.some(a => a.shift_id === s.id));
     }
     if (filters.publishStatus === "published") {
-      result = result.filter(s => s.status === "published");
+      result = result.filter(s => (s.publication_status ?? "published") === "published" && s.status !== "locked");
     } else if (filters.publishStatus === "draft") {
-      result = result.filter(s => s.status !== "published" && s.status !== "locked");
+      result = result.filter(s => s.publication_status === "draft");
     } else if (filters.publishStatus === "locked") {
       result = result.filter(s => s.status === "locked");
     }
@@ -649,10 +657,21 @@ export default function Shifts() {
     });
   };
 
-  const createSingleShift = async (shiftDate: string, skipNotifications = false, forceDraft = false) => {
+  // Creates a single shift row.
+  // - `publishNow=false` ⇒ it's a draft: publication_status='draft',
+  //   no notifications, assignments flagged as draft reservations.
+  // - `publishNow=true`  ⇒ regular published shift, assignments are real.
+  const createSingleShift = async (
+    shiftDate: string,
+    skipNotifications = false,
+    forceDraft = false,
+    publishNow = true,
+  ) => {
     if (!selectedCompanyId) return null;
-    // Determine initial status: auto_publish overrides unless forceDraft
-    const initialStatus = (!forceDraft && shiftsConfig.auto_publish) ? "published" : (forceDraft ? "draft" : "draft");
+    const isDraft = !publishNow || forceDraft;
+    // Legacy `status` column retained: drafts also flow through the legacy
+    // 'draft' value so existing UI/filters that look at status keep working.
+    const initialStatus = isDraft ? "draft" : ((!forceDraft && shiftsConfig.auto_publish) ? "published" : "draft");
     const insertData: any = {
       company_id: selectedCompanyId,
       title: title.trim() || "Turno",
@@ -667,7 +686,7 @@ export default function Shifts() {
       created_by: user?.id,
       pay_type: payType,
       day_type: payType === "daily" ? dayType : "full_day",
-      pay_override: payOverride, // Phase 2 #1: capture explicit override intent
+      pay_override: payOverride,
       shift_admin_id: shiftAdminId || null,
       transportation_required: transportRequired,
       car_capacity: parseInt(carCapacity) || 5,
@@ -677,26 +696,35 @@ export default function Shifts() {
       status: initialStatus,
       meeting_point_location_id: meetingPointLocationId || null,
       job_site_location_id: jobSiteLocationId || null,
+      // New lifecycle column — single source of truth for draft visibility.
+      publication_status: isDraft ? "draft" : "published",
+      published_at: isDraft ? null : new Date().toISOString(),
+      published_by: isDraft ? null : user?.id ?? null,
     };
     const { data: shift, error } = await supabase.from("scheduled_shifts").insert(insertData).select("id, shift_code").single();
 
     if (error) { toast.error(error.message); return null; }
 
-    // Title is kept clean — `shift_code` is the single source of truth and is rendered
-    // as a separate `#0001` chip by the cards/headers. Do NOT bake the code into the title.
-
     if (selectedEmployees.length > 0 && shift) {
       const assigns = selectedEmployees.map(eid => ({
         company_id: selectedCompanyId, shift_id: shift.id, employee_id: eid, status: "pending",
+        // Tentative reservations on drafts: visible to admins, invisible to workers,
+        // no notifications, no readiness enforcement.
+        is_draft_reservation: isDraft,
       }));
       await supabase.from("shift_assignments").insert(assigns as any);
     }
 
     if (shift) {
-      await logShiftActivity("crear_turno", shift.id, null, { title: title.trim(), date: shiftDate, start_time: startTime, end_time: endTime });
+      await logShiftActivity(
+        isDraft ? "guardar_borrador_turno" : "crear_turno",
+        shift.id,
+        null,
+        { title: title.trim(), date: shiftDate, start_time: startTime, end_time: endTime, draft: isDraft },
+      );
 
-      // Notifications only for the base shift (not repeated drafts)
-      if (!skipNotifications && claimable) {
+      // No notifications fire for drafts — they're invisible to workers.
+      if (!isDraft && !skipNotifications && claimable) {
         const { data: activeEmps } = await supabase
           .from("employees")
           .select("id")
@@ -725,52 +753,81 @@ export default function Shifts() {
     return shift;
   };
 
+  // Validate fields required to publish a shift. Returns list of missing fields
+  // (empty when ok). Used both inline and by the publish flow.
+  const validateForPublish = (): string[] => {
+    const missing: string[] = [];
+    if (!date) missing.push("Fecha");
+    if (!startTime) missing.push("Hora de inicio");
+    if (!endTime) missing.push("Hora de fin");
+    if (!title.trim()) missing.push("Título");
+    if (shiftsConfig.require_client && !clientId) missing.push("Cliente");
+    if (shiftsConfig.require_location && !locationId) missing.push("Ubicación");
+    if (shiftsConfig.require_shift_admin && !shiftAdminId) missing.push("Shift admin");
+    if (transportRequired && !driverEmployeeId) missing.push("Conductor (transporte requerido)");
+    if (selectedEmployees.length === 0 && !claimable) missing.push("Al menos 1 worker o marcar como reclamable");
+    if (startTime && endTime) {
+      const [sh, sm] = startTime.split(":").map(Number);
+      const [eh, em] = endTime.split(":").map(Number);
+      let durationMin = (eh * 60 + em) - (sh * 60 + sm);
+      if (durationMin < 0) durationMin += 24 * 60;
+      if (durationMin / 60 > shiftsConfig.max_shift_hours) missing.push(`Duración ≤ ${shiftsConfig.max_shift_hours}h`);
+    }
+    return missing;
+  };
+
+  // Save the current form as a draft. Almost no validations — only company + date.
+  // Drafts can be incomplete; everything is allowed except a missing date (because
+  // we anchor the calendar on date) and a missing tenant.
+  const handleSaveDraft = async () => {
+    if (!selectedCompanyId) { toast.error("Selecciona una compañía"); return; }
+    if (!date) { toast.error("Una fecha es obligatoria incluso para borradores"); return; }
+    setDraftSaving(true);
+    try {
+      const baseShift = await createSingleShift(date, /* skipNotifications */ true, /* forceDraft */ true, /* publishNow */ false);
+      if (!baseShift) return;
+      toast.success("Borrador guardado");
+      setCreateOpen(false);
+      resetForm();
+      loadData();
+    } finally {
+      setDraftSaving(false);
+    }
+  };
+
   const handleCreate = async () => {
     if (!date || !selectedCompanyId) return;
 
-    // Configurable validation rules
-    if (shiftsConfig.require_client && !clientId) {
-      toast.error("A client is required to create a shift");
-      return;
-    }
-    if (shiftsConfig.require_location && !locationId) {
-      toast.error("A location is required to create a shift");
-      return;
-    }
-    // Validate max shift hours
-    const [sh, sm] = startTime.split(":").map(Number);
-    const [eh, em] = endTime.split(":").map(Number);
-    let durationMin = (eh * 60 + em) - (sh * 60 + sm);
-    if (durationMin < 0) durationMin += 24 * 60;
-    if (durationMin / 60 > shiftsConfig.max_shift_hours) {
-      toast.error(`Shift duration exceeds the ${shiftsConfig.max_shift_hours}h maximum`);
+    // Strict validation only when publishing.
+    const missing = validateForPublish();
+    if (missing.length > 0) {
+      toast.error(`Pendiente antes de publicar: ${missing.join(", ")}`);
       return;
     }
 
     setSaving(true);
 
-    // Create the base shift (may notify if not repeating)
     const repeatDates = computeRepeatDates(date, repeatConfig);
     const isRepeating = repeatConfig.enabled && repeatDates.length > 0;
 
-    const baseShift = await createSingleShift(date, isRepeating);
+    // Base shift = published. Repeated shifts inherit the original behavior:
+    // they are created as drafts so the operator reviews them before publishing.
+    const baseShift = await createSingleShift(date, isRepeating, false, true);
     if (!baseShift) { setSaving(false); return; }
 
-    // Create repeated shifts (all as draft, no notifications)
     if (isRepeating) {
       const copyAssign = repeatConfig.copyAssignments;
-      // Temporarily clear employees if not copying
       const savedEmployees = [...selectedEmployees];
       if (!copyAssign) setSelectedEmployees([]);
 
       for (const repeatDate of repeatDates) {
-        await createSingleShift(repeatDate, true, true);
+        await createSingleShift(repeatDate, true, true, false);
       }
 
       if (!copyAssign) setSelectedEmployees(savedEmployees);
       toast.success(`${repeatDates.length + 1} turnos creados (${repeatDates.length} repetidos en borrador)`);
     } else {
-      toast.success("Turno creado");
+      toast.success("Turno publicado");
     }
 
     setSaving(false); setCreateOpen(false); resetForm(); loadData();
@@ -898,6 +955,11 @@ export default function Shifts() {
       toast.error("A shift lead must be assigned before publishing");
       return;
     }
+    // Use the RPC so draft reservations are lifted atomically and the
+    // publication lifecycle stays consistent (publication_status + status).
+    const { error: rpcError } = await supabase.rpc("publish_shift_draft" as any, { _shift_id: shift.id });
+    if (rpcError) { toast.error(rpcError.message); return; }
+    // Keep the legacy `status` column in sync for downstream UI/filters.
     const { error } = await supabase.from("scheduled_shifts")
       .update({ status: "published" } as any)
       .eq("id", shift.id);
@@ -1732,9 +1794,12 @@ export default function Shifts() {
         allowClaims={shiftsConfig.allow_claims}
         selectedCompanyId={selectedCompanyId}
         saving={saving}
+        draftSaving={draftSaving}
+        isDirty={Boolean(title.trim() || selectedEmployees.length > 0 || notes.trim() || clientId || locationId)}
         repeatConfig={repeatConfig}
         onRepeatChange={setRepeatConfig}
         onRequestSave={() => setConfirmOpen(true)}
+        onSaveDraft={handleSaveDraft}
         onAddNewEmployee={() => setQuickAddOpen(true)}
         onClientCreated={(id, name) => {
           setClients(prev => [...prev, { id, name }]);
