@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import AuditPanel from "@/components/audit/AuditPanel";
 import { cn } from "@/lib/utils";
 import { formatPersonName, formatDisplayText } from "@/lib/format-helpers";
@@ -21,12 +21,13 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import {
   Plus, Search, Building2, Loader2, Trash2, RotateCcw, Pencil,
-  LayoutGrid, List, Download, Phone, Mail, MessageCircle, Filter, X, Users, MapPin, Car
+  LayoutGrid, List, Download, Phone, Mail, MessageCircle, Filter, X, Users, MapPin, Car, ExternalLink
 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { ReportActionsBar } from "@/components/ui/report-actions-bar";
 import { ClientAvatar } from "@/components/ui/client-avatar";
 import { EmptyState } from "@/components/ui/empty-state";
+import { KpiCard } from "@/components/ui/kpi-card";
 
 interface Client {
   id: string;
@@ -56,6 +57,7 @@ type ViewMode = "grid" | "list";
 export default function Clients() {
   const { role, hasModuleAccess } = useAuth();
   const { selectedCompanyId } = useCompany();
+  const navigate = useNavigate();
   const canEdit = role === "owner" || role === "admin" || hasModuleAccess("clients", "edit");
   const canDelete = role === "owner" || role === "admin" || hasModuleAccess("clients", "delete");
 
@@ -261,6 +263,14 @@ export default function Clients() {
 
   const activeCount = [search, showDeleted !== "active" ? showDeleted : ""].filter(Boolean).length;
 
+  const stats = useMemo(() => {
+    const active = clients.filter(c => !c.deleted_at && c.status === "active").length;
+    const archived = clients.filter(c => c.deleted_at).length;
+    const withEmail = clients.filter(c => !c.deleted_at && c.contact_email).length;
+    const withPhone = clients.filter(c => !c.deleted_at && c.contact_phone).length;
+    return { active, archived, withEmail, withPhone };
+  }, [clients]);
+
   return (
     <div>
       <PageHeader
@@ -433,6 +443,16 @@ export default function Clients() {
         />
       )}
 
+      {/* KPI strip */}
+      {!loading && clients.length > 0 && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+          <KpiCard size="sm" accent="primary" icon={<Building2 className="h-3.5 w-3.5" />} value={stats.active} label="Active clients" />
+          <KpiCard size="sm" accent="muted" icon={<Mail className="h-3.5 w-3.5" />} value={stats.withEmail} label="With email" />
+          <KpiCard size="sm" accent="muted" icon={<Phone className="h-3.5 w-3.5" />} value={stats.withPhone} label="With phone" />
+          <KpiCard size="sm" accent="muted" icon={<Trash2 className="h-3.5 w-3.5" />} value={stats.archived} label="Archived" />
+        </div>
+      )}
+
       {/* Advanced toolbar */}
       <div className="flex items-center gap-2 flex-wrap mb-6">
         {/* Search */}
@@ -522,12 +542,18 @@ export default function Clients() {
                 {/* decorative blob */}
                 <div className="absolute top-0 right-0 h-24 w-24 rounded-full bg-primary/5 -translate-y-8 translate-x-8 group-hover:scale-[2] transition-transform duration-700" />
 
-                <div className="relative z-10 flex items-start gap-3">
+                <button
+                  type="button"
+                  onClick={() => navigate(`/app/clients/${c.id}`)}
+                  className="relative z-10 flex items-start gap-3 w-full text-left rounded-xl -m-1 p-1 hover:bg-muted/30 transition-colors"
+                  title="Open client profile"
+                >
                   <ClientAvatar name={c.name} size="lg" />
 
                   <div className="min-w-0 flex-1 pt-0.5">
-                    <p className="text-sm font-bold text-foreground truncate leading-tight">
+                    <p className="text-sm font-bold text-foreground truncate leading-tight flex items-center gap-1.5">
                       {formatDisplayText(c.name, "name")}
+                      <ExternalLink className="h-3 w-3 text-muted-foreground/40 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
                     </p>
                     <span className={cn(
                       "inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-semibold",
@@ -558,7 +584,7 @@ export default function Clients() {
                       )}
                     </div>
                   </div>
-                </div>
+                </button>
 
                 {/* Quick contact + Actions */}
                 <div className="relative z-10 flex flex-wrap items-center gap-1.5 mt-3 pt-3 border-t border-border/30">
@@ -580,10 +606,16 @@ export default function Clients() {
                       </a>
                     </>
                   )}
+                  <button
+                    onClick={() => navigate(`/app/clients/${c.id}`)}
+                    className="flex-1 min-w-[3.5rem] flex items-center justify-center gap-1 py-1.5 rounded-xl text-[10px] font-semibold bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                  >
+                    <ExternalLink className="h-3 w-3 shrink-0" /> Open
+                  </button>
                   {canEdit && !c.deleted_at && (
                     <button
                       onClick={() => openEdit(c)}
-                      className="flex-1 min-w-[3.5rem] flex items-center justify-center gap-1 py-1.5 rounded-xl text-[10px] font-semibold bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                      className="flex-1 min-w-[3.5rem] flex items-center justify-center gap-1 py-1.5 rounded-xl text-[10px] font-semibold bg-muted/40 text-foreground hover:bg-muted/70 transition-colors"
                     >
                       <Pencil className="h-3 w-3 shrink-0" /> Editar
                     </button>
@@ -624,8 +656,12 @@ export default function Clients() {
           {filtered.map((c, idx) => (
             <div
               key={c.id}
+              role="button"
+              tabIndex={0}
+              onClick={() => navigate(`/app/clients/${c.id}`)}
+              onKeyDown={(e) => { if (e.key === "Enter") navigate(`/app/clients/${c.id}`); }}
               className={cn(
-                "grid grid-cols-[1fr_140px_160px_140px_100px_100px] gap-2 px-4 py-3 items-center text-xs hover:bg-muted/20 transition-colors",
+                "grid grid-cols-[1fr_140px_160px_140px_100px_100px] gap-2 px-4 py-3 items-center text-xs hover:bg-muted/30 transition-colors cursor-pointer",
                 idx < filtered.length - 1 && "border-b border-border/10",
                 c.deleted_at && "opacity-60"
               )}
@@ -649,19 +685,22 @@ export default function Clients() {
                   {c.deleted_at ? "Archivado" : c.status === "active" ? "Activo" : "Inactivo"}
                 </span>
               </span>
-              <div className="flex items-center gap-1 justify-end">
+              <div className="flex items-center gap-1 justify-end" onClick={(e) => e.stopPropagation()}>
+                <button onClick={() => navigate(`/app/clients/${c.id}`)} className="p-1.5 rounded-lg hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors" title="Open profile">
+                  <ExternalLink className="h-3.5 w-3.5" />
+                </button>
                 {canEdit && !c.deleted_at && (
-                  <button onClick={() => openEdit(c)} className="p-1.5 rounded-lg hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors">
+                  <button onClick={() => openEdit(c)} className="p-1.5 rounded-lg hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors" title="Edit">
                     <Pencil className="h-3.5 w-3.5" />
                   </button>
                 )}
                 {canDelete && !c.deleted_at && (
-                  <button onClick={() => handleArchive(c.id)} className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors">
+                  <button onClick={() => handleArchive(c.id)} className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors" title="Archive">
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
                 )}
                 {c.deleted_at && canEdit && (
-                  <button onClick={() => handleRestore(c.id)} className="p-1.5 rounded-lg hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors">
+                  <button onClick={() => handleRestore(c.id)} className="p-1.5 rounded-lg hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors" title="Restore">
                     <RotateCcw className="h-3.5 w-3.5" />
                   </button>
                 )}

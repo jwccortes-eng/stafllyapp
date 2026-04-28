@@ -19,8 +19,13 @@ import { formatDistanceToNow } from "date-fns";
 import { enUS } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 
-export default function ClientExperienceInbox() {
-  const { data: threads = [], isLoading } = useClientThreads();
+interface Props {
+  /** When set, scopes threads to a single client. */
+  clientId?: string;
+}
+
+export default function ClientExperienceInbox({ clientId }: Props = {}) {
+  const { data: threads = [], isLoading } = useClientThreads(clientId ? { clientId } : undefined);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selected = threads.find((t) => t.id === selectedId) ?? threads[0] ?? null;
 

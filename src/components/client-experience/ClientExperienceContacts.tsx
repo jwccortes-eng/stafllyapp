@@ -35,8 +35,13 @@ const STATUS_TONE: Record<ClientContact["portal_status"], string> = {
   disabled: "bg-muted text-muted-foreground",
 };
 
-export default function ClientExperienceContacts() {
-  const { data: contacts = [], isLoading } = useClientContacts();
+interface Props {
+  /** When set, scopes contacts and the create dialog to a single client. */
+  clientId?: string;
+}
+
+export default function ClientExperienceContacts({ clientId }: Props = {}) {
+  const { data: contacts = [], isLoading } = useClientContacts(clientId);
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
 
@@ -69,7 +74,7 @@ export default function ClientExperienceContacts() {
               <Plus className="h-3.5 w-3.5" /> New contact
             </Button>
           </DialogTrigger>
-          <ContactDialog onClose={() => setOpen(false)} />
+          <ContactDialog onClose={() => setOpen(false)} lockedClientId={clientId} />
         </Dialog>
       </div>
 
@@ -140,7 +145,7 @@ export default function ClientExperienceContacts() {
   );
 }
 
-function ContactDialog({ onClose }: { onClose: () => void }) {
+function ContactDialog({ onClose, lockedClientId }: { onClose: () => void; lockedClientId?: string }) {
   const upsert = useUpsertClientContact();
   const { selectedCompanyId } = useCompany();
   const clientsQ = useQuery({
@@ -159,7 +164,7 @@ function ContactDialog({ onClose }: { onClose: () => void }) {
   });
   const clients = clientsQ.data ?? [];
   const [form, setForm] = useState({
-    client_id: "",
+    client_id: lockedClientId ?? "",
     name: "",
     email: "",
     phone: "",
@@ -190,45 +195,47 @@ function ContactDialog({ onClose }: { onClose: () => void }) {
         <DialogTitle>New client contact</DialogTitle>
       </DialogHeader>
       <div className="space-y-3">
-        <div className="space-y-1">
-          <Label className="text-xs">Client</Label>
-          <Select
-            value={form.client_id}
-            onValueChange={(v) => setForm((f) => ({ ...f, client_id: v }))}
-            disabled={clientsQ.isLoading || noClients || !!clientsQ.error}
-          >
-            <SelectTrigger className="h-9 text-sm">
-              <SelectValue
-                placeholder={
-                  clientsQ.isLoading
-                    ? "Loading clients…"
-                    : clientsQ.error
-                      ? "Failed to load clients"
-                      : noClients
-                        ? "No clients found"
-                        : "Select client"
-                }
-              />
-            </SelectTrigger>
-            <SelectContent>
-              {clients.map((c) => (
-                <SelectItem key={c.id} value={c.id} className="text-sm">
-                  {c.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {clientsQ.error && (
-            <p className="text-[11px] text-destructive">
-              Could not load clients. Refresh and try again.
-            </p>
-          )}
-          {noClients && (
-            <p className="text-[11px] text-muted-foreground">
-              No clients found. Create a client first in the Clients module.
-            </p>
-          )}
-        </div>
+        {!lockedClientId && (
+          <div className="space-y-1">
+            <Label className="text-xs">Client</Label>
+            <Select
+              value={form.client_id}
+              onValueChange={(v) => setForm((f) => ({ ...f, client_id: v }))}
+              disabled={clientsQ.isLoading || noClients || !!clientsQ.error}
+            >
+              <SelectTrigger className="h-9 text-sm">
+                <SelectValue
+                  placeholder={
+                    clientsQ.isLoading
+                      ? "Loading clients…"
+                      : clientsQ.error
+                        ? "Failed to load clients"
+                        : noClients
+                          ? "No clients found"
+                          : "Select client"
+                  }
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {clients.map((c) => (
+                  <SelectItem key={c.id} value={c.id} className="text-sm">
+                    {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {clientsQ.error && (
+              <p className="text-[11px] text-destructive">
+                Could not load clients. Refresh and try again.
+              </p>
+            )}
+            {noClients && (
+              <p className="text-[11px] text-muted-foreground">
+                No clients found. Create a client first in the Clients module.
+              </p>
+            )}
+          </div>
+        )}
         <div className="space-y-1">
           <Label className="text-xs">Name</Label>
           <Input

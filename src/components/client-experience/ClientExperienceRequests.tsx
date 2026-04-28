@@ -41,7 +41,12 @@ const PRIORITY_COLORS: Record<ServiceRequestRow["priority"], string> = {
   urgent: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200",
 };
 
-export default function ClientExperienceRequests() {
+interface Props {
+  /** When set, scopes requests to a single client. */
+  clientId?: string;
+}
+
+export default function ClientExperienceRequests({ clientId }: Props = {}) {
   const [status, setStatus] = useState<ServiceRequestRow["status"] | "">("");
   const [priority, setPriority] = useState<ServiceRequestRow["priority"] | "">("");
   const [search, setSearch] = useState("");
@@ -51,6 +56,7 @@ export default function ClientExperienceRequests() {
     status: status || undefined,
     priority: priority || undefined,
     search: search || undefined,
+    clientId: clientId || undefined,
   });
 
   const selected = useMemo(
