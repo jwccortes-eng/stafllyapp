@@ -752,52 +752,81 @@ export default function Shifts() {
     return shift;
   };
 
+  // Validate fields required to publish a shift. Returns list of missing fields
+  // (empty when ok). Used both inline and by the publish flow.
+  const validateForPublish = (): string[] => {
+    const missing: string[] = [];
+    if (!date) missing.push("Fecha");
+    if (!startTime) missing.push("Hora de inicio");
+    if (!endTime) missing.push("Hora de fin");
+    if (!title.trim()) missing.push("Título");
+    if (shiftsConfig.require_client && !clientId) missing.push("Cliente");
+    if (shiftsConfig.require_location && !locationId) missing.push("Ubicación");
+    if (shiftsConfig.require_shift_admin && !shiftAdminId) missing.push("Shift admin");
+    if (transportRequired && !driverEmployeeId) missing.push("Conductor (transporte requerido)");
+    if (selectedEmployees.length === 0 && !claimable) missing.push("Al menos 1 worker o marcar como reclamable");
+    if (startTime && endTime) {
+      const [sh, sm] = startTime.split(":").map(Number);
+      const [eh, em] = endTime.split(":").map(Number);
+      let durationMin = (eh * 60 + em) - (sh * 60 + sm);
+      if (durationMin < 0) durationMin += 24 * 60;
+      if (durationMin / 60 > shiftsConfig.max_shift_hours) missing.push(`Duración ≤ ${shiftsConfig.max_shift_hours}h`);
+    }
+    return missing;
+  };
+
+  // Save the current form as a draft. Almost no validations — only company + date.
+  // Drafts can be incomplete; everything is allowed except a missing date (because
+  // we anchor the calendar on date) and a missing tenant.
+  const handleSaveDraft = async () => {
+    if (!selectedCompanyId) { toast.error("Selecciona una compañía"); return; }
+    if (!date) { toast.error("Una fecha es obligatoria incluso para borradores"); return; }
+    setDraftSaving(true);
+    try {
+      const baseShift = await createSingleShift(date, /* skipNotifications */ true, /* forceDraft */ true, /* publishNow */ false);
+      if (!baseShift) return;
+      toast.success("Borrador guardado");
+      setCreateOpen(false);
+      resetForm();
+      loadData();
+    } finally {
+      setDraftSaving(false);
+    }
+  };
+
   const handleCreate = async () => {
     if (!date || !selectedCompanyId) return;
 
-    // Configurable validation rules
-    if (shiftsConfig.require_client && !clientId) {
-      toast.error("A client is required to create a shift");
-      return;
-    }
-    if (shiftsConfig.require_location && !locationId) {
-      toast.error("A location is required to create a shift");
-      return;
-    }
-    // Validate max shift hours
-    const [sh, sm] = startTime.split(":").map(Number);
-    const [eh, em] = endTime.split(":").map(Number);
-    let durationMin = (eh * 60 + em) - (sh * 60 + sm);
-    if (durationMin < 0) durationMin += 24 * 60;
-    if (durationMin / 60 > shiftsConfig.max_shift_hours) {
-      toast.error(`Shift duration exceeds the ${shiftsConfig.max_shift_hours}h maximum`);
+    // Strict validation only when publishing.
+    const missing = validateForPublish();
+    if (missing.length > 0) {
+      toast.error(`Pendiente antes de publicar: ${missing.join(", ")}`);
       return;
     }
 
     setSaving(true);
 
-    // Create the base shift (may notify if not repeating)
     const repeatDates = computeRepeatDates(date, repeatConfig);
     const isRepeating = repeatConfig.enabled && repeatDates.length > 0;
 
-    const baseShift = await createSingleShift(date, isRepeating);
+    // Base shift = published. Repeated shifts inherit the original behavior:
+    // they are created as drafts so the operator reviews them before publishing.
+    const baseShift = await createSingleShift(date, isRepeating, false, true);
     if (!baseShift) { setSaving(false); return; }
 
-    // Create repeated shifts (all as draft, no notifications)
     if (isRepeating) {
       const copyAssign = repeatConfig.copyAssignments;
-      // Temporarily clear employees if not copying
       const savedEmployees = [...selectedEmployees];
       if (!copyAssign) setSelectedEmployees([]);
 
       for (const repeatDate of repeatDates) {
-        await createSingleShift(repeatDate, true, true);
+        await createSingleShift(repeatDate, true, true, false);
       }
 
       if (!copyAssign) setSelectedEmployees(savedEmployees);
       toast.success(`${repeatDates.length + 1} turnos creados (${repeatDates.length} repetidos en borrador)`);
     } else {
-      toast.success("Turno creado");
+      toast.success("Turno publicado");
     }
 
     setSaving(false); setCreateOpen(false); resetForm(); loadData();
