@@ -57,6 +57,7 @@ Deno.serve(async (req) => {
           .eq("company_id", company.id)
           .eq("date", targetDate)
           .is("deleted_at", null)
+          .eq("publication_status", "published")
           .in("status", ["published", "open"]);
 
         for (const shift of shifts ?? []) {
@@ -69,6 +70,7 @@ Deno.serve(async (req) => {
             .from("shift_assignments")
             .select("employee_id")
             .eq("shift_id", shift.id)
+            .eq("is_draft_reservation", false)
             .in("status", ["confirmed", "pending", "accepted"]);
 
           for (const sa of assignments ?? []) {
@@ -104,11 +106,15 @@ Deno.serve(async (req) => {
     }
 
     // ─── NEW: Confirmation reminders for pending assignments ───
+    // Drafts must never trigger confirmations: filter draft reservations and
+    // require the parent shift to be in published lifecycle.
     const { data: pendingAssignments } = await supabase
       .from("shift_assignments")
       .select(`id, employee_id, scheduled_shifts!inner (id, title, date, start_time, end_time, company_id)`)
       .eq("status", "pending")
+      .eq("is_draft_reservation", false)
       .in("scheduled_shifts.date", [todayStr, tomorrowStr])
+      .eq("scheduled_shifts.publication_status", "published")
       .is("scheduled_shifts.deleted_at", null) as any;
 
     for (const sa of pendingAssignments ?? []) {
@@ -155,9 +161,11 @@ Deno.serve(async (req) => {
       .from("shift_assignments")
       .select(`id, employee_id, scheduled_shifts!inner (id, title, start_time, company_id)`)
       .in("status", ["confirmed", "accepted", "pending"])
+      .eq("is_draft_reservation", false)
       .eq("scheduled_shifts.date", todayStr)
       .lte("scheduled_shifts.start_time", nowHHMM)
       .gte("scheduled_shifts.start_time", tGrace)
+      .eq("scheduled_shifts.publication_status", "published")
       .is("scheduled_shifts.deleted_at", null) as any;
 
     for (const sa of startedAssignments ?? []) {
@@ -223,9 +231,11 @@ Deno.serve(async (req) => {
       .from("shift_assignments")
       .select(`id, employee_id, scheduled_shifts!inner (id, title, start_time, company_id)`)
       .in("status", ["confirmed", "accepted", "pending"])
+      .eq("is_draft_reservation", false)
       .eq("scheduled_shifts.date", todayStr)
       .lte("scheduled_shifts.start_time", tNoShow)
       .gte("scheduled_shifts.start_time", tNoShowMax)
+      .eq("scheduled_shifts.publication_status", "published")
       .is("scheduled_shifts.deleted_at", null) as any;
 
     for (const sa of noShowCandidates ?? []) {

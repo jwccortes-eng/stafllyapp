@@ -84,12 +84,25 @@ Deno.serve(async (req) => {
     // 1. Look up the shift by token.
     const { data: shift, error: shiftErr } = await admin
       .from("scheduled_shifts")
-      .select("id, company_id, title, date, start_time, end_time, location_id, status")
+      .select("id, company_id, title, date, start_time, end_time, location_id, status, publication_status, deleted_at")
       .eq("shift_link_token", token)
       .maybeSingle();
 
     if (shiftErr) throw shiftErr;
     if (!shift) return json({ error: "Shift not found" }, 404);
+
+    // Drafts / cancelled / archived / soft-deleted shifts must never expose
+    // details via a public link. Return a generic "not available" payload —
+    // do NOT leak title, date, location.
+    const pubStatus = (shift as any).publication_status ?? "published";
+    if (
+      (shift as any).deleted_at ||
+      pubStatus !== "published" ||
+      pubStatus === "cancelled" ||
+      pubStatus === "archived"
+    ) {
+      return json({ error: "Shift not available", code: "not_published" }, 404);
+    }
 
     const [{ data: company }, { data: location }] = await Promise.all([
       admin
