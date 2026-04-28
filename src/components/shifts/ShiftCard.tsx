@@ -126,12 +126,18 @@ export function ShiftCard({
     onDragStart?.(e);
   };
 
+  const isDraft = isDraftShift(shift);
+
   return (
     <div
       className={cn(
-        "group cursor-pointer relative rounded-xl border border-border/40 bg-card",
+        "group cursor-pointer relative rounded-xl bg-card",
         "transition-[transform,box-shadow,border-color] duration-200 ease-out",
-        "hover:-translate-y-[0.5px] hover:shadow-[0_1px_3px_-1px_hsl(var(--foreground)/0.08)] hover:border-border/60",
+        "hover:-translate-y-[0.5px] hover:shadow-[0_1px_3px_-1px_hsl(var(--foreground)/0.08)]",
+        // Drafts: dashed border + muted background to read as planning artifact.
+        isDraft
+          ? "border border-dashed border-muted-foreground/35 bg-muted/20 hover:border-muted-foreground/55"
+          : "border border-border/40 hover:border-border/60",
         isLocked && "opacity-70",
       )}
       draggable={draggable && !isLocked}
