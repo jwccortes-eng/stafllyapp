@@ -582,6 +582,11 @@ export default function ActivateAccount() {
         } as any)
         .eq("id", invite.employee_id);
 
+      // Clear any temporary wizard state from storage
+      try {
+        sessionStorage.removeItem(`activate:${token}`);
+        localStorage.removeItem(`activate:${token}`);
+      } catch {}
       setWizardStep("ready");
     } catch (err: any) {
       setError(err?.message || "Unexpected error during activation.");
