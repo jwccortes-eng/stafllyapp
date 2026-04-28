@@ -53,6 +53,7 @@ import { ShiftFormShell } from "@/components/shifts/ShiftFormShell";
 import { ShiftSummaryPanel } from "@/components/shifts/form/ShiftSummaryPanel";
 import type { Shift, Assignment, SelectOption, Employee, ViewMode } from "@/components/shifts/types";
 import { formatShiftCode } from "@/components/shifts/types";
+import { isDraftShift, isPublishedShift } from "@/lib/shifts/shift-guards";
 
 // Fields that affect ALL assigned employees (broadcast notification)
 const BROADCAST_FIELDS = ["date", "start_time", "end_time", "location_id", "client_id"];
@@ -399,9 +400,9 @@ export default function Shifts() {
       result = result.filter(s => !assignments.some(a => a.shift_id === s.id));
     }
     if (filters.publishStatus === "published") {
-      result = result.filter(s => (s.publication_status ?? "published") === "published" && s.status !== "locked");
+      result = result.filter(s => isPublishedShift(s) && s.status !== "locked");
     } else if (filters.publishStatus === "draft") {
-      result = result.filter(s => s.publication_status === "draft");
+      result = result.filter(s => isDraftShift(s));
     } else if (filters.publishStatus === "locked") {
       result = result.filter(s => s.status === "locked");
     }
