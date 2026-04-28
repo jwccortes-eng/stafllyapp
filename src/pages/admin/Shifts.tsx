@@ -160,9 +160,13 @@ function CreateShiftDialogInline(props: {
       startTime={v.startTime}
       endTime={v.endTime}
       saving={props.saving}
+      draftSaving={props.draftSaving}
+      isDirty={props.isDirty}
       saveDisabled={!v.date}
-      saveLabel="Revisar y crear"
+      saveLabel="Publish"
+      draftLabel="Save draft"
       onSave={props.onRequestSave}
+      onSaveDraft={props.onSaveDraft}
       summary={summary}
     >
       <ShiftFormFields
