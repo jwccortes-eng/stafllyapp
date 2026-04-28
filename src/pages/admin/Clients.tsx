@@ -542,12 +542,18 @@ export default function Clients() {
                 {/* decorative blob */}
                 <div className="absolute top-0 right-0 h-24 w-24 rounded-full bg-primary/5 -translate-y-8 translate-x-8 group-hover:scale-[2] transition-transform duration-700" />
 
-                <div className="relative z-10 flex items-start gap-3">
+                <button
+                  type="button"
+                  onClick={() => navigate(`/app/clients/${c.id}`)}
+                  className="relative z-10 flex items-start gap-3 w-full text-left rounded-xl -m-1 p-1 hover:bg-muted/30 transition-colors"
+                  title="Open client profile"
+                >
                   <ClientAvatar name={c.name} size="lg" />
 
                   <div className="min-w-0 flex-1 pt-0.5">
-                    <p className="text-sm font-bold text-foreground truncate leading-tight">
+                    <p className="text-sm font-bold text-foreground truncate leading-tight flex items-center gap-1.5">
                       {formatDisplayText(c.name, "name")}
+                      <ExternalLink className="h-3 w-3 text-muted-foreground/40 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
                     </p>
                     <span className={cn(
                       "inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-semibold",
@@ -578,7 +584,7 @@ export default function Clients() {
                       )}
                     </div>
                   </div>
-                </div>
+                </button>
 
                 {/* Quick contact + Actions */}
                 <div className="relative z-10 flex flex-wrap items-center gap-1.5 mt-3 pt-3 border-t border-border/30">
