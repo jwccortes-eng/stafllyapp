@@ -142,7 +142,7 @@ export function ShiftDetailDialog({
   availabilityConfigs = [], availabilityOverrides = [], onAddNewEmployee, allowClaims = true,
 }: ShiftDetailDialogProps) {
   const { user } = useAuth();
-  const { selectedCompanyId } = useCompany();
+  const { selectedCompanyId, selectedCompany } = useCompany();
   const [showAddPanel, setShowAddPanel] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
   const [tab, setTab] = useState("details");
@@ -939,6 +939,10 @@ export function ShiftDetailDialog({
                         remainingSlots={Math.max(0, slotsNum - shiftAssignments.length)}
                         requiresDriver={!!(shift as any).transportation_required}
                         onAddNewEmployee={onAddNewEmployee}
+                        debugContext={{
+                          selectedCompanyId,
+                          companyName: selectedCompany?.name ?? null,
+                        }}
                       />
                       {selected.length > 0 && (
                         <Button size="sm" onClick={handleAdd} className="w-full h-7 text-[10px] rounded-lg gap-1">

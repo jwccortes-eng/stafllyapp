@@ -10,6 +10,7 @@ import { Search, AlertTriangle, X, CalendarOff, Car, Zap, UserCheck, ShieldAlert
 import { cn } from "@/lib/utils";
 import { isEmployeeAvailable, type AvailabilityConfig, type AvailabilityOverride } from "@/hooks/useEmployeeAvailability";
 import { computeDuplicateHints } from "@/lib/employee-duplicate-hints";
+import { searchEmployees, type MatchResult } from "@/lib/employee-search";
 import type { Employee, Shift, Assignment } from "./types";
 
 interface EmployeeComboboxProps {
@@ -33,6 +34,11 @@ interface EmployeeComboboxProps {
   shiftGroup?: string | null;
   /** Show "+ Add new employee" option and callback when selected */
   onAddNewEmployee?: () => void;
+  /** Optional context for the diagnostic banner shown when employees=[] or filter empties out. */
+  debugContext?: {
+    selectedCompanyId?: string | null;
+    companyName?: string | null;
+  };
 }
 
 interface ConflictInfo { shiftTitle: string; time: string; }
@@ -65,7 +71,7 @@ export function EmployeeCombobox({
   employees, selected, onToggle, shifts = [], assignments = [], shiftDate, shiftStart, shiftEnd,
   maxHeight = "220px", showChips = true, availabilityConfigs = [], availabilityOverrides = [],
   availabilityBlockMode = "warning", showBulkActions = false, remainingSlots, requiresDriver = false,
-  shiftGroup, onAddNewEmployee,
+  shiftGroup, onAddNewEmployee, debugContext,
 }: EmployeeComboboxProps) {
   const [search, setSearch] = useState("");
   const [quickFilter, setQuickFilter] = useState<QuickFilter>("all");
@@ -108,61 +114,73 @@ export function EmployeeCombobox({
     return freq;
   }, [assignments]);
 
+  // Flexible, safe relevance search. Keeps token-AND substring matching as the
+  // primary path, plus exact ID/phone shortcuts and a soft phonetic alias
+  // fallback for common name variants (jhionny/jhonny/johnny → Johny).
+  // See src/lib/employee-search.ts.
+  const matchScoreById = useMemo(() => {
+    const map = new Map<string, number>();
+    if (!search.trim()) return map;
+    const scored = searchEmployees(employees, search);
+    for (const e of scored) map.set(e.id, e.__match.score);
+    return map;
+  }, [employees, search]);
+
+  const matchedByMap = useMemo(() => {
+    const map = new Map<string, MatchResult["matchedBy"]>();
+    if (!search.trim()) return map;
+    const scored = searchEmployees(employees, search);
+    for (const e of scored) map.set(e.id, e.__match.matchedBy);
+    return map;
+  }, [employees, search]);
+
   const filtered = useMemo(() => {
     let list = employees;
     if (search.trim()) {
-      // Flexible search: tokenized so "mune ang" still matches "Angel Munera",
-      // and so leading/extra spaces never collapse rows. Includes email,
-      // employer_identification (e.g. #1205) and the joined full name.
-      const tokens = search.toLowerCase().split(/\s+/).filter(Boolean);
-      list = list.filter((e) => {
-        const haystack = [
-          e.first_name,
-          e.last_name,
-          `${e.first_name} ${e.last_name}`,
-          e.phone_number ?? "",
-          (e.phone_number ?? "").replace(/\D/g, ""),
-          e.email ?? "",
-          e.employee_role ?? "",
-          e.groups ?? "",
-          e.employer_identification ?? "",
-          `#${e.employer_identification ?? ""}`,
-        ]
-          .join(" ")
-          .toLowerCase();
-        return tokens.every((t) => haystack.includes(t));
-      });
+      list = list.filter((e) => matchScoreById.has(e.id));
     }
     if (quickFilter === "available") list = list.filter(e => getGroup(e) === "ready");
     else if (quickFilter === "drivers") list = list.filter(e => isDriver(e));
     else if (quickFilter === "no-conflict") list = list.filter(e => !conflictMap.has(e.id));
     return list;
-  }, [employees, search, quickFilter, unavailableMap, conflictMap]);
+  }, [employees, search, matchScoreById, quickFilter, unavailableMap, conflictMap]);
 
-  // Smart sort with scoring: selected → ready (active+portal+complete) → warning → blocked → inactive
+  // Smart sort: when searching, relevance score dominates so the most precise
+  // match (exact ID/phone, then last name, then first name, then phonetic) leads.
+  // When NOT searching, group-based ranking (ready/warning/blocked/inactive) leads.
+  const isSearching = search.trim().length > 0;
   const sorted = useMemo(() => {
     const normalizedShiftGroup = shiftGroup?.toLowerCase().trim();
 
     const score = (emp: Employee): number => {
       if (selected.includes(emp.id)) return -1000;
+
+      if (isSearching) {
+        // Primary key: relevance from searchEmployees (lower = better, 0..120).
+        // Secondary nudge: small group penalty so a perfect match still beats
+        // a fuzzy phonetic ready worker but we don't surface inactive on top.
+        const rel = matchScoreById.get(emp.id) ?? 999;
+        const g = getGroup(emp);
+        const groupNudge = g === "ready" ? 0 : g === "warning" ? 5 : g === "blocked" ? 10 : 20;
+        return rel + groupNudge;
+      }
+
       const g = getGroup(emp);
       let s = g === "ready" ? 0 : g === "warning" ? 500 : g === "blocked" ? 1000 : 2000;
-
-      // Within ready: prefer portal-active + profile-complete + employer_id + frequent + same group
       if (g === "ready") {
         if (requiresDriver && isDriver(emp)) s -= 50;
         if (normalizedShiftGroup && emp.groups?.toLowerCase().includes(normalizedShiftGroup)) s -= 30;
         const freq = assignmentFreq.get(emp.id) || 0;
-        s -= Math.min(freq * 5, 25); // frequent workers get up to -25
-        if (emp.user_id) s -= 20; // portal-active preferred
-        if (!isProfileIncomplete(emp)) s -= 15; // profile complete preferred
-        if (emp.employer_identification) s -= 5; // has stable identifier
+        s -= Math.min(freq * 5, 25);
+        if (emp.user_id) s -= 20;
+        if (!isProfileIncomplete(emp)) s -= 15;
+        if (emp.employer_identification) s -= 5;
       }
       return s;
     };
 
     return [...filtered].sort((a, b) => score(a) - score(b) || `${a.first_name}`.localeCompare(`${b.first_name}`));
-  }, [filtered, selected, unavailableMap, conflictMap, requiresDriver, shiftGroup, assignmentFreq]);
+  }, [filtered, selected, unavailableMap, conflictMap, requiresDriver, shiftGroup, assignmentFreq, isSearching, matchScoreById]);
 
   const selectedEmps = employees.filter(e => selected.includes(e.id));
   const handleToggle = (id: string) => {
@@ -306,9 +324,53 @@ export function EmployeeCombobox({
       {/* Employee list */}
       <div className="border rounded-xl overflow-y-auto" style={{ maxHeight }}>
         {sorted.length === 0 && !onAddNewEmployee ? (
-          <p className="text-xs text-muted-foreground p-3 text-center">
-            {search ? "No results" : "No employees"}
-          </p>
+          <div className="p-3 space-y-2">
+            <p className="text-xs text-muted-foreground text-center">
+              {search ? "No results" : "No employees"}
+            </p>
+            {/* Admin-friendly diagnostic when the list is empty.
+                Helps disambiguate: empty roster vs filter mismatch vs tenant scope. */}
+            {(employees.length === 0 || (search && filtered.length === 0)) && (
+              <div className="rounded-lg bg-muted/40 border border-border/40 p-2 text-[10px] font-mono text-muted-foreground space-y-0.5">
+                <div className="flex justify-between gap-2">
+                  <span className="opacity-60">company</span>
+                  <span className="truncate" title={debugContext?.selectedCompanyId ?? ""}>
+                    {debugContext?.companyName ?? "—"}
+                  </span>
+                </div>
+                <div className="flex justify-between gap-2">
+                  <span className="opacity-60">companyId</span>
+                  <span className="truncate" title={debugContext?.selectedCompanyId ?? ""}>
+                    {debugContext?.selectedCompanyId
+                      ? `${debugContext.selectedCompanyId.slice(0, 8)}…`
+                      : "global / null"}
+                  </span>
+                </div>
+                <div className="flex justify-between gap-2">
+                  <span className="opacity-60">employeesLoaded</span>
+                  <span>{employees.length}</span>
+                </div>
+                <div className="flex justify-between gap-2">
+                  <span className="opacity-60">filteredCount</span>
+                  <span>{filtered.length}</span>
+                </div>
+                <div className="flex justify-between gap-2">
+                  <span className="opacity-60">selectedCount</span>
+                  <span>{selected.length}</span>
+                </div>
+                {employees.length === 0 && (
+                  <p className="pt-1 text-[10px] text-warning leading-snug font-sans">
+                    Roster vacío para esta compañía. Verifica el contexto multi-tenant.
+                  </p>
+                )}
+                {employees.length > 0 && search && filtered.length === 0 && (
+                  <p className="pt-1 text-[10px] text-warning leading-snug font-sans">
+                    Hay {employees.length} workers cargados pero ninguno matchea "{search}".
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
         ) : (
           <>
             {sorted.map(emp => {
