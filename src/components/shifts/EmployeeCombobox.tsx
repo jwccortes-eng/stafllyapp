@@ -71,7 +71,7 @@ export function EmployeeCombobox({
   employees, selected, onToggle, shifts = [], assignments = [], shiftDate, shiftStart, shiftEnd,
   maxHeight = "220px", showChips = true, availabilityConfigs = [], availabilityOverrides = [],
   availabilityBlockMode = "warning", showBulkActions = false, remainingSlots, requiresDriver = false,
-  shiftGroup, onAddNewEmployee,
+  shiftGroup, onAddNewEmployee, debugContext,
 }: EmployeeComboboxProps) {
   const [search, setSearch] = useState("");
   const [quickFilter, setQuickFilter] = useState<QuickFilter>("all");
