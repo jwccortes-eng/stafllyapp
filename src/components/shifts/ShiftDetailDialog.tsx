@@ -30,6 +30,7 @@ import ShiftLiveMapPanel from "./ShiftLiveMapPanel";
 import type { AvailabilityConfig, AvailabilityOverride } from "@/hooks/useEmployeeAvailability";
 import { cn } from "@/lib/utils";
 import { formatDisplayText } from "@/lib/format-helpers";
+import { searchEmployees } from "@/lib/employee-search";
 import { format, parseISO, differenceInMinutes } from "date-fns";
 import { es } from "date-fns/locale";
 import { useState, useEffect, useCallback } from "react";
@@ -266,6 +267,22 @@ export function ShiftDetailDialog({
   const shiftAssignments = assignments.filter(a => a.shift_id === shift.id);
   const assignedIds = new Set(shiftAssignments.map(a => a.employee_id));
   const unassigned = employees.filter(e => !assignedIds.has(e.id));
+  const johnyId = "90db5d68-ec73-4ccd-bec9-fdc46e42362e";
+  const johnyInEmployees = employees.find(e => e.id === johnyId) ?? null;
+  const johnyByLastName = employees.filter(e => e.last_name?.toLowerCase().includes("munera"));
+  const johnyInUnassigned = unassigned.find(e => e.id === johnyId) ?? null;
+  const debugSearchQueries = ["mune", "#145", "munera", "jhionny", "johny"] as const;
+  const debugSearches = Object.fromEntries(
+    debugSearchQueries.map((query) => [
+      query,
+      searchEmployees(unassigned, query).slice(0, 5).map((e) => ({
+        id: e.id,
+        label: `${e.first_name ?? ""} ${e.last_name ?? ""}${e.employer_identification ? ` #${e.employer_identification}` : ""}`.trim(),
+        matchedBy: e.__match.matchedBy,
+        score: e.__match.score,
+      })),
+    ]),
+  );
   const location = locations.find(l => l.id === shift.location_id);
   const client = clients.find(c => c.id === shift.client_id);
   const hoursLabel = calcHours(shift.start_time.slice(0, 5), shift.end_time.slice(0, 5));
@@ -362,6 +379,28 @@ export function ShiftDetailDialog({
 
   const statusLabel = shift.status === "published" ? "Publicado" : shift.status === "draft" ? "Borrador" : shift.status === "locked" ? "Bloqueado" : shift.status;
   const pendingRequests = requests.filter(r => r.status === "pending").length;
+
+  useEffect(() => {
+    if (!open || !showAddPanel) return;
+    console.debug("[ShiftAssignDebug]", {
+      selectedCompanyId,
+      companyName: selectedCompany?.name ?? null,
+      shiftCompanyId: (shift as any)?.company_id ?? null,
+      employeesLength: employees.length,
+      johnyInEmployees,
+      muneraMatchesInEmployees: johnyByLastName.map((e) => ({ id: e.id, name: `${e.first_name} ${e.last_name}` })),
+      assignedIds: Array.from(assignedIds),
+      johnyInAssigned: assignedIds.has(johnyId),
+      unassignedLength: unassigned.length,
+      johnyInUnassigned,
+      searchMune: debugSearches.mune,
+      search145: debugSearches["#145"],
+      quickFilterDefault: "all",
+      johnyConflict: null,
+      johnyUnavailable: null,
+      visualFilterHiding: !johnyInUnassigned ? null : "none",
+    });
+  }, [open, showAddPanel, selectedCompanyId, selectedCompany?.name, shift, employees.length, johnyInEmployees, johnyByLastName, assignedIds, unassigned.length, johnyInUnassigned, debugSearches]);
 
   return (
     <>
@@ -942,6 +981,20 @@ export function ShiftDetailDialog({
                         debugContext={{
                           selectedCompanyId,
                           companyName: selectedCompany?.name ?? null,
+                          shiftCompanyId: (shift as any)?.company_id ?? null,
+                          employeesLoaded: employees.length,
+                          unassignedCount: unassigned.length,
+                          assignedIds: Array.from(assignedIds),
+                          johnyEmployeeId: johnyId,
+                          debugSearches,
+                          debugFlags: {
+                            johnyInEmployees: !!johnyInEmployees,
+                            johnyInAssigned: assignedIds.has(johnyId),
+                            johnyInUnassigned: !!johnyInUnassigned,
+                            johnyConflict: null,
+                            johnyUnavailable: null,
+                            visualFilterHiding: johnyInUnassigned ? null : null,
+                          },
                         }}
                       />
                       {selected.length > 0 && (
