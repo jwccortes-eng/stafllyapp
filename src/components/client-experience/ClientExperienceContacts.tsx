@@ -195,45 +195,47 @@ function ContactDialog({ onClose, lockedClientId }: { onClose: () => void; locke
         <DialogTitle>New client contact</DialogTitle>
       </DialogHeader>
       <div className="space-y-3">
-        <div className="space-y-1">
-          <Label className="text-xs">Client</Label>
-          <Select
-            value={form.client_id}
-            onValueChange={(v) => setForm((f) => ({ ...f, client_id: v }))}
-            disabled={clientsQ.isLoading || noClients || !!clientsQ.error}
-          >
-            <SelectTrigger className="h-9 text-sm">
-              <SelectValue
-                placeholder={
-                  clientsQ.isLoading
-                    ? "Loading clients…"
-                    : clientsQ.error
-                      ? "Failed to load clients"
-                      : noClients
-                        ? "No clients found"
-                        : "Select client"
-                }
-              />
-            </SelectTrigger>
-            <SelectContent>
-              {clients.map((c) => (
-                <SelectItem key={c.id} value={c.id} className="text-sm">
-                  {c.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {clientsQ.error && (
-            <p className="text-[11px] text-destructive">
-              Could not load clients. Refresh and try again.
-            </p>
-          )}
-          {noClients && (
-            <p className="text-[11px] text-muted-foreground">
-              No clients found. Create a client first in the Clients module.
-            </p>
-          )}
-        </div>
+        {!lockedClientId && (
+          <div className="space-y-1">
+            <Label className="text-xs">Client</Label>
+            <Select
+              value={form.client_id}
+              onValueChange={(v) => setForm((f) => ({ ...f, client_id: v }))}
+              disabled={clientsQ.isLoading || noClients || !!clientsQ.error}
+            >
+              <SelectTrigger className="h-9 text-sm">
+                <SelectValue
+                  placeholder={
+                    clientsQ.isLoading
+                      ? "Loading clients…"
+                      : clientsQ.error
+                        ? "Failed to load clients"
+                        : noClients
+                          ? "No clients found"
+                          : "Select client"
+                  }
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {clients.map((c) => (
+                  <SelectItem key={c.id} value={c.id} className="text-sm">
+                    {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {clientsQ.error && (
+              <p className="text-[11px] text-destructive">
+                Could not load clients. Refresh and try again.
+              </p>
+            )}
+            {noClients && (
+              <p className="text-[11px] text-muted-foreground">
+                No clients found. Create a client first in the Clients module.
+              </p>
+            )}
+          </div>
+        )}
         <div className="space-y-1">
           <Label className="text-xs">Name</Label>
           <Input
