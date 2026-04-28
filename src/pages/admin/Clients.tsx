@@ -263,6 +263,14 @@ export default function Clients() {
 
   const activeCount = [search, showDeleted !== "active" ? showDeleted : ""].filter(Boolean).length;
 
+  const stats = useMemo(() => {
+    const active = clients.filter(c => !c.deleted_at && c.status === "active").length;
+    const archived = clients.filter(c => c.deleted_at).length;
+    const withEmail = clients.filter(c => !c.deleted_at && c.contact_email).length;
+    const withPhone = clients.filter(c => !c.deleted_at && c.contact_phone).length;
+    return { active, archived, withEmail, withPhone };
+  }, [clients]);
+
   return (
     <div>
       <PageHeader
