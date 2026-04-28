@@ -458,42 +458,16 @@ export default function Shifts() {
     };
   }, [viewMode, currentDay, weekStart, currentMonth]);
 
-  // 1) Dictionaries (clients/locations/employees) — only refetched when company changes.
+  // Dictionaries (clients/locations) — only refetched when company changes.
+  // Employees roster is now handled by useEmployeeRoster (paginated, React-Query cached, scoped by companyId).
   const refreshDictionaries = useCallback(async () => {
     if (!selectedCompanyId) return;
     const [clientsRes, locsRes] = await Promise.all([
       supabase.from("clients").select("id, name").eq("company_id", selectedCompanyId).is("deleted_at", null),
       supabase.from("locations").select("id, name, address, client_id, default_pay_type, default_clock_method, require_car, default_instructions").eq("company_id", selectedCompanyId).is("deleted_at", null),
     ]);
-
-    const pageSize = 500;
-    let from = 0;
-    let allEmployees: Employee[] = [];
-
-    while (true) {
-      const { data, error } = await supabase
-        .from("employees")
-        .select("id, first_name, last_name, phone_number, email, avatar_url, gender, employee_role, groups, user_id, has_car, can_drive, is_active, employer_identification, profile_status, onboarding_status")
-        .eq("company_id", selectedCompanyId)
-        .is("deleted_at", null)
-        .order("id", { ascending: true })
-        .range(from, from + pageSize - 1);
-
-      if (error) {
-        toast.error(error.message);
-        break;
-      }
-
-      const page = (data ?? []) as Employee[];
-      allEmployees = allEmployees.concat(page);
-
-      if (page.length < pageSize) break;
-      from += pageSize;
-    }
-
     setClients((clientsRes.data ?? []) as SelectOption[]);
     setLocations((locsRes.data ?? []) as any[]);
-    setEmployees(allEmployees);
   }, [selectedCompanyId]);
 
   // 2) Shifts + assignments — refetched when company OR date range changes.
