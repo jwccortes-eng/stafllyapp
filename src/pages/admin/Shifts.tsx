@@ -955,6 +955,11 @@ export default function Shifts() {
       toast.error("A shift lead must be assigned before publishing");
       return;
     }
+    // Use the RPC so draft reservations are lifted atomically and the
+    // publication lifecycle stays consistent (publication_status + status).
+    const { error: rpcError } = await supabase.rpc("publish_shift_draft" as any, { _shift_id: shift.id });
+    if (rpcError) { toast.error(rpcError.message); return; }
+    // Keep the legacy `status` column in sync for downstream UI/filters.
     const { error } = await supabase.from("scheduled_shifts")
       .update({ status: "published" } as any)
       .eq("id", shift.id);
