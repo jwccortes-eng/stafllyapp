@@ -394,9 +394,9 @@ export default function Shifts() {
       result = result.filter(s => !assignments.some(a => a.shift_id === s.id));
     }
     if (filters.publishStatus === "published") {
-      result = result.filter(s => s.status === "published");
+      result = result.filter(s => (s.publication_status ?? "published") === "published" && s.status !== "locked");
     } else if (filters.publishStatus === "draft") {
-      result = result.filter(s => s.status !== "published" && s.status !== "locked");
+      result = result.filter(s => s.publication_status === "draft");
     } else if (filters.publishStatus === "locked") {
       result = result.filter(s => s.status === "locked");
     }
