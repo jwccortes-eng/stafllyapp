@@ -14,10 +14,15 @@
  */
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Loader2, Save, X, Calendar as CalendarIcon, Building2 } from "lucide-react";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Loader2, Save, X, Calendar as CalendarIcon, Building2, FileText, Send } from "lucide-react";
 import { format, parse } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { useState } from "react";
 
 interface Props {
   open: boolean;
@@ -33,6 +38,13 @@ interface Props {
   saving?: boolean;
   saveLabel?: string;
   saveDisabled?: boolean;
+  /** Optional secondary action — typically "Save draft". When provided,
+   *  primary button becomes the publish/finalize action. */
+  onSaveDraft?: () => void | Promise<void>;
+  draftLabel?: string;
+  draftSaving?: boolean;
+  /** True when there are unsaved changes — used to show confirm-on-close. */
+  isDirty?: boolean;
   /** Optional banner above the save button (e.g. "requires re-acceptance"). */
   footerBanner?: React.ReactNode;
   /** Form column content (left). */
