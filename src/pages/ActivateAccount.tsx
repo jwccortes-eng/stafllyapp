@@ -157,7 +157,22 @@ export default function ActivateAccount() {
     setProfileForm(prev => ({ ...prev, [key]: value }));
   };
 
-  // ─── Load invite ───
+  // ─── Auto-redirect to portal after activation ───
+  useEffect(() => {
+    if (wizardStep !== "ready") return;
+    setRedirectCountdown(3);
+    const tick = setInterval(() => {
+      setRedirectCountdown((c) => (c === null ? null : c - 1));
+    }, 1000);
+    const redirect = setTimeout(() => {
+      navigate("/portal", { replace: true });
+    }, 3000);
+    return () => {
+      clearInterval(tick);
+      clearTimeout(redirect);
+    };
+  }, [wizardStep, navigate]);
+
   useEffect(() => {
     if (!token) { setPageState("invalid"); return; }
 
