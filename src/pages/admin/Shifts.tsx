@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
 import { useEmployeeAvailability } from "@/hooks/useEmployeeAvailability";
+import { useEmployeeRoster } from "@/hooks/useEmployeeRoster";
 import { usePayrollConfig } from "@/hooks/usePayrollConfig";
 import { useShiftsConfig } from "@/hooks/useShiftsConfig";
 import { ModuleSettingsSheet } from "@/components/settings/ModuleSettingsSheet";
@@ -289,7 +290,10 @@ export default function Shifts() {
   const hasLoadedOnce = useRef(false);
   const [clients, setClients] = useState<SelectOption[]>([]);
   const [locations, setLocations] = useState<(SelectOption & { address?: string; client_id?: string | null })[]>([]);
-  const [employees, setEmployees] = useState<Employee[]>([]);
+  // Employees roster — single source of truth, paginated, never truncated at 1k.
+  // Hidden-by-status workers (incomplete profile, pending onboarding, no portal) are NOT excluded here.
+  const employeeRoster = useEmployeeRoster(selectedCompanyId, "shifts");
+  const employees = employeeRoster.employees;
   const [createOpen, setCreateOpen] = useState(false);
 
   // Open create dialog when navigated with ?create=1
@@ -454,42 +458,16 @@ export default function Shifts() {
     };
   }, [viewMode, currentDay, weekStart, currentMonth]);
 
-  // 1) Dictionaries (clients/locations/employees) — only refetched when company changes.
+  // Dictionaries (clients/locations) — only refetched when company changes.
+  // Employees roster is now handled by useEmployeeRoster (paginated, React-Query cached, scoped by companyId).
   const refreshDictionaries = useCallback(async () => {
     if (!selectedCompanyId) return;
     const [clientsRes, locsRes] = await Promise.all([
       supabase.from("clients").select("id, name").eq("company_id", selectedCompanyId).is("deleted_at", null),
       supabase.from("locations").select("id, name, address, client_id, default_pay_type, default_clock_method, require_car, default_instructions").eq("company_id", selectedCompanyId).is("deleted_at", null),
     ]);
-
-    const pageSize = 500;
-    let from = 0;
-    let allEmployees: Employee[] = [];
-
-    while (true) {
-      const { data, error } = await supabase
-        .from("employees")
-        .select("id, first_name, last_name, phone_number, email, avatar_url, gender, employee_role, groups, user_id, has_car, can_drive, is_active, employer_identification, profile_status, onboarding_status")
-        .eq("company_id", selectedCompanyId)
-        .is("deleted_at", null)
-        .order("id", { ascending: true })
-        .range(from, from + pageSize - 1);
-
-      if (error) {
-        toast.error(error.message);
-        break;
-      }
-
-      const page = (data ?? []) as Employee[];
-      allEmployees = allEmployees.concat(page);
-
-      if (page.length < pageSize) break;
-      from += pageSize;
-    }
-
     setClients((clientsRes.data ?? []) as SelectOption[]);
     setLocations((locsRes.data ?? []) as any[]);
-    setEmployees(allEmployees);
   }, [selectedCompanyId]);
 
   // 2) Shifts + assignments — refetched when company OR date range changes.
