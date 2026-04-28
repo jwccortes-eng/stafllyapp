@@ -140,12 +140,17 @@ export default function PortalShiftDetail() {
 
       // Race-condition guard
       const { data: cur } = await supabase.from("scheduled_shifts")
-        .select("slots, deleted_at, claimable, status, shift_assignments(id, status)").eq("id", shift.id).maybeSingle();
+        .select("slots, deleted_at, claimable, status, publication_status, shift_assignments(id, status, is_draft_reservation)").eq("id", shift.id).maybeSingle();
       if (!cur || (cur as any).deleted_at) throw new Error("This shift is no longer available");
+      if (((cur as any).publication_status ?? "published") !== "published") {
+        throw new Error("This shift is no longer available");
+      }
       if (!(cur as any).claimable || !["open", "published"].includes(cur.status)) {
         throw new Error("This shift is no longer open for requests");
       }
-      const filled = ((cur as any).shift_assignments ?? []).filter((a: any) => a.status !== "removed" && a.status !== "rejected").length;
+      const filled = ((cur as any).shift_assignments ?? []).filter(
+        (a: any) => a.status !== "removed" && a.status !== "rejected" && a.is_draft_reservation !== true
+      ).length;
       if (cur.slots && filled >= cur.slots) throw new Error("This shift is already full");
 
       const { error } = await supabase.from("shift_requests").insert({
