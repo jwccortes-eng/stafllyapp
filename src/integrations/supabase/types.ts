@@ -15171,6 +15171,17 @@ export type Database = {
         }
         Returns: undefined
       }
+      register_onboarding_document: {
+        Args: {
+          _company_id: string
+          _document_type: string
+          _employee_id: string
+          _file_name: string
+          _file_url: string
+          _invite_token: string
+        }
+        Returns: string
+      }
       supersede_employee_invitations: {
         Args: {
           _company_id: string
