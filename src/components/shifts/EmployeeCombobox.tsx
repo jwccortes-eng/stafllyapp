@@ -111,10 +111,27 @@ export function EmployeeCombobox({
   const filtered = useMemo(() => {
     let list = employees;
     if (search.trim()) {
-      const q = search.toLowerCase();
-      list = list.filter(e =>
-        `${e.first_name} ${e.last_name} ${e.phone_number ?? ""} ${e.employee_role ?? ""} ${e.groups ?? ""}`.toLowerCase().includes(q)
-      );
+      // Flexible search: tokenized so "mune ang" still matches "Angel Munera",
+      // and so leading/extra spaces never collapse rows. Includes email,
+      // employer_identification (e.g. #1205) and the joined full name.
+      const tokens = search.toLowerCase().split(/\s+/).filter(Boolean);
+      list = list.filter((e) => {
+        const haystack = [
+          e.first_name,
+          e.last_name,
+          `${e.first_name} ${e.last_name}`,
+          e.phone_number ?? "",
+          (e.phone_number ?? "").replace(/\D/g, ""),
+          (e as any).email ?? "",
+          e.employee_role ?? "",
+          e.groups ?? "",
+          e.employer_identification ?? "",
+          `#${e.employer_identification ?? ""}`,
+        ]
+          .join(" ")
+          .toLowerCase();
+        return tokens.every((t) => haystack.includes(t));
+      });
     }
     if (quickFilter === "available") list = list.filter(e => getGroup(e) === "ready");
     else if (quickFilter === "drivers") list = list.filter(e => isDriver(e));
