@@ -656,10 +656,21 @@ export default function Shifts() {
     });
   };
 
-  const createSingleShift = async (shiftDate: string, skipNotifications = false, forceDraft = false) => {
+  // Creates a single shift row.
+  // - `publishNow=false` ⇒ it's a draft: publication_status='draft',
+  //   no notifications, assignments flagged as draft reservations.
+  // - `publishNow=true`  ⇒ regular published shift, assignments are real.
+  const createSingleShift = async (
+    shiftDate: string,
+    skipNotifications = false,
+    forceDraft = false,
+    publishNow = true,
+  ) => {
     if (!selectedCompanyId) return null;
-    // Determine initial status: auto_publish overrides unless forceDraft
-    const initialStatus = (!forceDraft && shiftsConfig.auto_publish) ? "published" : (forceDraft ? "draft" : "draft");
+    const isDraft = !publishNow || forceDraft;
+    // Legacy `status` column retained: drafts also flow through the legacy
+    // 'draft' value so existing UI/filters that look at status keep working.
+    const initialStatus = isDraft ? "draft" : ((!forceDraft && shiftsConfig.auto_publish) ? "published" : "draft");
     const insertData: any = {
       company_id: selectedCompanyId,
       title: title.trim() || "Turno",
@@ -674,7 +685,7 @@ export default function Shifts() {
       created_by: user?.id,
       pay_type: payType,
       day_type: payType === "daily" ? dayType : "full_day",
-      pay_override: payOverride, // Phase 2 #1: capture explicit override intent
+      pay_override: payOverride,
       shift_admin_id: shiftAdminId || null,
       transportation_required: transportRequired,
       car_capacity: parseInt(carCapacity) || 5,
@@ -684,26 +695,35 @@ export default function Shifts() {
       status: initialStatus,
       meeting_point_location_id: meetingPointLocationId || null,
       job_site_location_id: jobSiteLocationId || null,
+      // New lifecycle column — single source of truth for draft visibility.
+      publication_status: isDraft ? "draft" : "published",
+      published_at: isDraft ? null : new Date().toISOString(),
+      published_by: isDraft ? null : user?.id ?? null,
     };
     const { data: shift, error } = await supabase.from("scheduled_shifts").insert(insertData).select("id, shift_code").single();
 
     if (error) { toast.error(error.message); return null; }
 
-    // Title is kept clean — `shift_code` is the single source of truth and is rendered
-    // as a separate `#0001` chip by the cards/headers. Do NOT bake the code into the title.
-
     if (selectedEmployees.length > 0 && shift) {
       const assigns = selectedEmployees.map(eid => ({
         company_id: selectedCompanyId, shift_id: shift.id, employee_id: eid, status: "pending",
+        // Tentative reservations on drafts: visible to admins, invisible to workers,
+        // no notifications, no readiness enforcement.
+        is_draft_reservation: isDraft,
       }));
       await supabase.from("shift_assignments").insert(assigns as any);
     }
 
     if (shift) {
-      await logShiftActivity("crear_turno", shift.id, null, { title: title.trim(), date: shiftDate, start_time: startTime, end_time: endTime });
+      await logShiftActivity(
+        isDraft ? "guardar_borrador_turno" : "crear_turno",
+        shift.id,
+        null,
+        { title: title.trim(), date: shiftDate, start_time: startTime, end_time: endTime, draft: isDraft },
+      );
 
-      // Notifications only for the base shift (not repeated drafts)
-      if (!skipNotifications && claimable) {
+      // No notifications fire for drafts — they're invisible to workers.
+      if (!isDraft && !skipNotifications && claimable) {
         const { data: activeEmps } = await supabase
           .from("employees")
           .select("id")
