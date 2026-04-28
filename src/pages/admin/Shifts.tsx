@@ -457,19 +457,39 @@ export default function Shifts() {
   // 1) Dictionaries (clients/locations/employees) — only refetched when company changes.
   const refreshDictionaries = useCallback(async () => {
     if (!selectedCompanyId) return;
-    const [clientsRes, locsRes, empsRes] = await Promise.all([
+    const [clientsRes, locsRes] = await Promise.all([
       supabase.from("clients").select("id, name").eq("company_id", selectedCompanyId).is("deleted_at", null),
       supabase.from("locations").select("id, name, address, client_id, default_pay_type, default_clock_method, require_car, default_instructions").eq("company_id", selectedCompanyId).is("deleted_at", null),
-      // Include inactive workers so the selector can render them disabled with a clear "Inactive" badge.
-      // Multi-tenant remains strict — `company_id` filter is mandatory.
-      supabase.from("employees")
+    ]);
+
+    const pageSize = 500;
+    let from = 0;
+    let allEmployees: Employee[] = [];
+
+    while (true) {
+      const { data, error } = await supabase
+        .from("employees")
         .select("id, first_name, last_name, phone_number, email, avatar_url, gender, employee_role, groups, user_id, has_car, can_drive, is_active, employer_identification, profile_status, onboarding_status")
         .eq("company_id", selectedCompanyId)
-        .is("deleted_at", null),
-    ]);
+        .is("deleted_at", null)
+        .order("id", { ascending: true })
+        .range(from, from + pageSize - 1);
+
+      if (error) {
+        toast.error(error.message);
+        break;
+      }
+
+      const page = (data ?? []) as Employee[];
+      allEmployees = allEmployees.concat(page);
+
+      if (page.length < pageSize) break;
+      from += pageSize;
+    }
+
     setClients((clientsRes.data ?? []) as SelectOption[]);
     setLocations((locsRes.data ?? []) as any[]);
-    setEmployees((empsRes.data ?? []) as Employee[]);
+    setEmployees(allEmployees);
   }, [selectedCompanyId]);
 
   // 2) Shifts + assignments — refetched when company OR date range changes.
