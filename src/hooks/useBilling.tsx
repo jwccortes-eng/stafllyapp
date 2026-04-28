@@ -55,7 +55,7 @@ export function useRequestUpgrade() {
         .eq("id", selectedCompanyId);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["company-plan"] });
+      queryClient.invalidateQueries({ queryKey: ["company-plan", selectedCompanyId] });
       toast({
         title: "Solicitud enviada",
         description: "Nuestro equipo se pondrá en contacto contigo pronto para activar tu plan.",

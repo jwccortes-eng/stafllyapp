@@ -127,7 +127,7 @@ export default function PayrollPilotClose() {
 
   // Fetch base pay
   const { data: basePays } = useQuery({
-    queryKey: ["pilot-close-base", selectedPeriod],
+    queryKey: ["pilot-close-base", selectedCompanyId, selectedPeriod],
     enabled: !!selectedPeriod,
     queryFn: async () => {
       const { data } = await supabase.from("period_base_pay")
@@ -138,7 +138,7 @@ export default function PayrollPilotClose() {
 
   // Fetch movements
   const { data: movements, isLoading } = useQuery({
-    queryKey: ["pilot-close-movements", selectedPeriod],
+    queryKey: ["pilot-close-movements", selectedCompanyId, selectedPeriod],
     enabled: !!selectedPeriod,
     queryFn: async () => {
       const { data } = await supabase.from("movements")

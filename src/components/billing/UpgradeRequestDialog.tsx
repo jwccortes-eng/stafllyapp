@@ -63,7 +63,7 @@ export default function UpgradeRequestDialog({ open, onOpenChange }: UpgradeRequ
         } as any)
         .eq("id", selectedCompanyId);
 
-      queryClient.invalidateQueries({ queryKey: ["company-plan"] });
+      queryClient.invalidateQueries({ queryKey: ["company-plan", selectedCompanyId] });
       setSubmitted(true);
       toast({ title: "Solicitud enviada", description: "Nuestro equipo te contactará pronto." });
     } catch {
