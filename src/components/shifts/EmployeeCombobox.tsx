@@ -34,6 +34,11 @@ interface EmployeeComboboxProps {
   shiftGroup?: string | null;
   /** Show "+ Add new employee" option and callback when selected */
   onAddNewEmployee?: () => void;
+  /** Optional context for the diagnostic banner shown when employees=[] or filter empties out. */
+  debugContext?: {
+    selectedCompanyId?: string | null;
+    companyName?: string | null;
+  };
 }
 
 interface ConflictInfo { shiftTitle: string; time: string; }
