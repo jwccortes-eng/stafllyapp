@@ -299,10 +299,9 @@ export function ShiftDetailDialog({
   // `debugWorker` accepts a UUID or an `employer_identification` (e.g. `145` / `#145`).
   const { debugMode, debugWorker } = useDebugMode();
 
-  if (!shift) return null;
-
-  const isLocked = shift.status === "locked";
-  const effectiveCanEdit = canEdit && !isLocked;
+  // Compute debug probe BEFORE the `if (!shift)` early return so the
+  // following `useEffect` (also above the return) can depend on it without
+  // breaking Rules of Hooks. It's a pure calc, not a hook.
   const debugProbe = debugMode ? (() => {
     const probe = debugWorker?.toLowerCase() ?? null;
     const matched = probe
@@ -338,6 +337,27 @@ export function ShiftDetailDialog({
       },
     };
   })() : null;
+
+  // Debug logger — must live above the early return to keep hook order stable.
+  useEffect(() => {
+    if (!open || !showAddPanel || !debugMode || !shift) return;
+    console.debug("[ShiftAssignDebug]", {
+      selectedCompanyId,
+      companyName: selectedCompany?.name ?? null,
+      shiftCompanyId: (shift as any)?.company_id ?? null,
+      employeesLength: employees.length,
+      assignedCount: assignedIds.size,
+      unassignedLength: unassigned.length,
+      debugWorker,
+      probe: debugProbe?.flags,
+      probeSearches: debugProbe?.debugSearches,
+    });
+  }, [open, showAddPanel, debugMode, selectedCompanyId, selectedCompany?.name, shift, employees.length, assignedIds, unassigned.length, debugWorker, debugProbe]);
+
+  if (!shift) return null;
+
+  const isLocked = shift.status === "locked";
+  const effectiveCanEdit = canEdit && !isLocked;
 
   const location = locations.find(l => l.id === shift.location_id);
   const client = clients.find(c => c.id === shift.client_id);
