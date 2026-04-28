@@ -93,9 +93,12 @@ function CreateShiftDialogInline(props: {
   allowClaims: boolean;
   selectedCompanyId: string | null;
   saving: boolean;
+  draftSaving: boolean;
+  isDirty: boolean;
   repeatConfig: RepeatConfig;
   onRepeatChange: (c: RepeatConfig) => void;
   onRequestSave: () => void;
+  onSaveDraft: () => void;
   onAddNewEmployee: () => void;
   onClientCreated: (id: string, name: string) => void;
   onLocationCreated: (id: string, name: string, address: string) => void;
