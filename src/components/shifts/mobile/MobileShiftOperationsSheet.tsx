@@ -295,6 +295,59 @@ export function MobileShiftOperationsSheet({
             </div>
           </section>
 
+          {/* Traceability (collapsed by default to keep sheet light) */}
+          <section>
+            <button
+              type="button"
+              onClick={() => setTraceOpen(v => !v)}
+              className="w-full flex items-center justify-between gap-2 mb-2.5 px-0.5 text-left"
+              aria-expanded={traceOpen}
+            >
+              <div className="flex items-center gap-1.5">
+                <Workflow className="h-4 w-4 text-muted-foreground" />
+                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  Traceability
+                </span>
+              </div>
+              <ChevronDown
+                className={cn(
+                  "h-4 w-4 text-muted-foreground transition-transform",
+                  traceOpen && "rotate-180"
+                )}
+              />
+            </button>
+            {traceOpen ? (
+              <TraceabilitySnapshot
+                source={shiftTraceSource(draft, published)}
+                sourceNote="Scheduled shift · payroll uses real clock entries only"
+                timeline={buildShiftTimeline(shift)}
+                linked={buildShiftLinked({
+                  shift, clientName, locationName, assignedCount, slots,
+                })}
+                risks={buildShiftRisks({
+                  draft, published, understaffed, assignedCount,
+                  noClient, noLocation, hasShiftCode: !!shift.shift_code,
+                  imported: !!shift.import_batch_id,
+                })}
+                audit={buildShiftAudit(shift)}
+              />
+            ) : (
+              <p className="px-0.5 text-xs text-muted-foreground">
+                Tap to see source, timeline, linked records and audit.
+              </p>
+            )}
+            <p className="mt-2 px-0.5 text-[11px] text-muted-foreground">
+              Clock entries are reviewed from Time Clock.{" "}
+              <button
+                type="button"
+                onClick={handleViewAttendance}
+                className="font-semibold text-primary underline-offset-2 hover:underline"
+              >
+                View attendance
+              </button>
+            </p>
+          </section>
+
           {/* Assigned workers */}
           <section>
             <SectionTitle icon={Users}>
