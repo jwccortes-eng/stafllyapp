@@ -191,25 +191,9 @@ export default function EmployeeDashboard() {
   const firstName = empName.split(" ")[0] || "";
   const lastName = empName.split(" ").slice(1).join(" ") || "";
 
-  if (loading) {
-    return (
-      <div className="space-y-4 pt-2">
-        <div className="flex items-center gap-3">
-          <div className="h-11 w-11 rounded-full bg-muted animate-pulse" />
-          <div className="space-y-2 flex-1">
-            <div className="h-4 w-24 bg-muted animate-pulse rounded" />
-            <div className="h-3 w-32 bg-muted animate-pulse rounded" />
-          </div>
-        </div>
-        <div className="h-32 animate-pulse bg-muted rounded-2xl" />
-        <div className="grid grid-cols-3 gap-2">
-          {[1,2,3].map(i => <div key={i} className="h-16 animate-pulse bg-muted rounded-2xl" />)}
-        </div>
-      </div>
-    );
-  }
-
   // ── Build NBA shift snapshot from existing fetched data ──
+  // NOTE: All hooks must be declared before any early return to satisfy
+  // React's Rules of Hooks. Do not move these below the `if (loading)` guard.
   const nbaShift: NbaShift | null = useMemo(() => (
     nextShift
       ? {
@@ -240,6 +224,24 @@ export default function EmployeeDashboard() {
     claimableCount, readiness.status, readiness.missingPersonal.length,
     readiness.missingDocuments.length, now,
   ]);
+
+  if (loading) {
+    return (
+      <div className="space-y-4 pt-2">
+        <div className="flex items-center gap-3">
+          <div className="h-11 w-11 rounded-full bg-muted animate-pulse" />
+          <div className="space-y-2 flex-1">
+            <div className="h-4 w-24 bg-muted animate-pulse rounded" />
+            <div className="h-3 w-32 bg-muted animate-pulse rounded" />
+          </div>
+        </div>
+        <div className="h-32 animate-pulse bg-muted rounded-2xl" />
+        <div className="grid grid-cols-3 gap-2">
+          {[1,2,3].map(i => <div key={i} className="h-16 animate-pulse bg-muted rounded-2xl" />)}
+        </div>
+      </div>
+    );
+  }
 
   const nbaCoversToday = (
     nba.kind === "clocked_in" ||
