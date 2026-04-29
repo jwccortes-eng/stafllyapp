@@ -711,8 +711,8 @@ function ErrorState({ message, onRetry }: { message: string; onRetry: () => void
       <div className="h-14 w-14 rounded-2xl bg-rose-500/10 flex items-center justify-center mb-3">
         <AlertTriangle className="h-6 w-6 text-rose-600" />
       </div>
-      <h3 className="text-sm font-semibold mb-1">Couldn't load shifts</h3>
-      <p className="text-[12px] text-muted-foreground max-w-[280px] leading-snug mb-4">{message}</p>
+      <h3 className="text-base font-semibold mb-1">Couldn't load shifts</h3>
+      <p className="text-sm text-muted-foreground max-w-[300px] leading-relaxed mb-4">{message}</p>
       <Button size="sm" variant="outline" onClick={onRetry}>Retry</Button>
     </div>
   );
