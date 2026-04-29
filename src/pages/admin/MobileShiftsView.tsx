@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { ShiftFilters, EMPTY_FILTERS, type ShiftFilterState } from "@/components/shifts/ShiftFilters";
-import { ShiftDetailDialog } from "@/components/shifts/ShiftDetailDialog";
+import { MobileShiftOperationsSheet } from "@/components/shifts/mobile/MobileShiftOperationsSheet";
 import { isDraftShift, isPublishedShift } from "@/lib/shifts/shift-guards";
 import type { Shift, Assignment, Employee, SelectOption } from "@/components/shifts/types";
 import { cn } from "@/lib/utils";
