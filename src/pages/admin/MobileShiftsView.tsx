@@ -307,9 +307,7 @@ export default function MobileShiftsView() {
 
   const handleCreate = () => {
     if (!canEdit) return;
-    toast.info("Switch to desktop to create a shift", {
-      description: "Mobile quick-create comes in Phase 2.",
-    });
+    toast("Create shift from desktop for now");
   };
 
   return (
