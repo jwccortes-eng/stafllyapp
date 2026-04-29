@@ -313,6 +313,7 @@ export default function MyShifts() {
   // Sync tab to URL for deep-link / back navigation
   const changeTab = (t: TabFilter) => {
     setActiveTab(t);
+    setHistoryVisible(HISTORY_PAGE); // reset pagination on tab switch
     const next = new URLSearchParams(searchParams);
     if (t === "today") next.delete("tab"); else next.set("tab", t);
     setSearchParams(next, { replace: true });
@@ -326,8 +327,32 @@ export default function MyShifts() {
 
   if (loading) {
     return (
-      <div className="space-y-3 pt-2">
-        {[1, 2, 3].map(i => <div key={i} className="h-28 animate-pulse bg-muted rounded-2xl" />)}
+      <div className="space-y-2 pt-2 animate-fade-in">
+        <div className="flex items-center gap-5 border-b border-border/40 mb-3 pb-2.5">
+          {[1, 2, 3].map(i => <Skeleton key={i} className="h-3.5 w-14 rounded-md" />)}
+        </div>
+        {[1, 2, 3, 4].map(i => (
+          <div key={i} className="bg-card rounded-xl border border-border/40 p-3 flex items-center gap-3">
+            <Skeleton className="h-8 w-[58px] rounded-md" />
+            <div className="flex-1 space-y-1.5">
+              <Skeleton className="h-3 w-3/5 rounded" />
+              <Skeleton className="h-2.5 w-2/5 rounded" />
+            </div>
+            <Skeleton className="h-5 w-14 rounded-full" />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="pt-4">
+        <ErrorBlock
+          title="We couldn't load your shifts"
+          message={loadError}
+          onRetry={load}
+        />
       </div>
     );
   }
