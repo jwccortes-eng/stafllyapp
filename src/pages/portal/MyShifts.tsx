@@ -68,6 +68,7 @@ export default function MyShifts() {
   const [assignments, setAssignments] = useState<ShiftAssignment[]>([]);
   const [claimable, setClaimable] = useState<ClaimableShift[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [claiming, setClaiming] = useState<string | null>(null);
   const [responding, setResponding] = useState<string | null>(null);
   const [rejectDialogId, setRejectDialogId] = useState<string | null>(null);
@@ -75,11 +76,15 @@ export default function MyShifts() {
   const [selectedShift, setSelectedShift] = useState<ShiftAssignment | null>(null);
   const initialTab = (searchParams.get("tab") as TabFilter) || "today";
   const [activeTab, setActiveTab] = useState<TabFilter>(initialTab);
-  // toast imported from sonner at top
+  // Pagination for History — render in chunks to keep DOM small.
+  const HISTORY_PAGE = 30;
+  const [historyVisible, setHistoryVisible] = useState(HISTORY_PAGE);
 
   const load = async () => {
     if (!employeeId) { setAssignments([]); setClaimable([]); setLoading(false); return; }
     setLoading(true);
+    setLoadError(null);
+    try {
 
     const { data: emp } = await supabase.from("employees").select("company_id").eq("id", employeeId).maybeSingle();
     if (!emp) { setLoading(false); return; }
