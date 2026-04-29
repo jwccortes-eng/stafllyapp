@@ -91,11 +91,18 @@ export function PortalShiftCard({
 }: PortalShiftCardProps) {
   const meta = getStatusMeta(shift.status);
   const isTodayShift = isToday(parseISO(shift.date));
+  const isPast = parseISO(shift.date) < new Date(new Date().toDateString());
   const countdown = isTodayShift ? getCountdown(shift.date, shift.start_time) : null;
   const isPending = shift.status === "pending" || shift.status === "needs_reacceptance";
   const isConfirmed = shift.status === "confirmed" || shift.status === "accepted";
   const duration = calcDuration(shift.start_time, shift.end_time);
-  const subtitle = shift.client_name ?? shift.location_name ?? null;
+  // Format display strings — convert ALL CAPS to Title Case, replace heavy separators
+  const titleDisplay = formatDisplayName(shift.title);
+  const clientDisplay = formatDisplayName(shift.client_name);
+  const locationDisplay = formatDisplayName(shift.location_name);
+  const subtitle = clientDisplay || locationDisplay || null;
+  // Hide "Confirmed" badge on past shifts — repetitive noise in History.
+  const showStatusChip = !(isPast && isConfirmed);
 
   // ───────── Compact row — single line, max scannability ─────────
   // Pattern: [rail] · [day chip] · [time] · [title · subtitle] · [chip] · [chevron]
