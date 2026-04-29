@@ -20,6 +20,7 @@ import {
   FileText, Flag, Pencil, Hash, CreditCard, UserCheck, Truck,
 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
+import { isEmployeeDriver } from "@/components/shifts/types";
 
 interface ShiftDetail {
   id: string;
@@ -49,7 +50,7 @@ interface AssignmentDetail {
   employee_id: string;
   status: string;
   assignment_role: string;
-  employee?: { first_name: string; last_name: string; phone_number: string | null; county: string | null; has_car: string | null };
+  employee?: { first_name: string; last_name: string; phone_number: string | null; county: string | null; has_car: string | null; can_drive: boolean | null };
 }
 
 interface TimelineEvent {
@@ -120,7 +121,7 @@ export default function ShiftOperations() {
   const [savingNote, setSavingNote] = useState(false);
 
   // Staff list for role assignment
-  const [employees, setEmployees] = useState<{ id: string; first_name: string; last_name: string; county: string | null; has_car: string | null; phone_number: string | null }[]>([]);
+  const [employees, setEmployees] = useState<{ id: string; first_name: string; last_name: string; county: string | null; has_car: string | null; can_drive: boolean | null; phone_number: string | null }[]>([]);
 
   useEffect(() => {
     if (shiftId && selectedCompanyId) loadAll();
@@ -132,10 +133,10 @@ export default function ShiftOperations() {
 
     const [shiftRes, assignRes, timelineRes, notesRes, empsRes] = await Promise.all([
       supabase.from("scheduled_shifts").select("*").eq("id", shiftId).single(),
-      supabase.from("shift_assignments").select("id, employee_id, status, assignment_role, employees(first_name, last_name, phone_number, county, has_car)").eq("shift_id", shiftId) as any,
+      supabase.from("shift_assignments").select("id, employee_id, status, assignment_role, employees(first_name, last_name, phone_number, county, has_car, can_drive)").eq("shift_id", shiftId) as any,
       supabase.from("shift_timeline").select("*").eq("shift_id", shiftId).order("created_at", { ascending: false }),
       supabase.from("shift_notes").select("*").eq("shift_id", shiftId).order("created_at", { ascending: false }),
-      supabase.from("employees").select("id, first_name, last_name, county, has_car, phone_number").eq("company_id", selectedCompanyId).eq("is_active", true),
+      supabase.from("employees").select("id, first_name, last_name, county, has_car, can_drive, phone_number").eq("company_id", selectedCompanyId).eq("is_active", true),
     ]);
 
     if (shiftRes.data) {
@@ -351,7 +352,7 @@ export default function ShiftOperations() {
                       <div className="flex items-center gap-1.5 mt-0.5">
                         {emp?.phone_number && <span className="text-[10px] text-muted-foreground">{emp.phone_number}</span>}
                         {emp?.county && <span className="text-[10px] text-muted-foreground/50">• {emp.county}</span>}
-                        {emp?.has_car === "yes" && <Car className="h-2.5 w-2.5 text-warning" />}
+                        {emp && isEmployeeDriver(emp) && <Car className="h-2.5 w-2.5 text-warning" />}
                       </div>
                     </div>
                     {/* Role selector */}
@@ -430,7 +431,7 @@ export default function ShiftOperations() {
                             <div key={e.id} className="flex items-center gap-2 text-[11px] group">
                               <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/30 shrink-0" />
                               <span className="truncate text-muted-foreground">{e.first_name} {e.last_name}</span>
-                              {e.has_car === "yes" && <Car className="h-2.5 w-2.5 text-warning shrink-0" />}
+                              {isEmployeeDriver(e) && <Car className="h-2.5 w-2.5 text-warning shrink-0" />}
                               <button
                                 className="ml-auto text-[9px] font-semibold text-primary opacity-0 group-hover:opacity-100 transition-opacity"
                                 onClick={async () => {
