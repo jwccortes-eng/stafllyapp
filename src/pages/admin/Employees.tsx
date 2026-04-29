@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import { usePageView } from "@/hooks/useAuditLog";
 import AuditPanel from "@/components/audit/AuditPanel";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllPaginated } from "@/lib/supabase-pagination";
 import { formatPersonName, formatDisplayText } from "@/lib/format-helpers";
 import { Button } from "@/components/ui/button";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
