@@ -11,6 +11,8 @@ import NotificationBell from "@/components/NotificationBell";
 import { StaflyLogo } from "@/components/brand/StaflyBrand";
 import { FloatingDock } from "@/components/navigation/FloatingDock";
 import { AppLauncher } from "@/components/navigation/AppLauncher";
+import { AdminBottomNav } from "@/components/navigation/AdminBottomNav";
+import { MoreSheet } from "@/components/navigation/MoreSheet";
 import { ADMIN_NAV_ITEMS, ADMIN_DEFAULT_PINS } from "@/components/navigation/nav-items";
 import { useNavPreferences } from "@/hooks/useNavPreferences";
 import { supabase } from "@/integrations/supabase/client";
@@ -99,9 +101,14 @@ export default function AdminLayout() {
   });
 
   if (isMobile) {
+    // Phase A: Premium 5-tab AdminBottomNav + grouped MoreSheet.
+    // Fallback to legacy FloatingDock + AppLauncher with ?nav=legacy.
+    const useLegacyNav = typeof window !== "undefined"
+      && new URLSearchParams(window.location.search).get("nav") === "legacy";
+
     return (
-      <div className="min-h-screen bg-background pb-20">
-        <header className="sticky top-0 z-30 bg-card/80 backdrop-blur-xl border-b border-border/40">
+      <div className="min-h-screen bg-background pb-24">
+        <header className="sticky top-0 z-30 bg-card/85 backdrop-blur-xl border-b border-border/40">
           <div className="flex items-center justify-between px-3 h-13">
             <div className="flex items-center gap-2 min-w-0">
               <StaflyLogo size={22} markOnly />
@@ -124,25 +131,43 @@ export default function AdminLayout() {
           <Outlet />
         </main>
 
-        <FloatingDock
-          items={visibleItems}
-          pinnedIds={pinnedIds}
-          onOpenLauncher={() => setLauncherOpen(true)}
-          variant="admin"
-        />
-
-        <AppLauncher
-          open={launcherOpen}
-          onClose={() => setLauncherOpen(false)}
-          items={visibleItems}
-          pinnedIds={pinnedIds}
-          onTogglePin={togglePin}
-          maxPins={maxPins}
-          onSignOut={signOut}
-          variant="admin"
-        />
-
-        {/* CompanyActionGuard is now inside CompanySwitcher */}
+        {useLegacyNav ? (
+          <>
+            <FloatingDock
+              items={visibleItems}
+              pinnedIds={pinnedIds}
+              onOpenLauncher={() => setLauncherOpen(true)}
+              variant="admin"
+            />
+            <AppLauncher
+              open={launcherOpen}
+              onClose={() => setLauncherOpen(false)}
+              items={visibleItems}
+              pinnedIds={pinnedIds}
+              onTogglePin={togglePin}
+              maxPins={maxPins}
+              onSignOut={signOut}
+              variant="admin"
+            />
+          </>
+        ) : (
+          <>
+            <AdminBottomNav
+              onOpenMore={() => setLauncherOpen(true)}
+              moreOpen={launcherOpen}
+            />
+            <MoreSheet
+              open={launcherOpen}
+              onClose={() => setLauncherOpen(false)}
+              items={visibleItems}
+              pinnedIds={pinnedIds}
+              onTogglePin={togglePin}
+              maxPins={maxPins}
+              onSignOut={signOut}
+              badgeCounts={badgeCounts}
+            />
+          </>
+        )}
       </div>
     );
   }
