@@ -319,9 +319,9 @@ export default function MobilePeriodSummaryView() {
                     <EmployeeAvatar
                       firstName={r.first_name}
                       lastName={r.last_name}
-                      employeeId={r.employee_id}
                       size="md"
                     />
+
                   }
                   title={fullName}
                   subtitle={
