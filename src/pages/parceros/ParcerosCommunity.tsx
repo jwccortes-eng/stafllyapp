@@ -377,13 +377,42 @@ function ChannelList({ channels, navigate }: { channels: Channel[]; navigate: an
 /* ═══════════════════════════════════════════════ */
 
 function FlashJobList({ jobs, navigate, userId }: { jobs: FlashJob[]; navigate: any; userId?: string }) {
+  const [watching, setWatching] = useState(false);
   return (
     <div className="space-y-3">
+      {/* Context strip */}
+      <section className="rounded-2xl border border-border/50 bg-gradient-to-br from-amber-500/5 via-card to-card p-4">
+        <div className="flex items-center gap-2 mb-1">
+          <Zap className="h-4 w-4 text-amber-500" />
+          <h2 className="text-sm font-bold text-foreground">What are flash jobs?</h2>
+        </div>
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          Urgent opportunities posted in real time by the community. Apply fast — slots fill in minutes.
+        </p>
+        <div className="mt-3 flex items-center gap-2">
+          <button
+            onClick={() => {
+              setWatching((w) => !w);
+              toast.success(watching ? "You'll stop receiving alerts" : "We'll let you know when a flash job appears");
+            }}
+            className={cn(
+              "h-9 px-3 rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 transition-all",
+              watching
+                ? "bg-primary/10 text-primary border border-primary/30"
+                : "bg-card border border-border/60 text-foreground hover:bg-muted"
+            )}
+          >
+            <Bell className="h-3.5 w-3.5" />
+            {watching ? "Watching opportunities" : "Notify me"}
+          </button>
+        </div>
+      </section>
+
       {jobs.length === 0 && (
         <EmptyActionState
           icon={Zap}
           title="No urgent jobs right now"
-          description="Flash Jobs are short-term, time-sensitive opportunities posted by the community. They show up here the moment they're created."
+          description="Flash Jobs show up here the moment someone posts one. Turn on notifications above to be the first to know."
           actions={[
             { label: "Browse channels", onClick: () => navigate("/parceros/channels") },
             { label: "Back to Radar", onClick: () => navigate("/parceros"), variant: "outline" },
@@ -401,14 +430,38 @@ function FlashJobList({ jobs, navigate, userId }: { jobs: FlashJob[]; navigate: 
 /*  CARDS                                         */
 /* ═══════════════════════════════════════════════ */
 
-function ChannelCard({ channel, onTap, wide }: { channel: Channel; onTap: () => void; wide?: boolean }) {
+const CHANNEL_PURPOSE: Record<string, string> = {
+  jobs: "Job leads and gigs shared by the community",
+  events: "Meetups, trainings and local events",
+  zone: "Local updates from your area",
+  skill: "Tips and opportunities for this trade",
+  general: "General community conversation",
+};
+
+function describeChannel(channel: Channel): string {
+  if (channel.description && channel.description.trim()) return channel.description;
+  const cat = (channel.category || "").toLowerCase();
+  return CHANNEL_PURPOSE[cat] ?? `Conversation and opportunities for ${channel.zone}`;
+}
+
+function ChannelCard({
+  channel,
+  onTap,
+  wide,
+  explain,
+}: {
+  channel: Channel;
+  onTap: () => void;
+  wide?: boolean;
+  explain?: boolean;
+}) {
   const zoneStyle = ZONE_COLORS[channel.zone.toLowerCase()] ?? "bg-muted text-muted-foreground border-border/40";
   return (
     <button
       onClick={onTap}
       className={cn(
-        "flex items-center gap-3 p-3 rounded-xl border border-border/60 bg-card hover:bg-accent/30 transition-all text-left w-full",
-        wide ? "" : "flex-col items-start"
+        "flex gap-3 p-3 rounded-xl border border-border/60 bg-card hover:bg-accent/30 transition-all text-left w-full",
+        wide ? "items-start" : "flex-col items-start"
       )}
     >
       <div className={cn("text-2xl", wide ? "" : "mb-1")}>{channel.icon}</div>
@@ -422,8 +475,18 @@ function ChannelCard({ channel, onTap, wide }: { channel: Channel; onTap: () => 
             <Users className="h-2.5 w-2.5" /> {channel.member_count}
           </span>
         </div>
+        {explain && (
+          <>
+            <p className="text-[11px] text-muted-foreground mt-2 line-clamp-2 leading-relaxed">
+              {describeChannel(channel)}
+            </p>
+            <div className="mt-2.5 inline-flex items-center gap-1 text-[11px] font-semibold text-primary">
+              Open channel <ChevronRight className="h-3 w-3" />
+            </div>
+          </>
+        )}
       </div>
-      {wide && <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />}
+      {wide && !explain && <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0 self-center" />}
     </button>
   );
 }
