@@ -77,7 +77,7 @@ type SortKey = "name" | "base" | "extras" | "deductions" | "advances" | "total";
 type SortDir = "asc" | "desc";
 type PayFilter = "all" | "with_extras" | "with_deductions" | "zero_base";
 
-export default function PeriodSummary() {
+function DesktopPeriodSummary() {
   usePageView("Resumen de periodo");
   const { selectedCompanyId } = useCompany();
   const { user, hasActionPermission } = useAuth();
@@ -814,6 +814,20 @@ export default function PeriodSummary() {
           </Link>
         </div>
       </TabsContent>
-    </Tabs>
+     </Tabs>
   );
 }
+
+// ============================================================
+// Viewport switcher — Mobile gets a premium operator-first view.
+// Desktop logic above is byte-equivalent (only renamed).
+// ============================================================
+import { useIsMobile } from "@/hooks/use-mobile";
+import MobilePeriodSummaryView from "./MobilePeriodSummaryView";
+
+export default function PeriodSummary() {
+  const isMobile = useIsMobile();
+  if (isMobile) return <MobilePeriodSummaryView />;
+  return <DesktopPeriodSummary />;
+}
+
