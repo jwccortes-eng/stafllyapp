@@ -534,7 +534,7 @@ export default function MyShifts() {
                   </p>
                   {s.location && (
                     <p className="text-[11px] text-muted-foreground/65 mt-0.5 flex items-center gap-1 truncate">
-                      <MapPin className="h-2.5 w-2.5 shrink-0" /> {s.location.name}
+                      <MapPin className="h-2.5 w-2.5 shrink-0" /> {formatDisplayName(s.location.name)}
                     </p>
                   )}
                 </div>
