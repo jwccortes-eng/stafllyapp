@@ -282,8 +282,8 @@ export function MobileShiftOperationsSheet({
           {/* Operations snapshot */}
           <section>
             <SectionTitle icon={Sparkles}>Operations snapshot</SectionTitle>
-            <div className="rounded-2xl border border-border/50 bg-muted/30 p-3.5">
-              <p className="text-[13px] leading-relaxed text-foreground/90">{snapshot}</p>
+            <div className="rounded-2xl border border-border/50 bg-muted/30 p-4">
+              <p className="text-sm leading-relaxed text-foreground/90">{snapshot}</p>
             </div>
           </section>
 
@@ -291,15 +291,15 @@ export function MobileShiftOperationsSheet({
           <section>
             <SectionTitle icon={Users}>
               Assigned workers
-              <span className="ml-1.5 text-[11px] font-normal text-muted-foreground">
+              <span className="ml-1.5 text-xs font-normal text-muted-foreground normal-case tracking-normal">
                 ({assignedCount}{slots > 0 ? `/${slots}` : ""})
               </span>
             </SectionTitle>
 
             {assignedWorkers.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-border bg-muted/20 px-4 py-5 text-center">
-                <Users className="h-5 w-5 text-muted-foreground mx-auto mb-1.5" />
-                <p className="text-[12px] text-muted-foreground">No workers assigned yet</p>
+              <div className="rounded-2xl border border-dashed border-border bg-muted/20 px-4 py-6 text-center">
+                <Users className="h-5 w-5 text-muted-foreground mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground">No workers assigned yet</p>
               </div>
             ) : (
               <div className="space-y-1.5 max-h-[260px] overflow-y-auto pr-1 -mr-1">
@@ -310,19 +310,19 @@ export function MobileShiftOperationsSheet({
             )}
 
             {understaffed && (
-              <div className="mt-2.5 rounded-2xl border border-rose-500/30 bg-rose-500/5 p-3 flex items-center justify-between gap-3">
+              <div className="mt-2.5 rounded-2xl border border-rose-500/30 bg-rose-500/5 p-3.5 flex items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <div className="text-[13px] font-semibold text-rose-700 dark:text-rose-400">
+                  <div className="text-sm font-semibold text-rose-700 dark:text-rose-400">
                     {slots - assignedCount} spot{slots - assignedCount === 1 ? "" : "s"} open
                   </div>
-                  <div className="text-[11px] text-rose-600/80 dark:text-rose-400/70">
+                  <div className="text-xs text-rose-600/80 dark:text-rose-400/70 mt-0.5">
                     Add workers to reach full coverage
                   </div>
                 </div>
                 <Button
                   size="sm"
                   variant="outline"
-                  className="shrink-0 h-8 rounded-xl border-rose-500/40 text-rose-700 dark:text-rose-400 hover:bg-rose-500/10"
+                  className="shrink-0 h-9 rounded-xl border-rose-500/40 text-rose-700 dark:text-rose-400 hover:bg-rose-500/10 text-sm font-medium"
                   onClick={handleAssign}
                 >
                   <UserPlus className="h-3.5 w-3.5 mr-1" />
@@ -353,12 +353,12 @@ export function MobileShiftOperationsSheet({
                 <DetailRow icon={Sparkles} label="Claimable" value="Open to worker claims" />
               )}
               {shift.notes && (
-                <div className="px-3.5 py-3">
-                  <div className="flex items-center gap-2 text-[11px] uppercase tracking-wider text-muted-foreground mb-1.5">
-                    <StickyNote className="h-3 w-3" />
+                <div className="px-4 py-3">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground mb-1.5">
+                    <StickyNote className="h-3.5 w-3.5" />
                     Notes
                   </div>
-                  <p className="text-[13px] leading-relaxed text-foreground/90 whitespace-pre-wrap">
+                  <p className="text-sm leading-relaxed text-foreground/90 whitespace-pre-wrap">
                     {shift.notes}
                   </p>
                 </div>
@@ -368,21 +368,21 @@ export function MobileShiftOperationsSheet({
 
           {/* Inline secondary actions */}
           <section className="grid grid-cols-2 gap-2">
-            <Button variant="outline" className="h-11 rounded-xl justify-start gap-2" onClick={handleCopySummary}>
+            <Button variant="outline" className="h-12 rounded-xl justify-start gap-2 text-sm font-medium" onClick={handleCopySummary}>
               <Copy className="h-4 w-4" />
-              <span className="text-[13px]">Copy summary</span>
+              <span>Copy summary</span>
             </Button>
-            <Button variant="outline" className="h-11 rounded-xl justify-start gap-2" onClick={handleShare}>
+            <Button variant="outline" className="h-12 rounded-xl justify-start gap-2 text-sm font-medium" onClick={handleShare}>
               <Share2 className="h-4 w-4" />
-              <span className="text-[13px]">Share shift</span>
+              <span>Share shift</span>
             </Button>
-            <Button variant="outline" className="h-11 rounded-xl justify-start gap-2" onClick={handleViewAttendance}>
+            <Button variant="outline" className="h-12 rounded-xl justify-start gap-2 text-sm font-medium" onClick={handleViewAttendance}>
               <ClipboardList className="h-4 w-4" />
-              <span className="text-[13px]">Attendance</span>
+              <span>Attendance</span>
             </Button>
-            <Button variant="outline" className="h-11 rounded-xl justify-start gap-2" onClick={handleAssign}>
+            <Button variant="outline" className="h-12 rounded-xl justify-start gap-2 text-sm font-medium" onClick={handleAssign}>
               <UserPlus className="h-4 w-4" />
-              <span className="text-[13px]">Assign workers</span>
+              <span>Assign workers</span>
             </Button>
           </section>
         </div>
@@ -390,7 +390,7 @@ export function MobileShiftOperationsSheet({
         {/* Sticky footer */}
         <div className="px-5 pt-3 pb-[max(env(safe-area-inset-bottom,0px),12px)] border-t border-border/40 bg-background/95 backdrop-blur-sm">
           <Button
-            className="w-full h-12 rounded-xl text-[14px] font-semibold gap-2"
+            className="w-full h-12 rounded-xl text-sm font-semibold gap-2"
             onClick={handleOpenFullEditor}
           >
             <ExternalLink className="h-4 w-4" />
