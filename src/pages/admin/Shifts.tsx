@@ -32,6 +32,8 @@ import { OpsToolbar } from "@/components/operations/OpsToolbar";
 import { format, startOfWeek, addDays, addMonths, startOfMonth, endOfMonth, subDays, parse } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
+import MobileShiftsView from "./MobileShiftsView";
 
 import { DayView } from "@/components/shifts/DayView";
 import { WeekView } from "@/components/shifts/WeekView";
@@ -221,7 +223,17 @@ function CreateShiftDialogInline(props: {
   );
 }
 
-export default function Shifts() {
+/**
+ * Viewport wrapper. Only hook is useIsMobile so React hook order is stable
+ * across viewport flips. Each child component owns its own hook universe.
+ * Desktop is the original Shifts component, untouched.
+ */
+export default function ShiftsPage() {
+  const isMobile = useIsMobile();
+  return isMobile ? <MobileShiftsView /> : <DesktopShifts />;
+}
+
+function DesktopShifts() {
   usePageView("Programación");
   const navigate = useNavigate();
   const { role, hasModuleAccess, user } = useAuth();
