@@ -8,14 +8,16 @@ import { usePortalModules } from "@/hooks/usePortalModules";
 import {
   Wallet, Clock, CalendarDays, ArrowRight, Timer,
   Bell, ChevronRight, TrendingUp,
+  User, FileText, MessageCircle, LifeBuoy,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import { format, parseISO, isToday, isTomorrow, startOfWeek, endOfWeek } from "date-fns";
 import { PendingReviewPrompt } from "@/components/reviews/PendingReviewPrompt";
 import { NextBestActionCard } from "@/components/portal/home/NextBestActionCard";
 import { TodayBlock } from "@/components/portal/home/TodayBlock";
 import { ProfileReadinessStrip } from "@/components/portal/home/ProfileReadinessStrip";
+import { WorkerHero, type WorkerHeroStatus } from "@/components/portal/home/WorkerHero";
+import { QuickActions, type QuickAction } from "@/components/portal/home/QuickActions";
 import { selectNextBestAction, type NbaShift } from "@/lib/portal/next-best-action";
 
 interface NextShift {
@@ -254,29 +256,42 @@ export default function EmployeeDashboard() {
     nbaShift && !isToday(parseISO(nbaShift.date)) &&
     nba.kind !== "next_shift_future";
 
+  // ── Hero status — single source of truth derived from clockStatus + readiness ──
+  // No new queries: same fields the rest of the page already uses.
+  const heroStatus: WorkerHeroStatus = clockStatus.isClockedIn
+    ? "on_shift"
+    : (readiness.status && readiness.status !== "ready" && readiness.status !== "active")
+    ? "incomplete"
+    : "ready";
+
+  // ── Quick actions — only show modules the worker has access to ──
+  const quickActions: QuickAction[] = [
+    { id: "profile", label: "My profile", href: "/portal/profile", icon: User, accent: "muted" },
+    isModuleEnabled("my_documents") || isModuleEnabled("my_w9")
+      ? { id: "documents", label: "Documents", href: "/portal/documents", icon: FileText, accent: "warning" as const }
+      : null,
+    isModuleEnabled("my_shifts")
+      ? { id: "shifts", label: "My shifts", href: "/portal/shifts", icon: CalendarDays, accent: "primary" as const }
+      : null,
+    isModuleEnabled("my_clock")
+      ? { id: "clock", label: "Clock", href: "/portal/clock", icon: Clock, accent: "earning" as const }
+      : null,
+    isModuleEnabled("my_chat")
+      ? { id: "chat", label: "Support", href: "/portal/chat", icon: MessageCircle, accent: "muted" as const }
+      : null,
+  ].filter(Boolean) as QuickAction[];
+
   return (
-    <div className="space-y-4 animate-fade-in pb-24">
-      {/* ── Greeting — compact ── */}
-      <div className="flex items-center gap-3">
-        <EmployeeAvatar
-          firstName={firstName}
-          lastName={lastName}
-          avatarUrl={empAvatar}
-          size="md"
-          className="ring-2 ring-primary/10"
-        />
-        <div className="min-w-0 flex-1">
-          <p className="text-[11px] text-muted-foreground font-medium">{greeting},</p>
-          <h1 className="text-lg font-bold font-heading tracking-tight leading-tight text-foreground truncate">
-            {firstName}
-          </h1>
-        </div>
-        {companyName && (
-          <span className="text-[9px] text-muted-foreground/50 bg-muted/40 px-2 py-0.5 rounded-full font-medium shrink-0 max-w-[120px] truncate">
-            {formatDisplayName(companyName)}
-          </span>
-        )}
-      </div>
+    <div className="space-y-4 animate-fade-in pb-28">
+      {/* ── Worker Hero — premium emotional intro ── */}
+      <WorkerHero
+        firstName={firstName}
+        lastName={lastName}
+        greeting={greeting}
+        companyName={companyName || null}
+        avatarUrl={empAvatar}
+        status={heroStatus}
+      />
 
       {/* ── Next Best Action — single dynamic card ── */}
       <NextBestActionCard nba={nba} />
@@ -289,50 +304,83 @@ export default function EmployeeDashboard() {
       {/* ── Profile readiness strip (auto-hides if NBA already surfaces it) ── */}
       <ProfileReadinessStrip nbaKind={nba.kind} />
 
-      {/* ── Stats row — week / shifts / est pay ── */}
-      <div className="grid grid-cols-3 gap-2">
-        <div className="rounded-2xl bg-card border border-border/30 p-3 shadow-sm">
-          <div className="flex items-center gap-1.5 mb-1">
-            <Timer className="h-3.5 w-3.5 text-muted-foreground/40" />
-          </div>
-          <p className="text-base font-bold font-heading tabular-nums leading-none">{weeklyHours}</p>
-          <p className="text-[8px] font-medium text-muted-foreground/50 uppercase tracking-wider mt-1">This week</p>
+      {/* ── Your week — mini stats grid ── */}
+      <section aria-label="Your week" className="space-y-2">
+        <div className="flex items-center justify-between px-1">
+          <h2 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground/60">
+            Your week
+          </h2>
         </div>
-
-        {isModuleEnabled("my_shifts") && (
-          <Link to="/portal/shifts" className="block">
-            <div className="rounded-2xl bg-card border border-border/30 p-3 shadow-sm h-full">
-              <div className="flex items-center gap-1.5 mb-1">
-                <CalendarDays className="h-3.5 w-3.5 text-primary/40" />
-              </div>
-              <p className="text-base font-bold font-heading tabular-nums leading-none">
-                {(upcomingShifts.length + (nextShift ? 1 : 0))}
-              </p>
-              <p className="text-[8px] font-medium text-muted-foreground/50 uppercase tracking-wider mt-1">Shifts</p>
+        <div className="grid grid-cols-3 gap-2">
+          <div className="rounded-2xl bg-card border border-border/40 p-3 shadow-sm">
+            <div className="flex items-center gap-1.5 mb-1.5">
+              <Timer className="h-3.5 w-3.5 text-muted-foreground/55" />
             </div>
-          </Link>
-        )}
-
-        {isModuleEnabled("my_payments") && estimatedPay !== null ? (
-          <Link to="/portal/payments" className="block">
-            <div className="rounded-2xl bg-card border border-border/30 p-3 shadow-sm h-full">
-              <div className="flex items-center gap-1.5 mb-1">
-                <TrendingUp className="h-3.5 w-3.5 text-[hsl(var(--status-confirmed))]" />
-              </div>
-              <p className="text-base font-bold font-heading tabular-nums leading-none">${estimatedPay.toFixed(0)}</p>
-              <p className="text-[8px] font-medium text-muted-foreground/50 uppercase tracking-wider mt-1">Estimated</p>
-            </div>
-          </Link>
-        ) : (
-          <div className="rounded-2xl bg-card border border-border/30 p-3 shadow-sm">
-            <div className="flex items-center gap-1.5 mb-1">
-              <Wallet className="h-3.5 w-3.5 text-muted-foreground/30" />
-            </div>
-            <p className="text-base font-bold font-heading tabular-nums leading-none text-muted-foreground/30">—</p>
-            <p className="text-[8px] font-medium text-muted-foreground/50 uppercase tracking-wider mt-1">Est. pay</p>
+            <p className="text-lg font-bold font-heading tabular-nums leading-none text-foreground">
+              {weeklyHours}
+            </p>
+            <p className="text-[9.5px] font-semibold text-muted-foreground/65 uppercase tracking-wider mt-1.5">
+              This week
+            </p>
           </div>
-        )}
-      </div>
+
+          {isModuleEnabled("my_shifts") ? (
+            <Link to="/portal/shifts" className="block">
+              <div className="rounded-2xl bg-card border border-border/40 p-3 shadow-sm h-full active:scale-[0.98] transition-transform">
+                <div className="flex items-center gap-1.5 mb-1.5">
+                  <CalendarDays className="h-3.5 w-3.5 text-primary/70" />
+                </div>
+                <p className="text-lg font-bold font-heading tabular-nums leading-none text-foreground">
+                  {(upcomingShifts.length + (nextShift ? 1 : 0))}
+                </p>
+                <p className="text-[9.5px] font-semibold text-muted-foreground/65 uppercase tracking-wider mt-1.5">
+                  Shifts
+                </p>
+              </div>
+            </Link>
+          ) : (
+            <div className="rounded-2xl bg-card border border-border/40 p-3 shadow-sm">
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <CalendarDays className="h-3.5 w-3.5 text-muted-foreground/35" />
+              </div>
+              <p className="text-lg font-bold font-heading tabular-nums leading-none text-muted-foreground/40">—</p>
+              <p className="text-[9.5px] font-semibold text-muted-foreground/65 uppercase tracking-wider mt-1.5">
+                Shifts
+              </p>
+            </div>
+          )}
+
+          {isModuleEnabled("my_payments") && estimatedPay !== null ? (
+            <Link to="/portal/payments" className="block">
+              <div className="rounded-2xl bg-card border border-border/40 p-3 shadow-sm h-full active:scale-[0.98] transition-transform">
+                <div className="flex items-center gap-1.5 mb-1.5">
+                  <TrendingUp className="h-3.5 w-3.5 text-[hsl(var(--status-confirmed))]" />
+                </div>
+                <p className="text-lg font-bold font-heading tabular-nums leading-none text-foreground">
+                  ${estimatedPay.toFixed(0)}
+                </p>
+                <p className="text-[9.5px] font-semibold text-muted-foreground/65 uppercase tracking-wider mt-1.5">
+                  Est. pay
+                </p>
+              </div>
+            </Link>
+          ) : (
+            <div className="rounded-2xl bg-card border border-border/40 p-3 shadow-sm">
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <Wallet className="h-3.5 w-3.5 text-muted-foreground/35" />
+              </div>
+              <p className="text-lg font-bold font-heading tabular-nums leading-none text-muted-foreground/40">—</p>
+              <p className="text-[9.5px] font-semibold text-muted-foreground/65 uppercase tracking-wider mt-1.5">
+                Est. pay
+              </p>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* ── Quick actions — premium 2-col grid ── */}
+      <QuickActions actions={quickActions} />
+
 
       {/* ── Upcoming shifts (skip first; it's already in NBA / TodayBlock) ── */}
       {upcomingShifts.length > 0 && (
@@ -390,6 +438,19 @@ export default function EmployeeDashboard() {
         </div>
       )}
 
+      {/* ── Empty upcoming state — only when no shifts at all ── */}
+      {!nextShift && upcomingShifts.length === 0 && (
+        <div className="rounded-2xl border border-dashed border-border/50 bg-card/50 px-4 py-5 text-center">
+          <div className="h-10 w-10 mx-auto rounded-xl bg-muted/60 flex items-center justify-center mb-2">
+            <CalendarDays className="h-5 w-5 text-muted-foreground/60" />
+          </div>
+          <p className="text-[13px] font-semibold text-foreground">No upcoming shift yet</p>
+          <p className="text-[11.5px] text-muted-foreground/75 mt-1 leading-relaxed max-w-[260px] mx-auto">
+            We'll notify you when something is assigned.
+          </p>
+        </div>
+      )}
+
       {/* ── Notifications badge ── */}
       {unreadAlerts > 0 && (
         <div className="rounded-xl bg-primary/[0.04] border border-primary/10 px-3.5 py-2.5 flex items-center gap-3">
@@ -398,6 +459,22 @@ export default function EmployeeDashboard() {
             {unreadAlerts} unread notification{unreadAlerts > 1 ? "s" : ""}
           </p>
         </div>
+      )}
+
+      {/* ── Need help? — calm support entry, only if chat module enabled ── */}
+      {isModuleEnabled("my_chat") && (
+        <Link to="/portal/chat" className="block">
+          <div className="rounded-2xl border border-border/40 bg-card px-4 py-3 flex items-center gap-3 active:scale-[0.99] transition-all shadow-sm">
+            <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+              <LifeBuoy className="h-4 w-4 text-primary" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[13px] font-semibold text-foreground leading-tight">Need help?</p>
+              <p className="text-[11px] text-muted-foreground/75 mt-0.5">Reach out to your supervisor.</p>
+            </div>
+            <ChevronRight className="h-4 w-4 text-muted-foreground/30 shrink-0" />
+          </div>
+        </Link>
       )}
 
       {/* ── Pending Reviews ── */}
