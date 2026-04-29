@@ -645,13 +645,14 @@ function ShiftCard({
 }
 
 function StatusBadge({ isDraft, understaffed }: { isDraft: boolean; understaffed: boolean }) {
+  const base = "text-[11px] font-medium h-[22px] px-2 leading-none";
   if (isDraft) {
-    return <Badge variant="outline" className="text-[10px] h-5 px-1.5 border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10">Draft</Badge>;
+    return <Badge variant="outline" className={cn(base, "border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10")}>Draft</Badge>;
   }
   if (understaffed) {
-    return <Badge variant="outline" className="text-[10px] h-5 px-1.5 border-rose-500/40 text-rose-700 dark:text-rose-400 bg-rose-500/10">Unstaffed</Badge>;
+    return <Badge variant="outline" className={cn(base, "border-rose-500/40 text-rose-700 dark:text-rose-400 bg-rose-500/10")}>Unstaffed</Badge>;
   }
-  return <Badge variant="outline" className="text-[10px] h-5 px-1.5 border-emerald-500/40 text-emerald-700 dark:text-emerald-400 bg-emerald-500/10">Published</Badge>;
+  return <Badge variant="outline" className={cn(base, "border-emerald-500/40 text-emerald-700 dark:text-emerald-400 bg-emerald-500/10")}>Published</Badge>;
 }
 
 function Warning({ icon: Icon, label, tone }: { icon: any; label: string; tone: "bad" | "warn" }) {
@@ -659,7 +660,7 @@ function Warning({ icon: Icon, label, tone }: { icon: any; label: string; tone: 
     ? "bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/30"
     : "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30";
   return (
-    <span className={cn("inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-md border", cls)}>
+    <span className={cn("inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-md border", cls)}>
       <Icon className="h-3 w-3" />
       {label}
     </span>
