@@ -271,7 +271,7 @@ export default function MobilePeriodSummaryView() {
               </select>
             </div>
           )}
-          <MobileAdminTabs tabs={tabs} value={tab} onChange={setTab} />
+          <MobileAdminTabs<TabKey> tabs={tabs} value={tab} onChange={setTab} />
         </>
       }
       summary={<MobileSummaryStrip metrics={metrics} columns={2} />}
