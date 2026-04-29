@@ -51,6 +51,12 @@ interface TimeEntryRow {
   clock_out: string | null;
   break_minutes: number | null;
   status: string | null;
+  // Traceability (read-only) — present in time_entries schema
+  shift_id?: string | null;
+  entry_source?: string | null;
+  approved_by?: string | null;
+  approved_at?: string | null;
+  created_at?: string | null;
 }
 
 interface ScheduledInfo {
