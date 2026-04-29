@@ -192,17 +192,54 @@ export default function PortalClock() {
     const actionableShifts = mappedShifts.filter(
       s => s.attendance_mode !== "clock" || s.pay_type !== "daily",
     );
+
+    // ── Stale open entry recovery ──
+    // If the active open entry is from a previous day, fetch its shift metadata
+    // so the focus card + Clock out button render correctly. Without this the
+    // worker would see "On shift" on /portal but no Clock out CTA here.
+    let stale: { entry: TimeEntry; shift: TodayShift | null } | null = null;
+    if (anyOpen && !todayOpen) {
+      let staleShift: TodayShift | null = null;
+      if (anyOpen.shift_id) {
+        const { data: ssRow } = await supabase
+          .from("scheduled_shifts")
+          .select("id, title, start_time, end_time, shift_code, pay_type, attendance_mode, locations(name), clients(name)")
+          .eq("id", anyOpen.shift_id)
+          .maybeSingle();
+        if (ssRow) {
+          const ss: any = ssRow;
+          staleShift = {
+            id: ss.id, title: ss.title,
+            start_time: ss.start_time, end_time: ss.end_time,
+            shift_code: ss.shift_code,
+            location_name: ss.locations?.name,
+            client_name: ss.clients?.name,
+            pay_type: ss.pay_type,
+            attendance_mode:
+              (ss.attendance_mode as ShiftAttendanceMode) ??
+              defaultAttendanceModeForPayType(ss.pay_type),
+          };
+          // Make sure the focus card can resolve activeShift via todayShifts lookup.
+          if (!actionableShifts.some(s => s.id === staleShift!.id)) {
+            actionableShifts.push(staleShift);
+          }
+        }
+      }
+      stale = { entry: anyOpen, shift: staleShift };
+    }
+    setStaleOpenEntry(stale);
+
     // Daily-only-with-no-arrival edge case (shouldn't happen w/ defaults, but guard):
-    setHasDailyOnlyShifts(actionableShifts.length === 0 && mappedShifts.length > 0);
+    setHasDailyOnlyShifts(actionableShifts.length === 0 && mappedShifts.length > 0 && !stale);
     setTodayShifts(actionableShifts);
-    const activeOpen = list.find(e => !e.clock_out);
+    const activeOpen = todayOpen ?? anyOpen;
     if (!activeOpen) {
       const preselect = urlShiftId ? actionableShifts.find(s => s.id === urlShiftId) : null;
       if (preselect) setSelectedShift(preselect);
       else if (actionableShifts.length === 1) setSelectedShift(actionableShifts[0]);
     }
     setLoading(false);
-  }, [employeeId]);
+  }, [employeeId, urlShiftId]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
