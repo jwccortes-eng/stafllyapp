@@ -100,6 +100,7 @@ export default function PortalClock() {
   const [allowedMethods, setAllowedMethods] = useState<string[]>(["manual", "gps", "qr", "kiosk"]);
   const [successState, setSuccessState] = useState<{ type: "in" | "out"; time: string; shift: string } | null>(null);
   const [hasDailyOnlyShifts, setHasDailyOnlyShifts] = useState(false);
+  const [staleOpenEntry, setStaleOpenEntry] = useState<{ entry: TimeEntry; shift: TodayShift | null } | null>(null);
 
   useEffect(() => {
     const interval = setInterval(() => setNow(new Date()), 1000);
