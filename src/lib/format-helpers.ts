@@ -167,9 +167,10 @@ export function formatDisplayName(value: string | null | undefined): string {
     // Pure separator passes through; will be normalised below
     if (raw === "-" || raw === "/" || raw === "·") return raw;
 
-    // Preserve known acronyms (uppercase form)
+    // Preserve known acronyms — but only if token itself is uppercase, otherwise
+    // a user-typed lowercase "vip" should remain "vip".
     const upper = raw.toUpperCase();
-    if (PRESERVED_ACRONYMS.has(upper)) return upper;
+    if (PRESERVED_ACRONYMS.has(upper) && raw === upper) return upper;
 
     // Token contains only digits/punct → keep as-is ("3", "#145")
     if (/^[\d#.\-]+$/.test(raw)) return raw;
