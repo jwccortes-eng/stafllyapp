@@ -253,13 +253,7 @@ function RadarFeed({ channels, flashJobs, navigate }: { channels: Channel[]; fla
       )}
 
       {flashJobs.length === 0 && channels.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <Radio className="h-12 w-12 text-muted-foreground/30 mb-4" />
-          <h3 className="text-base font-heading font-bold text-foreground">La comunidad está arrancando</h3>
-          <p className="text-xs text-muted-foreground mt-1 max-w-xs">
-            Pronto verás canales por zona, oportunidades de trabajo y más.
-          </p>
-        </div>
+        <CommunityOnboarding navigate={navigate} />
       )}
     </div>
   );
@@ -275,11 +269,15 @@ function ChannelList({ channels, navigate }: { channels: Channel[]; navigate: an
   return (
     <div className="space-y-5">
       {zones.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-16 text-center">
-          <Hash className="h-10 w-10 text-muted-foreground/30 mb-3" />
-          <h3 className="text-sm font-bold text-foreground">No hay canales disponibles</h3>
-          <p className="text-xs text-muted-foreground mt-1">Los canales serán creados por administradores.</p>
-        </div>
+        <EmptyActionState
+          icon={Hash}
+          title="No channels yet"
+          description="Channels group your community by zone, role or topic. Start one when you have something to share."
+          actions={[
+            { label: "Explore Radar", onClick: () => navigate("/parceros") },
+            { label: "View flash jobs", onClick: () => navigate("/parceros/flash"), variant: "outline" },
+          ]}
+        />
       )}
       {zones.map((zone) => (
         <section key={zone}>
@@ -307,11 +305,15 @@ function FlashJobList({ jobs, navigate, userId }: { jobs: FlashJob[]; navigate: 
   return (
     <div className="space-y-3">
       {jobs.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-16 text-center">
-          <Zap className="h-10 w-10 text-muted-foreground/30 mb-3" />
-          <h3 className="text-sm font-bold text-foreground">Sin trabajos flash por ahora</h3>
-          <p className="text-xs text-muted-foreground mt-1">Los trabajos urgentes aparecerán aquí en tiempo real.</p>
-        </div>
+        <EmptyActionState
+          icon={Zap}
+          title="No urgent jobs right now"
+          description="Flash Jobs are short-term, time-sensitive opportunities posted by the community. They show up here the moment they're created."
+          actions={[
+            { label: "Browse channels", onClick: () => navigate("/parceros/channels") },
+            { label: "Back to Radar", onClick: () => navigate("/parceros"), variant: "outline" },
+          ]}
+        />
       )}
       {jobs.map((job) => (
         <FlashJobCard key={job.id} job={job} onTap={() => navigate(`/parceros/flash/${job.id}`)} />
