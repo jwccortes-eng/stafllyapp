@@ -402,12 +402,12 @@ export default function MobileShiftsView() {
           <div className="space-y-5">
             {grouped.map(group => (
               <div key={group.date}>
-                <div className="flex items-center gap-2 mb-2 px-1">
-                  <span className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground font-semibold">
+                <div className="flex items-baseline gap-2 mb-2.5 px-1">
+                  <span className="text-sm font-semibold text-foreground">
                     {group.label}
                   </span>
-                  <span className="text-[11px] text-muted-foreground/60">
-                    · {group.shifts.length}
+                  <span className="text-xs text-muted-foreground">
+                    · {group.shifts.length} shift{group.shifts.length === 1 ? "" : "s"}
                   </span>
                 </div>
                 <div className="space-y-2.5">
