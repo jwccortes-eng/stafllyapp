@@ -96,8 +96,8 @@ export default function MobileAdminHome() {
   const companyLabel = isGlobalMode ? "Global mode" : (selectedCompany?.name || "Stafly");
 
   const openCommandPalette = () => {
-    // CommandPalette listens to this custom event globally
-    window.dispatchEvent(new CustomEvent("open-command-palette"));
+    // Reuse the existing CommandPalette ⌘K trigger (same pattern as nTrigger).
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true }));
   };
 
   return (
