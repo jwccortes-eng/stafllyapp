@@ -5,7 +5,7 @@
  * In EDIT: assignment UI is handled outside; we still show admin selector.
  */
 import { memo } from "react";
-import { Users } from "lucide-react";
+import { Users, Info } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
