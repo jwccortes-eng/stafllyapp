@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect, useMemo } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
@@ -60,14 +60,27 @@ const URGENCY_CONFIG: Record<string, { color: string; label: string }> = {
   normal: { color: "bg-primary text-primary-foreground", label: "NORMAL" },
 };
 
+type TabKey = "radar" | "channels" | "flash";
+
+function tabFromPath(pathname: string): TabKey {
+  if (pathname.endsWith("/channels")) return "channels";
+  if (pathname.endsWith("/flash")) return "flash";
+  return "radar";
+}
+
 export default function ParcerosCommunity() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [channels, setChannels] = useState<Channel[]>([]);
   const [flashJobs, setFlashJobs] = useState<FlashJob[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [activeTab, setActiveTab] = useState<"radar" | "channels" | "flash">("radar");
+  const activeTab = useMemo(() => tabFromPath(location.pathname), [location.pathname]);
+  const setActiveTab = (key: TabKey) => {
+    const target = key === "radar" ? "/parceros" : `/parceros/${key}`;
+    if (location.pathname !== target) navigate(target);
+  };
 
   useEffect(() => {
     loadData();
@@ -240,13 +253,7 @@ function RadarFeed({ channels, flashJobs, navigate }: { channels: Channel[]; fla
       )}
 
       {flashJobs.length === 0 && channels.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <Radio className="h-12 w-12 text-muted-foreground/30 mb-4" />
-          <h3 className="text-base font-heading font-bold text-foreground">La comunidad está arrancando</h3>
-          <p className="text-xs text-muted-foreground mt-1 max-w-xs">
-            Pronto verás canales por zona, oportunidades de trabajo y más.
-          </p>
-        </div>
+        <CommunityOnboarding navigate={navigate} />
       )}
     </div>
   );
@@ -262,11 +269,15 @@ function ChannelList({ channels, navigate }: { channels: Channel[]; navigate: an
   return (
     <div className="space-y-5">
       {zones.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-16 text-center">
-          <Hash className="h-10 w-10 text-muted-foreground/30 mb-3" />
-          <h3 className="text-sm font-bold text-foreground">No hay canales disponibles</h3>
-          <p className="text-xs text-muted-foreground mt-1">Los canales serán creados por administradores.</p>
-        </div>
+        <EmptyActionState
+          icon={Hash}
+          title="No channels yet"
+          description="Channels group your community by zone, role or topic. Start one when you have something to share."
+          actions={[
+            { label: "Explore Radar", onClick: () => navigate("/parceros") },
+            { label: "View flash jobs", onClick: () => navigate("/parceros/flash"), variant: "outline" },
+          ]}
+        />
       )}
       {zones.map((zone) => (
         <section key={zone}>
@@ -294,11 +305,15 @@ function FlashJobList({ jobs, navigate, userId }: { jobs: FlashJob[]; navigate: 
   return (
     <div className="space-y-3">
       {jobs.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-16 text-center">
-          <Zap className="h-10 w-10 text-muted-foreground/30 mb-3" />
-          <h3 className="text-sm font-bold text-foreground">Sin trabajos flash por ahora</h3>
-          <p className="text-xs text-muted-foreground mt-1">Los trabajos urgentes aparecerán aquí en tiempo real.</p>
-        </div>
+        <EmptyActionState
+          icon={Zap}
+          title="No urgent jobs right now"
+          description="Flash Jobs are short-term, time-sensitive opportunities posted by the community. They show up here the moment they're created."
+          actions={[
+            { label: "Browse channels", onClick: () => navigate("/parceros/channels") },
+            { label: "Back to Radar", onClick: () => navigate("/parceros"), variant: "outline" },
+          ]}
+        />
       )}
       {jobs.map((job) => (
         <FlashJobCard key={job.id} job={job} onTap={() => navigate(`/parceros/flash/${job.id}`)} />
@@ -407,3 +422,95 @@ function FlashJobCard({ job, onTap, compact }: { job: FlashJob; onTap: () => voi
     </button>
   );
 }
+
+/* ═══════════════════════════════════════════════ */
+/*  EMPTY STATES (purposeful)                     */
+/* ═══════════════════════════════════════════════ */
+
+interface EmptyAction {
+  label: string;
+  onClick: () => void;
+  variant?: "default" | "outline";
+}
+
+function EmptyActionState({
+  icon: Icon,
+  title,
+  description,
+  actions = [],
+}: {
+  icon: any;
+  title: string;
+  description: string;
+  actions?: EmptyAction[];
+}) {
+  return (
+    <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+      <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
+        <Icon className="h-6 w-6 text-primary" />
+      </div>
+      <h3 className="text-base font-bold text-foreground">{title}</h3>
+      <p className="text-sm text-muted-foreground mt-1.5 max-w-xs leading-relaxed">
+        {description}
+      </p>
+      {actions.length > 0 && (
+        <div className="mt-5 flex flex-col sm:flex-row gap-2 w-full max-w-xs">
+          {actions.map((a, i) => (
+            <button
+              key={i}
+              onClick={a.onClick}
+              className={cn(
+                "flex-1 h-10 rounded-xl text-sm font-semibold transition-all active:scale-[0.98]",
+                a.variant === "outline"
+                  ? "border border-border/60 bg-card text-foreground hover:bg-muted"
+                  : "bg-primary text-primary-foreground hover:opacity-90"
+              )}
+            >
+              {a.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CommunityOnboarding({ navigate }: { navigate: any }) {
+  const steps = [
+    { icon: Hash, title: "Explore channels", hint: "Connect by zone, role or topic", to: "/parceros/channels" },
+    { icon: Briefcase, title: "Browse Flash Jobs", hint: "Short-term opportunities posted live", to: "/parceros/flash" },
+    { icon: Radio, title: "Stay on the Radar", hint: "See what's happening across the community", to: "/parceros" },
+  ];
+  return (
+    <div className="space-y-5 py-4">
+      <div className="text-center px-2">
+        <div className="inline-flex h-14 w-14 rounded-2xl bg-primary/10 items-center justify-center mb-3">
+          <Radio className="h-6 w-6 text-primary" />
+        </div>
+        <h2 className="text-lg font-bold">Welcome to Parceros</h2>
+        <p className="text-sm text-muted-foreground mt-1.5 max-w-sm mx-auto">
+          A community of workers, providers and operators. Discover channels, jobs and people in your zone.
+        </p>
+      </div>
+      <div className="space-y-2">
+        {steps.map((s) => (
+          <button
+            key={s.to}
+            onClick={() => navigate(s.to)}
+            className="w-full flex items-center gap-3 p-3.5 rounded-2xl border border-border/50 bg-card text-left active:scale-[0.99] transition-all hover:border-border"
+          >
+            <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+              <s.icon className="h-4.5 w-4.5" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-semibold">{s.title}</div>
+              <div className="text-xs text-muted-foreground mt-0.5">{s.hint}</div>
+            </div>
+            <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
