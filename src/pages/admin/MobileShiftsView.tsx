@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   CalendarDays, Plus, SlidersHorizontal, Search, ChevronLeft, ChevronRight,
-  Users, Clock, AlertTriangle, FileEdit, MapPin, Building2, X, Loader2,
+  Users, Clock, AlertTriangle, FileEdit, MapPin, Building2, X, Loader2, Eye,
 } from "lucide-react";
 import { format, parseISO, isToday, isTomorrow, addDays, startOfDay } from "date-fns";
 import { enUS } from "date-fns/locale";
@@ -307,9 +307,7 @@ export default function MobileShiftsView() {
 
   const handleCreate = () => {
     if (!canEdit) return;
-    toast.info("Switch to desktop to create a shift", {
-      description: "Mobile quick-create comes in Phase 2.",
-    });
+    toast("Create shift from desktop for now");
   };
 
   return (
@@ -528,12 +526,23 @@ function ShiftCard({
     coverage >= 60 ? "bg-amber-500" :
     "bg-rose-500";
 
+  const handleKey = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      onOpen();
+    }
+  };
+
   return (
-    <button
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onOpen}
+      onKeyDown={handleKey}
       className={cn(
-        "w-full text-left rounded-2xl border border-border/50 bg-card p-4",
-        "active:scale-[0.99] hover:border-border transition-all shadow-sm hover:shadow-md"
+        "group relative w-full text-left rounded-2xl border border-border/50 bg-card p-4 cursor-pointer select-none",
+        "active:scale-[0.98] hover:border-border transition-all shadow-sm hover:shadow-md",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
       )}
     >
       {/* Top row: client + status */}
@@ -549,7 +558,10 @@ function ShiftCard({
             </div>
           )}
         </div>
-        <StatusBadge isDraft={isDraft} understaffed={understaffed} />
+        <div className="flex items-center gap-1.5 shrink-0">
+          <StatusBadge isDraft={isDraft} understaffed={understaffed} />
+          <ChevronRight className="h-4 w-4 text-muted-foreground/60 group-hover:text-muted-foreground transition-colors" />
+        </div>
       </div>
 
       {/* Time */}
@@ -609,7 +621,26 @@ function ShiftCard({
           )}
         </div>
       )}
-    </button>
+
+      {/* Footer: explicit affordance + Operations button */}
+      <div className="mt-3 pt-3 border-t border-border/40 flex items-center justify-between gap-2">
+        <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+          <Eye className="h-3 w-3" />
+          View operations
+        </span>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onOpen();
+          }}
+          className="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg text-[11px] font-medium bg-primary/10 text-primary hover:bg-primary/15 active:scale-95 transition"
+        >
+          Operations
+          <ChevronRight className="h-3 w-3" />
+        </button>
+      </div>
+    </div>
   );
 }
 
