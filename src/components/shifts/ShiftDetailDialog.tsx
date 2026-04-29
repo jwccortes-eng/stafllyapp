@@ -779,19 +779,33 @@ export function ShiftDetailDialog({
                    playing special roles inside the assigned roster below. */}
               {(() => {
                 const requiresCar = !!(shift as any).transportation_required;
-                const driverAssigns = shiftAssignments.filter((a) => {
+                // Canonical driver = scheduled_shifts.driver_employee_id.
+                // Eligible drivers = assigned workers who pass isEmployeeDriver().
+                const confirmedDriverId: string | null = (shift as any).driver_employee_id ?? null;
+                const confirmedDriverEmp = confirmedDriverId
+                  ? employees.find(e => e.id === confirmedDriverId) ?? null
+                  : null;
+                const eligibleDriverAssigns = shiftAssignments.filter((a) => {
                   const emp = employees.find((e) => e.id === a.employee_id);
-                  // Use the canonical helper so legacy text ("Yes, I have a Car")
-                  // and the boolean `can_drive` flag both resolve correctly.
                   return emp && isEmployeeDriver(emp) && a.status !== "rejected";
                 });
-                // Workers assigned but NOT eligible to drive — used to explain
-                // the "Sin conductor" alert clearly when transport is required.
                 const nonDriverAssignedNames = shiftAssignments
                   .filter((a) => a.status !== "rejected")
                   .map((a) => employees.find((e) => e.id === a.employee_id))
                   .filter((e): e is Employee => !!e && !isEmployeeDriver(e))
                   .map((e) => `${e.first_name} ${e.last_name}`);
+
+                const assignAsDriver = async (empId: string, name: string) => {
+                  const { error } = await supabase
+                    .from("scheduled_shifts")
+                    .update({ driver_employee_id: empId } as any)
+                    .eq("id", shift.id);
+                  if (error) { toast.error(error.message); return; }
+                  // Patch local shift so the UI updates without refetch.
+                  (shift as any).driver_employee_id = empId;
+                  toast.success(`${name} asignado como conductor`);
+                  onPublish({ ...(shift as any), driver_employee_id: empId });
+                };
 
                 return (
                   <div className="rounded-xl border border-border/20 bg-muted/10 p-2 space-y-1">
@@ -818,52 +832,99 @@ export function ShiftDetailDialog({
                     })()}
                     {/* Driver slot — only when transport required */}
                     {requiresCar && (
-                      driverAssigns.length > 0 ? driverAssigns.map(a => {
-                        const emp = employees.find(e => e.id === a.employee_id)!;
-                        return (
-                          <div key={a.id} className="flex items-center gap-2 px-2 py-1 rounded-lg bg-earning/[0.06] border border-earning/20">
-                            <EmployeeAvatar firstName={emp.first_name} lastName={emp.last_name} avatarUrl={emp.avatar_url} gender={emp.gender} size="xs" />
-                            <span className="text-[10px] font-semibold flex-1 truncate">{emp.first_name} {emp.last_name}</span>
-                            <span className="text-[7px] font-bold text-earning bg-earning/10 px-1 rounded">CONDUCTOR</span>
-                          </div>
-                        );
-                      }) : (
+                      confirmedDriverEmp ? (
+                        <div className="flex items-center gap-2 px-2 py-1 rounded-lg bg-earning/[0.06] border border-earning/20">
+                          <EmployeeAvatar firstName={confirmedDriverEmp.first_name} lastName={confirmedDriverEmp.last_name} avatarUrl={confirmedDriverEmp.avatar_url} gender={confirmedDriverEmp.gender} size="xs" />
+                          <span className="text-[10px] font-semibold flex-1 truncate">{confirmedDriverEmp.first_name} {confirmedDriverEmp.last_name}</span>
+                          <span className="text-[7px] font-bold text-earning bg-earning/10 px-1 rounded">CONDUCTOR</span>
+                          {effectiveCanEdit && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-5 px-1.5 text-[8px] text-muted-foreground hover:text-destructive"
+                              onClick={async () => {
+                                const { error } = await supabase
+                                  .from("scheduled_shifts")
+                                  .update({ driver_employee_id: null } as any)
+                                  .eq("id", shift.id);
+                                if (error) { toast.error(error.message); return; }
+                                (shift as any).driver_employee_id = null;
+                                toast.success("Conductor removido");
+                                onPublish({ ...(shift as any), driver_employee_id: null });
+                              }}
+                            >
+                              Quitar
+                            </Button>
+                          )}
+                        </div>
+                      ) : (
                         <div className="rounded-lg border border-dashed border-destructive/30 bg-destructive/[0.04] p-2 space-y-1.5">
                           <div className="flex items-center gap-2">
                             <Car className="h-3 w-3 text-destructive/60 shrink-0" />
                             <span className="text-[10px] text-destructive font-semibold">Sin conductor — transporte requerido</span>
                           </div>
-                          {nonDriverAssignedNames.length > 0 ? (
-                            <p className="text-[9px] text-muted-foreground leading-snug">
-                              {nonDriverAssignedNames.length === 1
-                                ? `${nonDriverAssignedNames[0]} está asignado como worker, pero no figura como conductor.`
-                                : `${nonDriverAssignedNames.length} workers asignados — ninguno está marcado como conductor.`}
-                              {" "}Marca a alguien como conductor en su perfil, agrega un driver, o ajusta el transporte.
-                            </p>
+                          {eligibleDriverAssigns.length > 0 ? (
+                            <>
+                              <p className="text-[9px] text-muted-foreground leading-snug">
+                                {eligibleDriverAssigns.length === 1
+                                  ? `${(() => { const e = employees.find(x => x.id === eligibleDriverAssigns[0].employee_id)!; return `${e.first_name} ${e.last_name}`; })()} puede ser conductor para este turno.`
+                                  : `${eligibleDriverAssigns.length} workers asignados pueden manejar — selecciona quién será el conductor.`}
+                              </p>
+                              {effectiveCanEdit && (
+                                <div className="flex flex-wrap gap-1 pt-0.5">
+                                  {eligibleDriverAssigns.map(a => {
+                                    const emp = employees.find(e => e.id === a.employee_id)!;
+                                    const name = `${emp.first_name} ${emp.last_name}`;
+                                    return (
+                                      <Button
+                                        key={a.id}
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-6 text-[9px] px-2 rounded-md border-earning/40 text-earning hover:bg-earning/5"
+                                        onClick={() => assignAsDriver(emp.id, name)}
+                                      >
+                                        <Car className="h-2.5 w-2.5 mr-1" /> Asignar a {emp.first_name} como conductor
+                                      </Button>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </>
                           ) : (
-                            <p className="text-[9px] text-muted-foreground leading-snug">
-                              Asigna un worker que pueda manejar, o desactiva "transporte requerido" en la edición del turno.
-                            </p>
-                          )}
-                          {effectiveCanEdit && (
-                            <div className="flex flex-wrap gap-1 pt-0.5">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="h-6 text-[9px] px-2 rounded-md border-destructive/30 text-destructive hover:bg-destructive/5"
-                                onClick={() => { onOpenChange(false); onEdit(shift); }}
-                              >
-                                Editar transporte
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="h-6 text-[9px] px-2 rounded-md"
-                                onClick={() => setShowAddPanel(true)}
-                              >
-                                <UserPlus className="h-2.5 w-2.5 mr-1" /> Agregar conductor
-                              </Button>
-                            </div>
+                            <>
+                              {nonDriverAssignedNames.length > 0 ? (
+                                <p className="text-[9px] text-muted-foreground leading-snug">
+                                  {nonDriverAssignedNames.length === 1
+                                    ? `${nonDriverAssignedNames[0]} está asignado pero no figura como conductor en su perfil.`
+                                    : `${nonDriverAssignedNames.length} workers asignados — ninguno está marcado como conductor en su perfil.`}
+                                  {" "}Marca a alguien como conductor en su perfil, agrega un driver, o ajusta el transporte.
+                                </p>
+                              ) : (
+                                <p className="text-[9px] text-muted-foreground leading-snug">
+                                  Asigna un worker que pueda manejar, o desactiva "transporte requerido" en la edición del turno.
+                                </p>
+                              )}
+                              {effectiveCanEdit && (
+                                <div className="flex flex-wrap gap-1 pt-0.5">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-6 text-[9px] px-2 rounded-md border-destructive/30 text-destructive hover:bg-destructive/5"
+                                    onClick={() => { onOpenChange(false); onEdit(shift); }}
+                                  >
+                                    Editar transporte
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-6 text-[9px] px-2 rounded-md"
+                                    onClick={() => setShowAddPanel(true)}
+                                  >
+                                    <UserPlus className="h-2.5 w-2.5 mr-1" /> Agregar conductor
+                                  </Button>
+                                </div>
+                              )}
+                            </>
                           )}
                         </div>
                       )
