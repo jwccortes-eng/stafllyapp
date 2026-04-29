@@ -804,25 +804,10 @@ function ReviewSheet({
                   </div>
                   <div className="text-sm font-mono font-semibold tabular-nums">{fmtHours(dayMin)}</div>
                 </div>
-                <div className="space-y-1">
-                  {list.map(en => {
-                    const open = !en.clock_out;
-                    return (
-                      <div key={en.id} className="flex items-center justify-between gap-2 text-xs">
-                        <div className="flex items-center gap-1.5 text-muted-foreground">
-                          <Clock className="h-3 w-3" />
-                          <span className="font-mono tabular-nums">{fmtTime(en.clock_in)} → {open ? "—" : fmtTime(en.clock_out)}</span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          {(en.break_minutes ?? 0) > 0 && (
-                            <span className="text-muted-foreground">{en.break_minutes}m brk</span>
-                          )}
-                          {open && <Badge variant="outline" className="text-[10px] h-5 px-1.5 border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10">Open</Badge>}
-                          {en.status === "needs_review" && <Badge variant="outline" className="text-[10px] h-5 px-1.5 border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10">Review</Badge>}
-                        </div>
-                      </div>
-                    );
-                  })}
+                <div className="space-y-2">
+                  {list.map(en => (
+                    <EntryTraceRow key={en.id} en={en} period={period} />
+                  ))}
                 </div>
               </div>
             );
