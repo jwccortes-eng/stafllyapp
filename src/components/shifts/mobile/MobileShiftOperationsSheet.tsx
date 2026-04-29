@@ -78,6 +78,7 @@ export function MobileShiftOperationsSheet({
   clientName, locationName, meetingPoint,
 }: Props) {
   const navigate = useNavigate();
+  const [traceOpen, setTraceOpen] = useState(false);
 
   const data = useMemo(() => {
     if (!shift) return null;
