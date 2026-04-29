@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect, useMemo } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
@@ -60,14 +60,27 @@ const URGENCY_CONFIG: Record<string, { color: string; label: string }> = {
   normal: { color: "bg-primary text-primary-foreground", label: "NORMAL" },
 };
 
+type TabKey = "radar" | "channels" | "flash";
+
+function tabFromPath(pathname: string): TabKey {
+  if (pathname.endsWith("/channels")) return "channels";
+  if (pathname.endsWith("/flash")) return "flash";
+  return "radar";
+}
+
 export default function ParcerosCommunity() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [channels, setChannels] = useState<Channel[]>([]);
   const [flashJobs, setFlashJobs] = useState<FlashJob[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [activeTab, setActiveTab] = useState<"radar" | "channels" | "flash">("radar");
+  const activeTab = useMemo(() => tabFromPath(location.pathname), [location.pathname]);
+  const setActiveTab = (key: TabKey) => {
+    const target = key === "radar" ? "/parceros" : `/parceros/${key}`;
+    if (location.pathname !== target) navigate(target);
+  };
 
   useEffect(() => {
     loadData();
