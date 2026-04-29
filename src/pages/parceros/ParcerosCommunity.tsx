@@ -7,8 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ParcerosHeader } from "@/components/parceros/ParcerosHeader";
 import {
-  Search, MapPin, Users, Clock, Loader2, Radio, TrendingUp, ChevronRight,
-  Hash, Briefcase, AlertTriangle, Zap, UserCircle2, Bell, Plus, Sparkles,
+  Search, MapPin, Users, Clock, Loader2, TrendingUp, ChevronRight,
+  Hash, Briefcase, AlertTriangle, Zap, UserCircle2, Bell, Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNow, isPast } from "date-fns";
