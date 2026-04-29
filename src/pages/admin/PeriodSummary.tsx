@@ -814,6 +814,20 @@ function DesktopPeriodSummary() {
           </Link>
         </div>
       </TabsContent>
-    </Tabs>
+     </Tabs>
   );
 }
+
+// ============================================================
+// Viewport switcher — Mobile gets a premium operator-first view.
+// Desktop logic above is byte-equivalent (only renamed).
+// ============================================================
+import { useIsMobile } from "@/hooks/use-mobile";
+import MobilePeriodSummaryView from "./MobilePeriodSummaryView";
+
+export default function PeriodSummary() {
+  const isMobile = useIsMobile();
+  if (isMobile) return <MobilePeriodSummaryView />;
+  return <DesktopPeriodSummary />;
+}
+
