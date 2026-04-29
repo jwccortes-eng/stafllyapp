@@ -474,22 +474,15 @@ export default function MobileShiftsView() {
         </SheetContent>
       </Sheet>
 
-      {/* Shift Detail — read-only on mobile in Phase 1 (canEdit=false) */}
-      <ShiftDetailDialog
+      {/* Operations Snapshot — mobile-first sheet (read-only Phase 1.5) */}
+      <MobileShiftOperationsSheet
         shift={detailShift}
         open={detailOpen}
         onOpenChange={setDetailOpen}
         assignments={assignments}
         employees={employees}
-        locations={locations}
-        clients={clients}
-        allShifts={shifts}
-        canEdit={false}
-        allowClaims={true}
-        onAddEmployees={() => toast.info("Switch to desktop to assign workers")}
-        onRemoveAssignment={() => toast.info("Switch to desktop to manage assignments")}
-        onEdit={() => toast.info("Switch to desktop to edit this shift")}
-        onPublish={() => toast.info("Switch to desktop to publish this shift")}
+        clientName={detailShift?.client_id ? clientById.get(detailShift.client_id) ?? "—" : "—"}
+        locationName={detailShift?.location_id ? locationById.get(detailShift.location_id) ?? "" : ""}
       />
     </div>
   );
