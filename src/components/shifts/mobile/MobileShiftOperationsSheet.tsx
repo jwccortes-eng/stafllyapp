@@ -318,6 +318,7 @@ export function MobileShiftOperationsSheet({
             </button>
             {traceOpen ? (
               <TraceabilitySnapshot
+                compact
                 source={shiftTraceSource(draft, published)}
                 sourceNote="Scheduled shift · payroll uses real clock entries only"
                 timeline={buildShiftTimeline(shift)}
@@ -643,11 +644,16 @@ function buildShiftRisks(args: {
 }
 
 function buildShiftAudit(shift: Shift): TraceLinkedRecord[] {
+  const fmtTs = (ts: string | null | undefined) => {
+    if (!ts) return null;
+    try { return format(parseISO(ts), "MMM d, yyyy · HH:mm", { locale: enUS }); }
+    catch { return ts; }
+  };
   return [
-    { label: "Created at", value: shift.created_at ?? null },
+    { label: "Created at", value: fmtTs(shift.created_at), hint: shift.created_at ?? undefined },
     { label: "Created by", value: shift.created_by ? shift.created_by.slice(0, 8) + "…" : null, hint: shift.created_by ?? undefined },
     { label: "Published by", value: shift.published_by ? shift.published_by.slice(0, 8) + "…" : null, hint: shift.published_by ?? undefined },
-    { label: "Updated at", value: shift.updated_at ?? null },
+    { label: "Updated at", value: fmtTs(shift.updated_at), hint: shift.updated_at ?? undefined },
     { label: "Import batch", value: shift.import_batch_id ? shift.import_batch_id.slice(0, 8) + "…" : null, hint: shift.import_batch_id ?? undefined },
     { label: "Reconciliation hash", value: shift.reconciliation_hash ? shift.reconciliation_hash.slice(0, 10) + "…" : null, hint: shift.reconciliation_hash ?? undefined },
   ];
