@@ -207,21 +207,21 @@ export function MobileShiftOperationsSheet({
         <div className="px-5 pt-4 pb-3 border-b border-border/40 bg-background/95 backdrop-blur-sm">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2 mb-1">
+              <div className="flex items-center gap-2 mb-1.5">
                 {shift.shift_code && (
-                  <span className="inline-flex items-center gap-1 text-[11px] font-mono font-semibold text-muted-foreground">
-                    <Hash className="h-3 w-3" />
+                  <span className="inline-flex items-center gap-1 text-xs font-mono font-semibold text-muted-foreground">
+                    <Hash className="h-3.5 w-3.5" />
                     {formatShiftCode(shift.shift_code)}
                   </span>
                 )}
                 <StatusPill draft={draft} published={published} understaffed={understaffed} />
               </div>
-              <h2 className="text-lg font-semibold tracking-tight truncate leading-tight">
+              <h2 className="text-xl font-semibold tracking-tight leading-tight line-clamp-2">
                 {clientName && clientName !== "—" ? clientName : (shift.title || "Shift")}
               </h2>
               {locationName && (
-                <div className="flex items-center gap-1 text-[12px] text-muted-foreground mt-0.5 truncate">
-                  <MapPin className="h-3 w-3 shrink-0" />
+                <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1 truncate">
+                  <MapPin className="h-3.5 w-3.5 shrink-0" />
                   <span className="truncate">{locationName}</span>
                 </div>
               )}
@@ -229,23 +229,23 @@ export function MobileShiftOperationsSheet({
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 rounded-full shrink-0 -mt-1 -mr-1"
+              className="h-9 w-9 rounded-full shrink-0 -mt-1 -mr-1"
               onClick={() => onOpenChange(false)}
               aria-label="Close"
             >
-              <X className="h-4 w-4" />
+              <X className="h-5 w-5" />
             </Button>
           </div>
 
           {/* Date + time hero */}
-          <div className="mt-3 flex items-center gap-3">
-            <div className="flex items-center gap-2 px-2.5 h-8 rounded-lg bg-muted/60">
-              <CalendarDays className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="text-[12px] font-medium">{dateLabel(shift.date)}</span>
+          <div className="mt-3 flex items-center gap-2">
+            <div className="flex items-center gap-1.5 px-3 h-9 rounded-lg bg-muted/60">
+              <CalendarDays className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium">{dateLabel(shift.date)}</span>
             </div>
-            <div className="flex items-center gap-2 px-2.5 h-8 rounded-lg bg-muted/60">
-              <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="text-[13px] font-mono font-semibold tabular-nums">
+            <div className="flex items-center gap-1.5 px-3 h-9 rounded-lg bg-muted/60">
+              <Clock className="h-4 w-4 text-muted-foreground" />
+              <span className="text-base font-mono font-semibold tabular-nums">
                 {formatTimeShort(shift.start_time)}–{formatTimeShort(shift.end_time)}
               </span>
             </div>
