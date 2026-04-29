@@ -343,12 +343,18 @@ function ActivityRow({ item }: { item: any }) {
    MAIN DASHBOARD
    ═══════════════════════════════════════════════════ */
 
+/**
+ * Top-level export. Picks the correct view based on viewport.
+ * useIsMobile() is the only hook here, and the conditional render swaps between
+ * two independent components — each owns its own hook universe, so React's
+ * Rules of Hooks are preserved across viewport changes.
+ */
 export default function AdminDashboard() {
-  // ── Mobile branch: render dedicated MobileAdminHome BEFORE any other hook.
-  // useIsMobile must remain the first hook so React hook order is stable across renders.
   const isMobile = useIsMobile();
-  if (isMobile) return <MobileAdminHome />;
+  return isMobile ? <MobileAdminHome /> : <AdminDashboardDesktop />;
+}
 
+function AdminDashboardDesktop() {
   const { selectedCompanyId, selectedCompany, isModuleActive, companies, setSelectedCompanyId, isGlobalMode } = useCompany();
   const { role, hasModuleAccess, fullName } = useAuth();
   const { config: payrollConfig, currentWeek } = usePayrollConfig();
