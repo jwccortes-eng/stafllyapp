@@ -7,7 +7,7 @@ import { Link } from "react-router-dom";
 import { usePortalModules } from "@/hooks/usePortalModules";
 import {
   Wallet, Clock, CalendarDays, ArrowRight, Timer,
-  Bell, ChevronRight, TrendingUp, MapPin, Briefcase,
+  Bell, ChevronRight, TrendingUp,
   User, FileText, MessageCircle, LifeBuoy,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
