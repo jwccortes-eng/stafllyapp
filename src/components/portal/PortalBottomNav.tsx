@@ -79,7 +79,7 @@ export function PortalBottomNav({ onOpenMore, moreOpen = false }: PortalBottomNa
             const baseClass = "relative flex flex-col items-center justify-center flex-1 h-full active:scale-[0.92] transition-transform duration-150";
 
             const indicator = active && (
-              <span className="absolute top-0 h-0.5 w-7 rounded-full bg-primary" />
+              <span className="absolute top-0 h-[2px] w-5 rounded-full bg-primary" />
             );
 
             if (item.id === "more") {
