@@ -316,8 +316,8 @@ export default function MobileShiftsView() {
       <div className="px-4 pt-4 pb-3 sticky top-0 z-20 bg-background/95 backdrop-blur-sm border-b border-border/40">
         <div className="flex items-center justify-between gap-2 mb-3">
           <div className="min-w-0">
-            <h1 className="text-xl font-semibold tracking-tight">Shifts</h1>
-            <p className="text-[11px] text-muted-foreground truncate">
+            <h1 className="text-2xl font-semibold tracking-tight leading-tight">Shifts</h1>
+            <p className="text-xs text-muted-foreground truncate mt-0.5">
               {selectedCompany?.name ?? "All companies"} · {format(new Date(), "EEE MMM d", { locale: enUS })}
             </p>
           </div>
