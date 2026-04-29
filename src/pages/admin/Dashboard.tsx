@@ -29,6 +29,8 @@ import { OnboardingChecklist } from "@/components/OnboardingChecklist";
 import { PendingReviewsWidget } from "@/components/reviews/PendingReviewsWidget";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { ErrorBlock } from "@/components/ui/error-block";
+import { useIsMobile } from "@/hooks/use-mobile";
+import MobileAdminHome from "./MobileAdminHome";
 
 /* ─── animated counter hook ─── */
 function useAnimatedNumber(target: number, duration = 800) {
@@ -342,6 +344,11 @@ function ActivityRow({ item }: { item: any }) {
    ═══════════════════════════════════════════════════ */
 
 export default function AdminDashboard() {
+  // ── Mobile branch: render dedicated MobileAdminHome BEFORE any other hook.
+  // useIsMobile must remain the first hook so React hook order is stable across renders.
+  const isMobile = useIsMobile();
+  if (isMobile) return <MobileAdminHome />;
+
   const { selectedCompanyId, selectedCompany, isModuleActive, companies, setSelectedCompanyId, isGlobalMode } = useCompany();
   const { role, hasModuleAccess, fullName } = useAuth();
   const { config: payrollConfig, currentWeek } = usePayrollConfig();
