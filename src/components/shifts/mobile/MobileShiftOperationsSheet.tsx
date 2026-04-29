@@ -1,9 +1,9 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   X, Clock, MapPin, Building2, Users, Phone, FileEdit, AlertTriangle,
   CheckCircle2, CalendarDays, Sparkles, UserPlus, Share2, ClipboardList,
-  ExternalLink, Copy, StickyNote, Hash, Tag,
+  ExternalLink, Copy, StickyNote, Hash, Tag, Workflow, ChevronDown,
 } from "lucide-react";
 import { format, parseISO, isToday, isTomorrow, isPast } from "date-fns";
 import { enUS } from "date-fns/locale";
@@ -15,6 +15,13 @@ import { isDraftShift, isPublishedShift } from "@/lib/shifts/shift-guards";
 import { formatShiftCode, type Shift, type Assignment, type Employee } from "@/components/shifts/types";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import {
+  TraceabilitySnapshot,
+  type TraceRisk,
+  type TraceTimelineEvent,
+  type TraceLinkedRecord,
+  type TraceSourceKind,
+} from "@/components/traceability/TraceabilitySnapshot";
 
 /**
  * MobileShiftOperationsSheet — Mobile Shifts Phase 1.5
