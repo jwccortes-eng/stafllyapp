@@ -424,3 +424,306 @@ export function EmployeeCombobox({
     </div>
   );
 }
+
+// ────────────────────────────────────────────────────────────────────────────
+// Virtualized list — renders only visible rows + overscan to keep the picker
+// snappy with 1k+ workers. No data is dropped: sorted/filtered employees are
+// the source of truth; we just window the DOM.
+// ────────────────────────────────────────────────────────────────────────────
+interface VirtualEmployeeListProps {
+  sorted: Employee[];
+  selected: string[];
+  conflictMap: Map<string, ConflictInfo[]>;
+  unavailableMap: Map<string, string>;
+  availabilityBlockMode: "hard" | "warning";
+  requiresDriver: boolean;
+  groupBreaks: Set<string>;
+  readyCount: number;
+  dupHints: ReturnType<typeof computeDuplicateHints>;
+  getGroup: (e: Employee) => GroupKey;
+  handleToggle: (id: string) => void;
+  onAddNewEmployee?: () => void;
+  maxHeight: string;
+  search: string;
+  employees: Employee[];
+  filtered: Employee[];
+  debugContext?: EmployeeComboboxProps["debugContext"];
+}
+
+type FlatItem =
+  | { type: "header"; key: string; group: GroupKey }
+  | { type: "row"; key: string; emp: Employee }
+  | { type: "add"; key: string };
+
+const ROW_HEIGHT = 58;
+const HEADER_HEIGHT = 22;
+const ADD_HEIGHT = 36;
+const OVERSCAN = 6;
+
+function VirtualEmployeeList(props: VirtualEmployeeListProps) {
+  const {
+    sorted, selected, conflictMap, unavailableMap, availabilityBlockMode,
+    requiresDriver, groupBreaks, readyCount, dupHints, getGroup, handleToggle,
+    onAddNewEmployee, maxHeight, search, employees, filtered, debugContext,
+  } = props;
+
+  // Build flat item list (headers + rows + add button).
+  const items = useMemo<FlatItem[]>(() => {
+    const out: FlatItem[] = [];
+    for (const emp of sorted) {
+      if (!selected.includes(emp.id) && groupBreaks.has(emp.id)) {
+        out.push({ type: "header", key: `h-${emp.id}`, group: getGroup(emp) });
+      }
+      out.push({ type: "row", key: emp.id, emp });
+    }
+    if (onAddNewEmployee) out.push({ type: "add", key: "__add__" });
+    return out;
+  }, [sorted, selected, groupBreaks, getGroup, onAddNewEmployee]);
+
+  // Cumulative offsets for accurate windowing with mixed heights.
+  const offsets = useMemo(() => {
+    const arr = new Array<number>(items.length + 1);
+    arr[0] = 0;
+    for (let i = 0; i < items.length; i++) {
+      const it = items[i];
+      const h = it.type === "header" ? HEADER_HEIGHT : it.type === "add" ? ADD_HEIGHT : ROW_HEIGHT;
+      arr[i + 1] = arr[i] + h;
+    }
+    return arr;
+  }, [items]);
+  const totalHeight = offsets[offsets.length - 1] ?? 0;
+
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [scrollTop, setScrollTop] = useState(0);
+  const [viewportH, setViewportH] = useState(280);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    setViewportH(el.clientHeight);
+    const ro = new ResizeObserver(() => setViewportH(el.clientHeight));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  // Reset scroll when the underlying ordering changes drastically (e.g. new search).
+  useEffect(() => {
+    if (containerRef.current) containerRef.current.scrollTop = 0;
+    setScrollTop(0);
+  }, [search]);
+
+  // Binary search for first visible item.
+  const findIndex = (y: number): number => {
+    let lo = 0, hi = items.length - 1, ans = 0;
+    while (lo <= hi) {
+      const mid = (lo + hi) >> 1;
+      if (offsets[mid] <= y) { ans = mid; lo = mid + 1; } else hi = mid - 1;
+    }
+    return ans;
+  };
+
+  let startIdx = 0;
+  let endIdx = items.length;
+  if (items.length > 0) {
+    startIdx = Math.max(0, findIndex(scrollTop) - OVERSCAN);
+    endIdx = Math.min(items.length, findIndex(scrollTop + viewportH) + 1 + OVERSCAN);
+  }
+
+  const visible = items.slice(startIdx, endIdx);
+  const offsetTop = offsets[startIdx] ?? 0;
+
+  // Empty state (preserve admin diagnostic).
+  const showEmpty = sorted.length === 0 && !onAddNewEmployee;
+
+  return (
+    <div
+      ref={containerRef}
+      className="border rounded-xl overflow-y-auto"
+      style={{ maxHeight }}
+      onScroll={(e) => setScrollTop((e.target as HTMLDivElement).scrollTop)}
+    >
+      {showEmpty ? (
+        <div className="p-3 space-y-2">
+          <p className="text-xs text-muted-foreground text-center">
+            {search ? "No results" : "No employees"}
+          </p>
+          {(employees.length === 0 || (search && filtered.length === 0)) && (
+            <div className="rounded-lg bg-muted/40 border border-border/40 p-2 text-[10px] font-mono text-muted-foreground space-y-0.5">
+              <div className="flex justify-between gap-2">
+                <span className="opacity-60">company</span>
+                <span className="truncate" title={debugContext?.selectedCompanyId ?? ""}>
+                  {debugContext?.companyName ?? "—"}
+                </span>
+              </div>
+              <div className="flex justify-between gap-2">
+                <span className="opacity-60">companyId</span>
+                <span className="truncate" title={debugContext?.selectedCompanyId ?? ""}>
+                  {debugContext?.selectedCompanyId
+                    ? `${debugContext.selectedCompanyId.slice(0, 8)}…`
+                    : "global / null"}
+                </span>
+              </div>
+              <div className="flex justify-between gap-2">
+                <span className="opacity-60">employeesLoaded</span>
+                <span>{employees.length}</span>
+              </div>
+              <div className="flex justify-between gap-2">
+                <span className="opacity-60">filteredCount</span>
+                <span>{filtered.length}</span>
+              </div>
+              {employees.length === 0 && (
+                <p className="pt-1 text-[10px] text-warning leading-snug font-sans">
+                  Roster vacío para esta compañía. Verifica el contexto multi-tenant.
+                </p>
+              )}
+              {employees.length > 0 && search && filtered.length === 0 && (
+                <p className="pt-1 text-[10px] text-warning leading-snug font-sans">
+                  Hay {employees.length} workers cargados pero ninguno matchea "{search}".
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div style={{ height: totalHeight, position: "relative" }}>
+          <div style={{ transform: `translateY(${offsetTop}px)` }}>
+            {visible.map((item) => {
+              if (item.type === "add") {
+                return (
+                  <button
+                    key={item.key}
+                    type="button"
+                    onClick={onAddNewEmployee}
+                    style={{ height: ADD_HEIGHT }}
+                    className="flex items-center gap-2 w-full px-2 py-2 text-xs font-semibold text-primary hover:bg-primary/[0.06] transition-colors border-t border-border/20"
+                  >
+                    <UserPlus className="h-3.5 w-3.5" />
+                    + Add new employee
+                  </button>
+                );
+              }
+              if (item.type === "header") {
+                const labels: Record<GroupKey, { label: string; color: string; icon: React.ReactNode }> = {
+                  ready: { label: `Available · ${readyCount}`, color: "text-earning", icon: <UserCheck className="h-2.5 w-2.5" /> },
+                  warning: { label: "Warning", color: "text-warning", icon: <AlertTriangle className="h-2.5 w-2.5" /> },
+                  blocked: { label: "Unavailable", color: "text-destructive", icon: <CalendarOff className="h-2.5 w-2.5" /> },
+                  inactive: { label: "Inactive", color: "text-muted-foreground", icon: <PauseCircle className="h-2.5 w-2.5" /> },
+                };
+                const g = labels[item.group];
+                return (
+                  <div
+                    key={item.key}
+                    style={{ height: HEADER_HEIGHT }}
+                    className={cn(
+                      "flex items-center gap-1.5 px-2.5 bg-muted/40 text-[8px] font-bold uppercase tracking-wider border-b border-border/20",
+                      g.color,
+                    )}
+                  >
+                    {g.icon} {g.label}
+                  </div>
+                );
+              }
+              const emp = item.emp;
+              const isSelected = selected.includes(emp.id);
+              const conflicts = conflictMap.get(emp.id);
+              const hasConflict = !!conflicts?.length;
+              const unavailableReason = unavailableMap.get(emp.id);
+              const isUnavailable = !!unavailableReason;
+              const isInactive = emp.is_active === false;
+              const isHardBlocked =
+                isInactive ||
+                (isUnavailable && availabilityBlockMode === "hard" && !isSelected);
+              const empIsDriver = isEmployeeDriver(emp);
+              const profileIncomplete = isProfileIncomplete(emp);
+              const dupReason = dupHints.reasonById.get(emp.id);
+
+              return (
+                <label
+                  key={item.key}
+                  style={{ height: ROW_HEIGHT }}
+                  className={cn(
+                    "flex items-center gap-2 px-2 text-xs transition-colors border-b border-border/10",
+                    isHardBlocked ? "cursor-not-allowed opacity-40" : "cursor-pointer",
+                    isSelected ? "bg-primary/[0.07]" : "hover:bg-accent/50",
+                    hasConflict && !isSelected && "bg-warning/[0.04]",
+                    isUnavailable && !hasConflict && !isSelected && !isInactive && "bg-destructive/[0.03]",
+                    isInactive && !isSelected && "bg-muted/30",
+                  )}
+                >
+                  <Checkbox
+                    checked={isSelected}
+                    onCheckedChange={() => handleToggle(emp.id)}
+                    disabled={isHardBlocked}
+                    className="shrink-0 h-3.5 w-3.5"
+                  />
+                  <EmployeeAvatar
+                    firstName={emp.first_name} lastName={emp.last_name}
+                    avatarUrl={emp.avatar_url} gender={emp.gender} size="xs"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1 flex-wrap">
+                      <span className={cn("font-semibold text-[11px] truncate", (isUnavailable || isInactive) && !isSelected && "text-muted-foreground")}>
+                        {formatPersonName(emp.first_name)} {formatPersonName(emp.last_name)}
+                      </span>
+                      {emp.employer_identification && (
+                        <span className="h-3.5 px-1 rounded bg-muted/70 text-muted-foreground text-[7px] font-mono shrink-0">
+                          #{emp.employer_identification}
+                        </span>
+                      )}
+                      {empIsDriver && (
+                        <span className={cn(
+                          "h-3.5 px-1 rounded text-[7px] font-bold flex items-center gap-0.5 shrink-0",
+                          requiresDriver ? "bg-earning/15 text-earning ring-1 ring-earning/30" : "bg-primary/10 text-primary"
+                        )}>
+                          <Car className="h-2 w-2" />
+                        </span>
+                      )}
+                      {emp.employee_role && (
+                        <span className="h-3.5 px-1 rounded bg-muted text-muted-foreground text-[7px] font-medium truncate max-w-[60px] shrink-0">
+                          {formatDisplayText(emp.employee_role, "label")}
+                        </span>
+                      )}
+                      {emp.user_id ? (
+                        <span className="h-3.5 px-1 rounded bg-earning/10 text-earning text-[7px] font-bold shrink-0">Portal</span>
+                      ) : (
+                        <span className="h-3.5 px-1 rounded bg-muted text-muted-foreground text-[7px] font-bold shrink-0">No portal</span>
+                      )}
+                      {profileIncomplete && (
+                        <span className="h-3.5 px-1 rounded bg-warning/15 text-warning text-[7px] font-bold flex items-center gap-0.5 shrink-0">
+                          <ShieldAlert className="h-2 w-2" /> Incomplete
+                        </span>
+                      )}
+                      {dupReason && (
+                        <span className="h-3.5 px-1 rounded bg-deduction/10 text-deduction text-[7px] font-bold flex items-center gap-0.5 shrink-0">
+                          <Copy className="h-2 w-2" /> Dup
+                        </span>
+                      )}
+                      {isInactive && (
+                        <span className="h-3.5 px-1 rounded bg-muted text-muted-foreground text-[7px] font-bold shrink-0">Inactive</span>
+                      )}
+                    </div>
+                    {(emp.phone_number || emp.email) && !isInactive && (
+                      <p className="text-[8px] text-muted-foreground mt-0.5 truncate">
+                        {emp.phone_number ?? ""}{emp.phone_number && emp.email ? " · " : ""}{emp.email ?? ""}
+                      </p>
+                    )}
+                    {isUnavailable && !isInactive && (
+                      <p className="text-[8px] text-destructive flex items-center gap-0.5 mt-0.5 truncate">
+                        <CalendarOff className="h-2 w-2 shrink-0" /> {unavailableReason}
+                      </p>
+                    )}
+                    {hasConflict && !isUnavailable && !isInactive && (
+                      <p className="text-[8px] text-warning flex items-center gap-0.5 mt-0.5 truncate">
+                        <AlertTriangle className="h-2 w-2 shrink-0" /> {conflicts![0].shiftTitle} ({conflicts![0].time})
+                      </p>
+                    )}
+                  </div>
+                </label>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
