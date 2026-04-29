@@ -359,7 +359,7 @@ export default function MobileShiftsView() {
                 key={t.key}
                 onClick={() => setTab(t.key)}
                 className={cn(
-                  "shrink-0 inline-flex items-center gap-1.5 px-3 h-8 rounded-full text-xs font-medium transition-all",
+                  "shrink-0 inline-flex items-center gap-1.5 px-3.5 h-9 rounded-full text-sm font-medium transition-all",
                   active
                     ? "bg-primary text-primary-foreground shadow-sm"
                     : "bg-muted/60 text-muted-foreground hover:bg-muted active:scale-[0.97]"
@@ -368,7 +368,7 @@ export default function MobileShiftsView() {
                 <span>{t.label}</span>
                 {count > 0 && (
                   <span className={cn(
-                    "h-4 min-w-4 px-1 inline-flex items-center justify-center rounded-full text-[9px] font-bold",
+                    "h-[18px] min-w-[18px] px-1 inline-flex items-center justify-center rounded-full text-[10px] font-bold leading-none",
                     active ? "bg-primary-foreground/20 text-primary-foreground" : "bg-background text-foreground"
                   )}>
                     {count}
