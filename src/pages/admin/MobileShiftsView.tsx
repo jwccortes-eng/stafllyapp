@@ -331,7 +331,7 @@ export default function MobileShiftsView() {
             >
               <SlidersHorizontal className="h-4 w-4" />
               {activeFiltersCount > 0 && (
-                <span className="absolute top-1 right-1 h-4 min-w-4 px-1 text-[9px] font-bold leading-none flex items-center justify-center rounded-full bg-primary text-primary-foreground">
+                <span className="absolute top-0.5 right-0.5 h-4 min-w-4 px-1 text-[10px] font-bold leading-none flex items-center justify-center rounded-full bg-primary text-primary-foreground">
                   {activeFiltersCount}
                 </span>
               )}
