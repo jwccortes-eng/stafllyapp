@@ -1,9 +1,9 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   X, Clock, MapPin, Building2, Users, Phone, FileEdit, AlertTriangle,
   CheckCircle2, CalendarDays, Sparkles, UserPlus, Share2, ClipboardList,
-  ExternalLink, Copy, StickyNote, Hash, Tag,
+  ExternalLink, Copy, StickyNote, Hash, Tag, Workflow, ChevronDown,
 } from "lucide-react";
 import { format, parseISO, isToday, isTomorrow, isPast } from "date-fns";
 import { enUS } from "date-fns/locale";
@@ -15,6 +15,13 @@ import { isDraftShift, isPublishedShift } from "@/lib/shifts/shift-guards";
 import { formatShiftCode, type Shift, type Assignment, type Employee } from "@/components/shifts/types";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import {
+  TraceabilitySnapshot,
+  type TraceRisk,
+  type TraceTimelineEvent,
+  type TraceLinkedRecord,
+  type TraceSourceKind,
+} from "@/components/traceability/TraceabilitySnapshot";
 
 /**
  * MobileShiftOperationsSheet — Mobile Shifts Phase 1.5
@@ -71,6 +78,7 @@ export function MobileShiftOperationsSheet({
   clientName, locationName, meetingPoint,
 }: Props) {
   const navigate = useNavigate();
+  const [traceOpen, setTraceOpen] = useState(false);
 
   const data = useMemo(() => {
     if (!shift) return null;
@@ -285,6 +293,59 @@ export function MobileShiftOperationsSheet({
             <div className="rounded-2xl border border-border/50 bg-muted/30 p-4">
               <p className="text-sm leading-relaxed text-foreground/90">{snapshot}</p>
             </div>
+          </section>
+
+          {/* Traceability (collapsed by default to keep sheet light) */}
+          <section>
+            <button
+              type="button"
+              onClick={() => setTraceOpen(v => !v)}
+              className="w-full flex items-center justify-between gap-2 mb-2.5 px-0.5 text-left"
+              aria-expanded={traceOpen}
+            >
+              <div className="flex items-center gap-1.5">
+                <Workflow className="h-4 w-4 text-muted-foreground" />
+                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  Traceability
+                </span>
+              </div>
+              <ChevronDown
+                className={cn(
+                  "h-4 w-4 text-muted-foreground transition-transform",
+                  traceOpen && "rotate-180"
+                )}
+              />
+            </button>
+            {traceOpen ? (
+              <TraceabilitySnapshot
+                source={shiftTraceSource(draft, published)}
+                sourceNote="Scheduled shift · payroll uses real clock entries only"
+                timeline={buildShiftTimeline(shift)}
+                linked={buildShiftLinked({
+                  shift, clientName, locationName, assignedCount, slots,
+                })}
+                risks={buildShiftRisks({
+                  draft, published, understaffed, assignedCount,
+                  noClient, noLocation, hasShiftCode: !!shift.shift_code,
+                  imported: !!shift.import_batch_id,
+                })}
+                audit={buildShiftAudit(shift)}
+              />
+            ) : (
+              <p className="px-0.5 text-xs text-muted-foreground">
+                Tap to see source, timeline, linked records and audit.
+              </p>
+            )}
+            <p className="mt-2 px-0.5 text-[11px] text-muted-foreground">
+              Clock entries are reviewed from Time Clock.{" "}
+              <button
+                type="button"
+                onClick={handleViewAttendance}
+                className="font-semibold text-primary underline-offset-2 hover:underline"
+              >
+                View attendance
+              </button>
+            </p>
           </section>
 
           {/* Assigned workers */}
@@ -503,4 +564,91 @@ function StatusPill({ draft, published, understaffed }: { draft: boolean; publis
     return <Badge variant="outline" className={cn(base, "border-emerald-500/40 text-emerald-700 dark:text-emerald-400 bg-emerald-500/10")}>Published</Badge>;
   }
   return <Badge variant="outline" className={cn(base)}>Shift</Badge>;
+}
+
+/* ───── Traceability builders (pure, read-only) ───── */
+
+function shiftTraceSource(draft: boolean, _published: boolean): TraceSourceKind {
+  // Scheduled shifts are NOT a paid source — surface as "scheduled_only".
+  // Drafts get the same kind (the warning tone is reinforced via risks).
+  return "scheduled_only";
+}
+
+function buildShiftTimeline(shift: Shift): TraceTimelineEvent[] {
+  // Synthesize start/end from date + time so the timeline is meaningful even
+  // if no created_at/published_at is present in the row.
+  const startISO = shift.date && shift.start_time
+    ? `${shift.date}T${shift.start_time}`
+    : null;
+  const endISO = shift.date && shift.end_time
+    ? `${shift.date}T${shift.end_time}`
+    : null;
+
+  const events: TraceTimelineEvent[] = [];
+  if (shift.created_at) events.push({ label: "Created", at: shift.created_at });
+  if (shift.published_at) events.push({ label: "Published", at: shift.published_at });
+  if (shift.updated_at) events.push({ label: "Last updated", at: shift.updated_at });
+  events.push({ label: "Scheduled start", at: startISO });
+  events.push({ label: "Scheduled end", at: endISO });
+  return events;
+}
+
+function buildShiftLinked(args: {
+  shift: Shift;
+  clientName: string;
+  locationName: string;
+  assignedCount: number;
+  slots: number;
+}): TraceLinkedRecord[] {
+  const { shift, clientName, locationName, assignedCount, slots } = args;
+  const open = slots > 0 ? Math.max(0, slots - assignedCount) : 0;
+  return [
+    { label: "Shift ID", value: shift.id.slice(0, 8) + "…", hint: shift.id },
+    { label: "Shift code", value: shift.shift_code ? formatShiftCode(shift.shift_code) : null },
+    { label: "Client", value: clientName && clientName !== "—" ? clientName : null },
+    { label: "Location", value: locationName || null },
+    { label: "Assignments", value: String(assignedCount) },
+    { label: "Open slots", value: slots > 0 ? String(open) : "—" },
+    {
+      label: "Publication",
+      value: shift.publication_status ?? (shift.status || null),
+    },
+  ];
+}
+
+function buildShiftRisks(args: {
+  draft: boolean;
+  published: boolean;
+  understaffed: boolean;
+  assignedCount: number;
+  noClient: boolean;
+  noLocation: boolean;
+  hasShiftCode: boolean;
+  imported: boolean;
+}): TraceRisk[] {
+  const risks: TraceRisk[] = [];
+  // Always-on payroll guardrail
+  risks.push({
+    label: "Scheduled hours are not used for pay — payroll uses real clock entries only",
+    tone: "info",
+  });
+  if (args.draft) risks.push({ label: "Draft shift — workers won't see it yet", tone: "warn" });
+  if (args.published && args.understaffed) risks.push({ label: "Needs more staff", tone: "warn" });
+  if (args.assignedCount === 0) risks.push({ label: "No workers assigned", tone: "bad" });
+  if (args.noClient) risks.push({ label: "No client linked", tone: "warn" });
+  if (args.noLocation) risks.push({ label: "No location linked", tone: "warn" });
+  if (!args.hasShiftCode) risks.push({ label: "No shift code", tone: "warn" });
+  if (args.imported) risks.push({ label: "Imported from a batch", tone: "info" });
+  return risks;
+}
+
+function buildShiftAudit(shift: Shift): TraceLinkedRecord[] {
+  return [
+    { label: "Created at", value: shift.created_at ?? null },
+    { label: "Created by", value: shift.created_by ? shift.created_by.slice(0, 8) + "…" : null, hint: shift.created_by ?? undefined },
+    { label: "Published by", value: shift.published_by ? shift.published_by.slice(0, 8) + "…" : null, hint: shift.published_by ?? undefined },
+    { label: "Updated at", value: shift.updated_at ?? null },
+    { label: "Import batch", value: shift.import_batch_id ? shift.import_batch_id.slice(0, 8) + "…" : null, hint: shift.import_batch_id ?? undefined },
+    { label: "Reconciliation hash", value: shift.reconciliation_hash ? shift.reconciliation_hash.slice(0, 10) + "…" : null, hint: shift.reconciliation_hash ?? undefined },
+  ];
 }

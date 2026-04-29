@@ -16,6 +16,16 @@ export interface Shift {
   notes: string | null;
   claimable: boolean;
   shift_code?: string | null;
+  // ── Optional traceability fields (read-only).
+  // Present in scheduled_shifts schema. Loaded by views that need lineage
+  // (e.g. MobileShiftOperationsSheet). Safe to omit elsewhere.
+  created_at?: string | null;
+  updated_at?: string | null;
+  published_at?: string | null;
+  published_by?: string | null;
+  created_by?: string | null;
+  import_batch_id?: string | null;
+  reconciliation_hash?: string | null;
 }
 
 /**
