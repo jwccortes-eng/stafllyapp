@@ -438,6 +438,19 @@ export default function EmployeeDashboard() {
         </div>
       )}
 
+      {/* ── Empty upcoming state — only when no shifts at all ── */}
+      {!nextShift && upcomingShifts.length === 0 && (
+        <div className="rounded-2xl border border-dashed border-border/50 bg-card/50 px-4 py-5 text-center">
+          <div className="h-10 w-10 mx-auto rounded-xl bg-muted/60 flex items-center justify-center mb-2">
+            <CalendarDays className="h-5 w-5 text-muted-foreground/60" />
+          </div>
+          <p className="text-[13px] font-semibold text-foreground">No upcoming shift yet</p>
+          <p className="text-[11.5px] text-muted-foreground/75 mt-1 leading-relaxed max-w-[260px] mx-auto">
+            We'll notify you when something is assigned.
+          </p>
+        </div>
+      )}
+
       {/* ── Notifications badge ── */}
       {unreadAlerts > 0 && (
         <div className="rounded-xl bg-primary/[0.04] border border-primary/10 px-3.5 py-2.5 flex items-center gap-3">
@@ -446,6 +459,22 @@ export default function EmployeeDashboard() {
             {unreadAlerts} unread notification{unreadAlerts > 1 ? "s" : ""}
           </p>
         </div>
+      )}
+
+      {/* ── Need help? — calm support entry, only if chat module enabled ── */}
+      {isModuleEnabled("my_chat") && (
+        <Link to="/portal/chat" className="block">
+          <div className="rounded-2xl border border-border/40 bg-card px-4 py-3 flex items-center gap-3 active:scale-[0.99] transition-all shadow-sm">
+            <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+              <LifeBuoy className="h-4 w-4 text-primary" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[13px] font-semibold text-foreground leading-tight">Need help?</p>
+              <p className="text-[11px] text-muted-foreground/75 mt-0.5">Reach out to your supervisor.</p>
+            </div>
+            <ChevronRight className="h-4 w-4 text-muted-foreground/30 shrink-0" />
+          </div>
+        </Link>
       )}
 
       {/* ── Pending Reviews ── */}
