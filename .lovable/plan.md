@@ -1,153 +1,56 @@
-# Plan: Clients OS Premium + Stafly Platform Hub Lite
+# Roster Slots Audit — Quality Staff #1200–#1256
 
-> Auditoría + plan faseado. **No se implementa código todavía**, esperar aprobación.
+Objetivo: clasificar los 57 slots `keep_active` (rango 1200–1256, company `00000000-0000-0000-0000-000000000001`) como `real_employee`, `placeholder_system`, `external_labor` o `unknown_needs_review`, con su flag `payroll_safe`. **100% read-only**. Ningún INSERT/UPDATE/DELETE; el output será un CSV en `/mnt/documents/` y un resumen tabular para tu revisión y aprobación posterior.
 
----
+## Alcance estricto
 
-## 1. Auditoría
+- Solo `employees` company_id Quality Staff con `employer_identification::int BETWEEN 1200 AND 1256`.
+- No tocar: payroll_*, time_entries, scheduled_shifts, shift_assignments, attendance, RLS, auth, schema, Parceros, Monica Tabares (#420), ni los 4 inactivos del ciclo anterior.
+- No reactivar, no desactivar, no merge, no asignar PIN, no tocar `start_date/end_date`.
 
-### 1.1 Módulo actual `/app/clients`
+## Señales que se evaluarán por slot
 
-- **Página**: `src/pages/admin/Clients.tsx` (~680 LOC, monolítica).
-- **Tabla**: `public.clients` (operativos del tenant). También usa `public.client_locations` para sub-locaciones.
-- **Hooks**: `useAuth` (rol/permisos), `useCompany` (tenant scoping). Sin hook propio — todas las queries son inline (`supabase.from("clients")...`).
-- **Routing**: NO hay ruta de detalle. Todo vive en el listado; "editar" abre un `Dialog` modal sobre la misma página. **No existe `/app/clients/:clientId`**.
-- **Multi-tenant**: ✅ filtra por `company_id = selectedCompanyId` en todos los queries (`select`, `insert`, `update`, soft-delete). Gating por `<ModuleGate moduleKey="clients">` en `App.tsx:252`. Permisos por `hasModuleAccess("clients", "edit"|"delete")`.
-- **UI actual**: header + búsqueda + toggle grid/list + dialog crear/editar + soft-delete (`deleted_at`). Sin KPIs, sin filtros avanzados, sin tabs por cliente.
+Para cada uno de los 57 IDs leeremos:
 
-### 1.2 Módulo `/app/client-experience` (Fase 1 ya entregada)
+1. Identidad básica: `first_name`, `last_name`, `email`, `phone_number`, `is_active`, `end_date`, `start_date`, `created_at`, `updated_at`.
+2. Marcadores de placeholder: nombre matcheando `^System\s*\d+$`, faltante de email Y phone, nombres genéricos (Test, Demo, Temp, N/A, Unknown), email compartido o genérico.
+3. Marcadores de external/agency: prefijos/sufijos en nombre o email tipo "agency", "temp", "external", "contractor", "vendor", "staffing".
+4. Actividad real (read-only counts):
+   - `time_entries` por `employee_id` (count + last_at)
+   - `shift_assignments` por `employee_id` (count + last_shift_date)
+   - `payroll_entries` o equivalente (count, sin abrir contenido sensible)
+   - `attendance` o `clock_events` (count + last_at)
+5. Duplicados potenciales: misma normalización de nombre + phone10 contra otros activos del tenant (sin tocarlos).
 
-- **Página**: `src/pages/admin/ClientExperience.tsx` con 3 tabs: Inbox / Requests / Contacts.
-- **Componentes**: `src/components/client-experience/{Inbox,Requests,Contacts}.tsx`.
-- **Hook**: `src/hooks/useClientExperience.tsx` (CRUD scoped por `selectedCompanyId`).
-- **Tablas**: `client_contacts`, `client_conversation_threads`, `client_messages`, y extensión de `service_requests` (con `requested_by_contact_id`, `title`, `priority`, etc.).
-- **Trigger**: `sync_thread_on_message` mantiene `last_message_at` y unread counters.
-- **Reutilización en Clients OS**: el detalle de cliente puede embeber estos componentes filtrados por `clientId` (Contacts, Requests, Conversations tabs) sin duplicar lógica ni tablas.
+## Reglas de clasificación
 
-### 1.3 Vistas globales / developer
+- `placeholder_system` → nombre `System N` o genérico + 0 actividad + sin email/phone. `payroll_safe = no_placeholder_or_external`.
+- `external_labor` → marcador external/agency en nombre/email O patrón conocido. `payroll_safe = no_placeholder_or_external`.
+- `real_employee` → tiene email O phone normalizado válido Y al menos una señal de actividad (time_entry, shift_assignment, payroll, attendance). `payroll_safe = yes_real_employee`.
+- `unknown_needs_review` → cualquier otro caso (ej. tiene phone pero 0 actividad, o nombre real sin contacto). `payroll_safe = pending_human_review`.
 
-- **`/app/companies`** (`Companies.tsx`, ~727 LOC): admin de tenants — crear, editar, sandbox sync, usuarios, módulos. Pesada.
-- **`/app/global`** → `OwnerDashboard.tsx` (~675 LOC): KPIs globales cross-tenant (employees, periods, imports, movements, top earners). Más analítica que operativa.
-- **Selector de company**: `useCompany` (`src/hooks/useCompany.tsx`).
-  - `selectedCompanyId` persiste en `localStorage` (regla en memoria: nunca clobber en re-render).
-  - `isGlobalMode = selectedCompanyId === null` y solo aplica a roles `developer | owner` (`GLOBAL_MODE_ROLES`).
-  - Owners/devs aterrizan en Global Mode por defecto.
-- **Roles disponibles**: `developer`, `owner`, `admin`, `manager`, `worker` (entre otros). Solo `developer | owner` califican para vistas tipo Platform.
-- **Gap**: no existe una vista *operativa ligera* tipo "mis tenants Stafly activos" — `Companies` y `OwnerDashboard` son demasiado pesadas y mezclan administración con métricas.
+Justin Mora (#1201 y #1217 detectados como duplicados en muestra) queda flagged como `unknown_needs_review` con nota `duplicate_pair_pending_consolidation`, sin tocarlo (sigue regla del backlog).
 
----
+## Entregables
 
-## 2. Plan faseado
+1. CSV `/mnt/documents/roster-slots-1200-1256-audit-2026-04-29.csv` con columnas: `employer_identification, id, first_name, last_name, email, phone_number, is_active, end_date, time_entries_count, shift_assignments_count, payroll_entries_count, attendance_count, last_activity_at, person_type_guess, payroll_safe, duplicate_of, notes`.
+2. Resumen markdown con totales por categoría y los IDs que requieren decisión humana.
+3. Memoria `mem://backlog/roster-slots-1200-1256-audit-2026-04-29` con el estado del audit y siguientes pasos sugeridos (sin ejecutarlos).
 
-### FASE A — Clients OS Premium (`/app/clients`)
+## Lo que NO hace este plan
 
-Objetivo: convertir el listado plano en un centro premium operativo del tenant, con perfil por cliente.
+- No deactiva, no merge, no migra historia, no toca PIN, no asigna roles.
+- No abre ningún flujo de payroll/portal/onboarding.
+- No modifica los 4 IDs HIGH del ciclo anterior, ni Monica, ni Sandy, ni Justin (solo los flaggea).
+- No corre nada hasta tu aprobación explícita; el siguiente paso de cualquier write requerirá su propio Safety Check + dry-run + variantes A/B como en el ciclo anterior.
 
-**A.1 — Listado premium** (refactor `Clients.tsx`)
-- Header ejecutivo con nombre del tenant, contador total y CTA "New client".
-- KPIs (`KpiCard` ya existe): Active clients, With open requests, Unread conversations, New this month.
-- Búsqueda + filtros (status, has open requests, sort A-Z / recent / activity).
-- Toggle Cards / Table (ya existe — pulir).
-- Quick actions por card: Open profile, Call, Email, WhatsApp, New request.
-- Click en card → navega a `/app/clients/:clientId`.
+## Detalles técnicos
 
-**A.2 — Perfil de cliente** (nuevo `src/pages/admin/ClientProfile.tsx` + ruta `clients/:clientId`)
-Tabs:
-1. **Overview** — KPIs por cliente, contactos primarios, último contacto, próximos shifts.
-2. **Contacts** — embebe `ClientExperienceContacts` filtrado por `clientId`.
-3. **Requests** — embebe `ClientExperienceRequests` filtrado por `clientId`.
-4. **Conversations** — embebe `ClientExperienceInbox` filtrado por `clientId`.
-5. **Locations** — gestión de `client_locations`.
-6. **Services** — placeholder Fase A.2 (lectura de `service_categories` asignados, sin escritura compleja).
-7. **Billing** — link de solo lectura a `billing_clients` / invoices del cliente (sin tocar lógica).
-8. **Notes** — campo `clients.notes` editable.
-9. **Activity** — feed de eventos recientes (requests creados, mensajes, locations agregadas).
+- Queries SELECT-only vía `supabase--read_query` con cast `employer_identification::int` (la columna es `text`).
+- Conteos de actividad con `LEFT JOIN ... GROUP BY employees.id` para no perder slots sin movimiento.
+- Normalización de phone: `regexp_replace(phone_number, '\D', '', 'g')` y luego `right(...,10)` para detección de duplicados.
+- Detección de `System N`: `first_name ~* '^system\s*\d+$' OR (first_name ILIKE 'system%' AND last_name ~ '^\d+$')`.
+- Output CSV vía `psql COPY ... TO STDOUT` si `$PGHOST` está disponible; si no, vía `read_query` paginado y serialización en Node/Python.
+- Cero migraciones, cero edge functions, cero cambios de UI.
 
-**A.3 — Refactor a hook**
-- Extraer queries inline a `src/hooks/useClients.tsx` (lista + detalle), siempre scoped por `selectedCompanyId`.
-- Mantener tipos `Client`, `ClientLocation` exportados.
-
-**Sin cambios de schema en Fase A.** Todo se construye sobre `clients`, `client_locations`, `client_contacts`, `client_conversation_threads`, `client_messages`, `service_requests` ya existentes.
-
-### FASE B — Stafly Platform Hub Lite (`/app/platform`)
-
-Objetivo: vista global ligera **solo para developer/owner** con los tenants activos de Stafly.
-
-- Nueva ruta `/app/platform` → nueva página `src/pages/admin/PlatformHub.tsx`.
-- **Gating duro**: si `role !== "developer" && role !== "owner"` → `<Navigate to="/app" replace />`.
-- Por ahora muestra solo **Quality Staff by Keury** y **JKitchen Staff** (filtrado por nombre/slug en query a `companies`, no hardcoded — usar lista configurable en constante `STAFLY_ACTIVE_TENANTS`).
-- Cards premium por tenant con métricas básicas (queries paralelas por tenant):
-  - Workers activos (`employees` count).
-  - Pending activations (`employee_invitations` status `pending|opened`).
-  - Applications pending (`applications` status `new|reviewing`).
-  - Clients (`clients` count).
-  - Open requests (`service_requests` status abierta).
-  - Upcoming shifts (próximos 7 días).
-- Quick actions por tenant:
-  - **Open tenant** → `setSelectedCompanyId(tenant.id)` + navega a `/app`.
-  - Workers → `/app/employees`, Applications → `/app/applications`, Clients OS → `/app/clients`, Client Experience → `/app/client-experience`, Shifts → `/app/shifts`.
-  - (Cada quick action setea `selectedCompanyId` antes de navegar.)
-- Entrada en sidebar **solo visible** para `developer | owner` (sección nueva "Stafly Platform").
-
-**Sin tocar `/app/companies` ni `/app/global`** — Platform Hub Lite es un complemento operativo, no un reemplazo.
-
----
-
-## 3. Archivos a tocar
-
-### Fase A
-- ✏️ `src/pages/admin/Clients.tsx` — refactor a listado premium + KPIs + filtros + navegación a perfil.
-- 🆕 `src/pages/admin/ClientProfile.tsx` — perfil tabs.
-- 🆕 `src/hooks/useClients.tsx` — queries scoped multi-tenant.
-- 🆕 `src/components/clients/ClientKpis.tsx`, `ClientFiltersBar.tsx`, `ClientCard.tsx` (extraer del monolito).
-- ✏️ `src/components/client-experience/ClientExperienceContacts.tsx` — aceptar prop opcional `clientId` para filtrar.
-- ✏️ `src/components/client-experience/ClientExperienceRequests.tsx` — idem.
-- ✏️ `src/components/client-experience/ClientExperienceInbox.tsx` — idem.
-- ✏️ `src/App.tsx` — agregar ruta `clients/:clientId`.
-
-### Fase B
-- 🆕 `src/pages/admin/PlatformHub.tsx`.
-- 🆕 `src/hooks/usePlatformTenants.tsx` — métricas por tenant (developer/owner only).
-- ✏️ `src/App.tsx` — registrar ruta `/app/platform` con guard de rol.
-- ✏️ `src/components/AdminSidebar.tsx` y `src/components/navigation/nav-items.ts` — entry "Platform" visible solo para `developer | owner`.
-
-**No se tocan:** payroll, attendance, clock-in/out, shifts core, billing/invoices core, RLS, portal cliente público, login cliente.
-
----
-
-## 4. Riesgos detectados
-
-1. **Reutilización de componentes Client Experience**: hoy esperan filtrar por `selectedCompanyId` global. Hay que hacerlos polimórficos (`clientId` opcional) sin romper la página `/app/client-experience` actual. **Mitigación**: prop opcional con default a comportamiento actual.
-2. **Métricas en Platform Hub**: ejecutar 6 queries × N tenants puede pesar. **Mitigación**: una sola RPC `platform_tenant_stats` o queries en paralelo con `Promise.all` cacheadas con React Query (staleTime 60s). Empezar con queries directas, migrar a RPC si hace falta.
-3. **Switch de tenant desde Platform Hub**: setear `selectedCompanyId` y navegar puede chocar con la regla "trust localStorage" en `useCompany`. **Mitigación**: usar `setSelectedCompanyId(id)` (que ya persiste en localStorage) antes de `navigate()`, y NO durante render.
-4. **Gating de rol Platform**: si un admin entra por URL directa, debe redirigir. **Mitigación**: guard en el componente (no solo en sidebar).
-5. **Sin ruta de detalle hoy**: cualquier link externo o legacy a `/app/clients/:id` no existe — es feature nueva, no regresión.
-6. **TypeScript**: extraer hook `useClients` requiere mover tipos sin romper imports actuales en `Clients.tsx`. **Mitigación**: re-exportar tipos desde el hook.
-
----
-
-## 5. Recomendación de orden
-
-**Implementar primero Fase A.1 + A.2 (Clients OS Premium con perfil)**, porque:
-- Resuelve la falta crítica de perfil de cliente (hoy todo es modal).
-- Cierra el ciclo con Client Experience (Fase 1 ya entregada) sin duplicar tablas.
-- Es 100% dentro del tenant actual → cero riesgo cross-tenant.
-- Platform Hub Lite (Fase B) se puede entregar en un segundo PR pequeño porque su superficie es menor y solo para 2 roles.
-
-**Sub-orden sugerido dentro de Fase A:**
-1. Hook `useClients` + tipos.
-2. Hacer polimórficos los 3 componentes de Client Experience (prop `clientId?`).
-3. Página `ClientProfile` con tabs Overview / Contacts / Requests / Conversations / Locations / Notes (las "ligeras" primero).
-4. Ruta `/app/clients/:clientId` + navegación desde el listado.
-5. Refactor del listado: KPIs, filtros, quick actions, sort.
-6. Tabs Services / Billing / Activity (solo lectura, livianos).
-
-Después: **Fase B** en una segunda iteración.
-
----
-
-## 6. Pendiente de aprobación
-
-- ¿Aprobar este plan tal cual?
-- ¿Empezar por A.1 + A.2 como se recomienda, o prefieres que arranque por Platform Hub Lite (B) primero?
-- ¿Qué métrica falta o sobra en las cards de tenant del Platform Hub?
+Aprueba este plan para que pase a modo build y genere el CSV + resumen sin tocar datos.
