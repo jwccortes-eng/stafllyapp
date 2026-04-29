@@ -30,33 +30,10 @@ interface NextShift {
   status: string;
 }
 
-function getCountdown(dateStr: string, startTime: string): string | null {
-  const now = new Date();
-  const [h, m] = startTime.split(":").map(Number);
-  const shiftStart = parseISO(dateStr);
-  shiftStart.setHours(h, m, 0, 0);
-  const diff = shiftStart.getTime() - now.getTime();
-  if (diff < 0 || diff > 24 * 60 * 60 * 1000) return null;
-  const hrs = Math.floor(diff / 3600000);
-  const mins = Math.floor((diff % 3600000) / 60000);
-  if (hrs > 0) return `in ${hrs}h ${mins}m`;
-  return `in ${mins}m`;
-}
-
-function calcDuration(start: string, end: string): string {
-  const s = new Date(`2000-01-01T${start}`);
-  let e = new Date(`2000-01-01T${end}`);
-  if (e <= s) e = new Date(e.getTime() + 86400000);
-  const mins = differenceInMinutes(e, s);
-  const h = Math.floor(mins / 60);
-  const m = mins % 60;
-  return m > 0 ? `${h}h ${m}m` : `${h}h`;
-}
-
 export default function EmployeeDashboard() {
   const { effectiveEmployeeId: employeeId } = useEffectiveEmployee();
-  const navigate = useNavigate();
   const { isModuleEnabled } = usePortalModules();
+  const readiness = useEmployeeReadiness(employeeId);
   const [empName, setEmpName] = useState("");
   const [empAvatar, setEmpAvatar] = useState<string | null>(null);
   const [companyName, setCompanyName] = useState("");
