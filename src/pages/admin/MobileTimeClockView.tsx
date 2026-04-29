@@ -538,7 +538,7 @@ function TimesheetsPanel({ companyId }: { companyId: string | null }) {
         .select("id, first_name, last_name, avatar_url, phone_number, employee_role")
         .eq("company_id", companyId).eq("is_active", true).order("first_name"),
       supabase.from("time_entries")
-        .select("id, employee_id, clock_in, clock_out, break_minutes, status")
+        .select("id, employee_id, clock_in, clock_out, break_minutes, status, shift_id, entry_source, approved_by, approved_at, created_at")
         .eq("company_id", companyId)
         .gte("clock_in", startISO).lte("clock_in", endISO)
         .order("clock_in", { ascending: true }),
