@@ -6,6 +6,7 @@ import { format, parseISO, isToday, isTomorrow, differenceInMinutes } from "date
 import { enUS } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { OpsStatusChip, type OpsStatusTone } from "@/components/operations/OpsStatusChip";
+import { formatDisplayName } from "@/lib/format-helpers";
 
 export interface PortalShiftData {
   id: string;
@@ -90,11 +91,18 @@ export function PortalShiftCard({
 }: PortalShiftCardProps) {
   const meta = getStatusMeta(shift.status);
   const isTodayShift = isToday(parseISO(shift.date));
+  const isPast = parseISO(shift.date) < new Date(new Date().toDateString());
   const countdown = isTodayShift ? getCountdown(shift.date, shift.start_time) : null;
   const isPending = shift.status === "pending" || shift.status === "needs_reacceptance";
   const isConfirmed = shift.status === "confirmed" || shift.status === "accepted";
   const duration = calcDuration(shift.start_time, shift.end_time);
-  const subtitle = shift.client_name ?? shift.location_name ?? null;
+  // Format display strings — convert ALL CAPS to Title Case, replace heavy separators
+  const titleDisplay = formatDisplayName(shift.title);
+  const clientDisplay = formatDisplayName(shift.client_name);
+  const locationDisplay = formatDisplayName(shift.location_name);
+  const subtitle = clientDisplay || locationDisplay || null;
+  // Hide "Confirmed" badge on past shifts — repetitive noise in History.
+  const showStatusChip = !(isPast && isConfirmed);
 
   // ───────── Compact row — single line, max scannability ─────────
   // Pattern: [rail] · [day chip] · [time] · [title · subtitle] · [chip] · [chevron]
@@ -130,7 +138,7 @@ export function PortalShiftCard({
           {/* Title + subtitle */}
           <div className="min-w-0 flex-1">
             <p className="text-[13.5px] font-semibold text-foreground truncate leading-tight">
-              {shift.title}
+              {titleDisplay}
             </p>
             <p className="text-[11px] text-muted-foreground/70 truncate mt-0.5">
               <span className="tabular-nums">{shift.start_time?.slice(0, 5)}–{shift.end_time?.slice(0, 5)}</span>
@@ -138,9 +146,9 @@ export function PortalShiftCard({
             </p>
           </div>
 
-          {/* Status chip + chevron */}
+          {/* Status chip + chevron — chip hidden on past confirmed shifts */}
           <div className="flex items-center gap-1.5 shrink-0">
-            <OpsStatusChip tone={meta.tone} label={meta.label} size="sm" />
+            {showStatusChip && <OpsStatusChip tone={meta.tone} label={meta.label} size="sm" />}
             <ChevronRight className="h-4 w-4 text-muted-foreground/30" />
           </div>
         </div>
@@ -232,32 +240,34 @@ export function PortalShiftCard({
         </div>
 
         <p className="text-[15px] font-bold text-foreground leading-snug line-clamp-2">
-          {shift.title}
+          {titleDisplay}
         </p>
 
-        {(shift.location_name || shift.client_name) && (
+        {(locationDisplay || clientDisplay) && (
           <div className="flex items-center gap-2 text-[11.5px] text-muted-foreground/85 min-w-0">
-            {shift.client_name && (
+            {clientDisplay && (
               <span className="flex items-center gap-1.5 truncate min-w-0">
                 <Briefcase className="h-3 w-3 shrink-0 text-muted-foreground/50" />
-                <span className="truncate">{shift.client_name}</span>
+                <span className="truncate">{clientDisplay}</span>
               </span>
             )}
-            {shift.client_name && shift.location_name && (
+            {clientDisplay && locationDisplay && (
               <span className="text-muted-foreground/30 shrink-0">·</span>
             )}
-            {shift.location_name && (
+            {locationDisplay && (
               <span className="flex items-center gap-1.5 truncate min-w-0">
                 <MapPin className="h-3 w-3 shrink-0 text-muted-foreground/50" />
-                <span className="truncate">{shift.location_name}</span>
+                <span className="truncate">{locationDisplay}</span>
               </span>
             )}
           </div>
         )}
 
-        <div className="flex items-center justify-between gap-2 pt-0.5">
-          <OpsStatusChip tone={meta.tone} label={meta.label} size="sm" />
-        </div>
+        {showStatusChip && (
+          <div className="flex items-center justify-between gap-2 pt-0.5">
+            <OpsStatusChip tone={meta.tone} label={meta.label} size="sm" />
+          </div>
+        )}
 
         {isPending && (onAccept || onReject) && (
           <div className="flex items-center gap-2 pt-1" onClick={e => e.stopPropagation()}>

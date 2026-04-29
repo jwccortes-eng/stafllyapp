@@ -7,6 +7,7 @@ import {
 import { cn } from "@/lib/utils";
 import {
   format, parseISO, isBefore, startOfDay, isToday, isTomorrow,
+  startOfWeek, endOfWeek, subWeeks,
 } from "date-fns";
 import { enUS } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,9 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { PortalShiftDetailDrawer } from "@/components/portal/PortalShiftDetailDrawer";
 import { PortalShiftCard, type PortalShiftData } from "@/components/portal/PortalShiftCard";
 import { CLAIMABLE_VISIBLE_STATUSES, isShiftClaimableForEmployee } from "@/lib/shifts/visibility";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ErrorBlock } from "@/components/ui/error-block";
+import { formatDisplayName } from "@/lib/format-helpers";
 
 interface ShiftAssignment {
   id: string;
@@ -64,6 +68,7 @@ export default function MyShifts() {
   const [assignments, setAssignments] = useState<ShiftAssignment[]>([]);
   const [claimable, setClaimable] = useState<ClaimableShift[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [claiming, setClaiming] = useState<string | null>(null);
   const [responding, setResponding] = useState<string | null>(null);
   const [rejectDialogId, setRejectDialogId] = useState<string | null>(null);
@@ -71,11 +76,15 @@ export default function MyShifts() {
   const [selectedShift, setSelectedShift] = useState<ShiftAssignment | null>(null);
   const initialTab = (searchParams.get("tab") as TabFilter) || "today";
   const [activeTab, setActiveTab] = useState<TabFilter>(initialTab);
-  // toast imported from sonner at top
+  // Pagination for History — render in chunks to keep DOM small.
+  const HISTORY_PAGE = 30;
+  const [historyVisible, setHistoryVisible] = useState(HISTORY_PAGE);
 
   const load = async () => {
     if (!employeeId) { setAssignments([]); setClaimable([]); setLoading(false); return; }
     setLoading(true);
+    setLoadError(null);
+    try {
 
     const { data: emp } = await supabase.from("employees").select("company_id").eq("id", employeeId).maybeSingle();
     if (!emp) { setLoading(false); return; }
@@ -147,8 +156,13 @@ export default function MyShifts() {
         end_time: s.end_time, notes: s.notes, slots: s.slots,
         location: s.locations, client: s.clients, assignedCount: activeCount(s),
       }));
-    setClaimable(claimableFiltered);
-    setLoading(false);
+      setClaimable(claimableFiltered);
+    } catch (err: any) {
+      console.error("[MyShifts] load failed", err);
+      setLoadError(err?.message ?? "Could not load your shifts.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { load(); }, [employeeId]);
@@ -299,6 +313,7 @@ export default function MyShifts() {
   // Sync tab to URL for deep-link / back navigation
   const changeTab = (t: TabFilter) => {
     setActiveTab(t);
+    setHistoryVisible(HISTORY_PAGE); // reset pagination on tab switch
     const next = new URLSearchParams(searchParams);
     if (t === "today") next.delete("tab"); else next.set("tab", t);
     setSearchParams(next, { replace: true });
@@ -312,8 +327,32 @@ export default function MyShifts() {
 
   if (loading) {
     return (
-      <div className="space-y-3 pt-2">
-        {[1, 2, 3].map(i => <div key={i} className="h-28 animate-pulse bg-muted rounded-2xl" />)}
+      <div className="space-y-2 pt-2 animate-fade-in">
+        <div className="flex items-center gap-5 border-b border-border/40 mb-3 pb-2.5">
+          {[1, 2, 3].map(i => <Skeleton key={i} className="h-3.5 w-14 rounded-md" />)}
+        </div>
+        {[1, 2, 3, 4].map(i => (
+          <div key={i} className="bg-card rounded-xl border border-border/40 p-3 flex items-center gap-3">
+            <Skeleton className="h-8 w-[58px] rounded-md" />
+            <div className="flex-1 space-y-1.5">
+              <Skeleton className="h-3 w-3/5 rounded" />
+              <Skeleton className="h-2.5 w-2/5 rounded" />
+            </div>
+            <Skeleton className="h-5 w-14 rounded-full" />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="pt-4">
+        <ErrorBlock
+          title="We couldn't load your shifts"
+          message={loadError}
+          onRetry={load}
+        />
       </div>
     );
   }
@@ -348,32 +387,37 @@ export default function MyShifts() {
         </h1>
       </div>
 
-      {/* Underline tab bar — premium, low-noise, mirrors video benchmark rhythm */}
+      {/* Underline tab bar — premium, low-noise. Counts shown as soft pill badges. */}
       <div className="flex items-center gap-5 border-b border-border/40 mb-3">
         {tabs.map((t) => {
           const active = activeTab === t.key;
+          const accent = t.key === "available";
           return (
             <button
               key={t.key}
               onClick={() => changeTab(t.key)}
               className={cn(
-                "relative flex items-baseline gap-1.5 pb-2.5 text-[13px] font-semibold transition-colors",
+                "relative flex items-center gap-1.5 pb-2.5 text-[13px] font-semibold transition-colors",
                 active ? "text-foreground" : "text-muted-foreground/55 hover:text-foreground/80",
               )}
             >
-              {t.label}
+              <span>{t.label}</span>
               {t.count > 0 && (
                 <span className={cn(
-                  "text-[10px] font-bold tabular-nums",
-                  active ? (t.key === "available" ? "text-emerald-600 dark:text-emerald-400" : "text-primary") : "text-muted-foreground/45",
+                  "inline-flex items-center justify-center min-w-[18px] h-[16px] px-1 rounded-full text-[9.5px] font-bold tabular-nums",
+                  active
+                    ? accent
+                      ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
+                      : "bg-muted text-foreground/70"
+                    : "bg-muted/40 text-muted-foreground/55",
                 )}>
-                  {t.count}
+                  {t.count > 99 ? "99+" : t.count}
                 </span>
               )}
               {active && (
                 <span className={cn(
                   "absolute -bottom-px left-0 right-0 h-[2px] rounded-full",
-                  t.key === "available" ? "bg-emerald-500" : "bg-primary"
+                  accent ? "bg-emerald-500" : "bg-primary"
                 )} />
               )}
             </button>
@@ -381,27 +425,85 @@ export default function MyShifts() {
         })}
       </div>
 
-      {/* Shift list — compact rows, single source of state per card */}
-      {activeTab !== "available" && filtered.length > 0 && (
-        <div className="space-y-1.5">
-          {filtered.map((a) => (
-            <PortalShiftCard
-              key={a.id}
-              shift={toCardData(a)}
-              compact
-              onClick={() => setSelectedShift(a)}
-              onAccept={a.status === "pending" && !isBefore(parseISO(a.shift.date), today) ? () => acceptAssignment(a.id) : undefined}
-              onReject={a.status === "pending" && !isBefore(parseISO(a.shift.date), today) ? () => { setRejectDialogId(a.id); setRejectReason(""); } : undefined}
-              onClockIn={
-                (a.status === "confirmed" || a.status === "accepted") && isToday(parseISO(a.shift.date))
-                  ? () => navigate(`/portal/clock?shiftId=${a.shift.id}`)
-                  : undefined
-              }
-              responding={responding === a.id}
-            />
-          ))}
-        </div>
-      )}
+      {/* Shift list — compact rows. History tab adds week grouping + pagination. */}
+      {activeTab !== "available" && filtered.length > 0 && (() => {
+        const renderCard = (a: ShiftAssignment) => (
+          <PortalShiftCard
+            key={a.id}
+            shift={toCardData(a)}
+            compact
+            onClick={() => setSelectedShift(a)}
+            onAccept={a.status === "pending" && !isBefore(parseISO(a.shift.date), today) ? () => acceptAssignment(a.id) : undefined}
+            onReject={a.status === "pending" && !isBefore(parseISO(a.shift.date), today) ? () => { setRejectDialogId(a.id); setRejectReason(""); } : undefined}
+            onClockIn={
+              (a.status === "confirmed" || a.status === "accepted") && isToday(parseISO(a.shift.date))
+                ? () => navigate(`/portal/clock?shiftId=${a.shift.id}`)
+                : undefined
+            }
+            responding={responding === a.id}
+          />
+        );
+
+        if (activeTab === "history") {
+          // Paginate first to keep DOM size bounded.
+          const visible = filtered.slice(0, historyVisible);
+          const remaining = filtered.length - visible.length;
+
+          // Group by week bucket (already date-desc sorted).
+          const thisWeekStart = startOfWeek(today, { weekStartsOn: 1 });
+          const thisWeekEnd = endOfWeek(today, { weekStartsOn: 1 });
+          const lastWeekStart = startOfWeek(subWeeks(today, 1), { weekStartsOn: 1 });
+          const lastWeekEnd = endOfWeek(subWeeks(today, 1), { weekStartsOn: 1 });
+
+          type Bucket = { key: string; label: string; items: ShiftAssignment[] };
+          const buckets: Bucket[] = [
+            { key: "this-week", label: "This week", items: [] },
+            { key: "last-week", label: "Last week", items: [] },
+            { key: "earlier", label: "Earlier", items: [] },
+          ];
+
+          for (const a of visible) {
+            const d = parseISO(a.shift.date);
+            if (d >= thisWeekStart && d <= thisWeekEnd) buckets[0].items.push(a);
+            else if (d >= lastWeekStart && d <= lastWeekEnd) buckets[1].items.push(a);
+            else buckets[2].items.push(a);
+          }
+
+          return (
+            <div className="space-y-4">
+              {buckets.filter(b => b.items.length > 0).map((b) => (
+                <div key={b.key} className="space-y-1.5">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground/55 px-1">
+                    {b.label}
+                  </p>
+                  <div className="space-y-1.5">
+                    {b.items.map(renderCard)}
+                  </div>
+                </div>
+              ))}
+
+              {remaining > 0 && (
+                <div className="pt-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setHistoryVisible(v => v + HISTORY_PAGE)}
+                    className="w-full h-10 text-[12px] font-semibold rounded-xl text-muted-foreground hover:text-foreground"
+                  >
+                    Load {Math.min(remaining, HISTORY_PAGE)} more · {remaining} remaining
+                  </Button>
+                </div>
+              )}
+            </div>
+          );
+        }
+
+        return (
+          <div className="space-y-1.5">
+            {filtered.map(renderCard)}
+          </div>
+        );
+      })()}
 
       {/* AVAILABLE TAB — claimable shifts as primary content */}
       {activeTab === "available" && claimable.length > 0 && (
@@ -424,7 +526,7 @@ export default function MyShifts() {
                       </span>
                     )}
                   </div>
-                  <p className="text-[13.5px] font-bold text-foreground truncate">{s.title}</p>
+                  <p className="text-[13.5px] font-bold text-foreground truncate">{formatDisplayName(s.title)}</p>
                   <p className="text-[11px] text-muted-foreground/75 mt-0.5">
                     {isToday(parseISO(s.date)) ? "Today" : isTomorrow(parseISO(s.date)) ? "Tomorrow" : format(parseISO(s.date), "EEE d MMM", { locale: enUS })}
                     {" · "}
@@ -432,7 +534,7 @@ export default function MyShifts() {
                   </p>
                   {s.location && (
                     <p className="text-[11px] text-muted-foreground/65 mt-0.5 flex items-center gap-1 truncate">
-                      <MapPin className="h-2.5 w-2.5 shrink-0" /> {s.location.name}
+                      <MapPin className="h-2.5 w-2.5 shrink-0" /> {formatDisplayName(s.location.name)}
                     </p>
                   )}
                 </div>

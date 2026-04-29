@@ -50,9 +50,9 @@ export function PortalBottomNav({ onOpenMore, moreOpen = false }: PortalBottomNa
   };
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 px-3 pb-[max(env(safe-area-inset-bottom,8px),8px)] pt-2">
-      <div className="mx-auto max-w-md bg-card/95 backdrop-blur-2xl border border-border/30 rounded-[20px] shadow-[0_-4px_24px_-10px_rgba(0,0,0,0.1)]">
-        <div className="flex items-center justify-around h-[54px] px-1">
+    <nav className="fixed bottom-0 left-0 right-0 z-40 px-4 pb-[max(env(safe-area-inset-bottom,6px),6px)] pt-1.5 pointer-events-none">
+      <div className="mx-auto max-w-md bg-card/85 backdrop-blur-2xl border border-border/25 rounded-2xl shadow-[0_-2px_18px_-12px_rgba(0,0,0,0.18)] pointer-events-auto">
+        <div className="flex items-center justify-around h-[48px] px-1">
           {TABS.map((item) => {
             const active = isActive(item);
             const inner = (
@@ -60,15 +60,15 @@ export function PortalBottomNav({ onOpenMore, moreOpen = false }: PortalBottomNa
                 <div
                   className={cn(
                     "flex items-center justify-center transition-all duration-200",
-                    active ? "text-primary" : "text-muted-foreground/50"
+                    active ? "text-primary" : "text-muted-foreground/45"
                   )}
                 >
-                  <item.icon className="h-[19px] w-[19px]" strokeWidth={active ? 2.5 : 1.75} />
+                  <item.icon className="h-[18px] w-[18px]" strokeWidth={active ? 2.4 : 1.7} />
                 </div>
                 <span
                   className={cn(
-                    "text-[9.5px] leading-none transition-colors mt-1",
-                    active ? "text-primary font-bold" : "text-muted-foreground/55 font-semibold"
+                    "text-[9px] leading-none tracking-tight transition-colors mt-[3px]",
+                    active ? "text-primary font-semibold" : "text-muted-foreground/55 font-medium"
                   )}
                 >
                   {item.label}
@@ -79,7 +79,7 @@ export function PortalBottomNav({ onOpenMore, moreOpen = false }: PortalBottomNa
             const baseClass = "relative flex flex-col items-center justify-center flex-1 h-full active:scale-[0.92] transition-transform duration-150";
 
             const indicator = active && (
-              <span className="absolute top-0 h-0.5 w-7 rounded-full bg-primary" />
+              <span className="absolute top-0 h-[2px] w-5 rounded-full bg-primary" />
             );
 
             if (item.id === "more") {

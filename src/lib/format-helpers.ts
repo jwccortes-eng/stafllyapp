@@ -115,6 +115,94 @@ export function localeSortBy<T>(
   );
 }
 
+// ── Common short acronyms preserved as-is when formatting display names ──
+const PRESERVED_ACRONYMS = new Set([
+  "VIP", "USA", "US", "UK", "EU", "NYC", "LA", "DC", "DJ", "AV", "IT",
+  "HR", "PR", "CEO", "CFO", "CTO", "COO", "BBQ", "FAQ", "ID", "TBA", "TBD",
+  "JFK", "LAX", "ATL", "SF", "MIA", "QA", "QC", "NJ", "NY",
+]);
+
+/**
+ * Format a free-form display name (client, job, location, title) for the UI.
+ *
+ * Rules:
+ *  - Convert sustained ALL CAPS to Title Case (preserving short acronyms).
+ *  - Collapse repeated dashes/pipes/double-spaces.
+ *  - Replace heavy separators (" - ", " | ", " / ") with " · " for premium feel.
+ *  - Keep mixed-case strings intact (already human-formatted).
+ *  - Never truncate; truncation is a CSS concern.
+ *
+ * Examples:
+ *   "CHEF KAUFMAN - 3"     → "Chef Kaufman · Team 3" (caller may map "- 3" → "Team 3")
+ *   "CHEF KAUFMAN - 3"     → "Chef Kaufman · 3"
+ *   "VIP Production - R..." → "VIP Production · R..."
+ *   "ZEMER HALL"           → "Zemer Hall"
+ *   "Passover - Team 2"    → "Passover · Team 2"
+ */
+export function formatDisplayName(value: string | null | undefined): string {
+  if (!value) return "";
+  let s = value.replace(/\s+/g, " ").trim();
+  if (!s) return "";
+
+  // If the input has NO uppercase letters at all, treat it as already
+  // human-formatted lowercase (e.g. "vip production") and leave casing intact.
+  const hasUppercase = /[A-ZÁÉÍÓÚÑÜ]/.test(s);
+
+  // Collapse runs of separators
+  s = s
+    .replace(/\s*[-–—]{1,}\s*/g, " - ")
+    .replace(/\s*\|\s*/g, " - ")
+    .replace(/\s*\/\s*/g, " / ")
+    .replace(/\s{2,}/g, " ");
+
+  // English particles that stay lowercase mid-string (in addition to Spanish set)
+  const EN_PARTICLES = new Set([
+    "of", "and", "the", "for", "in", "on", "at", "to", "or", "a", "an", "by",
+  ]);
+
+  // Title-case word-by-word, preserving acronyms
+  const words = s.split(" ").map((raw) => {
+    if (!raw) return raw;
+
+    // Pure separator passes through; will be normalised below
+    if (raw === "-" || raw === "/" || raw === "·") return raw;
+
+    // Preserve known acronyms — but only if token itself is uppercase, otherwise
+    // a user-typed lowercase "vip" should remain "vip".
+    const upper = raw.toUpperCase();
+    if (PRESERVED_ACRONYMS.has(upper) && raw === upper) return upper;
+
+    // Token contains only digits/punct → keep as-is ("3", "#145")
+    if (/^[\d#.\-]+$/.test(raw)) return raw;
+
+    if (!hasUppercase) return raw; // user-typed lowercase: leave alone
+
+    const letters = raw.replace(/[^A-Za-zÁÉÍÓÚÑÜáéíóúñü]/g, "");
+    const isAllCaps = letters.length >= 2 && letters === letters.toUpperCase();
+    const isAllLower = letters.length >= 2 && letters === letters.toLowerCase();
+
+    // Mixed-case word inside a string that has uppercase elsewhere → keep
+    if (!isAllCaps && !isAllLower) return raw;
+
+    // ALL CAPS → Title Case; already lowercase → leave (might be a particle)
+    if (isAllCaps) return raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
+    return raw;
+  });
+
+  // Apply particle lowercase rule (except first word)
+  const cased = words
+    .map((w, i) => {
+      if (i === 0) return w;
+      const lower = w.toLowerCase();
+      if (LOWERCASE_PARTICLES.has(lower) || EN_PARTICLES.has(lower)) return lower;
+      return w;
+    })
+    .join(" ");
+
+  // Replace heavy " - " separator with premium middle-dot
+  return cased.replace(/ - /g, " · ").replace(/\s{2,}/g, " ").trim();
+}
+
 /**
  * Unified period label: "Periodo N · YYYY-MM-DD → YYYY-MM-DD"
  * Falls back to date range when sequence_number is unavailable.

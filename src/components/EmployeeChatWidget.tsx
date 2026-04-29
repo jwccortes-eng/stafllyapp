@@ -112,18 +112,20 @@ export default function EmployeeChatWidget() {
 
   return (
     <>
-      {/* Floating button */}
+      {/* Floating button — compact 48px on mobile, lifted above bottom nav + safe area */}
       <button
         onClick={() => setOpen(!open)}
         className={cn(
-          "fixed z-50 rounded-full shadow-lg transition-all duration-300",
-          "bg-primary text-primary-foreground hover:shadow-xl hover:scale-105",
-          "h-14 w-14 flex items-center justify-center",
-          "bottom-24 right-5 md:bottom-8 md:right-8"
+          "fixed z-50 rounded-full shadow-md transition-all duration-300",
+          "bg-primary text-primary-foreground hover:shadow-lg hover:scale-105 active:scale-95",
+          "h-12 w-12 md:h-14 md:w-14 flex items-center justify-center",
+          // Lift above the 48px bottom nav + 6-12px gap + safe area inset
+          "right-4 md:right-8",
+          "bottom-[calc(env(safe-area-inset-bottom,0px)+72px)] md:bottom-8"
         )}
-        aria-label={open ? "Cerrar chat" : "Abrir asistente"}
+        aria-label={open ? "Close chat" : "Open assistant"}
       >
-        {open ? <X className="h-6 w-6" /> : <MessageCircle className="h-6 w-6" />}
+        {open ? <X className="h-5 w-5 md:h-6 md:w-6" /> : <MessageCircle className="h-5 w-5 md:h-6 md:w-6" />}
       </button>
 
       {/* Chat panel */}
@@ -132,7 +134,7 @@ export default function EmployeeChatWidget() {
           className={cn(
             "fixed z-50 flex flex-col bg-background border rounded-2xl shadow-2xl overflow-hidden",
             "transition-all duration-300 animate-fade-in",
-            "bottom-40 right-4 left-4 h-[60vh] max-h-[500px]",
+            "bottom-[calc(env(safe-area-inset-bottom,0px)+128px)] right-4 left-4 h-[60vh] max-h-[500px]",
             "md:bottom-24 md:right-8 md:left-auto md:w-[400px] md:h-[520px]"
           )}
         >
