@@ -332,11 +332,22 @@ function ChannelList({ channels, navigate }: { channels: Channel[]; navigate: an
 
   return (
     <div className="space-y-5">
+      {/* Context strip */}
+      <section className="rounded-2xl border border-border/50 bg-card p-4">
+        <div className="flex items-center gap-2 mb-1">
+          <Hash className="h-4 w-4 text-primary" />
+          <h2 className="text-sm font-bold text-foreground">What are channels?</h2>
+        </div>
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          Channels organize people by zone, skill or opportunity. Join one to see live posts, jobs and people near you.
+        </p>
+      </section>
+
       {zones.length === 0 && (
         <EmptyActionState
           icon={Hash}
           title="No channels yet"
-          description="Channels group your community by zone, role or topic. Start one when you have something to share."
+          description="Channels group your community by zone, role or topic. They'll show up here as soon as the first one is live."
           actions={[
             { label: "Explore Radar", onClick: () => navigate("/parceros") },
             { label: "View flash jobs", onClick: () => navigate("/parceros/flash"), variant: "outline" },
@@ -352,7 +363,7 @@ function ChannelList({ channels, navigate }: { channels: Channel[]; navigate: an
             {channels
               .filter((c) => c.zone === zone)
               .map((ch) => (
-                <ChannelCard key={ch.id} channel={ch} onTap={() => navigate(`/parceros/channel/${ch.id}`)} wide />
+                <ChannelCard key={ch.id} channel={ch} onTap={() => navigate(`/parceros/channel/${ch.id}`)} wide explain />
               ))}
           </div>
         </section>
