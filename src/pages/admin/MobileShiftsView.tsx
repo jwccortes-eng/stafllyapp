@@ -699,8 +699,8 @@ function EmptyState({ tab }: { tab: TabKey }) {
       <div className="h-14 w-14 rounded-2xl bg-muted/60 flex items-center justify-center mb-3">
         <CalendarDays className="h-6 w-6 text-muted-foreground" />
       </div>
-      <h3 className="text-sm font-semibold mb-1">{m.title}</h3>
-      <p className="text-[12px] text-muted-foreground max-w-[260px] leading-snug">{m.hint}</p>
+      <h3 className="text-base font-semibold mb-1">{m.title}</h3>
+      <p className="text-sm text-muted-foreground max-w-[280px] leading-relaxed">{m.hint}</p>
     </div>
   );
 }
