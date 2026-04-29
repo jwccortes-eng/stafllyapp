@@ -7,9 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ParcerosHeader } from "@/components/parceros/ParcerosHeader";
 import {
-  Search, MapPin, Users, Clock, Loader2, Radio, TrendingUp, ChevronRight,
-  Hash, Briefcase, AlertTriangle, Zap,
+  Search, MapPin, Users, Clock, Loader2, TrendingUp, ChevronRight,
+  Hash, Briefcase, AlertTriangle, Zap, UserCircle2, Bell, Sparkles,
 } from "lucide-react";
+import { toast } from "sonner";
 import { formatDistanceToNow, isPast } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -203,6 +204,20 @@ function RadarFeed({ channels, flashJobs, navigate }: { channels: Channel[]; fla
 
   return (
     <div className="space-y-5">
+      {/* Intro / value prop */}
+      <section className="rounded-2xl border border-border/50 bg-gradient-to-br from-primary/5 via-card to-card p-4">
+        <div className="flex items-center gap-2 mb-1.5">
+          <Sparkles className="h-4 w-4 text-primary" />
+          <h2 className="text-sm font-bold text-foreground">Parceros is where the community moves</h2>
+        </div>
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          Channels organize people by zone, skill or opportunity. Flash jobs are urgent gigs posted in real time.
+        </p>
+      </section>
+
+      {/* Start here */}
+      <StartHereBlock navigate={navigate} />
+
       {/* Urgent Section */}
       {urgentJobs.length > 0 && (
         <section>
@@ -220,21 +235,23 @@ function RadarFeed({ channels, flashJobs, navigate }: { channels: Channel[]; fla
       )}
 
       {/* Active Channels */}
-      <section>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-bold text-foreground flex items-center gap-2">
-            <TrendingUp className="h-4 w-4 text-primary" /> Canales activos
-          </h2>
-          <button onClick={() => navigate("/parceros")} className="text-[10px] font-semibold text-primary">
-            Ver todos
-          </button>
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          {channels.slice(0, 4).map((ch) => (
-            <ChannelCard key={ch.id} channel={ch} onTap={() => navigate(`/parceros/channel/${ch.id}`)} />
-          ))}
-        </div>
-      </section>
+      {channels.length > 0 && (
+        <section>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-bold text-foreground flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-primary" /> Canales activos
+            </h2>
+            <button onClick={() => navigate("/parceros/channels")} className="text-[10px] font-semibold text-primary">
+              Ver todos
+            </button>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            {channels.slice(0, 4).map((ch) => (
+              <ChannelCard key={ch.id} channel={ch} onTap={() => navigate(`/parceros/channel/${ch.id}`)} />
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Recent Flash Jobs */}
       {flashJobs.length > 0 && (
@@ -251,11 +268,58 @@ function RadarFeed({ channels, flashJobs, navigate }: { channels: Channel[]; fla
           </div>
         </section>
       )}
-
-      {flashJobs.length === 0 && channels.length === 0 && (
-        <CommunityOnboarding navigate={navigate} />
-      )}
     </div>
+  );
+}
+
+function StartHereBlock({ navigate }: { navigate: any }) {
+  const items = [
+    {
+      icon: Hash,
+      title: "Join a channel",
+      hint: "Find your zone, role or topic",
+      to: "/parceros/channels",
+      tone: "from-blue-500/10 to-blue-500/5 text-blue-600",
+    },
+    {
+      icon: UserCircle2,
+      title: "Complete your profile",
+      hint: "So others know what you do",
+      to: "/portal/profile",
+      tone: "from-emerald-500/10 to-emerald-500/5 text-emerald-600",
+    },
+    {
+      icon: Briefcase,
+      title: "Browse opportunities",
+      hint: "Flash jobs posted live",
+      to: "/parceros/flash",
+      tone: "from-amber-500/10 to-amber-500/5 text-amber-600",
+    },
+  ];
+  return (
+    <section>
+      <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">
+        Start here
+      </h2>
+      <div className="space-y-2">
+        {items.map((it) => (
+          <button
+            key={it.to}
+            onClick={() => navigate(it.to)}
+            className="w-full flex items-center gap-3 p-3 rounded-xl border border-border/50 bg-card hover:border-border transition-all text-left active:scale-[0.99]"
+          >
+            <div className={cn("h-10 w-10 rounded-xl bg-gradient-to-br flex items-center justify-center shrink-0", it.tone)}>
+              <it.icon className="h-4 w-4" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-semibold text-foreground">{it.title}</div>
+              <div className="text-[11px] text-muted-foreground mt-0.5">{it.hint}</div>
+            </div>
+            <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+          </button>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -268,11 +332,22 @@ function ChannelList({ channels, navigate }: { channels: Channel[]; navigate: an
 
   return (
     <div className="space-y-5">
+      {/* Context strip */}
+      <section className="rounded-2xl border border-border/50 bg-card p-4">
+        <div className="flex items-center gap-2 mb-1">
+          <Hash className="h-4 w-4 text-primary" />
+          <h2 className="text-sm font-bold text-foreground">What are channels?</h2>
+        </div>
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          Channels organize people by zone, skill or opportunity. Join one to see live posts, jobs and people near you.
+        </p>
+      </section>
+
       {zones.length === 0 && (
         <EmptyActionState
           icon={Hash}
           title="No channels yet"
-          description="Channels group your community by zone, role or topic. Start one when you have something to share."
+          description="Channels group your community by zone, role or topic. They'll show up here as soon as the first one is live."
           actions={[
             { label: "Explore Radar", onClick: () => navigate("/parceros") },
             { label: "View flash jobs", onClick: () => navigate("/parceros/flash"), variant: "outline" },
@@ -288,7 +363,7 @@ function ChannelList({ channels, navigate }: { channels: Channel[]; navigate: an
             {channels
               .filter((c) => c.zone === zone)
               .map((ch) => (
-                <ChannelCard key={ch.id} channel={ch} onTap={() => navigate(`/parceros/channel/${ch.id}`)} wide />
+                <ChannelCard key={ch.id} channel={ch} onTap={() => navigate(`/parceros/channel/${ch.id}`)} wide explain />
               ))}
           </div>
         </section>
@@ -302,13 +377,42 @@ function ChannelList({ channels, navigate }: { channels: Channel[]; navigate: an
 /* ═══════════════════════════════════════════════ */
 
 function FlashJobList({ jobs, navigate, userId }: { jobs: FlashJob[]; navigate: any; userId?: string }) {
+  const [watching, setWatching] = useState(false);
   return (
     <div className="space-y-3">
+      {/* Context strip */}
+      <section className="rounded-2xl border border-border/50 bg-gradient-to-br from-amber-500/5 via-card to-card p-4">
+        <div className="flex items-center gap-2 mb-1">
+          <Zap className="h-4 w-4 text-amber-500" />
+          <h2 className="text-sm font-bold text-foreground">What are flash jobs?</h2>
+        </div>
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          Urgent opportunities posted in real time by the community. Apply fast — slots fill in minutes.
+        </p>
+        <div className="mt-3 flex items-center gap-2">
+          <button
+            onClick={() => {
+              setWatching((w) => !w);
+              toast.success(watching ? "You'll stop receiving alerts" : "We'll let you know when a flash job appears");
+            }}
+            className={cn(
+              "h-9 px-3 rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 transition-all",
+              watching
+                ? "bg-primary/10 text-primary border border-primary/30"
+                : "bg-card border border-border/60 text-foreground hover:bg-muted"
+            )}
+          >
+            <Bell className="h-3.5 w-3.5" />
+            {watching ? "Watching opportunities" : "Notify me"}
+          </button>
+        </div>
+      </section>
+
       {jobs.length === 0 && (
         <EmptyActionState
           icon={Zap}
           title="No urgent jobs right now"
-          description="Flash Jobs are short-term, time-sensitive opportunities posted by the community. They show up here the moment they're created."
+          description="Flash Jobs show up here the moment someone posts one. Turn on notifications above to be the first to know."
           actions={[
             { label: "Browse channels", onClick: () => navigate("/parceros/channels") },
             { label: "Back to Radar", onClick: () => navigate("/parceros"), variant: "outline" },
@@ -326,14 +430,38 @@ function FlashJobList({ jobs, navigate, userId }: { jobs: FlashJob[]; navigate: 
 /*  CARDS                                         */
 /* ═══════════════════════════════════════════════ */
 
-function ChannelCard({ channel, onTap, wide }: { channel: Channel; onTap: () => void; wide?: boolean }) {
+const CHANNEL_PURPOSE: Record<string, string> = {
+  jobs: "Job leads and gigs shared by the community",
+  events: "Meetups, trainings and local events",
+  zone: "Local updates from your area",
+  skill: "Tips and opportunities for this trade",
+  general: "General community conversation",
+};
+
+function describeChannel(channel: Channel): string {
+  if (channel.description && channel.description.trim()) return channel.description;
+  const cat = (channel.category || "").toLowerCase();
+  return CHANNEL_PURPOSE[cat] ?? `Conversation and opportunities for ${channel.zone}`;
+}
+
+function ChannelCard({
+  channel,
+  onTap,
+  wide,
+  explain,
+}: {
+  channel: Channel;
+  onTap: () => void;
+  wide?: boolean;
+  explain?: boolean;
+}) {
   const zoneStyle = ZONE_COLORS[channel.zone.toLowerCase()] ?? "bg-muted text-muted-foreground border-border/40";
   return (
     <button
       onClick={onTap}
       className={cn(
-        "flex items-center gap-3 p-3 rounded-xl border border-border/60 bg-card hover:bg-accent/30 transition-all text-left w-full",
-        wide ? "" : "flex-col items-start"
+        "flex gap-3 p-3 rounded-xl border border-border/60 bg-card hover:bg-accent/30 transition-all text-left w-full",
+        wide ? "items-start" : "flex-col items-start"
       )}
     >
       <div className={cn("text-2xl", wide ? "" : "mb-1")}>{channel.icon}</div>
@@ -347,8 +475,18 @@ function ChannelCard({ channel, onTap, wide }: { channel: Channel; onTap: () => 
             <Users className="h-2.5 w-2.5" /> {channel.member_count}
           </span>
         </div>
+        {explain && (
+          <>
+            <p className="text-[11px] text-muted-foreground mt-2 line-clamp-2 leading-relaxed">
+              {describeChannel(channel)}
+            </p>
+            <div className="mt-2.5 inline-flex items-center gap-1 text-[11px] font-semibold text-primary">
+              Open channel <ChevronRight className="h-3 w-3" />
+            </div>
+          </>
+        )}
       </div>
-      {wide && <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />}
+      {wide && !explain && <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0 self-center" />}
     </button>
   );
 }
@@ -474,43 +612,3 @@ function EmptyActionState({
     </div>
   );
 }
-
-function CommunityOnboarding({ navigate }: { navigate: any }) {
-  const steps = [
-    { icon: Hash, title: "Explore channels", hint: "Connect by zone, role or topic", to: "/parceros/channels" },
-    { icon: Briefcase, title: "Browse Flash Jobs", hint: "Short-term opportunities posted live", to: "/parceros/flash" },
-    { icon: Radio, title: "Stay on the Radar", hint: "See what's happening across the community", to: "/parceros" },
-  ];
-  return (
-    <div className="space-y-5 py-4">
-      <div className="text-center px-2">
-        <div className="inline-flex h-14 w-14 rounded-2xl bg-primary/10 items-center justify-center mb-3">
-          <Radio className="h-6 w-6 text-primary" />
-        </div>
-        <h2 className="text-lg font-bold">Welcome to Parceros</h2>
-        <p className="text-sm text-muted-foreground mt-1.5 max-w-sm mx-auto">
-          A community of workers, providers and operators. Discover channels, jobs and people in your zone.
-        </p>
-      </div>
-      <div className="space-y-2">
-        {steps.map((s) => (
-          <button
-            key={s.to}
-            onClick={() => navigate(s.to)}
-            className="w-full flex items-center gap-3 p-3.5 rounded-2xl border border-border/50 bg-card text-left active:scale-[0.99] transition-all hover:border-border"
-          >
-            <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
-              <s.icon className="h-4.5 w-4.5" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-sm font-semibold">{s.title}</div>
-              <div className="text-xs text-muted-foreground mt-0.5">{s.hint}</div>
-            </div>
-            <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
