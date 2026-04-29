@@ -136,11 +136,18 @@ export default function PortalClock() {
     const dayEnd = endOfDay(today).toISOString();
     const todayStr = format(today, "yyyy-MM-dd");
 
-    const [entriesRes, shiftsRes] = await Promise.all([
+    const [entriesRes, openEntriesRes, shiftsRes] = await Promise.all([
       supabase.from("time_entries")
         .select("id, clock_in, clock_out, status, notes, break_minutes, shift_id")
         .eq("employee_id", employeeId).gte("clock_in", dayStart).lte("clock_in", dayEnd)
         .order("clock_in", { ascending: false }),
+      // Detect ANY open time entry (not just today's) so workers are never trapped
+      // by a stuck/orphan entry from a previous day. The Clock out button must
+      // remain reachable even if the entry was opened days ago.
+      supabase.from("time_entries")
+        .select("id, clock_in, clock_out, status, notes, break_minutes, shift_id")
+        .eq("employee_id", employeeId).is("clock_out", null)
+        .order("clock_in", { ascending: false }).limit(1),
       // Hide soft-deleted shifts (see src/lib/shifts/visibility.ts)
       // Hide drafts and draft reservations (see src/lib/shifts/shift-guards.ts):
       // a draft must NEVER allow clock-in or generate time_entries.
@@ -156,7 +163,10 @@ export default function PortalClock() {
 
     const list = (entriesRes.data ?? []) as TimeEntry[];
     setTodayEntries(list);
-    setActiveEntry(list.find((e) => !e.clock_out) ?? null);
+    // Prefer today's open entry; fall back to any open entry from previous days.
+    const todayOpen = list.find((e) => !e.clock_out) ?? null;
+    const anyOpen = (openEntriesRes.data?.[0] ?? null) as TimeEntry | null;
+    setActiveEntry(todayOpen ?? anyOpen);
 
     const qrModes: Record<string, string> = {};
     const mappedShifts: TodayShift[] = (shiftsRes.data ?? []).map((sa: any) => {
