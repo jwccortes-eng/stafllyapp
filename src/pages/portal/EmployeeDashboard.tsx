@@ -209,14 +209,48 @@ export default function EmployeeDashboard() {
     );
   }
 
-  const countdown = nextShift && isToday(parseISO(nextShift.date))
-    ? getCountdown(nextShift.date, nextShift.start_time)
-    : null;
+  // ── Build NBA shift snapshot from existing fetched data ──
+  const nbaShift: NbaShift | null = useMemo(() => (
+    nextShift
+      ? {
+          id: nextShift.id,
+          title: nextShift.title,
+          date: nextShift.date,
+          start_time: nextShift.start_time,
+          end_time: nextShift.end_time,
+          status: nextShift.status,
+          client_name: nextShift.client_name,
+          location_name: nextShift.location_name,
+          meeting_point: nextShift.meeting_point,
+        }
+      : null
+  ), [nextShift]);
 
-  const isTodayShift = nextShift ? isToday(parseISO(nextShift.date)) : false;
-  const isTomorrowShift = nextShift ? isTomorrow(parseISO(nextShift.date)) : false;
-  const isConfirmed = nextShift && (nextShift.status === "confirmed" || nextShift.status === "accepted");
-  const duration = nextShift ? calcDuration(nextShift.start_time, nextShift.end_time) : "";
+  const nba = useMemo(() => selectNextBestAction({
+    clockStatus: { isClockedIn: clockStatus.isClockedIn, shiftTitle: clockStatus.shiftTitle },
+    nextShift: nbaShift,
+    pendingCount,
+    claimableCount,
+    readinessStatus: readiness.status,
+    readinessMissingPersonal: readiness.missingPersonal.length,
+    readinessMissingDocs: readiness.missingDocuments.length,
+    now,
+  }), [
+    clockStatus.isClockedIn, clockStatus.shiftTitle, nbaShift, pendingCount,
+    claimableCount, readiness.status, readiness.missingPersonal.length,
+    readiness.missingDocuments.length, now,
+  ]);
+
+  const nbaCoversToday = (
+    nba.kind === "clocked_in" ||
+    nba.kind === "clock_in_now" ||
+    nba.kind === "next_shift_today" ||
+    nba.kind === "confirm_shift"
+  );
+  const showTodayBlock = nbaShift && isToday(parseISO(nbaShift.date)) && !nbaCoversToday;
+  const showFutureBlock =
+    nbaShift && !isToday(parseISO(nbaShift.date)) &&
+    nba.kind !== "next_shift_future";
 
   return (
     <div className="space-y-4 animate-fade-in pb-24">
@@ -237,183 +271,23 @@ export default function EmployeeDashboard() {
         </div>
         {companyName && (
           <span className="text-[9px] text-muted-foreground/50 bg-muted/40 px-2 py-0.5 rounded-full font-medium shrink-0 max-w-[120px] truncate">
-            {companyName}
+            {formatDisplayName(companyName)}
           </span>
         )}
       </div>
 
-      {/* ── Profile readiness — surfaces pending onboarding (auto-hides if ready) ── */}
-      <ReadinessCard />
+      {/* ── Next Best Action — single dynamic card ── */}
+      <NextBestActionCard nba={nba} />
 
-      {/* ── Available shifts hero — visible only when claimables exist ── */}
-      {isModuleEnabled("my_shifts") && claimableCount > 0 && (
-        <Link to="/portal/shifts?tab=available" className="block">
-          <div className="rounded-2xl bg-gradient-to-br from-emerald-500/[0.08] via-emerald-500/[0.04] to-card border-2 border-emerald-500/25 px-4 py-3 flex items-center gap-3 active:scale-[0.98] transition-all shadow-[0_4px_20px_-8px_hsl(var(--primary)/0.15)]">
-            <div className="h-10 w-10 rounded-xl bg-emerald-500/15 flex items-center justify-center shrink-0">
-              <HandMetal className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-[13px] font-bold text-foreground leading-tight">
-                {claimableCount} shift{claimableCount > 1 ? "s" : ""} available
-              </p>
-              <p className="text-[10.5px] text-muted-foreground/70 mt-0.5">
-                Tap to view and request
-              </p>
-            </div>
-            <ChevronRight className="h-4 w-4 text-muted-foreground/30 shrink-0" />
-          </div>
-        </Link>
+      {/* ── Today / Future shift detail (only if NBA isn't already showing it) ── */}
+      {(showTodayBlock || showFutureBlock) && nbaShift && (
+        <TodayBlock shift={nbaShift} />
       )}
 
-      {/* ── Active clock banner — only when clocked in ── */}
-      {isModuleEnabled("my_clock") && clockStatus.isClockedIn && (
-        <button
-          className="w-full rounded-2xl px-4 py-3 bg-[hsl(var(--status-confirmed)/0.06)] border-2 border-[hsl(var(--status-confirmed)/0.2)] transition-all active:scale-[0.98]"
-          onClick={() => navigate("/portal/clock")}
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-[hsl(var(--status-confirmed)/0.12)] flex items-center justify-center">
-                <Clock className="h-4 w-4 text-[hsl(var(--status-confirmed))]" />
-              </div>
-              <div className="text-left">
-                <div className="flex items-center gap-2">
-                  <div className="h-2 w-2 rounded-full bg-[hsl(var(--status-confirmed))] animate-pulse" />
-                  <span className="text-[13px] font-bold text-foreground">On shift</span>
-                </div>
-                {clockStatus.shiftTitle && (
-                  <p className="text-[11px] text-muted-foreground truncate max-w-[180px]">{clockStatus.shiftTitle}</p>
-                )}
-              </div>
-            </div>
-            <div className="h-9 px-4 rounded-xl flex items-center gap-1.5 font-bold text-[12px] bg-[hsl(var(--status-confirmed))] text-white">
-              <LogOut className="h-3.5 w-3.5" /> Clock Out
-            </div>
-          </div>
-        </button>
-      )}
+      {/* ── Profile readiness strip (auto-hides if NBA already surfaces it) ── */}
+      <ProfileReadinessStrip nbaKind={nba.kind} />
 
-      {/* ── Alerts row ── */}
-      {pendingCount > 0 && (
-        <Link to="/portal/shifts">
-          <div className="rounded-2xl bg-[hsl(var(--status-pending)/0.08)] border border-[hsl(var(--status-pending)/0.15)] px-3.5 py-2.5 flex items-center gap-3 active:scale-[0.98] transition-all">
-            <AlertTriangle className="h-4 w-4 text-[hsl(var(--status-pending))] shrink-0" />
-             <p className="text-[13px] font-bold text-foreground flex-1">
-              {pendingCount} shift{pendingCount > 1 ? "s" : ""} to confirm
-            </p>
-            <ChevronRight className="h-4 w-4 text-muted-foreground/30" />
-          </div>
-        </Link>
-      )}
-
-      {/* ── HERO: Next Shift ── */}
-      {isModuleEnabled("my_shifts") && nextShift && (
-        <div
-          className={cn(
-            "rounded-2xl overflow-hidden cursor-pointer active:scale-[0.98] transition-all duration-200",
-            isTodayShift
-              ? "bg-gradient-to-br from-primary/[0.06] via-card to-card border-2 border-primary/20 shadow-[0_4px_24px_-8px_hsl(var(--primary)/0.15)]"
-              : "bg-card border border-border/40 shadow-sm"
-          )}
-          onClick={() => navigate("/portal/shifts")}
-        >
-          {/* Countdown banner */}
-          {countdown && isConfirmed && (
-            <div className="bg-primary/8 px-4 py-1.5 flex items-center gap-2 border-b border-primary/10">
-              <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
-              <span className="text-[11px] font-bold text-primary tracking-wide">Starts {countdown}</span>
-            </div>
-          )}
-
-          <div className="p-4 space-y-2.5">
-            {/* Row 1: Day + time + duration */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                {isTodayShift && (
-                  <span className="text-[9px] px-2 py-0.5 rounded-full font-bold bg-primary text-primary-foreground uppercase tracking-widest">Today</span>
-                )}
-                {isTomorrowShift && (
-                  <span className="text-[9px] px-2 py-0.5 rounded-full font-bold bg-accent text-accent-foreground uppercase tracking-widest">Tomorrow</span>
-                )}
-                {!isTodayShift && !isTomorrowShift && (
-                  <span className="text-[11px] font-semibold text-muted-foreground capitalize">
-                    {format(parseISO(nextShift.date), "EEE d MMM")}
-                  </span>
-                )}
-                <span className="text-sm font-bold text-foreground tabular-nums">
-                  {nextShift.start_time?.slice(0, 5)} – {nextShift.end_time?.slice(0, 5)}
-                </span>
-              </div>
-              <span className="text-[10px] text-muted-foreground/40 font-medium">{duration}</span>
-            </div>
-
-            {/* Title */}
-            <p className="text-[15px] font-bold text-foreground leading-snug line-clamp-2">{nextShift.title}</p>
-
-            {/* Location + Client — single line */}
-            {(nextShift.location_name || nextShift.client_name) && (
-              <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
-                {nextShift.location_name && (
-                  <span className="flex items-center gap-1 truncate">
-                    <MapPin className="h-3 w-3 shrink-0 text-primary/40" />
-                    <span className="truncate">{nextShift.location_name}</span>
-                  </span>
-                )}
-                {nextShift.client_name && (
-                  <span className="flex items-center gap-1 truncate">
-                    <Briefcase className="h-3 w-3 shrink-0 text-primary/40" />
-                    <span className="truncate">{nextShift.client_name}</span>
-                  </span>
-                )}
-              </div>
-            )}
-
-            {/* Meeting point */}
-            {nextShift.meeting_point && (
-              <div className="flex items-center gap-1.5 text-[11px] text-primary/80 bg-primary/[0.05] rounded-lg px-3 py-1.5">
-                <Navigation className="h-3 w-3 shrink-0" />
-                <span className="truncate font-medium">{nextShift.meeting_point}</span>
-              </div>
-            )}
-
-            {/* CTA */}
-            {isTodayShift && isConfirmed && isModuleEnabled("my_clock") && !clockStatus.isClockedIn && (
-              <Button
-                size="lg"
-                className="w-full h-12 text-sm gap-2 font-bold rounded-xl shadow-lg shadow-primary/20"
-                onClick={(e) => { e.stopPropagation(); navigate(`/portal/clock?shiftId=${nextShift.id}`); }}
-              >
-                <LogIn className="h-4 w-4" />
-                Clock In
-              </Button>
-            )}
-            {nextShift.status === "pending" && (
-              <Button
-                size="lg"
-                variant="outline"
-                className="w-full h-11 text-xs font-bold border-[hsl(var(--status-pending)/0.3)] text-[hsl(var(--status-pending))] hover:bg-[hsl(var(--status-pending)/0.05)] rounded-xl"
-                onClick={(e) => { e.stopPropagation(); navigate("/portal/shifts"); }}
-              >
-                <AlertTriangle className="h-3.5 w-3.5 mr-1.5" />
-                Confirm shift
-              </Button>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* No shifts */}
-      {isModuleEnabled("my_shifts") && !nextShift && (
-        <Link to="/portal/shifts" className="block">
-          <div className="rounded-2xl border-2 border-dashed border-border/30 bg-muted/5 p-6 flex flex-col items-center gap-2 active:scale-[0.98] transition-all">
-            <CalendarDays className="h-8 w-8 text-muted-foreground/20" />
-             <p className="text-sm font-bold text-foreground">No scheduled shifts</p>
-            <p className="text-[11px] text-muted-foreground/50">Assigned shifts will appear here</p>
-          </div>
-        </Link>
-      )}
-
-      {/* ── Stats row — tighter ── */}
+      {/* ── Stats row — week / shifts / est pay ── */}
       <div className="grid grid-cols-3 gap-2">
         <div className="rounded-2xl bg-card border border-border/30 p-3 shadow-sm">
           <div className="flex items-center gap-1.5 mb-1">
@@ -458,11 +332,11 @@ export default function EmployeeDashboard() {
         )}
       </div>
 
-      {/* ── Upcoming shifts ── */}
+      {/* ── Upcoming shifts (skip first; it's already in NBA / TodayBlock) ── */}
       {upcomingShifts.length > 0 && (
         <div>
           <div className="flex items-center justify-between mb-2">
-             <h2 className="text-xs font-bold text-foreground">Upcoming</h2>
+            <h2 className="text-xs font-bold text-foreground">Upcoming</h2>
             <Link to="/portal/shifts" className="text-[11px] text-primary font-semibold flex items-center gap-1">
               View all <ArrowRight className="h-3 w-3" />
             </Link>
@@ -479,9 +353,9 @@ export default function EmployeeDashboard() {
                   )}>
                     <div className="text-center shrink-0 w-9">
                       {sIsToday ? (
-                         <span className="text-[8px] px-1.5 py-0.5 rounded-full font-bold bg-primary text-primary-foreground uppercase">Today</span>
+                        <span className="text-[8px] px-1.5 py-0.5 rounded-full font-bold bg-primary/12 text-primary tracking-wide">Today</span>
                       ) : sIsTomorrow ? (
-                        <span className="text-[8px] px-1.5 py-0.5 rounded-full font-bold bg-accent text-accent-foreground uppercase">Tmw</span>
+                        <span className="text-[8px] px-1.5 py-0.5 rounded-full font-bold bg-accent/40 text-accent-foreground tracking-wide">Tmw</span>
                       ) : (
                         <>
                           <p className="text-[7px] font-bold uppercase text-muted-foreground/40 leading-none">
@@ -494,13 +368,15 @@ export default function EmployeeDashboard() {
                       )}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-[12px] font-semibold text-foreground truncate">{s.title}</p>
+                      <p className="text-[12px] font-semibold text-foreground truncate">
+                        {formatDisplayName(s.title)}
+                      </p>
                       <div className="flex items-center gap-2 text-[10px] text-muted-foreground/60 mt-0.5">
                         <span className="flex items-center gap-0.5 font-medium tabular-nums">
                           <Clock className="h-2.5 w-2.5" />
                           {s.start_time?.slice(0, 5)} – {s.end_time?.slice(0, 5)}
                         </span>
-                        {s.location_name && <span className="truncate">{s.location_name}</span>}
+                        {s.location_name && <span className="truncate">{formatDisplayName(s.location_name)}</span>}
                       </div>
                     </div>
                     <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/15 shrink-0" />
@@ -516,7 +392,7 @@ export default function EmployeeDashboard() {
       {unreadAlerts > 0 && (
         <div className="rounded-xl bg-primary/[0.04] border border-primary/10 px-3.5 py-2.5 flex items-center gap-3">
           <Bell className="h-4 w-4 text-primary shrink-0" />
-           <p className="text-[12px] font-semibold text-foreground flex-1">
+          <p className="text-[12px] font-semibold text-foreground flex-1">
             {unreadAlerts} unread notification{unreadAlerts > 1 ? "s" : ""}
           </p>
         </div>
