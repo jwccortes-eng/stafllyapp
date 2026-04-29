@@ -387,32 +387,37 @@ export default function MyShifts() {
         </h1>
       </div>
 
-      {/* Underline tab bar — premium, low-noise, mirrors video benchmark rhythm */}
+      {/* Underline tab bar — premium, low-noise. Counts shown as soft pill badges. */}
       <div className="flex items-center gap-5 border-b border-border/40 mb-3">
         {tabs.map((t) => {
           const active = activeTab === t.key;
+          const accent = t.key === "available";
           return (
             <button
               key={t.key}
               onClick={() => changeTab(t.key)}
               className={cn(
-                "relative flex items-baseline gap-1.5 pb-2.5 text-[13px] font-semibold transition-colors",
+                "relative flex items-center gap-1.5 pb-2.5 text-[13px] font-semibold transition-colors",
                 active ? "text-foreground" : "text-muted-foreground/55 hover:text-foreground/80",
               )}
             >
-              {t.label}
+              <span>{t.label}</span>
               {t.count > 0 && (
                 <span className={cn(
-                  "text-[10px] font-bold tabular-nums",
-                  active ? (t.key === "available" ? "text-emerald-600 dark:text-emerald-400" : "text-primary") : "text-muted-foreground/45",
+                  "inline-flex items-center justify-center min-w-[18px] h-[16px] px-1 rounded-full text-[9.5px] font-bold tabular-nums",
+                  active
+                    ? accent
+                      ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
+                      : "bg-muted text-foreground/70"
+                    : "bg-muted/40 text-muted-foreground/55",
                 )}>
-                  {t.count}
+                  {t.count > 99 ? "99+" : t.count}
                 </span>
               )}
               {active && (
                 <span className={cn(
                   "absolute -bottom-px left-0 right-0 h-[2px] rounded-full",
-                  t.key === "available" ? "bg-emerald-500" : "bg-primary"
+                  accent ? "bg-emerald-500" : "bg-primary"
                 )} />
               )}
             </button>
