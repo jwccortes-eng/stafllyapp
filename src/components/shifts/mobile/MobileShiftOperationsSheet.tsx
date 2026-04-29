@@ -318,6 +318,7 @@ export function MobileShiftOperationsSheet({
             </button>
             {traceOpen ? (
               <TraceabilitySnapshot
+                compact
                 source={shiftTraceSource(draft, published)}
                 sourceNote="Scheduled shift · payroll uses real clock entries only"
                 timeline={buildShiftTimeline(shift)}
