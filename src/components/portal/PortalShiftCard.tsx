@@ -138,7 +138,7 @@ export function PortalShiftCard({
           {/* Title + subtitle */}
           <div className="min-w-0 flex-1">
             <p className="text-[13.5px] font-semibold text-foreground truncate leading-tight">
-              {shift.title}
+              {titleDisplay}
             </p>
             <p className="text-[11px] text-muted-foreground/70 truncate mt-0.5">
               <span className="tabular-nums">{shift.start_time?.slice(0, 5)}–{shift.end_time?.slice(0, 5)}</span>
@@ -146,9 +146,9 @@ export function PortalShiftCard({
             </p>
           </div>
 
-          {/* Status chip + chevron */}
+          {/* Status chip + chevron — chip hidden on past confirmed shifts */}
           <div className="flex items-center gap-1.5 shrink-0">
-            <OpsStatusChip tone={meta.tone} label={meta.label} size="sm" />
+            {showStatusChip && <OpsStatusChip tone={meta.tone} label={meta.label} size="sm" />}
             <ChevronRight className="h-4 w-4 text-muted-foreground/30" />
           </div>
         </div>
