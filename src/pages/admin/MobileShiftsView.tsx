@@ -495,9 +495,9 @@ function SummaryCard({ label, value, accent }: { label: string; value: number | 
     accent === "bad" ? "text-rose-600 dark:text-rose-400" :
     "text-foreground";
   return (
-    <div className="rounded-2xl border border-border/50 bg-card px-2.5 py-2.5 text-center shadow-sm">
-      <div className={cn("text-base font-semibold tabular-nums", accentClass)}>{value}</div>
-      <div className="text-[10px] uppercase tracking-wider text-muted-foreground mt-0.5">{label}</div>
+    <div className="rounded-2xl border border-border/50 bg-card px-2.5 py-3 text-center shadow-sm">
+      <div className={cn("text-xl font-semibold tabular-nums leading-none", accentClass)}>{value}</div>
+      <div className="text-[11px] text-muted-foreground mt-1.5 font-medium">{label}</div>
     </div>
   );
 }
