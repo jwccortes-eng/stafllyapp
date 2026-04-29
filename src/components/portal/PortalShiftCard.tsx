@@ -240,32 +240,34 @@ export function PortalShiftCard({
         </div>
 
         <p className="text-[15px] font-bold text-foreground leading-snug line-clamp-2">
-          {shift.title}
+          {titleDisplay}
         </p>
 
-        {(shift.location_name || shift.client_name) && (
+        {(locationDisplay || clientDisplay) && (
           <div className="flex items-center gap-2 text-[11.5px] text-muted-foreground/85 min-w-0">
-            {shift.client_name && (
+            {clientDisplay && (
               <span className="flex items-center gap-1.5 truncate min-w-0">
                 <Briefcase className="h-3 w-3 shrink-0 text-muted-foreground/50" />
-                <span className="truncate">{shift.client_name}</span>
+                <span className="truncate">{clientDisplay}</span>
               </span>
             )}
-            {shift.client_name && shift.location_name && (
+            {clientDisplay && locationDisplay && (
               <span className="text-muted-foreground/30 shrink-0">·</span>
             )}
-            {shift.location_name && (
+            {locationDisplay && (
               <span className="flex items-center gap-1.5 truncate min-w-0">
                 <MapPin className="h-3 w-3 shrink-0 text-muted-foreground/50" />
-                <span className="truncate">{shift.location_name}</span>
+                <span className="truncate">{locationDisplay}</span>
               </span>
             )}
           </div>
         )}
 
-        <div className="flex items-center justify-between gap-2 pt-0.5">
-          <OpsStatusChip tone={meta.tone} label={meta.label} size="sm" />
-        </div>
+        {showStatusChip && (
+          <div className="flex items-center justify-between gap-2 pt-0.5">
+            <OpsStatusChip tone={meta.tone} label={meta.label} size="sm" />
+          </div>
+        )}
 
         {isPending && (onAccept || onReject) && (
           <div className="flex items-center gap-2 pt-1" onClick={e => e.stopPropagation()}>
