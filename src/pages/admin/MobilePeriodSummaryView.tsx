@@ -252,7 +252,7 @@ export default function MobilePeriodSummaryView() {
       }
       tabs={
         <>
-          {periods.length > 1 && (
+          {periods.length >= 1 && (
             <div className={cn(MOBILE_PAGE_PX, "pb-3")}>
               <select
                 value={periodId}
@@ -294,10 +294,30 @@ export default function MobilePeriodSummaryView() {
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
       ) : list.length === 0 ? (
-        <div className={cn(MOBILE_PAGE_PX, "py-16 text-center")}>
-          <p className="text-sm text-muted-foreground">
-            {tab === "issues" ? "No issues for this period 🎉" : "No workers in this period."}
-          </p>
+        <div className={cn(MOBILE_PAGE_PX, "py-16 flex flex-col items-center text-center gap-3")}>
+          <div className="h-14 w-14 rounded-2xl bg-muted flex items-center justify-center">
+            {tab === "issues" ? (
+              <span className="text-2xl">🎉</span>
+            ) : (
+              <DollarSign className="h-6 w-6 text-muted-foreground" />
+            )}
+          </div>
+          <div>
+            <p className="text-sm font-medium">
+              {tab === "issues"
+                ? "No issues for this period"
+                : periods.length === 0
+                  ? "No payroll periods yet"
+                  : "No workers in this period"}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {tab === "issues"
+                ? "All workers have valid base pay."
+                : periods.length === 0
+                  ? "Create a period from desktop to get started."
+                  : "Run consolidation from desktop to populate."}
+            </p>
+          </div>
         </div>
       ) : (
         <div className={cn(MOBILE_PAGE_PX, "space-y-2.5")}>
