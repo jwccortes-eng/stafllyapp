@@ -7,15 +7,17 @@ import { Link } from "react-router-dom";
 import { usePortalModules } from "@/hooks/usePortalModules";
 import {
   Wallet, Clock, CalendarDays, ArrowRight, Timer,
-  Bell, ChevronRight, TrendingUp,
+  Bell, ChevronRight, TrendingUp, MapPin, Briefcase,
+  User, FileText, MessageCircle, LifeBuoy,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import { format, parseISO, isToday, isTomorrow, startOfWeek, endOfWeek } from "date-fns";
 import { PendingReviewPrompt } from "@/components/reviews/PendingReviewPrompt";
 import { NextBestActionCard } from "@/components/portal/home/NextBestActionCard";
 import { TodayBlock } from "@/components/portal/home/TodayBlock";
 import { ProfileReadinessStrip } from "@/components/portal/home/ProfileReadinessStrip";
+import { WorkerHero, type WorkerHeroStatus } from "@/components/portal/home/WorkerHero";
+import { QuickActions, type QuickAction } from "@/components/portal/home/QuickActions";
 import { selectNextBestAction, type NbaShift } from "@/lib/portal/next-best-action";
 
 interface NextShift {
