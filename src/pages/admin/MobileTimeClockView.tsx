@@ -22,6 +22,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import {
+  TraceabilitySnapshot,
+  classifyTimeEntrySource,
+  type TraceRisk,
+  type TraceTimelineEvent,
+  type TraceLinkedRecord,
+} from "@/components/traceability/TraceabilitySnapshot";
 
 /**
  * MobileTimeClockView — /app/timeclock mobile.
@@ -51,6 +58,12 @@ interface TimeEntryRow {
   clock_out: string | null;
   break_minutes: number | null;
   status: string | null;
+  // Traceability (read-only) — present in time_entries schema
+  shift_id?: string | null;
+  entry_source?: string | null;
+  approved_by?: string | null;
+  approved_at?: string | null;
+  created_at?: string | null;
 }
 
 interface ScheduledInfo {
@@ -532,7 +545,7 @@ function TimesheetsPanel({ companyId }: { companyId: string | null }) {
         .select("id, first_name, last_name, avatar_url, phone_number, employee_role")
         .eq("company_id", companyId).eq("is_active", true).order("first_name"),
       supabase.from("time_entries")
-        .select("id, employee_id, clock_in, clock_out, break_minutes, status")
+        .select("id, employee_id, clock_in, clock_out, break_minutes, status, shift_id, entry_source, approved_by, approved_at, created_at")
         .eq("company_id", companyId)
         .gte("clock_in", startISO).lte("clock_in", endISO)
         .order("clock_in", { ascending: true }),
@@ -791,25 +804,10 @@ function ReviewSheet({
                   </div>
                   <div className="text-sm font-mono font-semibold tabular-nums">{fmtHours(dayMin)}</div>
                 </div>
-                <div className="space-y-1">
-                  {list.map(en => {
-                    const open = !en.clock_out;
-                    return (
-                      <div key={en.id} className="flex items-center justify-between gap-2 text-xs">
-                        <div className="flex items-center gap-1.5 text-muted-foreground">
-                          <Clock className="h-3 w-3" />
-                          <span className="font-mono tabular-nums">{fmtTime(en.clock_in)} → {open ? "—" : fmtTime(en.clock_out)}</span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          {(en.break_minutes ?? 0) > 0 && (
-                            <span className="text-muted-foreground">{en.break_minutes}m brk</span>
-                          )}
-                          {open && <Badge variant="outline" className="text-[10px] h-5 px-1.5 border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10">Open</Badge>}
-                          {en.status === "needs_review" && <Badge variant="outline" className="text-[10px] h-5 px-1.5 border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10">Review</Badge>}
-                        </div>
-                      </div>
-                    );
-                  })}
+                <div className="space-y-2">
+                  {list.map(en => (
+                    <EntryTraceRow key={en.id} en={en} period={period} />
+                  ))}
                 </div>
               </div>
             );
@@ -830,6 +828,99 @@ function ReviewSheet({
         </div>
       </SheetContent>
     </Sheet>
+  );
+}
+
+/* ───────────────────────── Entry Trace Row ───────────────────────── */
+
+function EntryTraceRow({ en, period }: { en: TimeEntryRow; period: PayPeriod | undefined }) {
+  const [expanded, setExpanded] = useState(false);
+  const open = !en.clock_out;
+  const source = classifyTimeEntrySource(en.entry_source);
+
+  // Risks (read-only inference from existing fields)
+  const risks: TraceRisk[] = [];
+  if (open) risks.push({ label: "Missing clock-out", tone: "bad" });
+  if (!en.shift_id) risks.push({ label: "Not linked to a scheduled shift", tone: "warn" });
+  if (en.status === "needs_review") risks.push({ label: "Flagged for review", tone: "warn" });
+  if (source === "manual_adjustment") risks.push({ label: "Manual adjustment by admin", tone: "info" });
+  if (source === "imported") risks.push({ label: "Imported from payroll batch", tone: "info" });
+
+  const timeline: TraceTimelineEvent[] = [
+    { label: "Created", at: en.created_at, icon: undefined },
+    { label: "Clock in", at: en.clock_in },
+    { label: "Clock out", at: en.clock_out, tone: open ? "warn" : "default" },
+    { label: "Approved", at: en.approved_at },
+  ];
+
+  const linked: TraceLinkedRecord[] = [
+    {
+      label: "Scheduled shift",
+      value: en.shift_id ? `${en.shift_id.slice(0, 8)}…` : null,
+      hint: en.shift_id || undefined,
+    },
+    {
+      label: "Pay period",
+      value: period
+        ? `${format(parseISO(period.start_date), "MMM d", { locale: enUS })}–${format(parseISO(period.end_date), "MMM d", { locale: enUS })}`
+        : null,
+    },
+    {
+      label: "Period status",
+      value: period?.status ?? null,
+    },
+  ];
+
+  const audit: TraceLinkedRecord[] = [
+    { label: "Entry ID", value: en.id.slice(0, 8) + "…", hint: en.id },
+    { label: "Source", value: en.entry_source ?? "clock" },
+    { label: "Approved by", value: en.approved_by ? en.approved_by.slice(0, 8) + "…" : null, hint: en.approved_by ?? undefined },
+  ];
+
+  return (
+    <div className="rounded-xl border border-border/40 bg-background/40">
+      {/* Summary row (clickable to expand) */}
+      <button
+        type="button"
+        onClick={() => setExpanded(v => !v)}
+        className="w-full flex items-center justify-between gap-2 px-2.5 py-2 text-xs hover:bg-muted/30 transition-colors rounded-xl"
+      >
+        <div className="flex items-center gap-1.5 text-muted-foreground min-w-0">
+          <Clock className="h-3 w-3 shrink-0" />
+          <span className="font-mono tabular-nums truncate">
+            {fmtTime(en.clock_in)} → {open ? "—" : fmtTime(en.clock_out!)}
+          </span>
+        </div>
+        <div className="flex items-center gap-1.5 shrink-0">
+          {(en.break_minutes ?? 0) > 0 && (
+            <span className="text-muted-foreground">{en.break_minutes}m brk</span>
+          )}
+          {open && <Badge variant="outline" className="text-[10px] h-5 px-1.5 border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10">Open</Badge>}
+          {en.status === "needs_review" && <Badge variant="outline" className="text-[10px] h-5 px-1.5 border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10">Review</Badge>}
+          {!en.shift_id && !open && <Badge variant="outline" className="text-[10px] h-5 px-1.5 border-rose-500/30 text-rose-700 dark:text-rose-400 bg-rose-500/10">No shift</Badge>}
+          <ChevronRight
+            className={cn(
+              "h-3.5 w-3.5 text-muted-foreground transition-transform",
+              expanded && "rotate-90"
+            )}
+          />
+        </div>
+      </button>
+
+      {/* Trace panel */}
+      {expanded && (
+        <div className="px-2.5 pb-2.5 pt-1">
+          <TraceabilitySnapshot
+            compact
+            source={source}
+            timeline={timeline}
+            linked={linked}
+            risks={risks}
+            audit={audit}
+          />
+        </div>
+      )}
+    </div>
   );
 }
 
