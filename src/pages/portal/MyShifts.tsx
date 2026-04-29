@@ -526,7 +526,7 @@ export default function MyShifts() {
                       </span>
                     )}
                   </div>
-                  <p className="text-[13.5px] font-bold text-foreground truncate">{s.title}</p>
+                  <p className="text-[13.5px] font-bold text-foreground truncate">{formatDisplayName(s.title)}</p>
                   <p className="text-[11px] text-muted-foreground/75 mt-0.5">
                     {isToday(parseISO(s.date)) ? "Today" : isTomorrow(parseISO(s.date)) ? "Tomorrow" : format(parseISO(s.date), "EEE d MMM", { locale: enUS })}
                     {" · "}
