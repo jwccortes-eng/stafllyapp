@@ -207,21 +207,21 @@ export function MobileShiftOperationsSheet({
         <div className="px-5 pt-4 pb-3 border-b border-border/40 bg-background/95 backdrop-blur-sm">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2 mb-1">
+              <div className="flex items-center gap-2 mb-1.5">
                 {shift.shift_code && (
-                  <span className="inline-flex items-center gap-1 text-[11px] font-mono font-semibold text-muted-foreground">
-                    <Hash className="h-3 w-3" />
+                  <span className="inline-flex items-center gap-1 text-xs font-mono font-semibold text-muted-foreground">
+                    <Hash className="h-3.5 w-3.5" />
                     {formatShiftCode(shift.shift_code)}
                   </span>
                 )}
                 <StatusPill draft={draft} published={published} understaffed={understaffed} />
               </div>
-              <h2 className="text-lg font-semibold tracking-tight truncate leading-tight">
+              <h2 className="text-xl font-semibold tracking-tight leading-tight line-clamp-2">
                 {clientName && clientName !== "—" ? clientName : (shift.title || "Shift")}
               </h2>
               {locationName && (
-                <div className="flex items-center gap-1 text-[12px] text-muted-foreground mt-0.5 truncate">
-                  <MapPin className="h-3 w-3 shrink-0" />
+                <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1 truncate">
+                  <MapPin className="h-3.5 w-3.5 shrink-0" />
                   <span className="truncate">{locationName}</span>
                 </div>
               )}
@@ -229,23 +229,23 @@ export function MobileShiftOperationsSheet({
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 rounded-full shrink-0 -mt-1 -mr-1"
+              className="h-9 w-9 rounded-full shrink-0 -mt-1 -mr-1"
               onClick={() => onOpenChange(false)}
               aria-label="Close"
             >
-              <X className="h-4 w-4" />
+              <X className="h-5 w-5" />
             </Button>
           </div>
 
           {/* Date + time hero */}
-          <div className="mt-3 flex items-center gap-3">
-            <div className="flex items-center gap-2 px-2.5 h-8 rounded-lg bg-muted/60">
-              <CalendarDays className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="text-[12px] font-medium">{dateLabel(shift.date)}</span>
+          <div className="mt-3 flex items-center gap-2">
+            <div className="flex items-center gap-1.5 px-3 h-9 rounded-lg bg-muted/60">
+              <CalendarDays className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium">{dateLabel(shift.date)}</span>
             </div>
-            <div className="flex items-center gap-2 px-2.5 h-8 rounded-lg bg-muted/60">
-              <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="text-[13px] font-mono font-semibold tabular-nums">
+            <div className="flex items-center gap-1.5 px-3 h-9 rounded-lg bg-muted/60">
+              <Clock className="h-4 w-4 text-muted-foreground" />
+              <span className="text-base font-mono font-semibold tabular-nums">
                 {formatTimeShort(shift.start_time)}–{formatTimeShort(shift.end_time)}
               </span>
             </div>
@@ -282,8 +282,8 @@ export function MobileShiftOperationsSheet({
           {/* Operations snapshot */}
           <section>
             <SectionTitle icon={Sparkles}>Operations snapshot</SectionTitle>
-            <div className="rounded-2xl border border-border/50 bg-muted/30 p-3.5">
-              <p className="text-[13px] leading-relaxed text-foreground/90">{snapshot}</p>
+            <div className="rounded-2xl border border-border/50 bg-muted/30 p-4">
+              <p className="text-sm leading-relaxed text-foreground/90">{snapshot}</p>
             </div>
           </section>
 
@@ -291,15 +291,15 @@ export function MobileShiftOperationsSheet({
           <section>
             <SectionTitle icon={Users}>
               Assigned workers
-              <span className="ml-1.5 text-[11px] font-normal text-muted-foreground">
+              <span className="ml-1.5 text-xs font-normal text-muted-foreground normal-case tracking-normal">
                 ({assignedCount}{slots > 0 ? `/${slots}` : ""})
               </span>
             </SectionTitle>
 
             {assignedWorkers.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-border bg-muted/20 px-4 py-5 text-center">
-                <Users className="h-5 w-5 text-muted-foreground mx-auto mb-1.5" />
-                <p className="text-[12px] text-muted-foreground">No workers assigned yet</p>
+              <div className="rounded-2xl border border-dashed border-border bg-muted/20 px-4 py-6 text-center">
+                <Users className="h-5 w-5 text-muted-foreground mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground">No workers assigned yet</p>
               </div>
             ) : (
               <div className="space-y-1.5 max-h-[260px] overflow-y-auto pr-1 -mr-1">
@@ -310,19 +310,19 @@ export function MobileShiftOperationsSheet({
             )}
 
             {understaffed && (
-              <div className="mt-2.5 rounded-2xl border border-rose-500/30 bg-rose-500/5 p-3 flex items-center justify-between gap-3">
+              <div className="mt-2.5 rounded-2xl border border-rose-500/30 bg-rose-500/5 p-3.5 flex items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <div className="text-[13px] font-semibold text-rose-700 dark:text-rose-400">
+                  <div className="text-sm font-semibold text-rose-700 dark:text-rose-400">
                     {slots - assignedCount} spot{slots - assignedCount === 1 ? "" : "s"} open
                   </div>
-                  <div className="text-[11px] text-rose-600/80 dark:text-rose-400/70">
+                  <div className="text-xs text-rose-600/80 dark:text-rose-400/70 mt-0.5">
                     Add workers to reach full coverage
                   </div>
                 </div>
                 <Button
                   size="sm"
                   variant="outline"
-                  className="shrink-0 h-8 rounded-xl border-rose-500/40 text-rose-700 dark:text-rose-400 hover:bg-rose-500/10"
+                  className="shrink-0 h-9 rounded-xl border-rose-500/40 text-rose-700 dark:text-rose-400 hover:bg-rose-500/10 text-sm font-medium"
                   onClick={handleAssign}
                 >
                   <UserPlus className="h-3.5 w-3.5 mr-1" />
@@ -353,12 +353,12 @@ export function MobileShiftOperationsSheet({
                 <DetailRow icon={Sparkles} label="Claimable" value="Open to worker claims" />
               )}
               {shift.notes && (
-                <div className="px-3.5 py-3">
-                  <div className="flex items-center gap-2 text-[11px] uppercase tracking-wider text-muted-foreground mb-1.5">
-                    <StickyNote className="h-3 w-3" />
+                <div className="px-4 py-3">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground mb-1.5">
+                    <StickyNote className="h-3.5 w-3.5" />
                     Notes
                   </div>
-                  <p className="text-[13px] leading-relaxed text-foreground/90 whitespace-pre-wrap">
+                  <p className="text-sm leading-relaxed text-foreground/90 whitespace-pre-wrap">
                     {shift.notes}
                   </p>
                 </div>
@@ -368,21 +368,21 @@ export function MobileShiftOperationsSheet({
 
           {/* Inline secondary actions */}
           <section className="grid grid-cols-2 gap-2">
-            <Button variant="outline" className="h-11 rounded-xl justify-start gap-2" onClick={handleCopySummary}>
+            <Button variant="outline" className="h-12 rounded-xl justify-start gap-2 text-sm font-medium" onClick={handleCopySummary}>
               <Copy className="h-4 w-4" />
-              <span className="text-[13px]">Copy summary</span>
+              <span>Copy summary</span>
             </Button>
-            <Button variant="outline" className="h-11 rounded-xl justify-start gap-2" onClick={handleShare}>
+            <Button variant="outline" className="h-12 rounded-xl justify-start gap-2 text-sm font-medium" onClick={handleShare}>
               <Share2 className="h-4 w-4" />
-              <span className="text-[13px]">Share shift</span>
+              <span>Share shift</span>
             </Button>
-            <Button variant="outline" className="h-11 rounded-xl justify-start gap-2" onClick={handleViewAttendance}>
+            <Button variant="outline" className="h-12 rounded-xl justify-start gap-2 text-sm font-medium" onClick={handleViewAttendance}>
               <ClipboardList className="h-4 w-4" />
-              <span className="text-[13px]">Attendance</span>
+              <span>Attendance</span>
             </Button>
-            <Button variant="outline" className="h-11 rounded-xl justify-start gap-2" onClick={handleAssign}>
+            <Button variant="outline" className="h-12 rounded-xl justify-start gap-2 text-sm font-medium" onClick={handleAssign}>
               <UserPlus className="h-4 w-4" />
-              <span className="text-[13px]">Assign workers</span>
+              <span>Assign workers</span>
             </Button>
           </section>
         </div>
@@ -390,7 +390,7 @@ export function MobileShiftOperationsSheet({
         {/* Sticky footer */}
         <div className="px-5 pt-3 pb-[max(env(safe-area-inset-bottom,0px),12px)] border-t border-border/40 bg-background/95 backdrop-blur-sm">
           <Button
-            className="w-full h-12 rounded-xl text-[14px] font-semibold gap-2"
+            className="w-full h-12 rounded-xl text-sm font-semibold gap-2"
             onClick={handleOpenFullEditor}
           >
             <ExternalLink className="h-4 w-4" />
@@ -406,9 +406,9 @@ export function MobileShiftOperationsSheet({
 
 function SectionTitle({ icon: Icon, children }: { icon: any; children: React.ReactNode }) {
   return (
-    <div className="flex items-center gap-1.5 mb-2 px-0.5">
-      <Icon className="h-3.5 w-3.5 text-muted-foreground" />
-      <span className="text-[11px] uppercase tracking-[0.14em] font-semibold text-muted-foreground">
+    <div className="flex items-center gap-1.5 mb-2.5 px-0.5">
+      <Icon className="h-4 w-4 text-muted-foreground" />
+      <span className="text-sm font-semibold text-foreground">
         {children}
       </span>
     </div>
@@ -422,9 +422,9 @@ function StatCard({ label, value, accent }: { label: string; value: number | str
     accent === "bad"  ? "text-rose-600 dark:text-rose-400" :
     "text-foreground";
   return (
-    <div className="rounded-2xl border border-border/50 bg-card px-3.5 py-3 shadow-sm">
-      <div className={cn("text-xl font-semibold tabular-nums leading-none", cls)}>{value}</div>
-      <div className="text-[10.5px] uppercase tracking-wider text-muted-foreground mt-1.5">{label}</div>
+    <div className="rounded-2xl border border-border/50 bg-card px-3.5 py-3.5 shadow-sm">
+      <div className={cn("text-2xl font-semibold tabular-nums leading-none", cls)}>{value}</div>
+      <div className="text-xs text-muted-foreground mt-2 font-medium">{label}</div>
     </div>
   );
 }
@@ -438,9 +438,9 @@ function BriefRow({ tone, text }: { tone: "good" | "warn" | "bad" | "info"; text
   } as const;
   const { cls, Icon } = map[tone];
   return (
-    <div className={cn("flex items-center gap-2 rounded-xl border px-3 py-2", cls)}>
-      <Icon className="h-3.5 w-3.5 shrink-0" />
-      <span className="text-[12.5px] font-medium">{text}</span>
+    <div className={cn("flex items-center gap-2 rounded-xl border px-3 py-2.5", cls)}>
+      <Icon className="h-4 w-4 shrink-0" />
+      <span className="text-sm font-medium leading-snug">{text}</span>
     </div>
   );
 }
@@ -450,24 +450,24 @@ function WorkerRow({ worker }: { worker: Employee }) {
   const initialsStr = (worker.first_name?.[0] ?? "").toUpperCase() + (worker.last_name?.[0] ?? "").toUpperCase();
   return (
     <div className="flex items-center gap-3 rounded-2xl border border-border/50 bg-card px-3 py-2.5">
-      <Avatar className="h-9 w-9 shrink-0">
+      <Avatar className="h-10 w-10 shrink-0">
         {worker.avatar_url ? <AvatarImage src={worker.avatar_url} alt="" /> : null}
-        <AvatarFallback className="text-[11px] font-semibold bg-muted">
+        <AvatarFallback className="text-xs font-semibold bg-muted">
           {initialsStr || "·"}
         </AvatarFallback>
       </Avatar>
       <div className="min-w-0 flex-1">
-        <div className="text-[13.5px] font-medium truncate leading-tight">
+        <div className="text-sm font-medium truncate leading-snug">
           {worker.first_name} {worker.last_name}
         </div>
-        <div className="text-[11px] text-muted-foreground truncate mt-0.5">
+        <div className="text-xs text-muted-foreground truncate mt-0.5">
           {phone ? phone : "No phone on file"}
         </div>
       </div>
       {phone ? (
         <a
           href={`tel:${phone}`}
-          className="shrink-0 inline-flex items-center justify-center h-9 w-9 rounded-xl bg-primary/10 text-primary hover:bg-primary/15 active:scale-95 transition"
+          className="shrink-0 inline-flex items-center justify-center h-10 w-10 rounded-xl bg-primary/10 text-primary hover:bg-primary/15 active:scale-95 transition"
           aria-label={`Call ${worker.first_name}`}
         >
           <Phone className="h-4 w-4" />
@@ -479,12 +479,12 @@ function WorkerRow({ worker }: { worker: Employee }) {
 
 function DetailRow({ icon: Icon, label, value, muted }: { icon: any; label: string; value: string; muted?: boolean }) {
   return (
-    <div className="flex items-center gap-3 px-3.5 py-2.5">
-      <Icon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-      <div className="text-[11.5px] uppercase tracking-wider text-muted-foreground w-24 shrink-0">
+    <div className="flex items-center gap-3 px-4 py-3">
+      <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
+      <div className="text-xs font-medium text-muted-foreground w-24 shrink-0">
         {label}
       </div>
-      <div className={cn("text-[13px] font-medium truncate text-right flex-1", muted && "text-muted-foreground")}>
+      <div className={cn("text-sm font-medium truncate text-right flex-1", muted && "text-muted-foreground")}>
         {value}
       </div>
     </div>
@@ -492,14 +492,15 @@ function DetailRow({ icon: Icon, label, value, muted }: { icon: any; label: stri
 }
 
 function StatusPill({ draft, published, understaffed }: { draft: boolean; published: boolean; understaffed: boolean }) {
+  const base = "text-[11px] font-medium h-[22px] px-2 leading-none";
   if (draft) {
-    return <Badge variant="outline" className="text-[10px] h-5 px-1.5 border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10">Draft</Badge>;
+    return <Badge variant="outline" className={cn(base, "border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10")}>Draft</Badge>;
   }
   if (published && understaffed) {
-    return <Badge variant="outline" className="text-[10px] h-5 px-1.5 border-rose-500/40 text-rose-700 dark:text-rose-400 bg-rose-500/10">Unstaffed</Badge>;
+    return <Badge variant="outline" className={cn(base, "border-rose-500/40 text-rose-700 dark:text-rose-400 bg-rose-500/10")}>Unstaffed</Badge>;
   }
   if (published) {
-    return <Badge variant="outline" className="text-[10px] h-5 px-1.5 border-emerald-500/40 text-emerald-700 dark:text-emerald-400 bg-emerald-500/10">Published</Badge>;
+    return <Badge variant="outline" className={cn(base, "border-emerald-500/40 text-emerald-700 dark:text-emerald-400 bg-emerald-500/10")}>Published</Badge>;
   }
-  return <Badge variant="outline" className="text-[10px] h-5 px-1.5">Shift</Badge>;
+  return <Badge variant="outline" className={cn(base)}>Shift</Badge>;
 }

@@ -316,8 +316,8 @@ export default function MobileShiftsView() {
       <div className="px-4 pt-4 pb-3 sticky top-0 z-20 bg-background/95 backdrop-blur-sm border-b border-border/40">
         <div className="flex items-center justify-between gap-2 mb-3">
           <div className="min-w-0">
-            <h1 className="text-xl font-semibold tracking-tight">Shifts</h1>
-            <p className="text-[11px] text-muted-foreground truncate">
+            <h1 className="text-2xl font-semibold tracking-tight leading-tight">Shifts</h1>
+            <p className="text-xs text-muted-foreground truncate mt-0.5">
               {selectedCompany?.name ?? "All companies"} · {format(new Date(), "EEE MMM d", { locale: enUS })}
             </p>
           </div>
@@ -331,7 +331,7 @@ export default function MobileShiftsView() {
             >
               <SlidersHorizontal className="h-4 w-4" />
               {activeFiltersCount > 0 && (
-                <span className="absolute top-1 right-1 h-4 min-w-4 px-1 text-[9px] font-bold leading-none flex items-center justify-center rounded-full bg-primary text-primary-foreground">
+                <span className="absolute top-0.5 right-0.5 h-4 min-w-4 px-1 text-[10px] font-bold leading-none flex items-center justify-center rounded-full bg-primary text-primary-foreground">
                   {activeFiltersCount}
                 </span>
               )}
@@ -359,7 +359,7 @@ export default function MobileShiftsView() {
                 key={t.key}
                 onClick={() => setTab(t.key)}
                 className={cn(
-                  "shrink-0 inline-flex items-center gap-1.5 px-3 h-8 rounded-full text-xs font-medium transition-all",
+                  "shrink-0 inline-flex items-center gap-1.5 px-3.5 h-9 rounded-full text-sm font-medium transition-all",
                   active
                     ? "bg-primary text-primary-foreground shadow-sm"
                     : "bg-muted/60 text-muted-foreground hover:bg-muted active:scale-[0.97]"
@@ -368,7 +368,7 @@ export default function MobileShiftsView() {
                 <span>{t.label}</span>
                 {count > 0 && (
                   <span className={cn(
-                    "h-4 min-w-4 px-1 inline-flex items-center justify-center rounded-full text-[9px] font-bold",
+                    "h-[18px] min-w-[18px] px-1 inline-flex items-center justify-center rounded-full text-[10px] font-bold leading-none",
                     active ? "bg-primary-foreground/20 text-primary-foreground" : "bg-background text-foreground"
                   )}>
                     {count}
@@ -402,12 +402,12 @@ export default function MobileShiftsView() {
           <div className="space-y-5">
             {grouped.map(group => (
               <div key={group.date}>
-                <div className="flex items-center gap-2 mb-2 px-1">
-                  <span className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground font-semibold">
+                <div className="flex items-baseline gap-2 mb-2.5 px-1">
+                  <span className="text-sm font-semibold text-foreground">
                     {group.label}
                   </span>
-                  <span className="text-[11px] text-muted-foreground/60">
-                    · {group.shifts.length}
+                  <span className="text-xs text-muted-foreground">
+                    · {group.shifts.length} shift{group.shifts.length === 1 ? "" : "s"}
                   </span>
                 </div>
                 <div className="space-y-2.5">
@@ -495,9 +495,9 @@ function SummaryCard({ label, value, accent }: { label: string; value: number | 
     accent === "bad" ? "text-rose-600 dark:text-rose-400" :
     "text-foreground";
   return (
-    <div className="rounded-2xl border border-border/50 bg-card px-2.5 py-2.5 text-center shadow-sm">
-      <div className={cn("text-base font-semibold tabular-nums", accentClass)}>{value}</div>
-      <div className="text-[10px] uppercase tracking-wider text-muted-foreground mt-0.5">{label}</div>
+    <div className="rounded-2xl border border-border/50 bg-card px-2.5 py-3 text-center shadow-sm">
+      <div className={cn("text-xl font-semibold tabular-nums leading-none", accentClass)}>{value}</div>
+      <div className="text-[11px] text-muted-foreground mt-1.5 font-medium">{label}</div>
     </div>
   );
 }
@@ -546,14 +546,14 @@ function ShiftCard({
       )}
     >
       {/* Top row: client + status */}
-      <div className="flex items-start justify-between gap-2 mb-2">
+      <div className="flex items-start justify-between gap-2 mb-2.5">
         <div className="min-w-0 flex-1">
-          <div className="text-sm font-semibold tracking-tight truncate">
+          <div className="text-base font-semibold tracking-tight leading-snug line-clamp-1">
             {clientName}
           </div>
           {locationName && (
-            <div className="flex items-center gap-1 text-[11px] text-muted-foreground truncate mt-0.5">
-              <MapPin className="h-3 w-3 shrink-0" />
+            <div className="flex items-center gap-1 text-xs text-muted-foreground truncate mt-1 leading-snug">
+              <MapPin className="h-3.5 w-3.5 shrink-0" />
               <span className="truncate">{locationName}</span>
             </div>
           )}
@@ -565,13 +565,13 @@ function ShiftCard({
       </div>
 
       {/* Time */}
-      <div className="flex items-center gap-2 mb-3">
-        <Clock className="h-4 w-4 text-muted-foreground" />
-        <span className="text-base font-mono font-semibold tabular-nums">
+      <div className="flex items-baseline gap-2 mb-3">
+        <Clock className="h-4 w-4 text-muted-foreground self-center" />
+        <span className="text-xl font-mono font-semibold tabular-nums leading-none">
           {formatTimeShort(shift.start_time)}–{formatTimeShort(shift.end_time)}
         </span>
         {shift.title && shift.title !== clientName && (
-          <span className="text-[11px] text-muted-foreground truncate">· {shift.title}</span>
+          <span className="text-xs text-muted-foreground truncate">· {shift.title}</span>
         )}
       </div>
 
@@ -581,7 +581,7 @@ function ShiftCard({
           <Users className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
           <span className="text-xs text-muted-foreground truncate">
             {assignedEmployees.length === 0
-              ? slots > 0 ? `0 / ${slots}` : "Unassigned"
+              ? slots > 0 ? `0 / ${slots} workers` : "Unassigned"
               : (
                 <>
                   {visibleNames.join(", ")}
@@ -591,7 +591,7 @@ function ShiftCard({
           </span>
         </div>
         {slots > 0 && (
-          <span className="text-[11px] font-mono tabular-nums text-muted-foreground shrink-0">
+          <span className="text-xs font-mono tabular-nums text-muted-foreground shrink-0">
             {assignedEmployees.length}/{slots}
           </span>
         )}
@@ -624,8 +624,8 @@ function ShiftCard({
 
       {/* Footer: explicit affordance + Operations button */}
       <div className="mt-3 pt-3 border-t border-border/40 flex items-center justify-between gap-2">
-        <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
-          <Eye className="h-3 w-3" />
+        <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+          <Eye className="h-3.5 w-3.5" />
           View operations
         </span>
         <button
@@ -634,10 +634,10 @@ function ShiftCard({
             e.stopPropagation();
             onOpen();
           }}
-          className="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg text-[11px] font-medium bg-primary/10 text-primary hover:bg-primary/15 active:scale-95 transition"
+          className="inline-flex items-center gap-1 h-8 px-3 rounded-lg text-xs font-semibold bg-primary/10 text-primary hover:bg-primary/15 active:scale-95 transition"
         >
           Operations
-          <ChevronRight className="h-3 w-3" />
+          <ChevronRight className="h-3.5 w-3.5" />
         </button>
       </div>
     </div>
@@ -645,13 +645,14 @@ function ShiftCard({
 }
 
 function StatusBadge({ isDraft, understaffed }: { isDraft: boolean; understaffed: boolean }) {
+  const base = "text-[11px] font-medium h-[22px] px-2 leading-none";
   if (isDraft) {
-    return <Badge variant="outline" className="text-[10px] h-5 px-1.5 border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10">Draft</Badge>;
+    return <Badge variant="outline" className={cn(base, "border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10")}>Draft</Badge>;
   }
   if (understaffed) {
-    return <Badge variant="outline" className="text-[10px] h-5 px-1.5 border-rose-500/40 text-rose-700 dark:text-rose-400 bg-rose-500/10">Unstaffed</Badge>;
+    return <Badge variant="outline" className={cn(base, "border-rose-500/40 text-rose-700 dark:text-rose-400 bg-rose-500/10")}>Unstaffed</Badge>;
   }
-  return <Badge variant="outline" className="text-[10px] h-5 px-1.5 border-emerald-500/40 text-emerald-700 dark:text-emerald-400 bg-emerald-500/10">Published</Badge>;
+  return <Badge variant="outline" className={cn(base, "border-emerald-500/40 text-emerald-700 dark:text-emerald-400 bg-emerald-500/10")}>Published</Badge>;
 }
 
 function Warning({ icon: Icon, label, tone }: { icon: any; label: string; tone: "bad" | "warn" }) {
@@ -659,7 +660,7 @@ function Warning({ icon: Icon, label, tone }: { icon: any; label: string; tone: 
     ? "bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/30"
     : "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30";
   return (
-    <span className={cn("inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-md border", cls)}>
+    <span className={cn("inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-md border", cls)}>
       <Icon className="h-3 w-3" />
       {label}
     </span>
@@ -698,8 +699,8 @@ function EmptyState({ tab }: { tab: TabKey }) {
       <div className="h-14 w-14 rounded-2xl bg-muted/60 flex items-center justify-center mb-3">
         <CalendarDays className="h-6 w-6 text-muted-foreground" />
       </div>
-      <h3 className="text-sm font-semibold mb-1">{m.title}</h3>
-      <p className="text-[12px] text-muted-foreground max-w-[260px] leading-snug">{m.hint}</p>
+      <h3 className="text-base font-semibold mb-1">{m.title}</h3>
+      <p className="text-sm text-muted-foreground max-w-[280px] leading-relaxed">{m.hint}</p>
     </div>
   );
 }
@@ -710,8 +711,8 @@ function ErrorState({ message, onRetry }: { message: string; onRetry: () => void
       <div className="h-14 w-14 rounded-2xl bg-rose-500/10 flex items-center justify-center mb-3">
         <AlertTriangle className="h-6 w-6 text-rose-600" />
       </div>
-      <h3 className="text-sm font-semibold mb-1">Couldn't load shifts</h3>
-      <p className="text-[12px] text-muted-foreground max-w-[280px] leading-snug mb-4">{message}</p>
+      <h3 className="text-base font-semibold mb-1">Couldn't load shifts</h3>
+      <p className="text-sm text-muted-foreground max-w-[300px] leading-relaxed mb-4">{message}</p>
       <Button size="sm" variant="outline" onClick={onRetry}>Retry</Button>
     </div>
   );
