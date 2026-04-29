@@ -546,14 +546,14 @@ function ShiftCard({
       )}
     >
       {/* Top row: client + status */}
-      <div className="flex items-start justify-between gap-2 mb-2">
+      <div className="flex items-start justify-between gap-2 mb-2.5">
         <div className="min-w-0 flex-1">
-          <div className="text-sm font-semibold tracking-tight truncate">
+          <div className="text-base font-semibold tracking-tight leading-snug line-clamp-1">
             {clientName}
           </div>
           {locationName && (
-            <div className="flex items-center gap-1 text-[11px] text-muted-foreground truncate mt-0.5">
-              <MapPin className="h-3 w-3 shrink-0" />
+            <div className="flex items-center gap-1 text-xs text-muted-foreground truncate mt-1 leading-snug">
+              <MapPin className="h-3.5 w-3.5 shrink-0" />
               <span className="truncate">{locationName}</span>
             </div>
           )}
@@ -565,13 +565,13 @@ function ShiftCard({
       </div>
 
       {/* Time */}
-      <div className="flex items-center gap-2 mb-3">
-        <Clock className="h-4 w-4 text-muted-foreground" />
-        <span className="text-base font-mono font-semibold tabular-nums">
+      <div className="flex items-baseline gap-2 mb-3">
+        <Clock className="h-4 w-4 text-muted-foreground self-center" />
+        <span className="text-xl font-mono font-semibold tabular-nums leading-none">
           {formatTimeShort(shift.start_time)}–{formatTimeShort(shift.end_time)}
         </span>
         {shift.title && shift.title !== clientName && (
-          <span className="text-[11px] text-muted-foreground truncate">· {shift.title}</span>
+          <span className="text-xs text-muted-foreground truncate">· {shift.title}</span>
         )}
       </div>
 
@@ -581,7 +581,7 @@ function ShiftCard({
           <Users className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
           <span className="text-xs text-muted-foreground truncate">
             {assignedEmployees.length === 0
-              ? slots > 0 ? `0 / ${slots}` : "Unassigned"
+              ? slots > 0 ? `0 / ${slots} workers` : "Unassigned"
               : (
                 <>
                   {visibleNames.join(", ")}
@@ -591,7 +591,7 @@ function ShiftCard({
           </span>
         </div>
         {slots > 0 && (
-          <span className="text-[11px] font-mono tabular-nums text-muted-foreground shrink-0">
+          <span className="text-xs font-mono tabular-nums text-muted-foreground shrink-0">
             {assignedEmployees.length}/{slots}
           </span>
         )}
@@ -624,8 +624,8 @@ function ShiftCard({
 
       {/* Footer: explicit affordance + Operations button */}
       <div className="mt-3 pt-3 border-t border-border/40 flex items-center justify-between gap-2">
-        <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
-          <Eye className="h-3 w-3" />
+        <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+          <Eye className="h-3.5 w-3.5" />
           View operations
         </span>
         <button
@@ -634,10 +634,10 @@ function ShiftCard({
             e.stopPropagation();
             onOpen();
           }}
-          className="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg text-[11px] font-medium bg-primary/10 text-primary hover:bg-primary/15 active:scale-95 transition"
+          className="inline-flex items-center gap-1 h-8 px-3 rounded-lg text-xs font-semibold bg-primary/10 text-primary hover:bg-primary/15 active:scale-95 transition"
         >
           Operations
-          <ChevronRight className="h-3 w-3" />
+          <ChevronRight className="h-3.5 w-3.5" />
         </button>
       </div>
     </div>
