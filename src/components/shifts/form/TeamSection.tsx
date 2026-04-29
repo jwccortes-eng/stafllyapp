@@ -5,7 +5,7 @@
  * In EDIT: assignment UI is handled outside; we still show admin selector.
  */
 import { memo } from "react";
-import { Users } from "lucide-react";
+import { Users, Info } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -105,6 +105,16 @@ function TeamSectionImpl({
             showBulkActions={transportRequired || (slotsNum > 0 && selectedEmployees.length < slotsNum)}
             remainingSlots={Math.max(slotsNum - selectedEmployees.length, 0)}
           />
+        </div>
+      )}
+
+      {!showEmployeePicker && mode === "edit" && (
+        <div className="flex items-start gap-2 p-2.5 rounded-xl bg-primary/[0.04] border border-primary/15">
+          <Info className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
+          <p className="text-[11px] text-muted-foreground leading-snug">
+            Para <span className="font-semibold text-foreground">asignar o quitar trabajadores</span>, cierra este modal y usa el botón{" "}
+            <span className="font-semibold text-primary">"Agregar empleados"</span> en el detalle del turno (sección Equipo).
+          </p>
         </div>
       )}
 
