@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { usePageView } from "@/hooks/useAuditLog";
+import { useIsMobile } from "@/hooks/use-mobile";
 import AuditPanel from "@/components/audit/AuditPanel";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
@@ -23,6 +24,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import TodayView from "./TodayView";
 import { TimesheetView } from "@/components/timeclock/TimesheetView";
 import { MonthClockView } from "@/components/timeclock/MonthClockView";
+import MobileTimeClockView from "./MobileTimeClockView";
 
 const CLOCK_SETTINGS_SECTIONS: SettingsSection[] = [
   {
@@ -52,8 +54,18 @@ const CLOCK_SETTINGS_SECTIONS: SettingsSection[] = [
   },
 ];
 
+/**
+ * Viewport wrapper. Mobile uses MobileTimeClockView; desktop renders the
+ * existing DesktopTimeClockView byte-equivalent. Isolating hook universes
+ * prevents Rules of Hooks violations across viewports.
+ */
 export default function TimeClock() {
   usePageView("Time Clock");
+  const isMobile = useIsMobile();
+  return isMobile ? <MobileTimeClockView /> : <DesktopTimeClockView />;
+}
+
+function DesktopTimeClockView() {
   const [activeTab, setActiveTab] = useState("today");
   const [timesheetMode, setTimesheetMode] = useState<"list" | "calendar">("list");
   const [clockSettingsOpen, setClockSettingsOpen] = useState(false);
