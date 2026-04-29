@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   CalendarDays, Plus, SlidersHorizontal, Search, ChevronLeft, ChevronRight,
-  Users, Clock, AlertTriangle, FileEdit, MapPin, Building2, X, Loader2,
+  Users, Clock, AlertTriangle, FileEdit, MapPin, Building2, X, Loader2, Eye,
 } from "lucide-react";
 import { format, parseISO, isToday, isTomorrow, addDays, startOfDay } from "date-fns";
 import { enUS } from "date-fns/locale";
