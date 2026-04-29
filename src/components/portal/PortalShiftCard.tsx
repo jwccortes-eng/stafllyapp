@@ -6,6 +6,7 @@ import { format, parseISO, isToday, isTomorrow, differenceInMinutes } from "date
 import { enUS } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { OpsStatusChip, type OpsStatusTone } from "@/components/operations/OpsStatusChip";
+import { formatDisplayName } from "@/lib/format-helpers";
 
 export interface PortalShiftData {
   id: string;
