@@ -391,228 +391,26 @@ export function EmployeeCombobox({
         </details>
       )}
 
-      {/* Employee list */}
-      <div className="border rounded-xl overflow-y-auto" style={{ maxHeight }}>
-        {sorted.length === 0 && !onAddNewEmployee ? (
-          <div className="p-3 space-y-2">
-            <p className="text-xs text-muted-foreground text-center">
-              {search ? "No results" : "No employees"}
-            </p>
-            {/* Admin-friendly diagnostic when the list is empty.
-                Helps disambiguate: empty roster vs filter mismatch vs tenant scope. */}
-            {(employees.length === 0 || (search && filtered.length === 0)) && (
-              <div className="rounded-lg bg-muted/40 border border-border/40 p-2 text-[10px] font-mono text-muted-foreground space-y-0.5">
-                <div className="flex justify-between gap-2">
-                  <span className="opacity-60">company</span>
-                  <span className="truncate" title={debugContext?.selectedCompanyId ?? ""}>
-                    {debugContext?.companyName ?? "—"}
-                  </span>
-                </div>
-                <div className="flex justify-between gap-2">
-                  <span className="opacity-60">companyId</span>
-                  <span className="truncate" title={debugContext?.selectedCompanyId ?? ""}>
-                    {debugContext?.selectedCompanyId
-                      ? `${debugContext.selectedCompanyId.slice(0, 8)}…`
-                      : "global / null"}
-                  </span>
-                </div>
-                <div className="flex justify-between gap-2">
-                  <span className="opacity-60">employeesLoaded</span>
-                  <span>{employees.length}</span>
-                </div>
-                <div className="flex justify-between gap-2">
-                  <span className="opacity-60">filteredCount</span>
-                  <span>{filtered.length}</span>
-                </div>
-                <div className="flex justify-between gap-2">
-                  <span className="opacity-60">selectedCount</span>
-                  <span>{selected.length}</span>
-                </div>
-                {employees.length === 0 && (
-                  <p className="pt-1 text-[10px] text-warning leading-snug font-sans">
-                    Roster vacío para esta compañía. Verifica el contexto multi-tenant.
-                  </p>
-                )}
-                {employees.length > 0 && search && filtered.length === 0 && (
-                  <p className="pt-1 text-[10px] text-warning leading-snug font-sans">
-                    Hay {employees.length} workers cargados pero ninguno matchea "{search}".
-                  </p>
-                )}
-              </div>
-            )}
-          </div>
-        ) : (
-          <>
-            {sorted.map(emp => {
-              const isSelected = selected.includes(emp.id);
-              const conflicts = conflictMap.get(emp.id);
-              const hasConflict = !!conflicts?.length;
-              const unavailableReason = unavailableMap.get(emp.id);
-              const isUnavailable = !!unavailableReason;
-              const isInactive = emp.is_active === false;
-              const isHardBlocked =
-                isInactive ||
-                (isUnavailable && availabilityBlockMode === "hard" && !isSelected);
-              const empIsDriver = isDriver(emp);
-              const group = getGroup(emp);
-              const profileIncomplete = isProfileIncomplete(emp);
-              const dupReason = dupHints.reasonById.get(emp.id);
-
-              let groupHeader: React.ReactNode = null;
-              if (!isSelected && groupBreaks.has(emp.id)) {
-                const labels: Record<GroupKey, { label: string; color: string; icon: React.ReactNode }> = {
-                  ready: { label: `Available · ${readyCount}`, color: "text-earning", icon: <UserCheck className="h-2.5 w-2.5" /> },
-                  warning: { label: "Warning", color: "text-warning", icon: <AlertTriangle className="h-2.5 w-2.5" /> },
-                  blocked: { label: "Unavailable", color: "text-destructive", icon: <CalendarOff className="h-2.5 w-2.5" /> },
-                  inactive: { label: "Inactive", color: "text-muted-foreground", icon: <PauseCircle className="h-2.5 w-2.5" /> },
-                };
-                const g = labels[group];
-                groupHeader = (
-                  <div className={cn("flex items-center gap-1.5 px-2.5 py-1 bg-muted/40 text-[8px] font-bold uppercase tracking-wider border-b border-border/20", g.color)}>
-                    {g.icon} {g.label}
-                  </div>
-                );
-              }
-
-              return (
-                <div key={emp.id}>
-                  {groupHeader}
-                  <label
-                    className={cn(
-                      "flex items-center gap-2 px-2 py-1.5 text-xs transition-colors border-b border-border/10 last:border-0",
-                      isHardBlocked ? "cursor-not-allowed opacity-40" : "cursor-pointer",
-                      isSelected ? "bg-primary/[0.07]" : "hover:bg-accent/50",
-                      hasConflict && !isSelected && "bg-warning/[0.04]",
-                      isUnavailable && !hasConflict && !isSelected && !isInactive && "bg-destructive/[0.03]",
-                      isInactive && !isSelected && "bg-muted/30",
-                    )}
-                  >
-                    <Checkbox
-                      checked={isSelected} onCheckedChange={() => handleToggle(emp.id)}
-                      disabled={isHardBlocked} className="shrink-0 h-3.5 w-3.5"
-                    />
-                    <EmployeeAvatar
-                      firstName={emp.first_name} lastName={emp.last_name}
-                      avatarUrl={emp.avatar_url} gender={emp.gender} size="xs"
-                    />
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1 flex-wrap">
-                        <span className={cn("font-semibold text-[11px] truncate", (isUnavailable || isInactive) && !isSelected && "text-muted-foreground")}>
-                          {formatPersonName(emp.first_name)} {formatPersonName(emp.last_name)}
-                        </span>
-                        {emp.employer_identification && (
-                          <TooltipProvider delayDuration={200}>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <span className="h-3.5 px-1 rounded bg-muted/70 text-muted-foreground text-[7px] font-mono shrink-0 cursor-default">
-                                  #{emp.employer_identification}
-                                </span>
-                              </TooltipTrigger>
-                              <TooltipContent side="top" className="text-[10px]">Employee ID</TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        )}
-                        {empIsDriver && (
-                          <span className={cn(
-                            "h-3.5 px-1 rounded text-[7px] font-bold flex items-center gap-0.5 shrink-0",
-                            requiresDriver ? "bg-earning/15 text-earning ring-1 ring-earning/30" : "bg-primary/10 text-primary"
-                          )}>
-                            <Car className="h-2 w-2" />
-                          </span>
-                        )}
-                        {emp.employee_role && (
-                          <span className="h-3.5 px-1 rounded bg-muted text-muted-foreground text-[7px] font-medium truncate max-w-[60px] shrink-0">
-                            {formatDisplayText(emp.employee_role, "label")}
-                          </span>
-                        )}
-                        {/* Portal status — Active / Pending / No portal */}
-                        {emp.user_id ? (
-                          <span className="h-3.5 px-1 rounded bg-earning/10 text-earning text-[7px] font-bold shrink-0">Portal</span>
-                        ) : (
-                          <TooltipProvider delayDuration={200}>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <span className="h-3.5 px-1 rounded bg-muted text-muted-foreground text-[7px] font-bold shrink-0 cursor-default">No portal</span>
-                              </TooltipTrigger>
-                              <TooltipContent side="top" className="text-[10px]">
-                                Portal not yet activated. Worker can still be assigned (pending).
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        )}
-                        {/* Profile readiness — operator hint, never blocks pending assignment */}
-                        {profileIncomplete && (
-                          <TooltipProvider delayDuration={200}>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <span className="h-3.5 px-1 rounded bg-warning/15 text-warning text-[7px] font-bold flex items-center gap-0.5 shrink-0 cursor-default">
-                                  <ShieldAlert className="h-2 w-2" /> Incomplete profile
-                                </span>
-                              </TooltipTrigger>
-                              <TooltipContent side="top" className="text-[10px] max-w-[220px]">
-                                Can be assigned in pending state, but the worker must complete onboarding before confirming or clocking in.
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        )}
-                        {/* Possible duplicate hint */}
-                        {dupReason && (
-                          <TooltipProvider delayDuration={200}>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <span className="h-3.5 px-1 rounded bg-deduction/10 text-deduction text-[7px] font-bold flex items-center gap-0.5 shrink-0 cursor-default">
-                                  <Copy className="h-2 w-2" /> Possible duplicate
-                                </span>
-                              </TooltipTrigger>
-                              <TooltipContent side="top" className="text-[10px] max-w-[220px]">
-                                {dupReason} as another worker. Verify before assigning.
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        )}
-                        {isInactive && (
-                          <span className="h-3.5 px-1 rounded bg-muted text-muted-foreground text-[7px] font-bold shrink-0">Inactive</span>
-                        )}
-                      </div>
-                      {(emp.phone_number || emp.email) && !isInactive && (
-                        <p className="text-[8px] text-muted-foreground mt-0.5 truncate">
-                          {emp.phone_number ?? ""}{emp.phone_number && emp.email ? " · " : ""}{emp.email ?? ""}
-                        </p>
-                      )}
-                      {isUnavailable && !isInactive && (
-                        <p className="text-[8px] text-destructive flex items-center gap-0.5 mt-0.5 truncate">
-                          <CalendarOff className="h-2 w-2 shrink-0" /> {unavailableReason}
-                        </p>
-                      )}
-                      {hasConflict && !isUnavailable && !isInactive && (
-                        <p className="text-[8px] text-warning flex items-center gap-0.5 mt-0.5 truncate">
-                          <AlertTriangle className="h-2 w-2 shrink-0" /> {conflicts![0].shiftTitle} ({conflicts![0].time})
-                        </p>
-                      )}
-                      {isInactive && (
-                        <p className="text-[8px] text-muted-foreground mt-0.5 truncate">
-                          Reactivate this worker before assigning.
-                        </p>
-                      )}
-                    </div>
-                  </label>
-                </div>
-              );
-            })}
-            {/* Persistent "+ Add new employee" action */}
-            {onAddNewEmployee && (
-              <button
-                type="button"
-                onClick={onAddNewEmployee}
-                className="flex items-center gap-2 w-full px-2 py-2 text-xs font-semibold text-primary hover:bg-primary/[0.06] transition-colors border-t border-border/20"
-              >
-                <UserPlus className="h-3.5 w-3.5" />
-                + Add new employee
-              </button>
-            )}
-          </>
-        )}
-      </div>
+      {/* Employee list — virtualized */}
+      <VirtualEmployeeList
+        sorted={sorted}
+        selected={selected}
+        conflictMap={conflictMap}
+        unavailableMap={unavailableMap}
+        availabilityBlockMode={availabilityBlockMode}
+        requiresDriver={requiresDriver}
+        groupBreaks={groupBreaks}
+        readyCount={readyCount}
+        dupHints={dupHints}
+        getGroup={getGroup}
+        handleToggle={handleToggle}
+        onAddNewEmployee={onAddNewEmployee}
+        maxHeight={maxHeight}
+        search={search}
+        employees={employees}
+        filtered={filtered}
+        debugContext={debugContext}
+      />
 
       {/* Summary */}
       <div className="flex items-center justify-between text-[9px] text-muted-foreground px-0.5">
