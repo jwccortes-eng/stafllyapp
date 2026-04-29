@@ -547,8 +547,25 @@ export default function PortalClock() {
         </div>
       )}
 
-      {/* ════════════════════════════════════════════════
-           ZONE 1 — Primary action
+      {/* ─── Stale open entry banner — recovery for stuck shifts ─── */}
+      {staleOpenEntry && !successState && (
+        <div className="mb-3 rounded-xl border border-warning/30 bg-warning/[0.06] p-3 flex items-start gap-3 relative overflow-hidden">
+          <span className="absolute left-0 top-0 bottom-0 w-[2px] bg-warning" />
+          <div className="h-8 w-8 rounded-lg bg-warning/[0.1] flex items-center justify-center shrink-0 ml-1">
+            <Timer className="h-4 w-4 text-warning" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[12.5px] font-semibold text-foreground">Unclosed shift detected</p>
+            <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">
+              {staleOpenEntry.shift?.title ?? "A shift"} stayed open since{" "}
+              <span className="tabular-nums font-medium">
+                {format(new Date(staleOpenEntry.entry.clock_in), "MMM d, HH:mm")}
+              </span>
+              . Tap Clock out below to close it.
+            </p>
+          </div>
+        </div>
+      )}
            One mission per screen: clock in or clock out.
            ════════════════════════════════════════════════ */}
       <section
