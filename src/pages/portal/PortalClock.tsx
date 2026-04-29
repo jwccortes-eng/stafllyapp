@@ -100,6 +100,7 @@ export default function PortalClock() {
   const [allowedMethods, setAllowedMethods] = useState<string[]>(["manual", "gps", "qr", "kiosk"]);
   const [successState, setSuccessState] = useState<{ type: "in" | "out"; time: string; shift: string } | null>(null);
   const [hasDailyOnlyShifts, setHasDailyOnlyShifts] = useState(false);
+  const [staleOpenEntry, setStaleOpenEntry] = useState<{ entry: TimeEntry; shift: TodayShift | null } | null>(null);
 
   useEffect(() => {
     const interval = setInterval(() => setNow(new Date()), 1000);
@@ -136,11 +137,18 @@ export default function PortalClock() {
     const dayEnd = endOfDay(today).toISOString();
     const todayStr = format(today, "yyyy-MM-dd");
 
-    const [entriesRes, shiftsRes] = await Promise.all([
+    const [entriesRes, openEntriesRes, shiftsRes] = await Promise.all([
       supabase.from("time_entries")
         .select("id, clock_in, clock_out, status, notes, break_minutes, shift_id")
         .eq("employee_id", employeeId).gte("clock_in", dayStart).lte("clock_in", dayEnd)
         .order("clock_in", { ascending: false }),
+      // Detect ANY open time entry (not just today's) so workers are never trapped
+      // by a stuck/orphan entry from a previous day. The Clock out button must
+      // remain reachable even if the entry was opened days ago.
+      supabase.from("time_entries")
+        .select("id, clock_in, clock_out, status, notes, break_minutes, shift_id")
+        .eq("employee_id", employeeId).is("clock_out", null)
+        .order("clock_in", { ascending: false }).limit(1),
       // Hide soft-deleted shifts (see src/lib/shifts/visibility.ts)
       // Hide drafts and draft reservations (see src/lib/shifts/shift-guards.ts):
       // a draft must NEVER allow clock-in or generate time_entries.
@@ -156,7 +164,10 @@ export default function PortalClock() {
 
     const list = (entriesRes.data ?? []) as TimeEntry[];
     setTodayEntries(list);
-    setActiveEntry(list.find((e) => !e.clock_out) ?? null);
+    // Prefer today's open entry; fall back to any open entry from previous days.
+    const todayOpen = list.find((e) => !e.clock_out) ?? null;
+    const anyOpen = (openEntriesRes.data?.[0] ?? null) as TimeEntry | null;
+    setActiveEntry(todayOpen ?? anyOpen);
 
     const qrModes: Record<string, string> = {};
     const mappedShifts: TodayShift[] = (shiftsRes.data ?? []).map((sa: any) => {
@@ -181,17 +192,54 @@ export default function PortalClock() {
     const actionableShifts = mappedShifts.filter(
       s => s.attendance_mode !== "clock" || s.pay_type !== "daily",
     );
+
+    // ── Stale open entry recovery ──
+    // If the active open entry is from a previous day, fetch its shift metadata
+    // so the focus card + Clock out button render correctly. Without this the
+    // worker would see "On shift" on /portal but no Clock out CTA here.
+    let stale: { entry: TimeEntry; shift: TodayShift | null } | null = null;
+    if (anyOpen && !todayOpen) {
+      let staleShift: TodayShift | null = null;
+      if (anyOpen.shift_id) {
+        const { data: ssRow } = await supabase
+          .from("scheduled_shifts")
+          .select("id, title, start_time, end_time, shift_code, pay_type, attendance_mode, locations(name), clients(name)")
+          .eq("id", anyOpen.shift_id)
+          .maybeSingle();
+        if (ssRow) {
+          const ss: any = ssRow;
+          staleShift = {
+            id: ss.id, title: ss.title,
+            start_time: ss.start_time, end_time: ss.end_time,
+            shift_code: ss.shift_code,
+            location_name: ss.locations?.name,
+            client_name: ss.clients?.name,
+            pay_type: ss.pay_type,
+            attendance_mode:
+              (ss.attendance_mode as ShiftAttendanceMode) ??
+              defaultAttendanceModeForPayType(ss.pay_type),
+          };
+          // Make sure the focus card can resolve activeShift via todayShifts lookup.
+          if (!actionableShifts.some(s => s.id === staleShift!.id)) {
+            actionableShifts.push(staleShift);
+          }
+        }
+      }
+      stale = { entry: anyOpen, shift: staleShift };
+    }
+    setStaleOpenEntry(stale);
+
     // Daily-only-with-no-arrival edge case (shouldn't happen w/ defaults, but guard):
-    setHasDailyOnlyShifts(actionableShifts.length === 0 && mappedShifts.length > 0);
+    setHasDailyOnlyShifts(actionableShifts.length === 0 && mappedShifts.length > 0 && !stale);
     setTodayShifts(actionableShifts);
-    const activeOpen = list.find(e => !e.clock_out);
+    const activeOpen = todayOpen ?? anyOpen;
     if (!activeOpen) {
       const preselect = urlShiftId ? actionableShifts.find(s => s.id === urlShiftId) : null;
       if (preselect) setSelectedShift(preselect);
       else if (actionableShifts.length === 1) setSelectedShift(actionableShifts[0]);
     }
     setLoading(false);
-  }, [employeeId]);
+  }, [employeeId, urlShiftId]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -409,6 +457,9 @@ export default function PortalClock() {
   const getElapsed = () => {
     if (!activeEntry) return null;
     const diff = Math.floor((now.getTime() - new Date(activeEntry.clock_in).getTime()) / 1000);
+    // Stale recovery: if entry was opened >24h ago, show a sober "—:—:—"
+    // to avoid a misleading 73:42:11 timer. The banner above already explains.
+    if (diff > 24 * 3600) return "—:—:—";
     const h = Math.floor(diff / 3600);
     const m = Math.floor((diff % 3600) / 60);
     const s = diff % 60;
@@ -494,6 +545,26 @@ export default function PortalClock() {
             </p>
             <p className="text-[11px] text-muted-foreground truncate mt-0.5">
               {successState.shift} · <span className="tabular-nums font-medium">{successState.time}</span>
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Stale open entry banner — recovery for stuck shifts ─── */}
+      {staleOpenEntry && !successState && (
+        <div className="mb-3 rounded-xl border border-warning/30 bg-warning/[0.06] p-3 flex items-start gap-3 relative overflow-hidden">
+          <span className="absolute left-0 top-0 bottom-0 w-[2px] bg-warning" />
+          <div className="h-8 w-8 rounded-lg bg-warning/[0.1] flex items-center justify-center shrink-0 ml-1">
+            <Timer className="h-4 w-4 text-warning" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[12.5px] font-semibold text-foreground">Unclosed shift detected</p>
+            <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">
+              {staleOpenEntry.shift?.title ?? "A shift"} stayed open since{" "}
+              <span className="tabular-nums font-medium">
+                {format(new Date(staleOpenEntry.entry.clock_in), "MMM d, HH:mm")}
+              </span>
+              . Tap Clock out below to close it.
             </p>
           </div>
         </div>
