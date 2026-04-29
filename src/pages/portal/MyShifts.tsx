@@ -425,27 +425,85 @@ export default function MyShifts() {
         })}
       </div>
 
-      {/* Shift list — compact rows, single source of state per card */}
-      {activeTab !== "available" && filtered.length > 0 && (
-        <div className="space-y-1.5">
-          {filtered.map((a) => (
-            <PortalShiftCard
-              key={a.id}
-              shift={toCardData(a)}
-              compact
-              onClick={() => setSelectedShift(a)}
-              onAccept={a.status === "pending" && !isBefore(parseISO(a.shift.date), today) ? () => acceptAssignment(a.id) : undefined}
-              onReject={a.status === "pending" && !isBefore(parseISO(a.shift.date), today) ? () => { setRejectDialogId(a.id); setRejectReason(""); } : undefined}
-              onClockIn={
-                (a.status === "confirmed" || a.status === "accepted") && isToday(parseISO(a.shift.date))
-                  ? () => navigate(`/portal/clock?shiftId=${a.shift.id}`)
-                  : undefined
-              }
-              responding={responding === a.id}
-            />
-          ))}
-        </div>
-      )}
+      {/* Shift list — compact rows. History tab adds week grouping + pagination. */}
+      {activeTab !== "available" && filtered.length > 0 && (() => {
+        const renderCard = (a: ShiftAssignment) => (
+          <PortalShiftCard
+            key={a.id}
+            shift={toCardData(a)}
+            compact
+            onClick={() => setSelectedShift(a)}
+            onAccept={a.status === "pending" && !isBefore(parseISO(a.shift.date), today) ? () => acceptAssignment(a.id) : undefined}
+            onReject={a.status === "pending" && !isBefore(parseISO(a.shift.date), today) ? () => { setRejectDialogId(a.id); setRejectReason(""); } : undefined}
+            onClockIn={
+              (a.status === "confirmed" || a.status === "accepted") && isToday(parseISO(a.shift.date))
+                ? () => navigate(`/portal/clock?shiftId=${a.shift.id}`)
+                : undefined
+            }
+            responding={responding === a.id}
+          />
+        );
+
+        if (activeTab === "history") {
+          // Paginate first to keep DOM size bounded.
+          const visible = filtered.slice(0, historyVisible);
+          const remaining = filtered.length - visible.length;
+
+          // Group by week bucket (already date-desc sorted).
+          const thisWeekStart = startOfWeek(today, { weekStartsOn: 1 });
+          const thisWeekEnd = endOfWeek(today, { weekStartsOn: 1 });
+          const lastWeekStart = startOfWeek(subWeeks(today, 1), { weekStartsOn: 1 });
+          const lastWeekEnd = endOfWeek(subWeeks(today, 1), { weekStartsOn: 1 });
+
+          type Bucket = { key: string; label: string; items: ShiftAssignment[] };
+          const buckets: Bucket[] = [
+            { key: "this-week", label: "This week", items: [] },
+            { key: "last-week", label: "Last week", items: [] },
+            { key: "earlier", label: "Earlier", items: [] },
+          ];
+
+          for (const a of visible) {
+            const d = parseISO(a.shift.date);
+            if (d >= thisWeekStart && d <= thisWeekEnd) buckets[0].items.push(a);
+            else if (d >= lastWeekStart && d <= lastWeekEnd) buckets[1].items.push(a);
+            else buckets[2].items.push(a);
+          }
+
+          return (
+            <div className="space-y-4">
+              {buckets.filter(b => b.items.length > 0).map((b) => (
+                <div key={b.key} className="space-y-1.5">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground/55 px-1">
+                    {b.label}
+                  </p>
+                  <div className="space-y-1.5">
+                    {b.items.map(renderCard)}
+                  </div>
+                </div>
+              ))}
+
+              {remaining > 0 && (
+                <div className="pt-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setHistoryVisible(v => v + HISTORY_PAGE)}
+                    className="w-full h-10 text-[12px] font-semibold rounded-xl text-muted-foreground hover:text-foreground"
+                  >
+                    Load {Math.min(remaining, HISTORY_PAGE)} more · {remaining} remaining
+                  </Button>
+                </div>
+              )}
+            </div>
+          );
+        }
+
+        return (
+          <div className="space-y-1.5">
+            {filtered.map(renderCard)}
+          </div>
+        );
+      })()}
 
       {/* AVAILABLE TAB — claimable shifts as primary content */}
       {activeTab === "available" && claimable.length > 0 && (
