@@ -29,6 +29,8 @@ import { OnboardingChecklist } from "@/components/OnboardingChecklist";
 import { PendingReviewsWidget } from "@/components/reviews/PendingReviewsWidget";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { ErrorBlock } from "@/components/ui/error-block";
+import { useIsMobile } from "@/hooks/use-mobile";
+import MobileAdminHome from "./MobileAdminHome";
 
 /* ─── animated counter hook ─── */
 function useAnimatedNumber(target: number, duration = 800) {
@@ -341,7 +343,18 @@ function ActivityRow({ item }: { item: any }) {
    MAIN DASHBOARD
    ═══════════════════════════════════════════════════ */
 
+/**
+ * Top-level export. Picks the correct view based on viewport.
+ * useIsMobile() is the only hook here, and the conditional render swaps between
+ * two independent components — each owns its own hook universe, so React's
+ * Rules of Hooks are preserved across viewport changes.
+ */
 export default function AdminDashboard() {
+  const isMobile = useIsMobile();
+  return isMobile ? <MobileAdminHome /> : <AdminDashboardDesktop />;
+}
+
+function AdminDashboardDesktop() {
   const { selectedCompanyId, selectedCompany, isModuleActive, companies, setSelectedCompanyId, isGlobalMode } = useCompany();
   const { role, hasModuleAccess, fullName } = useAuth();
   const { config: payrollConfig, currentWeek } = usePayrollConfig();
