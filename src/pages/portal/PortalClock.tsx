@@ -566,6 +566,9 @@ export default function PortalClock() {
           </div>
         </div>
       )}
+
+      {/* ════════════════════════════════════════════════
+           ZONE 1 — Primary action
            One mission per screen: clock in or clock out.
            ════════════════════════════════════════════════ */}
       <section
