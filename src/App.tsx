@@ -223,6 +223,9 @@ function App() {
               {/* Parceros — own layout, branded */}
               <Route path="/parceros" element={<ParcerosLayout />}>
                 <Route index element={<ParcerosCommunity />} />
+                <Route path="channels" element={<ParcerosCommunity />} />
+                <Route path="flash" element={<ParcerosCommunity />} />
+                <Route path="radar" element={<ParcerosCommunity />} />
                 <Route path="channel/:id" element={<ChannelView />} />
                 <Route path="flash/:id" element={<FlashJobDetail />} />
               </Route>
