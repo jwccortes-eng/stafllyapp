@@ -1,22 +1,22 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { formatPersonName } from "@/lib/format-helpers";
+import { formatPersonName, formatDisplayName } from "@/lib/format-helpers";
 import { useEffectiveEmployee } from "@/hooks/useEffectiveEmployee";
-import { Link, useNavigate } from "react-router-dom";
+import { useEmployeeReadiness } from "@/hooks/useEmployeeReadiness";
+import { Link } from "react-router-dom";
 import { usePortalModules } from "@/hooks/usePortalModules";
 import {
-  Wallet, Clock, CalendarDays,
-  ArrowRight, LogIn, LogOut, MapPin, Timer,
-  Bell, ChevronRight, AlertTriangle, Navigation,
-  Briefcase, TrendingUp, HandMetal,
+  Wallet, Clock, CalendarDays, ArrowRight, Timer,
+  Bell, ChevronRight, TrendingUp,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
-import { format, parseISO, isToday, isTomorrow, startOfWeek, endOfWeek, differenceInMinutes } from "date-fns";
-import { enUS } from "date-fns/locale";
-import { Button } from "@/components/ui/button";
+import { format, parseISO, isToday, isTomorrow, startOfWeek, endOfWeek } from "date-fns";
 import { PendingReviewPrompt } from "@/components/reviews/PendingReviewPrompt";
-import { ReadinessCard } from "@/components/portal/ReadinessCard";
+import { NextBestActionCard } from "@/components/portal/home/NextBestActionCard";
+import { TodayBlock } from "@/components/portal/home/TodayBlock";
+import { ProfileReadinessStrip } from "@/components/portal/home/ProfileReadinessStrip";
+import { selectNextBestAction, type NbaShift } from "@/lib/portal/next-best-action";
 
 interface NextShift {
   id: string;
