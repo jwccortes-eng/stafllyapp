@@ -204,6 +204,20 @@ function RadarFeed({ channels, flashJobs, navigate }: { channels: Channel[]; fla
 
   return (
     <div className="space-y-5">
+      {/* Intro / value prop */}
+      <section className="rounded-2xl border border-border/50 bg-gradient-to-br from-primary/5 via-card to-card p-4">
+        <div className="flex items-center gap-2 mb-1.5">
+          <Sparkles className="h-4 w-4 text-primary" />
+          <h2 className="text-sm font-bold text-foreground">Parceros is where the community moves</h2>
+        </div>
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          Channels organize people by zone, skill or opportunity. Flash jobs are urgent gigs posted in real time.
+        </p>
+      </section>
+
+      {/* Start here */}
+      <StartHereBlock navigate={navigate} />
+
       {/* Urgent Section */}
       {urgentJobs.length > 0 && (
         <section>
@@ -221,21 +235,23 @@ function RadarFeed({ channels, flashJobs, navigate }: { channels: Channel[]; fla
       )}
 
       {/* Active Channels */}
-      <section>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-bold text-foreground flex items-center gap-2">
-            <TrendingUp className="h-4 w-4 text-primary" /> Canales activos
-          </h2>
-          <button onClick={() => navigate("/parceros")} className="text-[10px] font-semibold text-primary">
-            Ver todos
-          </button>
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          {channels.slice(0, 4).map((ch) => (
-            <ChannelCard key={ch.id} channel={ch} onTap={() => navigate(`/parceros/channel/${ch.id}`)} />
-          ))}
-        </div>
-      </section>
+      {channels.length > 0 && (
+        <section>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-bold text-foreground flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-primary" /> Canales activos
+            </h2>
+            <button onClick={() => navigate("/parceros/channels")} className="text-[10px] font-semibold text-primary">
+              Ver todos
+            </button>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            {channels.slice(0, 4).map((ch) => (
+              <ChannelCard key={ch.id} channel={ch} onTap={() => navigate(`/parceros/channel/${ch.id}`)} />
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Recent Flash Jobs */}
       {flashJobs.length > 0 && (
@@ -252,11 +268,58 @@ function RadarFeed({ channels, flashJobs, navigate }: { channels: Channel[]; fla
           </div>
         </section>
       )}
-
-      {flashJobs.length === 0 && channels.length === 0 && (
-        <CommunityOnboarding navigate={navigate} />
-      )}
     </div>
+  );
+}
+
+function StartHereBlock({ navigate }: { navigate: any }) {
+  const items = [
+    {
+      icon: Hash,
+      title: "Join a channel",
+      hint: "Find your zone, role or topic",
+      to: "/parceros/channels",
+      tone: "from-blue-500/10 to-blue-500/5 text-blue-600",
+    },
+    {
+      icon: UserCircle2,
+      title: "Complete your profile",
+      hint: "So others know what you do",
+      to: "/portal/profile",
+      tone: "from-emerald-500/10 to-emerald-500/5 text-emerald-600",
+    },
+    {
+      icon: Briefcase,
+      title: "Browse opportunities",
+      hint: "Flash jobs posted live",
+      to: "/parceros/flash",
+      tone: "from-amber-500/10 to-amber-500/5 text-amber-600",
+    },
+  ];
+  return (
+    <section>
+      <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">
+        Start here
+      </h2>
+      <div className="space-y-2">
+        {items.map((it) => (
+          <button
+            key={it.to}
+            onClick={() => navigate(it.to)}
+            className="w-full flex items-center gap-3 p-3 rounded-xl border border-border/50 bg-card hover:border-border transition-all text-left active:scale-[0.99]"
+          >
+            <div className={cn("h-10 w-10 rounded-xl bg-gradient-to-br flex items-center justify-center shrink-0", it.tone)}>
+              <it.icon className="h-4 w-4" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-semibold text-foreground">{it.title}</div>
+              <div className="text-[11px] text-muted-foreground mt-0.5">{it.hint}</div>
+            </div>
+            <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+          </button>
+        ))}
+      </div>
+    </section>
   );
 }
 
