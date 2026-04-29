@@ -156,8 +156,13 @@ export default function MyShifts() {
         end_time: s.end_time, notes: s.notes, slots: s.slots,
         location: s.locations, client: s.clients, assignedCount: activeCount(s),
       }));
-    setClaimable(claimableFiltered);
-    setLoading(false);
+      setClaimable(claimableFiltered);
+    } catch (err: any) {
+      console.error("[MyShifts] load failed", err);
+      setLoadError(err?.message ?? "Could not load your shifts.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { load(); }, [employeeId]);
