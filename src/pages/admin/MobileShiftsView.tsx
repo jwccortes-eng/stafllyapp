@@ -112,8 +112,8 @@ export default function MobileShiftsView() {
     async function load() {
       try {
         const [shiftsRes, clientsRes, locsRes, empsRes] = await Promise.all([
-          supabase.from("scheduled_shifts")
-            .select("id,title,date,start_time,end_time,status,publication_status,slots,client_id,location_id,notes,claimable,shift_code")
+         supabase.from("scheduled_shifts")
+           .select("id,title,date,start_time,end_time,status,publication_status,slots,client_id,location_id,notes,claimable,shift_code,created_at,updated_at,published_at,published_by,created_by,import_batch_id,reconciliation_hash")
             .eq("company_id", selectedCompanyId!)
             .is("deleted_at", null)
             .gte("date", dateRange.start)
