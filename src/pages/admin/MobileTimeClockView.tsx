@@ -22,6 +22,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import {
+  TraceabilitySnapshot,
+  classifyTimeEntrySource,
+  type TraceRisk,
+  type TraceTimelineEvent,
+  type TraceLinkedRecord,
+} from "@/components/traceability/TraceabilitySnapshot";
 
 /**
  * MobileTimeClockView — /app/timeclock mobile.
