@@ -144,6 +144,7 @@ const AuthCallback = lazy(() => import("./pages/AuthCallback"));
 // Portal pages
 const EmployeeDashboard = lazy(() => import("./pages/portal/EmployeeDashboard"));
 const MyPayments = lazy(() => import("./pages/portal/MyPayments"));
+const PayReports = lazy(() => import("./pages/portal/PayReports"));
 const WeekDetail = lazy(() => import("./pages/portal/WeekDetail"));
 const Accumulated = lazy(() => import("./pages/portal/Accumulated"));
 const MyShifts = lazy(() => import("./pages/portal/MyShifts"));
@@ -341,6 +342,7 @@ function App() {
               <Route path="/portal" element={<EmployeeLayout />}>
                 <Route index element={<EmployeeDashboard />} />
                 <Route path="payments" element={<MyPayments />} />
+                <Route path="pay-reports" element={<PayReports />} />
                 <Route path="week/:periodId" element={<WeekDetail />} />
                 <Route path="accumulated" element={<Accumulated />} />
                 <Route path="shifts" element={<MyShifts />} />
