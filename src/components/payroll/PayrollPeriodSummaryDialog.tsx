@@ -228,7 +228,17 @@ export default function PayrollPeriodSummaryDialog({ open, onOpenChange, period,
             <Loader2 className="h-4 w-4 animate-spin" /> Loading summary…
           </div>
         ) : (
-          <div className="space-y-4">
+          <div id="payroll-summary-printable" className="space-y-4">
+            {/* Print-only header */}
+            <div className="hidden print:block border-b border-border pb-3 mb-3">
+              <div className="text-xs uppercase tracking-wider text-muted-foreground">{companyName || "Company"}</div>
+              <div className="text-xl font-bold">
+                Payroll Summary{period.sequence_number != null ? ` · Period #${period.sequence_number}` : ""}
+              </div>
+              <div className="text-sm text-muted-foreground">
+                {format(new Date(period.start_date), "yyyy-MM-dd")} → {format(new Date(period.end_date), "yyyy-MM-dd")} · Status: {period.status}
+              </div>
+            </div>
             {/* KPIs */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               <KpiCard value={totals.count} label="Employees" icon={<Users className="h-4 w-4" />} accent="primary" />
