@@ -27,6 +27,17 @@ export function DocumentReasonDialog({
 }: Props) {
   const [reason, setReason] = useState(initialReason);
   const [submitting, setSubmitting] = useState(false);
+  const wasOpen = useRef(false);
+
+  // Only sync `initialReason` into local state on the false→true transition.
+  // This prevents the textarea from resetting (and losing focus) when the
+  // parent re-renders due to realtime refreshes while the dialog is open.
+  useEffect(() => {
+    if (open && !wasOpen.current) {
+      setReason(initialReason);
+    }
+    wasOpen.current = open;
+  }, [open, initialReason]);
 
   const isReject = action === "reject";
   const Icon = isReject ? AlertTriangle : Repeat2;
@@ -50,7 +61,6 @@ export function DocumentReasonDialog({
       open={open}
       onOpenChange={(o) => {
         if (submitting) return;
-        if (!o) setReason(initialReason);
         onOpenChange(o);
       }}
     >
