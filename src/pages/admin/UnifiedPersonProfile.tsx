@@ -560,12 +560,6 @@ export default function UnifiedPersonProfile() {
                   <ReadinessBadge band={band} loading={readiness.loading} />
                 </div>
                 <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
-                  {employee.employer_identification && (
-                    <Badge variant="outline" className="font-mono text-[10px] gap-1">
-                      <Hash className="h-2.5 w-2.5" />
-                      {employee.employer_identification}
-                    </Badge>
-                  )}
                   {employee.employee_role && (
                     <Badge variant="secondary" className="text-[10px]">
                       {formatDisplayText(employee.employee_role, "label")}
@@ -598,7 +592,7 @@ export default function UnifiedPersonProfile() {
                   )}
                 </div>
 
-                {/* Contact row */}
+                {/* Contact row — only renders rows with real values */}
                 <div className="mt-3 flex items-center gap-x-4 gap-y-1 flex-wrap text-xs text-muted-foreground">
                   {employee.phone_number && (
                     <a
@@ -629,11 +623,6 @@ export default function UnifiedPersonProfile() {
                   {employee.start_date && (
                     <span className="inline-flex items-center gap-1">
                       <Briefcase className="h-3.5 w-3.5" /> Started {safeDistance(employee.start_date)}
-                    </span>
-                  )}
-                  {employee.birthday && (
-                    <span className="inline-flex items-center gap-1">
-                      <Cake className="h-3.5 w-3.5" /> {employee.birthday}
                     </span>
                   )}
                 </div>
