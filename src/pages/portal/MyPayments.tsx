@@ -1,3 +1,30 @@
+/**
+ * ⚠️ DEPRECATED for worker portal. Do not mount until audited.
+ *
+ * This view previously calculated unsafe live earnings from time_entries
+ * (entryHours × rate, with no 16h cap, no payroll_safe filter, no
+ * deduplication, no open-period guard). It produced inflated numbers
+ * shown to workers — e.g. Jorge Cortes: 604.1h / $18,123 vs the real
+ * finalized total of ~$2,449 across periods #124/#128/#129.
+ *
+ * Status (2026-04-30):
+ *  - Route /portal/payments is now <Navigate replace to="/portal/pay-reports" />.
+ *  - All worker nav (PortalProfile, PortalMoreSheet, PortalResources,
+ *    EmployeeDashboard card, NotificationBell, PayStub back link, admin
+ *    Notifications payment_ready) repointed to /portal/pay-reports.
+ *  - File kept on disk for forensic audit only. Do NOT re-import or re-mount.
+ *
+ * Before re-enabling, this view MUST be audited to guarantee:
+ *  1. No scheduled_shifts hours used as pay.
+ *  2. No raw unvalidated time_entries × rate.
+ *  3. No open/draft period estimates exposed as real pay.
+ *  4. Only finalized / published / approved payroll (period_base_pay
+ *     when pay_periods.status is finalized, plus historical imports).
+ *  5. Respects payroll_safe / placeholder rules and 16h/day cap.
+ *
+ * If audit fails or is not needed, delete this file. /portal/pay-reports
+ * already covers the worker-facing weekly summary correctly.
+ */
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
