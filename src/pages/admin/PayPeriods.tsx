@@ -499,6 +499,11 @@ export default function PayPeriods() {
         </div>
       )}
 
+      <HistoricalCloseoutBoard
+        companyId={selectedCompanyId}
+        onOpenSummary={(p) => setSummaryPeriod(p)}
+      />
+
       <div className="data-table-wrapper">
         <Table>
           <TableHeader>
