@@ -116,6 +116,7 @@ export default function AdminLayout() {
               <MobilePageTitle items={visibleItems} />
             </div>
             <div className="flex items-center gap-0.5 shrink-0">
+              <AdminProductSwitcher compact />
               <ModeSwitcher compact />
               <SoundStatusControl compact />
               <NotificationBell />
