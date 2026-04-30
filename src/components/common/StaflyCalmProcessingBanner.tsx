@@ -20,12 +20,17 @@ import staflyIcon from "@/assets/stafly-app-icon-new.png";
 import { cn } from "@/lib/utils";
 
 export type StaflyCalmStatus = "processing" | "success" | "waiting" | "error";
+export type StaflyCalmVariant = "inline" | "card" | "overlay" | "compact";
 
 export interface StaflyCalmProcessingBannerProps {
   title?: string;
   message?: string;
   status?: StaflyCalmStatus;
+  /** Preferred API. Defaults to "card". Use "compact" for inline pills, "overlay" for blocking actions, "inline" for minimal in-flow indicator. */
+  variant?: StaflyCalmVariant;
+  /** @deprecated use variant="compact" */
   compact?: boolean;
+  /** @deprecated use variant="overlay" */
   fullScreen?: boolean;
   showLogo?: boolean;
   progress?: number | null;
