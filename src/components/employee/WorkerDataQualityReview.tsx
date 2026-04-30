@@ -52,11 +52,13 @@ import {
 
 interface Props {
   employee: any;
-  /**
-   * Full company employee list — required for cross-row signals like duplicates
-   * and shared-email detection. Caller passes the same array used in the list.
-   */
   companyEmployees: any[];
+  /** Optional document signals — keeps parity with DataQualityRiskPanel. */
+  documentSignals?: Map<string, WorkerDocumentSignals>;
+  /** Phase 2 — switch the parent EmployeeProfileTabs to a specific tab. */
+  onJumpToTab?: (tab: ProfileTabId) => void;
+  /** Optional company name used in the WhatsApp reminder copy. */
+  companyName?: string | null;
 }
 
 const READINESS_TONE: Record<
