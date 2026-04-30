@@ -15047,6 +15047,10 @@ export type Database = {
         Returns: undefined
       }
       cleanup_expired_rate_limits: { Args: never; Returns: undefined }
+      company_user_can_access_employee_doc_path: {
+        Args: { _path: string }
+        Returns: boolean
+      }
       compute_employee_profile_status: {
         Args: { _employee_id: string }
         Returns: Database["public"]["Enums"]["employee_profile_status"]
@@ -15334,6 +15338,14 @@ export type Database = {
       }
       user_is_company_admin: {
         Args: { _company_id: string; _user_id: string }
+        Returns: boolean
+      }
+      worker_can_access_employee_doc_path: {
+        Args: { _path: string }
+        Returns: boolean
+      }
+      worker_owns_employee_document_scope: {
+        Args: { _company_id: string; _employee_id: string }
         Returns: boolean
       }
     }
