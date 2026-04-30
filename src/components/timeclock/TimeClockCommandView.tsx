@@ -28,7 +28,6 @@ import {
 import { format, differenceInMinutes, formatDistanceToNowStrict } from "date-fns";
 import { enUS } from "date-fns/locale";
 import StaflyCalmProcessingBanner from "@/components/common/StaflyCalmProcessingBanner";
-import { EmployeeDayDetailDrawer } from "@/components/today/EmployeeDayDetailDrawer";
 import { cn } from "@/lib/utils";
 
 // ─── threshold for "open too long" ─────────────────────────
@@ -56,7 +55,7 @@ interface Employee {
   last_name: string;
   avatar_url: string | null;
   employee_role: string | null;
-  employer_identification: number | null;
+  employer_identification: number | string | null;
 }
 
 export default function TimeClockCommandView() {
@@ -67,7 +66,7 @@ export default function TimeClockCommandView() {
   const [loading, setLoading] = useState(true);
   const [now, setNow] = useState(new Date());
   const [search, setSearch] = useState("");
-  const [selectedEmpId, setSelectedEmpId] = useState<string | null>(null);
+  const [, setSelectedEmpId] = useState<string | null>(null);
 
   // live tick
   useEffect(() => {
@@ -108,7 +107,7 @@ export default function TimeClockCommandView() {
       .lt("clock_in", startOfDay);
 
     const [empsRes, entriesRes, openOlderRes] = await Promise.all([empsP, entriesTodayP, openOlderP]);
-    setEmployees((empsRes.data ?? []) as Employee[]);
+    setEmployees(((empsRes.data ?? []) as unknown) as Employee[]);
 
     // merge: today's entries + open ones from before today
     const merged = [
