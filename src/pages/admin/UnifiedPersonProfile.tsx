@@ -258,6 +258,17 @@ export default function UnifiedPersonProfile() {
     // Realtime: keep documents snapshot fresh across portal/admin uploads
     // and review status changes. Scoped to this employee_id only.
     // Also refresh readiness so the hero/snapshot bands stay in sync.
+    //
+    // IMPORTANT: while a document edit dialog is open (Reject / Request
+    // replacement / Upload) we DEFER the refresh. Otherwise re-rendering the
+    // documents list / readiness band on each realtime tick remounts inputs
+    // inside the dialog and the textarea loses focus on every keystroke.
+    let pendingRefresh = false;
+    const runRefresh = () => {
+      pendingRefresh = false;
+      refetchDocs();
+      readiness.refresh?.();
+    };
     const channel = supabase
       .channel(`profile-docs-${id}`)
       .on(
@@ -269,14 +280,23 @@ export default function UnifiedPersonProfile() {
           filter: `employee_id=eq.${id}`,
         },
         () => {
-          refetchDocs();
-          readiness.refresh?.();
+          if (isDocDialogOpen()) {
+            pendingRefresh = true;
+            return;
+          }
+          runRefresh();
         },
       )
       .subscribe();
 
+    // When all dialogs close, flush any deferred refresh once.
+    const unsubSuspend = subscribeDocDialog((suspended) => {
+      if (!suspended && pendingRefresh) runRefresh();
+    });
+
     return () => {
       cancelled = true;
+      unsubSuspend();
       supabase.removeChannel(channel);
     };
   }, [id, employee]);
