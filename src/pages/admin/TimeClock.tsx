@@ -62,8 +62,6 @@ export default function TimeClock() {
 }
 
 function DesktopTimeClockView() {
-  const [activeTab, setActiveTab] = useState("live");
-  const [timesheetMode, setTimesheetMode] = useState<"list" | "calendar">("list");
   const [clockSettingsOpen, setClockSettingsOpen] = useState(false);
   const { config: clockConfig, updateConfig: updateClockConfig, loading: clockConfigLoading } = useClockConfig();
   const navigate = useNavigate();
