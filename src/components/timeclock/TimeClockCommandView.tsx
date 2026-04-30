@@ -384,11 +384,6 @@ export default function TimeClockCommandView() {
         Read-only · Time clock can show scheduled shift as context but never as payment.
       </p>
 
-      <EmployeeDayDetailDrawer
-        employeeId={selectedEmpId}
-        date={todayKey}
-        onClose={() => setSelectedEmpId(null)}
-      />
     </div>
   );
 }
