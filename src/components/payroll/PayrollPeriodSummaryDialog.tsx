@@ -319,7 +319,7 @@ export default function PayrollPeriodSummaryDialog({ open, onOpenChange, period,
             {/* Employee list */}
             {hasRows && (
               <div className="space-y-2">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 no-print">
                   <div className="relative flex-1">
                     <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                     <Input
@@ -334,7 +334,7 @@ export default function PayrollPeriodSummaryDialog({ open, onOpenChange, period,
                   </span>
                 </div>
 
-                <div className="rounded-xl border border-border/60 bg-card max-h-[360px] overflow-auto">
+                <div className="rounded-xl border border-border/60 bg-card max-h-[360px] overflow-auto print:max-h-none print:overflow-visible">
                   {filteredRows.map((r) => {
                     const e = employees[r.employee_id];
                     const name = e ? `${e.first_name ?? ""} ${e.last_name ?? ""}`.trim() : "Unknown employee";
