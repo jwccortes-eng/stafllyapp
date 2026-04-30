@@ -7,7 +7,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Clock, CalendarRange, Upload, MoreHorizontal, List, Calendar as CalendarIcon,
   FileBarChart, AlertTriangle, GitCompareArrows, Download, Settings, RefreshCw,
-  Monitor, Copy,
+  Monitor, Copy, Users, ArrowRight,
 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { toast } from "sonner";
