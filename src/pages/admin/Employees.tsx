@@ -1549,9 +1549,10 @@ export default function Employees() {
                     <EmployeeAvatar firstName={e.first_name ?? ""} lastName={e.last_name ?? ""} avatarUrl={e.avatar_url} gender={e.gender} size="sm" />
                   </TableCell>
                   <TableCell className="py-1">
-                    <div className="leading-none">
+                    <div className="leading-tight">
                       <span className="text-xs font-semibold">{formatPersonName(`${e.first_name} ${e.last_name}`)}</span>
                       <span className="sm:hidden block text-[10px] text-muted-foreground mt-0.5">{e.phone_number || e.email || ""}</span>
+                      <WorkerRiskTags risks={riskAnalysis.byId.get(e.id) ?? []} max={3} className="mt-1" />
                     </div>
                   </TableCell>
                   {visibleColumns.includes("employer_identification") && (
