@@ -83,6 +83,7 @@ const SystemHealth = lazy(() => import("./pages/admin/SystemHealth"));
 const Implementations = lazy(() => import("./pages/admin/Implementations"));
 const CommandCenter = lazy(() => import("./pages/admin/CommandCenter"));
 const DevCommandCenter = lazy(() => import("./pages/admin/DevCommandCenter"));
+const DocumentsCenter = lazy(() => import("./pages/admin/DocumentsCenter"));
 const NotificationTemplates = lazy(() => import("./pages/admin/NotificationTemplates"));
 const NotificationsPage = lazy(() => import("./pages/admin/Notifications"));
 const Requests = lazy(() => import("./pages/admin/Requests"));
@@ -238,6 +239,7 @@ function App() {
                 <Route path="dev-command-center" element={<DevCommandCenter />} />
                 <Route path="owner-command-center" element={<DevCommandCenter />} />
                 <Route path="employees" element={<CompanyRequiredGuard><Employees /></CompanyRequiredGuard>} />
+                <Route path="documents" element={<CompanyRequiredGuard><DocumentsCenter /></CompanyRequiredGuard>} />
                 <Route path="employees/merge" element={<CompanyRequiredGuard><EmployeeMerge /></CompanyRequiredGuard>} />
                 <Route path="workforce" element={<CompanyRequiredGuard><Workforce /></CompanyRequiredGuard>} />
                 <Route path="employees/:id/onboarding" element={<CompanyRequiredGuard><EmployeeOnboarding /></CompanyRequiredGuard>} />

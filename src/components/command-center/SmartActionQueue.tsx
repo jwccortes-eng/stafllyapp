@@ -13,6 +13,10 @@ import {
   GitMerge,
   Hash,
   ClipboardList,
+  FileClock,
+  FileX2,
+  CalendarClock,
+  FileMinus,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
@@ -60,6 +64,10 @@ export function SmartActionQueue({ companyId }: Props) {
     workersNoPortal: 0,
     workersMissingPin: 0,
     actionableRequests: 0,
+    docsPending: 0,
+    docsRejected: 0,
+    docsExpired: 0,
+    docsExpiring: 0,
   });
 
   useEffect(() => {
@@ -70,18 +78,33 @@ export function SmartActionQueue({ companyId }: Props) {
         const openQ = sb.from("time_entries").select("id", { count: "exact", head: true }).is("clock_out", null);
         const unmatchedQ = sb.from("historical_payroll_entries").select("id", { count: "exact", head: true }).is("matched_employee_id", null);
         const noPortalQ = sb.from("employees").select("id", { count: "exact", head: true }).eq("is_active", true).is("user_id", null);
-        // Actionable service requests = open / pending / unassigned / convertible
         const reqQ = sb.from("service_requests").select("id", { count: "exact", head: true })
           .in("status", ["new", "reviewing", "approved_for_scheduling"]);
-        
+        const docsPendingQ = sb.from("employee_documents").select("id", { count: "exact", head: true }).eq("review_status", "pending");
+        const docsRejectedQ = sb.from("employee_documents").select("id", { count: "exact", head: true }).eq("review_status", "rejected");
+
+        // Expiry windows for the unified expiry classifier (admin docs only).
+        const nowIso = new Date().toISOString();
+        const in30Iso = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+        const docsExpiredQ = sb.from("employee_documents").select("id", { count: "exact", head: true })
+          .eq("review_status", "approved").not("expires_at", "is", null).lte("expires_at", nowIso);
+        const docsExpiringQ = sb.from("employee_documents").select("id", { count: "exact", head: true })
+          .eq("review_status", "approved").not("expires_at", "is", null).gt("expires_at", nowIso).lte("expires_at", in30Iso);
+
         if (companyId) {
           openQ.eq("company_id", companyId);
           unmatchedQ.eq("company_id", companyId);
           noPortalQ.eq("company_id", companyId);
           reqQ.eq("company_id", companyId);
+          docsPendingQ.eq("company_id", companyId);
+          docsRejectedQ.eq("company_id", companyId);
+          docsExpiredQ.eq("company_id", companyId);
+          docsExpiringQ.eq("company_id", companyId);
         }
-        
-        const [openRes, unmatchedRes, noPortalRes, reqRes] = await Promise.all([openQ, unmatchedQ, noPortalQ, reqQ]);
+
+        const [openRes, unmatchedRes, noPortalRes, reqRes, dpRes, drRes, deRes, dxRes] = await Promise.all([
+          openQ, unmatchedQ, noPortalQ, reqQ, docsPendingQ, docsRejectedQ, docsExpiredQ, docsExpiringQ,
+        ]);
 
         if (cancelled) return;
         setCounts({
@@ -91,6 +114,10 @@ export function SmartActionQueue({ companyId }: Props) {
           workersNoPortal: noPortalRes?.count ?? 0,
           workersMissingPin: 0,
           actionableRequests: reqRes?.count ?? 0,
+          docsPending: dpRes?.count ?? 0,
+          docsRejected: drRes?.count ?? 0,
+          docsExpired: deRes?.count ?? 0,
+          docsExpiring: dxRes?.count ?? 0,
         });
       } catch {
         // Silent fail — keep defaults.
@@ -183,6 +210,65 @@ export function SmartActionQueue({ companyId }: Props) {
       icon: ClipboardList,
     });
   }
+  if (counts.docsExpired > 0) {
+    items.push({
+      id: "docs-expired",
+      priority: "high",
+      title: `${counts.docsExpired} expired document${counts.docsExpired === 1 ? "" : "s"}`,
+      reason: "An approved document has passed its expiration date.",
+      cta: "Open Documents",
+      to: "/app/documents?status=expired",
+      source: "Compliance",
+      icon: FileX2,
+    });
+  }
+  if (counts.docsRejected > 0) {
+    items.push({
+      id: "docs-rejected",
+      priority: "medium",
+      title: `${counts.docsRejected} rejected document${counts.docsRejected === 1 ? "" : "s"}`,
+      reason: "Worker uploads were rejected and need a replacement.",
+      cta: "Open Documents",
+      to: "/app/documents?status=rejected",
+      source: "Compliance",
+      icon: FileWarning,
+    });
+  }
+  if (counts.docsPending > 0) {
+    items.push({
+      id: "docs-pending",
+      priority: counts.docsPending > 10 ? "high" : "medium",
+      title: `Review ${counts.docsPending} pending document${counts.docsPending === 1 ? "" : "s"}`,
+      reason: "Uploaded documents are waiting for admin review.",
+      cta: "Open Documents",
+      to: "/app/documents?status=pending",
+      source: "Compliance",
+      icon: FileClock,
+    });
+  }
+  if (counts.docsExpiring > 0) {
+    items.push({
+      id: "docs-expiring",
+      priority: "medium",
+      title: `${counts.docsExpiring} document${counts.docsExpiring === 1 ? "" : "s"} expiring soon`,
+      reason: "Approved documents expire within 30 days.",
+      cta: "Open Documents",
+      to: "/app/documents?status=expiring_soon",
+      source: "Compliance",
+      icon: CalendarClock,
+    });
+  }
+  // Always-on link to missing-required-document workers (visible only when filter is useful).
+  items.push({
+    id: "docs-missing-required",
+    priority: "info",
+    title: "Workers missing required documents",
+    reason: "Filter the workers list by missing required document risk.",
+    cta: "Open Workers",
+    to: "/app/employees?risk=missing_required_document",
+    source: "Compliance",
+    icon: FileMinus,
+  });
   items.push({
     id: "duplicates",
     priority: "info",

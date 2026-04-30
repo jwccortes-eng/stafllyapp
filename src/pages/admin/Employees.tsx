@@ -78,6 +78,7 @@ import { ModuleSettingsSheet } from "@/components/settings/ModuleSettingsSheet";
 import type { SettingsSection } from "@/components/settings/ModuleSettingsSheet";
 import DataQualityRiskPanel, { WorkerRiskTags } from "@/components/employee/DataQualityRiskPanel";
 import { analyzeEmployeeRisks, type RiskKey } from "@/lib/data-quality-risks";
+import { useCompanyDocuments } from "@/hooks/useCompanyDocuments";
 
 // Fields that only owner/admin can see
 const SENSITIVE_FIELD_KEYS = new Set([
@@ -780,8 +781,17 @@ export default function Employees() {
     }
   };
 
-  // Risk analysis (read-only). Computed once per employees snapshot.
-  const riskAnalysis = useMemo(() => analyzeEmployeeRisks(employees), [employees]);
+  // Document signals (read-only) — feeds doc-compliance risks into the same engine.
+  const { signals: documentSignals } = useCompanyDocuments({
+    companyId: selectedCompanyId ?? null,
+    employees,
+  });
+
+  // Risk analysis (read-only). Recomputes when document signals change.
+  const riskAnalysis = useMemo(
+    () => analyzeEmployeeRisks(employees, documentSignals),
+    [employees, documentSignals],
+  );
 
   const baseFiltered = employees.filter((e) => {
     const haystack = `${e.first_name ?? ""} ${e.last_name ?? ""} ${e.email ?? ""} ${e.phone_number ?? ""} ${e.employer_identification ?? ""}`.toLowerCase();
@@ -1208,6 +1218,7 @@ export default function Employees() {
       {isPrivileged && employees.length > 0 && (
         <DataQualityRiskPanel
           employees={employees}
+          documentSignals={documentSignals}
           riskFilter={riskFilter}
           onRiskFilterChange={setRiskFilter}
         />

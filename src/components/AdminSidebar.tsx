@@ -47,6 +47,7 @@ const COMPANY_LINKS: LinkDef[] = [
 
   // WORKFORCE
   { to: "/app/employees", icon: Users, label: "Workers", module: "employees", section: "Workforce" },
+  { to: "/app/documents", icon: FileText, label: "Documents", module: null, section: "Workforce", badge: "documents_review" },
   { to: "/app/timeclock", icon: Clock, label: "Time Clock", module: "shifts", section: "Workforce" },
   { to: "/app/attendance", icon: ShieldCheck, label: "Attendance", module: null, section: "Workforce" },
   { to: "/app/applications", icon: UserPlus2, label: "Applications", module: null, section: "Workforce" },
@@ -111,15 +112,22 @@ export default function AdminSidebar() {
   useEffect(() => {
     if (!selectedCompanyId) return;
     async function fetchBadges() {
-      const [ticketsRes, shiftReqRes] = await Promise.all([
+      const [ticketsRes, shiftReqRes, pendingDocsRes, rejectedDocsRes, pendingOnbDocsRes] = await Promise.all([
         supabase.from("employee_tickets").select("id", { count: "exact", head: true })
           .eq("company_id", selectedCompanyId!).in("status", ["new", "in_progress"]),
         supabase.from("shift_assignments").select("id", { count: "exact", head: true })
           .eq("company_id", selectedCompanyId!).eq("status", "pending"),
+        (supabase as any).from("employee_documents").select("id", { count: "exact", head: true })
+          .eq("company_id", selectedCompanyId!).eq("review_status", "pending"),
+        (supabase as any).from("employee_documents").select("id", { count: "exact", head: true })
+          .eq("company_id", selectedCompanyId!).eq("review_status", "rejected"),
+        (supabase as any).from("employee_onboarding_documents").select("id", { count: "exact", head: true })
+          .eq("company_id", selectedCompanyId!).in("status", ["pending", "rejected"]),
       ]);
       setBadgeCounts({
         tickets: ticketsRes.count ?? 0,
         shift_requests: shiftReqRes.count ?? 0,
+        documents_review: (pendingDocsRes?.count ?? 0) + (rejectedDocsRes?.count ?? 0) + (pendingOnbDocsRes?.count ?? 0),
       });
     }
     fetchBadges();
