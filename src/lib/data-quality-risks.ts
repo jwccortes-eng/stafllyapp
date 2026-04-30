@@ -24,6 +24,12 @@ export type RiskKey =
   | "system_placeholder"
   | "missing_location"
   | "inactive_with_payroll"
+  // Profile completeness — Phase 2 actionable signals.
+  | "missing_phone"
+  | "missing_email"
+  | "missing_photo"
+  | "missing_emergency_contact"
+  | "portal_not_active"
   // Document compliance risks (only set when document signals are provided).
   | "missing_required_document"
   | "pending_document_review"
@@ -44,12 +50,17 @@ const RISK_META: Record<RiskKey, Omit<RiskTag, "key">> = {
   duplicate_review:    { label: "Duplicate review",   tone: "warning",     description: "Shares phone, email or worker code with another record." },
   suspicious_email:    { label: "Suspicious email",   tone: "warning",     description: "Email looks shared, generic or like a placeholder." },
   missing_role:        { label: "Missing role",       tone: "muted",       description: "No employee role assigned." },
-  phone_invalid:       { label: "Phone needs format", tone: "muted",       description: "Phone is missing or not a normalized 10-digit US number." },
+  phone_invalid:       { label: "Phone needs format", tone: "muted",       description: "Phone is not a normalized 10-digit US number." },
   historical_active:   { label: "Historical active",  tone: "warning",     description: "Marked historical/legacy but portal access is still active." },
   test_account:        { label: "Test account",       tone: "destructive", description: "Name or email looks like a test, demo or QA account." },
   system_placeholder:  { label: "System placeholder", tone: "destructive", description: "Auto-generated placeholder (e.g. ‘System 3’). Not a real worker." },
   missing_location:    { label: "Missing location",   tone: "muted",       description: "City and state are both blank." },
   inactive_with_payroll: { label: "Inactive · payroll history", tone: "muted", description: "Inactive worker with prior payroll activity — keep for audit." },
+  missing_phone:       { label: "Missing phone",      tone: "warning",     description: "No phone on file. Required to invite, contact or run payroll comms." },
+  missing_email:       { label: "Missing email",      tone: "muted",       description: "No email on file. Optional but useful for invitations and pay reports." },
+  missing_photo:       { label: "Missing photo",      tone: "muted",       description: "Worker has no profile photo. Required for facial recognition and identity." },
+  missing_emergency_contact: { label: "No emergency contact", tone: "muted", description: "No emergency contact name or phone on file." },
+  portal_not_active:   { label: "Portal not active",  tone: "muted",       description: "Worker has not linked a portal account yet (no user_id)." },
   missing_required_document: { label: "Missing docs",  tone: "warning",     description: "One or more required documents are not yet approved for this worker." },
   pending_document_review:   { label: "Docs pending",  tone: "muted",       description: "Uploaded document(s) are awaiting admin review." },
   expired_document:          { label: "Expired docs",  tone: "destructive", description: "At least one document has passed its expiration date." },
@@ -106,6 +117,11 @@ export function analyzeEmployeeRisks(
     system_placeholder: 0,
     missing_location: 0,
     inactive_with_payroll: 0,
+    missing_phone: 0,
+    missing_email: 0,
+    missing_photo: 0,
+    missing_emergency_contact: 0,
+    portal_not_active: 0,
     missing_required_document: 0,
     pending_document_review: 0,
     expired_document: 0,
@@ -189,6 +205,23 @@ export function analyzeEmployeeRisks(
       tags.push("inactive_with_payroll");
     }
 
+    // Phase 2 — actionable profile-completeness signals (active workers only).
+    if (isActive) {
+      const phoneRaw = (e?.phone_number ?? "").toString().trim();
+      if (!phoneRaw) tags.push("missing_phone");
+
+      if (!emailRaw) tags.push("missing_email");
+
+      const avatar = (e?.avatar_url ?? "").toString().trim();
+      if (!avatar) tags.push("missing_photo");
+
+      const ecName = (e?.emergency_contact_name ?? "").toString().trim();
+      const ecPhone = (e?.emergency_contact_phone ?? "").toString().trim();
+      if (!ecName && !ecPhone) tags.push("missing_emergency_contact");
+
+      if (!portalActive) tags.push("portal_not_active");
+    }
+
     // Document compliance risks — only computed when caller passes signals.
     // Only surface for active workers; we do not want to nag inactive records.
     const docSig = documentSignals?.get(e.id);
@@ -229,6 +262,7 @@ export function computePayrollReadiness(risks: RiskKey[]): PayrollReadiness {
     risks.includes("phone_invalid") ||
     risks.includes("historical_active") ||
     risks.includes("missing_role") ||
+    risks.includes("missing_phone") ||
     risks.includes("missing_required_document") ||
     risks.includes("expired_document") ||
     risks.includes("rejected_document")
@@ -253,7 +287,12 @@ export const RISK_ORDER: RiskKey[] = [
   "expiring_document",
   "pending_document_review",
   "suspicious_email",
+  "missing_phone",
   "phone_invalid",
+  "missing_email",
+  "missing_photo",
+  "missing_emergency_contact",
+  "portal_not_active",
   "missing_role",
   "missing_location",
   "inactive_with_payroll",

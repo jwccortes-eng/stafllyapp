@@ -78,6 +78,7 @@ import { ModuleSettingsSheet } from "@/components/settings/ModuleSettingsSheet";
 import type { SettingsSection } from "@/components/settings/ModuleSettingsSheet";
 import DataQualityRiskPanel, { WorkerRiskTags } from "@/components/employee/DataQualityRiskPanel";
 import { analyzeEmployeeRisks, type RiskKey } from "@/lib/data-quality-risks";
+import { buildBulkRemindersText } from "@/lib/data-quality-actions";
 import { useCompanyDocuments } from "@/hooks/useCompanyDocuments";
 
 // Fields that only owner/admin can see
@@ -280,6 +281,7 @@ export default function Employees() {
   const [deleteTarget, setDeleteTarget] = useState<EmployeeRecord | null>(null);
   const [passwordOpen, setPasswordOpen] = useState(false);
   const [viewEmployee, setViewEmployee] = useState<EmployeeRecord | null>(null);
+  const [profileActiveTab, setProfileActiveTab] = useState<string>("info");
   const [isEditing, setIsEditing] = useState(false);
   const [importPreview, setImportPreview] = useState<ImportPreviewRow[]>([]);
   const [importStep, setImportStep] = useState<"upload" | "preview" | "done">("upload");
@@ -1271,6 +1273,82 @@ export default function Employees() {
           : selectedFailedCount > 0
             ? `Re-invite ${selectedFailedCount} failed`
             : "Re-invite selected";
+
+        // Selected workers with at least one Phase 2 actionable risk → eligible
+        // for the WhatsApp / CSV bulk helpers. Computed inline so we never
+        // mutate state from a render-only path.
+        const selectedRows = Array.from(selectedIds)
+          .map((id) => employees.find((e) => e.id === id))
+          .filter(Boolean) as EmployeeRecord[];
+        const selectedWithIssues = selectedRows.filter(
+          (e) => (riskAnalysis.byId.get(e.id) ?? []).length > 0,
+        );
+
+        const handleCopyWhatsapp = async () => {
+          const rows = selectedWithIssues.map((e) => ({
+            employeeId: e.id,
+            firstName: e.first_name,
+            lastName: e.last_name,
+            phone: e.phone_number,
+            risks: riskAnalysis.byId.get(e.id) ?? [],
+          }));
+          const { text, included, skipped } = buildBulkRemindersText(rows, {
+            companyName: selectedCompany?.name ?? null,
+          });
+          if (!text) {
+            toast({
+              title: "Nothing to send",
+              description: "None of the selected workers have actionable missing items.",
+              variant: "destructive",
+            });
+            return;
+          }
+          try {
+            await navigator.clipboard.writeText(text);
+            toast({
+              title: `Copied ${included} reminder${included === 1 ? "" : "s"}`,
+              description: skipped > 0
+                ? `${skipped} worker${skipped === 1 ? "" : "s"} skipped (no actionable items). Paste into WhatsApp Web.`
+                : "Paste into WhatsApp Web — separators included.",
+            });
+          } catch {
+            toast({ title: "Could not copy to clipboard", variant: "destructive" });
+          }
+        };
+
+        const handleExportSelectedCsv = () => {
+          if (selectedWithIssues.length === 0) {
+            toast({ title: "Nothing to export", description: "None of the selected workers have detected issues.", variant: "destructive" });
+            return;
+          }
+          const header = ["worker_id", "first_name", "last_name", "email", "phone_number", "employer_identification", "is_active", "portal_active", "risk_tags"];
+          const escape = (v: any) => {
+            const s = v == null ? "" : String(v);
+            return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+          };
+          const lines = [header.join(",")];
+          for (const e of selectedWithIssues) {
+            const tags = riskAnalysis.byId.get(e.id) ?? [];
+            lines.push([
+              e.id, e.first_name ?? "", e.last_name ?? "", e.email ?? "",
+              e.phone_number ?? "", e.employer_identification ?? "",
+              e.is_active === false ? "false" : "true",
+              e.user_id ? "true" : "false",
+              tags.join("|"),
+            ].map(escape).join(","));
+          }
+          const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8;" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `worker_issues_${new Date().toISOString().slice(0, 10)}.csv`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          toast({ title: `Exported ${selectedWithIssues.length} workers`, description: "CSV downloaded." });
+        };
+
         return (
           <BulkActionsBar
             selectedCount={selectedIds.size}
@@ -1299,6 +1377,44 @@ export default function Employees() {
                     {selectedFailedCount === 0
                       ? "Select workers whose invitation failed, bounced or hit DLQ to enable bulk re-invite."
                       : `Resends invitations for ${selectedFailedCount} selected worker${selectedFailedCount === 1 ? "" : "s"} with a failed delivery state. Other selected rows are skipped.`}
+                  </TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span>
+                      <Button
+                        variant="outline"
+                        size="xs"
+                        onClick={handleCopyWhatsapp}
+                        disabled={selectedWithIssues.length === 0}
+                      >
+                        <MessageCircle className="h-3 w-3" />
+                        Copy WhatsApp ({selectedWithIssues.length})
+                      </Button>
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="text-xs max-w-[260px]">
+                    Builds one reminder per selected worker with detected issues and copies them to your clipboard. No messages are sent automatically.
+                  </TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span>
+                      <Button
+                        variant="outline"
+                        size="xs"
+                        onClick={handleExportSelectedCsv}
+                        disabled={selectedWithIssues.length === 0}
+                      >
+                        <Download className="h-3 w-3" />
+                        Export issues CSV
+                      </Button>
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="text-xs max-w-[260px]">
+                    Downloads a CSV of the selected workers with detected risk tags for offline review.
                   </TooltipContent>
                 </Tooltip>
               </>
@@ -1695,7 +1811,7 @@ export default function Employees() {
       )}
 
       {/* ─── Detail Sheet — Premium ─── */}
-      <Sheet open={!!viewEmployee} onOpenChange={(v) => { if (!v) { setViewEmployee(null); setIsEditing(false); } }}>
+      <Sheet open={!!viewEmployee} onOpenChange={(v) => { if (!v) { setViewEmployee(null); setIsEditing(false); setProfileActiveTab("info"); } }}>
         <SheetContent className="w-[440px] sm:w-[560px] p-0 flex flex-col">
           {/* Header */}
           <div className="bg-gradient-to-br from-primary/[0.04] to-transparent border-b px-5 py-4">
@@ -1781,11 +1897,17 @@ export default function Employees() {
             <div className="p-4 space-y-3">
               {viewEmployee && (
                 <>
-                  <WorkerDataQualityReview employee={viewEmployee} companyEmployees={employees} />
+                  <WorkerDataQualityReview
+                    employee={viewEmployee}
+                    companyEmployees={employees}
+                    documentSignals={documentSignals}
+                    companyName={selectedCompany?.name}
+                    onJumpToTab={(tab) => setProfileActiveTab(tab)}
+                  />
                   <WorkerDocumentsCompliance employee={viewEmployee} />
                 </>
               )}
-              <EmployeeProfileTabs employee={viewEmployee!} companyId={selectedCompanyId!} isEditing={isEditing} form={form} setForm={setForm} isPrivileged={isPrivileged} onEmployeeUpdate={(updates) => setViewEmployee(prev => prev ? { ...prev, ...updates } : prev)} companyName={selectedCompany?.name} onInvite={() => setInviteOpen(true)} invitation={viewEmployee ? invitations[viewEmployee.id] ?? null : null} />
+              <EmployeeProfileTabs employee={viewEmployee!} companyId={selectedCompanyId!} isEditing={isEditing} form={form} setForm={setForm} isPrivileged={isPrivileged} onEmployeeUpdate={(updates) => setViewEmployee(prev => prev ? { ...prev, ...updates } : prev)} companyName={selectedCompany?.name} onInvite={() => setInviteOpen(true)} invitation={viewEmployee ? invitations[viewEmployee.id] ?? null : null} activeTab={profileActiveTab} onTabChange={setProfileActiveTab} />
             </div>
           </ScrollArea>
         </SheetContent>
