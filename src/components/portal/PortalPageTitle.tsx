@@ -4,7 +4,7 @@ const PAGE_TITLES: Record<string, string> = {
   "/portal": "Home",
   "/portal/shifts": "My Shifts",
   "/portal/clock": "Clock",
-  "/portal/pay-reports": "My Payments",
+  "/portal/pay-reports": "My Pay Reports",
   "/portal/profile": "Profile",
   "/portal/availability": "Availability",
   "/portal/announcements": "Announcements",
