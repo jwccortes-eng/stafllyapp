@@ -58,7 +58,7 @@ export function KpiCard({ value, label, icon, accent = "muted", subtitle, onClic
               s.value,
               valueColors[accent],
               mono && "font-mono text-right",
-              size === "lg" && "break-all"
+              size === "lg" && "whitespace-nowrap"
             )}
             title={String(value)}
           >
