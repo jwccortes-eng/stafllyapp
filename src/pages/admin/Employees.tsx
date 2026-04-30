@@ -45,6 +45,7 @@ import { PremiumAvatar, type PremiumAvatarStatus } from "@/components/ui/premium
 import { ViewSwitcher, type ViewMode } from "@/components/ui/view-switcher";
 import { SortIndicator } from "@/components/ui/sort-indicator";
 import { useUrlFilters } from "@/hooks/useUrlFilters";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useSortPreference } from "@/hooks/useSortPreference";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -277,6 +278,10 @@ export default function Employees() {
   const [importResult, setImportResult] = useState<{ created: number; skipped: number } | null>(null);
   const [importing, setImporting] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("table");
+  const isMobile = useIsMobile();
+  // On mobile we always render the premium card view to avoid horizontal overflow
+  // and to hide noisy admin metadata (employer_identification etc.) from the list.
+  const effectiveViewMode: ViewMode = isMobile ? "cards" : viewMode;
   const [updateDiffs, setUpdateDiffs] = useState<UpdateDiff[]>([]);
   const [updateStep, setUpdateStep] = useState<"upload" | "preview" | "done">("upload");
   const [updateResult, setUpdateResult] = useState<{ updated: number; skipped: number; created?: number } | null>(null);
@@ -1327,7 +1332,7 @@ export default function Employees() {
             }
           />
         )
-      ) : viewMode === "compact" ? (
+      ) : effectiveViewMode === "compact" ? (
         /* ─── Compact List ─── */
         <div className="rounded-xl border border-border/50 bg-card overflow-hidden divide-y divide-border/40">
           {filtered.map(e => {
@@ -1361,7 +1366,7 @@ export default function Employees() {
             );
           })}
         </div>
-      ) : viewMode === "cards" ? (
+      ) : effectiveViewMode === "cards" ? (
         /* ─── Cards View ─── */
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
           {filtered.map(e => {

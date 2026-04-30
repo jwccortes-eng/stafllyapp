@@ -191,14 +191,14 @@ export function PortalAccessBadge({
         <Tooltip>
           <TooltipTrigger asChild>
             <span className={cn(
-              "inline-flex items-center gap-1 rounded-full font-semibold border border-transparent",
+              "inline-flex items-center gap-1 rounded-full font-semibold border border-transparent whitespace-nowrap max-w-full",
               compact ? "px-1.5 py-0 text-[9px]" : "px-2 py-0.5 text-[10px]",
               config.badgeClass,
             )}>
               <span className={cn("rounded-full shrink-0", compact ? "h-1 w-1" : "h-1.5 w-1.5", config.dotClass)} />
-              {config.label}
+              <span className="truncate">{config.label}</span>
               {inviteSubLabel && !compact && (
-                <span className="text-[8px] opacity-70 ml-0.5">· {inviteSubLabel}</span>
+                <span className="text-[8px] opacity-70 ml-0.5 truncate">· {inviteSubLabel}</span>
               )}
             </span>
           </TooltipTrigger>
