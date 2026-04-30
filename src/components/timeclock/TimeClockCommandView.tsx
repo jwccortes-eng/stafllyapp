@@ -258,7 +258,7 @@ export default function TimeClockCommandView() {
                 onClick={() => setSelectedEmpId(item.employee.id)}
               >
                 <EmployeeAvatar
-                  src={item.employee.avatar_url}
+                  avatarUrl={item.employee.avatar_url}
                   firstName={item.employee.first_name}
                   lastName={item.employee.last_name}
                   size="sm"
@@ -335,7 +335,7 @@ export default function TimeClockCommandView() {
                   onClick={() => setSelectedEmpId(r.employee.id)}
                 >
                   <EmployeeAvatar
-                    src={r.employee.avatar_url}
+                    avatarUrl={r.employee.avatar_url}
                     firstName={r.employee.first_name}
                     lastName={r.employee.last_name}
                     size="sm"
