@@ -78,6 +78,7 @@ import { ModuleSettingsSheet } from "@/components/settings/ModuleSettingsSheet";
 import type { SettingsSection } from "@/components/settings/ModuleSettingsSheet";
 import DataQualityRiskPanel, { WorkerRiskTags } from "@/components/employee/DataQualityRiskPanel";
 import { analyzeEmployeeRisks, type RiskKey } from "@/lib/data-quality-risks";
+import { buildBulkRemindersText } from "@/lib/data-quality-actions";
 import { useCompanyDocuments } from "@/hooks/useCompanyDocuments";
 
 // Fields that only owner/admin can see
