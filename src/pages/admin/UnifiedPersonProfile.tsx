@@ -70,6 +70,7 @@ import {
 } from "lucide-react";
 import { isInviteStatusFailure } from "@/lib/invitation-status";
 import { cn } from "@/lib/utils";
+import { isDocDialogOpen, subscribeDocDialog } from "@/lib/document-dialog-suspend";
 
 type EmployeeRecord = Record<string, any>;
 
