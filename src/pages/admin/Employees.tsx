@@ -778,12 +778,16 @@ export default function Employees() {
     }
   };
 
+  // Risk analysis (read-only). Computed once per employees snapshot.
+  const riskAnalysis = useMemo(() => analyzeEmployeeRisks(employees), [employees]);
+
   const baseFiltered = employees.filter((e) => {
     const haystack = `${e.first_name ?? ""} ${e.last_name ?? ""} ${e.email ?? ""} ${e.phone_number ?? ""} ${e.employer_identification ?? ""}`.toLowerCase();
     const matchesSearch = haystack.includes(search.toLowerCase());
     const matchesRole = filterRole === "all" || e.employee_role === filterRole;
     const matchesGroup = filterGroup === "all" || e.groups === filterGroup;
-    return matchesSearch && matchesStatusTab(e, statusTab) && matchesRole && matchesGroup;
+    const matchesRisk = riskFilter === "all" || (riskAnalysis.byId.get(e.id)?.includes(riskFilter) ?? false);
+    return matchesSearch && matchesStatusTab(e, statusTab) && matchesRole && matchesGroup && matchesRisk;
   });
 
   // Persisted sort applied to the filtered list.
