@@ -20,12 +20,17 @@ import staflyIcon from "@/assets/stafly-app-icon-new.png";
 import { cn } from "@/lib/utils";
 
 export type StaflyCalmStatus = "processing" | "success" | "waiting" | "error";
+export type StaflyCalmVariant = "inline" | "card" | "overlay" | "compact";
 
 export interface StaflyCalmProcessingBannerProps {
   title?: string;
   message?: string;
   status?: StaflyCalmStatus;
+  /** Preferred API. Defaults to "card". Use "compact" for inline pills, "overlay" for blocking actions, "inline" for minimal in-flow indicator. */
+  variant?: StaflyCalmVariant;
+  /** @deprecated use variant="compact" */
   compact?: boolean;
+  /** @deprecated use variant="overlay" */
   fullScreen?: boolean;
   showLogo?: boolean;
   progress?: number | null;
@@ -108,6 +113,7 @@ export default function StaflyCalmProcessingBanner({
   title,
   message,
   status = "processing",
+  variant,
   compact = false,
   fullScreen = false,
   showLogo = true,
@@ -117,9 +123,13 @@ export default function StaflyCalmProcessingBanner({
   onAction,
   className,
 }: StaflyCalmProcessingBannerProps) {
+  // Resolve effective variant (back-compat with compact/fullScreen)
+  const effectiveVariant: StaflyCalmVariant =
+    variant ?? (fullScreen ? "overlay" : compact ? "compact" : "card");
+
   const finalTitle = title ?? DEFAULTS.title;
   const finalMessage = message ?? DEFAULTS.message;
-  const finalFooter = footerNote ?? (compact ? undefined : DEFAULTS.footerNote);
+  const finalFooter = footerNote ?? (effectiveVariant === "card" || effectiveVariant === "overlay" ? DEFAULTS.footerNote : undefined);
 
   const ariaProps = useMemo(
     () =>
@@ -129,8 +139,28 @@ export default function StaflyCalmProcessingBanner({
     [status]
   );
 
-  // ─── COMPACT ──────────────────────────────────────────────
-  if (compact) {
+  // ─── INLINE (minimal in-flow loader, NOT a splash) ────────
+  if (effectiveVariant === "inline") {
+    return (
+      <div
+        {...ariaProps}
+        className={cn(
+          "flex items-center gap-2.5 text-sm text-muted-foreground print:hidden",
+          className
+        )}
+      >
+        <span className="relative flex h-2 w-2">
+          <span className="absolute inline-flex h-full w-full rounded-full bg-primary/60 opacity-75 motion-safe:animate-ping" />
+          <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
+        </span>
+        <span className="font-medium text-foreground/90">{finalTitle}</span>
+        {message && <span className="hidden sm:inline text-muted-foreground/80">· {finalMessage}</span>}
+      </div>
+    );
+  }
+
+  // ─── COMPACT (pill, premium gradient — for action chips) ──
+  if (effectiveVariant === "compact") {
     return (
       <div
         {...ariaProps}
@@ -138,7 +168,7 @@ export default function StaflyCalmProcessingBanner({
           "relative inline-flex items-center gap-2.5 rounded-full px-3.5 py-1.5",
           "bg-gradient-to-r from-[#0b1437] via-[#1a1f4d] to-[#2a1b54]",
           "border border-white/10 text-white shadow-[0_4px_20px_-8px_rgba(56,109,255,0.5)]",
-          "overflow-hidden",
+          "overflow-hidden print:hidden",
           className
         )}
       >
@@ -160,11 +190,11 @@ export default function StaflyCalmProcessingBanner({
     <div
       {...ariaProps}
       className={cn(
-        "relative w-full overflow-hidden rounded-2xl",
+        "relative w-full overflow-hidden rounded-2xl print:hidden",
         "bg-gradient-to-br from-[#070b24] via-[#121a4a] to-[#3a1d63]",
         "border border-white/10",
         "shadow-[0_20px_60px_-20px_rgba(56,109,255,0.55),0_0_120px_-40px_rgba(150,80,255,0.4)_inset]",
-        fullScreen ? "max-w-lg" : "",
+        effectiveVariant === "overlay" ? "max-w-lg" : "",
         className
       )}
     >
@@ -252,11 +282,11 @@ export default function StaflyCalmProcessingBanner({
     </div>
   );
 
-  // ─── FULLSCREEN OVERLAY ───────────────────────────────────
-  if (fullScreen) {
+  // ─── OVERLAY (blocking, only when explicitly requested) ───
+  if (effectiveVariant === "overlay") {
     return (
       <div
-        className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-[#04061a]/80 backdrop-blur-md motion-safe:animate-fade-in"
+        className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-[#04061a]/80 backdrop-blur-md motion-safe:animate-fade-in print:hidden"
         aria-modal="true"
       >
         {content}
