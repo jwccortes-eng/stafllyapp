@@ -40,6 +40,14 @@ export function DocumentReasonDialog({
     wasOpen.current = open;
   }, [open, initialReason]);
 
+  // While this dialog is open, suppress visual realtime refreshes from the
+  // parent profile so the textarea does not lose focus on each keystroke.
+  useEffect(() => {
+    if (!open) return;
+    const release = acquireDocDialogLock();
+    return release;
+  }, [open]);
+
   const isReject = action === "reject";
   const Icon = isReject ? AlertTriangle : Repeat2;
   const title = isReject ? "Reject document" : "Request replacement";
