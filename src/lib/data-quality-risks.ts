@@ -189,6 +189,17 @@ export function analyzeEmployeeRisks(
       tags.push("inactive_with_payroll");
     }
 
+    // Document compliance risks — only computed when caller passes signals.
+    // Only surface for active workers; we do not want to nag inactive records.
+    const docSig = documentSignals?.get(e.id);
+    if (docSig && isActive) {
+      if (docSig.missingRequiredLabels.length > 0) tags.push("missing_required_document");
+      if (docSig.pendingCount > 0) tags.push("pending_document_review");
+      if (docSig.expiredCount > 0) tags.push("expired_document");
+      if (docSig.expiringSoonCount > 0) tags.push("expiring_document");
+      if (docSig.rejectedCount > 0) tags.push("rejected_document");
+    }
+
     if (tags.length > 0) {
       // Dedupe while preserving order.
       const unique = Array.from(new Set(tags));
@@ -217,7 +228,10 @@ export function computePayrollReadiness(risks: RiskKey[]): PayrollReadiness {
     risks.includes("suspicious_email") ||
     risks.includes("phone_invalid") ||
     risks.includes("historical_active") ||
-    risks.includes("missing_role")
+    risks.includes("missing_role") ||
+    risks.includes("missing_required_document") ||
+    risks.includes("expired_document") ||
+    risks.includes("rejected_document")
   ) {
     return "needs_review";
   }
@@ -231,8 +245,13 @@ export function getRiskMeta(key: RiskKey): RiskTag {
 export const RISK_ORDER: RiskKey[] = [
   "system_placeholder",
   "test_account",
+  "expired_document",
+  "rejected_document",
+  "missing_required_document",
   "duplicate_review",
   "historical_active",
+  "expiring_document",
+  "pending_document_review",
   "suspicious_email",
   "phone_invalid",
   "missing_role",
