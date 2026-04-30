@@ -171,6 +171,18 @@ export function SmartActionQueue({ companyId }: Props) {
       icon: Users,
     });
   }
+  if (counts.actionableRequests > 0) {
+    items.push({
+      id: "actionable-requests",
+      priority: counts.actionableRequests > 5 ? "high" : "medium",
+      title: `${counts.actionableRequests} request${counts.actionableRequests === 1 ? "" : "s"} need action`,
+      reason: "Open / pending / ready-to-convert client or worker requests.",
+      cta: "Open Intake",
+      to: "/app/service-requests",
+      source: "Intake",
+      icon: ClipboardList,
+    });
+  }
   items.push({
     id: "duplicates",
     priority: "info",
