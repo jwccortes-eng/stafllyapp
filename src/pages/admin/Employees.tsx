@@ -278,6 +278,10 @@ export default function Employees() {
   const [importResult, setImportResult] = useState<{ created: number; skipped: number } | null>(null);
   const [importing, setImporting] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("table");
+  const isMobile = useIsMobile();
+  // On mobile we always render the premium card view to avoid horizontal overflow
+  // and to hide noisy admin metadata (employer_identification etc.) from the list.
+  const effectiveViewMode: ViewMode = isMobile ? "cards" : viewMode;
   const [updateDiffs, setUpdateDiffs] = useState<UpdateDiff[]>([]);
   const [updateStep, setUpdateStep] = useState<"upload" | "preview" | "done">("upload");
   const [updateResult, setUpdateResult] = useState<{ updated: number; skipped: number; created?: number } | null>(null);
