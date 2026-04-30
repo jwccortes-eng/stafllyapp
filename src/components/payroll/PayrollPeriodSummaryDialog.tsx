@@ -154,9 +154,34 @@ export default function PayrollPeriodSummaryDialog({ open, onOpenChange, period,
   const hasRows = basePay.length > 0;
   const hasImport = imports.length > 0;
 
+  const companyName = selectedCompany?.name ?? "";
+
+  const handleCopySummary = async () => {
+    const txt = `Period${period.sequence_number != null ? ` #${period.sequence_number}` : ""} · ${format(new Date(period.start_date), "yyyy-MM-dd")} → ${format(new Date(period.end_date), "yyyy-MM-dd")} · ${totals.count} employees · ${fmtMoney(totals.total)} · ${hasImport ? `${imports.length} import${imports.length > 1 ? "s" : ""} ${imports[0]?.status ?? ""}` : "no import"} · validation ${validationOk ? "OK" : hasRows ? "check" : "n/a"}${companyName ? ` · ${companyName}` : ""}`;
+    try {
+      await navigator.clipboard.writeText(txt);
+      toast.success("Payroll summary copied");
+    } catch {
+      toast.error("Could not copy summary");
+    }
+  };
+
+  const handlePrint = () => {
+    window.print();
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl">
+      <DialogContent className="max-w-3xl print:max-w-none print:shadow-none print:border-0">
+        <style>{`
+          @media print {
+            body * { visibility: hidden !important; }
+            #payroll-summary-printable, #payroll-summary-printable * { visibility: visible !important; }
+            #payroll-summary-printable { position: absolute; left: 0; top: 0; width: 100%; padding: 24px; }
+            .no-print { display: none !important; }
+            [data-radix-dialog-overlay] { display: none !important; }
+          }
+        `}</style>
         <DialogHeader>
           <DialogTitle className="flex flex-wrap items-center gap-2">
             <span>Payroll Summary</span>
