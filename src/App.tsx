@@ -342,6 +342,7 @@ function App() {
               <Route path="/portal" element={<EmployeeLayout />}>
                 <Route index element={<EmployeeDashboard />} />
                 <Route path="payments" element={<MyPayments />} />
+                <Route path="pay-reports" element={<PayReports />} />
                 <Route path="week/:periodId" element={<WeekDetail />} />
                 <Route path="accumulated" element={<Accumulated />} />
                 <Route path="shifts" element={<MyShifts />} />
