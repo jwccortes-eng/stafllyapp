@@ -22,16 +22,28 @@ interface ActionPermission {
 interface AuthContextType {
   user: User | null;
   session: Session | null;
-  /** Highest-priority role (backward compat) */
+  /** Highest-priority GLOBAL role (developer/owner only — from user_roles).
+   *  Per-company roles live in companyRoles. Do NOT use this to gate admin
+   *  access for a specific tenant. */
   role: AppRole;
-  /** All roles the user has */
+  /** Global roles only (from public.user_roles). */
   allRoles: Set<string>;
+  /** Map of companyId → role from public.company_users (per-tenant). */
+  companyRoles: Record<string, string>;
+  /** Resolve role a user has IN a specific company.
+   *  Combines global cross-tenant roles (developer/owner) with per-company role. */
+  getRoleForCompany: (companyId: string | null) => AppRole;
+  /** Whether the user has admin-level access in the given company. */
+  canAccessAdminForCompany: (companyId: string | null) => boolean;
+  /** Whether the user has an employee record in the given company. */
+  canAccessPortalForCompany: (companyId: string | null) => boolean;
   /** Active mode: admin panel or employee portal */
   activeMode: ActiveMode;
   setActiveMode: (mode: ActiveMode) => void;
-  /** Whether user can access admin panel */
+  /** DEPRECATED — global flag, true if user has any admin-level role anywhere.
+   *  Use canAccessAdminForCompany(selectedCompanyId) for tenant-scoped checks. */
   canAccessAdmin: boolean;
-  /** Whether user has an employee profile */
+  /** Whether user has an employee profile (anywhere) */
   canAccessPortal: boolean;
   employeeId: string | null;
   /** All employee IDs across companies */
@@ -49,6 +61,8 @@ interface AuthContextType {
 }
 
 const ADMIN_ROLES = new Set(['developer', 'owner', 'company_owner', 'admin', 'manager', 'supervisor']);
+/** Roles in user_roles that are TRULY cross-tenant (Stafly platform staff). */
+const GLOBAL_CROSS_TENANT_ROLES = new Set(['developer', 'owner']);
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
