@@ -54,7 +54,7 @@ interface ImportInfo {
 }
 
 export default function PayPeriods() {
-  const { selectedCompanyId } = useCompany();
+  const { selectedCompanyId, selectedCompany } = useCompany();
   const { role, hasActionPermission } = useAuth();
   const [periods, setPeriods] = useState<PayPeriod[]>([]);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -526,7 +526,11 @@ export default function PayPeriods() {
         onOpenSummary={(p) => setSummaryPeriod(p)}
       />
 
-      <ReviewPolicyBoard companyId={selectedCompanyId} />
+      <ReviewPolicyBoard
+        companyId={selectedCompanyId}
+        selectedCompanyId={selectedCompanyId}
+        selectedCompanyName={selectedCompany?.name ?? null}
+      />
 
       <div className="flex items-center justify-between gap-2 mb-2">
         <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">All Periods</h2>
