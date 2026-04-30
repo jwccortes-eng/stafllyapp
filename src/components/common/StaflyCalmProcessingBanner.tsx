@@ -113,6 +113,7 @@ export default function StaflyCalmProcessingBanner({
   title,
   message,
   status = "processing",
+  variant,
   compact = false,
   fullScreen = false,
   showLogo = true,
@@ -122,9 +123,13 @@ export default function StaflyCalmProcessingBanner({
   onAction,
   className,
 }: StaflyCalmProcessingBannerProps) {
+  // Resolve effective variant (back-compat with compact/fullScreen)
+  const effectiveVariant: StaflyCalmVariant =
+    variant ?? (fullScreen ? "overlay" : compact ? "compact" : "card");
+
   const finalTitle = title ?? DEFAULTS.title;
   const finalMessage = message ?? DEFAULTS.message;
-  const finalFooter = footerNote ?? (compact ? undefined : DEFAULTS.footerNote);
+  const finalFooter = footerNote ?? (effectiveVariant === "card" || effectiveVariant === "overlay" ? DEFAULTS.footerNote : undefined);
 
   const ariaProps = useMemo(
     () =>
@@ -134,8 +139,28 @@ export default function StaflyCalmProcessingBanner({
     [status]
   );
 
-  // ─── COMPACT ──────────────────────────────────────────────
-  if (compact) {
+  // ─── INLINE (minimal in-flow loader, NOT a splash) ────────
+  if (effectiveVariant === "inline") {
+    return (
+      <div
+        {...ariaProps}
+        className={cn(
+          "flex items-center gap-2.5 text-sm text-muted-foreground print:hidden",
+          className
+        )}
+      >
+        <span className="relative flex h-2 w-2">
+          <span className="absolute inline-flex h-full w-full rounded-full bg-primary/60 opacity-75 motion-safe:animate-ping" />
+          <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
+        </span>
+        <span className="font-medium text-foreground/90">{finalTitle}</span>
+        {message && <span className="hidden sm:inline text-muted-foreground/80">· {finalMessage}</span>}
+      </div>
+    );
+  }
+
+  // ─── COMPACT (pill, premium gradient — for action chips) ──
+  if (effectiveVariant === "compact") {
     return (
       <div
         {...ariaProps}
