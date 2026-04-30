@@ -53,7 +53,6 @@ import {
   Pencil,
   Archive,
   UserCheck,
-  Cake,
   Briefcase,
   CalendarDays,
   ShieldCheck,
@@ -67,6 +66,8 @@ import {
   AlertTriangle,
   CheckCircle2,
   RotateCw,
+  ChevronDown,
+  Code2,
 } from "lucide-react";
 import { isInviteStatusFailure } from "@/lib/invitation-status";
 import { cn } from "@/lib/utils";
