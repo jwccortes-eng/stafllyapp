@@ -38,7 +38,7 @@ const TYPE_ROUTES: Record<string, string> = {
   shift_rejected: "/app/shifts",
   clock_request: "/app/requests",
   announcement: "/portal/announcements",
-  payment_ready: "/portal/payments",
+  payment_ready: "/portal/pay-reports",
 };
 
 const TYPE_COLORS: Record<string, string> = {
