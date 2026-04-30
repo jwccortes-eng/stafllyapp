@@ -262,6 +262,7 @@ export function computePayrollReadiness(risks: RiskKey[]): PayrollReadiness {
     risks.includes("phone_invalid") ||
     risks.includes("historical_active") ||
     risks.includes("missing_role") ||
+    risks.includes("missing_phone") ||
     risks.includes("missing_required_document") ||
     risks.includes("expired_document") ||
     risks.includes("rejected_document")
@@ -286,7 +287,12 @@ export const RISK_ORDER: RiskKey[] = [
   "expiring_document",
   "pending_document_review",
   "suspicious_email",
+  "missing_phone",
   "phone_invalid",
+  "missing_email",
+  "missing_photo",
+  "missing_emergency_contact",
+  "portal_not_active",
   "missing_role",
   "missing_location",
   "inactive_with_payroll",
