@@ -874,30 +874,86 @@ export default function UnifiedPersonProfile() {
         })}
       </div>
 
-      {/* ─── READINESS GAPS ─── */}
-      {(readiness.missingPersonal.length > 0 || readiness.missingDocuments.length > 0) && (() => {
+      {/* ─── READINESS / OPS GAPS ───
+          Surfaces every signal an admin needs to act on this worker:
+          missing required profile fields, missing required documents,
+          docs awaiting review, rejected docs, and a recommended next action.
+          Hides itself only when nothing is actionable. */}
+      {(() => {
         const personalCount = readiness.missingPersonal.length;
-        const docsCount = readiness.missingDocuments.length;
-        // Resolve target: docs tab if any document missing, otherwise info tab.
-        const resolveTarget = docsCount > 0 ? "docs" : "info";
-        const resolveLabel = docsCount > 0
-          ? (personalCount > 0 ? "Resolve gaps · Documents first" : "Upload documents")
-          : "Complete personal info";
+        const missingDocsCount = readiness.missingDocuments.length;
+        const pendingDocs = docsCount.pending;
+        const rejectedDocs = docsCount.rejected;
+        const portalNotActive = !portalActive;
+        const hasInvitation = !!invitations[employee.id];
+        const hasAnything =
+          personalCount > 0 ||
+          missingDocsCount > 0 ||
+          pendingDocs > 0 ||
+          rejectedDocs > 0 ||
+          portalNotActive;
+        if (!hasAnything) return null;
+
+        // Recommended next action — highest-priority blocker first.
+        let nextLabel = "Complete personal info";
+        let nextTab = "info";
+        let nextEdit = true;
+        if (rejectedDocs > 0) {
+          nextLabel = `Review ${rejectedDocs} rejected document${rejectedDocs === 1 ? "" : "s"}`;
+          nextTab = "docs";
+          nextEdit = false;
+        } else if (missingDocsCount > 0) {
+          nextLabel = personalCount > 0
+            ? "Resolve gaps · Documents first"
+            : "Upload required documents";
+          nextTab = "docs";
+          nextEdit = false;
+        } else if (pendingDocs > 0) {
+          nextLabel = `Review ${pendingDocs} pending upload${pendingDocs === 1 ? "" : "s"}`;
+          nextTab = "docs";
+          nextEdit = false;
+        } else if (personalCount > 0) {
+          nextLabel = "Complete personal info";
+          nextTab = "info";
+          nextEdit = true;
+        } else if (portalNotActive) {
+          nextLabel = hasInvitation ? "Resend portal invite" : "Send portal invite";
+          nextTab = "access";
+          nextEdit = false;
+        }
+
+        const totalActionable =
+          personalCount + missingDocsCount + pendingDocs + rejectedDocs;
+        const tone = (rejectedDocs > 0 || missingDocsCount > 0)
+          ? "destructive"
+          : (pendingDocs > 0 || personalCount > 0 || portalNotActive)
+            ? "warning"
+            : "muted";
+        const toneClasses = tone === "destructive"
+          ? "border-destructive/30 bg-destructive/[0.04]"
+          : "border-warning/30 bg-warning/[0.04]";
+        const headerClasses = tone === "destructive" ? "text-destructive" : "text-warning";
+        const barBg = tone === "destructive" ? "bg-destructive/15" : "bg-warning/15";
+        const barFill = tone === "destructive" ? "bg-destructive" : "bg-warning";
+        const ctaClasses = tone === "destructive"
+          ? "border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+          : "border-warning/40 text-warning hover:bg-warning/10 hover:text-warning";
+
         return (
-          <Card className="border-warning/30 bg-warning/[0.04]">
+          <Card className={cn(toneClasses)}>
             <CardContent className="p-3">
-              <div className="flex items-center gap-2 text-xs font-semibold text-warning">
+              <div className={cn("flex items-center gap-2 text-xs font-semibold", headerClasses)}>
                 <ShieldOff className="h-3.5 w-3.5" />
-                Readiness gaps
+                Readiness &amp; action items
                 <span className="ml-auto text-[10px] font-normal text-muted-foreground tabular-nums">
-                  {readiness.completedRequirements}/{readiness.totalRequirements} complete · {readiness.progressPct}%
+                  {readiness.completedRequirements}/{readiness.totalRequirements} required complete · {readiness.progressPct}%
                 </span>
               </div>
 
-              {/* Progress bar */}
-              <div className="mt-2 h-1.5 w-full rounded-full bg-warning/15 overflow-hidden">
+              {/* Progress bar (required readiness only) */}
+              <div className={cn("mt-2 h-1.5 w-full rounded-full overflow-hidden", barBg)}>
                 <div
-                  className="h-full rounded-full bg-warning transition-all duration-500 ease-out"
+                  className={cn("h-full rounded-full transition-all duration-500 ease-out", barFill)}
                   style={{ width: `${readiness.progressPct}%` }}
                 />
               </div>
@@ -905,33 +961,63 @@ export default function UnifiedPersonProfile() {
               <div className="mt-2.5 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
                 {readiness.missingPersonal.slice(0, 6).map((field) => (
                   <div key={`p-${field}`} className="flex items-center gap-1.5">
-                    <span className="h-1 w-1 rounded-full bg-warning" />
-                    <span className="capitalize">Personal: {field.replace(/_/g, " ")}</span>
+                    <span className="h-1 w-1 rounded-full bg-warning shrink-0" />
+                    <span className="capitalize truncate">Personal: {field.replace(/_/g, " ")}</span>
                   </div>
                 ))}
                 {readiness.missingDocuments.slice(0, 6).map((d) => (
-                  <div key={`d-${d.category}`} className="flex items-center gap-1.5">
-                    <span className="h-1 w-1 rounded-full bg-destructive" />
-                    <span>Document: {d.label}</span>
+                  <div key={`m-${d.category}`} className="flex items-center gap-1.5">
+                    <span className="h-1 w-1 rounded-full bg-destructive shrink-0" />
+                    <span className="truncate">Required document missing: {d.label}</span>
                   </div>
                 ))}
+                {pendingDocs > 0 && (
+                  <div className="flex items-center gap-1.5">
+                    <Clock className="h-3 w-3 text-warning shrink-0" />
+                    <span>{pendingDocs} document{pendingDocs === 1 ? "" : "s"} awaiting admin review</span>
+                  </div>
+                )}
+                {rejectedDocs > 0 && (
+                  <div className="flex items-center gap-1.5">
+                    <AlertTriangle className="h-3 w-3 text-destructive shrink-0" />
+                    <span>{rejectedDocs} document{rejectedDocs === 1 ? "" : "s"} rejected · replacement needed</span>
+                  </div>
+                )}
+                {portalNotActive && (
+                  <div className="flex items-center gap-1.5">
+                    <ShieldOff className="h-3 w-3 text-muted-foreground shrink-0" />
+                    <span>
+                      Portal {hasInvitation ? "invited but not activated" : "not invited yet"}
+                    </span>
+                  </div>
+                )}
+                {lastPayrollDate ? (
+                  <div className="flex items-center gap-1.5">
+                    <Clock className="h-3 w-3 text-muted-foreground shrink-0" />
+                    <span>Last clock-in {safeDistance(lastPayrollDate)}</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1.5">
+                    <Clock className="h-3 w-3 text-muted-foreground shrink-0" />
+                    <span>No clock-ins on record</span>
+                  </div>
+                )}
               </div>
 
-              {/* Quick action */}
-              <div className="mt-3 flex items-center justify-between gap-2 pt-2 border-t border-warning/15">
+              {/* Recommended action */}
+              <div className="mt-3 flex items-center justify-between gap-2 pt-2 border-t border-border/40">
                 <span className="text-[10.5px] text-muted-foreground/80">
-                  {personalCount + docsCount} item{personalCount + docsCount === 1 ? "" : "s"} pending
-                  {docsCount > 0 && personalCount > 0
-                    ? " · documents block onboarding first"
-                    : " · required to be assigned to shifts"}
+                  {totalActionable > 0
+                    ? `${totalActionable} item${totalActionable === 1 ? "" : "s"} need${totalActionable === 1 ? "s" : ""} attention`
+                    : "Worker is ready · finish portal activation"}
                 </span>
                 <Button
                   size="sm"
                   variant="outline"
-                  className="h-7 text-[11px] border-warning/40 text-warning hover:bg-warning/10 hover:text-warning gap-1.5"
+                  className={cn("h-7 text-[11px] gap-1.5", ctaClasses)}
                   onClick={() => {
-                    setActiveTab(resolveTarget);
-                    if (resolveTarget === "info" && !isEditing) setIsEditing(true);
+                    setActiveTab(nextTab);
+                    if (nextTab === "info" && nextEdit && !isEditing) setIsEditing(true);
                     requestAnimationFrame(() => {
                       document
                         .querySelector('[data-state="active"][role="tabpanel"]')
@@ -939,7 +1025,7 @@ export default function UnifiedPersonProfile() {
                     });
                   }}
                 >
-                  {resolveLabel}
+                  {nextLabel}
                   <ExternalLink className="h-3 w-3" />
                 </Button>
               </div>
