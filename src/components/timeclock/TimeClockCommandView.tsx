@@ -1,15 +1,16 @@
 /**
- * TimeClockCommandView — premium read-only command panel for /app/timeclock.
+ * TimeClockCommandView — Centro de Mando de Tiempo (read-only Phase 1).
  *
- * Sections (in order):
- *  1. KPI row (clocked-in now, open entries, missing clock-out, late, today entries)
- *  2. Needs Attention (open entries > N hours, no clock-out, no shift match)
- *  3. Live Now (compact list of currently clocked-in workers)
+ * Layout:
+ *  - Premium header (rendered by parent page)
+ *  - KPI Command Strip (above the fold)
+ *  - Smart Time Alerts (above the fold; collapses to "Todo está en calma")
+ *  - Tabs: En vivo · Alertas · Hoy · Semana · Aprobaciones · Kiosk · All workers
  *
  * Strictly read-only:
  *  - No writes
  *  - No payroll math
- *  - No scheduled-hours-as-pay assumptions
+ *  - Scheduled shifts shown as operational context only, never as pay
  *  - All queries scoped by selectedCompanyId
  */
 import { useEffect, useMemo, useState } from "react";
@@ -20,18 +21,24 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import {
   Clock, AlertTriangle, Users, Activity, CalendarClock, CheckCircle2,
-  Search, RefreshCw, ChevronRight, MapPin,
+  Search, RefreshCw, ChevronRight, MapPin, Monitor, Copy, ArrowRight,
+  CalendarDays, ClipboardCheck, Radio,
 } from "lucide-react";
-import { format, differenceInMinutes } from "date-fns";
+import { format, differenceInMinutes, startOfWeek, endOfWeek, isWithinInterval } from "date-fns";
 import { enUS } from "date-fns/locale";
+import { toast } from "sonner";
 import StaflyCalmProcessingBanner from "@/components/common/StaflyCalmProcessingBanner";
+import { APP_BASE_URL } from "@/lib/app-url";
 import { cn } from "@/lib/utils";
 
-// ─── threshold for "open too long" ─────────────────────────
+// ─── thresholds ──────────────────────────────────────────────
 const OPEN_ENTRY_WARN_HOURS = 12;
+const OPEN_ENTRY_STALE_HOURS = 24;
+const VERY_LONG_ENTRY_HOURS = 16;
 
 interface TimeEntry {
   id: string;
@@ -58,14 +65,26 @@ interface Employee {
   employer_identification: number | string | null;
 }
 
+type AlertItem = {
+  type: "stale_open" | "long_open" | "no_shift" | "very_long" | "needs_review";
+  entry: TimeEntry;
+  employee: Employee;
+  minutes: number;
+  reason: string;
+};
+
 export default function TimeClockCommandView() {
   const { selectedCompanyId } = useCompany();
   const navigate = useNavigate();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [entries, setEntries] = useState<TimeEntry[]>([]);
+  const [weekEntries, setWeekEntries] = useState<TimeEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [now, setNow] = useState(new Date());
   const [search, setSearch] = useState("");
+  const [activeTab, setActiveTab] = useState<string>("live");
+  const [tabAutoSet, setTabAutoSet] = useState(false);
+
   const openWorker = (id: string) => navigate(`/app/workers/${id}`);
 
   // live tick
@@ -81,15 +100,15 @@ export default function TimeClockCommandView() {
     setLoading(true);
     const startOfDay = `${todayKey}T00:00:00`;
     const endOfDay = `${todayKey}T23:59:59`;
+    const weekStart = startOfWeek(now, { weekStartsOn: 1 }).toISOString();
+    const weekEnd = endOfWeek(now, { weekStartsOn: 1 }).toISOString();
 
-    // 1) employees scoped to company
     const empsP = supabase
       .from("employees")
       .select("id, first_name, last_name, avatar_url, employee_role, employer_identification")
       .eq("company_id", selectedCompanyId)
       .eq("is_active", true);
 
-    // 2) today's entries
     const entriesTodayP = supabase
       .from("time_entries")
       .select("id, employee_id, shift_id, clock_in, clock_out, break_minutes, status, scheduled_shifts(id, title, start_time, end_time)")
@@ -98,7 +117,6 @@ export default function TimeClockCommandView() {
       .lte("clock_in", endOfDay)
       .order("clock_in", { ascending: false });
 
-    // 3) any still-open entry (could be from yesterday)
     const openOlderP = supabase
       .from("time_entries")
       .select("id, employee_id, shift_id, clock_in, clock_out, break_minutes, status, scheduled_shifts(id, title, start_time, end_time)")
@@ -106,18 +124,26 @@ export default function TimeClockCommandView() {
       .is("clock_out", null)
       .lt("clock_in", startOfDay);
 
-    const [empsRes, entriesRes, openOlderRes] = await Promise.all([empsP, entriesTodayP, openOlderP]);
+    const weekP = supabase
+      .from("time_entries")
+      .select("id, employee_id, shift_id, clock_in, clock_out, break_minutes, status")
+      .eq("company_id", selectedCompanyId)
+      .gte("clock_in", weekStart)
+      .lte("clock_in", weekEnd);
+
+    const [empsRes, entriesRes, openOlderRes, weekRes] = await Promise.all([
+      empsP, entriesTodayP, openOlderP, weekP,
+    ]);
     setEmployees(((empsRes.data ?? []) as unknown) as Employee[]);
 
-    // merge: today's entries + open ones from before today
     const merged = [
       ...((entriesRes.data ?? []) as TimeEntry[]),
       ...((openOlderRes.data ?? []) as TimeEntry[]),
     ];
-    // dedupe by id
     const byId = new Map<string, TimeEntry>();
     merged.forEach((e) => byId.set(e.id, e));
     setEntries(Array.from(byId.values()));
+    setWeekEntries(((weekRes.data ?? []) as unknown) as TimeEntry[]);
     setLoading(false);
   };
 
@@ -144,11 +170,11 @@ export default function TimeClockCommandView() {
       .sort((a, b) => b.minutes - a.minutes);
   }, [openEntries, empMap, now]);
 
-  const needsAttention = useMemo(() => {
-    const issues: { type: "long_open" | "no_shift" | "stale_open"; entry: TimeEntry; employee: Employee; minutes: number; reason: string }[] = [];
+  const alerts = useMemo<AlertItem[]>(() => {
+    const issues: AlertItem[] = [];
     liveRows.forEach((r) => {
       const hours = r.minutes / 60;
-      if (hours >= 24) {
+      if (hours >= OPEN_ENTRY_STALE_HOURS) {
         issues.push({ ...r, type: "stale_open", reason: `Open clock for ${Math.round(hours)}h — likely missing clock-out` });
       } else if (hours >= OPEN_ENTRY_WARN_HOURS) {
         issues.push({ ...r, type: "long_open", reason: `Long open clock — ${Math.round(hours)}h` });
@@ -156,8 +182,24 @@ export default function TimeClockCommandView() {
         issues.push({ ...r, type: "no_shift", reason: "Open clock not linked to a scheduled shift" });
       }
     });
+    closedTodayEntries.forEach((e) => {
+      const emp = empMap.get(e.employee_id);
+      if (!emp) return;
+      const minutes = differenceInMinutes(new Date(e.clock_out!), new Date(e.clock_in));
+      if (minutes / 60 >= VERY_LONG_ENTRY_HOURS) {
+        issues.push({ type: "very_long", entry: e, employee: emp, minutes, reason: `Very long entry — ${Math.round(minutes / 60)}h` });
+      }
+      const status = (e.status ?? "").toLowerCase();
+      if (status.includes("review") || status.includes("pending") || status.includes("late")) {
+        issues.push({ type: "needs_review", entry: e, employee: emp, minutes, reason: `Status: ${e.status}` });
+      }
+    });
     return issues;
-  }, [liveRows]);
+  }, [liveRows, closedTodayEntries, empMap]);
+
+  const approvals = useMemo<AlertItem[]>(() => {
+    return alerts.filter((a) => a.type === "stale_open" || a.type === "needs_review" || a.type === "very_long");
+  }, [alerts]);
 
   const filteredLive = useMemo(() => {
     if (!search.trim()) return liveRows;
@@ -172,16 +214,77 @@ export default function TimeClockCommandView() {
     });
   }, [liveRows, search]);
 
+  // Today rollup grouped by worker
+  const todayRollup = useMemo(() => {
+    const map = new Map<string, { employee: Employee; entries: TimeEntry[]; trackedMin: number; firstIn: Date | null; lastOut: Date | null; hasOpen: boolean }>();
+    entries.forEach((e) => {
+      const emp = empMap.get(e.employee_id);
+      if (!emp) return;
+      let row = map.get(emp.id);
+      if (!row) {
+        row = { employee: emp, entries: [], trackedMin: 0, firstIn: null, lastOut: null, hasOpen: false };
+        map.set(emp.id, row);
+      }
+      row.entries.push(e);
+      const ci = new Date(e.clock_in);
+      if (!row.firstIn || ci < row.firstIn) row.firstIn = ci;
+      if (e.clock_out) {
+        const co = new Date(e.clock_out);
+        if (!row.lastOut || co > row.lastOut) row.lastOut = co;
+        row.trackedMin += differenceInMinutes(co, ci) - (e.break_minutes ?? 0);
+      } else {
+        row.hasOpen = true;
+        row.trackedMin += differenceInMinutes(now, ci);
+      }
+    });
+    return Array.from(map.values()).sort((a, b) => b.trackedMin - a.trackedMin);
+  }, [entries, empMap, now]);
+
+  // Week rollup
+  const weekRollup = useMemo(() => {
+    const map = new Map<string, { employee: Employee; trackedMin: number; openCount: number; entries: number }>();
+    weekEntries.forEach((e) => {
+      const emp = empMap.get(e.employee_id);
+      if (!emp) return;
+      let row = map.get(emp.id);
+      if (!row) {
+        row = { employee: emp, trackedMin: 0, openCount: 0, entries: 0 };
+        map.set(emp.id, row);
+      }
+      row.entries += 1;
+      if (e.clock_out) {
+        row.trackedMin += differenceInMinutes(new Date(e.clock_out), new Date(e.clock_in)) - (e.break_minutes ?? 0);
+      } else {
+        row.openCount += 1;
+      }
+    });
+    return Array.from(map.values()).sort((a, b) => b.trackedMin - a.trackedMin);
+  }, [weekEntries, empMap]);
+
   const kpis = useMemo(() => {
-    const lateOrReview = entries.filter((e) => (e.status ?? "").toLowerCase().includes("review") || (e.status ?? "").toLowerCase().includes("late")).length;
+    const lateOrReview = entries.filter((e) => {
+      const s = (e.status ?? "").toLowerCase();
+      return s.includes("review") || s.includes("late") || s.includes("pending");
+    }).length;
+    const totalMinutesToday = todayRollup.reduce((s, r) => s + r.trackedMin, 0);
     return {
       clockedIn: openEntries.length,
-      missingClockOut: needsAttention.filter((x) => x.type === "stale_open").length,
+      openClocks: openEntries.length,
+      missingClockOut: alerts.filter((x) => x.type === "stale_open").length,
       lateReview: lateOrReview,
       todayEntries: entries.length,
-      closedToday: closedTodayEntries.length,
+      totalMinutesToday,
     };
-  }, [openEntries, needsAttention, entries, closedTodayEntries]);
+  }, [openEntries, alerts, entries, todayRollup]);
+
+  // ─── smart default tab (only first time after data loads) ─
+  useEffect(() => {
+    if (loading || tabAutoSet) return;
+    if (alerts.length > 0) setActiveTab("alerts");
+    else if (liveRows.length > 0) setActiveTab("live");
+    else setActiveTab("today");
+    setTabAutoSet(true);
+  }, [loading, alerts.length, liveRows.length, tabAutoSet]);
 
   // ─── render ──────────────────────────────────────────────
   if (!selectedCompanyId) {
@@ -204,10 +307,10 @@ export default function TimeClockCommandView() {
 
   return (
     <div className="space-y-5">
-      {/* ─── KPI Row ───────────────────────────────────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+      {/* ─── KPI Command Strip ─────────────────────────────── */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         <KpiCard icon={Activity} tone="primary" label="Clocked in now" value={kpis.clockedIn} />
-        <KpiCard icon={Clock} tone="muted" label="Open entries" value={openEntries.length} />
+        <KpiCard icon={Clock} tone="muted" label="Open clocks" value={kpis.openClocks} />
         <KpiCard
           icon={AlertTriangle}
           tone={kpis.missingClockOut > 0 ? "danger" : "muted"}
@@ -221,23 +324,29 @@ export default function TimeClockCommandView() {
           value={kpis.lateReview}
         />
         <KpiCard icon={Users} tone="muted" label="Today entries" value={kpis.todayEntries} />
+        <KpiCard
+          icon={ClipboardCheck}
+          tone="muted"
+          label="Hours today"
+          value={formatHoursShort(kpis.totalMinutesToday)}
+        />
       </div>
 
-      {/* ─── Needs Attention ───────────────────────────────── */}
+      {/* ─── Smart Time Alerts ─────────────────────────────── */}
       <Card className="border border-border/60 rounded-2xl shadow-sm">
         <div className="flex items-center justify-between px-5 py-4 border-b border-border/50">
           <div className="flex items-center gap-2.5">
             <div className={cn(
               "h-9 w-9 rounded-xl flex items-center justify-center",
-              needsAttention.length > 0 ? "bg-amber-500/10 text-amber-600" : "bg-emerald-500/10 text-emerald-600"
+              alerts.length > 0 ? "bg-amber-500/10 text-amber-600" : "bg-emerald-500/10 text-emerald-600"
             )}>
-              {needsAttention.length > 0 ? <AlertTriangle className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
+              {alerts.length > 0 ? <AlertTriangle className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
             </div>
             <div>
-              <h3 className="font-heading text-base font-semibold tracking-tight">Needs attention</h3>
+              <h3 className="font-heading text-base font-semibold tracking-tight">Alertas de tiempo</h3>
               <p className="text-xs text-muted-foreground">
-                {needsAttention.length > 0
-                  ? `${needsAttention.length} item${needsAttention.length === 1 ? "" : "s"} to review`
+                {alerts.length > 0
+                  ? `${alerts.length} item${alerts.length === 1 ? "" : "s"} para revisar`
                   : "All clear · no open issues right now"}
               </p>
             </div>
@@ -247,143 +356,317 @@ export default function TimeClockCommandView() {
             Refresh
           </Button>
         </div>
-        {needsAttention.length === 0 ? (
-          <EmptyClear />
+        {alerts.length === 0 ? (
+          <CalmEmpty
+            title="Todo está en calma"
+            description="No hay entradas abiertas que requieran atención."
+            actions={[
+              { label: "Open Kiosk", onClick: () => navigate("/app/kiosk"), icon: Monitor },
+              { label: "View today", onClick: () => setActiveTab("today"), icon: CalendarDays },
+            ]}
+          />
         ) : (
           <ul className="divide-y divide-border/40">
-            {needsAttention.slice(0, 8).map((item) => (
-              <li
-                key={item.entry.id}
-                className="flex items-center gap-3 px-5 py-3 hover:bg-accent/40 cursor-pointer transition"
-                onClick={() => openWorker(item.employee.id)}
-              >
-                <EmployeeAvatar
-                  avatarUrl={item.employee.avatar_url}
-                  firstName={item.employee.first_name}
-                  lastName={item.employee.last_name}
-                  size="sm"
-                />
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold truncate">
-                      {item.employee.first_name} {item.employee.last_name}
-                    </span>
-                    {item.employee.employer_identification != null && (
-                      <span className="text-[10px] font-mono text-muted-foreground">
-                        #{item.employee.employer_identification}
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-xs text-muted-foreground truncate">{item.reason}</div>
-                </div>
-                <Badge
-                  variant="outline"
-                  className={cn(
-                    "text-[10px] font-semibold uppercase tracking-wider",
-                    item.type === "stale_open"
-                      ? "bg-rose-500/10 text-rose-700 border-rose-500/30"
-                      : item.type === "long_open"
-                      ? "bg-amber-500/10 text-amber-700 border-amber-500/30"
-                      : "bg-sky-500/10 text-sky-700 border-sky-500/30",
-                  )}
-                >
-                  {item.type === "stale_open" ? "Stale" : item.type === "long_open" ? "Long" : "No shift"}
-                </Badge>
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
-              </li>
+            {alerts.slice(0, 8).map((item) => (
+              <AlertRow key={`${item.type}-${item.entry.id}`} item={item} onOpen={() => openWorker(item.employee.id)} />
             ))}
           </ul>
         )}
       </Card>
 
-      {/* ─── Live Now ──────────────────────────────────────── */}
-      <Card className="border border-border/60 rounded-2xl shadow-sm">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-5 py-4 border-b border-border/50">
-          <div className="flex items-center gap-2.5">
-            <div className="h-9 w-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
-              <Activity className="h-4 w-4" />
+      {/* ─── Tabs ──────────────────────────────────────────── */}
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="w-full sm:w-auto flex-wrap h-auto gap-1">
+          <TabsTrigger value="live" className="gap-1.5 text-xs">
+            <Radio className="h-3.5 w-3.5" /> En vivo
+          </TabsTrigger>
+          <TabsTrigger value="alerts" className="gap-1.5 text-xs">
+            <AlertTriangle className="h-3.5 w-3.5" /> Alertas
+            {alerts.length > 0 && (
+              <span className="ml-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500/20 px-1 text-[10px] font-bold text-amber-700">
+                {alerts.length}
+              </span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="today" className="gap-1.5 text-xs">
+            <CalendarDays className="h-3.5 w-3.5" /> Hoy
+          </TabsTrigger>
+          <TabsTrigger value="week" className="gap-1.5 text-xs">
+            <CalendarClock className="h-3.5 w-3.5" /> Semana
+          </TabsTrigger>
+          <TabsTrigger value="approvals" className="gap-1.5 text-xs">
+            <ClipboardCheck className="h-3.5 w-3.5" /> Aprobaciones
+            {approvals.length > 0 && (
+              <span className="ml-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500/20 px-1 text-[10px] font-bold text-rose-700">
+                {approvals.length}
+              </span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="kiosk" className="gap-1.5 text-xs">
+            <Monitor className="h-3.5 w-3.5" /> Kiosk
+          </TabsTrigger>
+          <TabsTrigger value="all" className="gap-1.5 text-xs">
+            <Users className="h-3.5 w-3.5" /> All workers
+          </TabsTrigger>
+        </TabsList>
+
+        {/* En vivo */}
+        <TabsContent value="live" className="mt-4">
+          <Card className="border border-border/60 rounded-2xl shadow-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-5 py-4 border-b border-border/50">
+              <div className="flex items-center gap-2.5">
+                <div className="h-9 w-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                  <Activity className="h-4 w-4" />
+                </div>
+                <div>
+                  <h3 className="font-heading text-base font-semibold tracking-tight">Ahora en vivo</h3>
+                  <p className="text-xs text-muted-foreground">
+                    {liveRows.length} worker{liveRows.length === 1 ? "" : "s"} currently clocked in
+                  </p>
+                </div>
+              </div>
+              <div className="relative w-full sm:w-64">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  placeholder="Search worker, role, ID…"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-8 h-9 text-sm"
+                />
+              </div>
             </div>
-            <div>
-              <h3 className="font-heading text-base font-semibold tracking-tight">Live now</h3>
+            {filteredLive.length === 0 ? (
+              <CalmEmpty
+                title={liveRows.length === 0 ? "No hay trabajadores clocked in ahora mismo." : "No matches for your search."}
+                description={liveRows.length === 0 ? "Cuando alguien fiche desde el kiosk o el portal, aparecerá aquí en tiempo real." : undefined}
+                actions={liveRows.length === 0 ? [
+                  { label: "Open Kiosk", onClick: () => navigate("/app/kiosk"), icon: Monitor },
+                  { label: "View today", onClick: () => setActiveTab("today"), icon: CalendarDays },
+                ] : []}
+              />
+            ) : (
+              <ul className="divide-y divide-border/40">
+                {filteredLive.map((r) => (
+                  <LiveRow key={r.entry.id} row={r} onOpen={() => openWorker(r.employee.id)} />
+                ))}
+              </ul>
+            )}
+          </Card>
+        </TabsContent>
+
+        {/* Alertas */}
+        <TabsContent value="alerts" className="mt-4">
+          <Card className="border border-border/60 rounded-2xl shadow-sm">
+            <div className="px-5 py-4 border-b border-border/50">
+              <h3 className="font-heading text-base font-semibold tracking-tight">Alertas detalladas</h3>
               <p className="text-xs text-muted-foreground">
-                {liveRows.length} worker{liveRows.length === 1 ? "" : "s"} currently clocked in
+                Todas las anomalías de fichaje detectadas hoy.
               </p>
             </div>
-          </div>
-          <div className="relative w-full sm:w-64">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-            <Input
-              placeholder="Search worker, role, ID…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-8 h-9 text-sm"
-            />
-          </div>
-        </div>
-        {filteredLive.length === 0 ? (
-          <div className="px-5 py-10 text-center text-sm text-muted-foreground">
-            {liveRows.length === 0 ? "No one is clocked in right now." : "No matches for your search."}
-          </div>
-        ) : (
-          <ul className="divide-y divide-border/40">
-            {filteredLive.map((r) => {
-              const sched = r.entry.scheduled_shifts;
-              return (
-                <li
-                  key={r.entry.id}
-                  className="flex items-center gap-3 px-5 py-3 hover:bg-accent/40 cursor-pointer transition"
-                  onClick={() => openWorker(r.employee.id)}
-                >
-                  <EmployeeAvatar
-                    avatarUrl={r.employee.avatar_url}
-                    firstName={r.employee.first_name}
-                    lastName={r.employee.last_name}
-                    size="sm"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold truncate">
+            {alerts.length === 0 ? (
+              <CalmEmpty
+                title="Todo está en calma"
+                description="No hay entradas abiertas que requieran atención."
+              />
+            ) : (
+              <ul className="divide-y divide-border/40">
+                {alerts.map((item) => (
+                  <AlertRow key={`${item.type}-${item.entry.id}`} item={item} onOpen={() => openWorker(item.employee.id)} />
+                ))}
+              </ul>
+            )}
+          </Card>
+        </TabsContent>
+
+        {/* Hoy */}
+        <TabsContent value="today" className="mt-4">
+          <Card className="border border-border/60 rounded-2xl shadow-sm">
+            <div className="px-5 py-4 border-b border-border/50">
+              <h3 className="font-heading text-base font-semibold tracking-tight">Hoy</h3>
+              <p className="text-xs text-muted-foreground">
+                {todayRollup.length} worker{todayRollup.length === 1 ? "" : "s"} con actividad — first in / last out / total tracked.
+              </p>
+            </div>
+            {todayRollup.length === 0 ? (
+              <CalmEmpty title="Sin actividad hoy" description="Aún no hay fichajes registrados para hoy." />
+            ) : (
+              <ul className="divide-y divide-border/40">
+                {todayRollup.map((r) => (
+                  <li
+                    key={r.employee.id}
+                    className="flex items-center gap-3 px-5 py-3 hover:bg-accent/40 cursor-pointer transition"
+                    onClick={() => openWorker(r.employee.id)}
+                  >
+                    <EmployeeAvatar
+                      avatarUrl={r.employee.avatar_url}
+                      firstName={r.employee.first_name}
+                      lastName={r.employee.last_name}
+                      size="sm"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-semibold truncate">
                         {r.employee.first_name} {r.employee.last_name}
-                      </span>
-                      {r.employee.employee_role && (
-                        <span className="text-[10px] uppercase tracking-wider text-muted-foreground/80">
-                          · {r.employee.employee_role}
-                        </span>
-                      )}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {r.firstIn ? `In ${format(r.firstIn, "p", { locale: enUS })}` : "—"}
+                        {" · "}
+                        {r.lastOut ? `Out ${format(r.lastOut, "p", { locale: enUS })}` : r.hasOpen ? "Still open" : "—"}
+                        {" · "}
+                        {r.entries.length} entr{r.entries.length === 1 ? "y" : "ies"}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                      <span className="inline-flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        Since {format(new Date(r.entry.clock_in), "p", { locale: enUS })}
-                      </span>
-                      {sched && (
-                        <span className="inline-flex items-center gap-1 truncate">
-                          <MapPin className="h-3 w-3" />
-                          {sched.title}
-                        </span>
-                      )}
+                    <div className="text-right">
+                      <div className="text-sm font-bold tabular-nums">{formatDuration(Math.max(0, r.trackedMin))}</div>
+                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">tracked</div>
                     </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-sm font-bold tabular-nums">
-                      {formatDuration(r.minutes)}
+                    {r.hasOpen && (
+                      <Badge variant="outline" className="text-[10px] bg-primary/10 text-primary border-primary/30">Open</Badge>
+                    )}
+                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
+        </TabsContent>
+
+        {/* Semana */}
+        <TabsContent value="week" className="mt-4">
+          <Card className="border border-border/60 rounded-2xl shadow-sm">
+            <div className="px-5 py-4 border-b border-border/50">
+              <h3 className="font-heading text-base font-semibold tracking-tight">Esta semana</h3>
+              <p className="text-xs text-muted-foreground">
+                Rollup semanal por trabajador — total tracked y open issues. Solo lectura.
+              </p>
+            </div>
+            {weekRollup.length === 0 ? (
+              <CalmEmpty title="Sin actividad esta semana" />
+            ) : (
+              <ul className="divide-y divide-border/40">
+                {weekRollup.slice(0, 50).map((r) => (
+                  <li
+                    key={r.employee.id}
+                    className="flex items-center gap-3 px-5 py-3 hover:bg-accent/40 cursor-pointer transition"
+                    onClick={() => openWorker(r.employee.id)}
+                  >
+                    <EmployeeAvatar
+                      avatarUrl={r.employee.avatar_url}
+                      firstName={r.employee.first_name}
+                      lastName={r.employee.last_name}
+                      size="sm"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-semibold truncate">
+                        {r.employee.first_name} {r.employee.last_name}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {r.entries} entr{r.entries === 1 ? "y" : "ies"}
+                        {r.openCount > 0 && (
+                          <> · <span className="text-amber-700 font-semibold">{r.openCount} open</span></>
+                        )}
+                      </div>
                     </div>
-                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                      elapsed
+                    <div className="text-right">
+                      <div className="text-sm font-bold tabular-nums">{formatDuration(Math.max(0, r.trackedMin))}</div>
+                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">this week</div>
                     </div>
-                  </div>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </Card>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
+        </TabsContent>
+
+        {/* Aprobaciones */}
+        <TabsContent value="approvals" className="mt-4">
+          <Card className="border border-border/60 rounded-2xl shadow-sm">
+            <div className="px-5 py-4 border-b border-border/50">
+              <h3 className="font-heading text-base font-semibold tracking-tight">Listo para revisar</h3>
+              <p className="text-xs text-muted-foreground">
+                Entradas marcadas para revisión, missing clock-out y muy largas. Solo lectura — abre el perfil para resolver.
+              </p>
+            </div>
+            {approvals.length === 0 ? (
+              <CalmEmpty title="Sin aprobaciones pendientes" description="No hay entradas que requieran revisión del admin." />
+            ) : (
+              <ul className="divide-y divide-border/40">
+                {approvals.map((item) => (
+                  <AlertRow key={`${item.type}-${item.entry.id}`} item={item} onOpen={() => openWorker(item.employee.id)} />
+                ))}
+              </ul>
+            )}
+          </Card>
+        </TabsContent>
+
+        {/* Kiosk */}
+        <TabsContent value="kiosk" className="mt-4">
+          <Card className="border border-border/60 rounded-2xl shadow-sm p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                <Monitor className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="font-heading text-base font-semibold tracking-tight">Kiosk</h3>
+                <p className="text-xs text-muted-foreground">
+                  Acceso rápido al modo kiosk para fichajes en sitio.
+                </p>
+              </div>
+            </div>
+            <div className="rounded-xl bg-muted/40 p-4 mb-4">
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Kiosk URL</div>
+              <code className="text-xs font-mono break-all">{`${APP_BASE_URL}/kiosk`}</code>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" className="h-9 text-xs gap-1.5" onClick={() => navigate("/app/kiosk")}>
+                <Monitor className="h-3.5 w-3.5" /> Open Kiosk
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 text-xs gap-1.5"
+                onClick={() => {
+                  navigator.clipboard.writeText(`${APP_BASE_URL}/kiosk`);
+                  toast.success("Kiosk URL copied");
+                }}
+              >
+                <Copy className="h-3.5 w-3.5" /> Copy URL
+              </Button>
+            </div>
+          </Card>
+        </TabsContent>
+
+        {/* All workers */}
+        <TabsContent value="all" className="mt-4">
+          <Card className="border border-border/60 rounded-2xl shadow-sm p-8 flex flex-col items-center text-center gap-4">
+            <div className="h-12 w-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center">
+              <Users className="h-5 w-5" />
+            </div>
+            <div className="space-y-1 max-w-md">
+              <h3 className="font-heading text-lg font-semibold tracking-tight">Worker directory</h3>
+              <p className="text-sm text-muted-foreground">
+                Time Clock se enfoca en asistencia en vivo y excepciones. Para navegar el roster completo con búsqueda,
+                filtros, perfiles y data quality, usa el módulo Workers.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <Button size="sm" className="h-9 text-xs gap-1.5" onClick={() => navigate("/app/workers")}>
+                Open Workers <ArrowRight className="h-3.5 w-3.5" />
+              </Button>
+              <Button variant="outline" size="sm" className="h-9 text-xs gap-1.5" onClick={() => setActiveTab("today")}>
+                <CalendarDays className="h-3.5 w-3.5" /> View Today
+              </Button>
+              <Button variant="outline" size="sm" className="h-9 text-xs gap-1.5" onClick={() => setActiveTab("live")}>
+                <Radio className="h-3.5 w-3.5" /> Back to Live
+              </Button>
+            </div>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       <p className="text-[11px] text-muted-foreground">
         Read-only · Time clock can show scheduled shift as context but never as payment.
       </p>
-
     </div>
   );
 }
@@ -394,6 +677,12 @@ function formatDuration(minutes: number) {
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
   return `${h}h ${String(m).padStart(2, "0")}m`;
+}
+
+function formatHoursShort(minutes: number) {
+  const h = minutes / 60;
+  if (h < 10) return `${h.toFixed(1)}h`;
+  return `${Math.round(h)}h`;
 }
 
 function KpiCard({
@@ -430,14 +719,130 @@ function KpiCard({
   );
 }
 
-function EmptyClear() {
+function CalmEmpty({
+  title,
+  description,
+  actions = [],
+}: {
+  title: string;
+  description?: string;
+  actions?: { label: string; onClick: () => void; icon?: React.ComponentType<{ className?: string }> }[];
+}) {
   return (
     <div className="px-5 py-10 text-center">
       <div className="mx-auto mb-2 h-10 w-10 rounded-full bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
         <CheckCircle2 className="h-5 w-5" />
       </div>
-      <p className="text-sm font-semibold">Todo está en calma</p>
-      <p className="text-xs text-muted-foreground">No hay entradas abiertas que requieran atención.</p>
+      <p className="text-sm font-semibold">{title}</p>
+      {description && <p className="text-xs text-muted-foreground mt-1">{description}</p>}
+      {actions.length > 0 && (
+        <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+          {actions.map((a) => (
+            <Button key={a.label} variant="outline" size="sm" className="h-9 text-xs gap-1.5" onClick={a.onClick}>
+              {a.icon && <a.icon className="h-3.5 w-3.5" />}
+              {a.label}
+            </Button>
+          ))}
+        </div>
+      )}
     </div>
+  );
+}
+
+function AlertRow({ item, onOpen }: { item: AlertItem; onOpen: () => void }) {
+  const toneCls =
+    item.type === "stale_open"
+      ? "bg-rose-500/10 text-rose-700 border-rose-500/30"
+      : item.type === "long_open" || item.type === "very_long"
+      ? "bg-amber-500/10 text-amber-700 border-amber-500/30"
+      : item.type === "needs_review"
+      ? "bg-violet-500/10 text-violet-700 border-violet-500/30"
+      : "bg-sky-500/10 text-sky-700 border-sky-500/30";
+  const label =
+    item.type === "stale_open" ? "Stale" :
+    item.type === "long_open" ? "Long" :
+    item.type === "very_long" ? "Very long" :
+    item.type === "needs_review" ? "Review" : "No shift";
+  return (
+    <li
+      className="flex items-center gap-3 px-5 py-3 hover:bg-accent/40 cursor-pointer transition"
+      onClick={onOpen}
+    >
+      <EmployeeAvatar
+        avatarUrl={item.employee.avatar_url}
+        firstName={item.employee.first_name}
+        lastName={item.employee.last_name}
+        size="sm"
+      />
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-semibold truncate">
+            {item.employee.first_name} {item.employee.last_name}
+          </span>
+          {item.employee.employer_identification != null && (
+            <span className="text-[10px] font-mono text-muted-foreground">
+              #{item.employee.employer_identification}
+            </span>
+          )}
+        </div>
+        <div className="text-xs text-muted-foreground truncate">{item.reason}</div>
+      </div>
+      <Badge variant="outline" className={cn("text-[10px] font-semibold uppercase tracking-wider", toneCls)}>
+        {label}
+      </Badge>
+      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+    </li>
+  );
+}
+
+function LiveRow({
+  row,
+  onOpen,
+}: {
+  row: { entry: TimeEntry; employee: Employee; minutes: number };
+  onOpen: () => void;
+}) {
+  const sched = row.entry.scheduled_shifts;
+  return (
+    <li
+      className="flex items-center gap-3 px-5 py-3 hover:bg-accent/40 cursor-pointer transition"
+      onClick={onOpen}
+    >
+      <EmployeeAvatar
+        avatarUrl={row.employee.avatar_url}
+        firstName={row.employee.first_name}
+        lastName={row.employee.last_name}
+        size="sm"
+      />
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-semibold truncate">
+            {row.employee.first_name} {row.employee.last_name}
+          </span>
+          {row.employee.employee_role && (
+            <span className="text-[10px] uppercase tracking-wider text-muted-foreground/80">
+              · {row.employee.employee_role}
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+          <span className="inline-flex items-center gap-1">
+            <Clock className="h-3 w-3" />
+            Since {format(new Date(row.entry.clock_in), "p", { locale: enUS })}
+          </span>
+          {sched && (
+            <span className="inline-flex items-center gap-1 truncate">
+              <MapPin className="h-3 w-3" />
+              {sched.title}
+            </span>
+          )}
+        </div>
+      </div>
+      <div className="text-right">
+        <div className="text-sm font-bold tabular-nums">{formatDuration(row.minutes)}</div>
+        <div className="text-[10px] uppercase tracking-wider text-muted-foreground">elapsed</div>
+      </div>
+      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+    </li>
   );
 }
