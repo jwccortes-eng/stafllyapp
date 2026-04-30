@@ -182,7 +182,7 @@ export default function PayrollPeriodSummaryDialog({ open, onOpenChange, period,
             [data-radix-dialog-overlay] { display: none !important; }
           }
         `}</style>
-        <DialogHeader>
+        <DialogHeader className="no-print">
           <DialogTitle className="flex flex-wrap items-center gap-2">
             <span>Payroll Summary</span>
             {period.sequence_number != null && (
@@ -194,22 +194,32 @@ export default function PayrollPeriodSummaryDialog({ open, onOpenChange, period,
               {format(new Date(period.start_date), "yyyy-MM-dd")} → {format(new Date(period.end_date), "yyyy-MM-dd")}
             </span>
           </DialogTitle>
-          <div className="flex flex-wrap gap-1.5 mt-1">
-            {period.status !== "open" && (
-              <Badge variant="outline" className="text-[10px] bg-muted text-muted-foreground gap-1">
-                <Lock className="h-3 w-3" /> Cerrado
-              </Badge>
-            )}
-            {isImported && (
-              <Badge variant="outline" className="text-[10px] bg-info/15 text-info border-info/30 gap-1">
-                <Upload className="h-3 w-3" /> Importado
-              </Badge>
-            )}
-            {hasImport && (
-              <Badge variant="outline" className="text-[10px] bg-primary/10 text-primary border-primary/30 gap-1">
-                <Sparkles className="h-3 w-3" /> Historical Import
-              </Badge>
-            )}
+          <div className="flex flex-wrap items-center justify-between gap-2 mt-1">
+            <div className="flex flex-wrap gap-1.5">
+              {period.status !== "open" && (
+                <Badge variant="outline" className="text-[10px] bg-muted text-muted-foreground gap-1">
+                  <Lock className="h-3 w-3" /> Cerrado
+                </Badge>
+              )}
+              {isImported && (
+                <Badge variant="outline" className="text-[10px] bg-info/15 text-info border-info/30 gap-1">
+                  <Upload className="h-3 w-3" /> Importado
+                </Badge>
+              )}
+              {hasImport && (
+                <Badge variant="outline" className="text-[10px] bg-primary/10 text-primary border-primary/30 gap-1">
+                  <Sparkles className="h-3 w-3" /> Historical Import
+                </Badge>
+              )}
+            </div>
+            <div className="flex items-center gap-1.5">
+              <Button variant="outline" size="sm" onClick={handleCopySummary} disabled={!hasRows} className="h-8 text-xs gap-1.5">
+                <Copy className="h-3.5 w-3.5" /> Copy Summary
+              </Button>
+              <Button variant="outline" size="sm" onClick={handlePrint} disabled={!hasRows} className="h-8 text-xs gap-1.5">
+                <Printer className="h-3.5 w-3.5" /> Print
+              </Button>
+            </div>
           </div>
         </DialogHeader>
 
