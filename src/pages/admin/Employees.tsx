@@ -812,8 +812,8 @@ export default function Employees() {
     return 0;
   });
 
-  const activeFilterCount = [filterRole !== "all", filterGroup !== "all"].filter(Boolean).length;
-  const clearFilters = () => { setFilterRole("all"); setFilterGroup("all"); };
+  const activeFilterCount = [filterRole !== "all", filterGroup !== "all", riskFilter !== "all"].filter(Boolean).length;
+  const clearFilters = () => { setFilterRole("all"); setFilterGroup("all"); setRiskFilter("all"); };
 
   // When the user searches and gets 0 results in the current tab, but there ARE
   // matches in other tabs, surface that so they don't think the employee is missing.
