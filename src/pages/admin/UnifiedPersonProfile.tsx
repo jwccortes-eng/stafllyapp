@@ -169,6 +169,28 @@ export default function UnifiedPersonProfile() {
     if (!id || !employee) return;
     let cancelled = false;
     const sb = supabase as any;
+
+    // Reusable refetch for documents only — invoked from realtime subscription
+    // so admin sees worker portal uploads/status changes without a hard reload.
+    const refetchDocs = async () => {
+      const { data } = await sb
+        .from("employee_documents")
+        .select("review_status")
+        .eq("employee_id", id);
+      if (cancelled) return;
+      const docs = (data ?? []) as any[];
+      const docAgg = docs.reduce(
+        (acc: { approved: number; pending: number; rejected: number }, d: any) => {
+          if (d.review_status === "approved") acc.approved++;
+          else if (d.review_status === "pending") acc.pending++;
+          else if (d.review_status === "rejected") acc.rejected++;
+          return acc;
+        },
+        { approved: 0, pending: 0, rejected: 0 },
+      );
+      setDocsCount(docAgg);
+    };
+
     (async () => {
       const [docsRes, activityRes, shiftsRes, payrollRes, visitsRes] = await Promise.all([
         sb.from("employee_documents").select("review_status").eq("employee_id", id),
@@ -231,7 +253,31 @@ export default function UnifiedPersonProfile() {
       setLastPayrollDate(lastPay?.clock_in ?? null);
       setFrontDeskVisits((visitsRes.data ?? []) as any[]);
     })();
-    return () => { cancelled = true; };
+
+    // Realtime: keep documents snapshot fresh across portal/admin uploads
+    // and review status changes. Scoped to this employee_id only.
+    // Also refresh readiness so the hero/snapshot bands stay in sync.
+    const channel = supabase
+      .channel(`profile-docs-${id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "employee_documents",
+          filter: `employee_id=eq.${id}`,
+        },
+        () => {
+          refetchDocs();
+          readiness.refresh?.();
+        },
+      )
+      .subscribe();
+
+    return () => {
+      cancelled = true;
+      supabase.removeChannel(channel);
+    };
   }, [id, employee]);
 
   // ── Derived: readiness band ─────────────────────────────────────────────
@@ -361,9 +407,12 @@ export default function UnifiedPersonProfile() {
         key: "documents",
         label: "Documents",
         icon: FileText,
+        // Primary value reflects REQUIRED-doc readiness only (drives onboarding).
+        // Hint shows TOTAL employee_documents counts so admins can see new
+        // worker-portal uploads (pending) without misreading "Complete".
         value: readiness.missingDocuments.length === 0
-          ? "Complete"
-          : `${readiness.missingDocuments.length} missing`,
+          ? "Required complete"
+          : `${readiness.missingDocuments.length} required missing`,
         hint: docsCount.approved + docsCount.pending + docsCount.rejected > 0
           ? `${docsCount.approved} approved · ${docsCount.pending} pending`
           : undefined,
