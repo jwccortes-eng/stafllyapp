@@ -27,6 +27,7 @@ import { formatDistanceToNow, parseISO, isValid } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorBlock } from "@/components/ui/error-block";
 import { PremiumAvatar, type PremiumAvatarStatus } from "@/components/ui/premium-avatar";
