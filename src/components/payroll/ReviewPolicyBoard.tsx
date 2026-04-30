@@ -20,6 +20,7 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { EmptyState } from "@/components/ui/empty-state";
 
 /**
  * Review Policy Board — READ-ONLY
@@ -63,9 +64,18 @@ interface ReviewTarget {
   rationale: string;
 }
 
+interface HistoricalReviewDataset {
+  companyId: string;
+  source: string;
+  targets: ReviewTarget[];
+}
+
 // Frozen Connecteam reference numbers (from Phase E
 // `historical-review-periods-diff.xlsx → summary` sheet, captured 2026-04-30).
-const TARGETS: ReviewTarget[] = [
+const HISTORICAL_REVIEW_DATASET: HistoricalReviewDataset = {
+  companyId: "00000000-0000-0000-0000-000000000001",
+  source: "connecteam_phase_b/historical-review-periods-diff.xlsx#summary",
+  targets: [
   {
     sequence: 121,
     start: "2026-02-25",
@@ -156,7 +166,8 @@ const TARGETS: ReviewTarget[] = [
     rationale:
       "Second half of PASSOVER. Same blocker as #126.",
   },
-];
+  ],
+};
 
 interface LiveStats {
   staflyRows: number;
@@ -203,8 +214,6 @@ interface ReviewPolicyBoardProps {
   selectedCompanyName?: string | null;
 }
 
-const QUALITY_STAFF_HISTORICAL_COMPANY_ID = "00000000-0000-0000-0000-000000000001";
-
 export default function ReviewPolicyBoard({
   companyId,
   selectedCompanyId,
@@ -215,18 +224,24 @@ export default function ReviewPolicyBoard({
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<Record<number, boolean>>({});
   const effectiveCompanyId = companyId ?? selectedCompanyId ?? null;
-  const canShowHistoricalReviewBoard = effectiveCompanyId === QUALITY_STAFF_HISTORICAL_COMPANY_ID;
+  const datasetSource = HISTORICAL_REVIEW_DATASET.source;
+  const canShowHistoricalReviewBoard =
+    effectiveCompanyId === HISTORICAL_REVIEW_DATASET.companyId;
+  const safeTargets = canShowHistoricalReviewBoard
+    ? HISTORICAL_REVIEW_DATASET.targets
+    : [];
 
   useEffect(() => {
     let cancelled = false;
     async function load() {
       if (!effectiveCompanyId || !canShowHistoricalReviewBoard) {
         setStats({});
+        setExpanded({});
         setLoading(false);
         return;
       }
       setLoading(true);
-      const seqs = TARGETS.map((t) => t.sequence);
+      const seqs = safeTargets.map((t) => t.sequence);
 
       const { data: periods, error: pErr } = await supabase
         .from("pay_periods")
@@ -241,7 +256,7 @@ export default function ReviewPolicyBoard({
       }
 
       const out: Record<number, LiveStats> = {};
-      for (const t of TARGETS) {
+      for (const t of safeTargets) {
         out[t.sequence] = {
           staflyRows: 0,
           staflyTotal: 0,
@@ -293,25 +308,36 @@ export default function ReviewPolicyBoard({
 
   useEffect(() => {
     console.warn("[ReviewPolicyBoard tenant guard]", {
+      selectedCompanyId,
       selectedCompanyName,
-      companyId: effectiveCompanyId,
+      companyIdReceived: companyId,
+      effectiveCompanyId,
+      datasetSource,
       canShowHistoricalReviewBoard,
-      renderedRows: canShowHistoricalReviewBoard ? TARGETS.length : 0,
+      renderedRows: safeTargets.length,
     });
-  }, [canShowHistoricalReviewBoard, effectiveCompanyId, selectedCompanyName]);
+  }, [
+    canShowHistoricalReviewBoard,
+    companyId,
+    datasetSource,
+    effectiveCompanyId,
+    safeTargets.length,
+    selectedCompanyId,
+    selectedCompanyName,
+  ]);
 
   const summary = useMemo(() => {
-    const blocked = TARGETS.filter((t) =>
+    const blocked = safeTargets.filter((t) =>
       t.recommendation.startsWith("blocked"),
     ).length;
-    const merge = TARGETS.filter(
+    const merge = safeTargets.filter(
       (t) => t.recommendation === "merge_candidate",
     ).length;
-    const replace = TARGETS.filter(
+    const replace = safeTargets.filter(
       (t) => t.recommendation === "replace_candidate",
     ).length;
-    return { total: TARGETS.length, blocked, merge, replace };
-  }, []);
+    return { total: safeTargets.length, blocked, merge, replace };
+  }, [safeTargets]);
 
   const copyDecision = (t: ReviewTarget, live?: LiveStats) => {
     const lines = [
@@ -381,6 +407,13 @@ export default function ReviewPolicyBoard({
             No historical closeout dataset is configured for this company.
           </CardDescription>
         </CardHeader>
+        <EmptyState
+          icon={Scale}
+          title="No historical review dataset"
+          description="This company has no whitelisted Connecteam historical review board, so no global or fallback rows are rendered."
+          compact
+          className="pt-0"
+        />
       </Card>
     );
   }
@@ -451,7 +484,7 @@ export default function ReviewPolicyBoard({
               </div>
             ) : (
               <div className="space-y-2">
-                {TARGETS.map((t) => {
+                {safeTargets.map((t) => {
                   const live = stats[t.sequence];
                   const delta =
                     t.ctTotal != null
