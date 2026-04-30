@@ -22,16 +22,28 @@ interface ActionPermission {
 interface AuthContextType {
   user: User | null;
   session: Session | null;
-  /** Highest-priority role (backward compat) */
+  /** Highest-priority GLOBAL role (developer/owner only — from user_roles).
+   *  Per-company roles live in companyRoles. Do NOT use this to gate admin
+   *  access for a specific tenant. */
   role: AppRole;
-  /** All roles the user has */
+  /** Global roles only (from public.user_roles). */
   allRoles: Set<string>;
+  /** Map of companyId → role from public.company_users (per-tenant). */
+  companyRoles: Record<string, string>;
+  /** Resolve role a user has IN a specific company.
+   *  Combines global cross-tenant roles (developer/owner) with per-company role. */
+  getRoleForCompany: (companyId: string | null) => AppRole;
+  /** Whether the user has admin-level access in the given company. */
+  canAccessAdminForCompany: (companyId: string | null) => boolean;
+  /** Whether the user has an employee record in the given company. */
+  canAccessPortalForCompany: (companyId: string | null) => boolean;
   /** Active mode: admin panel or employee portal */
   activeMode: ActiveMode;
   setActiveMode: (mode: ActiveMode) => void;
-  /** Whether user can access admin panel */
+  /** DEPRECATED — global flag, true if user has any admin-level role anywhere.
+   *  Use canAccessAdminForCompany(selectedCompanyId) for tenant-scoped checks. */
   canAccessAdmin: boolean;
-  /** Whether user has an employee profile */
+  /** Whether user has an employee profile (anywhere) */
   canAccessPortal: boolean;
   employeeId: string | null;
   /** All employee IDs across companies */
@@ -49,6 +61,8 @@ interface AuthContextType {
 }
 
 const ADMIN_ROLES = new Set(['developer', 'owner', 'company_owner', 'admin', 'manager', 'supervisor']);
+/** Roles in user_roles that are TRULY cross-tenant (Stafly platform staff). */
+const GLOBAL_CROSS_TENANT_ROLES = new Set(['developer', 'owner']);
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
@@ -59,6 +73,10 @@ const AuthContext = createContext<AuthContextType>({
   setActiveMode: () => {},
   canAccessAdmin: false,
   canAccessPortal: false,
+  companyRoles: {},
+  getRoleForCompany: () => null,
+  canAccessAdminForCompany: () => false,
+  canAccessPortalForCompany: () => false,
   employeeId: null,
   allEmployeeIds: [],
   employeeActive: true,
@@ -77,6 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [role, setRole] = useState<AppRole>(null);
   const [allRoles, setAllRoles] = useState<Set<string>>(new Set());
+  const [companyRoles, setCompanyRoles] = useState<Record<string, string>>({});
   const [activeMode, setActiveModeState] = useState<ActiveMode>(() => {
     return (safeLocalStorage.getItem("stafly-active-mode") as ActiveMode) || 'admin';
   });
@@ -105,15 +124,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const rolePriority: AppRole[] = ["developer", "owner", "company_owner", "admin", "manager", "supervisor", "employee", null];
       const availableRoles = new Set((roleRows ?? []).map((row) => row.role as string));
 
-      // Check if user is company_owner in any company
+      // Per-company role membership (tenant-scoped — does NOT bleed into
+      // global role/allRoles. A company_owner in JKitchen is NOT an admin in
+      // Quality Staff. See `getRoleForCompany` / `canAccessAdminForCompany`.)
       const { data: companyUserRoles } = await supabase
         .from("company_users")
-        .select("role")
+        .select("company_id, role")
         .eq("user_id", userId);
 
-      if (companyUserRoles?.some(cu => cu.role === 'company_owner')) {
-        availableRoles.add("company_owner");
+      const cRoles: Record<string, string> = {};
+      for (const cu of companyUserRoles ?? []) {
+        if (cu.company_id && cu.role) cRoles[cu.company_id as string] = cu.role as string;
       }
+      setCompanyRoles(cRoles);
 
       const { data: empData } = await supabase
         .from("employees")
@@ -191,6 +214,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (import.meta.env.DEV) console.error('Error fetching user data:', err);
       setRole(null);
       setAllRoles(new Set());
+      setCompanyRoles({});
       setEmployeeId(null);
       setPermissions([]);
       setActionPermissions([]);
@@ -210,6 +234,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } else {
           setRole(null);
           setAllRoles(new Set());
+          setCompanyRoles({});
           setEmployeeId(null);
           setPermissions([]);
           setLoading(false);
@@ -236,6 +261,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSession(null);
     setRole(null);
     setAllRoles(new Set());
+    setCompanyRoles({});
     setEmployeeId(null);
     setPermissions([]);
     setActionPermissions([]);
@@ -251,11 +277,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     window.location.href = "/";
   };
 
-  const canAccessAdmin = [...allRoles].some(r => ADMIN_ROLES.has(r));
+  // GLOBAL admin flag — true only if the user has a true cross-tenant role
+  // (developer/owner) OR ANY per-company admin role anywhere. This is kept
+  // for back-compat (e.g. "do they have admin somewhere?"). It must NOT be
+  // used to gate access for a specific tenant — use canAccessAdminForCompany.
+  const hasGlobalCrossTenantAdmin = [...allRoles].some(r => GLOBAL_CROSS_TENANT_ROLES.has(r));
+  const hasAnyCompanyAdmin = Object.values(companyRoles).some(r => ADMIN_ROLES.has(r));
+  const canAccessAdmin = hasGlobalCrossTenantAdmin || hasAnyCompanyAdmin;
   const canAccessPortal = !!employeeId || allEmployeeIds.length > 0;
 
   const resolveEmployeeForCompany = useCallback((companyId: string): string | null => {
     return allEmployeeIds.find(e => e.companyId === companyId)?.id ?? null;
+  }, [allEmployeeIds]);
+
+  /**
+   * Resolve the effective role of the user IN a specific company.
+   * Priority:
+   *  1. Cross-tenant platform roles (developer, owner) — apply everywhere.
+   *  2. Per-company role from company_users for THAT company.
+   *  3. employee (if they have an active employee record in that company).
+   *  4. null.
+   */
+  const getRoleForCompany = useCallback((companyId: string | null): AppRole => {
+    // Global platform staff keep cross-tenant access.
+    if (allRoles.has('developer')) return 'developer';
+    if (allRoles.has('owner')) return 'owner';
+    if (!companyId) return null;
+    const cRole = companyRoles[companyId];
+    if (cRole) return cRole as AppRole;
+    const hasEmp = allEmployeeIds.some(e => e.companyId === companyId);
+    if (hasEmp) return 'employee';
+    return null;
+  }, [allRoles, companyRoles, allEmployeeIds]);
+
+  const canAccessAdminForCompany = useCallback((companyId: string | null): boolean => {
+    // Cross-tenant platform roles bypass tenant scope.
+    if (allRoles.has('developer') || allRoles.has('owner')) return true;
+    if (!companyId) return false;
+    const cRole = companyRoles[companyId];
+    return !!cRole && ADMIN_ROLES.has(cRole);
+  }, [allRoles, companyRoles]);
+
+  const canAccessPortalForCompany = useCallback((companyId: string | null): boolean => {
+    if (!companyId) return false;
+    return allEmployeeIds.some(e => e.companyId === companyId);
   }, [allEmployeeIds]);
 
   const hasModuleAccess = (module: string, permission: 'view' | 'edit' | 'delete'): boolean => {
@@ -281,7 +346,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider value={{
-      user, session, role, allRoles, activeMode, setActiveMode,
+      user, session, role, allRoles, companyRoles,
+      getRoleForCompany, canAccessAdminForCompany, canAccessPortalForCompany,
+      activeMode, setActiveMode,
       canAccessAdmin, canAccessPortal,
       employeeId, allEmployeeIds, employeeActive, fullName, loading,
       permissions, actionPermissions, signOut, hasModuleAccess, hasActionPermission,
