@@ -27,6 +27,8 @@ import {
   Filter,
 } from "lucide-react";
 
+const QUALITY_STAFF_HISTORICAL_COMPANY_ID = "00000000-0000-0000-0000-000000000001";
+
 type Status =
   | "imported_validated"
   | "clean_candidate"
@@ -172,9 +174,16 @@ export default function HistoricalCloseoutBoard({ companyId, onOpenSummary }: Pr
   const [filter, setFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const canShowHistoricalCloseout = companyId === QUALITY_STAFF_HISTORICAL_COMPANY_ID;
 
   useEffect(() => {
-    if (!open || !companyId) return;
+    if (!open || !companyId || !canShowHistoricalCloseout) {
+      setPeriods([]);
+      setImports([]);
+      setAgg([]);
+      setLoading(false);
+      return;
+    }
     let cancelled = false;
     (async () => {
       setLoading(true);
@@ -215,7 +224,7 @@ export default function HistoricalCloseoutBoard({ companyId, onOpenSummary }: Pr
     return () => {
       cancelled = true;
     };
-  }, [open, companyId]);
+  }, [open, companyId, canShowHistoricalCloseout]);
 
   const rows: BoardRow[] = useMemo(() => {
     const importsByPeriod = new Map<string, ImportLite[]>();
@@ -291,6 +300,16 @@ export default function HistoricalCloseoutBoard({ companyId, onOpenSummary }: Pr
 
   const printBoard = () => window.print();
 
+  const safeRows = canShowHistoricalCloseout ? filtered : [];
+
+  useEffect(() => {
+    console.warn("[HistoricalCloseoutBoard tenant guard]", {
+      companyId,
+      canShowHistoricalCloseout,
+      renderedRows: safeRows.length,
+    });
+  }, [companyId, canShowHistoricalCloseout, safeRows.length]);
+
   return (
     <div id="historical-closeout-board" className="mb-4 scroll-mt-20">
       <Collapsible open={open} onOpenChange={setOpen}>
@@ -343,12 +362,12 @@ export default function HistoricalCloseoutBoard({ companyId, onOpenSummary }: Pr
 
             {/* KPIs */}
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-              <KpiCard value={kpis.total} label="Periods" icon={<Calendar className="h-4 w-4" />} accent="muted" />
-              <KpiCard value={kpis.validated} label="Validated" icon={<ShieldCheck className="h-4 w-4" />} accent="earning" />
-              <KpiCard value={kpis.ready} label="Ready" icon={<Sparkles className="h-4 w-4" />} accent="primary" />
-              <KpiCard value={kpis.blockedReview} label="Blocked / review" icon={<AlertTriangle className="h-4 w-4" />} accent="warning" />
+              <KpiCard value={canShowHistoricalCloseout ? kpis.total : 0} label="Periods" icon={<Calendar className="h-4 w-4" />} accent="muted" />
+              <KpiCard value={canShowHistoricalCloseout ? kpis.validated : 0} label="Validated" icon={<ShieldCheck className="h-4 w-4" />} accent="earning" />
+              <KpiCard value={canShowHistoricalCloseout ? kpis.ready : 0} label="Ready" icon={<Sparkles className="h-4 w-4" />} accent="primary" />
+              <KpiCard value={canShowHistoricalCloseout ? kpis.blockedReview : 0} label="Blocked / review" icon={<AlertTriangle className="h-4 w-4" />} accent="warning" />
               <KpiCard
-                value={fmtMoney(kpis.historicalImported)}
+                value={fmtMoney(canShowHistoricalCloseout ? kpis.historicalImported : 0)}
                 label="Total imported"
                 icon={<DollarSign className="h-4 w-4" />}
                 accent="earning"
@@ -389,13 +408,16 @@ export default function HistoricalCloseoutBoard({ companyId, onOpenSummary }: Pr
 
             {loading ? (
               <div className="text-sm text-muted-foreground py-6 text-center">Loading board…</div>
-            ) : filtered.length === 0 ? (
+            ) : safeRows.length === 0 ? (
               <div className="rounded-xl border border-dashed border-border/60 p-6 text-center text-xs text-muted-foreground">
-                <Filter className="h-4 w-4 inline mr-1" /> No periods match this filter
+                <Filter className="h-4 w-4 inline mr-1" />
+                {canShowHistoricalCloseout
+                  ? "No periods match this filter"
+                  : "No historical closeout dataset is configured for this company"}
               </div>
             ) : (
               <div className="space-y-2">
-                {filtered.map((r) => {
+                {safeRows.map((r) => {
                   const meta = STATUS_META[r.status];
                   const isExpanded = expanded.has(r.period.id);
                   const validationOk =
