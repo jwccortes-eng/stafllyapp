@@ -3,11 +3,10 @@ import { useNavigate } from "react-router-dom";
 import { usePageView } from "@/hooks/useAuditLog";
 import { useIsMobile } from "@/hooks/use-mobile";
 import AuditPanel from "@/components/audit/AuditPanel";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
-  Clock, CalendarRange, Upload, MoreHorizontal, List, Calendar as CalendarIcon,
-  FileBarChart, AlertTriangle, GitCompareArrows, Download, Settings, RefreshCw,
-  Monitor, Copy, Users, ArrowRight,
+  Clock, CalendarRange, Upload, MoreHorizontal,
+  FileBarChart, AlertTriangle, GitCompareArrows, Settings,
+  Monitor, Copy, List,
 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { toast } from "sonner";
@@ -19,11 +18,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
   DropdownMenuSeparator, DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import TodayView from "./TodayView";
-import { TimesheetView } from "@/components/timeclock/TimesheetView";
-import { MonthClockView } from "@/components/timeclock/MonthClockView";
 import TimeClockCommandView from "@/components/timeclock/TimeClockCommandView";
 import MobileTimeClockView from "./MobileTimeClockView";
 
