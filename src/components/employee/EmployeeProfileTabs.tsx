@@ -13,6 +13,16 @@ import { EmployeeAvailabilitySection } from "@/components/EmployeeAvailabilitySe
 import { formatPersonName, formatDisplayText } from "@/lib/format-helpers";
 import { format, parseISO, formatDistanceToNow, isValid } from "date-fns";
 import { openEmployeeDocument } from "@/lib/employee-documents";
+import {
+  fetchUnifiedDocuments,
+  approveDocument,
+  rejectDocument,
+  requestReplacement,
+  uploadAdminDocument,
+  type UnifiedDocument,
+} from "@/lib/document-actions";
+import { DocumentReasonDialog } from "@/components/documents/DocumentReasonDialog";
+import { DocumentUploadDialog } from "@/components/documents/DocumentUploadDialog";
 import { toNumOrNull } from "@/lib/numeric-input";
 import { toast } from "sonner";
 
