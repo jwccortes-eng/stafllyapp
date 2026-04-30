@@ -78,8 +78,8 @@ function DesktopTimeClockView() {
       <div className="flex items-center justify-between">
         <PageHeader
           variant="3"
-          title="Time Clock"
-          subtitle="Live attendance, open clocks and worker activity."
+          title="Centro de Mando de Tiempo"
+          subtitle="Control en vivo de asistencia, horas abiertas, alertas y aprobaciones."
         />
         <div className="flex items-center gap-2">
           <TooltipProvider delayDuration={300}>
