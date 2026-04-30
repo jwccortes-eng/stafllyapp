@@ -297,7 +297,7 @@ export default function WeeklyPayrollReconciliation() {
         </Link>
         <PageHeader
           title="Weekly Payroll Reconciliation Report"
-          description="Compare a finalized weekly payroll file against Stafly's period_base_pay. Read-only · no recalculation."
+          subtitle="Compare a finalized weekly payroll file against Stafly's period_base_pay. Read-only · no recalculation."
           icon={Scale}
         />
       </div>
