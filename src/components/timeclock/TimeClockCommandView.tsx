@@ -357,8 +357,9 @@ export default function TimeClockCommandView() {
         <KpiCard
           icon={ClipboardCheck}
           tone="muted"
-          label="Hours today"
+          label="Tracked today"
           value={formatHoursShort(kpis.totalMinutesToday)}
+          hint="closed + same-day open only"
         />
       </div>
 
