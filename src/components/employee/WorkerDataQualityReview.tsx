@@ -85,20 +85,48 @@ const READINESS_TONE: Record<
   },
 };
 
-export default function WorkerDataQualityReview({ employee, companyEmployees }: Props) {
+export default function WorkerDataQualityReview({
+  employee,
+  companyEmployees,
+  documentSignals,
+  onJumpToTab,
+  companyName,
+}: Props) {
+  // All hooks declared before any early return — Rules of Hooks.
+  const analysis = useMemo(
+    () => analyzeEmployeeRisks(companyEmployees, documentSignals),
+    [companyEmployees, documentSignals],
+  );
+  const risks = employee ? (analysis.byId.get(employee.id) ?? []) : [];
+  const readiness = computePayrollReadiness(risks);
+  const orderedRisks = RISK_ORDER.filter((k) => risks.includes(k));
+
+  const targetTabs = useMemo(() => {
+    const set = new Set<ProfileTabId>();
+    for (const r of orderedRisks) set.add(tabForRisk(r));
+    return set;
+  }, [orderedRisks]);
+
+  const waMessage = useMemo(
+    () => buildWhatsappReminder({
+      firstName: employee?.first_name,
+      risks: orderedRisks,
+      companyName: companyName ?? null,
+    }),
+    [employee?.first_name, orderedRisks, companyName],
+  );
+  const waUrl = useMemo(
+    () => waMessage ? buildWaMeUrl(employee?.phone_number, waMessage) : null,
+    [employee?.phone_number, waMessage],
+  );
+
   if (!employee) return null;
 
-  // Reuse the same analyzer used by the panel + list to guarantee parity.
-  const analysis = analyzeEmployeeRisks(companyEmployees);
-  const risks = analysis.byId.get(employee.id) ?? [];
-  const readiness = computePayrollReadiness(risks);
   const tone = READINESS_TONE[readiness];
   const ReadinessIcon = tone.icon;
-
   const detected = collectDetectedSignals(employee);
   const recommendation = buildRecommendation(risks, readiness);
 
-  const orderedRisks = RISK_ORDER.filter((k) => risks.includes(k));
 
   return (
     <Card className={cn("border shadow-none", tone.wrap)}>
