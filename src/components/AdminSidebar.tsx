@@ -238,8 +238,8 @@ export default function AdminSidebar() {
                 </span>
               )}
               {!locked && badge > 0 && (
-                <span className="ml-auto shrink-0 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-destructive/20 text-destructive text-[10px] font-bold tabular-nums px-1">
-                  {badge > 99 ? "99+" : badge}
+                <span className="ml-auto shrink-0 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-rose-50 text-rose-600 border border-rose-100 text-[10px] font-semibold tabular-nums px-1.5 dark:bg-rose-500/15 dark:text-rose-300 dark:border-rose-500/20">
+                  {badge > 9 ? "9+" : badge}
                 </span>
               )}
             </>
