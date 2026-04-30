@@ -77,8 +77,8 @@ export function AdminProductSwitcher({ compact = false }: AdminProductSwitcherPr
           </div>
         </DropdownMenuItem>
 
-        {/* Portal — only if user has employee access */}
-        {canAccessPortal && (
+        {/* Portal — enabled if user has employee access, disabled hint otherwise */}
+        {canAccessPortal ? (
           <DropdownMenuItem
             onClick={goToPortal}
             className="flex items-start gap-3 py-2.5 cursor-pointer focus:bg-accent/50"
@@ -90,6 +90,21 @@ export function AdminProductSwitcher({ compact = false }: AdminProductSwitcherPr
               <p className="text-sm font-semibold leading-tight text-foreground">My Portal</p>
               <p className="text-[11px] text-muted-foreground leading-tight mt-0.5">
                 Shifts, hours & payments
+              </p>
+            </div>
+          </DropdownMenuItem>
+        ) : (
+          <DropdownMenuItem
+            disabled
+            className="flex items-start gap-3 py-2.5 opacity-60 focus:bg-transparent cursor-not-allowed"
+          >
+            <div className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center shrink-0 mt-0.5 ring-1 ring-border/40">
+              <User className="h-[18px] w-[18px] text-muted-foreground" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold leading-tight text-foreground">My Portal</p>
+              <p className="text-[11px] text-muted-foreground leading-tight mt-0.5">
+                Not available for this admin user
               </p>
             </div>
           </DropdownMenuItem>
