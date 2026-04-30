@@ -66,7 +66,7 @@ export default function TimeClockCommandView() {
   const [loading, setLoading] = useState(true);
   const [now, setNow] = useState(new Date());
   const [search, setSearch] = useState("");
-  const [, setSelectedEmpId] = useState<string | null>(null);
+  const openWorker = (id: string) => navigate(`/app/workers/${id}`);
 
   // live tick
   useEffect(() => {
@@ -255,7 +255,7 @@ export default function TimeClockCommandView() {
               <li
                 key={item.entry.id}
                 className="flex items-center gap-3 px-5 py-3 hover:bg-accent/40 cursor-pointer transition"
-                onClick={() => setSelectedEmpId(item.employee.id)}
+                onClick={() => openWorker(item.employee.id)}
               >
                 <EmployeeAvatar
                   avatarUrl={item.employee.avatar_url}
@@ -332,7 +332,7 @@ export default function TimeClockCommandView() {
                 <li
                   key={r.entry.id}
                   className="flex items-center gap-3 px-5 py-3 hover:bg-accent/40 cursor-pointer transition"
-                  onClick={() => setSelectedEmpId(r.employee.id)}
+                  onClick={() => openWorker(r.employee.id)}
                 >
                   <EmployeeAvatar
                     avatarUrl={r.employee.avatar_url}
