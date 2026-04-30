@@ -24,6 +24,7 @@ import PayrollSequenceSettings from "@/components/payroll/PayrollSequenceSetting
 import PeriodReconciliationCell from "@/components/payroll/PeriodReconciliationCell";
 import PayrollPeriodSummaryDialog from "@/components/payroll/PayrollPeriodSummaryDialog";
 import HistoricalCloseoutBoard from "@/components/payroll/HistoricalCloseoutBoard";
+import ReviewPolicyBoard from "@/components/payroll/ReviewPolicyBoard";
 import { usePayrollSequenceConfig, formatSequence } from "@/hooks/usePayrollSequenceConfig";
 import { Settings } from "lucide-react";
 
