@@ -89,8 +89,22 @@ Deno.serve(async (req) => {
 
     if (error) {
       console.error("[admin-reset-password] Update error:", error.message);
-      return new Response(JSON.stringify({ error: "Error al actualizar la contraseña" }), {
-        status: 400,
+      const raw = (error.message || "").toLowerCase();
+      let humanMessage = "Error al actualizar la contraseña";
+      if (raw.includes("weak") || raw.includes("pwned") || raw.includes("known to be")) {
+        humanMessage = "Esta contraseña es demasiado común o apareció en filtraciones conocidas. Elige una distinta (mezcla mayúsculas, números y símbolos).";
+      } else if (raw.includes("user not found") || raw.includes("not found")) {
+        humanMessage = "El usuario no existe en Auth.";
+      } else if (raw.includes("password") && raw.includes("short")) {
+        humanMessage = "La contraseña es demasiado corta.";
+      } else if (raw.includes("same") && raw.includes("password")) {
+        humanMessage = "La nueva contraseña no puede ser igual a la actual.";
+      } else if (error.message) {
+        humanMessage = `Auth: ${error.message}`;
+      }
+      // Return 200 so supabase-js delivers the body to the client (avoids generic "non-2xx")
+      return new Response(JSON.stringify({ error: humanMessage }), {
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
