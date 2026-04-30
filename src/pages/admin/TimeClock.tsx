@@ -24,6 +24,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import TodayView from "./TodayView";
 import { TimesheetView } from "@/components/timeclock/TimesheetView";
 import { MonthClockView } from "@/components/timeclock/MonthClockView";
+import TimeClockCommandView from "@/components/timeclock/TimeClockCommandView";
 import MobileTimeClockView from "./MobileTimeClockView";
 
 const CLOCK_SETTINGS_SECTIONS: SettingsSection[] = [
@@ -66,7 +67,7 @@ export default function TimeClock() {
 }
 
 function DesktopTimeClockView() {
-  const [activeTab, setActiveTab] = useState("today");
+  const [activeTab, setActiveTab] = useState("live");
   const [timesheetMode, setTimesheetMode] = useState<"list" | "calendar">("list");
   const [clockSettingsOpen, setClockSettingsOpen] = useState(false);
   const { config: clockConfig, updateConfig: updateClockConfig, loading: clockConfigLoading } = useClockConfig();
@@ -78,7 +79,7 @@ function DesktopTimeClockView() {
         <PageHeader
           variant="3"
           title="Time Clock"
-          subtitle="Control de asistencia y fichajes"
+          subtitle="Live attendance, open clocks and worker activity."
         />
         <div className="flex items-center gap-2">
           <TooltipProvider delayDuration={300}>
@@ -181,9 +182,13 @@ function DesktopTimeClockView() {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <div className="flex items-center justify-between gap-3">
           <TabsList className="w-auto">
-            <TabsTrigger value="today" className="gap-1.5 text-xs">
+            <TabsTrigger value="live" className="gap-1.5 text-xs">
               <Clock className="h-3.5 w-3.5" />
-              Today
+              Live now
+            </TabsTrigger>
+            <TabsTrigger value="today" className="gap-1.5 text-xs">
+              <CalendarRange className="h-3.5 w-3.5" />
+              All workers
             </TabsTrigger>
             <TabsTrigger value="timesheets" className="gap-1.5 text-xs">
               <CalendarRange className="h-3.5 w-3.5" />
@@ -203,6 +208,9 @@ function DesktopTimeClockView() {
           )}
         </div>
 
+        <TabsContent value="live" className="mt-4">
+          <TimeClockCommandView />
+        </TabsContent>
         <TabsContent value="today" className="mt-4">
           <TodayView />
         </TabsContent>
