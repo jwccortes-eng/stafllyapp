@@ -243,18 +243,32 @@ function ControlTower({ displayName }: { displayName: string }) {
 
       // ── Quality Staff per-period historical totals ──────────────────
       const allQS = [...QS_VALIDATED, ...QS_REVIEW, ...QS_PASSOVER];
-      const { data: qsRows } = await sb
-        .from("historical_payroll_entries")
-        .select("period_number, gross_amount")
+      const { data: qsPeriodRows } = await sb
+        .from("pay_periods")
+        .select("id, sequence_number")
         .eq("company_id", QUALITY_STAFF_ID)
-        .in("period_number", allQS);
+        .in("sequence_number", allQS);
+      const periodIdToSeq = new Map<string, number>();
+      (qsPeriodRows ?? []).forEach((p: any) => periodIdToSeq.set(p.id, Number(p.sequence_number)));
+
+      const periodIds = Array.from(periodIdToSeq.keys());
+      let qsRows: any[] = [];
+      if (periodIds.length > 0) {
+        const { data } = await sb
+          .from("historical_payroll_entries")
+          .select("period_id, base_total_pay")
+          .eq("company_id", QUALITY_STAFF_ID)
+          .in("period_id", periodIds);
+        qsRows = data ?? [];
+      }
       const map = new Map<number, { rows: number; total: number }>();
-      (qsRows ?? []).forEach((r: any) => {
-        const k = Number(r.period_number);
+      qsRows.forEach((r: any) => {
+        const k = periodIdToSeq.get(r.period_id);
+        if (k === undefined) return;
         if (!map.has(k)) map.set(k, { rows: 0, total: 0 });
         const e = map.get(k)!;
         e.rows += 1;
-        e.total += Number(r.gross_amount ?? 0);
+        e.total += Number(r.base_total_pay ?? 0);
       });
       setQsPeriods(allQS.map((p) => ({ period: p, rows: map.get(p)?.rows ?? 0, total: map.get(p)?.total ?? 0 })));
 
