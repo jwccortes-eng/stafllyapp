@@ -148,7 +148,7 @@ function ControlTower({ displayName }: { displayName: string }) {
               .eq("company_id", c.id).gte("date", new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10))
               .is("deleted_at", null),
             sb.from("time_entries").select("id", { count: "exact", head: true })
-              .eq("company_id", c.id).gte("clock_in_time", back30),
+              .eq("company_id", c.id).gte("clock_in", back30),
             sb.from("time_entries").select("id", { count: "exact", head: true })
               .eq("company_id", c.id).is("clock_out", null),
             sb.from("pay_periods").select("id", { count: "exact", head: true })
@@ -158,7 +158,7 @@ function ControlTower({ displayName }: { displayName: string }) {
             sb.from("historical_payroll_entries").select("id", { count: "exact", head: true })
               .eq("company_id", c.id),
             sb.from("company_modules").select("id", { count: "exact", head: true })
-              .eq("company_id", c.id).eq("enabled", true),
+              .eq("company_id", c.id).eq("is_active", true),
           ]);
 
           const wsActive = safeCount(wA);
