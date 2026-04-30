@@ -330,6 +330,15 @@ function ControlTower({ displayName }: { displayName: string }) {
         </div>
       </div>
 
+      {/* ── Initial calm banner during first snapshot load ─────────── */}
+      {loading && !snapshot && (
+        <StaflyCalmProcessingBanner
+          title="Sincronizando el tablero"
+          message="Stafly está organizando la operación."
+          footerNote="Solo lectura · No modificamos datos."
+        />
+      )}
+
       {/* ── Snapshot grid ───────────────────────────────────────────── */}
       <SnapshotGrid loading={loading} snapshot={snapshot} />
 
