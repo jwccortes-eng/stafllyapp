@@ -20,6 +20,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import StaflyCalmProcessingBanner from "@/components/common/StaflyCalmProcessingBanner";
 import {
   Activity, Building2, Users, CalendarDays, Upload, Database,
   ShieldCheck, AlertTriangle, FileWarning, Hash, Sparkles,
