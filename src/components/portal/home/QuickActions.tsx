@@ -15,6 +15,8 @@ export interface QuickAction {
   icon: LucideIcon;
   /** Optional accent token: "primary" | "earning" | "warning" | "muted" */
   accent?: "primary" | "earning" | "warning" | "muted";
+  /** Optional small badge displayed next to the label (e.g. "NEW"). */
+  badge?: string;
 }
 
 const ACCENT: Record<NonNullable<QuickAction["accent"]>, { wrap: string; iconWrap: string; icon: string }> = {
