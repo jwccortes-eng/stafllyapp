@@ -65,10 +65,16 @@ interface Props {
   employees: any[];
   riskFilter: RiskKey | "all";
   onRiskFilterChange: (next: RiskKey | "all") => void;
+  /** Optional document signals — when provided, doc-compliance risks (missing/
+   * pending/expired/expiring/rejected) are surfaced as cards too. */
+  documentSignals?: Map<string, import("@/lib/documents-signals").WorkerDocumentSignals>;
 }
 
-export default function DataQualityRiskPanel({ employees, riskFilter, onRiskFilterChange }: Props) {
-  const { byId, counts } = useMemo(() => analyzeEmployeeRisks(employees), [employees]);
+export default function DataQualityRiskPanel({ employees, documentSignals, riskFilter, onRiskFilterChange }: Props) {
+  const { byId, counts } = useMemo(
+    () => analyzeEmployeeRisks(employees, documentSignals),
+    [employees, documentSignals],
+  );
 
   const readinessTotals = useMemo(() => {
     const totals: Record<PayrollReadiness, number> = { ready: 0, needs_review: 0, blocked_visual: 0 };
