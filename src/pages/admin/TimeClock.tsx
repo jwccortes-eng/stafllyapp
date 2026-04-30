@@ -188,11 +188,15 @@ function DesktopTimeClockView() {
             </TabsTrigger>
             <TabsTrigger value="today" className="gap-1.5 text-xs">
               <CalendarRange className="h-3.5 w-3.5" />
-              All workers
+              Today
             </TabsTrigger>
             <TabsTrigger value="timesheets" className="gap-1.5 text-xs">
               <CalendarRange className="h-3.5 w-3.5" />
               Timesheets
+            </TabsTrigger>
+            <TabsTrigger value="all" className="gap-1.5 text-xs">
+              <Users className="h-3.5 w-3.5" />
+              All workers
             </TabsTrigger>
           </TabsList>
 
