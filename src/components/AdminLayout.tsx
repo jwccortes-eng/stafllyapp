@@ -49,7 +49,7 @@ export default function AdminLayout() {
     canAccessAdminForCompany, canAccessPortalForCompany, getRoleForCompany,
     employeeId,
   } = useAuth();
-  const { companies, selectedCompanyId, setSelectedCompanyId, isModuleActive } = useCompany();
+  const { companies, selectedCompanyId, switchCompany, isModuleActive } = useCompany();
   const [collapsed, setCollapsed] = useState(() => {
     const saved = safeLocalStorage.getItem("sidebar-collapsed");
     return saved !== null ? saved === "true" : true;
@@ -100,7 +100,7 @@ export default function AdminLayout() {
       fallbackAdminCompanyId !== selectedCompanyId
     ) {
       setRecoveringAdminCompanyId(fallbackAdminCompanyId);
-      setSelectedCompanyId(fallbackAdminCompanyId);
+      switchCompany(fallbackAdminCompanyId);
       return;
     }
 
@@ -113,7 +113,7 @@ export default function AdminLayout() {
     loading,
     recoveringAdminCompanyId,
     selectedCompanyId,
-    setSelectedCompanyId,
+    switchCompany,
     user,
   ]);
 
