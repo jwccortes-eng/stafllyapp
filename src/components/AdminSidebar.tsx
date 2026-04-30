@@ -226,7 +226,7 @@ export default function AdminSidebar() {
               )} />
             )}
             {collapsed && badge > 0 && !locked && (
-              <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-destructive" />
+              <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-rose-400/80 ring-2 ring-sidebar/80" />
             )}
           </div>
           {!collapsed && (
