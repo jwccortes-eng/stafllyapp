@@ -157,7 +157,21 @@ export default function PayrollPeriodSummaryDialog({ open, onOpenChange, period,
   const companyName = selectedCompany?.name ?? "";
 
   const handleCopySummary = async () => {
-    const txt = `Period${period.sequence_number != null ? ` #${period.sequence_number}` : ""} · ${format(new Date(period.start_date), "yyyy-MM-dd")} → ${format(new Date(period.end_date), "yyyy-MM-dd")} · ${totals.count} employees · ${fmtMoney(totals.total)} · ${hasImport ? `${imports.length} import${imports.length > 1 ? "s" : ""} ${imports[0]?.status ?? ""}` : "no import"} · validation ${validationOk ? "OK" : hasRows ? "check" : "n/a"}${companyName ? ` · ${companyName}` : ""}`;
+    const start = format(new Date(period.start_date), "yyyy-MM-dd");
+    const end = format(new Date(period.end_date), "yyyy-MM-dd");
+    const importPart = hasImport
+      ? `${imports.length} import${imports.length > 1 ? "s" : ""}${imports[0]?.status ? ` ${imports[0].status}` : ""}`
+      : "no import";
+    const parts: (string | null | false)[] = [
+      `Period${period.sequence_number != null ? ` #${period.sequence_number}` : ""}`,
+      `${start} → ${end}`,
+      `${totals.count} employees`,
+      fmtMoney(totals.total),
+      importPart,
+      `validation ${validationOk ? "OK" : hasRows ? "check" : "n/a"}`,
+      companyName || null,
+    ];
+    const txt = parts.filter(Boolean).join(" · ");
     try {
       await navigator.clipboard.writeText(txt);
       toast.success("Payroll summary copied");
