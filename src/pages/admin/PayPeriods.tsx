@@ -524,6 +524,8 @@ export default function PayPeriods() {
         onOpenSummary={(p) => setSummaryPeriod(p)}
       />
 
+      <ReviewPolicyBoard companyId={selectedCompanyId} />
+
       <div className="flex items-center justify-between gap-2 mb-2">
         <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">All Periods</h2>
         <Button
