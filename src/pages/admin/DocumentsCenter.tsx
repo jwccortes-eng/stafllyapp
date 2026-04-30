@@ -55,14 +55,16 @@ export default function DocumentsCenter() {
     queryKey: ["documents-center-workers", selectedCompanyId],
     enabled: !!selectedCompanyId,
     queryFn: async () => {
-      if (!selectedCompanyId) return [];
-      return fetchAllPaginated<any>((from, to) =>
+      if (!selectedCompanyId) return [] as any[];
+      const res = await fetchAllPaginated<any>((from, to) =>
         (supabase as any)
           .from("employees")
           .select("id, first_name, last_name, is_active, has_car, can_drive")
           .eq("company_id", selectedCompanyId)
+          .order("id", { ascending: true })
           .range(from, to),
       );
+      return res.data ?? [];
     },
   });
 
@@ -217,9 +219,9 @@ export default function DocumentsCenter() {
         subtitle="Read-only view of every uploaded document and missing required item across the company."
         kpis={[
           { label: "Total", value: counts.all },
-          { label: "Needs review", value: counts.needs_review, tone: "warning" },
-          { label: "Missing", value: counts.missing, tone: "warning" },
-          { label: "Expired", value: counts.expired, tone: "destructive" },
+          { label: "Needs review", value: counts.needs_review, accent: "warning" },
+          { label: "Missing", value: counts.missing, accent: "warning" },
+          { label: "Expired", value: counts.expired, accent: "destructive" },
         ]}
       />
 
