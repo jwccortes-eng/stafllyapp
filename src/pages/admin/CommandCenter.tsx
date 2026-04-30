@@ -23,6 +23,8 @@ import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
+import { HistoricalPayrollCloseoutPanel } from "@/components/command-center/HistoricalPayrollCloseoutPanel";
+import { SmartActionQueue } from "@/components/command-center/SmartActionQueue";
 import { format } from "date-fns";
 import {
   Activity, Users, CalendarDays, Clock, ShieldCheck, Building2,
