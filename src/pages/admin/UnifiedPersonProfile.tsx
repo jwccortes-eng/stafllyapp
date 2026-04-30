@@ -401,9 +401,13 @@ export default function UnifiedPersonProfile() {
         key: "portal",
         label: "Portal",
         icon: portalActive ? ShieldCheck : ShieldOff,
-        value: portalActive ? "Active" : "Inactive",
-        hint: invitation?.sent_at ? `Invited ${safeDistance(invitation.sent_at)}` : undefined,
-        tone: portalActive ? "success" : "muted",
+        value: portalActive ? "Active" : invitation ? "Invited" : "Not invited",
+        hint: portalActive
+          ? (invitation?.accepted_at ? `Accepted ${safeDistance(invitation.accepted_at)}` : "Worker has access")
+          : invitation?.sent_at
+            ? `Invited ${safeDistance(invitation.sent_at)}`
+            : "Send portal invite",
+        tone: portalActive ? "success" : invitation ? "warning" : "muted",
       },
       {
         key: "documents",
@@ -417,65 +421,57 @@ export default function UnifiedPersonProfile() {
           : `${readiness.missingDocuments.length} required missing`,
         hint: docsCount.approved + docsCount.pending + docsCount.rejected > 0
           ? `${docsCount.approved} approved · ${docsCount.pending} pending`
-          : undefined,
-        tone: readiness.missingDocuments.length === 0 ? "success" : "destructive",
+          : "No documents uploaded yet",
+        tone: readiness.missingDocuments.length === 0
+          ? (docsCount.pending > 0 ? "warning" : "success")
+          : "destructive",
       },
       {
         key: "readiness",
         label: "Readiness",
         icon: ShieldCheck,
         value: `${readiness.progressPct}%`,
-        hint: `${readiness.completedRequirements}/${readiness.totalRequirements} items`,
+        hint: `${readiness.completedRequirements}/${readiness.totalRequirements} items complete`,
         tone: band === "ready" ? "success" : band === "needs-attention" ? "warning" : "destructive",
       },
       {
         key: "attendance",
         label: "Attendance · 30d",
         icon: Clock,
-        value: `${attendance30d.shifts} shifts`,
-        hint: attendance30d.lateCount + attendance30d.noShowCount > 0
-          ? `${attendance30d.lateCount} late · ${attendance30d.noShowCount} no-show`
-          : "On track",
+        value: attendance30d.shifts > 0
+          ? `${attendance30d.shifts} shift${attendance30d.shifts === 1 ? "" : "s"}`
+          : "No shifts",
+        hint: attendance30d.shifts === 0
+          ? "Nothing scheduled in last 30 days"
+          : attendance30d.lateCount + attendance30d.noShowCount > 0
+            ? `${attendance30d.lateCount} late · ${attendance30d.noShowCount} no-show`
+            : "On track",
         tone: attendance30d.noShowCount > 0
           ? "destructive"
           : attendance30d.lateCount > 0
-          ? "warning"
-          : "success",
+            ? "warning"
+            : attendance30d.shifts > 0 ? "success" : "muted",
       },
       {
-        key: "payroll",
+        key: "last-clock-in",
         label: "Last clock-in",
         icon: Clock,
-        value: lastPayrollDate ? safeDistance(lastPayrollDate) : "—",
-        hint: lastPayrollDate ? "From time entries" : "No time entries yet",
+        value: lastPayrollDate ? safeDistance(lastPayrollDate) : "Never",
+        hint: lastPayrollDate ? "From time entries" : "No clock-ins on record",
         tone: lastPayrollDate ? "default" : "muted",
       },
       {
         key: "activity",
         label: "Last activity",
         icon: ActivityIcon,
-        value: recentActivity[0]?.created_at ? safeDistance(recentActivity[0].created_at) : "—",
-        hint: recentActivity[0]?.action ?? undefined,
+        value: recentActivity[0]?.created_at ? safeDistance(recentActivity[0].created_at) : "Quiet",
+        hint: recentActivity[0]?.action ?? "No recent activity logged",
         tone: recentActivity.length > 0 ? "default" : "muted",
-      },
-      {
-        key: "front-desk",
-        label: "Front Desk",
-        icon: ContactRound,
-        value: frontDeskVisits.length > 0
-          ? `${frontDeskVisits.length} visit${frontDeskVisits.length === 1 ? "" : "s"}`
-          : "—",
-        hint: frontDeskVisits[0]?.checked_in_at
-          ? `Last ${safeDistance(frontDeskVisits[0].checked_in_at)}`
-          : "No office visits yet",
-        tone: frontDeskVisits.some((v: any) => v.status === "pending_followup")
-          ? "warning"
-          : frontDeskVisits.length > 0 ? "default" : "muted",
       },
     ];
   }, [
     employee, invitations, portalActive, readiness, docsCount, attendance30d,
-    lastPayrollDate, recentActivity, band, frontDeskVisits,
+    lastPayrollDate, recentActivity, band,
   ]);
 
   // ── Loading / Error states ──────────────────────────────────────────────
