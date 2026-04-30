@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   ChevronDown,
@@ -199,18 +199,28 @@ const fmtMoney = (n: number | null | undefined) =>
 
 interface ReviewPolicyBoardProps {
   companyId: string | null;
+  selectedCompanyId?: string | null;
+  selectedCompanyName?: string | null;
 }
 
-export default function ReviewPolicyBoard({ companyId }: ReviewPolicyBoardProps) {
+const QUALITY_STAFF_HISTORICAL_COMPANY_ID = "00000000-0000-0000-0000-000000000001";
+
+export default function ReviewPolicyBoard({
+  companyId,
+  selectedCompanyId,
+  selectedCompanyName,
+}: ReviewPolicyBoardProps) {
   const [open, setOpen] = useState(true);
   const [stats, setStats] = useState<Record<number, LiveStats>>({});
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<Record<number, boolean>>({});
+  const effectiveCompanyId = companyId ?? selectedCompanyId ?? null;
+  const canShowHistoricalReviewBoard = effectiveCompanyId === QUALITY_STAFF_HISTORICAL_COMPANY_ID;
 
   useEffect(() => {
     let cancelled = false;
     async function load() {
-      if (!companyId) {
+      if (!effectiveCompanyId || !canShowHistoricalReviewBoard) {
         setStats({});
         setLoading(false);
         return;
@@ -221,7 +231,7 @@ export default function ReviewPolicyBoard({ companyId }: ReviewPolicyBoardProps)
       const { data: periods, error: pErr } = await supabase
         .from("pay_periods")
         .select("id, sequence_number, status")
-        .eq("company_id", companyId)
+        .eq("company_id", effectiveCompanyId)
         .in("sequence_number", seqs);
 
       if (pErr) {
@@ -279,7 +289,16 @@ export default function ReviewPolicyBoard({ companyId }: ReviewPolicyBoardProps)
     return () => {
       cancelled = true;
     };
-  }, [companyId]);
+  }, [canShowHistoricalReviewBoard, effectiveCompanyId]);
+
+  useEffect(() => {
+    console.warn("[ReviewPolicyBoard tenant guard]", {
+      selectedCompanyName,
+      companyId: effectiveCompanyId,
+      canShowHistoricalReviewBoard,
+      renderedRows: canShowHistoricalReviewBoard ? TARGETS.length : 0,
+    });
+  }, [canShowHistoricalReviewBoard, effectiveCompanyId, selectedCompanyName]);
 
   const summary = useMemo(() => {
     const blocked = TARGETS.filter((t) =>
@@ -351,7 +370,20 @@ export default function ReviewPolicyBoard({ companyId }: ReviewPolicyBoardProps)
     );
   };
 
-  if (!companyId) return null;
+  if (!effectiveCompanyId) return null;
+
+  if (!canShowHistoricalReviewBoard) {
+    return (
+      <Card className="mb-6 border-border/60 bg-card">
+        <CardHeader>
+          <CardTitle>Review Policy Board</CardTitle>
+          <CardDescription>
+            No historical closeout dataset is configured for this company.
+          </CardDescription>
+        </CardHeader>
+      </Card>
+    );
+  }
 
   return (
     <Card
