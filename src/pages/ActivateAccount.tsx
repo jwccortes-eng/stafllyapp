@@ -490,11 +490,12 @@ export default function ActivateAccount() {
     if (!driverLicenseFile || !vehicleRegFile) return false;
 
     const uploadDoc = async (file: File, docType: string) => {
-      const ext = file.name.split(".").pop() || "jpg";
-      const path = `${invite.employee_id}/${docType}.${ext}`;
+      const safeBase = file.name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 60);
+      // Unified path convention: company_id/employee_id/onboarding/category/timestamp_filename
+      const path = `${invite.company_id}/${invite.employee_id}/onboarding/${docType}/${Date.now()}_${safeBase}`;
       const { error: upErr } = await supabase.storage
         .from("employee-documents")
-        .upload(path, file, { upsert: true });
+        .upload(path, file, { upsert: true, contentType: file.type || undefined });
       if (upErr) throw upErr;
       // Bucket is private; store the path. Consumers sign on read.
       return path;

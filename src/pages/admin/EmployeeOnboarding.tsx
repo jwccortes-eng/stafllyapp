@@ -252,11 +252,13 @@ export default function EmployeeOnboarding() {
       toast({ title: "File too large", description: "Max 15 MB per file.", variant: "destructive" });
       return;
     }
-    const ext = file.name.split(".").pop() ?? "bin";
-    const path = `${employee.company_id}/${employee.id}/${category}_${Date.now()}.${ext}`;
+    // Unified path convention across all worker-document uploaders:
+    // company_id/employee_id/onboarding/category/timestamp_filename
+    const safeBase = file.name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 60);
+    const path = `${employee.company_id}/${employee.id}/onboarding/${category}/${Date.now()}_${safeBase}`;
     const { error: upErr } = await supabase.storage
       .from("employee-documents")
-      .upload(path, file, { upsert: false });
+      .upload(path, file, { upsert: false, contentType: file.type || undefined });
     if (upErr) {
       toast({ title: "Upload failed", description: upErr.message, variant: "destructive" });
       return;
@@ -270,9 +272,12 @@ export default function EmployeeOnboarding() {
       file_type: file.type,
       file_size: file.size,
       category,
+      review_status: "pending",
       uploaded_by: user.id,
     });
     if (insErr) {
+      // Cleanup orphan blob best-effort
+      await supabase.storage.from("employee-documents").remove([path]).catch(() => undefined);
       toast({ title: "Could not record document", description: insErr.message, variant: "destructive" });
       return;
     }
