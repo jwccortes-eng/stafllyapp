@@ -267,6 +267,16 @@ export default function EmployeeDashboard() {
   // ── Quick actions — only show modules the worker has access to ──
   const quickActions: QuickAction[] = [
     { id: "profile", label: "My profile", href: "/portal/profile", icon: User, accent: "muted" },
+    isModuleEnabled("my_payments")
+      ? {
+          id: "pay-reports",
+          label: "Pay reports",
+          href: "/portal/pay-reports",
+          icon: Wallet,
+          accent: "earning" as const,
+          badge: "NEW",
+        }
+      : null,
     isModuleEnabled("my_documents") || isModuleEnabled("my_w9")
       ? { id: "documents", label: "Documents", href: "/portal/documents", icon: FileText, accent: "warning" as const }
       : null,
