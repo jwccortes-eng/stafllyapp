@@ -97,6 +97,24 @@ export default function PayPeriods() {
 
   useEffect(() => { fetchPeriods(); }, [selectedCompanyId]);
 
+  // Auto-scroll to Historical Closeout Board when arriving via hash
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.location.hash !== "#historical-closeout-board") return;
+    const tryScroll = () => {
+      const el = document.getElementById("historical-closeout-board");
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+        return true;
+      }
+      return false;
+    };
+    if (!tryScroll()) {
+      const t = setTimeout(tryScroll, 400);
+      return () => clearTimeout(t);
+    }
+  }, []);
+
   // Fetch management metadata (imports + base_pay) for all periods
   useEffect(() => {
     if (!selectedCompanyId || periods.length === 0) return;
