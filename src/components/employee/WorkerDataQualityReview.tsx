@@ -218,6 +218,74 @@ export default function WorkerDataQualityReview({
           </div>
         )}
 
+        {/* Action center — Phase 2. Buttons appear only when there is a target. */}
+        {(onJumpToTab && targetTabs.size > 0) || waUrl ? (
+          <div className="rounded-md border border-border/60 bg-background/70 p-2.5 space-y-2">
+            <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              <Sparkles className="h-3 w-3" />
+              Quick actions
+            </div>
+
+            {onJumpToTab && targetTabs.size > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {targetTabs.has("info") && (
+                  <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => onJumpToTab("info")}>
+                    <User className="h-3 w-3 mr-1" />
+                    Edit info
+                    <ArrowRight className="h-3 w-3 ml-1 opacity-60" />
+                  </Button>
+                )}
+                {targetTabs.has("profile") && (
+                  <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => onJumpToTab("profile")}>
+                    <User className="h-3 w-3 mr-1" />
+                    Add photo
+                    <ArrowRight className="h-3 w-3 ml-1 opacity-60" />
+                  </Button>
+                )}
+                {targetTabs.has("docs") && (
+                  <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => onJumpToTab("docs")}>
+                    <FileText className="h-3 w-3 mr-1" />
+                    Open documents
+                    <ArrowRight className="h-3 w-3 ml-1 opacity-60" />
+                  </Button>
+                )}
+                {targetTabs.has("access") && (
+                  <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => onJumpToTab("access")}>
+                    <KeyRound className="h-3 w-3 mr-1" />
+                    Portal access
+                    <ArrowRight className="h-3 w-3 ml-1 opacity-60" />
+                  </Button>
+                )}
+              </div>
+            )}
+
+            {waMessage && (
+              <div className="flex items-start gap-2">
+                {waUrl ? (
+                  <Button
+                    asChild
+                    size="sm"
+                    className="h-7 text-[11px] bg-emerald-600 hover:bg-emerald-700 text-white"
+                  >
+                    <a href={waUrl} target="_blank" rel="noopener noreferrer">
+                      <MessageCircle className="h-3 w-3 mr-1" />
+                      WhatsApp reminder
+                    </a>
+                  </Button>
+                ) : (
+                  <Button size="sm" variant="outline" className="h-7 text-[11px]" disabled title="Add a 10-digit phone number first">
+                    <MessageCircle className="h-3 w-3 mr-1" />
+                    WhatsApp (no phone)
+                  </Button>
+                )}
+                <p className="text-[10px] text-muted-foreground leading-snug max-w-xs">
+                  Opens WhatsApp with a pre-filled message asking the worker to complete their profile. Sent manually by you.
+                </p>
+              </div>
+            )}
+          </div>
+        ) : null}
+
         {/* Manual recommendation */}
         <div className="rounded-md border border-border/60 bg-background/60 p-2.5">
           <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">
@@ -226,8 +294,7 @@ export default function WorkerDataQualityReview({
           </div>
           <p className="text-[11px] leading-snug text-foreground/85">{recommendation}</p>
           <p className="text-[10px] text-muted-foreground/80 mt-1.5 italic">
-            Phase 1 is read-only. Quick actions (mark reviewed, normalize phone, deactivate
-            portal access) will arrive in a later phase.
+            Edits open the matching tab in this profile — no auto-fixes are applied. Payroll, time entries and shifts are never modified from this panel.
           </p>
         </div>
       </div>
