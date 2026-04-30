@@ -1202,6 +1202,15 @@ export default function Employees() {
         })}
       </div>
 
+      {/* ─── Data Quality Risk Panel (Phase 1, read-only) ─── */}
+      {isPrivileged && employees.length > 0 && (
+        <DataQualityRiskPanel
+          employees={employees}
+          riskFilter={riskFilter}
+          onRiskFilterChange={setRiskFilter}
+        />
+      )}
+
       {/* ─── Premium Filter Bar ─── */}
       <PremiumFilterBar
         search={search}
