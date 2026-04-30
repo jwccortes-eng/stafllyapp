@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, User, DollarSign, TrendingUp, TrendingDown, Pencil, Save, X, Lock } from "lucide-react";
+import { ArrowLeft, User, DollarSign, TrendingUp, TrendingDown, Pencil, Save, X, Lock, Archive, Info } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { useToast } from "@/hooks/use-toast";
 
@@ -41,6 +41,15 @@ interface BasePay {
   total_overtime: number | null;
   total_paid_hours: number | null;
   total_regular: number | null;
+  import_id?: string | null;
+}
+
+type TraceLevel = "final_total_only" | "concept_breakdown";
+interface TraceInfo {
+  trace_level: TraceLevel;
+  source_system: "Stafly" | "Connecteam" | "Unknown";
+  source_file: string | null;
+  is_historical: boolean;
 }
 
 interface EditableBasePay {
@@ -77,6 +86,7 @@ export default function EmployeePeriodDetail() {
   });
 
   const isClosed = period?.status === "closed";
+  const [trace, setTrace] = useState<TraceInfo | null>(null);
 
   const load = async () => {
     if (!employeeId || !periodId) return;
@@ -85,7 +95,7 @@ export default function EmployeePeriodDetail() {
     const [empRes, periodRes, baseRes, shiftsRes, movRes] = await Promise.all([
       supabase.from("employees").select("first_name, last_name").eq("id", employeeId).single(),
       supabase.from("pay_periods").select("start_date, end_date, status").eq("id", periodId).single(),
-      supabase.from("period_base_pay").select("id, base_total_pay, total_work_hours, total_overtime, total_paid_hours, total_regular").eq("employee_id", employeeId).eq("period_id", periodId).maybeSingle(),
+      supabase.from("period_base_pay").select("id, base_total_pay, total_work_hours, total_overtime, total_paid_hours, total_regular, import_id").eq("employee_id", employeeId).eq("period_id", periodId).maybeSingle(),
       supabase.from("shifts").select("id, shift_start_date, shift_hours, hourly_rate_usd, daily_total_pay_usd, daily_total_hours, type, customer, job_code").eq("employee_id", employeeId).eq("period_id", periodId).order("shift_start_date"),
       supabase.from("movements").select("id, total_value, quantity, rate, note, concepts(name, category)").eq("employee_id", employeeId).eq("period_id", periodId),
     ]);
@@ -93,6 +103,42 @@ export default function EmployeePeriodDetail() {
     setEmployee(empRes.data);
     setPeriod(periodRes.data as any);
     setBasePay(baseRes.data as BasePay | null);
+
+    // Resolve trace level (read-only). Check import file + historical_payroll_entries.
+    const bp: any = baseRes.data;
+    let sourceFile: string | null = null;
+    let sourceSystem: TraceInfo["source_system"] = "Stafly";
+    let traceLevel: TraceLevel = "final_total_only";
+    if (bp?.import_id) {
+      const { data: imp } = await supabase.from("imports").select("file_name").eq("id", bp.import_id).maybeSingle();
+      sourceFile = (imp as any)?.file_name ?? null;
+      const fn = (sourceFile ?? "").toLowerCase();
+      if (fn && (fn.includes("connecteam") || fn.includes("untitled_report") || fn.includes("payroll"))) {
+        sourceSystem = "Connecteam";
+      }
+    }
+    try {
+      const { data: hist } = await supabase
+        .from("historical_payroll_entries")
+        .select("concept_payload, source_file")
+        .eq("period_id", periodId)
+        .eq("matched_employee_id", employeeId)
+        .maybeSingle();
+      if (hist) {
+        if (!sourceFile) sourceFile = (hist as any).source_file ?? null;
+        const payload = (hist as any).concept_payload;
+        if (payload && typeof payload === "object" && Object.keys(payload).length > 0) {
+          traceLevel = "concept_breakdown";
+        }
+        sourceSystem = "Connecteam";
+      }
+    } catch { /* admin RLS may differ; ignore */ }
+    setTrace({
+      trace_level: traceLevel,
+      source_system: sourceSystem,
+      source_file: sourceFile,
+      is_historical: sourceSystem === "Connecteam",
+    });
     setShifts((shiftsRes.data as ShiftRow[]) ?? []);
     setMovements(
       (movRes.data ?? []).map((m: any) => ({
