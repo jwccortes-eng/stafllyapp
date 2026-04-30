@@ -62,6 +62,7 @@ import { EmployeeProfileTabs } from "@/components/employee/EmployeeProfileTabs";
 import { BulkRateAssignment } from "@/components/employee/BulkRateAssignment";
 import { EmployeeInviteDialog } from "@/components/employee/EmployeeInviteDialog";
 import WorkerDataQualityReview from "@/components/employee/WorkerDataQualityReview";
+import WorkerDocumentsCompliance from "@/components/employee/WorkerDocumentsCompliance";
 import { QuickAddInviteWizard } from "@/components/employee/QuickAddInviteWizard";
 import { useEmployeeInvitations } from "@/hooks/useEmployeeInvitations";
 import { canInviteWorker, isWorkerInviteFailed } from "@/lib/worker-actions";
@@ -1768,7 +1769,10 @@ export default function Employees() {
           <ScrollArea className="flex-1">
             <div className="p-4 space-y-3">
               {viewEmployee && (
-                <WorkerDataQualityReview employee={viewEmployee} companyEmployees={employees} />
+                <>
+                  <WorkerDataQualityReview employee={viewEmployee} companyEmployees={employees} />
+                  <WorkerDocumentsCompliance employee={viewEmployee} />
+                </>
               )}
               <EmployeeProfileTabs employee={viewEmployee!} companyId={selectedCompanyId!} isEditing={isEditing} form={form} setForm={setForm} isPrivileged={isPrivileged} onEmployeeUpdate={(updates) => setViewEmployee(prev => prev ? { ...prev, ...updates } : prev)} companyName={selectedCompany?.name} onInvite={() => setInviteOpen(true)} invitation={viewEmployee ? invitations[viewEmployee.id] ?? null : null} />
             </div>

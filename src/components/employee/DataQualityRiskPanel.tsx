@@ -37,6 +37,11 @@ import {
   ArchiveRestore,
   Download,
   Sparkles,
+  FileX2,
+  FileClock,
+  FileWarning,
+  CalendarClock,
+  FileMinus,
 } from "lucide-react";
 
 const RISK_ICON: Record<RiskKey, React.ComponentType<{ className?: string }>> = {
@@ -49,6 +54,11 @@ const RISK_ICON: Record<RiskKey, React.ComponentType<{ className?: string }>> = 
   missing_role: UserCog,
   missing_location: MapPin,
   inactive_with_payroll: ArchiveRestore,
+  missing_required_document: FileMinus,
+  pending_document_review: FileClock,
+  expired_document: FileX2,
+  expiring_document: CalendarClock,
+  rejected_document: FileWarning,
 };
 
 interface Props {
