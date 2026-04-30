@@ -47,6 +47,7 @@ const COMPANY_LINKS: LinkDef[] = [
 
   // WORKFORCE
   { to: "/app/employees", icon: Users, label: "Workers", module: "employees", section: "Workforce" },
+  { to: "/app/documents", icon: FileText, label: "Documents", module: null, section: "Workforce", badge: "documents_review" },
   { to: "/app/timeclock", icon: Clock, label: "Time Clock", module: "shifts", section: "Workforce" },
   { to: "/app/attendance", icon: ShieldCheck, label: "Attendance", module: null, section: "Workforce" },
   { to: "/app/applications", icon: UserPlus2, label: "Applications", module: null, section: "Workforce" },
