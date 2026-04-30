@@ -26,8 +26,12 @@ import {
   Calendar,
   Filter,
 } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
 
-const QUALITY_STAFF_HISTORICAL_COMPANY_ID = "00000000-0000-0000-0000-000000000001";
+const HISTORICAL_CLOSEOUT_DATASET = {
+  companyId: "00000000-0000-0000-0000-000000000001",
+  source: "pay_periods/imports/period_base_pay",
+} as const;
 
 type Status =
   | "imported_validated"
@@ -174,7 +178,7 @@ export default function HistoricalCloseoutBoard({ companyId, onOpenSummary }: Pr
   const [filter, setFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
-  const canShowHistoricalCloseout = companyId === QUALITY_STAFF_HISTORICAL_COMPANY_ID;
+  const canShowHistoricalCloseout = companyId === HISTORICAL_CLOSEOUT_DATASET.companyId;
 
   useEffect(() => {
     if (!open || !companyId || !canShowHistoricalCloseout) {
@@ -305,6 +309,7 @@ export default function HistoricalCloseoutBoard({ companyId, onOpenSummary }: Pr
   useEffect(() => {
     console.warn("[HistoricalCloseoutBoard tenant guard]", {
       companyId,
+      datasetSource: HISTORICAL_CLOSEOUT_DATASET.source,
       canShowHistoricalCloseout,
       renderedRows: safeRows.length,
     });
@@ -378,43 +383,53 @@ export default function HistoricalCloseoutBoard({ companyId, onOpenSummary }: Pr
             </div>
 
             {/* Filters + actions */}
-            <div className="flex flex-wrap items-center gap-2 no-print">
-              <div className="flex flex-wrap gap-1">
-                {FILTERS.map((f) => (
-                  <Button
-                    key={f.key}
-                    size="sm"
-                    variant={filter === f.key ? "default" : "outline"}
-                    className="h-7 text-xs"
-                    onClick={() => setFilter(f.key)}
-                  >
-                    {f.label}
-                  </Button>
-                ))}
+            {canShowHistoricalCloseout && (
+              <div className="flex flex-wrap items-center gap-2 no-print">
+                <div className="flex flex-wrap gap-1">
+                  {FILTERS.map((f) => (
+                    <Button
+                      key={f.key}
+                      size="sm"
+                      variant={filter === f.key ? "default" : "outline"}
+                      className="h-7 text-xs"
+                      onClick={() => setFilter(f.key)}
+                    >
+                      {f.label}
+                    </Button>
+                  ))}
+                </div>
+                <div className="relative flex-1 min-w-[180px]">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                  <Input
+                    placeholder="Search period #, date or status…"
+                    className="pl-8 h-8 text-xs"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                  />
+                </div>
+                <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5" onClick={printBoard}>
+                  <Printer className="h-3.5 w-3.5" /> Print board
+                </Button>
               </div>
-              <div className="relative flex-1 min-w-[180px]">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                <Input
-                  placeholder="Search period #, date or status…"
-                  className="pl-8 h-8 text-xs"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
-              </div>
-              <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5" onClick={printBoard}>
-                <Printer className="h-3.5 w-3.5" /> Print board
-              </Button>
-            </div>
+            )}
 
             {loading ? (
               <div className="text-sm text-muted-foreground py-6 text-center">Loading board…</div>
             ) : safeRows.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-border/60 p-6 text-center text-xs text-muted-foreground">
-                <Filter className="h-4 w-4 inline mr-1" />
-                {canShowHistoricalCloseout
-                  ? "No periods match this filter"
-                  : "No historical closeout dataset is configured for this company"}
-              </div>
+              canShowHistoricalCloseout ? (
+                <div className="rounded-xl border border-dashed border-border/60 p-6 text-center text-xs text-muted-foreground">
+                  <Filter className="h-4 w-4 inline mr-1" />
+                  No periods match this filter
+                </div>
+              ) : (
+                <EmptyState
+                  icon={ListChecks}
+                  title="No historical closeout dataset"
+                  description="This company is not whitelisted for the historical closeout snapshot, so no PASSOVER or Connecteam rows are rendered."
+                  compact
+                  className="py-10"
+                />
+              )
             ) : (
               <div className="space-y-2">
                 {safeRows.map((r) => {
