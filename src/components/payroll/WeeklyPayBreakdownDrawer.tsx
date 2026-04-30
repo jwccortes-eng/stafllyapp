@@ -12,11 +12,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, Printer, ArrowLeft, ChevronRight } from "lucide-react";
+import { Printer, ArrowLeft, ChevronRight } from "lucide-react";
 import {
   fetchWeeklyPayBreakdown,
   type WeeklyPayBreakdownSummary,
 } from "@/lib/weekly-pay-breakdown";
+import StaflyCalmProcessingBanner from "@/components/common/StaflyCalmProcessingBanner";
 
 interface Props {
   open: boolean;
@@ -129,8 +130,12 @@ export default function WeeklyPayBreakdownDrawer({ open, onClose, companyId, per
         </SheetHeader>
 
         {loading ? (
-          <div className="flex items-center justify-center py-16 text-muted-foreground">
-            <Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading breakdown…
+          <div className="py-8">
+            <StaflyCalmProcessingBanner
+              title="Trazando el pago"
+              message="Estamos buscando la mejor evidencia disponible para explicar este total."
+              footerNote="Solo lectura · No recalculamos payroll."
+            />
           </div>
         ) : selected ? (
           <EmployeeDetail row={selected} />
