@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
@@ -10,6 +10,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Upload, FileText, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { acquireDocDialogLock } from "@/lib/document-dialog-suspend";
 
 const CATEGORY_OPTIONS = [
   { value: "id", label: "ID document" },
@@ -36,6 +37,14 @@ export function DocumentUploadDialog({ open, onOpenChange, onConfirm }: Props) {
   const [approveOnUpload, setApproveOnUpload] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // Suppress visual realtime refreshes in the parent profile while open,
+  // so any focused control inside the dialog keeps its focus.
+  useEffect(() => {
+    if (!open) return;
+    const release = acquireDocDialogLock();
+    return release;
+  }, [open]);
 
   const reset = () => {
     setFile(null);

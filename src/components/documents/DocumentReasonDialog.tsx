@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { AlertTriangle, Repeat2, Loader2 } from "lucide-react";
+import { acquireDocDialogLock } from "@/lib/document-dialog-suspend";
 
 export type DocumentReasonAction = "reject" | "replacement";
 
@@ -27,6 +28,25 @@ export function DocumentReasonDialog({
 }: Props) {
   const [reason, setReason] = useState(initialReason);
   const [submitting, setSubmitting] = useState(false);
+  const wasOpen = useRef(false);
+
+  // Only sync `initialReason` into local state on the false→true transition.
+  // This prevents the textarea from resetting (and losing focus) when the
+  // parent re-renders due to realtime refreshes while the dialog is open.
+  useEffect(() => {
+    if (open && !wasOpen.current) {
+      setReason(initialReason);
+    }
+    wasOpen.current = open;
+  }, [open, initialReason]);
+
+  // While this dialog is open, suppress visual realtime refreshes from the
+  // parent profile so the textarea does not lose focus on each keystroke.
+  useEffect(() => {
+    if (!open) return;
+    const release = acquireDocDialogLock();
+    return release;
+  }, [open]);
 
   const isReject = action === "reject";
   const Icon = isReject ? AlertTriangle : Repeat2;
@@ -50,7 +70,6 @@ export function DocumentReasonDialog({
       open={open}
       onOpenChange={(o) => {
         if (submitting) return;
-        if (!o) setReason(initialReason);
         onOpenChange(o);
       }}
     >
