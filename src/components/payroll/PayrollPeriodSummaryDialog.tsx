@@ -71,6 +71,7 @@ function initials(fn?: string | null, ln?: string | null) {
 }
 
 export default function PayrollPeriodSummaryDialog({ open, onOpenChange, period, companyId }: Props) {
+  const { selectedCompany } = useCompany();
   const [loading, setLoading] = useState(false);
   const [imports, setImports] = useState<ImportRow[]>([]);
   const [basePay, setBasePay] = useState<BasePayRow[]>([]);
