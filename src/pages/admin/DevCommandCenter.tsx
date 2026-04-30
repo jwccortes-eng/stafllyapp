@@ -196,23 +196,23 @@ function ControlTower({ displayName }: { displayName: string }) {
         sb.from("imports").select("id", { count: "exact", head: true }).gte("created_at", back14d),
       ]);
 
-      // Placeholders heuristic (best-effort, optional column).
+      // Placeholders heuristic (best-effort, optional columns).
       let placeholdersGlobal = 0;
       try {
         const { count } = await sb.from("employees")
           .select("id", { count: "exact", head: true })
           .or("payroll_safe.eq.false,person_type_guess.in.(placeholder,system,external,agency)");
         placeholdersGlobal = count ?? 0;
-      } catch { /* column may not exist on this schema */ }
+      } catch { /* columns may not exist on this schema */ }
 
       // Data quality globals
       const [missPhone, missEmail, openOver24h, teNoShift] = await Promise.all([
         sb.from("employees").select("id", { count: "exact", head: true })
-          .eq("is_active", true).is("phone", null),
+          .eq("is_active", true).is("phone_number", null),
         sb.from("employees").select("id", { count: "exact", head: true })
           .eq("is_active", true).is("email", null),
         sb.from("time_entries").select("id", { count: "exact", head: true })
-          .is("clock_out", null).lt("clock_in_time", back24h),
+          .is("clock_out", null).lt("clock_in", back24h),
         sb.from("time_entries").select("id", { count: "exact", head: true })
           .is("shift_id", null),
       ]);
