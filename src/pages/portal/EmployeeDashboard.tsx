@@ -360,17 +360,17 @@ export default function EmployeeDashboard() {
             </div>
           )}
 
-          {isModuleEnabled("my_payments") && estimatedPay !== null ? (
-            <Link to="/portal/payments" className="block">
+          {isModuleEnabled("my_payments") ? (
+            <Link to="/portal/pay-reports" className="block">
               <div className="rounded-2xl bg-card border border-border/40 p-3 shadow-sm h-full active:scale-[0.98] transition-transform">
                 <div className="flex items-center gap-1.5 mb-1.5">
-                  <TrendingUp className="h-3.5 w-3.5 text-[hsl(var(--status-confirmed))]" />
+                  <Wallet className="h-3.5 w-3.5 text-primary" />
                 </div>
-                <p className="text-lg font-bold font-heading tabular-nums leading-none text-foreground">
-                  ${estimatedPay.toFixed(0)}
+                <p className="text-sm font-bold font-heading leading-none text-foreground">
+                  Pay Reports
                 </p>
                 <p className="text-[9.5px] font-semibold text-muted-foreground/65 uppercase tracking-wider mt-1.5">
-                  Est. pay
+                  Finalized
                 </p>
               </div>
             </Link>
@@ -381,7 +381,7 @@ export default function EmployeeDashboard() {
               </div>
               <p className="text-lg font-bold font-heading tabular-nums leading-none text-muted-foreground/40">—</p>
               <p className="text-[9.5px] font-semibold text-muted-foreground/65 uppercase tracking-wider mt-1.5">
-                Est. pay
+                Pay
               </p>
             </div>
           )}
