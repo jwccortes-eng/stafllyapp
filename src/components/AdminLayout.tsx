@@ -44,7 +44,11 @@ export function useSidebarCollapsed() {
 }
 
 export default function AdminLayout() {
-  const { user, role, loading, signOut, hasModuleAccess, canAccessAdmin, canAccessPortal, employeeId } = useAuth();
+  const {
+    user, role, loading, signOut, hasModuleAccess,
+    canAccessAdminForCompany, canAccessPortalForCompany, getRoleForCompany,
+    employeeId,
+  } = useAuth();
   const { companies, selectedCompanyId, setSelectedCompanyId, isModuleActive } = useCompany();
   const [collapsed, setCollapsed] = useState(() => {
     const saved = safeLocalStorage.getItem("sidebar-collapsed");
@@ -54,6 +58,13 @@ export default function AdminLayout() {
   const location = useLocation();
   const [launcherOpen, setLauncherOpen] = useState(false);
   const { pinnedIds, togglePin, maxPins } = useNavPreferences(ADMIN_DEFAULT_PINS);
+
+  // Effective role + admin gate for the CURRENT tenant (or global mode for
+  // platform staff). Prevents company_owner from JKitchen entering Quality
+  // admin shell.
+  const effectiveRole = getRoleForCompany(selectedCompanyId);
+  const canAccessAdminHere = canAccessAdminForCompany(selectedCompanyId);
+  const canAccessPortalHere = canAccessPortalForCompany(selectedCompanyId);
 
   const [badgeCounts, setBadgeCounts] = useState<Record<string, number>>({});
   useEffect(() => {
@@ -84,20 +95,36 @@ export default function AdminLayout() {
   }
 
   if (!user) return <Navigate to="/auth" replace />;
-  // Allow any user with admin-level roles (canAccessAdmin computed in useAuth)
-  if (!canAccessAdmin) return <Navigate to={employeeId ? "/portal" : "/auth"} replace />;
+
+  // Hard tenant guard: a user that is admin in JKitchen but only employee in
+  // Quality must NOT see admin shell while Quality is selected. Send them to
+  // their portal in that company instead.
+  if (!canAccessAdminHere) {
+    if (canAccessPortalHere) return <Navigate to="/portal" replace />;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background px-6">
+        <div className="max-w-sm text-center space-y-3">
+          <p className="text-base font-semibold text-foreground">No admin access for this company</p>
+          <p className="text-sm text-muted-foreground">
+            You don't have administration permissions for the selected company.
+            Switch company or contact your owner.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   const isLinkVisible = (module: string | null) => {
     if (!module) return true;
     if (!isModuleActive(module)) return false;
-    if (role === 'developer' || role === 'owner' || role === 'company_owner' || role === 'admin') return true;
-    if (role === 'manager' || role === 'supervisor') return hasModuleAccess(module, 'view');
+    if (effectiveRole === 'developer' || effectiveRole === 'owner' || effectiveRole === 'company_owner' || effectiveRole === 'admin') return true;
+    if (effectiveRole === 'manager' || effectiveRole === 'supervisor') return hasModuleAccess(module, 'view');
     return false;
   };
 
   const visibleItems = ADMIN_NAV_ITEMS.filter(item => {
     if (!isLinkVisible(item.module)) return false;
-    if (item.roles && !item.roles.includes(role ?? '')) return false;
+    if (item.roles && !item.roles.includes(effectiveRole ?? '')) return false;
     return true;
   });
 
