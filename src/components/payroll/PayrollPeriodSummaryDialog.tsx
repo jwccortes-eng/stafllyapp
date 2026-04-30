@@ -375,7 +375,7 @@ export default function PayrollPeriodSummaryDialog({ open, onOpenChange, period,
               This is historical imported payroll. It does not recalculate from scheduled hours.
             </p>
 
-            <div className="flex justify-end">
+            <div className="flex justify-end no-print">
               <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
                 Close
               </Button>
