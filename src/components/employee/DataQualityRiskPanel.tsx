@@ -42,6 +42,11 @@ import {
   FileWarning,
   CalendarClock,
   FileMinus,
+  PhoneOff,
+  MailX,
+  ImageOff,
+  HeartPulse,
+  KeyRound,
 } from "lucide-react";
 
 const RISK_ICON: Record<RiskKey, React.ComponentType<{ className?: string }>> = {
@@ -54,6 +59,11 @@ const RISK_ICON: Record<RiskKey, React.ComponentType<{ className?: string }>> = 
   missing_role: UserCog,
   missing_location: MapPin,
   inactive_with_payroll: ArchiveRestore,
+  missing_phone: PhoneOff,
+  missing_email: MailX,
+  missing_photo: ImageOff,
+  missing_emergency_contact: HeartPulse,
+  portal_not_active: KeyRound,
   missing_required_document: FileMinus,
   pending_document_review: FileClock,
   expired_document: FileX2,
