@@ -82,6 +82,7 @@ const Billing = lazy(() => import("./pages/admin/Billing"));
 const SystemHealth = lazy(() => import("./pages/admin/SystemHealth"));
 const Implementations = lazy(() => import("./pages/admin/Implementations"));
 const CommandCenter = lazy(() => import("./pages/admin/CommandCenter"));
+const DevCommandCenter = lazy(() => import("./pages/admin/DevCommandCenter"));
 const NotificationTemplates = lazy(() => import("./pages/admin/NotificationTemplates"));
 const NotificationsPage = lazy(() => import("./pages/admin/Notifications"));
 const Requests = lazy(() => import("./pages/admin/Requests"));
