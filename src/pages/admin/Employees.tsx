@@ -74,6 +74,8 @@ import { BulkActivationCampaignDialog } from "@/components/employee/BulkActivati
 import { useOnboardingConfig } from "@/hooks/useOnboardingConfig";
 import { ModuleSettingsSheet } from "@/components/settings/ModuleSettingsSheet";
 import type { SettingsSection } from "@/components/settings/ModuleSettingsSheet";
+import DataQualityRiskPanel, { WorkerRiskTags } from "@/components/employee/DataQualityRiskPanel";
+import { analyzeEmployeeRisks, type RiskKey } from "@/lib/data-quality-risks";
 
 // Fields that only owner/admin can see
 const SENSITIVE_FIELD_KEYS = new Set([
@@ -235,6 +237,7 @@ export default function Employees() {
     status: "active",
     role: "all",
     group: "all",
+    risk: "all",
   });
   const search = urlFilters.q;
   const setSearch = (v: string) => setFilter({ q: v });
@@ -245,6 +248,8 @@ export default function Employees() {
   const setFilterRole = (v: string) => setFilter({ role: v });
   const filterGroup = urlFilters.group;
   const setFilterGroup = (v: string) => setFilter({ group: v });
+  const riskFilter = (urlFilters.risk as RiskKey | "all") || "all";
+  const setRiskFilter = (v: RiskKey | "all") => setFilter({ risk: v });
 
   // Persisted alphabetical sort by default; users can flip it.
   const { sort, onSort, directionFor } = useSortPreference<"name" | "code" | "role" | "last_activity">(
