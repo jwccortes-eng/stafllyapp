@@ -526,17 +526,29 @@ export default function StagedReconciliation() {
         title="Cierre Semanal"
         subtitle="Importar → Emparejar → Revisar → Aprobar → Publicar → Cerrar"
         rightSlot={
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              const ppId = activePeriod?.period_id;
-              window.location.href = ppId ? `/app/pay-periods?focus=${ppId}` : "/app/pay-periods";
-            }}
-          >
-            <Calendar className="h-4 w-4 mr-2" />
-            Volver a Periods
-          </Button>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button
+              variant="outline"
+              size="sm"
+              title="Historical Closeout Board lives in Payroll Periods."
+              onClick={() => {
+                const ppId = activePeriod?.period_id;
+                window.location.href = ppId ? `/app/periods?focus=${ppId}` : "/app/periods";
+              }}
+            >
+              <Calendar className="h-4 w-4 mr-2" />
+              Back to Payroll Periods
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                window.location.href = "/app/periods#historical-closeout-board";
+              }}
+            >
+              Open Historical Board
+            </Button>
+          </div>
         }
       />
 
