@@ -771,6 +771,13 @@ export default function PayPeriods() {
           : "Reabrir un periodo fuera de secuencia requiere privilegios especiales. Confirma tu contraseña para continuar."}
         onConfirm={toggleStatus}
       />
+
+      <PayrollPeriodSummaryDialog
+        open={!!summaryPeriod}
+        onOpenChange={(o) => !o && setSummaryPeriod(null)}
+        period={summaryPeriod}
+        companyId={selectedCompanyId}
+      />
     </div>
   );
 }
