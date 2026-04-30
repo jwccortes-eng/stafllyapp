@@ -796,14 +796,97 @@ export default function Applications() {
                   <p>• Estado: <strong>{approvalConfig.initialStatus === "active" ? "Activo" : "Inactivo"}</strong></p>
                 </div>
               </div>
+
+              {/* Inline error */}
+              {approvalError && (
+                <div className="p-3 rounded-xl border border-red-300 bg-red-50 space-y-2">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="h-4 w-4 text-red-600 mt-0.5 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-red-800">No se pudo completar la aprobación</p>
+                      <p className="text-xs text-red-700 mt-0.5">{approvalError.message}</p>
+                      {approvalError.code && (
+                        <p className="text-[10px] text-red-600 mt-1 font-mono">code: {approvalError.code}</p>
+                      )}
+                      {approvalError.details && (
+                        <p className="text-[10px] text-red-600/80 mt-1 font-mono break-all">{approvalError.details}</p>
+                      )}
+                    </div>
+                  </div>
+                  {(approvalError.code === "missing_phone" || approvalError.code === "missing_email") && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="w-full h-8 text-xs"
+                      onClick={() => handleApprove({ skipInvite: true })}
+                      disabled={approving}
+                    >
+                      Aprobar sin enviar invitación
+                    </Button>
+                  )}
+                </div>
+              )}
+
+              {/* Inline success with manual fallback */}
+              {approvalSuccess && (
+                <div className="p-3 rounded-xl border border-emerald-300 bg-emerald-50 space-y-2">
+                  <div className="flex items-start gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600 mt-0.5 shrink-0" />
+                    <p className="text-xs text-emerald-800 flex-1">{approvalSuccess.message}</p>
+                  </div>
+                  <div className="flex gap-2">
+                    {approvalSuccess.waUrl && (
+                      <Button
+                        size="sm"
+                        className="flex-1 h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+                        onClick={() => window.open(approvalSuccess.waUrl!, "_blank")}
+                      >
+                        <MessageSquare className="h-3.5 w-3.5 mr-1" />
+                        Enviar por WhatsApp
+                      </Button>
+                    )}
+                    {approvalSuccess.copyText && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex-1 h-8 text-xs"
+                        onClick={() => {
+                          navigator.clipboard.writeText(approvalSuccess.copyText!);
+                          toast.success("Mensaje copiado");
+                        }}
+                      >
+                        <Copy className="h-3.5 w-3.5 mr-1" />
+                        Copiar mensaje
+                      </Button>
+                    )}
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="w-full h-7 text-xs"
+                    onClick={() => {
+                      setShowApprovalModal(false);
+                      setSelected(null);
+                      setApprovalSuccess(null);
+                      setApprovalError(null);
+                    }}
+                  >
+                    Cerrar
+                  </Button>
+                </div>
+              )}
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowApprovalModal(false)}>Cancelar</Button>
-            <Button onClick={handleApprove} disabled={approving} className="text-primary-foreground">
-              {approving ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : <CheckCircle2 className="h-4 w-4 mr-1.5" />}
-              Confirmar aprobación
+            <Button variant="outline" onClick={() => { setShowApprovalModal(false); setApprovalError(null); setApprovalSuccess(null); }}>
+              {approvalSuccess ? "Cerrar" : "Cancelar"}
             </Button>
+            {!approvalSuccess && (
+              <Button onClick={() => handleApprove()} disabled={approving} className="text-primary-foreground">
+                {approving ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : <CheckCircle2 className="h-4 w-4 mr-1.5" />}
+                Confirmar aprobación
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
