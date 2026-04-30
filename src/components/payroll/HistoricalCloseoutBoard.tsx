@@ -292,7 +292,7 @@ export default function HistoricalCloseoutBoard({ companyId, onOpenSummary }: Pr
   const printBoard = () => window.print();
 
   return (
-    <div className="mb-4">
+    <div id="historical-closeout-board" className="mb-4 scroll-mt-20">
       <Collapsible open={open} onOpenChange={setOpen}>
         <CollapsibleTrigger asChild>
           <button
