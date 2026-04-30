@@ -214,6 +214,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (import.meta.env.DEV) console.error('Error fetching user data:', err);
       setRole(null);
       setAllRoles(new Set());
+      setCompanyRoles({});
       setEmployeeId(null);
       setPermissions([]);
       setActionPermissions([]);
@@ -233,6 +234,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } else {
           setRole(null);
           setAllRoles(new Set());
+          setCompanyRoles({});
           setEmployeeId(null);
           setPermissions([]);
           setLoading(false);
@@ -259,6 +261,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSession(null);
     setRole(null);
     setAllRoles(new Set());
+    setCompanyRoles({});
     setEmployeeId(null);
     setPermissions([]);
     setActionPermissions([]);
