@@ -61,6 +61,7 @@ import PasswordConfirmDialog from "@/components/PasswordConfirmDialog";
 import { EmployeeProfileTabs } from "@/components/employee/EmployeeProfileTabs";
 import { BulkRateAssignment } from "@/components/employee/BulkRateAssignment";
 import { EmployeeInviteDialog } from "@/components/employee/EmployeeInviteDialog";
+import WorkerDataQualityReview from "@/components/employee/WorkerDataQualityReview";
 import { QuickAddInviteWizard } from "@/components/employee/QuickAddInviteWizard";
 import { useEmployeeInvitations } from "@/hooks/useEmployeeInvitations";
 import { canInviteWorker, isWorkerInviteFailed } from "@/lib/worker-actions";
@@ -1552,7 +1553,7 @@ export default function Employees() {
                     <div className="leading-tight">
                       <span className="text-xs font-semibold">{formatPersonName(`${e.first_name} ${e.last_name}`)}</span>
                       <span className="sm:hidden block text-[10px] text-muted-foreground mt-0.5">{e.phone_number || e.email || ""}</span>
-                      <WorkerRiskTags risks={riskAnalysis.byId.get(e.id) ?? []} max={3} className="mt-1" />
+                      <WorkerRiskTags risks={riskAnalysis.byId.get(e.id) ?? []} max={2} className="mt-1" />
                     </div>
                   </TableCell>
                   {visibleColumns.includes("employer_identification") && (
@@ -1765,7 +1766,10 @@ export default function Employees() {
             </div>
           </div>
           <ScrollArea className="flex-1">
-            <div className="p-4">
+            <div className="p-4 space-y-3">
+              {viewEmployee && (
+                <WorkerDataQualityReview employee={viewEmployee} companyEmployees={employees} />
+              )}
               <EmployeeProfileTabs employee={viewEmployee!} companyId={selectedCompanyId!} isEditing={isEditing} form={form} setForm={setForm} isPrivileged={isPrivileged} onEmployeeUpdate={(updates) => setViewEmployee(prev => prev ? { ...prev, ...updates } : prev)} companyName={selectedCompany?.name} onInvite={() => setInviteOpen(true)} invitation={viewEmployee ? invitations[viewEmployee.id] ?? null : null} />
             </div>
           </ScrollArea>
