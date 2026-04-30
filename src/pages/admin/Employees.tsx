@@ -45,6 +45,7 @@ import { PremiumAvatar, type PremiumAvatarStatus } from "@/components/ui/premium
 import { ViewSwitcher, type ViewMode } from "@/components/ui/view-switcher";
 import { SortIndicator } from "@/components/ui/sort-indicator";
 import { useUrlFilters } from "@/hooks/useUrlFilters";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useSortPreference } from "@/hooks/useSortPreference";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
