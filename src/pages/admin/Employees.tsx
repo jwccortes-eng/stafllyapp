@@ -1787,7 +1787,7 @@ export default function Employees() {
                     companyEmployees={employees}
                     documentSignals={documentSignals}
                     companyName={selectedCompany?.name}
-                    onJumpToTab={(tab) => setActiveTab(tab)}
+                    onJumpToTab={(tab) => setProfileActiveTab(tab)}
                   />
                   <WorkerDocumentsCompliance employee={viewEmployee} />
                 </>
