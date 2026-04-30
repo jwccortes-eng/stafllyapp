@@ -73,9 +73,16 @@ export function QuickActions({ actions }: Props) {
               <div className={cn("h-9 w-9 rounded-xl flex items-center justify-center shrink-0", tone.iconWrap)}>
                 <Icon className={cn("h-4 w-4", tone.icon)} />
               </div>
-              <span className="text-[13px] font-semibold text-foreground leading-tight">
-                {a.label}
-              </span>
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="text-[13px] font-semibold text-foreground leading-tight truncate">
+                  {a.label}
+                </span>
+                {a.badge && (
+                  <span className="text-[8.5px] font-bold px-1.5 py-0.5 rounded-full bg-primary text-primary-foreground tracking-wide leading-none">
+                    {a.badge}
+                  </span>
+                )}
+              </div>
             </Link>
           );
         })}
