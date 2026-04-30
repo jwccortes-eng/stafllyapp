@@ -608,3 +608,14 @@
   0%, 100% { transform: translateY(0px); }
   50% { transform: translateY(-8px); }
 }
+
+/* ── Weekly Payroll Reconciliation — print layout ── */
+@media print {
+  body { background: white !important; }
+  aside, nav, header.sticky, .print\:hidden { display: none !important; }
+  .weekly-recon-print-header { display: block !important; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid #333; }
+  .weekly-recon-print-section { break-inside: avoid; page-break-inside: avoid; }
+  table { font-size: 10pt; }
+  thead { display: table-header-group; }
+  tr { page-break-inside: avoid; }
+}
