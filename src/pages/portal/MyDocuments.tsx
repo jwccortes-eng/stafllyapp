@@ -9,8 +9,9 @@
  *  - "Other documents" section for ad-hoc uploads (category=other).
  *
  * Storage:
- *  - Bucket `employee-documents` (private). Path convention: `<employee_id>/<filename>`
- *    so the existing storage RLS allows reads for the worker's own folder.
+ *  - Bucket `employee-documents` (private). Path convention:
+ *    `<company_id>/<employee_id>/onboarding/<document_type>/<timestamp>_<filename>`.
+ *    Files are stored as private storage paths and opened with signed URLs.
  *  - Files are listed via signed URLs on demand.
  *
  * Permissions:
@@ -139,7 +140,8 @@ export default function MyDocuments() {
     try {
       const ext = file.name.split(".").pop()?.toLowerCase() ?? "bin";
       const safeBase = file.name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 60);
-      const path = `${employeeId}/${category}-${Date.now()}-${safeBase}`;
+      const timestamp = Date.now();
+      const path = `${companyId}/${employeeId}/onboarding/${category}/${timestamp}_${safeBase}`;
 
       const { error: upErr } = await supabase.storage
         .from("employee-documents")
@@ -154,10 +156,14 @@ export default function MyDocuments() {
         file_type: file.type || ext,
         file_size: file.size,
         category,
+        review_status: "pending",
       });
-      if (rowErr) throw rowErr;
+      if (rowErr) {
+        await supabase.storage.from("employee-documents").remove([path]).catch(() => undefined);
+        throw rowErr;
+      }
 
-      toast({ title: "Document uploaded", description: DOCUMENT_CATEGORIES[category].label });
+      toast({ title: "Document uploaded", description: "Pending admin review." });
       await refresh();
       // Refresh readiness so banners across the portal update without a hard reload.
       readiness.refresh();
