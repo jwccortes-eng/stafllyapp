@@ -27,6 +27,7 @@ import { formatDistanceToNow, parseISO, isValid } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorBlock } from "@/components/ui/error-block";
 import { PremiumAvatar, type PremiumAvatarStatus } from "@/components/ui/premium-avatar";
@@ -46,13 +47,11 @@ import {
   Phone,
   Mail,
   MapPin,
-  Hash,
   Building2,
   Send,
   Pencil,
   Archive,
   UserCheck,
-  Cake,
   Briefcase,
   CalendarDays,
   ShieldCheck,
@@ -66,6 +65,8 @@ import {
   AlertTriangle,
   CheckCircle2,
   RotateCw,
+  ChevronDown,
+  Code2,
 } from "lucide-react";
 import { isInviteStatusFailure } from "@/lib/invitation-status";
 import { cn } from "@/lib/utils";
@@ -399,9 +400,13 @@ export default function UnifiedPersonProfile() {
         key: "portal",
         label: "Portal",
         icon: portalActive ? ShieldCheck : ShieldOff,
-        value: portalActive ? "Active" : "Inactive",
-        hint: invitation?.sent_at ? `Invited ${safeDistance(invitation.sent_at)}` : undefined,
-        tone: portalActive ? "success" : "muted",
+        value: portalActive ? "Active" : invitation ? "Invited" : "Not invited",
+        hint: portalActive
+          ? (invitation?.accepted_at ? `Accepted ${safeDistance(invitation.accepted_at)}` : "Worker has access")
+          : invitation?.sent_at
+            ? `Invited ${safeDistance(invitation.sent_at)}`
+            : "Send portal invite",
+        tone: portalActive ? "success" : invitation ? "warning" : "muted",
       },
       {
         key: "documents",
@@ -415,65 +420,57 @@ export default function UnifiedPersonProfile() {
           : `${readiness.missingDocuments.length} required missing`,
         hint: docsCount.approved + docsCount.pending + docsCount.rejected > 0
           ? `${docsCount.approved} approved · ${docsCount.pending} pending`
-          : undefined,
-        tone: readiness.missingDocuments.length === 0 ? "success" : "destructive",
+          : "No documents uploaded yet",
+        tone: readiness.missingDocuments.length === 0
+          ? (docsCount.pending > 0 ? "warning" : "success")
+          : "destructive",
       },
       {
         key: "readiness",
         label: "Readiness",
         icon: ShieldCheck,
         value: `${readiness.progressPct}%`,
-        hint: `${readiness.completedRequirements}/${readiness.totalRequirements} items`,
+        hint: `${readiness.completedRequirements}/${readiness.totalRequirements} items complete`,
         tone: band === "ready" ? "success" : band === "needs-attention" ? "warning" : "destructive",
       },
       {
         key: "attendance",
         label: "Attendance · 30d",
         icon: Clock,
-        value: `${attendance30d.shifts} shifts`,
-        hint: attendance30d.lateCount + attendance30d.noShowCount > 0
-          ? `${attendance30d.lateCount} late · ${attendance30d.noShowCount} no-show`
-          : "On track",
+        value: attendance30d.shifts > 0
+          ? `${attendance30d.shifts} shift${attendance30d.shifts === 1 ? "" : "s"}`
+          : "No shifts",
+        hint: attendance30d.shifts === 0
+          ? "Nothing scheduled in last 30 days"
+          : attendance30d.lateCount + attendance30d.noShowCount > 0
+            ? `${attendance30d.lateCount} late · ${attendance30d.noShowCount} no-show`
+            : "On track",
         tone: attendance30d.noShowCount > 0
           ? "destructive"
           : attendance30d.lateCount > 0
-          ? "warning"
-          : "success",
+            ? "warning"
+            : attendance30d.shifts > 0 ? "success" : "muted",
       },
       {
-        key: "payroll",
+        key: "last-clock-in",
         label: "Last clock-in",
         icon: Clock,
-        value: lastPayrollDate ? safeDistance(lastPayrollDate) : "—",
-        hint: lastPayrollDate ? "From time entries" : "No time entries yet",
+        value: lastPayrollDate ? safeDistance(lastPayrollDate) : "Never",
+        hint: lastPayrollDate ? "From time entries" : "No clock-ins on record",
         tone: lastPayrollDate ? "default" : "muted",
       },
       {
         key: "activity",
         label: "Last activity",
         icon: ActivityIcon,
-        value: recentActivity[0]?.created_at ? safeDistance(recentActivity[0].created_at) : "—",
-        hint: recentActivity[0]?.action ?? undefined,
+        value: recentActivity[0]?.created_at ? safeDistance(recentActivity[0].created_at) : "Quiet",
+        hint: recentActivity[0]?.action ?? "No recent activity logged",
         tone: recentActivity.length > 0 ? "default" : "muted",
-      },
-      {
-        key: "front-desk",
-        label: "Front Desk",
-        icon: ContactRound,
-        value: frontDeskVisits.length > 0
-          ? `${frontDeskVisits.length} visit${frontDeskVisits.length === 1 ? "" : "s"}`
-          : "—",
-        hint: frontDeskVisits[0]?.checked_in_at
-          ? `Last ${safeDistance(frontDeskVisits[0].checked_in_at)}`
-          : "No office visits yet",
-        tone: frontDeskVisits.some((v: any) => v.status === "pending_followup")
-          ? "warning"
-          : frontDeskVisits.length > 0 ? "default" : "muted",
       },
     ];
   }, [
     employee, invitations, portalActive, readiness, docsCount, attendance30d,
-    lastPayrollDate, recentActivity, band, frontDeskVisits,
+    lastPayrollDate, recentActivity, band,
   ]);
 
   // ── Loading / Error states ──────────────────────────────────────────────
@@ -558,12 +555,6 @@ export default function UnifiedPersonProfile() {
                   <ReadinessBadge band={band} loading={readiness.loading} />
                 </div>
                 <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
-                  {employee.employer_identification && (
-                    <Badge variant="outline" className="font-mono text-[10px] gap-1">
-                      <Hash className="h-2.5 w-2.5" />
-                      {employee.employer_identification}
-                    </Badge>
-                  )}
                   {employee.employee_role && (
                     <Badge variant="secondary" className="text-[10px]">
                       {formatDisplayText(employee.employee_role, "label")}
@@ -596,7 +587,7 @@ export default function UnifiedPersonProfile() {
                   )}
                 </div>
 
-                {/* Contact row */}
+                {/* Contact row — only renders rows with real values */}
                 <div className="mt-3 flex items-center gap-x-4 gap-y-1 flex-wrap text-xs text-muted-foreground">
                   {employee.phone_number && (
                     <a
@@ -627,11 +618,6 @@ export default function UnifiedPersonProfile() {
                   {employee.start_date && (
                     <span className="inline-flex items-center gap-1">
                       <Briefcase className="h-3.5 w-3.5" /> Started {safeDistance(employee.start_date)}
-                    </span>
-                  )}
-                  {employee.birthday && (
-                    <span className="inline-flex items-center gap-1">
-                      <Cake className="h-3.5 w-3.5" /> {employee.birthday}
                     </span>
                   )}
                 </div>
@@ -829,6 +815,41 @@ export default function UnifiedPersonProfile() {
           </CardContent>
         </div>
       </Card>
+
+      {/* ─── DEBUG / TECHNICAL INFO (admin/dev only) ─── */}
+      {isPrivileged && (
+        <Collapsible>
+          <CollapsibleTrigger className="group inline-flex items-center gap-1.5 text-[10.5px] font-medium uppercase tracking-wider text-muted-foreground/70 hover:text-foreground transition-colors">
+            <Code2 className="h-3 w-3" />
+            Technical info
+            <ChevronDown className="h-3 w-3 transition-transform group-data-[state=open]:rotate-180" />
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <Card className="mt-2 border-dashed border-border/60 bg-muted/20">
+              <CardContent className="p-3 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5 text-[11px] font-mono">
+                {[
+                  ["employee_id", employee.id],
+                  ["employer_identification", employee.employer_identification],
+                  ["user_id", employee.user_id ?? employee.auth_user_id],
+                  ["company_id", employee.company_id],
+                  ["profile_status", employee.profile_status],
+                  ["is_active", String(employee.is_active)],
+                  ["source", employee.source ?? employee.import_source],
+                  ["person_type_guess", employee.person_type_guess],
+                  ["payroll_safe", employee.payroll_safe == null ? null : String(employee.payroll_safe)],
+                  ["created_at", employee.created_at],
+                  ["updated_at", employee.updated_at],
+                ].filter(([, v]) => v != null && v !== "").map(([k, v]) => (
+                  <div key={String(k)} className="flex items-start gap-2 min-w-0">
+                    <span className="text-muted-foreground shrink-0 w-44 truncate">{k}</span>
+                    <span className="text-foreground truncate" title={String(v)}>{String(v)}</span>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          </CollapsibleContent>
+        </Collapsible>
+      )}
 
       {/* ─── SNAPSHOT STRIP ─── */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
