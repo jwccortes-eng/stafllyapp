@@ -6,6 +6,8 @@ import { Input } from "@/components/ui/input";
 import { KpiCard } from "@/components/ui/kpi-card";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
+import { toast } from "sonner";
+import { useCompany } from "@/hooks/useCompany";
 import {
   Users,
   DollarSign,
@@ -18,6 +20,8 @@ import {
   Upload,
   Sparkles,
   Loader2,
+  Printer,
+  Copy,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -67,6 +71,7 @@ function initials(fn?: string | null, ln?: string | null) {
 }
 
 export default function PayrollPeriodSummaryDialog({ open, onOpenChange, period, companyId }: Props) {
+  const { selectedCompany } = useCompany();
   const [loading, setLoading] = useState(false);
   const [imports, setImports] = useState<ImportRow[]>([]);
   const [basePay, setBasePay] = useState<BasePayRow[]>([]);
@@ -149,10 +154,35 @@ export default function PayrollPeriodSummaryDialog({ open, onOpenChange, period,
   const hasRows = basePay.length > 0;
   const hasImport = imports.length > 0;
 
+  const companyName = selectedCompany?.name ?? "";
+
+  const handleCopySummary = async () => {
+    const txt = `Period${period.sequence_number != null ? ` #${period.sequence_number}` : ""} · ${format(new Date(period.start_date), "yyyy-MM-dd")} → ${format(new Date(period.end_date), "yyyy-MM-dd")} · ${totals.count} employees · ${fmtMoney(totals.total)} · ${hasImport ? `${imports.length} import${imports.length > 1 ? "s" : ""} ${imports[0]?.status ?? ""}` : "no import"} · validation ${validationOk ? "OK" : hasRows ? "check" : "n/a"}${companyName ? ` · ${companyName}` : ""}`;
+    try {
+      await navigator.clipboard.writeText(txt);
+      toast.success("Payroll summary copied");
+    } catch {
+      toast.error("Could not copy summary");
+    }
+  };
+
+  const handlePrint = () => {
+    window.print();
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl">
-        <DialogHeader>
+      <DialogContent className="max-w-3xl print:max-w-none print:shadow-none print:border-0">
+        <style>{`
+          @media print {
+            body * { visibility: hidden !important; }
+            #payroll-summary-printable, #payroll-summary-printable * { visibility: visible !important; }
+            #payroll-summary-printable { position: absolute; left: 0; top: 0; width: 100%; padding: 24px; }
+            .no-print { display: none !important; }
+            [data-radix-dialog-overlay] { display: none !important; }
+          }
+        `}</style>
+        <DialogHeader className="no-print">
           <DialogTitle className="flex flex-wrap items-center gap-2">
             <span>Payroll Summary</span>
             {period.sequence_number != null && (
@@ -164,22 +194,32 @@ export default function PayrollPeriodSummaryDialog({ open, onOpenChange, period,
               {format(new Date(period.start_date), "yyyy-MM-dd")} → {format(new Date(period.end_date), "yyyy-MM-dd")}
             </span>
           </DialogTitle>
-          <div className="flex flex-wrap gap-1.5 mt-1">
-            {period.status !== "open" && (
-              <Badge variant="outline" className="text-[10px] bg-muted text-muted-foreground gap-1">
-                <Lock className="h-3 w-3" /> Cerrado
-              </Badge>
-            )}
-            {isImported && (
-              <Badge variant="outline" className="text-[10px] bg-info/15 text-info border-info/30 gap-1">
-                <Upload className="h-3 w-3" /> Importado
-              </Badge>
-            )}
-            {hasImport && (
-              <Badge variant="outline" className="text-[10px] bg-primary/10 text-primary border-primary/30 gap-1">
-                <Sparkles className="h-3 w-3" /> Historical Import
-              </Badge>
-            )}
+          <div className="flex flex-wrap items-center justify-between gap-2 mt-1">
+            <div className="flex flex-wrap gap-1.5">
+              {period.status !== "open" && (
+                <Badge variant="outline" className="text-[10px] bg-muted text-muted-foreground gap-1">
+                  <Lock className="h-3 w-3" /> Cerrado
+                </Badge>
+              )}
+              {isImported && (
+                <Badge variant="outline" className="text-[10px] bg-info/15 text-info border-info/30 gap-1">
+                  <Upload className="h-3 w-3" /> Importado
+                </Badge>
+              )}
+              {hasImport && (
+                <Badge variant="outline" className="text-[10px] bg-primary/10 text-primary border-primary/30 gap-1">
+                  <Sparkles className="h-3 w-3" /> Historical Import
+                </Badge>
+              )}
+            </div>
+            <div className="flex items-center gap-1.5">
+              <Button variant="outline" size="sm" onClick={handleCopySummary} disabled={!hasRows} className="h-8 text-xs gap-1.5">
+                <Copy className="h-3.5 w-3.5" /> Copy Summary
+              </Button>
+              <Button variant="outline" size="sm" onClick={handlePrint} disabled={!hasRows} className="h-8 text-xs gap-1.5">
+                <Printer className="h-3.5 w-3.5" /> Print
+              </Button>
+            </div>
           </div>
         </DialogHeader>
 
@@ -188,7 +228,17 @@ export default function PayrollPeriodSummaryDialog({ open, onOpenChange, period,
             <Loader2 className="h-4 w-4 animate-spin" /> Loading summary…
           </div>
         ) : (
-          <div className="space-y-4">
+          <div id="payroll-summary-printable" className="space-y-4">
+            {/* Print-only header */}
+            <div className="hidden print:block border-b border-border pb-3 mb-3">
+              <div className="text-xs uppercase tracking-wider text-muted-foreground">{companyName || "Company"}</div>
+              <div className="text-xl font-bold">
+                Payroll Summary{period.sequence_number != null ? ` · Period #${period.sequence_number}` : ""}
+              </div>
+              <div className="text-sm text-muted-foreground">
+                {format(new Date(period.start_date), "yyyy-MM-dd")} → {format(new Date(period.end_date), "yyyy-MM-dd")} · Status: {period.status}
+              </div>
+            </div>
             {/* KPIs */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               <KpiCard value={totals.count} label="Employees" icon={<Users className="h-4 w-4" />} accent="primary" />
@@ -269,7 +319,7 @@ export default function PayrollPeriodSummaryDialog({ open, onOpenChange, period,
             {/* Employee list */}
             {hasRows && (
               <div className="space-y-2">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 no-print">
                   <div className="relative flex-1">
                     <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                     <Input
@@ -284,7 +334,7 @@ export default function PayrollPeriodSummaryDialog({ open, onOpenChange, period,
                   </span>
                 </div>
 
-                <div className="rounded-xl border border-border/60 bg-card max-h-[360px] overflow-auto">
+                <div className="rounded-xl border border-border/60 bg-card max-h-[360px] overflow-auto print:max-h-none print:overflow-visible">
                   {filteredRows.map((r) => {
                     const e = employees[r.employee_id];
                     const name = e ? `${e.first_name ?? ""} ${e.last_name ?? ""}`.trim() : "Unknown employee";
@@ -325,7 +375,7 @@ export default function PayrollPeriodSummaryDialog({ open, onOpenChange, period,
               This is historical imported payroll. It does not recalculate from scheduled hours.
             </p>
 
-            <div className="flex justify-end">
+            <div className="flex justify-end no-print">
               <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
                 Close
               </Button>
