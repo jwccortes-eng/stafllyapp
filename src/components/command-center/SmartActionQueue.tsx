@@ -210,6 +210,65 @@ export function SmartActionQueue({ companyId }: Props) {
       icon: ClipboardList,
     });
   }
+  if (counts.docsExpired > 0) {
+    items.push({
+      id: "docs-expired",
+      priority: "high",
+      title: `${counts.docsExpired} expired document${counts.docsExpired === 1 ? "" : "s"}`,
+      reason: "An approved document has passed its expiration date.",
+      cta: "Open Documents",
+      to: "/app/documents?status=expired",
+      source: "Compliance",
+      icon: FileX2,
+    });
+  }
+  if (counts.docsRejected > 0) {
+    items.push({
+      id: "docs-rejected",
+      priority: "medium",
+      title: `${counts.docsRejected} rejected document${counts.docsRejected === 1 ? "" : "s"}`,
+      reason: "Worker uploads were rejected and need a replacement.",
+      cta: "Open Documents",
+      to: "/app/documents?status=rejected",
+      source: "Compliance",
+      icon: FileWarning,
+    });
+  }
+  if (counts.docsPending > 0) {
+    items.push({
+      id: "docs-pending",
+      priority: counts.docsPending > 10 ? "high" : "medium",
+      title: `Review ${counts.docsPending} pending document${counts.docsPending === 1 ? "" : "s"}`,
+      reason: "Uploaded documents are waiting for admin review.",
+      cta: "Open Documents",
+      to: "/app/documents?status=pending",
+      source: "Compliance",
+      icon: FileClock,
+    });
+  }
+  if (counts.docsExpiring > 0) {
+    items.push({
+      id: "docs-expiring",
+      priority: "medium",
+      title: `${counts.docsExpiring} document${counts.docsExpiring === 1 ? "" : "s"} expiring soon`,
+      reason: "Approved documents expire within 30 days.",
+      cta: "Open Documents",
+      to: "/app/documents?status=expiring_soon",
+      source: "Compliance",
+      icon: CalendarClock,
+    });
+  }
+  // Always-on link to missing-required-document workers (visible only when filter is useful).
+  items.push({
+    id: "docs-missing-required",
+    priority: "info",
+    title: "Workers missing required documents",
+    reason: "Filter the workers list by missing required document risk.",
+    cta: "Open Workers",
+    to: "/app/employees?risk=missing_required_document",
+    source: "Compliance",
+    icon: FileMinus,
+  });
   items.push({
     id: "duplicates",
     priority: "info",
