@@ -300,6 +300,37 @@ export default function EmployeePeriodDetail() {
         </Card>
       </div>
 
+      {/* Trace level / source banner — read-only */}
+      {trace && isClosed && (
+        <Card className="mb-4 border-border/60">
+          <CardContent className="pt-4 pb-3 flex flex-wrap items-center gap-2 text-xs">
+            <Badge variant="outline" className="gap-1">
+              <Lock className="h-3 w-3" /> Finalized / Closed
+            </Badge>
+            <Badge variant={trace.trace_level === "concept_breakdown" ? "default" : "secondary"} className="gap-1">
+              trace_level: {trace.trace_level}
+            </Badge>
+            <Badge variant="outline" className="gap-1">
+              source: {trace.source_system}
+            </Badge>
+            {trace.is_historical && (
+              <Badge variant="outline" className="gap-1">
+                <Archive className="h-3 w-3" /> Historical Import
+              </Badge>
+            )}
+            {trace.source_file && (
+              <span className="text-muted-foreground truncate max-w-[280px]">file: {trace.source_file}</span>
+            )}
+            <p className="basis-full text-[11px] text-muted-foreground flex items-start gap-1 mt-1">
+              <Info className="h-3 w-3 mt-0.5 shrink-0" />
+              {trace.trace_level === "final_total_only"
+                ? "Final total only — source detail unavailable. This is a finalized payroll record. Scheduled hours are not used for payment."
+                : "Source breakdown available. This is a finalized payroll record. Scheduled hours are not used for payment."}
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Base pay details — editable */}
       <Card className="mb-6">
         <CardHeader className="flex flex-row items-center justify-between">
