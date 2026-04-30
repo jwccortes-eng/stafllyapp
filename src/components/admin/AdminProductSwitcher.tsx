@@ -52,7 +52,7 @@ export function AdminProductSwitcher({ compact = false }: AdminProductSwitcherPr
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-64">
         <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">
-          Switch product
+          Switch workspace
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
 
