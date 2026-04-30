@@ -25,17 +25,29 @@ const CREATE_OPTIONS = [
 ];
 
 export default function TopBar({ collapsed }: { collapsed: boolean }) {
-  const { user, role, fullName, signOut } = useAuth();
-  const { selectedCompany, companies, isGlobalMode } = useCompany();
+  const { user, fullName, signOut, getRoleForCompany } = useAuth();
+  const { selectedCompany, selectedCompanyId, companies, isGlobalMode } = useCompany();
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
 
-  const isOwner = role === "developer" || role === "owner";
+  // Effective role within the CURRENT company context (or global mode for
+  // platform staff). The badge must NEVER show a role the user doesn't truly
+  // hold in the selected tenant.
+  const effectiveRole = getRoleForCompany(selectedCompanyId);
+  const isOwner = effectiveRole === "developer" || effectiveRole === "owner";
   const isMultiCompany = companies.length > 1;
   const initials = fullName
     ? fullName.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)
     : user?.email ? user.email[0].toUpperCase() : "?";
-  const roleLabel = role === "developer" ? "Dev" : role === "owner" ? "Owner" : role === "admin" ? "Admin" : role === "manager" ? "Manager" : "User";
+  const roleLabel =
+    effectiveRole === "developer" ? "Dev"
+    : effectiveRole === "owner" ? "Owner"
+    : effectiveRole === "company_owner" ? "Owner"
+    : effectiveRole === "admin" ? "Admin"
+    : effectiveRole === "manager" ? "Manager"
+    : effectiveRole === "supervisor" ? "Supervisor"
+    : effectiveRole === "employee" ? "Employee"
+    : "User";
 
   return (
     <header
