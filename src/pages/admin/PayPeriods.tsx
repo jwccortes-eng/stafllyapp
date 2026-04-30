@@ -505,6 +505,21 @@ export default function PayPeriods() {
         onOpenSummary={(p) => setSummaryPeriod(p)}
       />
 
+      <div className="flex items-center justify-between gap-2 mb-2">
+        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">All Periods</h2>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() =>
+            document
+              .getElementById("historical-closeout-board")
+              ?.scrollIntoView({ behavior: "smooth", block: "start" })
+          }
+        >
+          ↑ Historical Board
+        </Button>
+      </div>
+
       <div className="data-table-wrapper">
         <Table>
           <TableHeader>
