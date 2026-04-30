@@ -59,9 +59,14 @@ export default function ServiceRequests() {
       {/* Header */}
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Service Requests</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold tracking-tight">Requests · Intake</h1>
+            <span className="inline-flex items-center rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-700 dark:text-amber-400">
+              Beta
+            </span>
+          </div>
           <p className="text-sm text-muted-foreground">
-            {selectedCompany?.name} · capture client requests and track fulfillment end-to-end.
+            {selectedCompany?.name} · capture client &amp; worker requests, then convert them into shifts or actions.
           </p>
         </div>
         <Button onClick={() => setCreateOpen(true)}>

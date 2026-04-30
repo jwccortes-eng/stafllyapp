@@ -162,8 +162,8 @@ export default function MobileAdminHome() {
                 <div className="flex items-center gap-2 w-full">
                   <span className="text-sm font-semibold tracking-tight">{a.label}</span>
                   {count > 0 && (
-                    <Badge variant="destructive" className="h-5 px-1.5 text-[10px] font-bold ml-auto">
-                      {count > 99 ? "99+" : count}
+                    <Badge variant="secondary" className="h-5 px-1.5 text-[10px] font-semibold ml-auto bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/20">
+                      {count > 9 ? "9+" : count}
                     </Badge>
                   )}
                 </div>

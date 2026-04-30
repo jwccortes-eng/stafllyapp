@@ -201,10 +201,10 @@ function SectionGrid({
                   <item.icon className="h-5 w-5" strokeWidth={active ? 2.2 : 1.8} />
                   {count > 0 && (
                     <Badge
-                      variant="destructive"
-                      className="absolute -top-1.5 -right-1.5 h-4 min-w-4 px-1 text-[9px] font-bold leading-none flex items-center justify-center rounded-full"
+                      variant="secondary"
+                      className="absolute -top-1.5 -right-1.5 h-4 min-w-4 px-1 text-[9px] font-semibold leading-none flex items-center justify-center rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/20"
                     >
-                      {count > 99 ? "99+" : count}
+                      {count > 9 ? "9+" : count}
                     </Badge>
                   )}
                 </div>

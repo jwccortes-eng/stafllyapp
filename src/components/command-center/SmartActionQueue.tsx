@@ -12,6 +12,7 @@ import {
   Upload,
   GitMerge,
   Hash,
+  ClipboardList,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
@@ -58,6 +59,7 @@ export function SmartActionQueue({ companyId }: Props) {
     duplicates: 0,
     workersNoPortal: 0,
     workersMissingPin: 0,
+    actionableRequests: 0,
   });
 
   useEffect(() => {
@@ -68,14 +70,18 @@ export function SmartActionQueue({ companyId }: Props) {
         const openQ = sb.from("time_entries").select("id", { count: "exact", head: true }).is("clock_out", null);
         const unmatchedQ = sb.from("historical_payroll_entries").select("id", { count: "exact", head: true }).is("matched_employee_id", null);
         const noPortalQ = sb.from("employees").select("id", { count: "exact", head: true }).eq("is_active", true).is("user_id", null);
+        // Actionable service requests = open / pending / unassigned / convertible
+        const reqQ = sb.from("service_requests").select("id", { count: "exact", head: true })
+          .in("status", ["new", "reviewing", "approved_for_scheduling"]);
         
         if (companyId) {
           openQ.eq("company_id", companyId);
           unmatchedQ.eq("company_id", companyId);
           noPortalQ.eq("company_id", companyId);
+          reqQ.eq("company_id", companyId);
         }
         
-        const [openRes, unmatchedRes, noPortalRes] = await Promise.all([openQ, unmatchedQ, noPortalQ]);
+        const [openRes, unmatchedRes, noPortalRes, reqRes] = await Promise.all([openQ, unmatchedQ, noPortalQ, reqQ]);
 
         if (cancelled) return;
         setCounts({
@@ -84,6 +90,7 @@ export function SmartActionQueue({ companyId }: Props) {
           duplicates: 0,
           workersNoPortal: noPortalRes?.count ?? 0,
           workersMissingPin: 0,
+          actionableRequests: reqRes?.count ?? 0,
         });
       } catch {
         // Silent fail — keep defaults.
@@ -162,6 +169,18 @@ export function SmartActionQueue({ companyId }: Props) {
       to: "/app/employees?status=pending",
       source: "Workers",
       icon: Users,
+    });
+  }
+  if (counts.actionableRequests > 0) {
+    items.push({
+      id: "actionable-requests",
+      priority: counts.actionableRequests > 5 ? "high" : "medium",
+      title: `${counts.actionableRequests} request${counts.actionableRequests === 1 ? "" : "s"} need action`,
+      reason: "Open / pending / ready-to-convert client or worker requests.",
+      cta: "Open Intake",
+      to: "/app/service-requests",
+      source: "Intake",
+      icon: ClipboardList,
     });
   }
   items.push({
