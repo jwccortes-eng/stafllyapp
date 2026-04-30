@@ -1,15 +1,20 @@
 /**
- * WorkerDataQualityReview — Phase 1, read-only.
+ * WorkerDataQualityReview — Phase 2, actionable.
  *
  * Detailed Data Quality section shown inside the worker drawer/profile.
  * Renders payroll readiness, every detected risk with explanation,
- * the underlying detected data, and a manual operator recommendation.
+ * the underlying detected data, and quick action buttons that:
+ *   - Jump to the right tab inside EmployeeProfileTabs (Info, Profile, Access, Documents).
+ *   - Open WhatsApp with a pre-filled reminder for the worker's missing items.
  *
- * Strictly visual. No writes. No payroll math.
+ * No DB writes here. Edits happen in the destination tab. WhatsApp is
+ * delivered manually by the admin via wa.me.
  */
 
+import { useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
   analyzeEmployeeRisks,
@@ -20,7 +25,14 @@ import {
   type PayrollReadiness,
   type RiskKey,
 } from "@/lib/data-quality-risks";
+import {
+  buildWhatsappReminder,
+  buildWaMeUrl,
+  tabForRisk,
+  type ProfileTabId,
+} from "@/lib/data-quality-actions";
 import { normalizePhone } from "@/lib/phone";
+import type { WorkerDocumentSignals } from "@/lib/documents-signals";
 import {
   ShieldCheck,
   ShieldAlert,
@@ -32,6 +44,10 @@ import {
   KeyRound,
   Hash,
   Info,
+  MessageCircle,
+  ArrowRight,
+  User,
+  FileText,
 } from "lucide-react";
 
 interface Props {
