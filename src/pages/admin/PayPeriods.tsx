@@ -22,6 +22,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import PayrollSequenceSettings from "@/components/payroll/PayrollSequenceSettings";
 import PeriodReconciliationCell from "@/components/payroll/PeriodReconciliationCell";
+import PayrollPeriodSummaryDialog from "@/components/payroll/PayrollPeriodSummaryDialog";
 import { usePayrollSequenceConfig, formatSequence } from "@/hooks/usePayrollSequenceConfig";
 import { Settings } from "lucide-react";
 
@@ -73,6 +74,7 @@ export default function PayPeriods() {
   const [loadingImports, setLoadingImports] = useState<Set<string>>(new Set());
   const [periodMeta, setPeriodMeta] = useState<Record<string, { hasImports: boolean; hasBasePay: boolean }>>({});
   const [showSequenceConfig, setShowSequenceConfig] = useState(false);
+  const [summaryPeriod, setSummaryPeriod] = useState<PayPeriod | null>(null);
   const { config: seqConfig } = usePayrollSequenceConfig();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -599,9 +601,7 @@ export default function PayPeriods() {
                             sourceType={p.source_type}
                             reconciliationStatus={p.reconciliation_status}
                             lastReconciledAt={p.last_reconciled_at}
-                            onOpenSummary={() => {
-                              if (!expandedPeriods.has(p.id)) toggleExpand(p.id);
-                            }}
+                            onOpenSummary={() => setSummaryPeriod(p)}
                           />
                         </TableCell>
                         <TableCell className="text-xs text-muted-foreground">{p.closed_at ? format(new Date(p.closed_at), "yyyy-MM-dd HH:mm") : "—"}</TableCell>
@@ -770,6 +770,13 @@ export default function PayPeriods() {
           ? "Este es el siguiente periodo en secuencia. Confirma tu contraseña para abrirlo."
           : "Reabrir un periodo fuera de secuencia requiere privilegios especiales. Confirma tu contraseña para continuar."}
         onConfirm={toggleStatus}
+      />
+
+      <PayrollPeriodSummaryDialog
+        open={!!summaryPeriod}
+        onOpenChange={(o) => !o && setSummaryPeriod(null)}
+        period={summaryPeriod}
+        companyId={selectedCompanyId}
       />
     </div>
   );
