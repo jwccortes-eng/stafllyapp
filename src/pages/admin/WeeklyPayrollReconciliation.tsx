@@ -36,6 +36,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { writeExcelFile } from "@/lib/safe-xlsx";
+import StaflyCalmProcessingBanner from "@/components/common/StaflyCalmProcessingBanner";
 import {
   parseWeeklyPayrollFile,
   reconcile,
