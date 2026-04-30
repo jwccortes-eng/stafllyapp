@@ -42,7 +42,7 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
   { id: "concepts", to: "/app/concepts", icon: Tags, label: "Concepts", module: "concepts", section: "Management" },
   { id: "announcements", to: "/app/announcements", icon: Megaphone, label: "Announcements", module: "announcements", section: "Operations" },
   { id: "chat", to: "/app/chat", icon: MessageCircle, label: "Chat", module: null, section: "Operations" },
-  { id: "tickets", to: "/app/requests", icon: Inbox, label: "Tickets", module: null, section: "Management", badge: "tickets" },
+  { id: "tickets", to: "/app/requests", icon: Inbox, label: "Tickets", module: null, section: "Intake", badge: "tickets" },
   { id: "notifications", to: "/app/notifications", icon: Bell, label: "Notifications", module: null, section: "Management" },
   { id: "invite", to: "/app/invite", icon: UserPlus, label: "Invitations", module: null, section: "Management" },
   { id: "admin-hub", to: "/app/admin", icon: Wrench, label: "Admin", module: null, section: "Administration", roles: ["owner"] },
