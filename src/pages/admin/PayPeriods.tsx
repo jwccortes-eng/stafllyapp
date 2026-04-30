@@ -24,6 +24,7 @@ import PayrollSequenceSettings from "@/components/payroll/PayrollSequenceSetting
 import PeriodReconciliationCell from "@/components/payroll/PeriodReconciliationCell";
 import PayrollPeriodSummaryDialog from "@/components/payroll/PayrollPeriodSummaryDialog";
 import HistoricalCloseoutBoard from "@/components/payroll/HistoricalCloseoutBoard";
+import WeeklyPayBreakdownDrawer from "@/components/payroll/WeeklyPayBreakdownDrawer";
 import ReviewPolicyBoard from "@/components/payroll/ReviewPolicyBoard";
 import { usePayrollSequenceConfig, formatSequence } from "@/hooks/usePayrollSequenceConfig";
 import { Settings } from "lucide-react";
@@ -840,6 +841,15 @@ export default function PayPeriods() {
         onOpenChange={(o) => !o && setSummaryPeriod(null)}
         period={summaryPeriod}
         companyId={selectedCompanyId}
+      />
+
+      <WeeklyPayBreakdownDrawer
+        open={!!tracePeriod}
+        onClose={() => setTracePeriod(null)}
+        companyId={selectedCompanyId}
+        periodId={tracePeriod?.id ?? null}
+        periodLabel={tracePeriod?.sequence_number ? `#${tracePeriod.sequence_number}` : tracePeriod?.start_date ?? ""}
+        periodRange={tracePeriod ? `${tracePeriod.start_date} → ${tracePeriod.end_date}` : ""}
       />
     </div>
   );
