@@ -551,11 +551,13 @@ function PayReportDetailDialog({
   onClose,
   onCopy,
   onPrint,
+  onViewDetails,
 }: {
   row: PayReportRow | null;
   onClose: () => void;
   onCopy: (row: PayReportRow) => void;
   onPrint: () => void;
+  onViewDetails: (row: PayReportRow) => void;
 }) {
   const [copied, setCopied] = useState(false);
   if (!row) return null;
