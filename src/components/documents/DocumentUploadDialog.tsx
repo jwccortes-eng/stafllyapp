@@ -38,6 +38,14 @@ export function DocumentUploadDialog({ open, onOpenChange, onConfirm }: Props) {
   const [submitting, setSubmitting] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  // Suppress visual realtime refreshes in the parent profile while open,
+  // so any focused control inside the dialog keeps its focus.
+  useEffect(() => {
+    if (!open) return;
+    const release = acquireDocDialogLock();
+    return release;
+  }, [open]);
+
   const reset = () => {
     setFile(null);
     setCategory("other");
