@@ -917,6 +917,7 @@ export default function Employees() {
   const activeChips: ActiveFilterChip[] = [
     ...(filterRole !== "all" ? [{ key: "role", label: <>Role: <strong className="ml-0.5">{formatDisplayText(filterRole, "label")}</strong></>, onRemove: () => setFilterRole("all") }] : []),
     ...(filterGroup !== "all" ? [{ key: "group", label: <>Group: <strong className="ml-0.5">{filterGroup}</strong></>, onRemove: () => setFilterGroup("all") }] : []),
+    ...(riskFilter !== "all" ? [{ key: "risk", label: <>Risk: <strong className="ml-0.5">{riskFilter.replace(/_/g, " ")}</strong></>, onRemove: () => setRiskFilter("all") }] : []),
   ];
 
   return (
