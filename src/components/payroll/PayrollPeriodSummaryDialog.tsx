@@ -6,6 +6,8 @@ import { Input } from "@/components/ui/input";
 import { KpiCard } from "@/components/ui/kpi-card";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
+import { toast } from "sonner";
+import { useCompany } from "@/hooks/useCompany";
 import {
   Users,
   DollarSign,
@@ -18,6 +20,8 @@ import {
   Upload,
   Sparkles,
   Loader2,
+  Printer,
+  Copy,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
