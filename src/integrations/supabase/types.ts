@@ -4425,6 +4425,118 @@ export type Database = {
           },
         ]
       }
+      historical_payroll_entries: {
+        Row: {
+          base_total_pay: number
+          company_id: string
+          concept_payload: Json
+          created_at: string
+          employer_identification_hash: string | null
+          employer_identification_raw: string | null
+          historical_status: string
+          id: string
+          import_id: string | null
+          matched_employee_id: string | null
+          needs_identity_review: boolean
+          period_id: string
+          resolved_at: string | null
+          resolved_by: string | null
+          source_file: string
+          source_system: string
+          ssn_last4: string | null
+          updated_at: string
+          worker_name_raw: string
+          worker_record_type: string
+        }
+        Insert: {
+          base_total_pay?: number
+          company_id: string
+          concept_payload?: Json
+          created_at?: string
+          employer_identification_hash?: string | null
+          employer_identification_raw?: string | null
+          historical_status?: string
+          id?: string
+          import_id?: string | null
+          matched_employee_id?: string | null
+          needs_identity_review?: boolean
+          period_id: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          source_file: string
+          source_system?: string
+          ssn_last4?: string | null
+          updated_at?: string
+          worker_name_raw: string
+          worker_record_type?: string
+        }
+        Update: {
+          base_total_pay?: number
+          company_id?: string
+          concept_payload?: Json
+          created_at?: string
+          employer_identification_hash?: string | null
+          employer_identification_raw?: string | null
+          historical_status?: string
+          id?: string
+          import_id?: string | null
+          matched_employee_id?: string | null
+          needs_identity_review?: boolean
+          period_id?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          source_file?: string
+          source_system?: string
+          ssn_last4?: string | null
+          updated_at?: string
+          worker_name_raw?: string
+          worker_record_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "historical_payroll_entries_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "historical_payroll_entries_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "historical_payroll_entries_import_id_fkey"
+            columns: ["import_id"]
+            isOneToOne: false
+            referencedRelation: "imports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "historical_payroll_entries_matched_employee_id_fkey"
+            columns: ["matched_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "historical_payroll_entries_matched_employee_id_fkey"
+            columns: ["matched_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "historical_payroll_entries_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "pay_periods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       hourly_rate_inference_evidence: {
         Row: {
           company_id: string
