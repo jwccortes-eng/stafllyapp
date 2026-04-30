@@ -346,7 +346,8 @@ function App() {
               {/* Employee portal routes */}
               <Route path="/portal" element={<EmployeeLayout />}>
                 <Route index element={<EmployeeDashboard />} />
-                <Route path="payments" element={<MyPayments />} />
+                {/* /portal/payments deprecated for workers — showed unvalidated time_entries × rate (e.g. 604h / $18k). Redirect to finalized Pay Reports. MyPayments code is kept for audit. */}
+                <Route path="payments" element={<Navigate to="/portal/pay-reports" replace />} />
                 <Route path="pay-reports" element={<PayReports />} />
                 <Route path="week/:periodId" element={<WeekDetail />} />
                 <Route path="accumulated" element={<Accumulated />} />

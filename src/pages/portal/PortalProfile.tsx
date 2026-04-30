@@ -147,7 +147,7 @@ export default function PortalProfile() {
   ].filter(i => i.value);
 
   const menuItems = [
-    { to: "/portal/payments", icon: Wallet, label: "My payments", description: "Payroll history" },
+    { to: "/portal/pay-reports", icon: Wallet, label: "My Pay Reports", description: "Finalized weekly payroll" },
     { to: "/portal/accumulated", icon: BarChart3, label: "Accumulated", description: "Total history" },
     { to: "/portal/shifts", icon: CalendarDays, label: "My shifts", description: "Assignments and requests" },
   ];

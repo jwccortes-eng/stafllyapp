@@ -21,7 +21,7 @@ const TYPE_ROUTES: Record<string, string> = {
   shift_rejected: "/app/shifts",
   clock_request: "/app/requests",
   announcement: "/portal/announcements",
-  payment_ready: "/portal/payments",
+  payment_ready: "/portal/pay-reports",
   shift_reminder: "/portal/shifts",
   shift_reminder_24h: "/portal/shifts",
   shift_reminder_1h: "/portal/shifts",

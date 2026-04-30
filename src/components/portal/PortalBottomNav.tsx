@@ -24,7 +24,7 @@ const TABS: TabItem[] = [
 
 const MORE_PATHS = [
   "/portal/profile",
-  "/portal/payments",
+  "/portal/pay-reports",
   "/portal/availability",
   "/portal/announcements",
   "/portal/resources",

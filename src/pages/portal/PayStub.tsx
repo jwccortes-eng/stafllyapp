@@ -79,7 +79,7 @@ export default function PayStub() {
     return (
       <div className="text-center py-16 text-muted-foreground">
         <p className="text-sm">Periodo no encontrado</p>
-        <Link to="/portal/payments" className="text-primary text-sm mt-2 inline-block">← Volver a Nómina</Link>
+        <Link to="/portal/pay-reports" className="text-primary text-sm mt-2 inline-block">← Volver a Nómina</Link>
       </div>
     );
   }
@@ -107,7 +107,7 @@ export default function PayStub() {
         subtitle={`${period.start_date} → ${period.end_date}`}
         badge={statusLabel}
         rightSlot={
-          <Link to="/portal/payments" className="h-9 w-9 rounded-xl bg-muted flex items-center justify-center hover:bg-accent transition-colors">
+          <Link to="/portal/pay-reports" className="h-9 w-9 rounded-xl bg-muted flex items-center justify-center hover:bg-accent transition-colors">
             <ArrowLeft className="h-4 w-4" />
           </Link>
         }
