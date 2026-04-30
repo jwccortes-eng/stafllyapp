@@ -522,11 +522,13 @@ export default function PayPeriods() {
       )}
 
       <HistoricalCloseoutBoard
+        key={`historical-closeout-${selectedCompanyId ?? "none"}`}
         companyId={selectedCompanyId}
         onOpenSummary={(p) => setSummaryPeriod(p)}
       />
 
       <ReviewPolicyBoard
+        key={`review-policy-${selectedCompanyId ?? "none"}`}
         companyId={selectedCompanyId}
         selectedCompanyId={selectedCompanyId}
         selectedCompanyName={selectedCompany?.name ?? null}
