@@ -407,7 +407,26 @@ export default function CompensationValidation() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Validación de Compensación" subtitle="Revisión operativa de tarifas por empleado" />
+      <PageHeader
+        title="Validación de Compensación"
+        subtitle="Revisión operativa de tarifas por empleado"
+        rightSlot={
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button variant="outline" size="sm" asChild>
+              <a href="/app/periods" className="flex items-center gap-1.5">
+                <CalendarDays className="h-4 w-4" />
+                Go to Payroll Periods
+              </a>
+            </Button>
+            <Button variant="ghost" size="sm" asChild>
+              <a href="/app/movements" className="flex items-center gap-1.5">
+                <Wallet className="h-4 w-4" />
+                Adjustments
+              </a>
+            </Button>
+          </div>
+        }
+      />
 
       <Tabs defaultValue="validation" className="w-full">
         <TabsList>
