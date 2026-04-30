@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { cn } from "@/lib/utils";
 
 const resources = [
-  { to: "/portal/payments", icon: Wallet, label: "Nómina", description: "Pagos y detalle semanal", color: "bg-primary/10 text-primary" },
+  { to: "/portal/pay-reports", icon: Wallet, label: "Pay Reports", description: "Finalized weekly payroll", color: "bg-primary/10 text-primary" },
   { to: "/portal/accumulated", icon: BarChart3, label: "Historial", description: "Acumulado y tendencia", color: "bg-earning/10 text-earning" },
   { to: "/portal/shifts", icon: CalendarDays, label: "Turnos", description: "Mis asignaciones y disponibles", color: "bg-accent text-accent-foreground" },
   { to: "/portal/announcements", icon: BookOpen, label: "Feed completo", description: "Todos los anuncios", color: "bg-warning/10 text-warning" },
