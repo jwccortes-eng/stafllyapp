@@ -359,7 +359,6 @@ export default function TimeClockCommandView() {
           tone="muted"
           label="Tracked today"
           value={formatHoursShort(kpis.totalMinutesToday)}
-          hint="closed + same-day open only"
         />
       </div>
 
