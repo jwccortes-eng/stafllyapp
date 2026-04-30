@@ -143,8 +143,8 @@ function DesktopTimeClockView() {
                 Comparación prog. vs real
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => navigate("/app/reports")} className="gap-2 text-sm">
-                <FileBarChart className="h-4 w-4" />
-                Todos los reportes
+                <List className="h-4 w-4" />
+                Timesheets &amp; reportes
               </DropdownMenuItem>
 
               <DropdownMenuSeparator />
