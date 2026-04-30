@@ -840,3 +840,52 @@ function LiveRow({
     </li>
   );
 }
+
+// ─── inline skeleton (NO blue splash) ─────────────────────
+function TimeCommandSkeleton() {
+  return (
+    <div className="space-y-5" aria-busy="true" aria-live="polite">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <Card key={i} className="rounded-2xl border border-border/60 shadow-sm p-4">
+            <div className="flex items-center gap-2.5">
+              <div className="h-9 w-9 rounded-xl bg-muted animate-pulse" />
+              <div className="flex-1 space-y-1.5">
+                <div className="h-2.5 w-20 rounded bg-muted animate-pulse" />
+                <div className="h-4 w-10 rounded bg-muted animate-pulse" />
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
+      <Card className="border border-border/60 rounded-2xl shadow-sm">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border/50">
+          <div className="flex items-center gap-2.5">
+            <div className="h-9 w-9 rounded-xl bg-muted animate-pulse" />
+            <div className="space-y-1.5">
+              <div className="h-3 w-32 rounded bg-muted animate-pulse" />
+              <div className="h-2 w-48 rounded bg-muted animate-pulse" />
+            </div>
+          </div>
+          <StaflyCalmProcessingBanner
+            variant="inline"
+            title="Sincronizando asistencia"
+            message="Estamos organizando el estado del reloj en tiempo real."
+          />
+        </div>
+        <div className="divide-y divide-border/40">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-3 px-5 py-3">
+              <div className="h-8 w-8 rounded-full bg-muted animate-pulse" />
+              <div className="flex-1 space-y-1.5">
+                <div className="h-3 w-40 rounded bg-muted animate-pulse" />
+                <div className="h-2 w-56 rounded bg-muted animate-pulse" />
+              </div>
+              <div className="h-5 w-12 rounded bg-muted animate-pulse" />
+            </div>
+          ))}
+        </div>
+      </Card>
+    </div>
+  );
+}
