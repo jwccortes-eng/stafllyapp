@@ -45,6 +45,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import WorkerPayBreakdownDialog from "@/components/portal/WorkerPayBreakdownDialog";
 
 // ============================================================================
 // Types
@@ -648,7 +649,7 @@ function PayReportDetailDialog({
           )}
 
           {/* Actions */}
-          <div className="grid grid-cols-2 gap-2 pt-1">
+          <div className="grid grid-cols-3 gap-2 pt-1">
             <Button
               type="button"
               variant="outline"
@@ -660,24 +661,13 @@ function PayReportDetailDialog({
               }}
               className="w-full"
             >
-              {copied ? (
-                <>
-                  <Check className="h-3.5 w-3.5 mr-1.5" /> Copied
-                </>
-              ) : (
-                <>
-                  <Copy className="h-3.5 w-3.5 mr-1.5" /> Copy summary
-                </>
-              )}
+              {copied ? (<><Check className="h-3.5 w-3.5 mr-1.5" /> Copied</>) : (<><Copy className="h-3.5 w-3.5 mr-1.5" /> Copy</>)}
             </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={onPrint}
-              className="w-full"
-            >
+            <Button type="button" variant="outline" size="sm" onClick={onPrint} className="w-full">
               <Printer className="h-3.5 w-3.5 mr-1.5" /> Print
+            </Button>
+            <Button type="button" variant="default" size="sm" onClick={() => onViewDetails(row)} className="w-full">
+              <Info className="h-3.5 w-3.5 mr-1.5" /> Details
             </Button>
           </div>
         </div>
