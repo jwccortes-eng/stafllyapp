@@ -1696,7 +1696,7 @@ export default function Employees() {
       )}
 
       {/* ─── Detail Sheet — Premium ─── */}
-      <Sheet open={!!viewEmployee} onOpenChange={(v) => { if (!v) { setViewEmployee(null); setIsEditing(false); } }}>
+      <Sheet open={!!viewEmployee} onOpenChange={(v) => { if (!v) { setViewEmployee(null); setIsEditing(false); setProfileActiveTab("info"); } }}>
         <SheetContent className="w-[440px] sm:w-[560px] p-0 flex flex-col">
           {/* Header */}
           <div className="bg-gradient-to-br from-primary/[0.04] to-transparent border-b px-5 py-4">
