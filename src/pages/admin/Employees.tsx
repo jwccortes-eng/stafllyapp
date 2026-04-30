@@ -1376,8 +1376,10 @@ export default function Employees() {
                 )}
               >
                 <PremiumAvatar firstName={e.first_name} lastName={e.last_name} avatarUrl={e.avatar_url} size="sm" status={status} />
-                <span className="text-xs font-semibold flex-1 truncate">{formatPersonName(`${e.first_name} ${e.last_name}`)}</span>
-                {e.employer_identification && <span className="text-[10px] font-mono text-muted-foreground hidden sm:inline">#{e.employer_identification}</span>}
+                <div className="flex-1 min-w-0">
+                  <span className="text-xs font-semibold truncate block">{formatPersonName(`${e.first_name} ${e.last_name}`)}</span>
+                  <WorkerRiskTags risks={riskAnalysis.byId.get(e.id) ?? []} max={2} className="mt-0.5" />
+                </div>
                 {e.phone_number && <span className="text-[10px] text-muted-foreground hidden md:inline">{e.phone_number}</span>}
                 {isDriver(e) && <Car className="h-3 w-3 text-sky-500 shrink-0" aria-label="Driver" />}
                 <EmpStatusBadge employee={e} invitation={invitations[e.id]} />
