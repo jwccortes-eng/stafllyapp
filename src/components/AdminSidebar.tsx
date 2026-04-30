@@ -288,8 +288,8 @@ export default function AdminSidebar() {
           </span>
           <div className="flex items-center gap-1.5">
             {!isOpen && sectionBadge > 0 && (
-              <span className="min-w-[16px] h-[16px] flex items-center justify-center rounded-full bg-destructive/20 text-destructive text-[9px] font-bold px-1 tabular-nums">
-                {sectionBadge}
+              <span className="min-w-[16px] h-[16px] flex items-center justify-center rounded-full bg-rose-50 text-rose-600 border border-rose-100 text-[9px] font-semibold px-1.5 tabular-nums dark:bg-rose-500/15 dark:text-rose-300 dark:border-rose-500/20">
+                {sectionBadge > 9 ? "9+" : sectionBadge}
               </span>
             )}
             <ChevronDown className={cn(
