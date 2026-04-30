@@ -12,6 +12,7 @@
  */
 
 import { normalizePhone } from "@/lib/phone";
+import type { WorkerDocumentSignals } from "@/lib/documents-signals";
 
 export type RiskKey =
   | "duplicate_review"
@@ -22,7 +23,13 @@ export type RiskKey =
   | "test_account"
   | "system_placeholder"
   | "missing_location"
-  | "inactive_with_payroll";
+  | "inactive_with_payroll"
+  // Document compliance risks (only set when document signals are provided).
+  | "missing_required_document"
+  | "pending_document_review"
+  | "expired_document"
+  | "expiring_document"
+  | "rejected_document";
 
 export type PayrollReadiness = "ready" | "needs_review" | "blocked_visual";
 
@@ -43,6 +50,11 @@ const RISK_META: Record<RiskKey, Omit<RiskTag, "key">> = {
   system_placeholder:  { label: "System placeholder", tone: "destructive", description: "Auto-generated placeholder (e.g. ‘System 3’). Not a real worker." },
   missing_location:    { label: "Missing location",   tone: "muted",       description: "City and state are both blank." },
   inactive_with_payroll: { label: "Inactive · payroll history", tone: "muted", description: "Inactive worker with prior payroll activity — keep for audit." },
+  missing_required_document: { label: "Missing docs",  tone: "warning",     description: "One or more required documents are not yet approved for this worker." },
+  pending_document_review:   { label: "Docs pending",  tone: "muted",       description: "Uploaded document(s) are awaiting admin review." },
+  expired_document:          { label: "Expired docs",  tone: "destructive", description: "At least one document has passed its expiration date." },
+  expiring_document:         { label: "Docs expiring", tone: "warning",     description: "At least one document expires within the next 30 days." },
+  rejected_document:         { label: "Docs rejected", tone: "warning",     description: "An uploaded document was rejected and needs a replacement." },
 };
 
 const SHARED_EXACT_EMAIL = new Set([
@@ -71,8 +83,18 @@ export interface RiskAnalysisResult {
 /**
  * Analyze a list of employee records and return per-row risk tags + aggregate counts.
  * The input shape is intentionally permissive — anything off the `employees` table.
+ *
+ * @param employees       Employee records (already scoped by selectedCompanyId).
+ * @param documentSignals Optional Map<employee_id, WorkerDocumentSignals> — when
+ *                        provided, document-compliance risks (missing/pending/
+ *                        expired/expiring/rejected) are added to each row.
+ *                        Backwards compatible: when omitted, document risks are
+ *                        not produced and counts stay at zero.
  */
-export function analyzeEmployeeRisks(employees: any[]): RiskAnalysisResult {
+export function analyzeEmployeeRisks(
+  employees: any[],
+  documentSignals?: Map<string, WorkerDocumentSignals>,
+): RiskAnalysisResult {
   const byId = new Map<string, RiskKey[]>();
   const counts: Record<RiskKey, number> = {
     duplicate_review: 0,
@@ -84,6 +106,11 @@ export function analyzeEmployeeRisks(employees: any[]): RiskAnalysisResult {
     system_placeholder: 0,
     missing_location: 0,
     inactive_with_payroll: 0,
+    missing_required_document: 0,
+    pending_document_review: 0,
+    expired_document: 0,
+    expiring_document: 0,
+    rejected_document: 0,
   };
 
   // Build duplicate buckets (shared definition with the Workers duplicate detector).
