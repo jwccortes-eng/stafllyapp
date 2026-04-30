@@ -124,15 +124,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const rolePriority: AppRole[] = ["developer", "owner", "company_owner", "admin", "manager", "supervisor", "employee", null];
       const availableRoles = new Set((roleRows ?? []).map((row) => row.role as string));
 
-      // Check if user is company_owner in any company
+      // Per-company role membership (tenant-scoped — does NOT bleed into
+      // global role/allRoles. A company_owner in JKitchen is NOT an admin in
+      // Quality Staff. See `getRoleForCompany` / `canAccessAdminForCompany`.)
       const { data: companyUserRoles } = await supabase
         .from("company_users")
-        .select("role")
+        .select("company_id, role")
         .eq("user_id", userId);
 
-      if (companyUserRoles?.some(cu => cu.role === 'company_owner')) {
-        availableRoles.add("company_owner");
+      const cRoles: Record<string, string> = {};
+      for (const cu of companyUserRoles ?? []) {
+        if (cu.company_id && cu.role) cRoles[cu.company_id as string] = cu.role as string;
       }
+      setCompanyRoles(cRoles);
 
       const { data: empData } = await supabase
         .from("employees")
