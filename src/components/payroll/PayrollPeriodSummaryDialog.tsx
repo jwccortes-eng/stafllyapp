@@ -256,7 +256,7 @@ export default function PayrollPeriodSummaryDialog({ open, onOpenChange, period,
             {/* KPIs */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               <KpiCard value={totals.count} label="Employees" icon={<Users className="h-4 w-4" />} accent="primary" />
-              <KpiCard value={fmtMoney(totals.total)} label="Total imported" icon={<DollarSign className="h-4 w-4" />} accent="earning" mono size="lg" className="col-span-2 sm:col-span-1" />
+              <KpiCard value={fmtMoney(totals.total)} label="Total imported" accent="earning" mono size="lg" className="col-span-2 sm:col-span-1" />
               <KpiCard value={imports.length} label="Imports" icon={<FileSpreadsheet className="h-4 w-4" />} accent="muted" />
               <KpiCard
                 value={validationOk ? "OK" : hasRows ? "Check" : "—"}
