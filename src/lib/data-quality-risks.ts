@@ -205,6 +205,23 @@ export function analyzeEmployeeRisks(
       tags.push("inactive_with_payroll");
     }
 
+    // Phase 2 — actionable profile-completeness signals (active workers only).
+    if (isActive) {
+      const phoneRaw = (e?.phone_number ?? "").toString().trim();
+      if (!phoneRaw) tags.push("missing_phone");
+
+      if (!emailRaw) tags.push("missing_email");
+
+      const avatar = (e?.avatar_url ?? "").toString().trim();
+      if (!avatar) tags.push("missing_photo");
+
+      const ecName = (e?.emergency_contact_name ?? "").toString().trim();
+      const ecPhone = (e?.emergency_contact_phone ?? "").toString().trim();
+      if (!ecName && !ecPhone) tags.push("missing_emergency_contact");
+
+      if (!portalActive) tags.push("portal_not_active");
+    }
+
     // Document compliance risks — only computed when caller passes signals.
     // Only surface for active workers; we do not want to nag inactive records.
     const docSig = documentSignals?.get(e.id);
