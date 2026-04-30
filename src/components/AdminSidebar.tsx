@@ -10,7 +10,7 @@ import {
   Inbox, Wrench, Lock, Sparkles, ClipboardList, Receipt, Brain,
   Map as MapIcon, ContactRound, Award, GitCompareArrows,
   FileText, Bell, UserPlus, Star, ArrowLeftRight, Globe, ShieldCheck,
-  Monitor, Radio, UserPlus2, Banknote,
+  Monitor, Radio, UserPlus2, Banknote, Scale,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
@@ -67,6 +67,7 @@ const COMPANY_LINKS: LinkDef[] = [
   { to: "/app/advances-loans", icon: Banknote, label: "Advances", module: null, section: "Payroll & Billing" },
   { to: "/app/concepts", icon: Tags, label: "Concepts", module: "concepts", section: "Payroll & Billing" },
   { to: "/app/payroll-reconciliation", icon: GitCompareArrows, label: "Reconciliation", module: null, section: "Payroll & Billing" },
+  { to: "/app/weekly-payroll-reconciliation", icon: Scale, label: "Weekly Recon Report", module: null, section: "Payroll & Billing" },
   { to: "/app/summary", icon: FileSpreadsheet, label: "Reports", module: "summary", section: "Payroll & Billing" },
   { to: "/app/invoicing/invoices", icon: FileText, label: "Invoices", module: "tenant_invoicing", section: "Payroll & Billing" },
   { to: "/app/invoicing/service-blocks", icon: ClipboardList, label: "Service Blocks", module: "tenant_invoicing", section: "Payroll & Billing" },

@@ -45,6 +45,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import WorkerPayBreakdownDialog from "@/components/portal/WorkerPayBreakdownDialog";
 
 // ============================================================================
 // Types
@@ -200,6 +201,14 @@ export default function PayReports() {
   const [rows, setRows] = useState<PayReportRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [openRow, setOpenRow] = useState<PayReportRow | null>(null);
+  const [breakdownRow, setBreakdownRow] = useState<PayReportRow | null>(null);
+  const [companyId, setCompanyId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!effectiveEmployeeId) return;
+    supabase.from("employees").select("company_id").eq("id", effectiveEmployeeId).maybeSingle()
+      .then(({ data }) => setCompanyId((data as any)?.company_id ?? null));
+  }, [effectiveEmployeeId]);
 
   // ----- Load -----
   useEffect(() => {
@@ -437,6 +446,17 @@ export default function PayReports() {
         onClose={() => setOpenRow(null)}
         onCopy={copySummary}
         onPrint={handlePrint}
+        onViewDetails={(r) => { setOpenRow(null); setBreakdownRow(r); }}
+      />
+
+      <WorkerPayBreakdownDialog
+        open={!!breakdownRow}
+        onClose={() => setBreakdownRow(null)}
+        companyId={companyId}
+        periodId={breakdownRow?.period.id ?? null}
+        employeeId={effectiveEmployeeId ?? null}
+        periodLabel={breakdownRow ? fmtRange(breakdownRow.period.start_date, breakdownRow.period.end_date) : ""}
+        isHistorical={breakdownRow?.is_historical_import ?? false}
       />
     </div>
   );
@@ -550,11 +570,13 @@ function PayReportDetailDialog({
   onClose,
   onCopy,
   onPrint,
+  onViewDetails,
 }: {
   row: PayReportRow | null;
   onClose: () => void;
   onCopy: (row: PayReportRow) => void;
   onPrint: () => void;
+  onViewDetails: (row: PayReportRow) => void;
 }) {
   const [copied, setCopied] = useState(false);
   if (!row) return null;
@@ -648,7 +670,7 @@ function PayReportDetailDialog({
           )}
 
           {/* Actions */}
-          <div className="grid grid-cols-2 gap-2 pt-1">
+          <div className="grid grid-cols-3 gap-2 pt-1">
             <Button
               type="button"
               variant="outline"
@@ -660,24 +682,13 @@ function PayReportDetailDialog({
               }}
               className="w-full"
             >
-              {copied ? (
-                <>
-                  <Check className="h-3.5 w-3.5 mr-1.5" /> Copied
-                </>
-              ) : (
-                <>
-                  <Copy className="h-3.5 w-3.5 mr-1.5" /> Copy summary
-                </>
-              )}
+              {copied ? (<><Check className="h-3.5 w-3.5 mr-1.5" /> Copied</>) : (<><Copy className="h-3.5 w-3.5 mr-1.5" /> Copy</>)}
             </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={onPrint}
-              className="w-full"
-            >
+            <Button type="button" variant="outline" size="sm" onClick={onPrint} className="w-full">
               <Printer className="h-3.5 w-3.5 mr-1.5" /> Print
+            </Button>
+            <Button type="button" variant="default" size="sm" onClick={() => onViewDetails(row)} className="w-full">
+              <Info className="h-3.5 w-3.5 mr-1.5" /> Details
             </Button>
           </div>
         </div>

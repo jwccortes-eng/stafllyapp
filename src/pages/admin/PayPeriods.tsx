@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Lock, Unlock, CalendarPlus, Send, EyeOff, ChevronDown, ChevronRight, FileSpreadsheet, RefreshCw, Clock, CheckCircle2, AlertCircle, Upload, ShieldAlert } from "lucide-react";
+import { Plus, Lock, Unlock, CalendarPlus, Send, EyeOff, ChevronDown, ChevronRight, FileSpreadsheet, RefreshCw, Clock, CheckCircle2, AlertCircle, Upload, ShieldAlert, Scale, Search } from "lucide-react";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { ErrorBlock } from "@/components/ui/error-block";
 import { PageHeader } from "@/components/ui/page-header";
@@ -24,6 +24,7 @@ import PayrollSequenceSettings from "@/components/payroll/PayrollSequenceSetting
 import PeriodReconciliationCell from "@/components/payroll/PeriodReconciliationCell";
 import PayrollPeriodSummaryDialog from "@/components/payroll/PayrollPeriodSummaryDialog";
 import HistoricalCloseoutBoard from "@/components/payroll/HistoricalCloseoutBoard";
+import WeeklyPayBreakdownDrawer from "@/components/payroll/WeeklyPayBreakdownDrawer";
 import ReviewPolicyBoard from "@/components/payroll/ReviewPolicyBoard";
 import { usePayrollSequenceConfig, formatSequence } from "@/hooks/usePayrollSequenceConfig";
 import { Settings } from "lucide-react";
@@ -77,6 +78,7 @@ export default function PayPeriods() {
   const [periodMeta, setPeriodMeta] = useState<Record<string, { hasImports: boolean; hasBasePay: boolean }>>({});
   const [showSequenceConfig, setShowSequenceConfig] = useState(false);
   const [summaryPeriod, setSummaryPeriod] = useState<PayPeriod | null>(null);
+  const [tracePeriod, setTracePeriod] = useState<PayPeriod | null>(null);
   const { config: seqConfig } = usePayrollSequenceConfig();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -708,6 +710,26 @@ export default function PayPeriods() {
                                 <TooltipContent>{p.published_at ? "Retirar publicación" : "Publicar para empleados"}</TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button variant="ghost" size="icon" onClick={() => navigate(`/app/weekly-payroll-reconciliation?periodId=${p.id}`)}>
+                                    <Scale className="h-4 w-4 text-primary" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Reconciliation Report</TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button variant="ghost" size="icon" onClick={() => setTracePeriod(p)}>
+                                    <Search className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Trace Pay (breakdown)</TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -819,6 +841,15 @@ export default function PayPeriods() {
         onOpenChange={(o) => !o && setSummaryPeriod(null)}
         period={summaryPeriod}
         companyId={selectedCompanyId}
+      />
+
+      <WeeklyPayBreakdownDrawer
+        open={!!tracePeriod}
+        onClose={() => setTracePeriod(null)}
+        companyId={selectedCompanyId}
+        periodId={tracePeriod?.id ?? null}
+        periodLabel={tracePeriod?.sequence_number ? `#${tracePeriod.sequence_number}` : tracePeriod?.start_date ?? ""}
+        periodRange={tracePeriod ? `${tracePeriod.start_date} → ${tracePeriod.end_date}` : ""}
       />
     </div>
   );

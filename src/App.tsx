@@ -40,6 +40,7 @@ const UserManual = lazy(() => import("./pages/help/UserManual"));
 
 // Admin pages
 const PayPeriods = lazy(() => import("./pages/admin/PayPeriods"));
+const WeeklyPayrollReconciliation = lazy(() => import("./pages/admin/WeeklyPayrollReconciliation"));
 const ImportConnecteam = lazy(() => import("./pages/admin/ImportConnecteam"));
 const Concepts = lazy(() => import("./pages/admin/Concepts"));
 const Movements = lazy(() => import("./pages/admin/Movements"));
@@ -331,6 +332,7 @@ function App() {
                 <Route path="payroll-pilot-close" element={<CompanyRequiredGuard><PayrollPilotClose /></CompanyRequiredGuard>} />
                 <Route path="payroll-mappings" element={<CompanyRequiredGuard><PayrollMappings /></CompanyRequiredGuard>} />
                 <Route path="payroll-reconciliation" element={<CompanyRequiredGuard><PayrollReconciliation /></CompanyRequiredGuard>} />
+                <Route path="weekly-payroll-reconciliation" element={<CompanyRequiredGuard><WeeklyPayrollReconciliation /></CompanyRequiredGuard>} />
                 <Route path="compensation-adoption" element={<CompanyRequiredGuard><CompensationAdoption /></CompanyRequiredGuard>} />
                 <Route path="applications" element={<CompanyRequiredGuard><Applications /></CompanyRequiredGuard>} />
                 <Route path="application-settings" element={<CompanyRequiredGuard><ApplicationSettings /></CompanyRequiredGuard>} />
