@@ -407,9 +407,12 @@ export default function UnifiedPersonProfile() {
         key: "documents",
         label: "Documents",
         icon: FileText,
+        // Primary value reflects REQUIRED-doc readiness only (drives onboarding).
+        // Hint shows TOTAL employee_documents counts so admins can see new
+        // worker-portal uploads (pending) without misreading "Complete".
         value: readiness.missingDocuments.length === 0
-          ? "Complete"
-          : `${readiness.missingDocuments.length} missing`,
+          ? "Required complete"
+          : `${readiness.missingDocuments.length} required missing`,
         hint: docsCount.approved + docsCount.pending + docsCount.rejected > 0
           ? `${docsCount.approved} approved · ${docsCount.pending} pending`
           : undefined,
