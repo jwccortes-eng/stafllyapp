@@ -201,6 +201,14 @@ export default function PayReports() {
   const [rows, setRows] = useState<PayReportRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [openRow, setOpenRow] = useState<PayReportRow | null>(null);
+  const [breakdownRow, setBreakdownRow] = useState<PayReportRow | null>(null);
+  const [companyId, setCompanyId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!effectiveEmployeeId) return;
+    supabase.from("employees").select("company_id").eq("id", effectiveEmployeeId).maybeSingle()
+      .then(({ data }) => setCompanyId((data as any)?.company_id ?? null));
+  }, [effectiveEmployeeId]);
 
   // ----- Load -----
   useEffect(() => {
@@ -438,6 +446,17 @@ export default function PayReports() {
         onClose={() => setOpenRow(null)}
         onCopy={copySummary}
         onPrint={handlePrint}
+        onViewDetails={(r) => { setOpenRow(null); setBreakdownRow(r); }}
+      />
+
+      <WorkerPayBreakdownDialog
+        open={!!breakdownRow}
+        onClose={() => setBreakdownRow(null)}
+        companyId={companyId}
+        periodId={breakdownRow?.period.id ?? null}
+        employeeId={effectiveEmployeeId ?? null}
+        periodLabel={breakdownRow ? fmtRange(breakdownRow.period.start_date, breakdownRow.period.end_date) : ""}
+        isHistorical={breakdownRow?.is_historical_import ?? false}
       />
     </div>
   );
