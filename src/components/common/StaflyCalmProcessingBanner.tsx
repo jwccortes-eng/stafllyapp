@@ -190,11 +190,11 @@ export default function StaflyCalmProcessingBanner({
     <div
       {...ariaProps}
       className={cn(
-        "relative w-full overflow-hidden rounded-2xl",
+        "relative w-full overflow-hidden rounded-2xl print:hidden",
         "bg-gradient-to-br from-[#070b24] via-[#121a4a] to-[#3a1d63]",
         "border border-white/10",
         "shadow-[0_20px_60px_-20px_rgba(56,109,255,0.55),0_0_120px_-40px_rgba(150,80,255,0.4)_inset]",
-        fullScreen ? "max-w-lg" : "",
+        effectiveVariant === "overlay" ? "max-w-lg" : "",
         className
       )}
     >
