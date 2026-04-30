@@ -49,11 +49,12 @@ export default function AdminLayout() {
     canAccessAdminForCompany, canAccessPortalForCompany, getRoleForCompany,
     employeeId,
   } = useAuth();
-  const { companies, selectedCompanyId, setSelectedCompanyId, isModuleActive } = useCompany();
+  const { companies, selectedCompanyId, switchCompany, isModuleActive } = useCompany();
   const [collapsed, setCollapsed] = useState(() => {
     const saved = safeLocalStorage.getItem("sidebar-collapsed");
     return saved !== null ? saved === "true" : true;
   });
+  const [recoveringAdminCompanyId, setRecoveringAdminCompanyId] = useState<string | null>(null);
   const isMobile = useIsMobile();
   const location = useLocation();
   const [launcherOpen, setLauncherOpen] = useState(false);
@@ -65,6 +66,10 @@ export default function AdminLayout() {
   const effectiveRole = getRoleForCompany(selectedCompanyId);
   const canAccessAdminHere = canAccessAdminForCompany(selectedCompanyId);
   const canAccessPortalHere = canAccessPortalForCompany(selectedCompanyId);
+  const fallbackAdminCompanyId = useMemo(() => {
+    if (canAccessAdminHere) return null;
+    return companies.find((company) => canAccessAdminForCompany(company.id))?.id ?? null;
+  }, [canAccessAdminForCompany, canAccessAdminHere, companies]);
 
   const [badgeCounts, setBadgeCounts] = useState<Record<string, number>>({});
   useEffect(() => {
@@ -86,6 +91,32 @@ export default function AdminLayout() {
     return () => clearInterval(interval);
   }, [selectedCompanyId]);
 
+  useEffect(() => {
+    if (loading || !user) return;
+
+    if (
+      !canAccessAdminHere &&
+      fallbackAdminCompanyId &&
+      fallbackAdminCompanyId !== selectedCompanyId
+    ) {
+      setRecoveringAdminCompanyId(fallbackAdminCompanyId);
+      switchCompany(fallbackAdminCompanyId);
+      return;
+    }
+
+    if (recoveringAdminCompanyId && selectedCompanyId === recoveringAdminCompanyId) {
+      setRecoveringAdminCompanyId(null);
+    }
+  }, [
+    canAccessAdminHere,
+    fallbackAdminCompanyId,
+    loading,
+    recoveringAdminCompanyId,
+    selectedCompanyId,
+    switchCompany,
+    user,
+  ]);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -95,6 +126,20 @@ export default function AdminLayout() {
   }
 
   if (!user) return <Navigate to="/auth" replace />;
+
+  if (recoveringAdminCompanyId) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background px-6">
+        <div className="max-w-sm text-center space-y-3">
+          <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto" />
+          <p className="text-base font-semibold text-foreground">Restoring admin access</p>
+          <p className="text-sm text-muted-foreground">
+            Switching you to a company where you have admin permissions.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   // Hard tenant guard: a user that is admin in JKitchen but only employee in
   // Quality must NOT see admin shell while Quality is selected. Send them to
