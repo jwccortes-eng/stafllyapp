@@ -179,77 +179,7 @@ function DesktopTimeClockView() {
         </div>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <div className="flex items-center justify-between gap-3">
-          <TabsList className="w-auto">
-            <TabsTrigger value="live" className="gap-1.5 text-xs">
-              <Clock className="h-3.5 w-3.5" />
-              Live now
-            </TabsTrigger>
-            <TabsTrigger value="today" className="gap-1.5 text-xs">
-              <CalendarRange className="h-3.5 w-3.5" />
-              Today
-            </TabsTrigger>
-            <TabsTrigger value="timesheets" className="gap-1.5 text-xs">
-              <CalendarRange className="h-3.5 w-3.5" />
-              Timesheets
-            </TabsTrigger>
-            <TabsTrigger value="all" className="gap-1.5 text-xs">
-              <Users className="h-3.5 w-3.5" />
-              All workers
-            </TabsTrigger>
-          </TabsList>
-
-          {activeTab === "timesheets" && (
-            <ToggleGroup type="single" value={timesheetMode} onValueChange={(v) => v && setTimesheetMode(v as "list" | "calendar")} size="sm">
-              <ToggleGroupItem value="list" aria-label="List view" className="h-8 w-8 p-0">
-                <List className="h-3.5 w-3.5" />
-              </ToggleGroupItem>
-              <ToggleGroupItem value="calendar" aria-label="Calendar view" className="h-8 w-8 p-0">
-                <CalendarIcon className="h-3.5 w-3.5" />
-              </ToggleGroupItem>
-            </ToggleGroup>
-          )}
-        </div>
-
-        <TabsContent value="live" className="mt-4">
-          <TimeClockCommandView />
-        </TabsContent>
-        <TabsContent value="today" className="mt-4">
-          <TodayView />
-        </TabsContent>
-        <TabsContent value="timesheets" className="mt-4">
-          {timesheetMode === "list" ? <TimesheetView /> : <MonthClockView />}
-        </TabsContent>
-        <TabsContent value="all" className="mt-4">
-          <div className="rounded-2xl border border-border/60 bg-card shadow-sm p-8 flex flex-col items-center text-center gap-4">
-            <div className="h-12 w-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center">
-              <Users className="h-5 w-5" />
-            </div>
-            <div className="space-y-1 max-w-md">
-              <h3 className="font-heading text-lg font-semibold tracking-tight">All workers directory</h3>
-              <p className="text-sm text-muted-foreground">
-                Time Clock focuses on live attendance and exceptions. To browse the full worker roster,
-                use the Workers module — it has search, filters, profiles and data quality.
-              </p>
-            </div>
-            <div className="flex flex-wrap items-center justify-center gap-2">
-              <Button size="sm" className="h-9 text-xs gap-1.5" onClick={() => navigate("/app/workers")}>
-                Open Workers
-                <ArrowRight className="h-3.5 w-3.5" />
-              </Button>
-              <Button variant="outline" size="sm" className="h-9 text-xs gap-1.5" onClick={() => setActiveTab("today")}>
-                <CalendarRange className="h-3.5 w-3.5" />
-                View Today entries
-              </Button>
-              <Button variant="outline" size="sm" className="h-9 text-xs gap-1.5" onClick={() => setActiveTab("live")}>
-                <Clock className="h-3.5 w-3.5" />
-                Back to Live now
-              </Button>
-            </div>
-          </div>
-        </TabsContent>
-      </Tabs>
+      <TimeClockCommandView />
 
       {/* Audit trail */}
       <div className="mt-8">
