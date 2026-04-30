@@ -24,6 +24,12 @@ export type RiskKey =
   | "system_placeholder"
   | "missing_location"
   | "inactive_with_payroll"
+  // Profile completeness — Phase 2 actionable signals.
+  | "missing_phone"
+  | "missing_email"
+  | "missing_photo"
+  | "missing_emergency_contact"
+  | "portal_not_active"
   // Document compliance risks (only set when document signals are provided).
   | "missing_required_document"
   | "pending_document_review"
