@@ -24,6 +24,7 @@ import PayrollSequenceSettings from "@/components/payroll/PayrollSequenceSetting
 import PeriodReconciliationCell from "@/components/payroll/PeriodReconciliationCell";
 import PayrollPeriodSummaryDialog from "@/components/payroll/PayrollPeriodSummaryDialog";
 import HistoricalCloseoutBoard from "@/components/payroll/HistoricalCloseoutBoard";
+import ReviewPolicyBoard from "@/components/payroll/ReviewPolicyBoard";
 import { usePayrollSequenceConfig, formatSequence } from "@/hooks/usePayrollSequenceConfig";
 import { Settings } from "lucide-react";
 
@@ -522,6 +523,8 @@ export default function PayPeriods() {
         companyId={selectedCompanyId}
         onOpenSummary={(p) => setSummaryPeriod(p)}
       />
+
+      <ReviewPolicyBoard companyId={selectedCompanyId} />
 
       <div className="flex items-center justify-between gap-2 mb-2">
         <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">All Periods</h2>
