@@ -74,6 +74,8 @@ import { BulkActivationCampaignDialog } from "@/components/employee/BulkActivati
 import { useOnboardingConfig } from "@/hooks/useOnboardingConfig";
 import { ModuleSettingsSheet } from "@/components/settings/ModuleSettingsSheet";
 import type { SettingsSection } from "@/components/settings/ModuleSettingsSheet";
+import DataQualityRiskPanel, { WorkerRiskTags } from "@/components/employee/DataQualityRiskPanel";
+import { analyzeEmployeeRisks, type RiskKey } from "@/lib/data-quality-risks";
 
 // Fields that only owner/admin can see
 const SENSITIVE_FIELD_KEYS = new Set([
@@ -235,6 +237,7 @@ export default function Employees() {
     status: "active",
     role: "all",
     group: "all",
+    risk: "all",
   });
   const search = urlFilters.q;
   const setSearch = (v: string) => setFilter({ q: v });
@@ -245,6 +248,8 @@ export default function Employees() {
   const setFilterRole = (v: string) => setFilter({ role: v });
   const filterGroup = urlFilters.group;
   const setFilterGroup = (v: string) => setFilter({ group: v });
+  const riskFilter = (urlFilters.risk as RiskKey | "all") || "all";
+  const setRiskFilter = (v: RiskKey | "all") => setFilter({ risk: v });
 
   // Persisted alphabetical sort by default; users can flip it.
   const { sort, onSort, directionFor } = useSortPreference<"name" | "code" | "role" | "last_activity">(
@@ -773,12 +778,16 @@ export default function Employees() {
     }
   };
 
+  // Risk analysis (read-only). Computed once per employees snapshot.
+  const riskAnalysis = useMemo(() => analyzeEmployeeRisks(employees), [employees]);
+
   const baseFiltered = employees.filter((e) => {
     const haystack = `${e.first_name ?? ""} ${e.last_name ?? ""} ${e.email ?? ""} ${e.phone_number ?? ""} ${e.employer_identification ?? ""}`.toLowerCase();
     const matchesSearch = haystack.includes(search.toLowerCase());
     const matchesRole = filterRole === "all" || e.employee_role === filterRole;
     const matchesGroup = filterGroup === "all" || e.groups === filterGroup;
-    return matchesSearch && matchesStatusTab(e, statusTab) && matchesRole && matchesGroup;
+    const matchesRisk = riskFilter === "all" || (riskAnalysis.byId.get(e.id)?.includes(riskFilter) ?? false);
+    return matchesSearch && matchesStatusTab(e, statusTab) && matchesRole && matchesGroup && matchesRisk;
   });
 
   // Persisted sort applied to the filtered list.
@@ -803,8 +812,8 @@ export default function Employees() {
     return 0;
   });
 
-  const activeFilterCount = [filterRole !== "all", filterGroup !== "all"].filter(Boolean).length;
-  const clearFilters = () => { setFilterRole("all"); setFilterGroup("all"); };
+  const activeFilterCount = [filterRole !== "all", filterGroup !== "all", riskFilter !== "all"].filter(Boolean).length;
+  const clearFilters = () => { setFilterRole("all"); setFilterGroup("all"); setRiskFilter("all"); };
 
   // When the user searches and gets 0 results in the current tab, but there ARE
   // matches in other tabs, surface that so they don't think the employee is missing.
@@ -908,6 +917,7 @@ export default function Employees() {
   const activeChips: ActiveFilterChip[] = [
     ...(filterRole !== "all" ? [{ key: "role", label: <>Role: <strong className="ml-0.5">{formatDisplayText(filterRole, "label")}</strong></>, onRemove: () => setFilterRole("all") }] : []),
     ...(filterGroup !== "all" ? [{ key: "group", label: <>Group: <strong className="ml-0.5">{filterGroup}</strong></>, onRemove: () => setFilterGroup("all") }] : []),
+    ...(riskFilter !== "all" ? [{ key: "risk", label: <>Risk: <strong className="ml-0.5">{riskFilter.replace(/_/g, " ")}</strong></>, onRemove: () => setRiskFilter("all") }] : []),
   ];
 
   return (
@@ -1192,6 +1202,15 @@ export default function Employees() {
         })}
       </div>
 
+      {/* ─── Data Quality Risk Panel (Phase 1, read-only) ─── */}
+      {isPrivileged && employees.length > 0 && (
+        <DataQualityRiskPanel
+          employees={employees}
+          riskFilter={riskFilter}
+          onRiskFilterChange={setRiskFilter}
+        />
+      )}
+
       {/* ─── Premium Filter Bar ─── */}
       <PremiumFilterBar
         search={search}
@@ -1357,8 +1376,10 @@ export default function Employees() {
                 )}
               >
                 <PremiumAvatar firstName={e.first_name} lastName={e.last_name} avatarUrl={e.avatar_url} size="sm" status={status} />
-                <span className="text-xs font-semibold flex-1 truncate">{formatPersonName(`${e.first_name} ${e.last_name}`)}</span>
-                {e.employer_identification && <span className="text-[10px] font-mono text-muted-foreground hidden sm:inline">#{e.employer_identification}</span>}
+                <div className="flex-1 min-w-0">
+                  <span className="text-xs font-semibold truncate block">{formatPersonName(`${e.first_name} ${e.last_name}`)}</span>
+                  <WorkerRiskTags risks={riskAnalysis.byId.get(e.id) ?? []} max={2} className="mt-0.5" />
+                </div>
                 {e.phone_number && <span className="text-[10px] text-muted-foreground hidden md:inline">{e.phone_number}</span>}
                 {isDriver(e) && <Car className="h-3 w-3 text-sky-500 shrink-0" aria-label="Driver" />}
                 <EmpStatusBadge employee={e} invitation={invitations[e.id]} />
@@ -1391,6 +1412,7 @@ export default function Employees() {
                   <PremiumAvatar firstName={e.first_name} lastName={e.last_name} avatarUrl={e.avatar_url} size="lg" status={status} />
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-bold truncate leading-tight">{formatPersonName(`${e.first_name} ${e.last_name}`)}</p>
+                    <WorkerRiskTags risks={riskAnalysis.byId.get(e.id) ?? []} max={2} className="mt-1" />
                     {e.employee_role && <span className="inline-block mt-0.5 px-1.5 py-0.5 rounded text-[9px] font-semibold bg-primary/8 text-primary">{formatDisplayText(e.employee_role, "label")}</span>}
                     <div className="mt-1.5 space-y-0.5">
                       {e.phone_number && <p className="text-[10px] text-muted-foreground truncate flex items-center gap-1"><Phone className="h-2.5 w-2.5" />{e.phone_number}</p>}
@@ -1527,9 +1549,10 @@ export default function Employees() {
                     <EmployeeAvatar firstName={e.first_name ?? ""} lastName={e.last_name ?? ""} avatarUrl={e.avatar_url} gender={e.gender} size="sm" />
                   </TableCell>
                   <TableCell className="py-1">
-                    <div className="leading-none">
+                    <div className="leading-tight">
                       <span className="text-xs font-semibold">{formatPersonName(`${e.first_name} ${e.last_name}`)}</span>
                       <span className="sm:hidden block text-[10px] text-muted-foreground mt-0.5">{e.phone_number || e.email || ""}</span>
+                      <WorkerRiskTags risks={riskAnalysis.byId.get(e.id) ?? []} max={3} className="mt-1" />
                     </div>
                   </TableCell>
                   {visibleColumns.includes("employer_identification") && (

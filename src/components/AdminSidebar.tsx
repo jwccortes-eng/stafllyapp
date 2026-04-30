@@ -226,7 +226,7 @@ export default function AdminSidebar() {
               )} />
             )}
             {collapsed && badge > 0 && !locked && (
-              <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-destructive" />
+              <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-rose-400/80 ring-2 ring-sidebar/80" />
             )}
           </div>
           {!collapsed && (
@@ -238,8 +238,8 @@ export default function AdminSidebar() {
                 </span>
               )}
               {!locked && badge > 0 && (
-                <span className="ml-auto shrink-0 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-destructive/20 text-destructive text-[10px] font-bold tabular-nums px-1">
-                  {badge > 99 ? "99+" : badge}
+                <span className="ml-auto shrink-0 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-rose-50 text-rose-600 border border-rose-100 text-[10px] font-semibold tabular-nums px-1.5 dark:bg-rose-500/15 dark:text-rose-300 dark:border-rose-500/20">
+                  {badge > 9 ? "9+" : badge}
                 </span>
               )}
             </>
@@ -288,8 +288,8 @@ export default function AdminSidebar() {
           </span>
           <div className="flex items-center gap-1.5">
             {!isOpen && sectionBadge > 0 && (
-              <span className="min-w-[16px] h-[16px] flex items-center justify-center rounded-full bg-destructive/20 text-destructive text-[9px] font-bold px-1 tabular-nums">
-                {sectionBadge}
+              <span className="min-w-[16px] h-[16px] flex items-center justify-center rounded-full bg-rose-50 text-rose-600 border border-rose-100 text-[9px] font-semibold px-1.5 tabular-nums dark:bg-rose-500/15 dark:text-rose-300 dark:border-rose-500/20">
+                {sectionBadge > 9 ? "9+" : sectionBadge}
               </span>
             )}
             <ChevronDown className={cn(
@@ -310,8 +310,8 @@ export default function AdminSidebar() {
       data-stafly-sidebar
       className={cn(
         "fixed inset-y-0 left-0 z-30 flex flex-col transition-all duration-300 ease-in-out",
-        "border-r border-sidebar-border/60 dark",
-        "bg-sidebar text-sidebar-foreground",
+        "border-r border-sidebar-border/70 shadow-sm",
+        "bg-sidebar/85 backdrop-blur-xl text-sidebar-foreground",
         collapsed ? "w-[68px]" : "w-[256px]",
       )}
     >
