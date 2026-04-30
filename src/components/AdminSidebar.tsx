@@ -310,8 +310,8 @@ export default function AdminSidebar() {
       data-stafly-sidebar
       className={cn(
         "fixed inset-y-0 left-0 z-30 flex flex-col transition-all duration-300 ease-in-out",
-        "border-r border-sidebar-border/60 dark",
-        "bg-sidebar text-sidebar-foreground",
+        "border-r border-sidebar-border/70 shadow-sm",
+        "bg-sidebar/85 backdrop-blur-xl text-sidebar-foreground",
         collapsed ? "w-[68px]" : "w-[256px]",
       )}
     >
