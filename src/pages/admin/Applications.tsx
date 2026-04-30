@@ -215,9 +215,54 @@ export default function Applications() {
     },
   });
 
-  const handleApprove = async () => {
+  const normalizePhoneDigits = (raw: string | null | undefined) => {
+    if (!raw) return "";
+    let d = String(raw).replace(/\D/g, "");
+    if (d.startsWith("00")) d = d.slice(2);
+    if (d.length === 11 && d.startsWith("1")) d = d.slice(1);
+    return d;
+  };
+
+  const handleApprove = async (overrides?: { skipInvite?: boolean }) => {
     if (!selected) return;
+    setApprovalError(null);
+    setApprovalSuccess(null);
+
+    const sendInvite = overrides?.skipInvite ? false : approvalConfig.sendInvite;
+    const channel = approvalConfig.inviteChannel;
+    const phoneDigits = normalizePhoneDigits(selected.phone);
+    const hasPhone = phoneDigits.length >= 10;
+    const hasEmail = !!selected.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(selected.email);
+
+    // Pre-flight validations (frontend safety net — backend also validates)
+    if (sendInvite) {
+      if ((channel === "whatsapp" || channel === "sms") && !hasPhone) {
+        setApprovalError({
+          code: "missing_phone",
+          message: "Este applicant no tiene teléfono válido para WhatsApp/SMS. Aprueba sin invitación o cambia el canal.",
+        });
+        return;
+      }
+      if (channel === "email" && !hasEmail) {
+        setApprovalError({
+          code: "missing_email",
+          message: "Este applicant no tiene email válido. Aprueba sin invitación o cambia el canal.",
+        });
+        return;
+      }
+    }
+
     setApproving(true);
+    // Safe debug log (no PII secrets)
+    console.info("[approve-application] submitting", {
+      application_id: selected.id,
+      company_id: selectedCompanyId,
+      send_invite: sendInvite,
+      invite_channel: channel,
+      has_phone: hasPhone,
+      has_email: hasEmail,
+    });
+
     try {
       const { data, error } = await supabase.functions.invoke("approve-application", {
         body: {
@@ -225,29 +270,98 @@ export default function Applications() {
           role: approvalConfig.role,
           portal_enabled: approvalConfig.portalEnabled,
           pin_enabled: approvalConfig.pinEnabled,
-          send_invite: approvalConfig.sendInvite,
-          invite_channel: approvalConfig.inviteChannel,
+          send_invite: sendInvite,
+          invite_channel: channel,
           initial_status: approvalConfig.initialStatus,
           admin_notes: adminNotes || null,
           link_existing_employee_id: existingMatches.length === 1 ? existingMatches[0].id : null,
         },
       });
 
-      if (error) throw new Error(error.message || "Approval failed");
-      if (data?.error) throw new Error(data.error);
+      // Network/transport error
+      if (error && !data) {
+        setApprovalError({
+          code: "network_error",
+          message: "No se pudo contactar el servidor. Reintenta en unos segundos.",
+          details: error.message,
+        });
+        return;
+      }
 
+      // Structured response (always 200 from edge function now)
+      if (data && data.success === false) {
+        setApprovalError({
+          code: data.code,
+          message: data.message || "No se pudo completar la aprobación.",
+          details: data.details,
+        });
+        return;
+      }
+
+      if (!data || !data.success) {
+        setApprovalError({
+          code: "unknown_error",
+          message: "Respuesta inesperada del servidor.",
+          details: JSON.stringify(data ?? {}).slice(0, 300),
+        });
+        return;
+      }
+
+      // Success path
       const msgs: string[] = ["✅ Solicitud aprobada"];
-      if (data.created_new) msgs.push("Nuevo empleado creado");
-      if (data.linked_existing) msgs.push("Vinculado a empleado existente");
-      if (data.invite_sent) msgs.push("Invitación enviada");
+      if (data.created_new) msgs.push("nuevo empleado creado");
+      if (data.linked_existing) msgs.push("vinculado a empleado existente");
+      if (data.invite_logged) msgs.push("invitación registrada");
       toast.success(msgs.join(" · "));
+
+      // Build manual fallback link if invite was requested
+      let waUrl: string | null = null;
+      let copyText: string | null = null;
+      if (data.invite_requested) {
+        const baseUrl = (typeof window !== "undefined" ? window.location.origin : "https://staflyapps.com");
+        const link = data.invite_token
+          ? `${baseUrl}/activate/${data.invite_token}`
+          : `${baseUrl}/login`;
+        const message =
+          `Hola ${selected.first_name}, tu solicitud en ${selectedCompany?.name ?? "Stafly"} fue aprobada. ` +
+          `Activa tu acceso aquí: ${link}` +
+          (approvalConfig.pinEnabled && phoneDigits.length >= 4
+            ? `\nTu PIN inicial son los últimos 4 dígitos de tu teléfono.`
+            : "");
+        copyText = message;
+        if (hasPhone) {
+          const phoneCC = `1${phoneDigits}`;
+          waUrl = `https://wa.me/${phoneCC}?text=${encodeURIComponent(message)}`;
+        }
+      }
+
+      // Show inline success with manual fallback if invite did not actually go out
+      // (we never auto-send WhatsApp from the server today)
+      if (data.invite_requested && (channel === "whatsapp" || channel === "sms")) {
+        setApprovalSuccess({
+          message:
+            data.invite_skipped_reason
+              ? `Empleado aprobado, pero la invitación automática no se envió (${data.invite_skipped_reason}). Envíala manualmente.`
+              : "Empleado aprobado. Envía la invitación manualmente por WhatsApp.",
+          waUrl,
+          copyText,
+        });
+      } else {
+        // Email or no invite requested → close immediately
+        queryClient.invalidateQueries({ queryKey: ["job-applications"] });
+        queryClient.invalidateQueries({ queryKey: ["application-events"] });
+        setShowApprovalModal(false);
+        setSelected(null);
+      }
 
       queryClient.invalidateQueries({ queryKey: ["job-applications"] });
       queryClient.invalidateQueries({ queryKey: ["application-events"] });
-      setShowApprovalModal(false);
-      setSelected(null);
     } catch (err: any) {
-      toast.error(err.message || "Error al aprobar solicitud");
+      console.error("[approve-application] unexpected", err);
+      setApprovalError({
+        code: "unknown_error",
+        message: err?.message || "Error inesperado al aprobar.",
+      });
     } finally {
       setApproving(false);
     }
