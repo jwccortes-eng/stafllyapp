@@ -105,6 +105,8 @@ export default function Applications() {
   const [approvalConfig, setApprovalConfig] = useState({ role: "employee", portalEnabled: true, pinEnabled: true, sendInvite: false, inviteChannel: "whatsapp", initialStatus: "active" });
   const [detailTab, setDetailTab] = useState("summary");
   const [approving, setApproving] = useState(false);
+  const [approvalError, setApprovalError] = useState<{ code?: string; message: string; details?: string } | null>(null);
+  const [approvalSuccess, setApprovalSuccess] = useState<{ message: string; waUrl?: string | null; copyText?: string | null } | null>(null);
 
   const { data: applications = [], isLoading } = useQuery({
     queryKey: ["job-applications", selectedCompanyId],
