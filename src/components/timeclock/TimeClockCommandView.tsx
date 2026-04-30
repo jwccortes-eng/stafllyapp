@@ -214,6 +214,42 @@ export default function TimeClockCommandView() {
     });
   }, [liveRows, search]);
 
+  // Today's window
+  const todayStart = useMemo(() => {
+    const d = new Date(now);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }, [now]);
+  const todayEnd = useMemo(() => {
+    const d = new Date(now);
+    d.setHours(23, 59, 59, 999);
+    return d;
+  }, [now]);
+
+  /**
+   * Tracked minutes attributable to TODAY.
+   * - Closed: overlap of [clock_in, clock_out] with [todayStart, todayEnd]
+   * - Open started today: overlap of [clock_in, min(now, todayEnd)] with today
+   * - Open started before today: 0 (treated as stale alert, not today's hours)
+   */
+  const getTrackedMinutesToday = (e: TimeEntry): number => {
+    if (!e.clock_in) return 0;
+    const ci = new Date(e.clock_in);
+    let endRef: Date;
+    if (e.clock_out) {
+      endRef = new Date(e.clock_out);
+    } else {
+      if (ci < todayStart) return 0; // stale open clock — excluded
+      endRef = now < todayEnd ? now : todayEnd;
+    }
+    const startMs = Math.max(ci.getTime(), todayStart.getTime());
+    const endMs = Math.min(endRef.getTime(), todayEnd.getTime());
+    if (endMs <= startMs) return 0;
+    const rawMin = Math.floor((endMs - startMs) / 60000);
+    const breakMin = Math.max(0, Math.min(e.break_minutes ?? 0, rawMin));
+    return Math.max(0, rawMin - breakMin);
+  };
+
   // Today rollup grouped by worker
   const todayRollup = useMemo(() => {
     const map = new Map<string, { employee: Employee; entries: TimeEntry[]; trackedMin: number; firstIn: Date | null; lastOut: Date | null; hasOpen: boolean }>();
@@ -231,14 +267,14 @@ export default function TimeClockCommandView() {
       if (e.clock_out) {
         const co = new Date(e.clock_out);
         if (!row.lastOut || co > row.lastOut) row.lastOut = co;
-        row.trackedMin += differenceInMinutes(co, ci) - (e.break_minutes ?? 0);
       } else {
         row.hasOpen = true;
-        row.trackedMin += differenceInMinutes(now, ci);
       }
+      row.trackedMin += getTrackedMinutesToday(e);
     });
     return Array.from(map.values()).sort((a, b) => b.trackedMin - a.trackedMin);
-  }, [entries, empMap, now]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [entries, empMap, now, todayStart, todayEnd]);
 
   // Week rollup
   const weekRollup = useMemo(() => {
@@ -321,7 +357,7 @@ export default function TimeClockCommandView() {
         <KpiCard
           icon={ClipboardCheck}
           tone="muted"
-          label="Hours today"
+          label="Tracked today"
           value={formatHoursShort(kpis.totalMinutesToday)}
         />
       </div>
