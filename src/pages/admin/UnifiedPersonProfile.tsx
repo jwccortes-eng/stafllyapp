@@ -47,7 +47,6 @@ import {
   Phone,
   Mail,
   MapPin,
-  Hash,
   Building2,
   Send,
   Pencil,
