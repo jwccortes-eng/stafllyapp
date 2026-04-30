@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Lock, Unlock, CalendarPlus, Send, EyeOff, ChevronDown, ChevronRight, FileSpreadsheet, RefreshCw, Clock, CheckCircle2, AlertCircle, Upload, ShieldAlert } from "lucide-react";
+import { Plus, Lock, Unlock, CalendarPlus, Send, EyeOff, ChevronDown, ChevronRight, FileSpreadsheet, RefreshCw, Clock, CheckCircle2, AlertCircle, Upload, ShieldAlert, Scale, Search } from "lucide-react";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { ErrorBlock } from "@/components/ui/error-block";
 import { PageHeader } from "@/components/ui/page-header";
@@ -77,6 +77,7 @@ export default function PayPeriods() {
   const [periodMeta, setPeriodMeta] = useState<Record<string, { hasImports: boolean; hasBasePay: boolean }>>({});
   const [showSequenceConfig, setShowSequenceConfig] = useState(false);
   const [summaryPeriod, setSummaryPeriod] = useState<PayPeriod | null>(null);
+  const [tracePeriod, setTracePeriod] = useState<PayPeriod | null>(null);
   const { config: seqConfig } = usePayrollSequenceConfig();
   const { toast } = useToast();
   const navigate = useNavigate();
