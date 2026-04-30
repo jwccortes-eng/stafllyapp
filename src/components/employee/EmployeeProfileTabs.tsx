@@ -462,9 +462,40 @@ function DocumentsTab({ employee, companyId }: { employee: EmployeeRecord; compa
     const marker = "/storage/v1/object/public/employee-documents/";
     const idx = raw.indexOf(marker);
     const path = idx !== -1 ? raw.slice(idx + marker.length) : raw;
-    if (path) await supabase.storage.from("employee-documents").remove([path]).catch(() => {});
-    await (supabase.from("employee_documents" as any) as any).delete().eq("id", doc.raw_id);
-    toast({ title: "Document deleted" });
+    let storageOk = true;
+    if (path) {
+      const { error: rmErr } = await supabase.storage.from("employee-documents").remove([path]);
+      if (rmErr) storageOk = false;
+    }
+    const { error: delErr } = await (supabase.from("employee_documents" as any) as any).delete().eq("id", doc.raw_id);
+    if (delErr) {
+      toast({ title: "Delete failed", description: delErr.message, variant: "destructive" });
+      return;
+    }
+    // Best-effort audit log for symmetry with approve/reject/replacement/upload
+    try {
+      const { data: auth } = await supabase.auth.getUser();
+      const userId = auth?.user?.id;
+      if (userId) {
+        await supabase.from("activity_log" as any).insert({
+          user_id: userId,
+          company_id: doc.company_id,
+          action: "document_deleted",
+          entity_type: "employee_document",
+          entity_id: doc.raw_id,
+          details: {
+            source_table: doc.source,
+            employee_id: doc.employee_id,
+            document_name: doc.name,
+            category: doc.category,
+            storage_cleanup_ok: storageOk,
+          },
+        } as any);
+      }
+    } catch { /* never block UX on audit */ }
+    toast({
+      title: storageOk ? "Document deleted" : "Document row deleted. Storage cleanup pending.",
+    });
     fetchDocs();
   };
 
