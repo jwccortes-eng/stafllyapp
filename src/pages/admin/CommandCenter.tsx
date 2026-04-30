@@ -725,6 +725,12 @@ function CompanyCommandCenter({
             </section>
           </div>
 
+          {/* Smart Action Queue — what needs attention today */}
+          <SmartActionQueue companyId={companyId} />
+
+          {/* Historical Payroll Closeout summary */}
+          <HistoricalPayrollCloseoutPanel companyId={companyId} />
+
           {/* Ecosystem */}
           <section className="space-y-3">
             <SectionHeader icon={Layers} title="Ecosistema" subtitle="Acceso rápido a tus módulos" />
