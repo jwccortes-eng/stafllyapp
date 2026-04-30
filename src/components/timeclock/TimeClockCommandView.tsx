@@ -25,7 +25,7 @@ import {
   Clock, AlertTriangle, Users, Activity, CalendarClock, CheckCircle2,
   Search, RefreshCw, ChevronRight, MapPin,
 } from "lucide-react";
-import { format, differenceInMinutes, formatDistanceToNowStrict } from "date-fns";
+import { format, differenceInMinutes } from "date-fns";
 import { enUS } from "date-fns/locale";
 import StaflyCalmProcessingBanner from "@/components/common/StaflyCalmProcessingBanner";
 import { cn } from "@/lib/utils";
