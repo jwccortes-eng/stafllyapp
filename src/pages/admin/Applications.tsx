@@ -675,7 +675,7 @@ export default function Applications() {
       </Sheet>
 
       {/* Approval Modal */}
-      <Dialog open={showApprovalModal} onOpenChange={setShowApprovalModal}>
+      <Dialog open={showApprovalModal} onOpenChange={(open) => { setShowApprovalModal(open); if (!open) { setApprovalError(null); setApprovalSuccess(null); } }}>
         <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
