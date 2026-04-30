@@ -20,6 +20,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import StaflyCalmProcessingBanner from "@/components/common/StaflyCalmProcessingBanner";
 import {
   Activity, Building2, Users, CalendarDays, Upload, Database,
   ShieldCheck, AlertTriangle, FileWarning, Hash, Sparkles,
@@ -329,6 +330,15 @@ function ControlTower({ displayName }: { displayName: string }) {
           </Button>
         </div>
       </div>
+
+      {/* ── Initial calm banner during first snapshot load ─────────── */}
+      {loading && !snapshot && (
+        <StaflyCalmProcessingBanner
+          title="Sincronizando el tablero"
+          message="Stafly está organizando la operación."
+          footerNote="Solo lectura · No modificamos datos."
+        />
+      )}
 
       {/* ── Snapshot grid ───────────────────────────────────────────── */}
       <SnapshotGrid loading={loading} snapshot={snapshot} />

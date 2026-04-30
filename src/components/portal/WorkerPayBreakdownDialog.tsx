@@ -6,8 +6,9 @@
  */
 import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Loader2, Info, Archive } from "lucide-react";
+import { Info, Archive } from "lucide-react";
 import { fetchWeeklyPayBreakdown, type WeeklyPayBreakdownSummary } from "@/lib/weekly-pay-breakdown";
+import StaflyCalmProcessingBanner from "@/components/common/StaflyCalmProcessingBanner";
 
 interface Props {
   open: boolean;
@@ -50,8 +51,12 @@ export default function WorkerPayBreakdownDialog({
           <DialogDescription>{periodLabel}</DialogDescription>
         </DialogHeader>
         {loading ? (
-          <div className="flex items-center justify-center py-10 text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin mr-2" /> Loading…
+          <div className="py-2">
+            <StaflyCalmProcessingBanner
+              title="Preparando tu reporte"
+              message="Estamos cargando tu pago final de forma segura."
+              footerNote="Tus datos solo son visibles para ti."
+            />
           </div>
         ) : !data ? (
           <p className="text-sm text-muted-foreground py-6 text-center">No data available.</p>

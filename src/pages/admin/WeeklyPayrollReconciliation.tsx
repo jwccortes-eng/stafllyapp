@@ -36,6 +36,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { writeExcelFile } from "@/lib/safe-xlsx";
+import StaflyCalmProcessingBanner from "@/components/common/StaflyCalmProcessingBanner";
 import {
   parseWeeklyPayrollFile,
   reconcile,
@@ -381,8 +382,12 @@ export default function WeeklyPayrollReconciliation() {
         </CardContent>
       </Card>
 
-      {loadingStafly && (
-        <div className="text-sm text-muted-foreground"><Loader2 className="inline h-4 w-4 animate-spin mr-1" /> Loading Stafly payroll…</div>
+      {(loadingStafly || parsing) && (
+        <StaflyCalmProcessingBanner
+          title="Validando payroll semanal"
+          message="Estamos comparando el archivo final contra Stafly. Todo está bien."
+          footerNote="Scheduled hours are not used for payment."
+        />
       )}
 
       {result && <SummaryGrid summary={result.summary} />}
