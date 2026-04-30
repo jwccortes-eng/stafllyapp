@@ -5,7 +5,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import AuditPanel from "@/components/audit/AuditPanel";
 import {
   Clock, CalendarRange, Upload, MoreHorizontal,
-  FileBarChart, AlertTriangle, GitCompareArrows, Settings,
+  AlertTriangle, GitCompareArrows, Settings,
   Monitor, Copy, List,
 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
