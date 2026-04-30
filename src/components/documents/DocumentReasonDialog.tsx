@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { AlertTriangle, Repeat2, Loader2 } from "lucide-react";
+import { acquireDocDialogLock } from "@/lib/document-dialog-suspend";
 
 export type DocumentReasonAction = "reject" | "replacement";
 
