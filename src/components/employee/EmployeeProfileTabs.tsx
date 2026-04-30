@@ -386,169 +386,203 @@ function TimeTab({ employee, companyId }: { employee: EmployeeRecord; companyId:
 /* ── Documents Tab ── */
 function DocumentsTab({ employee, companyId }: { employee: EmployeeRecord; companyId: string }) {
   const [w9, setW9] = useState<any>(null);
-  const [docs, setDocs] = useState<any[]>([]);
+  const [docs, setDocs] = useState<UnifiedDocument[]>([]);
   const [loading, setLoading] = useState(true);
-  const [uploading, setUploading] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const [reasonDialog, setReasonDialog] = useState<{
+    action: "reject" | "replacement"; doc: UnifiedDocument;
+  } | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const fetchDocs = async () => {
-    const [{ data: w9Data }, { data: docsData }, { data: onbDocsData }] = await Promise.all([
-      supabase.from("contractor_w9").select("id, status, legal_name, tax_classification, tin_last4, submitted_at, reviewed_at").eq("employee_id", employee.id).eq("company_id", companyId).maybeSingle(),
-      supabase.from("employee_documents" as any).select("*").eq("employee_id", employee.id).eq("company_id", companyId).order("created_at", { ascending: false }),
-      supabase.from("employee_onboarding_documents" as any).select("*").eq("employee_id", employee.id).eq("company_id", companyId).order("created_at", { ascending: false }),
+  const fetchDocs = useCallback(async () => {
+    const [{ data: w9Data }, unified] = await Promise.all([
+      supabase.from("contractor_w9")
+        .select("id, status, legal_name, tax_classification, tin_last4, submitted_at, reviewed_at")
+        .eq("employee_id", employee.id).eq("company_id", companyId).maybeSingle(),
+      fetchUnifiedDocuments(employee.id, companyId),
     ]);
-    // Normalize onboarding documents into the same shape DocumentsTab renders.
-    // These rows come from the activation wizard (driver_license, vehicle_registration, …).
-    const ONB_LABELS: Record<string, string> = {
-      driver_license: "Driver's license",
-      vehicle_registration: "Vehicle registration",
-    };
-    const normalizedOnb = ((onbDocsData as any[]) ?? []).map((d) => ({
-      id: `onb-${d.id}`,
-      name: d.file_name || ONB_LABELS[d.document_type] || d.document_type,
-      file_url: d.file_url,
-      file_size: null,
-      category: ONB_LABELS[d.document_type] || d.document_type,
-      created_at: d.created_at,
-      review_status: d.status === "approved" ? "approved" : d.status === "rejected" ? "rejected" : "pending",
-      rejection_reason: d.rejection_reason ?? null,
-      _readonly: true, // uploaded by the worker via activation; admins use VehicleDocumentsSection / dedicated review
-    }));
-    const merged = [...((docsData as any[]) ?? []), ...normalizedOnb].sort((a, b) =>
-      String(b.created_at ?? "").localeCompare(String(a.created_at ?? "")),
-    );
-    setW9(w9Data); setDocs(merged); setLoading(false);
-  };
-  useEffect(() => { fetchDocs(); }, [employee.id, companyId]);
+    setW9(w9Data);
+    setDocs(unified);
+    setLoading(false);
+  }, [employee.id, companyId]);
+  useEffect(() => { fetchDocs(); }, [fetchDocs]);
 
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files; if (!files?.length) return;
-    setUploading(true);
-    for (const file of Array.from(files)) {
-      const path = `${companyId}/${employee.id}/${Date.now()}_${file.name}`;
-      const { error: uploadError } = await supabase.storage.from("employee-documents").upload(path, file);
-      if (uploadError) { toast({ title: "Error", description: uploadError.message, variant: "destructive" }); continue; }
-      // Store the storage path (bucket is private; we sign on read).
-      await (supabase.from("employee_documents" as any) as any).insert({ employee_id: employee.id, company_id: companyId, name: file.name, file_url: path, file_type: file.type, file_size: file.size, category: "other" });
-    }
-    setUploading(false); if (fileRef.current) fileRef.current.value = ""; fetchDocs(); toast({ title: "Documentos subidos" });
+  const handleApprove = async (doc: UnifiedDocument) => {
+    setBusyId(doc.id);
+    const { error } = await approveDocument(doc);
+    setBusyId(null);
+    if (error) { toast({ title: "Error", description: error, variant: "destructive" }); return; }
+    toast({ title: "Document approved" });
+    fetchDocs();
   };
-  const handleDelete = async (doc: any) => {
-    // Recover the storage path whether the row stores a path or a legacy public URL.
+
+  const handleReasonConfirm = async (reason: string) => {
+    if (!reasonDialog) return;
+    const { doc, action } = reasonDialog;
+    setBusyId(doc.id);
+    const fn = action === "reject" ? rejectDocument : requestReplacement;
+    const { error } = await fn(doc, reason);
+    setBusyId(null);
+    setReasonDialog(null);
+    if (error) { toast({ title: "Error", description: error, variant: "destructive" }); return; }
+    toast({ title: action === "reject" ? "Document rejected" : "Replacement requested" });
+    fetchDocs();
+  };
+
+  const handleUploadConfirm = async (input: { file: File; category: string; approveOnUpload: boolean }) => {
+    const { error } = await uploadAdminDocument({
+      employeeId: employee.id,
+      companyId,
+      ...input,
+    });
+    if (error) { toast({ title: "Error", description: error, variant: "destructive" }); return; }
+    toast({ title: input.approveOnUpload ? "Document uploaded & approved" : "Document uploaded" });
+    setUploadOpen(false);
+    fetchDocs();
+  };
+
+  const handleDelete = async (doc: UnifiedDocument) => {
+    if (doc.source !== "employee_documents") {
+      toast({ title: "Cannot delete", description: "Onboarding documents are managed by the worker.", variant: "destructive" });
+      return;
+    }
+    if (!window.confirm(`Delete "${doc.name}"? This cannot be undone.`)) return;
     const raw: string = doc.file_url ?? "";
     const marker = "/storage/v1/object/public/employee-documents/";
     const idx = raw.indexOf(marker);
     const path = idx !== -1 ? raw.slice(idx + marker.length) : raw;
-    if (path) await supabase.storage.from("employee-documents").remove([path]);
-    await (supabase.from("employee_documents" as any) as any).delete().eq("id", doc.id);
+    if (path) await supabase.storage.from("employee-documents").remove([path]).catch(() => {});
+    await (supabase.from("employee_documents" as any) as any).delete().eq("id", doc.raw_id);
+    toast({ title: "Document deleted" });
     fetchDocs();
   };
 
-  // Admin: approve a document (clears any previous rejection_reason).
-  const handleApprove = async (doc: any) => {
-    const { error } = await (supabase.from("employee_documents" as any) as any)
-      .update({
-        review_status: "approved",
-        reviewed_at: new Date().toISOString(),
-        rejection_reason: null,
-      })
-      .eq("id", doc.id);
-    if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
-    toast({ title: "Documento aprobado" });
-    fetchDocs();
-  };
-
-  // Admin: reject a document with a required reason — surfaced to the worker.
-  const handleReject = async (doc: any) => {
-    const reason = window.prompt("Motivo del rechazo (visible para el trabajador):", doc.rejection_reason ?? "");
-    if (!reason || !reason.trim()) return;
-    const { error } = await (supabase.from("employee_documents" as any) as any)
-      .update({
-        review_status: "rejected",
-        reviewed_at: new Date().toISOString(),
-        rejection_reason: reason.trim(),
-      })
-      .eq("id", doc.id);
-    if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
-    toast({ title: "Documento rechazado" });
-    fetchDocs();
-  };
-
-  if (loading) return <div className="py-6 text-center text-[11px] text-muted-foreground">Cargando...</div>;
+  if (loading) return <div className="py-6 text-center text-[11px] text-muted-foreground">Loading...</div>;
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50">Documentos</h3>
-        <div><input ref={fileRef} type="file" multiple className="hidden" onChange={handleUpload} accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" /><Button size="sm" variant="outline" className="h-6 text-[10px] gap-1" onClick={() => fileRef.current?.click()} disabled={uploading}><Upload className="h-2.5 w-2.5" />{uploading ? "..." : "Subir"}</Button></div>
+        <h3 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">Documents</h3>
+        <Button size="sm" variant="outline" className="h-7 text-[11px] gap-1.5" onClick={() => setUploadOpen(true)}>
+          <Upload className="h-3 w-3" /> Upload
+        </Button>
       </div>
-      {docs.length > 0 && (
-        <div className="space-y-1.5">
-          {docs.map((doc: any) => {
-            const rs = (doc.review_status ?? "pending") as "pending" | "approved" | "rejected";
-            const badgeCls =
-              rs === "approved" ? "bg-earning/10 text-earning" :
-              rs === "rejected" ? "bg-deduction/10 text-deduction" :
-              "bg-warning/10 text-warning";
-            const badgeLabel = rs === "approved" ? "Aprobado" : rs === "rejected" ? "Rechazado" : "Pendiente";
+
+      {docs.length > 0 ? (
+        <div className="space-y-2">
+          {docs.map((doc) => {
+            const badge = stateBadge(doc.state);
+            const isBusy = busyId === doc.id;
+            const sourceLabel = doc.source === "employee_documents" ? "Admin upload" : "Onboarding";
             return (
-              <Card key={doc.id} className="rounded-lg border-border/30">
-                <CardContent className="p-2.5 space-y-1.5">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 min-w-0 flex-1">
-                      <FileText className="h-3.5 w-3.5 text-primary/50 shrink-0" />
+              <Card key={doc.id} className="rounded-xl border-border/40">
+                <CardContent className="p-3 space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                      <div className="h-8 w-8 rounded-lg bg-primary/[0.06] flex items-center justify-center shrink-0 mt-0.5">
+                        <FileText className="h-4 w-4 text-primary/70" />
+                      </div>
                       <div className="min-w-0">
-                        <p className="text-[11px] font-medium truncate">{doc.name}</p>
-                        <p className="text-[9px] text-muted-foreground">
-                          {doc.category ? `${doc.category} · ` : ""}
-                          {doc.file_size ? `${(doc.file_size / 1024).toFixed(0)} KB` : ""}
-                          {doc.created_at && ` · ${safeFormat(doc.created_at, "dd MMM yyyy")}`}
+                        <p className="text-[12px] font-medium truncate leading-tight">{doc.name}</p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">
+                          {doc.category} · <span className="text-muted-foreground/70">{sourceLabel}</span>
+                          {doc.file_size ? ` · ${(doc.file_size / 1024).toFixed(0)} KB` : ""}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground/70 mt-0.5">
+                          Uploaded {safeFormat(doc.created_at, "dd MMM yyyy")}
+                          {doc.reviewed_at ? ` · Reviewed ${safeFormat(doc.reviewed_at, "dd MMM yyyy")}` : ""}
                         </p>
                       </div>
                     </div>
-                    <Badge className={cn("text-[9px] shrink-0", badgeCls)}>{badgeLabel}</Badge>
-                    <div className="flex items-center gap-0.5 shrink-0">
-                      <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => openEmployeeDocument(doc.file_url)}><Download className="h-2.5 w-2.5" /></Button>
-                      {!doc._readonly && (
-                        <Button size="icon" variant="ghost" className="h-6 w-6 text-destructive" onClick={() => handleDelete(doc)}><Trash2 className="h-2.5 w-2.5" /></Button>
-                      )}
-                    </div>
+                    <Badge className={cn("text-[9px] shrink-0 whitespace-nowrap", badge.cls)}>{badge.label}</Badge>
                   </div>
-                  {rs === "rejected" && doc.rejection_reason && (
-                    <p className="text-[10px] text-deduction/90 leading-snug pl-5">
-                      <span className="font-bold">Motivo:</span> {doc.rejection_reason}
+
+                  {doc.state === "rejected" && doc.reason && (
+                    <p className="text-[10px] text-destructive/90 leading-snug pl-10">
+                      <span className="font-semibold">Reason:</span> {doc.reason}
                     </p>
                   )}
-                  {!doc._readonly && (
-                    <div className="flex items-center gap-1.5 pl-5">
-                      {rs !== "approved" && (
-                        <Button size="sm" variant="outline" className="h-6 text-[10px] gap-1 border-earning/30 text-earning hover:bg-earning/10" onClick={() => handleApprove(doc)}>
-                          Aprobar
-                        </Button>
-                      )}
-                      {rs !== "rejected" && (
-                        <Button size="sm" variant="outline" className="h-6 text-[10px] gap-1 border-deduction/30 text-deduction hover:bg-deduction/10" onClick={() => handleReject(doc)}>
-                          Rechazar
-                        </Button>
-                      )}
-                    </div>
+                  {doc.state === "replacement_requested" && doc.replacement_reason && (
+                    <p className="text-[10px] text-amber-700 dark:text-amber-400 leading-snug pl-10">
+                      <span className="font-semibold">Replacement:</span> {doc.replacement_reason}
+                    </p>
                   )}
+
+                  <div className="flex flex-wrap items-center gap-1.5 pl-10">
+                    <Button size="sm" variant="ghost" className="h-7 text-[10px] gap-1" onClick={() => openEmployeeDocument(doc.file_url)}>
+                      <ExternalLink className="h-3 w-3" /> View
+                    </Button>
+                    {doc.state !== "approved" && (
+                      <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1 border-emerald-500/30 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-400" onClick={() => handleApprove(doc)} disabled={isBusy}>
+                        <CheckCircle2 className="h-3 w-3" /> Approve
+                      </Button>
+                    )}
+                    {doc.state !== "rejected" && doc.state !== "replacement_requested" && (
+                      <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1 border-destructive/30 text-destructive hover:bg-destructive/10" onClick={() => setReasonDialog({ action: "reject", doc })} disabled={isBusy}>
+                        <AlertCircle className="h-3 w-3" /> Reject
+                      </Button>
+                    )}
+                    {doc.state !== "replacement_requested" && (
+                      <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1 border-amber-500/30 text-amber-700 hover:bg-amber-500/10 dark:text-amber-400" onClick={() => setReasonDialog({ action: "replacement", doc })} disabled={isBusy}>
+                        <Tag className="h-3 w-3" /> Request replacement
+                      </Button>
+                    )}
+                    {doc.source === "employee_documents" && (
+                      <Button size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground hover:text-destructive ml-auto" onClick={() => handleDelete(doc)} disabled={isBusy}>
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             );
           })}
         </div>
+      ) : (
+        <EmptyState icon={FileText} title="No documents" description="Upload an ID, license or signed form" compact />
       )}
-      {docs.length === 0 && !w9 && <EmptyState icon={FileText} title="Sin documentos" description="Sube identificaciones u otros" compact />}
-      <h3 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50">W-9</h3>
-      {!w9 ? <EmptyState icon={FileText} title="Sin W-9" description="No se ha enviado W-9" compact /> : (
+
+      <h3 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60 pt-2">W-9</h3>
+      {!w9 ? <EmptyState icon={FileText} title="No W-9" description="W-9 has not been submitted" compact /> : (
         <Card className="rounded-lg border-border/30"><CardContent className="p-3 space-y-1.5">
-          <div className="flex items-center justify-between"><p className="text-xs font-semibold">{w9.legal_name}</p><Badge className={cn("text-[9px]", w9.status === "approved" ? "bg-earning/10 text-earning" : w9.status === "submitted" ? "bg-warning/10 text-warning" : "bg-muted text-muted-foreground")}>{w9.status === "approved" ? "Aprobado" : w9.status === "submitted" ? "Enviado" : w9.status}</Badge></div>
-          <div className="grid grid-cols-2 gap-1.5 text-[10px]"><div><span className="text-muted-foreground">Clasificación:</span> {w9.tax_classification}</div><div><span className="text-muted-foreground">TIN:</span> ***{w9.tin_last4 ?? "—"}</div></div>
+          <div className="flex items-center justify-between"><p className="text-xs font-semibold">{w9.legal_name}</p><Badge className={cn("text-[9px]", w9.status === "approved" ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400" : w9.status === "submitted" ? "bg-amber-500/10 text-amber-700 dark:text-amber-400" : "bg-muted text-muted-foreground")}>{w9.status === "approved" ? "Approved" : w9.status === "submitted" ? "Submitted" : w9.status}</Badge></div>
+          <div className="grid grid-cols-2 gap-1.5 text-[10px]"><div><span className="text-muted-foreground">Classification:</span> {w9.tax_classification}</div><div><span className="text-muted-foreground">TIN:</span> ***{w9.tin_last4 ?? "—"}</div></div>
         </CardContent></Card>
+      )}
+
+      <DocumentUploadDialog open={uploadOpen} onOpenChange={setUploadOpen} onConfirm={handleUploadConfirm} />
+      {reasonDialog && (
+        <DocumentReasonDialog
+          open={!!reasonDialog}
+          onOpenChange={(o) => !o && setReasonDialog(null)}
+          action={reasonDialog.action}
+          documentName={reasonDialog.doc.name}
+          initialReason={
+            reasonDialog.action === "reject"
+              ? (reasonDialog.doc.reason ?? "")
+              : (reasonDialog.doc.replacement_reason ?? "")
+          }
+          onConfirm={handleReasonConfirm}
+        />
       )}
     </div>
   );
+}
+
+/** Premium status badge mapping (English). */
+function stateBadge(state: UnifiedDocument["state"]): { label: string; cls: string } {
+  switch (state) {
+    case "approved":
+      return { label: "Approved", cls: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400" };
+    case "rejected":
+      return { label: "Rejected", cls: "bg-destructive/10 text-destructive" };
+    case "replacement_requested":
+      return { label: "Replacement requested", cls: "bg-amber-500/10 text-amber-700 dark:text-amber-400" };
+    case "expired":
+      return { label: "Expired", cls: "bg-rose-500/10 text-rose-700 dark:text-rose-400" };
+    default:
+      return { label: "Pending review", cls: "bg-amber-500/10 text-amber-700 dark:text-amber-400" };
+  }
 }
 
 /* ── Activity Tab ── */
