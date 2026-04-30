@@ -1781,7 +1781,13 @@ export default function Employees() {
             <div className="p-4 space-y-3">
               {viewEmployee && (
                 <>
-                  <WorkerDataQualityReview employee={viewEmployee} companyEmployees={employees} />
+                  <WorkerDataQualityReview
+                    employee={viewEmployee}
+                    companyEmployees={employees}
+                    documentSignals={documentSignals}
+                    companyName={selectedCompany?.name}
+                    onJumpToTab={(tab) => setActiveTab(tab)}
+                  />
                   <WorkerDocumentsCompliance employee={viewEmployee} />
                 </>
               )}
