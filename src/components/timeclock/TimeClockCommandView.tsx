@@ -296,13 +296,7 @@ export default function TimeClockCommandView() {
   }
 
   if (loading && entries.length === 0) {
-    return (
-      <StaflyCalmProcessingBanner
-        title="Sincronizando asistencia"
-        message="Estamos organizando el estado del reloj en tiempo real. Todo está bien."
-        footerNote="Solo lectura · No modificamos time entries."
-      />
-    );
+    return <TimeCommandSkeleton />;
   }
 
   return (
