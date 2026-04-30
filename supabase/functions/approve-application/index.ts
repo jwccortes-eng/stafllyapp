@@ -1,44 +1,100 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
-import { corsHeaders } from "https://esm.sh/@supabase/supabase-js@2.95.0/cors";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
+type ResultCode =
+  | "ok"
+  | "unauthorized"
+  | "missing_input"
+  | "application_not_found"
+  | "already_approved"
+  | "employee_create_failed"
+  | "employee_update_failed"
+  | "application_update_failed"
+  | "rls_denied"
+  | "missing_phone"
+  | "missing_email"
+  | "whatsapp_not_configured"
+  | "invite_log_failed"
+  | "unknown_error";
+
+function jsonResponse(status: number, body: Record<string, unknown>) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+// Always return 200 so the supabase-js client surfaces our structured payload
+// (any non-2xx becomes "Edge Function returned a non-2xx status code").
+function structured(body: { success: boolean; code: ResultCode; message: string; [k: string]: unknown }) {
+  return jsonResponse(200, body);
+}
+
+function normalizePhone(raw: string | null | undefined): string {
+  if (!raw) return "";
+  let digits = String(raw).replace(/\D/g, "");
+  if (digits.startsWith("00")) digits = digits.slice(2);
+  if (digits.length === 11 && digits.startsWith("1")) digits = digits.slice(1);
+  return digits;
+}
+
+function isLikelyEmail(raw: string | null | undefined): boolean {
+  if (!raw) return false;
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(raw).trim());
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
+  const requestId = crypto.randomUUID();
+  let step = "init";
+
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return structured({ success: false, code: "unauthorized", message: "Falta token de autenticación.", request_id: requestId });
     }
 
-    // Create admin client for transactional operations
+    step = "init_clients";
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
-
-    // Create user client to verify caller
     const supabaseUser = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: authHeader } } }
+      { global: { headers: { Authorization: authHeader } } },
     );
 
-    const {
-      data: { user: caller },
-    } = await supabaseUser.auth.getUser();
-    if (!caller) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+    step = "auth_get_user";
+    const { data: userData, error: userErr } = await supabaseUser.auth.getUser();
+    if (userErr || !userData?.user) {
+      return structured({
+        success: false,
+        code: "unauthorized",
+        message: "Sesión inválida o expirada.",
+        details: userErr?.message,
+        request_id: requestId,
       });
     }
+    const caller = userData.user;
 
-    const body = await req.json();
+    step = "parse_body";
+    let body: any = {};
+    try {
+      body = await req.json();
+    } catch {
+      return structured({ success: false, code: "missing_input", message: "Body inválido.", request_id: requestId });
+    }
+
     const {
       application_id,
       role = "employee",
@@ -48,16 +104,14 @@ Deno.serve(async (req) => {
       invite_channel = "whatsapp",
       initial_status = "active",
       link_existing_employee_id = null,
-    } = body;
+      admin_notes = null,
+    } = body ?? {};
 
     if (!application_id) {
-      return new Response(JSON.stringify({ error: "application_id required" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return structured({ success: false, code: "missing_input", message: "Falta application_id.", request_id: requestId });
     }
 
-    // 1. Fetch application
+    step = "fetch_application";
     const { data: app, error: appErr } = await supabaseAdmin
       .from("job_applications")
       .select("*")
@@ -65,47 +119,67 @@ Deno.serve(async (req) => {
       .single();
 
     if (appErr || !app) {
-      return new Response(JSON.stringify({ error: "Application not found" }), {
-        status: 404,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      return structured({
+        success: false,
+        code: "application_not_found",
+        message: "No se encontró la solicitud.",
+        details: appErr?.message,
+        request_id: requestId,
       });
     }
 
     if (app.status === "approved") {
-      return new Response(
-        JSON.stringify({ error: "Application already approved", employee_id: app.approved_employee_id }),
-        { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return structured({
+        success: false,
+        code: "already_approved",
+        message: "Esta solicitud ya fue aprobada.",
+        employee_id: app.approved_employee_id ?? null,
+        request_id: requestId,
+      });
     }
 
     const companyId = app.company_id;
-    const phone = app.phone?.replace(/\D/g, "") || "";
-    const email = app.email?.toLowerCase().trim() || null;
+    const phone = normalizePhone(app.phone);
+    const email = app.email ? String(app.email).toLowerCase().trim() : null;
     const events: string[] = [];
     let employeeId: string | null = null;
     let linkedExisting = false;
     let createdNew = false;
-    let inviteSent = false;
 
-    // Log start event
+    // Pre-flight invite validation — never block approval, just downgrade send_invite
+    let effectiveSendInvite = !!send_invite;
+    let inviteSkippedReason: ResultCode | null = null;
+    if (effectiveSendInvite) {
+      if (invite_channel === "whatsapp" || invite_channel === "sms") {
+        if (!phone || phone.length < 10) {
+          effectiveSendInvite = false;
+          inviteSkippedReason = "missing_phone";
+        }
+      } else if (invite_channel === "email") {
+        if (!isLikelyEmail(email)) {
+          effectiveSendInvite = false;
+          inviteSkippedReason = "missing_email";
+        }
+      }
+    }
+
+    step = "log_started";
     await supabaseAdmin.from("application_events").insert({
       application_id,
       event_type: "approval_started",
-      event_data: { role, portal_enabled, pin_enabled, send_invite, initial_status },
+      event_data: { role, portal_enabled, pin_enabled, send_invite, effective_send_invite: effectiveSendInvite, invite_channel, initial_status, request_id: requestId },
       created_by: caller.id,
     });
-    events.push("approval_started");
 
-    // 2. Identity resolution — find existing employee in this company
+    // --- Identity resolution ---
+    step = "identity_resolution";
     if (link_existing_employee_id) {
-      // Admin explicitly chose to link
       const { data: existingEmp } = await supabaseAdmin
         .from("employees")
         .select("id, user_id, is_active")
         .eq("id", link_existing_employee_id)
         .eq("company_id", companyId)
-        .single();
-
+        .maybeSingle();
       if (existingEmp) {
         employeeId = existingEmp.id;
         linkedExisting = true;
@@ -114,7 +188,6 @@ Deno.serve(async (req) => {
     }
 
     if (!employeeId && phone) {
-      // Try match by phone in same company
       const { data: phoneMatch } = await supabaseAdmin
         .from("employees")
         .select("id, user_id, is_active")
@@ -122,7 +195,6 @@ Deno.serve(async (req) => {
         .eq("phone_number", phone)
         .limit(1)
         .maybeSingle();
-
       if (phoneMatch) {
         employeeId = phoneMatch.id;
         linkedExisting = true;
@@ -131,7 +203,6 @@ Deno.serve(async (req) => {
     }
 
     if (!employeeId && email) {
-      // Try match by email in same company
       const { data: emailMatch } = await supabaseAdmin
         .from("employees")
         .select("id, user_id, is_active")
@@ -139,7 +210,6 @@ Deno.serve(async (req) => {
         .eq("email", email)
         .limit(1)
         .maybeSingle();
-
       if (emailMatch) {
         employeeId = emailMatch.id;
         linkedExisting = true;
@@ -147,9 +217,9 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 3. If no existing employee, create one
+    // --- Create or update employee ---
     if (!employeeId) {
-      // Generate PIN from last 4 digits of phone
+      step = "create_employee";
       const accessPin = phone.length >= 4 ? phone.slice(-4) : null;
 
       const { data: newEmp, error: createErr } = await supabaseAdmin
@@ -171,61 +241,77 @@ Deno.serve(async (req) => {
         .select("id")
         .single();
 
-      if (createErr) {
-        // Rollback: log failure
+      if (createErr || !newEmp) {
         await supabaseAdmin.from("application_events").insert({
           application_id,
           event_type: "approval_failed",
-          event_data: { error: createErr.message },
+          event_data: { step, error: createErr?.message, request_id: requestId },
           created_by: caller.id,
         });
-        return new Response(
-          JSON.stringify({ error: "Failed to create employee", detail: createErr.message }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        const isRls = (createErr?.message || "").toLowerCase().includes("row-level security");
+        return structured({
+          success: false,
+          code: isRls ? "rls_denied" : "employee_create_failed",
+          message: isRls ? "No tienes permisos para crear empleados en esta empresa." : "No se pudo crear el empleado.",
+          details: createErr?.message,
+          step,
+          request_id: requestId,
+        });
       }
 
       employeeId = newEmp.id;
       createdNew = true;
       events.push("created_new_employee");
     } else {
-      // Update existing employee with approval data
+      step = "update_employee";
       const updateFields: Record<string, any> = {
         is_active: initial_status === "active",
         portal_access_enabled: portal_enabled,
-        employee_role: role === "supervisor" ? "Supervisor" : undefined,
       };
+      if (role === "supervisor") updateFields.employee_role = "Supervisor";
 
       if (pin_enabled) {
-        // Only set PIN if not already set
         const { data: empCheck } = await supabaseAdmin
           .from("employees")
           .select("access_pin")
           .eq("id", employeeId)
-          .single();
-
+          .maybeSingle();
         if (!empCheck?.access_pin && phone.length >= 4) {
           updateFields.access_pin = phone.slice(-4);
         }
       }
 
-      // Remove undefined fields
-      Object.keys(updateFields).forEach((k) => {
-        if (updateFields[k] === undefined) delete updateFields[k];
-      });
+      const { error: updErr } = await supabaseAdmin
+        .from("employees")
+        .update(updateFields)
+        .eq("id", employeeId);
 
-      if (Object.keys(updateFields).length > 0) {
-        await supabaseAdmin.from("employees").update(updateFields).eq("id", employeeId);
+      if (updErr) {
+        await supabaseAdmin.from("application_events").insert({
+          application_id,
+          event_type: "approval_failed",
+          event_data: { step, error: updErr.message, request_id: requestId },
+          created_by: caller.id,
+        });
+        return structured({
+          success: false,
+          code: "employee_update_failed",
+          message: "No se pudo actualizar el empleado existente.",
+          details: updErr.message,
+          step,
+          request_id: requestId,
+        });
       }
       events.push("updated_existing_employee");
     }
 
-    // 4. Role assignment — ensure company_users entry exists if there's a user_id
+    // --- Role assignment if user_id exists ---
+    step = "company_membership";
     const { data: empData } = await supabaseAdmin
       .from("employees")
       .select("user_id")
       .eq("id", employeeId)
-      .single();
+      .maybeSingle();
 
     if (empData?.user_id) {
       const companyRole = role === "supervisor" ? "supervisor" : "employee";
@@ -246,34 +332,65 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 5. Invitation flow
-    if (send_invite && employeeId) {
-      await supabaseAdmin.from("employee_invitations").insert({
-        company_id: companyId,
-        employee_id: employeeId,
-        channel: invite_channel,
-        status: "sent",
-        sent_by: caller.id,
-        sent_at: new Date().toISOString(),
-        notes: `Auto-invite from application approval (${app.reference_code})`,
-      });
-      inviteSent = true;
-      events.push("invite_sent");
+    // --- Invitation: log only, do NOT call any external WhatsApp provider ---
+    // We do not have an automatic WhatsApp provider here. The frontend will
+    // open wa.me / mailto with the invite_token as a manual fallback.
+    step = "invitation";
+    let inviteLogged = false;
+    let inviteToken: string | null = null;
+    let inviteError: string | null = null;
+
+    if (effectiveSendInvite && employeeId) {
+      try {
+        const token = crypto.randomUUID();
+        const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+        const { error: invErr } = await supabaseAdmin
+          .from("employee_invitations")
+          .insert({
+            company_id: companyId,
+            employee_id: employeeId,
+            channel: invite_channel,
+            status: "sent",
+            sent_by: caller.id,
+            sent_at: new Date().toISOString(),
+            invite_token: token,
+            expires_at: expiresAt,
+            notes: `Auto-invite from application approval (${app.reference_code ?? application_id.slice(0, 8)})`,
+          });
+
+        if (invErr) {
+          inviteError = invErr.message;
+          events.push("invite_log_failed");
+        } else {
+          inviteLogged = true;
+          inviteToken = token;
+          events.push("invite_logged");
+        }
+      } catch (e) {
+        inviteError = String(e);
+        events.push("invite_log_failed");
+      }
     }
 
-    // 6. Update application record
+    // --- Mark application approved ---
+    step = "mark_approved";
     const approvalPayload = {
       role,
       portal_enabled,
       pin_enabled,
       send_invite,
+      effective_send_invite: effectiveSendInvite,
+      invite_skipped_reason: inviteSkippedReason,
       invite_channel,
       initial_status,
       linked_existing: linkedExisting,
       created_new: createdNew,
+      invite_logged: inviteLogged,
+      invite_error: inviteError,
+      request_id: requestId,
     };
 
-    const { error: updateErr } = await supabaseAdmin
+    const { error: appUpdErr } = await supabaseAdmin
       .from("job_applications")
       .update({
         status: "approved",
@@ -282,51 +399,45 @@ Deno.serve(async (req) => {
         approved_employee_id: employeeId,
         linked_user_id: empData?.user_id || app.linked_user_id,
         approval_payload: approvalPayload,
-        admin_notes: body.admin_notes || app.admin_notes,
+        admin_notes: admin_notes || app.admin_notes,
       })
       .eq("id", application_id);
 
-    if (updateErr) {
-      return new Response(
-        JSON.stringify({ error: "Failed to update application", detail: updateErr.message }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    if (appUpdErr) {
+      // Employee created but application not flagged — still report partial success
+      await supabaseAdmin.from("application_events").insert({
+        application_id,
+        event_type: "approval_partial",
+        event_data: { step, error: appUpdErr.message, employee_id: employeeId, request_id: requestId },
+        created_by: caller.id,
+      });
+      return structured({
+        success: false,
+        code: "application_update_failed",
+        message: "Empleado creado, pero no se pudo marcar la solicitud como aprobada.",
+        details: appUpdErr.message,
+        employee_id: employeeId,
+        step,
+        request_id: requestId,
+      });
     }
 
-    // 7. Audit trail
-    const eventEntries = events
-      .filter((e) => e !== "approval_started")
-      .map((event_type) => ({
-        application_id,
-        event_type,
-        event_data: { employee_id: employeeId, ...approvalPayload },
-        created_by: caller.id,
-      }));
-
+    // --- Audit trail ---
+    step = "audit";
+    const eventEntries = events.map((event_type) => ({
+      application_id,
+      event_type,
+      event_data: { employee_id: employeeId, ...approvalPayload },
+      created_by: caller.id,
+    }));
     eventEntries.push({
       application_id,
       event_type: "approval_completed",
-      event_data: {
-        employee_id: employeeId,
-        linked_existing: linkedExisting,
-        created_new: createdNew,
-        invite_sent: inviteSent,
-        portal_enabled,
-        pin_enabled,
-        final_access_state: portal_enabled
-          ? inviteSent
-            ? "invited_pending"
-            : "no_portal"
-          : pin_enabled
-          ? "pin_only"
-          : "no_portal",
-      },
+      event_data: { employee_id: employeeId, ...approvalPayload },
       created_by: caller.id,
     });
-
     await supabaseAdmin.from("application_events").insert(eventEntries);
 
-    // Activity log
     await supabaseAdmin.from("activity_log").insert({
       user_id: caller.id,
       company_id: companyId,
@@ -336,29 +447,30 @@ Deno.serve(async (req) => {
       details: { employee_id: employeeId, ...approvalPayload },
     });
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-        employee_id: employeeId,
-        linked_existing: linkedExisting,
-        created_new: createdNew,
-        invite_sent: inviteSent,
-        portal_enabled,
-        pin_enabled,
-        final_access_state: portal_enabled
-          ? inviteSent
-            ? "invited_pending"
-            : "pending_setup"
-          : pin_enabled
-          ? "pin_only"
-          : "no_portal",
-      }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return structured({
+      success: true,
+      code: "ok",
+      message: createdNew ? "Empleado creado y solicitud aprobada." : "Solicitud aprobada y vinculada al empleado existente.",
+      employee_id: employeeId,
+      linked_existing: linkedExisting,
+      created_new: createdNew,
+      invite_requested: !!send_invite,
+      invite_logged: inviteLogged,
+      invite_skipped_reason: inviteSkippedReason,
+      invite_error: inviteError,
+      invite_token: inviteToken,
+      portal_enabled,
+      pin_enabled,
+      request_id: requestId,
+    });
   } catch (err) {
-    return new Response(
-      JSON.stringify({ error: "Internal error", detail: String(err) }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return structured({
+      success: false,
+      code: "unknown_error",
+      message: "Error inesperado al aprobar la solicitud.",
+      details: String(err),
+      step,
+      request_id: requestId,
+    });
   }
 });
