@@ -23,6 +23,8 @@ import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
+import { HistoricalPayrollCloseoutPanel } from "@/components/command-center/HistoricalPayrollCloseoutPanel";
+import { SmartActionQueue } from "@/components/command-center/SmartActionQueue";
 import { format } from "date-fns";
 import {
   Activity, Users, CalendarDays, Clock, ShieldCheck, Building2,
@@ -722,6 +724,12 @@ function CompanyCommandCenter({
               )}
             </section>
           </div>
+
+          {/* Smart Action Queue — what needs attention today */}
+          <SmartActionQueue companyId={companyId} />
+
+          {/* Historical Payroll Closeout summary */}
+          <HistoricalPayrollCloseoutPanel companyId={companyId} />
 
           {/* Ecosystem */}
           <section className="space-y-3">
