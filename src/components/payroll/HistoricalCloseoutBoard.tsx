@@ -164,7 +164,7 @@ interface Props {
 }
 
 export default function HistoricalCloseoutBoard({ companyId, onOpenSummary }: Props) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
   const [loading, setLoading] = useState(false);
   const [periods, setPeriods] = useState<PeriodLite[]>([]);
   const [imports, setImports] = useState<ImportLite[]>([]);
@@ -306,6 +306,9 @@ export default function HistoricalCloseoutBoard({ companyId, onOpenSummary }: Pr
               <div className="min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-sm font-bold">Historical Closeout Board</span>
+                  <Badge className="text-[10px] bg-primary text-primary-foreground hover:bg-primary">
+                    NEW
+                  </Badge>
                   <Badge variant="outline" className="text-[10px]">
                     Read-only
                   </Badge>
