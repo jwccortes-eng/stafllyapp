@@ -168,7 +168,7 @@ export default function StaflyCalmProcessingBanner({
           "relative inline-flex items-center gap-2.5 rounded-full px-3.5 py-1.5",
           "bg-gradient-to-r from-[#0b1437] via-[#1a1f4d] to-[#2a1b54]",
           "border border-white/10 text-white shadow-[0_4px_20px_-8px_rgba(56,109,255,0.5)]",
-          "overflow-hidden",
+          "overflow-hidden print:hidden",
           className
         )}
       >
