@@ -235,6 +235,8 @@ function App() {
               <Route path="/app" element={<AdminLayout />}>
                 <Route index element={<AdminDashboard />} />
                 <Route path="command-center" element={<CommandCenter />} />
+                <Route path="dev-command-center" element={<DevCommandCenter />} />
+                <Route path="owner-command-center" element={<DevCommandCenter />} />
                 <Route path="employees" element={<CompanyRequiredGuard><Employees /></CompanyRequiredGuard>} />
                 <Route path="employees/merge" element={<CompanyRequiredGuard><EmployeeMerge /></CompanyRequiredGuard>} />
                 <Route path="workforce" element={<CompanyRequiredGuard><Workforce /></CompanyRequiredGuard>} />
