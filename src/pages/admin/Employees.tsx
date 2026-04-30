@@ -1412,6 +1412,7 @@ export default function Employees() {
                   <PremiumAvatar firstName={e.first_name} lastName={e.last_name} avatarUrl={e.avatar_url} size="lg" status={status} />
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-bold truncate leading-tight">{formatPersonName(`${e.first_name} ${e.last_name}`)}</p>
+                    <WorkerRiskTags risks={riskAnalysis.byId.get(e.id) ?? []} max={2} className="mt-1" />
                     {e.employee_role && <span className="inline-block mt-0.5 px-1.5 py-0.5 rounded text-[9px] font-semibold bg-primary/8 text-primary">{formatDisplayText(e.employee_role, "label")}</span>}
                     <div className="mt-1.5 space-y-0.5">
                       {e.phone_number && <p className="text-[10px] text-muted-foreground truncate flex items-center gap-1"><Phone className="h-2.5 w-2.5" />{e.phone_number}</p>}
