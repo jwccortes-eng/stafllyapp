@@ -282,11 +282,11 @@ export default function StaflyCalmProcessingBanner({
     </div>
   );
 
-  // ─── FULLSCREEN OVERLAY ───────────────────────────────────
-  if (fullScreen) {
+  // ─── OVERLAY (blocking, only when explicitly requested) ───
+  if (effectiveVariant === "overlay") {
     return (
       <div
-        className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-[#04061a]/80 backdrop-blur-md motion-safe:animate-fade-in"
+        className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-[#04061a]/80 backdrop-blur-md motion-safe:animate-fade-in print:hidden"
         aria-modal="true"
       >
         {content}
