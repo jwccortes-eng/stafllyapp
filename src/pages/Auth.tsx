@@ -137,39 +137,12 @@ export default function Auth() {
     e.preventDefault();
     setLoading(true);
 
-    if (isLogin) {
-      console.log("[Auth] Login attempt:", identifier);
-      const { error } = await supabase.auth.signInWithPassword({ email: identifier, password });
-      if (error) {
-        console.error("[Auth] Login error:", error.message, error.status);
-        toast({ title: "Error", description: getUserFriendlyError(error), variant: "destructive" });
-      }
-    } else {
-      if (!companyName.trim()) {
-        toast({ title: "Error", description: "Enter your company name", variant: "destructive" });
-        setLoading(false);
-        return;
-      }
-      console.log("[Auth] Signup attempt:", { email: identifier, fullName, companyName: companyName.trim() });
-      const { data: signUpData, error } = await supabase.auth.signUp({
-        email: identifier,
-        password,
-        options: {
-          data: { full_name: fullName, company_name: companyName.trim() },
-          emailRedirectTo: `${APP_BASE_URL}/auth/callback`,
-        },
-      });
-      if (error) {
-        console.error("[Auth] Signup error:", error.message, error.status, JSON.stringify(error));
-        if (error.message?.includes('already registered') || (error as any).status === 422) {
-          toast({ title: "Email already registered", description: "This email already has an account. Try signing in or reset your password.", variant: "destructive" });
-        } else {
-          toast({ title: "Signup error", description: getUserFriendlyError(error), variant: "destructive" });
-        }
-      } else {
-        console.log("[Auth] Signup success:", signUpData?.user?.id, "confirmation pending:", !signUpData?.user?.email_confirmed_at);
-        toast({ title: "Account created", description: "Check your email to confirm your account." });
-      }
+    // [SECURITY 2026-05-01] Signup is disabled platform-wide. Login only.
+    console.log("[Auth] Login attempt:", identifier);
+    const { error } = await supabase.auth.signInWithPassword({ email: identifier, password });
+    if (error) {
+      console.error("[Auth] Login error:", error.message, error.status);
+      toast({ title: "Error", description: getUserFriendlyError(error), variant: "destructive" });
     }
     setLoading(false);
   };
