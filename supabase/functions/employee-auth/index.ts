@@ -137,6 +137,35 @@ function authPassword(pin: string): string {
   return AUTH_PWD_PREFIX + pin;
 }
 
+function normalizePhone(raw: string | null | undefined): string {
+  if (!raw) return "";
+  let digits = String(raw).replace(/\D/g, "");
+  if (digits.startsWith("00")) digits = digits.slice(2);
+  if (digits.length === 11 && digits.startsWith("1")) digits = digits.slice(1);
+  return digits;
+}
+
+function getPhoneLookupVariants(raw: string | null | undefined): string[] {
+  const normalized = normalizePhone(raw);
+  if (!normalized) return [];
+  const variants = new Set<string>([normalized]);
+  if (normalized.length === 10) {
+    variants.add(`1${normalized}`);
+  }
+  return Array.from(variants);
+}
+
+async function resolveAuthEmail(adminClient: any, userId: string | null | undefined, fallbackEmail: string) {
+  if (!userId) return fallbackEmail;
+  try {
+    const { data, error } = await adminClient.auth.admin.getUserById(userId);
+    if (!error && data?.user?.email) return data.user.email;
+  } catch (err) {
+    console.error("[employee-auth] resolveAuthEmail failed", userId, err);
+  }
+  return fallbackEmail;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -160,7 +189,9 @@ Deno.serve(async (req) => {
         );
       }
 
-      const cleanPhone = phone.replace(/[^\d+]/g, "").slice(0, 20);
+      const cleanPhone = normalizePhone(phone);
+      const phoneVariants = getPhoneLookupVariants(phone);
+      console.info("[phone-login]", { normalizedPhone: cleanPhone, step: "check" });
 
       // Rate limit check action to prevent enumeration
       const rateCheck = await checkRateLimit(adminClient, cleanPhone);
@@ -176,7 +207,7 @@ Deno.serve(async (req) => {
       const { data: employees } = await adminClient
         .from("employees")
         .select("id, access_pin, is_active")
-        .eq("phone_number", cleanPhone)
+        .in("phone_number", phoneVariants)
         .eq("is_active", true)
         .order("created_at", { ascending: true });
 
@@ -235,11 +266,13 @@ Deno.serve(async (req) => {
       let employee: any = null;
 
       if (phone) {
-        const cleanPhone = phone.replace(/[^\d+]/g, "").slice(0, 20);
+        const cleanPhone = normalizePhone(phone);
+        const phoneVariants = getPhoneLookupVariants(phone);
+        console.info("[phone-login]", { normalizedPhone: cleanPhone, step: "activate_lookup" });
         const { data: byPhone } = await adminClient
           .from("employees")
           .select("id, first_name, last_name, access_pin, is_active, user_id, phone_number")
-          .eq("phone_number", cleanPhone)
+          .in("phone_number", phoneVariants)
           .eq("is_active", true)
           .order("created_at", { ascending: true });
         employee = byPhone?.find((e: any) => !e.access_pin) || byPhone?.[0] || null;
@@ -353,8 +386,19 @@ Deno.serve(async (req) => {
 
       await ensureEmployeeRole(adminClient, employee.user_id);
 
+      const loginEmail = await resolveAuthEmail(adminClient, employee.user_id, empEmail);
+      console.info("[phone-login]", {
+        normalizedPhone: normalizePhone(phone),
+        matchedProfileId: null,
+        matchedEmployeeId: employee.id,
+        matchedCompanyId: null,
+        portalEnabled: true,
+        isActive: employee.is_active,
+        step: "activate_sign_in",
+      });
+
       const { data: signInData, error: signInError } = await anonClient.auth.signInWithPassword({
-        email: empEmail,
+        email: loginEmail,
         password: pwd,
       });
 
@@ -500,8 +544,10 @@ Deno.serve(async (req) => {
         );
       }
 
-      const cleanPhone = phone.replace(/[^\d+]/g, "").slice(0, 20);
+      const cleanPhone = normalizePhone(phone);
+      const phoneVariants = getPhoneLookupVariants(phone);
       const pwd = authPassword(pin);
+      console.info("[phone-login]", { normalizedPhone: cleanPhone, hasPin: !!pin, step: "login" });
 
       const rateCheck = await checkRateLimit(adminClient, cleanPhone);
       if (!rateCheck.allowed) {
@@ -514,8 +560,8 @@ Deno.serve(async (req) => {
       // Fetch all employees with this phone; pick the one with matching PIN
       const { data: loginEmployees } = await adminClient
         .from("employees")
-        .select("id, first_name, last_name, phone_number, access_pin, is_active, user_id, must_change_pin")
-        .eq("phone_number", cleanPhone)
+        .select("id, first_name, last_name, phone_number, access_pin, is_active, user_id, must_change_pin, company_id, portal_access_enabled")
+        .in("phone_number", phoneVariants)
         .eq("is_active", true)
         .order("created_at", { ascending: true });
 
@@ -588,7 +634,7 @@ Deno.serve(async (req) => {
         const { data: allPhoneEmps } = await adminClient
           .from("employees")
           .select("id, company_id, user_id")
-          .eq("phone_number", cleanPhone)
+            .in("phone_number", phoneVariants)
           .eq("is_active", true);
 
         for (const emp of (allPhoneEmps ?? [])) {
@@ -613,8 +659,19 @@ Deno.serve(async (req) => {
         }
       }
 
+      const loginEmail = await resolveAuthEmail(adminClient, employee.user_id, empEmail);
+      console.info("[phone-login]", {
+        normalizedPhone: cleanPhone,
+        matchedProfileId: null,
+        matchedEmployeeId: employee.id,
+        matchedCompanyId: employee.company_id,
+        portalEnabled: employee.portal_access_enabled ?? null,
+        isActive: employee.is_active,
+        step: "login_sign_in",
+      });
+
       const { data: signInData, error: signInError } = await anonClient.auth.signInWithPassword({
-        email: empEmail,
+        email: loginEmail,
         password: pwd,
       });
 

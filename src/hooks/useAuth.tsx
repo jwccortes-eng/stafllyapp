@@ -222,6 +222,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else if (hasEmployeeProfile) {
         setActiveModeState('employee');
       }
+
+      console.info("[useAuth]", {
+        userId,
+        sessionExists: true,
+        profileExists: !!profileData,
+        companyRoles: cRoles,
+        allEmployeeIds: activeEmps,
+        activeMode: savedMode,
+        canAccessAdmin: hasAdminRole || Object.values(cRoles).some((r) => ADMIN_ROLES.has(r)),
+        canAccessPortal: activeEmps.length > 0,
+        redirectTarget: hasAdminRole || Object.values(cRoles).some((r) => ADMIN_ROLES.has(r)) ? "/app" : activeEmps.length > 0 ? "/portal" : "/auth",
+      });
     } catch (err) {
       if (import.meta.env.DEV) console.error('Error fetching user data:', err);
       resetAuthState();
@@ -233,6 +245,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const syncSession = async (nextSession: Session | null) => {
       if (!mounted) return;
+
+      console.info("[useAuth]", {
+        userId: nextSession?.user?.id ?? null,
+        sessionExists: !!nextSession,
+        step: "syncSession",
+      });
 
       setSession(nextSession);
       setUser(nextSession?.user ?? null);
@@ -251,6 +269,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, nextSession) => {
         if (!mounted) return;
+
+        console.info("[useAuth]", {
+          userId: nextSession?.user?.id ?? null,
+          sessionExists: !!nextSession,
+          step: "onAuthStateChange",
+          event,
+        });
 
         setSession(nextSession);
         setUser(nextSession?.user ?? null);

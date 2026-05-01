@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { APP_BASE_URL } from "@/lib/app-url";
@@ -17,6 +17,7 @@ type LoginMethod = "email" | "phone";
 export default function Auth() {
   const { user, role, loading: authLoading, canAccessAdmin, canAccessPortal, activeMode } = useAuth();
   const navigate = useNavigate();
+  const phoneRedirectPendingRef = useRef(false);
   const [searchParams] = useSearchParams();
   const [method, setMethod] = useState<LoginMethod>("email");
   const [identifier, setIdentifier] = useState("");
@@ -33,6 +34,28 @@ export default function Auth() {
   // Smart redirect after auth
   useEffect(() => {
     if (authLoading || !user || settingUp) return;
+
+    if (phoneRedirectPendingRef.current) {
+      console.info("[phone-login]", {
+        step: "post-session-redirect",
+        userId: user.id,
+        canAccessAdmin,
+        canAccessPortal,
+        activeMode,
+      });
+
+      if (canAccessAdmin) {
+        phoneRedirectPendingRef.current = false;
+        navigate("/app", { replace: true });
+        return;
+      }
+
+      if (canAccessPortal) {
+        phoneRedirectPendingRef.current = false;
+        navigate("/portal", { replace: true });
+        return;
+      }
+    }
 
     const autoSetup = async () => {
       const metaCompanyName = user.user_metadata?.company_name;
@@ -115,17 +138,14 @@ export default function Auth() {
   };
 
   const handlePhoneSessionReady = () => {
-    if (canAccessAdmin && activeMode !== 'employee') {
-      navigate('/app', { replace: true });
-      return;
-    }
-
-    if (canAccessPortal) {
-      navigate('/portal', { replace: true });
-      return;
-    }
-
-    navigate('/', { replace: true });
+    phoneRedirectPendingRef.current = true;
+    console.info("[phone-login]", {
+      step: "session-ready",
+      hasUser: !!user,
+      canAccessAdmin,
+      canAccessPortal,
+      activeMode,
+    });
   };
 
   return (
