@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Loader2, Upload, FileText, CheckCircle2, XCircle, FileSpreadsheet } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { parseCsv, inferTransactions } from "@/lib/finance/csv-parser";
+import { parseCsv } from "@/lib/finance/csv-parser";
 import { FOUNDER_FINANCE_BUCKET } from "@/lib/finance/founder-access";
 import { toast } from "sonner";
 
@@ -69,21 +69,23 @@ export default function FounderFinanceImports() {
       // 3) If CSV, parse and stage extracted items
       if (isCsv) {
         const text = await file.text();
-        const rows = parseCsv(text);
-        const items = inferTransactions(rows);
+        const result = parseCsv(text);
+        const items = result.rows;
         if (items.length > 0) {
           await supabase.from("finance_import_extracted_items" as any).insert(
             items.map((it) => ({
               batch_id: batch.id,
               owner_user_id: user.id,
-              raw: it.raw,
-              occurred_at: it.occurred_at,
-              merchant: it.merchant,
-              description: it.description,
+              transaction_date: it.transaction_date,
+              description_raw: it.description_raw,
+              merchant_guess: it.merchant_guess,
               amount: it.amount,
-              direction: it.direction,
-              suggested_category: it.suggested_category,
-              status: "pending_review",
+              currency: it.currency,
+              category_guess: it.category_guess,
+              is_recurring_guess: it.is_recurring_guess,
+              confidence_score: it.confidence_score,
+              raw_payload: it.raw_payload,
+              review_status: "pending",
             }))
           );
         }
