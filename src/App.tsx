@@ -344,6 +344,16 @@ function App() {
                 <Route path="invoicing/invoices" element={<CompanyRequiredGuard><ModuleGate moduleKey="tenant_invoicing"><InvoicingInvoices /></ModuleGate></CompanyRequiredGuard>} />
                 <Route path="invoicing/invoices/new" element={<CompanyRequiredGuard><ModuleGate moduleKey="tenant_invoicing"><InvoicingInvoiceNew /></ModuleGate></CompanyRequiredGuard>} />
                 <Route path="invoicing/invoices/:id" element={<CompanyRequiredGuard><ModuleGate moduleKey="tenant_invoicing"><InvoicingInvoiceDetail /></ModuleGate></CompanyRequiredGuard>} />
+                {/* Founder Finance — private to founder role; gated inside layout */}
+                <Route path="founder-finance" element={<FounderFinanceLayout />}>
+                  <Route index element={<FounderFinanceOverview />} />
+                  <Route path="imports" element={<FounderFinanceImports />} />
+                  <Route path="accounts" element={<FounderFinanceStub title="Accounts" description="Manage bank accounts, credit cards and wallets." />} />
+                  <Route path="debts" element={<FounderFinanceStub title="Debts" description="Track loans, credit-card balances and payoff plans." />} />
+                  <Route path="recurring" element={<FounderFinanceStub title="Recurring expenses" description="Subscriptions and auto-charges, detected from imports." />} />
+                  <Route path="categories" element={<FounderFinanceStub title="Categories" description="Customize your personal expense categories." />} />
+                  <Route path="goals" element={<FounderFinanceStub title="Goals" description="Set savings and payoff targets." />} />
+                </Route>
               </Route>
 
               {/* Employee portal routes */}
