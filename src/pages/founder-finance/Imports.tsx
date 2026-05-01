@@ -29,14 +29,22 @@ export default function FounderFinanceImports() {
   const loadBatches = useCallback(async () => {
     if (!user?.id) return;
     setLoading(true);
-    const { data } = await supabase
-      .from("finance_import_batches" as any)
-      .select("id, source_type, source_label, status, detected_count, approved_count, created_at")
-      .eq("owner_user_id", user.id)
-      .order("created_at", { ascending: false })
-      .limit(50);
-    setBatches((data as any) ?? []);
-    setLoading(false);
+    try {
+      const { data, error } = await supabase
+        .from("finance_import_batches" as any)
+        .select("id, source_type, source_label, status, detected_count, approved_count, created_at")
+        .eq("owner_user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      setBatches((data as any) ?? []);
+    } catch (e: any) {
+      console.error("loadBatches failed", e);
+      toast.error(e?.message ?? "Failed to load imports");
+      setBatches([]);
+    } finally {
+      setLoading(false);
+    }
   }, [user?.id]);
 
   useEffect(() => { loadBatches(); }, [loadBatches]);
