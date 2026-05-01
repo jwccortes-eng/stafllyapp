@@ -3,13 +3,17 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useCompany } from "@/hooks/useCompany";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
-import { Check, ChevronsUpDown, Search, LayoutDashboard, User, Shield, Globe } from "lucide-react";
+import { Check, ChevronsUpDown, Search, LayoutDashboard, User, Shield, Globe, AlertTriangle } from "lucide-react";
 import {
   Popover, PopoverContent, PopoverTrigger,
 } from "@/components/ui/popover";
 import { supabase } from "@/integrations/supabase/client";
 import CompanySwitchPinDialog from "@/components/CompanySwitchPinDialog";
 import { CompanyLogo } from "@/components/ui/company-logo";
+import {
+  classifyCompany, getCompanyBadges, isCompanyOperable,
+  GROUP_LABELS, BADGE_CLASSES, type CompanyGroup,
+} from "@/lib/company-governance";
 
 const ROLE_LABELS: Record<string, string> = {
   developer: "Dev",
