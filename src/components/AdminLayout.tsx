@@ -47,7 +47,7 @@ export default function AdminLayout() {
   const {
     user, role, session, loading: authLoading, signOut, hasModuleAccess,
     canAccessAdminForCompany, canAccessPortalForCompany, getRoleForCompany,
-    employeeId, companyRoles, allEmployeeIds, activeMode,
+    employeeId, companyRoles, allEmployeeIds, activeMode, allRoles,
   } = useAuth();
   const { companies, selectedCompanyId, selectedCompany, switchCompany, isModuleActive, loading: companyLoading } = useCompany();
   const [collapsed, setCollapsed] = useState(() => {
@@ -67,7 +67,7 @@ export default function AdminLayout() {
   const canAccessAdminHere = canAccessAdminForCompany(selectedCompanyId);
   const canAccessPortalHere = canAccessPortalForCompany(selectedCompanyId);
   const isFounderFinanceRoute = location.pathname === "/app/founder-finance" || location.pathname.startsWith("/app/founder-finance/");
-  const hasFounderAccess = role === "developer" || role === "owner";
+  const hasFounderAccess = role === "developer" || role === "owner" || allRoles.has("founder");
   const fallbackAdminCompanyId = useMemo(() => {
     if (canAccessAdminHere) return null;
     return companies.find((company) => canAccessAdminForCompany(company.id))?.id ?? null;
