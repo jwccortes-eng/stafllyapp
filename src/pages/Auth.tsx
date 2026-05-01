@@ -115,7 +115,17 @@ export default function Auth() {
   };
 
   const handlePhoneSessionReady = () => {
-    window.location.reload();
+    if (canAccessAdmin && activeMode !== 'employee') {
+      navigate('/app', { replace: true });
+      return;
+    }
+
+    if (canAccessPortal) {
+      navigate('/portal', { replace: true });
+      return;
+    }
+
+    navigate('/', { replace: true });
   };
 
   return (
