@@ -13,10 +13,9 @@ import { toast } from "sonner";
 type Batch = {
   id: string;
   source_type: string;
-  source_label: string | null;
+  file_name: string;
   status: string;
-  detected_count: number | null;
-  approved_count: number | null;
+  summary: { detected_count?: number | null; approved_count?: number | null } | null;
   created_at: string;
 };
 
@@ -32,7 +31,7 @@ export default function FounderFinanceImports() {
     try {
       const { data, error } = await supabase
         .from("finance_import_batches" as any)
-        .select("id, source_type, source_label, status, detected_count, approved_count, created_at")
+        .select("id, source_type, file_name, status, summary, created_at")
         .eq("owner_user_id", user.id)
         .order("created_at", { ascending: false })
         .limit(50);
@@ -54,7 +53,7 @@ export default function FounderFinanceImports() {
     setUploading(true);
     try {
       const isCsv = file.name.toLowerCase().endsWith(".csv");
-      const sourceType = isCsv ? "csv" : file.type === "application/pdf" ? "pdf" : "other";
+      const sourceType = isCsv ? "csv" : file.type === "application/pdf" ? "pdf_statement" : "screenshot";
 
       // 1) Upload to private bucket
       const path = `${user.id}/${Date.now()}_${file.name}`;
@@ -67,9 +66,10 @@ export default function FounderFinanceImports() {
       const { data: batch, error: bErr } = await (supabase.from("finance_import_batches" as any).insert({
         owner_user_id: user.id,
         source_type: sourceType,
-        source_label: file.name,
-        storage_path: path,
-        status: isCsv ? "parsing" : "pending_parser",
+        file_name: file.name,
+        file_type: file.type || null,
+        raw_file_path: path,
+        status: isCsv ? "parsing" : "uploaded",
       }).select("id").single() as any);
       if (bErr) throw bErr;
 
@@ -81,7 +81,7 @@ export default function FounderFinanceImports() {
         if (items.length > 0) {
           await supabase.from("finance_import_extracted_items" as any).insert(
             items.map((it) => ({
-              batch_id: batch.id,
+              import_batch_id: batch.id,
               owner_user_id: user.id,
               transaction_date: it.transaction_date,
               description_raw: it.description_raw,
@@ -97,7 +97,7 @@ export default function FounderFinanceImports() {
           );
         }
         await supabase.from("finance_import_batches" as any)
-          .update({ status: "ready_for_review", detected_count: items.length })
+          .update({ status: "needs_review", summary: { detected_count: items.length } })
           .eq("id", batch.id);
         toast.success(`Parsed ${items.length} transactions from ${file.name}`);
       } else {
@@ -116,10 +116,12 @@ export default function FounderFinanceImports() {
   const statusBadge = (s: string) => {
     const map: Record<string, { v: any; label: string }> = {
       parsing: { v: "secondary", label: "Parsing" },
-      pending_parser: { v: "outline", label: "Pending parser" },
-      ready_for_review: { v: "default", label: "Ready for review" },
+      uploaded: { v: "outline", label: "Uploaded" },
+      parsed: { v: "outline", label: "Parsed" },
+      needs_review: { v: "default", label: "Needs review" },
       approved: { v: "default", label: "Approved" },
       rejected: { v: "destructive", label: "Rejected" },
+      failed: { v: "destructive", label: "Failed" },
     };
     const x = map[s] ?? { v: "outline", label: s };
     return <Badge variant={x.v}>{x.label}</Badge>;
@@ -180,10 +182,10 @@ export default function FounderFinanceImports() {
                 <div className="flex items-center gap-3 min-w-0">
                   {b.source_type === "csv" ? <FileSpreadsheet className="h-4 w-4 text-muted-foreground shrink-0" /> : <FileText className="h-4 w-4 text-muted-foreground shrink-0" />}
                   <div className="min-w-0">
-                    <div className="text-sm font-medium truncate">{b.source_label ?? "(untitled)"}</div>
+                    <div className="text-sm font-medium truncate">{b.file_name}</div>
                     <div className="text-xs text-muted-foreground">
-                      {new Date(b.created_at).toLocaleString()} · {b.detected_count ?? 0} detected
-                      {b.approved_count ? ` · ${b.approved_count} approved` : ""}
+                      {new Date(b.created_at).toLocaleString()} · {b.summary?.detected_count ?? 0} detected
+                      {b.summary?.approved_count ? ` · ${b.summary.approved_count} approved` : ""}
                     </div>
                   </div>
                 </div>
