@@ -1,6 +1,7 @@
 import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useCompany } from "@/hooks/useCompany";
 
 /**
  * Production hotfix (2026-04-30):
@@ -13,7 +14,19 @@ import { useAuth } from "@/hooks/useAuth";
  * No landing, no marketing copy, no lazy chunks.
  */
 export default function Index() {
-  const { user, loading, canAccessAdmin, canAccessPortal, activeMode } = useAuth();
+  const {
+    user,
+    session,
+    loading: authLoading,
+    canAccessAdmin,
+    canAccessPortal,
+    activeMode,
+    companyRoles,
+    allEmployeeIds,
+    canAccessAdminForCompany,
+    canAccessPortalForCompany,
+  } = useAuth();
+  const { companies, loading: companyLoading, selectedCompanyId, selectedCompany } = useCompany();
   const navigate = useNavigate();
 
   // Handle Supabase auth redirects that land on `/#access_token=...`
@@ -35,7 +48,34 @@ export default function Index() {
   }, [navigate]);
 
   useEffect(() => {
-    if (loading) return;
+    if (authLoading || companyLoading) return;
+
+    const redirectTarget = !user
+      ? "/login"
+      : canAccessAdmin && canAccessPortal
+        ? (activeMode === "employee" ? "/portal" : "/app")
+        : canAccessAdmin
+          ? "/app"
+          : canAccessPortal
+            ? "/portal"
+            : "/login";
+
+    console.info("[post-login-debug]", {
+      step: "index-route",
+      userId: user?.id ?? null,
+      sessionExists: !!session,
+      authLoading,
+      companyLoading,
+      selectedCompanyId,
+      selectedCompanyName: selectedCompany?.name ?? null,
+      companies: companies.map((company) => ({ id: company.id, name: company.name })),
+      companyRoles,
+      allEmployeeIds,
+      activeMode,
+      canAccessAdminForSelected: canAccessAdminForCompany(selectedCompanyId),
+      canAccessPortalForSelected: canAccessPortalForCompany(selectedCompanyId),
+      redirectTarget,
+    });
 
     if (!user) {
       navigate("/login", { replace: true });
@@ -51,7 +91,7 @@ export default function Index() {
     } else {
       navigate("/login", { replace: true });
     }
-  }, [user, loading, navigate, canAccessAdmin, canAccessPortal, activeMode]);
+  }, [activeMode, allEmployeeIds, authLoading, canAccessAdmin, canAccessAdminForCompany, canAccessPortal, canAccessPortalForCompany, companies, companyLoading, companyRoles, navigate, selectedCompany, selectedCompanyId, session, user]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background">

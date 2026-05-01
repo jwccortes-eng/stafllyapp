@@ -45,11 +45,11 @@ export function useSidebarCollapsed() {
 
 export default function AdminLayout() {
   const {
-    user, role, loading, signOut, hasModuleAccess,
+    user, role, session, loading: authLoading, signOut, hasModuleAccess,
     canAccessAdminForCompany, canAccessPortalForCompany, getRoleForCompany,
-    employeeId,
+    employeeId, companyRoles, allEmployeeIds, activeMode,
   } = useAuth();
-  const { companies, selectedCompanyId, switchCompany, isModuleActive } = useCompany();
+  const { companies, selectedCompanyId, selectedCompany, switchCompany, isModuleActive, loading: companyLoading } = useCompany();
   const [collapsed, setCollapsed] = useState(() => {
     const saved = safeLocalStorage.getItem("sidebar-collapsed");
     return saved !== null ? saved === "true" : true;
@@ -70,6 +70,9 @@ export default function AdminLayout() {
     if (canAccessAdminHere) return null;
     return companies.find((company) => canAccessAdminForCompany(company.id))?.id ?? null;
   }, [canAccessAdminForCompany, canAccessAdminHere, companies]);
+  const authReady = !authLoading;
+  const companyReady = !companyLoading;
+  const shouldRecoverAdmin = authReady && companyReady && !!user && !canAccessAdminHere && !!fallbackAdminCompanyId && fallbackAdminCompanyId !== selectedCompanyId;
 
   const [badgeCounts, setBadgeCounts] = useState<Record<string, number>>({});
   useEffect(() => {
@@ -92,13 +95,26 @@ export default function AdminLayout() {
   }, [selectedCompanyId]);
 
   useEffect(() => {
-    if (loading || !user) return;
+    console.info("[post-login-debug]", {
+      step: "admin-layout",
+      userId: user?.id ?? null,
+      sessionExists: !!session,
+      authLoading,
+      companyLoading,
+      selectedCompanyId,
+      selectedCompanyName: selectedCompany?.name ?? null,
+      companies: companies.map((company) => ({ id: company.id, name: company.name })),
+      companyRoles,
+      allEmployeeIds,
+      activeMode,
+      canAccessAdminForSelected: canAccessAdminForCompany(selectedCompanyId),
+      canAccessPortalForSelected: canAccessPortalForCompany(selectedCompanyId),
+      redirectTarget: shouldRecoverAdmin ? "/app" : !canAccessAdminHere && canAccessPortalHere ? "/portal" : null,
+    });
 
-    if (
-      !canAccessAdminHere &&
-      fallbackAdminCompanyId &&
-      fallbackAdminCompanyId !== selectedCompanyId
-    ) {
+    if (!authReady || !companyReady || !user) return;
+
+    if (shouldRecoverAdmin) {
       setRecoveringAdminCompanyId(fallbackAdminCompanyId);
       switchCompany(fallbackAdminCompanyId);
       return;
@@ -110,14 +126,24 @@ export default function AdminLayout() {
   }, [
     canAccessAdminHere,
     fallbackAdminCompanyId,
-    loading,
+    authLoading,
+    companyLoading,
     recoveringAdminCompanyId,
     selectedCompanyId,
+    selectedCompany,
     switchCompany,
     user,
+    session,
+    companyRoles,
+    allEmployeeIds,
+    activeMode,
+    canAccessPortalHere,
+    shouldRecoverAdmin,
+    authReady,
+    companyReady,
   ]);
 
-  if (loading) {
+  if (!authReady || !companyReady) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
@@ -127,7 +153,7 @@ export default function AdminLayout() {
 
   if (!user) return <Navigate to="/auth" replace />;
 
-  if (recoveringAdminCompanyId) {
+  if (recoveringAdminCompanyId || shouldRecoverAdmin) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background px-6">
         <div className="max-w-sm text-center space-y-3">

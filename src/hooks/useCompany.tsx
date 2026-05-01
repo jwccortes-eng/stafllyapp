@@ -48,7 +48,17 @@ const CompanyContext = createContext<CompanyContextType>({
 const GLOBAL_MODE_ROLES = new Set(["developer", "owner"]);
 
 export function CompanyProvider({ children }: { children: ReactNode }) {
-  const { user, role } = useAuth();
+  const {
+    user,
+    session,
+    role,
+    loading: authLoading,
+    companyRoles,
+    allEmployeeIds,
+    activeMode,
+    canAccessAdminForCompany,
+    canAccessPortalForCompany,
+  } = useAuth();
   const [companies, setCompanies] = useState<Company[]>([]);
   const [selectedCompanyId, setSelectedCompanyIdRaw] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -58,6 +68,25 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
 
   const canUseGlobalMode = !!role && GLOBAL_MODE_ROLES.has(role);
   const isGlobalMode = canUseGlobalMode && selectedCompanyId === null;
+
+  const logPostLoginDebug = useCallback((step: string, nextCompanies: Company[], nextSelectedCompanyId: string | null, nextCompanyLoading: boolean) => {
+    console.info("[post-login-debug]", {
+      step,
+      userId: user?.id ?? null,
+      sessionExists: !!session,
+      authLoading,
+      companyLoading: nextCompanyLoading,
+      selectedCompanyId: nextSelectedCompanyId,
+      selectedCompanyName: nextCompanies.find((company) => company.id === nextSelectedCompanyId)?.name ?? null,
+      companies: nextCompanies.map((company) => ({ id: company.id, name: company.name })),
+      companyRoles,
+      allEmployeeIds,
+      activeMode,
+      canAccessAdminForSelected: canAccessAdminForCompany(nextSelectedCompanyId),
+      canAccessPortalForSelected: canAccessPortalForCompany(nextSelectedCompanyId),
+      redirectTarget: null,
+    });
+  }, [activeMode, allEmployeeIds, authLoading, canAccessAdminForCompany, canAccessPortalForCompany, companyRoles, session, user]);
 
   const setSelectedCompanyId = useCallback((id: string | null) => {
     setSelectedCompanyIdRaw(id);
@@ -70,13 +99,23 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const fetchCompanies = useCallback(async () => {
-    if (!user) {
-      setCompanies([]);
-      setLoading(false);
+    if (authLoading) {
+      setLoading(true);
       return;
     }
 
+    if (!user) {
+      setCompanies([]);
+      setSelectedCompanyIdRaw(null);
+      setLoading(false);
+      logPostLoginDebug("company-provider-no-user", [], null, false);
+      return;
+    }
+
+    setLoading(true);
+
     let list: Company[] = [];
+    let resolvedSelection: string | null = null;
 
     try {
       if (role === 'developer' || role === 'owner') {
@@ -123,11 +162,14 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
           setSelectedCompanyIdRaw(null);
           safeLocalStorage.removeItem("selectedCompanyId");
         }
+          resolvedSelection = validStored ?? selectedCompanyId;
       } else if (validStored) {
         setSelectedCompanyIdRaw(validStored);
+          resolvedSelection = validStored;
       } else {
         setSelectedCompanyIdRaw(null);
         safeLocalStorage.removeItem("selectedCompanyId");
+          resolvedSelection = null;
       }
     } else {
       // Regular users MUST have a company context.
@@ -138,6 +180,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
 
       if (validStored) {
         setSelectedCompanyIdRaw(validStored);
+          resolvedSelection = validStored;
       } else if (list.length > 0) {
         // Stored id pointed to an inaccessible/missing company — clean it up.
         if (currentSelection && currentSelection !== list[0].id) {
@@ -146,14 +189,17 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
         const first = list[0].id;
         setSelectedCompanyIdRaw(first);
         safeLocalStorage.setItem("selectedCompanyId", first);
+          resolvedSelection = first;
       } else {
         setSelectedCompanyIdRaw(null);
         safeLocalStorage.removeItem("selectedCompanyId");
+          resolvedSelection = null;
       }
     }
 
     setLoading(false);
-  }, [user, role, canUseGlobalMode, manuallySelected]);
+      logPostLoginDebug("company-provider-resolved", list, resolvedSelection, false);
+  }, [authLoading, user, role, canUseGlobalMode, manuallySelected, selectedCompanyId, logPostLoginDebug]);
 
   /** Switch company: update state + invalidate all cached queries */
   const switchCompany = useCallback((id: string | null) => {
@@ -163,8 +209,8 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
   }, [selectedCompanyId, setSelectedCompanyId]);
 
   useEffect(() => {
-    if (user && role !== undefined) fetchCompanies();
-  }, [user, role, fetchCompanies]);
+    void fetchCompanies();
+  }, [fetchCompanies]);
 
   useEffect(() => {
     if (selectedCompanyId) {
