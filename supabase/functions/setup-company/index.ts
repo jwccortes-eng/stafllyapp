@@ -51,6 +51,48 @@ Deno.serve(async (req) => {
       });
     }
 
+    // [SECURITY 2026-05-01] Self-service tenant creation is DISABLED.
+    // Only developers can provision new companies. This is the server-side
+    // backstop in case anyone bypasses the frontend (e.g. direct HTTP POST).
+    // See activity_log action='unauthorized_self_signup_suspended' for the
+    // incident that triggered this lockdown (Llc tenant, 2026-04-30).
+    const adminCheckClient = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+    const { data: roleRow } = await adminCheckClient
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .eq("role", "developer")
+      .maybeSingle();
+
+    if (!roleRow) {
+      console.warn(`[setup-company] BLOCKED self-service signup attempt by user=${user.id} email=${user.email}`);
+      // Audit the blocked attempt
+      await adminCheckClient.from("activity_log").insert({
+        user_id: user.id,
+        action: "setup_company_blocked_invite_only",
+        entity_type: "auth",
+        details: {
+          email: user.email,
+          reason: "self_service_signup_disabled_invite_only",
+          source: "setup-company_edge_function",
+          timestamp: new Date().toISOString(),
+        },
+      });
+      return new Response(
+        JSON.stringify({
+          error: "Stafly is currently invite-only. Please contact your administrator to get access.",
+          code: "INVITE_ONLY",
+        }),
+        {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
     const { company_name } = await req.json();
     if (!company_name?.trim()) {
       return new Response(JSON.stringify({ error: "company_name is required" }), {
