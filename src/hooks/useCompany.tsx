@@ -112,6 +112,8 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    setLoading(true);
+
     let list: Company[] = [];
     let resolvedSelection: string | null = null;
 
