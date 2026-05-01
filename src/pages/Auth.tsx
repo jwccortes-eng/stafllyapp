@@ -85,7 +85,7 @@ export default function Auth() {
 
   // Smart redirect after auth
   useEffect(() => {
-    if (authLoading || !user || settingUp) return;
+    if (authLoading || !user) return;
 
     if (phoneRedirectPendingRef.current) {
       console.info("[phone-login]", {
