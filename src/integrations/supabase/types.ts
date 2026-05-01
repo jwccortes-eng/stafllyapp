@@ -15378,6 +15378,7 @@ export type Database = {
         | "owner"
         | "manager"
         | "supervisor"
+        | "founder"
       billable_unit: "hour" | "day" | "flat"
       calc_mode: "quantity_x_rate" | "manual_value" | "hybrid"
       client_contact_portal_status: "invited" | "active" | "disabled"
@@ -15870,6 +15871,7 @@ export const Constants = {
         "owner",
         "manager",
         "supervisor",
+        "founder",
       ],
       billable_unit: ["hour", "day", "flat"],
       calc_mode: ["quantity_x_rate", "manual_value", "hybrid"],
