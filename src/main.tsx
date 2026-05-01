@@ -9,7 +9,7 @@ import { registerPwa, APP_VERSION, APP_BUILD_TIME } from "./lib/pwa-runtime";
  * stale cached bundle. If two browsers show different ids, the older one is on
  * a stale SW cache (see vite.config.ts PWA config).
  */
-export const APP_BUILD_ID = "tenant-hotfix-2026-05-01-v1";
+export const APP_BUILD_ID = "tenant-hotfix-2026-05-01-v2";
 if (typeof window !== "undefined") {
   // eslint-disable-next-line no-console
   console.info("[stafly-build]", {
