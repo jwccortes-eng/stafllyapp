@@ -1,7 +1,26 @@
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
-import { registerPwa } from "./lib/pwa-runtime";
+import { registerPwa, APP_VERSION, APP_BUILD_TIME } from "./lib/pwa-runtime";
+
+/**
+ * Build stamp — visible in EVERY browser, every host (preview, prod, incognito).
+ * Lets us confirm whether a given device is on the latest deploy or stuck on a
+ * stale cached bundle. If two browsers show different ids, the older one is on
+ * a stale SW cache (see vite.config.ts PWA config).
+ */
+export const APP_BUILD_ID = "tenant-hotfix-2026-05-01-v1";
+if (typeof window !== "undefined") {
+  // eslint-disable-next-line no-console
+  console.info("[stafly-build]", {
+    buildId: APP_BUILD_ID,
+    version: APP_VERSION,
+    buildTime: APP_BUILD_TIME,
+    appHost: window.location.host,
+    supabaseUrl: import.meta.env.VITE_SUPABASE_URL,
+    mode: import.meta.env.MODE,
+  });
+}
 
 /**
  * Cross-browser SW hygiene.
