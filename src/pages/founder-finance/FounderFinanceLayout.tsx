@@ -1,12 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
-import { Outlet, useLocation, useNavigate, NavLink } from "react-router-dom";
+import { useMemo } from "react";
+import { Outlet, useNavigate, NavLink } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Shield, Wallet, Upload, ListTree, Target, Repeat, CreditCard, AlertTriangle } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { isFounder, DEFAULT_CATEGORIES } from "@/lib/finance/founder-access";
-import { supabase } from "@/integrations/supabase/client";
+import { isFounder } from "@/lib/finance/founder-access";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { cn } from "@/lib/utils";
 
 const TABS = [
@@ -22,32 +22,7 @@ const TABS = [
 export default function FounderFinanceLayout() {
   const { user, allRoles, loading } = useAuth();
   const navigate = useNavigate();
-  const loc = useLocation();
   const isOwner = useMemo(() => isFounder(allRoles), [allRoles]);
-  const [seeding, setSeeding] = useState(false);
-  const [seeded, setSeeded] = useState<boolean | null>(null);
-
-  // Seed default categories on first visit (idempotent: UNIQUE owner_user_id+name)
-  useEffect(() => {
-    if (!user?.id || !isOwner || seeded !== null) return;
-    let cancelled = false;
-    (async () => {
-      const { count } = await supabase
-        .from("finance_categories" as any)
-        .select("id", { count: "exact", head: true })
-        .eq("owner_user_id", user.id);
-      if (cancelled) return;
-      if ((count ?? 0) === 0) {
-        setSeeding(true);
-        await supabase.from("finance_categories" as any).insert(
-          DEFAULT_CATEGORIES.map((c) => ({ ...c, owner_user_id: user.id }))
-        );
-        setSeeding(false);
-      }
-      setSeeded(true);
-    })();
-    return () => { cancelled = true; };
-  }, [user?.id, isOwner, seeded]);
 
   if (loading) {
     return (
@@ -90,11 +65,6 @@ export default function FounderFinanceLayout() {
             Personal command center. Fully isolated from tenants, payroll and billing.
           </p>
         </div>
-        {seeding && (
-          <div className="text-xs text-muted-foreground flex items-center gap-1.5">
-            <Loader2 className="h-3 w-3 animate-spin" /> Seeding categories…
-          </div>
-        )}
       </header>
 
       {/* Tabs */}
@@ -119,7 +89,9 @@ export default function FounderFinanceLayout() {
         ))}
       </nav>
 
-      <Outlet />
+      <ErrorBoundary>
+        <Outlet />
+      </ErrorBoundary>
     </div>
   );
 }
