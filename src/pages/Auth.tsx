@@ -116,32 +116,11 @@ export default function Auth() {
     }
 
     const autoSetup = async () => {
-      const metaCompanyName = user.user_metadata?.company_name;
-      if (metaCompanyName && !needsSetupChecked) {
-        setNeedsSetupChecked(true);
-        setSettingUp(true);
-        console.log("[Auth] Auto-setup triggered for company:", metaCompanyName);
-        try {
-          const { data, error } = await supabase.functions.invoke("setup-company", {
-            body: { company_name: metaCompanyName },
-          });
-          console.log("[Auth] setup-company response:", JSON.stringify(data), error ? JSON.stringify(error) : "no error");
-          if (error) throw error;
-          if (data?.already_setup) {
-            console.log("[Auth] Company already exists, redirecting...");
-          } else if (data?.success) {
-            console.log("[Auth] Company created:", data.company_id);
-            toast({ title: "Company created!", description: `${metaCompanyName} is ready. You have a 14-day Pro trial.` });
-          }
-          window.location.reload();
-          return;
-        } catch (err: any) {
-          console.error("[Auth] Auto-setup error:", err?.message, JSON.stringify(err));
-          toast({ title: "Setup error", description: err?.message || "Please try reloading the page.", variant: "destructive" });
-        } finally {
-          setSettingUp(false);
-        }
-      }
+      // [SECURITY 2026-05-01] Self-service company creation is DISABLED platform-wide.
+      // Stafly is invite-only pre-launch. Only developers can provision tenants.
+      // The legacy auto-setup-from-signup flow has been removed to prevent
+      // unauthorized tenants like the "Llc" incident (see activity_log
+      // action='unauthorized_self_signup_suspended').
 
       if (canAccessAdmin && canAccessPortal) {
         navigate(activeMode === 'employee' ? "/portal" : "/app");
