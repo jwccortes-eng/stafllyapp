@@ -65,9 +65,16 @@ const CompanySwitcher = forwardRef<HTMLDivElement, CompanySwitcherProps>(functio
     return companies.filter(c => c.name.toLowerCase().includes(q));
   }, [companies, search]);
 
+  const isDeveloper = role === "developer";
+
   const handleSelect = (company: typeof companies[0]) => {
     if (company.id === selectedCompanyId) {
       setOpen(false);
+      return;
+    }
+
+    // Hard block: only developer can enter suspended/archived tenants.
+    if (!isCompanyOperable(company, isDeveloper)) {
       return;
     }
 
