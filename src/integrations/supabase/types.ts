@@ -1529,24 +1529,31 @@ export type Database = {
           application_cover_url: string | null
           application_enabled: boolean
           application_intro: string | null
+          archived_at: string | null
           billing_status: string
           brand_color: string | null
           company_code: number | null
           created_at: string
+          created_by: string | null
           id: string
           invite_code: string
           is_active: boolean
+          is_demo: boolean
           is_sandbox: boolean
+          is_test: boolean
           logo_url: string | null
           max_admins: number
           max_employees: number
           name: string
+          owner_user_id: string | null
           paid_features_enabled: boolean
           plan_activated_at: string | null
           plan_activated_by: string | null
           plan_code: string
           plan_status: string
           slug: string
+          source: string | null
+          status: string
           trial_ends_at: string | null
           updated_at: string
           upgrade_requested_at: string | null
@@ -1555,24 +1562,31 @@ export type Database = {
           application_cover_url?: string | null
           application_enabled?: boolean
           application_intro?: string | null
+          archived_at?: string | null
           billing_status?: string
           brand_color?: string | null
           company_code?: number | null
           created_at?: string
+          created_by?: string | null
           id?: string
           invite_code: string
           is_active?: boolean
+          is_demo?: boolean
           is_sandbox?: boolean
+          is_test?: boolean
           logo_url?: string | null
           max_admins?: number
           max_employees?: number
           name: string
+          owner_user_id?: string | null
           paid_features_enabled?: boolean
           plan_activated_at?: string | null
           plan_activated_by?: string | null
           plan_code?: string
           plan_status?: string
           slug: string
+          source?: string | null
+          status?: string
           trial_ends_at?: string | null
           updated_at?: string
           upgrade_requested_at?: string | null
@@ -1581,24 +1595,31 @@ export type Database = {
           application_cover_url?: string | null
           application_enabled?: boolean
           application_intro?: string | null
+          archived_at?: string | null
           billing_status?: string
           brand_color?: string | null
           company_code?: number | null
           created_at?: string
+          created_by?: string | null
           id?: string
           invite_code?: string
           is_active?: boolean
+          is_demo?: boolean
           is_sandbox?: boolean
+          is_test?: boolean
           logo_url?: string | null
           max_admins?: number
           max_employees?: number
           name?: string
+          owner_user_id?: string | null
           paid_features_enabled?: boolean
           plan_activated_at?: string | null
           plan_activated_by?: string | null
           plan_code?: string
           plan_status?: string
           slug?: string
+          source?: string | null
+          status?: string
           trial_ends_at?: string | null
           updated_at?: string
           upgrade_requested_at?: string | null
