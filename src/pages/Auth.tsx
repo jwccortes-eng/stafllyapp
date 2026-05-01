@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { APP_BASE_URL } from "@/lib/app-url";
 import { useAuth } from "@/hooks/useAuth";
@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyError } from "@/lib/error-helpers";
-import { Mail, Lock, Eye, EyeOff, Loader2, User, ShieldCheck, Building2, Phone, Sparkles } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, Loader2, ShieldCheck, Phone } from "lucide-react";
 import { StaflyLogo } from "@/components/brand/StaflyBrand";
 import { EmployeeAuthFlow } from "@/components/auth/EmployeeAuthFlow";
 
@@ -32,17 +32,11 @@ export default function Auth() {
   const { companies, loading: companyLoading, selectedCompanyId, selectedCompany } = useCompany();
   const navigate = useNavigate();
   const phoneRedirectPendingRef = useRef(false);
-  const [searchParams] = useSearchParams();
   const [method, setMethod] = useState<LoginMethod>("email");
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
-  const [fullName, setFullName] = useState("");
-  const [companyName, setCompanyName] = useState("");
-  const [isLogin, setIsLogin] = useState(!searchParams.get("register"));
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [settingUp, setSettingUp] = useState(false);
-  const [needsSetupChecked, setNeedsSetupChecked] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
