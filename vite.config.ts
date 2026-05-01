@@ -50,19 +50,28 @@ export default defineConfig(({ mode }) => ({
         // (no prior visit) must hit the server directly so they get the latest
         // bundle, not a cached one from a previous device install.
         navigateFallbackDenylist: [/^\/~oauth/, /^\/s\//, /^\/apply\//, /^\/invite/, /^\/activate\//, /^\/join\//],
-        globPatterns: ["**/*.{js,css,html,ico,png,jpg,svg,woff2}"],
+        globPatterns: ["**/*.{js,css,ico,png,jpg,svg,woff2}"],
+        // CRITICAL: do NOT precache HTML. Combined with the NetworkFirst rule
+        // below, this guarantees navigations always fetch fresh index.html so
+        // a stale SW can never serve an old build (Edwin / Paula bug, May 2026).
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         runtimeCaching: [
           {
-            // Cache Supabase REST API calls (stale-while-revalidate)
-            urlPattern: /^https:\/\/.*\.supabase\.co\/rest\/v1\/.*/i,
-            handler: "StaleWhileRevalidate",
+            // HTML navigations: always try network first. If the network fails,
+            // fall back to a recently cached copy. Prevents stale shells.
+            urlPattern: ({ request }) => request.mode === "navigate",
+            handler: "NetworkFirst",
             options: {
-              cacheName: "supabase-api-cache",
-              expiration: { maxEntries: 100, maxAgeSeconds: 60 * 30 },
+              cacheName: "html-shell",
+              networkTimeoutSeconds: 3,
+              expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 },
               cacheableResponse: { statuses: [0, 200] },
             },
           },
+          // NOTE: Supabase REST (/rest/v1/) is intentionally NOT cached here.
+          // Auth / company_users / companies must always be live; a stale
+          // cached response was causing Edwin to land on the wrong tenant
+          // and Paula to see a previous build's data shape (May 2026).
           {
             // Cache Supabase Storage (images, docs)
             urlPattern: /^https:\/\/.*\.supabase\.co\/storage\/v1\/object\/.*/i,
