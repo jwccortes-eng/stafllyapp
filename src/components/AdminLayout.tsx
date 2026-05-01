@@ -66,6 +66,8 @@ export default function AdminLayout() {
   const effectiveRole = getRoleForCompany(selectedCompanyId);
   const canAccessAdminHere = canAccessAdminForCompany(selectedCompanyId);
   const canAccessPortalHere = canAccessPortalForCompany(selectedCompanyId);
+  const isFounderFinanceRoute = location.pathname === "/app/founder-finance" || location.pathname.startsWith("/app/founder-finance/");
+  const hasFounderAccess = role === "developer" || role === "owner";
   const fallbackAdminCompanyId = useMemo(() => {
     if (canAccessAdminHere) return null;
     return companies.find((company) => canAccessAdminForCompany(company.id))?.id ?? null;
@@ -171,6 +173,17 @@ export default function AdminLayout() {
   // Quality must NOT see admin shell while Quality is selected. Send them to
   // their portal in that company instead.
   if (!canAccessAdminHere) {
+    if (isFounderFinanceRoute && hasFounderAccess) {
+      return (
+        <div className="min-h-screen bg-background">
+          <main className="p-6 lg:p-10 pt-6">
+            <div className="animate-fade-in max-w-[1500px] mx-auto">
+              <Outlet />
+            </div>
+          </main>
+        </div>
+      );
+    }
     if (canAccessPortalHere) return <Navigate to="/portal" replace />;
     return (
       <div className="min-h-screen flex items-center justify-center bg-background px-6">
