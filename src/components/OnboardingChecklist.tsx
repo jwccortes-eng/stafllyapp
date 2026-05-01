@@ -112,8 +112,9 @@ export function OnboardingChecklist() {
     }
 
     checkProgress();
-  }, [selectedCompanyId]);
+  }, [selectedCompanyId, onboardingApplies]);
 
+  if (!onboardingApplies) return null;
   if (loading || dismissed) return null;
 
   const completedCount = steps.filter(s => s.completed).length;
