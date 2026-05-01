@@ -125,7 +125,7 @@ export default function Auth() {
       }
     };
     autoSetup();
-  }, [user, role, authLoading, navigate, settingUp, canAccessAdmin, canAccessPortal, activeMode]);
+  }, [user, role, authLoading, navigate, canAccessAdmin, canAccessPortal, activeMode]);
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
