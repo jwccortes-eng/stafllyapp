@@ -4227,6 +4227,580 @@ export type Database = {
           },
         ]
       }
+      finance_accounts: {
+        Row: {
+          account_type: string
+          created_at: string
+          currency: string
+          current_balance: number
+          id: string
+          institution: string | null
+          is_active: boolean
+          last4: string | null
+          name: string
+          notes: string | null
+          owner_user_id: string
+          updated_at: string
+        }
+        Insert: {
+          account_type?: string
+          created_at?: string
+          currency?: string
+          current_balance?: number
+          id?: string
+          institution?: string | null
+          is_active?: boolean
+          last4?: string | null
+          name: string
+          notes?: string | null
+          owner_user_id: string
+          updated_at?: string
+        }
+        Update: {
+          account_type?: string
+          created_at?: string
+          currency?: string
+          current_balance?: number
+          id?: string
+          institution?: string | null
+          is_active?: boolean
+          last4?: string | null
+          name?: string
+          notes?: string | null
+          owner_user_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      finance_audit_log: {
+        Row: {
+          action: string
+          created_at: string
+          details: Json
+          entity_id: string | null
+          entity_type: string
+          id: string
+          owner_user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: Json
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          owner_user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: Json
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          owner_user_id?: string
+        }
+        Relationships: []
+      }
+      finance_categories: {
+        Row: {
+          color: string | null
+          created_at: string
+          icon: string | null
+          id: string
+          is_active: boolean
+          kind: string
+          name: string
+          owner_user_id: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          kind?: string
+          name: string
+          owner_user_id: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          kind?: string
+          name?: string
+          owner_user_id?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      finance_debts: {
+        Row: {
+          apr: number | null
+          created_at: string
+          credit_limit: number | null
+          current_balance: number
+          debt_type: string
+          due_day: number | null
+          id: string
+          institution: string | null
+          is_active: boolean
+          last4: string | null
+          min_payment: number | null
+          name: string
+          next_due_date: string | null
+          notes: string | null
+          owner_user_id: string
+          updated_at: string
+        }
+        Insert: {
+          apr?: number | null
+          created_at?: string
+          credit_limit?: number | null
+          current_balance?: number
+          debt_type?: string
+          due_day?: number | null
+          id?: string
+          institution?: string | null
+          is_active?: boolean
+          last4?: string | null
+          min_payment?: number | null
+          name: string
+          next_due_date?: string | null
+          notes?: string | null
+          owner_user_id: string
+          updated_at?: string
+        }
+        Update: {
+          apr?: number | null
+          created_at?: string
+          credit_limit?: number | null
+          current_balance?: number
+          debt_type?: string
+          due_day?: number | null
+          id?: string
+          institution?: string | null
+          is_active?: boolean
+          last4?: string | null
+          min_payment?: number | null
+          name?: string
+          next_due_date?: string | null
+          notes?: string | null
+          owner_user_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      finance_goals: {
+        Row: {
+          created_at: string
+          current_amount: number
+          goal_type: string
+          id: string
+          is_active: boolean
+          name: string
+          notes: string | null
+          owner_user_id: string
+          target_amount: number
+          target_date: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          current_amount?: number
+          goal_type?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          notes?: string | null
+          owner_user_id: string
+          target_amount: number
+          target_date?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          current_amount?: number
+          goal_type?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          notes?: string | null
+          owner_user_id?: string
+          target_amount?: number
+          target_date?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      finance_import_batches: {
+        Row: {
+          approved_at: string | null
+          confidence_score: number | null
+          created_at: string
+          error_message: string | null
+          file_name: string
+          file_type: string | null
+          id: string
+          owner_user_id: string
+          parser_version: string | null
+          raw_file_path: string | null
+          source_institution: string | null
+          source_type: string
+          statement_period_end: string | null
+          statement_period_start: string | null
+          status: string
+          summary: Json
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          confidence_score?: number | null
+          created_at?: string
+          error_message?: string | null
+          file_name: string
+          file_type?: string | null
+          id?: string
+          owner_user_id: string
+          parser_version?: string | null
+          raw_file_path?: string | null
+          source_institution?: string | null
+          source_type?: string
+          statement_period_end?: string | null
+          statement_period_start?: string | null
+          status?: string
+          summary?: Json
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          confidence_score?: number | null
+          created_at?: string
+          error_message?: string | null
+          file_name?: string
+          file_type?: string | null
+          id?: string
+          owner_user_id?: string
+          parser_version?: string | null
+          raw_file_path?: string | null
+          source_institution?: string | null
+          source_type?: string
+          statement_period_end?: string | null
+          statement_period_start?: string | null
+          status?: string
+          summary?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      finance_import_extracted_items: {
+        Row: {
+          account_guess: string | null
+          account_id: string | null
+          amount: number | null
+          category_guess: string | null
+          category_id: string | null
+          confidence_score: number | null
+          created_at: string
+          currency: string | null
+          debt_id: string | null
+          description_raw: string | null
+          id: string
+          import_batch_id: string
+          is_recurring_guess: boolean
+          item_type: string
+          merchant_guess: string | null
+          notes: string | null
+          owner_user_id: string
+          raw_payload: Json
+          review_status: string
+          reviewed_at: string | null
+          transaction_date: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_guess?: string | null
+          account_id?: string | null
+          amount?: number | null
+          category_guess?: string | null
+          category_id?: string | null
+          confidence_score?: number | null
+          created_at?: string
+          currency?: string | null
+          debt_id?: string | null
+          description_raw?: string | null
+          id?: string
+          import_batch_id: string
+          is_recurring_guess?: boolean
+          item_type?: string
+          merchant_guess?: string | null
+          notes?: string | null
+          owner_user_id: string
+          raw_payload?: Json
+          review_status?: string
+          reviewed_at?: string | null
+          transaction_date?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_guess?: string | null
+          account_id?: string | null
+          amount?: number | null
+          category_guess?: string | null
+          category_id?: string | null
+          confidence_score?: number | null
+          created_at?: string
+          currency?: string | null
+          debt_id?: string | null
+          description_raw?: string | null
+          id?: string
+          import_batch_id?: string
+          is_recurring_guess?: boolean
+          item_type?: string
+          merchant_guess?: string | null
+          notes?: string | null
+          owner_user_id?: string
+          raw_payload?: Json
+          review_status?: string
+          reviewed_at?: string | null
+          transaction_date?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "finance_import_extracted_items_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "finance_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "finance_import_extracted_items_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "finance_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "finance_import_extracted_items_debt_id_fkey"
+            columns: ["debt_id"]
+            isOneToOne: false
+            referencedRelation: "finance_debts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "finance_import_extracted_items_import_batch_id_fkey"
+            columns: ["import_batch_id"]
+            isOneToOne: false
+            referencedRelation: "finance_import_batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      finance_income_sources: {
+        Row: {
+          created_at: string
+          currency: string
+          expected_amount: number | null
+          frequency: string
+          id: string
+          is_active: boolean
+          name: string
+          next_payment_date: string | null
+          notes: string | null
+          owner_user_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          currency?: string
+          expected_amount?: number | null
+          frequency?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          next_payment_date?: string | null
+          notes?: string | null
+          owner_user_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          currency?: string
+          expected_amount?: number | null
+          frequency?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          next_payment_date?: string | null
+          notes?: string | null
+          owner_user_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      finance_recurring_expenses: {
+        Row: {
+          account_id: string | null
+          amount: number
+          category_id: string | null
+          created_at: string
+          currency: string
+          debt_id: string | null
+          frequency: string
+          id: string
+          is_active: boolean
+          merchant: string
+          next_charge_date: string | null
+          notes: string | null
+          owner_user_id: string
+          updated_at: string
+        }
+        Insert: {
+          account_id?: string | null
+          amount: number
+          category_id?: string | null
+          created_at?: string
+          currency?: string
+          debt_id?: string | null
+          frequency?: string
+          id?: string
+          is_active?: boolean
+          merchant: string
+          next_charge_date?: string | null
+          notes?: string | null
+          owner_user_id: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string | null
+          amount?: number
+          category_id?: string | null
+          created_at?: string
+          currency?: string
+          debt_id?: string | null
+          frequency?: string
+          id?: string
+          is_active?: boolean
+          merchant?: string
+          next_charge_date?: string | null
+          notes?: string | null
+          owner_user_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "finance_recurring_expenses_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "finance_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "finance_recurring_expenses_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "finance_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "finance_recurring_expenses_debt_id_fkey"
+            columns: ["debt_id"]
+            isOneToOne: false
+            referencedRelation: "finance_debts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      finance_transactions_manual: {
+        Row: {
+          account_id: string | null
+          amount: number
+          category_id: string | null
+          created_at: string
+          currency: string
+          debt_id: string | null
+          description: string | null
+          direction: string
+          id: string
+          is_recurring: boolean
+          merchant: string | null
+          notes: string | null
+          owner_user_id: string
+          source_batch_id: string | null
+          source_item_id: string | null
+          transaction_date: string
+          updated_at: string
+        }
+        Insert: {
+          account_id?: string | null
+          amount: number
+          category_id?: string | null
+          created_at?: string
+          currency?: string
+          debt_id?: string | null
+          description?: string | null
+          direction?: string
+          id?: string
+          is_recurring?: boolean
+          merchant?: string | null
+          notes?: string | null
+          owner_user_id: string
+          source_batch_id?: string | null
+          source_item_id?: string | null
+          transaction_date: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string | null
+          amount?: number
+          category_id?: string | null
+          created_at?: string
+          currency?: string
+          debt_id?: string | null
+          description?: string | null
+          direction?: string
+          id?: string
+          is_recurring?: boolean
+          merchant?: string | null
+          notes?: string | null
+          owner_user_id?: string
+          source_batch_id?: string | null
+          source_item_id?: string | null
+          transaction_date?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "finance_transactions_manual_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "finance_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "finance_transactions_manual_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "finance_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "finance_transactions_manual_debt_id_fkey"
+            columns: ["debt_id"]
+            isOneToOne: false
+            referencedRelation: "finance_debts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       flash_job_responses: {
         Row: {
           flash_job_id: string
@@ -15242,6 +15816,7 @@ export type Database = {
         Args: { _conversation_id: string; _user_id: string }
         Returns: boolean
       }
+      is_founder: { Args: { _user_id: string }; Returns: boolean }
       is_global_owner: { Args: { _user_id: string }; Returns: boolean }
       list_unassigned_profiles: {
         Args: never
@@ -15378,6 +15953,7 @@ export type Database = {
         | "owner"
         | "manager"
         | "supervisor"
+        | "founder"
       billable_unit: "hour" | "day" | "flat"
       calc_mode: "quantity_x_rate" | "manual_value" | "hybrid"
       client_contact_portal_status: "invited" | "active" | "disabled"
@@ -15870,6 +16446,7 @@ export const Constants = {
         "owner",
         "manager",
         "supervisor",
+        "founder",
       ],
       billable_unit: ["hour", "day", "flat"],
       calc_mode: ["quantity_x_rate", "manual_value", "hybrid"],
