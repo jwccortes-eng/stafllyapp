@@ -112,7 +112,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     safeLocalStorage.setItem("stafly-active-mode", mode);
   }, []);
 
-  const fetchUserData = async (userId: string) => {
+  const resetAuthState = useCallback(() => {
+    setRole(null);
+    setAllRoles(new Set());
+    setCompanyRoles({});
+    setEmployeeId(null);
+    setAllEmployeeIds([]);
+    setEmployeeActive(true);
+    setPermissions([]);
+    setActionPermissions([]);
+    setFullName(null);
+  }, []);
+
+  const fetchUserData = useCallback(async (userId: string) => {
     try {
       const { data: roleRows, error: roleError } = await supabase
         .from("user_roles")
@@ -212,44 +224,74 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     } catch (err) {
       if (import.meta.env.DEV) console.error('Error fetching user data:', err);
-      setRole(null);
-      setAllRoles(new Set());
-      setCompanyRoles({});
-      setEmployeeId(null);
-      setPermissions([]);
-      setActionPermissions([]);
+      resetAuthState();
     }
-  };
+  }, [resetAuthState]);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
+    let mounted = true;
 
-        if (session?.user) {
+    const syncSession = async (nextSession: Session | null) => {
+      if (!mounted) return;
+
+      setSession(nextSession);
+      setUser(nextSession?.user ?? null);
+
+      if (nextSession?.user) {
+        await fetchUserData(nextSession.user.id);
+      } else {
+        resetAuthState();
+      }
+
+      if (mounted) {
+        setLoading(false);
+      }
+    };
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, nextSession) => {
+        if (!mounted) return;
+
+        setSession(nextSession);
+        setUser(nextSession?.user ?? null);
+
+        if (event === "INITIAL_SESSION" || event === "TOKEN_REFRESHED") {
+          if (event === "INITIAL_SESSION" && !nextSession) {
+            resetAuthState();
+            setLoading(false);
+          }
+          return;
+        }
+
+        if (nextSession?.user) {
+          setLoading(true);
           setTimeout(() => {
-            fetchUserData(session.user.id).then(() => setLoading(false));
+            void fetchUserData(nextSession.user.id).finally(() => {
+              if (mounted) setLoading(false);
+            });
           }, 0);
         } else {
-          setRole(null);
-          setAllRoles(new Set());
-          setCompanyRoles({});
-          setEmployeeId(null);
-          setPermissions([]);
+          resetAuthState();
           setLoading(false);
         }
       }
     );
 
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) {
+      void syncSession(session);
+    }).catch((err) => {
+      if (import.meta.env.DEV) console.error('Error restoring session:', err);
+      if (mounted) {
+        resetAuthState();
         setLoading(false);
       }
     });
 
-    return () => subscription.unsubscribe();
-  }, []);
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, [fetchUserData, resetAuthState]);
 
   const signOut = async () => {
     try {
