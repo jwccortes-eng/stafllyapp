@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { APP_BASE_URL } from "@/lib/app-url";
 import { useAuth } from "@/hooks/useAuth";
+import { useCompany } from "@/hooks/useCompany";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,7 +16,20 @@ import { EmployeeAuthFlow } from "@/components/auth/EmployeeAuthFlow";
 type LoginMethod = "email" | "phone";
 
 export default function Auth() {
-  const { user, role, loading: authLoading, canAccessAdmin, canAccessPortal, activeMode } = useAuth();
+  const {
+    user,
+    session,
+    role,
+    loading: authLoading,
+    canAccessAdmin,
+    canAccessPortal,
+    activeMode,
+    companyRoles,
+    allEmployeeIds,
+    canAccessAdminForCompany,
+    canAccessPortalForCompany,
+  } = useAuth();
+  const { companies, loading: companyLoading, selectedCompanyId, selectedCompany } = useCompany();
   const navigate = useNavigate();
   const phoneRedirectPendingRef = useRef(false);
   const [searchParams] = useSearchParams();
@@ -30,6 +44,50 @@ export default function Auth() {
   const [settingUp, setSettingUp] = useState(false);
   const [needsSetupChecked, setNeedsSetupChecked] = useState(false);
   const { toast } = useToast();
+
+  useEffect(() => {
+    const redirectTarget = phoneRedirectPendingRef.current
+      ? (canAccessAdmin ? "/app" : canAccessPortal ? "/portal" : null)
+      : (canAccessAdmin && canAccessPortal
+          ? (activeMode === "employee" ? "/portal" : "/app")
+          : canAccessAdmin
+            ? "/app"
+            : canAccessPortal
+              ? "/portal"
+              : null);
+
+    console.info("[post-login-debug]", {
+      step: "auth-screen",
+      userId: user?.id ?? null,
+      sessionExists: !!session,
+      authLoading,
+      companyLoading,
+      selectedCompanyId,
+      selectedCompanyName: selectedCompany?.name ?? null,
+      companies: companies.map((company) => ({ id: company.id, name: company.name })),
+      companyRoles,
+      allEmployeeIds,
+      activeMode,
+      canAccessAdminForSelected: canAccessAdminForCompany(selectedCompanyId),
+      canAccessPortalForSelected: canAccessPortalForCompany(selectedCompanyId),
+      redirectTarget,
+    });
+  }, [
+    activeMode,
+    allEmployeeIds,
+    authLoading,
+    canAccessAdmin,
+    canAccessAdminForCompany,
+    canAccessPortal,
+    canAccessPortalForCompany,
+    companies,
+    companyLoading,
+    companyRoles,
+    selectedCompany,
+    selectedCompanyId,
+    session,
+    user,
+  ]);
 
   // Smart redirect after auth
   useEffect(() => {
