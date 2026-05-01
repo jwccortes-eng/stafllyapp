@@ -288,51 +288,104 @@ const CompanySwitcher = forwardRef<HTMLDivElement, CompanySwitcherProps>(functio
               <div className="border-t border-border/20 my-1" />
             )}
 
-            {filtered.map((company) => {
-              const isSelected = company.id === selectedCompanyId;
-              const companyRole = companyRoles[company.id];
-              const roleLabel = companyRole ? ROLE_LABELS[companyRole] || companyRole : null;
+            {(() => {
+              const groupOrder: CompanyGroup[] = [
+                "production_pilot",
+                "test_demo",
+                "needs_review",
+                "inactive_suspended",
+              ];
+              const grouped: Record<CompanyGroup, typeof filtered> = {
+                production_pilot: [],
+                test_demo: [],
+                needs_review: [],
+                inactive_suspended: [],
+              };
+              filtered.forEach((c) => grouped[classifyCompany(c)].push(c));
 
-              return (
-                <button
-                  key={company.id}
-                  onClick={() => handleSelect(company)}
-                  className={cn(
-                    "flex items-center gap-2.5 w-full rounded-lg px-2.5 py-2.5 text-left transition-all duration-150",
-                    isSelected
-                      ? "bg-primary/[0.06] ring-1 ring-primary/10"
-                      : "hover:bg-accent/40"
-                  )}
-                >
-                  <CompanyLogo
-                    name={company.name}
-                    logoUrl={company.logo_url}
-                    brandColor={company.brand_color}
-                    size="sm"
-                    active={isSelected}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <p className={cn("text-[12px] font-medium truncate leading-tight", isSelected && "text-primary font-semibold")}>
-                      {company.name}
-                    </p>
-                    {roleLabel && (
-                      <p className="text-[10px] text-muted-foreground/60 mt-0.5">{roleLabel}</p>
-                    )}
-                  </div>
-                  {isSelected ? (
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <span className="text-[9px] font-bold uppercase text-primary/60 tracking-wider">Activa</span>
-                      <Check className="h-3.5 w-3.5 text-primary" />
-                    </div>
-                  ) : (
-                    <Shield className="h-3.5 w-3.5 text-muted-foreground/20 shrink-0" />
-                  )}
-                </button>
-              );
-            })}
-            {filtered.length === 0 && (
-              <p className="text-[11px] text-muted-foreground/40 text-center py-4">No se encontraron empresas</p>
-            )}
+              const sections = groupOrder.filter((g) => grouped[g].length > 0);
+              if (sections.length === 0) {
+                return (
+                  <p className="text-[11px] text-muted-foreground/40 text-center py-4">
+                    No companies found
+                  </p>
+                );
+              }
+
+              return sections.map((group) => (
+                <div key={group} className="mb-1.5">
+                  <p className="px-2 pt-2 pb-1 text-[9px] font-bold uppercase tracking-wider text-muted-foreground/50">
+                    {GROUP_LABELS[group]}
+                  </p>
+                  {grouped[group].map((company) => {
+                    const isSelected = company.id === selectedCompanyId;
+                    const companyRole = companyRoles[company.id];
+                    const roleLabel = companyRole ? ROLE_LABELS[companyRole] || companyRole : null;
+                    const badges = getCompanyBadges(company);
+                    const operable = isCompanyOperable(company, isDeveloper);
+                    const dangerous = group === "inactive_suspended";
+
+                    return (
+                      <button
+                        key={company.id}
+                        onClick={() => handleSelect(company)}
+                        disabled={!operable}
+                        className={cn(
+                          "flex items-center gap-2.5 w-full rounded-lg px-2.5 py-2 text-left transition-all duration-150",
+                          isSelected
+                            ? "bg-primary/[0.06] ring-1 ring-primary/10"
+                            : operable
+                              ? "hover:bg-accent/40"
+                              : "opacity-50 cursor-not-allowed",
+                        )}
+                      >
+                        <CompanyLogo
+                          name={company.name}
+                          logoUrl={company.logo_url}
+                          brandColor={company.brand_color}
+                          size="sm"
+                          active={isSelected}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <p className={cn(
+                              "text-[12px] font-medium truncate leading-tight",
+                              isSelected && "text-primary font-semibold",
+                            )}>
+                              {company.name}
+                            </p>
+                            {dangerous && operable && (
+                              <AlertTriangle className="h-3 w-3 text-destructive shrink-0" />
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1 mt-0.5 flex-wrap">
+                            {badges.slice(0, 3).map((b, i) => (
+                              <span
+                                key={i}
+                                className={cn(
+                                  "inline-flex items-center px-1.5 py-px rounded text-[8.5px] font-bold uppercase tracking-wide leading-tight",
+                                  BADGE_CLASSES[b.tone],
+                                )}
+                              >
+                                {b.label}
+                              </span>
+                            ))}
+                            {roleLabel && (
+                              <span className="text-[9px] text-muted-foreground/60">{roleLabel}</span>
+                            )}
+                          </div>
+                        </div>
+                        {isSelected ? (
+                          <Check className="h-3.5 w-3.5 text-primary shrink-0" />
+                        ) : (
+                          <Shield className="h-3.5 w-3.5 text-muted-foreground/20 shrink-0" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              ));
+            })()}
           </div>
           {/* Footer hint */}
           <div className="px-3 py-2 border-t border-border/30 bg-muted/20">
