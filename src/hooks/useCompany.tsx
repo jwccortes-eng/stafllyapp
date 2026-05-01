@@ -12,6 +12,10 @@ interface Company {
   invite_code?: string;
   brand_color?: string | null;
   logo_url?: string | null;
+  status?: string | null;
+  source?: string | null;
+  is_test?: boolean | null;
+  is_demo?: boolean | null;
 }
 
 interface CompanyContextType {
@@ -121,19 +125,21 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
       if (role === 'developer' || role === 'owner') {
         const { data, error } = await supabase
           .from("companies")
-          .select("id, name, slug, is_active, invite_code, brand_color, logo_url")
+          .select("id, name, slug, is_active, invite_code, brand_color, logo_url, status, source, is_test, is_demo")
           .order("name");
         if (error) throw error;
         list = (data as Company[]) ?? [];
       } else {
         const { data, error } = await supabase
           .from("company_users")
-          .select("company_id, companies(id, name, slug, is_active, brand_color, logo_url)")
+          .select("company_id, companies(id, name, slug, is_active, brand_color, logo_url, status, source, is_test, is_demo)")
           .eq("user_id", user.id);
         if (error) throw error;
         list = ((data ?? [])
           .map((cu: any) => cu.companies)
           .filter(Boolean) as Company[])
+          // Hide suspended/archived tenants from non-developer users.
+          .filter((c) => c.status !== "suspended" && c.status !== "archived")
           .sort((a, b) => a.name.localeCompare(b.name));
       }
     } catch (err) {

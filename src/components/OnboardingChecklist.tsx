@@ -18,6 +18,8 @@ interface ChecklistStep {
   completed: boolean;
 }
 
+import { shouldShowOnboarding } from "@/lib/company-governance";
+
 export function OnboardingChecklist() {
   const { selectedCompanyId, selectedCompany } = useCompany();
   const navigate = useNavigate();
@@ -25,8 +27,16 @@ export function OnboardingChecklist() {
   const [loading, setLoading] = useState(true);
   const [dismissed, setDismissed] = useState(false);
 
+  // Hide for suspended/inactive/archived/test/demo tenants — they shouldn't
+  // be nudged to "complete setup".
+  const onboardingApplies = !!selectedCompany && shouldShowOnboarding(selectedCompany);
+
   useEffect(() => {
     if (!selectedCompanyId) return;
+    if (!onboardingApplies) {
+      setLoading(false);
+      return;
+    }
 
     // Check if user dismissed this checklist
     const dismissKey = `onboarding_dismissed_${selectedCompanyId}`;
@@ -102,8 +112,9 @@ export function OnboardingChecklist() {
     }
 
     checkProgress();
-  }, [selectedCompanyId]);
+  }, [selectedCompanyId, onboardingApplies]);
 
+  if (!onboardingApplies) return null;
   if (loading || dismissed) return null;
 
   const completedCount = steps.filter(s => s.completed).length;
