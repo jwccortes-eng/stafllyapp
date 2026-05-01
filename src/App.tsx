@@ -169,6 +169,12 @@ const ParcerosCommunity = lazy(() => import("./pages/parceros/ParcerosCommunity"
 const ChannelView = lazy(() => import("./pages/parceros/ChannelView"));
 const FlashJobDetail = lazy(() => import("./pages/parceros/FlashJobDetail"));
 
+// Founder Finance — private founder-only module
+const FounderFinanceLayout = lazy(() => import("./pages/founder-finance/FounderFinanceLayout"));
+const FounderFinanceOverview = lazy(() => import("./pages/founder-finance/Overview"));
+const FounderFinanceImports = lazy(() => import("./pages/founder-finance/Imports"));
+const FounderFinanceStub = lazy(() => import("./pages/founder-finance/StubPage"));
+
 import { queryClient } from "@/lib/query-client";
 
 function NetworkListener() {
