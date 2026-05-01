@@ -223,15 +223,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setActiveModeState('employee');
       }
 
-      console.info("[useAuth]", {
+      console.info("[post-login-debug]", {
+        step: "use-auth-hydrated",
         userId,
         sessionExists: true,
-        profileExists: !!profileData,
+        authLoading: false,
+        companyLoading: null,
+        selectedCompanyId: null,
+        selectedCompanyName: null,
+        companies: [],
         companyRoles: cRoles,
         allEmployeeIds: activeEmps,
         activeMode: savedMode,
-        canAccessAdmin: hasAdminRole || Object.values(cRoles).some((r) => ADMIN_ROLES.has(r)),
-        canAccessPortal: activeEmps.length > 0,
+        canAccessAdminForSelected: null,
+        canAccessPortalForSelected: null,
         redirectTarget: hasAdminRole || Object.values(cRoles).some((r) => ADMIN_ROLES.has(r)) ? "/app" : activeEmps.length > 0 ? "/portal" : "/auth",
       });
     } catch (err) {
@@ -246,10 +251,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const syncSession = async (nextSession: Session | null) => {
       if (!mounted) return;
 
-      console.info("[useAuth]", {
+        console.info("[post-login-debug]", {
+          step: "use-auth-sync-session",
         userId: nextSession?.user?.id ?? null,
         sessionExists: !!nextSession,
-        step: "syncSession",
+          authLoading: true,
+          companyLoading: null,
+          selectedCompanyId: null,
+          selectedCompanyName: null,
+          companies: [],
+          companyRoles: {},
+          allEmployeeIds: [],
+          activeMode,
+          canAccessAdminForSelected: null,
+          canAccessPortalForSelected: null,
+          redirectTarget: null,
       });
 
       setSession(nextSession);
@@ -270,10 +286,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       (event, nextSession) => {
         if (!mounted) return;
 
-        console.info("[useAuth]", {
+        console.info("[post-login-debug]", {
+          step: "use-auth-state-change",
           userId: nextSession?.user?.id ?? null,
           sessionExists: !!nextSession,
-          step: "onAuthStateChange",
+          authLoading: true,
+          companyLoading: null,
+          selectedCompanyId: null,
+          selectedCompanyName: null,
+          companies: [],
+          companyRoles: {},
+          allEmployeeIds: [],
+          activeMode,
+          canAccessAdminForSelected: null,
+          canAccessPortalForSelected: null,
+          redirectTarget: null,
           event,
         });
 
@@ -316,7 +343,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, [fetchUserData, resetAuthState]);
+  }, [activeMode, fetchUserData, resetAuthState]);
 
   const signOut = async () => {
     try {
