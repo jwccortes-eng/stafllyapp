@@ -69,13 +69,13 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
   const canUseGlobalMode = !!role && GLOBAL_MODE_ROLES.has(role);
   const isGlobalMode = canUseGlobalMode && selectedCompanyId === null;
 
-  const logPostLoginDebug = useCallback((step: string, nextCompanies: Company[], nextSelectedCompanyId: string | null) => {
+  const logPostLoginDebug = useCallback((step: string, nextCompanies: Company[], nextSelectedCompanyId: string | null, nextCompanyLoading: boolean) => {
     console.info("[post-login-debug]", {
       step,
       userId: user?.id ?? null,
       sessionExists: !!session,
       authLoading,
-      companyLoading: loading,
+      companyLoading: nextCompanyLoading,
       selectedCompanyId: nextSelectedCompanyId,
       selectedCompanyName: nextCompanies.find((company) => company.id === nextSelectedCompanyId)?.name ?? null,
       companies: nextCompanies.map((company) => ({ id: company.id, name: company.name })),
@@ -86,7 +86,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
       canAccessPortalForSelected: canAccessPortalForCompany(nextSelectedCompanyId),
       redirectTarget: null,
     });
-  }, [activeMode, allEmployeeIds, authLoading, canAccessAdminForCompany, canAccessPortalForCompany, companyRoles, loading, session, user]);
+  }, [activeMode, allEmployeeIds, authLoading, canAccessAdminForCompany, canAccessPortalForCompany, companyRoles, session, user]);
 
   const setSelectedCompanyId = useCallback((id: string | null) => {
     setSelectedCompanyIdRaw(id);
@@ -108,7 +108,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
       setCompanies([]);
       setSelectedCompanyIdRaw(null);
       setLoading(false);
-      logPostLoginDebug("company-provider-no-user", [], null);
+      logPostLoginDebug("company-provider-no-user", [], null, false);
       return;
     }
 
@@ -198,7 +198,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
     }
 
     setLoading(false);
-      logPostLoginDebug("company-provider-resolved", list, resolvedSelection);
+      logPostLoginDebug("company-provider-resolved", list, resolvedSelection, false);
   }, [authLoading, user, role, canUseGlobalMode, manuallySelected, selectedCompanyId, logPostLoginDebug]);
 
   /** Switch company: update state + invalidate all cached queries */
