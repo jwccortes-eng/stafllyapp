@@ -213,6 +213,18 @@ export default function Requests() {
     const sMap: Record<string, ShiftCtx> = {};
     (sRes.data ?? []).forEach((s: any) => { sMap[s.id] = s; });
 
+    // Fetch client names for shifts that have a client_id
+    const clientIds = Array.from(new Set(Object.values(sMap).map(s => s.client_id).filter(Boolean) as string[]));
+    if (clientIds.length) {
+      const { data: clients } = await supabase
+        .from("clients").select("id, name").in("id", clientIds);
+      const cMap: Record<string, string> = {};
+      (clients ?? []).forEach((c: any) => { cMap[c.id] = c.name; });
+      Object.values(sMap).forEach(s => {
+        if (s.client_id) s.client_name = cMap[s.client_id] ?? null;
+      });
+    }
+
     // For shift tickets, also find related time_entry by shift+employee
     const teMap: Record<string, TimeEntryCtx> = {};
     (teRes.data ?? []).forEach((te: any) => { teMap[te.id] = te; });
