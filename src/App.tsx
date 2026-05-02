@@ -18,6 +18,7 @@ import AdminLayout from "./components/AdminLayout";
 import EmployeeLayout from "./components/EmployeeLayout";
 import ModuleGate from "./components/ModuleGate";
 import { CompanyRequiredGuard } from "./components/CompanyRequiredGuard";
+import { PortalModuleGuard } from "./components/portal/PortalModuleGuard";
 import AdminDashboard from "./pages/admin/Dashboard";
 import Employees from "./pages/admin/Employees";
 import Shifts from "./pages/admin/Shifts";
