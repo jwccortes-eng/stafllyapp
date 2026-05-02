@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useCompany } from "@/hooks/useCompany";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { EmployeeIdentityRow } from "@/components/ui/employee-identity-row";
@@ -10,6 +11,8 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import type { Assignment, Employee } from "./types";
+import { AttendanceValidator } from "./AttendanceValidator";
+import { canManageShifts } from "@/lib/shifts/shift-permissions";
 
 interface Confirmation {
   id: string;
