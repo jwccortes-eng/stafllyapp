@@ -209,6 +209,44 @@ export function ShiftAttendancePanel({
         )}
       </div>
 
+      {/* Phase 2 — Attendance validation (Present / Late / Absent + clock time) */}
+      {shiftAssignments.length > 0 && (
+        <div className="rounded-xl border border-border/60 bg-card/50 p-2.5">
+          <div className="flex items-center gap-1.5 mb-1.5">
+            <ShieldCheck className="h-3.5 w-3.5 text-primary" />
+            <span className="text-[11px] font-semibold uppercase tracking-wide">
+              Attendance validation
+            </span>
+            {!canValidateNew && (
+              <span className="text-[10px] text-muted-foreground">(read-only)</span>
+            )}
+          </div>
+          <div className="divide-y divide-border/40">
+            {shiftAssignments.map(a => {
+              const emp = getEmployee(a.employee_id);
+              if (!emp) return null;
+              const extra = asgnExtras.find(x => x.id === a.id);
+              const clock = clockByEmp[a.employee_id];
+              return (
+                <AttendanceValidator
+                  key={a.id}
+                  assignmentId={a.id}
+                  workerName={`${emp.first_name} ${emp.last_name}`.trim()}
+                  clockInAt={clock?.clock_in ?? null}
+                  clockOutAt={clock?.clock_out ?? null}
+                  attendanceStatus={extra?.attendance_status as any}
+                  canEdit={canValidateNew}
+                  onChanged={() => setValidatorReload(k => k + 1)}
+                />
+              );
+            })}
+          </div>
+          <p className="mt-1.5 text-[10px] text-muted-foreground">
+            Independent from clock entries. Payroll is not affected.
+          </p>
+        </div>
+      )}
+
       {/* Employee list */}
       <div className="space-y-1">
         {shiftAssignments.map(a => {
