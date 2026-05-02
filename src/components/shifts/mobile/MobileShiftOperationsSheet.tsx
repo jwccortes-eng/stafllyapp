@@ -446,6 +446,42 @@ export function MobileShiftOperationsSheet({
             )}
           </section>
 
+          {/* Attendance validation — managers/admins/founders only */}
+          {assignedWorkers.length > 0 && (
+            <section>
+              <SectionTitle icon={ShieldCheck}>
+                Attendance validation
+                {!canValidate && (
+                  <span className="ml-1.5 text-[10px] font-normal text-muted-foreground normal-case tracking-normal">
+                    (read-only)
+                  </span>
+                )}
+              </SectionTitle>
+              <div className="rounded-2xl border border-border/50 bg-card divide-y divide-border/40 px-3">
+                {assignedWorkers.map(w => {
+                  const asgn = asgnExtras.find(a => a.employee_id === w.id);
+                  const clock = clockByEmp[w.id];
+                  if (!asgn) return null;
+                  return (
+                    <AttendanceValidator
+                      key={asgn.id}
+                      assignmentId={asgn.id}
+                      workerName={`${w.first_name} ${w.last_name}`.trim()}
+                      clockInAt={clock?.clock_in ?? null}
+                      clockOutAt={clock?.clock_out ?? null}
+                      attendanceStatus={asgn.attendance_status as any}
+                      canEdit={canValidate}
+                      compact
+                      onChanged={() => setReloadKey(k => k + 1)}
+                    />
+                  );
+                })}
+              </div>
+              <p className="mt-2 px-0.5 text-[11px] text-muted-foreground">
+                Validation is independent from clock entries and never overrides payroll.
+              </p>
+            </section>
+          )}
           {/* Operational details */}
           <section>
             <SectionTitle icon={Tag}>Details</SectionTitle>
