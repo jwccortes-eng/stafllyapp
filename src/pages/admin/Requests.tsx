@@ -357,19 +357,28 @@ export default function Requests() {
     return { shift, te, asgn };
   }, [shifts, timeEntries, assignments]);
 
+  const sortByPriority = (a: Ticket, b: Ticket) => {
+    const pa = PRIORITY_RANK[a.priority] ?? 2;
+    const pb = PRIORITY_RANK[b.priority] ?? 2;
+    if (pa !== pb) return pb - pa;
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  };
+
   const filtered = useMemo(() => {
-    return tickets.filter(t => {
-      if (statusFilter !== "all" && t.status !== statusFilter) return false;
-      const { shift, te } = ctxFor(t);
-      if (urgencyFilter !== "all" && computeUrgency(t, shift, te) !== urgencyFilter) return false;
-      if (!search) return true;
-      const q = search.toLowerCase();
-      return (
-        t.subject?.toLowerCase().includes(q) ||
-        t.employee?.first_name?.toLowerCase().includes(q) ||
-        t.employee?.last_name?.toLowerCase().includes(q)
-      );
-    });
+    return tickets
+      .filter(t => {
+        if (statusFilter !== "all" && t.status !== statusFilter) return false;
+        const { shift, te } = ctxFor(t);
+        if (urgencyFilter !== "all" && computeUrgency(t, shift, te) !== urgencyFilter) return false;
+        if (!search) return true;
+        const q = search.toLowerCase();
+        return (
+          t.subject?.toLowerCase().includes(q) ||
+          t.employee?.first_name?.toLowerCase().includes(q) ||
+          t.employee?.last_name?.toLowerCase().includes(q)
+        );
+      })
+      .sort(sortByPriority);
   }, [tickets, statusFilter, urgencyFilter, search, ctxFor]);
 
   // Group buckets
@@ -389,6 +398,7 @@ export default function Requests() {
       }
       other.push(t);
     });
+    [today, upcoming, pastUnresolved, other].forEach(arr => arr.sort(sortByPriority));
     return { today, upcoming, pastUnresolved, other };
   }, [filtered, ctxFor]);
 
