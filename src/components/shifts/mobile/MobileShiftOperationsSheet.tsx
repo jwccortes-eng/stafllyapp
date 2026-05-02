@@ -1,9 +1,10 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   X, Clock, MapPin, Building2, Users, Phone, FileEdit, AlertTriangle,
   CheckCircle2, CalendarDays, Sparkles, UserPlus, Share2, ClipboardList,
   ExternalLink, Copy, StickyNote, Hash, Tag, Workflow, ChevronDown,
+  ShieldCheck,
 } from "lucide-react";
 import { format, parseISO, isToday, isTomorrow, isPast } from "date-fns";
 import { enUS } from "date-fns/locale";
@@ -15,6 +16,12 @@ import { isDraftShift, isPublishedShift } from "@/lib/shifts/shift-guards";
 import { formatShiftCode, type Shift, type Assignment, type Employee } from "@/components/shifts/types";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { useCompany } from "@/hooks/useCompany";
+import { staffedAssignments } from "@/lib/shifts/assignment-coverage";
+import { canManageShifts } from "@/lib/shifts/shift-permissions";
+import { AttendanceValidator } from "@/components/shifts/AttendanceValidator";
 import {
   TraceabilitySnapshot,
   type TraceRisk,
