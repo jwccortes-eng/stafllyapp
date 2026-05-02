@@ -366,21 +366,21 @@ function App() {
                 <Route index element={<EmployeeDashboard />} />
                 {/* /portal/payments deprecated for workers — showed unvalidated time_entries × rate (e.g. 604h / $18k). Redirect to finalized Pay Reports. MyPayments code is kept for audit. */}
                 <Route path="payments" element={<Navigate to="/portal/pay-reports" replace />} />
-                <Route path="pay-reports" element={<PayReports />} />
-                <Route path="week/:periodId" element={<WeekDetail />} />
-                <Route path="accumulated" element={<Accumulated />} />
-                <Route path="shifts" element={<MyShifts />} />
-                <Route path="shifts/:shiftId" element={<PortalShiftDetail />} />
-                <Route path="announcements" element={<MyAnnouncements />} />
-                <Route path="resources" element={<PortalResources />} />
-                <Route path="clock" element={<PortalClock />} />
-                <Route path="paystub/:periodId" element={<PayStub />} />
-                <Route path="chat" element={<PortalChat />} />
+                <Route path="pay-reports" element={<PortalModuleGuard moduleKey="my_payments"><PayReports /></PortalModuleGuard>} />
+                <Route path="week/:periodId" element={<PortalModuleGuard moduleKey="my_payments"><WeekDetail /></PortalModuleGuard>} />
+                <Route path="accumulated" element={<PortalModuleGuard moduleKey="my_payments"><Accumulated /></PortalModuleGuard>} />
+                <Route path="shifts" element={<PortalModuleGuard moduleKey="my_shifts"><MyShifts /></PortalModuleGuard>} />
+                <Route path="shifts/:shiftId" element={<PortalModuleGuard moduleKey="my_shifts"><PortalShiftDetail /></PortalModuleGuard>} />
+                <Route path="announcements" element={<PortalModuleGuard moduleKey="my_announcements"><MyAnnouncements /></PortalModuleGuard>} />
+                <Route path="resources" element={<PortalModuleGuard moduleKey="my_resources"><PortalResources /></PortalModuleGuard>} />
+                <Route path="clock" element={<PortalModuleGuard moduleKey="my_clock"><PortalClock /></PortalModuleGuard>} />
+                <Route path="paystub/:periodId" element={<PortalModuleGuard moduleKey="my_payments"><PayStub /></PortalModuleGuard>} />
+                <Route path="chat" element={<PortalModuleGuard moduleKey="my_chat"><PortalChat /></PortalModuleGuard>} />
                 <Route path="profile" element={<PortalProfile />} />
                 <Route path="profile/complete" element={<CompleteProfile />} />
-                <Route path="availability" element={<MyAvailability />} />
-                <Route path="w9" element={<MyW9 />} />
-                <Route path="documents" element={<MyDocuments />} />
+                <Route path="availability" element={<PortalModuleGuard moduleKey="my_availability"><MyAvailability /></PortalModuleGuard>} />
+                <Route path="w9" element={<PortalModuleGuard moduleKey="my_w9"><MyW9 /></PortalModuleGuard>} />
+                <Route path="documents" element={<PortalModuleGuard moduleKey="my_documents"><MyDocuments /></PortalModuleGuard>} />
               </Route>
 
               <Route path="*" element={<NotFound />} />
