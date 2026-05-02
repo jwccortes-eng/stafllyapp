@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useCompany } from "@/hooks/useCompany";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { EmployeeIdentityRow } from "@/components/ui/employee-identity-row";
@@ -10,6 +11,8 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import type { Assignment, Employee } from "./types";
+import { AttendanceValidator } from "./AttendanceValidator";
+import { canManageShifts } from "@/lib/shifts/shift-permissions";
 
 interface Confirmation {
   id: string;
@@ -33,15 +36,24 @@ interface ShiftAttendancePanelProps {
 export function ShiftAttendancePanel({
   shiftId, companyId, assignments, employees, canManage, shiftAdminId,
 }: ShiftAttendancePanelProps) {
-  const { user } = useAuth();
+  const { user, allRoles, canAccessAdminForCompany } = useAuth();
+  const { selectedCompanyId } = useCompany();
   const [confirmations, setConfirmations] = useState<Confirmation[]>([]);
   const [loading, setLoading] = useState(true);
   const [acting, setActing] = useState<string | null>(null);
   const [noteForAssignment, setNoteForAssignment] = useState<string | null>(null);
   const [noteText, setNoteText] = useState("");
+  const [asgnExtras, setAsgnExtras] = useState<{ id: string; employee_id: string; attendance_status: string | null }[]>([]);
+  const [clockByEmp, setClockByEmp] = useState<Record<string, { clock_in: string | null; clock_out: string | null }>>({});
+  const [validatorReload, setValidatorReload] = useState(0);
 
   const shiftAssignments = assignments.filter(a => a.shift_id === shiftId && a.status !== "rejected" && a.status !== "removed");
   const adminEmp = shiftAdminId ? employees.find(e => e.id === shiftAdminId) : null;
+  const canValidateNew = canManageShifts({
+    allRoles,
+    canAccessAdminForCompany,
+    companyId: selectedCompanyId ?? companyId,
+  });
 
   const loadConfirmations = useCallback(async () => {
     const { data } = await supabase
@@ -53,6 +65,36 @@ export function ShiftAttendancePanel({
   }, [shiftId]);
 
   useEffect(() => { loadConfirmations(); }, [loadConfirmations]);
+
+  // Phase 2: load attendance_status + first clock entry per worker.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const [asgnRes, teRes] = await Promise.all([
+        supabase
+          .from("shift_assignments")
+          .select("id, employee_id, attendance_status")
+          .eq("shift_id", shiftId),
+        supabase
+          .from("time_entries")
+          .select("employee_id, clock_in, clock_out")
+          .eq("shift_id", shiftId)
+          .neq("status", "rejected"),
+      ]);
+      if (cancelled) return;
+      setAsgnExtras((asgnRes.data ?? []) as any);
+      const map: Record<string, { clock_in: string | null; clock_out: string | null }> = {};
+      for (const te of (teRes.data ?? []) as any[]) {
+        const prev = map[te.employee_id];
+        if (!prev || (te.clock_in && (!prev.clock_in || te.clock_in < prev.clock_in))) {
+          map[te.employee_id] = { clock_in: te.clock_in, clock_out: te.clock_out };
+        }
+      }
+      setClockByEmp(map);
+    })();
+    return () => { cancelled = true; };
+  }, [shiftId, validatorReload]);
+
 
   const getEmployee = (id: string) => employees.find(e => e.id === id);
   const getConfirmation = (assignmentId: string) => confirmations.find(c => c.assignment_id === assignmentId);
@@ -166,6 +208,44 @@ export function ShiftAttendancePanel({
           </Button>
         )}
       </div>
+
+      {/* Phase 2 — Attendance validation (Present / Late / Absent + clock time) */}
+      {shiftAssignments.length > 0 && (
+        <div className="rounded-xl border border-border/60 bg-card/50 p-2.5">
+          <div className="flex items-center gap-1.5 mb-1.5">
+            <ShieldCheck className="h-3.5 w-3.5 text-primary" />
+            <span className="text-[11px] font-semibold uppercase tracking-wide">
+              Attendance validation
+            </span>
+            {!canValidateNew && (
+              <span className="text-[10px] text-muted-foreground">(read-only)</span>
+            )}
+          </div>
+          <div className="divide-y divide-border/40">
+            {shiftAssignments.map(a => {
+              const emp = getEmployee(a.employee_id);
+              if (!emp) return null;
+              const extra = asgnExtras.find(x => x.id === a.id);
+              const clock = clockByEmp[a.employee_id];
+              return (
+                <AttendanceValidator
+                  key={a.id}
+                  assignmentId={a.id}
+                  workerName={`${emp.first_name} ${emp.last_name}`.trim()}
+                  clockInAt={clock?.clock_in ?? null}
+                  clockOutAt={clock?.clock_out ?? null}
+                  attendanceStatus={extra?.attendance_status as any}
+                  canEdit={canValidateNew}
+                  onChanged={() => setValidatorReload(k => k + 1)}
+                />
+              );
+            })}
+          </div>
+          <p className="mt-1.5 text-[10px] text-muted-foreground">
+            Independent from clock entries. Payroll is not affected.
+          </p>
+        </div>
+      )}
 
       {/* Employee list */}
       <div className="space-y-1">

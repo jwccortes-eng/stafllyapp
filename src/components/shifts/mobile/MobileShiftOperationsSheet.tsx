@@ -1,9 +1,10 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   X, Clock, MapPin, Building2, Users, Phone, FileEdit, AlertTriangle,
   CheckCircle2, CalendarDays, Sparkles, UserPlus, Share2, ClipboardList,
   ExternalLink, Copy, StickyNote, Hash, Tag, Workflow, ChevronDown,
+  ShieldCheck,
 } from "lucide-react";
 import { format, parseISO, isToday, isTomorrow, isPast } from "date-fns";
 import { enUS } from "date-fns/locale";
@@ -15,6 +16,12 @@ import { isDraftShift, isPublishedShift } from "@/lib/shifts/shift-guards";
 import { formatShiftCode, type Shift, type Assignment, type Employee } from "@/components/shifts/types";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { useCompany } from "@/hooks/useCompany";
+import { staffedAssignments } from "@/lib/shifts/assignment-coverage";
+import { canManageShifts } from "@/lib/shifts/shift-permissions";
+import { AttendanceValidator } from "@/components/shifts/AttendanceValidator";
 import {
   TraceabilitySnapshot,
   type TraceRisk,
@@ -79,19 +86,64 @@ export function MobileShiftOperationsSheet({
 }: Props) {
   const navigate = useNavigate();
   const [traceOpen, setTraceOpen] = useState(false);
+  const { allRoles, canAccessAdminForCompany } = useAuth();
+  const { selectedCompanyId } = useCompany();
+
+  // Per-shift attendance + clock cache. Loaded when sheet opens.
+  type AsgnExtra = {
+    id: string;
+    employee_id: string;
+    status: string;
+    attendance_status: string | null;
+  };
+  const [asgnExtras, setAsgnExtras] = useState<AsgnExtra[]>([]);
+  const [clockByEmp, setClockByEmp] = useState<Record<string, { clock_in: string | null; clock_out: string | null }>>({});
+  const [reloadKey, setReloadKey] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!shift || !open) return;
+    (async () => {
+      const [asgnRes, teRes] = await Promise.all([
+        supabase
+          .from("shift_assignments")
+          .select("id, employee_id, status, attendance_status")
+          .eq("shift_id", shift.id),
+        supabase
+          .from("time_entries")
+          .select("employee_id, clock_in, clock_out")
+          .eq("shift_id", shift.id)
+          .neq("status", "rejected"),
+      ]);
+      if (cancelled) return;
+      setAsgnExtras(((asgnRes.data ?? []) as any));
+      const map: Record<string, { clock_in: string | null; clock_out: string | null }> = {};
+      for (const te of (teRes.data ?? []) as any[]) {
+        const prev = map[te.employee_id];
+        if (!prev || (te.clock_in && (!prev.clock_in || te.clock_in < prev.clock_in))) {
+          map[te.employee_id] = { clock_in: te.clock_in, clock_out: te.clock_out };
+        }
+      }
+      setClockByEmp(map);
+    })();
+    return () => { cancelled = true; };
+  }, [shift?.id, open, reloadKey]);
+
+  const canValidate = canManageShifts({ allRoles, canAccessAdminForCompany, companyId: selectedCompanyId });
 
   const data = useMemo(() => {
     if (!shift) return null;
 
     const empById = new Map(employees.map(e => [e.id, e]));
-    const shiftAsgns = assignments.filter(a => a.shift_id === shift.id);
-    const confirmed = shiftAsgns.filter(a => a.status === "confirmed");
-    const assignedWorkers = confirmed
+    // UNIFIED COVERAGE: scheduled = anything not rejected/removed.
+    // No more "confirmed-only" filter — that was the mobile vs desktop drift.
+    const shiftAsgns = staffedAssignments(assignments, shift.id);
+    const assignedWorkers = shiftAsgns
       .map(a => empById.get(a.employee_id))
       .filter(Boolean) as Employee[];
 
     const slots = shift.slots ?? 0;
-    const assignedCount = confirmed.length;
+    const assignedCount = shiftAsgns.length;
     const coverage = slots > 0 ? Math.round((assignedCount / slots) * 100) : (assignedCount > 0 ? 100 : 0);
     const understaffed = slots > 0 && assignedCount < slots;
     const fullyStaffed = slots > 0 && assignedCount >= slots;
@@ -110,7 +162,7 @@ export function MobileShiftOperationsSheet({
     } catch { /* noop */ }
 
     return {
-      shiftAsgns, confirmed, assignedWorkers, slots, assignedCount, coverage,
+      shiftAsgns, assignedWorkers, slots, assignedCount, coverage,
       understaffed, fullyStaffed, draft, published, noClient, noLocation,
       hours, dateBucket,
     };
@@ -394,6 +446,42 @@ export function MobileShiftOperationsSheet({
             )}
           </section>
 
+          {/* Attendance validation — managers/admins/founders only */}
+          {assignedWorkers.length > 0 && (
+            <section>
+              <SectionTitle icon={ShieldCheck}>
+                Attendance validation
+                {!canValidate && (
+                  <span className="ml-1.5 text-[10px] font-normal text-muted-foreground normal-case tracking-normal">
+                    (read-only)
+                  </span>
+                )}
+              </SectionTitle>
+              <div className="rounded-2xl border border-border/50 bg-card divide-y divide-border/40 px-3">
+                {assignedWorkers.map(w => {
+                  const asgn = asgnExtras.find(a => a.employee_id === w.id);
+                  const clock = clockByEmp[w.id];
+                  if (!asgn) return null;
+                  return (
+                    <AttendanceValidator
+                      key={asgn.id}
+                      assignmentId={asgn.id}
+                      workerName={`${w.first_name} ${w.last_name}`.trim()}
+                      clockInAt={clock?.clock_in ?? null}
+                      clockOutAt={clock?.clock_out ?? null}
+                      attendanceStatus={asgn.attendance_status as any}
+                      canEdit={canValidate}
+                      compact
+                      onChanged={() => setReloadKey(k => k + 1)}
+                    />
+                  );
+                })}
+              </div>
+              <p className="mt-2 px-0.5 text-[11px] text-muted-foreground">
+                Validation is independent from clock entries and never overrides payroll.
+              </p>
+            </section>
+          )}
           {/* Operational details */}
           <section>
             <SectionTitle icon={Tag}>Details</SectionTitle>

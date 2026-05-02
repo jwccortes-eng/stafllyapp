@@ -62,7 +62,9 @@ interface AuthContextType {
 
 const ADMIN_ROLES = new Set(['developer', 'owner', 'company_owner', 'admin', 'manager', 'supervisor']);
 /** Roles in user_roles that are TRULY cross-tenant (Stafly platform staff). */
-const GLOBAL_CROSS_TENANT_ROLES = new Set(['developer', 'owner']);
+// 'founder' is cross-tenant for finance/admin views (Founder Finance,
+// shift management, etc.). It does NOT grant payroll write access.
+const GLOBAL_CROSS_TENANT_ROLES = new Set(['developer', 'owner', 'founder']);
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
@@ -396,6 +398,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Global platform staff keep cross-tenant access.
     if (allRoles.has('developer')) return 'developer';
     if (allRoles.has('owner')) return 'owner';
+    if (allRoles.has('founder')) return 'founder' as AppRole;
     if (!companyId) return null;
     const cRole = companyRoles[companyId];
     if (cRole) return cRole as AppRole;
@@ -406,7 +409,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const canAccessAdminForCompany = useCallback((companyId: string | null): boolean => {
     // Cross-tenant platform roles bypass tenant scope.
-    if (allRoles.has('developer') || allRoles.has('owner')) return true;
+    if (allRoles.has('developer') || allRoles.has('owner') || allRoles.has('founder')) return true;
     if (!companyId) return false;
     const cRole = companyRoles[companyId];
     return !!cRole && ADMIN_ROLES.has(cRole);
