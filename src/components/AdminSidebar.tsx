@@ -58,7 +58,8 @@ const COMPANY_LINKS: LinkDef[] = [
   // JOBS & CLIENTS
   { to: "/app/clients", icon: Building2, label: "Clients", module: "clients", section: "Jobs & Clients" },
   { to: "/app/locations", icon: MapPin, label: "Locations", module: "locations", section: "Jobs & Clients" },
-  { to: "/app/requests", icon: Inbox, label: "Service Requests", module: null, section: "Jobs & Clients", badge: "tickets" },
+  { to: "/app/requests", icon: Inbox, label: "Worker Requests", module: null, section: "Workforce", badge: "tickets" },
+  { to: "/app/service-requests", icon: Inbox, label: "Service Requests", module: null, section: "Jobs & Clients" },
 
   // PAYROLL & BILLING
   { to: "/app/periods", icon: CalendarDays, label: "Payroll", module: "periods", section: "Payroll & Billing" },
