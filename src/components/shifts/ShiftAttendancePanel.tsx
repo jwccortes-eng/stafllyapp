@@ -1,79 +1,165 @@
-import { useState, useEffect, useCallback } from "react";
+/**
+ * ShiftAttendancePanel — premium Attendance tab inside Shift Detail.
+ *
+ * Validation layer for human review BEFORE payroll review.
+ *  - Reads `shift_assignments` (validation source of truth)
+ *  - Reads `time_entries` (RAW evidence, never written here)
+ *  - Writes ONLY `shift_assignments.attendance_status / _validated_by / _validated_at`
+ *  - Never touches payroll, never modifies time_entries
+ *
+ * Permissions: only users for whom `canManageShifts` returns true can
+ * mutate. Others see a read-only view (also enforced at RLS).
+ */
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { EmployeeIdentityRow } from "@/components/ui/employee-identity-row";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
-import { CheckCircle2, XCircle, Users, Loader2, Clock, ShieldCheck, StickyNote } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Check,
+  Clock,
+  AlertTriangle,
+  X,
+  Loader2,
+  ShieldCheck,
+  Users,
+  RotateCcw,
+  CheckCircle2,
+  CircleDashed,
+} from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import type { Assignment, Employee } from "./types";
-import { AttendanceValidator } from "./AttendanceValidator";
 import { canManageShifts } from "@/lib/shifts/shift-permissions";
+import {
+  staffedAssignments,
+  type AttendanceValidationStatus,
+} from "@/lib/shifts/assignment-coverage";
 
-interface Confirmation {
+type ValStatus = AttendanceValidationStatus;
+
+interface AsgnExtra {
   id: string;
-  assignment_id: string;
   employee_id: string;
-  status: string;
-  confirmed_by: string;
-  confirmed_at: string;
-  notes: string | null;
+  attendance_status: ValStatus | null;
+  attendance_validated_at: string | null;
 }
+
+interface ClockEvidence {
+  clock_in: string | null;
+  clock_out: string | null;
+  count: number;
+}
+
+type Evidence = "no_clock" | "clocked_in" | "clocked_out" | "incomplete";
+
+const EVIDENCE_META: Record<
+  Evidence,
+  { label: string; cls: string }
+> = {
+  no_clock: { label: "No clock", cls: "bg-muted text-muted-foreground border-border" },
+  clocked_in: { label: "Clocked in", cls: "bg-sky-500/10 text-sky-700 dark:text-sky-300 border-sky-500/20" },
+  clocked_out: { label: "Clocked out", cls: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20" },
+  incomplete: { label: "Incomplete clock", cls: "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20" },
+};
+
+const STATUS_META: Record<ValStatus, { label: string; pill: string; ring: string }> = {
+  pending: {
+    label: "Pending",
+    pill: "bg-muted text-muted-foreground border-border",
+    ring: "",
+  },
+  present: {
+    label: "Present",
+    pill: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30",
+    ring: "ring-1 ring-emerald-500/20",
+  },
+  late: {
+    label: "Late",
+    pill: "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30",
+    ring: "ring-1 ring-amber-500/20",
+  },
+  absent: {
+    label: "Absent",
+    pill: "bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/30",
+    ring: "ring-1 ring-rose-500/20",
+  },
+  excused: {
+    label: "Excused",
+    pill: "bg-sky-500/10 text-sky-700 dark:text-sky-300 border-sky-500/30",
+    ring: "ring-1 ring-sky-500/20",
+  },
+};
 
 interface ShiftAttendancePanelProps {
   shiftId: string;
   companyId: string;
   assignments: Assignment[];
   employees: Employee[];
-  canManage: boolean;
+  canManage: boolean; // legacy — superseded by canValidate (per-company role check)
   shiftAdminId?: string | null;
 }
 
+function evidenceFor(c: ClockEvidence | undefined): Evidence {
+  if (!c || c.count === 0) return "no_clock";
+  if (c.clock_in && c.clock_out) return "clocked_out";
+  if (c.clock_in && !c.clock_out) return "incomplete";
+  return "clocked_in";
+}
+
+function fmtClock(iso: string | null): string {
+  if (!iso) return "—";
+  try { return format(new Date(iso), "HH:mm"); } catch { return "—"; }
+}
+
 export function ShiftAttendancePanel({
-  shiftId, companyId, assignments, employees, canManage, shiftAdminId,
+  shiftId, companyId, assignments, employees, shiftAdminId,
 }: ShiftAttendancePanelProps) {
   const { user, allRoles, canAccessAdminForCompany } = useAuth();
   const { selectedCompanyId } = useCompany();
-  const [confirmations, setConfirmations] = useState<Confirmation[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [acting, setActing] = useState<string | null>(null);
-  const [noteForAssignment, setNoteForAssignment] = useState<string | null>(null);
-  const [noteText, setNoteText] = useState("");
-  const [asgnExtras, setAsgnExtras] = useState<{ id: string; employee_id: string; attendance_status: string | null }[]>([]);
-  const [clockByEmp, setClockByEmp] = useState<Record<string, { clock_in: string | null; clock_out: string | null }>>({});
-  const [validatorReload, setValidatorReload] = useState(0);
 
-  const shiftAssignments = assignments.filter(a => a.shift_id === shiftId && a.status !== "rejected" && a.status !== "removed");
-  const adminEmp = shiftAdminId ? employees.find(e => e.id === shiftAdminId) : null;
-  const canValidateNew = canManageShifts({
+  const canValidate = canManageShifts({
     allRoles,
     canAccessAdminForCompany,
     companyId: selectedCompanyId ?? companyId,
   });
 
-  const loadConfirmations = useCallback(async () => {
-    const { data } = await supabase
-      .from("shift_attendance_confirmations")
-      .select("id, assignment_id, employee_id, status, confirmed_by, confirmed_at, notes")
-      .eq("shift_id", shiftId);
-    setConfirmations((data ?? []) as Confirmation[]);
-    setLoading(false);
-  }, [shiftId]);
+  const [extras, setExtras] = useState<AsgnExtra[]>([]);
+  const [clockByEmp, setClockByEmp] = useState<Record<string, ClockEvidence>>({});
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [bulkBusy, setBulkBusy] = useState<string | null>(null);
+  const [confirmAbsentOpen, setConfirmAbsentOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [reloadKey, setReloadKey] = useState(0);
 
-  useEffect(() => { loadConfirmations(); }, [loadConfirmations]);
+  const shiftAssignments = useMemo(
+    () => staffedAssignments(assignments as any, shiftId),
+    [assignments, shiftId],
+  );
 
-  // Phase 2: load attendance_status + first clock entry per worker.
+  const adminEmp = shiftAdminId ? employees.find(e => e.id === shiftAdminId) : null;
+
+  // Load attendance + raw clock evidence
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const [asgnRes, teRes] = await Promise.all([
+      setLoading(true);
+      const [aRes, teRes] = await Promise.all([
         supabase
           .from("shift_assignments")
-          .select("id, employee_id, attendance_status")
+          .select("id, employee_id, attendance_status, attendance_validated_at")
           .eq("shift_id", shiftId),
         supabase
           .from("time_entries")
@@ -82,270 +168,425 @@ export function ShiftAttendancePanel({
           .neq("status", "rejected"),
       ]);
       if (cancelled) return;
-      setAsgnExtras((asgnRes.data ?? []) as any);
-      const map: Record<string, { clock_in: string | null; clock_out: string | null }> = {};
+      setExtras((aRes.data ?? []) as AsgnExtra[]);
+      const map: Record<string, ClockEvidence> = {};
       for (const te of (teRes.data ?? []) as any[]) {
         const prev = map[te.employee_id];
-        if (!prev || (te.clock_in && (!prev.clock_in || te.clock_in < prev.clock_in))) {
-          map[te.employee_id] = { clock_in: te.clock_in, clock_out: te.clock_out };
+        if (!prev) {
+          map[te.employee_id] = { clock_in: te.clock_in, clock_out: te.clock_out, count: 1 };
+        } else {
+          // Keep earliest clock_in and latest clock_out
+          const earliestIn = (prev.clock_in && te.clock_in)
+            ? (prev.clock_in < te.clock_in ? prev.clock_in : te.clock_in)
+            : (prev.clock_in ?? te.clock_in);
+          const latestOut = (prev.clock_out && te.clock_out)
+            ? (prev.clock_out > te.clock_out ? prev.clock_out : te.clock_out)
+            : (prev.clock_out ?? te.clock_out);
+          map[te.employee_id] = { clock_in: earliestIn, clock_out: latestOut, count: prev.count + 1 };
         }
       }
       setClockByEmp(map);
+      setLoading(false);
     })();
     return () => { cancelled = true; };
-  }, [shiftId, validatorReload]);
-
+  }, [shiftId, reloadKey]);
 
   const getEmployee = (id: string) => employees.find(e => e.id === id);
-  const getConfirmation = (assignmentId: string) => confirmations.find(c => c.assignment_id === assignmentId);
+  const getExtra = (asgnId: string) => extras.find(x => x.id === asgnId);
 
-  const handleConfirm = async (assignment: Assignment, status: "present" | "absent", note?: string) => {
-    if (!user) return;
-    setActing(assignment.id);
-    try {
-      const existing = getConfirmation(assignment.id);
-      if (existing) {
-        await supabase.from("shift_attendance_confirmations")
-          .update({ status, confirmed_by: user.id, confirmed_at: new Date().toISOString(), notes: note || existing.notes } as any)
-          .eq("id", existing.id);
-      } else {
-        await supabase.from("shift_attendance_confirmations").insert({
-          company_id: companyId, shift_id: shiftId, assignment_id: assignment.id,
-          employee_id: assignment.employee_id, status, confirmed_by: user.id,
-          notes: note || null,
-        } as any);
-      }
-      await loadConfirmations();
-      const emp = getEmployee(assignment.employee_id);
-      toast.success(`${emp?.first_name ?? "Empleado"} marcado como ${status === "present" ? "presente" : "ausente"}`);
-    } catch (err: any) {
-      toast.error(err.message ?? "Error al confirmar asistencia");
-    } finally {
-      setActing(null);
-      setNoteForAssignment(null);
-      setNoteText("");
+  const setStatus = useCallback(async (
+    assignmentIds: string[],
+    next: ValStatus,
+  ) => {
+    if (!canValidate || assignmentIds.length === 0) return false;
+    const { error } = await supabase
+      .from("shift_assignments")
+      .update({
+        attendance_status: next,
+        attendance_validated_by: user?.id ?? null,
+        attendance_validated_at: new Date().toISOString(),
+      } as any)
+      .in("id", assignmentIds);
+    if (error) {
+      toast.error(`Couldn't update attendance: ${error.message}`);
+      return false;
     }
+    setReloadKey(k => k + 1);
+    return true;
+  }, [canValidate, user?.id]);
+
+  const handleSingle = async (assignmentId: string, next: ValStatus, name: string) => {
+    setBusyId(assignmentId);
+    const ok = await setStatus([assignmentId], next);
+    setBusyId(null);
+    if (ok) toast.success(`${name} marked ${next}`);
   };
 
-  const handleConfirmAll = async () => {
-    if (!user) return;
-    setActing("all");
-    try {
-      const unconfirmed = shiftAssignments.filter(a => !getConfirmation(a.id));
-      if (unconfirmed.length === 0) {
-        toast.info("Todos los empleados ya están confirmados");
-        setActing(null);
-        return;
-      }
-      const inserts = unconfirmed.map(a => ({
-        company_id: companyId, shift_id: shiftId, assignment_id: a.id,
-        employee_id: a.employee_id, status: "present", confirmed_by: user.id,
-      }));
-      await supabase.from("shift_attendance_confirmations").insert(inserts as any);
-      await loadConfirmations();
-      toast.success(`${unconfirmed.length} empleado(s) confirmados como presentes`);
-    } catch (err: any) {
-      toast.error(err.message ?? "Error al confirmar asistencia");
-    } finally {
-      setActing(null);
+  /* ─────────── Bulk actions ─────────── */
+
+  const bulkPresentClocked = async () => {
+    const ids = shiftAssignments
+      .filter(a => {
+        const ev = evidenceFor(clockByEmp[a.employee_id]);
+        return ev === "clocked_in" || ev === "clocked_out" || ev === "incomplete";
+      })
+      .map(a => a.id);
+    if (ids.length === 0) {
+      toast.info("No clocked workers to mark");
+      return;
     }
+    setBulkBusy("present");
+    const ok = await setStatus(ids, "present");
+    setBulkBusy(null);
+    if (ok) toast.success(`${ids.length} marked present`);
   };
+
+  const bulkAbsentRemainingPending = async () => {
+    const ids = shiftAssignments
+      .filter(a => (getExtra(a.id)?.attendance_status ?? "pending") === "pending")
+      .map(a => a.id);
+    if (ids.length === 0) {
+      toast.info("No pending workers to mark");
+      return;
+    }
+    setBulkBusy("absent");
+    const ok = await setStatus(ids, "absent");
+    setBulkBusy(null);
+    if (ok) toast.success(`${ids.length} marked absent`);
+  };
+
+  const bulkResetPending = async () => {
+    const ids = shiftAssignments
+      .filter(a => (getExtra(a.id)?.attendance_status ?? "pending") !== "pending")
+      .map(a => a.id);
+    if (ids.length === 0) {
+      toast.info("Nothing to reset");
+      return;
+    }
+    setBulkBusy("reset");
+    const ok = await setStatus(ids, "pending");
+    setBulkBusy(null);
+    if (ok) toast.success(`${ids.length} reset to pending`);
+  };
+
+  /* ─────────── Header counts ─────────── */
+
+  const counts = useMemo(() => {
+    let validated = 0, pending = 0, present = 0, late = 0, absent = 0, excused = 0;
+    for (const a of shiftAssignments) {
+      const s = (getExtra(a.id)?.attendance_status ?? "pending") as ValStatus;
+      if (s === "pending") pending++; else validated++;
+      if (s === "present") present++;
+      else if (s === "late") late++;
+      else if (s === "absent") absent++;
+      else if (s === "excused") excused++;
+    }
+    return { total: shiftAssignments.length, validated, pending, present, late, absent, excused };
+  }, [shiftAssignments, extras]);
+
+  const ready = counts.total > 0 && counts.pending === 0;
 
   if (loading) {
-    return <div className="flex items-center justify-center py-4"><Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /></div>;
-  }
-
-  if (shiftAssignments.length === 0) {
     return (
-      <div className="text-center py-4 text-xs text-muted-foreground">
-        No hay empleados asignados a este turno.
+      <div className="flex items-center justify-center py-10">
+        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
-  const confirmedCount = shiftAssignments.filter(a => getConfirmation(a.id)).length;
-  const presentCount = shiftAssignments.filter(a => getConfirmation(a.id)?.status === "present").length;
+  if (shiftAssignments.length === 0) {
+    return (
+      <div className="text-center py-12 text-sm text-muted-foreground">
+        No workers assigned to this shift yet.
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-3">
-      {/* Shift Admin banner */}
-      <div className={cn(
-        "rounded-xl border p-2.5 flex items-center gap-2.5",
-        adminEmp ? "border-primary/20 bg-primary/[0.04]" : "border-warning/20 bg-warning/[0.04]"
-      )}>
-        <div className={cn("h-8 w-8 rounded-lg flex items-center justify-center shrink-0", adminEmp ? "bg-primary/10" : "bg-warning/10")}>
-          <ShieldCheck className={cn("h-4 w-4", adminEmp ? "text-primary" : "text-warning")} />
-        </div>
-        {adminEmp ? (
-          <div className="flex items-center gap-2 flex-1 min-w-0">
-            <EmployeeAvatar firstName={adminEmp.first_name} lastName={adminEmp.last_name} avatarUrl={adminEmp.avatar_url} gender={adminEmp.gender} size="xs" />
-            <div className="min-w-0">
-              <p className="text-[10px] font-bold text-primary uppercase tracking-wide">Admin del turno</p>
-              <p className="text-xs font-semibold truncate">{adminEmp.first_name} {adminEmp.last_name}</p>
+    <div className="space-y-4 pb-24 md:pb-2">
+      {/* ───── Header summary ───── */}
+      <div className="rounded-2xl border border-border/60 bg-card p-4 space-y-3">
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+              <ShieldCheck className="h-3 w-3" /> Attendance validation
             </div>
+            <p className="mt-1 text-sm font-semibold text-foreground">
+              {counts.total} assigned · {counts.validated} validated · {counts.pending} pending
+            </p>
+          </div>
+          <div
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium",
+              ready
+                ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30"
+                : "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30",
+            )}
+            title="Informational only — does not change payroll calculations."
+          >
+            {ready ? <CheckCircle2 className="h-3 w-3" /> : <CircleDashed className="h-3 w-3" />}
+            {ready ? "Ready for payroll review" : "Not ready · pending validation"}
+          </div>
+        </div>
+
+        {/* Progress bar */}
+        <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+          <div
+            className={cn(
+              "h-full transition-all",
+              ready ? "bg-emerald-500" : "bg-primary",
+            )}
+            style={{ width: `${counts.total ? (counts.validated / counts.total) * 100 : 0}%` }}
+          />
+        </div>
+
+        {/* Mini distribution */}
+        <div className="flex flex-wrap gap-1.5 text-[10px]">
+          {counts.present > 0 && <Pill tone="emerald" label={`${counts.present} present`} />}
+          {counts.late > 0 && <Pill tone="amber" label={`${counts.late} late`} />}
+          {counts.absent > 0 && <Pill tone="rose" label={`${counts.absent} absent`} />}
+          {counts.excused > 0 && <Pill tone="sky" label={`${counts.excused} excused`} />}
+          {counts.pending > 0 && <Pill tone="muted" label={`${counts.pending} pending`} />}
+        </div>
+
+        {/* Shift admin chip */}
+        {adminEmp ? (
+          <div className="flex items-center gap-2 text-[11px] text-muted-foreground border-t border-border/40 pt-2">
+            <ShieldCheck className="h-3 w-3 text-primary" />
+            <span>Shift Admin:</span>
+            <EmployeeAvatar firstName={adminEmp.first_name} lastName={adminEmp.last_name} avatarUrl={adminEmp.avatar_url} gender={adminEmp.gender} size="xs" />
+            <span className="font-medium text-foreground">{adminEmp.first_name} {adminEmp.last_name}</span>
           </div>
         ) : (
-          <div className="min-w-0">
-            <p className="text-[10px] font-bold text-warning uppercase tracking-wide">Sin admin asignado</p>
-            <p className="text-[10px] text-muted-foreground">Asigna un admin para validar asistencia.</p>
+          <div className="flex items-center gap-1.5 text-[11px] text-amber-600 dark:text-amber-400 border-t border-border/40 pt-2">
+            <AlertTriangle className="h-3 w-3" /> No shift admin assigned
           </div>
         )}
       </div>
 
-      {/* Summary */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Users className="h-3.5 w-3.5 text-muted-foreground" />
-          <span className="text-xs font-medium">
-            {confirmedCount}/{shiftAssignments.length} confirmados
-            {presentCount > 0 && <span className="text-earning ml-1">({presentCount} presentes)</span>}
-          </span>
-        </div>
-        {canManage && confirmedCount < shiftAssignments.length && (
-          <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1" onClick={handleConfirmAll} disabled={acting === "all"}>
-            {acting === "all" ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
-            Confirmar todos
+      {/* ───── Bulk actions ───── */}
+      {canValidate && (
+        <div className="flex flex-wrap gap-2">
+          <Button
+            size="sm" variant="outline" className="h-9 rounded-xl gap-1.5 text-xs"
+            onClick={bulkPresentClocked}
+            disabled={bulkBusy !== null}
+          >
+            {bulkBusy === "present" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+            Mark clocked as Present
           </Button>
-        )}
-      </div>
-
-      {/* Phase 2 — Attendance validation (Present / Late / Absent + clock time) */}
-      {shiftAssignments.length > 0 && (
-        <div className="rounded-xl border border-border/60 bg-card/50 p-2.5">
-          <div className="flex items-center gap-1.5 mb-1.5">
-            <ShieldCheck className="h-3.5 w-3.5 text-primary" />
-            <span className="text-[11px] font-semibold uppercase tracking-wide">
-              Attendance validation
-            </span>
-            {!canValidateNew && (
-              <span className="text-[10px] text-muted-foreground">(read-only)</span>
-            )}
-          </div>
-          <div className="divide-y divide-border/40">
-            {shiftAssignments.map(a => {
-              const emp = getEmployee(a.employee_id);
-              if (!emp) return null;
-              const extra = asgnExtras.find(x => x.id === a.id);
-              const clock = clockByEmp[a.employee_id];
-              return (
-                <AttendanceValidator
-                  key={a.id}
-                  assignmentId={a.id}
-                  workerName={`${emp.first_name} ${emp.last_name}`.trim()}
-                  clockInAt={clock?.clock_in ?? null}
-                  clockOutAt={clock?.clock_out ?? null}
-                  attendanceStatus={extra?.attendance_status as any}
-                  canEdit={canValidateNew}
-                  onChanged={() => setValidatorReload(k => k + 1)}
-                />
-              );
-            })}
-          </div>
-          <p className="mt-1.5 text-[10px] text-muted-foreground">
-            Independent from clock entries. Payroll is not affected.
-          </p>
+          <Button
+            size="sm" variant="outline" className="h-9 rounded-xl gap-1.5 text-xs"
+            onClick={() => setConfirmAbsentOpen(true)}
+            disabled={bulkBusy !== null}
+          >
+            {bulkBusy === "absent" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <X className="h-3.5 w-3.5" />}
+            Mark pending as Absent
+          </Button>
+          <Button
+            size="sm" variant="ghost" className="h-9 rounded-xl gap-1.5 text-xs text-muted-foreground"
+            onClick={bulkResetPending}
+            disabled={bulkBusy !== null}
+          >
+            {bulkBusy === "reset" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
+            Reset all
+          </Button>
         </div>
       )}
 
-      {/* Employee list */}
-      <div className="space-y-1">
+      {/* ───── Worker cards ───── */}
+      <div className="space-y-2">
         {shiftAssignments.map(a => {
           const emp = getEmployee(a.employee_id);
-          const conf = getConfirmation(a.id);
           if (!emp) return null;
+          const ext = getExtra(a.id);
+          const status: ValStatus = (ext?.attendance_status ?? "pending") as ValStatus;
+          const clock = clockByEmp[a.employee_id];
+          const ev = evidenceFor(clock);
           const isAdmin = a.employee_id === shiftAdminId;
+
+          // Smart warnings
+          const warnings: string[] = [];
+          if (status === "present" && ev === "no_clock") warnings.push("Marked Present but no clock evidence");
+          if (status === "absent" && (ev === "clocked_in" || ev === "clocked_out" || ev === "incomplete"))
+            warnings.push("Marked Absent but worker has a clock entry");
+          if (status === "pending" && ev === "no_clock") warnings.push("No clock entry — needs validation");
+          if (ev === "incomplete") warnings.push("Clock-in exists but no clock-out");
+
+          const sm = STATUS_META[status];
+          const em = EVIDENCE_META[ev];
+          const isBusy = busyId === a.id;
+          const role = (a as any).role || (a as any).slot_role_label || null;
+
           return (
-            <div key={a.id}>
-              <div className={cn(
-                "flex items-center justify-between rounded-lg px-2.5 py-1.5 border transition-colors",
-                conf?.status === "present" && "bg-earning/5 border-earning/20",
-                conf?.status === "absent" && "bg-destructive/5 border-destructive/20",
-                !conf && "border-border",
-              )}>
-                <div className="flex items-center gap-2 min-w-0">
-                  <EmployeeIdentityRow
-                    firstName={emp.first_name}
-                    lastName={emp.last_name}
-                    avatarUrl={emp.avatar_url}
-                    gender={emp.gender}
-                    size="sm"
-                    secondary={conf ? (
-                      <span className="flex items-center gap-0.5">
-                        <Clock className="h-2 w-2" />
-                        {format(new Date(conf.confirmed_at), "HH:mm")}
-                      </span>
-                    ) : undefined}
-                  />
-                  {isAdmin && (
-                    <span className="text-[7px] font-bold text-primary bg-primary/10 px-1 rounded shrink-0">ADMIN</span>
-                  )}
-                </div>
-                <div className="flex items-center gap-1">
-                  {conf ? (
-                    <span className={cn(
-                      "text-[10px] font-semibold px-2 py-0.5 rounded-full",
-                      conf.status === "present" ? "bg-earning/10 text-earning" : "bg-destructive/10 text-destructive",
-                    )}>
-                      {conf.status === "present" ? "Presente" : "Ausente"}
+            <div
+              key={a.id}
+              className={cn(
+                "rounded-2xl border bg-card p-3 sm:p-4 transition-all",
+                "border-border/60",
+                sm.ring,
+              )}
+            >
+              {/* Top row: identity + status */}
+              <div className="flex items-start gap-3">
+                <EmployeeAvatar
+                  firstName={emp.first_name} lastName={emp.last_name}
+                  avatarUrl={emp.avatar_url} gender={emp.gender} size="sm"
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-sm font-semibold truncate">
+                      {emp.first_name} {emp.last_name}
                     </span>
-                  ) : null}
-                  {canManage && (
-                    <div className="flex items-center gap-0.5 ml-1">
-                      <button
-                        onClick={() => handleConfirm(a, "present")}
-                        disabled={acting === a.id}
-                        className={cn("p-1 rounded-md transition-colors", conf?.status === "present" ? "text-earning bg-earning/10" : "text-muted-foreground hover:text-earning hover:bg-earning/5")}
-                        title="Marcar presente"
-                      >
-                        <CheckCircle2 className="h-3.5 w-3.5" />
-                      </button>
-                      <button
-                        onClick={() => handleConfirm(a, "absent")}
-                        disabled={acting === a.id}
-                        className={cn("p-1 rounded-md transition-colors", conf?.status === "absent" ? "text-destructive bg-destructive/10" : "text-muted-foreground hover:text-destructive hover:bg-destructive/5")}
-                        title="Marcar ausente"
-                      >
-                        <XCircle className="h-3.5 w-3.5" />
-                      </button>
-                      <button
-                        onClick={() => { setNoteForAssignment(noteForAssignment === a.id ? null : a.id); setNoteText(conf?.notes || ""); }}
-                        className={cn("p-1 rounded-md transition-colors", conf?.notes ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-primary hover:bg-primary/5")}
-                        title="Agregar nota"
-                      >
-                        <StickyNote className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  )}
+                    {isAdmin && (
+                      <span className="text-[9px] font-bold text-primary bg-primary/10 px-1.5 rounded">ADMIN</span>
+                    )}
+                    {role && (
+                      <span className="text-[10px] text-muted-foreground/70">· {role}</span>
+                    )}
+                  </div>
+                  <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+                    <span className={cn("inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide", sm.pill)}>
+                      {sm.label}
+                    </span>
+                    <span className={cn("inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-medium", em.cls)}>
+                      <Clock className="h-2.5 w-2.5" /> {em.label}
+                    </span>
+                    {ext?.attendance_validated_at && status !== "pending" && (
+                      <span className="text-[10px] text-muted-foreground/60">
+                        validated {format(new Date(ext.attendance_validated_at), "HH:mm")}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
-              {/* Confirmation note */}
-              {conf?.notes && noteForAssignment !== a.id && (
-                <p className="text-[10px] text-muted-foreground ml-10 mt-0.5 italic">📝 {conf.notes}</p>
-              )}
-              {/* Note input */}
-              {noteForAssignment === a.id && canManage && (
-                <div className="ml-10 mt-1 flex items-end gap-1">
-                  <Textarea
-                    value={noteText}
-                    onChange={e => setNoteText(e.target.value)}
-                    placeholder="Nota operacional..."
-                    rows={1}
-                    className="text-[10px] resize-none flex-1 min-h-[28px]"
+
+              {/* Clock evidence row */}
+              <div className="mt-2.5 grid grid-cols-2 gap-2 text-[11px]">
+                <div className="rounded-lg bg-muted/30 border border-border/40 px-2.5 py-1.5">
+                  <p className="text-[9px] uppercase tracking-wider text-muted-foreground/60">Clock in</p>
+                  <p className="font-mono tabular-nums">{fmtClock(clock?.clock_in ?? null)}</p>
+                </div>
+                <div className="rounded-lg bg-muted/30 border border-border/40 px-2.5 py-1.5">
+                  <p className="text-[9px] uppercase tracking-wider text-muted-foreground/60">Clock out</p>
+                  <p className="font-mono tabular-nums">{fmtClock(clock?.clock_out ?? null)}</p>
+                </div>
+              </div>
+
+              {/* Warnings */}
+              {warnings.map((w, i) => (
+                <div key={i} className="mt-2 flex items-start gap-1.5 rounded-lg bg-amber-500/[0.06] border border-amber-500/20 px-2.5 py-1.5">
+                  <AlertTriangle className="h-3 w-3 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+                  <p className="text-[11px] text-amber-700 dark:text-amber-300">{w}</p>
+                </div>
+              ))}
+
+              {/* Action buttons */}
+              {canValidate && (
+                <div className="mt-3 grid grid-cols-4 gap-1.5">
+                  <ActionBtn
+                    active={status === "present"} loading={isBusy} icon={Check} label="Present" tone="emerald"
+                    onClick={() => handleSingle(a.id, "present", `${emp.first_name} ${emp.last_name}`)}
                   />
-                  <Button
-                    size="sm"
-                    className="h-7 text-[10px] px-2"
-                    onClick={() => handleConfirm(a, conf?.status as "present" | "absent" || "present", noteText.trim())}
-                    disabled={acting === a.id}
-                  >
-                    Guardar
-                  </Button>
+                  <ActionBtn
+                    active={status === "late"} loading={isBusy} icon={AlertTriangle} label="Late" tone="amber"
+                    onClick={() => handleSingle(a.id, "late", `${emp.first_name} ${emp.last_name}`)}
+                  />
+                  <ActionBtn
+                    active={status === "absent"} loading={isBusy} icon={X} label="Absent" tone="rose"
+                    onClick={() => handleSingle(a.id, "absent", `${emp.first_name} ${emp.last_name}`)}
+                  />
+                  <ActionBtn
+                    active={status === "pending"} loading={isBusy} icon={RotateCcw} label="Reset" tone="muted"
+                    onClick={() => handleSingle(a.id, "pending", `${emp.first_name} ${emp.last_name}`)}
+                  />
                 </div>
               )}
             </div>
           );
         })}
       </div>
+
+      {!canValidate && (
+        <p className="text-[11px] text-muted-foreground text-center">
+          Read-only view. Only shift managers, admins, founders, owners or developers can validate attendance.
+        </p>
+      )}
+      <p className="text-[10px] text-muted-foreground/60 text-center">
+        Validation is independent from clock entries and does not change payroll calculations.
+      </p>
+
+      <AlertDialog open={confirmAbsentOpen} onOpenChange={setConfirmAbsentOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Mark all pending workers as Absent?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will mark every worker still pending validation as Absent. You can reset individual workers afterwards. This does not modify clock entries or payroll.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => { setConfirmAbsentOpen(false); await bulkAbsentRemainingPending(); }}
+              className="bg-rose-600 hover:bg-rose-600/90 text-white"
+            >
+              Mark as Absent
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
+  );
+}
+
+/* ─────────── small helpers ─────────── */
+
+function Pill({ tone, label }: { tone: "emerald" | "amber" | "rose" | "sky" | "muted"; label: string }) {
+  const map: Record<string, string> = {
+    emerald: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20",
+    amber: "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20",
+    rose: "bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/20",
+    sky: "bg-sky-500/10 text-sky-700 dark:text-sky-300 border-sky-500/20",
+    muted: "bg-muted text-muted-foreground border-border",
+  };
+  return (
+    <span className={cn("inline-flex items-center rounded-full border px-1.5 py-0.5 font-medium", map[tone])}>
+      {label}
+    </span>
+  );
+}
+
+function ActionBtn({
+  active, loading, icon: Icon, label, tone, onClick,
+}: {
+  active: boolean;
+  loading: boolean;
+  icon: typeof Check;
+  label: string;
+  tone: "emerald" | "amber" | "rose" | "muted";
+  onClick: () => void;
+}) {
+  const activeCls: Record<string, string> = {
+    emerald: "bg-emerald-600 hover:bg-emerald-600/90 text-white border-emerald-600",
+    amber: "bg-amber-500 hover:bg-amber-500/90 text-white border-amber-500",
+    rose: "bg-rose-600 hover:bg-rose-600/90 text-white border-rose-600",
+    muted: "bg-muted text-foreground border-border",
+  };
+  return (
+    <Button
+      type="button"
+      size="sm"
+      variant="outline"
+      onClick={onClick}
+      disabled={loading}
+      className={cn(
+        "h-9 rounded-xl gap-1 text-[11px] font-medium",
+        active && activeCls[tone],
+      )}
+      aria-pressed={active}
+    >
+      {loading && active ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Icon className="h-3.5 w-3.5" />}
+      {label}
+    </Button>
   );
 }
