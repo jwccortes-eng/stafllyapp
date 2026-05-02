@@ -277,7 +277,9 @@ export default function MobileShiftsView() {
       totalSlots += s.slots ?? 0;
       const asgns = assignmentsByShift.get(s.id) ?? [];
       for (const a of asgns) {
-        if (a.status === "confirmed") {
+        // Coverage = scheduled workers (any non-rejected, non-removed assignment).
+        // Matches desktop semantics. Do NOT filter to "confirmed" — that under-counts.
+        if (a.status !== "rejected" && a.status !== "removed") {
           totalConfirmed++;
           workerSet.add(a.employee_id);
         }
