@@ -523,6 +523,24 @@ function DesktopShifts() {
   useEffect(() => { refreshDictionaries(); }, [refreshDictionaries]);
   useEffect(() => { refreshShifts(); }, [refreshShifts]);
 
+  // Deep-link: open shift detail (and specific tab) from /app/shifts?shiftId=...&tab=attendance
+  useEffect(() => {
+    const sid = searchParams.get("shiftId");
+    if (!sid || shifts.length === 0) return;
+    const found = shifts.find(s => s.id === sid);
+    if (!found) return;
+    const tabParam = searchParams.get("tab") || undefined;
+    setSelectedShift(found);
+    setDetailInitialTab(tabParam);
+    setDetailOpen(true);
+    setSearchParams(prev => {
+      const p = new URLSearchParams(prev);
+      p.delete("shiftId");
+      p.delete("tab");
+      return p;
+    }, { replace: true });
+  }, [shifts, searchParams, setSearchParams]);
+
   // Stable click handler — prevents child views from re-rendering on every parent render.
   const handleShiftClick = useCallback((s: Shift) => {
     setSelectedShift(s);
