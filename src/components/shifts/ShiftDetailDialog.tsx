@@ -276,11 +276,11 @@ export function ShiftDetailDialog({
 
   useEffect(() => {
     if (shift && open) {
-      setTab("details");
+      setTab(initialTab || "details");
       loadRequests();
       loadRoleSlots();
     }
-  }, [shift, open, loadRequests, loadRoleSlots]);
+  }, [shift, open, loadRequests, loadRoleSlots, initialTab]);
 
   // IMPORTANT: All hooks MUST be called before any early return to satisfy
   // React's Rules of Hooks. `shift` may be null while the drawer is closing —
