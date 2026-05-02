@@ -1976,7 +1976,8 @@ function DesktopShifts() {
       <ShiftDetailDialog
         shift={selectedShift}
         open={detailOpen}
-        onOpenChange={setDetailOpen}
+        onOpenChange={(o) => { setDetailOpen(o); if (!o) setDetailInitialTab(undefined); }}
+        initialTab={detailInitialTab}
         assignments={assignments}
         employees={employees}
         locations={locations}
