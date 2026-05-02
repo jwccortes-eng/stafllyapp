@@ -98,6 +98,8 @@ interface ShiftDetailDialogProps {
   onAddNewEmployee?: () => void;
   /** When false, hides all claimable UI */
   allowClaims?: boolean;
+  /** Initial tab to open (e.g. "attendance" via deep-link). Defaults to "details". */
+  initialTab?: string;
 }
 
 function calcHours(start: string, end: string): string {
