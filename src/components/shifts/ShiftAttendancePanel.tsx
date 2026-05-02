@@ -36,15 +36,24 @@ interface ShiftAttendancePanelProps {
 export function ShiftAttendancePanel({
   shiftId, companyId, assignments, employees, canManage, shiftAdminId,
 }: ShiftAttendancePanelProps) {
-  const { user } = useAuth();
+  const { user, allRoles, canAccessAdminForCompany } = useAuth();
+  const { selectedCompanyId } = useCompany();
   const [confirmations, setConfirmations] = useState<Confirmation[]>([]);
   const [loading, setLoading] = useState(true);
   const [acting, setActing] = useState<string | null>(null);
   const [noteForAssignment, setNoteForAssignment] = useState<string | null>(null);
   const [noteText, setNoteText] = useState("");
+  const [asgnExtras, setAsgnExtras] = useState<{ id: string; employee_id: string; attendance_status: string | null }[]>([]);
+  const [clockByEmp, setClockByEmp] = useState<Record<string, { clock_in: string | null; clock_out: string | null }>>({});
+  const [validatorReload, setValidatorReload] = useState(0);
 
   const shiftAssignments = assignments.filter(a => a.shift_id === shiftId && a.status !== "rejected" && a.status !== "removed");
   const adminEmp = shiftAdminId ? employees.find(e => e.id === shiftAdminId) : null;
+  const canValidateNew = canManageShifts({
+    allRoles,
+    canAccessAdminForCompany,
+    companyId: selectedCompanyId ?? companyId,
+  });
 
   const loadConfirmations = useCallback(async () => {
     const { data } = await supabase
