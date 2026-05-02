@@ -398,6 +398,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Global platform staff keep cross-tenant access.
     if (allRoles.has('developer')) return 'developer';
     if (allRoles.has('owner')) return 'owner';
+    if (allRoles.has('founder')) return 'founder' as AppRole;
     if (!companyId) return null;
     const cRole = companyRoles[companyId];
     if (cRole) return cRole as AppRole;
@@ -408,7 +409,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const canAccessAdminForCompany = useCallback((companyId: string | null): boolean => {
     // Cross-tenant platform roles bypass tenant scope.
-    if (allRoles.has('developer') || allRoles.has('owner')) return true;
+    if (allRoles.has('developer') || allRoles.has('owner') || allRoles.has('founder')) return true;
     if (!companyId) return false;
     const cRole = companyRoles[companyId];
     return !!cRole && ADMIN_ROLES.has(cRole);
