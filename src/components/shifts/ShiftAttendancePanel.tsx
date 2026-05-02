@@ -394,9 +394,31 @@ export function ShiftAttendancePanel({
         </div>
       )}
 
-      {/* ───── Worker cards ───── */}
-      <div className="space-y-2">
-        {shiftAssignments.map(a => {
+      {/* ───── Blocking banner ───── */}
+      {counts.pending > 0 && (
+        <div className="flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/[0.08] px-3 py-2.5">
+          <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+          <div className="min-w-0">
+            <p className="text-[12px] font-semibold text-amber-800 dark:text-amber-200">
+              Payroll review is blocked until all workers are validated
+            </p>
+            <p className="text-[11px] text-amber-700/80 dark:text-amber-300/80">
+              {counts.pending} of {counts.total} still pending validation.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* ───── Worker cards (grouped) ───── */}
+      {(() => {
+        const pendingList = shiftAssignments.filter(
+          a => (getExtra(a.id)?.attendance_status ?? "pending") === "pending",
+        );
+        const validatedList = shiftAssignments.filter(
+          a => (getExtra(a.id)?.attendance_status ?? "pending") !== "pending",
+        );
+
+        const renderCard = (a: typeof shiftAssignments[number]) => {
           const emp = getEmployee(a.employee_id);
           if (!emp) return null;
           const ext = getExtra(a.id);
