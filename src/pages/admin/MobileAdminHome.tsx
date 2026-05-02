@@ -78,10 +78,12 @@ export default function MobileAdminHome() {
     if (isGlobalMode) return true;
     if (a.module) {
       if (!isModuleActive(a.module)) return false;
-      if (role === "developer" || role === "owner" || role === "company_owner" || role === "admin") return true;
+      if (isAdminRole) return true;
       if (role === "manager" || role === "supervisor") return hasModuleAccess(a.module, "view");
       return false;
     }
+    // Non-module admin tools (e.g. Requests inbox) are admin-only
+    if (!isAdminRole && role !== "manager" && role !== "supervisor") return false;
     return true;
   };
 
