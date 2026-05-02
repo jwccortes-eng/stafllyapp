@@ -148,7 +148,10 @@ export default function AdminSidebar() {
     if (isGlobalMode) return true; // Global mode shows all platform links
     if (link.module) {
       if (!isModuleActive(link.module)) return false;
-      if (role === 'developer' || role === 'owner' || role === 'company_owner' || role === 'admin') return true;
+      // Hide plan-locked modules from non-admin roles (managers/supervisors/employees)
+      // Admins still see them (locked) so they can upgrade.
+      if (!isAdminRole && !canAccessModule(link.module)) return false;
+      if (isAdminRole) return true;
       if (role === 'manager' || role === 'supervisor') return hasModuleAccess(link.module, 'view');
       return false;
     }
@@ -166,7 +169,7 @@ export default function AdminSidebar() {
     return location.pathname === to || location.pathname.startsWith(to + "/");
   };
 
-  const isOwner = role === 'developer' || role === 'owner';
+  const isOwner = globalRole === 'developer' || globalRole === 'owner' || isAdminRole;
 
   const visibleSections = useMemo(() => {
     const sectionMap = new Map<string, LinkDef[]>();
