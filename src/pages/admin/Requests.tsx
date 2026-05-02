@@ -56,6 +56,7 @@ interface ShiftCtx {
   title: string | null;
   client_id: string | null;
   location_id: string | null;
+  client_name?: string | null;
 }
 interface TimeEntryCtx {
   id: string;
