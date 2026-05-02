@@ -12908,6 +12908,10 @@ export type Database = {
           accepted_at: string | null
           accepted_shift_version: number | null
           assignment_role: string | null
+          attendance_notes: string | null
+          attendance_status: string
+          attendance_validated_at: string | null
+          attendance_validated_by: string | null
           company_id: string
           created_at: string
           employee_id: string
@@ -12928,6 +12932,10 @@ export type Database = {
           accepted_at?: string | null
           accepted_shift_version?: number | null
           assignment_role?: string | null
+          attendance_notes?: string | null
+          attendance_status?: string
+          attendance_validated_at?: string | null
+          attendance_validated_by?: string | null
           company_id: string
           created_at?: string
           employee_id: string
@@ -12948,6 +12956,10 @@ export type Database = {
           accepted_at?: string | null
           accepted_shift_version?: number | null
           assignment_role?: string | null
+          attendance_notes?: string | null
+          attendance_status?: string
+          attendance_validated_at?: string | null
+          attendance_validated_by?: string | null
           company_id?: string
           created_at?: string
           employee_id?: string
