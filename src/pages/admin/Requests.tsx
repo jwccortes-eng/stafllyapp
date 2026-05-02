@@ -700,17 +700,30 @@ function Group({
           const urgency = computeUrgency(t, shift, te);
           const sc = STATUS_CONFIG[t.status] || STATUS_CONFIG.new;
           const when = shiftWhen(shift);
+          const pr = PRIORITY_META[t.priority] ?? PRIORITY_META.normal;
+          const typeLabel = TYPE_LABELS[t.type] || t.subject;
+          const shiftLine = shift
+            ? [when.label, shiftTimeWindow(shift), shift.client_name].filter(Boolean).join(" · ")
+            : null;
+          const teLine = !shift && te
+            ? `Clock ${te.clock_in ? format(new Date(te.clock_in), "HH:mm") : "—"} → ${te.clock_out ? format(new Date(te.clock_out), "HH:mm") : "missing"}`
+            : null;
           return (
             <button
               key={t.id}
               onClick={() => onOpen(t)}
-              className="group w-full text-left rounded-2xl border border-border/50 bg-card hover:shadow-md hover:border-border transition-all overflow-hidden flex"
+              className={cn(
+                "group w-full text-left rounded-2xl border bg-card hover:shadow-md transition-all overflow-hidden flex",
+                pr.border,
+              )}
             >
-              <div className={cn("w-1 shrink-0", URGENCY_BAR[urgency])} />
+              <div className={cn("w-1 shrink-0", pr.bar)} />
               <div className="flex-1 p-4 space-y-2">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <UrgencyPill urgency={urgency} />
+                    <span className={cn("inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] font-medium", pr.pill)}>
+                      {pr.label}
+                    </span>
                     <Badge variant="outline" className={cn("gap-1 text-[10px] border", sc.tone)}>
                       {sc.label}
                     </Badge>
@@ -725,24 +738,24 @@ function Group({
                   </span>
                 </div>
 
-                <p className="text-sm font-medium leading-snug">{t.subject}</p>
+                <p className="text-sm font-medium leading-snug">{typeLabel}</p>
 
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                   <span className="inline-flex items-center gap-1">
                     <User className="h-3 w-3" />
                     {t.employee?.first_name} {t.employee?.last_name}
                   </span>
-                  {shift && (
-                    <>
-                      <span className="inline-flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        {when.label}
-                      </span>
-                      <span className="inline-flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {shiftTimeWindow(shift)}
-                      </span>
-                    </>
+                  {shiftLine && (
+                    <span className="inline-flex items-center gap-1">
+                      <Calendar className="h-3 w-3" />
+                      {shiftLine}
+                    </span>
+                  )}
+                  {teLine && (
+                    <span className="inline-flex items-center gap-1 font-mono">
+                      <Timer className="h-3 w-3" />
+                      {teLine}
+                    </span>
                   )}
                   {asgn?.attendance_status && ATTENDANCE_LABELS[asgn.attendance_status] && (
                     <span className={cn("inline-flex items-center gap-1 font-medium", ATTENDANCE_LABELS[asgn.attendance_status].tone)}>
