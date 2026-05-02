@@ -98,6 +98,8 @@ interface ShiftDetailDialogProps {
   onAddNewEmployee?: () => void;
   /** When false, hides all claimable UI */
   allowClaims?: boolean;
+  /** Initial tab to open (e.g. "attendance" via deep-link). Defaults to "details". */
+  initialTab?: string;
 }
 
 function calcHours(start: string, end: string): string {
@@ -160,12 +162,13 @@ export function ShiftDetailDialog({
   canEdit, onAddEmployees, onRemoveAssignment, onEdit, onPublish, onSave, onRequestAction,
   onDuplicate, onDelete,
   availabilityConfigs = [], availabilityOverrides = [], onAddNewEmployee, allowClaims = true,
+  initialTab,
 }: ShiftDetailDialogProps) {
   const { user } = useAuth();
   const { selectedCompanyId, selectedCompany } = useCompany();
   const [showAddPanel, setShowAddPanel] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
-  const [tab, setTab] = useState("details");
+  const [tab, setTab] = useState(initialTab || "details");
 
   // Editing is now delegated to the canonical ShiftEditDialog (ShiftFormFields).
   // No local form state — this sheet is read-only and triggers `onEdit(shift)`.
@@ -273,11 +276,11 @@ export function ShiftDetailDialog({
 
   useEffect(() => {
     if (shift && open) {
-      setTab("details");
+      setTab(initialTab || "details");
       loadRequests();
       loadRoleSlots();
     }
-  }, [shift, open, loadRequests, loadRoleSlots]);
+  }, [shift, open, loadRequests, loadRoleSlots, initialTab]);
 
   // IMPORTANT: All hooks MUST be called before any early return to satisfy
   // React's Rules of Hooks. `shift` may be null while the drawer is closing —
