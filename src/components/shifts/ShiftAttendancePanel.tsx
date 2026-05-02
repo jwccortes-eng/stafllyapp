@@ -66,6 +66,36 @@ export function ShiftAttendancePanel({
 
   useEffect(() => { loadConfirmations(); }, [loadConfirmations]);
 
+  // Phase 2: load attendance_status + first clock entry per worker.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const [asgnRes, teRes] = await Promise.all([
+        supabase
+          .from("shift_assignments")
+          .select("id, employee_id, attendance_status")
+          .eq("shift_id", shiftId),
+        supabase
+          .from("time_entries")
+          .select("employee_id, clock_in, clock_out")
+          .eq("shift_id", shiftId)
+          .neq("status", "rejected"),
+      ]);
+      if (cancelled) return;
+      setAsgnExtras((asgnRes.data ?? []) as any);
+      const map: Record<string, { clock_in: string | null; clock_out: string | null }> = {};
+      for (const te of (teRes.data ?? []) as any[]) {
+        const prev = map[te.employee_id];
+        if (!prev || (te.clock_in && (!prev.clock_in || te.clock_in < prev.clock_in))) {
+          map[te.employee_id] = { clock_in: te.clock_in, clock_out: te.clock_out };
+        }
+      }
+      setClockByEmp(map);
+    })();
+    return () => { cancelled = true; };
+  }, [shiftId, validatorReload]);
+
+
   const getEmployee = (id: string) => employees.find(e => e.id === id);
   const getConfirmation = (assignmentId: string) => confirmations.find(c => c.assignment_id === assignmentId);
 
