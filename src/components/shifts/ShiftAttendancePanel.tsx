@@ -144,8 +144,8 @@ export function ShiftAttendancePanel({
   const [loading, setLoading] = useState(true);
   const [reloadKey, setReloadKey] = useState(0);
 
-  const shiftAssignments = useMemo(
-    () => staffedAssignments(assignments as any, shiftId),
+  const shiftAssignments = useMemo<Assignment[]>(
+    () => staffedAssignments(assignments as any, shiftId) as unknown as Assignment[],
     [assignments, shiftId],
   );
 
