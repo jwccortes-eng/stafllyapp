@@ -415,14 +415,15 @@ export default function MobileShiftsView() {
                 <div className="space-y-2.5">
                   {group.shifts.map(shift => {
                     const asgns = assignmentsByShift.get(shift.id) ?? [];
-                    const confirmed = asgns.filter(a => a.status === "confirmed");
-                    const assignedEmployees = confirmed
+                    // Unified with desktop: count any non-rejected, non-removed assignment.
+                    const staffed = asgns.filter(a => a.status !== "rejected" && a.status !== "removed");
+                    const assignedEmployees = staffed
                       .map(a => employeeById.get(a.employee_id))
                       .filter(Boolean) as Employee[];
                     const slots = shift.slots ?? 0;
-                    const coverage = slots > 0 ? Math.round((confirmed.length / slots) * 100) : 0;
+                    const coverage = slots > 0 ? Math.round((staffed.length / slots) * 100) : 0;
                     const isDraft = isDraftShift(shift);
-                    const understaffed = slots > 0 && confirmed.length < slots;
+                    const understaffed = slots > 0 && staffed.length < slots;
                     const noClient = !shift.client_id;
 
                     return (
