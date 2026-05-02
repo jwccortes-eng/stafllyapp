@@ -346,6 +346,7 @@ function DesktopShifts() {
   // Detail dialog
   const [selectedShift, setSelectedShift] = useState<Shift | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  const [detailInitialTab, setDetailInitialTab] = useState<string | undefined>(undefined);
 
   // Edit dialog
   const [editShift, setEditShift] = useState<Shift | null>(null);
