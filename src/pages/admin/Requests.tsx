@@ -542,44 +542,50 @@ export default function Requests() {
                   </div>
                 )}
 
-                {/* Primary actions */}
-                <div className="grid grid-cols-1 gap-2">
-                  {selectedCtx.shift && (
-                    <Button
-                      className="rounded-xl justify-between h-11"
-                      onClick={() => navigate(`/app/shifts/${selectedCtx.shift!.id}`)}
-                    >
-                      <span className="flex items-center gap-2">
-                        <CheckCircle2 className="h-4 w-4" /> Go to attendance
-                      </span>
-                      <ArrowRight className="h-4 w-4" />
-                    </Button>
-                  )}
-                  {selectedCtx.shift && (
-                    <Button
-                      variant="outline"
-                      className="rounded-xl justify-between h-10"
-                      onClick={() => navigate(`/app/shifts/${selectedCtx.shift!.id}`)}
-                    >
-                      <span className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4" /> Open shift detail
-                      </span>
-                      <ArrowRight className="h-4 w-4" />
-                    </Button>
-                  )}
-                  {selectedCtx.te && (
-                    <Button
-                      variant="outline"
-                      className="rounded-xl justify-between h-10"
-                      onClick={() => navigate(`/app/timeclock?entry=${selectedCtx.te!.id}`)}
-                    >
-                      <span className="flex items-center gap-2">
-                        <Timer className="h-4 w-4" /> Open time entry
-                      </span>
-                      <ArrowRight className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
+                {/* Next step */}
+                {(selectedCtx.shift || selectedCtx.te) && (() => {
+                  const isClock = isAttendanceTicket(selectedTicket);
+                  const primary = isClock
+                    ? { label: "Review attendance", icon: CheckCircle2, href: selectedCtx.shift ? `/app/shifts/${selectedCtx.shift.id}` : `/app/timeclock?entry=${selectedCtx.te?.id}` }
+                    : selectedCtx.shift
+                      ? { label: "Open shift", icon: Calendar, href: `/app/shifts/${selectedCtx.shift.id}` }
+                      : null;
+                  const secondary = isClock && selectedCtx.shift
+                    ? { label: "Open shift", icon: Calendar, href: `/app/shifts/${selectedCtx.shift.id}` }
+                    : null;
+                  if (!primary) return null;
+                  return (
+                    <div className="rounded-2xl border border-primary/20 bg-primary/[0.04] p-4 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+                        <h4 className="text-[11px] font-semibold uppercase tracking-wider text-primary">Next step</h4>
+                      </div>
+                      <div className="grid gap-2">
+                        <Button
+                          className="rounded-xl justify-between h-11"
+                          onClick={() => navigate(primary.href)}
+                        >
+                          <span className="flex items-center gap-2">
+                            <primary.icon className="h-4 w-4" /> {primary.label}
+                          </span>
+                          <ArrowRight className="h-4 w-4" />
+                        </Button>
+                        {secondary && (
+                          <Button
+                            variant="outline"
+                            className="rounded-xl justify-between h-10"
+                            onClick={() => navigate(secondary.href)}
+                          >
+                            <span className="flex items-center gap-2">
+                              <secondary.icon className="h-4 w-4" /> {secondary.label}
+                            </span>
+                            <ArrowRight className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* Status actions */}
                 <div className="space-y-2">
