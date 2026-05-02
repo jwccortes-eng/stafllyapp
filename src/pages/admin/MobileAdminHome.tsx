@@ -42,7 +42,9 @@ const ACTIONS: ActionDef[] = [
 export default function MobileAdminHome() {
   const navigate = useNavigate();
   const { selectedCompanyId, selectedCompany, isModuleActive, isGlobalMode } = useCompany();
-  const { role, hasModuleAccess, fullName } = useAuth();
+  const { role: globalRole, hasModuleAccess, fullName, getRoleForCompany } = useAuth();
+  const role = isGlobalMode ? globalRole : getRoleForCompany(selectedCompanyId);
+  const isAdminRole = role === "developer" || role === "owner" || role === "company_owner" || role === "admin";
 
   const [badges, setBadges] = useState<{ tickets: number; shift_requests: number }>({ tickets: 0, shift_requests: 0 });
 
