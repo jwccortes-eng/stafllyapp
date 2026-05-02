@@ -81,14 +81,45 @@ const STATUS_CONFIG: Record<string, { label: string; tone: string; icon: any }> 
 };
 
 const TYPE_LABELS: Record<string, string> = {
-  clock_request: "Clock fix",
-  shift_request: "Shift change",
-  general: "General",
+  clock_request: "Missing clock-in",
+  shift_request: "Schedule issue",
+  general: "General request",
   complaint: "Complaint",
-  document: "Document",
-  schedule_change: "Schedule change",
-  no_show: "No-show",
-  attendance: "Attendance",
+  document: "Document issue",
+  schedule_change: "Schedule issue",
+  no_show: "No-show reported",
+  attendance: "Attendance issue",
+};
+
+const PRIORITY_RANK: Record<string, number> = {
+  urgent: 4, high: 3, normal: 2, low: 1,
+};
+
+const PRIORITY_META: Record<string, { label: string; pill: string; border: string; bar: string }> = {
+  urgent: {
+    label: "Urgent",
+    pill: "bg-destructive/10 text-destructive border-destructive/20",
+    border: "border-destructive/40 ring-1 ring-destructive/10",
+    bar: "bg-destructive",
+  },
+  high: {
+    label: "High",
+    pill: "bg-orange-500/10 text-orange-700 dark:text-orange-300 border-orange-500/20",
+    border: "border-orange-500/30",
+    bar: "bg-orange-500",
+  },
+  normal: {
+    label: "Normal",
+    pill: "bg-muted text-foreground/70 border-border",
+    border: "border-border/50",
+    bar: "bg-muted-foreground/30",
+  },
+  low: {
+    label: "Low",
+    pill: "bg-muted/60 text-muted-foreground/70 border-border/40",
+    border: "border-border/30 opacity-90",
+    bar: "bg-muted-foreground/20",
+  },
 };
 
 const ATTENDANCE_LABELS: Record<string, { label: string; tone: string }> = {
