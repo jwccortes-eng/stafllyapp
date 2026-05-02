@@ -526,8 +526,35 @@ export function ShiftAttendancePanel({
               )}
             </div>
           );
-        })}
-      </div>
+        };
+
+        return (
+          <div className="space-y-4">
+            {pendingList.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between px-1">
+                  <h3 className="text-[11px] font-semibold uppercase tracking-wider text-amber-700 dark:text-amber-300">
+                    Needs validation
+                  </h3>
+                  <span className="text-[10px] font-medium text-muted-foreground">{pendingList.length}</span>
+                </div>
+                <div className="space-y-2">{pendingList.map(renderCard)}</div>
+              </div>
+            )}
+            {validatedList.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between px-1">
+                  <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Validated
+                  </h3>
+                  <span className="text-[10px] font-medium text-muted-foreground">{validatedList.length}</span>
+                </div>
+                <div className="space-y-2">{validatedList.map(renderCard)}</div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {!canValidate && (
         <p className="text-[11px] text-muted-foreground text-center">
