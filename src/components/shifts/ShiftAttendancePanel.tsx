@@ -394,9 +394,31 @@ export function ShiftAttendancePanel({
         </div>
       )}
 
-      {/* ───── Worker cards ───── */}
-      <div className="space-y-2">
-        {shiftAssignments.map(a => {
+      {/* ───── Blocking banner ───── */}
+      {counts.pending > 0 && (
+        <div className="flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/[0.08] px-3 py-2.5">
+          <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+          <div className="min-w-0">
+            <p className="text-[12px] font-semibold text-amber-800 dark:text-amber-200">
+              Payroll review is blocked until all workers are validated
+            </p>
+            <p className="text-[11px] text-amber-700/80 dark:text-amber-300/80">
+              {counts.pending} of {counts.total} still pending validation.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* ───── Worker cards (grouped) ───── */}
+      {(() => {
+        const pendingList = shiftAssignments.filter(
+          a => (getExtra(a.id)?.attendance_status ?? "pending") === "pending",
+        );
+        const validatedList = shiftAssignments.filter(
+          a => (getExtra(a.id)?.attendance_status ?? "pending") !== "pending",
+        );
+
+        const renderCard = (a: typeof shiftAssignments[number]) => {
           const emp = getEmployee(a.employee_id);
           if (!emp) return null;
           const ext = getExtra(a.id);
@@ -504,8 +526,35 @@ export function ShiftAttendancePanel({
               )}
             </div>
           );
-        })}
-      </div>
+        };
+
+        return (
+          <div className="space-y-4">
+            {pendingList.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between px-1">
+                  <h3 className="text-[11px] font-semibold uppercase tracking-wider text-amber-700 dark:text-amber-300">
+                    Needs validation
+                  </h3>
+                  <span className="text-[10px] font-medium text-muted-foreground">{pendingList.length}</span>
+                </div>
+                <div className="space-y-2">{pendingList.map(renderCard)}</div>
+              </div>
+            )}
+            {validatedList.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between px-1">
+                  <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Validated
+                  </h3>
+                  <span className="text-[10px] font-medium text-muted-foreground">{validatedList.length}</span>
+                </div>
+                <div className="space-y-2">{validatedList.map(renderCard)}</div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {!canValidate && (
         <p className="text-[11px] text-muted-foreground text-center">
