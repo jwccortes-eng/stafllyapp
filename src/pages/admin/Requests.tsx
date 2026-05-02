@@ -56,6 +56,7 @@ interface ShiftCtx {
   title: string | null;
   client_id: string | null;
   location_id: string | null;
+  client_name?: string | null;
 }
 interface TimeEntryCtx {
   id: string;
@@ -80,14 +81,45 @@ const STATUS_CONFIG: Record<string, { label: string; tone: string; icon: any }> 
 };
 
 const TYPE_LABELS: Record<string, string> = {
-  clock_request: "Clock fix",
-  shift_request: "Shift change",
-  general: "General",
+  clock_request: "Missing clock-in",
+  shift_request: "Schedule issue",
+  general: "General request",
   complaint: "Complaint",
-  document: "Document",
-  schedule_change: "Schedule change",
-  no_show: "No-show",
-  attendance: "Attendance",
+  document: "Document issue",
+  schedule_change: "Schedule issue",
+  no_show: "No-show reported",
+  attendance: "Attendance issue",
+};
+
+const PRIORITY_RANK: Record<string, number> = {
+  urgent: 4, high: 3, normal: 2, low: 1,
+};
+
+const PRIORITY_META: Record<string, { label: string; pill: string; border: string; bar: string }> = {
+  urgent: {
+    label: "Urgent",
+    pill: "bg-destructive/10 text-destructive border-destructive/20",
+    border: "border-destructive/40 ring-1 ring-destructive/10",
+    bar: "bg-destructive",
+  },
+  high: {
+    label: "High",
+    pill: "bg-orange-500/10 text-orange-700 dark:text-orange-300 border-orange-500/20",
+    border: "border-orange-500/30",
+    bar: "bg-orange-500",
+  },
+  normal: {
+    label: "Normal",
+    pill: "bg-muted text-foreground/70 border-border",
+    border: "border-border/50",
+    bar: "bg-muted-foreground/30",
+  },
+  low: {
+    label: "Low",
+    pill: "bg-muted/60 text-muted-foreground/70 border-border/40",
+    border: "border-border/30 opacity-90",
+    bar: "bg-muted-foreground/20",
+  },
 };
 
 const ATTENDANCE_LABELS: Record<string, { label: string; tone: string }> = {
@@ -180,6 +212,18 @@ export default function Requests() {
 
     const sMap: Record<string, ShiftCtx> = {};
     (sRes.data ?? []).forEach((s: any) => { sMap[s.id] = s; });
+
+    // Fetch client names for shifts that have a client_id
+    const clientIds = Array.from(new Set(Object.values(sMap).map(s => s.client_id).filter(Boolean) as string[]));
+    if (clientIds.length) {
+      const { data: clients } = await supabase
+        .from("clients").select("id, name").in("id", clientIds);
+      const cMap: Record<string, string> = {};
+      (clients ?? []).forEach((c: any) => { cMap[c.id] = c.name; });
+      Object.values(sMap).forEach(s => {
+        if (s.client_id) s.client_name = cMap[s.client_id] ?? null;
+      });
+    }
 
     // For shift tickets, also find related time_entry by shift+employee
     const teMap: Record<string, TimeEntryCtx> = {};
@@ -313,19 +357,28 @@ export default function Requests() {
     return { shift, te, asgn };
   }, [shifts, timeEntries, assignments]);
 
+  const sortByPriority = (a: Ticket, b: Ticket) => {
+    const pa = PRIORITY_RANK[a.priority] ?? 2;
+    const pb = PRIORITY_RANK[b.priority] ?? 2;
+    if (pa !== pb) return pb - pa;
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  };
+
   const filtered = useMemo(() => {
-    return tickets.filter(t => {
-      if (statusFilter !== "all" && t.status !== statusFilter) return false;
-      const { shift, te } = ctxFor(t);
-      if (urgencyFilter !== "all" && computeUrgency(t, shift, te) !== urgencyFilter) return false;
-      if (!search) return true;
-      const q = search.toLowerCase();
-      return (
-        t.subject?.toLowerCase().includes(q) ||
-        t.employee?.first_name?.toLowerCase().includes(q) ||
-        t.employee?.last_name?.toLowerCase().includes(q)
-      );
-    });
+    return tickets
+      .filter(t => {
+        if (statusFilter !== "all" && t.status !== statusFilter) return false;
+        const { shift, te } = ctxFor(t);
+        if (urgencyFilter !== "all" && computeUrgency(t, shift, te) !== urgencyFilter) return false;
+        if (!search) return true;
+        const q = search.toLowerCase();
+        return (
+          t.subject?.toLowerCase().includes(q) ||
+          t.employee?.first_name?.toLowerCase().includes(q) ||
+          t.employee?.last_name?.toLowerCase().includes(q)
+        );
+      })
+      .sort(sortByPriority);
   }, [tickets, statusFilter, urgencyFilter, search, ctxFor]);
 
   // Group buckets
@@ -345,6 +398,7 @@ export default function Requests() {
       }
       other.push(t);
     });
+    [today, upcoming, pastUnresolved, other].forEach(arr => arr.sort(sortByPriority));
     return { today, upcoming, pastUnresolved, other };
   }, [filtered, ctxFor]);
 
@@ -488,44 +542,50 @@ export default function Requests() {
                   </div>
                 )}
 
-                {/* Primary actions */}
-                <div className="grid grid-cols-1 gap-2">
-                  {selectedCtx.shift && (
-                    <Button
-                      className="rounded-xl justify-between h-11"
-                      onClick={() => navigate(`/app/shifts/${selectedCtx.shift!.id}`)}
-                    >
-                      <span className="flex items-center gap-2">
-                        <CheckCircle2 className="h-4 w-4" /> Go to attendance
-                      </span>
-                      <ArrowRight className="h-4 w-4" />
-                    </Button>
-                  )}
-                  {selectedCtx.shift && (
-                    <Button
-                      variant="outline"
-                      className="rounded-xl justify-between h-10"
-                      onClick={() => navigate(`/app/shifts/${selectedCtx.shift!.id}`)}
-                    >
-                      <span className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4" /> Open shift detail
-                      </span>
-                      <ArrowRight className="h-4 w-4" />
-                    </Button>
-                  )}
-                  {selectedCtx.te && (
-                    <Button
-                      variant="outline"
-                      className="rounded-xl justify-between h-10"
-                      onClick={() => navigate(`/app/timeclock?entry=${selectedCtx.te!.id}`)}
-                    >
-                      <span className="flex items-center gap-2">
-                        <Timer className="h-4 w-4" /> Open time entry
-                      </span>
-                      <ArrowRight className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
+                {/* Next step */}
+                {(selectedCtx.shift || selectedCtx.te) && (() => {
+                  const isClock = isAttendanceTicket(selectedTicket);
+                  const primary = isClock
+                    ? { label: "Review attendance", icon: CheckCircle2, href: selectedCtx.shift ? `/app/shifts/${selectedCtx.shift.id}` : `/app/timeclock?entry=${selectedCtx.te?.id}` }
+                    : selectedCtx.shift
+                      ? { label: "Open shift", icon: Calendar, href: `/app/shifts/${selectedCtx.shift.id}` }
+                      : null;
+                  const secondary = isClock && selectedCtx.shift
+                    ? { label: "Open shift", icon: Calendar, href: `/app/shifts/${selectedCtx.shift.id}` }
+                    : null;
+                  if (!primary) return null;
+                  return (
+                    <div className="rounded-2xl border border-primary/20 bg-primary/[0.04] p-4 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+                        <h4 className="text-[11px] font-semibold uppercase tracking-wider text-primary">Next step</h4>
+                      </div>
+                      <div className="grid gap-2">
+                        <Button
+                          className="rounded-xl justify-between h-11"
+                          onClick={() => navigate(primary.href)}
+                        >
+                          <span className="flex items-center gap-2">
+                            <primary.icon className="h-4 w-4" /> {primary.label}
+                          </span>
+                          <ArrowRight className="h-4 w-4" />
+                        </Button>
+                        {secondary && (
+                          <Button
+                            variant="outline"
+                            className="rounded-xl justify-between h-10"
+                            onClick={() => navigate(secondary.href)}
+                          >
+                            <span className="flex items-center gap-2">
+                              <secondary.icon className="h-4 w-4" /> {secondary.label}
+                            </span>
+                            <ArrowRight className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* Status actions */}
                 <div className="space-y-2">
@@ -646,17 +706,30 @@ function Group({
           const urgency = computeUrgency(t, shift, te);
           const sc = STATUS_CONFIG[t.status] || STATUS_CONFIG.new;
           const when = shiftWhen(shift);
+          const pr = PRIORITY_META[t.priority] ?? PRIORITY_META.normal;
+          const typeLabel = TYPE_LABELS[t.type] || t.subject;
+          const shiftLine = shift
+            ? [when.label, shiftTimeWindow(shift), shift.client_name].filter(Boolean).join(" · ")
+            : null;
+          const teLine = !shift && te
+            ? `Clock ${te.clock_in ? format(new Date(te.clock_in), "HH:mm") : "—"} → ${te.clock_out ? format(new Date(te.clock_out), "HH:mm") : "missing"}`
+            : null;
           return (
             <button
               key={t.id}
               onClick={() => onOpen(t)}
-              className="group w-full text-left rounded-2xl border border-border/50 bg-card hover:shadow-md hover:border-border transition-all overflow-hidden flex"
+              className={cn(
+                "group w-full text-left rounded-2xl border bg-card hover:shadow-md transition-all overflow-hidden flex",
+                pr.border,
+              )}
             >
-              <div className={cn("w-1 shrink-0", URGENCY_BAR[urgency])} />
+              <div className={cn("w-1 shrink-0", pr.bar)} />
               <div className="flex-1 p-4 space-y-2">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <UrgencyPill urgency={urgency} />
+                    <span className={cn("inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] font-medium", pr.pill)}>
+                      {pr.label}
+                    </span>
                     <Badge variant="outline" className={cn("gap-1 text-[10px] border", sc.tone)}>
                       {sc.label}
                     </Badge>
@@ -671,24 +744,24 @@ function Group({
                   </span>
                 </div>
 
-                <p className="text-sm font-medium leading-snug">{t.subject}</p>
+                <p className="text-sm font-medium leading-snug">{typeLabel}</p>
 
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                   <span className="inline-flex items-center gap-1">
                     <User className="h-3 w-3" />
                     {t.employee?.first_name} {t.employee?.last_name}
                   </span>
-                  {shift && (
-                    <>
-                      <span className="inline-flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        {when.label}
-                      </span>
-                      <span className="inline-flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {shiftTimeWindow(shift)}
-                      </span>
-                    </>
+                  {shiftLine && (
+                    <span className="inline-flex items-center gap-1">
+                      <Calendar className="h-3 w-3" />
+                      {shiftLine}
+                    </span>
+                  )}
+                  {teLine && (
+                    <span className="inline-flex items-center gap-1 font-mono">
+                      <Timer className="h-3 w-3" />
+                      {teLine}
+                    </span>
                   )}
                   {asgn?.attendance_status && ATTENDANCE_LABELS[asgn.attendance_status] && (
                     <span className={cn("inline-flex items-center gap-1 font-medium", ATTENDANCE_LABELS[asgn.attendance_status].tone)}>
