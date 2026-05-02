@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export default function EmployeeLayout() {
-  const { user, role, employeeActive, employeeId, allEmployeeIds, resolveEmployeeForCompany, loading, signOut, fullName, canAccessAdmin } = useAuth();
+  const { user, role, employeeActive, employeeId, allEmployeeIds, resolveEmployeeForCompany, loading, signOut, fullName, canAccessAdmin, canAccessAdminForCompany } = useAuth();
   const { companies, selectedCompanyId, selectedCompany, switchCompany } = useCompany();
   const isMobile = useIsMobile();
   const { isModuleEnabled, enabledModules, loading: modulesLoading } = usePortalModules();
@@ -140,6 +140,10 @@ export default function EmployeeLayout() {
     </DropdownMenu>
   ) : null;
 
+  // Tenant-scoped admin check: workers in this tenant must NOT see "Panel Admin"
+  // even if they have admin role in another company.
+  const canAccessAdminHere = canAccessAdminForCompany(selectedCompanyId);
+
   const navAndSheet = (
     <>
       <PortalBottomNav onOpenMore={() => setMoreOpen(true)} moreOpen={moreOpen} />
@@ -151,7 +155,7 @@ export default function EmployeeLayout() {
         avatarUrl={avatarUrl}
         enabledModules={enabledModules}
         isModuleEnabled={isModuleEnabled}
-        canAccessAdmin={canAccessAdmin}
+        canAccessAdmin={canAccessAdminHere}
       />
       <EmployeeChatWidget />
     </>

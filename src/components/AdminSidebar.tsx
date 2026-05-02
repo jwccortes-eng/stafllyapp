@@ -101,8 +101,12 @@ const COMPANY_SECTION_ORDER = ["Command Center", "Workforce", "Jobs & Clients", 
 const GLOBAL_SECTION_ORDER = ["Platform", "System"];
 
 export default function AdminSidebar() {
-  const { signOut, role, hasModuleAccess, user, fullName } = useAuth();
+  const { signOut, role: globalRole, hasModuleAccess, user, fullName, getRoleForCompany, canAccessAdminForCompany } = useAuth();
   const { companies, selectedCompanyId, setSelectedCompanyId, isModuleActive, isGlobalMode, canUseGlobalMode } = useCompany();
+  // Tenant-scoped role: NEVER use global role to gate per-tenant UI.
+  // In Global Mode (developer/owner platform view), fall back to global role.
+  const role = isGlobalMode ? globalRole : getRoleForCompany(selectedCompanyId);
+  const isAdminRole = role === 'developer' || role === 'owner' || role === 'company_owner' || role === 'admin';
   const { canAccessModule, requiredPlanForModule, isTrial, trialDaysLeft } = useSubscription();
   const location = useLocation();
   const navigate = useNavigate();
@@ -144,7 +148,10 @@ export default function AdminSidebar() {
     if (isGlobalMode) return true; // Global mode shows all platform links
     if (link.module) {
       if (!isModuleActive(link.module)) return false;
-      if (role === 'developer' || role === 'owner' || role === 'company_owner' || role === 'admin') return true;
+      // Hide plan-locked modules from non-admin roles (managers/supervisors/employees)
+      // Admins still see them (locked) so they can upgrade.
+      if (!isAdminRole && !canAccessModule(link.module)) return false;
+      if (isAdminRole) return true;
       if (role === 'manager' || role === 'supervisor') return hasModuleAccess(link.module, 'view');
       return false;
     }
@@ -162,7 +169,7 @@ export default function AdminSidebar() {
     return location.pathname === to || location.pathname.startsWith(to + "/");
   };
 
-  const isOwner = role === 'developer' || role === 'owner';
+  const isOwner = globalRole === 'developer' || globalRole === 'owner' || isAdminRole;
 
   const visibleSections = useMemo(() => {
     const sectionMap = new Map<string, LinkDef[]>();

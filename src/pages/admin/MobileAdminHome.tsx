@@ -42,7 +42,9 @@ const ACTIONS: ActionDef[] = [
 export default function MobileAdminHome() {
   const navigate = useNavigate();
   const { selectedCompanyId, selectedCompany, isModuleActive, isGlobalMode } = useCompany();
-  const { role, hasModuleAccess, fullName } = useAuth();
+  const { role: globalRole, hasModuleAccess, fullName, getRoleForCompany } = useAuth();
+  const role = isGlobalMode ? globalRole : getRoleForCompany(selectedCompanyId);
+  const isAdminRole = role === "developer" || role === "owner" || role === "company_owner" || role === "admin";
 
   const [badges, setBadges] = useState<{ tickets: number; shift_requests: number }>({ tickets: 0, shift_requests: 0 });
 
@@ -76,10 +78,12 @@ export default function MobileAdminHome() {
     if (isGlobalMode) return true;
     if (a.module) {
       if (!isModuleActive(a.module)) return false;
-      if (role === "developer" || role === "owner" || role === "company_owner" || role === "admin") return true;
+      if (isAdminRole) return true;
       if (role === "manager" || role === "supervisor") return hasModuleAccess(a.module, "view");
       return false;
     }
+    // Non-module admin tools (e.g. Requests inbox) are admin-only
+    if (!isAdminRole && role !== "manager" && role !== "supervisor") return false;
     return true;
   };
 
