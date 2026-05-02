@@ -21,7 +21,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
 import { staffedAssignments } from "@/lib/shifts/assignment-coverage";
 import { canManageShifts } from "@/lib/shifts/shift-permissions";
-import { AttendanceValidator } from "@/components/shifts/AttendanceValidator";
 import { ShiftAttendancePanel } from "@/components/shifts/ShiftAttendancePanel";
 import {
   TraceabilitySnapshot,
