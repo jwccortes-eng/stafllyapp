@@ -15833,6 +15833,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      has_switch_pin: { Args: never; Returns: boolean }
       is_company_owner: {
         Args: { _company_id: string; _user_id: string }
         Returns: boolean
@@ -15935,6 +15936,7 @@ export type Database = {
         }
         Returns: string
       }
+      set_switch_pin: { Args: { _pin: string }; Returns: undefined }
       supersede_employee_invitations: {
         Args: {
           _company_id: string
@@ -15962,6 +15964,7 @@ export type Database = {
         Args: { _company_id: string; _user_id: string }
         Returns: boolean
       }
+      verify_switch_pin: { Args: { _pin: string }; Returns: boolean }
       worker_can_access_employee_doc_path: {
         Args: { _path: string }
         Returns: boolean
