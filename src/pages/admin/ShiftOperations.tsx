@@ -138,13 +138,18 @@ export default function ShiftOperations() {
     if (!shiftId || !selectedCompanyId) return;
     setLoading(true);
 
-    const [shiftRes, assignRes, timelineRes, notesRes, empsRes] = await Promise.all([
+    const [shiftRes, assignRes, timelineRes, notesRes, empsRes, clientsRes, locsRes] = await Promise.all([
       supabase.from("scheduled_shifts").select("*").eq("id", shiftId).single(),
       supabase.from("shift_assignments").select("id, employee_id, status, assignment_role, employees(first_name, last_name, phone_number, county, has_car, can_drive)").eq("shift_id", shiftId) as any,
       supabase.from("shift_timeline").select("*").eq("shift_id", shiftId).order("created_at", { ascending: false }),
       supabase.from("shift_notes").select("*").eq("shift_id", shiftId).order("created_at", { ascending: false }),
       supabase.from("employees").select("id, first_name, last_name, county, has_car, can_drive, phone_number").eq("company_id", selectedCompanyId).eq("is_active", true),
+      supabase.from("clients").select("id, name").eq("company_id", selectedCompanyId).order("name"),
+      supabase.from("locations").select("id, name, address, client_id").eq("company_id", selectedCompanyId).order("name"),
     ]);
+
+    setClientsList((clientsRes.data ?? []) as any);
+    setLocationsList((locsRes.data ?? []) as any);
 
     if (shiftRes.data) {
       const s = shiftRes.data as any;
