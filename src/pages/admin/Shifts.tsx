@@ -422,6 +422,16 @@ function DesktopShifts() {
     if (filters.claimableOnly) {
       result = result.filter(s => s.claimable);
     }
+    if (filters.needsStaffingOnly) {
+      // Phase 1 QW#3 — visual filter only, never mutates data.
+      result = result.filter(s => {
+        const slots = (s as any).slots ?? 0;
+        const assigned = assignments.filter(
+          a => a.shift_id === s.id && a.status !== "rejected"
+        ).length;
+        return slots > 0 && assigned < slots;
+      });
+    }
     return result;
   }, [shifts, assignments, filters]);
 

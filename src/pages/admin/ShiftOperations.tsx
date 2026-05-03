@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -23,6 +23,8 @@ import { PageHeader } from "@/components/ui/page-header";
 import { isEmployeeDriver, type Shift, type Assignment, type Employee } from "@/components/shifts/types";
 import { ShiftEditDialog } from "@/components/shifts/ShiftEditDialog";
 import type { LocationOption } from "@/components/shifts/ShiftFormFields";
+import { ShiftActionBar } from "@/components/shifts/ShiftActionBar";
+import { StaffingRequiredBanner } from "@/components/shifts/StaffingRequiredBanner";
 
 interface ShiftDetail {
   id: string;
@@ -45,6 +47,7 @@ interface ShiftDetail {
   shift_admin_id: string | null;
   driver_employee_id: string | null;
   shift_code: string | null;
+  publication_status?: string | null;
 }
 
 interface AssignmentDetail {
@@ -129,6 +132,9 @@ export default function ShiftOperations() {
   const [clientsList, setClientsList] = useState<{ id: string; name: string }[]>([]);
   const [locationsList, setLocationsList] = useState<LocationOption[]>([]);
   const [editOpen, setEditOpen] = useState(false);
+  const [hasTimeEntries, setHasTimeEntries] = useState(false);
+  const staffingRef = useRef<HTMLDivElement | null>(null);
+  const scrollToStaffing = () => staffingRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
 
   useEffect(() => {
     if (shiftId && selectedCompanyId) loadAll();
@@ -170,6 +176,15 @@ export default function ShiftOperations() {
     setTimeline((timelineRes.data ?? []) as TimelineEvent[]);
     setNotes((notesRes.data ?? []) as ShiftNote[]);
     setEmployees((empsRes.data ?? []) as any[]);
+
+    // Read-only check: does this shift already have any time_entries?
+    // Only used to soft-block edit from the action bar; never mutates anything.
+    const { count: teCount } = await supabase
+      .from("time_entries")
+      .select("id", { count: "exact", head: true })
+      .eq("shift_id", shiftId);
+    setHasTimeEntries((teCount ?? 0) > 0);
+
     setLoading(false);
   };
 
@@ -293,12 +308,31 @@ export default function ShiftOperations() {
             Centro de Operaciones del Turno
           </p>
         </div>
-        {!["locked", "archived", "cancelled"].includes(shift.status) && (
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setEditOpen(true)}>
-            <Pencil className="h-3.5 w-3.5" /> Editar turno
-          </Button>
-        )}
       </div>
+
+      {/* Phase 1 QW#1 — Unified Shift Action Bar */}
+      {selectedCompanyId && (
+        <ShiftActionBar
+          shift={shift as any}
+          assignments={assignments as any}
+          companyId={selectedCompanyId}
+          userId={user?.id ?? null}
+          hasTimeEntries={hasTimeEntries}
+          onEdit={() => setEditOpen(true)}
+          onScrollToStaffing={scrollToStaffing}
+        />
+      )}
+
+      {/* Phase 1 QW#3 — Staffing Required banner */}
+      <StaffingRequiredBanner
+        slots={shift.slots ?? 0}
+        assigned={assignments.filter(a => a.status !== "rejected").length}
+        pending={assignments.filter(a => a.status === "pending").length}
+        rejected={assignments.filter(a => a.status === "rejected").length}
+        specialInstructions={shift.special_instructions}
+        isDraft={shift.status === "draft" || shift.publication_status === "draft"}
+        onScrollToStaffing={scrollToStaffing}
+      />
 
       {/* A) Shift Summary */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -350,7 +384,7 @@ export default function ShiftOperations() {
           </div>
 
           {/* B) Staffing Board */}
-          <div className="rounded-2xl border border-border/40 bg-card p-5 space-y-4">
+          <div ref={staffingRef} className="rounded-2xl border border-border/40 bg-card p-5 space-y-4 scroll-mt-24">
             <h2 className="text-sm font-bold flex items-center gap-2"><Users className="h-4 w-4 text-primary" /> Staffing Board</h2>
             {/* KPI chips */}
             <div className="flex flex-wrap gap-2">

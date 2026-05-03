@@ -2,7 +2,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, X, UserX, EyeOff, Lock, MapPin, Hand } from "lucide-react";
+import { Search, X, UserX, EyeOff, Lock, MapPin, Hand, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { SelectOption } from "./types";
 
@@ -13,6 +13,8 @@ export interface ShiftFilterState {
   assignedStatus: string;
   publishStatus: string;
   claimableOnly: boolean;
+  /** Phase 1 QW#3 — "Needs staffing": slots > assigned (computed in parent). */
+  needsStaffingOnly?: boolean;
 }
 
 interface ShiftFiltersProps {
@@ -31,6 +33,7 @@ export const EMPTY_FILTERS: ShiftFilterState = {
   assignedStatus: "",
   publishStatus: "",
   claimableOnly: false,
+  needsStaffingOnly: false,
 };
 
 export function ShiftFilters({ filters, onChange, clients, locations = [], allowClaims = true }: ShiftFiltersProps) {
@@ -38,6 +41,7 @@ export function ShiftFilters({ filters, onChange, clients, locations = [], allow
     filters.search, filters.clientId, filters.locationId,
     filters.assignedStatus, filters.publishStatus,
     filters.claimableOnly ? "1" : "",
+    filters.needsStaffingOnly ? "1" : "",
   ].filter(Boolean).length;
 
   const update = (partial: Partial<ShiftFilterState>) => onChange({ ...filters, ...partial });
@@ -90,6 +94,21 @@ export function ShiftFilters({ filters, onChange, clients, locations = [], allow
       >
         <EyeOff className="h-3 w-3" />
         Borrador
+      </Button>
+
+      <Button
+        variant="ghost"
+        size="sm"
+        className={cn(
+          "h-7 text-[10px] px-2.5 gap-1 rounded-lg transition-all",
+          filters.needsStaffingOnly
+            ? "bg-orange-100 text-orange-600 hover:bg-orange-200 dark:bg-orange-900/30 dark:text-orange-400"
+            : "text-muted-foreground/60 hover:text-foreground hover:bg-muted/50"
+        )}
+        onClick={() => update({ needsStaffingOnly: !filters.needsStaffingOnly })}
+      >
+        <AlertTriangle className="h-3 w-3" />
+        Needs staffing
       </Button>
 
       <Button
