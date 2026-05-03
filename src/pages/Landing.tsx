@@ -384,7 +384,7 @@ export default function Landing() {
                     <div className="h-2 w-2 rounded-full bg-status-confirmed/50" />
                   </div>
                   <div className="flex-1 flex justify-center">
-                    <div className="bg-muted/40 rounded-md px-10 py-0.5 text-[9px] text-muted-foreground/60 font-mono">app.staflyapps.com</div>
+                    <div className="bg-muted/40 rounded-md px-10 py-0.5 text-[9px] text-muted-foreground/60 font-mono">staflyapps.com</div>
                   </div>
                 </div>
 
