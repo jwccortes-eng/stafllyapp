@@ -86,13 +86,16 @@ export default function InviteEmployees() {
   const getStatus = (emp: Employee) => {
     if (emp.user_id) return "active" as const;
     const hasPhone = !!(emp.phone_number ?? "").replace(/\D/g, "");
-    const hasPin = !!(emp.access_pin ?? "").toString().trim();
-    return hasPhone && hasPin ? "ready" as const : "incomplete" as const;
+    return hasPhone && emp.has_access_pin ? "ready" as const : "incomplete" as const;
   };
 
   const buildInviteMessage = (emp: Employee) => {
-    const pin = emp.access_pin ?? "[pendiente]";
-    return `¡Hola ${emp.first_name}! 👋\n\nTe invitamos a acceder al portal de empleados de *${companyName}*.\n\n📱 Accede aquí: ${portalUrl}\n📞 Tu teléfono: ${emp.phone_number ?? "N/A"}\n🔑 Tu PIN: ${pin}\n\nIngresa con tu número de teléfono y PIN.\n\n— Equipo ${companyName}`;
+    // Phase B: never embed raw PIN. If admin needs to share a fresh one, use Generate PIN
+    // (server returns it once via toast) or open EmployeeInviteDialog.
+    const pinLine = emp.has_access_pin
+      ? `🔑 Usa tu PIN de 4 dígitos. Si no lo recuerdas, pide a tu admin que lo restablezca.`
+      : `🔑 Pide a tu admin que te genere un PIN.`;
+    return `¡Hola ${emp.first_name}! 👋\n\nTe invitamos a acceder al portal de empleados de *${companyName}*.\n\n📱 Accede aquí: ${portalUrl}\n📞 Tu teléfono: ${emp.phone_number ?? "N/A"}\n${pinLine}\n\nIngresa con tu número de teléfono y PIN.\n\n— Equipo ${companyName}`;
   };
 
   const normalizePhoneForWA = (raw: string): string => {
