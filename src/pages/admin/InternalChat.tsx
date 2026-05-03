@@ -330,7 +330,7 @@ export default function InternalChat() {
                         );
                       }}
                     />
-                    {p.full_name || p.email || "Usuario"}
+                    {p.full_name || "Usuario"}
                   </label>
                 ))}
               </div>
