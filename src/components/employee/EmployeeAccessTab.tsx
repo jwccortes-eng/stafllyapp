@@ -49,9 +49,19 @@ export function EmployeeAccessTab({ employee, companyId, companyName, isPrivileg
   const [newPin, setNewPin] = useState("");
   const [savingPin, setSavingPin] = useState(false);
   const [lastGeneratedPin, setLastGeneratedPin] = useState<string | null>(null);
+  const [hasPinResolved, setHasPinResolved] = useState<boolean | null>(null);
 
   useEffect(() => {
     fetchModules();
+    let cancelled = false;
+    (async () => {
+      try {
+        const { checkEmployeeHasPin } = await import("@/lib/access-pin");
+        const v = await checkEmployeeHasPin(employee.id);
+        if (!cancelled) setHasPinResolved(v);
+      } catch { /* noop */ }
+    })();
+    return () => { cancelled = true; };
   }, [employee.id, companyId]);
 
   const fetchModules = async () => {
