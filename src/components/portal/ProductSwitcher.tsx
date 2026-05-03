@@ -28,6 +28,12 @@ interface ProductSwitcherProps {
  */
 export function ProductSwitcher({ compact = false }: ProductSwitcherProps) {
   const navigate = useNavigate();
+  const { canAccessAdminForCompany } = useAuth();
+  const { selectedCompanyId } = useCompany();
+  const { selectedCompanyId: effectiveCompanyId } = useEffectiveEmployee();
+  const canAccessAdmin =
+    canAccessAdminForCompany(selectedCompanyId) ||
+    canAccessAdminForCompany(effectiveCompanyId);
 
   return (
     <DropdownMenu>
