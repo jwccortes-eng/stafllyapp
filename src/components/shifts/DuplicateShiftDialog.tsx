@@ -496,6 +496,34 @@ export function DuplicateShiftDialog({
           </Button>
         </DialogFooter>
       </DialogContent>
+
+      <AlertDialog
+        open={!!pendingForceEmployee}
+        onOpenChange={(o) => { if (!o) setPendingForceEmployee(null); }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Incluir trabajador con conflicto</AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingForceEmployee?.employee_name} tiene otro turno en ese horario
+              ({pendingForceEmployee?.conflict_title} ·{" "}
+              {pendingForceEmployee?.conflict_start.slice(0,5)}–{pendingForceEmployee?.conflict_end.slice(0,5)}).
+              {" "}El sistema puede bloquear esta acción. No es recomendado.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Mantener excluido</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (pendingForceEmployee) toggleExcluded(pendingForceEmployee.employee_id);
+                setPendingForceEmployee(null);
+              }}
+            >
+              Incluir igual
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }
