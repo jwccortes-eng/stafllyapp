@@ -49,9 +49,19 @@ export function EmployeeAccessTab({ employee, companyId, companyName, isPrivileg
   const [newPin, setNewPin] = useState("");
   const [savingPin, setSavingPin] = useState(false);
   const [lastGeneratedPin, setLastGeneratedPin] = useState<string | null>(null);
+  const [hasPinResolved, setHasPinResolved] = useState<boolean | null>(null);
 
   useEffect(() => {
     fetchModules();
+    let cancelled = false;
+    (async () => {
+      try {
+        const { checkEmployeeHasPin } = await import("@/lib/access-pin");
+        const v = await checkEmployeeHasPin(employee.id);
+        if (!cancelled) setHasPinResolved(v);
+      } catch { /* noop */ }
+    })();
+    return () => { cancelled = true; };
   }, [employee.id, companyId]);
 
   const fetchModules = async () => {
@@ -113,6 +123,7 @@ export function EmployeeAccessTab({ employee, companyId, companyName, isPrivileg
 
       toast({ title: "PIN actualizado", description: "Cópialo ahora — no se mostrará de nuevo." });
       setLastGeneratedPin(newPin);
+      setHasPinResolved(true);
       onEmployeeUpdate?.({ has_access_pin: true });
       setNewPin("");
     } catch (err: any) {
@@ -132,6 +143,7 @@ export function EmployeeAccessTab({ employee, companyId, companyName, isPrivileg
       const { resetEmployeePin } = await import("@/lib/access-pin");
       const newPinValue = await resetEmployeePin(employee.id);
       setLastGeneratedPin(newPinValue);
+      setHasPinResolved(true);
       onEmployeeUpdate?.({ has_access_pin: true });
       toast({ title: "PIN generado", description: "Cópialo ahora — no se mostrará de nuevo." });
     } catch (err: any) {
@@ -164,7 +176,7 @@ export function EmployeeAccessTab({ employee, companyId, companyName, isPrivileg
                 <p className="text-sm font-medium">PIN del empleado</p>
                 <p className="text-xs text-muted-foreground">Usado para el inicio de sesión del empleado</p>
               </div>
-              {employee.access_pin ? (
+              {employee.has_access_pin === true || hasPinResolved === true || !!lastGeneratedPin ? (
                 <Badge variant="outline" className="text-[10px] text-[hsl(var(--earning))] border-[hsl(var(--earning))]/30 gap-1">
                   <CheckCircle2 className="h-3 w-3" /> PIN configurado
                 </Badge>

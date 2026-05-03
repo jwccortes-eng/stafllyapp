@@ -70,7 +70,7 @@ export function ShiftRidesPanel({
   const loadDrivers = useCallback(async () => {
     const { data, error } = await supabase
       .from("employees")
-      .select("id, first_name, last_name, avatar_url, gender, phone_number, email, employee_role, has_car, can_drive, user_id, access_pin, is_active")
+      .select("id, first_name, last_name, avatar_url, gender, phone_number, email, employee_role, has_car, can_drive, user_id, is_active")
       .eq("company_id", companyId)
       .eq("is_active", true)
       .order("first_name");
@@ -81,6 +81,12 @@ export function ShiftRidesPanel({
     }
     const all = (data ?? []) as Employee[];
     const onlyDrivers = all.filter(isEmployeeDriver);
+    // Phase B: resolve PIN existence via boolean RPC (parallel, capped to driver subset).
+    try {
+      const { checkEmployeesHasPinBulk } = await import("@/lib/access-pin");
+      const pinMap = await checkEmployeesHasPinBulk(onlyDrivers.map(d => d.id));
+      onlyDrivers.forEach(d => { (d as any).has_access_pin = !!pinMap[d.id]; });
+    } catch { /* noop — badges fall back to "Sin acceso" */ }
     setDrivers(onlyDrivers);
   }, [companyId]);
 
@@ -445,7 +451,7 @@ export function ShiftRidesPanel({
                         <Badge variant="outline" className="text-[9px] bg-[hsl(var(--earning))]/12 text-[hsl(var(--earning))] border-[hsl(var(--earning))]/25">
                           Activo
                         </Badge>
-                      ) : driver.access_pin ? (
+                      ) : driver.has_access_pin ? (
                         <Badge variant="outline" className="text-[9px] bg-warning/12 text-warning border-warning/25">
                           Pendiente
                         </Badge>
@@ -484,11 +490,11 @@ export function ShiftRidesPanel({
                     <button
                       type="button"
                       onClick={() => handleInviteEmployee(driver)}
-                      title={driver.access_pin ? "Reenviar invitación" : "Enviar invitación / link de acceso"}
+                      title={driver.has_access_pin ? "Reenviar invitación" : "Enviar invitación / link de acceso"}
                       className="flex items-center gap-1 rounded-lg px-2 py-1 text-[10px] font-medium text-primary hover:bg-primary/10 transition-colors"
                     >
-                      {driver.access_pin ? <RefreshCw className="h-3 w-3" /> : <Send className="h-3 w-3" />}
-                      {driver.access_pin ? "Reenviar" : "Invitar"}
+                      {driver.has_access_pin ? <RefreshCw className="h-3 w-3" /> : <Send className="h-3 w-3" />}
+                      {driver.has_access_pin ? "Reenviar" : "Invitar"}
                     </button>
                     {/* SECONDARY — copy shift link (smart-link), never replaces the primary CTA. */}
                     {shiftContext && (

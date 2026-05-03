@@ -25,7 +25,7 @@ interface Employee {
   phone_number: string | null;
   email: string | null;
   is_active: boolean;
-  access_pin: string | null;
+  has_access_pin: boolean;
   user_id: string | null;
   avatar_url: string | null;
   gender: string | null;
@@ -56,11 +56,15 @@ export default function InviteEmployees() {
     setLoading(true);
     const { data } = await supabase
       .from("employees")
-      .select("id, first_name, last_name, phone_number, email, is_active, access_pin, user_id, avatar_url, gender, employee_role")
+      .select("id, first_name, last_name, phone_number, email, is_active, user_id, avatar_url, gender, employee_role")
       .eq("company_id", selectedCompanyId!)
       .eq("is_active", true)
       .order("first_name");
-    setEmployees(data ?? []);
+    const rows = (data ?? []) as any[];
+    // Phase B: resolve PIN existence via boolean RPC (parallel).
+    const { checkEmployeesHasPinBulk } = await import("@/lib/access-pin");
+    const pinMap = await checkEmployeesHasPinBulk(rows.map(r => r.id));
+    setEmployees(rows.map(r => ({ ...r, has_access_pin: !!pinMap[r.id] })));
     setLoading(false);
   };
 
@@ -82,13 +86,16 @@ export default function InviteEmployees() {
   const getStatus = (emp: Employee) => {
     if (emp.user_id) return "active" as const;
     const hasPhone = !!(emp.phone_number ?? "").replace(/\D/g, "");
-    const hasPin = !!(emp.access_pin ?? "").toString().trim();
-    return hasPhone && hasPin ? "ready" as const : "incomplete" as const;
+    return hasPhone && emp.has_access_pin ? "ready" as const : "incomplete" as const;
   };
 
   const buildInviteMessage = (emp: Employee) => {
-    const pin = emp.access_pin ?? "[pendiente]";
-    return `¡Hola ${emp.first_name}! 👋\n\nTe invitamos a acceder al portal de empleados de *${companyName}*.\n\n📱 Accede aquí: ${portalUrl}\n📞 Tu teléfono: ${emp.phone_number ?? "N/A"}\n🔑 Tu PIN: ${pin}\n\nIngresa con tu número de teléfono y PIN.\n\n— Equipo ${companyName}`;
+    // Phase B: never embed raw PIN. If admin needs to share a fresh one, use Generate PIN
+    // (server returns it once via toast) or open EmployeeInviteDialog.
+    const pinLine = emp.has_access_pin
+      ? `🔑 Usa tu PIN de 4 dígitos. Si no lo recuerdas, pide a tu admin que lo restablezca.`
+      : `🔑 Pide a tu admin que te genere un PIN.`;
+    return `¡Hola ${emp.first_name}! 👋\n\nTe invitamos a acceder al portal de empleados de *${companyName}*.\n\n📱 Accede aquí: ${portalUrl}\n📞 Tu teléfono: ${emp.phone_number ?? "N/A"}\n${pinLine}\n\nIngresa con tu número de teléfono y PIN.\n\n— Equipo ${companyName}`;
   };
 
   const normalizePhoneForWA = (raw: string): string => {
@@ -219,7 +226,7 @@ export default function InviteEmployees() {
           {sorted.map(emp => {
             const status = getStatus(emp);
             const hasPhone = !!(emp.phone_number ?? "").replace(/\D/g, "");
-            const hasPin = !!(emp.access_pin ?? "").toString().trim();
+            const hasPin = !!emp.has_access_pin;
             const isCopied = copiedId === emp.id;
 
             return (

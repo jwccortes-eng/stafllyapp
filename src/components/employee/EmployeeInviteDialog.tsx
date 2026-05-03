@@ -74,9 +74,12 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
 
   const portalUrl = portalAuthUrl();
   const inviteLink = liveToken ? inviteUrl(liveToken) : null;
-  const currentPin = livePin ?? (typeof employee.access_pin === "string" && employee.access_pin.trim() ? employee.access_pin.trim() : null);
+  // Phase B: never read employee.access_pin from frontend. Only show a PIN that
+  // was just generated in this dialog session (livePin) or a deferred RPC-resolved
+  // boolean (hasPinResolved) for badge state.
+  const currentPin = livePin;
   const pin = currentPin ?? "—";
-  const hasPin = currentPin !== null;
+  const hasPin = currentPin !== null || employee.has_access_pin === true;
   const hasPhone = !!(employee.phone_number ?? "").replace(/\D/g, "");
   const hasEmail = !!employee.email;
 
@@ -84,10 +87,19 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
   // Worker is archived/deactivated — block all send actions, keep view-only affordances.
   const isInactive = employee.is_active === false;
 
-  // Reset livePin when dialog opens/closes
+  // Reset livePin when dialog opens/closes; resolve PIN existence via RPC.
   useEffect(() => {
-    if (!open) { setLivePin(null); setLastError(null); }
-  }, [open]);
+    if (!open) { setLivePin(null); setLastError(null); return; }
+    let cancelled = false;
+    (async () => {
+      try {
+        const { checkEmployeeHasPin } = await import("@/lib/access-pin");
+        const v = await checkEmployeeHasPin(employee.id);
+        if (!cancelled) (employee as any).has_access_pin = v === true;
+      } catch { /* noop */ }
+    })();
+    return () => { cancelled = true; };
+  }, [open, employee.id]);
 
   useEffect(() => {
     if (!open || !providerMessageId) return;
@@ -298,22 +310,29 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
     if (!employee.id) return;
     setGeneratingPin(true);
     try {
-      const newPin = String(Math.floor(1000 + Math.random() * 9000));
-      const { error } = await supabase
-        .from("employees")
-        .update({ access_pin: newPin } as any)
-        .eq("id", employee.id);
-      if (error) throw error;
+      const { resetEmployeePin } = await import("@/lib/access-pin");
+      const newPin = await resetEmployeePin(employee.id);
       setLivePin(newPin);
-      toast({ title: "PIN generado", description: `Nuevo PIN: ${newPin}` });
+      (employee as any).has_access_pin = true;
+      toast({ title: "PIN generado", description: "Cópialo ahora — no se mostrará de nuevo." });
     } catch (err: any) {
-      toast({ title: "Error al generar PIN", description: err.message, variant: "destructive" });
+      const msg = err?.message ?? "Error al generar PIN";
+      toast({
+        title: "Error al generar PIN",
+        description: msg === "forbidden" ? "Sin permiso para generar PIN." : msg,
+        variant: "destructive",
+      });
     } finally {
       setGeneratingPin(false);
     }
   };
 
-  const message = `¡Hola ${employee.first_name}! 👋\n\nTe invitamos a acceder al portal de empleados de *${companyName}*.\n\n📱 Portal: ${portalUrl}\n📞 Tu teléfono: ${employee.phone_number ?? "—"}\n🔑 Tu PIN: ${pin}\n\nSelecciona "Acceso empleado" e ingresa con tu número y PIN.\n\nDesde el portal podrás:\n✅ Ver tus turnos asignados\n✅ Registrar entrada y salida\n✅ Consultar tus pagos\n✅ Recibir comunicados\n\n${inviteLink ? `🔗 Activa tu cuenta: ${inviteLink}\n\n` : ""}— Equipo ${companyName}`;
+  const pinLine = livePin
+    ? `🔑 Tu PIN: ${livePin}`
+    : (employee.has_access_pin === true
+        ? `🔑 Tu PIN ya está configurado. Si no lo recuerdas, pide a tu admin que lo restablezca.`
+        : `🔑 Pide a tu admin que te genere un PIN.`);
+  const message = `¡Hola ${employee.first_name}! 👋\n\nTe invitamos a acceder al portal de empleados de *${companyName}*.\n\n📱 Portal: ${portalUrl}\n📞 Tu teléfono: ${employee.phone_number ?? "—"}\n${pinLine}\n\nSelecciona "Acceso empleado" e ingresa con tu número y PIN.\n\nDesde el portal podrás:\n✅ Ver tus turnos asignados\n✅ Registrar entrada y salida\n✅ Consultar tus pagos\n✅ Recibir comunicados\n\n${inviteLink ? `🔗 Activa tu cuenta: ${inviteLink}\n\n` : ""}— Equipo ${companyName}`;
 
   const whatsappTargets = buildWhatsAppTargets(employee.phone_number, message);
   const smsLink = `sms:${employee.phone_number ?? ""}?body=${encodeURIComponent(message)}`;
@@ -389,7 +408,7 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
               ` : ""}
               <div style="background: hsl(220, 20%, 97%); border-radius: 12px; padding: 16px; margin: 0 0 20px;">
                 <p style="font-size: 13px; color: hsl(220, 15%, 30%); margin: 0 0 8px;">📱 <strong>Portal:</strong> <a href="${portalUrl}" style="color: hsl(222, 100%, 59%);">${portalUrl}</a></p>
-                <p style="font-size: 13px; color: hsl(220, 15%, 30%); margin: 0;">🔑 <strong>Tu PIN:</strong> ${pin}</p>
+                ${livePin ? `<p style="font-size: 13px; color: hsl(220, 15%, 30%); margin: 0;">🔑 <strong>Tu PIN:</strong> ${livePin}</p>` : `<p style="font-size: 13px; color: hsl(220, 15%, 30%); margin: 0;">🔑 Usa tu PIN de 4 dígitos. Si no lo recuerdas, pide a tu admin que lo restablezca.</p>`}
               </div>
               <p style="font-size: 13px; color: hsl(220, 15%, 46%); line-height: 1.6;">Ingresa con tu número de teléfono y tu PIN de 4 dígitos.</p>
               <p style="font-size: 12px; color: hsl(220, 15%, 46%); margin: 30px 0 0;">Si no esperabas esta invitación, ignora este correo.</p>
@@ -461,7 +480,7 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
   // Readiness checks
   const readyChecks = [
     { label: "Teléfono", ok: hasPhone, detail: employee.phone_number || "No registrado" },
-    { label: "PIN", ok: hasPin, detail: hasPin ? pin : "No asignado" },
+    { label: "PIN", ok: hasPin, detail: hasPin ? (livePin ?? "Configurado") : "No asignado" },
     { label: "Email", ok: hasEmail, detail: employee.email || "Opcional" },
   ];
   const isReady = hasPhone && hasPin;
@@ -633,7 +652,7 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
                 </div>
                 <div className="flex items-center justify-between text-[11px]">
                   <span className="text-muted-foreground">PIN</span>
-                  <Badge variant="outline" className="font-mono text-[10px] tracking-widest">{pin}</Badge>
+                  <Badge variant="outline" className="font-mono text-[10px] tracking-widest">{livePin ?? (hasPin ? "••••" : "—")}</Badge>
                 </div>
               </div>
 

@@ -163,7 +163,7 @@ export default function Applications() {
       if (phone) {
         const { data: byPhone } = await supabase
           .from("employees")
-          .select("id, first_name, last_name, phone_number, email, is_active, user_id, access_pin, portal_access_enabled")
+          .select("id, first_name, last_name, phone_number, email, is_active, user_id, portal_access_enabled")
           .eq("company_id", selectedCompanyId)
           .eq("phone_number", phone);
         if (byPhone?.length) conditions.push(...byPhone);
@@ -171,7 +171,7 @@ export default function Applications() {
       if (selected.email) {
         const { data: byEmail } = await supabase
           .from("employees")
-          .select("id, first_name, last_name, phone_number, email, is_active, user_id, access_pin, portal_access_enabled")
+          .select("id, first_name, last_name, phone_number, email, is_active, user_id, portal_access_enabled")
           .eq("company_id", selectedCompanyId)
           .eq("email", selected.email.toLowerCase().trim());
         if (byEmail?.length) conditions.push(...byEmail);
@@ -717,7 +717,7 @@ export default function Applications() {
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-foreground">{emp.first_name} {emp.last_name}</p>
                         <p className="text-[10px] text-muted-foreground">
-                          {emp.is_active ? "Activo" : "Inactivo"} · {emp.user_id ? "Con portal" : "Sin portal"} · {emp.access_pin ? "Con PIN" : "Sin PIN"}
+                          {emp.is_active ? "Activo" : "Inactivo"} · {emp.user_id ? "Con portal" : "Sin portal"}
                         </p>
                       </div>
                       <Badge variant="outline" className="text-[9px] shrink-0">Se vinculará</Badge>
