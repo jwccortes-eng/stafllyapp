@@ -101,6 +101,21 @@ export function ShiftFilters({ filters, onChange, clients, locations = [], allow
         size="sm"
         className={cn(
           "h-7 text-[10px] px-2.5 gap-1 rounded-lg transition-all",
+          filters.needsStaffingOnly
+            ? "bg-orange-100 text-orange-600 hover:bg-orange-200 dark:bg-orange-900/30 dark:text-orange-400"
+            : "text-muted-foreground/60 hover:text-foreground hover:bg-muted/50"
+        )}
+        onClick={() => update({ needsStaffingOnly: !filters.needsStaffingOnly })}
+      >
+        <AlertTriangle className="h-3 w-3" />
+        Needs staffing
+      </Button>
+
+      <Button
+        variant="ghost"
+        size="sm"
+        className={cn(
+          "h-7 text-[10px] px-2.5 gap-1 rounded-lg transition-all",
           filters.publishStatus === "locked"
             ? "bg-slate-200 text-slate-700 hover:bg-slate-300 dark:bg-slate-800 dark:text-slate-300"
             : "text-muted-foreground/60 hover:text-foreground hover:bg-muted/50"
