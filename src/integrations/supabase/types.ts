@@ -15934,6 +15934,7 @@ export type Database = {
         }
         Returns: number
       }
+      try_path_uuid: { Args: { idx: number; path: string }; Returns: string }
       unaccent_safe: { Args: { _input: string }; Returns: string }
       update_invitation_status_by_token: {
         Args: { _new_status: string; _token: string }
