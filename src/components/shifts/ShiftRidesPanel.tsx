@@ -490,11 +490,11 @@ export function ShiftRidesPanel({
                     <button
                       type="button"
                       onClick={() => handleInviteEmployee(driver)}
-                      title={driver.access_pin ? "Reenviar invitación" : "Enviar invitación / link de acceso"}
+                      title={driver.has_access_pin ? "Reenviar invitación" : "Enviar invitación / link de acceso"}
                       className="flex items-center gap-1 rounded-lg px-2 py-1 text-[10px] font-medium text-primary hover:bg-primary/10 transition-colors"
                     >
-                      {driver.access_pin ? <RefreshCw className="h-3 w-3" /> : <Send className="h-3 w-3" />}
-                      {driver.access_pin ? "Reenviar" : "Invitar"}
+                      {driver.has_access_pin ? <RefreshCw className="h-3 w-3" /> : <Send className="h-3 w-3" />}
+                      {driver.has_access_pin ? "Reenviar" : "Invitar"}
                     </button>
                     {/* SECONDARY — copy shift link (smart-link), never replaces the primary CTA. */}
                     {shiftContext && (
