@@ -23,15 +23,28 @@ export type PortalAccessState =
 interface EmployeeLike {
   user_id?: string | null;
   is_active?: boolean;
+  /**
+   * Phase B: do NOT read `access_pin` value from the row anymore.
+   * Pass `has_access_pin` (boolean) resolved via the
+   * `employee_has_access_pin` RPC. We accept legacy `access_pin` only
+   * to compute existence as a fallback during the transition.
+   */
+  has_access_pin?: boolean | null;
+  /** @deprecated frontend should not consume the raw value; use has_access_pin */
   access_pin?: string | null;
   phone_number?: string | null;
+}
+
+function resolveHasPin(emp: EmployeeLike): boolean {
+  if (typeof emp.has_access_pin === "boolean") return emp.has_access_pin;
+  return !!(emp.access_pin ?? "").toString().trim();
 }
 
 export function getPortalAccessState(emp: EmployeeLike, invitation?: EmployeeInvitation | null): PortalAccessState {
   if (emp.is_active === false) return "inactive";
   if (emp.user_id) return "active";
   const hasPhone = !!(emp.phone_number ?? "").replace(/\D/g, "");
-  const hasPin = !!(emp.access_pin ?? "").toString().trim();
+  const hasPin = resolveHasPin(emp);
   if (invitation) {
     return isInviteStatusFailure(invitation.status) ? "failed" : "invited";
   }
@@ -41,7 +54,7 @@ export function getPortalAccessState(emp: EmployeeLike, invitation?: EmployeeInv
 function getMissingItems(emp: EmployeeLike): string[] {
   const items: string[] = [];
   if (!(emp.phone_number ?? "").replace(/\D/g, "")) items.push("phone");
-  if (!(emp.access_pin ?? "").toString().trim()) items.push("PIN");
+  if (!resolveHasPin(emp)) items.push("PIN");
   return items;
 }
 
