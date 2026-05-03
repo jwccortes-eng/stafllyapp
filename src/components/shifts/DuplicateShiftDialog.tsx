@@ -105,6 +105,7 @@ export function DuplicateShiftDialog({
   const [overlaps, setOverlaps] = useState<OverlapRow[]>([]);
   const [checkingOverlap, setCheckingOverlap] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [pendingForceEmployee, setPendingForceEmployee] = useState<OverlapRow | null>(null);
 
   // Reset when reopened
   useEffect(() => {
