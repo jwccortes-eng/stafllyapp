@@ -56,11 +56,15 @@ export default function InviteEmployees() {
     setLoading(true);
     const { data } = await supabase
       .from("employees")
-      .select("id, first_name, last_name, phone_number, email, is_active, access_pin, user_id, avatar_url, gender, employee_role")
+      .select("id, first_name, last_name, phone_number, email, is_active, user_id, avatar_url, gender, employee_role")
       .eq("company_id", selectedCompanyId!)
       .eq("is_active", true)
       .order("first_name");
-    setEmployees(data ?? []);
+    const rows = (data ?? []) as any[];
+    // Phase B: resolve PIN existence via boolean RPC (parallel).
+    const { checkEmployeesHasPinBulk } = await import("@/lib/access-pin");
+    const pinMap = await checkEmployeesHasPinBulk(rows.map(r => r.id));
+    setEmployees(rows.map(r => ({ ...r, has_access_pin: !!pinMap[r.id] })));
     setLoading(false);
   };
 
