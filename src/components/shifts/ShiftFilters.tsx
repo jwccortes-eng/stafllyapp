@@ -33,6 +33,7 @@ export const EMPTY_FILTERS: ShiftFilterState = {
   assignedStatus: "",
   publishStatus: "",
   claimableOnly: false,
+  needsStaffingOnly: false,
 };
 
 export function ShiftFilters({ filters, onChange, clients, locations = [], allowClaims = true }: ShiftFiltersProps) {
