@@ -106,14 +106,13 @@ export function QuickAddInviteWizard({ open, onOpenChange, onEmployeeCreated }: 
       last_name: lastName.trim() || null,
       phone_number: digits,
       email: email.trim() || null,
-      access_pin: autoPin,
       is_active: true,
     };
 
     const { data, error } = await supabase
       .from("employees")
       .insert(insertData as any)
-      .select("id, first_name, last_name, phone_number, email, access_pin, company_id, avatar_url, gender, user_id")
+      .select("id, first_name, last_name, phone_number, email, company_id, avatar_url, gender, user_id")
       .single();
 
     if (error) {
@@ -136,8 +135,19 @@ export function QuickAddInviteWizard({ open, onOpenChange, onEmployeeCreated }: 
     }
 
     const emp = data as Record<string, any>;
-    setCreatedEmployee(emp);
-    onEmployeeCreated?.(emp);
+
+    // Phase B: generate initial PIN via SECURITY DEFINER RPC. Returned exactly once.
+    let initialPin: string | null = null;
+    try {
+      const { resetEmployeePin } = await import("@/lib/access-pin");
+      initialPin = await resetEmployeePin(emp.id);
+    } catch (pinErr) {
+      console.warn("[QuickAdd] initial PIN generation failed:", pinErr);
+    }
+
+    const empWithPin = { ...emp, access_pin: initialPin, has_access_pin: !!initialPin };
+    setCreatedEmployee(empWithPin);
+    onEmployeeCreated?.(empWithPin);
     setStep(2);
     setSaving(false);
     return true;
