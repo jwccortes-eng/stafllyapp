@@ -25,7 +25,7 @@ interface Employee {
   phone_number: string | null;
   email: string | null;
   is_active: boolean;
-  access_pin: string | null;
+  has_access_pin: boolean;
   user_id: string | null;
   avatar_url: string | null;
   gender: string | null;
