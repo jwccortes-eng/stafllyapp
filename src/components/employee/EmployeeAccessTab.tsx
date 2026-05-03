@@ -143,6 +143,7 @@ export function EmployeeAccessTab({ employee, companyId, companyName, isPrivileg
       const { resetEmployeePin } = await import("@/lib/access-pin");
       const newPinValue = await resetEmployeePin(employee.id);
       setLastGeneratedPin(newPinValue);
+      setHasPinResolved(true);
       onEmployeeUpdate?.({ has_access_pin: true });
       toast({ title: "PIN generado", description: "Cópialo ahora — no se mostrará de nuevo." });
     } catch (err: any) {
