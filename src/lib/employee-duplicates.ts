@@ -1,7 +1,10 @@
 import { supabase } from "@/integrations/supabase/client";
 import { getPhoneLookupVariants } from "@/lib/phone";
 
-export const EMPLOYEE_LOOKUP_FIELDS = "id, first_name, last_name, phone_number, email, access_pin, company_id, avatar_url, gender, user_id, is_active, employer_identification, employee_role, onboarding_status";
+// NOTE (Phase 1 PIN hardening): `access_pin` removed from generic lookup.
+// Consumers that need to know whether a worker has a PIN should query a
+// dedicated boolean (Fase 2 will introduce employee_has_access_pin RPC).
+export const EMPLOYEE_LOOKUP_FIELDS = "id, first_name, last_name, phone_number, email, company_id, avatar_url, gender, user_id, is_active, employer_identification, employee_role, onboarding_status";
 
 export type EmployeeDuplicateMatchType = "phone" | "email" | "phone_and_email";
 

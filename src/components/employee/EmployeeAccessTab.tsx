@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
   CalendarDays, Clock, DollarSign, MessageCircle, Megaphone,
-  FileText, User, BookOpen, KeyRound, Eye, EyeOff, Loader2, Shield, RefreshCw,
+  FileText, User, BookOpen, KeyRound, Loader2, Shield, RefreshCw, CheckCircle2,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { PortalAccessCard } from "./PortalAccessCard";
@@ -44,10 +44,11 @@ export function EmployeeAccessTab({ employee, companyId, companyName, isPrivileg
   const [saving, setSaving] = useState<string | null>(null);
   const { toast } = useToast();
 
-  // PIN state
-  const [showPin, setShowPin] = useState(false);
+  // PIN state — Phase 1: never display the stored PIN. Show only "configured / none"
+  // and surface the freshly-generated PIN once after a reset (one-time reveal).
   const [newPin, setNewPin] = useState("");
   const [savingPin, setSavingPin] = useState(false);
+  const [lastGeneratedPin, setLastGeneratedPin] = useState<string | null>(null);
 
   useEffect(() => {
     fetchModules();
@@ -129,7 +130,8 @@ export function EmployeeAccessTab({ employee, companyId, companyName, isPrivileg
         }
       }
 
-      toast({ title: "PIN actualizado", description: `Nuevo PIN: ${newPin}` });
+      toast({ title: "PIN actualizado", description: "Cópialo ahora — no se mostrará de nuevo." });
+      setLastGeneratedPin(newPin);
       onEmployeeUpdate?.({ access_pin: newPin });
       setNewPin("");
     } catch (err: any) {
@@ -164,31 +166,45 @@ export function EmployeeAccessTab({ employee, companyId, companyName, isPrivileg
           <CardContent className="p-4 space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium">PIN actual</p>
+                <p className="text-sm font-medium">PIN del empleado</p>
                 <p className="text-xs text-muted-foreground">Usado para el inicio de sesión del empleado</p>
               </div>
-              <div className="flex items-center gap-2">
-                {employee.access_pin ? (
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-sm font-mono font-bold tracking-widest">
-                      {showPin ? employee.access_pin : "••••"}
-                    </span>
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setShowPin(!showPin)}>
-                      {showPin ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-                    </Button>
-                  </div>
-                ) : (
-                  <Badge variant="outline" className="text-[10px] text-muted-foreground">Sin PIN</Badge>
-                )}
-              </div>
+              {employee.access_pin ? (
+                <Badge variant="outline" className="text-[10px] text-[hsl(var(--earning))] border-[hsl(var(--earning))]/30 gap-1">
+                  <CheckCircle2 className="h-3 w-3" /> PIN configurado
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="text-[10px] text-muted-foreground">Sin PIN</Badge>
+              )}
             </div>
+
+            {/* One-time reveal after reset — does not persist on re-render of stored data */}
+            {lastGeneratedPin && (
+              <div className="rounded-lg border border-warning/30 bg-warning/5 px-3 py-2 space-y-1">
+                <p className="text-[10px] font-semibold text-warning uppercase tracking-wider">
+                  Nuevo PIN (cópialo ahora)
+                </p>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-lg font-mono font-bold tracking-widest">{lastGeneratedPin}</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-[10px]"
+                    onClick={() => { navigator.clipboard.writeText(lastGeneratedPin); toast({ title: "PIN copiado" }); }}
+                  >
+                    Copiar
+                  </Button>
+                </div>
+                <p className="text-[10px] text-muted-foreground">No se mostrará de nuevo. Compártelo ahora con el empleado.</p>
+              </div>
+            )}
 
             {isPrivileged && (
               <>
                 <Separator />
                 <div className="flex items-end gap-2">
                   <div className="flex-1 space-y-1">
-                    <Label className="text-xs">Nuevo PIN (4 dígitos)</Label>
+                    <Label className="text-xs">Resetear PIN (4 dígitos)</Label>
                     <Input
                       type="text"
                       inputMode="numeric"
