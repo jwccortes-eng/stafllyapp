@@ -13,6 +13,8 @@ export interface ShiftFilterState {
   assignedStatus: string;
   publishStatus: string;
   claimableOnly: boolean;
+  /** Phase 1 QW#3 — "Needs staffing": slots > assigned (computed in parent). */
+  needsStaffingOnly?: boolean;
 }
 
 interface ShiftFiltersProps {
