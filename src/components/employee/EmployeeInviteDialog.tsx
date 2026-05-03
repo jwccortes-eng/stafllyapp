@@ -310,16 +310,18 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
     if (!employee.id) return;
     setGeneratingPin(true);
     try {
-      const newPin = String(Math.floor(1000 + Math.random() * 9000));
-      const { error } = await supabase
-        .from("employees")
-        .update({ access_pin: newPin } as any)
-        .eq("id", employee.id);
-      if (error) throw error;
+      const { resetEmployeePin } = await import("@/lib/access-pin");
+      const newPin = await resetEmployeePin(employee.id);
       setLivePin(newPin);
-      toast({ title: "PIN generado", description: `Nuevo PIN: ${newPin}` });
+      (employee as any).has_access_pin = true;
+      toast({ title: "PIN generado", description: "Cópialo ahora — no se mostrará de nuevo." });
     } catch (err: any) {
-      toast({ title: "Error al generar PIN", description: err.message, variant: "destructive" });
+      const msg = err?.message ?? "Error al generar PIN";
+      toast({
+        title: "Error al generar PIN",
+        description: msg === "forbidden" ? "Sin permiso para generar PIN." : msg,
+        variant: "destructive",
+      });
     } finally {
       setGeneratingPin(false);
     }
