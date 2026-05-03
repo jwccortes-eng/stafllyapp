@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { ChevronDown, Briefcase, Radio, ArrowLeftRight } from "lucide-react";
+import { ChevronDown, Briefcase, Radio, ArrowLeftRight, LayoutDashboard } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,6 +9,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/useAuth";
+import { useCompany } from "@/hooks/useCompany";
+import { useEffectiveEmployee } from "@/hooks/useEffectiveEmployee";
 
 interface ProductSwitcherProps {
   compact?: boolean;
