@@ -74,9 +74,8 @@ export function QuickAddInviteWizard({ open, onOpenChange, onEmployeeCreated }: 
 
     setSaving(true);
 
-    // Auto-generate PIN from last 4 digits of phone
+    // Phase B: PIN is generated server-side via reset_employee_access_pin RPC after insert.
     const digits = normalizePhone(phone);
-    const autoPin = digits.length >= 4 ? digits.slice(-4) : String(Math.floor(1000 + Math.random() * 9000));
 
     // Pre-check: surface duplicates BEFORE insert with a clear, actionable message.
     // The DB has UNIQUE(phone_number, company_id) — without this pre-check the user
