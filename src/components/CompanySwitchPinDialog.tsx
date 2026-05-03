@@ -71,30 +71,24 @@ export default function CompanySwitchPinDialog({ open, onOpenChange, targetCompa
     setError("");
 
     try {
-      // Verify PIN against stored switch_pin in profiles
-      const { data: profile, error: fetchErr } = await supabase
-        .from("profiles")
-        .select("switch_pin")
-        .eq("user_id", user.id)
-        .maybeSingle();
+      // Check whether the user already has a PIN (no value exposed to client)
+      const { data: hasPinData, error: hasErr } = await supabase.rpc("has_switch_pin");
+      if (hasErr) throw hasErr;
 
-      if (fetchErr) throw fetchErr;
-
-      const storedPin = profile?.switch_pin;
-
-      // If no PIN set, auto-set this one and allow
-      if (!storedPin) {
-        await supabase
-          .from("profiles")
-          .update({ switch_pin: currentPin })
-          .eq("user_id", user.id);
-        
+      // First-time setup: persist the entered PIN via SECURITY DEFINER RPC
+      if (!hasPinData) {
+        const { error: setErr } = await supabase.rpc("set_switch_pin", { _pin: currentPin });
+        if (setErr) throw setErr;
         onConfirm(targetCompany.id);
         onOpenChange(false);
         return;
       }
 
-      if (storedPin !== currentPin) {
+      // Verify entered PIN server-side
+      const { data: ok, error: verErr } = await supabase.rpc("verify_switch_pin", { _pin: currentPin });
+      if (verErr) throw verErr;
+
+      if (!ok) {
         setShake(true);
         setTimeout(() => setShake(false), 600);
         setError("Código incorrecto");
