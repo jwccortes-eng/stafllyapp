@@ -15644,6 +15644,10 @@ export type Database = {
       }
     }
     Functions: {
+      anon_can_upload_onboarding_doc: {
+        Args: { _path: string }
+        Returns: boolean
+      }
       apply_role_template: {
         Args: {
           _company_id: string
