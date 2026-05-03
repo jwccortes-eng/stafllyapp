@@ -1492,6 +1492,7 @@ export type Database = {
           name: string
           pinned_message_ids: string[] | null
           updated_at: string
+          visibility: string
           zone: string
         }
         Insert: {
@@ -1506,6 +1507,7 @@ export type Database = {
           name: string
           pinned_message_ids?: string[] | null
           updated_at?: string
+          visibility?: string
           zone: string
         }
         Update: {
@@ -1520,6 +1522,7 @@ export type Database = {
           name?: string
           pinned_message_ids?: string[] | null
           updated_at?: string
+          visibility?: string
           zone?: string
         }
         Relationships: []
@@ -9199,6 +9202,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          avatar_url: string | null
           created_at: string
           email: string | null
           full_name: string | null
@@ -9209,6 +9213,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          avatar_url?: string | null
           created_at?: string
           email?: string | null
           full_name?: string | null
@@ -9219,6 +9224,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          avatar_url?: string | null
           created_at?: string
           email?: string | null
           full_name?: string | null
@@ -15513,14 +15519,17 @@ export type Database = {
       }
       profiles_safe: {
         Row: {
+          avatar_url: string | null
           full_name: string | null
           user_id: string | null
         }
         Insert: {
+          avatar_url?: string | null
           full_name?: string | null
           user_id?: string | null
         }
         Update: {
+          avatar_url?: string | null
           full_name?: string | null
           user_id?: string | null
         }

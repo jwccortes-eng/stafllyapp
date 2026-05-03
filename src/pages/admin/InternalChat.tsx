@@ -51,7 +51,7 @@ export default function InternalChat() {
     const [convRes, memRes, profRes] = await Promise.all([
       supabase.from("conversations").select("*").eq("company_id", selectedCompanyId).order("updated_at", { ascending: false }),
       supabase.from("conversation_members").select("user_id, conversation_id").eq("company_id", selectedCompanyId),
-      supabase.from("profiles").select("user_id, full_name, email"),
+      supabase.from("profiles_safe").select("user_id, full_name"),
     ]);
     setConversations((convRes.data ?? []) as unknown as Conversation[]);
     setMembers((memRes.data ?? []) as unknown as Member[]);
@@ -159,7 +159,7 @@ export default function InternalChat() {
     if (convo.name) return convo.name;
     const convoMembers = members.filter(m => m.conversation_id === convo.id && m.user_id !== userId);
     if (convoMembers.length === 0) return "Yo";
-    return convoMembers.map(m => profiles.get(m.user_id)?.full_name ?? profiles.get(m.user_id)?.email ?? "Usuario").join(", ");
+    return convoMembers.map(m => profiles.get(m.user_id)?.full_name ?? "Usuario").join(", ");
   };
 
   const getInitials = (name: string) => name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
@@ -330,7 +330,7 @@ export default function InternalChat() {
                         );
                       }}
                     />
-                    {p.full_name || p.email || "Usuario"}
+                    {p.full_name || "Usuario"}
                   </label>
                 ))}
               </div>
