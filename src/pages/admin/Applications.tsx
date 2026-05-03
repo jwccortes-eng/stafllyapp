@@ -171,7 +171,7 @@ export default function Applications() {
       if (selected.email) {
         const { data: byEmail } = await supabase
           .from("employees")
-          .select("id, first_name, last_name, phone_number, email, is_active, user_id, access_pin, portal_access_enabled")
+          .select("id, first_name, last_name, phone_number, email, is_active, user_id, portal_access_enabled")
           .eq("company_id", selectedCompanyId)
           .eq("email", selected.email.toLowerCase().trim());
         if (byEmail?.length) conditions.push(...byEmail);
