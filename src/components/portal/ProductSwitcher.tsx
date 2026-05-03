@@ -29,11 +29,24 @@ interface ProductSwitcherProps {
 export function ProductSwitcher({ compact = false }: ProductSwitcherProps) {
   const navigate = useNavigate();
   const { canAccessAdminForCompany } = useAuth();
-  const { selectedCompanyId } = useCompany();
+  const { companies, selectedCompanyId, setSelectedCompanyId } = useCompany();
   const { selectedCompanyId: effectiveCompanyId } = useEffectiveEmployee();
-  const canAccessAdmin =
-    canAccessAdminForCompany(selectedCompanyId) ||
-    canAccessAdminForCompany(effectiveCompanyId);
+  const adminHere = canAccessAdminForCompany(selectedCompanyId);
+  const adminEffective = canAccessAdminForCompany(effectiveCompanyId);
+  const fallbackAdminCompanyId =
+    (effectiveCompanyId && adminEffective ? effectiveCompanyId : null) ??
+    companies.find((c) => canAccessAdminForCompany(c.id))?.id ??
+    null;
+  const canAccessAdmin = adminHere || !!fallbackAdminCompanyId;
+
+  const goToAdmin = () => {
+    // If the active company doesn't grant admin, switch to one that does
+    // before navigating, so AdminLayout doesn't bounce to "No admin access".
+    if (!adminHere && fallbackAdminCompanyId) {
+      setSelectedCompanyId(fallbackAdminCompanyId);
+    }
+    navigate("/app");
+  };
 
   return (
     <DropdownMenu>
@@ -58,7 +71,7 @@ export function ProductSwitcher({ compact = false }: ProductSwitcherProps) {
 
         {canAccessAdmin && (
           <DropdownMenuItem
-            onClick={() => navigate("/app")}
+            onClick={goToAdmin}
             className="flex items-start gap-3 py-2.5 cursor-pointer focus:bg-accent/50"
           >
             <div className="h-9 w-9 rounded-lg bg-foreground/90 flex items-center justify-center shrink-0 mt-0.5 shadow-md">
