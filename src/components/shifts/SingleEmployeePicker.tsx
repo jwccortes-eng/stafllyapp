@@ -41,7 +41,7 @@ type PortalState = "active" | "pending" | "new";
 
 function resolvePortalState(e: Employee): PortalState {
   if (e.user_id) return "active";
-  if (e.access_pin) return "pending";
+  if (e.has_access_pin === true || (e.has_access_pin == null && e.access_pin)) return "pending";
   return "new";
 }
 
