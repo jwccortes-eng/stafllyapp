@@ -132,6 +132,9 @@ export default function ShiftOperations() {
   const [clientsList, setClientsList] = useState<{ id: string; name: string }[]>([]);
   const [locationsList, setLocationsList] = useState<LocationOption[]>([]);
   const [editOpen, setEditOpen] = useState(false);
+  const [hasTimeEntries, setHasTimeEntries] = useState(false);
+  const staffingRef = useRef<HTMLDivElement | null>(null);
+  const scrollToStaffing = () => staffingRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
 
   useEffect(() => {
     if (shiftId && selectedCompanyId) loadAll();
