@@ -384,7 +384,7 @@ export default function ShiftOperations() {
           </div>
 
           {/* B) Staffing Board */}
-          <div className="rounded-2xl border border-border/40 bg-card p-5 space-y-4">
+          <div ref={staffingRef} className="rounded-2xl border border-border/40 bg-card p-5 space-y-4 scroll-mt-24">
             <h2 className="text-sm font-bold flex items-center gap-2"><Users className="h-4 w-4 text-primary" /> Staffing Board</h2>
             {/* KPI chips */}
             <div className="flex flex-wrap gap-2">
