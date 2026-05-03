@@ -441,30 +441,36 @@ export function DuplicateShiftDialog({
                     <AlertTriangle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
                     <p className="text-[11px] text-amber-700 dark:text-amber-300">
                       {overlaps.length} trabajador{overlaps.length === 1 ? "" : "es"} con turno conflictivo en esa fecha.
-                      Quedarán <strong>excluidos</strong> por defecto. Puedes desmarcar para forzar (el trigger lo bloqueará).
+                      Quedan <strong>excluidos por defecto</strong>. Incluirlos no es recomendado y el sistema puede bloquearlo.
                     </p>
                   </div>
                   <div className="space-y-1.5 max-h-[160px] overflow-y-auto">
-                    {overlaps.map(o => (
-                      <div
-                        key={`${o.employee_id}-${o.conflict_shift_id}`}
-                        className="flex items-center justify-between gap-2 text-[11px]"
-                      >
-                        <div className="min-w-0">
-                          <p className="font-semibold truncate">{o.employee_name}</p>
-                          <p className="text-muted-foreground truncate">
-                            ↳ {o.conflict_title} · {o.conflict_start.slice(0,5)}–{o.conflict_end.slice(0,5)}
-                          </p>
-                        </div>
-                        <Badge
-                          variant={forcedIncludedConflicts.has(o.employee_id) ? "destructive" : "outline"}
-                          className="text-[9px] cursor-pointer shrink-0"
-                          onClick={() => toggleExcluded(o.employee_id)}
+                    {overlaps.map(o => {
+                      const forced = forcedIncludedConflicts.has(o.employee_id);
+                      return (
+                        <div
+                          key={`${o.employee_id}-${o.conflict_shift_id}`}
+                          className="flex items-center justify-between gap-2 text-[11px]"
                         >
-                          {forcedIncludedConflicts.has(o.employee_id) ? "Forzar" : "Excluido"}
-                        </Badge>
-                      </div>
-                    ))}
+                          <div className="min-w-0">
+                            <p className="font-semibold truncate">{o.employee_name}</p>
+                            <p className="text-muted-foreground truncate">
+                              ↳ {o.conflict_title} · {o.conflict_start.slice(0,5)}–{o.conflict_end.slice(0,5)}
+                            </p>
+                          </div>
+                          <Badge
+                            variant={forced ? "destructive" : "outline"}
+                            className="text-[9px] cursor-pointer shrink-0"
+                            onClick={() => {
+                              if (forced) toggleExcluded(o.employee_id);
+                              else setPendingForceEmployee(o);
+                            }}
+                          >
+                            {forced ? "No recomendado" : "Excluido"}
+                          </Badge>
+                        </div>
+                      );
+                    })}
                   </div>
                 </>
               )}
