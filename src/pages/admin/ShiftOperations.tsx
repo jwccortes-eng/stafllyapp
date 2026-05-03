@@ -23,6 +23,8 @@ import { PageHeader } from "@/components/ui/page-header";
 import { isEmployeeDriver, type Shift, type Assignment, type Employee } from "@/components/shifts/types";
 import { ShiftEditDialog } from "@/components/shifts/ShiftEditDialog";
 import type { LocationOption } from "@/components/shifts/ShiftFormFields";
+import { ShiftActionBar } from "@/components/shifts/ShiftActionBar";
+import { StaffingRequiredBanner } from "@/components/shifts/StaffingRequiredBanner";
 
 interface ShiftDetail {
   id: string;
