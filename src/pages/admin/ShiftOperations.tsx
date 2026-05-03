@@ -604,6 +604,17 @@ export default function ShiftOperations() {
           </div>
         </div>
       </div>
+
+      <ShiftEditDialog
+        shift={shift as unknown as Shift}
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        clients={clientsList}
+        locations={locationsList}
+        employees={employees as unknown as Employee[]}
+        assignments={assignments as unknown as Assignment[]}
+        onSave={handleEditSave}
+      />
     </div>
   );
 }
