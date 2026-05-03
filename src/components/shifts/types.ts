@@ -62,7 +62,9 @@ export interface Employee {
   employee_role?: string | null;
   groups?: string | null;
   user_id?: string | null;
-  /** PIN for portal access (presence indicates portal-ready). */
+  /** Phase B: PIN existence resolved via employee_has_access_pin RPC. */
+  has_access_pin?: boolean | null;
+  /** @deprecated raw value not exposed anymore; kept optional for type compatibility. */
   access_pin?: string | null;
   has_car?: string | null;
   /** Authoritative driver flag — boolean column on employees. */
