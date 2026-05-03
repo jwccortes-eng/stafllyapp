@@ -72,7 +72,8 @@ export default function InviteEmployees() {
     if (error) {
       toast({ title: "Error", description: "No se pudo generar PIN", variant: "destructive" });
     } else {
-      toast({ title: "PIN generado", description: `Nuevo PIN: ${data.pin}` });
+      // One-time reveal: show PIN only right after generation so admin can share it.
+      toast({ title: "PIN generado", description: `Nuevo PIN: ${data.pin} — cópialo ahora, no se mostrará más.` });
       fetchEmployees();
     }
     setGeneratingPin(null);
@@ -268,7 +269,7 @@ export default function InviteEmployees() {
                           <KeyRound className="h-2.5 w-2.5" />
                         </span>
                       </TooltipTrigger>
-                      <TooltipContent side="top" className="text-[10px]">{hasPin ? `PIN: ${emp.access_pin}` : "Sin PIN"}</TooltipContent>
+                      <TooltipContent side="top" className="text-[10px]">{hasPin ? "PIN configurado" : "Sin PIN"}</TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
                 </div>
