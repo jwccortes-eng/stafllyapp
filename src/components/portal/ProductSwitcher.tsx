@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { ChevronDown, Briefcase, Radio, ArrowLeftRight } from "lucide-react";
+import { ChevronDown, Briefcase, Radio, ArrowLeftRight, LayoutDashboard } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,6 +9,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/useAuth";
+import { useCompany } from "@/hooks/useCompany";
+import { useEffectiveEmployee } from "@/hooks/useEffectiveEmployee";
 
 interface ProductSwitcherProps {
   compact?: boolean;
@@ -25,6 +28,12 @@ interface ProductSwitcherProps {
  */
 export function ProductSwitcher({ compact = false }: ProductSwitcherProps) {
   const navigate = useNavigate();
+  const { canAccessAdminForCompany } = useAuth();
+  const { selectedCompanyId } = useCompany();
+  const { selectedCompanyId: effectiveCompanyId } = useEffectiveEmployee();
+  const canAccessAdmin =
+    canAccessAdminForCompany(selectedCompanyId) ||
+    canAccessAdminForCompany(effectiveCompanyId);
 
   return (
     <DropdownMenu>
@@ -46,6 +55,25 @@ export function ProductSwitcher({ compact = false }: ProductSwitcherProps) {
           Cambiar de producto
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
+
+        {canAccessAdmin && (
+          <DropdownMenuItem
+            onClick={() => navigate("/app")}
+            className="flex items-start gap-3 py-2.5 cursor-pointer focus:bg-accent/50"
+          >
+            <div className="h-9 w-9 rounded-lg bg-foreground/90 flex items-center justify-center shrink-0 mt-0.5 shadow-md">
+              <LayoutDashboard className="h-[18px] w-[18px] text-background" strokeWidth={2.5} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold leading-tight text-foreground">
+                Admin Dashboard
+              </p>
+              <p className="text-[11px] text-muted-foreground leading-tight mt-0.5">
+                Workers, shifts, payroll y operaciones
+              </p>
+            </div>
+          </DropdownMenuItem>
+        )}
 
         <DropdownMenuItem disabled className="flex items-start gap-3 py-2.5 opacity-100 focus:bg-transparent">
           <div className="h-9 w-9 rounded-lg bg-primary/12 flex items-center justify-center shrink-0 mt-0.5 ring-1 ring-primary/20">
