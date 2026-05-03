@@ -226,7 +226,7 @@ export default function InviteEmployees() {
           {sorted.map(emp => {
             const status = getStatus(emp);
             const hasPhone = !!(emp.phone_number ?? "").replace(/\D/g, "");
-            const hasPin = !!(emp.access_pin ?? "").toString().trim();
+            const hasPin = !!emp.has_access_pin;
             const isCopied = copiedId === emp.id;
 
             return (
