@@ -56,6 +56,25 @@ export function ProductSwitcher({ compact = false }: ProductSwitcherProps) {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
 
+        {canAccessAdmin && (
+          <DropdownMenuItem
+            onClick={() => navigate("/app")}
+            className="flex items-start gap-3 py-2.5 cursor-pointer focus:bg-accent/50"
+          >
+            <div className="h-9 w-9 rounded-lg bg-foreground/90 flex items-center justify-center shrink-0 mt-0.5 shadow-md">
+              <LayoutDashboard className="h-[18px] w-[18px] text-background" strokeWidth={2.5} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold leading-tight text-foreground">
+                Admin Dashboard
+              </p>
+              <p className="text-[11px] text-muted-foreground leading-tight mt-0.5">
+                Workers, shifts, payroll y operaciones
+              </p>
+            </div>
+          </DropdownMenuItem>
+        )}
+
         <DropdownMenuItem disabled className="flex items-start gap-3 py-2.5 opacity-100 focus:bg-transparent">
           <div className="h-9 w-9 rounded-lg bg-primary/12 flex items-center justify-center shrink-0 mt-0.5 ring-1 ring-primary/20">
             <Briefcase className="h-[18px] w-[18px] text-primary" />
