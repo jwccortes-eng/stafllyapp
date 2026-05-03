@@ -70,7 +70,7 @@ export function ShiftRidesPanel({
   const loadDrivers = useCallback(async () => {
     const { data, error } = await supabase
       .from("employees")
-      .select("id, first_name, last_name, avatar_url, gender, phone_number, email, employee_role, has_car, can_drive, user_id, access_pin, is_active")
+      .select("id, first_name, last_name, avatar_url, gender, phone_number, email, employee_role, has_car, can_drive, user_id, is_active")
       .eq("company_id", companyId)
       .eq("is_active", true)
       .order("first_name");
@@ -81,6 +81,12 @@ export function ShiftRidesPanel({
     }
     const all = (data ?? []) as Employee[];
     const onlyDrivers = all.filter(isEmployeeDriver);
+    // Phase B: resolve PIN existence via boolean RPC (parallel, capped to driver subset).
+    try {
+      const { checkEmployeesHasPinBulk } = await import("@/lib/access-pin");
+      const pinMap = await checkEmployeesHasPinBulk(onlyDrivers.map(d => d.id));
+      onlyDrivers.forEach(d => { (d as any).has_access_pin = !!pinMap[d.id]; });
+    } catch { /* noop — badges fall back to "Sin acceso" */ }
     setDrivers(onlyDrivers);
   }, [companyId]);
 
