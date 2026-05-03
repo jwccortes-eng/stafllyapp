@@ -20,7 +20,9 @@ import {
   FileText, Flag, Pencil, Hash, CreditCard, UserCheck, Truck,
 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
-import { isEmployeeDriver } from "@/components/shifts/types";
+import { isEmployeeDriver, type Shift, type Assignment, type Employee } from "@/components/shifts/types";
+import { ShiftEditDialog } from "@/components/shifts/ShiftEditDialog";
+import type { LocationOption } from "@/components/shifts/ShiftFormFields";
 
 interface ShiftDetail {
   id: string;
@@ -123,6 +125,11 @@ export default function ShiftOperations() {
   // Staff list for role assignment
   const [employees, setEmployees] = useState<{ id: string; first_name: string; last_name: string; county: string | null; has_car: string | null; can_drive: boolean | null; phone_number: string | null }[]>([]);
 
+  // Edit dialog reference data
+  const [clientsList, setClientsList] = useState<{ id: string; name: string }[]>([]);
+  const [locationsList, setLocationsList] = useState<LocationOption[]>([]);
+  const [editOpen, setEditOpen] = useState(false);
+
   useEffect(() => {
     if (shiftId && selectedCompanyId) loadAll();
   }, [shiftId, selectedCompanyId]);
@@ -131,13 +138,18 @@ export default function ShiftOperations() {
     if (!shiftId || !selectedCompanyId) return;
     setLoading(true);
 
-    const [shiftRes, assignRes, timelineRes, notesRes, empsRes] = await Promise.all([
+    const [shiftRes, assignRes, timelineRes, notesRes, empsRes, clientsRes, locsRes] = await Promise.all([
       supabase.from("scheduled_shifts").select("*").eq("id", shiftId).single(),
       supabase.from("shift_assignments").select("id, employee_id, status, assignment_role, employees(first_name, last_name, phone_number, county, has_car, can_drive)").eq("shift_id", shiftId) as any,
       supabase.from("shift_timeline").select("*").eq("shift_id", shiftId).order("created_at", { ascending: false }),
       supabase.from("shift_notes").select("*").eq("shift_id", shiftId).order("created_at", { ascending: false }),
       supabase.from("employees").select("id, first_name, last_name, county, has_car, can_drive, phone_number").eq("company_id", selectedCompanyId).eq("is_active", true),
+      supabase.from("clients").select("id, name").eq("company_id", selectedCompanyId).order("name"),
+      supabase.from("locations").select("id, name, address, client_id").eq("company_id", selectedCompanyId).order("name"),
     ]);
+
+    setClientsList((clientsRes.data ?? []) as any);
+    setLocationsList((locsRes.data ?? []) as any);
 
     if (shiftRes.data) {
       const s = shiftRes.data as any;
@@ -207,7 +219,26 @@ export default function ShiftOperations() {
     }
   };
 
-  // KPIs
+  const handleEditSave = async (id: string, updates: any, oldShift: any) => {
+    if (oldShift.status === "locked" || oldShift.status === "archived" || oldShift.status === "cancelled") {
+      toast.error("Este turno no se puede editar");
+      return;
+    }
+    const { error } = await supabase.from("scheduled_shifts").update(updates).eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    if (selectedCompanyId && user) {
+      await supabase.from("shift_timeline").insert({
+        shift_id: id,
+        company_id: selectedCompanyId,
+        event_type: "shift_edited",
+        description: "Turno editado desde Centro de Operaciones",
+        actor_id: user.id,
+        metadata: { fields: Object.keys(updates) },
+      } as any);
+    }
+    toast.success("Turno actualizado");
+    loadAll();
+  };
   const totalAssigned = assignments.length;
   const confirmed = assignments.filter(a => a.status === "confirmed").length;
   const pending = assignments.filter(a => a.status === "pending").length;
@@ -262,6 +293,11 @@ export default function ShiftOperations() {
             Centro de Operaciones del Turno
           </p>
         </div>
+        {!["locked", "archived", "cancelled"].includes(shift.status) && (
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setEditOpen(true)}>
+            <Pencil className="h-3.5 w-3.5" /> Editar turno
+          </Button>
+        )}
       </div>
 
       {/* A) Shift Summary */}
@@ -568,6 +604,17 @@ export default function ShiftOperations() {
           </div>
         </div>
       </div>
+
+      <ShiftEditDialog
+        shift={shift as unknown as Shift}
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        clients={clientsList}
+        locations={locationsList}
+        employees={employees as unknown as Employee[]}
+        assignments={assignments as unknown as Assignment[]}
+        onSave={handleEditSave}
+      />
     </div>
   );
 }
