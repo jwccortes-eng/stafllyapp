@@ -174,7 +174,7 @@ export function EmployeeAccessTab({ employee, companyId, companyName, isPrivileg
                 <p className="text-sm font-medium">PIN del empleado</p>
                 <p className="text-xs text-muted-foreground">Usado para el inicio de sesión del empleado</p>
               </div>
-              {employee.has_access_pin === true || !!lastGeneratedPin ? (
+              {employee.has_access_pin === true || hasPinResolved === true || !!lastGeneratedPin ? (
                 <Badge variant="outline" className="text-[10px] text-[hsl(var(--earning))] border-[hsl(var(--earning))]/30 gap-1">
                   <CheckCircle2 className="h-3 w-3" /> PIN configurado
                 </Badge>
