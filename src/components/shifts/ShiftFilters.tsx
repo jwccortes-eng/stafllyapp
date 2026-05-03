@@ -41,6 +41,7 @@ export function ShiftFilters({ filters, onChange, clients, locations = [], allow
     filters.search, filters.clientId, filters.locationId,
     filters.assignedStatus, filters.publishStatus,
     filters.claimableOnly ? "1" : "",
+    filters.needsStaffingOnly ? "1" : "",
   ].filter(Boolean).length;
 
   const update = (partial: Partial<ShiftFilterState>) => onChange({ ...filters, ...partial });
