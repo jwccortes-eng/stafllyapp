@@ -652,7 +652,7 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
                 </div>
                 <div className="flex items-center justify-between text-[11px]">
                   <span className="text-muted-foreground">PIN</span>
-                  <Badge variant="outline" className="font-mono text-[10px] tracking-widest">{pin}</Badge>
+                  <Badge variant="outline" className="font-mono text-[10px] tracking-widest">{livePin ?? (hasPin ? "••••" : "—")}</Badge>
                 </div>
               </div>
 
