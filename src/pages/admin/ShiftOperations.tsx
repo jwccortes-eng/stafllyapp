@@ -293,6 +293,11 @@ export default function ShiftOperations() {
             Centro de Operaciones del Turno
           </p>
         </div>
+        {!["locked", "archived", "cancelled"].includes(shift.status) && (
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setEditOpen(true)}>
+            <Pencil className="h-3.5 w-3.5" /> Editar turno
+          </Button>
+        )}
       </div>
 
       {/* A) Shift Summary */}
