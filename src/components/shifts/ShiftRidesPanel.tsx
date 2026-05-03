@@ -451,7 +451,7 @@ export function ShiftRidesPanel({
                         <Badge variant="outline" className="text-[9px] bg-[hsl(var(--earning))]/12 text-[hsl(var(--earning))] border-[hsl(var(--earning))]/25">
                           Activo
                         </Badge>
-                      ) : driver.access_pin ? (
+                      ) : driver.has_access_pin ? (
                         <Badge variant="outline" className="text-[9px] bg-warning/12 text-warning border-warning/25">
                           Pendiente
                         </Badge>
