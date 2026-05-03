@@ -87,10 +87,19 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
   // Worker is archived/deactivated — block all send actions, keep view-only affordances.
   const isInactive = employee.is_active === false;
 
-  // Reset livePin when dialog opens/closes
+  // Reset livePin when dialog opens/closes; resolve PIN existence via RPC.
   useEffect(() => {
-    if (!open) { setLivePin(null); setLastError(null); }
-  }, [open]);
+    if (!open) { setLivePin(null); setLastError(null); return; }
+    let cancelled = false;
+    (async () => {
+      try {
+        const { checkEmployeeHasPin } = await import("@/lib/access-pin");
+        const v = await checkEmployeeHasPin(employee.id);
+        if (!cancelled) (employee as any).has_access_pin = v === true;
+      } catch { /* noop */ }
+    })();
+    return () => { cancelled = true; };
+  }, [open, employee.id]);
 
   useEffect(() => {
     if (!open || !providerMessageId) return;
