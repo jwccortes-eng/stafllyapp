@@ -51,7 +51,7 @@ export default function InternalChat() {
     const [convRes, memRes, profRes] = await Promise.all([
       supabase.from("conversations").select("*").eq("company_id", selectedCompanyId).order("updated_at", { ascending: false }),
       supabase.from("conversation_members").select("user_id, conversation_id").eq("company_id", selectedCompanyId),
-      supabase.from("profiles").select("user_id, full_name, email"),
+      supabase.from("profiles_safe").select("user_id, full_name"),
     ]);
     setConversations((convRes.data ?? []) as unknown as Conversation[]);
     setMembers((memRes.data ?? []) as unknown as Member[]);
