@@ -125,6 +125,11 @@ export default function ShiftOperations() {
   // Staff list for role assignment
   const [employees, setEmployees] = useState<{ id: string; first_name: string; last_name: string; county: string | null; has_car: string | null; can_drive: boolean | null; phone_number: string | null }[]>([]);
 
+  // Edit dialog reference data
+  const [clientsList, setClientsList] = useState<{ id: string; name: string }[]>([]);
+  const [locationsList, setLocationsList] = useState<LocationOption[]>([]);
+  const [editOpen, setEditOpen] = useState(false);
+
   useEffect(() => {
     if (shiftId && selectedCompanyId) loadAll();
   }, [shiftId, selectedCompanyId]);
