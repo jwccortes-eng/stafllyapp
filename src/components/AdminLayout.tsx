@@ -169,6 +169,14 @@ export default function AdminLayout() {
     );
   }
 
+  // Redirect non-developer/owner users away from /app/dev-command-center.
+  const isDevCommandCenter = location.pathname === "/app/dev-command-center"
+    || location.pathname.startsWith("/app/dev-command-center/");
+  const isPlatformStaff = role === "developer" || role === "owner";
+  if (isDevCommandCenter && !isPlatformStaff) {
+    return <Navigate to="/app" replace />;
+  }
+
   // Hard tenant guard: a user that is admin in JKitchen but only employee in
   // Quality must NOT see admin shell while Quality is selected. Send them to
   // their portal in that company instead.
