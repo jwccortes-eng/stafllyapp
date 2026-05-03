@@ -79,6 +79,14 @@ interface Props {
   onDuplicated?: (newShiftId: string) => void;
 }
 
+const DUPLICATE_DEBUG_PREFIX = "[DuplicateShiftDialog]";
+
+function debugDuplicateShift(payload: Record<string, unknown>) {
+  if (import.meta.env.DEV) {
+    console.info(DUPLICATE_DEBUG_PREFIX, payload);
+  }
+}
+
 export function DuplicateShiftDialog({
   open, onOpenChange, shift, assignments, companyId, userId,
   defaultCopyWorkers = false, onDuplicated,
@@ -89,7 +97,7 @@ export function DuplicateShiftDialog({
   const [copyNotes, setCopyNotes] = useState(true);
   const [copyRoles, setCopyRoles] = useState(true);
   const [copyWorkers, setCopyWorkers] = useState(defaultCopyWorkers);
-  const [excluded, setExcluded] = useState<Set<string>>(new Set());
+  const [forcedIncludedConflicts, setForcedIncludedConflicts] = useState<Set<string>>(new Set());
   const [overlaps, setOverlaps] = useState<OverlapRow[]>([]);
   const [checkingOverlap, setCheckingOverlap] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -103,15 +111,37 @@ export function DuplicateShiftDialog({
       setCopyNotes(true);
       setCopyRoles(true);
       setCopyWorkers(defaultCopyWorkers);
-      setExcluded(new Set());
+      setForcedIncludedConflicts(new Set());
       setOverlaps([]);
     }
   }, [open, defaultCopyWorkers]);
 
-  const eligibleWorkers = useMemo(
-    () => assignments.filter(a => a.status !== "rejected" && a.employee_id),
-    [assignments],
+  const eligibleWorkers = useMemo(() => {
+    const seen = new Set<string>();
+    return assignments.filter((a) => {
+      if (!a.employee_id || a.status === "rejected" || a.status === "removed") return false;
+      if (seen.has(a.employee_id)) return false;
+      seen.add(a.employee_id);
+      return true;
+    });
+  }, [assignments]);
+
+  const overlappingEmployeeIds = useMemo(
+    () => new Set(overlaps.map((o) => o.employee_id)),
+    [overlaps],
   );
+
+  const excludedConflictCount = useMemo(
+    () => Array.from(overlappingEmployeeIds).filter((employeeId) => !forcedIncludedConflicts.has(employeeId)).length,
+    [forcedIncludedConflicts, overlappingEmployeeIds],
+  );
+
+  const workersToCopy = useMemo(
+    () => eligibleWorkers.filter((a) => !overlappingEmployeeIds.has(a.employee_id) || forcedIncludedConflicts.has(a.employee_id)),
+    [eligibleWorkers, forcedIncludedConflicts, overlappingEmployeeIds],
+  );
+
+  const overlapCount = overlappingEmployeeIds.size;
 
   // Overlap precheck whenever target date or copyWorkers changes
   useEffect(() => {
@@ -158,19 +188,8 @@ export function DuplicateShiftDialog({
     return () => { cancelled = true; };
   }, [copyWorkers, targetDate, copyTime, eligibleWorkers, companyId, shift.start_time, shift.end_time]);
 
-  // Auto-mark overlapping workers as excluded by default
-  useEffect(() => {
-    if (overlaps.length > 0) {
-      setExcluded(prev => {
-        const next = new Set(prev);
-        overlaps.forEach(o => next.add(o.employee_id));
-        return next;
-      });
-    }
-  }, [overlaps]);
-
   const toggleExcluded = (employeeId: string) => {
-    setExcluded(prev => {
+    setForcedIncludedConflicts(prev => {
       const next = new Set(prev);
       if (next.has(employeeId)) next.delete(employeeId);
       else next.add(employeeId);
