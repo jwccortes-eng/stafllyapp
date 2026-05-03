@@ -71,7 +71,7 @@ export function ProductSwitcher({ compact = false }: ProductSwitcherProps) {
 
         {canAccessAdmin && (
           <DropdownMenuItem
-            onClick={() => navigate("/app")}
+            onClick={goToAdmin}
             className="flex items-start gap-3 py-2.5 cursor-pointer focus:bg-accent/50"
           >
             <div className="h-9 w-9 rounded-lg bg-foreground/90 flex items-center justify-center shrink-0 mt-0.5 shadow-md">
