@@ -79,6 +79,14 @@ interface Props {
   onDuplicated?: (newShiftId: string) => void;
 }
 
+const DUPLICATE_DEBUG_PREFIX = "[DuplicateShiftDialog]";
+
+function debugDuplicateShift(payload: Record<string, unknown>) {
+  if (import.meta.env.DEV) {
+    console.info(DUPLICATE_DEBUG_PREFIX, payload);
+  }
+}
+
 export function DuplicateShiftDialog({
   open, onOpenChange, shift, assignments, companyId, userId,
   defaultCopyWorkers = false, onDuplicated,
@@ -89,7 +97,7 @@ export function DuplicateShiftDialog({
   const [copyNotes, setCopyNotes] = useState(true);
   const [copyRoles, setCopyRoles] = useState(true);
   const [copyWorkers, setCopyWorkers] = useState(defaultCopyWorkers);
-  const [excluded, setExcluded] = useState<Set<string>>(new Set());
+  const [forcedIncludedConflicts, setForcedIncludedConflicts] = useState<Set<string>>(new Set());
   const [overlaps, setOverlaps] = useState<OverlapRow[]>([]);
   const [checkingOverlap, setCheckingOverlap] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -103,15 +111,37 @@ export function DuplicateShiftDialog({
       setCopyNotes(true);
       setCopyRoles(true);
       setCopyWorkers(defaultCopyWorkers);
-      setExcluded(new Set());
+      setForcedIncludedConflicts(new Set());
       setOverlaps([]);
     }
   }, [open, defaultCopyWorkers]);
 
-  const eligibleWorkers = useMemo(
-    () => assignments.filter(a => a.status !== "rejected" && a.employee_id),
-    [assignments],
+  const eligibleWorkers = useMemo(() => {
+    const seen = new Set<string>();
+    return assignments.filter((a) => {
+      if (!a.employee_id || a.status === "rejected" || a.status === "removed") return false;
+      if (seen.has(a.employee_id)) return false;
+      seen.add(a.employee_id);
+      return true;
+    });
+  }, [assignments]);
+
+  const overlappingEmployeeIds = useMemo(
+    () => new Set(overlaps.map((o) => o.employee_id)),
+    [overlaps],
   );
+
+  const excludedConflictCount = useMemo(
+    () => Array.from(overlappingEmployeeIds).filter((employeeId) => !forcedIncludedConflicts.has(employeeId)).length,
+    [forcedIncludedConflicts, overlappingEmployeeIds],
+  );
+
+  const workersToCopy = useMemo(
+    () => eligibleWorkers.filter((a) => !overlappingEmployeeIds.has(a.employee_id) || forcedIncludedConflicts.has(a.employee_id)),
+    [eligibleWorkers, forcedIncludedConflicts, overlappingEmployeeIds],
+  );
+
+  const overlapCount = overlappingEmployeeIds.size;
 
   // Overlap precheck whenever target date or copyWorkers changes
   useEffect(() => {
@@ -158,19 +188,8 @@ export function DuplicateShiftDialog({
     return () => { cancelled = true; };
   }, [copyWorkers, targetDate, copyTime, eligibleWorkers, companyId, shift.start_time, shift.end_time]);
 
-  // Auto-mark overlapping workers as excluded by default
-  useEffect(() => {
-    if (overlaps.length > 0) {
-      setExcluded(prev => {
-        const next = new Set(prev);
-        overlaps.forEach(o => next.add(o.employee_id));
-        return next;
-      });
-    }
-  }, [overlaps]);
-
   const toggleExcluded = (employeeId: string) => {
-    setExcluded(prev => {
+    setForcedIncludedConflicts(prev => {
       const next = new Set(prev);
       if (next.has(employeeId)) next.delete(employeeId);
       else next.add(employeeId);
@@ -183,8 +202,23 @@ export function DuplicateShiftDialog({
       toast.error("Selecciona una fecha destino");
       return;
     }
+    if (copyWorkers && workersToCopy.length === 0) {
+      toast.error("No hay trabajadores elegibles para copiar en esta fecha.");
+      return;
+    }
     setSubmitting(true);
     const dateStr = format(targetDate, "yyyy-MM-dd");
+
+    debugDuplicateShift({
+      source_shift_id: shift.id,
+      target_date: dateStr,
+      copyWorkers,
+      assignments_count_received: assignments.length,
+      eligible_workers_count: eligibleWorkers.length,
+      overlaps_count: overlapCount,
+      excluded_count: excludedConflictCount,
+      assignments_to_insert_count: copyWorkers ? workersToCopy.length : 0,
+    });
 
     // 1) Insert shift as draft/draft. publication_status defaults to 'draft'.
     const insertPayload: Record<string, any> = {
@@ -231,16 +265,19 @@ export function DuplicateShiftDialog({
 
     const newShiftId = (created as any).id as string;
 
-    // 2) Optionally copy workers as pending (skip excluded + overlapping).
+    // 2) Optionally copy workers as pending draft reservations.
     if (copyWorkers) {
-      const toInsert = eligibleWorkers
-        .filter(a => !excluded.has(a.employee_id))
+      const toInsert = workersToCopy
         .map(a => ({
           company_id: companyId,
           shift_id: newShiftId,
           employee_id: a.employee_id,
           status: "pending",
           assignment_role: copyRoles ? (a.assignment_role || "staff") : "staff",
+          response_status: "pending",
+          response_required: false,
+          attendance_status: "pending",
+          is_draft_reservation: true,
         }));
 
       if (toInsert.length > 0) {
@@ -250,11 +287,25 @@ export function DuplicateShiftDialog({
         if (assignErr) {
           // Rollback the shift to keep things clean — trigger blocked something
           // unexpected. UI surfaces the error and removes the empty draft.
-          await supabase.from("scheduled_shifts").delete().eq("id", newShiftId);
+          debugDuplicateShift({
+            source_shift_id: shift.id,
+            target_date: dateStr,
+            copyWorkers,
+            assignments_count_received: assignments.length,
+            eligible_workers_count: eligibleWorkers.length,
+            overlaps_count: overlapCount,
+            excluded_count: excludedConflictCount,
+            assignments_to_insert_count: toInsert.length,
+            insert_error_exact: assignErr.message,
+          });
+          const { error: rollbackErr } = await supabase.from("scheduled_shifts").delete().eq("id", newShiftId);
           setSubmitting(false);
           const msg = assignErr.message || "Error al copiar trabajadores";
+          if (rollbackErr) {
+            debugDuplicateShift({ rollback_error_exact: rollbackErr.message, new_shift_id: newShiftId });
+          }
           toast.error(
-            msg.toLowerCase().includes("overlap")
+            msg.toLowerCase().includes("overlap") || msg.toLowerCase().includes("solapa")
               ? "Un trabajador tiene solapamiento. Revisa los conflictos antes de duplicar."
               : msg,
           );
@@ -265,7 +316,9 @@ export function DuplicateShiftDialog({
 
     setSubmitting(false);
     toast.success("Turno duplicado como borrador.", {
-      description: copyWorkers ? "Trabajadores copiados como pending." : "Sin trabajadores. Asigna desde Staffing.",
+      description: copyWorkers
+        ? `Se copiaron ${workersToCopy.length} trabajador${workersToCopy.length === 1 ? "" : "es"} como pending.`
+        : "Sin trabajadores. Asigna desde Staffing.",
     });
     onOpenChange(false);
     onDuplicated?.(newShiftId);
@@ -360,6 +413,20 @@ export function DuplicateShiftDialog({
                 <span className="text-xs font-semibold">Validación de solapamiento</span>
                 {checkingOverlap && <Loader2 className="h-3 w-3 animate-spin" />}
               </div>
+              <div className="grid grid-cols-3 gap-2 text-[11px]">
+                <div className="rounded-md bg-muted/40 px-2 py-1.5">
+                  <p className="text-muted-foreground">Disponibles</p>
+                  <p className="font-semibold">{eligibleWorkers.length}</p>
+                </div>
+                <div className="rounded-md bg-muted/40 px-2 py-1.5">
+                  <p className="text-muted-foreground">Excluidos</p>
+                  <p className="font-semibold">{excludedConflictCount}</p>
+                </div>
+                <div className="rounded-md bg-muted/40 px-2 py-1.5">
+                  <p className="text-muted-foreground">Se copiarán</p>
+                  <p className="font-semibold">{workersToCopy.length}</p>
+                </div>
+              </div>
               {overlaps.length === 0 && !checkingOverlap && (
                 <p className="text-[11px] text-muted-foreground">Sin conflictos detectados.</p>
               )}
@@ -385,16 +452,24 @@ export function DuplicateShiftDialog({
                           </p>
                         </div>
                         <Badge
-                          variant={excluded.has(o.employee_id) ? "outline" : "destructive"}
+                          variant={forcedIncludedConflicts.has(o.employee_id) ? "destructive" : "outline"}
                           className="text-[9px] cursor-pointer shrink-0"
                           onClick={() => toggleExcluded(o.employee_id)}
                         >
-                          {excluded.has(o.employee_id) ? "Excluido" : "Incluir"}
+                          {forcedIncludedConflicts.has(o.employee_id) ? "Forzar" : "Excluido"}
                         </Badge>
                       </div>
                     ))}
                   </div>
                 </>
+              )}
+              {!checkingOverlap && workersToCopy.length === 0 && (
+                <div className="flex items-start gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 p-2">
+                  <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
+                  <p className="text-[11px] text-amber-700 dark:text-amber-300">
+                    Todos los trabajadores tienen conflicto para esta fecha. Ajusta la fecha o duplica sin trabajadores.
+                  </p>
+                </div>
               )}
             </div>
           )}
@@ -404,7 +479,7 @@ export function DuplicateShiftDialog({
           <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={submitting}>
             Cancelar
           </Button>
-          <Button onClick={handleSubmit} disabled={submitting || !targetDate}>
+          <Button onClick={handleSubmit} disabled={submitting || !targetDate || (copyWorkers && !checkingOverlap && workersToCopy.length === 0)}>
             {submitting ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Copy className="h-4 w-4 mr-1.5" />}
             Duplicar como borrador
           </Button>
