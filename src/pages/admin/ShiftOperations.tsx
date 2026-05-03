@@ -20,7 +20,9 @@ import {
   FileText, Flag, Pencil, Hash, CreditCard, UserCheck, Truck,
 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
-import { isEmployeeDriver } from "@/components/shifts/types";
+import { isEmployeeDriver, type Shift, type Assignment, type Employee } from "@/components/shifts/types";
+import { ShiftEditDialog } from "@/components/shifts/ShiftEditDialog";
+import type { LocationOption } from "@/components/shifts/ShiftFormFields";
 
 interface ShiftDetail {
   id: string;
