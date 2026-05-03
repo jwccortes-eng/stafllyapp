@@ -47,6 +47,7 @@ interface ShiftDetail {
   shift_admin_id: string | null;
   driver_employee_id: string | null;
   shift_code: string | null;
+  publication_status?: string | null;
 }
 
 interface AssignmentDetail {
