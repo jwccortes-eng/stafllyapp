@@ -480,7 +480,7 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
   // Readiness checks
   const readyChecks = [
     { label: "Teléfono", ok: hasPhone, detail: employee.phone_number || "No registrado" },
-    { label: "PIN", ok: hasPin, detail: hasPin ? pin : "No asignado" },
+    { label: "PIN", ok: hasPin, detail: hasPin ? (livePin ?? "Configurado") : "No asignado" },
     { label: "Email", ok: hasEmail, detail: employee.email || "Opcional" },
   ];
   const isReady = hasPhone && hasPin;
