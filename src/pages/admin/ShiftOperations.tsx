@@ -219,7 +219,26 @@ export default function ShiftOperations() {
     }
   };
 
-  // KPIs
+  const handleEditSave = async (id: string, updates: any, oldShift: any) => {
+    if (oldShift.status === "locked" || oldShift.status === "archived" || oldShift.status === "cancelled") {
+      toast.error("Este turno no se puede editar");
+      return;
+    }
+    const { error } = await supabase.from("scheduled_shifts").update(updates).eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    if (selectedCompanyId && user) {
+      await supabase.from("shift_timeline").insert({
+        shift_id: id,
+        company_id: selectedCompanyId,
+        event_type: "shift_edited",
+        description: "Turno editado desde Centro de Operaciones",
+        actor_id: user.id,
+        metadata: { fields: Object.keys(updates) },
+      } as any);
+    }
+    toast.success("Turno actualizado");
+    loadAll();
+  };
   const totalAssigned = assignments.length;
   const confirmed = assignments.filter(a => a.status === "confirmed").length;
   const pending = assignments.filter(a => a.status === "pending").length;
