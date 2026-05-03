@@ -408,7 +408,7 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
               ` : ""}
               <div style="background: hsl(220, 20%, 97%); border-radius: 12px; padding: 16px; margin: 0 0 20px;">
                 <p style="font-size: 13px; color: hsl(220, 15%, 30%); margin: 0 0 8px;">📱 <strong>Portal:</strong> <a href="${portalUrl}" style="color: hsl(222, 100%, 59%);">${portalUrl}</a></p>
-                <p style="font-size: 13px; color: hsl(220, 15%, 30%); margin: 0;">🔑 <strong>Tu PIN:</strong> ${pin}</p>
+                ${livePin ? `<p style="font-size: 13px; color: hsl(220, 15%, 30%); margin: 0;">🔑 <strong>Tu PIN:</strong> ${livePin}</p>` : `<p style="font-size: 13px; color: hsl(220, 15%, 30%); margin: 0;">🔑 Usa tu PIN de 4 dígitos. Si no lo recuerdas, pide a tu admin que lo restablezca.</p>`}
               </div>
               <p style="font-size: 13px; color: hsl(220, 15%, 46%); line-height: 1.6;">Ingresa con tu número de teléfono y tu PIN de 4 dígitos.</p>
               <p style="font-size: 12px; color: hsl(220, 15%, 46%); margin: 30px 0 0;">Si no esperabas esta invitación, ignora este correo.</p>
