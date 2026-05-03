@@ -17,6 +17,8 @@ export function PortalAccessCard({ employee, companyName, invitation, onInvite }
   const hasPin = typeof employee.has_access_pin === "boolean"
     ? employee.has_access_pin
     : !!(employee.access_pin ?? "").toString().trim();
+
+  return (
     <Card className="rounded-xl border-border/40">
       <CardContent className="p-4 space-y-3">
         <div className="flex items-center justify-between">
@@ -46,8 +48,8 @@ export function PortalAccessCard({ employee, companyName, invitation, onInvite }
           </div>
           <div className="bg-muted/30 rounded-lg px-2.5 py-1.5">
             <span className="text-muted-foreground">PIN</span>
-            <p className={cn("font-medium mt-0.5", employee.access_pin ? "text-foreground" : "text-warning")}>
-              {employee.access_pin ? "PIN configurado" : "Sin PIN"}
+            <p className={cn("font-medium mt-0.5", hasPin ? "text-foreground" : "text-warning")}>
+              {hasPin ? "PIN configurado" : "Sin PIN"}
             </p>
           </div>
           <div className="bg-muted/30 rounded-lg px-2.5 py-1.5">
