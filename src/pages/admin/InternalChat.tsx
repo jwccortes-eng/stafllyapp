@@ -159,7 +159,7 @@ export default function InternalChat() {
     if (convo.name) return convo.name;
     const convoMembers = members.filter(m => m.conversation_id === convo.id && m.user_id !== userId);
     if (convoMembers.length === 0) return "Yo";
-    return convoMembers.map(m => profiles.get(m.user_id)?.full_name ?? profiles.get(m.user_id)?.email ?? "Usuario").join(", ");
+    return convoMembers.map(m => profiles.get(m.user_id)?.full_name ?? "Usuario").join(", ");
   };
 
   const getInitials = (name: string) => name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
