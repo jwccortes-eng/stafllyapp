@@ -123,6 +123,7 @@ export function EmployeeAccessTab({ employee, companyId, companyName, isPrivileg
 
       toast({ title: "PIN actualizado", description: "Cópialo ahora — no se mostrará de nuevo." });
       setLastGeneratedPin(newPin);
+      setHasPinResolved(true);
       onEmployeeUpdate?.({ has_access_pin: true });
       setNewPin("");
     } catch (err: any) {
