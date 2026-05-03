@@ -32,12 +32,20 @@ export interface WorkerLike {
   id?: string;
   is_active?: boolean | null;
   user_id?: string | null;
+  /** Phase B: prefer this boolean derived from `employee_has_access_pin` RPC. */
+  has_access_pin?: boolean | null;
+  /** @deprecated do not read the raw PIN from frontend */
   access_pin?: string | null;
   phone_number?: string | null;
   email?: string | null;
 }
 
 const digits = (v: unknown) => (v == null ? "" : String(v).replace(/\D/g, ""));
+
+function resolveHasPin(w: WorkerLike): boolean {
+  if (typeof w.has_access_pin === "boolean") return w.has_access_pin;
+  return !!(w.access_pin ?? "").toString().trim();
+}
 
 export function getWorkerOperationalStatus(
   w: WorkerLike,
@@ -48,7 +56,7 @@ export function getWorkerOperationalStatus(
   if (invitation && isInviteStatusFailure(invitation.status)) return "invite_failed";
   if (invitation) return "invited";
   const hasPhone = !!digits(w.phone_number);
-  const hasPin = !!(w.access_pin ?? "").toString().trim();
+  const hasPin = resolveHasPin(w);
   return hasPhone && hasPin ? "ready" : "incomplete";
 }
 

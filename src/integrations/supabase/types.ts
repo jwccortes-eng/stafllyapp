@@ -15692,6 +15692,10 @@ export type Database = {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
       }
+      employee_has_access_pin: {
+        Args: { _employee_id: string }
+        Returns: boolean
+      }
       employee_has_locked_payroll: {
         Args: { _employee_id: string }
         Returns: boolean
@@ -15939,6 +15943,14 @@ export type Database = {
           _invite_token: string
         }
         Returns: string
+      }
+      reset_employee_access_pin: {
+        Args: { _employee_id: string }
+        Returns: string
+      }
+      set_employee_access_pin: {
+        Args: { _employee_id: string; _pin: string }
+        Returns: boolean
       }
       set_switch_pin: { Args: { _pin: string }; Returns: undefined }
       supersede_employee_invitations: {

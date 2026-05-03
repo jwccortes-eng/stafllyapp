@@ -96,28 +96,9 @@ export function EmployeeAccessTab({ employee, companyId, companyName, isPrivileg
       return;
     }
     setSavingPin(true);
-
     try {
-      const { data: updated, error } = await supabase
-        .from("employees")
-        .update({ access_pin: newPin })
-        .eq("id", employee.id)
-        .select("id, access_pin")
-        .maybeSingle();
-
-      if (error) {
-        console.error("PIN update error:", error);
-        toast({ title: "Error", description: error.message, variant: "destructive" });
-        setSavingPin(false);
-        return;
-      }
-
-      if (!updated) {
-        console.error("PIN update: 0 rows affected for employee", employee.id);
-        toast({ title: "Error", description: "No se pudo guardar el PIN. Verifica tus permisos.", variant: "destructive" });
-        setSavingPin(false);
-        return;
-      }
+      const { setEmployeePin } = await import("@/lib/access-pin");
+      await setEmployeePin(employee.id, newPin);
 
       // Sync auth password if employee has a linked user account
       if (employee.user_id) {
@@ -132,19 +113,33 @@ export function EmployeeAccessTab({ employee, companyId, companyName, isPrivileg
 
       toast({ title: "PIN actualizado", description: "Cópialo ahora — no se mostrará de nuevo." });
       setLastGeneratedPin(newPin);
-      onEmployeeUpdate?.({ access_pin: newPin });
+      onEmployeeUpdate?.({ has_access_pin: true });
       setNewPin("");
     } catch (err: any) {
-      console.error("PIN change error:", err);
-      toast({ title: "Error", description: err?.message || "Error al guardar PIN", variant: "destructive" });
+      const msg = err?.message ?? "Error al guardar PIN";
+      const friendly = msg === "forbidden" ? "No tienes permiso para cambiar el PIN de este empleado."
+        : msg === "invalid_pin_format" ? "Formato de PIN inválido (4 dígitos)."
+        : msg;
+      toast({ title: "Error", description: friendly, variant: "destructive" });
     } finally {
       setSavingPin(false);
     }
   };
 
-  const generateRandomPin = () => {
-    const pin = Math.floor(1000 + Math.random() * 9000).toString();
-    setNewPin(pin);
+  const generateRandomPin = async () => {
+    setSavingPin(true);
+    try {
+      const { resetEmployeePin } = await import("@/lib/access-pin");
+      const newPinValue = await resetEmployeePin(employee.id);
+      setLastGeneratedPin(newPinValue);
+      onEmployeeUpdate?.({ has_access_pin: true });
+      toast({ title: "PIN generado", description: "Cópialo ahora — no se mostrará de nuevo." });
+    } catch (err: any) {
+      const msg = err?.message ?? "No se pudo generar el PIN";
+      toast({ title: "Error", description: msg === "forbidden" ? "Sin permiso para resetear PIN." : msg, variant: "destructive" });
+    } finally {
+      setSavingPin(false);
+    }
   };
 
   if (loading) return <div className="py-8 text-center text-xs text-muted-foreground">Cargando...</div>;
