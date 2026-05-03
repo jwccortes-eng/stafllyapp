@@ -14,8 +14,9 @@ interface PortalAccessCardProps {
 
 export function PortalAccessCard({ employee, companyName, invitation, onInvite }: PortalAccessCardProps) {
   const state = getPortalAccessState(employee, invitation);
-
-  return (
+  const hasPin = typeof employee.has_access_pin === "boolean"
+    ? employee.has_access_pin
+    : !!(employee.access_pin ?? "").toString().trim();
     <Card className="rounded-xl border-border/40">
       <CardContent className="p-4 space-y-3">
         <div className="flex items-center justify-between">
