@@ -308,12 +308,31 @@ export default function ShiftOperations() {
             Centro de Operaciones del Turno
           </p>
         </div>
-        {!["locked", "archived", "cancelled"].includes(shift.status) && (
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setEditOpen(true)}>
-            <Pencil className="h-3.5 w-3.5" /> Editar turno
-          </Button>
-        )}
       </div>
+
+      {/* Phase 1 QW#1 — Unified Shift Action Bar */}
+      {selectedCompanyId && (
+        <ShiftActionBar
+          shift={shift as any}
+          assignments={assignments as any}
+          companyId={selectedCompanyId}
+          userId={user?.id ?? null}
+          hasTimeEntries={hasTimeEntries}
+          onEdit={() => setEditOpen(true)}
+          onScrollToStaffing={scrollToStaffing}
+        />
+      )}
+
+      {/* Phase 1 QW#3 — Staffing Required banner */}
+      <StaffingRequiredBanner
+        slots={shift.slots ?? 0}
+        assigned={assignments.filter(a => a.status !== "rejected").length}
+        pending={assignments.filter(a => a.status === "pending").length}
+        rejected={assignments.filter(a => a.status === "rejected").length}
+        specialInstructions={shift.special_instructions}
+        isDraft={shift.status === "draft" || shift.publication_status === "draft"}
+        onScrollToStaffing={scrollToStaffing}
+      />
 
       {/* A) Shift Summary */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
