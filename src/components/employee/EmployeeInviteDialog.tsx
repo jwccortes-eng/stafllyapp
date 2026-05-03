@@ -74,9 +74,12 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
 
   const portalUrl = portalAuthUrl();
   const inviteLink = liveToken ? inviteUrl(liveToken) : null;
-  const currentPin = livePin ?? (typeof employee.access_pin === "string" && employee.access_pin.trim() ? employee.access_pin.trim() : null);
+  // Phase B: never read employee.access_pin from frontend. Only show a PIN that
+  // was just generated in this dialog session (livePin) or a deferred RPC-resolved
+  // boolean (hasPinResolved) for badge state.
+  const currentPin = livePin;
   const pin = currentPin ?? "—";
-  const hasPin = currentPin !== null;
+  const hasPin = currentPin !== null || employee.has_access_pin === true;
   const hasPhone = !!(employee.phone_number ?? "").replace(/\D/g, "");
   const hasEmail = !!employee.email;
 
