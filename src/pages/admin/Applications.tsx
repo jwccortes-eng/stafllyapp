@@ -163,7 +163,7 @@ export default function Applications() {
       if (phone) {
         const { data: byPhone } = await supabase
           .from("employees")
-          .select("id, first_name, last_name, phone_number, email, is_active, user_id, access_pin, portal_access_enabled")
+          .select("id, first_name, last_name, phone_number, email, is_active, user_id, portal_access_enabled")
           .eq("company_id", selectedCompanyId)
           .eq("phone_number", phone);
         if (byPhone?.length) conditions.push(...byPhone);
