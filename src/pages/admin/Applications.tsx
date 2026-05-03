@@ -717,7 +717,7 @@ export default function Applications() {
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-foreground">{emp.first_name} {emp.last_name}</p>
                         <p className="text-[10px] text-muted-foreground">
-                          {emp.is_active ? "Activo" : "Inactivo"} · {emp.user_id ? "Con portal" : "Sin portal"} · {emp.access_pin ? "Con PIN" : "Sin PIN"}
+                          {emp.is_active ? "Activo" : "Inactivo"} · {emp.user_id ? "Con portal" : "Sin portal"}
                         </p>
                       </div>
                       <Badge variant="outline" className="text-[9px] shrink-0">Se vinculará</Badge>
