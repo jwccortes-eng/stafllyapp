@@ -82,7 +82,7 @@ export default function ChannelView() {
     const uniqueUserIds = [...new Set((msgsRes.data ?? []).map((m: any) => m.user_id))];
     if (uniqueUserIds.length > 0) {
       const { data: profiles } = await supabase
-        .from("profiles")
+        .from("profiles_safe")
         .select("user_id, full_name")
         .in("user_id", uniqueUserIds);
       const map: Record<string, string> = {};
@@ -105,7 +105,7 @@ export default function ChannelView() {
         setMessages((prev) => [...prev, msg]);
         // Load profile name if missing
         if (!profileNames[msg.user_id]) {
-          supabase.from("profiles").select("user_id, full_name").eq("user_id", msg.user_id).single().then(({ data }) => {
+          supabase.from("profiles_safe").select("user_id, full_name").eq("user_id", msg.user_id).maybeSingle().then(({ data }) => {
             if (data) setProfileNames((prev) => ({ ...prev, [data.user_id]: data.full_name || "Usuario" }));
           });
         }
