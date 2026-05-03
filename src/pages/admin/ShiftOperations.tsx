@@ -176,6 +176,15 @@ export default function ShiftOperations() {
     setTimeline((timelineRes.data ?? []) as TimelineEvent[]);
     setNotes((notesRes.data ?? []) as ShiftNote[]);
     setEmployees((empsRes.data ?? []) as any[]);
+
+    // Read-only check: does this shift already have any time_entries?
+    // Only used to soft-block edit from the action bar; never mutates anything.
+    const { count: teCount } = await supabase
+      .from("time_entries")
+      .select("id", { count: "exact", head: true })
+      .eq("shift_id", shiftId);
+    setHasTimeEntries((teCount ?? 0) > 0);
+
     setLoading(false);
   };
 
