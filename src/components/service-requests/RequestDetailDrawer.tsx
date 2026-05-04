@@ -117,7 +117,7 @@ export function RequestDetailDrawer({ open, onOpenChange, requestId }: Props) {
                   {Array.from(new Set(data.links.map(l => l.shift_id))).map(shiftId => (
                     <div key={shiftId} className="rounded-lg border border-border bg-card p-2.5 space-y-2">
                       <Link
-                        to={`/app/shifts?shiftId=${shiftId}`}
+                        to={`/app/shift-ops?id=${shiftId}`}
                         className="flex items-center justify-between text-sm hover:bg-accent/40 -m-2 p-2 rounded-md transition"
                       >
                         <span className="font-mono text-xs text-muted-foreground">Shift {shiftId.slice(0, 8)}</span>
