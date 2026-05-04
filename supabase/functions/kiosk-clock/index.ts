@@ -181,16 +181,9 @@ Deno.serve(async (req) => {
 
     if (openEntry) {
       clockType = "clock_out";
-      const clockIn = new Date(openEntry.clock_in);
-      const clockOut = new Date(now);
-      const diffHours = (clockOut.getTime() - clockIn.getTime()) / 3600000;
-
       const { error: updateErr } = await adminClient
         .from("time_entries")
-        .update({
-          clock_out: now,
-          total_hours: Math.round(diffHours * 100) / 100,
-        })
+        .update({ clock_out: now })
         .eq("id", openEntry.id);
 
       if (updateErr) console.error("Clock out update error:", updateErr);
@@ -224,7 +217,7 @@ Deno.serve(async (req) => {
           clock_in: now,
           shift_id: shiftId,
           status: "approved",
-          source: "kiosk",
+          entry_source: "kiosk",
         })
         .select("id")
         .single();
