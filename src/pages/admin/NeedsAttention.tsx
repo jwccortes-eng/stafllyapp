@@ -200,11 +200,19 @@ export default function NeedsAttention() {
             </p>
           </div>
 
-          {/* Summary strip */}
-          <div className="flex items-center gap-2">
-            <SummaryPill severity="critical" count={totals.critical} />
-            <SummaryPill severity="warn" count={totals.warn} />
-            <SummaryPill severity="info" count={totals.info} />
+          {/* Summary strip + cierre link */}
+          <div className="flex flex-col items-end gap-2">
+            <div className="flex items-center gap-2">
+              <SummaryPill severity="critical" count={totals.critical} />
+              <SummaryPill severity="warn" count={totals.warn} />
+              <SummaryPill severity="info" count={totals.info} />
+            </div>
+            <Button asChild variant="ghost" size="sm" className="h-auto px-2 py-1 text-xs text-muted-foreground hover:text-foreground">
+              <Link to="/app/daily-close">
+                Ver cierre del día
+                <ArrowRight className="ml-1 h-3 w-3" />
+              </Link>
+            </Button>
           </div>
         </div>
 
