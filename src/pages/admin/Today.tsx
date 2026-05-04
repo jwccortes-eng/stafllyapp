@@ -54,10 +54,10 @@ export default function Today() {
         const dayStart = startOfDay(today).toISOString();
         const dayEnd = endOfDay(today).toISOString();
 
-        // Q1: scheduled_shifts hoy
+        // Q1: scheduled_shifts hoy (incluye status/publication_status para filtrar operables)
         const { data: shifts } = await supabase
           .from("scheduled_shifts")
-          .select("id, slots")
+          .select("id, slots, status, publication_status, start_time")
           .eq("company_id", selectedCompanyId)
           .eq("date", dayKey)
           .is("deleted_at", null);
@@ -69,16 +69,16 @@ export default function Today() {
           .eq("company_id", selectedCompanyId)
           .is("clock_out", null);
 
-        // Q3: time_entries clock_in del día (para staffing assignments alertas)
+        // Q3: shift_assignments del día — assignments activos = accepted/confirmed/pending
         const shiftIds = (shifts ?? []).map((s) => s.id);
-        let assignmentsByShift = new Map<string, number>();
+        const assignmentsByShift = new Map<string, number>();
         if (shiftIds.length > 0) {
           const { data: asg } = await supabase
             .from("shift_assignments")
             .select("shift_id, status")
             .in("shift_id", shiftIds);
           (asg ?? []).forEach((a) => {
-            if (a.status === "accepted" || a.status === "active" || a.status === "confirmed") {
+            if (a.status === "accepted" || a.status === "confirmed" || a.status === "pending") {
               assignmentsByShift.set(a.shift_id, (assignmentsByShift.get(a.shift_id) ?? 0) + 1);
             }
           });
@@ -90,8 +90,14 @@ export default function Today() {
           return differenceInHours(today, new Date(e.clock_in)) > 16;
         }).length;
 
-        // Alerta: shifts con slots > assigned
+        // Alerta: turnos publicados/operables con staffing incompleto
+        // Excluir drafts/cancelled/archived → no son críticos "ahora"
+        const NON_OPERABLE_STATUS = new Set(["draft", "cancelled", "canceled", "archived"]);
         const staffingGaps = (shifts ?? []).filter((s) => {
+          const status = String(s.status ?? "").toLowerCase();
+          const pub = String(s.publication_status ?? "").toLowerCase();
+          if (NON_OPERABLE_STATUS.has(status)) return false;
+          if (pub === "draft") return false;
           const need = Number(s.slots ?? 0);
           const have = assignmentsByShift.get(s.id) ?? 0;
           return need > 0 && have < need;
