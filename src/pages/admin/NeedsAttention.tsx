@@ -9,6 +9,7 @@ import {
   FileWarning,
   ShieldAlert,
   CalendarX,
+  CalendarCheck2,
   ArrowRight,
   Sparkles,
   CheckCircle2,
