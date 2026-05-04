@@ -110,6 +110,12 @@ export function DuplicateShiftDialog({
   // Reset when reopened
   useEffect(() => {
     if (open) {
+      debugDuplicateShift({
+        source_shift_id: shift.id,
+        assignments_count_received: assignments.length,
+        employee_ids_received: assignments.map((assignment) => assignment.employee_id),
+        default_copy_workers_received: defaultCopyWorkers,
+      });
       setTargetDate(undefined);
       setCopyClient(true);
       setCopyTime(true);
@@ -145,6 +151,16 @@ export function DuplicateShiftDialog({
     () => eligibleWorkers.filter((a) => !overlappingEmployeeIds.has(a.employee_id) || forcedIncludedConflicts.has(a.employee_id)),
     [eligibleWorkers, forcedIncludedConflicts, overlappingEmployeeIds],
   );
+
+  useEffect(() => {
+    if (!open) return;
+    debugDuplicateShift({
+      source_shift_id: shift.id,
+      assignments_count_received: assignments.length,
+      eligible_workers_count: eligibleWorkers.length,
+      workers_to_copy_count: workersToCopy.length,
+    });
+  }, [open, shift.id, assignments.length, eligibleWorkers.length, workersToCopy.length]);
 
   const overlapCount = overlappingEmployeeIds.size;
 
