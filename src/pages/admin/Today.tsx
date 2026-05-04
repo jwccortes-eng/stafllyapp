@@ -173,9 +173,9 @@ export default function Today() {
                       tiempo real.
                     </p>
                     <div className="mt-4 flex flex-wrap gap-2">
-                      <MiniStat label="Turnos hoy" value="—" />
-                      <MiniStat label="Clock-ins activos" value="—" />
-                      <MiniStat label="Alertas críticas" value="—" />
+                      <MiniStat label="Turnos hoy" value={fmt(stats.shiftsToday)} />
+                      <MiniStat label="Clock-ins activos" value={fmt(stats.activeClockIns)} />
+                      <MiniStat label="Alertas críticas" value={fmt(stats.criticalAlerts)} />
                     </div>
                   </div>
                 </div>
