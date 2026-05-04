@@ -88,6 +88,7 @@ const DevCommandCenter = lazy(() => import("./pages/admin/DevCommandCenter"));
 const DocumentsCenter = lazy(() => import("./pages/admin/DocumentsCenter"));
 const NeedsAttention = lazy(() => import("./pages/admin/NeedsAttention"));
 const DailyClose = lazy(() => import("./pages/admin/DailyClose"));
+const Today = lazy(() => import("./pages/admin/Today"));
 const NotificationTemplates = lazy(() => import("./pages/admin/NotificationTemplates"));
 const NotificationsPage = lazy(() => import("./pages/admin/Notifications"));
 const Requests = lazy(() => import("./pages/admin/Requests"));
@@ -248,6 +249,7 @@ function App() {
                 <Route index element={<AdminDashboard />} />
                 <Route path="needs-attention" element={<NeedsAttention />} />
                 <Route path="daily-close" element={<CompanyRequiredGuard><DailyClose /></CompanyRequiredGuard>} />
+                <Route path="today" element={<Today />} />
                 <Route path="command-center" element={<CommandCenter />} />
                 <Route path="dev-command-center" element={<DevCommandCenter />} />
                 <Route path="owner-command-center" element={<DevCommandCenter />} />
