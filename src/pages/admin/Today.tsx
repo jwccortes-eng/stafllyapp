@@ -239,7 +239,7 @@ export default function Today() {
                       payroll.
                     </p>
                     <div className="mt-3 inline-flex items-center rounded-md bg-muted/60 px-2.5 py-1 text-xs font-medium text-foreground/75">
-                      Estado del día: pendiente de revisión
+                      {dayStateLabel}
                     </div>
                   </div>
                 </div>
