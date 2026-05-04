@@ -249,6 +249,7 @@ function App() {
                 <Route index element={<AdminDashboard />} />
                 <Route path="needs-attention" element={<NeedsAttention />} />
                 <Route path="daily-close" element={<CompanyRequiredGuard><DailyClose /></CompanyRequiredGuard>} />
+                <Route path="today" element={<Today />} />
                 <Route path="command-center" element={<CommandCenter />} />
                 <Route path="dev-command-center" element={<DevCommandCenter />} />
                 <Route path="owner-command-center" element={<DevCommandCenter />} />
