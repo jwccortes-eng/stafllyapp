@@ -1,7 +1,11 @@
 import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { startOfDay, endOfDay, format, differenceInHours } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useCompany } from "@/contexts/CompanyContext";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Activity,
   AlertTriangle,
