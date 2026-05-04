@@ -16,6 +16,7 @@ import {
   CheckCircle2,
   CircleDashed,
   AlertCircle,
+  Info,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
@@ -33,17 +34,9 @@ import { cn } from "@/lib/utils";
 /**
  * /app/daily-close — Phase 1 (read-only, no writes).
  *
- * Reads:
- *   - time_entries  (clock_in, clock_out, status)
- *   - scheduled_shifts (date, deleted_at, slots, status, publication_status)
- *   - shift_assignments (shift_id, status, attendance_status)
- *
- * Strict no-write:
- *   - No "Mark Closed" button.
- *   - No mutations to time_entries / scheduled_shifts / shift_assignments / payroll.
- *   - No notifications.
- *   - No daily_close table created.
- *   - Documents + Incidents intentionally rendered as "Pendiente de conectar".
+ * Iteration 3 (2026-05-04): guided checklist UX. Progress bar across 6 steps,
+ * per-section "what/why/decision", clearer CTAs, top disclaimer, final
+ * "Qué falta para cerrar el día" block. Still strict read-only.
  */
 
 type CheckStatus = "ok" | "review" | "pending_source" | "neutral";
@@ -56,6 +49,77 @@ interface SectionState {
   href?: string;
   ctaLabel?: string;
 }
+
+interface SectionMeta {
+  key: SectionKey;
+  title: string;
+  category: string;
+  icon: typeof Clock;
+  whatItChecks: string;
+  whyItMatters: string;
+  decision: string;
+  footnote?: string;
+}
+
+type SectionKey = "shifts" | "staffing" | "attendance" | "incidents" | "documents" | "payroll";
+
+const SECTION_META: Record<SectionKey, SectionMeta> = {
+  shifts: {
+    key: "shifts",
+    title: "Turnos",
+    category: "Programación",
+    icon: CalendarCheck2,
+    whatItChecks: "Turnos publicados para este día y su estado terminal.",
+    whyItMatters: "Un turno mal cancelado o sin cerrar distorsiona el resto del cierre.",
+    decision: "Confirma cuáles turnos quedan vigentes y cuáles deben cancelarse.",
+  },
+  staffing: {
+    key: "staffing",
+    title: "Staffing",
+    category: "Cobertura",
+    icon: Users,
+    whatItChecks: "Cupos asignados vs cupos requeridos por turno.",
+    whyItMatters: "Un cupo abierto sin resolver suele terminar como no-show o gap operativo.",
+    decision: "Asigna trabajadores, acepta el gap o reasigna la cobertura.",
+  },
+  attendance: {
+    key: "attendance",
+    title: "Asistencia",
+    category: "Tiempo y asistencia",
+    icon: Clock,
+    whatItChecks: "Clock-ins del día y si todos tienen clock-out.",
+    whyItMatters: "Una entrada sin cerrar infla horas y rompe el cálculo del payroll.",
+    decision: "Cierra la entrada, edita la hora real o escala el caso.",
+  },
+  incidents: {
+    key: "incidents",
+    title: "Incidentes",
+    category: "Operaciones",
+    icon: AlertTriangle,
+    whatItChecks: "Eventos del día (no-shows, ausencias, reasignaciones forzadas).",
+    whyItMatters: "Sin trazabilidad de incidentes no se puede explicar lo que pasó en operación.",
+    decision: "Confirma cada incidente y registra cómo se resolvió.",
+  },
+  documents: {
+    key: "documents",
+    title: "Documentos",
+    category: "Cumplimiento",
+    icon: FileWarning,
+    whatItChecks: "Documentos requeridos para los trabajadores que operaron hoy.",
+    whyItMatters: "Trabajar sin documentos vigentes expone a la empresa a riesgo legal.",
+    decision: "Solicita el documento faltante o bloquea futuras programaciones.",
+  },
+  payroll: {
+    key: "payroll",
+    title: "Payroll readiness",
+    category: "Revisión de payroll",
+    icon: Wallet,
+    whatItChecks: "Si los time_entries del día están completos para revisión manual.",
+    whyItMatters: "Sin asistencia limpia no se puede confiar en el reporte de payroll.",
+    decision: "Aprueba para revisión o regresa a corregir asistencia.",
+    footnote: "Se basa solo en time_entries reales. Nunca usa scheduled hours.",
+  },
+};
 
 const STATUS_TONE: Record<CheckStatus, { dot: string; ring: string; iconBg: string; chip: string; label: string; icon: typeof CheckCircle2 }> = {
   ok: {
@@ -154,7 +218,6 @@ export default function DailyClose() {
         const dayStart = startOfDay(date).toISOString();
         const dayEnd = endOfDay(date).toISOString();
 
-        // 1) Time entries with clock_in inside the selected day.
         const { data: entries, error: errEntries } = await supabase
           .from("time_entries")
           .select("id, employee_id, clock_in, clock_out, status, shift_id")
@@ -164,7 +227,6 @@ export default function DailyClose() {
 
         if (errEntries) throw errEntries;
 
-        // 2) Shifts of the day.
         const { data: shifts, error: errShifts } = await supabase
           .from("scheduled_shifts")
           .select("id, title, slots, status, publication_status, deleted_at, start_time")
@@ -176,7 +238,6 @@ export default function DailyClose() {
 
         const shiftIds = (shifts ?? []).map((s) => s.id);
 
-        // 3) Active assignments for those shifts.
         let assignments: Array<{ shift_id: string; status: string }> = [];
         if (shiftIds.length > 0) {
           const { data: asg, error: errAsg } = await supabase
@@ -203,7 +264,7 @@ export default function DailyClose() {
                 ? "Día futuro. Sin asistencia aún."
                 : "No hay asistencia registrada en este día.",
               href: "/app/timeclock",
-              ctaLabel: "Ver timeclock",
+              ctaLabel: "Revisar timeclock",
             };
           }
           if (openCount > 0) {
@@ -213,7 +274,7 @@ export default function DailyClose() {
               detail: `${totalEntries} clock-ins · ${openCount} sin clock-out.`,
               examples: openEntries.slice(0, 2).map((e) => `Entry ${e.id.slice(0, 8)} · desde ${format(new Date(e.clock_in), "p")}`),
               href: "/app/timeclock",
-              ctaLabel: "Ver entradas abiertas",
+              ctaLabel: "Revisar clock-outs",
             };
           }
           return {
@@ -221,7 +282,7 @@ export default function DailyClose() {
             primary: `${totalEntries}`,
             detail: "Todas las entradas tienen clock-out.",
             href: "/app/timeclock",
-            ctaLabel: "Ver timeclock",
+            ctaLabel: "Validar no-shows",
           };
         })();
 
@@ -238,7 +299,7 @@ export default function DailyClose() {
               primary: "0",
               detail: "Sin turnos programados este día.",
               href: "/app/shifts",
-              ctaLabel: "Ver turnos",
+              ctaLabel: "Revisar turnos",
             };
           }
           return {
@@ -249,12 +310,11 @@ export default function DailyClose() {
               : `${shiftsActive.length} turnos activos.`,
             examples: shiftRows.slice(0, 2).map((s) => `${s.title} · ${s.start_time?.slice(0, 5) ?? ""}`),
             href: "/app/shifts",
-            ctaLabel: "Ver turnos",
+            ctaLabel: "Confirmar turnos",
           };
         })();
 
         // ---- Staffing ----
-        // Active assignments per shift; gap = slots - active.
         const ACTIVE_STATUSES = new Set(["pending", "accepted", "confirmed"]);
         const activeByShift = new Map<string, number>();
         for (const a of assignments) {
@@ -284,7 +344,7 @@ export default function DailyClose() {
               primary: "—",
               detail: "Sin turnos activos para evaluar.",
               href: "/app/shifts",
-              ctaLabel: "Ver turnos",
+              ctaLabel: "Revisar turnos",
             };
           }
           if (gaps.length === 0) {
@@ -293,7 +353,7 @@ export default function DailyClose() {
               primary: "Cubierto",
               detail: `${shiftsActive.length} turnos cubiertos al 100%.`,
               href: "/app/shifts",
-              ctaLabel: "Ver turnos",
+              ctaLabel: "Revisar staffing",
             };
           }
           return {
@@ -304,7 +364,7 @@ export default function DailyClose() {
               : `${totalGapSlots} cupos abiertos.`,
             examples: gaps.slice(0, 2).map((g) => `${g.title} · ${g.gap}/${g.slots} sin cubrir`),
             href: "/app/shifts",
-            ctaLabel: "Abrir staffing",
+            ctaLabel: "Resolver staffing",
           };
         })();
 
@@ -327,7 +387,6 @@ export default function DailyClose() {
     };
   }, [selectedCompanyId, dayKey, date, isUpcoming]);
 
-  // Static (Phase 1) — sources not yet wired.
   const incidents: SectionState = {
     status: "pending_source",
     primary: "Pendiente",
@@ -338,10 +397,9 @@ export default function DailyClose() {
     primary: "Pendiente",
     detail: "Pendiente de conectar señal de documentos por día trabajado.",
     href: "/app/documents",
-    ctaLabel: "Ver documentos",
+    ctaLabel: "Revisar documentos",
   };
 
-  // Payroll readiness — derived from attendance (real time_entries only).
   const payroll: SectionState = useMemo(() => {
     if (snap.loading) return { status: "neutral", primary: "—", detail: "Calculando…" };
     if (snap.attendance.status === "review") {
@@ -350,7 +408,7 @@ export default function DailyClose() {
         primary: "Faltan validaciones",
         detail: "Hay clock-ins sin cerrar. Cierra entradas antes de revisar payroll.",
         href: "/app/timeclock",
-        ctaLabel: "Cerrar entradas",
+        ctaLabel: "Revisar clock-outs",
       };
     }
     if (snap.attendance.primary === "0" && !isUpcoming) {
@@ -366,7 +424,7 @@ export default function DailyClose() {
         primary: "Datos suficientes",
         detail: "time_entries del día completas. Listo para revisión manual de payroll.",
         href: "/app/payroll-reconciliation",
-        ctaLabel: "Ir a reconciliación",
+        ctaLabel: "Ver readiness de payroll",
       };
     }
     return {
@@ -374,18 +432,16 @@ export default function DailyClose() {
       primary: "Faltan validaciones",
       detail: "Hay turnos con staffing incompleto que pueden requerir validación de asistencia.",
       href: "/app/payroll-reconciliation",
-      ctaLabel: "Ir a reconciliación",
+      ctaLabel: "Ver readiness de payroll",
     };
   }, [snap.loading, snap.attendance, snap.staffing, isUpcoming]);
 
   const dayState: DayState = useMemo(() => {
     if (snap.loading) return "open";
     if (isCurrent || isUpcoming) {
-      // Current/future day stays Open unless blockers exist.
       const hasBlocker = [snap.attendance, snap.staffing].some((s) => s.status === "review");
       return hasBlocker ? "needs_review" : "open";
     }
-    // Past day:
     const hasBlocker = [snap.attendance, snap.staffing, payroll].some((s) => s.status === "review");
     if (hasBlocker) return "needs_review";
     return "ready";
@@ -393,15 +449,30 @@ export default function DailyClose() {
 
   const dayStateStyle = DAY_STATE_STYLE[dayState];
 
-  // Section count for header summary
-  const allSections = [snap.shifts, snap.staffing, snap.attendance, incidents, documents, payroll];
-  const okCount = allSections.filter((s) => s.status === "ok").length;
+  // Ordered checklist
+  const ordered: Array<{ meta: SectionMeta; state: SectionState }> = [
+    { meta: SECTION_META.shifts, state: snap.shifts },
+    { meta: SECTION_META.staffing, state: snap.staffing },
+    { meta: SECTION_META.attendance, state: snap.attendance },
+    { meta: SECTION_META.incidents, state: incidents },
+    { meta: SECTION_META.documents, state: documents },
+    { meta: SECTION_META.payroll, state: payroll },
+  ];
+
+  const okCount = ordered.filter((s) => s.state.status === "ok").length;
+  const totalCount = ordered.length;
+  const progressPct = Math.round((okCount / totalCount) * 100);
+
+  // "Qué falta para cerrar el día" — top 3 blockers
+  const blockers = ordered
+    .filter((s) => s.state.status === "review" || s.state.status === "pending_source")
+    .slice(0, 3);
 
   return (
     <div className="min-h-screen bg-background">
       <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-14 lg:px-8">
         {/* Header */}
-        <div className="mb-12 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <div className="mb-2 flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
               <Sparkles className="h-3.5 w-3.5" />
@@ -421,20 +492,12 @@ export default function DailyClose() {
 
           {/* Date controls */}
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => setDate((d) => subDays(d, 1))}
-              aria-label="Día anterior"
-            >
+            <Button variant="outline" size="icon" onClick={() => setDate((d) => subDays(d, 1))} aria-label="Día anterior">
               <ChevronLeft className="h-4 w-4" />
             </Button>
             <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
               <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn("min-w-[200px] justify-start text-left font-normal")}
-                >
+                <Button variant="outline" className={cn("min-w-[200px] justify-start text-left font-normal")}>
                   <CalendarIcon className="mr-2 h-4 w-4" />
                   {format(date, "PP")}
                 </Button>
@@ -443,37 +506,79 @@ export default function DailyClose() {
                 <Calendar
                   mode="single"
                   selected={date}
-                  onSelect={(d) => {
-                    if (d) {
-                      setDate(d);
-                      setPopoverOpen(false);
-                    }
-                  }}
+                  onSelect={(d) => { if (d) { setDate(d); setPopoverOpen(false); } }}
                   initialFocus
                   className={cn("p-3 pointer-events-auto")}
                 />
               </PopoverContent>
             </Popover>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => setDate((d) => addDays(d, 1))}
-              aria-label="Día siguiente"
-            >
+            <Button variant="outline" size="icon" onClick={() => setDate((d) => addDays(d, 1))} aria-label="Día siguiente">
               <ChevronRight className="h-4 w-4" />
             </Button>
-            <Button
-              variant={isCurrent ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setDate(new Date())}
-            >
+            <Button variant={isCurrent ? "default" : "ghost"} size="sm" onClick={() => setDate(new Date())}>
               Hoy
             </Button>
           </div>
         </div>
 
+        {/* Top disclaimer */}
+        <div className="mb-6 flex items-start gap-3 rounded-xl border border-border/60 bg-muted/30 px-4 py-3">
+          <Info className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">
+            Este cierre <span className="font-medium text-foreground">no paga nómina</span>. Solo confirma que la operación del día está completa y confiable.
+          </p>
+        </div>
+
+        {/* Progress bar — guided checklist */}
+        <Card className="mb-8 overflow-hidden">
+          <CardContent className="p-5 sm:p-6">
+            <div className="mb-3 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className={cn("font-medium", dayStateStyle.chip)}>
+                  {dayStateStyle.label}
+                </Badge>
+                <span className="text-xs text-muted-foreground">
+                  {okCount} de {totalCount} pasos completos
+                </span>
+              </div>
+              <span className="font-mono text-xs font-semibold tabular-nums text-muted-foreground">
+                {progressPct}%
+              </span>
+            </div>
+
+            {/* Bar */}
+            <div className="mb-4 h-1.5 overflow-hidden rounded-full bg-muted">
+              <div
+                className={cn(
+                  "h-full rounded-full transition-all duration-700 ease-out",
+                  dayState === "ready" ? "bg-emerald-500" : dayState === "needs_review" ? "bg-amber-500" : "bg-primary",
+                )}
+                style={{ width: `${progressPct}%` }}
+              />
+            </div>
+
+            {/* Steps */}
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+              {ordered.map(({ meta, state }, i) => {
+                const tone = STATUS_TONE[state.status];
+                const StepIcon = tone.icon;
+                return (
+                  <div key={meta.key} className="flex flex-col items-center gap-1.5 text-center">
+                    <div className={cn("flex h-7 w-7 items-center justify-center rounded-full", tone.iconBg)}>
+                      <StepIcon className="h-3.5 w-3.5" />
+                    </div>
+                    <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                      {i + 1}. {meta.title}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Day state hero */}
-        <Card className="mb-12 overflow-hidden">
+        <Card className="mb-10 overflow-hidden">
           <div className="flex flex-col gap-5 p-7 sm:flex-row sm:items-center sm:justify-between sm:p-8">
             <div className="flex items-start gap-4">
               <div className={cn("rounded-xl p-3", STATUS_TONE[dayState === "ready" ? "ok" : dayState === "needs_review" ? "review" : "neutral"].iconBg)}>
@@ -486,14 +591,6 @@ export default function DailyClose() {
                 )}
               </div>
               <div>
-                <div className="mb-1.5 flex items-center gap-2">
-                  <Badge variant="outline" className={cn("font-medium", dayStateStyle.chip)}>
-                    {dayStateStyle.label}
-                  </Badge>
-                  <span className="text-xs text-muted-foreground">
-                    {okCount} / {allSections.length} secciones OK
-                  </span>
-                </div>
                 <h2 className="font-display text-xl font-semibold">
                   {dayState === "ready" && "El día tiene datos suficientes para revisión de payroll."}
                   {dayState === "needs_review" && "El día tiene validaciones pendientes."}
@@ -528,50 +625,52 @@ export default function DailyClose() {
 
         {/* Checklist */}
         <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-          <CheckCard
-            title="Turnos"
-            category="Programación"
-            icon={CalendarCheck2}
-            state={snap.shifts}
-            loading={snap.loading}
-          />
-          <CheckCard
-            title="Staffing"
-            category="Cobertura"
-            icon={Users}
-            state={snap.staffing}
-            loading={snap.loading}
-          />
-          <CheckCard
-            title="Asistencia"
-            category="Tiempo y asistencia"
-            icon={Clock}
-            state={snap.attendance}
-            loading={snap.loading}
-          />
-          <CheckCard
-            title="Incidentes"
-            category="Operaciones"
-            icon={AlertTriangle}
-            state={incidents}
-            loading={false}
-          />
-          <CheckCard
-            title="Documentos"
-            category="Cumplimiento"
-            icon={FileWarning}
-            state={documents}
-            loading={false}
-          />
-          <CheckCard
-            title="Payroll readiness"
-            category="Revisión de payroll"
-            icon={Wallet}
-            state={payroll}
-            loading={snap.loading}
-            footnote="Se basa solo en time_entries reales. Nunca usa scheduled hours."
-          />
+          {ordered.map(({ meta, state }, i) => (
+            <CheckCard key={meta.key} step={i + 1} meta={meta} state={state} loading={snap.loading} />
+          ))}
         </div>
+
+        {/* Qué falta para cerrar el día */}
+        <Card className="mt-10 overflow-hidden border-border/60">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+              <CardTitle className="text-base font-semibold">Qué falta para cerrar el día</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-0">
+            {blockers.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Nada bloqueando. Todos los pasos del cierre están en OK.
+              </p>
+            ) : (
+              <ul className="space-y-2.5">
+                {blockers.map(({ meta, state }) => {
+                  const tone = STATUS_TONE[state.status];
+                  return (
+                    <li key={meta.key} className="flex items-start gap-3">
+                      <span className={cn("mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full", tone.dot)} />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-foreground">
+                          {meta.title} · <span className="text-muted-foreground font-normal">{state.primary}</span>
+                        </p>
+                        <p className="text-xs text-muted-foreground">{meta.decision}</p>
+                      </div>
+                      {state.href && state.ctaLabel && (
+                        <Button asChild variant="ghost" size="sm" className="shrink-0">
+                          <Link to={state.href}>
+                            {state.ctaLabel}
+                            <ArrowRight className="ml-1 h-3.5 w-3.5" />
+                          </Link>
+                        </Button>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Footer */}
         <p className="mt-10 text-center text-xs text-muted-foreground">
@@ -583,20 +682,17 @@ export default function DailyClose() {
 }
 
 function CheckCard({
-  title,
-  category,
-  icon: Icon,
+  step,
+  meta,
   state,
   loading,
-  footnote,
 }: {
-  title: string;
-  category: string;
-  icon: typeof Clock;
+  step: number;
+  meta: SectionMeta;
   state: SectionState;
   loading: boolean;
-  footnote?: string;
 }) {
+  const Icon = meta.icon;
   const tone = STATUS_TONE[state.status];
   const StatusIcon = tone.icon;
 
@@ -604,21 +700,21 @@ function CheckCard({
     <Card className={cn("overflow-hidden bg-card transition-all", tone.ring)}>
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-3">
-          <div className={cn("rounded-lg p-2", tone.iconBg)}>
-            <Icon className="h-5 w-5" />
+          <div className="flex items-center gap-3">
+            <div className={cn("rounded-lg p-2", tone.iconBg)}>
+              <Icon className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                Paso {step} · {meta.category}
+              </div>
+              <CardTitle className="mt-0.5 text-base font-semibold leading-snug">{meta.title}</CardTitle>
+            </div>
           </div>
-          <div className="flex items-center gap-1.5">
-            <StatusIcon className="h-3.5 w-3.5 text-muted-foreground" />
-            <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-              {tone.label}
-            </span>
-          </div>
-        </div>
-        <div className="mt-3">
-          <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-            {category}
-          </div>
-          <CardTitle className="mt-1 text-base font-semibold leading-snug">{title}</CardTitle>
+          <Badge variant="outline" className={cn("font-medium", tone.chip)}>
+            <StatusIcon className="mr-1 h-3 w-3" />
+            {tone.label}
+          </Badge>
         </div>
       </CardHeader>
       <CardContent className="space-y-4 pt-0">
@@ -628,6 +724,22 @@ function CheckCard({
           </div>
           <p className="mt-1 text-sm text-muted-foreground">{state.detail}</p>
         </div>
+
+        {/* What / Why / Decision */}
+        <dl className="space-y-2 rounded-lg border border-border/60 bg-muted/20 p-3 text-xs">
+          <div>
+            <dt className="font-semibold uppercase tracking-wider text-[10px] text-muted-foreground">Qué revisa</dt>
+            <dd className="mt-0.5 text-foreground/85">{meta.whatItChecks}</dd>
+          </div>
+          <div>
+            <dt className="font-semibold uppercase tracking-wider text-[10px] text-muted-foreground">Por qué importa</dt>
+            <dd className="mt-0.5 text-foreground/85">{meta.whyItMatters}</dd>
+          </div>
+          <div>
+            <dt className="font-semibold uppercase tracking-wider text-[10px] text-muted-foreground">Decisión</dt>
+            <dd className="mt-0.5 text-foreground/85">{meta.decision}</dd>
+          </div>
+        </dl>
 
         {state.examples && state.examples.length > 0 && (
           <div className="space-y-1.5 rounded-lg border border-dashed border-border/60 bg-muted/30 p-2.5">
@@ -649,8 +761,8 @@ function CheckCard({
           </Button>
         )}
 
-        {footnote && (
-          <p className="text-[11px] text-muted-foreground/80">{footnote}</p>
+        {meta.footnote && (
+          <p className="text-[11px] text-muted-foreground/80">{meta.footnote}</p>
         )}
       </CardContent>
     </Card>
