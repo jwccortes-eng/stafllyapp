@@ -82,6 +82,7 @@ export function ShiftActionBar({
   const navigate = useNavigate();
   const [dupOpen, setDupOpen] = useState(false);
   const [dupWithWorkers, setDupWithWorkers] = useState(false);
+  const [dupSessionKey, setDupSessionKey] = useState(0);
 
   const isDraft = shift.status === "draft" || shift.publication_status === "draft";
   const isLocked = ["locked", "archived", "cancelled"].includes(shift.status);
@@ -98,7 +99,15 @@ export function ShiftActionBar({
   }, [shift.status, hasTimeEntries]);
 
   const openDuplicate = (withWorkers: boolean) => {
+    console.info("[ShiftActionBar] duplicate_open", {
+      source_shift_id: shift.id,
+      assignments_length_received: assignments.length,
+      employee_ids_received: assignments.map((assignment) => assignment.employee_id),
+      requested_copy_workers: withWorkers,
+    });
+
     setDupWithWorkers(withWorkers);
+    setDupSessionKey((current) => current + 1);
     setDupOpen(true);
   };
 
@@ -242,6 +251,7 @@ export function ShiftActionBar({
       )}
 
       <DuplicateShiftDialog
+        key={`${shift.id}-${dupSessionKey}-${dupWithWorkers ? "with-workers" : "without-workers"}`}
         open={dupOpen}
         onOpenChange={setDupOpen}
         shift={shift as any}
