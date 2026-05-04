@@ -313,13 +313,13 @@ function Section({
   if (cards.length === 0) return null;
   const s = SEV_STYLES[severity];
   return (
-    <section className="mb-8">
-      <div className="mb-3 flex items-baseline gap-3">
+    <section className="mb-10">
+      <div className="mb-4 flex items-baseline gap-3">
         <span className={`h-2 w-2 rounded-full ${s.dot}`} />
         <h2 className="text-sm font-semibold uppercase tracking-wider text-foreground">{title}</h2>
         <span className="text-xs text-muted-foreground">{subtitle}</span>
       </div>
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
         {cards.map((card) => (
           <ActionCard key={card.id} card={card} />
         ))}
