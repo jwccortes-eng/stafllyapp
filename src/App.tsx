@@ -286,7 +286,6 @@ function App() {
                 <Route path="import-wizard" element={<CompanyRequiredGuard><ModuleGate moduleKey="import"><ImportWizard /></ModuleGate></CompanyRequiredGuard>} />
                 <Route path="shift-requests" element={<CompanyRequiredGuard><ShiftRequests /></CompanyRequiredGuard>} />
                 <Route path="timeclock" element={<CompanyRequiredGuard><ModuleGate moduleKey="timeclock"><TimeClock /></ModuleGate></CompanyRequiredGuard>} />
-                <Route path="today" element={<CompanyRequiredGuard><TodayView /></CompanyRequiredGuard>} />
                 <Route path="announcements" element={<CompanyRequiredGuard><Announcements /></CompanyRequiredGuard>} />
                 <Route path="chat" element={<CompanyRequiredGuard><ModuleGate moduleKey="chat"><InternalChat /></ModuleGate></CompanyRequiredGuard>} />
                 <Route path="settings" element={<PlatformSettings />} />
