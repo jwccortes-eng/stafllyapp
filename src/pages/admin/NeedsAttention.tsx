@@ -9,6 +9,7 @@ import {
   FileWarning,
   ShieldAlert,
   CalendarX,
+  CalendarCheck2,
   ArrowRight,
   Sparkles,
   CheckCircle2,
@@ -217,6 +218,34 @@ export default function NeedsAttention() {
         </div>
 
         {/* Hero card — most urgent */}
+        {/* Daily close CTA */}
+        <Card className="mb-6 overflow-hidden border-primary/20 bg-gradient-to-br from-primary/[0.04] via-background to-background">
+          <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+            <div className="flex items-start gap-4">
+              <div className="rounded-xl bg-primary/10 p-2.5 text-primary">
+                <CalendarCheck2 className="h-5 w-5" />
+              </div>
+              <div>
+                <div className="mb-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                  Operación diaria
+                </div>
+                <h2 className="font-display text-base font-semibold sm:text-lg">
+                  Cerrar operación del día
+                </h2>
+                <p className="mt-1 max-w-xl text-sm text-muted-foreground">
+                  Revisa turnos, staffing, asistencia y readiness antes de payroll.
+                </p>
+              </div>
+            </div>
+            <Button asChild variant="outline" className="shrink-0">
+              <Link to="/app/daily-close">
+                Ver cierre del día
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
+        </Card>
+
         <Card className="mb-12 overflow-hidden border-destructive/20 bg-gradient-to-br from-destructive/[0.04] via-background to-background">
           <div className="flex flex-col gap-5 p-7 sm:flex-row sm:items-center sm:justify-between sm:p-8">
             <div className="flex items-start gap-4">
