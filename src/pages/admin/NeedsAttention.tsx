@@ -368,18 +368,12 @@ function ActionCard({ card }: { card: MockCard }) {
           </CardTitle>
         </div>
       </CardHeader>
-      <CardContent className="space-y-3 pt-0">
+      <CardContent className="space-y-4 pt-0">
         <p className="text-sm text-muted-foreground">{card.description}</p>
 
-        <p className={`text-xs font-medium ${
-          card.severity === "critical"
-            ? "text-destructive"
-            : card.severity === "warn"
-            ? "text-amber-700 dark:text-amber-400"
-            : "text-foreground/80"
-        }`}>
+        <div className="inline-flex items-center rounded-md bg-muted/60 px-2.5 py-1 text-xs font-medium text-foreground/75">
           {card.decision}
-        </p>
+        </div>
 
         {/* Examples preview — máx 2 */}
         <div className="space-y-1.5 rounded-lg border border-dashed border-border/60 bg-muted/30 p-2.5">
@@ -391,21 +385,23 @@ function ActionCard({ card }: { card: MockCard }) {
           ))}
         </div>
 
-        <Button asChild variant="ghost" size="sm" className="w-full justify-between">
-          <Link to={card.href}>
-            {card.cta}
-            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-          </Link>
-        </Button>
+        <div className="space-y-2 pt-1">
+          <Button asChild variant="outline" size="sm" className="w-full justify-between">
+            <Link to={card.href}>
+              {card.cta}
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+            </Link>
+          </Button>
 
-        {card.secondary && (
-          <button
-            type="button"
-            className="w-full text-center text-[11px] text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
-          >
-            {card.secondary}
-          </button>
-        )}
+          {card.secondary && (
+            <button
+              type="button"
+              className="block w-full text-center text-[11px] text-muted-foreground/80 underline-offset-2 hover:text-muted-foreground hover:underline"
+            >
+              {card.secondary}
+            </button>
+          )}
+        </div>
       </CardContent>
     </Card>
   );
