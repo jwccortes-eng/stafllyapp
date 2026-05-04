@@ -209,14 +209,14 @@ export default function NeedsAttention() {
         </div>
 
         {/* Hero card — most urgent */}
-        <Card className="mb-8 overflow-hidden border-destructive/20 bg-gradient-to-br from-destructive/[0.04] via-background to-background">
-          <div className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
+        <Card className="mb-12 overflow-hidden border-destructive/20 bg-gradient-to-br from-destructive/[0.04] via-background to-background">
+          <div className="flex flex-col gap-5 p-7 sm:flex-row sm:items-center sm:justify-between sm:p-8">
             <div className="flex items-start gap-4">
               <div className="rounded-xl bg-destructive/10 p-3 text-destructive">
                 <Clock className="h-6 w-6" />
               </div>
               <div>
-                <div className="mb-1 flex items-center gap-2">
+                <div className="mb-1.5 flex items-center gap-2">
                   <Badge variant="outline" className="border-destructive/30 bg-destructive/5 text-destructive">
                     Prioridad #1
                   </Badge>
@@ -225,12 +225,12 @@ export default function NeedsAttention() {
                 <h2 className="font-display text-xl font-semibold">
                   4 trabajadores siguen con clock-in hace más de 16h
                 </h2>
-                <p className="mt-1 max-w-xl text-sm text-muted-foreground">
+                <p className="mt-1.5 max-w-xl text-sm text-muted-foreground">
                   Estas entradas inflarán el payroll si no se cierran. Lo más probable: clock-outs perdidos.
                 </p>
-                <p className="mt-2 text-xs font-medium text-destructive">
+                <div className="mt-3 inline-flex items-center rounded-md bg-muted/60 px-2.5 py-1 text-xs font-medium text-foreground/80">
                   Decisión: cerrar ahora, editar hora o escalar.
-                </p>
+                </div>
               </div>
             </div>
             <Button asChild size="lg" variant="default" className="shrink-0">
