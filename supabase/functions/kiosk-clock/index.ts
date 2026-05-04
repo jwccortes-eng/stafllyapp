@@ -6,12 +6,41 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const AUTH_PWD_PREFIX = "SF_";
+// K1 limits
+const MAX_PHOTO_BASE64_CHARS = 1_400_000; // ~1MB binary after decode
+const ALLOWED_PHOTO_MIME = /^image\/(jpeg|jpg|png|webp)$/i;
+const IP_LOCKOUT_THRESHOLD_15M = 30;
+const IP_KEY_PREFIX = "ip:";
+
+function jsonResp(body: unknown, status: number) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+async function sha256Hex(input: string): Promise<string> {
+  const buf = new TextEncoder().encode(input);
+  const hash = await crypto.subtle.digest("SHA-256", buf);
+  return Array.from(new Uint8Array(hash))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+function getClientIp(req: Request): string {
+  const fwd = req.headers.get("x-forwarded-for");
+  if (fwd) return fwd.split(",")[0]!.trim().slice(0, 64);
+  const cf = req.headers.get("cf-connecting-ip");
+  if (cf) return cf.trim().slice(0, 64);
+  return "unknown";
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
+
+  const ip = getClientIp(req);
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -21,18 +50,57 @@ Deno.serve(async (req) => {
     const { phone, pin, kiosk_device_id, photo_base64 } = await req.json();
 
     if (!phone || !pin) {
-      return new Response(
-        JSON.stringify({ error: "Teléfono y PIN son requeridos" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return jsonResp({ error: "Teléfono y PIN son requeridos" }, 400);
     }
 
-    const cleanPhone = phone.replace(/[^\d+]/g, "").slice(0, 20);
+    const cleanPhone = String(phone).replace(/[^\d+]/g, "").slice(0, 20);
+    const phoneHash = (await sha256Hex(cleanPhone)).slice(0, 12);
 
-    // Rate limit check
+    // ---- Photo pre-validation (before any DB work) ----
+    let photoBinary: Uint8Array | null = null;
+    let photoContentType = "image/jpeg";
+    if (photo_base64) {
+      if (typeof photo_base64 !== "string") {
+        return jsonResp({ error: "Invalid photo" }, 400);
+      }
+      if (photo_base64.length > MAX_PHOTO_BASE64_CHARS) {
+        console.warn(JSON.stringify({ event: "kiosk_photo_oversize", ip, phone_hash: phoneHash, len: photo_base64.length }));
+        return jsonResp({ error: "Photo too large" }, 413);
+      }
+      const dataUrlMatch = photo_base64.match(/^data:([^;]+);base64,(.*)$/);
+      let raw = photo_base64;
+      if (dataUrlMatch) {
+        if (!ALLOWED_PHOTO_MIME.test(dataUrlMatch[1])) {
+          return jsonResp({ error: "Invalid photo" }, 400);
+        }
+        photoContentType = dataUrlMatch[1].toLowerCase().replace("image/jpg", "image/jpeg");
+        raw = dataUrlMatch[2];
+      }
+      if (!/^[A-Za-z0-9+/=\r\n]+$/.test(raw) || raw.length < 100) {
+        return jsonResp({ error: "Invalid photo" }, 400);
+      }
+      try {
+        photoBinary = Uint8Array.from(atob(raw.replace(/[\r\n]/g, "")), (c) => c.charCodeAt(0));
+      } catch {
+        return jsonResp({ error: "Invalid photo" }, 400);
+      }
+    }
+
+    // ---- IP rate limit ----
+    const ipKey = IP_KEY_PREFIX + ip;
+    const { data: ipRate } = await adminClient
+      .from("auth_rate_limits")
+      .select("locked_until, failed_attempts")
+      .eq("phone_number", ipKey)
+      .maybeSingle();
+    if (ipRate?.locked_until && new Date(ipRate.locked_until) > new Date()) {
+      return jsonResp({ error: "Demasiados intentos. Intenta más tarde." }, 429);
+    }
+
+    // ---- Phone rate limit ----
     const { data: rateData } = await adminClient
       .from("auth_rate_limits")
-      .select("*")
+      .select("locked_until")
       .eq("phone_number", cleanPhone)
       .maybeSingle();
 
@@ -40,69 +108,64 @@ Deno.serve(async (req) => {
       const lockUntil = new Date(rateData.locked_until);
       if (new Date() < lockUntil) {
         const minutesLeft = Math.ceil((lockUntil.getTime() - Date.now()) / 60000);
-        return new Response(
-          JSON.stringify({ error: `Cuenta bloqueada. Intenta en ${minutesLeft} min.` }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return jsonResp({ error: `Cuenta bloqueada. Intenta en ${minutesLeft} min.` }, 429);
       }
     }
 
-    // Find employee
+    // ---- Find employee ----
     const { data: employee, error: empErr } = await adminClient
       .from("employees")
-      .select("id, first_name, last_name, phone_number, access_pin, is_active, user_id, company_id, avatar_url")
+      .select("id, first_name, last_name, phone_number, access_pin, is_active, company_id, avatar_url")
       .eq("phone_number", cleanPhone)
       .maybeSingle();
 
     if (empErr || !employee) {
-      // Record failed attempt
       await recordFailed(adminClient, cleanPhone);
-      return new Response(
-        JSON.stringify({ error: "Credenciales inválidas" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    if (!employee.is_active) {
-      return new Response(
-        JSON.stringify({ error: "Tu cuenta está inactiva. Contacta al administrador." }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      await recordFailedIp(adminClient, ipKey);
+      console.warn(JSON.stringify({ event: "kiosk_auth_fail", reason: "no_employee", ip, phone_hash: phoneHash }));
+      return jsonResp({ error: "Invalid credentials" }, 401);
     }
 
     if (!employee.access_pin || employee.access_pin !== pin) {
       await recordFailed(adminClient, cleanPhone);
-      return new Response(
-        JSON.stringify({ error: "PIN incorrecto" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      await recordFailedIp(adminClient, ipKey);
+      console.warn(JSON.stringify({ event: "kiosk_auth_fail", reason: "bad_pin", ip, phone_hash: phoneHash }));
+      return jsonResp({ error: "Invalid credentials" }, 401);
     }
 
-    // Reset rate limit on success
-    await adminClient.from("auth_rate_limits").delete().eq("phone_number", cleanPhone);
+    // PIN correct — only NOW reveal account-inactive (not enumeration risk)
+    if (!employee.is_active) {
+      console.warn(JSON.stringify({ event: "kiosk_auth_inactive", ip, phone_hash: phoneHash }));
+      return jsonResp({ error: "Tu cuenta está inactiva. Contacta al administrador." }, 403);
+    }
 
-    // Upload photo if provided
+    // Reset rate limits on success
+    await adminClient.from("auth_rate_limits").delete().eq("phone_number", cleanPhone);
+    await adminClient.from("auth_rate_limits").delete().eq("phone_number", ipKey);
+
+    // ---- Upload photo (signed URL for private bucket) ----
     let photoUrl: string | null = null;
-    if (photo_base64) {
+    if (photoBinary) {
       try {
-        const photoData = Uint8Array.from(atob(photo_base64), c => c.charCodeAt(0));
-        const fileName = `${employee.company_id}/${employee.id}/${Date.now()}.jpg`;
+        const ext = photoContentType === "image/png" ? "png" : photoContentType === "image/webp" ? "webp" : "jpg";
+        const fileName = `${employee.company_id}/${employee.id}/${Date.now()}.${ext}`;
         const { error: uploadErr } = await adminClient.storage
           .from("kiosk-photos")
-          .upload(fileName, photoData, { contentType: "image/jpeg", upsert: false });
-
+          .upload(fileName, photoBinary, { contentType: photoContentType, upsert: false });
         if (!uploadErr) {
-          const { data: urlData } = adminClient.storage
+          const { data: signed } = await adminClient.storage
             .from("kiosk-photos")
-            .getPublicUrl(fileName);
-          photoUrl = urlData?.publicUrl ?? null;
+            .createSignedUrl(fileName, 60 * 60 * 24 * 30); // 30 days
+          photoUrl = signed?.signedUrl ?? null;
+        } else {
+          console.error("Photo upload error:", uploadErr.message);
         }
       } catch (photoErr) {
-        console.error("Photo upload error:", photoErr);
+        console.error("Photo decode/upload error:", photoErr);
       }
     }
 
-    // Check if there's an open time entry (no clock_out)
+    // ---- Open entry check ----
     const { data: openEntry } = await adminClient
       .from("time_entries")
       .select("id, clock_in, shift_id")
@@ -117,7 +180,6 @@ Deno.serve(async (req) => {
     let timeEntryId: string | null = null;
 
     if (openEntry) {
-      // CLOCK OUT
       clockType = "clock_out";
       const clockIn = new Date(openEntry.clock_in);
       const clockOut = new Date(now);
@@ -131,12 +193,9 @@ Deno.serve(async (req) => {
         })
         .eq("id", openEntry.id);
 
-      if (updateErr) {
-        console.error("Clock out update error:", updateErr);
-      }
+      if (updateErr) console.error("Clock out update error:", updateErr);
       timeEntryId = openEntry.id;
     } else {
-      // CLOCK IN - find today's shift assignment if any
       const today = new Date().toISOString().slice(0, 10);
       const { data: todayAssignment } = await adminClient
         .from("shift_assignments")
@@ -150,13 +209,9 @@ Deno.serve(async (req) => {
       let shiftId: string | null = null;
       if (todayAssignment) {
         shiftId = todayAssignment.shift_id;
-        // Check if shift allows kiosk
         const shiftClockMethod = (todayAssignment as any).scheduled_shifts?.clock_method;
         if (shiftClockMethod === "mobile") {
-          return new Response(
-            JSON.stringify({ error: "Este turno solo permite fichaje desde el celular" }),
-            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
+          return jsonResp({ error: "Este turno solo permite fichaje desde el celular" }, 403);
         }
       }
 
@@ -175,15 +230,11 @@ Deno.serve(async (req) => {
         .single();
 
       if (insertErr) {
-        return new Response(
-          JSON.stringify({ error: insertErr.message }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return jsonResp({ error: insertErr.message }, 500);
       }
       timeEntryId = newEntry.id;
     }
 
-    // Record clock event
     await adminClient.from("clock_events").insert({
       employee_id: employee.id,
       company_id: employee.company_id,
@@ -195,24 +246,18 @@ Deno.serve(async (req) => {
       device: "kiosk-terminal",
     });
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-        clock_type: clockType,
-        employee_name: `${employee.first_name} ${employee.last_name}`,
-        avatar_url: employee.avatar_url,
-        timestamp: now,
-      }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return jsonResp({
+      success: true,
+      clock_type: clockType,
+      employee_name: `${employee.first_name} ${employee.last_name}`,
+      avatar_url: employee.avatar_url,
+      timestamp: now,
+    }, 200);
 
   } catch (err) {
     const message = err instanceof Error ? err.message : "Internal error";
     console.error("kiosk-clock error:", message);
-    return new Response(
-      JSON.stringify({ error: message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return jsonResp({ error: "Internal error" }, 500);
   }
 });
 
@@ -241,5 +286,37 @@ async function recordFailed(adminClient: any, phone: string) {
     await adminClient
       .from("auth_rate_limits")
       .insert({ phone_number: phone, failed_attempts: newAttempts, locked_until: lockedUntil, last_attempt_at: new Date().toISOString() });
+  }
+}
+
+async function recordFailedIp(adminClient: any, ipKey: string) {
+  const { data: existing } = await adminClient
+    .from("auth_rate_limits")
+    .select("id, failed_attempts, last_attempt_at")
+    .eq("phone_number", ipKey)
+    .maybeSingle();
+
+  // Reset window if last attempt > 15 min ago
+  let baseAttempts = existing?.failed_attempts ?? 0;
+  if (existing?.last_attempt_at) {
+    const ageMs = Date.now() - new Date(existing.last_attempt_at).getTime();
+    if (ageMs > 15 * 60 * 1000) baseAttempts = 0;
+  }
+
+  const newAttempts = baseAttempts + 1;
+  let lockedUntil: string | null = null;
+  if (newAttempts >= IP_LOCKOUT_THRESHOLD_15M) {
+    lockedUntil = new Date(Date.now() + 60 * 60 * 1000).toISOString(); // 1h IP lock
+  }
+
+  if (existing) {
+    await adminClient
+      .from("auth_rate_limits")
+      .update({ failed_attempts: newAttempts, locked_until: lockedUntil, last_attempt_at: new Date().toISOString() })
+      .eq("id", existing.id);
+  } else {
+    await adminClient
+      .from("auth_rate_limits")
+      .insert({ phone_number: ipKey, failed_attempts: newAttempts, locked_until: lockedUntil, last_attempt_at: new Date().toISOString() });
   }
 }
