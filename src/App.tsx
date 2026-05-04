@@ -65,7 +65,6 @@ const BulkImportShifts = lazy(() => import("./pages/admin/BulkImportShifts"));
 const ImportWizard = lazy(() => import("./pages/admin/ImportWizard"));
 const ShiftRequests = lazy(() => import("./pages/admin/ShiftRequests"));
 const TimeClock = lazy(() => import("./pages/admin/TimeClock"));
-const TodayView = lazy(() => import("./pages/admin/TodayView"));
 const Announcements = lazy(() => import("./pages/admin/Announcements"));
 const InternalChat = lazy(() => import("./pages/admin/InternalChat"));
 const PlatformSettings = lazy(() => import("./pages/admin/PlatformSettings"));
@@ -249,6 +248,7 @@ function App() {
                 <Route index element={<AdminDashboard />} />
                 <Route path="needs-attention" element={<NeedsAttention />} />
                 <Route path="daily-close" element={<CompanyRequiredGuard><DailyClose /></CompanyRequiredGuard>} />
+                <Route path="today-test" element={<div className="p-6 text-sm font-medium">TODAY TEST OK</div>} />
                 <Route path="today" element={<Today />} />
                 <Route path="command-center" element={<CommandCenter />} />
                 <Route path="dev-command-center" element={<DevCommandCenter />} />
