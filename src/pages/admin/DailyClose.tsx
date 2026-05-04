@@ -324,14 +324,14 @@ export default function DailyClose() {
           }
         }
 
-        const gaps: Array<{ title: string; gap: number; slots: number }> = [];
+        const gaps: Array<{ id: string; title: string; gap: number; slots: number }> = [];
         for (const s of shiftsActive) {
           const slots = s.slots ?? 0;
           const active = activeByShift.get(s.id) ?? 0;
           if (slots > 0 && active < slots) {
-            gaps.push({ title: s.title, gap: slots - active, slots });
+            gaps.push({ id: s.id, title: s.title, gap: slots - active, slots });
           } else if (slots === 0 && active === 0) {
-            gaps.push({ title: s.title, gap: 0, slots: 0 });
+            gaps.push({ id: s.id, title: s.title, gap: 0, slots: 0 });
           }
         }
 
@@ -364,7 +364,7 @@ export default function DailyClose() {
               ? `${unstaffedShifts} turnos sin nadie · ${totalGapSlots} cupos abiertos.`
               : `${totalGapSlots} cupos abiertos.`,
             examples: gaps.slice(0, 2).map((g) => `${g.title} · ${g.gap}/${g.slots} sin cubrir`),
-            href: gaps[0] ? shiftOpsHref(shiftsActive.find((s) => s.title === gaps[0].title)?.id ?? "") : "/app/shifts",
+            href: gaps[0] ? shiftOpsHref(gaps[0].id) : "/app/shifts",
             ctaLabel: "Abrir turno",
           };
         })();
