@@ -2038,6 +2038,27 @@ function DesktopShifts() {
         allowClaims={shiftsConfig.allow_claims}
       />
 
+      {duplicateShift && selectedCompanyId && (
+        <DuplicateShiftDialog
+          key={`dup-${duplicateShift.id}-${duplicateSessionKey}`}
+          open={duplicateOpen}
+          onOpenChange={(o) => {
+            setDuplicateOpen(o);
+            if (!o) setDuplicateShift(null);
+          }}
+          shift={duplicateShift as any}
+          assignments={
+            assignments.filter((a) => a.shift_id === duplicateShift.id) as any
+          }
+          companyId={selectedCompanyId}
+          userId={user?.id ?? null}
+          defaultCopyWorkers={false}
+          onDuplicated={() => {
+            loadData();
+          }}
+        />
+      )}
+
       <QuickAddInviteWizard
         open={quickAddOpen}
         onOpenChange={setQuickAddOpen}
