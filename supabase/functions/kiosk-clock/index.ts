@@ -217,7 +217,7 @@ Deno.serve(async (req) => {
           clock_in: now,
           shift_id: shiftId,
           status: "approved",
-          entry_source: "kiosk",
+          entry_source: "clock",
         })
         .select("id")
         .single();
