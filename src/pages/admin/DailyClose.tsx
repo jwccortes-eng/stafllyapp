@@ -62,6 +62,7 @@ interface SectionMeta {
 }
 
 type SectionKey = "shifts" | "staffing" | "attendance" | "incidents" | "documents" | "payroll";
+const shiftOpsHref = (shiftId: string) => `/app/shift-ops?id=${shiftId}`;
 
 const SECTION_META: Record<SectionKey, SectionMeta> = {
   shifts: {
@@ -309,8 +310,8 @@ export default function DailyClose() {
               ? `${shiftsActive.length} activos · ${shiftsCancelled} cancelados.`
               : `${shiftsActive.length} turnos activos.`,
             examples: shiftRows.slice(0, 2).map((s) => `${s.title} · ${s.start_time?.slice(0, 5) ?? ""}`),
-            href: "/app/shifts",
-            ctaLabel: "Confirmar turnos",
+            href: shiftsActive[0] ? shiftOpsHref(shiftsActive[0].id) : "/app/shifts",
+            ctaLabel: "Abrir turno",
           };
         })();
 
@@ -363,8 +364,8 @@ export default function DailyClose() {
               ? `${unstaffedShifts} turnos sin nadie · ${totalGapSlots} cupos abiertos.`
               : `${totalGapSlots} cupos abiertos.`,
             examples: gaps.slice(0, 2).map((g) => `${g.title} · ${g.gap}/${g.slots} sin cubrir`),
-            href: "/app/shifts",
-            ctaLabel: "Resolver staffing",
+            href: gaps[0] ? shiftOpsHref(shiftsActive.find((s) => s.title === gaps[0].title)?.id ?? "") : "/app/shifts",
+            ctaLabel: "Abrir turno",
           };
         })();
 
