@@ -1,7 +1,11 @@
 import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { startOfDay, endOfDay, format, differenceInHours } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useCompany } from "@/hooks/useCompany";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Activity,
   AlertTriangle,
@@ -17,7 +21,112 @@ import {
  * Solo enlaza a /app/needs-attention y /app/daily-close.
  */
 
+type Stats = {
+  loading: boolean;
+  shiftsToday: number | null;
+  activeClockIns: number | null;
+  criticalAlerts: number | null;
+  dayState: "in_progress" | "needs_review" | "unknown";
+};
+
 export default function Today() {
+  const { selectedCompanyId } = useCompany();
+  const [stats, setStats] = useState<Stats>({
+    loading: true,
+    shiftsToday: null,
+    activeClockIns: null,
+    criticalAlerts: null,
+    dayState: "unknown",
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!selectedCompanyId) {
+      setStats({ loading: false, shiftsToday: null, activeClockIns: null, criticalAlerts: null, dayState: "unknown" });
+      return;
+    }
+    setStats((s) => ({ ...s, loading: true }));
+
+    (async () => {
+      try {
+        const today = new Date();
+        const dayKey = format(today, "yyyy-MM-dd");
+        const dayStart = startOfDay(today).toISOString();
+        const dayEnd = endOfDay(today).toISOString();
+
+        // Q1: scheduled_shifts hoy
+        const { data: shifts } = await supabase
+          .from("scheduled_shifts")
+          .select("id, slots")
+          .eq("company_id", selectedCompanyId)
+          .eq("date", dayKey)
+          .is("deleted_at", null);
+
+        // Q2: clock-ins activos (open time_entries)
+        const { data: openEntries } = await supabase
+          .from("time_entries")
+          .select("id, clock_in")
+          .eq("company_id", selectedCompanyId)
+          .is("clock_out", null);
+
+        // Q3: time_entries clock_in del día (para staffing assignments alertas)
+        const shiftIds = (shifts ?? []).map((s) => s.id);
+        let assignmentsByShift = new Map<string, number>();
+        if (shiftIds.length > 0) {
+          const { data: asg } = await supabase
+            .from("shift_assignments")
+            .select("shift_id, status")
+            .in("shift_id", shiftIds);
+          (asg ?? []).forEach((a) => {
+            if (a.status === "accepted" || a.status === "active" || a.status === "confirmed") {
+              assignmentsByShift.set(a.shift_id, (assignmentsByShift.get(a.shift_id) ?? 0) + 1);
+            }
+          });
+        }
+
+        // Alerta: open clock-in > 16h
+        const stale = (openEntries ?? []).filter((e) => {
+          if (!e.clock_in) return false;
+          return differenceInHours(today, new Date(e.clock_in)) > 16;
+        }).length;
+
+        // Alerta: shifts con slots > assigned
+        const staffingGaps = (shifts ?? []).filter((s) => {
+          const need = Number(s.slots ?? 0);
+          const have = assignmentsByShift.get(s.id) ?? 0;
+          return need > 0 && have < need;
+        }).length;
+
+        const criticalAlerts = stale + staffingGaps;
+
+        const dayState: Stats["dayState"] =
+          stale > 0 || staffingGaps > 0 ? "needs_review" : "in_progress";
+
+        if (cancelled) return;
+        setStats({
+          loading: false,
+          shiftsToday: shifts?.length ?? 0,
+          activeClockIns: openEntries?.length ?? 0,
+          criticalAlerts,
+          dayState,
+        });
+      } catch {
+        if (!cancelled) {
+          setStats({ loading: false, shiftsToday: null, activeClockIns: null, criticalAlerts: null, dayState: "unknown" });
+        }
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [selectedCompanyId]);
+
+  const fmt = (n: number | null) => (stats.loading ? "…" : n === null ? "—" : String(n));
+  const dayStateLabel =
+    stats.dayState === "needs_review"
+      ? "Estado del día: requiere revisión"
+      : stats.dayState === "in_progress"
+      ? "Estado del día: en curso"
+      : "Estado del día: pendiente de revisión";
   return (
     <div className="min-h-screen bg-background">
       <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
@@ -64,9 +173,9 @@ export default function Today() {
                       tiempo real.
                     </p>
                     <div className="mt-4 flex flex-wrap gap-2">
-                      <MiniStat label="Turnos hoy" value="—" />
-                      <MiniStat label="Clock-ins activos" value="—" />
-                      <MiniStat label="Alertas críticas" value="—" />
+                      <MiniStat label="Turnos hoy" value={fmt(stats.shiftsToday)} />
+                      <MiniStat label="Clock-ins activos" value={fmt(stats.activeClockIns)} />
+                      <MiniStat label="Alertas críticas" value={fmt(stats.criticalAlerts)} />
                     </div>
                   </div>
                 </div>
@@ -130,7 +239,7 @@ export default function Today() {
                       payroll.
                     </p>
                     <div className="mt-3 inline-flex items-center rounded-md bg-muted/60 px-2.5 py-1 text-xs font-medium text-foreground/75">
-                      Estado del día: pendiente de revisión
+                      {dayStateLabel}
                     </div>
                   </div>
                 </div>
