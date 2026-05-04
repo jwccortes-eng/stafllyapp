@@ -44,6 +44,7 @@ import { EmployeeView } from "@/components/shifts/EmployeeView";
 import { ClientView } from "@/components/shifts/ClientView";
 import { ShiftDetailDialog } from "@/components/shifts/ShiftDetailDialog";
 import { ShiftEditDialog } from "@/components/shifts/ShiftEditDialog";
+import { DuplicateShiftDialog } from "@/components/shifts/DuplicateShiftDialog";
 import { ShiftFilters, EMPTY_FILTERS, type ShiftFilterState } from "@/components/shifts/ShiftFilters";
 import { WeeklySummaryBar } from "@/components/shifts/WeeklySummaryBar";
 import { EmployeeCombobox } from "@/components/shifts/EmployeeCombobox";
@@ -351,6 +352,9 @@ function DesktopShifts() {
   // Edit dialog
   const [editShift, setEditShift] = useState<Shift | null>(null);
   const [editOpen, setEditOpen] = useState(false);
+  const [duplicateShift, setDuplicateShift] = useState<Shift | null>(null);
+  const [duplicateOpen, setDuplicateOpen] = useState(false);
+  const [duplicateSessionKey, setDuplicateSessionKey] = useState(0);
 
   // Create form
   const [title, setTitle] = useState("");
@@ -2001,7 +2005,9 @@ function DesktopShifts() {
         onSave={handleEditShift}
         onRequestAction={loadData}
         onDuplicate={(s) => {
-          handleDuplicateToDay(s, s.date);
+          setDuplicateShift(s);
+          setDuplicateSessionKey((k) => k + 1);
+          setDuplicateOpen(true);
         }}
         onDelete={async (s) => {
           const { error } = await supabase.from("scheduled_shifts")
@@ -2031,6 +2037,27 @@ function DesktopShifts() {
         onSave={handleEditShift}
         allowClaims={shiftsConfig.allow_claims}
       />
+
+      {duplicateShift && selectedCompanyId && (
+        <DuplicateShiftDialog
+          key={`dup-${duplicateShift.id}-${duplicateSessionKey}`}
+          open={duplicateOpen}
+          onOpenChange={(o) => {
+            setDuplicateOpen(o);
+            if (!o) setDuplicateShift(null);
+          }}
+          shift={duplicateShift as any}
+          assignments={
+            assignments.filter((a) => a.shift_id === duplicateShift.id) as any
+          }
+          companyId={selectedCompanyId}
+          userId={user?.id ?? null}
+          defaultCopyWorkers={false}
+          onDuplicated={() => {
+            loadData();
+          }}
+        />
+      )}
 
       <QuickAddInviteWizard
         open={quickAddOpen}
