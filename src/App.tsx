@@ -86,6 +86,7 @@ const Implementations = lazy(() => import("./pages/admin/Implementations"));
 const CommandCenter = lazy(() => import("./pages/admin/CommandCenter"));
 const DevCommandCenter = lazy(() => import("./pages/admin/DevCommandCenter"));
 const DocumentsCenter = lazy(() => import("./pages/admin/DocumentsCenter"));
+const NeedsAttention = lazy(() => import("./pages/admin/NeedsAttention"));
 const NotificationTemplates = lazy(() => import("./pages/admin/NotificationTemplates"));
 const NotificationsPage = lazy(() => import("./pages/admin/Notifications"));
 const Requests = lazy(() => import("./pages/admin/Requests"));
