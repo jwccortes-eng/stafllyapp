@@ -546,12 +546,12 @@ export default function Requests() {
                 {(selectedCtx.shift || selectedCtx.te) && (() => {
                   const isClock = isAttendanceTicket(selectedTicket);
                   const primary = isClock
-                    ? { label: "Review attendance", icon: CheckCircle2, href: selectedCtx.shift ? `/app/shifts?shiftId=${selectedCtx.shift.id}&tab=attendance` : `/app/timeclock?entry=${selectedCtx.te?.id}` }
+                    ? { label: "Review attendance", icon: CheckCircle2, href: selectedCtx.shift ? `/app/shift-ops?id=${selectedCtx.shift.id}` : `/app/timeclock?entry=${selectedCtx.te?.id}` }
                     : selectedCtx.shift
-                      ? { label: "Open shift", icon: Calendar, href: `/app/shifts?shiftId=${selectedCtx.shift.id}` }
+                      ? { label: "Open shift", icon: Calendar, href: `/app/shift-ops?id=${selectedCtx.shift.id}` }
                       : null;
                   const secondary = isClock && selectedCtx.shift
-                    ? { label: "Open shift", icon: Calendar, href: `/app/shifts?shiftId=${selectedCtx.shift.id}` }
+                    ? { label: "Open shift", icon: Calendar, href: `/app/shift-ops?id=${selectedCtx.shift.id}` }
                     : null;
                   if (!primary) return null;
                   return (

@@ -756,7 +756,7 @@ export default function OperationsCommandCenter() {
                     <Star className="h-3.5 w-3.5" /> Calificar trabajadores
                   </Button>
                 )}
-                <Button variant="outline" size="sm" className="w-full gap-2 text-xs" onClick={() => { setSelectedShiftId(null); navigate(`/app/shift-ops?id=${selectedShiftId}`); }}>
+                <Button variant="outline" size="sm" className="w-full gap-2 text-xs" onClick={() => { if (selectedShiftId) navigate(`/app/shift-ops?id=${selectedShiftId}`); }}>
                   <Eye className="h-3.5 w-3.5" /> Abrir operaciones del turno
                 </Button>
               </div>

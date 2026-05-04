@@ -85,7 +85,7 @@ export default function TimeClockCommandView() {
   const [activeTab, setActiveTab] = useState<string>("live");
   const [tabAutoSet, setTabAutoSet] = useState(false);
 
-  const openWorker = (id: string) => navigate(`/app/workers/${id}`);
+  const openWorker = (id: string) => navigate(`/app/people/${id}`);
 
   // live tick
   useEffect(() => {
@@ -680,7 +680,7 @@ export default function TimeClockCommandView() {
               </p>
             </div>
             <div className="flex flex-wrap items-center justify-center gap-2">
-              <Button size="sm" className="h-9 text-xs gap-1.5" onClick={() => navigate("/app/workers")}>
+              <Button size="sm" className="h-9 text-xs gap-1.5" onClick={() => navigate("/app/employees")}>
                 Open Workers <ArrowRight className="h-3.5 w-3.5" />
               </Button>
               <Button variant="outline" size="sm" className="h-9 text-xs gap-1.5" onClick={() => setActiveTab("today")}>

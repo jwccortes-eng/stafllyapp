@@ -36,6 +36,7 @@ import {
 
 const NON_OPERABLE_STATUS = new Set(["draft", "cancelled", "canceled", "archived"]);
 const ACTIVE_ASG = new Set(["accepted", "confirmed", "pending"]);
+const shiftOpsHref = (shiftId: string) => `/app/shift-ops?id=${shiftId}`;
 
 type ShiftRow = {
   id: string;
@@ -278,7 +279,7 @@ export default function Today() {
           description: `${label} no tiene a nadie asignado (${slots} cupos)`,
           entity: label,
           priority: "high",
-          href: "/app/shifts",
+            href: shiftOpsHref(s.id),
         });
       } else if (operable && asg.length < slots) {
         items.push({
@@ -287,7 +288,7 @@ export default function Today() {
           description: `${label} tiene ${slots - asg.length} cupo(s) sin cubrir`,
           entity: label,
           priority: "medium",
-          href: "/app/shifts",
+            href: shiftOpsHref(s.id),
         });
       }
 
@@ -299,7 +300,7 @@ export default function Today() {
           description: `${label} está en borrador con ${asg.length} trabajador(es)`,
           entity: label,
           priority: "medium",
-          href: "/app/shifts",
+            href: shiftOpsHref(s.id),
         });
       }
     });
@@ -502,8 +503,8 @@ export default function Today() {
                               </td>
                               <td className="px-3 py-2 text-right">
                                 <Button asChild variant="ghost" size="sm" className="h-7 px-2">
-                                  <Link to="/app/shifts">
-                                    Abrir
+                                  <Link to={shiftOpsHref(c.id)}>
+                                    Abrir turno
                                     <ArrowRight className="ml-1 h-3 w-3" />
                                   </Link>
                                 </Button>
@@ -519,7 +520,7 @@ export default function Today() {
                       {shiftCards.map((c) => (
                         <Link
                           key={c.id}
-                          to="/app/shifts"
+                          to={shiftOpsHref(c.id)}
                           className="block rounded-lg border border-border/50 p-3 hover:bg-accent/20"
                         >
                           <div className="flex items-center justify-between gap-2">
