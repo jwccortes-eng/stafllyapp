@@ -180,9 +180,9 @@ export default function NeedsAttention() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-14 lg:px-8">
         {/* Header */}
-        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="mb-12 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <div className="mb-2 flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
               <Sparkles className="h-3.5 w-3.5" />
@@ -209,14 +209,14 @@ export default function NeedsAttention() {
         </div>
 
         {/* Hero card — most urgent */}
-        <Card className="mb-8 overflow-hidden border-destructive/20 bg-gradient-to-br from-destructive/[0.04] via-background to-background">
-          <div className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
+        <Card className="mb-12 overflow-hidden border-destructive/20 bg-gradient-to-br from-destructive/[0.04] via-background to-background">
+          <div className="flex flex-col gap-5 p-7 sm:flex-row sm:items-center sm:justify-between sm:p-8">
             <div className="flex items-start gap-4">
               <div className="rounded-xl bg-destructive/10 p-3 text-destructive">
                 <Clock className="h-6 w-6" />
               </div>
               <div>
-                <div className="mb-1 flex items-center gap-2">
+                <div className="mb-1.5 flex items-center gap-2">
                   <Badge variant="outline" className="border-destructive/30 bg-destructive/5 text-destructive">
                     Prioridad #1
                   </Badge>
@@ -225,12 +225,12 @@ export default function NeedsAttention() {
                 <h2 className="font-display text-xl font-semibold">
                   4 trabajadores siguen con clock-in hace más de 16h
                 </h2>
-                <p className="mt-1 max-w-xl text-sm text-muted-foreground">
+                <p className="mt-1.5 max-w-xl text-sm text-muted-foreground">
                   Estas entradas inflarán el payroll si no se cierran. Lo más probable: clock-outs perdidos.
                 </p>
-                <p className="mt-2 text-xs font-medium text-destructive">
+                <div className="mt-3 inline-flex items-center rounded-md bg-muted/60 px-2.5 py-1 text-xs font-medium text-foreground/80">
                   Decisión: cerrar ahora, editar hora o escalar.
-                </p>
+                </div>
               </div>
             </div>
             <Button asChild size="lg" variant="default" className="shrink-0">
@@ -313,13 +313,13 @@ function Section({
   if (cards.length === 0) return null;
   const s = SEV_STYLES[severity];
   return (
-    <section className="mb-8">
-      <div className="mb-3 flex items-baseline gap-3">
+    <section className="mb-10">
+      <div className="mb-4 flex items-baseline gap-3">
         <span className={`h-2 w-2 rounded-full ${s.dot}`} />
         <h2 className="text-sm font-semibold uppercase tracking-wider text-foreground">{title}</h2>
         <span className="text-xs text-muted-foreground">{subtitle}</span>
       </div>
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
         {cards.map((card) => (
           <ActionCard key={card.id} card={card} />
         ))}
@@ -368,18 +368,12 @@ function ActionCard({ card }: { card: MockCard }) {
           </CardTitle>
         </div>
       </CardHeader>
-      <CardContent className="space-y-3 pt-0">
+      <CardContent className="space-y-4 pt-0">
         <p className="text-sm text-muted-foreground">{card.description}</p>
 
-        <p className={`text-xs font-medium ${
-          card.severity === "critical"
-            ? "text-destructive"
-            : card.severity === "warn"
-            ? "text-amber-700 dark:text-amber-400"
-            : "text-foreground/80"
-        }`}>
+        <div className="inline-flex items-center rounded-md bg-muted/60 px-2.5 py-1 text-xs font-medium text-foreground/75">
           {card.decision}
-        </p>
+        </div>
 
         {/* Examples preview — máx 2 */}
         <div className="space-y-1.5 rounded-lg border border-dashed border-border/60 bg-muted/30 p-2.5">
@@ -391,21 +385,23 @@ function ActionCard({ card }: { card: MockCard }) {
           ))}
         </div>
 
-        <Button asChild variant="ghost" size="sm" className="w-full justify-between">
-          <Link to={card.href}>
-            {card.cta}
-            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-          </Link>
-        </Button>
+        <div className="space-y-2 pt-1">
+          <Button asChild variant="outline" size="sm" className="w-full justify-between">
+            <Link to={card.href}>
+              {card.cta}
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+            </Link>
+          </Button>
 
-        {card.secondary && (
-          <button
-            type="button"
-            className="w-full text-center text-[11px] text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
-          >
-            {card.secondary}
-          </button>
-        )}
+          {card.secondary && (
+            <button
+              type="button"
+              className="block w-full text-center text-[11px] text-muted-foreground/80 underline-offset-2 hover:text-muted-foreground hover:underline"
+            >
+              {card.secondary}
+            </button>
+          )}
+        </div>
       </CardContent>
     </Card>
   );
