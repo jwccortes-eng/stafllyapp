@@ -101,81 +101,89 @@ function JobSiteSectionImpl({
       subtitle="Dirección principal donde se realizará el trabajo."
       variant="hero"
     >
-      <div>
-        <Label className="text-[11px] text-muted-foreground font-medium">Ubicación guardada</Label>
-        <div className="flex gap-1 mt-1">
-          <Select value={locationId || "none"} onValueChange={handleLocationChange}>
-            <SelectTrigger className="h-9 text-sm flex-1">
-              <SelectValue placeholder="Sin asignar" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">Sin asignar</SelectItem>
-              {locations.map((l) => (
-                <SelectItem key={l.id} value={l.id}>
-                  {l.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {onQuickAddLocation && (
-            <Popover open={showAddLocation} onOpenChange={setShowAddLocation}>
-              <PopoverTrigger asChild>
-                <Button variant="outline" size="icon" className="h-9 w-9 shrink-0">
-                  <Plus className="h-3.5 w-3.5" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-64 p-3" align="end">
-                <p className="text-xs font-medium mb-2">Nueva ubicación</p>
-                <div className="space-y-1.5">
-                  <Input
-                    value={newName}
-                    onChange={(e) => setNewName(e.target.value)}
-                    placeholder="Nombre"
-                    className="h-8 text-sm"
-                  />
-                  <Input
-                    value={newAddress}
-                    onChange={(e) => setNewAddress(e.target.value)}
-                    placeholder="Dirección (opcional)"
-                    className="h-8 text-sm"
-                    onKeyDown={(e) => e.key === "Enter" && submitNew()}
-                  />
-                  <Button size="sm" className="h-8 w-full text-xs" onClick={submitNew} disabled={adding || !newName.trim()}>
-                    {adding ? <Loader2 className="h-3 w-3 animate-spin" /> : "Crear"}
-                  </Button>
-                </div>
-              </PopoverContent>
-            </Popover>
-          )}
-        </div>
-        {selectedLoc?.address && (
-          <div className="mt-1.5 flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
-            <span className="truncate">{selectedLoc.address}</span>
-            {mapsUrl && (
-              <a
-                href={mapsUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1 text-primary hover:underline shrink-0"
-              >
-                <ExternalLink className="h-3 w-3" /> Maps
-              </a>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Premium structured Job Site (autocomplete) */}
+      {/* Premium structured Job Site (autocomplete) — official source of truth */}
       {companyId && (
         <SingleLocationPicker
-          label="Job site (premium)"
+          label="Job Site"
           icon={MapPin}
-          helper="Sitio real donde se realiza el trabajo (autocomplete con coordenadas)."
+          helper="No hay Job Site asignado. Selecciona o crea uno para este turno."
           companyId={companyId}
           type="job_site"
           selectedId={jobSiteLocationId}
           onSelect={(id) => onChange({ jobSiteLocationId: id })}
         />
+      )}
+
+      {/* Legacy saved-location dropdown — only shown when no premium Job Site is selected,
+          to avoid two competing inputs. Kept for backward compatibility with old shifts. */}
+      {!jobSiteLocationId && (
+        <details className="group rounded-xl border border-border/30 bg-muted/10">
+          <summary className="cursor-pointer list-none px-3 py-2 text-[11px] font-medium text-muted-foreground hover:text-foreground select-none">
+            Usar ubicación guardada (legacy)
+          </summary>
+          <div className="px-3 pb-3 pt-1">
+            <div className="flex gap-1">
+              <Select value={locationId || "none"} onValueChange={handleLocationChange}>
+                <SelectTrigger className="h-9 text-sm flex-1">
+                  <SelectValue placeholder="Sin asignar" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sin asignar</SelectItem>
+                  {locations.map((l) => (
+                    <SelectItem key={l.id} value={l.id}>
+                      {l.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {onQuickAddLocation && (
+                <Popover open={showAddLocation} onOpenChange={setShowAddLocation}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="icon" className="h-9 w-9 shrink-0">
+                      <Plus className="h-3.5 w-3.5" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-64 p-3" align="end">
+                    <p className="text-xs font-medium mb-2">Nueva ubicación</p>
+                    <div className="space-y-1.5">
+                      <Input
+                        value={newName}
+                        onChange={(e) => setNewName(e.target.value)}
+                        placeholder="Nombre"
+                        className="h-8 text-sm"
+                      />
+                      <Input
+                        value={newAddress}
+                        onChange={(e) => setNewAddress(e.target.value)}
+                        placeholder="Dirección (opcional)"
+                        className="h-8 text-sm"
+                        onKeyDown={(e) => e.key === "Enter" && submitNew()}
+                      />
+                      <Button size="sm" className="h-8 w-full text-xs" onClick={submitNew} disabled={adding || !newName.trim()}>
+                        {adding ? <Loader2 className="h-3 w-3 animate-spin" /> : "Crear"}
+                      </Button>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              )}
+            </div>
+            {selectedLoc?.address && (
+              <div className="mt-1.5 flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
+                <span className="truncate">{selectedLoc.address}</span>
+                {mapsUrl && (
+                  <a
+                    href={mapsUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 text-primary hover:underline shrink-0"
+                  >
+                    <ExternalLink className="h-3 w-3" /> Maps
+                  </a>
+                )}
+              </div>
+            )}
+          </div>
+        </details>
       )}
 
       <div>
