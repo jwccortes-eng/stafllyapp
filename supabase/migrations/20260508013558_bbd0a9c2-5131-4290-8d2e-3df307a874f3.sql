@@ -1,0 +1,1 @@
+DROP FUNCTION IF EXISTS public._set_cron_secret(text);

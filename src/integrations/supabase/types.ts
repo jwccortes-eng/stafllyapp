@@ -15654,7 +15654,6 @@ export type Database = {
     }
     Functions: {
       _get_cron_secret: { Args: never; Returns: string }
-      _set_cron_secret: { Args: { p_value: string }; Returns: undefined }
       anon_can_upload_onboarding_doc: {
         Args: { _path: string }
         Returns: boolean
