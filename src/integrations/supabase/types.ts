@@ -12473,6 +12473,39 @@ export type Database = {
           },
         ]
       }
+      security_alerts: {
+        Row: {
+          actual: string | null
+          check_name: string
+          created_at: string
+          details: Json | null
+          expected: string | null
+          id: string
+          severity: string
+          target: string | null
+        }
+        Insert: {
+          actual?: string | null
+          check_name: string
+          created_at?: string
+          details?: Json | null
+          expected?: string | null
+          id?: string
+          severity?: string
+          target?: string | null
+        }
+        Update: {
+          actual?: string | null
+          check_name?: string
+          created_at?: string
+          details?: Json | null
+          expected?: string | null
+          id?: string
+          severity?: string
+          target?: string | null
+        }
+        Relationships: []
+      }
       sensitive_data_audit_log: {
         Row: {
           action: string
