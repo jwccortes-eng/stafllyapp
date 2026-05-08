@@ -222,7 +222,9 @@ export function SingleLocationPicker({
             >
               <span className="flex items-center gap-1.5">
                 <Plus className="h-3 w-3" />
-                {resolvedSelected ? "Cambiar ubicación" : "Seleccionar ubicación premium"}
+                {resolvedSelected
+                  ? (changeCtaLabel ?? "Cambiar ubicación")
+                  : (emptyCtaLabel ?? "Seleccionar ubicación premium")}
               </span>
               <ChevronDown className={cn("h-3 w-3 transition-transform", open && "rotate-180")} />
             </Button>
