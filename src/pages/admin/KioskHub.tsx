@@ -519,6 +519,101 @@ export default function KioskHub() {
             </div>
           )}
         </TabsContent>
+
+        {/* ─── SECURITY (A2 monitor mode) ─── */}
+        <TabsContent value="security" className="mt-4">
+          <Card>
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <div>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <ShieldAlert className="h-4 w-4 text-warning" />
+                    Untrusted device alerts
+                  </CardTitle>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Monitor mode — last 30 days. No traffic is blocked yet. Trust known devices in the Devices tab.
+                  </p>
+                </div>
+                <Button variant="outline" size="sm" onClick={fetchAlerts} disabled={loadingAlerts}>
+                  Refresh
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              {loadingAlerts ? (
+                <ul className="divide-y divide-border/40">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <li key={i} className="px-4 py-3"><Skeleton className="h-4 w-3/4" /></li>
+                  ))}
+                </ul>
+              ) : alerts.length === 0 ? (
+                <div className="flex flex-col items-center justify-center gap-2 py-12 px-6 text-center">
+                  <div className="rounded-full bg-earning/10 p-3">
+                    <ShieldCheck className="h-5 w-5 text-earning" />
+                  </div>
+                  <p className="text-sm font-medium">No untrusted device activity</p>
+                  <p className="text-xs text-muted-foreground max-w-xs">
+                    All recent kiosk requests came from trusted devices in this company.
+                  </p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Device ID</TableHead>
+                      <TableHead>Action</TableHead>
+                      <TableHead>Reason</TableHead>
+                      <TableHead>Employee</TableHead>
+                      <TableHead className="text-right">Count</TableHead>
+                      <TableHead>Last seen</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {alerts.map((a, i) => {
+                      const known = a.device_id ? devices.find((d) => d.device_identifier === a.device_id || d.id === a.device_id) : null;
+                      return (
+                        <TableRow key={i}>
+                          <TableCell>
+                            {a.device_id ? (
+                              <code className="text-xs bg-muted px-2 py-0.5 rounded font-mono">{a.device_id}</code>
+                            ) : (
+                              <span className="text-xs text-muted-foreground italic">missing</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-xs">{a.action ?? "—"}</TableCell>
+                          <TableCell className="text-xs text-muted-foreground">{a.reason ?? "—"}</TableCell>
+                          <TableCell className="text-xs font-mono text-muted-foreground">
+                            {a.employee_id ? a.employee_id.slice(0, 8) : "—"}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums font-medium">{a.count}</TableCell>
+                          <TableCell className="text-xs text-muted-foreground">
+                            {new Date(a.last_seen).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {known ? (
+                              known.is_trusted ? (
+                                <Badge variant="outline" className="text-[10px] border-earning/30 bg-earning/10 text-earning">
+                                  <ShieldCheck className="h-2.5 w-2.5 mr-1" /> Trusted
+                                </Badge>
+                              ) : (
+                                <Button size="sm" variant="outline" onClick={() => handleQuickTrust(known, true)}>
+                                  Trust
+                                </Button>
+                              )
+                            ) : (
+                              <span className="text-[10px] text-muted-foreground">Not registered</span>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
 
       {/* ─── DEVICE DIALOG ─── */}
