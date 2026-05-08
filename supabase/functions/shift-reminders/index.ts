@@ -303,8 +303,9 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err: any) {
+    console.error("[shift-reminders] internal error:", err);
     return new Response(
-      JSON.stringify({ error: err.message ?? String(err) }),
+      JSON.stringify({ error: "Internal error", code: "internal_error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
