@@ -667,10 +667,23 @@ Deno.serve(async (req) => {
 
     // ============= CAPTURE KIOSK PHOTO =============
     if (action === "capture_kiosk_photo") {
-      const { employee_id, photo_base64, visit_id } = body;
+      const { employee_id, photo_base64, visit_id, device_id } = body;
       if (!employee_id || !photo_base64) {
         return jsonResp({ error: "employee_id y photo_base64 requeridos" }, 400);
       }
+
+      // Monitor-mode device trust audit (non-blocking). Resolve company_id first.
+      const { data: empForAudit } = await adminClient
+        .from("employees")
+        .select("company_id")
+        .eq("id", employee_id)
+        .maybeSingle();
+      void auditDeviceTrust(adminClient, {
+        action: "capture_kiosk_photo",
+        device_id,
+        employee_id,
+        company_id: empForAudit?.company_id ?? null,
+      });
 
       const match = photo_base64.match(/^data:(image\/\w+);base64,(.*)$/);
       const mime = match?.[1] ?? "image/jpeg";
