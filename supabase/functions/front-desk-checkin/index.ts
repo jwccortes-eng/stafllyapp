@@ -415,19 +415,36 @@ Deno.serve(async (req) => {
 
     // ============= LIST PAYMENTS =============
     if (action === "list_payments") {
-      const { phone, employee_id } = body;
+      const { phone, employee_id, device_id } = body;
       let empId: string | null = employee_id ?? null;
+      let empCompanyId: string | null = null;
 
       if (!empId && phone) {
         const cleanPhone = phone.replace(/[^\d+]/g, "").slice(0, 20);
         const { data: emp } = await adminClient
           .from("employees")
-          .select("id")
+          .select("id, company_id")
           .eq("phone_number", cleanPhone)
           .maybeSingle();
         empId = emp?.id ?? null;
+        empCompanyId = emp?.company_id ?? null;
+      } else if (empId) {
+        const { data: emp } = await adminClient
+          .from("employees")
+          .select("company_id")
+          .eq("id", empId)
+          .maybeSingle();
+        empCompanyId = emp?.company_id ?? null;
       }
       if (!empId) return jsonResp({ payments: [] });
+
+      // Monitor-mode device trust audit (non-blocking).
+      void auditDeviceTrust(adminClient, {
+        action: "list_payments",
+        device_id,
+        employee_id: empId,
+        company_id: empCompanyId,
+      });
 
       const { data: rows } = await adminClient
         .from("normalized_payroll_rows")
@@ -438,6 +455,7 @@ Deno.serve(async (req) => {
 
       return jsonResp({ payments: rows || [] });
     }
+
 
     // ============= CREATE VISIT (legacy) =============
     if (action === "create_visit") {
