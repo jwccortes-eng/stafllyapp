@@ -38,10 +38,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Monitor, Plus, Pencil, Trash2, Copy, Check, ExternalLink,
-  Clock, Activity, MapPin, Smartphone,
+  Clock, Activity, MapPin, Smartphone, ShieldAlert, ShieldCheck,
 } from "lucide-react";
 
 interface KioskDevice {
@@ -51,7 +52,18 @@ interface KioskDevice {
   location_id: string | null;
   device_identifier: string;
   is_active: boolean;
+  is_trusted: boolean;
   created_at: string;
+}
+
+interface UntrustedAlertRow {
+  device_id: string | null;
+  company_id: string | null;
+  action: string | null;
+  employee_id: string | null;
+  reason: string | null;
+  count: number;
+  last_seen: string;
 }
 interface Location { id: string; name: string; }
 
@@ -98,11 +110,17 @@ export default function KioskHub() {
   const [formName, setFormName] = useState("");
   const [formLocation, setFormLocation] = useState<string>("");
   const [formDeviceId, setFormDeviceId] = useState("");
+  const [formIsActive, setFormIsActive] = useState(true);
+  const [formIsTrusted, setFormIsTrusted] = useState(false);
   const [saving, setSaving] = useState(false);
 
   // Today's kiosk activity
   const [todayEvents, setTodayEvents] = useState<KioskClockRow[]>([]);
   const [loadingEvents, setLoadingEvents] = useState(true);
+
+  // Untrusted device alerts (A2 monitor mode)
+  const [alerts, setAlerts] = useState<UntrustedAlertRow[]>([]);
+  const [loadingAlerts, setLoadingAlerts] = useState(true);
 
   const fetchDevices = async () => {
     if (!selectedCompanyId) return;
@@ -135,10 +153,53 @@ export default function KioskHub() {
     setLoadingEvents(false);
   };
 
+  const fetchAlerts = async () => {
+    if (!selectedCompanyId) return;
+    setLoadingAlerts(true);
+    const sb = supabase as any;
+    const since = new Date(Date.now() - 1000 * 60 * 60 * 24 * 30).toISOString();
+    const { data, error } = await sb
+      .from("security_alerts")
+      .select("details, created_at")
+      .eq("check_name", "front_desk_untrusted_device")
+      .gte("created_at", since)
+      .order("created_at", { ascending: false })
+      .limit(500);
+    if (error || !data) {
+      setAlerts([]);
+      setLoadingAlerts(false);
+      return;
+    }
+    const grouped = new Map<string, UntrustedAlertRow>();
+    for (const row of data as Array<{ details: any; created_at: string }>) {
+      const d = row.details ?? {};
+      if (d.company_id && d.company_id !== selectedCompanyId) continue;
+      const key = `${d.device_id ?? "none"}|${d.action ?? "?"}|${d.reason ?? "?"}`;
+      const existing = grouped.get(key);
+      if (existing) {
+        existing.count += 1;
+        if (row.created_at > existing.last_seen) existing.last_seen = row.created_at;
+      } else {
+        grouped.set(key, {
+          device_id: d.device_id ?? null,
+          company_id: d.company_id ?? null,
+          action: d.action ?? null,
+          employee_id: d.employee_id ?? null,
+          reason: d.reason ?? null,
+          count: 1,
+          last_seen: row.created_at,
+        });
+      }
+    }
+    setAlerts(Array.from(grouped.values()).sort((a, b) => b.last_seen.localeCompare(a.last_seen)));
+    setLoadingAlerts(false);
+  };
+
   useEffect(() => {
     fetchDevices();
     fetchLocations();
     fetchTodayEvents();
+    fetchAlerts();
   }, [selectedCompanyId]);
 
   const stats = useMemo(() => {
@@ -154,6 +215,8 @@ export default function KioskHub() {
     setFormName("");
     setFormLocation("");
     setFormDeviceId(safeRandomUUID().slice(0, 8).toUpperCase());
+    setFormIsActive(true);
+    setFormIsTrusted(false);
     setDialogOpen(true);
   };
   const openEdit = (d: KioskDevice) => {
@@ -161,6 +224,8 @@ export default function KioskHub() {
     setFormName(d.name);
     setFormLocation(d.location_id ?? "");
     setFormDeviceId(d.device_identifier);
+    setFormIsActive(d.is_active);
+    setFormIsTrusted(!!d.is_trusted);
     setDialogOpen(true);
   };
 
@@ -172,6 +237,8 @@ export default function KioskHub() {
       name: formName.trim(),
       location_id: formLocation && formLocation !== "none" ? formLocation : null,
       device_identifier: formDeviceId || safeRandomUUID().slice(0, 8).toUpperCase(),
+      is_active: formIsActive,
+      is_trusted: formIsTrusted,
     };
     if (editing) {
       await kioskFetch(`kiosk_devices?id=eq.${editing.id}`, { method: "PATCH", body: JSON.stringify(payload) });
@@ -184,6 +251,16 @@ export default function KioskHub() {
     setDialogOpen(false);
     fetchDevices();
   };
+
+  const handleQuickTrust = async (d: KioskDevice, trusted: boolean) => {
+    await kioskFetch(`kiosk_devices?id=eq.${d.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ is_trusted: trusted }),
+    });
+    toast({ title: trusted ? "Device trusted" : "Trust revoked" });
+    fetchDevices();
+  };
+
 
   const handleDelete = async (d: KioskDevice) => {
     await kioskFetch(`kiosk_devices?id=eq.${d.id}`, { method: "DELETE" });
@@ -243,6 +320,10 @@ export default function KioskHub() {
         <TabsList>
           <TabsTrigger value="activity">Today's activity</TabsTrigger>
           <TabsTrigger value="devices">Devices ({devices.length})</TabsTrigger>
+          <TabsTrigger value="security">
+            <ShieldAlert className="h-3.5 w-3.5 mr-1.5" />
+            Security {alerts.length > 0 && <Badge variant="destructive" className="ml-1.5 text-[10px] h-4 px-1">{alerts.length}</Badge>}
+          </TabsTrigger>
         </TabsList>
 
         {/* ─── ACTIVITY ─── */}
@@ -341,6 +422,7 @@ export default function KioskHub() {
                     <TableHead>Location</TableHead>
                     <TableHead>Device ID</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Trust</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -364,6 +446,24 @@ export default function KioskHub() {
                           <Badge variant={d.is_active ? "default" : "secondary"} className="text-[10px]">
                             {d.is_active ? "Active" : "Inactive"}
                           </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Switch
+                              checked={!!d.is_trusted}
+                              onCheckedChange={(v) => handleQuickTrust(d, v)}
+                              aria-label={`Trust ${d.name}`}
+                            />
+                            {d.is_trusted ? (
+                              <Badge variant="outline" className="text-[10px] border-earning/30 bg-earning/10 text-earning">
+                                <ShieldCheck className="h-2.5 w-2.5 mr-1" /> Trusted
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-[10px] border-muted-foreground/20 text-muted-foreground">
+                                Untrusted
+                              </Badge>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center justify-end gap-1">
@@ -419,6 +519,101 @@ export default function KioskHub() {
             </div>
           )}
         </TabsContent>
+
+        {/* ─── SECURITY (A2 monitor mode) ─── */}
+        <TabsContent value="security" className="mt-4">
+          <Card>
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <div>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <ShieldAlert className="h-4 w-4 text-warning" />
+                    Untrusted device alerts
+                  </CardTitle>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Monitor mode — last 30 days. No traffic is blocked yet. Trust known devices in the Devices tab.
+                  </p>
+                </div>
+                <Button variant="outline" size="sm" onClick={fetchAlerts} disabled={loadingAlerts}>
+                  Refresh
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              {loadingAlerts ? (
+                <ul className="divide-y divide-border/40">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <li key={i} className="px-4 py-3"><Skeleton className="h-4 w-3/4" /></li>
+                  ))}
+                </ul>
+              ) : alerts.length === 0 ? (
+                <div className="flex flex-col items-center justify-center gap-2 py-12 px-6 text-center">
+                  <div className="rounded-full bg-earning/10 p-3">
+                    <ShieldCheck className="h-5 w-5 text-earning" />
+                  </div>
+                  <p className="text-sm font-medium">No untrusted device activity</p>
+                  <p className="text-xs text-muted-foreground max-w-xs">
+                    All recent kiosk requests came from trusted devices in this company.
+                  </p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Device ID</TableHead>
+                      <TableHead>Action</TableHead>
+                      <TableHead>Reason</TableHead>
+                      <TableHead>Employee</TableHead>
+                      <TableHead className="text-right">Count</TableHead>
+                      <TableHead>Last seen</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {alerts.map((a, i) => {
+                      const known = a.device_id ? devices.find((d) => d.device_identifier === a.device_id || d.id === a.device_id) : null;
+                      return (
+                        <TableRow key={i}>
+                          <TableCell>
+                            {a.device_id ? (
+                              <code className="text-xs bg-muted px-2 py-0.5 rounded font-mono">{a.device_id}</code>
+                            ) : (
+                              <span className="text-xs text-muted-foreground italic">missing</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-xs">{a.action ?? "—"}</TableCell>
+                          <TableCell className="text-xs text-muted-foreground">{a.reason ?? "—"}</TableCell>
+                          <TableCell className="text-xs font-mono text-muted-foreground">
+                            {a.employee_id ? a.employee_id.slice(0, 8) : "—"}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums font-medium">{a.count}</TableCell>
+                          <TableCell className="text-xs text-muted-foreground">
+                            {new Date(a.last_seen).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {known ? (
+                              known.is_trusted ? (
+                                <Badge variant="outline" className="text-[10px] border-earning/30 bg-earning/10 text-earning">
+                                  <ShieldCheck className="h-2.5 w-2.5 mr-1" /> Trusted
+                                </Badge>
+                              ) : (
+                                <Button size="sm" variant="outline" onClick={() => handleQuickTrust(known, true)}>
+                                  Trust
+                                </Button>
+                              )
+                            ) : (
+                              <span className="text-[10px] text-muted-foreground">Not registered</span>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
 
       {/* ─── DEVICE DIALOG ─── */}
@@ -447,6 +642,26 @@ export default function KioskHub() {
               <Label>Device ID</Label>
               <Input value={formDeviceId} onChange={(e) => setFormDeviceId(e.target.value)} className="font-mono" />
               <p className="text-[10px] text-muted-foreground">Auto-generated if left blank.</p>
+            </div>
+            <div className="rounded-lg border border-border/50 p-3 space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <Label className="text-sm">Active</Label>
+                  <p className="text-[11px] text-muted-foreground">Inactive devices can't be used as kiosks.</p>
+                </div>
+                <Switch checked={formIsActive} onCheckedChange={setFormIsActive} />
+              </div>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <Label className="text-sm flex items-center gap-1.5">
+                    <ShieldCheck className="h-3.5 w-3.5" /> Trusted
+                  </Label>
+                  <p className="text-[11px] text-muted-foreground">
+                    Marked as a known device. Untrusted devices are logged in monitor mode (not blocked yet).
+                  </p>
+                </div>
+                <Switch checked={formIsTrusted} onCheckedChange={setFormIsTrusted} />
+              </div>
             </div>
             <Button onClick={handleSave} disabled={!formName.trim() || saving} className="w-full">
               {saving ? "Saving..." : editing ? "Save changes" : "Create kiosk"}
