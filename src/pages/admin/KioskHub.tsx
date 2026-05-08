@@ -422,6 +422,7 @@ export default function KioskHub() {
                     <TableHead>Location</TableHead>
                     <TableHead>Device ID</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Trust</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -445,6 +446,24 @@ export default function KioskHub() {
                           <Badge variant={d.is_active ? "default" : "secondary"} className="text-[10px]">
                             {d.is_active ? "Active" : "Inactive"}
                           </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Switch
+                              checked={!!d.is_trusted}
+                              onCheckedChange={(v) => handleQuickTrust(d, v)}
+                              aria-label={`Trust ${d.name}`}
+                            />
+                            {d.is_trusted ? (
+                              <Badge variant="outline" className="text-[10px] border-earning/30 bg-earning/10 text-earning">
+                                <ShieldCheck className="h-2.5 w-2.5 mr-1" /> Trusted
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-[10px] border-muted-foreground/20 text-muted-foreground">
+                                Untrusted
+                              </Badge>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center justify-end gap-1">
