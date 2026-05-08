@@ -306,17 +306,6 @@ export default function Apply() {
     setSubmitting(true);
     setSubmitError(null);
     try {
-      let documentUrl: string | undefined;
-      if (documentFile) {
-        const ext = documentFile.name.split(".").pop();
-        const path = `${company.id}/${Date.now()}.${ext}`;
-        const { error: uploadErr } = await supabase.storage.from("application-documents").upload(path, documentFile);
-        if (uploadErr) {
-          throw new Error("No se pudo subir el documento. Intenta de nuevo.");
-        }
-        documentUrl = path;
-      }
-
       const normalizedPhoneValue = normalizePhone(phone);
 
       const payload = {
