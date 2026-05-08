@@ -38,10 +38,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Monitor, Plus, Pencil, Trash2, Copy, Check, ExternalLink,
-  Clock, Activity, MapPin, Smartphone,
+  Clock, Activity, MapPin, Smartphone, ShieldAlert, ShieldCheck,
 } from "lucide-react";
 
 interface KioskDevice {
@@ -51,7 +52,18 @@ interface KioskDevice {
   location_id: string | null;
   device_identifier: string;
   is_active: boolean;
+  is_trusted: boolean;
   created_at: string;
+}
+
+interface UntrustedAlertRow {
+  device_id: string | null;
+  company_id: string | null;
+  action: string | null;
+  employee_id: string | null;
+  reason: string | null;
+  count: number;
+  last_seen: string;
 }
 interface Location { id: string; name: string; }
 
