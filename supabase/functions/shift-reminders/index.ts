@@ -14,6 +14,18 @@ Deno.serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
+  // CRON gate: require Bearer CRON_SECRET if configured.
+  // TODO(security): make fail-closed once CRON_SECRET is verified in pg_cron jobs.
+  const cronSecret = Deno.env.get("CRON_SECRET");
+  if (cronSecret) {
+    const authH = req.headers.get("Authorization") ?? "";
+    if (authH !== `Bearer ${cronSecret}`) {
+      return new Response(JSON.stringify({ error: "unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+  }
+
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
@@ -291,8 +303,9 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err: any) {
+    console.error("[shift-reminders] internal error:", err);
     return new Response(
-      JSON.stringify({ error: err.message ?? String(err) }),
+      JSON.stringify({ error: "Internal error", code: "internal_error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

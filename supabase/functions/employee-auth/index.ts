@@ -403,11 +403,11 @@ Deno.serve(async (req) => {
       });
 
       if (signInError) {
+        console.error("[employee-auth] activation signIn error:", signInError);
         return new Response(
           JSON.stringify({
             error: "Cuenta activada pero error al iniciar sesión. Intenta iniciar sesión manualmente.",
             code: "signin_failed",
-            detail: signInError.message,
           }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
@@ -896,7 +896,7 @@ Deno.serve(async (req) => {
     });
   } catch (err: any) {
     console.error("[employee-auth] internal error:", err?.message, err?.stack);
-    return new Response(JSON.stringify({ error: "Error interno del servidor", code: "internal_error", detail: err?.message }), {
+    return new Response(JSON.stringify({ error: "Error interno del servidor", code: "internal_error" }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
