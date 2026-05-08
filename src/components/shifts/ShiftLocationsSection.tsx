@@ -99,6 +99,10 @@ interface SinglePickerProps {
   type: "meeting_point" | "job_site";
   selectedId: string | null;
   onSelect: (id: string | null, formattedAddress: string | null) => void;
+  /** CTA label when nothing is selected. Defaults to "Seleccionar ubicación premium". */
+  emptyCtaLabel?: string;
+  /** CTA label when a location is selected. Defaults to "Cambiar ubicación". */
+  changeCtaLabel?: string;
 }
 
 export function SingleLocationPicker({
@@ -109,6 +113,8 @@ export function SingleLocationPicker({
   type,
   selectedId,
   onSelect,
+  emptyCtaLabel,
+  changeCtaLabel,
 }: SinglePickerProps) {
   const { data: locations, create } = useLocationsV2(companyId, type);
   const [draft, setDraft] = useState<LocationPickerValue>({ ...EMPTY_LOCATION });
