@@ -99,6 +99,10 @@ interface SinglePickerProps {
   type: "meeting_point" | "job_site";
   selectedId: string | null;
   onSelect: (id: string | null, formattedAddress: string | null) => void;
+  /** CTA label when nothing is selected. Defaults to "Seleccionar ubicación premium". */
+  emptyCtaLabel?: string;
+  /** CTA label when a location is selected. Defaults to "Cambiar ubicación". */
+  changeCtaLabel?: string;
 }
 
 export function SingleLocationPicker({
@@ -109,6 +113,8 @@ export function SingleLocationPicker({
   type,
   selectedId,
   onSelect,
+  emptyCtaLabel,
+  changeCtaLabel,
 }: SinglePickerProps) {
   const { data: locations, create } = useLocationsV2(companyId, type);
   const [draft, setDraft] = useState<LocationPickerValue>({ ...EMPTY_LOCATION });
@@ -216,7 +222,9 @@ export function SingleLocationPicker({
             >
               <span className="flex items-center gap-1.5">
                 <Plus className="h-3 w-3" />
-                {resolvedSelected ? "Cambiar ubicación" : "Seleccionar ubicación premium"}
+                {resolvedSelected
+                  ? (changeCtaLabel ?? "Cambiar ubicación")
+                  : (emptyCtaLabel ?? "Seleccionar ubicación premium")}
               </span>
               <ChevronDown className={cn("h-3 w-3 transition-transform", open && "rotate-180")} />
             </Button>
