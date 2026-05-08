@@ -75,6 +75,66 @@ const SELF_EDITABLE_FIELDS = [
 const EMPLOYEE_SELECT =
   "id, first_name, last_name, phone_number, is_active, user_id, company_id, avatar_url, email, address, employee_role, emergency_contact_name, emergency_contact_phone";
 
+const UUID_RE_GLOBAL = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Monitor-mode device trust check (A2 Phase 1).
+ * Never blocks. Inserts a security_alerts row when the kiosk device is missing,
+ * unknown, untrusted, or company-mismatched. Enforce mode is a future phase.
+ */
+async function auditDeviceTrust(
+  adminClient: ReturnType<typeof createClient>,
+  params: {
+    action: string;
+    device_id: string | null | undefined;
+    employee_id: string | null | undefined;
+    company_id: string | null | undefined;
+  },
+): Promise<void> {
+  try {
+    const { action, device_id, employee_id, company_id } = params;
+    let reason: string | null = null;
+    let trusted = false;
+
+    if (!device_id || typeof device_id !== "string" || !UUID_RE_GLOBAL.test(device_id)) {
+      reason = "missing_or_invalid_device_id";
+    } else {
+      const { data: dev } = await adminClient
+        .from("kiosk_devices")
+        .select("id, company_id, is_active, is_trusted")
+        .eq("id", device_id)
+        .maybeSingle();
+      if (!dev) reason = "device_not_registered";
+      else if (!dev.is_active) reason = "device_inactive";
+      else if (company_id && dev.company_id !== company_id) reason = "company_mismatch";
+      else if (!dev.is_trusted) reason = "device_not_trusted";
+      else trusted = true;
+    }
+
+    if (trusted) return;
+
+    console.warn("[front-desk monitor] untrusted device", { action, device_id, employee_id, company_id, reason });
+
+    await adminClient.from("security_alerts").insert({
+      check_name: "front_desk_untrusted_device",
+      severity: "warn",
+      target: action,
+      expected: "trusted device with matching company_id",
+      actual: reason,
+      details: {
+        action,
+        employee_id: employee_id ?? null,
+        company_id: company_id ?? null,
+        device_id: device_id ?? null,
+        mode: "monitor",
+      },
+    });
+  } catch (err) {
+    // Never let auditing break the user-facing action.
+    console.error("auditDeviceTrust failed", err);
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
