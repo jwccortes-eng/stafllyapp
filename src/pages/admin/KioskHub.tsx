@@ -153,10 +153,53 @@ export default function KioskHub() {
     setLoadingEvents(false);
   };
 
+  const fetchAlerts = async () => {
+    if (!selectedCompanyId) return;
+    setLoadingAlerts(true);
+    const sb = supabase as any;
+    const since = new Date(Date.now() - 1000 * 60 * 60 * 24 * 30).toISOString();
+    const { data, error } = await sb
+      .from("security_alerts")
+      .select("details, created_at")
+      .eq("check_name", "front_desk_untrusted_device")
+      .gte("created_at", since)
+      .order("created_at", { ascending: false })
+      .limit(500);
+    if (error || !data) {
+      setAlerts([]);
+      setLoadingAlerts(false);
+      return;
+    }
+    const grouped = new Map<string, UntrustedAlertRow>();
+    for (const row of data as Array<{ details: any; created_at: string }>) {
+      const d = row.details ?? {};
+      if (d.company_id && d.company_id !== selectedCompanyId) continue;
+      const key = `${d.device_id ?? "none"}|${d.action ?? "?"}|${d.reason ?? "?"}`;
+      const existing = grouped.get(key);
+      if (existing) {
+        existing.count += 1;
+        if (row.created_at > existing.last_seen) existing.last_seen = row.created_at;
+      } else {
+        grouped.set(key, {
+          device_id: d.device_id ?? null,
+          company_id: d.company_id ?? null,
+          action: d.action ?? null,
+          employee_id: d.employee_id ?? null,
+          reason: d.reason ?? null,
+          count: 1,
+          last_seen: row.created_at,
+        });
+      }
+    }
+    setAlerts(Array.from(grouped.values()).sort((a, b) => b.last_seen.localeCompare(a.last_seen)));
+    setLoadingAlerts(false);
+  };
+
   useEffect(() => {
     fetchDevices();
     fetchLocations();
     fetchTodayEvents();
+    fetchAlerts();
   }, [selectedCompanyId]);
 
   const stats = useMemo(() => {
@@ -172,6 +215,8 @@ export default function KioskHub() {
     setFormName("");
     setFormLocation("");
     setFormDeviceId(safeRandomUUID().slice(0, 8).toUpperCase());
+    setFormIsActive(true);
+    setFormIsTrusted(false);
     setDialogOpen(true);
   };
   const openEdit = (d: KioskDevice) => {
@@ -179,6 +224,8 @@ export default function KioskHub() {
     setFormName(d.name);
     setFormLocation(d.location_id ?? "");
     setFormDeviceId(d.device_identifier);
+    setFormIsActive(d.is_active);
+    setFormIsTrusted(!!d.is_trusted);
     setDialogOpen(true);
   };
 
@@ -190,6 +237,8 @@ export default function KioskHub() {
       name: formName.trim(),
       location_id: formLocation && formLocation !== "none" ? formLocation : null,
       device_identifier: formDeviceId || safeRandomUUID().slice(0, 8).toUpperCase(),
+      is_active: formIsActive,
+      is_trusted: formIsTrusted,
     };
     if (editing) {
       await kioskFetch(`kiosk_devices?id=eq.${editing.id}`, { method: "PATCH", body: JSON.stringify(payload) });
@@ -202,6 +251,16 @@ export default function KioskHub() {
     setDialogOpen(false);
     fetchDevices();
   };
+
+  const handleQuickTrust = async (d: KioskDevice, trusted: boolean) => {
+    await kioskFetch(`kiosk_devices?id=eq.${d.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ is_trusted: trusted }),
+    });
+    toast({ title: trusted ? "Device trusted" : "Trust revoked" });
+    fetchDevices();
+  };
+
 
   const handleDelete = async (d: KioskDevice) => {
     await kioskFetch(`kiosk_devices?id=eq.${d.id}`, { method: "DELETE" });
