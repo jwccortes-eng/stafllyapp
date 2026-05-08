@@ -75,6 +75,66 @@ const SELF_EDITABLE_FIELDS = [
 const EMPLOYEE_SELECT =
   "id, first_name, last_name, phone_number, is_active, user_id, company_id, avatar_url, email, address, employee_role, emergency_contact_name, emergency_contact_phone";
 
+const UUID_RE_GLOBAL = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Monitor-mode device trust check (A2 Phase 1).
+ * Never blocks. Inserts a security_alerts row when the kiosk device is missing,
+ * unknown, untrusted, or company-mismatched. Enforce mode is a future phase.
+ */
+async function auditDeviceTrust(
+  adminClient: ReturnType<typeof createClient>,
+  params: {
+    action: string;
+    device_id: string | null | undefined;
+    employee_id: string | null | undefined;
+    company_id: string | null | undefined;
+  },
+): Promise<void> {
+  try {
+    const { action, device_id, employee_id, company_id } = params;
+    let reason: string | null = null;
+    let trusted = false;
+
+    if (!device_id || typeof device_id !== "string" || !UUID_RE_GLOBAL.test(device_id)) {
+      reason = "missing_or_invalid_device_id";
+    } else {
+      const { data: dev } = await adminClient
+        .from("kiosk_devices")
+        .select("id, company_id, is_active, is_trusted")
+        .eq("id", device_id)
+        .maybeSingle();
+      if (!dev) reason = "device_not_registered";
+      else if (!dev.is_active) reason = "device_inactive";
+      else if (company_id && dev.company_id !== company_id) reason = "company_mismatch";
+      else if (!dev.is_trusted) reason = "device_not_trusted";
+      else trusted = true;
+    }
+
+    if (trusted) return;
+
+    console.warn("[front-desk monitor] untrusted device", { action, device_id, employee_id, company_id, reason });
+
+    await adminClient.from("security_alerts").insert({
+      check_name: "front_desk_untrusted_device",
+      severity: "warn",
+      target: action,
+      expected: "trusted device with matching company_id",
+      actual: reason,
+      details: {
+        action,
+        employee_id: employee_id ?? null,
+        company_id: company_id ?? null,
+        device_id: device_id ?? null,
+        mode: "monitor",
+      },
+    });
+  } catch (err) {
+    // Never let auditing break the user-facing action.
+    console.error("auditDeviceTrust failed", err);
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -191,6 +251,15 @@ Deno.serve(async (req) => {
         .eq("id", employee_id)
         .maybeSingle();
       if (!current) return jsonResp({ error: "Empleado no encontrado" }, 404);
+
+      // Monitor-mode device trust audit (non-blocking).
+      void auditDeviceTrust(adminClient, {
+        action: "update_self",
+        device_id,
+        employee_id,
+        company_id: (current as any).company_id,
+      });
+
 
       for (const field of SELF_EDITABLE_FIELDS) {
         if (!(field in updates)) continue;
@@ -346,19 +415,36 @@ Deno.serve(async (req) => {
 
     // ============= LIST PAYMENTS =============
     if (action === "list_payments") {
-      const { phone, employee_id } = body;
+      const { phone, employee_id, device_id } = body;
       let empId: string | null = employee_id ?? null;
+      let empCompanyId: string | null = null;
 
       if (!empId && phone) {
         const cleanPhone = phone.replace(/[^\d+]/g, "").slice(0, 20);
         const { data: emp } = await adminClient
           .from("employees")
-          .select("id")
+          .select("id, company_id")
           .eq("phone_number", cleanPhone)
           .maybeSingle();
         empId = emp?.id ?? null;
+        empCompanyId = emp?.company_id ?? null;
+      } else if (empId) {
+        const { data: emp } = await adminClient
+          .from("employees")
+          .select("company_id")
+          .eq("id", empId)
+          .maybeSingle();
+        empCompanyId = emp?.company_id ?? null;
       }
       if (!empId) return jsonResp({ payments: [] });
+
+      // Monitor-mode device trust audit (non-blocking).
+      void auditDeviceTrust(adminClient, {
+        action: "list_payments",
+        device_id,
+        employee_id: empId,
+        company_id: empCompanyId,
+      });
 
       const { data: rows } = await adminClient
         .from("normalized_payroll_rows")
@@ -369,6 +455,7 @@ Deno.serve(async (req) => {
 
       return jsonResp({ payments: rows || [] });
     }
+
 
     // ============= CREATE VISIT (legacy) =============
     if (action === "create_visit") {
@@ -580,10 +667,23 @@ Deno.serve(async (req) => {
 
     // ============= CAPTURE KIOSK PHOTO =============
     if (action === "capture_kiosk_photo") {
-      const { employee_id, photo_base64, visit_id } = body;
+      const { employee_id, photo_base64, visit_id, device_id } = body;
       if (!employee_id || !photo_base64) {
         return jsonResp({ error: "employee_id y photo_base64 requeridos" }, 400);
       }
+
+      // Monitor-mode device trust audit (non-blocking). Resolve company_id first.
+      const { data: empForAudit } = await adminClient
+        .from("employees")
+        .select("company_id")
+        .eq("id", employee_id)
+        .maybeSingle();
+      void auditDeviceTrust(adminClient, {
+        action: "capture_kiosk_photo",
+        device_id,
+        employee_id,
+        company_id: empForAudit?.company_id ?? null,
+      });
 
       const match = photo_base64.match(/^data:(image\/\w+);base64,(.*)$/);
       const mime = match?.[1] ?? "image/jpeg";

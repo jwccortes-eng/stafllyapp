@@ -6057,6 +6057,7 @@ export type Database = {
           device_identifier: string
           id: string
           is_active: boolean
+          is_trusted: boolean
           location_id: string | null
           name: string
           updated_at: string
@@ -6067,6 +6068,7 @@ export type Database = {
           device_identifier?: string
           id?: string
           is_active?: boolean
+          is_trusted?: boolean
           location_id?: string | null
           name: string
           updated_at?: string
@@ -6077,6 +6079,7 @@ export type Database = {
           device_identifier?: string
           id?: string
           is_active?: boolean
+          is_trusted?: boolean
           location_id?: string | null
           name?: string
           updated_at?: string
