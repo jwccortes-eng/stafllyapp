@@ -252,6 +252,15 @@ Deno.serve(async (req) => {
         .maybeSingle();
       if (!current) return jsonResp({ error: "Empleado no encontrado" }, 404);
 
+      // Monitor-mode device trust audit (non-blocking).
+      void auditDeviceTrust(adminClient, {
+        action: "update_self",
+        device_id,
+        employee_id,
+        company_id: (current as any).company_id,
+      });
+
+
       for (const field of SELF_EDITABLE_FIELDS) {
         if (!(field in updates)) continue;
         const raw = (updates as any)[field];
