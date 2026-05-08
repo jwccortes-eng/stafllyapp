@@ -15657,6 +15657,7 @@ export type Database = {
         Args: { _path: string }
         Returns: boolean
       }
+      application_exists: { Args: { _id: string }; Returns: boolean }
       apply_role_template: {
         Args: {
           _company_id: string
