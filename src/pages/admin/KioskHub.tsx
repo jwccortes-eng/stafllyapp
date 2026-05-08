@@ -643,6 +643,26 @@ export default function KioskHub() {
               <Input value={formDeviceId} onChange={(e) => setFormDeviceId(e.target.value)} className="font-mono" />
               <p className="text-[10px] text-muted-foreground">Auto-generated if left blank.</p>
             </div>
+            <div className="rounded-lg border border-border/50 p-3 space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <Label className="text-sm">Active</Label>
+                  <p className="text-[11px] text-muted-foreground">Inactive devices can't be used as kiosks.</p>
+                </div>
+                <Switch checked={formIsActive} onCheckedChange={setFormIsActive} />
+              </div>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <Label className="text-sm flex items-center gap-1.5">
+                    <ShieldCheck className="h-3.5 w-3.5" /> Trusted
+                  </Label>
+                  <p className="text-[11px] text-muted-foreground">
+                    Marked as a known device. Untrusted devices are logged in monitor mode (not blocked yet).
+                  </p>
+                </div>
+                <Switch checked={formIsTrusted} onCheckedChange={setFormIsTrusted} />
+              </div>
+            </div>
             <Button onClick={handleSave} disabled={!formName.trim() || saving} className="w-full">
               {saving ? "Saving..." : editing ? "Save changes" : "Create kiosk"}
             </Button>
