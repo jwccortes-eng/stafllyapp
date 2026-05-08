@@ -110,11 +110,17 @@ export default function KioskHub() {
   const [formName, setFormName] = useState("");
   const [formLocation, setFormLocation] = useState<string>("");
   const [formDeviceId, setFormDeviceId] = useState("");
+  const [formIsActive, setFormIsActive] = useState(true);
+  const [formIsTrusted, setFormIsTrusted] = useState(false);
   const [saving, setSaving] = useState(false);
 
   // Today's kiosk activity
   const [todayEvents, setTodayEvents] = useState<KioskClockRow[]>([]);
   const [loadingEvents, setLoadingEvents] = useState(true);
+
+  // Untrusted device alerts (A2 monitor mode)
+  const [alerts, setAlerts] = useState<UntrustedAlertRow[]>([]);
+  const [loadingAlerts, setLoadingAlerts] = useState(true);
 
   const fetchDevices = async () => {
     if (!selectedCompanyId) return;
