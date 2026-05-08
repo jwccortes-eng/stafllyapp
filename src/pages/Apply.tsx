@@ -378,9 +378,13 @@ export default function Apply() {
           setSubmitError(`No se pudo subir el documento: ${uploadErr.message}. Tu solicitud se envió, pero sube tu documento más tarde.`);
         } else {
           documentUrl = path;
-          await supabase.from("job_applications")
+          // Best-effort: anon cannot update job_applications (admin-only RLS),
+          // so we don't block on this. application_documents row below is the
+          // source of truth used by the admin review UI.
+          supabase.from("job_applications")
             .update({ document_url: path })
-            .eq("id", applicationId);
+            .eq("id", applicationId)
+            .then(r => { if (r.error) console.warn("[apply] doc url patch skipped:", r.error.message); });
         }
       }
 
