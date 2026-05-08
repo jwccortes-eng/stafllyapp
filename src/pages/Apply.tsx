@@ -306,18 +306,9 @@ export default function Apply() {
     setSubmitting(true);
     setSubmitError(null);
     try {
-      let documentUrl: string | undefined;
-      if (documentFile) {
-        const ext = documentFile.name.split(".").pop();
-        const path = `${company.id}/${Date.now()}.${ext}`;
-        const { error: uploadErr } = await supabase.storage.from("application-documents").upload(path, documentFile);
-        if (uploadErr) {
-          throw new Error("No se pudo subir el documento. Intenta de nuevo.");
-        }
-        documentUrl = path;
-      }
-
       const normalizedPhoneValue = normalizePhone(phone);
+
+      const applicationId = safeRandomUUID();
 
       const payload = {
         company_id: company.id,
@@ -332,7 +323,7 @@ export default function Apply() {
         can_drive: canDrive,
         has_car: hasCar,
         can_travel: canTravel,
-        document_url: documentUrl ?? null,
+        document_url: null as string | null,
         emergency_contact: emergencyContact.trim() || null,
         experience_summary: experienceSummary.trim() || null,
         languages: languages.trim() ? languages.split(",").map((l) => l.trim()) : null,
@@ -344,8 +335,6 @@ export default function Apply() {
         address_zip: address.address_zip.trim() || null,
         formatted_address: [address.address_line, address.address_city, address.address_state, address.address_zip].filter(Boolean).join(", ") || null,
       };
-
-      const applicationId = safeRandomUUID();
 
       const { error } = await supabase
         .from("job_applications")
@@ -365,6 +354,37 @@ export default function Apply() {
           throw new Error("No se pudo guardar la solicitud. Contacta a la empresa.");
         } else {
           throw new Error(`Error al enviar: ${msg}`);
+        }
+      }
+
+      // Upload document AFTER the application row exists so RLS policy
+      // ({applicationId}/...) accepts the anon upload.
+      let documentUrl: string | null = null;
+      if (documentFile) {
+        const ext = (documentFile.name.split(".").pop() || "bin").toLowerCase();
+        const path = `${applicationId}/${Date.now()}.${ext}`;
+        const { error: uploadErr } = await supabase.storage
+          .from("application-documents")
+          .upload(path, documentFile, {
+            contentType: documentFile.type || undefined,
+            upsert: false,
+          });
+        if (uploadErr) {
+          console.warn("[apply] storage upload failed", {
+            bucket: "application-documents",
+            path,
+            error: uploadErr,
+          });
+          setSubmitError(`No se pudo subir el documento: ${uploadErr.message}. Tu solicitud se envió, pero sube tu documento más tarde.`);
+        } else {
+          documentUrl = path;
+          // Best-effort: anon cannot update job_applications (admin-only RLS),
+          // so we don't block on this. application_documents row below is the
+          // source of truth used by the admin review UI.
+          supabase.from("job_applications")
+            .update({ document_url: path })
+            .eq("id", applicationId)
+            .then(r => { if (r.error) console.warn("[apply] doc url patch skipped:", r.error.message); });
         }
       }
 
