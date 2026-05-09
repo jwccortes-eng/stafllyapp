@@ -22,6 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import {
   Clock, AlertTriangle, Users, Activity, CalendarClock, CheckCircle2,
@@ -84,8 +85,10 @@ export default function TimeClockCommandView() {
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState<string>("live");
   const [tabAutoSet, setTabAutoSet] = useState(false);
+  const [alertDetail, setAlertDetail] = useState<AlertItem | null>(null);
 
   const openWorker = (id: string) => navigate(`/app/people/${id}`);
+  const openAlert = (item: AlertItem) => setAlertDetail(item);
 
   // live tick
   useEffect(() => {
@@ -398,7 +401,7 @@ export default function TimeClockCommandView() {
         ) : (
           <ul className="divide-y divide-border/40">
             {alerts.slice(0, 8).map((item) => (
-              <AlertRow key={`${item.type}-${item.entry.id}`} item={item} onOpen={() => openWorker(item.employee.id)} />
+              <AlertRow key={`${item.type}-${item.entry.id}`} item={item} onOpen={() => openAlert(item)} />
             ))}
           </ul>
         )}
@@ -501,7 +504,7 @@ export default function TimeClockCommandView() {
             ) : (
               <ul className="divide-y divide-border/40">
                 {alerts.map((item) => (
-                  <AlertRow key={`${item.type}-${item.entry.id}`} item={item} onOpen={() => openWorker(item.employee.id)} />
+                  <AlertRow key={`${item.type}-${item.entry.id}`} item={item} onOpen={() => openAlert(item)} />
                 ))}
               </ul>
             )}
@@ -622,7 +625,7 @@ export default function TimeClockCommandView() {
             ) : (
               <ul className="divide-y divide-border/40">
                 {approvals.map((item) => (
-                  <AlertRow key={`${item.type}-${item.entry.id}`} item={item} onOpen={() => openWorker(item.employee.id)} />
+                  <AlertRow key={`${item.type}-${item.entry.id}`} item={item} onOpen={() => openAlert(item)} />
                 ))}
               </ul>
             )}
@@ -697,9 +700,128 @@ export default function TimeClockCommandView() {
       <p className="text-[11px] text-muted-foreground">
         Read-only · Time clock can show scheduled shift as context but never as payment.
       </p>
+
+      <AlertDetailSheet
+        item={alertDetail}
+        onClose={() => setAlertDetail(null)}
+        onOpenWorker={(id) => {
+          setAlertDetail(null);
+          openWorker(id);
+        }}
+      />
     </div>
   );
 }
+
+// ─── Alert detail sheet ──────────────────────────────────
+function AlertDetailSheet({
+  item,
+  onClose,
+  onOpenWorker,
+}: {
+  item: AlertItem | null;
+  onClose: () => void;
+  onOpenWorker: (id: string) => void;
+}) {
+  const open = !!item;
+  const labelMap: Record<AlertItem["type"], string> = {
+    stale_open: "Stale open clock",
+    long_open: "Long open clock",
+    very_long: "Very long entry",
+    needs_review: "Needs review",
+    no_shift: "Clock without scheduled shift",
+  };
+  return (
+    <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
+      <SheetContent side="bottom" className="rounded-t-3xl p-0 max-h-[85vh] flex flex-col">
+        <SheetHeader className="px-5 pt-5 pb-3 text-left">
+          <SheetTitle className="text-base font-bold font-heading">
+            {item ? labelMap[item.type] : "Time alert"}
+          </SheetTitle>
+        </SheetHeader>
+        {item && (
+          <div className="px-5 pb-5 space-y-4 overflow-y-auto">
+            <div className="flex items-center gap-3">
+              <EmployeeAvatar
+                avatarUrl={item.employee.avatar_url}
+                firstName={item.employee.first_name}
+                lastName={item.employee.last_name}
+                size="md"
+              />
+              <div className="min-w-0 flex-1">
+                <div className="text-sm font-semibold truncate">
+                  {item.employee.first_name} {item.employee.last_name}
+                </div>
+                {item.employee.employer_identification != null && (
+                  <div className="text-[11px] font-mono text-muted-foreground">
+                    #{item.employee.employer_identification}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-border bg-card divide-y divide-border/50">
+              <div className="flex items-center justify-between px-4 py-3 text-sm">
+                <span className="text-muted-foreground">Issue</span>
+                <span className="font-medium text-foreground">{item.reason}</span>
+              </div>
+              <div className="flex items-center justify-between px-4 py-3 text-sm">
+                <span className="text-muted-foreground">Clock-in</span>
+                <span className="font-medium text-foreground tabular-nums">
+                  {format(new Date(item.entry.clock_in), "PPp", { locale: enUS })}
+                </span>
+              </div>
+              <div className="flex items-center justify-between px-4 py-3 text-sm">
+                <span className="text-muted-foreground">Elapsed</span>
+                <span className="font-medium text-foreground tabular-nums">
+                  {formatDuration(item.minutes)}
+                </span>
+              </div>
+              {item.entry.scheduled_shifts && (
+                <div className="flex items-center justify-between px-4 py-3 text-sm">
+                  <span className="text-muted-foreground">Shift</span>
+                  <span className="font-medium text-foreground truncate ml-2">
+                    {item.entry.scheduled_shifts.title}
+                  </span>
+                </div>
+              )}
+              <div className="flex items-center justify-between px-4 py-3 text-sm">
+                <span className="text-muted-foreground">Status</span>
+                <span className="font-medium text-foreground">
+                  {item.entry.clock_out ? "Closed" : "Open"}
+                </span>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-800 dark:text-amber-300">
+              <strong className="block font-semibold mb-0.5">Suggested action</strong>
+              {item.type === "stale_open"
+                ? "Close the clock from worker profile or wait for the worker to clock out."
+                : item.type === "very_long"
+                ? "Review the entry for accuracy — duration exceeds 16h."
+                : item.type === "needs_review"
+                ? "Open the worker's timesheet to validate the entry."
+                : item.type === "no_shift"
+                ? "Link this clock to a scheduled shift if needed."
+                : "Reach out to the worker and confirm whether they are still working."}
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <Button
+                variant="outline"
+                className="w-full h-11 rounded-xl text-sm font-medium gap-2"
+                onClick={() => onOpenWorker(item.employee.id)}
+              >
+                <Users className="h-4 w-4" /> View worker profile
+              </Button>
+            </div>
+          </div>
+        )}
+      </SheetContent>
+    </Sheet>
+  );
+}
+
 
 // ─── helpers ──────────────────────────────────────────────
 function formatDuration(minutes: number) {

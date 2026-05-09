@@ -247,8 +247,8 @@ export function MobileShiftOperationsSheet({
   };
 
   const handleAssign = () => {
-    toast.info("Assignment editing coming in Phase 2", {
-      description: "Use desktop to add or remove workers for now.",
+    toast.info("Assignment editing is desktop-only", {
+      description: "Mobile editing arrives in Phase 2. Use desktop to add or remove workers.",
     });
   };
 
@@ -424,26 +424,24 @@ export function MobileShiftOperationsSheet({
             )}
 
             {understaffed && (
-              <div className="mt-2.5 rounded-2xl border border-rose-500/30 bg-rose-500/5 p-3.5 flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="text-sm font-semibold text-rose-700 dark:text-rose-400">
-                    {slots - assignedCount} spot{slots - assignedCount === 1 ? "" : "s"} open
-                  </div>
-                  <div className="text-xs text-rose-600/80 dark:text-rose-400/70 mt-0.5">
-                    Add workers to reach full coverage
-                  </div>
+              <div className="mt-2.5 rounded-2xl border border-rose-500/30 bg-rose-500/5 p-3.5">
+                <div className="text-sm font-semibold text-rose-700 dark:text-rose-400">
+                  {slots - assignedCount} spot{slots - assignedCount === 1 ? "" : "s"} open
                 </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="shrink-0 h-9 rounded-xl border-rose-500/40 text-rose-700 dark:text-rose-400 hover:bg-rose-500/10 text-sm font-medium"
-                  onClick={handleAssign}
-                >
-                  <UserPlus className="h-3.5 w-3.5 mr-1" />
-                  Assign
-                </Button>
+                <div className="text-xs text-rose-600/80 dark:text-rose-400/70 mt-0.5">
+                  Add workers to reach full coverage
+                </div>
               </div>
             )}
+
+            {/* Honest mobile capability banner */}
+            <div className="mt-2.5 rounded-2xl border border-border bg-muted/30 p-3 text-xs text-foreground/80">
+              <strong className="block font-semibold text-foreground mb-0.5">
+                Worker assignment editing is desktop-only for now
+              </strong>
+              Mobile support is coming next. You can still review assignments,
+              attendance, traceability and open spots from here.
+            </div>
           </section>
 
           {/* Attendance validation — unified premium panel (same as desktop)
@@ -508,10 +506,6 @@ export function MobileShiftOperationsSheet({
             <Button variant="outline" className="h-12 rounded-xl justify-start gap-2 text-sm font-medium" onClick={handleViewAttendance}>
               <ClipboardList className="h-4 w-4" />
               <span>Attendance</span>
-            </Button>
-            <Button variant="outline" className="h-12 rounded-xl justify-start gap-2 text-sm font-medium" onClick={handleAssign}>
-              <UserPlus className="h-4 w-4" />
-              <span>Assign workers</span>
             </Button>
           </section>
         </div>

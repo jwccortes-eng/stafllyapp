@@ -91,17 +91,17 @@ export function MoreSheet({
     <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
       <SheetContent
         side="bottom"
-        className="p-0 h-[88vh] rounded-t-3xl border-t border-border/40 bg-card/98 backdrop-blur-2xl flex flex-col"
+        className="p-0 h-[88vh] rounded-t-3xl border-t border-border bg-card flex flex-col"
       >
         {/* Drag handle */}
         <div className="flex justify-center pt-2 pb-1 shrink-0">
-          <div className="h-1 w-10 rounded-full bg-muted-foreground/20" />
+          <div className="h-1 w-10 rounded-full bg-border" />
         </div>
 
         <SheetHeader className="px-5 pt-2 pb-3 flex-row items-center justify-between space-y-0 shrink-0">
           <div className="text-left">
-            <SheetTitle className="text-base font-bold font-heading">All Apps</SheetTitle>
-            <p className="text-[11px] text-muted-foreground/70 mt-0.5">
+            <SheetTitle className="text-base font-bold font-heading text-foreground">All Apps</SheetTitle>
+            <p className="text-[11px] text-muted-foreground mt-0.5">
               Tap <Pin className="inline h-3 w-3 -mt-0.5" /> to pin ({pinnedIds.length}/{maxPins})
             </p>
           </div>
@@ -178,7 +178,7 @@ function SectionGrid({
 }: SectionGridProps) {
   return (
     <div>
-      <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/45 mb-2">
+      <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-2">
         {label}
       </p>
       <div className="grid grid-cols-4 gap-2">
@@ -195,12 +195,12 @@ function SectionGrid({
                 onClick={onClose}
                 className={cn(
                   "flex flex-col items-center gap-1.5 py-3 px-1 rounded-xl transition-all duration-200 active:scale-95",
-                  active ? "bg-primary/10 text-primary" : "text-foreground/75 hover:bg-muted/40"
+                  active ? "bg-primary/10 text-primary" : "text-foreground hover:bg-muted"
                 )}
               >
                 <div className={cn(
                   "relative flex items-center justify-center h-11 w-11 rounded-xl transition-all",
-                  active ? "bg-primary text-primary-foreground shadow-md shadow-primary/25" : "bg-muted/40"
+                  active ? "bg-primary text-primary-foreground shadow-md shadow-primary/25" : "bg-muted text-foreground"
                 )}>
                   <item.icon className="h-5 w-5" strokeWidth={active ? 2.2 : 1.8} />
                   {count > 0 && (
