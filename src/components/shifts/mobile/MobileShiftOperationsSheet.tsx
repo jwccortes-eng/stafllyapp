@@ -1191,18 +1191,18 @@ function PublicationBadge({
   const base = "h-[22px] px-2 text-[11px] font-semibold leading-none";
   const s = (status ?? "").toLowerCase();
   if (s === "cancelled" || s === "canceled") {
-    return <Badge variant="outline" className={cn(base, "border-rose-500/40 text-rose-700 dark:text-rose-400 bg-rose-500/10")}>Cancelled</Badge>;
+    return <Badge variant="outline" aria-label="Publication status: cancelled" className={cn(base, "border-rose-500/40 text-rose-700 dark:text-rose-400 bg-rose-500/10")}>Cancelled</Badge>;
   }
   if (s === "archived") {
-    return <Badge variant="outline" className={cn(base, "border-border/60 text-muted-foreground bg-muted/40")}>Archived</Badge>;
+    return <Badge variant="outline" aria-label="Publication status: archived" className={cn(base, "border-border/60 text-muted-foreground bg-muted/40")}>Archived</Badge>;
   }
   if (draft) {
-    return <Badge variant="outline" className={cn(base, "border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10")}>Draft</Badge>;
+    return <Badge variant="outline" aria-label="Publication status: draft — workers cannot see this shift yet" className={cn(base, "border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10")}>Draft</Badge>;
   }
   if (published) {
-    return <Badge variant="outline" className={cn(base, "border-emerald-500/40 text-emerald-700 dark:text-emerald-400 bg-emerald-500/10")}>Published</Badge>;
+    return <Badge variant="outline" aria-label="Publication status: published" className={cn(base, "border-emerald-500/40 text-emerald-700 dark:text-emerald-400 bg-emerald-500/10")}>Published</Badge>;
   }
-  return <Badge variant="outline" className={cn(base)}>Shift</Badge>;
+  return <Badge variant="outline" aria-label="Publication status: shift" className={cn(base)}>Shift</Badge>;
 }
 
 /* ───── Traceability builders (pure, read-only) ───── */
