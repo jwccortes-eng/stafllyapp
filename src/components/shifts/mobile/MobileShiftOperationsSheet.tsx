@@ -161,7 +161,7 @@ export function MobileShiftOperationsSheet({
       ]);
       if (cancelled) return;
       if (asgnRes.error || teRes.error) {
-        setTeamError("Couldn't load team data");
+        setTeamError(MOBILE_SHIFT_COPY.teamErrorTitle);
       }
       setAsgnExtras(((asgnRes.data ?? []) as any));
       setShiftAdminId(((shiftRes.data as any)?.shift_admin_id) ?? null);
