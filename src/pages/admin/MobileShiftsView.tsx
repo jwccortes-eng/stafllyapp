@@ -104,12 +104,14 @@ export default function MobileShiftsView() {
   const [detailShift, setDetailShift] = useState<Shift | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
 
-  // Load shifts for the next 14 days + last 1 day (for "Today" buffer)
+  // Load shifts: yesterday for "Today" buffer + 60 days forward for Upcoming
   const dateRange = useMemo(() => {
     const start = format(addDays(new Date(), -1), "yyyy-MM-dd");
-    const end = format(addDays(new Date(), 14), "yyyy-MM-dd");
+    const end = format(addDays(new Date(), 60), "yyyy-MM-dd");
     return { start, end };
   }, []);
+
+  const [pendingRequests, setPendingRequests] = useState<PendingRequest[]>([]);
 
   useEffect(() => {
     if (!selectedCompanyId) {
