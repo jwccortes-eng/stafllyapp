@@ -451,22 +451,38 @@ export function MobileShiftOperationsSheet({
                 <p className="text-xs text-muted-foreground mt-1">Add workers from desktop for now.</p>
               </div>
             ) : (
-              <div className="space-y-1.5 max-h-[360px] overflow-y-auto pr-1 -mr-1">
-                {assignedWorkers.map(w => {
-                  const extra = asgnExtras.find(a => a.employee_id === w.id);
-                  return (
-                    <WorkerRow
-                      key={w.id}
-                      worker={w}
-                      assignmentStatus={extra?.status ?? null}
-                      attendanceStatus={extra?.attendance_status ?? null}
-                      role={extra?.assignment_role ?? null}
-                      clock={clockByEmp[w.id]}
-                      isShiftAdmin={shiftAdminId === w.id}
-                    />
-                  );
-                })}
-              </div>
+              <>
+                <p className="text-[11px] text-muted-foreground mb-1.5 px-0.5">
+                  Sorted by role and attendance status.
+                </p>
+                <div className="space-y-1.5 max-h-[360px] overflow-y-auto pr-1 -mr-1">
+                  {[...assignedWorkers]
+                    .sort((a, b) => {
+                      const ea = asgnExtras.find(x => x.employee_id === a.id) ?? null;
+                      const eb = asgnExtras.find(x => x.employee_id === b.id) ?? null;
+                      const sa = getWorkerSortScore(a, ea, clockByEmp[a.id], shiftAdminId, dateBucket);
+                      const sb = getWorkerSortScore(b, eb, clockByEmp[b.id], shiftAdminId, dateBucket);
+                      if (sa !== sb) return sa - sb;
+                      const na = `${a.first_name ?? ""} ${a.last_name ?? ""}`.trim().toLowerCase();
+                      const nb = `${b.first_name ?? ""} ${b.last_name ?? ""}`.trim().toLowerCase();
+                      return na.localeCompare(nb);
+                    })
+                    .map(w => {
+                      const extra = asgnExtras.find(a => a.employee_id === w.id);
+                      return (
+                        <WorkerRow
+                          key={w.id}
+                          worker={w}
+                          assignmentStatus={extra?.status ?? null}
+                          attendanceStatus={extra?.attendance_status ?? null}
+                          role={extra?.assignment_role ?? null}
+                          clock={clockByEmp[w.id]}
+                          isShiftAdmin={shiftAdminId === w.id}
+                        />
+                      );
+                    })}
+                </div>
+              </>
             )}
 
             {understaffed && (
@@ -885,3 +901,51 @@ function buildShiftAudit(shift: Shift): TraceLinkedRecord[] {
     { label: "Reconciliation hash", value: shift.reconciliation_hash ? shift.reconciliation_hash.slice(0, 10) + "…" : null, hint: shift.reconciliation_hash ?? undefined },
   ];
 }
+
+/* ───── Worker sort (mobile shift Assigned section) ─────
+ * Lower score = appears first.
+ *   0  Shift admin
+ *  10  Captain / lead / admin role
+ *  20  Currently clocked in (clock_in && !clock_out) or marked present
+ *  30  Needs review / late / absent — only when shift is today/past
+ *  40  Not started / pending / missing clock-in
+ *  60  Clocked out (already left)
+ *  80  Excused
+ * +5 when worker has no phone (contactable workers first within group).
+ */
+function getWorkerSortScore(
+  worker: Employee,
+  extra: { status: string; attendance_status: string | null; assignment_role: string | null } | null,
+  clock: { clock_in: string | null; clock_out: string | null } | undefined,
+  shiftAdminId: string | null,
+  dateBucket: "today" | "tomorrow" | "past" | "future",
+): number {
+  let score = 40;
+  const role = (extra?.assignment_role ?? "").toLowerCase();
+  const att = (extra?.attendance_status ?? "").toLowerCase();
+  const isUrgentDay = dateBucket === "today" || dateBucket === "past";
+
+  if (shiftAdminId && worker.id === shiftAdminId) {
+    score = 0;
+  } else if (role === "captain" || role === "lead" || role === "admin") {
+    score = 10;
+  } else if (clock?.clock_in && !clock?.clock_out) {
+    score = 20;
+  } else if (clock?.clock_out) {
+    score = 60;
+  } else if (att === "needs_review" || att === "late" || att === "absent") {
+    score = isUrgentDay ? 30 : 50;
+  } else if (att === "excused") {
+    score = 80;
+  } else if (att === "present") {
+    score = 20;
+  } else {
+    score = 40;
+  }
+
+  const phone = (worker.phone_number ?? "").trim();
+  if (!phone) score += 5;
+
+  return score;
+}
+
