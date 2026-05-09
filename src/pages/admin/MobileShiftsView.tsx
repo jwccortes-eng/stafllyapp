@@ -741,9 +741,8 @@ function EmptyState({ tab }: { tab: TabKey }) {
   const messages: Record<TabKey, { title: string; hint: string }> = {
     today: { title: "No shifts today", hint: "Take a breath. Tomorrow's roster is just a tap away." },
     upcoming: { title: "Nothing scheduled ahead", hint: "Use the desktop scheduler to plan upcoming shifts." },
-    unstaffed: { title: "All shifts are staffed", hint: "Coverage looks good across the board." },
-    drafts: { title: "No drafts pending", hint: "Drafts you save will appear here before publishing." },
-    issues: { title: "No issues found", hint: "Everything checks out — no missing clients or empty slots." },
+    needs: { title: "All shifts are staffed", hint: "Coverage looks good across the board." },
+    requests: { title: "No pending shift requests", hint: "Worker claims and shift requests will appear here when submitted." },
   };
   const m = messages[tab];
   return (
