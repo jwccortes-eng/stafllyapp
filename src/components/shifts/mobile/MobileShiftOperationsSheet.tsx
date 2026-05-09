@@ -869,6 +869,7 @@ export function MobileShiftOperationsSheet({
         id: a.id,
         employee_id: a.employee_id,
         status: a.status,
+        response_status: a.response_status,
         attendance_status: a.attendance_status,
         assignment_role: a.assignment_role,
       }))}
@@ -876,6 +877,7 @@ export function MobileShiftOperationsSheet({
       canManage={canValidate}
       clientName={clientName}
       locationName={locationName}
+      shiftAdminId={shiftAdminId}
     />
     </>
   );
