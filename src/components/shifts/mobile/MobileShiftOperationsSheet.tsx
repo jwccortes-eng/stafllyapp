@@ -509,7 +509,7 @@ export function MobileShiftOperationsSheet({
               <div className="flex items-center gap-1.5">
                 <Workflow className="h-4 w-4 text-muted-foreground" />
                 <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Traceability
+                  Source &amp; history
                 </span>
               </div>
               <ChevronDown
@@ -537,7 +537,7 @@ export function MobileShiftOperationsSheet({
               />
             ) : (
               <p className="px-0.5 text-xs text-muted-foreground">
-                Tap to see source, timeline, linked records and audit.
+                Tap to see where this shift came from, recent changes, and linked records.
               </p>
             )}
             <p className="mt-2 px-0.5 text-[11px] text-muted-foreground">
