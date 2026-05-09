@@ -39,6 +39,29 @@ import {
  * No notifications, no DB writes, no schema/RLS impact.
  */
 
+/**
+ * Centralized operator-facing copy for the mobile shift operations sheet.
+ * Keep visible wording here so empty/error/helper messages stay consistent.
+ * Dynamic strings (with worker names, counts, etc.) stay local in JSX.
+ */
+const MOBILE_SHIFT_COPY = {
+  assignedWorkersHelper: "Review assigned workers and contact them safely from mobile.",
+  assignedSortedHelper: "Sorted by role and attendance status.",
+  attendanceSectionHelper: "Review clock-in and clock-out activity.",
+  shiftDetailsHelper: "Review the core shift information.",
+  noWorkersTitle: "No workers assigned yet",
+  noWorkersHelper: "Add workers from desktop before reviewing coverage or attendance.",
+  attendanceUnavailableTitle: "Attendance unavailable",
+  attendanceUnavailableHelper: "Assign workers first before reviewing attendance.",
+  noClockActivityTitle: "No clock activity yet",
+  noClockActivityHelper: "Clock-in and clock-out activity will appear here when workers start.",
+  noPhoneTitle: "No phone on file",
+  noPhoneHelper: "Add a phone number from the worker profile to enable call, SMS, and WhatsApp.",
+  teamErrorTitle: "Couldn't load team data",
+  teamErrorHelper: "Check your connection and try again. No shift data was changed.",
+  readOnlyMobile: "Read-only on mobile",
+} as const;
+
 interface Props {
   shift: Shift | null;
   open: boolean;
