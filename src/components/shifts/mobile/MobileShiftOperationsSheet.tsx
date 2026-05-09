@@ -322,7 +322,11 @@ export function MobileShiftOperationsSheet({
         className="h-[92vh] p-0 rounded-t-3xl flex flex-col overflow-hidden bg-background"
       >
         {/* Sticky Context Header — "You are reviewing this shift" */}
-        <div className="px-5 pt-3 pb-3 border-b border-border/40 bg-background/95 backdrop-blur-sm">
+        <div
+          className="px-5 pt-3 pb-3 border-b border-border/40 bg-background/95 backdrop-blur-sm"
+          role="region"
+          aria-label={`Shift context for ${clientName && clientName !== "—" ? clientName : (shift.title || "shift")}, ${dateLabel(shift.date)}, ${formatTimeShort(shift.start_time)} to ${formatTimeShort(shift.end_time)}`}
+        >
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5 mb-1">
@@ -357,30 +361,50 @@ export function MobileShiftOperationsSheet({
           </div>
 
           {/* Status / publication / context badges */}
-          <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+          <div className="mt-2.5 flex flex-wrap items-center gap-1.5" role="group" aria-label="Shift status badges">
             <PublicationBadge status={shift.publication_status} draft={draft} published={published} />
             {understaffed && (
-              <Badge variant="outline" className="h-[22px] px-2 text-[11px] font-medium border-rose-500/40 text-rose-700 dark:text-rose-400 bg-rose-500/10">
+              <Badge
+                variant="outline"
+                className="h-[22px] px-2 text-[11px] font-medium border-rose-500/40 text-rose-700 dark:text-rose-400 bg-rose-500/10"
+                aria-label={`Unstaffed — needs ${Math.max(slots - assignedCount, 0)} more worker${slots - assignedCount === 1 ? "" : "s"}`}
+              >
                 Unstaffed
               </Badge>
             )}
             {fullyStaffed && published && (
-              <Badge variant="outline" className="h-[22px] px-2 text-[11px] font-medium border-emerald-500/40 text-emerald-700 dark:text-emerald-400 bg-emerald-500/10">
+              <Badge
+                variant="outline"
+                className="h-[22px] px-2 text-[11px] font-medium border-emerald-500/40 text-emerald-700 dark:text-emerald-400 bg-emerald-500/10"
+                aria-label="Fully staffed"
+              >
                 Fully staffed
               </Badge>
             )}
             {noClient && (
-              <Badge variant="outline" className="h-[22px] px-2 text-[11px] font-medium border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10">
+              <Badge
+                variant="outline"
+                className="h-[22px] px-2 text-[11px] font-medium border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10"
+                aria-label="Warning: no client linked to this shift"
+              >
                 No client
               </Badge>
             )}
             {noLocation && (
-              <Badge variant="outline" className="h-[22px] px-2 text-[11px] font-medium border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10">
+              <Badge
+                variant="outline"
+                className="h-[22px] px-2 text-[11px] font-medium border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10"
+                aria-label="Warning: no location linked to this shift"
+              >
                 No location
               </Badge>
             )}
             {weekendLabel && (
-              <Badge variant="outline" className="h-[22px] px-2 text-[11px] font-medium border-border/60 text-muted-foreground bg-muted/40">
+              <Badge
+                variant="outline"
+                className="h-[22px] px-2 text-[11px] font-medium border-border/60 text-muted-foreground bg-muted/40"
+                aria-label={`Weekend shift: ${weekendLabel}`}
+              >
                 {weekendLabel}
               </Badge>
             )}
@@ -394,6 +418,7 @@ export function MobileShiftOperationsSheet({
                     : "border-border/60 text-muted-foreground bg-muted/40",
                 )}
                 title="Calendar week context — pay period not loaded"
+                aria-label={`Calendar week context: ${weekBucket.label}. Pay period not loaded.`}
               >
                 {weekBucket.label}
               </Badge>
@@ -412,12 +437,19 @@ export function MobileShiftOperationsSheet({
                 {formatTimeShort(shift.start_time)}–{formatTimeShort(shift.end_time)}
               </span>
             </div>
-            <div className="flex items-center gap-1.5 px-2.5 h-8 rounded-lg bg-muted/60">
-              <Users className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="text-xs font-semibold tabular-nums">
+            <div
+              className="flex items-center gap-1.5 px-2.5 h-8 rounded-lg bg-muted/60"
+              aria-label={
+                slots > 0
+                  ? `${assignedCount} of ${slots} workers assigned`
+                  : `${assignedCount} worker${assignedCount === 1 ? "" : "s"} assigned`
+              }
+            >
+              <Users className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
+              <span className="text-xs font-semibold tabular-nums" aria-hidden="true">
                 {slots > 0 ? `${assignedCount}/${slots}` : `${assignedCount}`}
               </span>
-              <span className="text-[11px] text-muted-foreground">assigned</span>
+              <span className="text-[11px] text-muted-foreground" aria-hidden="true">assigned</span>
             </div>
           </div>
 
@@ -1159,18 +1191,18 @@ function PublicationBadge({
   const base = "h-[22px] px-2 text-[11px] font-semibold leading-none";
   const s = (status ?? "").toLowerCase();
   if (s === "cancelled" || s === "canceled") {
-    return <Badge variant="outline" className={cn(base, "border-rose-500/40 text-rose-700 dark:text-rose-400 bg-rose-500/10")}>Cancelled</Badge>;
+    return <Badge variant="outline" aria-label="Publication status: cancelled" className={cn(base, "border-rose-500/40 text-rose-700 dark:text-rose-400 bg-rose-500/10")}>Cancelled</Badge>;
   }
   if (s === "archived") {
-    return <Badge variant="outline" className={cn(base, "border-border/60 text-muted-foreground bg-muted/40")}>Archived</Badge>;
+    return <Badge variant="outline" aria-label="Publication status: archived" className={cn(base, "border-border/60 text-muted-foreground bg-muted/40")}>Archived</Badge>;
   }
   if (draft) {
-    return <Badge variant="outline" className={cn(base, "border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10")}>Draft</Badge>;
+    return <Badge variant="outline" aria-label="Publication status: draft — workers cannot see this shift yet" className={cn(base, "border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10")}>Draft</Badge>;
   }
   if (published) {
-    return <Badge variant="outline" className={cn(base, "border-emerald-500/40 text-emerald-700 dark:text-emerald-400 bg-emerald-500/10")}>Published</Badge>;
+    return <Badge variant="outline" aria-label="Publication status: published" className={cn(base, "border-emerald-500/40 text-emerald-700 dark:text-emerald-400 bg-emerald-500/10")}>Published</Badge>;
   }
-  return <Badge variant="outline" className={cn(base)}>Shift</Badge>;
+  return <Badge variant="outline" aria-label="Publication status: shift" className={cn(base)}>Shift</Badge>;
 }
 
 /* ───── Traceability builders (pure, read-only) ───── */
