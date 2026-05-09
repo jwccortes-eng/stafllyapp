@@ -954,6 +954,8 @@ export default function Employees() {
         kpis={kpis}
         rightSlot={
           <>
+            {/* Mobile keeps only Quick add to avoid header overflow */}
+            <div className="hidden md:contents">
             {isPrivileged && (
               <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => setCampaignOpen(true)}>
                 <Rocket className="h-3.5 w-3.5 mr-1.5" />
@@ -1074,11 +1076,12 @@ export default function Employees() {
               <DialogTrigger asChild><Button disabled={atEmployeeLimit} size="sm" className="h-8 text-xs"><Plus className="h-3.5 w-3.5 mr-1.5" />New (full form)</Button></DialogTrigger>
               <DialogContent className="max-w-md"><DialogHeader><DialogTitle>New Worker</DialogTitle><DialogDescription>Enter the new worker's information</DialogDescription></DialogHeader>{atEmployeeLimit ? <UpgradeBanner feature={`Limit of ${limits.maxEmployees} active workers`} /> : <EmployeeForm fields={CONNECTEAM_FIELDS} form={form} setForm={setForm} loading={loading} onSubmit={handleCreate} submitLabel="Create" />}</DialogContent>
             </Dialog>
+            </div>
             <Button size="sm" variant="default" className="h-8 text-xs" disabled={atEmployeeLimit} onClick={() => setQuickAddOpen(true)}>
               <UserPlus className="h-3.5 w-3.5 mr-1.5" />Quick add
             </Button>
             <QuickAddInviteWizard open={quickAddOpen} onOpenChange={setQuickAddOpen} onEmployeeCreated={() => fetchEmployees()} />
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setOnboardingSettingsOpen(true)} title="Onboarding settings">
+            <Button variant="ghost" size="icon" className="hidden md:inline-flex h-8 w-8" onClick={() => setOnboardingSettingsOpen(true)} title="Onboarding settings">
               <Settings2 className="h-4 w-4" />
             </Button>
           </>
