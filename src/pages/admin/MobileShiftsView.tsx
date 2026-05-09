@@ -369,16 +369,7 @@ export default function MobileShiftsView() {
                 </span>
               )}
             </Button>
-            {canEdit && (
-              <Button
-                size="icon"
-                className="h-9 w-9 rounded-xl"
-                onClick={handleCreate}
-                aria-label="Create shift"
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
-            )}
+            {/* Create from mobile is intentionally hidden (Phase 1) — desktop recommended */}
           </div>
         </div>
 
