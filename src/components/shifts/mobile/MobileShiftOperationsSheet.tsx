@@ -4,8 +4,9 @@ import {
   X, Clock, MapPin, Building2, Users, Phone, FileEdit, AlertTriangle,
   CheckCircle2, CalendarDays, Sparkles, UserPlus, Share2, ClipboardList,
   ExternalLink, Copy, StickyNote, Hash, Tag, Workflow, ChevronDown,
-  ShieldCheck,
+  ShieldCheck, MessageCircle, MessageSquare, Crown,
 } from "lucide-react";
+import { buildWhatsAppTargets, normalizePhone } from "@/lib/phone";
 import { format, parseISO, isToday, isTomorrow, isPast } from "date-fns";
 import { enUS } from "date-fns/locale";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
@@ -95,28 +96,43 @@ export function MobileShiftOperationsSheet({
     employee_id: string;
     status: string;
     attendance_status: string | null;
+    assignment_role: string | null;
   };
   const [asgnExtras, setAsgnExtras] = useState<AsgnExtra[]>([]);
   const [clockByEmp, setClockByEmp] = useState<Record<string, { clock_in: string | null; clock_out: string | null }>>({});
+  const [shiftAdminId, setShiftAdminId] = useState<string | null>(null);
+  const [loadingTeam, setLoadingTeam] = useState(false);
+  const [teamError, setTeamError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
     if (!shift || !open) return;
+    setLoadingTeam(true);
+    setTeamError(null);
     (async () => {
-      const [asgnRes, teRes] = await Promise.all([
+      const [asgnRes, teRes, shiftRes] = await Promise.all([
         supabase
           .from("shift_assignments")
-          .select("id, employee_id, status, attendance_status")
+          .select("id, employee_id, status, attendance_status, assignment_role")
           .eq("shift_id", shift.id),
         supabase
           .from("time_entries")
           .select("employee_id, clock_in, clock_out")
           .eq("shift_id", shift.id)
           .neq("status", "rejected"),
+        supabase
+          .from("scheduled_shifts")
+          .select("shift_admin_id")
+          .eq("id", shift.id)
+          .maybeSingle(),
       ]);
       if (cancelled) return;
+      if (asgnRes.error || teRes.error) {
+        setTeamError("Couldn't load team data");
+      }
       setAsgnExtras(((asgnRes.data ?? []) as any));
+      setShiftAdminId(((shiftRes.data as any)?.shift_admin_id) ?? null);
       const map: Record<string, { clock_in: string | null; clock_out: string | null }> = {};
       for (const te of (teRes.data ?? []) as any[]) {
         const prev = map[te.employee_id];
@@ -125,6 +141,7 @@ export function MobileShiftOperationsSheet({
         }
       }
       setClockByEmp(map);
+      setLoadingTeam(false);
     })();
     return () => { cancelled = true; };
   }, [shift?.id, open, reloadKey]);
@@ -396,39 +413,70 @@ export function MobileShiftOperationsSheet({
               </span>
             </SectionTitle>
 
-            {assignedWorkers.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-border bg-muted/20 px-4 py-6 text-center">
-                <Users className="h-5 w-5 text-muted-foreground mx-auto mb-2" />
-                <p className="text-sm text-muted-foreground">No workers assigned yet</p>
-              </div>
-            ) : (
-              <div className="space-y-1.5 max-h-[260px] overflow-y-auto pr-1 -mr-1">
-                {assignedWorkers.map(w => (
-                  <WorkerRow key={w.id} worker={w} />
+            {/* Coverage chips */}
+            {(() => {
+              let checkedIn = 0, checkedOut = 0, missing = 0;
+              for (const w of assignedWorkers) {
+                const c = clockByEmp[w.id];
+                if (c?.clock_out) checkedOut++;
+                else if (c?.clock_in) checkedIn++;
+                else missing++;
+              }
+              return (
+                <div className="flex flex-wrap gap-1.5 mb-2.5">
+                  <CoverChip label="Required" value={slots > 0 ? slots : "—"} />
+                  <CoverChip label="Assigned" value={assignedCount} />
+                  <CoverChip label="Checked in" value={checkedIn} tone={checkedIn > 0 ? "good" : "muted"} />
+                  <CoverChip label="Out" value={checkedOut} tone="muted" />
+                  <CoverChip label="Missing" value={missing} tone={missing > 0 && dateBucket === "today" ? "bad" : "muted"} />
+                </div>
+              );
+            })()}
+
+            {loadingTeam && assignedWorkers.length === 0 ? (
+              <div className="space-y-1.5">
+                {[0, 1].map(i => (
+                  <div key={i} className="h-16 rounded-2xl bg-muted/40 animate-pulse" />
                 ))}
               </div>
-            )}
-
-            {understaffed && (
-              <div className="mt-2.5 rounded-2xl border border-rose-500/30 bg-rose-500/5 p-3.5">
-                <div className="text-sm font-semibold text-rose-700 dark:text-rose-400">
-                  {slots - assignedCount} spot{slots - assignedCount === 1 ? "" : "s"} open
-                </div>
-                <div className="text-xs text-rose-600/80 dark:text-rose-400/70 mt-0.5">
-                  Add workers to reach full coverage
-                </div>
+            ) : teamError ? (
+              <div className="rounded-2xl border border-rose-500/30 bg-rose-500/5 px-4 py-4 text-sm text-rose-700 dark:text-rose-400 flex items-center justify-between gap-3">
+                <span>{teamError}</span>
+                <Button size="sm" variant="outline" onClick={() => setReloadKey(k => k + 1)}>Retry</Button>
+              </div>
+            ) : assignedWorkers.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-border bg-muted/20 px-4 py-6 text-center">
+                <Users className="h-5 w-5 text-muted-foreground mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground">No workers assigned yet.</p>
+                <p className="text-xs text-muted-foreground mt-1">Add workers from desktop for now.</p>
+              </div>
+            ) : (
+              <div className="space-y-1.5 max-h-[360px] overflow-y-auto pr-1 -mr-1">
+                {assignedWorkers.map(w => {
+                  const extra = asgnExtras.find(a => a.employee_id === w.id);
+                  return (
+                    <WorkerRow
+                      key={w.id}
+                      worker={w}
+                      assignmentStatus={extra?.status ?? null}
+                      attendanceStatus={extra?.attendance_status ?? null}
+                      role={extra?.assignment_role ?? null}
+                      clock={clockByEmp[w.id]}
+                      isShiftAdmin={shiftAdminId === w.id}
+                    />
+                  );
+                })}
               </div>
             )}
 
-          {/* Phased note — staffing changes are desktop-only for now */}
             {understaffed && (
-              <div className="mt-2.5 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-800 dark:text-amber-300">
-                <strong className="block font-semibold mb-0.5">
+              <div className="mt-2.5 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-3.5">
+                <div className="text-sm font-semibold text-amber-800 dark:text-amber-300">
                   Staffing changes are desktop recommended for now
-                </strong>
-                You can review coverage and contact assigned workers from mobile.
-                Adding or removing workers is being prepared for mobile and should
-                be done from desktop for now.
+                </div>
+                <div className="text-xs text-amber-700/80 dark:text-amber-300/80 mt-1 leading-relaxed">
+                  {slots - assignedCount} spot{slots - assignedCount === 1 ? "" : "s"} open. You can review coverage and contact assigned workers from mobile.
+                </div>
               </div>
             )}
           </section>
@@ -560,34 +608,160 @@ function BriefRow({ tone, text }: { tone: "good" | "warn" | "bad" | "info"; text
   );
 }
 
-function WorkerRow({ worker }: { worker: Employee }) {
-  const phone = worker.phone_number?.trim();
-  const initialsStr = (worker.first_name?.[0] ?? "").toUpperCase() + (worker.last_name?.[0] ?? "").toUpperCase();
+function CoverChip({
+  label, value, tone = "default",
+}: { label: string; value: number | string; tone?: "default" | "good" | "warn" | "bad" | "muted" }) {
+  const cls =
+    tone === "good" ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30" :
+    tone === "warn" ? "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30" :
+    tone === "bad"  ? "bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/30" :
+    tone === "muted" ? "bg-muted/50 text-muted-foreground border-border/50" :
+    "bg-card text-foreground border-border/60";
   return (
-    <div className="flex items-center gap-3 rounded-2xl border border-border/50 bg-card px-3 py-2.5">
-      <Avatar className="h-10 w-10 shrink-0">
-        {worker.avatar_url ? <AvatarImage src={worker.avatar_url} alt="" /> : null}
-        <AvatarFallback className="text-xs font-semibold bg-muted">
-          {initialsStr || "·"}
-        </AvatarFallback>
-      </Avatar>
-      <div className="min-w-0 flex-1">
-        <div className="text-sm font-medium truncate leading-snug">
-          {worker.first_name} {worker.last_name}
-        </div>
-        <div className="text-xs text-muted-foreground truncate mt-0.5">
-          {phone ? phone : "No phone on file"}
+    <div className={cn("inline-flex items-center gap-1.5 h-8 px-2.5 rounded-full border text-[11px] font-medium", cls)}>
+      <span className="font-semibold tabular-nums">{value}</span>
+      <span className="opacity-80">{label}</span>
+    </div>
+  );
+}
+
+function attendanceBadgeFor(
+  attendanceStatus: string | null,
+  clock: { clock_in: string | null; clock_out: string | null } | undefined,
+): { label: string; cls: string } {
+  if (clock?.clock_out) return { label: "Clocked out", cls: "bg-muted text-muted-foreground" };
+  if (clock?.clock_in) return { label: "Clocked in", cls: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400" };
+  switch ((attendanceStatus ?? "").toLowerCase()) {
+    case "present": return { label: "Present", cls: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400" };
+    case "late":    return { label: "Late", cls: "bg-amber-500/15 text-amber-700 dark:text-amber-400" };
+    case "absent":  return { label: "Absent", cls: "bg-rose-500/15 text-rose-700 dark:text-rose-400" };
+    case "excused": return { label: "Excused", cls: "bg-muted text-muted-foreground" };
+    case "needs_review": return { label: "Needs review", cls: "bg-primary/15 text-primary" };
+    default: return { label: "Not started", cls: "bg-muted text-muted-foreground" };
+  }
+}
+
+function roleBadgeFor(role: string | null, isShiftAdmin: boolean): { label: string; cls: string } | null {
+  if (isShiftAdmin) return { label: "Shift admin", cls: "bg-primary/15 text-primary border-primary/30" };
+  if (!role) return null;
+  const r = role.toLowerCase();
+  if (r === "captain") return { label: "Captain", cls: "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30" };
+  if (r === "lead" || r === "admin") return { label: "Lead", cls: "bg-primary/15 text-primary border-primary/30" };
+  if (r === "staff" || r === "worker") return null;
+  return { label: role, cls: "bg-muted text-muted-foreground border-border" };
+}
+
+function WorkerRow({
+  worker, assignmentStatus, attendanceStatus, role, clock, isShiftAdmin,
+}: {
+  worker: Employee;
+  assignmentStatus: string | null;
+  attendanceStatus: string | null;
+  role: string | null;
+  clock: { clock_in: string | null; clock_out: string | null } | undefined;
+  isShiftAdmin: boolean;
+}) {
+  const phone = worker.phone_number?.trim();
+  const normalized = normalizePhone(phone);
+  const wa = phone ? buildWhatsAppTargets(phone, "") : null;
+  const initialsStr = (worker.first_name?.[0] ?? "").toUpperCase() + (worker.last_name?.[0] ?? "").toUpperCase();
+  const att = attendanceBadgeFor(attendanceStatus, clock);
+  const roleBadge = roleBadgeFor(role, isShiftAdmin);
+  const statusLow = (assignmentStatus ?? "").toLowerCase();
+  const showAssignStatus = statusLow && !["accepted", "confirmed", "assigned"].includes(statusLow);
+
+  const handleCopy = async () => {
+    if (!phone) return;
+    try {
+      await navigator.clipboard.writeText(phone);
+      toast.success("Phone copied");
+    } catch {
+      toast.error("Couldn't copy phone");
+    }
+  };
+
+  return (
+    <div className="rounded-2xl border border-border/50 bg-card px-3 py-2.5">
+      <div className="flex items-center gap-3">
+        <Avatar className="h-10 w-10 shrink-0">
+          {worker.avatar_url ? <AvatarImage src={worker.avatar_url} alt="" /> : null}
+          <AvatarFallback className="text-xs font-semibold bg-muted">
+            {initialsStr || "·"}
+          </AvatarFallback>
+        </Avatar>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-sm font-medium leading-snug truncate">
+              {worker.first_name} {worker.last_name}
+            </span>
+            {isShiftAdmin && <Crown className="h-3.5 w-3.5 text-primary shrink-0" />}
+          </div>
+          <div className="text-[11px] text-muted-foreground truncate mt-0.5">
+            {phone ? phone : "No phone on file"}
+          </div>
         </div>
       </div>
+
+      <div className="flex items-center gap-1.5 flex-wrap mt-2">
+        <span className={cn("inline-flex items-center h-5 px-1.5 rounded-full text-[10px] font-semibold", att.cls)}>
+          {att.label}
+        </span>
+        {roleBadge && (
+          <span className={cn("inline-flex items-center h-5 px-1.5 rounded-full border text-[10px] font-semibold", roleBadge.cls)}>
+            {roleBadge.label}
+          </span>
+        )}
+        {showAssignStatus && (
+          <span className="inline-flex items-center h-5 px-1.5 rounded-full bg-muted text-muted-foreground text-[10px] font-semibold capitalize">
+            {statusLow.replace(/_/g, " ")}
+          </span>
+        )}
+      </div>
+
       {phone ? (
-        <a
-          href={`tel:${phone}`}
-          className="shrink-0 inline-flex items-center justify-center h-10 w-10 rounded-xl bg-primary/10 text-primary hover:bg-primary/15 active:scale-95 transition"
-          aria-label={`Call ${worker.first_name}`}
-        >
-          <Phone className="h-4 w-4" />
-        </a>
-      ) : null}
+        <div className="flex items-center gap-1.5 mt-2.5">
+          <a
+            href={`tel:${phone}`}
+            className="flex-1 inline-flex items-center justify-center gap-1.5 h-9 rounded-xl bg-primary/10 text-primary hover:bg-primary/15 active:scale-[0.98] transition text-xs font-semibold"
+            aria-label={`Call ${worker.first_name}`}
+          >
+            <Phone className="h-3.5 w-3.5" />
+            Call
+          </a>
+          <a
+            href={`sms:${normalized || phone}`}
+            className="flex-1 inline-flex items-center justify-center gap-1.5 h-9 rounded-xl bg-muted text-foreground hover:bg-muted/80 active:scale-[0.98] transition text-xs font-semibold"
+            aria-label={`SMS ${worker.first_name}`}
+          >
+            <MessageSquare className="h-3.5 w-3.5" />
+            SMS
+          </a>
+          {wa?.waMeUrl && (
+            <a
+              href={wa.waMeUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 inline-flex items-center justify-center gap-1.5 h-9 rounded-xl bg-[#25D366]/10 text-[#128C4F] dark:text-[#25D366] hover:bg-[#25D366]/15 active:scale-[0.98] transition text-xs font-semibold"
+              aria-label={`WhatsApp ${worker.first_name}`}
+            >
+              <MessageCircle className="h-3.5 w-3.5" />
+              WhatsApp
+            </a>
+          )}
+          <button
+            type="button"
+            onClick={handleCopy}
+            className="inline-flex items-center justify-center h-9 w-9 rounded-xl bg-muted text-muted-foreground hover:bg-muted/80 active:scale-[0.98] transition"
+            aria-label="Copy phone"
+          >
+            <Copy className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      ) : (
+        <div className="mt-2 text-[11px] text-muted-foreground italic">
+          No phone on file.
+        </div>
+      )}
     </div>
   );
 }
