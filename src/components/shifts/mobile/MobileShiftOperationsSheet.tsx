@@ -789,7 +789,7 @@ export function MobileShiftOperationsSheet({
             View attendance
           </Button>
           <p className="mt-2 text-center text-[11px] text-muted-foreground">
-            Editing shift details and staffing is desktop recommended for now.
+            Editing shift details and staffing is available from desktop for now.
           </p>
         </div>
       </SheetContent>
