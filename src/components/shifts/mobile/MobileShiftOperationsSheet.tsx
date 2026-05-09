@@ -40,35 +40,53 @@ import {
  */
 
 /**
- * Centralized operator-facing copy for the mobile shift operations sheet.
- * Keep visible wording here so empty/error/helper messages stay consistent.
- * Dynamic strings (with worker names, counts, etc.) stay local in JSX.
+ * Centralized operator-facing helper copy. Kept local: action labels,
+ * badges, section titles, dynamic aria labels, and dev-only strings.
+ *
+ * i18n-ready: keys are flat for now and grouped by section via comments.
+ * When a translation system is added, swap string values for `t(key)`
+ * without touching the JSX.
  */
 const MOBILE_SHIFT_COPY = {
+  // Shared
+  readOnlyMobile: "Read-only on mobile",
+
+  // Coverage section
+  coverageHelper: "Required spots, assigned workers, and current staffing status.",
+
+  // Assigned workers section
   assignedWorkersHelper: "Review assigned workers and contact them safely from mobile.",
   assignedSortedHelper: "Sorted by role and attendance status.",
-  attendanceSectionHelper: "Review clock-in and clock-out activity.",
-  shiftDetailsHelper: "Review the core shift information.",
   noWorkersTitle: "No workers assigned yet",
   noWorkersHelper: "Add workers from desktop before reviewing coverage or attendance.",
+
+  // Attendance section
+  attendanceSectionHelper: "Review clock-in and clock-out activity.",
   attendanceUnavailableTitle: "Attendance unavailable",
   attendanceUnavailableHelper: "Assign workers first before reviewing attendance.",
   noClockActivityTitle: "No clock activity yet",
   noClockActivityHelper: "Clock-in and clock-out activity will appear here when workers start.",
-  noPhoneTitle: "No phone on file",
-  noPhoneHelper: "Add a phone number from the worker profile to enable call, SMS, and WhatsApp.",
-  teamErrorTitle: "Couldn't load team data",
-  teamErrorHelper: "Check your connection and try again. No shift data was changed.",
-  readOnlyMobile: "Read-only on mobile",
-  coverageHelper: "Required spots, assigned workers, and current staffing status.",
+
+  // Shift details section
+  shiftDetailsHelper: "Review the core shift information.",
   noClientTitle: "No client set",
   noClientHelper: "Add the client from desktop so this shift is easier to identify.",
   noLocationTitle: "No location set",
   noLocationHelper: "Add the location from desktop before publishing or dispatching.",
   noMeetingPoint: "No meeting point set.",
+
+  // Notes section
   notesSectionHelper: "Internal notes for this shift.",
   noNotesTitle: "No notes yet",
   noNotesHelper: "Internal notes can be added from desktop for now.",
+
+  // Worker row — no phone state
+  noPhoneTitle: "No phone on file",
+  noPhoneHelper: "Add a phone number from the worker profile to enable call, SMS, and WhatsApp.",
+
+  // Error states
+  teamErrorTitle: "Couldn't load team data",
+  teamErrorHelper: "Check your connection and try again. No shift data was changed.",
 } as const;
 
 interface Props {
