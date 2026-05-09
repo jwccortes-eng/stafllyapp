@@ -399,9 +399,14 @@ export function MobileShiftOperationsSheet({
 
         {/* Scroll area */}
         <div className="flex-1 overflow-y-auto px-5 pt-4 pb-4 space-y-5">
-          {/* Operations summary */}
+          {/* Coverage */}
           <section>
-            <SectionTitle icon={ClipboardList}>Operations summary</SectionTitle>
+            <SectionTitle
+              icon={ClipboardList}
+              helper="Required spots, assigned workers, and current staffing status."
+            >
+              Coverage
+            </SectionTitle>
             <div className="grid grid-cols-2 gap-2">
               <StatCard label="Slots" value={slots > 0 ? `${assignedCount}/${slots}` : `${assignedCount}`} />
               <StatCard
