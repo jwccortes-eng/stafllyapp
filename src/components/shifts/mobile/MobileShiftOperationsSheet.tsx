@@ -536,11 +536,12 @@ export function MobileShiftOperationsSheet({
                 <Button size="sm" variant="outline" onClick={() => setReloadKey(k => k + 1)}>Retry</Button>
               </div>
             ) : assignedWorkers.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-border bg-muted/20 px-4 py-6 text-center">
-                <Users className="h-5 w-5 text-muted-foreground mx-auto mb-2" />
-                <p className="text-sm text-muted-foreground">No workers assigned yet.</p>
-                <p className="text-xs text-muted-foreground mt-1">Add workers from desktop for now.</p>
-              </div>
+              <EmptyBlock
+                icon={Users}
+                title="No workers assigned yet"
+                helper="Add workers from desktop for now. Mobile staffing changes are being prepared."
+                badge="Desktop required"
+              />
             ) : (
               <>
                 <p className="text-[11px] text-muted-foreground mb-1.5 px-0.5">
@@ -579,14 +580,26 @@ export function MobileShiftOperationsSheet({
 
           {/* Attendance — unified premium panel (same as desktop)
               Source of truth: ShiftAttendancePanel. */}
-          {assignedWorkers.length > 0 && shift && selectedCompanyId && (
-            <section>
-              <SectionTitle
+          <section>
+            <SectionTitle
+              icon={ClipboardList}
+              helper="Review clock-in and clock-out activity."
+            >
+              Attendance
+            </SectionTitle>
+            {assignedWorkers.length === 0 ? (
+              <EmptyBlock
                 icon={ClipboardList}
-                helper="Review clock-in and clock-out activity."
-              >
-                Attendance
-              </SectionTitle>
+                title="Attendance unavailable"
+                helper="Assign workers first before reviewing attendance."
+              />
+            ) : Object.keys(clockByEmp).length === 0 ? (
+              <EmptyBlock
+                icon={Clock}
+                title="No clock activity yet"
+                helper="Clock-in and clock-out activity will appear here when workers start."
+              />
+            ) : shift && selectedCompanyId ? (
               <ShiftAttendancePanel
                 shiftId={shift.id}
                 companyId={selectedCompanyId}
@@ -594,8 +607,8 @@ export function MobileShiftOperationsSheet({
                 employees={employees}
                 canManage={canValidate}
               />
-            </section>
-          )}
+            ) : null}
+          </section>
 
           {/* Shift details */}
           <section>
@@ -612,9 +625,38 @@ export function MobileShiftOperationsSheet({
               })()} />
               <DetailRow icon={Clock} label="Start" value={formatTimeShort(shift.start_time)} />
               <DetailRow icon={Clock} label="End" value={formatTimeShort(shift.end_time)} />
-              <DetailRow icon={Building2} label="Client" value={clientName && clientName !== "—" ? clientName : "—"} muted={!clientName || clientName === "—"} />
-              <DetailRow icon={MapPin} label="Location" value={locationName || "—"} muted={!locationName} />
-              {meetingPoint && <DetailRow icon={MapPin} label="Meeting point" value={meetingPoint} />}
+              {noClient ? (
+                <div className="px-4 py-3">
+                  <EmptyBlock
+                    icon={Building2}
+                    title="No client set"
+                    helper="Add the client from desktop so this shift is easier to identify."
+                    compact
+                  />
+                </div>
+              ) : (
+                <DetailRow icon={Building2} label="Client" value={clientName && clientName !== "—" ? clientName : "—"} muted={!clientName || clientName === "—"} />
+              )}
+              {noLocation ? (
+                <div className="px-4 py-3">
+                  <EmptyBlock
+                    icon={MapPin}
+                    title="No location set"
+                    helper="Add the location from desktop before publishing or dispatching."
+                    compact
+                  />
+                </div>
+              ) : (
+                <DetailRow icon={MapPin} label="Location" value={locationName || "—"} muted={!locationName} />
+              )}
+              {meetingPoint ? (
+                <DetailRow icon={MapPin} label="Meeting point" value={meetingPoint} />
+              ) : (
+                <div className="flex items-center gap-2 px-4 py-2.5 text-xs text-muted-foreground">
+                  <MapPin className="h-3.5 w-3.5 opacity-60" />
+                  <span>No meeting point added.</span>
+                </div>
+              )}
               <DetailRow
                 icon={FileEdit}
                 label="Publication"
@@ -627,21 +669,27 @@ export function MobileShiftOperationsSheet({
           </section>
 
           {/* Notes */}
-          {shift.notes && (
-            <section>
-              <SectionTitle
-                icon={StickyNote}
-                helper="Internal notes for this shift."
-              >
-                Notes
-              </SectionTitle>
+          <section>
+            <SectionTitle
+              icon={StickyNote}
+              helper="Internal notes for this shift."
+            >
+              Notes
+            </SectionTitle>
+            {shift.notes ? (
               <div className="rounded-2xl border border-border/50 bg-card px-4 py-3">
                 <p className="text-sm leading-relaxed text-foreground/90 whitespace-pre-wrap">
                   {shift.notes}
                 </p>
               </div>
-            </section>
-          )}
+            ) : (
+              <EmptyBlock
+                icon={StickyNote}
+                title="No notes yet"
+                helper="Internal notes can be added from desktop for now."
+              />
+            )}
+          </section>
 
           {/* Inline secondary actions */}
           <section className="grid grid-cols-2 gap-2">
@@ -706,6 +754,46 @@ function SectionTitle({
           {helper}
         </p>
       )}
+    </div>
+  );
+}
+
+function EmptyBlock({
+  icon: Icon, title, helper, badge, compact,
+}: {
+  icon?: any;
+  title: string;
+  helper?: string;
+  badge?: string;
+  compact?: boolean;
+}) {
+  return (
+    <div
+      className={cn(
+        "rounded-2xl border border-dashed border-border/60 bg-muted/20",
+        compact ? "px-3 py-2.5" : "px-4 py-4",
+      )}
+    >
+      <div className="flex items-start gap-2.5">
+        {Icon && (
+          <div className="h-7 w-7 rounded-lg bg-muted/60 flex items-center justify-center shrink-0">
+            <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+          </div>
+        )}
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-sm font-semibold text-foreground leading-tight">{title}</span>
+            {badge && (
+              <span className="inline-flex items-center h-[18px] px-1.5 rounded-full bg-muted text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                {badge}
+              </span>
+            )}
+          </div>
+          {helper && (
+            <p className="text-[11px] text-muted-foreground mt-1 leading-snug">{helper}</p>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
