@@ -765,6 +765,41 @@ function SectionTitle({
   );
 }
 
+function ErrorBlock({
+  title, helper, onRetry, onBack,
+}: {
+  title: string;
+  helper?: string;
+  onRetry?: () => void;
+  onBack?: () => void;
+}) {
+  return (
+    <div className="rounded-2xl border border-rose-500/30 bg-rose-500/5 px-4 py-4">
+      <div className="flex items-start gap-2.5">
+        <div className="h-7 w-7 rounded-lg bg-rose-500/15 flex items-center justify-center shrink-0">
+          <AlertTriangle className="h-3.5 w-3.5 text-rose-600 dark:text-rose-400" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold text-rose-800 dark:text-rose-300 leading-tight">{title}</p>
+          {helper && (
+            <p className="text-[11px] text-rose-700/80 dark:text-rose-300/80 mt-1 leading-snug">{helper}</p>
+          )}
+          {(onRetry || onBack) && (
+            <div className="mt-2.5 flex items-center gap-2">
+              {onRetry && (
+                <Button size="sm" className="h-8 rounded-lg" onClick={onRetry}>Retry</Button>
+              )}
+              {onBack && (
+                <Button size="sm" variant="ghost" className="h-8 rounded-lg" onClick={onBack}>Back</Button>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function EmptyBlock({
   icon: Icon, title, helper, badge, compact,
 }: {
