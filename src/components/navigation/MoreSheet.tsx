@@ -178,7 +178,7 @@ function SectionGrid({
 }: SectionGridProps) {
   return (
     <div>
-      <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/45 mb-2">
+      <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-2">
         {label}
       </p>
       <div className="grid grid-cols-4 gap-2">
