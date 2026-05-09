@@ -432,14 +432,13 @@ export function MobileShiftOperationsSheet({
               </div>
             )}
 
-            {/* Honest mobile capability banner — phased rollout, not permanent */}
+            {/* Phased note — only the assignment management piece is rolling out */}
             <div className="mt-2.5 rounded-2xl border border-border bg-muted/30 p-3 text-xs text-foreground/80">
               <strong className="block font-semibold text-foreground mb-0.5">
-                Mobile shift operations are rolling out
+                Team assignment is rolling out
               </strong>
-              Editing assignments, creating, publishing and unpublishing are
-              desktop recommended for now. Reviewing assignments, attendance,
-              traceability and open spots already works here.
+              You can edit shift details and review attendance from mobile.
+              Adding or removing assigned workers is best on desktop for now.
             </div>
           </section>
 
