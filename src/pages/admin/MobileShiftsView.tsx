@@ -1,16 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
-  CalendarDays, Plus, SlidersHorizontal, Search, ChevronLeft, ChevronRight,
-  Users, Clock, AlertTriangle, FileEdit, MapPin, Building2, X, Loader2, Eye,
+  CalendarDays, SlidersHorizontal, ChevronRight,
+  Users, Clock, AlertTriangle, FileEdit, MapPin, Building2, Eye,
 } from "lucide-react";
-import { format, parseISO, isToday, isTomorrow, addDays, startOfDay } from "date-fns";
+import { format, parseISO, isToday, isTomorrow, addDays } from "date-fns";
 import { enUS } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { ShiftFilters, EMPTY_FILTERS, type ShiftFilterState } from "@/components/shifts/ShiftFilters";
@@ -18,7 +17,6 @@ import { MobileShiftOperationsSheet } from "@/components/shifts/mobile/MobileShi
 import { isDraftShift, isPublishedShift } from "@/lib/shifts/shift-guards";
 import type { Shift, Assignment, Employee, SelectOption } from "@/components/shifts/types";
 import { cn } from "@/lib/utils";
-import { toast } from "sonner";
 
 /**
  * MobileShiftsView — Phase 1
