@@ -451,22 +451,38 @@ export function MobileShiftOperationsSheet({
                 <p className="text-xs text-muted-foreground mt-1">Add workers from desktop for now.</p>
               </div>
             ) : (
-              <div className="space-y-1.5 max-h-[360px] overflow-y-auto pr-1 -mr-1">
-                {assignedWorkers.map(w => {
-                  const extra = asgnExtras.find(a => a.employee_id === w.id);
-                  return (
-                    <WorkerRow
-                      key={w.id}
-                      worker={w}
-                      assignmentStatus={extra?.status ?? null}
-                      attendanceStatus={extra?.attendance_status ?? null}
-                      role={extra?.assignment_role ?? null}
-                      clock={clockByEmp[w.id]}
-                      isShiftAdmin={shiftAdminId === w.id}
-                    />
-                  );
-                })}
-              </div>
+              <>
+                <p className="text-[11px] text-muted-foreground mb-1.5 px-0.5">
+                  Sorted by role and attendance status.
+                </p>
+                <div className="space-y-1.5 max-h-[360px] overflow-y-auto pr-1 -mr-1">
+                  {[...assignedWorkers]
+                    .sort((a, b) => {
+                      const ea = asgnExtras.find(x => x.employee_id === a.id) ?? null;
+                      const eb = asgnExtras.find(x => x.employee_id === b.id) ?? null;
+                      const sa = getWorkerSortScore(a, ea, clockByEmp[a.id], shiftAdminId, dateBucket);
+                      const sb = getWorkerSortScore(b, eb, clockByEmp[b.id], shiftAdminId, dateBucket);
+                      if (sa !== sb) return sa - sb;
+                      const na = `${a.first_name ?? ""} ${a.last_name ?? ""}`.trim().toLowerCase();
+                      const nb = `${b.first_name ?? ""} ${b.last_name ?? ""}`.trim().toLowerCase();
+                      return na.localeCompare(nb);
+                    })
+                    .map(w => {
+                      const extra = asgnExtras.find(a => a.employee_id === w.id);
+                      return (
+                        <WorkerRow
+                          key={w.id}
+                          worker={w}
+                          assignmentStatus={extra?.status ?? null}
+                          attendanceStatus={extra?.attendance_status ?? null}
+                          role={extra?.assignment_role ?? null}
+                          clock={clockByEmp[w.id]}
+                          isShiftAdmin={shiftAdminId === w.id}
+                        />
+                      );
+                    })}
+                </div>
+              </>
             )}
 
             {understaffed && (
