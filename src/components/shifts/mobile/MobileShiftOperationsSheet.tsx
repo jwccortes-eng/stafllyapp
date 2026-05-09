@@ -732,8 +732,8 @@ export function MobileShiftOperationsSheet({
                 <div className="px-4 py-3">
                   <EmptyBlock
                     icon={Building2}
-                    title="No client set"
-                    helper="Add the client from desktop so this shift is easier to identify."
+                    title={MOBILE_SHIFT_COPY.noClientTitle}
+                    helper={MOBILE_SHIFT_COPY.noClientHelper}
                     compact
                   />
                 </div>
@@ -744,8 +744,8 @@ export function MobileShiftOperationsSheet({
                 <div className="px-4 py-3">
                   <EmptyBlock
                     icon={MapPin}
-                    title="No location set"
-                    helper="Add the location from desktop before publishing or dispatching."
+                    title={MOBILE_SHIFT_COPY.noLocationTitle}
+                    helper={MOBILE_SHIFT_COPY.noLocationHelper}
                     compact
                   />
                 </div>
@@ -757,7 +757,7 @@ export function MobileShiftOperationsSheet({
               ) : (
                 <div className="flex items-center gap-2 px-4 py-2.5 text-xs text-muted-foreground">
                   <MapPin className="h-3.5 w-3.5 opacity-60" />
-                  <span>No meeting point set.</span>
+                  <span>{MOBILE_SHIFT_COPY.noMeetingPoint}</span>
                 </div>
               )}
               <DetailRow
