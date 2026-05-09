@@ -577,12 +577,16 @@ export function MobileShiftOperationsSheet({
             )}
           </section>
 
-          {/* Attendance validation — unified premium panel (same as desktop)
-              Source of truth: ShiftAttendancePanel. Includes grouping
-              (Needs validation / Validated), blocking banner when pending>0,
-              bulk actions, and per-worker validators. RLS handles permissions. */}
+          {/* Attendance — unified premium panel (same as desktop)
+              Source of truth: ShiftAttendancePanel. */}
           {assignedWorkers.length > 0 && shift && selectedCompanyId && (
             <section>
+              <SectionTitle
+                icon={ClipboardList}
+                helper="Review clock-in and clock-out activity."
+              >
+                Attendance
+              </SectionTitle>
               <ShiftAttendancePanel
                 shiftId={shift.id}
                 companyId={selectedCompanyId}
@@ -592,9 +596,16 @@ export function MobileShiftOperationsSheet({
               />
             </section>
           )}
-          {/* Operational details */}
+
+          {/* Shift details */}
           <section>
-            <SectionTitle icon={Tag}>Details</SectionTitle>
+            <SectionTitle
+              icon={Tag}
+              helper="Review the core shift information."
+              badge="Edit from desktop"
+            >
+              Shift details
+            </SectionTitle>
             <div className="rounded-2xl border border-border/50 bg-card divide-y divide-border/40">
               <DetailRow icon={CalendarDays} label="Date" value={(() => {
                 try { return format(parseISO(shift.date), "EEEE, MMMM d, yyyy", { locale: enUS }); } catch { return shift.date; }
@@ -612,19 +623,25 @@ export function MobileShiftOperationsSheet({
               {shift.claimable && (
                 <DetailRow icon={Sparkles} label="Claimable" value="Open to worker claims" />
               )}
-              {shift.notes && (
-                <div className="px-4 py-3">
-                  <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground mb-1.5">
-                    <StickyNote className="h-3.5 w-3.5" />
-                    Notes
-                  </div>
-                  <p className="text-sm leading-relaxed text-foreground/90 whitespace-pre-wrap">
-                    {shift.notes}
-                  </p>
-                </div>
-              )}
             </div>
           </section>
+
+          {/* Notes */}
+          {shift.notes && (
+            <section>
+              <SectionTitle
+                icon={StickyNote}
+                helper="Internal notes for this shift."
+              >
+                Notes
+              </SectionTitle>
+              <div className="rounded-2xl border border-border/50 bg-card px-4 py-3">
+                <p className="text-sm leading-relaxed text-foreground/90 whitespace-pre-wrap">
+                  {shift.notes}
+                </p>
+              </div>
+            </section>
+          )}
 
           {/* Inline secondary actions */}
           <section className="grid grid-cols-2 gap-2">
