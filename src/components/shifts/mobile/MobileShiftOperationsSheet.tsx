@@ -39,6 +39,29 @@ import {
  * No notifications, no DB writes, no schema/RLS impact.
  */
 
+/**
+ * Centralized operator-facing copy for the mobile shift operations sheet.
+ * Keep visible wording here so empty/error/helper messages stay consistent.
+ * Dynamic strings (with worker names, counts, etc.) stay local in JSX.
+ */
+const MOBILE_SHIFT_COPY = {
+  assignedWorkersHelper: "Review assigned workers and contact them safely from mobile.",
+  assignedSortedHelper: "Sorted by role and attendance status.",
+  attendanceSectionHelper: "Review clock-in and clock-out activity.",
+  shiftDetailsHelper: "Review the core shift information.",
+  noWorkersTitle: "No workers assigned yet",
+  noWorkersHelper: "Add workers from desktop before reviewing coverage or attendance.",
+  attendanceUnavailableTitle: "Attendance unavailable",
+  attendanceUnavailableHelper: "Assign workers first before reviewing attendance.",
+  noClockActivityTitle: "No clock activity yet",
+  noClockActivityHelper: "Clock-in and clock-out activity will appear here when workers start.",
+  noPhoneTitle: "No phone on file",
+  noPhoneHelper: "Add a phone number from the worker profile to enable call, SMS, and WhatsApp.",
+  teamErrorTitle: "Couldn't load team data",
+  teamErrorHelper: "Check your connection and try again. No shift data was changed.",
+  readOnlyMobile: "Read-only on mobile",
+} as const;
+
 interface Props {
   shift: Shift | null;
   open: boolean;
@@ -556,8 +579,8 @@ export function MobileShiftOperationsSheet({
           <section>
             <SectionTitle
               icon={Users}
-              helper="Review assigned workers and contact them safely from mobile."
-              badge="Read-only on mobile"
+              helper={MOBILE_SHIFT_COPY.assignedWorkersHelper}
+              badge={MOBILE_SHIFT_COPY.readOnlyMobile}
             >
               Assigned workers
               <span className="ml-1.5 text-xs font-normal text-muted-foreground normal-case tracking-normal">
@@ -593,8 +616,8 @@ export function MobileShiftOperationsSheet({
               </div>
             ) : teamError ? (
               <ErrorBlock
-                title="Couldn't load team data"
-                helper="Check your connection and try again. No shift data was changed."
+                title={MOBILE_SHIFT_COPY.teamErrorTitle}
+                helper={MOBILE_SHIFT_COPY.teamErrorHelper}
                 devHint={teamError}
                 retryDisabled={loadingTeam}
                 retryLabel={loadingTeam ? "Retrying..." : "Retry"}
@@ -604,14 +627,14 @@ export function MobileShiftOperationsSheet({
             ) : assignedWorkers.length === 0 ? (
               <EmptyBlock
                 icon={Users}
-                title="No workers assigned yet"
-                helper="Add workers from desktop before reviewing coverage or attendance."
-                badge="Read-only on mobile"
+                title={MOBILE_SHIFT_COPY.noWorkersTitle}
+                helper={MOBILE_SHIFT_COPY.noWorkersHelper}
+                badge={MOBILE_SHIFT_COPY.readOnlyMobile}
               />
             ) : (
               <>
                 <p className="text-[11px] text-muted-foreground mb-1.5 px-0.5">
-                  Sorted by role and attendance status.
+                  {MOBILE_SHIFT_COPY.assignedSortedHelper}
                 </p>
                 <div className="space-y-1.5 max-h-[360px] overflow-y-auto pr-1 -mr-1">
                   {sortedAssignedWorkers.map(w => {
@@ -649,21 +672,21 @@ export function MobileShiftOperationsSheet({
           <section>
             <SectionTitle
               icon={ClipboardList}
-              helper="Review clock-in and clock-out activity."
+              helper={MOBILE_SHIFT_COPY.attendanceSectionHelper}
             >
               Attendance
             </SectionTitle>
             {assignedWorkers.length === 0 ? (
               <EmptyBlock
                 icon={ClipboardList}
-                title="Attendance unavailable"
-                helper="Assign workers first before reviewing attendance."
+                title={MOBILE_SHIFT_COPY.attendanceUnavailableTitle}
+                helper={MOBILE_SHIFT_COPY.attendanceUnavailableHelper}
               />
             ) : Object.keys(clockByEmp).length === 0 ? (
               <EmptyBlock
                 icon={Clock}
-                title="No clock activity yet"
-                helper="Clock-in and clock-out activity will appear here when workers start."
+                title={MOBILE_SHIFT_COPY.noClockActivityTitle}
+                helper={MOBILE_SHIFT_COPY.noClockActivityHelper}
               />
             ) : shift && selectedCompanyId ? (
               <>
@@ -685,8 +708,8 @@ export function MobileShiftOperationsSheet({
           <section>
             <SectionTitle
               icon={Tag}
-              helper="Review the core shift information."
-              badge="Read-only on mobile"
+              helper={MOBILE_SHIFT_COPY.shiftDetailsHelper}
+              badge={MOBILE_SHIFT_COPY.readOnlyMobile}
             >
               Shift details
             </SectionTitle>
@@ -1089,7 +1112,7 @@ const WorkerRow = memo(function WorkerRow({
             {isShiftAdmin && <Crown className="h-3.5 w-3.5 text-primary shrink-0" />}
           </div>
           <div className="text-[11px] text-muted-foreground truncate mt-0.5">
-            {phone ? phone : "No phone on file"}
+            {phone ? phone : MOBILE_SHIFT_COPY.noPhoneTitle}
           </div>
         </div>
       </div>
@@ -1158,10 +1181,10 @@ const WorkerRow = memo(function WorkerRow({
             <Phone className="h-3.5 w-3.5 mt-0.5 text-muted-foreground shrink-0" aria-hidden="true" />
             <div className="min-w-0">
               <div className="text-[11px] font-semibold text-foreground/80 leading-tight">
-                No phone on file
+                {MOBILE_SHIFT_COPY.noPhoneTitle}
               </div>
               <div className="text-[10.5px] text-muted-foreground leading-snug mt-0.5">
-                Add a phone number from the worker profile to enable call, SMS, and WhatsApp.
+                {MOBILE_SHIFT_COPY.noPhoneHelper}
               </div>
             </div>
           </div>
