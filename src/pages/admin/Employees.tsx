@@ -80,6 +80,7 @@ import DataQualityRiskPanel, { WorkerRiskTags } from "@/components/employee/Data
 import { analyzeEmployeeRisks, type RiskKey } from "@/lib/data-quality-risks";
 import { buildBulkRemindersText } from "@/lib/data-quality-actions";
 import { useCompanyDocuments } from "@/hooks/useCompanyDocuments";
+import MobileDataQualitySummary from "@/components/employee/MobileDataQualitySummary";
 
 // Fields that only owner/admin can see
 const SENSITIVE_FIELD_KEYS = new Set([
@@ -1269,14 +1270,27 @@ export default function Employees() {
         })}
       </div>
 
-      {/* ─── Data Quality Risk Panel (Phase 1, read-only) ─── */}
+      {/* ─── Data Quality Risk Panel (Phase 1, read-only) ───
+          Mobile: collapsed by default behind a compact summary card to keep
+          Workers light. Desktop: full panel inline. */}
       {isPrivileged && employees.length > 0 && (
-        <DataQualityRiskPanel
-          employees={employees}
-          documentSignals={documentSignals}
-          riskFilter={riskFilter}
-          onRiskFilterChange={setRiskFilter}
-        />
+        <>
+          <div className="hidden md:block">
+            <DataQualityRiskPanel
+              employees={employees}
+              documentSignals={documentSignals}
+              riskFilter={riskFilter}
+              onRiskFilterChange={setRiskFilter}
+            />
+          </div>
+          <MobileDataQualitySummary
+            needReview={Array.from(riskAnalysis.byId.values()).filter(r => r.length > 0).length}
+            employees={employees}
+            documentSignals={documentSignals}
+            riskFilter={riskFilter}
+            onRiskFilterChange={setRiskFilter}
+          />
+        </>
       )}
 
       {/* ─── Premium Filter Bar ─── */}
@@ -1604,7 +1618,31 @@ export default function Employees() {
                 </div>
                 <div className="mt-2 flex items-center justify-between gap-2">
                   <EmpStatusBadge employee={e} invitation={invitations[e.id]} showInvite onInvite={() => { setViewEmployee(e); setInviteOpen(true); }} onCopyLink={copyInviteLink} />
-                  {e.access_pin && <span className="text-[9px] text-muted-foreground/50 hidden sm:inline">PIN</span>}
+                  <div className="flex items-center gap-1">
+                    {phone && (
+                      <>
+                        <a
+                          href={`tel:${phone}`}
+                          onClick={(ev) => ev.stopPropagation()}
+                          className="md:hidden inline-flex items-center justify-center h-8 w-8 rounded-lg bg-primary/10 text-primary active:scale-95 transition"
+                          aria-label={`Call ${e.first_name}`}
+                        >
+                          <Phone className="h-3.5 w-3.5" />
+                        </a>
+                        <a
+                          href={`https://wa.me/${phone.replace(/^\+/, "")}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(ev) => ev.stopPropagation()}
+                          className="md:hidden inline-flex items-center justify-center h-8 w-8 rounded-lg bg-emerald-500/10 text-emerald-600 active:scale-95 transition"
+                          aria-label={`WhatsApp ${e.first_name}`}
+                        >
+                          <MessageCircle className="h-3.5 w-3.5" />
+                        </a>
+                      </>
+                    )}
+                    {e.access_pin && <span className="text-[9px] text-muted-foreground/50 hidden sm:inline">PIN</span>}
+                  </div>
                 </div>
               </div>
             );

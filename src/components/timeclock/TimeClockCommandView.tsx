@@ -27,7 +27,7 @@ import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import {
   Clock, AlertTriangle, Users, Activity, CalendarClock, CheckCircle2,
   Search, RefreshCw, ChevronRight, MapPin, Monitor, Copy, ArrowRight,
-  CalendarDays, ClipboardCheck, Radio,
+  CalendarDays, ClipboardCheck, Radio, Phone, MessageCircle,
 } from "lucide-react";
 import { format, differenceInMinutes, startOfWeek, endOfWeek, isWithinInterval } from "date-fns";
 import { enUS } from "date-fns/locale";
@@ -64,6 +64,7 @@ interface Employee {
   avatar_url: string | null;
   employee_role: string | null;
   employer_identification: number | string | null;
+  phone_number: string | null;
 }
 
 type AlertItem = {
@@ -108,7 +109,7 @@ export default function TimeClockCommandView() {
 
     const empsP = supabase
       .from("employees")
-      .select("id, first_name, last_name, avatar_url, employee_role, employer_identification")
+      .select("id, first_name, last_name, avatar_url, employee_role, employer_identification, phone_number")
       .eq("company_id", selectedCompanyId)
       .eq("is_active", true);
 
@@ -704,6 +705,10 @@ export default function TimeClockCommandView() {
       <AlertDetailSheet
         item={alertDetail}
         onClose={() => setAlertDetail(null)}
+        onReviewInTime={() => {
+          setAlertDetail(null);
+          setActiveTab("approvals");
+        }}
         onOpenWorker={(id) => {
           setAlertDetail(null);
           openWorker(id);
@@ -718,10 +723,12 @@ function AlertDetailSheet({
   item,
   onClose,
   onOpenWorker,
+  onReviewInTime,
 }: {
   item: AlertItem | null;
   onClose: () => void;
   onOpenWorker: (id: string) => void;
+  onReviewInTime: () => void;
 }) {
   const open = !!item;
   const labelMap: Record<AlertItem["type"], string> = {
@@ -731,6 +738,8 @@ function AlertDetailSheet({
     needs_review: "Needs review",
     no_shift: "Clock without scheduled shift",
   };
+  const phoneRaw = (item?.employee.phone_number ?? "").replace(/[^+\d]/g, "");
+  const waPhone = phoneRaw.replace(/^\+/, "");
   return (
     <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
       <SheetContent side="bottom" className="rounded-t-3xl p-0 max-h-[85vh] flex flex-col">
@@ -796,25 +805,61 @@ function AlertDetailSheet({
             <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-800 dark:text-amber-300">
               <strong className="block font-semibold mb-0.5">Suggested action</strong>
               {item.type === "stale_open"
-                ? "Close the clock from worker profile or wait for the worker to clock out."
+                ? "Reach out to confirm the worker is no longer on shift, then review the entry in Time."
                 : item.type === "very_long"
                 ? "Review the entry for accuracy — duration exceeds 16h."
                 : item.type === "needs_review"
-                ? "Open the worker's timesheet to validate the entry."
+                ? "Open Approvals in Time to validate the entry."
                 : item.type === "no_shift"
                 ? "Link this clock to a scheduled shift if needed."
                 : "Reach out to the worker and confirm whether they are still working."}
             </div>
 
-            <div className="flex flex-col gap-2">
-              <Button
-                variant="outline"
-                className="w-full h-11 rounded-xl text-sm font-medium gap-2"
-                onClick={() => onOpenWorker(item.employee.id)}
-              >
-                <Users className="h-4 w-4" /> View worker profile
-              </Button>
+            {/* Primary actions: contact + review in Time */}
+            <div className="grid grid-cols-2 gap-2">
+              {phoneRaw ? (
+                <a
+                  href={`tel:${phoneRaw}`}
+                  className="inline-flex items-center justify-center gap-1.5 h-11 rounded-xl bg-primary/10 text-primary text-sm font-medium active:scale-[0.98] transition"
+                >
+                  <Phone className="h-4 w-4" /> Call
+                </a>
+              ) : (
+                <span className="inline-flex items-center justify-center gap-1.5 h-11 rounded-xl bg-muted text-muted-foreground text-sm font-medium opacity-60">
+                  <Phone className="h-4 w-4" /> No phone
+                </span>
+              )}
+              {waPhone ? (
+                <a
+                  href={`https://wa.me/${waPhone}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center gap-1.5 h-11 rounded-xl bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-sm font-medium active:scale-[0.98] transition"
+                >
+                  <MessageCircle className="h-4 w-4" /> WhatsApp
+                </a>
+              ) : (
+                <span className="inline-flex items-center justify-center gap-1.5 h-11 rounded-xl bg-muted text-muted-foreground text-sm font-medium opacity-60">
+                  <MessageCircle className="h-4 w-4" /> WhatsApp
+                </span>
+              )}
             </div>
+
+            <Button
+              className="w-full h-11 rounded-xl text-sm font-semibold gap-2"
+              onClick={onReviewInTime}
+            >
+              <ClipboardCheck className="h-4 w-4" /> Review in Time
+            </Button>
+
+            {/* Secondary: worker profile */}
+            <Button
+              variant="ghost"
+              className="w-full h-10 rounded-xl text-xs text-muted-foreground gap-2"
+              onClick={() => onOpenWorker(item.employee.id)}
+            >
+              <Users className="h-3.5 w-3.5" /> View worker profile
+            </Button>
           </div>
         )}
       </SheetContent>

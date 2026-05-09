@@ -42,11 +42,32 @@ const PRIMARY_TAB_ROUTES = new Set([
 const SECTION_GROUPS: { label: string; matches: string[] }[] = [
   { label: "Operations", matches: ["Home", "Operations", "Intake"] },
   { label: "People", matches: ["Management"] },
+  { label: "Time & Attendance", matches: [] }, // populated via item-id override
   { label: "Payroll & Billing", matches: ["Payroll", "Tax", "Commercial"] },
   { label: "System", matches: ["Administration"] },
+  { label: "Support", matches: ["Help", "Support"] },
 ];
 const FALLBACK_GROUP = "More";
-function groupForSection(section: string): string {
+
+/**
+ * Per-item overrides — promote specific items into customer-facing groups
+ * regardless of their internal `section`. This is what lifts time-related
+ * items out of "Operations" without renaming nav-items.ts.
+ */
+const ITEM_GROUP_OVERRIDES: Record<string, string> = {
+  timeclock: "Time & Attendance",
+  attendance: "Time & Attendance",
+  kiosk: "Time & Attendance",
+  "front-desk": "Time & Attendance",
+  "live-map": "Time & Attendance",
+  notifications: "Support",
+  chat: "Support",
+};
+
+function groupForItem(item: NavItem): string {
+  const override = ITEM_GROUP_OVERRIDES[item.id];
+  if (override) return override;
+  const section = item.section || FALLBACK_GROUP;
   for (const g of SECTION_GROUPS) if (g.matches.includes(section)) return g.label;
   return FALLBACK_GROUP;
 }
@@ -66,10 +87,10 @@ export function MoreSheet({
   // Filter out primary bottom-nav tabs
   const moreItems = items.filter(i => !PRIMARY_TAB_ROUTES.has(i.to));
 
-  // Group by remapped customer-friendly section
+  // Group by remapped customer-friendly section (with item-id overrides)
   const sections = new Map<string, NavItem[]>();
   moreItems.forEach(item => {
-    const key = groupForSection(item.section || FALLBACK_GROUP);
+    const key = groupForItem(item);
     if (!sections.has(key)) sections.set(key, []);
     sections.get(key)!.push(item);
   });
