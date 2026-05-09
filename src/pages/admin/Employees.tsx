@@ -1094,7 +1094,7 @@ export default function Employees() {
           header action row overflows on smaller viewports. */}
       {isPrivileged && (
         <Card
-          className="border-warning/20 bg-gradient-to-r from-warning/5 via-card to-card hover:border-warning/40 transition-colors cursor-pointer group"
+          className="hidden md:block border-warning/20 bg-gradient-to-r from-warning/5 via-card to-card hover:border-warning/40 transition-colors cursor-pointer group"
           onClick={() => navigate("/app/workers/duplicates")}
           role="button"
           tabIndex={0}
