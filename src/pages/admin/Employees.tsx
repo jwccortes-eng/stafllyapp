@@ -1081,6 +1081,56 @@ export default function Employees() {
               <UserPlus className="h-3.5 w-3.5 mr-1.5" />Quick add
             </Button>
             <QuickAddInviteWizard open={quickAddOpen} onOpenChange={setQuickAddOpen} onEmployeeCreated={() => fetchEmployees()} />
+            {/* Mobile-only: collapsed actions menu so users can still reach key actions */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon" className="h-8 w-8 md:hidden" aria-label="More actions">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-60">
+                {isPrivileged && (
+                  <DropdownMenuItem onClick={() => setCampaignOpen(true)} className="gap-2 text-sm">
+                    <Rocket className="h-4 w-4" /> Activation Campaign
+                  </DropdownMenuItem>
+                )}
+                {isPrivileged && (
+                  <DropdownMenuItem onClick={() => navigate("/app/workers/duplicates")} className="gap-2 text-sm">
+                    <UserSearch className="h-4 w-4" /> Detect duplicates
+                    {strongDuplicateCount > 0 && (
+                      <Badge variant="outline" className="ml-auto h-5 px-1.5 bg-warning/10 text-warning border-warning/30 text-[10px]">
+                        {strongDuplicateCount}
+                      </Badge>
+                    )}
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem onClick={handleExport} disabled={filtered.length === 0} className="gap-2 text-sm">
+                  <Download className="h-4 w-4" /> Export
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setOnboardingSettingsOpen(true)} className="gap-2 text-sm">
+                  <Settings2 className="h-4 w-4" /> Onboarding settings
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground font-normal">
+                  Desktop recommended
+                </DropdownMenuLabel>
+                <DropdownMenuItem
+                  disabled
+                  className="gap-2 text-sm opacity-70"
+                >
+                  <ArrowUpDown className="h-4 w-4" /> Update via file
+                  <Badge variant="outline" className="ml-auto h-4 px-1 text-[9px]">Desktop</Badge>
+                </DropdownMenuItem>
+                <DropdownMenuItem disabled className="gap-2 text-sm opacity-70">
+                  <Upload className="h-4 w-4" /> Import workers
+                  <Badge variant="outline" className="ml-auto h-4 px-1 text-[9px]">Desktop</Badge>
+                </DropdownMenuItem>
+                <DropdownMenuItem disabled className="gap-2 text-sm opacity-70">
+                  <Hash className="h-4 w-4" /> Bulk rates
+                  <Badge variant="outline" className="ml-auto h-4 px-1 text-[9px]">Desktop</Badge>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button variant="ghost" size="icon" className="hidden md:inline-flex h-8 w-8" onClick={() => setOnboardingSettingsOpen(true)} title="Onboarding settings">
               <Settings2 className="h-4 w-4" />
             </Button>
