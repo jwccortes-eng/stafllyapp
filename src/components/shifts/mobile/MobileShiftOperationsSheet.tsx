@@ -768,31 +768,59 @@ function SectionTitle({
 }
 
 function ErrorBlock({
-  title, helper, onRetry, onBack,
+  title, helper, onRetry, onBack, devHint, retryDisabled,
 }: {
   title: string;
   helper?: string;
   onRetry?: () => void;
   onBack?: () => void;
+  devHint?: string | null;
+  retryDisabled?: boolean;
 }) {
+  const isDev = typeof import.meta !== "undefined" && (import.meta as any)?.env?.DEV;
   return (
-    <div className="rounded-2xl border border-rose-500/30 bg-rose-500/5 px-4 py-4">
+    <div
+      role="alert"
+      aria-live="polite"
+      className="rounded-2xl border border-dashed border-rose-500/40 bg-muted/20 px-4 py-4"
+    >
       <div className="flex items-start gap-2.5">
-        <div className="h-7 w-7 rounded-lg bg-rose-500/15 flex items-center justify-center shrink-0">
+        <div className="h-7 w-7 rounded-lg bg-rose-500/10 flex items-center justify-center shrink-0">
           <AlertTriangle className="h-3.5 w-3.5 text-rose-600 dark:text-rose-400" />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold text-rose-800 dark:text-rose-300 leading-tight">{title}</p>
+          <p className="text-sm font-semibold text-foreground leading-tight">{title}</p>
           {helper && (
-            <p className="text-[11px] text-rose-700/80 dark:text-rose-300/80 mt-1 leading-snug">{helper}</p>
+            <p className="text-[11px] text-muted-foreground mt-1 leading-snug">{helper}</p>
+          )}
+          {isDev && devHint && (
+            <p className="mt-1.5 text-[10px] font-mono text-rose-700/70 dark:text-rose-300/70 leading-snug break-words">
+              {devHint}
+            </p>
           )}
           {(onRetry || onBack) && (
             <div className="mt-2.5 flex items-center gap-2">
               {onRetry && (
-                <Button size="sm" className="h-8 rounded-lg" onClick={onRetry}>Retry</Button>
+                <Button
+                  size="sm"
+                  className="h-8 rounded-lg"
+                  onClick={onRetry}
+                  disabled={retryDisabled}
+                  aria-label="Retry loading team data"
+                >
+                  Retry
+                </Button>
               )}
               {onBack && (
-                <Button size="sm" variant="ghost" className="h-8 rounded-lg" onClick={onBack}>Back</Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-8 rounded-lg"
+                  onClick={onBack}
+                  aria-label="Back to shifts"
+                >
+                  Back
+                </Button>
               )}
             </div>
           )}
