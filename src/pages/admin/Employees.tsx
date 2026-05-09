@@ -938,6 +938,22 @@ export default function Employees() {
 
   return (
     <div className="space-y-3 overflow-x-hidden max-w-full">
+      {isMobile && (
+        <MobileWorkersCommandView
+          employees={employees}
+          invitations={invitations}
+          documentSignals={documentSignals}
+          selectedCompany={selectedCompany ? { id: selectedCompany.id, name: selectedCompany.name } : null}
+          isPrivileged={isPrivileged}
+          onOpenProfile={(e) => { setViewEmployee(e); setProfileActiveTab("info"); }}
+          onInvite={(e) => { setViewEmployee(e); setInviteOpen(true); }}
+          onCopyInviteLink={copyInviteLink}
+          onOpenCampaign={() => setCampaignOpen(true)}
+          onOpenOnboardingSettings={() => setOnboardingSettingsOpen(true)}
+          onRefetch={() => { fetchEmployees(); refetchInvitations(); }}
+        />
+      )}
+      {!isMobile && (<>
       {/* ─── Premium Header + KPI strip ─── */}
       <PremiumPageHeader
         title="Workers"
