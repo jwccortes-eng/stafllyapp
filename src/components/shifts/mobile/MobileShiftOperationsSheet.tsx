@@ -185,12 +185,18 @@ export function MobileShiftOperationsSheet({
     };
   }, [shift, assignments, employees]);
 
-  if (!shift || !data) return null;
-
-  const {
-    assignedWorkers, slots, assignedCount, coverage, understaffed, fullyStaffed,
-    draft, published, noClient, noLocation, hours, dateBucket,
-  } = data;
+  const assignedWorkers = data?.assignedWorkers ?? [];
+  const slots = data?.slots ?? 0;
+  const assignedCount = data?.assignedCount ?? 0;
+  const coverage = data?.coverage ?? 0;
+  const understaffed = data?.understaffed ?? false;
+  const fullyStaffed = data?.fullyStaffed ?? false;
+  const draft = data?.draft ?? false;
+  const published = data?.published ?? false;
+  const noClient = data?.noClient ?? false;
+  const noLocation = data?.noLocation ?? false;
+  const hours = data?.hours ?? null;
+  const dateBucket = data?.dateBucket ?? "future";
 
   // ── Memoized assignment lookup + sorted workers (avoids repeated .find in sort/map)
   const asgnByEmployeeId = useMemo(() => {
@@ -213,6 +219,8 @@ export function MobileShiftOperationsSheet({
       return na.localeCompare(nb);
     });
   }, [assignedWorkers, asgnByEmployeeId, clockByEmp, shiftAdminId, dateBucket]);
+
+  if (!shift || !data) return null;
 
   // ── Smart brief (deterministic)
   const briefMessages: { tone: "good" | "warn" | "bad" | "info"; text: string }[] = [];
