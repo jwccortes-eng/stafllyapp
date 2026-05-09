@@ -508,18 +508,33 @@ export function MobileShiftOperationsSheet({
           </section>
         </div>
 
-        {/* Sticky footer */}
-        <div className="px-5 pt-3 pb-[max(env(safe-area-inset-bottom,0px),12px)] border-t border-border/40 bg-background/95 backdrop-blur-sm">
+        {/* Sticky footer — primary mobile shift actions */}
+        <div className="px-5 pt-3 pb-[max(env(safe-area-inset-bottom,0px),12px)] border-t border-border/40 bg-background/95 backdrop-blur-sm space-y-2">
           <Button
             className="w-full h-12 rounded-xl text-sm font-semibold gap-2"
             onClick={handleOpenFullEditor}
           >
-            <ExternalLink className="h-4 w-4" />
-            Open in desktop editor
+            <FileEdit className="h-4 w-4" />
+            Edit shift
           </Button>
-          <p className="mt-1.5 text-[10px] text-center text-muted-foreground">
-            Mobile editing is being rolled out · desktop recommended for now
-          </p>
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              variant="outline"
+              className="h-11 rounded-xl text-sm font-medium gap-2"
+              onClick={handleManageTeam}
+            >
+              <Users className="h-4 w-4" />
+              Manage team
+            </Button>
+            <Button
+              variant="outline"
+              className="h-11 rounded-xl text-sm font-medium gap-2"
+              onClick={handleViewAttendance}
+            >
+              <ClipboardList className="h-4 w-4" />
+              Attendance
+            </Button>
+          </div>
         </div>
       </SheetContent>
     </Sheet>
