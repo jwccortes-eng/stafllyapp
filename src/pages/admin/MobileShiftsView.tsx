@@ -1,16 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
-  CalendarDays, Plus, SlidersHorizontal, Search, ChevronLeft, ChevronRight,
-  Users, Clock, AlertTriangle, FileEdit, MapPin, Building2, X, Loader2, Eye,
+  CalendarDays, SlidersHorizontal, ChevronRight,
+  Users, Clock, AlertTriangle, FileEdit, MapPin, Building2, Eye,
 } from "lucide-react";
-import { format, parseISO, isToday, isTomorrow, addDays, startOfDay } from "date-fns";
+import { format, parseISO, isToday, isTomorrow, addDays } from "date-fns";
 import { enUS } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { ShiftFilters, EMPTY_FILTERS, type ShiftFilterState } from "@/components/shifts/ShiftFilters";
@@ -18,7 +17,6 @@ import { MobileShiftOperationsSheet } from "@/components/shifts/mobile/MobileShi
 import { isDraftShift, isPublishedShift } from "@/lib/shifts/shift-guards";
 import type { Shift, Assignment, Employee, SelectOption } from "@/components/shifts/types";
 import { cn } from "@/lib/utils";
-import { toast } from "sonner";
 
 /**
  * MobileShiftsView — Phase 1
@@ -27,15 +25,27 @@ import { toast } from "sonner";
  * and shift-guards. Multi-tenant scoped by selectedCompanyId.
  */
 
-type TabKey = "today" | "upcoming" | "unstaffed" | "drafts" | "issues";
+type TabKey = "today" | "upcoming" | "needs" | "requests";
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: "today", label: "Today" },
   { key: "upcoming", label: "Upcoming" },
-  { key: "unstaffed", label: "Unstaffed" },
-  { key: "drafts", label: "Drafts" },
-  { key: "issues", label: "Issues" },
+  { key: "needs", label: "Needs Staff" },
+  { key: "requests", label: "Requests" },
 ];
+
+interface PendingRequest {
+  id: string;
+  shift_id: string;
+  employee_id: string;
+  created_at: string;
+  message: string | null;
+  employee_name: string;
+  shift_title: string | null;
+  shift_date: string | null;
+  shift_start: string | null;
+  shift_end: string | null;
+}
 
 function calcShiftHours(start: string, end: string): number {
   if (!start || !end) return 0;
@@ -92,12 +102,14 @@ export default function MobileShiftsView() {
   const [detailShift, setDetailShift] = useState<Shift | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
 
-  // Load shifts for the next 14 days + last 1 day (for "Today" buffer)
+  // Load shifts: yesterday for "Today" buffer + 60 days forward for Upcoming
   const dateRange = useMemo(() => {
     const start = format(addDays(new Date(), -1), "yyyy-MM-dd");
-    const end = format(addDays(new Date(), 14), "yyyy-MM-dd");
+    const end = format(addDays(new Date(), 60), "yyyy-MM-dd");
     return { start, end };
   }, []);
+
+  const [pendingRequests, setPendingRequests] = useState<PendingRequest[]>([]);
 
   useEffect(() => {
     if (!selectedCompanyId) {
@@ -150,6 +162,32 @@ export default function MobileShiftsView() {
         setClients((clientsRes.data ?? []) as SelectOption[]);
         setLocations((locsRes.data ?? []) as SelectOption[]);
         setEmployees((empsRes.data ?? []) as Employee[]);
+
+        // Load pending shift requests (best-effort; tolerate schema absence)
+        try {
+          const reqRes = await supabase
+            .from("shift_requests")
+            .select("id, shift_id, employee_id, status, message, created_at, employees!inner(first_name,last_name), scheduled_shifts!inner(title,date,start_time,end_time)")
+            .eq("company_id", selectedCompanyId!)
+            .eq("status", "pending")
+            .order("created_at", { ascending: false })
+            .limit(50);
+          if (alive && !reqRes.error) {
+            const rows = (reqRes.data ?? []) as any[];
+            setPendingRequests(rows.map(r => ({
+              id: r.id,
+              shift_id: r.shift_id,
+              employee_id: r.employee_id,
+              created_at: r.created_at,
+              message: r.message,
+              employee_name: `${r.employees?.first_name ?? ""} ${r.employees?.last_name ?? ""}`.trim() || "Worker",
+              shift_title: r.scheduled_shifts?.title ?? null,
+              shift_date: r.scheduled_shifts?.date ?? null,
+              shift_start: r.scheduled_shifts?.start_time ?? null,
+              shift_end: r.scheduled_shifts?.end_time ?? null,
+            })));
+          }
+        } catch { /* ignore — requests is optional */ }
       } catch (e: any) {
         if (!alive) return;
         console.error("[MobileShiftsView] load error", e);
@@ -212,39 +250,33 @@ export default function MobileShiftsView() {
   }, [shifts, filters, assignmentsByShift, clientById, locationById]);
 
   const tabCounts = useMemo(() => {
-    const counts = { today: 0, upcoming: 0, unstaffed: 0, drafts: 0, issues: 0 };
+    const counts = { today: 0, upcoming: 0, needs: 0, requests: pendingRequests.length };
     for (const s of baseFiltered) {
       const asgns = assignmentsByShift.get(s.id) ?? [];
-      const confirmed = asgns.filter(a => a.status === "confirmed").length;
+      const staffed = asgns.filter(a => a.status !== "rejected" && a.status !== "removed").length;
       const slots = s.slots ?? 0;
-      const isDraft = isDraftShift(s);
-      const understaffed = slots > 0 && confirmed < slots;
-      const noClient = !s.client_id;
+      const understaffed = slots > 0 && staffed < slots;
 
       if (s.date === todayStr) counts.today++;
       if (s.date > todayStr) counts.upcoming++;
-      if (s.date >= todayStr && understaffed) counts.unstaffed++;
-      if (isDraft) counts.drafts++;
-      if (s.date >= todayStr && (noClient || (slots > 0 && confirmed === 0))) counts.issues++;
+      if (s.date >= todayStr && understaffed) counts.needs++;
     }
     return counts;
-  }, [baseFiltered, assignmentsByShift, todayStr]);
+  }, [baseFiltered, assignmentsByShift, todayStr, pendingRequests.length]);
 
   const visibleShifts = useMemo(() => {
+    if (tab === "requests") return [];
     return baseFiltered.filter(s => {
       const asgns = assignmentsByShift.get(s.id) ?? [];
-      const confirmed = asgns.filter(a => a.status === "confirmed").length;
+      const staffed = asgns.filter(a => a.status !== "rejected" && a.status !== "removed").length;
       const slots = s.slots ?? 0;
-      const understaffed = slots > 0 && confirmed < slots;
-      const isDraft = isDraftShift(s);
-      const noClient = !s.client_id;
+      const understaffed = slots > 0 && staffed < slots;
 
       switch (tab) {
         case "today": return s.date === todayStr;
         case "upcoming": return s.date > todayStr;
-        case "unstaffed": return s.date >= todayStr && understaffed;
-        case "drafts": return isDraft;
-        case "issues": return s.date >= todayStr && (noClient || (slots > 0 && confirmed === 0));
+        case "needs": return s.date >= todayStr && understaffed;
+        default: return false;
       }
     });
   }, [baseFiltered, tab, assignmentsByShift, todayStr]);
@@ -307,10 +339,7 @@ export default function MobileShiftsView() {
     setDetailOpen(true);
   };
 
-  const handleCreate = () => {
-    if (!canEdit) return;
-    toast("Create shift from desktop for now");
-  };
+  const handleOpenRequests = () => navigate("/app/shift-requests");
 
   return (
     <div className="min-h-full pb-[calc(env(safe-area-inset-bottom,0px)+72px)] bg-background">
@@ -338,16 +367,7 @@ export default function MobileShiftsView() {
                 </span>
               )}
             </Button>
-            {canEdit && (
-              <Button
-                size="icon"
-                className="h-9 w-9 rounded-xl"
-                onClick={handleCreate}
-                aria-label="Create shift"
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
-            )}
+            {/* Create from mobile is intentionally hidden (Phase 1) — desktop recommended */}
           </div>
         </div>
 
@@ -394,7 +414,35 @@ export default function MobileShiftsView() {
 
       {/* List */}
       <div className="px-4 pt-4">
-        {loading ? (
+        {tab === "requests" ? (
+          pendingRequests.length === 0 ? (
+            <EmptyState tab="requests" />
+          ) : (
+            <div className="space-y-2.5">
+              <div className="text-xs text-muted-foreground px-1 mb-1">
+                {pendingRequests.length} pending request{pendingRequests.length === 1 ? "" : "s"}
+              </div>
+              {pendingRequests.map(req => (
+                <RequestRow
+                  key={req.id}
+                  req={req}
+                  onOpen={() => {
+                    const s = shifts.find(x => x.id === req.shift_id);
+                    if (s) handleOpenDetail(s);
+                  }}
+                />
+              ))}
+              <Button
+                variant="outline"
+                className="w-full h-11 mt-2"
+                onClick={handleOpenRequests}
+              >
+                Manage in Shift Requests
+                <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
+            </div>
+          )
+        ) : loading ? (
           <SkeletonList />
         ) : error ? (
           <ErrorState message={error} onRetry={() => window.location.reload()} />
@@ -415,7 +463,6 @@ export default function MobileShiftsView() {
                 <div className="space-y-2.5">
                   {group.shifts.map(shift => {
                     const asgns = assignmentsByShift.get(shift.id) ?? [];
-                    // Unified with desktop: count any non-rejected, non-removed assignment.
                     const staffed = asgns.filter(a => a.status !== "rejected" && a.status !== "removed");
                     const assignedEmployees = staffed
                       .map(a => employeeById.get(a.employee_id))
@@ -688,13 +735,41 @@ function SkeletonList() {
   );
 }
 
+function RequestRow({ req, onOpen }: { req: PendingRequest; onOpen: () => void }) {
+  const dateStr = req.shift_date ? (() => {
+    try { return format(parseISO(req.shift_date!), "EEE MMM d", { locale: enUS }); } catch { return req.shift_date; }
+  })() : "—";
+  const time = req.shift_start && req.shift_end
+    ? `${req.shift_start.slice(0,5)}–${req.shift_end.slice(0,5)}`
+    : "";
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className="w-full text-left rounded-2xl border border-border/50 bg-card p-3.5 active:scale-[0.98] transition"
+    >
+      <div className="flex items-start justify-between gap-2 mb-1.5">
+        <div className="text-sm font-semibold truncate">{req.employee_name}</div>
+        <Badge variant="outline" className="text-[10px] border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10">
+          Pending
+        </Badge>
+      </div>
+      <div className="text-xs text-muted-foreground truncate">
+        {req.shift_title ?? "Shift"} · {dateStr}{time ? ` · ${time}` : ""}
+      </div>
+      {req.message && (
+        <div className="text-xs text-foreground/80 mt-1.5 line-clamp-2">"{req.message}"</div>
+      )}
+    </button>
+  );
+}
+
 function EmptyState({ tab }: { tab: TabKey }) {
   const messages: Record<TabKey, { title: string; hint: string }> = {
     today: { title: "No shifts today", hint: "Take a breath. Tomorrow's roster is just a tap away." },
     upcoming: { title: "Nothing scheduled ahead", hint: "Use the desktop scheduler to plan upcoming shifts." },
-    unstaffed: { title: "All shifts are staffed", hint: "Coverage looks good across the board." },
-    drafts: { title: "No drafts pending", hint: "Drafts you save will appear here before publishing." },
-    issues: { title: "No issues found", hint: "Everything checks out — no missing clients or empty slots." },
+    needs: { title: "All shifts are staffed", hint: "Coverage looks good across the board." },
+    requests: { title: "No pending shift requests", hint: "Worker claims and shift requests will appear here when submitted." },
   };
   const m = messages[tab];
   return (
