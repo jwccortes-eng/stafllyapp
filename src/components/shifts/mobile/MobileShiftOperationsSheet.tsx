@@ -7,7 +7,7 @@ import {
   ShieldCheck, MessageCircle, MessageSquare, Crown, Loader2,
 } from "lucide-react";
 import { buildWhatsAppTargets, normalizePhone } from "@/lib/phone";
-import { format, parseISO, isToday, isTomorrow, isPast } from "date-fns";
+import { format, parseISO, isToday, isTomorrow, isPast, isThisWeek } from "date-fns";
 import { enUS } from "date-fns/locale";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
@@ -187,10 +187,24 @@ export function MobileShiftOperationsSheet({
       else if (day === 5) weekendLabel = "Friday night";
     } catch { /* noop */ }
 
+    let weekBucket: { label: string; tone: "info" | "muted" } | null = null;
+    try {
+      const d = parseISO(shift.date);
+      // Wed–Tue pay-period anchor would require pay_periods data which is not
+      // loaded here. Fall back to a calendar-week context only — read-only.
+      if (isThisWeek(d, { weekStartsOn: 1 })) {
+        weekBucket = { label: "This week", tone: "info" };
+      } else if (isPast(d)) {
+        weekBucket = { label: "Past week", tone: "muted" };
+      } else {
+        weekBucket = { label: "Future week", tone: "muted" };
+      }
+    } catch { /* noop */ }
+
     return {
       shiftAsgns, assignedWorkers, slots, assignedCount, coverage,
       understaffed, fullyStaffed, draft, published, noClient, noLocation,
-      hours, dateBucket, weekendLabel,
+      hours, dateBucket, weekendLabel, weekBucket,
     };
   }, [shift, assignments, employees]);
 
@@ -207,6 +221,7 @@ export function MobileShiftOperationsSheet({
   const hours = data?.hours ?? null;
   const dateBucket = data?.dateBucket ?? "future";
   const weekendLabel = data?.weekendLabel ?? null;
+  const weekBucket = data?.weekBucket ?? null;
 
   // ── Memoized assignment lookup + sorted workers (avoids repeated .find in sort/map)
   const asgnByEmployeeId = useMemo(() => {
@@ -367,6 +382,20 @@ export function MobileShiftOperationsSheet({
             {weekendLabel && (
               <Badge variant="outline" className="h-[22px] px-2 text-[11px] font-medium border-border/60 text-muted-foreground bg-muted/40">
                 {weekendLabel}
+              </Badge>
+            )}
+            {weekBucket && (
+              <Badge
+                variant="outline"
+                className={cn(
+                  "h-[22px] px-2 text-[11px] font-medium",
+                  weekBucket.tone === "info"
+                    ? "border-primary/30 text-primary bg-primary/5"
+                    : "border-border/60 text-muted-foreground bg-muted/40",
+                )}
+                title="Calendar week context — pay period not loaded"
+              >
+                {weekBucket.label}
               </Badge>
             )}
           </div>
