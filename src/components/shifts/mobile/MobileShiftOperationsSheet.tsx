@@ -240,15 +240,14 @@ export function MobileShiftOperationsSheet({
 
   const handleOpenFullEditor = () => {
     onOpenChange(false);
-    toast.info("Full shift editing is desktop recommended for now", {
-      description: "Mobile shift operations are being rolled out — create, edit, assign and publish are coming next.",
-    });
+    // Reuse canonical Shift Operations editor (mobile-friendly form)
+    navigate(`/app/shift-ops?id=${shift.id}`);
   };
 
-  const handleAssign = () => {
-    toast.info("Assigning workers is desktop recommended for now", {
-      description: "Mobile assignment is being rolled out. For now, use desktop to add or remove workers.",
-    });
+  const handleManageTeam = () => {
+    onOpenChange(false);
+    // Same canonical screen — staffing/team section is part of it.
+    navigate(`/app/shift-ops?id=${shift.id}#staffing`);
   };
 
   const handleViewAttendance = () => {
