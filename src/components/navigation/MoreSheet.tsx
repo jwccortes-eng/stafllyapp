@@ -100,8 +100,8 @@ export function MoreSheet({
 
         <SheetHeader className="px-5 pt-2 pb-3 flex-row items-center justify-between space-y-0 shrink-0">
           <div className="text-left">
-            <SheetTitle className="text-base font-bold font-heading">All Apps</SheetTitle>
-            <p className="text-[11px] text-muted-foreground/70 mt-0.5">
+            <SheetTitle className="text-base font-bold font-heading text-foreground">All Apps</SheetTitle>
+            <p className="text-[11px] text-muted-foreground mt-0.5">
               Tap <Pin className="inline h-3 w-3 -mt-0.5" /> to pin ({pinnedIds.length}/{maxPins})
             </p>
           </div>
