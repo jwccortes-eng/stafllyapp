@@ -96,28 +96,43 @@ export function MobileShiftOperationsSheet({
     employee_id: string;
     status: string;
     attendance_status: string | null;
+    assignment_role: string | null;
   };
   const [asgnExtras, setAsgnExtras] = useState<AsgnExtra[]>([]);
   const [clockByEmp, setClockByEmp] = useState<Record<string, { clock_in: string | null; clock_out: string | null }>>({});
+  const [shiftAdminId, setShiftAdminId] = useState<string | null>(null);
+  const [loadingTeam, setLoadingTeam] = useState(false);
+  const [teamError, setTeamError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
     if (!shift || !open) return;
+    setLoadingTeam(true);
+    setTeamError(null);
     (async () => {
-      const [asgnRes, teRes] = await Promise.all([
+      const [asgnRes, teRes, shiftRes] = await Promise.all([
         supabase
           .from("shift_assignments")
-          .select("id, employee_id, status, attendance_status")
+          .select("id, employee_id, status, attendance_status, assignment_role")
           .eq("shift_id", shift.id),
         supabase
           .from("time_entries")
           .select("employee_id, clock_in, clock_out")
           .eq("shift_id", shift.id)
           .neq("status", "rejected"),
+        supabase
+          .from("scheduled_shifts")
+          .select("shift_admin_id")
+          .eq("id", shift.id)
+          .maybeSingle(),
       ]);
       if (cancelled) return;
+      if (asgnRes.error || teRes.error) {
+        setTeamError("Couldn't load team data");
+      }
       setAsgnExtras(((asgnRes.data ?? []) as any));
+      setShiftAdminId(((shiftRes.data as any)?.shift_admin_id) ?? null);
       const map: Record<string, { clock_in: string | null; clock_out: string | null }> = {};
       for (const te of (teRes.data ?? []) as any[]) {
         const prev = map[te.employee_id];
@@ -126,6 +141,7 @@ export function MobileShiftOperationsSheet({
         }
       }
       setClockByEmp(map);
+      setLoadingTeam(false);
     })();
     return () => { cancelled = true; };
   }, [shift?.id, open, reloadKey]);
