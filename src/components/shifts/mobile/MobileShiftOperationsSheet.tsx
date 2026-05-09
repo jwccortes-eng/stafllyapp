@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, memo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   X, Clock, MapPin, Building2, Users, Phone, FileEdit, AlertTriangle,
