@@ -1055,6 +1055,7 @@ const WorkerRow = memo(function WorkerRow({
   const phone = worker.phone_number?.trim();
   const normalized = normalizePhone(phone);
   const wa = phone ? buildWhatsAppTargets(phone, "") : null;
+  const workerName = `${worker.first_name ?? ""} ${worker.last_name ?? ""}`.trim() || "worker";
   const initialsStr = (worker.first_name?.[0] ?? "").toUpperCase() + (worker.last_name?.[0] ?? "").toUpperCase();
   const att = attendanceBadgeFor(attendanceStatus, clock);
   const roleBadge = roleBadgeFor(role, isShiftAdmin);
@@ -1114,17 +1115,17 @@ const WorkerRow = memo(function WorkerRow({
           <a
             href={`tel:${phone}`}
             className="flex-1 inline-flex items-center justify-center gap-1.5 h-9 rounded-xl bg-primary/10 text-primary hover:bg-primary/15 active:scale-[0.98] transition text-xs font-semibold"
-            aria-label={`Call ${worker.first_name}`}
+            aria-label={`Call ${workerName}`}
           >
-            <Phone className="h-3.5 w-3.5" />
+            <Phone className="h-3.5 w-3.5" aria-hidden="true" />
             Call
           </a>
           <a
             href={`sms:${normalized || phone}`}
             className="flex-1 inline-flex items-center justify-center gap-1.5 h-9 rounded-xl bg-muted text-foreground hover:bg-muted/80 active:scale-[0.98] transition text-xs font-semibold"
-            aria-label={`SMS ${worker.first_name}`}
+            aria-label={`Send SMS to ${workerName}`}
           >
-            <MessageSquare className="h-3.5 w-3.5" />
+            <MessageSquare className="h-3.5 w-3.5" aria-hidden="true" />
             SMS
           </a>
           {wa?.waMeUrl && (
@@ -1133,9 +1134,9 @@ const WorkerRow = memo(function WorkerRow({
               target="_blank"
               rel="noopener noreferrer"
               className="flex-1 inline-flex items-center justify-center gap-1.5 h-9 rounded-xl bg-[#25D366]/10 text-[#128C4F] dark:text-[#25D366] hover:bg-[#25D366]/15 active:scale-[0.98] transition text-xs font-semibold"
-              aria-label={`WhatsApp ${worker.first_name}`}
+              aria-label={`Open WhatsApp for ${workerName}`}
             >
-              <MessageCircle className="h-3.5 w-3.5" />
+              <MessageCircle className="h-3.5 w-3.5" aria-hidden="true" />
               WhatsApp
             </a>
           )}
@@ -1143,13 +1144,13 @@ const WorkerRow = memo(function WorkerRow({
             type="button"
             onClick={handleCopy}
             className="inline-flex items-center justify-center h-9 w-9 rounded-xl bg-muted text-muted-foreground hover:bg-muted/80 active:scale-[0.98] transition"
-            aria-label="Copy phone"
+            aria-label={`Copy phone number for ${workerName}`}
           >
-            <Copy className="h-3.5 w-3.5" />
+            <Copy className="h-3.5 w-3.5" aria-hidden="true" />
           </button>
         </div>
       ) : (
-        <div className="mt-2 text-[11px] text-muted-foreground italic">
+        <div className="mt-2 text-[11px] text-muted-foreground italic" aria-label={`No phone on file for ${workerName}`}>
           No phone on file.
         </div>
       )}
