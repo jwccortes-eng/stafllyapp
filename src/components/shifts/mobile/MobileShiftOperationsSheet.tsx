@@ -605,8 +605,8 @@ export function MobileShiftOperationsSheet({
               <EmptyBlock
                 icon={Users}
                 title="No workers assigned yet"
-                helper="Add workers from desktop for now. Mobile staffing changes are being prepared."
-                badge="Desktop required"
+                helper="Add workers from desktop before reviewing coverage or attendance."
+                badge="Read-only on mobile"
               />
             ) : (
               <>
