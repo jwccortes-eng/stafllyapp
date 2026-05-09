@@ -192,6 +192,28 @@ export function MobileShiftOperationsSheet({
     draft, published, noClient, noLocation, hours, dateBucket,
   } = data;
 
+  // ── Memoized assignment lookup + sorted workers (avoids repeated .find in sort/map)
+  const asgnByEmployeeId = useMemo(() => {
+    const map = new Map<string, AsgnExtra>();
+    for (const item of asgnExtras) {
+      map.set(item.employee_id, item);
+    }
+    return map;
+  }, [asgnExtras]);
+
+  const sortedAssignedWorkers = useMemo(() => {
+    return [...assignedWorkers].sort((a, b) => {
+      const ea = asgnByEmployeeId.get(a.id) ?? null;
+      const eb = asgnByEmployeeId.get(b.id) ?? null;
+      const sa = getWorkerSortScore(a, ea, clockByEmp[a.id], shiftAdminId, dateBucket);
+      const sb = getWorkerSortScore(b, eb, clockByEmp[b.id], shiftAdminId, dateBucket);
+      if (sa !== sb) return sa - sb;
+      const na = `${a.first_name ?? ""} ${a.last_name ?? ""}`.trim().toLowerCase();
+      const nb = `${b.first_name ?? ""} ${b.last_name ?? ""}`.trim().toLowerCase();
+      return na.localeCompare(nb);
+    });
+  }, [assignedWorkers, asgnByEmployeeId, clockByEmp, shiftAdminId, dateBucket]);
+
   // ── Smart brief (deterministic)
   const briefMessages: { tone: "good" | "warn" | "bad" | "info"; text: string }[] = [];
   if (draft) briefMessages.push({ tone: "warn", text: "Draft — workers won't see this yet" });
@@ -456,31 +478,20 @@ export function MobileShiftOperationsSheet({
                   Sorted by role and attendance status.
                 </p>
                 <div className="space-y-1.5 max-h-[360px] overflow-y-auto pr-1 -mr-1">
-                  {[...assignedWorkers]
-                    .sort((a, b) => {
-                      const ea = asgnExtras.find(x => x.employee_id === a.id) ?? null;
-                      const eb = asgnExtras.find(x => x.employee_id === b.id) ?? null;
-                      const sa = getWorkerSortScore(a, ea, clockByEmp[a.id], shiftAdminId, dateBucket);
-                      const sb = getWorkerSortScore(b, eb, clockByEmp[b.id], shiftAdminId, dateBucket);
-                      if (sa !== sb) return sa - sb;
-                      const na = `${a.first_name ?? ""} ${a.last_name ?? ""}`.trim().toLowerCase();
-                      const nb = `${b.first_name ?? ""} ${b.last_name ?? ""}`.trim().toLowerCase();
-                      return na.localeCompare(nb);
-                    })
-                    .map(w => {
-                      const extra = asgnExtras.find(a => a.employee_id === w.id);
-                      return (
-                        <WorkerRow
-                          key={w.id}
-                          worker={w}
-                          assignmentStatus={extra?.status ?? null}
-                          attendanceStatus={extra?.attendance_status ?? null}
-                          role={extra?.assignment_role ?? null}
-                          clock={clockByEmp[w.id]}
-                          isShiftAdmin={shiftAdminId === w.id}
-                        />
-                      );
-                    })}
+                  {sortedAssignedWorkers.map(w => {
+                    const extra = asgnByEmployeeId.get(w.id) ?? null;
+                    return (
+                      <WorkerRow
+                        key={w.id}
+                        worker={w}
+                        assignmentStatus={extra?.status ?? null}
+                        attendanceStatus={extra?.attendance_status ?? null}
+                        role={extra?.assignment_role ?? null}
+                        clock={clockByEmp[w.id]}
+                        isShiftAdmin={shiftAdminId === w.id}
+                      />
+                    );
+                  })}
                 </div>
               </>
             )}
