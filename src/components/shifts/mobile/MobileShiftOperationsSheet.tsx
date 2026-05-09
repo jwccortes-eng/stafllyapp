@@ -536,11 +536,12 @@ export function MobileShiftOperationsSheet({
                 <Button size="sm" variant="outline" onClick={() => setReloadKey(k => k + 1)}>Retry</Button>
               </div>
             ) : assignedWorkers.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-border bg-muted/20 px-4 py-6 text-center">
-                <Users className="h-5 w-5 text-muted-foreground mx-auto mb-2" />
-                <p className="text-sm text-muted-foreground">No workers assigned yet.</p>
-                <p className="text-xs text-muted-foreground mt-1">Add workers from desktop for now.</p>
-              </div>
+              <EmptyBlock
+                icon={Users}
+                title="No workers assigned yet"
+                helper="Add workers from desktop for now. Mobile staffing changes are being prepared."
+                badge="Desktop required"
+              />
             ) : (
               <>
                 <p className="text-[11px] text-muted-foreground mb-1.5 px-0.5">
