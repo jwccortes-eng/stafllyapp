@@ -240,15 +240,14 @@ export function MobileShiftOperationsSheet({
 
   const handleOpenFullEditor = () => {
     onOpenChange(false);
-    // Phase 1: surface a guidance toast — desktop is the safe edit path.
-    toast.info("Open from desktop for full editing", {
-      description: "Mobile editing arrives in Phase 2.",
+    toast.info("Full shift editing is desktop recommended for now", {
+      description: "Mobile shift operations are being rolled out — create, edit, assign and publish are coming next.",
     });
   };
 
   const handleAssign = () => {
-    toast.info("Assignment editing is desktop-only", {
-      description: "Mobile editing arrives in Phase 2. Use desktop to add or remove workers.",
+    toast.info("Assigning workers is desktop recommended for now", {
+      description: "Mobile assignment is being rolled out. For now, use desktop to add or remove workers.",
     });
   };
 
@@ -434,13 +433,14 @@ export function MobileShiftOperationsSheet({
               </div>
             )}
 
-            {/* Honest mobile capability banner */}
+            {/* Honest mobile capability banner — phased rollout, not permanent */}
             <div className="mt-2.5 rounded-2xl border border-border bg-muted/30 p-3 text-xs text-foreground/80">
               <strong className="block font-semibold text-foreground mb-0.5">
-                Worker assignment editing is desktop-only for now
+                Mobile shift operations are rolling out
               </strong>
-              Mobile support is coming next. You can still review assignments,
-              attendance, traceability and open spots from here.
+              Editing assignments, creating, publishing and unpublishing are
+              desktop recommended for now. Reviewing assignments, attendance,
+              traceability and open spots already works here.
             </div>
           </section>
 
@@ -517,8 +517,11 @@ export function MobileShiftOperationsSheet({
             onClick={handleOpenFullEditor}
           >
             <ExternalLink className="h-4 w-4" />
-            Open full editor
+            Open in desktop editor
           </Button>
+          <p className="mt-1.5 text-[10px] text-center text-muted-foreground">
+            Mobile editing is being rolled out · desktop recommended for now
+          </p>
         </div>
       </SheetContent>
     </Sheet>
