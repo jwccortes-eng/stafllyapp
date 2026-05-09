@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, memo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   X, Clock, MapPin, Building2, Users, Phone, FileEdit, AlertTriangle,
@@ -678,7 +678,39 @@ function roleBadgeFor(role: string | null, isShiftAdmin: boolean): { label: stri
   return { label: role, cls: "bg-muted text-muted-foreground border-border" };
 }
 
-function WorkerRow({
+function areWorkerRowPropsEqual(
+  prev: {
+    worker: Employee;
+    assignmentStatus: string | null;
+    attendanceStatus: string | null;
+    role: string | null;
+    clock: { clock_in: string | null; clock_out: string | null } | undefined;
+    isShiftAdmin: boolean;
+  },
+  next: {
+    worker: Employee;
+    assignmentStatus: string | null;
+    attendanceStatus: string | null;
+    role: string | null;
+    clock: { clock_in: string | null; clock_out: string | null } | undefined;
+    isShiftAdmin: boolean;
+  },
+): boolean {
+  if (prev.worker.id !== next.worker.id) return false;
+  if (prev.worker.first_name !== next.worker.first_name) return false;
+  if (prev.worker.last_name !== next.worker.last_name) return false;
+  if (prev.worker.phone_number !== next.worker.phone_number) return false;
+  if (prev.worker.avatar_url !== next.worker.avatar_url) return false;
+  if (prev.assignmentStatus !== next.assignmentStatus) return false;
+  if (prev.attendanceStatus !== next.attendanceStatus) return false;
+  if (prev.role !== next.role) return false;
+  if (prev.isShiftAdmin !== next.isShiftAdmin) return false;
+  if (prev.clock?.clock_in !== next.clock?.clock_in) return false;
+  if (prev.clock?.clock_out !== next.clock?.clock_out) return false;
+  return true;
+}
+
+const WorkerRow = memo(function WorkerRow({
   worker, assignmentStatus, attendanceStatus, role, clock, isShiftAdmin,
 }: {
   worker: Employee;
@@ -791,7 +823,7 @@ function WorkerRow({
       )}
     </div>
   );
-}
+}, areWorkerRowPropsEqual);
 
 function DetailRow({ icon: Icon, label, value, muted }: { icon: any; label: string; value: string; muted?: boolean }) {
   return (
