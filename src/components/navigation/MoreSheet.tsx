@@ -91,11 +91,11 @@ export function MoreSheet({
     <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
       <SheetContent
         side="bottom"
-        className="p-0 h-[88vh] rounded-t-3xl border-t border-border/40 bg-card/98 backdrop-blur-2xl flex flex-col"
+        className="p-0 h-[88vh] rounded-t-3xl border-t border-border bg-card flex flex-col"
       >
         {/* Drag handle */}
         <div className="flex justify-center pt-2 pb-1 shrink-0">
-          <div className="h-1 w-10 rounded-full bg-muted-foreground/20" />
+          <div className="h-1 w-10 rounded-full bg-border" />
         </div>
 
         <SheetHeader className="px-5 pt-2 pb-3 flex-row items-center justify-between space-y-0 shrink-0">
