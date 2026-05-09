@@ -935,7 +935,7 @@ export default function Employees() {
   ];
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 overflow-x-hidden max-w-full">
       {/* ─── Premium Header + KPI strip ─── */}
       <PremiumPageHeader
         title="Workers"
