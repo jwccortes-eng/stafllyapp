@@ -858,6 +858,22 @@ export function MobileShiftOperationsSheet({
           </p>
         </div>
       </SheetContent>
+      <MobileShiftTeamHub
+        open={hubOpen}
+        onOpenChange={setHubOpen}
+        shift={shift}
+        assignments={asgnExtras.map(a => ({
+          id: a.id,
+          employee_id: a.employee_id,
+          status: a.status,
+          attendance_status: a.attendance_status,
+          assignment_role: a.assignment_role,
+        }))}
+        employees={employees}
+        canManage={canValidate}
+        clientName={clientName}
+        locationName={locationName}
+      />
     </Sheet>
   );
 }
