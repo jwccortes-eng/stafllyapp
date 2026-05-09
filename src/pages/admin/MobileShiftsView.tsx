@@ -27,15 +27,27 @@ import { toast } from "sonner";
  * and shift-guards. Multi-tenant scoped by selectedCompanyId.
  */
 
-type TabKey = "today" | "upcoming" | "unstaffed" | "drafts" | "issues";
+type TabKey = "today" | "upcoming" | "needs" | "requests";
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: "today", label: "Today" },
   { key: "upcoming", label: "Upcoming" },
-  { key: "unstaffed", label: "Unstaffed" },
-  { key: "drafts", label: "Drafts" },
-  { key: "issues", label: "Issues" },
+  { key: "needs", label: "Needs Staff" },
+  { key: "requests", label: "Requests" },
 ];
+
+interface PendingRequest {
+  id: string;
+  shift_id: string;
+  employee_id: string;
+  created_at: string;
+  message: string | null;
+  employee_name: string;
+  shift_title: string | null;
+  shift_date: string | null;
+  shift_start: string | null;
+  shift_end: string | null;
+}
 
 function calcShiftHours(start: string, end: string): number {
   if (!start || !end) return 0;
