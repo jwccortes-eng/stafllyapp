@@ -80,6 +80,7 @@ import DataQualityRiskPanel, { WorkerRiskTags } from "@/components/employee/Data
 import { analyzeEmployeeRisks, type RiskKey } from "@/lib/data-quality-risks";
 import { buildBulkRemindersText } from "@/lib/data-quality-actions";
 import { useCompanyDocuments } from "@/hooks/useCompanyDocuments";
+import MobileDataQualitySummary from "@/components/employee/MobileDataQualitySummary";
 
 // Fields that only owner/admin can see
 const SENSITIVE_FIELD_KEYS = new Set([
