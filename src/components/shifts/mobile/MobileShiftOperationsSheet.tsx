@@ -654,13 +654,32 @@ export function MobileShiftOperationsSheet({
 
 /* ───── Subcomponents ───── */
 
-function SectionTitle({ icon: Icon, children }: { icon: any; children: React.ReactNode }) {
+function SectionTitle({
+  icon: Icon, children, helper, badge,
+}: {
+  icon: any;
+  children: React.ReactNode;
+  helper?: string;
+  badge?: string;
+}) {
   return (
-    <div className="flex items-center gap-1.5 mb-2.5 px-0.5">
-      <Icon className="h-4 w-4 text-muted-foreground" />
-      <span className="text-sm font-semibold text-foreground">
-        {children}
-      </span>
+    <div className="mb-2.5 px-0.5">
+      <div className="flex items-center gap-1.5 flex-wrap">
+        <Icon className="h-4 w-4 text-muted-foreground" />
+        <span className="text-sm font-semibold text-foreground">
+          {children}
+        </span>
+        {badge && (
+          <span className="ml-auto inline-flex items-center h-[18px] px-1.5 rounded-full bg-muted text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            {badge}
+          </span>
+        )}
+      </div>
+      {helper && (
+        <p className="text-[11px] text-muted-foreground mt-1 leading-snug">
+          {helper}
+        </p>
+      )}
     </div>
   );
 }
