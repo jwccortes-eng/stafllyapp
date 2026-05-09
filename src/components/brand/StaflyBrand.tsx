@@ -89,10 +89,16 @@ export const StaflyLogo = forwardRef<HTMLDivElement, LogoProps>(function StaflyL
       <StaflyMark size={size} />
       {!markOnly && (
         <span
-          className="font-heading font-bold tracking-tight text-foreground select-none"
+          className="font-heading font-bold tracking-tight text-foreground select-none flex items-baseline gap-1.5"
           style={{ fontSize: size * 0.56, lineHeight: 1 }}
         >
-          Stafly<span className="text-primary">Apps</span>
+          Stafly<span className="text-primary">Core</span>
+          <span
+            className="font-medium text-muted-foreground/70 tracking-normal"
+            style={{ fontSize: size * 0.32 }}
+          >
+            by Stafly
+          </span>
         </span>
       )}
     </div>
