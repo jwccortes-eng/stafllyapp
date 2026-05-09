@@ -60,6 +60,15 @@ const MOBILE_SHIFT_COPY = {
   teamErrorTitle: "Couldn't load team data",
   teamErrorHelper: "Check your connection and try again. No shift data was changed.",
   readOnlyMobile: "Read-only on mobile",
+  coverageHelper: "Required spots, assigned workers, and current staffing status.",
+  noClientTitle: "No client set",
+  noClientHelper: "Add the client from desktop so this shift is easier to identify.",
+  noLocationTitle: "No location set",
+  noLocationHelper: "Add the location from desktop before publishing or dispatching.",
+  noMeetingPoint: "No meeting point set.",
+  notesSectionHelper: "Internal notes for this shift.",
+  noNotesTitle: "No notes yet",
+  noNotesHelper: "Internal notes can be added from desktop for now.",
 } as const;
 
 interface Props {
