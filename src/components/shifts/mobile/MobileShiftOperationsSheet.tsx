@@ -493,7 +493,11 @@ export function MobileShiftOperationsSheet({
 
           {/* Assigned workers */}
           <section>
-            <SectionTitle icon={Users}>
+            <SectionTitle
+              icon={Users}
+              helper="Review assigned workers and contact them safely from mobile."
+              badge="Read-only on mobile"
+            >
               Assigned workers
               <span className="ml-1.5 text-xs font-normal text-muted-foreground normal-case tracking-normal">
                 ({assignedCount}{slots > 0 ? `/${slots}` : ""})
