@@ -48,7 +48,7 @@ export default function CookiePolicy() {
 
           <section>
             <h2 className="text-lg font-semibold text-foreground">3. Cookies de terceros</h2>
-            <p>StaflyApps no utiliza cookies de seguimiento de terceros, publicidad ni analytics de terceros. Solo utilizamos cookies estrictamente necesarias para el funcionamiento del servicio.</p>
+            <p>Stafly Core no utiliza cookies de seguimiento de terceros, publicidad ni analytics de terceros. Solo utilizamos cookies estrictamente necesarias para el funcionamiento del servicio.</p>
           </section>
 
           <section>

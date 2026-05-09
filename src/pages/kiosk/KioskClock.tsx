@@ -226,7 +226,7 @@ export default function KioskClock() {
           )}
         </div>
 
-        <p className="text-[10px] text-white/20">Kiosk Mode · StaflyApps</p>
+        <p className="text-[10px] text-white/20">Kiosk Mode · Stafly Core</p>
       </div>
     </div>
   );

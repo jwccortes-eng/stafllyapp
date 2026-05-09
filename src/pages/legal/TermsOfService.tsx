@@ -23,12 +23,12 @@ export default function TermsOfService() {
         <div className="prose prose-sm dark:prose-invert max-w-none space-y-6 text-muted-foreground leading-relaxed">
           <section>
             <h2 className="text-lg font-semibold text-foreground">1. Aceptación de los términos</h2>
-            <p>Al acceder y utilizar StaflyApps ("la Plataforma"), usted acepta estar sujeto a estos Términos de Servicio. Si no está de acuerdo con alguna parte de estos términos, no podrá acceder al servicio.</p>
+            <p>Al acceder y utilizar Stafly Core ("la Plataforma"), usted acepta estar sujeto a estos Términos de Servicio. Si no está de acuerdo con alguna parte de estos términos, no podrá acceder al servicio.</p>
           </section>
 
           <section>
             <h2 className="text-lg font-semibold text-foreground">2. Descripción del servicio</h2>
-            <p>StaflyApps es una plataforma SaaS de gestión de personal que ofrece:</p>
+            <p>Stafly Core es una plataforma SaaS de gestión de personal que ofrece:</p>
             <ul className="list-disc pl-5 space-y-1">
               <li>Programación y gestión de turnos</li>
               <li>Control de asistencia con verificación GPS</li>
@@ -42,7 +42,7 @@ export default function TermsOfService() {
 
           <section>
             <h2 className="text-lg font-semibold text-foreground">3. Cuentas de usuario</h2>
-            <p>Usted es responsable de mantener la confidencialidad de su cuenta y contraseña. Acepta notificarnos inmediatamente sobre cualquier uso no autorizado de su cuenta. StaflyApps no será responsable por pérdidas causadas por el uso no autorizado de su cuenta.</p>
+            <p>Usted es responsable de mantener la confidencialidad de su cuenta y contraseña. Acepta notificarnos inmediatamente sobre cualquier uso no autorizado de su cuenta. Stafly Core no será responsable por pérdidas causadas por el uso no autorizado de su cuenta.</p>
           </section>
 
           <section>
@@ -59,12 +59,12 @@ export default function TermsOfService() {
 
           <section>
             <h2 className="text-lg font-semibold text-foreground">5. Planes y facturación</h2>
-            <p>StaflyApps ofrece planes Free, Pro y Enterprise. Los planes de pago se facturan mensualmente. Usted puede cancelar su suscripción en cualquier momento, y el acceso continuará hasta el final del período facturado. No se realizan reembolsos por períodos parciales.</p>
+            <p>Stafly Core ofrece planes Free, Pro y Enterprise. Los planes de pago se facturan mensualmente. Usted puede cancelar su suscripción en cualquier momento, y el acceso continuará hasta el final del período facturado. No se realizan reembolsos por períodos parciales.</p>
           </section>
 
           <section>
             <h2 className="text-lg font-semibold text-foreground">6. Propiedad intelectual</h2>
-            <p>Todo el contenido, código, diseño y marca de StaflyApps son propiedad exclusiva de la empresa. Los datos que usted ingrese en la plataforma siguen siendo de su propiedad.</p>
+            <p>Todo el contenido, código, diseño y marca de Stafly Core son propiedad exclusiva de la empresa. Los datos que usted ingrese en la plataforma siguen siendo de su propiedad.</p>
           </section>
 
           <section>
@@ -74,7 +74,7 @@ export default function TermsOfService() {
 
           <section>
             <h2 className="text-lg font-semibold text-foreground">8. Limitación de responsabilidad</h2>
-            <p>StaflyApps no será responsable por daños indirectos, incidentales o consecuentes. Nuestra responsabilidad máxima se limita al monto pagado por usted en los últimos 12 meses.</p>
+            <p>Stafly Core no será responsable por daños indirectos, incidentales o consecuentes. Nuestra responsabilidad máxima se limita al monto pagado por usted en los últimos 12 meses.</p>
           </section>
 
           <section>
