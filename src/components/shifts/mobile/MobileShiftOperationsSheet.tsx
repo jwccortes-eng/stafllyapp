@@ -23,6 +23,7 @@ import { useCompany } from "@/hooks/useCompany";
 import { staffedAssignments } from "@/lib/shifts/assignment-coverage";
 import { canManageShifts } from "@/lib/shifts/shift-permissions";
 import { ShiftAttendancePanel } from "@/components/shifts/ShiftAttendancePanel";
+import { MobileShiftTeamHub } from "@/components/shifts/mobile/MobileShiftTeamHub";
 import {
   TraceabilitySnapshot,
   type TraceRisk,
@@ -137,6 +138,7 @@ export function MobileShiftOperationsSheet({
 }: Props) {
   const navigate = useNavigate();
   const [traceOpen, setTraceOpen] = useState(false);
+  const [hubOpen, setHubOpen] = useState(false);
   const { allRoles, canAccessAdminForCompany } = useAuth();
   const { selectedCompanyId } = useCompany();
 
@@ -366,6 +368,7 @@ export function MobileShiftOperationsSheet({
   };
 
   return (
+    <>
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
@@ -507,6 +510,18 @@ export function MobileShiftOperationsSheet({
           <p className="mt-2 text-[11px] text-muted-foreground leading-snug">
             Review this shift before making changes.
           </p>
+
+          {canValidate && (
+            <Button
+              size="sm"
+              className="mt-2.5 w-full h-9 rounded-xl text-xs font-semibold gap-1.5"
+              onClick={() => setHubOpen(true)}
+              aria-label="Open team management for this shift"
+            >
+              <Users className="h-3.5 w-3.5" />
+              Manage team
+            </Button>
+          )}
         </div>
 
         {/* Scroll area */}
@@ -845,6 +860,23 @@ export function MobileShiftOperationsSheet({
         </div>
       </SheetContent>
     </Sheet>
+    <MobileShiftTeamHub
+      open={hubOpen}
+      onOpenChange={setHubOpen}
+      shift={shift}
+      assignments={asgnExtras.map(a => ({
+        id: a.id,
+        employee_id: a.employee_id,
+        status: a.status,
+        attendance_status: a.attendance_status,
+        assignment_role: a.assignment_role,
+      }))}
+      employees={employees}
+      canManage={canValidate}
+      clientName={clientName}
+      locationName={locationName}
+    />
+    </>
   );
 }
 
