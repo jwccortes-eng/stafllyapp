@@ -121,7 +121,7 @@ export default function MobileTimeClockView() {
         </div>
       </div>
 
-      <TimeClockCommandView />
+      <MobileTimeCommandView />
 
       <ModuleSettingsSheet
         open={clockSettingsOpen}
