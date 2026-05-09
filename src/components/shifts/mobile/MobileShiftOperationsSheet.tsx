@@ -178,10 +178,19 @@ export function MobileShiftOperationsSheet({
       else if (isPast(d)) dateBucket = "past";
     } catch { /* noop */ }
 
+    let weekendLabel: string | null = null;
+    try {
+      const d = parseISO(shift.date);
+      const day = d.getDay();
+      if (day === 0) weekendLabel = "Sunday";
+      else if (day === 6) weekendLabel = "Saturday";
+      else if (day === 5) weekendLabel = "Friday night";
+    } catch { /* noop */ }
+
     return {
       shiftAsgns, assignedWorkers, slots, assignedCount, coverage,
       understaffed, fullyStaffed, draft, published, noClient, noLocation,
-      hours, dateBucket,
+      hours, dateBucket, weekendLabel,
     };
   }, [shift, assignments, employees]);
 
@@ -197,6 +206,7 @@ export function MobileShiftOperationsSheet({
   const noLocation = data?.noLocation ?? false;
   const hours = data?.hours ?? null;
   const dateBucket = data?.dateBucket ?? "future";
+  const weekendLabel = data?.weekendLabel ?? null;
 
   // ── Memoized assignment lookup + sorted workers (avoids repeated .find in sort/map)
   const asgnByEmployeeId = useMemo(() => {
