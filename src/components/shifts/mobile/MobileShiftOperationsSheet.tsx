@@ -60,6 +60,15 @@ const MOBILE_SHIFT_COPY = {
   teamErrorTitle: "Couldn't load team data",
   teamErrorHelper: "Check your connection and try again. No shift data was changed.",
   readOnlyMobile: "Read-only on mobile",
+  coverageHelper: "Required spots, assigned workers, and current staffing status.",
+  noClientTitle: "No client set",
+  noClientHelper: "Add the client from desktop so this shift is easier to identify.",
+  noLocationTitle: "No location set",
+  noLocationHelper: "Add the location from desktop before publishing or dispatching.",
+  noMeetingPoint: "No meeting point set.",
+  notesSectionHelper: "Internal notes for this shift.",
+  noNotesTitle: "No notes yet",
+  noNotesHelper: "Internal notes can be added from desktop for now.",
 } as const;
 
 interface Props {
@@ -152,7 +161,7 @@ export function MobileShiftOperationsSheet({
       ]);
       if (cancelled) return;
       if (asgnRes.error || teRes.error) {
-        setTeamError("Couldn't load team data");
+        setTeamError(MOBILE_SHIFT_COPY.teamErrorTitle);
       }
       setAsgnExtras(((asgnRes.data ?? []) as any));
       setShiftAdminId(((shiftRes.data as any)?.shift_admin_id) ?? null);
@@ -487,7 +496,7 @@ export function MobileShiftOperationsSheet({
           <section>
             <SectionTitle
               icon={ClipboardList}
-              helper="Required spots, assigned workers, and current staffing status."
+              helper={MOBILE_SHIFT_COPY.coverageHelper}
             >
               Coverage
             </SectionTitle>
@@ -723,8 +732,8 @@ export function MobileShiftOperationsSheet({
                 <div className="px-4 py-3">
                   <EmptyBlock
                     icon={Building2}
-                    title="No client set"
-                    helper="Add the client from desktop so this shift is easier to identify."
+                    title={MOBILE_SHIFT_COPY.noClientTitle}
+                    helper={MOBILE_SHIFT_COPY.noClientHelper}
                     compact
                   />
                 </div>
@@ -735,8 +744,8 @@ export function MobileShiftOperationsSheet({
                 <div className="px-4 py-3">
                   <EmptyBlock
                     icon={MapPin}
-                    title="No location set"
-                    helper="Add the location from desktop before publishing or dispatching."
+                    title={MOBILE_SHIFT_COPY.noLocationTitle}
+                    helper={MOBILE_SHIFT_COPY.noLocationHelper}
                     compact
                   />
                 </div>
@@ -748,7 +757,7 @@ export function MobileShiftOperationsSheet({
               ) : (
                 <div className="flex items-center gap-2 px-4 py-2.5 text-xs text-muted-foreground">
                   <MapPin className="h-3.5 w-3.5 opacity-60" />
-                  <span>No meeting point set.</span>
+                  <span>{MOBILE_SHIFT_COPY.noMeetingPoint}</span>
                 </div>
               )}
               <DetailRow
@@ -766,7 +775,7 @@ export function MobileShiftOperationsSheet({
           <section>
             <SectionTitle
               icon={StickyNote}
-              helper="Internal notes for this shift."
+              helper={MOBILE_SHIFT_COPY.notesSectionHelper}
             >
               Notes
             </SectionTitle>
@@ -779,8 +788,8 @@ export function MobileShiftOperationsSheet({
             ) : (
               <EmptyBlock
                 icon={StickyNote}
-                title="No notes yet"
-                helper="Internal notes can be added from desktop for now."
+                title={MOBILE_SHIFT_COPY.noNotesTitle}
+                helper={MOBILE_SHIFT_COPY.noNotesHelper}
               />
             )}
           </section>
