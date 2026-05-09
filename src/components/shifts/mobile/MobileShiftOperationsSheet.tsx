@@ -147,6 +147,7 @@ export function MobileShiftOperationsSheet({
     id: string;
     employee_id: string;
     status: string;
+    response_status: string | null;
     attendance_status: string | null;
     assignment_role: string | null;
   };
