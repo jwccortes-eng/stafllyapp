@@ -195,12 +195,12 @@ function SectionGrid({
                 onClick={onClose}
                 className={cn(
                   "flex flex-col items-center gap-1.5 py-3 px-1 rounded-xl transition-all duration-200 active:scale-95",
-                  active ? "bg-primary/10 text-primary" : "text-foreground/75 hover:bg-muted/40"
+                  active ? "bg-primary/10 text-primary" : "text-foreground hover:bg-muted"
                 )}
               >
                 <div className={cn(
                   "relative flex items-center justify-center h-11 w-11 rounded-xl transition-all",
-                  active ? "bg-primary text-primary-foreground shadow-md shadow-primary/25" : "bg-muted/40"
+                  active ? "bg-primary text-primary-foreground shadow-md shadow-primary/25" : "bg-muted text-foreground"
                 )}>
                   <item.icon className="h-5 w-5" strokeWidth={active ? 2.2 : 1.8} />
                   {count > 0 && (
