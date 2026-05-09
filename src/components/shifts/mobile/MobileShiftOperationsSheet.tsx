@@ -322,7 +322,11 @@ export function MobileShiftOperationsSheet({
         className="h-[92vh] p-0 rounded-t-3xl flex flex-col overflow-hidden bg-background"
       >
         {/* Sticky Context Header — "You are reviewing this shift" */}
-        <div className="px-5 pt-3 pb-3 border-b border-border/40 bg-background/95 backdrop-blur-sm">
+        <div
+          className="px-5 pt-3 pb-3 border-b border-border/40 bg-background/95 backdrop-blur-sm"
+          role="region"
+          aria-label={`Shift context for ${clientName && clientName !== "—" ? clientName : (shift.title || "shift")}, ${dateLabel(shift.date)}, ${formatTimeShort(shift.start_time)} to ${formatTimeShort(shift.end_time)}`}
+        >
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5 mb-1">
