@@ -437,12 +437,19 @@ export function MobileShiftOperationsSheet({
                 {formatTimeShort(shift.start_time)}–{formatTimeShort(shift.end_time)}
               </span>
             </div>
-            <div className="flex items-center gap-1.5 px-2.5 h-8 rounded-lg bg-muted/60">
-              <Users className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="text-xs font-semibold tabular-nums">
+            <div
+              className="flex items-center gap-1.5 px-2.5 h-8 rounded-lg bg-muted/60"
+              aria-label={
+                slots > 0
+                  ? `${assignedCount} of ${slots} workers assigned`
+                  : `${assignedCount} worker${assignedCount === 1 ? "" : "s"} assigned`
+              }
+            >
+              <Users className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
+              <span className="text-xs font-semibold tabular-nums" aria-hidden="true">
                 {slots > 0 ? `${assignedCount}/${slots}` : `${assignedCount}`}
               </span>
-              <span className="text-[11px] text-muted-foreground">assigned</span>
+              <span className="text-[11px] text-muted-foreground" aria-hidden="true">assigned</span>
             </div>
           </div>
 
