@@ -147,6 +147,7 @@ export function MobileShiftOperationsSheet({
     id: string;
     employee_id: string;
     status: string;
+    response_status: string | null;
     attendance_status: string | null;
     assignment_role: string | null;
   };
@@ -166,7 +167,7 @@ export function MobileShiftOperationsSheet({
       const [asgnRes, teRes, shiftRes] = await Promise.all([
         supabase
           .from("shift_assignments")
-          .select("id, employee_id, status, attendance_status, assignment_role")
+          .select("id, employee_id, status, response_status, attendance_status, assignment_role")
           .eq("shift_id", shift.id),
         supabase
           .from("time_entries")
@@ -868,6 +869,7 @@ export function MobileShiftOperationsSheet({
         id: a.id,
         employee_id: a.employee_id,
         status: a.status,
+        response_status: a.response_status,
         attendance_status: a.attendance_status,
         assignment_role: a.assignment_role,
       }))}
@@ -875,6 +877,7 @@ export function MobileShiftOperationsSheet({
       canManage={canValidate}
       clientName={clientName}
       locationName={locationName}
+      shiftAdminId={shiftAdminId}
     />
     </>
   );
