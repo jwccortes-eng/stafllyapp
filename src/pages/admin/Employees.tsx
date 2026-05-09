@@ -81,6 +81,7 @@ import { analyzeEmployeeRisks, type RiskKey } from "@/lib/data-quality-risks";
 import { buildBulkRemindersText } from "@/lib/data-quality-actions";
 import { useCompanyDocuments } from "@/hooks/useCompanyDocuments";
 import MobileDataQualitySummary from "@/components/employee/MobileDataQualitySummary";
+import MobileWorkersCommandView from "@/components/employee/MobileWorkersCommandView";
 
 // Fields that only owner/admin can see
 const SENSITIVE_FIELD_KEYS = new Set([
@@ -937,6 +938,22 @@ export default function Employees() {
 
   return (
     <div className="space-y-3 overflow-x-hidden max-w-full">
+      {isMobile && (
+        <MobileWorkersCommandView
+          employees={employees}
+          invitations={invitations}
+          documentSignals={documentSignals}
+          selectedCompany={selectedCompany ? { id: selectedCompany.id, name: selectedCompany.name } : null}
+          isPrivileged={isPrivileged}
+          onOpenProfile={(e) => { setViewEmployee(e); setProfileActiveTab("info"); }}
+          onInvite={(e) => { setViewEmployee(e); setInviteOpen(true); }}
+          onCopyInviteLink={copyInviteLink}
+          onOpenCampaign={() => setCampaignOpen(true)}
+          onOpenOnboardingSettings={() => setOnboardingSettingsOpen(true)}
+          onRefetch={() => { fetchEmployees(); refetchInvitations(); }}
+        />
+      )}
+      {!isMobile && (<>
       {/* ─── Premium Header + KPI strip ─── */}
       <PremiumPageHeader
         title="Workers"
@@ -1900,6 +1917,7 @@ export default function Employees() {
           </Table>
         </div>
       )}
+      </>)}
 
       {/* ─── Detail Sheet — Premium ─── */}
       <Sheet open={!!viewEmployee} onOpenChange={(v) => { if (!v) { setViewEmployee(null); setIsEditing(false); setProfileActiveTab("info"); } }}>
