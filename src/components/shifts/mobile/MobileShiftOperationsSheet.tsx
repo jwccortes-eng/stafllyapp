@@ -524,17 +524,19 @@ export function MobileShiftOperationsSheet({
               );
             })()}
 
-            {loadingTeam && assignedWorkers.length === 0 ? (
+            {loadingTeam ? (
               <div className="space-y-1.5">
                 {[0, 1].map(i => (
                   <div key={i} className="h-16 rounded-2xl bg-muted/40 animate-pulse" />
                 ))}
               </div>
             ) : teamError ? (
-              <div className="rounded-2xl border border-rose-500/30 bg-rose-500/5 px-4 py-4 text-sm text-rose-700 dark:text-rose-400 flex items-center justify-between gap-3">
-                <span>{teamError}</span>
-                <Button size="sm" variant="outline" onClick={() => setReloadKey(k => k + 1)}>Retry</Button>
-              </div>
+              <ErrorBlock
+                title="Couldn't load team data"
+                helper="Check your connection and try again. No shift data was changed."
+                onRetry={() => setReloadKey(k => k + 1)}
+                onBack={() => onOpenChange(false)}
+              />
             ) : assignedWorkers.length === 0 ? (
               <EmptyBlock
                 icon={Users}
