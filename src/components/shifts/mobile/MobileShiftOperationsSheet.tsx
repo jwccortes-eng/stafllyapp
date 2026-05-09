@@ -138,6 +138,7 @@ export function MobileShiftOperationsSheet({
 }: Props) {
   const navigate = useNavigate();
   const [traceOpen, setTraceOpen] = useState(false);
+  const [hubOpen, setHubOpen] = useState(false);
   const { allRoles, canAccessAdminForCompany } = useAuth();
   const { selectedCompanyId } = useCompany();
 
