@@ -1269,14 +1269,27 @@ export default function Employees() {
         })}
       </div>
 
-      {/* ─── Data Quality Risk Panel (Phase 1, read-only) ─── */}
+      {/* ─── Data Quality Risk Panel (Phase 1, read-only) ───
+          Mobile: collapsed by default behind a compact summary card to keep
+          Workers light. Desktop: full panel inline. */}
       {isPrivileged && employees.length > 0 && (
-        <DataQualityRiskPanel
-          employees={employees}
-          documentSignals={documentSignals}
-          riskFilter={riskFilter}
-          onRiskFilterChange={setRiskFilter}
-        />
+        <>
+          <div className="hidden md:block">
+            <DataQualityRiskPanel
+              employees={employees}
+              documentSignals={documentSignals}
+              riskFilter={riskFilter}
+              onRiskFilterChange={setRiskFilter}
+            />
+          </div>
+          <MobileDataQualitySummary
+            needReview={Array.from(riskAnalysis.byId.values()).filter(r => r.length > 0).length}
+            employees={employees}
+            documentSignals={documentSignals}
+            riskFilter={riskFilter}
+            onRiskFilterChange={setRiskFilter}
+          />
+        </>
       )}
 
       {/* ─── Premium Filter Bar ─── */}
