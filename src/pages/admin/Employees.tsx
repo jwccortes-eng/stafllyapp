@@ -81,6 +81,7 @@ import { analyzeEmployeeRisks, type RiskKey } from "@/lib/data-quality-risks";
 import { buildBulkRemindersText } from "@/lib/data-quality-actions";
 import { useCompanyDocuments } from "@/hooks/useCompanyDocuments";
 import MobileDataQualitySummary from "@/components/employee/MobileDataQualitySummary";
+import MobileWorkersCommandView from "@/components/employee/MobileWorkersCommandView";
 
 // Fields that only owner/admin can see
 const SENSITIVE_FIELD_KEYS = new Set([
