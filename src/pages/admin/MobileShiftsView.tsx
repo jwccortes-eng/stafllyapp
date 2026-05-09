@@ -226,39 +226,33 @@ export default function MobileShiftsView() {
   }, [shifts, filters, assignmentsByShift, clientById, locationById]);
 
   const tabCounts = useMemo(() => {
-    const counts = { today: 0, upcoming: 0, unstaffed: 0, drafts: 0, issues: 0 };
+    const counts = { today: 0, upcoming: 0, needs: 0, requests: pendingRequests.length };
     for (const s of baseFiltered) {
       const asgns = assignmentsByShift.get(s.id) ?? [];
-      const confirmed = asgns.filter(a => a.status === "confirmed").length;
+      const staffed = asgns.filter(a => a.status !== "rejected" && a.status !== "removed").length;
       const slots = s.slots ?? 0;
-      const isDraft = isDraftShift(s);
-      const understaffed = slots > 0 && confirmed < slots;
-      const noClient = !s.client_id;
+      const understaffed = slots > 0 && staffed < slots;
 
       if (s.date === todayStr) counts.today++;
       if (s.date > todayStr) counts.upcoming++;
-      if (s.date >= todayStr && understaffed) counts.unstaffed++;
-      if (isDraft) counts.drafts++;
-      if (s.date >= todayStr && (noClient || (slots > 0 && confirmed === 0))) counts.issues++;
+      if (s.date >= todayStr && understaffed) counts.needs++;
     }
     return counts;
-  }, [baseFiltered, assignmentsByShift, todayStr]);
+  }, [baseFiltered, assignmentsByShift, todayStr, pendingRequests.length]);
 
   const visibleShifts = useMemo(() => {
+    if (tab === "requests") return [];
     return baseFiltered.filter(s => {
       const asgns = assignmentsByShift.get(s.id) ?? [];
-      const confirmed = asgns.filter(a => a.status === "confirmed").length;
+      const staffed = asgns.filter(a => a.status !== "rejected" && a.status !== "removed").length;
       const slots = s.slots ?? 0;
-      const understaffed = slots > 0 && confirmed < slots;
-      const isDraft = isDraftShift(s);
-      const noClient = !s.client_id;
+      const understaffed = slots > 0 && staffed < slots;
 
       switch (tab) {
         case "today": return s.date === todayStr;
         case "upcoming": return s.date > todayStr;
-        case "unstaffed": return s.date >= todayStr && understaffed;
-        case "drafts": return isDraft;
-        case "issues": return s.date >= todayStr && (noClient || (slots > 0 && confirmed === 0));
+        case "needs": return s.date >= todayStr && understaffed;
+        default: return false;
       }
     });
   }, [baseFiltered, tab, assignmentsByShift, todayStr]);
