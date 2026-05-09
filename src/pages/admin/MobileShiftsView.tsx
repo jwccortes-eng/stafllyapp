@@ -164,6 +164,32 @@ export default function MobileShiftsView() {
         setClients((clientsRes.data ?? []) as SelectOption[]);
         setLocations((locsRes.data ?? []) as SelectOption[]);
         setEmployees((empsRes.data ?? []) as Employee[]);
+
+        // Load pending shift requests (best-effort; tolerate schema absence)
+        try {
+          const reqRes = await supabase
+            .from("shift_requests")
+            .select("id, shift_id, employee_id, status, message, created_at, employees!inner(first_name,last_name), scheduled_shifts!inner(title,date,start_time,end_time)")
+            .eq("company_id", selectedCompanyId!)
+            .eq("status", "pending")
+            .order("created_at", { ascending: false })
+            .limit(50);
+          if (alive && !reqRes.error) {
+            const rows = (reqRes.data ?? []) as any[];
+            setPendingRequests(rows.map(r => ({
+              id: r.id,
+              shift_id: r.shift_id,
+              employee_id: r.employee_id,
+              created_at: r.created_at,
+              message: r.message,
+              employee_name: `${r.employees?.first_name ?? ""} ${r.employees?.last_name ?? ""}`.trim() || "Worker",
+              shift_title: r.scheduled_shifts?.title ?? null,
+              shift_date: r.scheduled_shifts?.date ?? null,
+              shift_start: r.scheduled_shifts?.start_time ?? null,
+              shift_end: r.scheduled_shifts?.end_time ?? null,
+            })));
+          }
+        } catch { /* ignore — requests is optional */ }
       } catch (e: any) {
         if (!alive) return;
         console.error("[MobileShiftsView] load error", e);
