@@ -534,6 +534,8 @@ export function MobileShiftOperationsSheet({
               <ErrorBlock
                 title="Couldn't load team data"
                 helper="Check your connection and try again. No shift data was changed."
+                devHint={teamError}
+                retryDisabled={loadingTeam}
                 onRetry={() => setReloadKey(k => k + 1)}
                 onBack={() => onOpenChange(false)}
               />
