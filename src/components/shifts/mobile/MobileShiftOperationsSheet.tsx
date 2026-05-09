@@ -187,10 +187,24 @@ export function MobileShiftOperationsSheet({
       else if (day === 5) weekendLabel = "Friday night";
     } catch { /* noop */ }
 
+    let weekBucket: { label: string; tone: "info" | "muted" } | null = null;
+    try {
+      const d = parseISO(shift.date);
+      // Wed–Tue pay-period anchor would require pay_periods data which is not
+      // loaded here. Fall back to a calendar-week context only — read-only.
+      if (isThisWeek(d, { weekStartsOn: 1 })) {
+        weekBucket = { label: "This week", tone: "info" };
+      } else if (isPast(d)) {
+        weekBucket = { label: "Past week", tone: "muted" };
+      } else {
+        weekBucket = { label: "Future week", tone: "muted" };
+      }
+    } catch { /* noop */ }
+
     return {
       shiftAsgns, assignedWorkers, slots, assignedCount, coverage,
       understaffed, fullyStaffed, draft, published, noClient, noLocation,
-      hours, dateBucket, weekendLabel,
+      hours, dateBucket, weekendLabel, weekBucket,
     };
   }, [shift, assignments, employees]);
 
@@ -207,6 +221,7 @@ export function MobileShiftOperationsSheet({
   const hours = data?.hours ?? null;
   const dateBucket = data?.dateBucket ?? "future";
   const weekendLabel = data?.weekendLabel ?? null;
+  const weekBucket = data?.weekBucket ?? null;
 
   // ── Memoized assignment lookup + sorted workers (avoids repeated .find in sort/map)
   const asgnByEmployeeId = useMemo(() => {
