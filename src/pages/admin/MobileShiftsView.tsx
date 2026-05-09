@@ -341,10 +341,7 @@ export default function MobileShiftsView() {
     setDetailOpen(true);
   };
 
-  const handleCreate = () => {
-    if (!canEdit) return;
-    toast("Create shift from desktop for now");
-  };
+  const handleOpenRequests = () => navigate("/app/shift-requests");
 
   return (
     <div className="min-h-full pb-[calc(env(safe-area-inset-bottom,0px)+72px)] bg-background">
