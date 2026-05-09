@@ -901,3 +901,51 @@ function buildShiftAudit(shift: Shift): TraceLinkedRecord[] {
     { label: "Reconciliation hash", value: shift.reconciliation_hash ? shift.reconciliation_hash.slice(0, 10) + "…" : null, hint: shift.reconciliation_hash ?? undefined },
   ];
 }
+
+/* ───── Worker sort (mobile shift Assigned section) ─────
+ * Lower score = appears first.
+ *   0  Shift admin
+ *  10  Captain / lead / admin role
+ *  20  Currently clocked in (clock_in && !clock_out) or marked present
+ *  30  Needs review / late / absent — only when shift is today/past
+ *  40  Not started / pending / missing clock-in
+ *  60  Clocked out (already left)
+ *  80  Excused
+ * +5 when worker has no phone (contactable workers first within group).
+ */
+function getWorkerSortScore(
+  worker: Employee,
+  extra: { status: string; attendance_status: string | null; assignment_role: string | null } | null,
+  clock: { clock_in: string | null; clock_out: string | null } | undefined,
+  shiftAdminId: string | null,
+  dateBucket: "today" | "tomorrow" | "past" | "future",
+): number {
+  let score = 40;
+  const role = (extra?.assignment_role ?? "").toLowerCase();
+  const att = (extra?.attendance_status ?? "").toLowerCase();
+  const isUrgentDay = dateBucket === "today" || dateBucket === "past";
+
+  if (shiftAdminId && worker.id === shiftAdminId) {
+    score = 0;
+  } else if (role === "captain" || role === "lead" || role === "admin") {
+    score = 10;
+  } else if (clock?.clock_in && !clock?.clock_out) {
+    score = 20;
+  } else if (clock?.clock_out) {
+    score = 60;
+  } else if (att === "needs_review" || att === "late" || att === "absent") {
+    score = isUrgentDay ? 30 : 50;
+  } else if (att === "excused") {
+    score = 80;
+  } else if (att === "present") {
+    score = 20;
+  } else {
+    score = 40;
+  }
+
+  const phone = (worker.phone_number ?? "").trim();
+  if (!phone) score += 5;
+
+  return score;
+}
+
