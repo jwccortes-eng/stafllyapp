@@ -496,7 +496,7 @@ export function MobileShiftOperationsSheet({
           <section>
             <SectionTitle
               icon={ClipboardList}
-              helper="Required spots, assigned workers, and current staffing status."
+              helper={MOBILE_SHIFT_COPY.coverageHelper}
             >
               Coverage
             </SectionTitle>
