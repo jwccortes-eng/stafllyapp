@@ -1,174 +1,134 @@
-## Edwin Gonzales / JKitchen Staff — Remediation plan (data-only, surgical)
+# Shift Team Management Hub — Audit & Plan
 
-Read-only audit completed. This plan ONLY targets Edwin's records and one role grant. No payroll, no time_entries, no mass changes.
+## 1. Existing files & components found
 
----
+**Desktop assignment mutations (source of truth today):**
+- `src/pages/admin/Shifts.tsx` — insert/delete/replace assignments (lines ~761, 1224, 1300, 1334, 1467); main "Agregar empleados" flow.
+- `src/components/shifts/ShiftDetailDialog.tsx` — desktop shift detail with team panel; insert assignments + bulk-confirm (`status:"confirmed"`).
+- `src/components/shifts/form/TeamSection.tsx` — team picker used inside `ShiftFormShell` (create+edit), with admin selector and coverage chip.
+- `src/components/shifts/EmployeeCombobox.tsx` — searchable picker with availability/driver/conflict gating.
+- `src/components/shifts/ReplacementSuggestionDialog.tsx` — scored 1‑click replacement insert.
+- `src/components/shifts/ShiftTeamPanel.tsx` — read-only team list with contact actions (already used by mobile sheet area).
+- `src/components/shifts/ShiftRoleSlotsTeamPanel.tsx` — typed role slots staffing UI.
+- `src/components/shifts/AttendanceValidator.tsx` — sets `attendance_status` (pending/present/late/absent/excused).
+- `src/components/shifts/ShiftAttendancePanel.tsx` — wraps validator on the desktop dialog.
+- `src/pages/admin/ShiftRequests.tsx` + `src/pages/admin/Requests.tsx` — claim/request approval flow that inserts an assignment.
+- `src/pages/admin/ShiftOperations.tsx` — per-assignment role change + add worker.
+- `src/lib/dispatch-writers.ts`, `src/lib/auto-dispatch.ts` — server-side-style insert helpers.
+- `src/pages/portal/MyShifts.tsx` — worker self accept/reject (`response_status` updates).
 
-### 1. Current state (verified)
+**Read-only mobile surface:**
+- `src/components/shifts/mobile/MobileShiftOperationsSheet.tsx` — the sheet we just hardened. Currently shows context, coverage, assigned, attendance, details, notes, source/history. No mutations.
 
-**Auth user**: `c82849c4-a291-4c52-826b-e4b2e829f53b`
+**Coverage / permission guards already centralized:**
+- `src/lib/shifts/assignment-coverage.ts` — `countStaffed`, `staffedAssignments` (excludes `rejected`/`removed`).
+- `src/lib/shifts/shift-permissions.ts` — `canManageShifts({ allRoles, canAccessAdminForCompany, companyId })`.
+- `src/lib/shifts/shift-guards.ts` — `isDraftShift` + version helpers (re-acceptance triggers).
 
-**3 employees rows for the same person:**
+## 2. Existing statuses (live data, prod)
 
-| # | employee_id | name | tenant | user_id | phone | email | EID | time_entries | shift_assigns | documents | invites | hist_payroll |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| A | `d5f6fdf8…` | Edwin Gonzales | Quality Staff | — | — | — | 1208 | 0 | 0 | 0 | 0 | 0 |
-| B | `9d2b1cb0…` | Edwin Gonzalez | **JKitchen** | `c82849c4` | 3476783647 | jkitchenx13@gmail.com | 001 | 0 | 3 | 1 | 3 | 0 |
-| C | `4c3bcf06…` | EDWIN GONZALES | Quality Staff | `c82849c4` | 3476783647 | williegonzalez17gonzalez@aol.com | — | 0 | 14 | 0 | 2 | 0 |
+`shift_assignments.status` (assignment lifecycle, what desktop writes):
+`accepted` (3799) · `confirmed` (1982) · `pending` (501) · `removed` (49) · `rejected` (3).
 
-**Roles for `c82849c4`:**
-- `user_roles` (global): `employee` ✅ correct
-- `company_users`:
-  - Quality Staff → `employee` ✅
-  - **JKitchen → `company_owner`** ❌ wrong
+`shift_assignments.response_status` (worker reply channel, written from portal):
+`pending` (6259) · `rejected` (49) · `accepted` (26).
 
-**Other JKitchen owners (sanity check, NOT touching them):**
-- `2bf0401f…` (Jorge / developer + founder) → `company_owner` ✅ legitimate
-- `58a5f9c8…` (global admin) → `company_owner` ✅ likely legitimate (separate review)
-- `c82849c4…` (Edwin) → `company_owner` ❌ the only suspicious one
+`shift_assignments.attendance_status` (set by `AttendanceValidator`):
+`pending` (6309) · `present` (24) · `absent` (1) — plus `late` / `excused` defined in `ATTENDANCE_OPTIONS`.
 
-**Zero payroll exposure**: 0 time_entries, 0 payroll_adjustments, 0 historical_payroll on all three records.
+Other relevant columns already present: `assignment_role`, `role_slot_id`, `accepted_shift_version`, `responded_at`, `accepted_at`, `rejected_at`, `last_notified_at`, `attendance_validated_by/at/notes`, `is_draft_reservation`, `import_batch_id`.
 
----
+## 3. Existing safe mutations we can reuse (no new SQL needed)
 
-### 2. Decisions
+- **Insert assignment** (`Shifts.tsx`, `ShiftDetailDialog.tsx`, `ShiftRequests.tsx`, `dispatch-writers`).
+- **Delete assignment** (`Shifts.tsx` lines 1300/1334) — used today as "remove from shift".
+- **Update `status` → confirmed** (`ShiftDetailDialog.tsx` line 422 bulk).
+- **Update `assignment_role`** (`ShiftOperations.tsx` line 219).
+- **Update `attendance_status`** via `AttendanceValidator` (RLS already enforces manager-only).
+- **Update `response_status`** from worker portal only (`MyShifts.tsx`).
+- **Approve request** (`ShiftRequests.tsx`) — insert + close request row.
 
-**B (`9d2b1cb0…`, JKitchen)** = keeper. Real worker, has auth, real email, has shift_assignments (3) and 1 document and 3 invites.
+All of the above already enforce `company_id` scoping and use the `Managers can edit shift_assignments` RLS path. RLS prevents workers from self-mutating attendance.
 
-**C (`4c3bcf06…`, Quality)** = keep ACTIVE but UNLINK auth. It has 14 shift_assignments — historical roster activity. We do NOT migrate it (different tenant). We just remove the wrong `user_id` link so this auth user stops resolving to a Quality employee.
+## 4. Gaps
 
-**A (`d5f6fdf8…`, Quality #1208)** = mark as duplicate of C and deactivate. Zero dependencies. Safe.
+1. No mobile-first surface for any of these actions; operators leave to desktop.
+2. No explicit "Cancel worker on this shift" — current flow is `delete()`, which is destructive (audit/history lost) and overlaps with `removed` status that already exists but is barely used.
+3. `response_status` and `status` semantics are duplicated and inconsistent (`accepted` lives in both columns, written by different actors). Needs a documented matrix before we expose state changes on mobile.
+4. No-show is conceptually separate (`attendance_status='absent'`) but UI conflates it with assignment cancellation.
+5. Worker requests/claims live in a different page (`ShiftRequests.tsx`) — mobile operators can't see "1 person requested this shift" inline.
+6. No audit log entry on insert/delete of `shift_assignments` (no `shift_audit_log` writes from these paths). `ShiftAuditTrail.tsx` exists but is fed by other events.
+7. Removing an assignment doesn't currently consider linked `time_entries` — we need a guard before we expose it on mobile.
 
-> Open question for the user: confirm Edwin currently works only at JKitchen (not at Quality anymore). If he still works at Quality, decision for C may change — see Risk #3.
+## 5. Recommended architecture
 
----
+**Component:** new `MobileShiftTeamHub.tsx` (sibling of `MobileShiftOperationsSheet`), opened from the sheet via a single primary CTA "Manage team". The sheet stays the read-only operational view; the Hub owns mutations.
 
-### 3. Exact changes (4 statements, all reversible)
-
-```sql
-BEGIN;
-
--- 3.1 Revoke wrong company_owner role on JKitchen
-DELETE FROM company_users
-WHERE user_id = 'c82849c4-a291-4c52-826b-e4b2e829f53b'
-  AND company_id = 'b653f344-b07a-44a2-ae2c-cf06bfb0645a'
-  AND role = 'company_owner';
-
--- 3.2 Re-grant correct role: employee on JKitchen
-INSERT INTO company_users (user_id, company_id, role)
-VALUES ('c82849c4-a291-4c52-826b-e4b2e829f53b',
-        'b653f344-b07a-44a2-ae2c-cf06bfb0645a',
-        'employee')
-ON CONFLICT DO NOTHING;
-
--- 3.3 Unlink wrong auth from Quality duplicate (keeps record + history intact)
-UPDATE employees
-SET user_id = NULL,
-    notes = COALESCE(notes,'') ||
-            E'\n[2026-05-02] user_id unlinked: same auth was duplicated in JKitchen #001 (keeper).'
-WHERE id = '4c3bcf06-6a34-4fd5-bdce-826f91825be0'
-  AND user_id = 'c82849c4-a291-4c52-826b-e4b2e829f53b';
-
--- 3.4 Deactivate orphan Quality #1208 (no auth, no history, true duplicate of C)
-UPDATE employees
-SET is_active = false,
-    notes = COALESCE(notes,'') ||
-            E'\n[2026-05-02] Deactivated: duplicate of 4c3bcf06… (same person, EID 1208 was unused).'
-WHERE id = 'd5f6fdf8-006c-49fa-9dbe-c372bd06b85b'
-  AND is_active = true;
-
--- COMMIT only after verifying counts (see §5)
-COMMIT;
+```text
+MobileShiftOperationsSheet (read-only)
+   └── [Manage team] →  MobileShiftTeamHub (full-height sheet)
+                          ├── A. Coverage Summary strip
+                          ├── B. Assigned (grouped by status)
+                          ├── C. Requests (only if request rows exist)
+                          ├── D. Add workers (EmployeeCombobox-mobile)
+                          └── E. Per-worker actions (sheet-in-sheet)
 ```
 
----
+**State model (no schema change):**
 
-### 4. Tables touched (scope summary)
-
-| Table | Rows changed | Operation |
+| UI bucket | Source of truth | How we read it |
 |---|---|---|
-| `company_users` | 1 deleted, 1 inserted | role re-grant |
-| `employees` | 2 updated | unlink user_id, deactivate orphan |
+| Confirmed | `status='confirmed'` | direct |
+| Accepted | `status='accepted'` AND `response_status='accepted'` | direct |
+| Pending  | `status='pending'` OR (`response_status='pending'` AND not rejected) | derived |
+| Rejected by worker | `response_status='rejected'` | direct |
+| Removed by ops | `status='removed'` | direct (instead of hard delete) |
+| No-show / Present / Late | `attendance_status` | `AttendanceValidator` reused |
 
-**NOT touched**: `time_entries`, `payroll_adjustments`, `scheduled_shifts`, `shift_assignments`, `historical_payroll_entries`, `employee_documents`, `employee_invitations`, `user_roles`, `auth.users`, `pay_periods`.
+**Permission gate:** every mutation behind `canManageShifts(...)` (already exists). Workers see the read-only sheet only.
 
----
+**Reuse, don't rebuild:** the Hub composes existing primitives — `EmployeeCombobox`, `AttendanceValidator`, `ShiftTeamPanel`. No new RPCs.
 
-### 5. Pre-commit verification (inside the transaction)
+**Deprecate hard delete on mobile:** mobile-only "Remove" must write `status='removed'` (soft); hard delete stays desktop-only and only when there are zero linked `time_entries`.
 
-```sql
--- Must show: 1 (employee on JKitchen)
-SELECT count(*) FROM company_users
-WHERE user_id = 'c82849c4-a291-4c52-826b-e4b2e829f53b'
-  AND company_id = 'b653f344-b07a-44a2-ae2c-cf06bfb0645a';
+## 6. Recommended Phase 1 (this sprint, safe)
 
--- Must show: 1 row (only the JKitchen keeper)
-SELECT id, company_id, is_active
-FROM employees WHERE user_id = 'c82849c4-a291-4c52-826b-e4b2e829f53b';
+**Phase 1 — Mobile read + minimal safe mutations, behind `canManageShifts`:**
 
--- Quality dupe still active, no auth, history preserved
-SELECT id, is_active, user_id,
-  (SELECT count(*) FROM shift_assignments WHERE employee_id = '4c3bcf06-6a34-4fd5-bdce-826f91825be0') AS assigns
-FROM employees WHERE id = '4c3bcf06-6a34-4fd5-bdce-826f91825be0';
+1. Add a "Manage team" CTA in `MobileShiftOperationsSheet` → opens `MobileShiftTeamHub`.
+2. Hub renders sections A + B + (C if requests exist) using existing data already loaded by the sheet.
+3. Per-worker actions (whitelist):
+   - **Accept on behalf** → `status='accepted'`, `accepted_at=now()` (mirrors desktop bulk path).
+   - **Confirm** → `status='confirmed'`.
+   - **Mark attendance** → reuse `AttendanceValidator` inline.
+   - **Soft-remove from shift** → `status='removed'`, `response_status` unchanged. Confirmation dialog. Blocked if a `time_entries` row exists for this `(employee_id, shift_id)` window.
+4. **Add worker**: launch `EmployeeCombobox` in a sub-sheet; insert with current desktop payload shape (`status:'pending'`, `response_status:'pending'`, role inherited from open slot).
+5. **Requests:** read-only list with deep link to `/app/shifts/requests` for approval (no mutation on mobile yet).
 
--- Orphan inactive
-SELECT id, is_active FROM employees WHERE id = 'd5f6fdf8-006c-49fa-9dbe-c372bd06b85b';
-```
+**Explicitly out of Phase 1:**
+- Hard delete of assignments on mobile.
+- Cancelling the whole shift, duplicating, editing details (stay on desktop; show "Open on desktop" link).
+- Bulk publish / re-notify.
+- Mass attendance changes.
+- Any change to `time_entries`, payroll, scheduled hours, RLS, or schema.
 
-If anything is off → `ROLLBACK`.
+**Phase 2 (separate task, requires migrations):**
+- Add `shift_audit_log` write triggers for assignment insert/update/delete.
+- Formalize `response_status` vs `status` with a CHECK trigger and a single helper RPC `assign_worker_to_shift` / `set_assignment_state`.
+- Mobile cancel-shift + duplicate-shift.
 
----
+## 7. Safety contract carried into implementation
 
-### 6. Rollback plan (if needed after commit)
+- Payroll continues to read only `time_entries`. No mutation in Phase 1 touches `time_entries` or `payroll_*`.
+- Scheduled hours never feed payroll.
+- Soft-remove (`status='removed'`) preserves history; no `delete()` from mobile.
+- Every mutation gated by `canManageShifts(...)` and tenant-scoped (`company_id = selectedCompanyId`).
+- Destructive actions require an explicit confirm sheet.
+- Worker portal behavior unchanged.
+- Desktop flows untouched.
 
-```sql
-BEGIN;
-INSERT INTO company_users (user_id, company_id, role)
-VALUES ('c82849c4-a291-4c52-826b-e4b2e829f53b',
-        'b653f344-b07a-44a2-ae2c-cf06bfb0645a','company_owner')
-ON CONFLICT DO NOTHING;
+## Deliverables for the next loop (only after you approve this plan)
 
-DELETE FROM company_users
-WHERE user_id = 'c82849c4-a291-4c52-826b-e4b2e829f53b'
-  AND company_id = 'b653f344-b07a-44a2-ae2c-cf06bfb0645a'
-  AND role = 'employee';
-
-UPDATE employees SET user_id = 'c82849c4-a291-4c52-826b-e4b2e829f53b'
-WHERE id = '4c3bcf06-6a34-4fd5-bdce-826f91825be0';
-
-UPDATE employees SET is_active = true
-WHERE id = 'd5f6fdf8-006c-49fa-9dbe-c372bd06b85b';
-COMMIT;
-```
-
----
-
-### 7. Risks
-
-1. **Login flow**: After fix, Edwin logs in → `useAuth` finds 1 employee (JKitchen). `useEffectiveEmployee` resolves correctly. Portal works as before — possibly even better (was probably confused between 2 records).
-2. **JKitchen admin UI for him**: He will lose any "Panel Admin" access in JKitchen. That is the intended fix (he is not an owner).
-3. **If Edwin DOES still work at Quality**: Step 3.3 unlinks his auth but keeps the Quality record active → admins can still see him as a roster worker. He just can't access Quality's portal as himself anymore until a fresh `user_id` link is added later. Confirm with user before running 3.3 if uncertain.
-4. **Other JKitchen owners** (`58a5f9c8…`): out of scope here. Flagged as a separate audit item.
-
----
-
-### 8. Post-fix validations (manual / UI)
-
-1. Login as `c82849c4` → lands in `/portal` for JKitchen by default. No "Panel Admin" button.
-2. Switch tenant context to Quality → no employee resolved, no portal data leaked.
-3. Admin (Jorge) opens Workers in JKitchen → Edwin still listed, profile intact, 3 shift_assignments visible.
-4. Admin opens Workers in Quality → only `4c3bcf06…` shows (active), `d5f6fdf8…` hidden (inactive). No history lost.
-5. No row reappears in the Workers Data Quality risk panel as "broken".
-
----
-
-### 9. What this plan deliberately does NOT do
-
-- Does NOT delete any row.
-- Does NOT migrate `shift_assignments` / `documents` / `invitations` between tenants.
-- Does NOT touch `auth.users`.
-- Does NOT touch `58a5f9c8…` (other JKitchen owner) — separate review.
-- Does NOT change Edwin's name spelling, EID, phone, or email.
-- Does NOT consolidate Edwin across tenants — that requires a deeper cross-tenant identity decision.
-
-Approve to switch to default mode and execute the 4 statements inside one transaction with the §5 verification gate.
+- Step 1 PR: `MobileShiftTeamHub.tsx` skeleton + "Manage team" CTA, no mutations yet — safe preview.
+- Step 2 PR: wire the 4 whitelisted actions in §6.3 with confirm dialogs and `time_entries` guard.
+- Step 3 PR: Add-worker sub-sheet using `EmployeeCombobox`.
