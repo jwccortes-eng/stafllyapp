@@ -384,6 +384,20 @@ export function MobileShiftOperationsSheet({
                 {weekendLabel}
               </Badge>
             )}
+            {weekBucket && (
+              <Badge
+                variant="outline"
+                className={cn(
+                  "h-[22px] px-2 text-[11px] font-medium",
+                  weekBucket.tone === "info"
+                    ? "border-primary/30 text-primary bg-primary/5"
+                    : "border-border/60 text-muted-foreground bg-muted/40",
+                )}
+                title="Calendar week context — pay period not loaded"
+              >
+                {weekBucket.label}
+              </Badge>
+            )}
           </div>
 
           {/* Date + time + slots context strip */}
