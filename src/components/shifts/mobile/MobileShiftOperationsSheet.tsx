@@ -524,17 +524,19 @@ export function MobileShiftOperationsSheet({
               );
             })()}
 
-            {loadingTeam && assignedWorkers.length === 0 ? (
+            {loadingTeam ? (
               <div className="space-y-1.5">
                 {[0, 1].map(i => (
                   <div key={i} className="h-16 rounded-2xl bg-muted/40 animate-pulse" />
                 ))}
               </div>
             ) : teamError ? (
-              <div className="rounded-2xl border border-rose-500/30 bg-rose-500/5 px-4 py-4 text-sm text-rose-700 dark:text-rose-400 flex items-center justify-between gap-3">
-                <span>{teamError}</span>
-                <Button size="sm" variant="outline" onClick={() => setReloadKey(k => k + 1)}>Retry</Button>
-              </div>
+              <ErrorBlock
+                title="Couldn't load team data"
+                helper="Check your connection and try again. No shift data was changed."
+                onRetry={() => setReloadKey(k => k + 1)}
+                onBack={() => onOpenChange(false)}
+              />
             ) : assignedWorkers.length === 0 ? (
               <EmptyBlock
                 icon={Users}
@@ -600,13 +602,18 @@ export function MobileShiftOperationsSheet({
                 helper="Clock-in and clock-out activity will appear here when workers start."
               />
             ) : shift && selectedCompanyId ? (
-              <ShiftAttendancePanel
-                shiftId={shift.id}
-                companyId={selectedCompanyId}
-                assignments={assignments}
-                employees={employees}
-                canManage={canValidate}
-              />
+              <>
+                <ShiftAttendancePanel
+                  shiftId={shift.id}
+                  companyId={selectedCompanyId}
+                  assignments={assignments}
+                  employees={employees}
+                  canManage={canValidate}
+                />
+                <p className="mt-2 px-0.5 text-[11px] text-muted-foreground">
+                  Attendance data is loaded from the attendance system.
+                </p>
+              </>
             ) : null}
           </section>
 
@@ -754,6 +761,41 @@ function SectionTitle({
           {helper}
         </p>
       )}
+    </div>
+  );
+}
+
+function ErrorBlock({
+  title, helper, onRetry, onBack,
+}: {
+  title: string;
+  helper?: string;
+  onRetry?: () => void;
+  onBack?: () => void;
+}) {
+  return (
+    <div className="rounded-2xl border border-rose-500/30 bg-rose-500/5 px-4 py-4">
+      <div className="flex items-start gap-2.5">
+        <div className="h-7 w-7 rounded-lg bg-rose-500/15 flex items-center justify-center shrink-0">
+          <AlertTriangle className="h-3.5 w-3.5 text-rose-600 dark:text-rose-400" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold text-rose-800 dark:text-rose-300 leading-tight">{title}</p>
+          {helper && (
+            <p className="text-[11px] text-rose-700/80 dark:text-rose-300/80 mt-1 leading-snug">{helper}</p>
+          )}
+          {(onRetry || onBack) && (
+            <div className="mt-2.5 flex items-center gap-2">
+              {onRetry && (
+                <Button size="sm" className="h-8 rounded-lg" onClick={onRetry}>Retry</Button>
+              )}
+              {onBack && (
+                <Button size="sm" variant="ghost" className="h-8 rounded-lg" onClick={onBack}>Back</Button>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
