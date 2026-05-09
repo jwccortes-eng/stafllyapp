@@ -23,6 +23,7 @@ import { useCompany } from "@/hooks/useCompany";
 import { staffedAssignments } from "@/lib/shifts/assignment-coverage";
 import { canManageShifts } from "@/lib/shifts/shift-permissions";
 import { ShiftAttendancePanel } from "@/components/shifts/ShiftAttendancePanel";
+import { MobileShiftTeamHub } from "@/components/shifts/mobile/MobileShiftTeamHub";
 import {
   TraceabilitySnapshot,
   type TraceRisk,
