@@ -454,7 +454,7 @@ export function MobileShiftOperationsSheet({
           </div>
 
           <p className="mt-2 text-[11px] text-muted-foreground leading-snug">
-            Review the shift context before making changes.
+            Review this shift before making changes.
           </p>
         </div>
 
@@ -605,8 +605,8 @@ export function MobileShiftOperationsSheet({
               <EmptyBlock
                 icon={Users}
                 title="No workers assigned yet"
-                helper="Add workers from desktop for now. Mobile staffing changes are being prepared."
-                badge="Desktop required"
+                helper="Add workers from desktop before reviewing coverage or attendance."
+                badge="Read-only on mobile"
               />
             ) : (
               <>
@@ -635,7 +635,7 @@ export function MobileShiftOperationsSheet({
             {understaffed && (
               <div className="mt-2.5 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-3.5">
                 <div className="text-sm font-semibold text-amber-800 dark:text-amber-300">
-                  Staffing changes are desktop recommended for now
+                  Staffing changes are available from desktop for now.
                 </div>
                 <div className="text-xs text-amber-700/80 dark:text-amber-300/80 mt-1 leading-relaxed">
                   {slots - assignedCount} spot{slots - assignedCount === 1 ? "" : "s"} open. You can review coverage and contact assigned workers from mobile.
@@ -789,7 +789,7 @@ export function MobileShiftOperationsSheet({
             View attendance
           </Button>
           <p className="mt-2 text-center text-[11px] text-muted-foreground">
-            Editing shift details and staffing is desktop recommended for now.
+            Editing shift details and staffing is available from desktop for now.
           </p>
         </div>
       </SheetContent>
