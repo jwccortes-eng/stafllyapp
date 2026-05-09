@@ -1055,6 +1055,7 @@ const WorkerRow = memo(function WorkerRow({
   const phone = worker.phone_number?.trim();
   const normalized = normalizePhone(phone);
   const wa = phone ? buildWhatsAppTargets(phone, "") : null;
+  const workerName = `${worker.first_name ?? ""} ${worker.last_name ?? ""}`.trim() || "worker";
   const initialsStr = (worker.first_name?.[0] ?? "").toUpperCase() + (worker.last_name?.[0] ?? "").toUpperCase();
   const att = attendanceBadgeFor(attendanceStatus, clock);
   const roleBadge = roleBadgeFor(role, isShiftAdmin);
