@@ -240,15 +240,14 @@ export function MobileShiftOperationsSheet({
 
   const handleOpenFullEditor = () => {
     onOpenChange(false);
-    toast.info("Full shift editing is desktop recommended for now", {
-      description: "Mobile shift operations are being rolled out — create, edit, assign and publish are coming next.",
-    });
+    // Reuse canonical Shift Operations editor (mobile-friendly form)
+    navigate(`/app/shift-ops?id=${shift.id}`);
   };
 
-  const handleAssign = () => {
-    toast.info("Assigning workers is desktop recommended for now", {
-      description: "Mobile assignment is being rolled out. For now, use desktop to add or remove workers.",
-    });
+  const handleManageTeam = () => {
+    onOpenChange(false);
+    // Same canonical screen — staffing/team section is part of it.
+    navigate(`/app/shift-ops?id=${shift.id}#staffing`);
   };
 
   const handleViewAttendance = () => {
@@ -433,14 +432,13 @@ export function MobileShiftOperationsSheet({
               </div>
             )}
 
-            {/* Honest mobile capability banner — phased rollout, not permanent */}
+            {/* Phased note — only the assignment management piece is rolling out */}
             <div className="mt-2.5 rounded-2xl border border-border bg-muted/30 p-3 text-xs text-foreground/80">
               <strong className="block font-semibold text-foreground mb-0.5">
-                Mobile shift operations are rolling out
+                Team assignment is rolling out
               </strong>
-              Editing assignments, creating, publishing and unpublishing are
-              desktop recommended for now. Reviewing assignments, attendance,
-              traceability and open spots already works here.
+              You can edit shift details and review attendance from mobile.
+              Adding or removing assigned workers is best on desktop for now.
             </div>
           </section>
 
@@ -510,18 +508,33 @@ export function MobileShiftOperationsSheet({
           </section>
         </div>
 
-        {/* Sticky footer */}
-        <div className="px-5 pt-3 pb-[max(env(safe-area-inset-bottom,0px),12px)] border-t border-border/40 bg-background/95 backdrop-blur-sm">
+        {/* Sticky footer — primary mobile shift actions */}
+        <div className="px-5 pt-3 pb-[max(env(safe-area-inset-bottom,0px),12px)] border-t border-border/40 bg-background/95 backdrop-blur-sm space-y-2">
           <Button
             className="w-full h-12 rounded-xl text-sm font-semibold gap-2"
             onClick={handleOpenFullEditor}
           >
-            <ExternalLink className="h-4 w-4" />
-            Open in desktop editor
+            <FileEdit className="h-4 w-4" />
+            Edit shift
           </Button>
-          <p className="mt-1.5 text-[10px] text-center text-muted-foreground">
-            Mobile editing is being rolled out · desktop recommended for now
-          </p>
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              variant="outline"
+              className="h-11 rounded-xl text-sm font-medium gap-2"
+              onClick={handleManageTeam}
+            >
+              <Users className="h-4 w-4" />
+              Manage team
+            </Button>
+            <Button
+              variant="outline"
+              className="h-11 rounded-xl text-sm font-medium gap-2"
+              onClick={handleViewAttendance}
+            >
+              <ClipboardList className="h-4 w-4" />
+              Attendance
+            </Button>
+          </div>
         </div>
       </SheetContent>
     </Sheet>
