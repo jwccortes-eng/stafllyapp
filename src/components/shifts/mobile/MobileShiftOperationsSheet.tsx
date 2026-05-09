@@ -602,13 +602,18 @@ export function MobileShiftOperationsSheet({
                 helper="Clock-in and clock-out activity will appear here when workers start."
               />
             ) : shift && selectedCompanyId ? (
-              <ShiftAttendancePanel
-                shiftId={shift.id}
-                companyId={selectedCompanyId}
-                assignments={assignments}
-                employees={employees}
-                canManage={canValidate}
-              />
+              <>
+                <ShiftAttendancePanel
+                  shiftId={shift.id}
+                  companyId={selectedCompanyId}
+                  assignments={assignments}
+                  employees={employees}
+                  canManage={canValidate}
+                />
+                <p className="mt-2 px-0.5 text-[11px] text-muted-foreground">
+                  Attendance data is loaded from the attendance system.
+                </p>
+              </>
             ) : null}
           </section>
 
