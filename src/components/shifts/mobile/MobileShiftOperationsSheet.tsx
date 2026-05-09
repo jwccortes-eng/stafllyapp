@@ -4,8 +4,9 @@ import {
   X, Clock, MapPin, Building2, Users, Phone, FileEdit, AlertTriangle,
   CheckCircle2, CalendarDays, Sparkles, UserPlus, Share2, ClipboardList,
   ExternalLink, Copy, StickyNote, Hash, Tag, Workflow, ChevronDown,
-  ShieldCheck,
+  ShieldCheck, MessageCircle, MessageSquare, Crown,
 } from "lucide-react";
+import { buildWhatsAppTargets, normalizePhone } from "@/lib/phone";
 import { format, parseISO, isToday, isTomorrow, isPast } from "date-fns";
 import { enUS } from "date-fns/locale";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
