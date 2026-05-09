@@ -247,8 +247,8 @@ export function MobileShiftOperationsSheet({
   };
 
   const handleAssign = () => {
-    toast.info("Assignment editing coming in Phase 2", {
-      description: "Use desktop to add or remove workers for now.",
+    toast.info("Assignment editing is desktop-only", {
+      description: "Mobile editing arrives in Phase 2. Use desktop to add or remove workers.",
     });
   };
 
