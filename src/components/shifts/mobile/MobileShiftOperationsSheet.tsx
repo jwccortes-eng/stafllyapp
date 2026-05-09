@@ -413,39 +413,70 @@ export function MobileShiftOperationsSheet({
               </span>
             </SectionTitle>
 
-            {assignedWorkers.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-border bg-muted/20 px-4 py-6 text-center">
-                <Users className="h-5 w-5 text-muted-foreground mx-auto mb-2" />
-                <p className="text-sm text-muted-foreground">No workers assigned yet</p>
-              </div>
-            ) : (
-              <div className="space-y-1.5 max-h-[260px] overflow-y-auto pr-1 -mr-1">
-                {assignedWorkers.map(w => (
-                  <WorkerRow key={w.id} worker={w} />
+            {/* Coverage chips */}
+            {(() => {
+              let checkedIn = 0, checkedOut = 0, missing = 0;
+              for (const w of assignedWorkers) {
+                const c = clockByEmp[w.id];
+                if (c?.clock_out) checkedOut++;
+                else if (c?.clock_in) checkedIn++;
+                else missing++;
+              }
+              return (
+                <div className="flex flex-wrap gap-1.5 mb-2.5">
+                  <CoverChip label="Required" value={slots > 0 ? slots : "—"} />
+                  <CoverChip label="Assigned" value={assignedCount} />
+                  <CoverChip label="Checked in" value={checkedIn} tone={checkedIn > 0 ? "good" : "muted"} />
+                  <CoverChip label="Out" value={checkedOut} tone="muted" />
+                  <CoverChip label="Missing" value={missing} tone={missing > 0 && dateBucket === "today" ? "bad" : "muted"} />
+                </div>
+              );
+            })()}
+
+            {loadingTeam && assignedWorkers.length === 0 ? (
+              <div className="space-y-1.5">
+                {[0, 1].map(i => (
+                  <div key={i} className="h-16 rounded-2xl bg-muted/40 animate-pulse" />
                 ))}
               </div>
-            )}
-
-            {understaffed && (
-              <div className="mt-2.5 rounded-2xl border border-rose-500/30 bg-rose-500/5 p-3.5">
-                <div className="text-sm font-semibold text-rose-700 dark:text-rose-400">
-                  {slots - assignedCount} spot{slots - assignedCount === 1 ? "" : "s"} open
-                </div>
-                <div className="text-xs text-rose-600/80 dark:text-rose-400/70 mt-0.5">
-                  Add workers to reach full coverage
-                </div>
+            ) : teamError ? (
+              <div className="rounded-2xl border border-rose-500/30 bg-rose-500/5 px-4 py-4 text-sm text-rose-700 dark:text-rose-400 flex items-center justify-between gap-3">
+                <span>{teamError}</span>
+                <Button size="sm" variant="outline" onClick={() => setReloadKey(k => k + 1)}>Retry</Button>
+              </div>
+            ) : assignedWorkers.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-border bg-muted/20 px-4 py-6 text-center">
+                <Users className="h-5 w-5 text-muted-foreground mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground">No workers assigned yet.</p>
+                <p className="text-xs text-muted-foreground mt-1">Add workers from desktop for now.</p>
+              </div>
+            ) : (
+              <div className="space-y-1.5 max-h-[360px] overflow-y-auto pr-1 -mr-1">
+                {assignedWorkers.map(w => {
+                  const extra = asgnExtras.find(a => a.employee_id === w.id);
+                  return (
+                    <WorkerRow
+                      key={w.id}
+                      worker={w}
+                      assignmentStatus={extra?.status ?? null}
+                      attendanceStatus={extra?.attendance_status ?? null}
+                      role={extra?.assignment_role ?? null}
+                      clock={clockByEmp[w.id]}
+                      isShiftAdmin={shiftAdminId === w.id}
+                    />
+                  );
+                })}
               </div>
             )}
 
-          {/* Phased note — staffing changes are desktop-only for now */}
             {understaffed && (
-              <div className="mt-2.5 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-800 dark:text-amber-300">
-                <strong className="block font-semibold mb-0.5">
+              <div className="mt-2.5 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-3.5">
+                <div className="text-sm font-semibold text-amber-800 dark:text-amber-300">
                   Staffing changes are desktop recommended for now
-                </strong>
-                You can review coverage and contact assigned workers from mobile.
-                Adding or removing workers is being prepared for mobile and should
-                be done from desktop for now.
+                </div>
+                <div className="text-xs text-amber-700/80 dark:text-amber-300/80 mt-1 leading-relaxed">
+                  {slots - assignedCount} spot{slots - assignedCount === 1 ? "" : "s"} open. You can review coverage and contact assigned workers from mobile.
+                </div>
               </div>
             )}
           </section>
