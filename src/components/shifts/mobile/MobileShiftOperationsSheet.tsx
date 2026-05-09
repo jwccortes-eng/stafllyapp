@@ -1150,8 +1150,21 @@ const WorkerRow = memo(function WorkerRow({
           </button>
         </div>
       ) : (
-        <div className="mt-2 text-[11px] text-muted-foreground italic" aria-label={`No phone on file for ${workerName}`}>
-          No phone on file.
+        <div
+          className="mt-2.5 rounded-xl border border-dashed border-border/60 bg-muted/30 px-3 py-2"
+          aria-label={`No phone on file for ${workerName}. Add a phone number from the worker profile to enable contact actions.`}
+        >
+          <div className="flex items-start gap-2">
+            <Phone className="h-3.5 w-3.5 mt-0.5 text-muted-foreground shrink-0" aria-hidden="true" />
+            <div className="min-w-0">
+              <div className="text-[11px] font-semibold text-foreground/80 leading-tight">
+                No phone on file
+              </div>
+              <div className="text-[10.5px] text-muted-foreground leading-snug mt-0.5">
+                Add a phone number from the worker profile to enable call, SMS, and WhatsApp.
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
