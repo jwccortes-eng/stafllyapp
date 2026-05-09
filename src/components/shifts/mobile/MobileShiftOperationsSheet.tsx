@@ -775,7 +775,7 @@ export function MobileShiftOperationsSheet({
           <section>
             <SectionTitle
               icon={StickyNote}
-              helper="Internal notes for this shift."
+              helper={MOBILE_SHIFT_COPY.notesSectionHelper}
             >
               Notes
             </SectionTitle>
