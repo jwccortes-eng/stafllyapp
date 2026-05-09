@@ -416,7 +416,35 @@ export default function MobileShiftsView() {
 
       {/* List */}
       <div className="px-4 pt-4">
-        {loading ? (
+        {tab === "requests" ? (
+          pendingRequests.length === 0 ? (
+            <EmptyState tab="requests" />
+          ) : (
+            <div className="space-y-2.5">
+              <div className="text-xs text-muted-foreground px-1 mb-1">
+                {pendingRequests.length} pending request{pendingRequests.length === 1 ? "" : "s"}
+              </div>
+              {pendingRequests.map(req => (
+                <RequestRow
+                  key={req.id}
+                  req={req}
+                  onOpen={() => {
+                    const s = shifts.find(x => x.id === req.shift_id);
+                    if (s) handleOpenDetail(s);
+                  }}
+                />
+              ))}
+              <Button
+                variant="outline"
+                className="w-full h-11 mt-2"
+                onClick={handleOpenRequests}
+              >
+                Manage in Shift Requests
+                <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
+            </div>
+          )
+        ) : loading ? (
           <SkeletonList />
         ) : error ? (
           <ErrorState message={error} onRetry={() => window.location.reload()} />
@@ -437,7 +465,6 @@ export default function MobileShiftsView() {
                 <div className="space-y-2.5">
                   {group.shifts.map(shift => {
                     const asgns = assignmentsByShift.get(shift.id) ?? [];
-                    // Unified with desktop: count any non-rejected, non-removed assignment.
                     const staffed = asgns.filter(a => a.status !== "rejected" && a.status !== "removed");
                     const assignedEmployees = staffed
                       .map(a => employeeById.get(a.employee_id))
