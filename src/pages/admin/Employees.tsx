@@ -1917,6 +1917,7 @@ export default function Employees() {
           </Table>
         </div>
       )}
+      </>)}
 
       {/* ─── Detail Sheet — Premium ─── */}
       <Sheet open={!!viewEmployee} onOpenChange={(v) => { if (!v) { setViewEmployee(null); setIsEditing(false); setProfileActiveTab("info"); } }}>
