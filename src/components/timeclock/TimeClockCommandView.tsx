@@ -84,8 +84,10 @@ export default function TimeClockCommandView() {
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState<string>("live");
   const [tabAutoSet, setTabAutoSet] = useState(false);
+  const [alertDetail, setAlertDetail] = useState<AlertItem | null>(null);
 
   const openWorker = (id: string) => navigate(`/app/people/${id}`);
+  const openAlert = (item: AlertItem) => setAlertDetail(item);
 
   // live tick
   useEffect(() => {
