@@ -296,53 +296,95 @@ export function MobileShiftOperationsSheet({
         side="bottom"
         className="h-[92vh] p-0 rounded-t-3xl flex flex-col overflow-hidden bg-background"
       >
-        {/* Sticky Header */}
-        <div className="px-5 pt-4 pb-3 border-b border-border/40 bg-background/95 backdrop-blur-sm">
+        {/* Sticky Context Header — "You are reviewing this shift" */}
+        <div className="px-5 pt-3 pb-3 border-b border-border/40 bg-background/95 backdrop-blur-sm">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2 mb-1.5">
+              <div className="flex items-center gap-1.5 mb-1">
+                <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
+                  Shift context
+                </span>
                 {shift.shift_code && (
-                  <span className="inline-flex items-center gap-1 text-xs font-mono font-semibold text-muted-foreground">
-                    <Hash className="h-3.5 w-3.5" />
+                  <span className="inline-flex items-center gap-0.5 text-[10px] font-mono font-semibold text-muted-foreground/80">
+                    <Hash className="h-3 w-3" />
                     {formatShiftCode(shift.shift_code)}
                   </span>
                 )}
-                <StatusPill draft={draft} published={published} understaffed={understaffed} />
               </div>
               <h2 className="text-xl font-semibold tracking-tight leading-tight line-clamp-2">
                 {clientName && clientName !== "—" ? clientName : (shift.title || "Shift")}
               </h2>
-              {locationName && (
-                <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1 truncate">
-                  <MapPin className="h-3.5 w-3.5 shrink-0" />
-                  <span className="truncate">{locationName}</span>
-                </div>
-              )}
+              <div className="flex items-center gap-1 text-sm text-muted-foreground mt-0.5 truncate">
+                <MapPin className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate">{locationName || "No location"}</span>
+              </div>
             </div>
             <Button
               variant="ghost"
-              size="icon"
-              className="h-9 w-9 rounded-full shrink-0 -mt-1 -mr-1"
+              size="sm"
+              className="h-9 px-2 rounded-full shrink-0 -mt-1 -mr-1 text-xs gap-1"
               onClick={() => onOpenChange(false)}
-              aria-label="Close"
+              aria-label="Back to shifts"
             >
-              <X className="h-5 w-5" />
+              <X className="h-4 w-4" />
+              Back
             </Button>
           </div>
 
-          {/* Date + time hero */}
-          <div className="mt-3 flex items-center gap-2">
-            <div className="flex items-center gap-1.5 px-3 h-9 rounded-lg bg-muted/60">
-              <CalendarDays className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm font-medium">{dateLabel(shift.date)}</span>
+          {/* Status / publication / context badges */}
+          <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+            <PublicationBadge status={shift.publication_status} draft={draft} published={published} />
+            {understaffed && (
+              <Badge variant="outline" className="h-[22px] px-2 text-[11px] font-medium border-rose-500/40 text-rose-700 dark:text-rose-400 bg-rose-500/10">
+                Unstaffed
+              </Badge>
+            )}
+            {fullyStaffed && published && (
+              <Badge variant="outline" className="h-[22px] px-2 text-[11px] font-medium border-emerald-500/40 text-emerald-700 dark:text-emerald-400 bg-emerald-500/10">
+                Fully staffed
+              </Badge>
+            )}
+            {noClient && (
+              <Badge variant="outline" className="h-[22px] px-2 text-[11px] font-medium border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10">
+                No client
+              </Badge>
+            )}
+            {noLocation && (
+              <Badge variant="outline" className="h-[22px] px-2 text-[11px] font-medium border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10">
+                No location
+              </Badge>
+            )}
+            {weekendLabel && (
+              <Badge variant="outline" className="h-[22px] px-2 text-[11px] font-medium border-border/60 text-muted-foreground bg-muted/40">
+                {weekendLabel}
+              </Badge>
+            )}
+          </div>
+
+          {/* Date + time + slots context strip */}
+          <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+            <div className="flex items-center gap-1.5 px-2.5 h-8 rounded-lg bg-muted/60">
+              <CalendarDays className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="text-xs font-medium">{dateLabel(shift.date)}</span>
             </div>
-            <div className="flex items-center gap-1.5 px-3 h-9 rounded-lg bg-muted/60">
-              <Clock className="h-4 w-4 text-muted-foreground" />
-              <span className="text-base font-mono font-semibold tabular-nums">
+            <div className="flex items-center gap-1.5 px-2.5 h-8 rounded-lg bg-muted/60">
+              <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="text-xs font-mono font-semibold tabular-nums">
                 {formatTimeShort(shift.start_time)}–{formatTimeShort(shift.end_time)}
               </span>
             </div>
+            <div className="flex items-center gap-1.5 px-2.5 h-8 rounded-lg bg-muted/60">
+              <Users className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="text-xs font-semibold tabular-nums">
+                {slots > 0 ? `${assignedCount}/${slots}` : `${assignedCount}`}
+              </span>
+              <span className="text-[11px] text-muted-foreground">assigned</span>
+            </div>
           </div>
+
+          <p className="mt-2 text-[11px] text-muted-foreground leading-snug">
+            Review the shift context before making changes.
+          </p>
         </div>
 
         {/* Scroll area */}
