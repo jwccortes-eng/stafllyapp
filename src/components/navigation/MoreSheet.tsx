@@ -35,18 +35,22 @@ const PRIMARY_TAB_ROUTES = new Set([
 ]);
 
 /**
- * Section ordering for premium calm grouping.
- * Sections present in nav-items.ts not listed here go last.
+ * Mobile section remap: collapse internal section names into a small set of
+ * customer-friendly groups. Internal section names not listed fall back to "More".
+ * Order of keys here defines vertical order in the sheet.
  */
-const SECTION_ORDER = [
-  "Home",
-  "Operations",
-  "Payroll",
-  "Tax",
-  "Commercial",
-  "Management",
-  "Administration",
+const SECTION_GROUPS: { label: string; matches: string[] }[] = [
+  { label: "Operations", matches: ["Home", "Operations", "Intake"] },
+  { label: "People", matches: ["Management"] },
+  { label: "Payroll & Billing", matches: ["Payroll", "Tax", "Commercial"] },
+  { label: "System", matches: ["Administration"] },
 ];
+const FALLBACK_GROUP = "More";
+function groupForSection(section: string): string {
+  for (const g of SECTION_GROUPS) if (g.matches.includes(section)) return g.label;
+  return FALLBACK_GROUP;
+}
+const SECTION_ORDER = [...SECTION_GROUPS.map(g => g.label), FALLBACK_GROUP];
 
 export function MoreSheet({
   open, onClose, items, pinnedIds, onTogglePin, maxPins, onSignOut, badgeCounts = {},
