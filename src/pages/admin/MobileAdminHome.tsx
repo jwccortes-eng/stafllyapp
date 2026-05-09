@@ -155,23 +155,23 @@ export default function MobileAdminHome() {
                 className={cn(
                   "group relative flex flex-col items-start text-left",
                   "rounded-2xl border border-border/50 bg-card",
-                  "p-4 min-h-[120px]",
+                  "p-3 min-h-[96px]",
                   "active:scale-[0.97] hover:border-border transition-all",
                   "shadow-sm hover:shadow-md"
                 )}
               >
-                <div className={cn("h-11 w-11 rounded-xl flex items-center justify-center mb-3", a.accent)}>
-                  <Icon className="h-5 w-5" />
+                <div className={cn("h-9 w-9 rounded-lg flex items-center justify-center mb-2", a.accent)}>
+                  <Icon className="h-[18px] w-[18px]" />
                 </div>
                 <div className="flex items-center gap-2 w-full">
-                  <span className="text-sm font-semibold tracking-tight">{a.label}</span>
+                  <span className="text-[13px] font-semibold tracking-tight truncate">{a.label}</span>
                   {count > 0 && (
-                    <Badge variant="secondary" className="h-5 px-1.5 text-[10px] font-semibold ml-auto bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/20">
+                    <Badge variant="secondary" className="h-4 px-1 text-[10px] font-semibold ml-auto bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/20">
                       {count > 9 ? "9+" : count}
                     </Badge>
                   )}
                 </div>
-                <span className="text-[11px] text-muted-foreground mt-0.5 leading-tight">
+                <span className="text-[10.5px] text-muted-foreground mt-0.5 leading-tight truncate w-full">
                   {a.hint}
                 </span>
               </button>
