@@ -238,18 +238,6 @@ export function MobileShiftOperationsSheet({
     handleCopySummary();
   };
 
-  const handleOpenFullEditor = () => {
-    onOpenChange(false);
-    // Reuse canonical Shift Operations editor (mobile-friendly form)
-    navigate(`/app/shift-ops?id=${shift.id}`);
-  };
-
-  const handleManageTeam = () => {
-    onOpenChange(false);
-    // Same canonical screen — staffing/team section is part of it.
-    navigate(`/app/shift-ops?id=${shift.id}#staffing`);
-  };
-
   const handleViewAttendance = () => {
     onOpenChange(false);
     navigate(`/app/attendance?shift=${shift.id}`);
