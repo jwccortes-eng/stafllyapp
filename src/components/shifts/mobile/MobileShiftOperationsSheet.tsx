@@ -536,6 +536,7 @@ export function MobileShiftOperationsSheet({
                 helper="Check your connection and try again. No shift data was changed."
                 devHint={teamError}
                 retryDisabled={loadingTeam}
+                retryLabel={loadingTeam ? "Retrying..." : "Retry"}
                 onRetry={() => setReloadKey(k => k + 1)}
                 onBack={() => onOpenChange(false)}
               />
