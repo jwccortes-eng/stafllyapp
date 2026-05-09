@@ -361,30 +361,50 @@ export function MobileShiftOperationsSheet({
           </div>
 
           {/* Status / publication / context badges */}
-          <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+          <div className="mt-2.5 flex flex-wrap items-center gap-1.5" role="group" aria-label="Shift status badges">
             <PublicationBadge status={shift.publication_status} draft={draft} published={published} />
             {understaffed && (
-              <Badge variant="outline" className="h-[22px] px-2 text-[11px] font-medium border-rose-500/40 text-rose-700 dark:text-rose-400 bg-rose-500/10">
+              <Badge
+                variant="outline"
+                className="h-[22px] px-2 text-[11px] font-medium border-rose-500/40 text-rose-700 dark:text-rose-400 bg-rose-500/10"
+                aria-label={`Unstaffed — needs ${Math.max(slots - assignedCount, 0)} more worker${slots - assignedCount === 1 ? "" : "s"}`}
+              >
                 Unstaffed
               </Badge>
             )}
             {fullyStaffed && published && (
-              <Badge variant="outline" className="h-[22px] px-2 text-[11px] font-medium border-emerald-500/40 text-emerald-700 dark:text-emerald-400 bg-emerald-500/10">
+              <Badge
+                variant="outline"
+                className="h-[22px] px-2 text-[11px] font-medium border-emerald-500/40 text-emerald-700 dark:text-emerald-400 bg-emerald-500/10"
+                aria-label="Fully staffed"
+              >
                 Fully staffed
               </Badge>
             )}
             {noClient && (
-              <Badge variant="outline" className="h-[22px] px-2 text-[11px] font-medium border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10">
+              <Badge
+                variant="outline"
+                className="h-[22px] px-2 text-[11px] font-medium border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10"
+                aria-label="Warning: no client linked to this shift"
+              >
                 No client
               </Badge>
             )}
             {noLocation && (
-              <Badge variant="outline" className="h-[22px] px-2 text-[11px] font-medium border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10">
+              <Badge
+                variant="outline"
+                className="h-[22px] px-2 text-[11px] font-medium border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10"
+                aria-label="Warning: no location linked to this shift"
+              >
                 No location
               </Badge>
             )}
             {weekendLabel && (
-              <Badge variant="outline" className="h-[22px] px-2 text-[11px] font-medium border-border/60 text-muted-foreground bg-muted/40">
+              <Badge
+                variant="outline"
+                className="h-[22px] px-2 text-[11px] font-medium border-border/60 text-muted-foreground bg-muted/40"
+                aria-label={`Weekend shift: ${weekendLabel}`}
+              >
                 {weekendLabel}
               </Badge>
             )}
@@ -398,6 +418,7 @@ export function MobileShiftOperationsSheet({
                     : "border-border/60 text-muted-foreground bg-muted/40",
                 )}
                 title="Calendar week context — pay period not loaded"
+                aria-label={`Calendar week context: ${weekBucket.label}. Pay period not loaded.`}
               >
                 {weekBucket.label}
               </Badge>
