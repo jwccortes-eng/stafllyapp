@@ -1181,10 +1181,10 @@ const WorkerRow = memo(function WorkerRow({
             <Phone className="h-3.5 w-3.5 mt-0.5 text-muted-foreground shrink-0" aria-hidden="true" />
             <div className="min-w-0">
               <div className="text-[11px] font-semibold text-foreground/80 leading-tight">
-                No phone on file
+                {MOBILE_SHIFT_COPY.noPhoneTitle}
               </div>
               <div className="text-[10.5px] text-muted-foreground leading-snug mt-0.5">
-                Add a phone number from the worker profile to enable call, SMS, and WhatsApp.
+                {MOBILE_SHIFT_COPY.noPhoneHelper}
               </div>
             </div>
           </div>
