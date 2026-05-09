@@ -672,21 +672,21 @@ export function MobileShiftOperationsSheet({
           <section>
             <SectionTitle
               icon={ClipboardList}
-              helper="Review clock-in and clock-out activity."
+              helper={MOBILE_SHIFT_COPY.attendanceSectionHelper}
             >
               Attendance
             </SectionTitle>
             {assignedWorkers.length === 0 ? (
               <EmptyBlock
                 icon={ClipboardList}
-                title="Attendance unavailable"
-                helper="Assign workers first before reviewing attendance."
+                title={MOBILE_SHIFT_COPY.attendanceUnavailableTitle}
+                helper={MOBILE_SHIFT_COPY.attendanceUnavailableHelper}
               />
             ) : Object.keys(clockByEmp).length === 0 ? (
               <EmptyBlock
                 icon={Clock}
-                title="No clock activity yet"
-                helper="Clock-in and clock-out activity will appear here when workers start."
+                title={MOBILE_SHIFT_COPY.noClockActivityTitle}
+                helper={MOBILE_SHIFT_COPY.noClockActivityHelper}
               />
             ) : shift && selectedCompanyId ? (
               <>
@@ -708,8 +708,8 @@ export function MobileShiftOperationsSheet({
           <section>
             <SectionTitle
               icon={Tag}
-              helper="Review the core shift information."
-              badge="Read-only on mobile"
+              helper={MOBILE_SHIFT_COPY.shiftDetailsHelper}
+              badge={MOBILE_SHIFT_COPY.readOnlyMobile}
             >
               Shift details
             </SectionTitle>
