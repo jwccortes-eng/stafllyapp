@@ -1112,7 +1112,7 @@ const WorkerRow = memo(function WorkerRow({
             {isShiftAdmin && <Crown className="h-3.5 w-3.5 text-primary shrink-0" />}
           </div>
           <div className="text-[11px] text-muted-foreground truncate mt-0.5">
-            {phone ? phone : "No phone on file"}
+            {phone ? phone : MOBILE_SHIFT_COPY.noPhoneTitle}
           </div>
         </div>
       </div>
