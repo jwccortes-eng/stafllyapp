@@ -66,10 +66,10 @@ export function MoreSheet({
   // Filter out primary bottom-nav tabs
   const moreItems = items.filter(i => !PRIMARY_TAB_ROUTES.has(i.to));
 
-  // Group by section (preserve appearance order within section)
+  // Group by remapped customer-friendly section
   const sections = new Map<string, NavItem[]>();
   moreItems.forEach(item => {
-    const key = item.section || "More";
+    const key = groupForSection(item.section || FALLBACK_GROUP);
     if (!sections.has(key)) sections.set(key, []);
     sections.get(key)!.push(item);
   });
