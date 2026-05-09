@@ -582,7 +582,38 @@ export function MobileShiftOperationsSheet({
               helper={MOBILE_SHIFT_COPY.assignedWorkersHelper}
               badge={MOBILE_SHIFT_COPY.readOnlyMobile}
             >
-...
+              Assigned workers
+              <span className="ml-1.5 text-xs font-normal text-muted-foreground normal-case tracking-normal">
+                ({assignedCount}{slots > 0 ? `/${slots}` : ""})
+              </span>
+            </SectionTitle>
+
+            {/* Coverage chips */}
+            {(() => {
+              let checkedIn = 0, checkedOut = 0, missing = 0;
+              for (const w of assignedWorkers) {
+                const c = clockByEmp[w.id];
+                if (c?.clock_out) checkedOut++;
+                else if (c?.clock_in) checkedIn++;
+                else missing++;
+              }
+              return (
+                <div className="flex flex-wrap gap-1.5 mb-2.5">
+                  <CoverChip label="Required" value={slots > 0 ? slots : "—"} />
+                  <CoverChip label="Assigned" value={assignedCount} />
+                  <CoverChip label="Checked in" value={checkedIn} tone={checkedIn > 0 ? "good" : "muted"} />
+                  <CoverChip label="Out" value={checkedOut} tone="muted" />
+                  <CoverChip label="Missing" value={missing} tone={missing > 0 && dateBucket === "today" ? "bad" : "muted"} />
+                </div>
+              );
+            })()}
+
+            {loadingTeam ? (
+              <div className="space-y-1.5">
+                {[0, 1].map(i => (
+                  <div key={i} className="h-16 rounded-2xl bg-muted/40 animate-pulse" />
+                ))}
+              </div>
             ) : teamError ? (
               <ErrorBlock
                 title={MOBILE_SHIFT_COPY.teamErrorTitle}
