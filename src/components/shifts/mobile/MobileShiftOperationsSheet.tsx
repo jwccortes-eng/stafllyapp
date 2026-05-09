@@ -758,6 +758,46 @@ function SectionTitle({
   );
 }
 
+function EmptyBlock({
+  icon: Icon, title, helper, badge, compact,
+}: {
+  icon?: any;
+  title: string;
+  helper?: string;
+  badge?: string;
+  compact?: boolean;
+}) {
+  return (
+    <div
+      className={cn(
+        "rounded-2xl border border-dashed border-border/60 bg-muted/20",
+        compact ? "px-3 py-2.5" : "px-4 py-4",
+      )}
+    >
+      <div className="flex items-start gap-2.5">
+        {Icon && (
+          <div className="h-7 w-7 rounded-lg bg-muted/60 flex items-center justify-center shrink-0">
+            <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+          </div>
+        )}
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-sm font-semibold text-foreground leading-tight">{title}</span>
+            {badge && (
+              <span className="inline-flex items-center h-[18px] px-1.5 rounded-full bg-muted text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                {badge}
+              </span>
+            )}
+          </div>
+          {helper && (
+            <p className="text-[11px] text-muted-foreground mt-1 leading-snug">{helper}</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function StatCard({ label, value, accent }: { label: string; value: number | string; accent?: "good" | "warn" | "bad" }) {
   const cls =
     accent === "good" ? "text-emerald-600 dark:text-emerald-400" :
