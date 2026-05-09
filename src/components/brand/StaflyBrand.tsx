@@ -24,7 +24,7 @@ export const StaflyMark = forwardRef<SVGSVGElement, MarkProps>(function StaflyMa
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       className={`shrink-0 ${className}`}
-      aria-label="StaflyApps"
+      aria-label="Stafly Core"
       {...rest}
     >
       {/* Shield shape with gradient */}
@@ -75,7 +75,7 @@ export const StaflyLogo = forwardRef<HTMLDivElement, LogoProps>(function StaflyL
       <div ref={ref} className={`flex items-center ${className}`} style={mergedStyle} {...rest}>
         <img
           src={staflySidebarLogo}
-          alt="StaflyApps"
+          alt="Stafly Core"
           height={size}
           style={{ height: size, width: "auto" }}
           className="shrink-0"
