@@ -172,7 +172,7 @@ export function AttractMode({
 
       {/* Bottom branding bar */}
       <div className="absolute bottom-6 left-1/2 -translate-x-1/2 text-xs text-muted-foreground/70">
-        Powered by StaflyApps · staflyapps.com
+        Powered by Stafly Core · staflyapps.com
       </div>
     </div>
   );

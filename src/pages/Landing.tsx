@@ -612,7 +612,7 @@ export default function Landing() {
                       <Smartphone className="h-6 w-6 text-primary-foreground" />
                     </div>
                     <p className="text-primary-foreground font-heading font-bold text-lg">Portal</p>
-                    <p className="text-primary-foreground/60 text-xs">StaflyApps</p>
+                    <p className="text-primary-foreground/60 text-xs">Stafly Core</p>
                   </div>
                 </div>
                 <div className="p-4 space-y-2.5 -mt-4 relative">

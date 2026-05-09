@@ -92,7 +92,7 @@ export default function SyncStatusPanel({ companyId }: Props) {
                 <div className="font-medium text-sm">Dual-Sync Mode</div>
                 <div className="text-xs text-muted-foreground">
                   {dualSyncActive
-                    ? "Active — Connecteam and StaflyApps running in parallel"
+                    ? "Active — Connecteam and Stafly Core running in parallel"
                     : "Inactive — Enable to run both systems simultaneously"}
                 </div>
               </div>

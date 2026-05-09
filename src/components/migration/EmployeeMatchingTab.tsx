@@ -77,7 +77,7 @@ export default function EmployeeMatchingTab({ companyId, onRefresh }: Props) {
               <TableRow>
                 <TableHead>Connecteam Name</TableHead>
                 <TableHead>Phone / Email</TableHead>
-                <TableHead>StaflyApps Match</TableHead>
+                <TableHead>Stafly Core Match</TableHead>
                 <TableHead>Method</TableHead>
                 <TableHead>Confidence</TableHead>
                 <TableHead>Status</TableHead>

@@ -240,7 +240,7 @@ export function EmployeeAuthFlow({ onSessionReady }: { onSessionReady: () => voi
           access_token: data.session.access_token,
           refresh_token: data.session.refresh_token,
         });
-        toast({ title: "Account activated! 🎉", description: "Welcome to StaflyApps" });
+        toast({ title: "Account activated! 🎉", description: "Welcome to Stafly Core" });
         onSessionReady();
       }
     } catch (e: any) {
