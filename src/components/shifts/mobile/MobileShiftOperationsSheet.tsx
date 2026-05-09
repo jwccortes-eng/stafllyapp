@@ -7,7 +7,7 @@ import {
   ShieldCheck, MessageCircle, MessageSquare, Crown, Loader2,
 } from "lucide-react";
 import { buildWhatsAppTargets, normalizePhone } from "@/lib/phone";
-import { format, parseISO, isToday, isTomorrow, isPast } from "date-fns";
+import { format, parseISO, isToday, isTomorrow, isPast, isThisWeek } from "date-fns";
 import { enUS } from "date-fns/locale";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
