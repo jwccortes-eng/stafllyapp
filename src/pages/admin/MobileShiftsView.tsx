@@ -737,6 +737,35 @@ function SkeletonList() {
   );
 }
 
+function RequestRow({ req, onOpen }: { req: PendingRequest; onOpen: () => void }) {
+  const dateStr = req.shift_date ? (() => {
+    try { return format(parseISO(req.shift_date!), "EEE MMM d", { locale: enUS }); } catch { return req.shift_date; }
+  })() : "—";
+  const time = req.shift_start && req.shift_end
+    ? `${req.shift_start.slice(0,5)}–${req.shift_end.slice(0,5)}`
+    : "";
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className="w-full text-left rounded-2xl border border-border/50 bg-card p-3.5 active:scale-[0.98] transition"
+    >
+      <div className="flex items-start justify-between gap-2 mb-1.5">
+        <div className="text-sm font-semibold truncate">{req.employee_name}</div>
+        <Badge variant="outline" className="text-[10px] border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10">
+          Pending
+        </Badge>
+      </div>
+      <div className="text-xs text-muted-foreground truncate">
+        {req.shift_title ?? "Shift"} · {dateStr}{time ? ` · ${time}` : ""}
+      </div>
+      {req.message && (
+        <div className="text-xs text-foreground/80 mt-1.5 line-clamp-2">"{req.message}"</div>
+      )}
+    </button>
+  );
+}
+
 function EmptyState({ tab }: { tab: TabKey }) {
   const messages: Record<TabKey, { title: string; hint: string }> = {
     today: { title: "No shifts today", hint: "Take a breath. Tomorrow's roster is just a tap away." },
