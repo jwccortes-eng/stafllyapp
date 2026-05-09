@@ -27,7 +27,7 @@ import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import {
   Clock, AlertTriangle, Users, Activity, CalendarClock, CheckCircle2,
   Search, RefreshCw, ChevronRight, MapPin, Monitor, Copy, ArrowRight,
-  CalendarDays, ClipboardCheck, Radio,
+  CalendarDays, ClipboardCheck, Radio, Phone, MessageCircle,
 } from "lucide-react";
 import { format, differenceInMinutes, startOfWeek, endOfWeek, isWithinInterval } from "date-fns";
 import { enUS } from "date-fns/locale";
@@ -64,6 +64,7 @@ interface Employee {
   avatar_url: string | null;
   employee_role: string | null;
   employer_identification: number | string | null;
+  phone_number: string | null;
 }
 
 type AlertItem = {
@@ -108,7 +109,7 @@ export default function TimeClockCommandView() {
 
     const empsP = supabase
       .from("employees")
-      .select("id, first_name, last_name, avatar_url, employee_role, employer_identification")
+      .select("id, first_name, last_name, avatar_url, employee_role, employer_identification, phone_number")
       .eq("company_id", selectedCompanyId)
       .eq("is_active", true);
 
