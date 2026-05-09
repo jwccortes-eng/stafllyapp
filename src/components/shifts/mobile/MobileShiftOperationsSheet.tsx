@@ -725,7 +725,7 @@ export function MobileShiftOperationsSheet({
               ) : (
                 <div className="flex items-center gap-2 px-4 py-2.5 text-xs text-muted-foreground">
                   <MapPin className="h-3.5 w-3.5 opacity-60" />
-                  <span>No meeting point added.</span>
+                  <span>No meeting point set.</span>
                 </div>
               )}
               <DetailRow
