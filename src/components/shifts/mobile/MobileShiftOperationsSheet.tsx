@@ -686,7 +686,7 @@ export function MobileShiftOperationsSheet({
             <SectionTitle
               icon={Tag}
               helper="Review the core shift information."
-              badge="Edit from desktop"
+              badge="Read-only on mobile"
             >
               Shift details
             </SectionTitle>
