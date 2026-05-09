@@ -222,8 +222,11 @@ export default function Auth() {
         {/* Email flow */}
         {method === "email" && (
           <div className="w-full max-w-[400px]">
-            <div className="flex flex-col items-center mb-8">
+            <div className="flex flex-col items-center mb-8 text-center">
               <StaflyLogo size={44} />
+              <p className="text-[11px] text-muted-foreground mt-2 max-w-[280px]">
+                The operating system for your service workforce.
+              </p>
             </div>
 
             <div className="bg-card rounded-2xl shadow-sm border border-border/40 px-8 py-9 space-y-6">

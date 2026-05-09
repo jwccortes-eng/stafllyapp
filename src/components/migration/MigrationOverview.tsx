@@ -50,7 +50,7 @@ export default function MigrationOverview({ stats, loading, onRefresh }: Props) 
                 <Badge variant="secondary" className="text-xs">PILOT</Badge>
               </div>
               <p className="text-sm text-muted-foreground">
-                Connecteam → StaflyApps Migration &amp; Reconciliation
+                Connecteam → Stafly Core Migration &amp; Reconciliation
               </p>
             </div>
             <div className="flex items-center gap-3">

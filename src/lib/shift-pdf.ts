@@ -28,7 +28,7 @@ export function downloadShiftAssignmentPDF(data: ShiftPDFData) {
   // Header
   doc.setFontSize(18);
   doc.setFont("helvetica", "bold");
-  doc.text("StaflyApps", 14, 18);
+  doc.text("Stafly Core", 14, 18);
   doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(120);
@@ -96,7 +96,7 @@ export function downloadShiftAssignmentPDF(data: ShiftPDFData) {
   const pageHeight = doc.internal.pageSize.height;
   doc.setFontSize(8);
   doc.setTextColor(160);
-  doc.text(`Generado por StaflyApps — ${format(new Date(), "dd/MM/yyyy HH:mm")}`, 14, pageHeight - 10);
+  doc.text(`Generado por Stafly Core — ${format(new Date(), "dd/MM/yyyy HH:mm")}`, 14, pageHeight - 10);
 
   doc.save(`turno-${data.date}-${data.title.replace(/[^a-zA-Z0-9]/g, "_").slice(0, 30)}.pdf`);
 }

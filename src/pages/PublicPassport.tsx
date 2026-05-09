@@ -105,7 +105,7 @@ export default function PublicPassport() {
           Este perfil no existe o es privado.
         </p>
         <a href="/" className="text-sm text-primary hover:underline font-medium mt-2">
-          ← Ir a StaflyApps
+          ← Ir a Stafly Core
         </a>
       </div>
     );
@@ -333,7 +333,7 @@ export default function PublicPassport() {
         {/* Footer */}
         <div className="text-center pt-4 pb-8">
           <p className="text-[10px] text-muted-foreground">
-            Perfil verificado por <a href="/" className="text-primary hover:underline font-medium">StaflyApps</a> · Generado {passport.generated_at ? new Date(passport.generated_at).toLocaleDateString("es") : "—"}
+            Perfil verificado por <a href="/" className="text-primary hover:underline font-medium">Stafly Core</a> · Generado {passport.generated_at ? new Date(passport.generated_at).toLocaleDateString("es") : "—"}
           </p>
         </div>
       </main>

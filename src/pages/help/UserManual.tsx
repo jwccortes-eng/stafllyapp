@@ -85,7 +85,7 @@ function generateManualPDF(audience: Audience) {
   doc.setFontSize(28);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(41, 98, 255);
-  doc.text("StaflyApps", pageW / 2, y + 20, { align: "center" });
+  doc.text("Stafly Core", pageW / 2, y + 20, { align: "center" });
 
   doc.setFontSize(20);
   doc.setTextColor(30, 30, 30);
@@ -164,7 +164,7 @@ function generateManualPDF(audience: Audience) {
     });
   });
 
-  doc.save(`StaflyApps_${title.replace(/ /g, "_")}.pdf`);
+  doc.save(`StaflyCore_${title.replace(/ /g, "_")}.pdf`);
 }
 
 export default function UserManual() {

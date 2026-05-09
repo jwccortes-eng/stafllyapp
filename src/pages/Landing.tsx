@@ -116,7 +116,7 @@ const i18n = {
     },
     finalCta: {
       title: "¿Listo para operar mejor?",
-      sub: "Únete a empresas que ya gestionan su personal con StaflyApps. Gratis para empezar, potente para escalar.",
+      sub: "Únete a empresas que ya gestionan su personal con Stafly Core. Gratis para empezar, potente para escalar.",
       cta: "Comienza gratis ahora",
     },
     footer: { product: "Producto", pricing: "Precios", portal: "Portal empleados", help: "Ayuda", privacy: "Privacidad", terms: "Términos" },
@@ -225,7 +225,7 @@ const i18n = {
     },
     finalCta: {
       title: "Ready to operate better?",
-      sub: "Join companies already managing their staff with StaflyApps. Free to start, powerful to scale.",
+      sub: "Join companies already managing their staff with Stafly Core. Free to start, powerful to scale.",
       cta: "Start free now",
     },
     footer: { product: "Product", pricing: "Pricing", portal: "Employee portal", help: "Help", privacy: "Privacy", terms: "Terms" },
@@ -612,7 +612,7 @@ export default function Landing() {
                       <Smartphone className="h-6 w-6 text-primary-foreground" />
                     </div>
                     <p className="text-primary-foreground font-heading font-bold text-lg">Portal</p>
-                    <p className="text-primary-foreground/60 text-xs">StaflyApps</p>
+                    <p className="text-primary-foreground/60 text-xs">Stafly Core</p>
                   </div>
                 </div>
                 <div className="p-4 space-y-2.5 -mt-4 relative">
@@ -786,7 +786,7 @@ export default function Landing() {
             </div>
           </div>
           <div className="mt-8 pt-6 border-t border-border/30 text-center">
-            <p className="text-xs text-muted-foreground/70">© {new Date().getFullYear()} StaflyApps. All rights reserved.</p>
+            <p className="text-xs text-muted-foreground/70">© {new Date().getFullYear()} Stafly Core. All rights reserved.</p>
           </div>
         </div>
       </footer>

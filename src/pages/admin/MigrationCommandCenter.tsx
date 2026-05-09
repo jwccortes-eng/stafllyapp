@@ -116,7 +116,7 @@ export default function MigrationCommandCenter() {
     header.innerHTML = `
       <div style="padding:16px 0;border-bottom:2px solid #333;margin-bottom:16px;">
         <h1 style="font-size:18px;font-weight:700;margin:0;">Migration Command Center — Full Report</h1>
-        <p style="font-size:13px;color:#666;margin:4px 0 0;">Connecteam → StaflyApps • Pilot Migration & Reconciliation</p>
+        <p style="font-size:13px;color:#666;margin:4px 0 0;">Connecteam → Stafly Core • Pilot Migration & Reconciliation</p>
         <p style="font-size:10px;color:#999;margin:4px 0 0;">Generado: ${new Date().toLocaleString("es-US")}</p>
       </div>
     `;
@@ -136,7 +136,7 @@ export default function MigrationCommandCenter() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <PageHeader
           title="Migration Command Center"
-          subtitle="Connecteam → StaflyApps • Pilot Migration & Reconciliation"
+          subtitle="Connecteam → Stafly Core • Pilot Migration & Reconciliation"
         />
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" className="gap-1.5" onClick={handlePrintAll}>

@@ -70,7 +70,7 @@ const CATEGORY_LABELS: Record<string, { label: string; icon: typeof AlertTriangl
   orphan_clocks: { label: "Orphan Clocks", icon: Clock, color: "text-orange-600" },
   duration_mismatch: { label: "Duration Mismatch", icon: AlertTriangle, color: "text-amber-600" },
   unmapped_employee: { label: "Unmapped Employees", icon: Users, color: "text-red-600" },
-  stafly_only_employees: { label: "StaflyApps Only", icon: Users, color: "text-blue-600" },
+  stafly_only_employees: { label: "Stafly Core Only", icon: Users, color: "text-blue-600" },
   rate_difference: { label: "Rate Differences", icon: DollarSign, color: "text-purple-600" },
 };
 
@@ -188,7 +188,7 @@ export default function ReconciliationReport() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <PageHeader
           title="Reconciliation Report"
-          subtitle={`Connecteam ↔ StaflyApps • ${periods.length} weeks analyzed • ${exceptions.length} findings`}
+          subtitle={`Connecteam ↔ Stafly Core • ${periods.length} weeks analyzed • ${exceptions.length} findings`}
         />
         <ReportActionsBar
           title="Reconciliation Report"
@@ -393,7 +393,7 @@ export default function ReconciliationReport() {
                           <div className="flex justify-between"><span>Entries</span><span>{ct.entries || 0}</span></div>
                         </div>
                         <div className="space-y-1.5 p-3 rounded-lg bg-muted/30">
-                          <div className="text-xs font-medium text-muted-foreground mb-2">StaflyApps</div>
+                          <div className="text-xs font-medium text-muted-foreground mb-2">Stafly Core</div>
                           <div className="flex justify-between"><span>Gross Pay</span><span className="font-medium">{fmt(sf.gross)}</span></div>
                           <div className="flex justify-between"><span>Hours</span><span>{fmtHrs(sf.hours)}</span></div>
                           <div className="flex justify-between"><span>Employees</span><span>{sf.employees || 0}</span></div>
@@ -623,19 +623,19 @@ export default function ReconciliationReport() {
                 <span>
                   <strong>Orphan Clocks</strong> are the #1 driver of variance — {
                     topDrivers.find(d => d.category === "orphan_clocks")?.pct.toFixed(0) || 0
-                  }% of total explained amount. These are Connecteam clock entries with no corresponding time entry in StaflyApps. Top affected jobs: Emminence Hall, ELY Produccion, New Customer.
+                  }% of total explained amount. These are Connecteam clock entries with no corresponding time entry in Stafly Core. Top affected jobs: Emminence Hall, ELY Produccion, New Customer.
                 </span>
               </div>
               <div className="flex items-start gap-2">
                 <DollarSign className="h-4 w-4 text-purple-500 mt-0.5 shrink-0" />
                 <span>
-                  <strong>Rate Differences</strong> affect multiple employees consistently. Connecteam rates are often higher ($17-30/hr) vs StaflyApps ($15/hr). This suggests the SF system may be using a default rate instead of employee-specific rates.
+                  <strong>Rate Differences</strong> affect multiple employees consistently. Connecteam rates are often higher ($17-30/hr) vs Stafly Core ($15/hr). This suggests the SF system may be using a default rate instead of employee-specific rates.
                 </span>
               </div>
               <div className="flex items-start gap-2">
                 <Users className="h-4 w-4 text-blue-500 mt-0.5 shrink-0" />
                 <span>
-                  <strong>SF-Only Employees</strong> contribute negative variance — employees with time entries in StaflyApps but no corresponding CT clock. This is expected for employees already fully migrated.
+                  <strong>SF-Only Employees</strong> contribute negative variance — employees with time entries in Stafly Core but no corresponding CT clock. This is expected for employees already fully migrated.
                 </span>
               </div>
               <div className="flex items-start gap-2">

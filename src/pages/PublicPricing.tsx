@@ -269,7 +269,7 @@ export default function PublicPricing() {
             <Link to="/privacy" className="hover:text-[hsl(220,20%,14%)] transition-colors">Privacy</Link>
             <Link to="/terms" className="hover:text-[hsl(220,20%,14%)] transition-colors">Terms</Link>
           </div>
-          <p className="text-xs" style={{ color: "hsl(220,10%,58%)" }}>© {new Date().getFullYear()} StaflyApps</p>
+          <p className="text-xs" style={{ color: "hsl(220,10%,58%)" }}>© {new Date().getFullYear()} Stafly Core</p>
         </div>
       </footer>
     </div>

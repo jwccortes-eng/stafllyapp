@@ -288,7 +288,7 @@ export default function CompanyMigration() {
     <div className="space-y-6">
       <PageHeader
         title="Company Employee Migration"
-        subtitle={`Connecteam → StaflyApps${selectedCompany ? ` • ${selectedCompany.name}` : ""}`}
+        subtitle={`Connecteam → Stafly Core${selectedCompany ? ` • ${selectedCompany.name}` : ""}`}
       />
 
       {!selectedCompanyId && (

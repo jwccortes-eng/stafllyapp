@@ -43,7 +43,7 @@ export function downloadPassportPDF(data: PassportPDFData) {
   doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(120, 120, 130);
-  doc.text("Perfil profesional verificado por StaflyApps", margin, y + 6);
+  doc.text("Perfil profesional verificado por Stafly Core", margin, y + 6);
   y += 16;
 
   // ── Profile section ──
@@ -177,7 +177,7 @@ export function downloadPassportPDF(data: PassportPDFData) {
   doc.setFontSize(7);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(160, 160, 170);
-  doc.text(`Verificado por StaflyApps · ${data.pageUrl}`, margin, footerY);
+  doc.text(`Verificado por Stafly Core · ${data.pageUrl}`, margin, footerY);
   if (data.generatedAt) {
     doc.text(
       `Generado: ${new Date(data.generatedAt).toLocaleDateString("es")}`,

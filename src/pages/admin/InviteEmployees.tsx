@@ -44,7 +44,7 @@ export default function InviteEmployees() {
   const [generatingPin, setGeneratingPin] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  const companyName = selectedCompany?.name ?? "StaflyApps";
+  const companyName = selectedCompany?.name ?? "Stafly Core";
   const portalUrl = portalAuthUrl();
 
   useEffect(() => {

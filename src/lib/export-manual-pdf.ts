@@ -304,7 +304,7 @@ export function downloadManualPdf() {
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(36);
   doc.setFont("helvetica", "bold");
-  doc.text("StaflyApps", pageW / 2, 100, { align: "center" });
+  doc.text("Stafly Core", pageW / 2, 100, { align: "center" });
 
   doc.setFontSize(16);
   doc.setFont("helvetica", "normal");
@@ -411,11 +411,11 @@ export function downloadManualPdf() {
     doc.setPage(i);
     doc.setFontSize(8);
     doc.setTextColor(156, 163, 175);
-    doc.text("StaflyApps — Manual de la plataforma", marginL, 290);
+    doc.text("Stafly Core — Manual de la plataforma", marginL, 290);
     doc.text(`Página ${i - 1} de ${totalPages - 1}`, pageW - marginR, 290, {
       align: "right",
     });
   }
 
-  doc.save("StaflyApps-Manual-Completo.pdf");
+  doc.save("StaflyCore-Manual-Completo.pdf");
 }

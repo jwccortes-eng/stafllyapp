@@ -46,12 +46,12 @@ export const HELP_CATEGORIES: HelpCategory[] = [
     color: "bg-success/10 text-success",
     faqs: {
       es: [
-        { q: "¿Por qué StaflyApps pide ubicación?", a: "Para registrar GPS **solo** cuando haces **Clock In / Clock Out**.\nStaflyApps **no** hace tracking continuo." },
+        { q: "¿Por qué Stafly Core pide ubicación?", a: "Para registrar GPS **solo** cuando haces **Clock In / Clock Out**.\nStafly Core **no** hace tracking continuo." },
         { q: "No me deja fichar / no aparece el GPS", a: "1. Activa Location Services en tu teléfono\n2. Permite ubicación para el navegador (Safari/Chrome)\n3. Verifica internet (Wi-Fi o datos)\n4. Cierra y abre el navegador e intenta de nuevo" },
         { q: "Olvidé hacer Clock Out", a: "Contacta a tu Manager/Admin para que aplique **Force clock-out** o ajuste el registro." },
       ],
       en: [
-        { q: "Why does StaflyApps ask for location?", a: "To capture GPS **only** when you **Clock In/Out**.\nStaflyApps does **not** track you continuously." },
+        { q: "Why does Stafly Core ask for location?", a: "To capture GPS **only** when you **Clock In/Out**.\nStafly Core does **not** track you continuously." },
         { q: "I can't clock in / GPS doesn't show", a: "1. Enable Location Services\n2. Allow browser location permission\n3. Check internet connection\n4. Restart the browser and try again" },
         { q: "I forgot to Clock Out", a: "Contact your Manager/Admin to **force clock-out** or adjust the entry." },
       ],
