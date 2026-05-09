@@ -15,7 +15,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
   DropdownMenuSeparator, DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
-import TimeClockCommandView from "@/components/timeclock/TimeClockCommandView";
+import MobileTimeCommandView from "@/components/timeclock/MobileTimeCommandView";
 
 /**
  * MobileTimeClockView — /app/timeclock on mobile (390x844).
