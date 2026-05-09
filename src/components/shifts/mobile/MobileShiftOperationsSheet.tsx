@@ -369,6 +369,7 @@ export function MobileShiftOperationsSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
+        hideClose
         className="h-[92vh] p-0 rounded-t-3xl flex flex-col overflow-hidden bg-background"
       >
         {/* Sticky Context Header — "You are reviewing this shift" */}
