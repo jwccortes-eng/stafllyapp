@@ -368,6 +368,7 @@ export function MobileShiftOperationsSheet({
   };
 
   return (
+    <>
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
