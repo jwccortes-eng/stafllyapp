@@ -769,7 +769,7 @@ function SectionTitle({
 }
 
 function ErrorBlock({
-  title, helper, onRetry, onBack, devHint, retryDisabled,
+  title, helper, onRetry, onBack, devHint, retryDisabled, retryLabel,
 }: {
   title: string;
   helper?: string;
@@ -777,8 +777,11 @@ function ErrorBlock({
   onBack?: () => void;
   devHint?: string | null;
   retryDisabled?: boolean;
+  retryLabel?: string;
 }) {
   const isDev = typeof import.meta !== "undefined" && (import.meta as any)?.env?.DEV;
+  const label = retryLabel ?? "Retry";
+  const isRetrying = !!retryDisabled && label !== "Retry";
   return (
     <div
       role="alert"
@@ -804,12 +807,14 @@ function ErrorBlock({
               {onRetry && (
                 <Button
                   size="sm"
-                  className="h-8 rounded-lg"
+                  className="h-8 rounded-lg gap-1.5"
                   onClick={onRetry}
                   disabled={retryDisabled}
-                  aria-label="Retry loading team data"
+                  aria-label={label}
+                  aria-busy={isRetrying || undefined}
                 >
-                  Retry
+                  {isRetrying && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                  {label}
                 </Button>
               )}
               {onBack && (
