@@ -454,7 +454,7 @@ export function MobileShiftOperationsSheet({
           </div>
 
           <p className="mt-2 text-[11px] text-muted-foreground leading-snug">
-            Review the shift context before making changes.
+            Review this shift before making changes.
           </p>
         </div>
 
