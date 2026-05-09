@@ -509,6 +509,18 @@ export function MobileShiftOperationsSheet({
           <p className="mt-2 text-[11px] text-muted-foreground leading-snug">
             Review this shift before making changes.
           </p>
+
+          {canValidate && (
+            <Button
+              size="sm"
+              className="mt-2.5 w-full h-9 rounded-xl text-xs font-semibold gap-1.5"
+              onClick={() => setHubOpen(true)}
+              aria-label="Open team management for this shift"
+            >
+              <Users className="h-3.5 w-3.5" />
+              Manage team
+            </Button>
+          )}
         </div>
 
         {/* Scroll area */}
