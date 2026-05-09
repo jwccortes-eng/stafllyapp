@@ -788,8 +788,8 @@ export function MobileShiftOperationsSheet({
             ) : (
               <EmptyBlock
                 icon={StickyNote}
-                title="No notes yet"
-                helper="Internal notes can be added from desktop for now."
+                title={MOBILE_SHIFT_COPY.noNotesTitle}
+                helper={MOBILE_SHIFT_COPY.noNotesHelper}
               />
             )}
           </section>
