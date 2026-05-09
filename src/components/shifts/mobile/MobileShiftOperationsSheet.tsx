@@ -238,18 +238,6 @@ export function MobileShiftOperationsSheet({
     handleCopySummary();
   };
 
-  const handleOpenFullEditor = () => {
-    onOpenChange(false);
-    // Reuse canonical Shift Operations editor (mobile-friendly form)
-    navigate(`/app/shift-ops?id=${shift.id}`);
-  };
-
-  const handleManageTeam = () => {
-    onOpenChange(false);
-    // Same canonical screen — staffing/team section is part of it.
-    navigate(`/app/shift-ops?id=${shift.id}#staffing`);
-  };
-
   const handleViewAttendance = () => {
     onOpenChange(false);
     navigate(`/app/attendance?shift=${shift.id}`);
@@ -432,14 +420,17 @@ export function MobileShiftOperationsSheet({
               </div>
             )}
 
-            {/* Phased note — only the assignment management piece is rolling out */}
-            <div className="mt-2.5 rounded-2xl border border-border bg-muted/30 p-3 text-xs text-foreground/80">
-              <strong className="block font-semibold text-foreground mb-0.5">
-                Team assignment is rolling out
-              </strong>
-              You can edit shift details and review attendance from mobile.
-              Adding or removing assigned workers is best on desktop for now.
-            </div>
+          {/* Phased note — staffing changes are desktop-only for now */}
+            {understaffed && (
+              <div className="mt-2.5 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-800 dark:text-amber-300">
+                <strong className="block font-semibold mb-0.5">
+                  Staffing changes are desktop recommended for now
+                </strong>
+                You can review coverage and contact assigned workers from mobile.
+                Adding or removing workers is being prepared for mobile and should
+                be done from desktop for now.
+              </div>
+            )}
           </section>
 
           {/* Attendance validation — unified premium panel (same as desktop)
@@ -508,33 +499,18 @@ export function MobileShiftOperationsSheet({
           </section>
         </div>
 
-        {/* Sticky footer — primary mobile shift actions */}
-        <div className="px-5 pt-3 pb-[max(env(safe-area-inset-bottom,0px),12px)] border-t border-border/40 bg-background/95 backdrop-blur-sm space-y-2">
+        {/* Sticky footer — single safe primary action for Mobile Shifts v1 */}
+        <div className="px-5 pt-3 pb-[max(env(safe-area-inset-bottom,0px),12px)] border-t border-border/40 bg-background/95 backdrop-blur-sm">
           <Button
             className="w-full h-12 rounded-xl text-sm font-semibold gap-2"
-            onClick={handleOpenFullEditor}
+            onClick={handleViewAttendance}
           >
-            <FileEdit className="h-4 w-4" />
-            Edit shift
+            <ClipboardList className="h-4 w-4" />
+            View attendance
           </Button>
-          <div className="grid grid-cols-2 gap-2">
-            <Button
-              variant="outline"
-              className="h-11 rounded-xl text-sm font-medium gap-2"
-              onClick={handleManageTeam}
-            >
-              <Users className="h-4 w-4" />
-              Manage team
-            </Button>
-            <Button
-              variant="outline"
-              className="h-11 rounded-xl text-sm font-medium gap-2"
-              onClick={handleViewAttendance}
-            >
-              <ClipboardList className="h-4 w-4" />
-              Attendance
-            </Button>
-          </div>
+          <p className="mt-2 text-center text-[11px] text-muted-foreground">
+            Editing shift details and staffing is desktop recommended for now.
+          </p>
         </div>
       </SheetContent>
     </Sheet>
