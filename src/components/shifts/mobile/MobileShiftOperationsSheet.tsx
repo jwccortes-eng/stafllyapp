@@ -507,10 +507,6 @@ export function MobileShiftOperationsSheet({
               <ClipboardList className="h-4 w-4" />
               <span>Attendance</span>
             </Button>
-            <Button variant="outline" className="h-12 rounded-xl justify-start gap-2 text-sm font-medium" onClick={handleAssign}>
-              <UserPlus className="h-4 w-4" />
-              <span>Assign workers</span>
-            </Button>
           </section>
         </div>
 
