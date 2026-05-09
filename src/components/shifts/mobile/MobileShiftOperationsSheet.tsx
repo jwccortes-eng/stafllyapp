@@ -432,14 +432,17 @@ export function MobileShiftOperationsSheet({
               </div>
             )}
 
-            {/* Phased note — only the assignment management piece is rolling out */}
-            <div className="mt-2.5 rounded-2xl border border-border bg-muted/30 p-3 text-xs text-foreground/80">
-              <strong className="block font-semibold text-foreground mb-0.5">
-                Team assignment is rolling out
-              </strong>
-              You can edit shift details and review attendance from mobile.
-              Adding or removing assigned workers is best on desktop for now.
-            </div>
+          {/* Phased note — staffing changes are desktop-only for now */}
+            {understaffed && (
+              <div className="mt-2.5 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-800 dark:text-amber-300">
+                <strong className="block font-semibold mb-0.5">
+                  Staffing changes are desktop recommended for now
+                </strong>
+                You can review coverage and contact assigned workers from mobile.
+                Adding or removing workers is being prepared for mobile and should
+                be done from desktop for now.
+              </div>
+            )}
           </section>
 
           {/* Attendance validation — unified premium panel (same as desktop)
