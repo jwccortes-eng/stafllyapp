@@ -385,11 +385,17 @@ export default function MyShifts() {
     );
   }
 
-  // Use response_status for display; fall back to assignment status for backwards compat
+  // response_status is the worker's source of truth. We must NOT show the card
+  // as "Confirmed" while the worker still owes a response (admin may have
+  // auto-set assignment.status='confirmed' on creation).
   const getDisplayStatus = (a: ShiftAssignment): string => {
     if (a.response_status === "needs_reacceptance") return "needs_reacceptance";
-    if (a.response_status === "accepted" || a.status === "confirmed" || a.status === "accepted") return "confirmed";
     if (a.response_status === "rejected" || a.status === "rejected") return "rejected";
+    if (a.response_status === "accepted") return "confirmed";
+    // Pending response — even if status='confirmed' on the row.
+    if (a.response_status === "pending") return "pending";
+    // Legacy rows without response_status fall back to assignment.status.
+    if (a.status === "confirmed" || a.status === "accepted") return "confirmed";
     return "pending";
   };
 
@@ -455,22 +461,32 @@ export default function MyShifts() {
 
       {/* Shift list — compact rows. History tab adds week grouping + pagination. */}
       {activeTab !== "available" && filtered.length > 0 && (() => {
-        const renderCard = (a: ShiftAssignment) => (
-          <PortalShiftCard
-            key={a.id}
-            shift={toCardData(a)}
-            compact
-            onClick={() => setSelectedShift(a)}
-            onAccept={a.status === "pending" && !isBefore(parseISO(a.shift.date), today) ? () => acceptAssignment(a.id) : undefined}
-            onReject={a.status === "pending" && !isBefore(parseISO(a.shift.date), today) ? () => { setRejectDialogId(a.id); setRejectReason(""); } : undefined}
-            onClockIn={
-              (a.status === "confirmed" || a.status === "accepted") && isToday(parseISO(a.shift.date))
-                ? () => navigate(`/portal/clock?shiftId=${a.shift.id}`)
-                : undefined
-            }
-            responding={responding === a.id}
-          />
-        );
+        const renderCard = (a: ShiftAssignment) => {
+          // A response is owed whenever response_status is pending OR
+          // needs_reacceptance — independent of the assignment.status, which may
+          // already be "confirmed" when the admin auto-assigned the worker.
+          const responseOwed =
+            (a.response_status === "pending" || a.response_status === "needs_reacceptance") &&
+            !isBefore(parseISO(a.shift.date), today);
+          // Treat the worker as confirmed only when they have explicitly accepted.
+          const workerAccepted = a.response_status === "accepted";
+          return (
+            <PortalShiftCard
+              key={a.id}
+              shift={toCardData(a)}
+              compact
+              onClick={() => setSelectedShift(a)}
+              onAccept={responseOwed ? () => acceptAssignment(a.id) : undefined}
+              onReject={responseOwed ? () => { setRejectDialogId(a.id); setRejectReason(""); } : undefined}
+              onClockIn={
+                workerAccepted && isToday(parseISO(a.shift.date))
+                  ? () => navigate(`/portal/clock?shiftId=${a.shift.id}`)
+                  : undefined
+              }
+              responding={responding === a.id}
+            />
+          );
+        };
 
         if (activeTab === "history") {
           // Paginate first to keep DOM size bounded.

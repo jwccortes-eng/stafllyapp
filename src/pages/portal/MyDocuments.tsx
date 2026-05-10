@@ -37,6 +37,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { PROFILE_STATUS_LABELS } from "@/lib/onboarding/profile-status";
+import { resolveEmployeeDocumentUrl } from "@/lib/employee-documents";
 
 type ReviewStatus = "pending" | "approved" | "rejected";
 
@@ -194,11 +195,11 @@ export default function MyDocuments() {
   const handleView = async (doc: DocRow) => {
     if (!doc.file_url) return;
     try {
-      const { data, error } = await supabase.storage
-        .from("employee-documents")
-        .createSignedUrl(doc.file_url, 60);
-      if (error) throw error;
-      if (data?.signedUrl) window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+      // Use the resolver so legacy rows that stored a full public URL (or a
+      // previously-signed URL) are normalized to a path before signing.
+      const url = await resolveEmployeeDocumentUrl(doc.file_url);
+      if (!url) throw new Error("File not accessible");
+      window.open(url, "_blank", "noopener,noreferrer");
     } catch (err: any) {
       toast({ title: "Could not open file", description: err?.message ?? "Try again.", variant: "destructive" });
     }
