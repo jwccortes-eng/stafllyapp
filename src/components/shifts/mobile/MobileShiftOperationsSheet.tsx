@@ -875,6 +875,9 @@ export function MobileShiftOperationsSheet({
         response_status: a.response_status,
         attendance_status: a.attendance_status,
         assignment_role: a.assignment_role,
+        accepted_at: a.accepted_at,
+        rejected_at: a.rejected_at,
+        responded_at: a.responded_at,
       }))}
       employees={employees}
       canManage={canValidate}
