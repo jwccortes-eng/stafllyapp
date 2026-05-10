@@ -58,6 +58,7 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
   { id: "kiosk", to: "/app/kiosk", icon: Monitor, label: "Kiosk", module: null, section: "Operations" },
   { id: "attendance", to: "/app/attendance", icon: ScanEye, label: "Attendance", module: null, section: "Operations" },
   { id: "migration", to: "/app/migration", icon: ArrowLeftRight, label: "Migration", module: null, section: "Administration", roles: ["owner"] },
+  { id: "payroll-review-queue", to: "/app/payroll-review-queue", icon: ScanEye, label: "Review Queue", module: null, section: "Payroll", badge: "READ ONLY", roles: ["developer", "owner", "company_owner", "admin"] },
   { id: "staged-recon", to: "/app/payroll-reconciliation", icon: GitCompareArrows, label: "Reconciliation", module: null, section: "Payroll", roles: ["developer", "owner", "company_owner", "admin"] },
   { id: "advances-loans", to: "/app/advances-loans", icon: Banknote, label: "Advances", module: null, section: "Payroll" },
   { id: "comp-validation", to: "/app/compensation-validation", icon: DollarSign, label: "Compensation", module: null, section: "Payroll", roles: ["developer", "owner", "company_owner", "admin"] },

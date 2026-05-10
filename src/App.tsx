@@ -78,6 +78,7 @@ const Permissions = lazy(() => import("./pages/admin/Permissions"));
 const CompanyConfig = lazy(() => import("./pages/admin/CompanyConfig"));
 const Automations = lazy(() => import("./pages/admin/Automations"));
 const PayrollSettings = lazy(() => import("./pages/admin/PayrollSettings"));
+const PayrollReviewQueue = lazy(() => import("./pages/admin/PayrollReviewQueue"));
 const MonetizationReport = lazy(() => import("./pages/admin/MonetizationReport"));
 const Pricing = lazy(() => import("./pages/admin/Pricing"));
 const Billing = lazy(() => import("./pages/admin/Billing"));
@@ -353,6 +354,7 @@ function App() {
                 <Route path="payroll-pilot-close" element={<CompanyRequiredGuard><PayrollPilotClose /></CompanyRequiredGuard>} />
                 <Route path="payroll-mappings" element={<CompanyRequiredGuard><PayrollMappings /></CompanyRequiredGuard>} />
                 <Route path="payroll-reconciliation" element={<CompanyRequiredGuard><PayrollReconciliation /></CompanyRequiredGuard>} />
+                <Route path="payroll-review-queue" element={<CompanyRequiredGuard><PayrollReviewQueue /></CompanyRequiredGuard>} />
                 <Route path="weekly-payroll-reconciliation" element={<CompanyRequiredGuard><WeeklyPayrollReconciliation /></CompanyRequiredGuard>} />
                 <Route path="compensation-adoption" element={<CompanyRequiredGuard><CompensationAdoption /></CompanyRequiredGuard>} />
                 <Route path="applications" element={<CompanyRequiredGuard><Applications /></CompanyRequiredGuard>} />
