@@ -467,9 +467,9 @@ export function MobileShiftOperationsSheet({
               <Badge
                 variant="outline"
                 className="h-[22px] px-2 text-[11px] font-medium border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10"
-                aria-label="Warning: no location linked to this shift"
+                aria-label={meetingPoint ? "Warning: missing job site (meeting point is set)" : "Warning: no location linked to this shift"}
               >
-                No location
+                {meetingPoint ? "Missing job site" : "No location"}
               </Badge>
             )}
             {weekendLabel && (
