@@ -128,23 +128,30 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, responseStatu
   const hoursLabel = calcHours(shift.start_time?.slice(0, 5), shift.end_time?.slice(0, 5));
   const isTodayShift = isToday(parseISO(shift.date));
   const isTomorrowShift = isTomorrow(parseISO(shift.date));
-  const statusMeta = getStatusMeta(assignmentStatus);
+  // Worker truth: prefer responseStatus when provided; fallback to assignmentStatus.
+  const effectiveStatus = responseStatus ?? assignmentStatus;
+  const statusMeta = getStatusMeta(effectiveStatus);
   const shiftCompanyId = shift.company_id || empCompanyId || "";
   const countdown = isTodayShift ? getCountdown(shift.date, shift.start_time) : null;
-  const isConfirmed = assignmentStatus === "confirmed" || assignmentStatus === "accepted";
+  const isAccepted = effectiveStatus === "confirmed" || effectiveStatus === "accepted";
+  const isPending = effectiveStatus === "pending" || effectiveStatus === "needs_reacceptance";
+  const isRejected = effectiveStatus === "rejected";
+  const showResponseActions = isPending && !!(onAccept || onReject);
+  const showClockInAction = isAccepted && isTodayShift;
+  const showStickyFooter = !secondaryView && (showResponseActions || showClockInAction);
 
   const dayLabel = isTodayShift
-    ? "Today"
+    ? "Hoy"
     : isTomorrowShift
-    ? "Tomorrow"
-    : format(parseISO(shift.date), "EEE, MMM d", { locale: enUS });
+    ? "Mañana"
+    : format(parseISO(shift.date), "EEE d MMM", { locale: enUS });
 
-  const copyAddress = (text: string) => {
+  const copyAddress = (text: string, label = "Dirección") => {
     navigator.clipboard.writeText(text);
-    toast({ title: "Copied", description: "Address copied to clipboard" });
+    toast({ title: "Copiado", description: `${label} copiada al portapapeles` });
   };
 
-  const clockLabel = clockingMethod === "required" ? "QR scan required" : clockingMethod === "optional" ? "QR optional" : "Mobile clock-in";
+  const clockLabel = clockingMethod === "required" ? "QR obligatorio" : clockingMethod === "optional" ? "QR opcional" : "Marcar desde el móvil";
   const ClockMethodIcon = clockingMethod === "required" || clockingMethod === "optional" ? ScanLine : Phone;
 
   return (
