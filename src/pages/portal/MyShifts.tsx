@@ -181,14 +181,14 @@ export default function MyShifts() {
 
       // Check for existing request/assignment to prevent duplicates
       const { data: existing } = await supabase.from("shift_requests").select("id").eq("shift_id", shiftId).eq("employee_id", employeeId).maybeSingle();
-      if (existing) throw new Error("You already requested this shift");
+      if (existing) throw new Error("Ya solicitaste este turno");
 
       // Race condition guard: re-check slot availability
       const { data: currentShift } = await supabase.from("scheduled_shifts")
         .select("slots, shift_assignments(id)").eq("id", shiftId).maybeSingle();
       if (currentShift) {
         const filled = currentShift.shift_assignments?.length ?? 0;
-        if (currentShift.slots && filled >= currentShift.slots) throw new Error("This shift is already full");
+        if (currentShift.slots && filled >= currentShift.slots) throw new Error("Este turno ya está lleno");
       }
 
       const { error } = await supabase.from("shift_requests").insert({
@@ -212,12 +212,12 @@ export default function MyShifts() {
       } catch {}
       if (navigator.vibrate) navigator.vibrate(100);
 
-      toast.success("✅ Request sent!", { description: claimedShift ? `Shift "${claimedShift.title}" requested successfully.` : "Your request has been submitted." });
+      toast.success("✅ ¡Solicitud enviada!", { description: claimedShift ? `Turno "${claimedShift.title}" solicitado.` : "Tu solicitud fue enviada." });
       await load();
     } catch (err: any) {
       // Rollback optimistic update
       if (claimedShift) setClaimable(prev => [...prev, claimedShift].sort((a, b) => a.date.localeCompare(b.date)));
-      toast.error("Error", { description: err.message ?? "Could not request the shift." });
+      toast.error("Error", { description: err.message ?? "No pudimos solicitar el turno." });
     } finally {
       setClaiming(null);
     }
@@ -283,7 +283,7 @@ export default function MyShifts() {
       error = fallback.error;
     }
     if (error) toast.error("Error", { description: error.message });
-    else { toast.success("Shift confirmed!"); notifyAdminOfResponse(assignmentId, "confirmed"); await load(); }
+    else { toast.success("¡Turno confirmado!"); notifyAdminOfResponse(assignmentId, "confirmed"); await load(); }
     setResponding(null);
   };
 
@@ -305,7 +305,7 @@ export default function MyShifts() {
       error = fallback.error;
     }
     if (error) toast.error("Error", { description: error.message });
-    else { toast.success("Shift rejected"); notifyAdminOfResponse(rejectDialogId, "rejected"); await load(); }
+    else { toast.success("Turno rechazado"); notifyAdminOfResponse(rejectDialogId, "rejected"); await load(); }
     setResponding(null); setRejectDialogId(null); setRejectReason("");
   };
 
@@ -331,11 +331,13 @@ export default function MyShifts() {
   const upcomingCount = assignments.filter(a => !isBefore(parseISO(a.shift.date), today) && !isToday(parseISO(a.shift.date))).length;
   const pastCount = assignments.filter(a => isBefore(parseISO(a.shift.date), today)).length;
 
-  const tabs: { key: TabFilter; label: string; count: number }[] = [
-    ...(claimable.length > 0 ? [{ key: "available" as TabFilter, label: "Available", count: claimable.length }] : []),
-    { key: "today", label: "Today", count: todayCount },
-    { key: "upcoming", label: "Upcoming", count: upcomingCount },
-    { key: "history", label: "History", count: pastCount },
+  // History count is intentionally not shown as a badge — it grows unbounded
+  // and creates noise (e.g. "99+"). Today/Upcoming/Available keep their counts.
+  const tabs: { key: TabFilter; label: string; count: number; showCount: boolean }[] = [
+    ...(claimable.length > 0 ? [{ key: "available" as TabFilter, label: "Disponibles", count: claimable.length, showCount: true }] : []),
+    { key: "today", label: "Hoy", count: todayCount, showCount: true },
+    { key: "upcoming", label: "Próximos", count: upcomingCount, showCount: true },
+    { key: "history", label: "Historial", count: pastCount, showCount: false },
   ];
 
   // Sync tab to URL for deep-link / back navigation
@@ -348,9 +350,9 @@ export default function MyShifts() {
   };
 
   const subtitle = (() => {
-    if (todayCount > 0) return `${todayCount} shift${todayCount > 1 ? "s" : ""} today`;
-    if (upcomingCount > 0) return `${upcomingCount} upcoming`;
-    return "No scheduled shifts";
+    if (todayCount > 0) return `${todayCount} turno${todayCount > 1 ? "s" : ""} hoy`;
+    if (upcomingCount > 0) return `${upcomingCount} próximo${upcomingCount > 1 ? "s" : ""}`;
+    return "Sin turnos programados";
   })();
 
   if (loading) {
@@ -377,7 +379,7 @@ export default function MyShifts() {
     return (
       <div className="pt-4">
         <ErrorBlock
-          title="We couldn't load your shifts"
+          title="No pudimos cargar tus turnos"
           message={loadError}
           onRetry={load}
         />
@@ -417,7 +419,7 @@ export default function MyShifts() {
       {/* Minimal header — title only, subtitle merged into active tab context */}
       <div className="pt-1 pb-3">
         <h1 className="text-[22px] font-bold font-heading tracking-tight text-foreground leading-none">
-          My Shifts
+          Mis turnos
         </h1>
       </div>
 
@@ -436,16 +438,16 @@ export default function MyShifts() {
               )}
             >
               <span>{t.label}</span>
-              {t.count > 0 && (
+              {t.showCount && t.count > 0 && (
                 <span className={cn(
-                  "inline-flex items-center justify-center min-w-[18px] h-[16px] px-1 rounded-full text-[9.5px] font-bold tabular-nums",
+                  "inline-flex items-center justify-center min-w-[18px] h-[16px] px-1 rounded-full text-[10px] font-bold tabular-nums",
                   active
                     ? accent
                       ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
                       : "bg-muted text-foreground/70"
                     : "bg-muted/40 text-muted-foreground/55",
                 )}>
-                  {t.count > 99 ? "99+" : t.count}
+                  {t.count > 9 ? "9+" : t.count}
                 </span>
               )}
               {active && (
@@ -501,9 +503,9 @@ export default function MyShifts() {
 
           type Bucket = { key: string; label: string; items: ShiftAssignment[] };
           const buckets: Bucket[] = [
-            { key: "this-week", label: "This week", items: [] },
-            { key: "last-week", label: "Last week", items: [] },
-            { key: "earlier", label: "Earlier", items: [] },
+            { key: "this-week", label: "Esta semana", items: [] },
+            { key: "last-week", label: "Semana pasada", items: [] },
+            { key: "earlier", label: "Anteriores", items: [] },
           ];
 
           for (const a of visible) {
@@ -515,6 +517,11 @@ export default function MyShifts() {
 
           return (
             <div className="space-y-4">
+              {/* Discrete total — replaces the noisy "99+" badge in the tab */}
+              <p className="text-[11px] text-muted-foreground/60 px-1 -mt-1">
+                {filtered.length} turno{filtered.length === 1 ? "" : "s"} en total
+              </p>
+
               {buckets.filter(b => b.items.length > 0).map((b) => (
                 <div key={b.key} className="space-y-1.5">
                   <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground/55 px-1">
@@ -534,7 +541,7 @@ export default function MyShifts() {
                     onClick={() => setHistoryVisible(v => v + HISTORY_PAGE)}
                     className="w-full h-10 text-[12px] font-semibold rounded-xl text-muted-foreground hover:text-foreground"
                   >
-                    Load {Math.min(remaining, HISTORY_PAGE)} more · {remaining} remaining
+                    Cargar {Math.min(remaining, HISTORY_PAGE)} más · {remaining} restantes
                   </Button>
                 </div>
               )}
@@ -561,24 +568,24 @@ export default function MyShifts() {
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-widest bg-emerald-500/15 text-emerald-700 dark:text-emerald-400">
-                      Available
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-widest bg-emerald-500/15 text-emerald-700 dark:text-emerald-400">
+                      Disponible
                     </span>
                     {s.slots && (
-                      <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">
-                        {s.slots - s.assignedCount} spot{(s.slots - s.assignedCount) !== 1 ? "s" : ""}
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">
+                        {s.slots - s.assignedCount} {(s.slots - s.assignedCount) === 1 ? "lugar" : "lugares"}
                       </span>
                     )}
                   </div>
-                  <p className="text-[13.5px] font-bold text-foreground truncate">{formatDisplayName(s.title)}</p>
-                  <p className="text-[11px] text-muted-foreground/75 mt-0.5">
-                    {isToday(parseISO(s.date)) ? "Today" : isTomorrow(parseISO(s.date)) ? "Tomorrow" : format(parseISO(s.date), "EEE d MMM", { locale: enUS })}
+                  <p className="text-[14px] font-bold text-foreground truncate">{formatDisplayName(s.title)}</p>
+                  <p className="text-[12px] text-muted-foreground/80 mt-0.5">
+                    {isToday(parseISO(s.date)) ? "Hoy" : isTomorrow(parseISO(s.date)) ? "Mañana" : format(parseISO(s.date), "EEE d MMM", { locale: enUS })}
                     {" · "}
                     <span className="tabular-nums">{s.start_time?.slice(0, 5)}–{s.end_time?.slice(0, 5)}</span>
                   </p>
                   {s.location && (
-                    <p className="text-[11px] text-muted-foreground/65 mt-0.5 flex items-center gap-1 truncate">
-                      <MapPin className="h-2.5 w-2.5 shrink-0" /> {formatDisplayName(s.location.name)}
+                    <p className="text-[12px] text-muted-foreground/70 mt-0.5 flex items-center gap-1 truncate">
+                      <MapPin className="h-3 w-3 shrink-0" /> {formatDisplayName(s.location.name)}
                     </p>
                   )}
                 </div>
@@ -589,7 +596,7 @@ export default function MyShifts() {
                 onClick={(e) => { e.stopPropagation(); claimShift(s.id); }}
                 disabled={claiming === s.id}
               >
-                {claiming === s.id ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />Requesting...</> : <><HandMetal className="h-3.5 w-3.5" />Request shift</>}
+                {claiming === s.id ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />Solicitando...</> : <><HandMetal className="h-3.5 w-3.5" />Solicitar turno</>}
               </Button>
             </div>
           ))}
@@ -604,16 +611,16 @@ export default function MyShifts() {
           </div>
           <div className="space-y-1">
             <p className="text-sm font-bold text-foreground">
-              {activeTab === "today" && "No shifts today"}
-              {activeTab === "upcoming" && "No upcoming shifts"}
-              {activeTab === "history" && "No history"}
+              {activeTab === "today" && "Sin turnos hoy"}
+              {activeTab === "upcoming" && "Sin próximos turnos"}
+              {activeTab === "history" && "Sin historial"}
             </p>
-            <p className="text-xs text-muted-foreground/60 max-w-[240px] mx-auto">
+            <p className="text-xs text-muted-foreground/70 max-w-[240px] mx-auto">
               {activeTab === "today"
-                ? "You have no shifts scheduled for today."
+                ? "No tienes turnos programados para hoy."
                 : activeTab === "history"
-                ? "You don't have any completed shifts yet."
-                : "Assigned shifts will appear here."
+                ? "Aún no tienes turnos completados."
+                : "Tus turnos asignados aparecerán aquí."
               }
             </p>
           </div>
@@ -633,17 +640,17 @@ export default function MyShifts() {
       <Dialog open={!!rejectDialogId} onOpenChange={o => { if (!o) { setRejectDialogId(null); setRejectReason(""); } }}>
         <DialogContent className="max-w-sm rounded-2xl">
           <DialogHeader>
-            <DialogTitle className="text-base font-bold">Reject shift</DialogTitle>
+            <DialogTitle className="text-base font-bold">Rechazar turno</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
-            <p className="text-xs text-muted-foreground">Optionally provide a reason for rejecting.</p>
-            <Textarea value={rejectReason} onChange={e => setRejectReason(e.target.value)} placeholder="Reason (optional)..." rows={3} className="text-sm resize-none rounded-xl" />
+            <p className="text-xs text-muted-foreground">Puedes indicar un motivo (opcional).</p>
+            <Textarea value={rejectReason} onChange={e => setRejectReason(e.target.value)} placeholder="Motivo (opcional)..." rows={3} className="text-sm resize-none rounded-xl" />
           </div>
           <DialogFooter>
-            <Button variant="ghost" size="sm" className="rounded-xl" onClick={() => { setRejectDialogId(null); setRejectReason(""); }}>Cancel</Button>
+            <Button variant="ghost" size="sm" className="rounded-xl" onClick={() => { setRejectDialogId(null); setRejectReason(""); }}>Cancelar</Button>
             <Button variant="destructive" size="sm" className="rounded-xl" onClick={rejectAssignment} disabled={responding === rejectDialogId}>
               {responding === rejectDialogId ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
-              Reject
+              Rechazar
             </Button>
           </DialogFooter>
         </DialogContent>

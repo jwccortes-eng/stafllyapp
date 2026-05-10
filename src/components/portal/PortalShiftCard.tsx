@@ -38,14 +38,14 @@ function getStatusMeta(status: string): { tone: OpsStatusTone; label: string; ra
   switch (status) {
     case "confirmed":
     case "accepted":
-      return { tone: "success", label: "Confirmed", rail: "bg-earning/70" };
+      return { tone: "success", label: "Confirmado", rail: "bg-earning/70" };
     case "needs_reacceptance":
-      return { tone: "warning", label: "Re-accept", rail: "bg-warning" };
+      return { tone: "warning", label: "Re-aceptar", rail: "bg-warning" };
     case "rejected":
-      return { tone: "critical", label: "Rejected", rail: "bg-destructive" };
+      return { tone: "critical", label: "Rechazado", rail: "bg-destructive" };
     case "pending":
     default:
-      return { tone: "warning", label: "Pending", rail: "bg-warning/80" };
+      return { tone: "warning", label: "Pendiente", rail: "bg-warning/80" };
   }
 }
 
@@ -68,15 +68,15 @@ function getCountdown(dateStr: string, startTime: string): string | null {
   if (diff < 0 || diff > 24 * 60 * 60 * 1000) return null;
   const hrs = Math.floor(diff / 3600000);
   const mins = Math.floor((diff % 3600000) / 60000);
-  if (hrs > 0) return `in ${hrs}h ${mins}m`;
-  return `in ${mins}m`;
+  if (hrs > 0) return `en ${hrs}h ${mins}m`;
+  return `en ${mins}m`;
 }
 
 /** Day label used in compact + full views. */
 function dayLabel(dateStr: string): string {
   const d = parseISO(dateStr);
-  if (isToday(d)) return "Today";
-  if (isTomorrow(d)) return "Tomorrow";
+  if (isToday(d)) return "Hoy";
+  if (isTomorrow(d)) return "Mañana";
   return format(d, "EEE d MMM", { locale: enUS });
 }
 
@@ -123,24 +123,24 @@ export function PortalShiftCard({
         {/* Primary row */}
         <div className="flex items-center gap-3 pl-3.5 pr-3 py-2.5">
           {/* Day + time block — fixed width for column alignment */}
-          <div className="shrink-0 w-[58px]">
+          <div className="shrink-0 w-[60px]">
             <p className={cn(
-              "text-[10px] font-bold uppercase tracking-wider leading-none",
-              isTodayShift ? "text-primary" : "text-muted-foreground/55",
+              "text-[11px] font-bold uppercase tracking-wider leading-none",
+              isTodayShift ? "text-primary" : "text-muted-foreground/65",
             )}>
-              {isTodayShift ? "Today" : isTomorrow(parseISO(shift.date)) ? "Tomr" : format(parseISO(shift.date), "EEE", { locale: enUS })}
+              {isTodayShift ? "Hoy" : isTomorrow(parseISO(shift.date)) ? "Mañana" : format(parseISO(shift.date), "EEE", { locale: enUS })}
             </p>
-            <p className="text-[13px] font-bold text-foreground/90 tabular-nums leading-tight mt-1">
+            <p className="text-[14px] font-bold text-foreground/90 tabular-nums leading-tight mt-1">
               {shift.start_time?.slice(0, 5)}
             </p>
           </div>
 
           {/* Title + subtitle */}
           <div className="min-w-0 flex-1">
-            <p className="text-[13.5px] font-semibold text-foreground truncate leading-tight">
+            <p className="text-[14.5px] font-semibold text-foreground truncate leading-tight">
               {titleDisplay}
             </p>
-            <p className="text-[11px] text-muted-foreground/70 truncate mt-0.5">
+            <p className="text-[12px] text-muted-foreground/75 truncate mt-0.5">
               <span className="tabular-nums">{shift.start_time?.slice(0, 5)}–{shift.end_time?.slice(0, 5)}</span>
               {subtitle && <> · {subtitle}</>}
             </p>
@@ -161,21 +161,21 @@ export function PortalShiftCard({
           >
             <Button
               size="sm"
-              className="flex-1 h-9 text-[12px] font-semibold rounded-lg gap-1.5"
+              className="flex-1 h-10 text-[13px] font-semibold rounded-lg gap-1.5"
               onClick={onAccept}
               disabled={responding}
             >
-              <CheckCircle2 className="h-3.5 w-3.5" />
-              {shift.status === "needs_reacceptance" ? "Accept changes" : "Confirm"}
+              <CheckCircle2 className="h-4 w-4" />
+              {shift.status === "needs_reacceptance" ? "Aceptar cambios" : "Confirmar"}
             </Button>
             <Button
               variant="ghost"
               size="sm"
-              className="h-9 px-3 text-[12px] text-muted-foreground hover:text-destructive rounded-lg"
+              className="h-10 px-3 text-[13px] text-muted-foreground hover:text-destructive rounded-lg"
               onClick={onReject}
               disabled={responding}
             >
-              Decline
+              Rechazar
             </Button>
           </div>
         )}
@@ -184,11 +184,11 @@ export function PortalShiftCard({
           <div className="px-3.5 pb-2.5" onClick={(e) => e.stopPropagation()}>
             <Button
               size="sm"
-              className="w-full h-9 text-[12px] font-semibold rounded-lg gap-1.5 shadow-sm shadow-primary/15"
+              className="w-full h-10 text-[13px] font-semibold rounded-lg gap-1.5 shadow-sm shadow-primary/15"
               onClick={onClockIn}
             >
-              <LogIn className="h-3.5 w-3.5" />
-              Clock In{countdown && ` · starts ${countdown}`}
+              <LogIn className="h-4 w-4" />
+              Marcar entrada{countdown && ` · empieza ${countdown}`}
             </Button>
           </div>
         )}
@@ -214,7 +214,7 @@ export function PortalShiftCard({
         <div className="bg-primary/[0.05] px-4 py-1.5 flex items-center gap-2 border-b border-primary/10">
           <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse shrink-0" />
           <span className="text-[10px] font-bold text-primary tracking-wide uppercase">
-            Starts {countdown}
+            Empieza {countdown}
           </span>
         </div>
       )}
@@ -278,7 +278,7 @@ export function PortalShiftCard({
               disabled={responding}
             >
               <CheckCircle2 className="h-3.5 w-3.5" />
-              {shift.status === "needs_reacceptance" ? "Accept changes" : "Confirm"}
+              {shift.status === "needs_reacceptance" ? "Aceptar cambios" : "Confirmar"}
             </Button>
             <Button
               variant="ghost"
@@ -287,7 +287,7 @@ export function PortalShiftCard({
               onClick={onReject}
               disabled={responding}
             >
-              Decline
+              Rechazar
             </Button>
           </div>
         )}
@@ -300,7 +300,7 @@ export function PortalShiftCard({
               onClick={onClockIn}
             >
               <LogIn className="h-3.5 w-3.5" />
-              Clock In
+              Marcar entrada
             </Button>
           </div>
         )}
