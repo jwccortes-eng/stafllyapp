@@ -217,7 +217,7 @@ export default function MyShifts() {
     } catch (err: any) {
       // Rollback optimistic update
       if (claimedShift) setClaimable(prev => [...prev, claimedShift].sort((a, b) => a.date.localeCompare(b.date)));
-      toast.error("Error", { description: err.message ?? "Could not request the shift." });
+      toast.error("Error", { description: err.message ?? "No pudimos solicitar el turno." });
     } finally {
       setClaiming(null);
     }
