@@ -101,6 +101,10 @@ export default function MobileShiftsView() {
 
   const [detailShift, setDetailShift] = useState<Shift | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  const [detailManageTeam, setDetailManageTeam] = useState(false);
+  // Tracks whether we've already attempted to consume a deep-link intent
+  // for the current shifts payload (avoids reopening on every refresh).
+  const [deepLinkConsumed, setDeepLinkConsumed] = useState(false);
 
   // Load shifts: yesterday for "Today" buffer + 60 days forward for Upcoming
   const dateRange = useMemo(() => {
