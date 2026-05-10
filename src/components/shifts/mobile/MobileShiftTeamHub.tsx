@@ -1090,25 +1090,183 @@ function IssuesTab({
   );
 }
 
-function RecommendedTab({ onOpenDesktop }: { onOpenDesktop: () => void }) {
+type ReadinessFilter = "all" | "ready" | "grace" | "phone";
+
+function RecommendedTab({
+  employees, assignments, companyId, onAssign, onOpenDesktop,
+}: {
+  employees: Employee[];
+  assignments: HubAssignment[];
+  companyId: string | null | undefined;
+  onAssign: (employeeId: string, workerName: string) => void;
+  onOpenDesktop: () => void;
+}) {
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState<ReadinessFilter>("all");
+
+  // Active assignment ids (anything except rejected/removed counts as taken).
+  const takenIds = useMemo(() => {
+    const s = new Set<string>();
+    for (const a of assignments) {
+      const st = (a.status ?? "").toLowerCase();
+      if (st !== "rejected" && st !== "removed") s.add(a.employee_id);
+    }
+    return s;
+  }, [assignments]);
+
+  // Build the recommended list. v1 = active workers, not already assigned,
+  // sorted: ready/grace first → has phone → name.
+  const candidates = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const list = employees
+      .filter(e => e.is_active !== false)
+      .filter(e => !takenIds.has(e.id))
+      .map(e => {
+        const r = computeReadiness(e, companyId);
+        const name = `${e.first_name ?? ""} ${e.last_name ?? ""}`.trim() || "Worker";
+        const phone = normalizePhone(e.phone_number ?? "");
+        return { e, r, name, phone };
+      })
+      // Hide hard-blocked records by default to avoid noise; backend would reject anyway.
+      .filter(x => x.r.state !== "inactive" && x.r.state !== "unknown");
+
+    const filtered = list.filter(x => {
+      if (filter === "ready" && x.r.state !== "ready") return false;
+      if (filter === "grace" && x.r.state !== "grace_period") return false;
+      if (filter === "phone" && !x.phone) return false;
+      if (q) {
+        const hay = `${x.name} ${x.phone} ${x.e.email ?? ""} ${x.e.employer_identification ?? ""}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+
+    const score = (state: ReadinessState) =>
+      state === "ready" ? 0 : state === "grace_period" ? 1 : 2;
+    filtered.sort((a, b) => {
+      const s = score(a.r.state) - score(b.r.state);
+      if (s !== 0) return s;
+      const p = (b.phone ? 1 : 0) - (a.phone ? 1 : 0);
+      if (p !== 0) return p;
+      return a.name.localeCompare(b.name);
+    });
+    return filtered;
+  }, [employees, takenIds, companyId, search, filter]);
+
+  const visible = candidates.slice(0, 60);
+
   return (
-    <section aria-label="Recommended workers">
-      <SectionTitle icon={Sparkles} helper={HUB_COPY.recommendedHelper}>
-        Recommended
+    <section aria-label="Recommended workers" className="space-y-3">
+      <SectionTitle icon={Sparkles} helper="Active workers not already assigned. Sorted by readiness, then phone, then name.">
+        Add workers
       </SectionTitle>
-      <div className="rounded-2xl border border-dashed border-border/60 bg-muted/20 px-4 py-5 text-center">
-        <Sparkles className="h-5 w-5 mx-auto text-muted-foreground" />
-        <p className="mt-2 text-[12px] text-muted-foreground leading-snug">
-          {HUB_COPY.recommendedPlaceholder}
-        </p>
-        <button
-          type="button"
-          onClick={onOpenDesktop}
-          className="mt-3 inline-flex items-center gap-1 text-[12px] font-semibold text-primary"
-        >
-          {HUB_COPY.openDesktopStaffing} <ExternalLink className="h-3 w-3" />
-        </button>
+
+      {/* Search */}
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search by name, phone, or ID…"
+          className="pl-9 h-10 text-sm"
+        />
       </div>
+
+      {/* Filter chips */}
+      <div className="flex flex-wrap gap-1.5">
+        {([
+          { key: "all", label: "All" },
+          { key: "ready", label: "Ready" },
+          { key: "grace", label: "Grace period" },
+          { key: "phone", label: "Has phone" },
+        ] as { key: ReadinessFilter; label: string }[]).map(c => (
+          <button
+            key={c.key}
+            type="button"
+            onClick={() => setFilter(c.key)}
+            className={cn(
+              "h-7 rounded-full px-2.5 text-[11px] font-semibold border",
+              filter === c.key
+                ? "bg-primary text-primary-foreground border-primary"
+                : "bg-muted/40 text-muted-foreground border-border/50",
+            )}
+          >
+            {c.label}
+          </button>
+        ))}
+      </div>
+
+      {visible.length === 0 ? (
+        <EmptyBlock
+          title="No workers match"
+          helper="Try a different search or clear filters. Workers already on this shift are hidden."
+        />
+      ) : (
+        <ul className="space-y-2">
+          {visible.map(({ e, r, name, phone }) => {
+            const initials = ((e.first_name?.[0] ?? "") + (e.last_name?.[0] ?? "")).toUpperCase() || "W";
+            const reasonLine =
+              r.state === "ready"
+                ? phone ? "Ready · has phone" : "Ready"
+                : r.state === "grace_period"
+                  ? "Grace period · profile needs completion"
+                  : r.label;
+            const badgeTone =
+              r.state === "ready"
+                ? "border-emerald-300/60 text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30"
+                : r.state === "grace_period"
+                  ? "border-amber-300/60 text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30"
+                  : "border-rose-300/60 text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/30";
+            return (
+              <li
+                key={e.id}
+                className="rounded-2xl border border-border/50 bg-card px-3 py-2.5 flex items-center gap-3"
+              >
+                <Avatar className="h-9 w-9">
+                  {e.avatar_url ? <AvatarImage src={e.avatar_url} alt={name} /> : null}
+                  <AvatarFallback className="text-[11px] font-semibold">{initials}</AvatarFallback>
+                </Avatar>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-sm font-semibold text-foreground truncate">{name}</p>
+                    <span className={cn("rounded-full border px-1.5 py-0 text-[10px] font-semibold", badgeTone)}>
+                      {r.state === "ready" ? "Ready" : r.state === "grace_period" ? "Grace" : "Blocked"}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground truncate">{reasonLine}</p>
+                  {phone ? (
+                    <p className="text-[11px] text-muted-foreground tabular-nums">{phone}</p>
+                  ) : (
+                    <p className="text-[11px] text-amber-700 dark:text-amber-400">No phone on file</p>
+                  )}
+                </div>
+                {r.canBeApproved ? (
+                  <Button
+                    size="sm"
+                    onClick={() => onAssign(e.id, name)}
+                    className="h-8 px-2.5 text-[12px] gap-1"
+                  >
+                    <UserPlus className="h-3.5 w-3.5" />
+                    Assign
+                  </Button>
+                ) : (
+                  <Button size="sm" variant="outline" disabled className="h-8 px-2.5 text-[12px]">
+                    Blocked
+                  </Button>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
+      <button
+        type="button"
+        onClick={onOpenDesktop}
+        className="mt-1 inline-flex items-center gap-1 text-[12px] font-semibold text-primary"
+      >
+        Open desktop staffing <ExternalLink className="h-3 w-3" />
+      </button>
     </section>
   );
 }
