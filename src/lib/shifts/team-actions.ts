@@ -66,6 +66,39 @@ export async function resolveShiftRequest(input: ResolveClaimInput) {
   return data;
 }
 
+export interface AssignWorkerInput {
+  shiftId: string;
+  employeeId: string;
+  assignmentRole?: string;
+  reason?: string | null;
+  source?: string;
+}
+
+/**
+ * Phase 3 — Add Workers from mobile.
+ * Wraps the SECURITY DEFINER RPC `assign_worker_to_shift`.
+ *
+ * Server-side guarantees:
+ *   - Authorization via can_manage_shift_company.
+ *   - Same-company employee/shift.
+ *   - Readiness gated by get_employee_shift_readiness (60-day grace policy).
+ *   - No duplicates against active assignments.
+ *   - Inserts as status='pending', response_status='pending' (worker still must accept).
+ *   - Writes shift_audit_log row (action='assignment_created').
+ *   - Never touches time_entries / attendance / payroll.
+ */
+export async function assignWorkerToShift(input: AssignWorkerInput) {
+  const { data, error } = await supabase.rpc("assign_worker_to_shift", {
+    p_shift_id: input.shiftId,
+    p_employee_id: input.employeeId,
+    p_assignment_role: input.assignmentRole ?? "worker",
+    p_reason: input.reason ?? null,
+    p_source: input.source ?? "mobile_manage_team",
+  });
+  if (error) throw error;
+  return data;
+}
+
 /** Maps allowed Phase-2 transitions per current assignment status. */
 export function allowedNextStatusesFor(currentStatus: string): AssignmentNextStatus[] {
   switch (currentStatus) {
