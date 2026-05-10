@@ -541,7 +541,7 @@ function MobileShiftTeamHubImpl({
       });
     }
     return items;
-  }, [grouped, openSpots, empById, shift.location_id, shift.client_id, claimsPending]);
+  }, [grouped, openSpots, empById, shift.location_id, shift.client_id, claimsPending, hasMeetingPointLocation, meetingPoint]);
 
   const order: Bucket[] = [
     "confirmed", "accepted", "pending",
