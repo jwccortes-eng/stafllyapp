@@ -13152,6 +13152,51 @@ export type Database = {
           },
         ]
       }
+      shift_audit_log: {
+        Row: {
+          action: string
+          actor_user_id: string
+          after_data: Json | null
+          assignment_id: string | null
+          before_data: Json | null
+          company_id: string
+          created_at: string
+          employee_id: string | null
+          id: string
+          reason: string | null
+          shift_id: string
+          source: string
+        }
+        Insert: {
+          action: string
+          actor_user_id?: string
+          after_data?: Json | null
+          assignment_id?: string | null
+          before_data?: Json | null
+          company_id: string
+          created_at?: string
+          employee_id?: string | null
+          id?: string
+          reason?: string | null
+          shift_id: string
+          source?: string
+        }
+        Update: {
+          action?: string
+          actor_user_id?: string
+          after_data?: Json | null
+          assignment_id?: string | null
+          before_data?: Json | null
+          company_id?: string
+          created_at?: string
+          employee_id?: string | null
+          id?: string
+          reason?: string | null
+          shift_id?: string
+          source?: string
+        }
+        Relationships: []
+      }
       shift_chat_config: {
         Row: {
           auto_close_at: string | null
@@ -15704,6 +15749,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      can_manage_shift_company: {
+        Args: { _company_id: string }
+        Returns: boolean
+      }
       cleanup_expired_rate_limits: { Args: never; Returns: undefined }
       company_user_can_access_employee_doc_path: {
         Args: { _path: string }
@@ -15986,9 +16035,75 @@ export type Database = {
         Args: { _employee_id: string }
         Returns: string
       }
+      resolve_shift_request: {
+        Args: {
+          p_decision: string
+          p_reason?: string
+          p_request_id: string
+          p_source?: string
+        }
+        Returns: {
+          company_id: string
+          created_at: string
+          employee_id: string
+          id: string
+          message: string | null
+          rejection_reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          shift_id: string
+          status: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "shift_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       set_employee_access_pin: {
         Args: { _employee_id: string; _pin: string }
         Returns: boolean
+      }
+      set_shift_assignment_state: {
+        Args: {
+          p_assignment_id: string
+          p_next_response_status?: string
+          p_next_status?: string
+          p_reason?: string
+          p_source?: string
+        }
+        Returns: {
+          accepted_at: string | null
+          accepted_shift_version: number | null
+          assignment_role: string | null
+          attendance_notes: string | null
+          attendance_status: string
+          attendance_validated_at: string | null
+          attendance_validated_by: string | null
+          company_id: string
+          created_at: string
+          employee_id: string
+          id: string
+          import_batch_id: string | null
+          is_draft_reservation: boolean
+          last_notified_at: string | null
+          rejected_at: string | null
+          rejection_reason: string | null
+          responded_at: string | null
+          response_required: boolean
+          response_status: string
+          role_slot_id: string | null
+          shift_id: string
+          status: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "shift_assignments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       set_switch_pin: { Args: { _pin: string }; Returns: undefined }
       supersede_employee_invitations: {
