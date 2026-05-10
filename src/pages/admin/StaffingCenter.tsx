@@ -442,7 +442,7 @@ export default function StaffingCenter() {
 
   const goManage = useCallback((shiftId: string) => {
     const tab = todayShifts.some(t => t.shift.id === shiftId) ? "today" : "upcoming";
-    navigate(`/app/shifts?tab=${tab}#shift-${shiftId}`);
+    navigate(`/app/shifts?tab=${tab}&shift=${shiftId}&manageTeam=1`);
   }, [navigate, todayShifts]);
 
   // ── Guards ──────────────────────────────────────────────────────────────
