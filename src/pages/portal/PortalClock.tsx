@@ -513,11 +513,12 @@ export default function PortalClock() {
         <Clock className="h-4 w-4 text-warning mt-0.5 shrink-0" />
         <div className="min-w-0">
           <p className="text-[12px] font-semibold text-foreground leading-tight">
-            Stage 1: keep clocking in/out in Connecteam
+            Etapa 1: sigue marcando entrada/salida en Connecteam
           </p>
           <p className="text-[11px] text-muted-foreground/85 mt-0.5 leading-snug">
-            Stafly TimeClock is not the payroll source yet. Use Connecteam as
-            usual; we'll let you know when Stafly takes over.
+            Stafly TimeClock todavía no es la fuente oficial de payroll. Usa
+            Connecteam como siempre hasta que te avisemos que Stafly toma el
+            control.
           </p>
         </div>
       </div>
