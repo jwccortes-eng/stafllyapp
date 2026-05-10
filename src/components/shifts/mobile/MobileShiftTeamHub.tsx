@@ -606,6 +606,7 @@ function MobileShiftTeamHubImpl({
 
           {tab === "recommended" && (
             <RecommendedTab
+              shift={shift}
               employees={employees}
               assignments={assignments}
               companyId={companyId}
