@@ -219,9 +219,9 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, responseStatu
                       <Clock className="h-3.5 w-3.5 text-muted-foreground/80" />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-[10px] uppercase tracking-widest text-muted-foreground/55 font-bold">When</p>
+                      <p className="text-[10px] uppercase tracking-widest text-muted-foreground/55 font-bold">Cuándo</p>
                       <p className="text-[13px] font-semibold text-foreground capitalize mt-0.5">
-                        {format(parseISO(shift.date), "EEEE, MMMM d", { locale: enUS })}
+                        {format(parseISO(shift.date), "EEEE d 'de' MMMM", { locale: es })}
                       </p>
                     </div>
                   </div>
