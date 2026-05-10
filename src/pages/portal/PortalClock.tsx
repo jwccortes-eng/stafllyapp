@@ -658,7 +658,7 @@ export default function PortalClock() {
               <p className="text-[42px] leading-none font-semibold font-mono tabular-nums text-foreground">
                 {format(now, "HH:mm")}
               </p>
-              <p className="text-[11px] text-muted-foreground/65 capitalize mt-2">
+              <p className="text-[11px] text-muted-foreground/65 first-letter:uppercase mt-2">
                 {format(now, "EEEE d 'de' MMMM", { locale: es })}
               </p>
             </>
