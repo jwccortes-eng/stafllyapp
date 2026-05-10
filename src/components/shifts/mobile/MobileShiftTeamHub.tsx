@@ -49,6 +49,10 @@ import { MobileTeamActionDialog } from "@/components/shifts/mobile/MobileTeamAct
 import { isOnboardingComplete } from "@/lib/onboarding";
 import { isGraceEligibleCompany, isWithinGraceWindow, GRACE_POLICY_DAYS } from "@/lib/shifts/readiness-grace";
 import { formatDistanceToNowStrict } from "date-fns";
+import {
+  rankCandidate, inferShiftRoleNeeds, EMPTY_SIGNALS, REASON_CHIP_LABEL,
+  type RecommendationSignals, type ReviewSignal, type RankedCandidate,
+} from "@/lib/shifts/worker-recommendation";
 
 function formatRelative(iso: string): string {
   try { return formatDistanceToNowStrict(new Date(iso), { addSuffix: true }); }
@@ -606,6 +610,7 @@ function MobileShiftTeamHubImpl({
 
           {tab === "recommended" && (
             <RecommendedTab
+              shift={shift}
               employees={employees}
               assignments={assignments}
               companyId={companyId}
@@ -1112,11 +1117,20 @@ function IssuesTab({
   );
 }
 
-type ReadinessFilter = "all" | "ready" | "grace" | "phone";
+type RecFilter =
+  | "best"
+  | "ready"
+  | "grace"
+  | "phone"
+  | "history"
+  | "drivers"
+  | "captains"
+  | "available";
 
 function RecommendedTab({
-  employees, assignments, companyId, onAssign, onOpenDesktop,
+  shift, employees, assignments, companyId, onAssign, onOpenDesktop,
 }: {
+  shift: Shift;
   employees: Employee[];
   assignments: HubAssignment[];
   companyId: string | null | undefined;
@@ -1124,7 +1138,9 @@ function RecommendedTab({
   onOpenDesktop: () => void;
 }) {
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<ReadinessFilter>("all");
+  const [filter, setFilter] = useState<RecFilter>("best");
+  const [signals, setSignals] = useState<RecommendationSignals>(EMPTY_SIGNALS);
+  const [signalsLoading, setSignalsLoading] = useState(false);
 
   // Active assignment ids (anything except rejected/removed counts as taken).
   const takenIds = useMemo(() => {
@@ -1136,50 +1152,217 @@ function RecommendedTab({
     return s;
   }, [assignments]);
 
-  // Build the recommended list. v1 = active workers, not already assigned,
-  // sorted: ready/grace first → has phone → name.
-  const candidates = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    const list = employees
+  // Build the eligible base list (active + not already assigned + not hard-blocked).
+  const eligible = useMemo(() => {
+    return employees
       .filter(e => e.is_active !== false)
       .filter(e => !takenIds.has(e.id))
-      .map(e => {
-        const r = computeReadiness(e, companyId);
-        const name = `${e.first_name ?? ""} ${e.last_name ?? ""}`.trim() || "Worker";
-        const phone = normalizePhone(e.phone_number ?? "");
-        return { e, r, name, phone };
-      })
-      // Hide hard-blocked records by default to avoid noise; backend would reject anyway.
+      .map(e => ({ e, r: computeReadiness(e, companyId) }))
       .filter(x => x.r.state !== "inactive" && x.r.state !== "unknown");
+  }, [employees, takenIds, companyId]);
 
-    const filtered = list.filter(x => {
-      if (filter === "ready" && x.r.state !== "ready") return false;
-      if (filter === "grace" && x.r.state !== "grace_period") return false;
-      if (filter === "phone" && !x.phone) return false;
+  // Batch-fetch signals once per (shift, eligible) change.
+  useEffect(() => {
+    let cancelled = false;
+    const empIds = eligible.map(x => x.e.id);
+    if (!companyId || empIds.length === 0 || !shift?.id) {
+      setSignals(EMPTY_SIGNALS);
+      return;
+    }
+    setSignalsLoading(true);
+
+    (async () => {
+      // Window: last 12 months of history.
+      const since = new Date();
+      since.setFullYear(since.getFullYear() - 1);
+      const sinceStr = since.toISOString().slice(0, 10);
+
+      const overrideByEmp = new Map<string, boolean>();
+      const configByEmp = new Map<string, { default_available: boolean; blocked_weekdays: number[] | null }>();
+      const clientHistoryByEmp = new Map<string, number>();
+      const locationHistoryByEmp = new Map<string, number>();
+      const reviewByEmp = new Map<string, ReviewSignal>();
+      const conflictEmpIds = new Set<string>();
+
+      // Fire all queries in parallel; ignore individual failures gracefully.
+      const queries = [
+        // 1) Availability override for shift date.
+        supabase
+          .from("employee_availability_overrides")
+          .select("employee_id, is_available")
+          .eq("company_id", companyId)
+          .eq("date", shift.date)
+          .in("employee_id", empIds),
+        // 2) Availability config (default + blocked weekdays).
+        supabase
+          .from("employee_availability_config")
+          .select("employee_id, default_available, blocked_weekdays")
+          .eq("company_id", companyId)
+          .in("employee_id", empIds),
+        // 3) Review stats (company-scoped reliability).
+        supabase
+          .from("employee_review_stats")
+          .select("employee_id, avg_overall_score, no_show_flags_90d, low_score_count_30d, total_reviews")
+          .eq("company_id", companyId)
+          .in("employee_id", empIds),
+        // 4) Client/location history — recent assignments via shift join.
+        supabase
+          .from("shift_assignments")
+          .select("employee_id, scheduled_shifts!inner(client_id, location_id, date)")
+          .eq("company_id", companyId)
+          .in("employee_id", empIds)
+          .neq("status", "rejected")
+          .neq("status", "removed")
+          .gte("scheduled_shifts.date", sinceStr)
+          .lte("scheduled_shifts.date", shift.date)
+          .limit(2000),
+        // 5) Same-date assignments (for overlap conflict detection).
+        supabase
+          .from("shift_assignments")
+          .select("employee_id, shift_id, scheduled_shifts!inner(date, start_time, end_time)")
+          .eq("company_id", companyId)
+          .in("employee_id", empIds)
+          .neq("status", "rejected")
+          .neq("status", "removed")
+          .eq("scheduled_shifts.date", shift.date)
+          .neq("shift_id", shift.id)
+          .limit(1000),
+      ];
+
+      const [ovRes, cfgRes, revRes, histRes, sameDayRes] = await Promise.allSettled(queries);
+
+      if (cancelled) return;
+
+      if (ovRes.status === "fulfilled" && !ovRes.value.error) {
+        for (const row of (ovRes.value.data ?? []) as any[]) {
+          overrideByEmp.set(`${shift.date}:${row.employee_id}`, row.is_available !== false);
+        }
+      }
+      if (cfgRes.status === "fulfilled" && !cfgRes.value.error) {
+        for (const row of (cfgRes.value.data ?? []) as any[]) {
+          configByEmp.set(row.employee_id, {
+            default_available: row.default_available !== false,
+            blocked_weekdays: Array.isArray(row.blocked_weekdays) ? row.blocked_weekdays : null,
+          });
+        }
+      }
+      if (revRes.status === "fulfilled" && !revRes.value.error) {
+        for (const row of (revRes.value.data ?? []) as any[]) {
+          reviewByEmp.set(row.employee_id, {
+            avg_overall_score: row.avg_overall_score,
+            no_show_flags_90d: row.no_show_flags_90d,
+            low_score_count_30d: row.low_score_count_30d,
+            total_reviews: row.total_reviews,
+          });
+        }
+      }
+      if (histRes.status === "fulfilled" && !histRes.value.error) {
+        for (const row of (histRes.value.data ?? []) as any[]) {
+          const ss = row.scheduled_shifts;
+          if (!ss) continue;
+          if (shift.client_id && ss.client_id === shift.client_id) {
+            clientHistoryByEmp.set(row.employee_id, (clientHistoryByEmp.get(row.employee_id) ?? 0) + 1);
+          }
+          if (shift.location_id && ss.location_id === shift.location_id) {
+            locationHistoryByEmp.set(row.employee_id, (locationHistoryByEmp.get(row.employee_id) ?? 0) + 1);
+          }
+        }
+      }
+      if (sameDayRes.status === "fulfilled" && !sameDayRes.value.error) {
+        const toMin = (t: string | null | undefined) => {
+          if (!t) return null;
+          const [h, m] = t.split(":").map(Number);
+          return h * 60 + (m || 0);
+        };
+        const sStart = toMin(shift.start_time);
+        const sEndRaw = toMin(shift.end_time);
+        const sEnd = sStart != null && sEndRaw != null && sEndRaw <= sStart ? sEndRaw + 24 * 60 : sEndRaw;
+        for (const row of (sameDayRes.value.data ?? []) as any[]) {
+          const ss = row.scheduled_shifts;
+          if (!ss) continue;
+          const oStart = toMin(ss.start_time);
+          const oEndRaw = toMin(ss.end_time);
+          if (oStart == null || oEndRaw == null || sStart == null || sEnd == null) {
+            // Unknown times → treat as conflict (same date assignment).
+            conflictEmpIds.add(row.employee_id);
+            continue;
+          }
+          const oEnd = oEndRaw <= oStart ? oEndRaw + 24 * 60 : oEndRaw;
+          const overlaps = oStart < sEnd && sStart < oEnd;
+          if (overlaps) conflictEmpIds.add(row.employee_id);
+        }
+      }
+
+      setSignals({
+        overrideByEmp, configByEmp, clientHistoryByEmp, locationHistoryByEmp, reviewByEmp, conflictEmpIds,
+      });
+      setSignalsLoading(false);
+    })().catch(() => {
+      if (!cancelled) setSignalsLoading(false);
+    });
+
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [companyId, shift?.id, shift?.date, eligible.length]);
+
+  const roleNeeds = useMemo(() => inferShiftRoleNeeds(shift), [shift?.id]);
+
+  // Rank.
+  const ranked = useMemo<RankedCandidate[]>(() => {
+    return eligible.map(({ e, r }) =>
+      rankCandidate({
+        employee: e,
+        shift,
+        readinessState: r.state as RankedCandidate["readinessState"],
+        canBeApproved: r.canBeApproved,
+        alreadyAssigned: false,
+        signals,
+        needsDriver: roleNeeds.needsDriver,
+        needsCaptain: roleNeeds.needsCaptain,
+      }),
+    );
+  }, [eligible, signals, shift, roleNeeds]);
+
+  // Search + filter.
+  const visible = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const filtered = ranked.filter(c => {
+      if (filter === "ready" && c.readinessState !== "ready") return false;
+      if (filter === "grace" && c.readinessState !== "grace_period") return false;
+      if (filter === "phone" && !c.phone) return false;
+      if (filter === "history" && c.clientHistoryCount === 0 && c.locationHistoryCount === 0) return false;
+      if (filter === "drivers" && !c.driver) return false;
+      if (filter === "captains" && !c.reasons.includes("captain")) return false;
+      if (filter === "available" && c.availabilitySignal !== "available") return false;
       if (q) {
-        const hay = `${x.name} ${x.phone} ${x.e.email ?? ""} ${x.e.employer_identification ?? ""}`.toLowerCase();
+        const e = c.employee;
+        const hay = `${c.name} ${c.phone} ${e.email ?? ""} ${e.employer_identification ?? ""}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
       return true;
     });
-
-    const score = (state: ReadinessState) =>
-      state === "ready" ? 0 : state === "grace_period" ? 1 : 2;
     filtered.sort((a, b) => {
-      const s = score(a.r.state) - score(b.r.state);
+      const s = b.score - a.score;
       if (s !== 0) return s;
-      const p = (b.phone ? 1 : 0) - (a.phone ? 1 : 0);
-      if (p !== 0) return p;
       return a.name.localeCompare(b.name);
     });
-    return filtered;
-  }, [employees, takenIds, companyId, search, filter]);
+    return filtered.slice(0, 60);
+  }, [ranked, search, filter]);
 
-  const visible = candidates.slice(0, 60);
+  const FILTERS: { key: RecFilter; label: string }[] = [
+    { key: "best", label: "Best match" },
+    { key: "ready", label: "Ready" },
+    { key: "grace", label: "Grace period" },
+    { key: "phone", label: "Has phone" },
+    { key: "history", label: "Worked here" },
+    { key: "available", label: "Available" },
+    { key: "drivers", label: "Drivers" },
+    { key: "captains", label: "Captains" },
+  ];
 
   return (
     <section aria-label="Recommended workers" className="space-y-3">
-      <SectionTitle icon={Sparkles} helper="Active workers not already assigned. Sorted by readiness, then phone, then name.">
+      <SectionTitle icon={Sparkles} helper="Ranked by readiness, availability, history, contact, and reliability.">
         Add workers
       </SectionTitle>
 
@@ -1189,19 +1372,14 @@ function RecommendedTab({
         <Input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search by name, phone, or ID…"
+          placeholder="Search by name, phone, email, or ID…"
           className="pl-9 h-10 text-sm"
         />
       </div>
 
       {/* Filter chips */}
       <div className="flex flex-wrap gap-1.5">
-        {([
-          { key: "all", label: "All" },
-          { key: "ready", label: "Ready" },
-          { key: "grace", label: "Grace period" },
-          { key: "phone", label: "Has phone" },
-        ] as { key: ReadinessFilter; label: string }[]).map(c => (
+        {FILTERS.map(c => (
           <button
             key={c.key}
             type="button"
@@ -1218,6 +1396,10 @@ function RecommendedTab({
         ))}
       </div>
 
+      {signalsLoading && (
+        <p className="text-[11px] text-muted-foreground px-1">Refining recommendations…</p>
+      )}
+
       {visible.length === 0 ? (
         <EmptyBlock
           title="No workers match"
@@ -1225,55 +1407,78 @@ function RecommendedTab({
         />
       ) : (
         <ul className="space-y-2">
-          {visible.map(({ e, r, name, phone }) => {
-            const initials = ((e.first_name?.[0] ?? "") + (e.last_name?.[0] ?? "")).toUpperCase() || "W";
-            const reasonLine =
-              r.state === "ready"
-                ? phone ? "Ready · has phone" : "Ready"
-                : r.state === "grace_period"
-                  ? "Grace period · profile needs completion"
-                  : r.label;
+          {visible.map((c) => {
+            const reasonChips = c.reasons.slice(0, 4);
+            const riskChips = c.riskFlags.slice(0, 2);
             const badgeTone =
-              r.state === "ready"
+              c.readinessState === "ready"
                 ? "border-emerald-300/60 text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30"
-                : r.state === "grace_period"
+                : c.readinessState === "grace_period"
                   ? "border-amber-300/60 text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30"
                   : "border-rose-300/60 text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/30";
             return (
               <li
-                key={e.id}
-                className="rounded-2xl border border-border/50 bg-card px-3 py-2.5 flex items-center gap-3"
+                key={c.employee.id}
+                className="rounded-2xl border border-border/50 bg-card px-3 py-2.5 flex items-start gap-3"
               >
-                <Avatar className="h-9 w-9">
-                  {e.avatar_url ? <AvatarImage src={e.avatar_url} alt={name} /> : null}
-                  <AvatarFallback className="text-[11px] font-semibold">{initials}</AvatarFallback>
+                <Avatar className="h-9 w-9 mt-0.5">
+                  {c.employee.avatar_url ? <AvatarImage src={c.employee.avatar_url} alt={c.name} /> : null}
+                  <AvatarFallback className="text-[11px] font-semibold">{c.initials}</AvatarFallback>
                 </Avatar>
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5">
-                    <p className="text-sm font-semibold text-foreground truncate">{name}</p>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <p className="text-sm font-semibold text-foreground truncate">{c.name}</p>
                     <span className={cn("rounded-full border px-1.5 py-0 text-[10px] font-semibold", badgeTone)}>
-                      {r.state === "ready" ? "Ready" : r.state === "grace_period" ? "Grace" : "Blocked"}
+                      {c.readinessState === "ready" ? "Ready" : c.readinessState === "grace_period" ? "Grace" : "Blocked"}
+                    </span>
+                    <span className="text-[10px] font-mono tabular-nums text-muted-foreground" title={`Score ${c.score}`}>
+                      {c.score}
                     </span>
                   </div>
-                  <p className="text-[11px] text-muted-foreground truncate">{reasonLine}</p>
-                  {phone ? (
-                    <p className="text-[11px] text-muted-foreground tabular-nums">{phone}</p>
+                  {(reasonChips.length > 0 || riskChips.length > 0) && (
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {reasonChips.map(k => (
+                        <span
+                          key={`r-${k}`}
+                          className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400"
+                        >
+                          {REASON_CHIP_LABEL[k]}
+                        </span>
+                      ))}
+                      {riskChips.map(k => (
+                        <span
+                          key={`x-${k}`}
+                          className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-rose-50 text-rose-700 dark:bg-rose-950/30 dark:text-rose-400"
+                        >
+                          {REASON_CHIP_LABEL[k]}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {c.phone ? (
+                    <p className="mt-1 text-[11px] text-muted-foreground tabular-nums">{c.phone}</p>
                   ) : (
-                    <p className="text-[11px] text-amber-700 dark:text-amber-400">No phone on file</p>
+                    <p className="mt-1 text-[11px] text-amber-700 dark:text-amber-400">No phone on file</p>
                   )}
                 </div>
-                {r.canBeApproved ? (
+                {c.canAssign ? (
                   <Button
                     size="sm"
-                    onClick={() => onAssign(e.id, name)}
-                    className="h-8 px-2.5 text-[12px] gap-1"
+                    onClick={() => onAssign(c.employee.id, c.name)}
+                    className="h-8 px-2.5 text-[12px] gap-1 shrink-0"
                   >
                     <UserPlus className="h-3.5 w-3.5" />
                     Assign
                   </Button>
                 ) : (
-                  <Button size="sm" variant="outline" disabled className="h-8 px-2.5 text-[12px]">
-                    Blocked
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled
+                    className="h-8 px-2.5 text-[12px] shrink-0"
+                    title={c.conflictDetected ? "Worker has an overlapping shift" : "Worker can't be assigned"}
+                  >
+                    {c.conflictDetected ? "Conflict" : "Blocked"}
                   </Button>
                 )}
               </li>
