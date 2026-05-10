@@ -16198,6 +16198,15 @@ export type Database = {
         Args: { _company_id: string; _employee_id: string }
         Returns: boolean
       }
+      worker_respond_to_shift_assignment: {
+        Args: {
+          p_assignment_id: string
+          p_reason?: string
+          p_response: string
+          p_source?: string
+        }
+        Returns: Json
+      }
     }
     Enums: {
       app_role:
