@@ -17,7 +17,7 @@ import {
   HandMetal, CheckCircle2, AlertCircle, XCircle, Loader2, Hourglass,
 } from "lucide-react";
 import { format, parseISO, isToday, isTomorrow, isBefore, startOfDay } from "date-fns";
-import { enUS } from "date-fns/locale";
+import { enUS, es } from "date-fns/locale";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
