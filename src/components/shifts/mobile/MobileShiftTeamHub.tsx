@@ -489,6 +489,20 @@ function MobileShiftTeamHubImpl({
             {HUB_COPY.safetyNote}
           </p>
         </div>
+
+        <MobileTeamActionDialog
+          open={actionDialogOpen}
+          onOpenChange={setActionDialogOpen}
+          workerName={actionMode?.workerName ?? ""}
+          mode={
+            actionMode?.kind === "assignment_state"
+              ? { kind: "assignment_state", assignmentId: actionMode.assignmentId, nextStatus: actionMode.nextStatus }
+              : actionMode?.kind === "claim_decision"
+                ? { kind: "claim_decision", requestId: actionMode.requestId, decision: actionMode.decision }
+                : null
+          }
+          onSuccess={handleMutated}
+        />
       </SheetContent>
     </Sheet>
   );
