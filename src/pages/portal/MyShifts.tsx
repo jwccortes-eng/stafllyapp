@@ -640,17 +640,17 @@ export default function MyShifts() {
       <Dialog open={!!rejectDialogId} onOpenChange={o => { if (!o) { setRejectDialogId(null); setRejectReason(""); } }}>
         <DialogContent className="max-w-sm rounded-2xl">
           <DialogHeader>
-            <DialogTitle className="text-base font-bold">Reject shift</DialogTitle>
+            <DialogTitle className="text-base font-bold">Rechazar turno</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
-            <p className="text-xs text-muted-foreground">Optionally provide a reason for rejecting.</p>
-            <Textarea value={rejectReason} onChange={e => setRejectReason(e.target.value)} placeholder="Reason (optional)..." rows={3} className="text-sm resize-none rounded-xl" />
+            <p className="text-xs text-muted-foreground">Puedes indicar un motivo (opcional).</p>
+            <Textarea value={rejectReason} onChange={e => setRejectReason(e.target.value)} placeholder="Motivo (opcional)..." rows={3} className="text-sm resize-none rounded-xl" />
           </div>
           <DialogFooter>
-            <Button variant="ghost" size="sm" className="rounded-xl" onClick={() => { setRejectDialogId(null); setRejectReason(""); }}>Cancel</Button>
+            <Button variant="ghost" size="sm" className="rounded-xl" onClick={() => { setRejectDialogId(null); setRejectReason(""); }}>Cancelar</Button>
             <Button variant="destructive" size="sm" className="rounded-xl" onClick={rejectAssignment} disabled={responding === rejectDialogId}>
               {responding === rejectDialogId ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
-              Reject
+              Rechazar
             </Button>
           </DialogFooter>
         </DialogContent>
