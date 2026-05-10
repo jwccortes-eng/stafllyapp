@@ -101,6 +101,8 @@ interface Props {
   locationName?: string | null;
   /** scheduled_shifts.shift_admin_id, used for Captain badge. */
   shiftAdminId?: string | null;
+  /** Optional callback so the parent sheet can refetch after a safe mutation. */
+  onMutated?: () => void;
 }
 
 type Bucket =
