@@ -1229,9 +1229,26 @@ function RecommendedTab({
           .eq("scheduled_shifts.date", shift.date)
           .neq("shift_id", shift.id)
           .limit(1000),
+        // 6) Active worker preferences for this client/location.
+        (() => {
+          let q = supabase
+            .from("worker_client_preferences")
+            .select("id, employee_id, preference_type, client_id, location_id")
+            .eq("company_id", companyId)
+            .in("employee_id", empIds)
+            .is("archived_at", null);
+          const orParts: string[] = [];
+          if (shift.client_id) orParts.push(`client_id.eq.${shift.client_id}`);
+          if (shift.location_id) orParts.push(`location_id.eq.${shift.location_id}`);
+          if (orParts.length === 0) {
+            // No client/location → no rows can match; short-circuit with impossible filter.
+            return q.eq("id", "00000000-0000-0000-0000-000000000000");
+          }
+          return q.or(orParts.join(","));
+        })(),
       ];
 
-      const [ovRes, cfgRes, revRes, histRes, sameDayRes] = await Promise.allSettled(queries);
+      const [ovRes, cfgRes, revRes, histRes, sameDayRes, prefRes] = await Promise.allSettled(queries);
 
       if (cancelled) return;
 
