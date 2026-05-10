@@ -50,7 +50,7 @@ import { isOnboardingComplete } from "@/lib/onboarding";
 import { isGraceEligibleCompany, isWithinGraceWindow, GRACE_POLICY_DAYS } from "@/lib/shifts/readiness-grace";
 import { formatDistanceToNowStrict } from "date-fns";
 import {
-  rankCandidate, inferShiftRoleNeeds, EMPTY_SIGNALS, REASON_CHIP_LABEL,
+  rankCandidate, inferShiftRoleNeeds, EMPTY_SIGNALS,
   type RecommendationSignals, type ReviewSignal, type RankedCandidate,
   type WorkerPreferenceRow, type WorkerPreferenceType,
 } from "@/lib/shifts/worker-recommendation";
