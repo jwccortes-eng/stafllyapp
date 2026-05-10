@@ -10,9 +10,12 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useClient, useClientLocations, useUpdateClientNotes } from "@/hooks/useClients";
 import { useClientContacts, useClientServiceRequests, useClientThreads } from "@/hooks/useClientExperience";
+import { useAuth } from "@/hooks/useAuth";
+import { useCompany } from "@/hooks/useCompany";
 import ClientExperienceContacts from "@/components/client-experience/ClientExperienceContacts";
 import ClientExperienceRequests from "@/components/client-experience/ClientExperienceRequests";
 import ClientExperienceInbox from "@/components/client-experience/ClientExperienceInbox";
+import { WorkerPreferenceList } from "@/components/preferences/WorkerPreferenceList";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -40,6 +43,9 @@ export default function ClientProfile() {
   const { clientId } = useParams<{ clientId: string }>();
   const navigate = useNavigate();
   const [tab, setTab] = useState<string>("overview");
+  const { canAccessAdminForCompany } = useAuth();
+  const { selectedCompanyId } = useCompany();
+  const isPrivileged = canAccessAdminForCompany(selectedCompanyId);
 
   const clientQ = useClient(clientId);
   const contactsQ = useClientContacts(clientId);
@@ -175,6 +181,9 @@ export default function ClientProfile() {
           <TabsTrigger value="requests" className="gap-2 text-xs"><ClipboardList className="h-3.5 w-3.5" /> Requests</TabsTrigger>
           <TabsTrigger value="conversations" className="gap-2 text-xs"><MessageSquare className="h-3.5 w-3.5" /> Conversations</TabsTrigger>
           <TabsTrigger value="locations" className="gap-2 text-xs"><MapPin className="h-3.5 w-3.5" /> Locations</TabsTrigger>
+          {isPrivileged && (
+            <TabsTrigger value="fit" className="gap-2 text-xs"><Star className="h-3.5 w-3.5" /> Fit</TabsTrigger>
+          )}
           <TabsTrigger value="notes" className="gap-2 text-xs"><FileText className="h-3.5 w-3.5" /> Notes</TabsTrigger>
         </TabsList>
 
@@ -202,6 +211,24 @@ export default function ClientProfile() {
             locations={locationsQ.data ?? []}
           />
         </TabsContent>
+        {isPrivileged && selectedCompanyId && clientId && (
+          <TabsContent value="fit" className="mt-0">
+            <Card className="p-4 space-y-3">
+              <div>
+                <h3 className="text-sm font-semibold">Preferred workers</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Preferred workers appear higher in Recommended for this client. Blocked workers can't be assigned from Recommended until cleared. Internal — not visible to workers.
+                </p>
+              </div>
+              <WorkerPreferenceList
+                mode="client"
+                companyId={selectedCompanyId}
+                targetId={clientId}
+                canManage={isPrivileged}
+              />
+            </Card>
+          </TabsContent>
+        )}
         <TabsContent value="notes" className="mt-0">
           <NotesPanel clientId={clientId} initialNotes={client.notes ?? ""} />
         </TabsContent>
