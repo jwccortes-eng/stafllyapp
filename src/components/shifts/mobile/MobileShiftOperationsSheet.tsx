@@ -325,7 +325,7 @@ export function MobileShiftOperationsSheet({
   if (draft && fullyStaffed) briefMessages.push({ tone: "info", text: "Ready to publish" });
   if (assignedCount === 0) briefMessages.push({ tone: "bad", text: "No workers assigned" });
   if (noClient) briefMessages.push({ tone: "warn", text: "No client linked" });
-  if (noLocation) briefMessages.push({ tone: "warn", text: "No location linked" });
+  if (noLocation) briefMessages.push({ tone: "warn", text: meetingPoint ? "Missing job site (meeting point set)" : "No location linked" });
   if (dateBucket === "today") briefMessages.push({ tone: "info", text: "Starts today" });
   else if (dateBucket === "tomorrow") briefMessages.push({ tone: "info", text: "Upcoming tomorrow" });
   if (briefMessages.length === 0) briefMessages.push({ tone: "good", text: "Looks good — no action needed" });
