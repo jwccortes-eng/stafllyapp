@@ -110,6 +110,7 @@ function computeMetrics(shift: ShiftRow, asgs: AssignmentRow[], claims: number):
 
   const openSpots = Math.max(required - staffed, 0);
   const hasLocation = !!(shift.location_id || shift.job_site_location_id);
+  const hasMeetingPoint = !!(shift.meeting_point_location_id || (shift.meeting_point && shift.meeting_point.trim()));
   const todayStr = format(new Date(), "yyyy-MM-dd");
   const isToday = shift.date === todayStr;
   const shiftStart = shift.start_time
@@ -124,7 +125,7 @@ function computeMetrics(shift: ShiftRow, asgs: AssignmentRow[], claims: number):
   const reasons: string[] = [];
   if (isToday && openSpots > 0) { score += 100; reasons.push("Needs staff today"); }
   else if (openSpots > 0) reasons.push("Needs staff");
-  if (!hasLocation) { score += 80; reasons.push("No location"); }
+  if (!hasLocation) { score += 80; reasons.push(hasMeetingPoint ? "Missing job site" : "No location"); }
   if (pending > 0) { score += 60; reasons.push(`${pending} pending response${pending === 1 ? "" : "s"}`); }
   if (rejected > 0) { score += 60; reasons.push(`${rejected} rejected`); }
   if (claims > 0) { score += 50; reasons.push(`${claims} claim${claims === 1 ? "" : "s"} pending`); }
@@ -135,7 +136,7 @@ function computeMetrics(shift: ShiftRow, asgs: AssignmentRow[], claims: number):
 
   return {
     required, staffed, accepted, pending, rejected, removed, absent,
-    claimsPending: claims, openSpots, hasLocation, isToday, withinNext48h,
+    claimsPending: claims, openSpots, hasLocation, hasMeetingPoint, isToday, withinNext48h,
     isLarge, coveragePct, riskScore: score, reasons,
   };
 }
