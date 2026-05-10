@@ -187,9 +187,9 @@ export default function PortalShiftDetail() {
         <BackBar onBack={() => navigate("/portal/shifts")} />
         <EmptyState
           icon={<XCircle className="h-10 w-10 text-muted-foreground/30" />}
-          title="Shift not available"
-          body="This shift has been removed or is no longer accessible."
-          actionLabel="Back to my shifts"
+          title="Turno no disponible"
+          body="Este turno fue eliminado o ya no es accesible."
+          actionLabel="Volver a mis turnos"
           onAction={() => navigate("/portal/shifts")}
         />
       </div>
