@@ -305,7 +305,7 @@ export default function MyShifts() {
       error = fallback.error;
     }
     if (error) toast.error("Error", { description: error.message });
-    else { toast.success("Shift rejected"); notifyAdminOfResponse(rejectDialogId, "rejected"); await load(); }
+    else { toast.success("Turno rechazado"); notifyAdminOfResponse(rejectDialogId, "rejected"); await load(); }
     setResponding(null); setRejectDialogId(null); setRejectReason("");
   };
 
