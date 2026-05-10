@@ -25,7 +25,7 @@ export function TodayBlock({ shift }: Props) {
   return (
     <Link
       to="/portal/shifts"
-      className="block rounded-2xl bg-card border border-border/40 px-4 py-3 active:scale-[0.99] transition-all shadow-sm"
+      className="block rounded-2xl bg-card border border-border/50 px-4 py-3 active:scale-[0.99] transition-all shadow-sm"
     >
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
