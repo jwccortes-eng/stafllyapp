@@ -17,7 +17,7 @@ import {
   HandMetal, CheckCircle2, AlertCircle, XCircle, Loader2, Hourglass,
 } from "lucide-react";
 import { format, parseISO, isToday, isTomorrow, isBefore, startOfDay } from "date-fns";
-import { enUS } from "date-fns/locale";
+import { enUS, es } from "date-fns/locale";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -159,10 +159,10 @@ export default function PortalShiftDetail() {
       if (error) throw error;
 
       if (navigator.vibrate) navigator.vibrate(80);
-      toast.success("✅ Request sent!", { description: "We'll notify you when it's reviewed." });
+      toast.success("✅ ¡Solicitud enviada!", { description: "Te avisaremos cuando se revise." });
       setState("pending_approval");
     } catch (e: any) {
-      toast.error("Could not request", { description: e.message });
+      toast.error("No pudimos enviar la solicitud", { description: e.message });
       await load();
     } finally {
       setRequesting(false);
@@ -187,9 +187,9 @@ export default function PortalShiftDetail() {
         <BackBar onBack={() => navigate("/portal/shifts")} />
         <EmptyState
           icon={<XCircle className="h-10 w-10 text-muted-foreground/30" />}
-          title="Shift not available"
-          body="This shift has been removed or is no longer accessible."
-          actionLabel="Back to my shifts"
+          title="Turno no disponible"
+          body="Este turno fue eliminado o ya no es accesible."
+          actionLabel="Volver a mis turnos"
           onAction={() => navigate("/portal/shifts")}
         />
       </div>
@@ -197,10 +197,10 @@ export default function PortalShiftDetail() {
   }
 
   const dateLabel = isToday(parseISO(shift.date))
-    ? "Today"
+    ? "Hoy"
     : isTomorrow(parseISO(shift.date))
-    ? "Tomorrow"
-    : format(parseISO(shift.date), "EEEE d MMM", { locale: enUS });
+    ? "Mañana"
+    : format(parseISO(shift.date), "EEEE d MMM", { locale: es });
 
   const timeLabel = `${shift.start_time?.slice(0, 5)} – ${shift.end_time?.slice(0, 5)}`;
   const slotsLeft = shift.slots ? Math.max(0, shift.slots - shift.assignedCount) : null;
@@ -230,7 +230,7 @@ export default function PortalShiftDetail() {
             </div>
             {slotsLeft !== null && state === "available" && (
               <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-primary/10 text-primary">
-                {slotsLeft} spot{slotsLeft !== 1 ? "s" : ""} left
+                {slotsLeft} {slotsLeft === 1 ? "cupo disponible" : "cupos disponibles"}
               </span>
             )}
           </div>
@@ -243,29 +243,29 @@ export default function PortalShiftDetail() {
           {/* Meta rows */}
           <div className="space-y-2 pt-1">
             {shift.client?.name && (
-              <Row icon={<Briefcase className="h-3.5 w-3.5" />} label="Client" value={shift.client.name} />
+              <Row icon={<Briefcase className="h-3.5 w-3.5" />} label="Cliente" value={shift.client.name} />
             )}
             {shift.location?.name && (
-              <Row icon={<MapPin className="h-3.5 w-3.5" />} label="Location" value={shift.location.name} />
+              <Row icon={<MapPin className="h-3.5 w-3.5" />} label="Dónde" value={shift.location.name} />
             )}
             {shift.meeting_point && (
               <div className="flex items-start gap-2 px-3 py-2 rounded-xl bg-primary/[0.05] border border-primary/10">
                 <Navigation className="h-3.5 w-3.5 text-primary mt-0.5 shrink-0" />
                 <div className="min-w-0">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-primary/70">Meeting point</p>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-primary/70">Punto de encuentro</p>
                   <p className="text-[12px] text-foreground font-medium">{shift.meeting_point}</p>
                 </div>
               </div>
             )}
             {shift.notes && (
               <div className="rounded-xl bg-muted/30 border border-border/30 p-3">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70 mb-1">Notes</p>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70 mb-1">Notas</p>
                 <p className="text-[12px] text-foreground/80 leading-relaxed whitespace-pre-line">{shift.notes}</p>
               </div>
             )}
             {shift.special_instructions && (
               <div className="rounded-xl bg-amber-500/[0.08] border border-amber-500/20 p-3">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 mb-1">Important</p>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 mb-1">Importante</p>
                 <p className="text-[12px] text-foreground/90 leading-relaxed whitespace-pre-line">{shift.special_instructions}</p>
               </div>
             )}
@@ -282,9 +282,9 @@ export default function PortalShiftDetail() {
           disabled={requesting}
         >
           {requesting ? (
-            <><Loader2 className="h-4 w-4 animate-spin" /> Sending request...</>
+            <><Loader2 className="h-4 w-4 animate-spin" /> Enviando solicitud...</>
           ) : (
-            <><HandMetal className="h-4 w-4" /> Request this shift</>
+            <><HandMetal className="h-4 w-4" /> Solicitar este turno</>
           )}
         </Button>
       )}
@@ -296,7 +296,7 @@ export default function PortalShiftDetail() {
           className="w-full h-12 text-sm font-semibold rounded-xl gap-2"
           onClick={() => navigate("/portal/shifts")}
         >
-          <Hourglass className="h-4 w-4" /> Back to my shifts
+          <Hourglass className="h-4 w-4" /> Volver a mis turnos
         </Button>
       )}
 
@@ -307,7 +307,7 @@ export default function PortalShiftDetail() {
           className="w-full h-12 text-sm font-semibold rounded-xl"
           onClick={() => navigate("/portal/shifts")}
         >
-          Back to my shifts
+          Volver a mis turnos
         </Button>
       )}
     </div>
@@ -322,7 +322,7 @@ function BackBar({ onBack }: { onBack: () => void }) {
       onClick={onBack}
       className="flex items-center gap-1.5 text-[12px] font-semibold text-muted-foreground hover:text-foreground mb-3 -ml-1 px-1 py-1 rounded-lg active:scale-95 transition-all"
     >
-      <ArrowLeft className="h-3.5 w-3.5" /> Back
+      <ArrowLeft className="h-3.5 w-3.5" /> Volver
     </button>
   );
 }
@@ -345,32 +345,32 @@ function StateBanner({ state }: { state: AvailabilityState }) {
   const config: Record<string, { icon: React.ReactNode; label: string; sub: string; tone: string }> = {
     pending_approval: {
       icon: <Hourglass className="h-4 w-4" />,
-      label: "Request pending",
-      sub: "We'll notify you when it's reviewed.",
+      label: "Solicitud pendiente",
+      sub: "Te avisaremos cuando se revise.",
       tone: "bg-amber-500/[0.08] border-amber-500/20 text-amber-700 dark:text-amber-400",
     },
     assigned: {
       icon: <CheckCircle2 className="h-4 w-4" />,
-      label: "Already assigned to you",
-      sub: "Find it on My Shifts.",
+      label: "Ya estás asignado",
+      sub: "Búscalo en Mis turnos.",
       tone: "bg-emerald-500/[0.08] border-emerald-500/20 text-emerald-700 dark:text-emerald-400",
     },
     full: {
       icon: <AlertCircle className="h-4 w-4" />,
-      label: "No spots left",
-      sub: "All slots have been filled.",
+      label: "Sin cupos disponibles",
+      sub: "Todos los lugares están ocupados.",
       tone: "bg-muted/40 border-border/40 text-muted-foreground",
     },
     not_claimable: {
       icon: <AlertCircle className="h-4 w-4" />,
-      label: "Not open for requests",
-      sub: "This shift is not currently accepting claims.",
+      label: "No abierto a solicitudes",
+      sub: "Este turno no acepta solicitudes en este momento.",
       tone: "bg-muted/40 border-border/40 text-muted-foreground",
     },
     past: {
       icon: <XCircle className="h-4 w-4" />,
-      label: "Shift in the past",
-      sub: "This shift has already passed.",
+      label: "Turno ya pasó",
+      sub: "Este turno ya finalizó.",
       tone: "bg-muted/40 border-border/40 text-muted-foreground",
     },
   };

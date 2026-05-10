@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffectiveEmployee } from "@/hooks/useEffectiveEmployee";
 import { format, startOfDay, endOfDay } from "date-fns";
-import { enUS } from "date-fns/locale";
+import { enUS, es } from "date-fns/locale";
 import {
   Clock, LogIn, LogOut, MapPin, Timer, CalendarDays,
   FileText, Camera, ScanLine, CheckCircle2, ChevronRight,
@@ -573,13 +573,13 @@ export default function PortalClock() {
             <Timer className="h-4 w-4 text-warning" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-[12.5px] font-semibold text-foreground">Unclosed shift detected</p>
+            <p className="text-[12.5px] font-semibold text-foreground">Turno sin cerrar</p>
             <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">
-              {staleOpenEntry.shift?.title ?? "A shift"} stayed open since{" "}
+              {staleOpenEntry.shift?.title ?? "Un turno"} quedó abierto desde{" "}
               <span className="tabular-nums font-medium">
-                {format(new Date(staleOpenEntry.entry.clock_in), "MMM d, HH:mm")}
+                {format(new Date(staleOpenEntry.entry.clock_in), "d MMM, HH:mm")}
               </span>
-              . Tap Clock out below to close it.
+              . Toca Marcar salida abajo para cerrarlo.
             </p>
           </div>
         </div>
@@ -607,16 +607,16 @@ export default function PortalClock() {
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-earning opacity-60" />
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-earning" />
               </span>
-              <span className="text-[10.5px] font-bold uppercase tracking-widest text-earning">On shift</span>
+              <span className="text-[10.5px] font-bold uppercase tracking-widest text-earning">En turno</span>
             </div>
             <p className="text-[10.5px] text-muted-foreground/70 tabular-nums">
-              Started {format(new Date(activeEntry!.clock_in), "HH:mm")}
+              Iniciado {format(new Date(activeEntry!.clock_in), "HH:mm")}
             </p>
           </div>
         ) : (
           <div className="px-4 pt-3.5 pb-1 flex items-center justify-between gap-2">
             <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/55">
-              {focusShift ? "Ready to clock in" : "No shift selected"}
+              {focusShift ? "Listo para marcar entrada" : "Sin turno seleccionado"}
             </p>
             <p className="text-[10.5px] text-muted-foreground/70 tabular-nums">
               {format(now, "HH:mm:ss")}
@@ -632,7 +632,7 @@ export default function PortalClock() {
                 {getElapsed()}
               </p>
               <p className="text-[10px] uppercase tracking-widest text-muted-foreground/55 mt-2 font-semibold">
-                Elapsed
+                Transcurrido
               </p>
             </>
           ) : focusShift ? (
@@ -659,7 +659,7 @@ export default function PortalClock() {
                 {format(now, "HH:mm")}
               </p>
               <p className="text-[11px] text-muted-foreground/65 capitalize mt-2">
-                {format(now, "EEEE, MMMM d", { locale: enUS })}
+                {format(now, "EEEE d 'de' MMMM", { locale: es })}
               </p>
             </>
           )}
@@ -684,7 +684,7 @@ export default function PortalClock() {
               {acting ? (
                 <div className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
               ) : (
-                <><LogOut className="h-4 w-4" /> Clock Out</>
+                <><LogOut className="h-4 w-4" /> Marcar salida</>
               )}
             </Button>
           ) : focusShift ? (
@@ -696,7 +696,7 @@ export default function PortalClock() {
               {acting ? (
                 <div className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
               ) : (
-                <><LogIn className="h-4 w-4" /> Clock In</>
+                <><LogIn className="h-4 w-4" /> Marcar entrada</>
               )}
             </Button>
           ) : (
@@ -704,12 +704,12 @@ export default function PortalClock() {
             <div className="rounded-xl bg-muted/30 border border-border/30 px-4 py-3.5 flex flex-col items-center text-center gap-1">
               <CalendarDays className="h-5 w-5 text-muted-foreground/45" />
               <p className="text-[12.5px] font-semibold text-foreground">
-                {hasDailyOnlyShifts ? "Daily-pay shifts today" : "No shifts to clock"}
+                {hasDailyOnlyShifts ? "Turnos de pago diario hoy" : "Sin turnos para marcar"}
               </p>
               <p className="text-[10.5px] text-muted-foreground/65 max-w-[260px] leading-relaxed">
                 {hasDailyOnlyShifts
-                  ? "Today's shifts don't require clocking in. Pay is calculated automatically."
-                  : "Contact your supervisor if a shift is missing."}
+                  ? "Los turnos de hoy no requieren marcar entrada. El pago se calcula automáticamente."
+                  : "Contacta a tu supervisor si falta algún turno."}
               </p>
             </div>
           )}
@@ -803,7 +803,7 @@ export default function PortalClock() {
               className="flex-1 h-10 rounded-xl text-[12px] font-medium text-muted-foreground gap-1.5 hover:bg-muted/40 hover:text-foreground"
             >
               <ScanLine className="h-3.5 w-3.5" />
-              Scan QR
+              Escanear QR
             </Button>
           )}
           {!isClockedIn && allowManual && (
@@ -816,7 +816,7 @@ export default function PortalClock() {
               )}
             >
               <FileText className="h-3.5 w-3.5" />
-              Report time
+              Reportar tiempo
             </Button>
           )}
         </div>
@@ -828,16 +828,16 @@ export default function PortalClock() {
           <DialogHeader>
             <DialogTitle className="text-base flex items-center gap-2">
               <FileText className="h-4 w-4 text-primary" />
-              Report uncaptured time
+              Reportar tiempo no registrado
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
-            <p className="text-xs text-muted-foreground">Describe what hours you worked and why you couldn't clock in.</p>
+            <p className="text-xs text-muted-foreground">Describe las horas que trabajaste y por qué no pudiste marcar entrada.</p>
             <Textarea value={requestMessage} onChange={e => setRequestMessage(e.target.value)}
-              placeholder="E.g.: I worked from 8:00 to 17:00 but couldn't clock in because..." rows={4} className="text-sm resize-none rounded-xl" />
+              placeholder="Ej: Trabajé de 8:00 a 17:00 pero no pude marcar entrada porque..." rows={4} className="text-sm resize-none rounded-xl" />
             <Button onClick={handleSendTimeRequest} disabled={sendingRequest || !requestMessage.trim()} className="w-full h-11 text-sm font-bold rounded-xl">
               {sendingRequest ? <div className="h-3.5 w-3.5 border-2 border-current border-t-transparent rounded-full animate-spin mr-1.5" /> : null}
-              Send request
+              Enviar solicitud
             </Button>
           </div>
         </DialogContent>

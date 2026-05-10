@@ -3,12 +3,12 @@ import { Button } from "@/components/ui/button";
 import {
   Clock, MapPin, Users, FileText, Navigation,
   AlertCircle, LogIn, MessageCircle, Star, Copy,
-  Briefcase, ScanLine, Phone, ChevronRight, X,
+  Briefcase, ScanLine, Phone, ChevronRight, X, Check, Loader2,
 } from "lucide-react";
 import { ShiftReviewButton } from "@/components/reviews/ShiftReviewButton";
 import { NavigationButtons } from "@/components/navigation/NavigationButtons";
 import { format, parseISO, differenceInMinutes, isToday, isTomorrow } from "date-fns";
-import { enUS } from "date-fns/locale";
+import { enUS, es } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -39,6 +39,10 @@ interface ShiftInfo {
 interface PortalShiftDetailDrawerProps {
   shift: ShiftInfo | null;
   assignmentStatus?: string;
+  responseStatus?: string;
+  onAccept?: () => void;
+  onReject?: () => void;
+  responding?: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -63,22 +67,22 @@ function getCountdown(dateStr: string, startTime: string): string | null {
   if (diff < 0 || diff > 24 * 60 * 60 * 1000) return null;
   const hrs = Math.floor(diff / 3600000);
   const mins = Math.floor((diff % 3600000) / 60000);
-  if (hrs > 0) return `Starts in ${hrs}h ${mins}m`;
-  return `Starts in ${mins}m`;
+  if (hrs > 0) return `Empieza en ${hrs}h ${mins}m`;
+  return `Empieza en ${mins}m`;
 }
 
 function getStatusMeta(status?: string): { tone: OpsStatusTone; label: string } {
   switch (status) {
     case "confirmed":
     case "accepted":
-      return { tone: "success", label: "Confirmed" };
+      return { tone: "success", label: "Confirmado" };
     case "needs_reacceptance":
-      return { tone: "warning", label: "Re-accept" };
+      return { tone: "warning", label: "Re-confirmar" };
     case "rejected":
-      return { tone: "critical", label: "Rejected" };
+      return { tone: "critical", label: "Rechazado" };
     case "pending":
     default:
-      return { tone: "warning", label: "Pending" };
+      return { tone: "warning", label: "Pendiente" };
   }
 }
 
@@ -92,7 +96,7 @@ function getStatusMeta(status?: string): { tone: OpsStatusTone; label: string } 
  *    (rendered inline as overlay) only when the user opts in.
  *  • Footer holds a single dominant CTA.
  */
-export function PortalShiftDetailDrawer({ shift, assignmentStatus, open, onOpenChange }: PortalShiftDetailDrawerProps) {
+export function PortalShiftDetailDrawer({ shift, assignmentStatus, responseStatus, onAccept, onReject, responding, open, onOpenChange }: PortalShiftDetailDrawerProps) {
   const navigate = useNavigate();
   const { effectiveEmployeeId: employeeId } = useEffectiveEmployee();
   const { toast } = useToast();
@@ -124,23 +128,30 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, open, onOpenC
   const hoursLabel = calcHours(shift.start_time?.slice(0, 5), shift.end_time?.slice(0, 5));
   const isTodayShift = isToday(parseISO(shift.date));
   const isTomorrowShift = isTomorrow(parseISO(shift.date));
-  const statusMeta = getStatusMeta(assignmentStatus);
+  // Worker truth: prefer responseStatus when provided; fallback to assignmentStatus.
+  const effectiveStatus = responseStatus ?? assignmentStatus;
+  const statusMeta = getStatusMeta(effectiveStatus);
   const shiftCompanyId = shift.company_id || empCompanyId || "";
   const countdown = isTodayShift ? getCountdown(shift.date, shift.start_time) : null;
-  const isConfirmed = assignmentStatus === "confirmed" || assignmentStatus === "accepted";
+  const isAccepted = effectiveStatus === "confirmed" || effectiveStatus === "accepted";
+  const isPending = effectiveStatus === "pending" || effectiveStatus === "needs_reacceptance";
+  const isRejected = effectiveStatus === "rejected";
+  const showResponseActions = isPending && !!(onAccept || onReject);
+  const showClockInAction = isAccepted && isTodayShift;
+  const showStickyFooter = !secondaryView && (showResponseActions || showClockInAction);
 
   const dayLabel = isTodayShift
-    ? "Today"
+    ? "Hoy"
     : isTomorrowShift
-    ? "Tomorrow"
-    : format(parseISO(shift.date), "EEE, MMM d", { locale: enUS });
+    ? "Mañana"
+    : format(parseISO(shift.date), "EEE d MMM", { locale: enUS });
 
-  const copyAddress = (text: string) => {
+  const copyAddress = (text: string, label = "Dirección") => {
     navigator.clipboard.writeText(text);
-    toast({ title: "Copied", description: "Address copied to clipboard" });
+    toast({ title: "Copiado", description: `${label} copiada al portapapeles` });
   };
 
-  const clockLabel = clockingMethod === "required" ? "QR scan required" : clockingMethod === "optional" ? "QR optional" : "Mobile clock-in";
+  const clockLabel = clockingMethod === "required" ? "QR obligatorio" : clockingMethod === "optional" ? "QR opcional" : "Marcar desde el móvil";
   const ClockMethodIcon = clockingMethod === "required" || clockingMethod === "optional" ? ScanLine : Phone;
 
   return (
@@ -184,7 +195,7 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, open, onOpenC
           </div>
 
           {/* Countdown — only when actionable */}
-          {countdown && isConfirmed && (
+          {countdown && isAccepted && (
             <div className="flex items-center gap-2 text-[10.5px] font-bold text-primary bg-primary/[0.06] rounded-lg px-2.5 py-1.5 border border-primary/10">
               <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse shrink-0" />
               <span className="tracking-wide uppercase">{countdown}</span>
@@ -195,7 +206,7 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, open, onOpenC
         {/* ─── Content ─── */}
         <div
           className="px-5 pb-6 overflow-y-auto"
-          style={{ maxHeight: "calc(94vh - 220px)" }}
+          style={{ maxHeight: showStickyFooter ? "calc(94vh - 280px)" : "calc(94vh - 200px)" }}
         >
           {!secondaryView && (
             <div className="space-y-4 pt-4">
@@ -208,9 +219,9 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, open, onOpenC
                       <Clock className="h-3.5 w-3.5 text-muted-foreground/80" />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-[10px] uppercase tracking-widest text-muted-foreground/55 font-bold">When</p>
+                      <p className="text-[10px] uppercase tracking-widest text-muted-foreground/55 font-bold">Cuándo</p>
                       <p className="text-[13px] font-semibold text-foreground capitalize mt-0.5">
-                        {format(parseISO(shift.date), "EEEE, MMMM d", { locale: enUS })}
+                        {format(parseISO(shift.date), "EEEE d 'de' MMMM", { locale: es })}
                       </p>
                     </div>
                   </div>
@@ -223,40 +234,50 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, open, onOpenC
                           <MapPin className="h-3.5 w-3.5 text-muted-foreground/80" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="text-[10px] uppercase tracking-widest text-muted-foreground/55 font-bold">Where</p>
+                          <p className="text-[10px] uppercase tracking-widest text-muted-foreground/55 font-bold">Dónde</p>
                           <p className="text-[13px] font-semibold text-foreground mt-0.5 truncate">{shift.location.name}</p>
                         </div>
                         <button
                           className="p-2 rounded-lg hover:bg-muted text-muted-foreground/50 hover:text-foreground transition-colors"
-                          onClick={() => copyAddress(shift.location!.name)}
-                          aria-label="Copy address"
+                          onClick={() => copyAddress(shift.location!.name, "Dirección")}
+                          aria-label="Copiar dirección"
                         >
                           <Copy className="h-3.5 w-3.5" />
                         </button>
                       </div>
                       {locationCoords && (
-                        <NavigationButtons latitude={locationCoords.lat} longitude={locationCoords.lng} label="Navigate" />
+                        <NavigationButtons latitude={locationCoords.lat} longitude={locationCoords.lng} label="Abrir mapa" />
                       )}
                     </div>
                   )}
 
                   {/* Meeting point row — merged into same block */}
                   {shift.meeting_point && (
-                    <a
-                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(shift.meeting_point)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-3 px-4 py-3 border-t border-border/30 hover:bg-muted/30 transition-colors"
-                    >
+                    <div className="flex items-center gap-3 px-4 py-3 border-t border-border/30">
                       <div className="h-8 w-8 rounded-lg bg-muted/60 flex items-center justify-center shrink-0">
                         <Navigation className="h-3.5 w-3.5 text-muted-foreground/80" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-[10px] uppercase tracking-widest text-muted-foreground/55 font-bold">Meeting Point</p>
+                        <p className="text-[10px] uppercase tracking-widest text-muted-foreground/55 font-bold">Punto de encuentro</p>
                         <p className="text-[13px] font-semibold text-foreground mt-0.5 truncate">{shift.meeting_point}</p>
                       </div>
-                      <ChevronRight className="h-4 w-4 text-muted-foreground/30 shrink-0" />
-                    </a>
+                      <button
+                        className="p-2 rounded-lg hover:bg-muted text-muted-foreground/50 hover:text-foreground transition-colors"
+                        onClick={() => copyAddress(shift.meeting_point!, "Punto de encuentro")}
+                        aria-label="Copiar punto de encuentro"
+                      >
+                        <Copy className="h-3.5 w-3.5" />
+                      </button>
+                      <a
+                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(shift.meeting_point)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-2 rounded-lg hover:bg-muted text-muted-foreground/50 hover:text-foreground transition-colors"
+                        aria-label="Abrir mapa"
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </a>
+                    </div>
                   )}
 
                   {/* Clock-in method — merged */}
@@ -265,7 +286,7 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, open, onOpenC
                       <ClockMethodIcon className="h-3.5 w-3.5 text-muted-foreground/80" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-[10px] uppercase tracking-widest text-muted-foreground/55 font-bold">Clock-in</p>
+                      <p className="text-[10px] uppercase tracking-widest text-muted-foreground/55 font-bold">Entrada</p>
                       <p className="text-[13px] font-semibold text-foreground mt-0.5">{clockLabel}</p>
                     </div>
                   </div>
@@ -278,7 +299,7 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, open, onOpenC
                   <div className="flex items-start gap-2.5">
                     <AlertCircle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
                     <div className="min-w-0">
-                      <p className="text-[10px] uppercase tracking-widest text-warning font-bold">Instructions</p>
+                      <p className="text-[10px] uppercase tracking-widest text-warning font-bold">Instrucciones</p>
                       <p className="text-[13px] mt-1 leading-relaxed text-foreground">{shift.special_instructions}</p>
                     </div>
                   </div>
@@ -291,7 +312,7 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, open, onOpenC
                   <div className="flex items-start gap-2.5">
                     <FileText className="h-4 w-4 text-muted-foreground/55 shrink-0 mt-0.5" />
                     <div className="min-w-0">
-                      <p className="text-[10px] uppercase tracking-widest text-muted-foreground/55 font-bold">Notes</p>
+                      <p className="text-[10px] uppercase tracking-widest text-muted-foreground/55 font-bold">Notas</p>
                       <p className="text-[13px] mt-1 leading-relaxed text-foreground/85">{shift.notes}</p>
                     </div>
                   </div>
@@ -306,7 +327,7 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, open, onOpenC
                     onClick={() => setSecondaryView("team")}
                   >
                     <Users className="h-4 w-4 text-muted-foreground/70 shrink-0" />
-                    <span className="text-[13px] font-semibold text-foreground flex-1">Team on this shift</span>
+                    <span className="text-[13px] font-semibold text-foreground flex-1">Equipo del turno</span>
                     <ChevronRight className="h-4 w-4 text-muted-foreground/30" />
                   </button>
                   <button
@@ -314,7 +335,7 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, open, onOpenC
                     onClick={() => setSecondaryView("chat")}
                   >
                     <MessageCircle className="h-4 w-4 text-muted-foreground/70 shrink-0" />
-                    <span className="text-[13px] font-semibold text-foreground flex-1">Shift chat</span>
+                    <span className="text-[13px] font-semibold text-foreground flex-1">Chat del turno</span>
                     <ChevronRight className="h-4 w-4 text-muted-foreground/30" />
                   </button>
                 </div>
@@ -325,7 +346,7 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, open, onOpenC
                 <section className="flex items-center gap-2.5 p-3 rounded-2xl border border-border/40 bg-card">
                   <Star className="h-4 w-4 text-warning shrink-0" />
                   <div className="flex-1">
-                    <p className="text-[10px] uppercase tracking-widest text-muted-foreground/55 font-bold">Rate this shift</p>
+                    <p className="text-[10px] uppercase tracking-widest text-muted-foreground/55 font-bold">Califica este turno</p>
                   </div>
                   <ShiftReviewButton
                     shiftId={shift.id}
@@ -338,7 +359,7 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, open, onOpenC
 
               {/* Disclaimer — minimal */}
               <p className="text-[10px] text-muted-foreground/40 leading-relaxed px-1 italic">
-                Scheduled hours are estimates. Payroll uses actual clocked hours.
+                Las horas programadas son una estimación. La nómina usa las horas reales registradas.
               </p>
             </div>
           )}
@@ -350,7 +371,7 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, open, onOpenC
                 className="flex items-center gap-1.5 text-[12px] text-muted-foreground hover:text-foreground transition-colors -ml-1"
                 onClick={() => setSecondaryView(null)}
               >
-                <X className="h-3.5 w-3.5" /> Back to details
+                <X className="h-3.5 w-3.5" /> Volver al detalle
               </button>
               {secondaryView === "team" && (
                 <ShiftTeamPanel shiftId={shift.id} companyId={shiftCompanyId} compact={false} />
@@ -362,17 +383,41 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, open, onOpenC
           )}
         </div>
 
-        {/* ─── Footer — single dominant CTA ─── */}
-        {!secondaryView && isConfirmed && isTodayShift && (
-          <div className="px-5 pt-3 pb-[max(env(safe-area-inset-bottom,16px),16px)] border-t border-border/40 bg-card">
-            <Button
-              size="lg"
-              className="w-full h-12 text-[14px] gap-2 font-bold rounded-xl shadow-md shadow-primary/15"
-              onClick={() => { onOpenChange(false); navigate(`/portal/clock?shiftId=${shift.id}`); }}
-            >
-              <LogIn className="h-4 w-4" />
-              Clock In
-            </Button>
+        {/* ─── Sticky action bar ─── */}
+        {showStickyFooter && (
+          <div className="px-5 pt-3 pb-[max(env(safe-area-inset-bottom,16px),16px)] border-t border-border/40 bg-card flex gap-2">
+            {showResponseActions && onReject && (
+              <Button
+                variant="outline"
+                size="lg"
+                className="flex-1 h-12 text-[14px] gap-2 font-semibold rounded-xl"
+                onClick={onReject}
+                disabled={!!responding}
+              >
+                <X className="h-4 w-4" /> Rechazar
+              </Button>
+            )}
+            {showResponseActions && onAccept && (
+              <Button
+                size="lg"
+                className="flex-[1.4] h-12 text-[14px] gap-2 font-bold rounded-xl shadow-md shadow-primary/15"
+                onClick={onAccept}
+                disabled={!!responding}
+              >
+                {responding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                Confirmar
+              </Button>
+            )}
+            {!showResponseActions && showClockInAction && (
+              <Button
+                size="lg"
+                className="w-full h-12 text-[14px] gap-2 font-bold rounded-xl shadow-md shadow-primary/15"
+                onClick={() => { onOpenChange(false); navigate(`/portal/clock?shiftId=${shift.id}`); }}
+              >
+                <LogIn className="h-4 w-4" />
+                Marcar entrada
+              </Button>
+            )}
           </div>
         )}
       </DrawerContent>
