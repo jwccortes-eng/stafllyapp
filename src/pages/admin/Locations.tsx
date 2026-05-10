@@ -393,12 +393,17 @@ export default function Locations() {
             <TableBody>
               {filtered.map(l => (
                 <TableRow key={l.id}>
-                  <TableCell>
-                    <div>
-                      <span className="font-medium">{l.name}</span>
-                      {l.state && <span className="text-[10px] text-muted-foreground ml-1.5">({l.state})</span>}
-                    </div>
-                  </TableCell>
+                <TableCell>
+                  <div>
+                    <Link
+                      to={`/app/locations/${l.id}`}
+                      className="font-medium hover:underline hover:text-primary transition-colors"
+                    >
+                      {l.name}
+                    </Link>
+                    {l.state && <span className="text-[10px] text-muted-foreground ml-1.5">({l.state})</span>}
+                  </div>
+                </TableCell>
                   <TableCell className="hidden md:table-cell text-muted-foreground text-sm">
                     {[l.address, l.city].filter(Boolean).join(", ") || "—"}
                   </TableCell>
