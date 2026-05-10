@@ -1183,6 +1183,7 @@ function RecommendedTab({
       const locationHistoryByEmp = new Map<string, number>();
       const reviewByEmp = new Map<string, ReviewSignal>();
       const conflictEmpIds = new Set<string>();
+      const preferencesByEmp = new Map<string, WorkerPreferenceRow[]>();
 
       // Fire all queries in parallel; ignore individual failures gracefully.
       const queries = [
