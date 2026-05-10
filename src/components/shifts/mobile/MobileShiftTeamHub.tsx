@@ -1672,6 +1672,12 @@ function RecommendedTab({
         Add workers
       </SectionTitle>
 
+      {!shift.location_id && (
+        <p className="text-[11px] text-muted-foreground rounded-lg border border-dashed border-border/60 bg-muted/30 px-3 py-2 leading-snug">
+          Add a job site to use venue history ranking. Meeting points are not used as worked-here history.
+        </p>
+      )}
+
       {/* Search */}
       <div className="relative">
         <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
