@@ -571,11 +571,15 @@ export default function MobileShiftsView() {
       <MobileShiftOperationsSheet
         shift={detailShift}
         open={detailOpen}
-        onOpenChange={setDetailOpen}
+        onOpenChange={(o) => {
+          setDetailOpen(o);
+          if (!o) setDetailManageTeam(false);
+        }}
         assignments={assignments}
         employees={employees}
         clientName={detailShift?.client_id ? clientById.get(detailShift.client_id) ?? "—" : "—"}
         locationName={detailShift?.location_id ? locationById.get(detailShift.location_id) ?? "" : ""}
+        initialOpenTeamHub={detailManageTeam}
       />
     </div>
   );
