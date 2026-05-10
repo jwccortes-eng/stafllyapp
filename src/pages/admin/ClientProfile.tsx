@@ -181,6 +181,9 @@ export default function ClientProfile() {
           <TabsTrigger value="requests" className="gap-2 text-xs"><ClipboardList className="h-3.5 w-3.5" /> Requests</TabsTrigger>
           <TabsTrigger value="conversations" className="gap-2 text-xs"><MessageSquare className="h-3.5 w-3.5" /> Conversations</TabsTrigger>
           <TabsTrigger value="locations" className="gap-2 text-xs"><MapPin className="h-3.5 w-3.5" /> Locations</TabsTrigger>
+          {isPrivileged && (
+            <TabsTrigger value="fit" className="gap-2 text-xs"><Star className="h-3.5 w-3.5" /> Fit</TabsTrigger>
+          )}
           <TabsTrigger value="notes" className="gap-2 text-xs"><FileText className="h-3.5 w-3.5" /> Notes</TabsTrigger>
         </TabsList>
 
