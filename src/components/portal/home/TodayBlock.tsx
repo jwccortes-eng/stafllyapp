@@ -31,17 +31,17 @@ export function TodayBlock({ shift }: Props) {
         <div className="flex items-center gap-2">
           {today && (
             <span className="text-[9px] px-2 py-0.5 rounded-full font-bold bg-primary/12 text-primary tracking-wide">
-              Today
+              Hoy
             </span>
           )}
           {tomorrow && (
             <span className="text-[9px] px-2 py-0.5 rounded-full font-bold bg-accent/40 text-accent-foreground tracking-wide">
-              Tomorrow
+              Mañana
             </span>
           )}
           {!today && !tomorrow && (
-            <span className="text-[11px] font-semibold text-muted-foreground capitalize">
-              {format(d, "EEE d MMM")}
+            <span className="text-[11px] font-semibold text-muted-foreground first-letter:uppercase">
+              {format(d, "EEE d MMM", { locale: es })}
             </span>
           )}
           <span className="text-[13px] font-bold text-foreground tabular-nums">
