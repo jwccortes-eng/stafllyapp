@@ -775,6 +775,10 @@ function WorkerRow({
   if (assignment.attendance_status && assignment.attendance_status !== "pending") {
     subBits.push(assignment.attendance_status);
   }
+  const responseTs = assignment.accepted_at || assignment.rejected_at || assignment.responded_at || null;
+  const responseLabel = responseTs
+    ? (assignment.accepted_at ? "Accepted " : assignment.rejected_at ? "Rejected " : "Responded ") + formatRelative(responseTs)
+    : null;
 
   return (
     <li className="px-3 py-2.5">
