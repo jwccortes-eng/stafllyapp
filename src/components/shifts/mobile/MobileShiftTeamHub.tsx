@@ -1593,8 +1593,7 @@ function RecommendedTab({
       ) : (
         <ul className="space-y-2">
           {visible.map((c) => {
-            const reasonChips = c.reasons.slice(0, 4);
-            const riskChips = c.riskFlags.slice(0, 2);
+            const display = buildRecommendedDisplay(c);
             const badgeTone =
               c.readinessState === "ready"
                 ? "border-emerald-300/60 text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30"
@@ -1616,29 +1615,34 @@ function RecommendedTab({
                     <span className={cn("rounded-full border px-1.5 py-0 text-[10px] font-semibold", badgeTone)}>
                       {c.readinessState === "ready" ? "Ready" : c.readinessState === "grace_period" ? "Grace" : "Blocked"}
                     </span>
-                    <span className="text-[10px] font-mono tabular-nums text-muted-foreground" title={`Score ${c.score}`}>
-                      {c.score}
+                    <span
+                      className="rounded-md border border-border/50 bg-muted/40 px-1.5 py-0 text-[10px] font-mono tabular-nums text-muted-foreground"
+                      title={`Score ${c.score}`}
+                    >
+                      Score {c.score}
                     </span>
                   </div>
-                  {(reasonChips.length > 0 || riskChips.length > 0) && (
+                  {display.chips.length > 0 && (
                     <div className="mt-1 flex flex-wrap gap-1">
-                      {reasonChips.map(k => (
+                      {display.chips.map(ch => (
                         <span
-                          key={`r-${k}`}
-                          className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400"
+                          key={`d-${ch.key}`}
+                          className={cn(
+                            "text-[10px] font-medium px-1.5 py-0.5 rounded-md",
+                            ch.tone === "good"
+                              ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400"
+                              : ch.tone === "risk"
+                                ? "bg-rose-50 text-rose-700 dark:bg-rose-950/30 dark:text-rose-400"
+                                : "bg-muted text-muted-foreground",
+                          )}
                         >
-                          {REASON_CHIP_LABEL[k]}
-                        </span>
-                      ))}
-                      {riskChips.map(k => (
-                        <span
-                          key={`x-${k}`}
-                          className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-rose-50 text-rose-700 dark:bg-rose-950/30 dark:text-rose-400"
-                        >
-                          {REASON_CHIP_LABEL[k]}
+                          {ch.label}
                         </span>
                       ))}
                     </div>
+                  )}
+                  {display.summary && (
+                    <p className="mt-1 text-[11px] text-foreground/80 leading-snug">{display.summary}</p>
                   )}
                   {c.phone ? (
                     <p className="mt-1 text-[11px] text-muted-foreground tabular-nums">{c.phone}</p>
