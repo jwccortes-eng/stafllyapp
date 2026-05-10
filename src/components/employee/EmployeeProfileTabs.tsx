@@ -720,6 +720,7 @@ export function EmployeeProfileTabs({
       </TabsContent>
       <TabsContent value="advances" className="mt-0"><EmployeeAdvancesTab employeeId={employee.id} companyId={companyId} /></TabsContent>
       <TabsContent value="shifts" className="mt-0"><ShiftsTab employee={employee} companyId={companyId} /></TabsContent>
+      <TabsContent value="time" className="mt-0"><TimeTab employee={employee} companyId={companyId} /></TabsContent>
       {isPrivileged && (
         <TabsContent value="fit" className="mt-0">
           <Card className="rounded-lg border-border/30">
