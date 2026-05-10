@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import {
   Clock, MapPin, Users, FileText, Navigation,
   AlertCircle, LogIn, MessageCircle, Star, Copy,
-  Briefcase, ScanLine, Phone, ChevronRight, X,
+  Briefcase, ScanLine, Phone, ChevronRight, X, Check, Loader2,
 } from "lucide-react";
 import { ShiftReviewButton } from "@/components/reviews/ShiftReviewButton";
 import { NavigationButtons } from "@/components/navigation/NavigationButtons";
