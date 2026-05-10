@@ -856,7 +856,7 @@ function ContactBtn({
 }
 
 function ClaimsTab({
-  loading, error, claims, empById, canManage, onClaimAction, onOpenDesktop,
+  loading, error, claims, empById, canManage, companyId, onClaimAction, onOpenDesktop,
   onViewWorker, onCopyReminder,
 }: {
   loading: boolean;
@@ -864,6 +864,7 @@ function ClaimsTab({
   claims: ShiftRequestRow[];
   empById: Map<string, Employee>;
   canManage: boolean;
+  companyId: string | null;
   onClaimAction: (requestId: string, decision: ClaimDecision, workerName: string, employeeId?: string) => void;
   onOpenDesktop: () => void;
   onViewWorker: (employeeId: string) => void;
