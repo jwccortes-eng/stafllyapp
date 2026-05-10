@@ -900,7 +900,7 @@ function ClaimsTab({
               c.status === "approved" ? "good" :
               c.status === "rejected" ? "bad" : "warn";
             const isPending = c.status === "pending";
-            const readiness = computeReadiness(e);
+            const readiness = computeReadiness(e, companyId);
             const blocked = isPending && !readiness.canBeApproved;
             return (
               <li key={c.id} className="rounded-2xl border border-border/50 bg-card p-3">
