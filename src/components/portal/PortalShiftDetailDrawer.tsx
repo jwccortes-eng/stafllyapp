@@ -371,7 +371,7 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, responseStatu
                 className="flex items-center gap-1.5 text-[12px] text-muted-foreground hover:text-foreground transition-colors -ml-1"
                 onClick={() => setSecondaryView(null)}
               >
-                <X className="h-3.5 w-3.5" /> Back to details
+                <X className="h-3.5 w-3.5" /> Volver al detalle
               </button>
               {secondaryView === "team" && (
                 <ShiftTeamPanel shiftId={shift.id} companyId={shiftCompanyId} compact={false} />
