@@ -15814,6 +15814,19 @@ export type Database = {
         Args: { _company_id: string; _period_id: string }
         Returns: Json
       }
+      create_shift_worker_notification: {
+        Args: {
+          p_assignment_id: string
+          p_company_id: string
+          p_employee_id: string
+          p_message: string
+          p_shift_id: string
+          p_source?: string
+          p_title: string
+          p_type: string
+        }
+        Returns: string
+      }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
