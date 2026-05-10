@@ -230,7 +230,7 @@ export default function PortalShiftDetail() {
             </div>
             {slotsLeft !== null && state === "available" && (
               <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-primary/10 text-primary">
-                {slotsLeft} spot{slotsLeft !== 1 ? "s" : ""} left
+                {slotsLeft} {slotsLeft === 1 ? "cupo disponible" : "cupos disponibles"}
               </span>
             )}
           </div>
