@@ -375,3 +375,80 @@ The Manage Team module is the primary operator interface for per-shift staffing.
   - `time_entries` period window widened ±1 day (review tolerance, not payroll math).
   - "Clock/pay without assignment" deduped per `employee_id` with combined signal.
   - "Needs employee match" subtitle clarifies it reads `historical_payroll_entries` and may be empty when periods were committed directly into `period_base_pay`.
+
+---
+
+## Stage 1 Parallel Run — Stafly Staffing / Connecteam Payroll
+
+### 1. Principle
+- Stafly is **primary** for staffing operations.
+- Connecteam remains **primary** for TimeClock, timesheets, and payroll calculation/export.
+- Daily Close and Payroll Review Queue are **evidence and review tools only** — they do not calculate, approve, post, or pay payroll.
+
+### 2. Stage 1 Ownership
+
+**Stafly owns:**
+- Shift planning (create / draft / publish)
+- Job site (`locations`) and meeting point (`meeting_point_location_id`)
+- Worker assignments
+- Worker responses (accept / decline / reassign)
+- Open spots and replacements
+- Daily Close evidence (captain reports, photos, notes)
+- Payroll Review Queue read-only review
+
+**Connecteam owns:**
+- TimeClock (clock-in / clock-out)
+- Timesheets
+- Payroll calculation and export
+- Official hours of record
+
+### 3. Role SOP Summary
+- **Jorge / Keury** — Owns staffing decisions, publishes shifts in Stafly, resolves staffing conflicts, owns operational rollback.
+- **Captain** — Confirms attendance on-site, files Daily Close evidence, reports issues via Stafly.
+- **Worker** — Receives shifts via Stafly portal/WhatsApp; clocks in/out in **Connecteam** (Stage 1 rule).
+- **María** — Runs payroll in Connecteam, uses Payroll Review Queue for triage, owns payroll/TimeClock conflict decisions.
+- **Admin / Developer** — Monitors system health, owns technical rollback, never edits payroll data directly.
+
+### 4. Source-of-Truth Rule
+| Domain | Source of Truth |
+|---|---|
+| Staffing / assignments | **Stafly** |
+| Hours / payroll | **Connecteam** |
+| Daily Close | Evidence only (not payroll input) |
+| Payroll Review Queue | Read-only triage only |
+
+### 5. Conflict Rule
+- **Staffing conflicts** → decided by **Jorge / Keury**.
+- **Payroll / TimeClock conflicts** → decided by **María**.
+- **Connecteam wins** for hours/pay in Stage 1.
+- **No automated payroll-impacting changes** from Stafly during Stage 1.
+
+### 6. Go / No-Go Pre-Flight Checklist (Phase 24)
+- [ ] Jorge + Keury sign off on Stafly as primary staffing tool.
+- [ ] María signs off on Connecteam remaining payroll authority.
+- [ ] Captains briefed on Daily Close workflow.
+- [ ] Workers notified: shifts via Stafly, clock in/out in Connecteam.
+- [ ] WhatsApp + spreadsheet backup channel confirmed active.
+- [ ] Payroll Review Queue verified read-only on target tenant.
+- [ ] Rollback owners assigned (Jorge ops / María payroll / Dev technical).
+- [ ] Pilot week start date confirmed (Wed–Tue cycle).
+- [ ] Success metrics dashboard / tracking sheet ready.
+
+### 7. Rollback
+- WhatsApp + spreadsheet backup remains available throughout Stage 1.
+- Connecteam TimeClock stays active at all times.
+- Connecteam payroll authority is unchanged.
+- **Jorge** owns operational rollback (revert to WhatsApp/spreadsheet staffing).
+- **María** owns payroll decision (Connecteam remains source).
+- **Dev** owns technical rollback (disable Stafly modules if needed).
+
+### 8. Success Metrics (Weekly)
+| Metric | Target |
+|---|---|
+| Shifts published in Stafly | ≥ 95% of week's shifts |
+| Worker response rate | ≥ 80% within 24h of publish |
+| Open spots resolved before shift start | ≥ 90% |
+| Daily Close completed by captain | ≥ 90% of shifts |
+| Payroll-impacting incidents traced to Stafly | **0** |
+| María signs off on Payroll Review Queue usefulness | Yes |
+| Stage 1 → Stage 2 exit | 2 consecutive weeks meeting all targets |
