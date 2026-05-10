@@ -383,17 +383,41 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, responseStatu
           )}
         </div>
 
-        {/* ─── Footer — single dominant CTA ─── */}
-        {!secondaryView && isConfirmed && isTodayShift && (
-          <div className="px-5 pt-3 pb-[max(env(safe-area-inset-bottom,16px),16px)] border-t border-border/40 bg-card">
-            <Button
-              size="lg"
-              className="w-full h-12 text-[14px] gap-2 font-bold rounded-xl shadow-md shadow-primary/15"
-              onClick={() => { onOpenChange(false); navigate(`/portal/clock?shiftId=${shift.id}`); }}
-            >
-              <LogIn className="h-4 w-4" />
-              Clock In
-            </Button>
+        {/* ─── Sticky action bar ─── */}
+        {showStickyFooter && (
+          <div className="px-5 pt-3 pb-[max(env(safe-area-inset-bottom,16px),16px)] border-t border-border/40 bg-card flex gap-2">
+            {showResponseActions && onReject && (
+              <Button
+                variant="outline"
+                size="lg"
+                className="flex-1 h-12 text-[14px] gap-2 font-semibold rounded-xl"
+                onClick={onReject}
+                disabled={!!responding}
+              >
+                <X className="h-4 w-4" /> Rechazar
+              </Button>
+            )}
+            {showResponseActions && onAccept && (
+              <Button
+                size="lg"
+                className="flex-[1.4] h-12 text-[14px] gap-2 font-bold rounded-xl shadow-md shadow-primary/15"
+                onClick={onAccept}
+                disabled={!!responding}
+              >
+                {responding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                Confirmar
+              </Button>
+            )}
+            {!showResponseActions && showClockInAction && (
+              <Button
+                size="lg"
+                className="w-full h-12 text-[14px] gap-2 font-bold rounded-xl shadow-md shadow-primary/15"
+                onClick={() => { onOpenChange(false); navigate(`/portal/clock?shiftId=${shift.id}`); }}
+              >
+                <LogIn className="h-4 w-4" />
+                Marcar entrada
+              </Button>
+            )}
           </div>
         )}
       </DrawerContent>
