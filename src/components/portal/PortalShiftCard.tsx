@@ -123,24 +123,24 @@ export function PortalShiftCard({
         {/* Primary row */}
         <div className="flex items-center gap-3 pl-3.5 pr-3 py-2.5">
           {/* Day + time block — fixed width for column alignment */}
-          <div className="shrink-0 w-[58px]">
+          <div className="shrink-0 w-[60px]">
             <p className={cn(
-              "text-[10px] font-bold uppercase tracking-wider leading-none",
-              isTodayShift ? "text-primary" : "text-muted-foreground/55",
+              "text-[11px] font-bold uppercase tracking-wider leading-none",
+              isTodayShift ? "text-primary" : "text-muted-foreground/65",
             )}>
-              {isTodayShift ? "Today" : isTomorrow(parseISO(shift.date)) ? "Tomr" : format(parseISO(shift.date), "EEE", { locale: enUS })}
+              {isTodayShift ? "Hoy" : isTomorrow(parseISO(shift.date)) ? "Mañana" : format(parseISO(shift.date), "EEE", { locale: enUS })}
             </p>
-            <p className="text-[13px] font-bold text-foreground/90 tabular-nums leading-tight mt-1">
+            <p className="text-[14px] font-bold text-foreground/90 tabular-nums leading-tight mt-1">
               {shift.start_time?.slice(0, 5)}
             </p>
           </div>
 
           {/* Title + subtitle */}
           <div className="min-w-0 flex-1">
-            <p className="text-[13.5px] font-semibold text-foreground truncate leading-tight">
+            <p className="text-[14.5px] font-semibold text-foreground truncate leading-tight">
               {titleDisplay}
             </p>
-            <p className="text-[11px] text-muted-foreground/70 truncate mt-0.5">
+            <p className="text-[12px] text-muted-foreground/75 truncate mt-0.5">
               <span className="tabular-nums">{shift.start_time?.slice(0, 5)}–{shift.end_time?.slice(0, 5)}</span>
               {subtitle && <> · {subtitle}</>}
             </p>
