@@ -1607,6 +1607,9 @@ function RecommendedTab({
   const visible = useMemo(() => {
     const q = search.trim().toLowerCase();
     const filtered = ranked.filter(c => {
+      if (filter === "best" && classifyGroup(c) !== "best") return false;
+      if (filter === "strong_history" && (c.locationHistoryCount ?? 0) < 5) return false;
+      if (filter === "no_risk" && ((c.riskFlags?.length ?? 0) > 0 || c.conflictDetected)) return false;
       if (filter === "ready" && c.readinessState !== "ready") return false;
       if (filter === "grace" && c.readinessState !== "grace_period") return false;
       if (filter === "phone" && !c.phone) return false;
@@ -1629,8 +1632,18 @@ function RecommendedTab({
     return filtered.slice(0, 60);
   }, [ranked, search, filter]);
 
+  // Phase 13A: split visible candidates into 3 visual groups, preserving sort.
+  const grouped = useMemo(() => {
+    const out: Record<RecGroup, RankedCandidate[]> = { best: [], good: [], caution: [] };
+    for (const c of visible) out[classifyGroup(c)].push(c);
+    return out;
+  }, [visible]);
+
   const FILTERS: { key: RecFilter; label: string }[] = [
+    { key: "all", label: "All" },
     { key: "best", label: "Best match" },
+    { key: "strong_history", label: "Strong venue history" },
+    { key: "no_risk", label: "No risk flags" },
     { key: "ready", label: "Ready" },
     { key: "grace", label: "Grace period" },
     { key: "phone", label: "Has phone" },
