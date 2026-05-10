@@ -611,16 +611,16 @@ export default function MyShifts() {
           </div>
           <div className="space-y-1">
             <p className="text-sm font-bold text-foreground">
-              {activeTab === "today" && "No shifts today"}
-              {activeTab === "upcoming" && "No upcoming shifts"}
-              {activeTab === "history" && "No history"}
+              {activeTab === "today" && "Sin turnos hoy"}
+              {activeTab === "upcoming" && "Sin próximos turnos"}
+              {activeTab === "history" && "Sin historial"}
             </p>
-            <p className="text-xs text-muted-foreground/60 max-w-[240px] mx-auto">
+            <p className="text-xs text-muted-foreground/70 max-w-[240px] mx-auto">
               {activeTab === "today"
-                ? "You have no shifts scheduled for today."
+                ? "No tienes turnos programados para hoy."
                 : activeTab === "history"
-                ? "You don't have any completed shifts yet."
-                : "Assigned shifts will appear here."
+                ? "Aún no tienes turnos completados."
+                : "Tus turnos asignados aparecerán aquí."
               }
             </p>
           </div>
