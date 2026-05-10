@@ -109,9 +109,9 @@ export function selectNextBestAction(ctx: NbaContext): NbaResult {
     return {
       kind: "clocked_in",
       tone: "live",
-      title: "You're on shift",
-      subtitle: ctx.clockStatus.shiftTitle ?? "Tap to clock out when you're done.",
-      ctaLabel: "Clock out",
+      title: "Estás en turno",
+      subtitle: ctx.clockStatus.shiftTitle ?? "Toca para marcar salida cuando termines.",
+      ctaLabel: "Marcar salida",
       ctaHref: "/portal/clock",
     };
   }
@@ -120,16 +120,16 @@ export function selectNextBestAction(ctx: NbaContext): NbaResult {
   if (ns && nsToday && nsConfirmed && minsToStart <= window) {
     const subtitle =
       minsToStart > 0
-        ? `Starts in ${minsToStart} min · ${formatTime(ns.start_time)}`
-        : `Started ${Math.abs(minsToStart)} min ago · ${formatTime(ns.start_time)}`;
+        ? `Empieza en ${minsToStart} min · ${formatTime(ns.start_time)}`
+        : `Empezó hace ${Math.abs(minsToStart)} min · ${formatTime(ns.start_time)}`;
     return {
       kind: "clock_in_now",
       tone: "primary",
-      title: "Clock in available",
+      title: "Marcar entrada disponible",
       subtitle,
-      ctaLabel: "Clock in",
+      ctaLabel: "Marcar entrada",
       ctaHref: `/portal/clock?shiftId=${ns.id}`,
-      secondaryCtaLabel: "View",
+      secondaryCtaLabel: "Ver",
       secondaryCtaHref: "/portal/shifts",
       meta: { shiftId: ns.id },
     };
@@ -143,14 +143,14 @@ export function selectNextBestAction(ctx: NbaContext): NbaResult {
       tone: "warning",
       title:
         ctx.pendingCount > 1
-          ? `Confirm ${ctx.pendingCount} shifts`
-          : "Confirm your shift",
+          ? `Confirma ${ctx.pendingCount} turnos`
+          : "Confirma tu turno",
       subtitle: usingNs
         ? `${ns!.client_name ?? ns!.title} · ${formatTime(ns!.start_time)}`
-        : "One or more shifts need your confirmation.",
-      ctaLabel: "Confirm",
+        : "Tienes turnos pendientes de confirmación.",
+      ctaLabel: "Confirmar",
       ctaHref: "/portal/shifts",
-      secondaryCtaLabel: "View",
+      secondaryCtaLabel: "Ver",
       secondaryCtaHref: "/portal/shifts",
     };
   }
@@ -160,11 +160,11 @@ export function selectNextBestAction(ctx: NbaContext): NbaResult {
     return {
       kind: "next_shift_today",
       tone: "primary",
-      title: "You have a shift today",
+      title: "Tienes un turno hoy",
       subtitle: `${formatTime(ns.start_time)} – ${formatTime(ns.end_time)} · ${
         ns.client_name ?? ns.location_name ?? ns.title
       }`,
-      ctaLabel: "View shift",
+      ctaLabel: "Ver turno",
       ctaHref: "/portal/shifts",
       meta: { shiftId: ns.id },
     };
@@ -175,11 +175,11 @@ export function selectNextBestAction(ctx: NbaContext): NbaResult {
     return {
       kind: "missing_docs",
       tone: "warning",
-      title: "Upload your documents",
-      subtitle: `${ctx.readinessMissingDocs} document${
+      title: "Sube tus documentos",
+      subtitle: `${ctx.readinessMissingDocs} documento${
         ctx.readinessMissingDocs > 1 ? "s" : ""
-      } missing before you can be assigned.`,
-      ctaLabel: "Upload now",
+      } pendiente${ctx.readinessMissingDocs > 1 ? "s" : ""} para poder ser asignado.`,
+      ctaLabel: "Subir ahora",
       ctaHref: "/portal/documents",
     };
   }
@@ -194,11 +194,11 @@ export function selectNextBestAction(ctx: NbaContext): NbaResult {
     return {
       kind: "missing_profile",
       tone: "deduction",
-      title: "Complete your profile",
-      subtitle: `${ctx.readinessMissingPersonal} item${
+      title: "Completa tu perfil",
+      subtitle: `Falta${ctx.readinessMissingPersonal > 1 ? "n" : ""} ${ctx.readinessMissingPersonal} dato${
         ctx.readinessMissingPersonal > 1 ? "s" : ""
-      } needed to be assigned to shifts.`,
-      ctaLabel: "Continue",
+      } para ser asignado a turnos.`,
+      ctaLabel: "Continuar",
       ctaHref: "/portal/profile/complete",
     };
   }
@@ -208,9 +208,9 @@ export function selectNextBestAction(ctx: NbaContext): NbaResult {
     return {
       kind: "next_shift_future",
       tone: "neutral",
-      title: "Your next shift",
+      title: "Tu próximo turno",
       subtitle: `${ns.client_name ?? ns.title} · ${formatTime(ns.start_time)}`,
-      ctaLabel: "View",
+      ctaLabel: "Ver",
       ctaHref: "/portal/shifts",
       meta: { shiftId: ns.id },
     };
@@ -221,11 +221,11 @@ export function selectNextBestAction(ctx: NbaContext): NbaResult {
     return {
       kind: "claim_available",
       tone: "success",
-      title: `${ctx.claimableCount} shift${
+      title: `${ctx.claimableCount} turno${
         ctx.claimableCount > 1 ? "s" : ""
-      } available`,
-      subtitle: "Tap to view and request the ones that fit you.",
-      ctaLabel: "Browse",
+      } disponible${ctx.claimableCount > 1 ? "s" : ""}`,
+      subtitle: "Toca para ver y solicitar los que te convengan.",
+      ctaLabel: "Explorar",
       ctaHref: "/portal/shifts?tab=available",
     };
   }
@@ -234,8 +234,8 @@ export function selectNextBestAction(ctx: NbaContext): NbaResult {
   return {
     kind: "all_set",
     tone: "success",
-    title: "You're all set",
-    subtitle: "No shift right now. We'll let you know when something opens up.",
+    title: "Todo listo",
+    subtitle: "Sin turnos por ahora. Te avisaremos cuando algo se abra.",
     ctaLabel: null,
     ctaHref: null,
   };
