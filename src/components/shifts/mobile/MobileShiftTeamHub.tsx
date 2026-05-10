@@ -529,6 +529,14 @@ function MobileShiftTeamHubImpl({
                 onOpenChange(false);
                 navigate("/app/shifts/requests");
               }}
+              onViewWorker={(employeeId) => {
+                onOpenChange(false);
+                navigate(`/app/workers/${employeeId}`);
+              }}
+              onCopyReminder={(workerName) => {
+                navigator.clipboard?.writeText(buildReminderText(workerName)).catch(() => {});
+                toast({ title: "Reminder copied", description: "Paste into WhatsApp or SMS." });
+              }}
             />
           )}
 
