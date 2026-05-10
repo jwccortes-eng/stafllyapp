@@ -17,6 +17,7 @@ import { MobileShiftOperationsSheet } from "@/components/shifts/mobile/MobileShi
 import { isDraftShift, isPublishedShift } from "@/lib/shifts/shift-guards";
 import type { Shift, Assignment, Employee, SelectOption } from "@/components/shifts/types";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 /**
  * MobileShiftsView — Phase 1
