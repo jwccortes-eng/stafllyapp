@@ -299,7 +299,7 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, responseStatu
                   <div className="flex items-start gap-2.5">
                     <AlertCircle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
                     <div className="min-w-0">
-                      <p className="text-[10px] uppercase tracking-widest text-warning font-bold">Instructions</p>
+                      <p className="text-[10px] uppercase tracking-widest text-warning font-bold">Instrucciones</p>
                       <p className="text-[13px] mt-1 leading-relaxed text-foreground">{shift.special_instructions}</p>
                     </div>
                   </div>
