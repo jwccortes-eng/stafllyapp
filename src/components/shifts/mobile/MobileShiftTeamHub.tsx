@@ -821,14 +821,17 @@ function ContactBtn({
 
 function ClaimsTab({
   loading, error, claims, empById, canManage, onClaimAction, onOpenDesktop,
+  onViewWorker, onCopyReminder,
 }: {
   loading: boolean;
   error: string | null;
   claims: ShiftRequestRow[];
   empById: Map<string, Employee>;
   canManage: boolean;
-  onClaimAction: (requestId: string, decision: ClaimDecision, workerName: string) => void;
+  onClaimAction: (requestId: string, decision: ClaimDecision, workerName: string, employeeId?: string) => void;
   onOpenDesktop: () => void;
+  onViewWorker: (employeeId: string) => void;
+  onCopyReminder: (workerName: string) => void;
 }) {
   return (
     <section aria-label="Worker claims and requests">
@@ -860,6 +863,8 @@ function ClaimsTab({
               c.status === "approved" ? "good" :
               c.status === "rejected" ? "bad" : "warn";
             const isPending = c.status === "pending";
+            const readiness = computeReadiness(e);
+            const blocked = isPending && !readiness.canBeApproved;
             return (
               <li key={c.id} className="rounded-2xl border border-border/50 bg-card p-3">
                 <div className="flex items-start gap-2.5">
@@ -881,6 +886,11 @@ function ClaimsTab({
                         {c.status}
                       </Badge>
                     </div>
+                    {readiness.state !== "ready" && (
+                      <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+                        <ReadinessChip readiness={readiness} />
+                      </div>
+                    )}
                     {c.message && (
                       <p className="mt-1 text-[12px] text-muted-foreground line-clamp-3">
                         "{c.message}"
@@ -891,24 +901,58 @@ function ClaimsTab({
                       {c.reviewed_at ? ` · reviewed ${new Date(c.reviewed_at).toLocaleString()}` : ""}
                     </p>
 
+                    {blocked && (
+                      <p className="mt-1.5 text-[11px] text-amber-700 dark:text-amber-400 leading-snug">
+                        {readiness.helper}
+                      </p>
+                    )}
+
                     {isPending && canManage && (
-                      <div className="mt-2 flex items-center gap-1.5">
+                      <div className="mt-2 flex items-center gap-1.5 flex-wrap">
                         <button
                           type="button"
-                          onClick={() => onClaimAction(c.id, "approved", workerName)}
-                          className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-emerald-600 text-white text-[11px] font-semibold hover:bg-emerald-700 transition-colors"
+                          disabled={blocked}
+                          onClick={() => onClaimAction(c.id, "approved", workerName, c.employee_id)}
+                          aria-disabled={blocked}
+                          title={blocked ? readiness.helper : undefined}
+                          className={cn(
+                            "inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-semibold transition-colors",
+                            blocked
+                              ? "bg-muted text-muted-foreground cursor-not-allowed"
+                              : "bg-emerald-600 text-white hover:bg-emerald-700",
+                          )}
                         >
                           <Check className="h-3 w-3" />
                           Approve
                         </button>
                         <button
                           type="button"
-                          onClick={() => onClaimAction(c.id, "rejected", workerName)}
+                          onClick={() => onClaimAction(c.id, "rejected", workerName, c.employee_id)}
                           className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-muted hover:bg-muted/80 text-foreground text-[11px] font-semibold transition-colors"
                         >
                           <XCircle className="h-3 w-3" />
                           Reject
                         </button>
+                        {blocked && e && (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => onViewWorker(e.id)}
+                              className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-muted/60 hover:bg-muted text-foreground text-[11px] font-semibold transition-colors"
+                            >
+                              <UserCog className="h-3 w-3" />
+                              View profile
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => onCopyReminder(workerName)}
+                              className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-muted/60 hover:bg-muted text-foreground text-[11px] font-semibold transition-colors"
+                            >
+                              <Copy className="h-3 w-3" />
+                              Copy reminder
+                            </button>
+                          </>
+                        )}
                       </div>
                     )}
                   </div>
