@@ -234,19 +234,19 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, responseStatu
                           <MapPin className="h-3.5 w-3.5 text-muted-foreground/80" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="text-[10px] uppercase tracking-widest text-muted-foreground/55 font-bold">Where</p>
+                          <p className="text-[10px] uppercase tracking-widest text-muted-foreground/55 font-bold">Dónde</p>
                           <p className="text-[13px] font-semibold text-foreground mt-0.5 truncate">{shift.location.name}</p>
                         </div>
                         <button
                           className="p-2 rounded-lg hover:bg-muted text-muted-foreground/50 hover:text-foreground transition-colors"
-                          onClick={() => copyAddress(shift.location!.name)}
-                          aria-label="Copy address"
+                          onClick={() => copyAddress(shift.location!.name, "Dirección")}
+                          aria-label="Copiar dirección"
                         >
                           <Copy className="h-3.5 w-3.5" />
                         </button>
                       </div>
                       {locationCoords && (
-                        <NavigationButtons latitude={locationCoords.lat} longitude={locationCoords.lng} label="Navigate" />
+                        <NavigationButtons latitude={locationCoords.lat} longitude={locationCoords.lng} label="Abrir mapa" />
                       )}
                     </div>
                   )}
