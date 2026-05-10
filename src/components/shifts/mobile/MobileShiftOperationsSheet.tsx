@@ -100,6 +100,8 @@ interface Props {
   locationName: string;
   /** Optional — if a meeting point text is available, pass it. */
   meetingPoint?: string | null;
+  /** When true and the sheet opens, immediately open the Manage Team hub. */
+  initialOpenTeamHub?: boolean;
 }
 
 function formatTimeShort(t: string): string {
@@ -134,11 +136,18 @@ function initials(e: Employee): string {
 
 export function MobileShiftOperationsSheet({
   shift, open, onOpenChange, assignments, employees,
-  clientName, locationName, meetingPoint,
+  clientName, locationName, meetingPoint, initialOpenTeamHub,
 }: Props) {
   const navigate = useNavigate();
   const [traceOpen, setTraceOpen] = useState(false);
   const [hubOpen, setHubOpen] = useState(false);
+
+  // Auto-open Manage Team hub when requested by deep-link intent.
+  useEffect(() => {
+    if (open && initialOpenTeamHub && shift) {
+      setHubOpen(true);
+    }
+  }, [open, initialOpenTeamHub, shift?.id]);
   const { allRoles, canAccessAdminForCompany } = useAuth();
   const { selectedCompanyId } = useCompany();
 

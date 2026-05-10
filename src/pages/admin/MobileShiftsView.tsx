@@ -17,6 +17,7 @@ import { MobileShiftOperationsSheet } from "@/components/shifts/mobile/MobileShi
 import { isDraftShift, isPublishedShift } from "@/lib/shifts/shift-guards";
 import type { Shift, Assignment, Employee, SelectOption } from "@/components/shifts/types";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 /**
  * MobileShiftsView — Phase 1
@@ -101,6 +102,10 @@ export default function MobileShiftsView() {
 
   const [detailShift, setDetailShift] = useState<Shift | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  const [detailManageTeam, setDetailManageTeam] = useState(false);
+  // Tracks whether we've already attempted to consume a deep-link intent
+  // for the current shifts payload (avoids reopening on every refresh).
+  const [deepLinkConsumed, setDeepLinkConsumed] = useState(false);
 
   // Load shifts: yesterday for "Today" buffer + 60 days forward for Upcoming
   const dateRange = useMemo(() => {
@@ -208,6 +213,46 @@ export default function MobileShiftsView() {
     setSearchParams(next, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab]);
+
+  // Deep-link: open a specific shift's operations sheet via
+  // ?shift=<id> (preferred) or legacy #shift-<id>. Optional ?manageTeam=1
+  // immediately opens the Manage Team hub. Consumed once per load to avoid
+  // reopening on filter/tab changes; URL is cleaned after consumption.
+  useEffect(() => {
+    if (loading || deepLinkConsumed) return;
+
+    const queryShiftId = searchParams.get("shift");
+    const hash = typeof window !== "undefined" ? window.location.hash : "";
+    const hashShiftId = hash.startsWith("#shift-") ? hash.slice("#shift-".length) : null;
+    const targetId = queryShiftId || hashShiftId;
+    if (!targetId) return;
+
+    const wantManageTeam = searchParams.get("manageTeam") === "1"
+      || searchParams.get("openTeamHub") === "1";
+
+    const target = shifts.find(s => s.id === targetId);
+    if (target) {
+      setDetailShift(target);
+      setDetailManageTeam(wantManageTeam);
+      setDetailOpen(true);
+    } else {
+      toast("Shift not found in this view.", {
+        description: "Try switching tabs or removing filters.",
+      });
+    }
+
+    // Clean intent params + hash so refresh doesn't reopen the sheet.
+    const next = new URLSearchParams(searchParams);
+    next.delete("shift");
+    next.delete("manageTeam");
+    next.delete("openTeamHub");
+    setSearchParams(next, { replace: true });
+    if (hashShiftId && typeof window !== "undefined") {
+      window.history.replaceState(null, "", window.location.pathname + window.location.search);
+    }
+    setDeepLinkConsumed(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, shifts]);
 
   // ── Apply tab + filters
   const todayStr = format(new Date(), "yyyy-MM-dd");
@@ -526,11 +571,15 @@ export default function MobileShiftsView() {
       <MobileShiftOperationsSheet
         shift={detailShift}
         open={detailOpen}
-        onOpenChange={setDetailOpen}
+        onOpenChange={(o) => {
+          setDetailOpen(o);
+          if (!o) setDetailManageTeam(false);
+        }}
         assignments={assignments}
         employees={employees}
         clientName={detailShift?.client_id ? clientById.get(detailShift.client_id) ?? "—" : "—"}
         locationName={detailShift?.location_id ? locationById.get(detailShift.location_id) ?? "" : ""}
+        initialOpenTeamHub={detailManageTeam}
       />
     </div>
   );
