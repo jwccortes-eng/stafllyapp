@@ -312,7 +312,7 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, responseStatu
                   <div className="flex items-start gap-2.5">
                     <FileText className="h-4 w-4 text-muted-foreground/55 shrink-0 mt-0.5" />
                     <div className="min-w-0">
-                      <p className="text-[10px] uppercase tracking-widest text-muted-foreground/55 font-bold">Notes</p>
+                      <p className="text-[10px] uppercase tracking-widest text-muted-foreground/55 font-bold">Notas</p>
                       <p className="text-[13px] mt-1 leading-relaxed text-foreground/85">{shift.notes}</p>
                     </div>
                   </div>
