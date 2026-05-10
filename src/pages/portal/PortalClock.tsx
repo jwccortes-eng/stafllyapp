@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffectiveEmployee } from "@/hooks/useEffectiveEmployee";
 import { format, startOfDay, endOfDay } from "date-fns";
-import { enUS } from "date-fns/locale";
+import { enUS, es } from "date-fns/locale";
 import {
   Clock, LogIn, LogOut, MapPin, Timer, CalendarDays,
   FileText, Camera, ScanLine, CheckCircle2, ChevronRight,
