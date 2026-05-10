@@ -322,7 +322,7 @@ function BackBar({ onBack }: { onBack: () => void }) {
       onClick={onBack}
       className="flex items-center gap-1.5 text-[12px] font-semibold text-muted-foreground hover:text-foreground mb-3 -ml-1 px-1 py-1 rounded-lg active:scale-95 transition-all"
     >
-      <ArrowLeft className="h-3.5 w-3.5" /> Back
+      <ArrowLeft className="h-3.5 w-3.5" /> Volver
     </button>
   );
 }
