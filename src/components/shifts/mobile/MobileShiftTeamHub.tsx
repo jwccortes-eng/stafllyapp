@@ -27,7 +27,7 @@ import {
   X, Users, ShieldCheck, Clock, ExternalLink, Inbox,
   CheckCircle2, AlertCircle, UserMinus, UserX, Phone, MessageSquare,
   Copy, AlertTriangle, Sparkles, Star, MapPin, Briefcase,
-  MoreVertical, Check, XCircle,
+  MoreVertical, Check, XCircle, UserCog,
 } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -45,6 +45,55 @@ import { normalizePhone, buildWhatsAppTargets } from "@/lib/phone";
 import { useToast } from "@/hooks/use-toast";
 import { allowedNextStatusesFor, type AssignmentNextStatus, type ClaimDecision } from "@/lib/shifts/team-actions";
 import { MobileTeamActionDialog } from "@/components/shifts/mobile/MobileTeamActionDialog";
+import { isOnboardingComplete } from "@/lib/onboarding";
+
+/* ─── Worker readiness (read-only, mirrors backend EMPLOYEE_NOT_READY guard) ─── */
+
+type ReadinessState =
+  | "ready" | "incomplete_profile" | "pending_documents"
+  | "onboarding_pending" | "missing_phone" | "inactive" | "unknown";
+
+interface Readiness {
+  state: ReadinessState;
+  canBeApproved: boolean;
+  label: string;
+  helper: string;
+}
+
+function computeReadiness(e: Employee | undefined): Readiness {
+  if (!e) return { state: "unknown", canBeApproved: false, label: "Needs review", helper: "Worker record not loaded." };
+  if (e.is_active === false) return { state: "inactive", canBeApproved: false, label: "Inactive", helper: "Reactivate the worker before approving." };
+  if (e.profile_status === "incomplete") return { state: "incomplete_profile", canBeApproved: false, label: "Profile incomplete", helper: "Complete worker profile before approving this claim." };
+  if (e.profile_status === "pending_documents") return { state: "pending_documents", canBeApproved: false, label: "Missing documents", helper: "Worker needs to upload required documents." };
+  if (!normalizePhone(e.phone_number)) return { state: "missing_phone", canBeApproved: false, label: "Missing phone", helper: "Add a phone number before approving." };
+  if (e.onboarding_status && !isOnboardingComplete(e.onboarding_status) && e.profile_status !== "active") {
+    return { state: "onboarding_pending", canBeApproved: false, label: "Onboarding pending", helper: "Worker hasn't finished onboarding yet." };
+  }
+  return { state: "ready", canBeApproved: true, label: "Ready", helper: "Worker is ready for shifts." };
+}
+
+const READINESS_TONE: Record<ReadinessState, "good" | "info" | "warn" | "bad" | "muted"> = {
+  ready: "good", incomplete_profile: "warn", pending_documents: "warn",
+  onboarding_pending: "warn", missing_phone: "warn", inactive: "bad", unknown: "muted",
+};
+
+function ReadinessChip({ readiness, className }: { readiness: Readiness; className?: string }) {
+  if (readiness.state === "ready") return null;
+  return (
+    <Badge
+      variant="outline"
+      className={cn("h-[18px] px-1.5 text-[10px] font-semibold whitespace-nowrap inline-flex items-center", toneToClass(READINESS_TONE[readiness.state]), className)}
+      title={readiness.helper}
+    >
+      <AlertCircle className="h-2.5 w-2.5 mr-0.5" />
+      {readiness.label}
+    </Badge>
+  );
+}
+
+function buildReminderText(workerName: string): string {
+  return `Hi ${workerName}, please finish your worker profile in the Stafly portal so we can confirm your shifts. Thanks!`;
+}
 
 const HUB_COPY = {
   intro: "Read-only team view. Staffing changes still happen on desktop.",
@@ -193,7 +242,18 @@ function MobileShiftTeamHubImpl({
     setActionMode({ kind: "assignment_state", assignmentId, nextStatus, workerName });
     setActionDialogOpen(true);
   };
-  const openClaimAction = (requestId: string, decision: ClaimDecision, workerName: string) => {
+  const openClaimAction = (requestId: string, decision: ClaimDecision, workerName: string, employeeId?: string) => {
+    if (decision === "approved" && employeeId) {
+      const r = computeReadiness(empById.get(employeeId));
+      if (!r.canBeApproved) {
+        toast({
+          title: "Worker not ready to be approved",
+          description: r.helper,
+          variant: "destructive",
+        });
+        return;
+      }
+    }
     setActionMode({ kind: "claim_decision", requestId, decision, workerName });
     setActionDialogOpen(true);
   };
@@ -469,6 +529,14 @@ function MobileShiftTeamHubImpl({
                 onOpenChange(false);
                 navigate("/app/shifts/requests");
               }}
+              onViewWorker={(employeeId) => {
+                onOpenChange(false);
+                navigate(`/app/workers/${employeeId}`);
+              }}
+              onCopyReminder={(workerName) => {
+                navigator.clipboard?.writeText(buildReminderText(workerName)).catch(() => {});
+                toast({ title: "Reminder copied", description: "Paste into WhatsApp or SMS." });
+              }}
             />
           )}
 
@@ -637,6 +705,7 @@ function WorkerRow({
   const wa = hasPhone ? buildWhatsAppTargets(phoneDigits, "") : null;
   const allowedActions = allowedNextStatusesFor(assignment.status);
   const showMenu = canManage && allowedActions.length > 0;
+  const readiness = computeReadiness(employee);
 
   const subBits: string[] = [];
   if (assignment.assignment_role) subBits.push(assignment.assignment_role);
@@ -669,6 +738,9 @@ function WorkerRow({
           <p className="text-[11px] text-muted-foreground truncate">
             {subBits.length ? subBits.join(" · ") : "—"}
           </p>
+          {readiness.state !== "ready" && readiness.state !== "missing_phone" && (
+            <div className="mt-0.5"><ReadinessChip readiness={readiness} /></div>
+          )}
           {!hasPhone && (
             <p className="text-[10px] text-amber-700 dark:text-amber-400 mt-0.5">{HUB_COPY.noPhone}</p>
           )}
@@ -753,14 +825,17 @@ function ContactBtn({
 
 function ClaimsTab({
   loading, error, claims, empById, canManage, onClaimAction, onOpenDesktop,
+  onViewWorker, onCopyReminder,
 }: {
   loading: boolean;
   error: string | null;
   claims: ShiftRequestRow[];
   empById: Map<string, Employee>;
   canManage: boolean;
-  onClaimAction: (requestId: string, decision: ClaimDecision, workerName: string) => void;
+  onClaimAction: (requestId: string, decision: ClaimDecision, workerName: string, employeeId?: string) => void;
   onOpenDesktop: () => void;
+  onViewWorker: (employeeId: string) => void;
+  onCopyReminder: (workerName: string) => void;
 }) {
   return (
     <section aria-label="Worker claims and requests">
@@ -792,6 +867,8 @@ function ClaimsTab({
               c.status === "approved" ? "good" :
               c.status === "rejected" ? "bad" : "warn";
             const isPending = c.status === "pending";
+            const readiness = computeReadiness(e);
+            const blocked = isPending && !readiness.canBeApproved;
             return (
               <li key={c.id} className="rounded-2xl border border-border/50 bg-card p-3">
                 <div className="flex items-start gap-2.5">
@@ -813,6 +890,11 @@ function ClaimsTab({
                         {c.status}
                       </Badge>
                     </div>
+                    {readiness.state !== "ready" && (
+                      <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+                        <ReadinessChip readiness={readiness} />
+                      </div>
+                    )}
                     {c.message && (
                       <p className="mt-1 text-[12px] text-muted-foreground line-clamp-3">
                         "{c.message}"
@@ -823,24 +905,58 @@ function ClaimsTab({
                       {c.reviewed_at ? ` · reviewed ${new Date(c.reviewed_at).toLocaleString()}` : ""}
                     </p>
 
+                    {blocked && (
+                      <p className="mt-1.5 text-[11px] text-amber-700 dark:text-amber-400 leading-snug">
+                        {readiness.helper}
+                      </p>
+                    )}
+
                     {isPending && canManage && (
-                      <div className="mt-2 flex items-center gap-1.5">
+                      <div className="mt-2 flex items-center gap-1.5 flex-wrap">
                         <button
                           type="button"
-                          onClick={() => onClaimAction(c.id, "approved", workerName)}
-                          className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-emerald-600 text-white text-[11px] font-semibold hover:bg-emerald-700 transition-colors"
+                          disabled={blocked}
+                          onClick={() => onClaimAction(c.id, "approved", workerName, c.employee_id)}
+                          aria-disabled={blocked}
+                          title={blocked ? readiness.helper : undefined}
+                          className={cn(
+                            "inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-semibold transition-colors",
+                            blocked
+                              ? "bg-muted text-muted-foreground cursor-not-allowed"
+                              : "bg-emerald-600 text-white hover:bg-emerald-700",
+                          )}
                         >
                           <Check className="h-3 w-3" />
                           Approve
                         </button>
                         <button
                           type="button"
-                          onClick={() => onClaimAction(c.id, "rejected", workerName)}
+                          onClick={() => onClaimAction(c.id, "rejected", workerName, c.employee_id)}
                           className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-muted hover:bg-muted/80 text-foreground text-[11px] font-semibold transition-colors"
                         >
                           <XCircle className="h-3 w-3" />
                           Reject
                         </button>
+                        {blocked && e && (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => onViewWorker(e.id)}
+                              className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-muted/60 hover:bg-muted text-foreground text-[11px] font-semibold transition-colors"
+                            >
+                              <UserCog className="h-3 w-3" />
+                              View profile
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => onCopyReminder(workerName)}
+                              className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-muted/60 hover:bg-muted text-foreground text-[11px] font-semibold transition-colors"
+                            >
+                              <Copy className="h-3 w-3" />
+                              Copy reminder
+                            </button>
+                          </>
+                        )}
                       </div>
                     )}
                   </div>

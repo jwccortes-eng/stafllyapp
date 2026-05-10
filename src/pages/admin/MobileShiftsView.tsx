@@ -135,7 +135,7 @@ export default function MobileShiftsView() {
           supabase.from("clients").select("id,name").eq("company_id", selectedCompanyId!).order("name"),
           supabase.from("locations").select("id,name").eq("company_id", selectedCompanyId!).order("name"),
           supabase.from("employees")
-            .select("id,first_name,last_name,avatar_url,phone_number,employer_identification,is_active")
+            .select("id,first_name,last_name,avatar_url,phone_number,email,employer_identification,is_active,user_id,profile_status,onboarding_status")
             .eq("company_id", selectedCompanyId!)
             .eq("is_active", true)
             .order("first_name"),

@@ -94,6 +94,7 @@ export function MobileTeamActionDialog({
         /forbidden/i.test(msg) ? "You don't have permission for this action." :
         /invalid_transition/i.test(msg) ? "That status change isn't allowed." :
         /request_not_pending/i.test(msg) ? "This claim was already reviewed." :
+        /EMPLOYEE_NOT_READY/i.test(msg) ? "This worker needs to complete their profile before approval." :
         msg;
       toast({ title: "Action failed", description: friendly, variant: "destructive" });
     } finally {
