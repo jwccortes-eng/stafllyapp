@@ -412,8 +412,14 @@ export function MobileShiftOperationsSheet({
               </h2>
               <div className="flex items-center gap-1 text-sm text-muted-foreground mt-0.5 truncate">
                 <MapPin className="h-3.5 w-3.5 shrink-0" />
-                <span className="truncate">{locationName || "No location"}</span>
+                <span className="truncate">{locationName || (meetingPoint ? "Job site missing" : "No location")}</span>
               </div>
+              {!locationName && meetingPoint && (
+                <div className="flex items-center gap-1 text-[11px] text-amber-700 dark:text-amber-400 mt-0.5 truncate">
+                  <MapPin className="h-3 w-3 shrink-0 opacity-70" />
+                  <span className="truncate">Meeting point: {meetingPoint}</span>
+                </div>
+              )}
             </div>
             <Button
               variant="ghost"
