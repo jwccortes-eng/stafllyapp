@@ -323,3 +323,55 @@ The Manage Team module is the primary operator interface for per-shift staffing.
   - reviewed → `d7af5c4f-46dd-4429-a402-987bb3ed15f6`
 - **Confirmed untouched:** payroll, `time_entries`, `attendance_status`, `shift_assignments`, `scheduled_shifts`, schema.
 
+
+---
+
+## Payroll Review Queue v1
+
+### 1. Purpose
+- Read-only triage surface for María before payroll review.
+- Helps surface issues before approval/reconciliation.
+- Does not calculate, approve, post, or pay payroll.
+
+### 2. Route
+- `/app/payroll-review-queue` (admin/developer only, tenant-scoped).
+
+### 3. Source of truth (unchanged)
+- Connecteam imports / `period_base_pay` / `historical_payroll_entries` remain payroll authority.
+- Stafly native TimeClock is **not** a payroll source.
+- Scheduled hours are **never** payable hours — used only as discrepancy signals.
+
+### 4. Default period selection
+- Current period containing today, else
+- Most recent period with `period_base_pay` rows, else
+- Most recent past period.
+- Never auto-selects a future high-sequence period (e.g., #165).
+
+### 5. Buckets
+1. Ready to review
+2. Needs employee match
+3. Time mismatch
+4. Assignment without clock/pay
+5. Clock/pay without assignment
+6. Day-pay needs validation
+7. Driver/transport payment
+8. Manual adjustment pending
+9. Worker dispute
+10. Missing docs/profile
+11. Closeout conflict
+12. High-risk / over-threshold
+
+### 6. Safety
+- No DB writes, no schema changes, no payroll calculations.
+- No period locking/posting, no TimeClock source switch.
+- No changes to `time_entries`, `movements`, `pay_periods`, `payroll_adjustments`, `shift_assignments`, `scheduled_shifts`, `shift_closeout_reports`, or `shift_rides`.
+
+### 7. Phase 22 QA
+- Tenant: Quality Staff.
+- #131 selected as default current period.
+- #124 / #128 / #129 contain real `period_base_pay` data and render correctly.
+- #165 (future) not auto-selected.
+- Phase 22.1 fixes applied:
+  - `time_entries` period window widened ±1 day (review tolerance, not payroll math).
+  - "Clock/pay without assignment" deduped per `employee_id` with combined signal.
+  - "Needs employee match" subtitle clarifies it reads `historical_payroll_entries` and may be empty when periods were committed directly into `period_base_pay`.
