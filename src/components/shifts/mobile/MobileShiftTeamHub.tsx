@@ -1311,9 +1311,22 @@ function RecommendedTab({
           if (overlaps) conflictEmpIds.add(row.employee_id);
         }
       }
+      if (prefRes.status === "fulfilled" && !prefRes.value.error) {
+        for (const row of (prefRes.value.data ?? []) as any[]) {
+          const list = preferencesByEmp.get(row.employee_id) ?? [];
+          list.push({
+            id: row.id,
+            preference_type: row.preference_type as WorkerPreferenceType,
+            client_id: row.client_id,
+            location_id: row.location_id,
+          });
+          preferencesByEmp.set(row.employee_id, list);
+        }
+      }
 
       setSignals({
-        overrideByEmp, configByEmp, clientHistoryByEmp, locationHistoryByEmp, reviewByEmp, conflictEmpIds,
+        overrideByEmp, configByEmp, clientHistoryByEmp, locationHistoryByEmp,
+        reviewByEmp, conflictEmpIds, preferencesByEmp,
       });
       setSignalsLoading(false);
     })().catch(() => {
