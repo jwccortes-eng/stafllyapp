@@ -58,6 +58,7 @@ import { useWorkerProfile } from "@/hooks/useWorkerProfile";
 import EmployeeAdvancesTab from "@/components/advances/EmployeeAdvancesTab";
 import { EmployeeAddressSection } from "@/components/employee/EmployeeAddressSection";
 import { PortalOnboardingPanel } from "@/components/employee/PortalOnboardingPanel";
+import { WorkerPreferenceList } from "@/components/preferences/WorkerPreferenceList";
 import { useToast } from "@/hooks/use-toast";
 
 const EmployeeCompensationTab = lazy(() => import("@/components/compensation/EmployeeCompensationTab"));
