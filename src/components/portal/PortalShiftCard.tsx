@@ -161,21 +161,21 @@ export function PortalShiftCard({
           >
             <Button
               size="sm"
-              className="flex-1 h-9 text-[12px] font-semibold rounded-lg gap-1.5"
+              className="flex-1 h-10 text-[13px] font-semibold rounded-lg gap-1.5"
               onClick={onAccept}
               disabled={responding}
             >
-              <CheckCircle2 className="h-3.5 w-3.5" />
-              {shift.status === "needs_reacceptance" ? "Accept changes" : "Confirm"}
+              <CheckCircle2 className="h-4 w-4" />
+              {shift.status === "needs_reacceptance" ? "Aceptar cambios" : "Confirmar"}
             </Button>
             <Button
               variant="ghost"
               size="sm"
-              className="h-9 px-3 text-[12px] text-muted-foreground hover:text-destructive rounded-lg"
+              className="h-10 px-3 text-[13px] text-muted-foreground hover:text-destructive rounded-lg"
               onClick={onReject}
               disabled={responding}
             >
-              Decline
+              Rechazar
             </Button>
           </div>
         )}
@@ -184,11 +184,11 @@ export function PortalShiftCard({
           <div className="px-3.5 pb-2.5" onClick={(e) => e.stopPropagation()}>
             <Button
               size="sm"
-              className="w-full h-9 text-[12px] font-semibold rounded-lg gap-1.5 shadow-sm shadow-primary/15"
+              className="w-full h-10 text-[13px] font-semibold rounded-lg gap-1.5 shadow-sm shadow-primary/15"
               onClick={onClockIn}
             >
-              <LogIn className="h-3.5 w-3.5" />
-              Clock In{countdown && ` · starts ${countdown}`}
+              <LogIn className="h-4 w-4" />
+              Marcar entrada{countdown && ` · empieza ${countdown}`}
             </Button>
           </div>
         )}
