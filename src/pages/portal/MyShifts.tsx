@@ -331,11 +331,13 @@ export default function MyShifts() {
   const upcomingCount = assignments.filter(a => !isBefore(parseISO(a.shift.date), today) && !isToday(parseISO(a.shift.date))).length;
   const pastCount = assignments.filter(a => isBefore(parseISO(a.shift.date), today)).length;
 
-  const tabs: { key: TabFilter; label: string; count: number }[] = [
-    ...(claimable.length > 0 ? [{ key: "available" as TabFilter, label: "Available", count: claimable.length }] : []),
-    { key: "today", label: "Today", count: todayCount },
-    { key: "upcoming", label: "Upcoming", count: upcomingCount },
-    { key: "history", label: "History", count: pastCount },
+  // History count is intentionally not shown as a badge — it grows unbounded
+  // and creates noise (e.g. "99+"). Today/Upcoming/Available keep their counts.
+  const tabs: { key: TabFilter; label: string; count: number; showCount: boolean }[] = [
+    ...(claimable.length > 0 ? [{ key: "available" as TabFilter, label: "Disponibles", count: claimable.length, showCount: true }] : []),
+    { key: "today", label: "Hoy", count: todayCount, showCount: true },
+    { key: "upcoming", label: "Próximos", count: upcomingCount, showCount: true },
+    { key: "history", label: "Historial", count: pastCount, showCount: false },
   ];
 
   // Sync tab to URL for deep-link / back navigation
