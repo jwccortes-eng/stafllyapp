@@ -6,9 +6,9 @@ import { useEmployeeReadiness } from "@/hooks/useEmployeeReadiness";
 import { Link } from "react-router-dom";
 import { usePortalModules } from "@/hooks/usePortalModules";
 import {
-  Wallet, Clock, CalendarDays, ArrowRight, Timer,
-  Bell, ChevronRight, TrendingUp,
-  User, FileText, MessageCircle, LifeBuoy,
+  Wallet, Clock, CalendarDays, ArrowRight,
+  ChevronRight,
+  User, FileText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, parseISO, isToday, isTomorrow, startOfWeek, endOfWeek } from "date-fns";
@@ -185,9 +185,9 @@ export default function EmployeeDashboard() {
 
   const greeting = (() => {
     const h = new Date().getHours();
-    if (h < 12) return "Good morning";
-    if (h < 18) return "Good afternoon";
-    return "Good evening";
+    if (h < 12) return "Buenos días";
+    if (h < 19) return "Buenas tardes";
+    return "Buenas noches";
   })();
 
   const firstName = empName.split(" ")[0] || "";
@@ -264,36 +264,27 @@ export default function EmployeeDashboard() {
     ? "incomplete"
     : "ready";
 
-  // ── Quick actions — only show modules the worker has access to ──
+  // ── Quick actions — sólo lo que NO está en bottom nav (Inicio/Turnos/Reloj/Más).
+  // Perfil + Documentos + Pagos. Nada más.
   const quickActions: QuickAction[] = [
-    { id: "profile", label: "My profile", href: "/portal/profile", icon: User, accent: "muted" },
+    { id: "profile", label: "Perfil", href: "/portal/profile", icon: User, accent: "muted" },
+    isModuleEnabled("my_documents") || isModuleEnabled("my_w9")
+      ? { id: "documents", label: "Documentos", href: "/portal/documents", icon: FileText, accent: "warning" as const }
+      : null,
     isModuleEnabled("my_payments")
       ? {
           id: "pay-reports",
-          label: "Pay reports",
+          label: "Mis pagos",
           href: "/portal/pay-reports",
           icon: Wallet,
           accent: "earning" as const,
-          badge: "NEW",
         }
-      : null,
-    isModuleEnabled("my_documents") || isModuleEnabled("my_w9")
-      ? { id: "documents", label: "Documents", href: "/portal/documents", icon: FileText, accent: "warning" as const }
-      : null,
-    isModuleEnabled("my_shifts")
-      ? { id: "shifts", label: "My shifts", href: "/portal/shifts", icon: CalendarDays, accent: "primary" as const }
-      : null,
-    isModuleEnabled("my_clock")
-      ? { id: "clock", label: "Clock", href: "/portal/clock", icon: Clock, accent: "earning" as const }
-      : null,
-    isModuleEnabled("my_chat")
-      ? { id: "chat", label: "Support", href: "/portal/chat", icon: MessageCircle, accent: "muted" as const }
       : null,
   ].filter(Boolean) as QuickAction[];
 
   return (
-    <div className="space-y-4 animate-fade-in pb-28">
-      {/* ── Worker Hero — premium emotional intro ── */}
+    <div className="space-y-3 animate-fade-in pb-28">
+      {/* ── Worker Hero — saludo compacto ── */}
       <WorkerHero
         firstName={firstName}
         lastName={lastName}
@@ -303,102 +294,26 @@ export default function EmployeeDashboard() {
         status={heroStatus}
       />
 
-      {/* ── Next Best Action — single dynamic card ── */}
+      {/* ── Acción principal ── */}
       <NextBestActionCard nba={nba} />
 
-      {/* ── Today / Future shift detail (only if NBA isn't already showing it) ── */}
+      {/* ── Detalle del turno (si NBA no lo cubre ya) ── */}
       {(showTodayBlock || showFutureBlock) && nbaShift && (
         <TodayBlock shift={nbaShift} />
       )}
 
-      {/* ── Profile readiness strip (auto-hides if NBA already surfaces it) ── */}
+      {/* ── Estado del perfil — auto-oculto si NBA ya lo cubre ── */}
       <ProfileReadinessStrip nbaKind={nba.kind} />
 
-      {/* ── Your week — mini stats grid ── */}
-      <section aria-label="Your week" className="space-y-2">
-        <div className="flex items-center justify-between px-1">
-          <h2 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground/60">
-            Your week
-          </h2>
-        </div>
-        <div className="grid grid-cols-3 gap-2">
-          <div className="rounded-2xl bg-card border border-border/40 p-3 shadow-sm">
-            <div className="flex items-center gap-1.5 mb-1.5">
-              <Timer className="h-3.5 w-3.5 text-muted-foreground/55" />
-            </div>
-            <p className="text-lg font-bold font-heading tabular-nums leading-none text-foreground">
-              {weeklyHours}
-            </p>
-            <p className="text-[9.5px] font-semibold text-muted-foreground/65 uppercase tracking-wider mt-1.5">
-              This week
-            </p>
-          </div>
-
-          {isModuleEnabled("my_shifts") ? (
-            <Link to="/portal/shifts" className="block">
-              <div className="rounded-2xl bg-card border border-border/40 p-3 shadow-sm h-full active:scale-[0.98] transition-transform">
-                <div className="flex items-center gap-1.5 mb-1.5">
-                  <CalendarDays className="h-3.5 w-3.5 text-primary/70" />
-                </div>
-                <p className="text-lg font-bold font-heading tabular-nums leading-none text-foreground">
-                  {(upcomingShifts.length + (nextShift ? 1 : 0))}
-                </p>
-                <p className="text-[9.5px] font-semibold text-muted-foreground/65 uppercase tracking-wider mt-1.5">
-                  Shifts
-                </p>
-              </div>
-            </Link>
-          ) : (
-            <div className="rounded-2xl bg-card border border-border/40 p-3 shadow-sm">
-              <div className="flex items-center gap-1.5 mb-1.5">
-                <CalendarDays className="h-3.5 w-3.5 text-muted-foreground/35" />
-              </div>
-              <p className="text-lg font-bold font-heading tabular-nums leading-none text-muted-foreground/40">—</p>
-              <p className="text-[9.5px] font-semibold text-muted-foreground/65 uppercase tracking-wider mt-1.5">
-                Shifts
-              </p>
-            </div>
-          )}
-
-          {isModuleEnabled("my_payments") ? (
-            <Link to="/portal/pay-reports" className="block">
-              <div className="rounded-2xl bg-card border border-border/40 p-3 shadow-sm h-full active:scale-[0.98] transition-transform">
-                <div className="flex items-center gap-1.5 mb-1.5">
-                  <Wallet className="h-3.5 w-3.5 text-primary" />
-                </div>
-                <p className="text-sm font-bold font-heading leading-none text-foreground">
-                  Pay Reports
-                </p>
-                <p className="text-[9.5px] font-semibold text-muted-foreground/65 uppercase tracking-wider mt-1.5">
-                  Finalized
-                </p>
-              </div>
-            </Link>
-          ) : (
-            <div className="rounded-2xl bg-card border border-border/40 p-3 shadow-sm">
-              <div className="flex items-center gap-1.5 mb-1.5">
-                <Wallet className="h-3.5 w-3.5 text-muted-foreground/35" />
-              </div>
-              <p className="text-lg font-bold font-heading tabular-nums leading-none text-muted-foreground/40">—</p>
-              <p className="text-[9.5px] font-semibold text-muted-foreground/65 uppercase tracking-wider mt-1.5">
-                Pay
-              </p>
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* ── Quick actions — premium 2-col grid ── */}
-      <QuickActions actions={quickActions} />
-
-
-      {/* ── Upcoming shifts (skip first; it's already in NBA / TodayBlock) ── */}
+      {/* ── Próximos turnos ── */}
       {upcomingShifts.length > 0 && (
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <h2 className="text-xs font-bold text-foreground">Upcoming</h2>
+        <section className="space-y-2">
+          <div className="flex items-center justify-between px-1">
+            <h2 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground/60">
+              Próximos turnos
+            </h2>
             <Link to="/portal/shifts" className="text-[11px] text-primary font-semibold flex items-center gap-1">
-              View all <ArrowRight className="h-3 w-3" />
+              Ver todos <ArrowRight className="h-3 w-3" />
             </Link>
           </div>
           <div className="space-y-1.5">
@@ -408,84 +323,61 @@ export default function EmployeeDashboard() {
               return (
                 <Link key={s.id} to="/portal/shifts" className="block">
                   <div className={cn(
-                    "flex items-center gap-3 px-3 py-2.5 rounded-xl bg-card border shadow-sm active:scale-[0.98] transition-all",
-                    sIsToday ? "border-primary/15" : "border-border/30"
+                    "flex items-center gap-3 px-3 py-2.5 rounded-2xl bg-card border shadow-sm active:scale-[0.98] transition-all",
+                    sIsToday ? "border-primary/20" : "border-border/50"
                   )}>
-                    <div className="text-center shrink-0 w-9">
+                    <div className="text-center shrink-0 w-10">
                       {sIsToday ? (
-                        <span className="text-[8px] px-1.5 py-0.5 rounded-full font-bold bg-primary/12 text-primary tracking-wide">Today</span>
+                        <span className="text-[8.5px] px-1.5 py-0.5 rounded-full font-bold bg-primary/12 text-primary tracking-wide">Hoy</span>
                       ) : sIsTomorrow ? (
-                        <span className="text-[8px] px-1.5 py-0.5 rounded-full font-bold bg-accent/40 text-accent-foreground tracking-wide">Tmw</span>
+                        <span className="text-[8.5px] px-1.5 py-0.5 rounded-full font-bold bg-accent/40 text-accent-foreground tracking-wide">Mañ</span>
                       ) : (
                         <>
-                          <p className="text-[7px] font-bold uppercase text-muted-foreground/40 leading-none">
+                          <p className="text-[8px] font-bold uppercase text-muted-foreground/50 leading-none">
                             {format(parseISO(s.date), "MMM")}
                           </p>
-                          <p className="text-sm font-bold text-foreground leading-tight tabular-nums">
+                          <p className="text-base font-bold text-foreground leading-tight tabular-nums mt-0.5">
                             {format(parseISO(s.date), "d")}
                           </p>
                         </>
                       )}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-[12px] font-semibold text-foreground truncate">
+                      <p className="text-[12.5px] font-semibold text-foreground truncate">
                         {formatDisplayName(s.title)}
                       </p>
-                      <div className="flex items-center gap-2 text-[10px] text-muted-foreground/60 mt-0.5">
-                        <span className="flex items-center gap-0.5 font-medium tabular-nums">
+                      <div className="flex items-center gap-2 text-[10.5px] text-muted-foreground/70 mt-0.5">
+                        <span className="flex items-center gap-1 font-medium tabular-nums">
                           <Clock className="h-2.5 w-2.5" />
                           {s.start_time?.slice(0, 5)} – {s.end_time?.slice(0, 5)}
                         </span>
                         {s.location_name && <span className="truncate">{formatDisplayName(s.location_name)}</span>}
                       </div>
                     </div>
-                    <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/15 shrink-0" />
+                    <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/25 shrink-0" />
                   </div>
                 </Link>
               );
             })}
           </div>
-        </div>
+        </section>
       )}
 
-      {/* ── Empty upcoming state — only when no shifts at all ── */}
+      {/* ── Empty state — solo si no hay nada ── */}
       {!nextShift && upcomingShifts.length === 0 && (
-        <div className="rounded-2xl border border-dashed border-border/50 bg-card/50 px-4 py-5 text-center">
+        <div className="rounded-2xl border border-dashed border-border/50 bg-card/50 px-4 py-6 text-center">
           <div className="h-10 w-10 mx-auto rounded-xl bg-muted/60 flex items-center justify-center mb-2">
             <CalendarDays className="h-5 w-5 text-muted-foreground/60" />
           </div>
-          <p className="text-[13px] font-semibold text-foreground">No upcoming shift yet</p>
+          <p className="text-[13px] font-semibold text-foreground">Sin turnos por ahora</p>
           <p className="text-[11.5px] text-muted-foreground/75 mt-1 leading-relaxed max-w-[260px] mx-auto">
-            We'll notify you when something is assigned.
+            Te avisaremos cuando algo se asigne.
           </p>
         </div>
       )}
 
-      {/* ── Notifications badge ── */}
-      {unreadAlerts > 0 && (
-        <div className="rounded-xl bg-primary/[0.04] border border-primary/10 px-3.5 py-2.5 flex items-center gap-3">
-          <Bell className="h-4 w-4 text-primary shrink-0" />
-          <p className="text-[12px] font-semibold text-foreground flex-1">
-            {unreadAlerts} unread notification{unreadAlerts > 1 ? "s" : ""}
-          </p>
-        </div>
-      )}
-
-      {/* ── Need help? — calm support entry, only if chat module enabled ── */}
-      {isModuleEnabled("my_chat") && (
-        <Link to="/portal/chat" className="block">
-          <div className="rounded-2xl border border-border/40 bg-card px-4 py-3 flex items-center gap-3 active:scale-[0.99] transition-all shadow-sm">
-            <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-              <LifeBuoy className="h-4 w-4 text-primary" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-[13px] font-semibold text-foreground leading-tight">Need help?</p>
-              <p className="text-[11px] text-muted-foreground/75 mt-0.5">Reach out to your supervisor.</p>
-            </div>
-            <ChevronRight className="h-4 w-4 text-muted-foreground/30 shrink-0" />
-          </div>
-        </Link>
-      )}
+      {/* ── Más (Perfil / Documentos / Pagos) ── */}
+      <QuickActions actions={quickActions} />
 
       {/* ── Pending Reviews ── */}
       <PendingReviewPrompt />

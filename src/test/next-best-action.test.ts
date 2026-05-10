@@ -52,7 +52,7 @@ describe("selectNextBestAction", () => {
     }));
     expect(r.kind).toBe("clock_in_now");
     expect(r.ctaHref).toContain("/portal/clock?shiftId=");
-    expect(r.subtitle).toMatch(/Starts in/);
+    expect(r.subtitle).toMatch(/Empieza en/);
   });
 
   it("returns confirm_shift when there are pending assignments", () => {
@@ -101,7 +101,7 @@ describe("selectNextBestAction", () => {
   it("returns claim_available when claimables exist and nothing else urgent", () => {
     const r = selectNextBestAction(ctx({ claimableCount: 3 }));
     expect(r.kind).toBe("claim_available");
-    expect(r.title).toMatch(/3 shifts available/);
+    expect(r.title).toMatch(/3 turnos disponibles/);
   });
 
   it("returns all_set when nothing is pending", () => {

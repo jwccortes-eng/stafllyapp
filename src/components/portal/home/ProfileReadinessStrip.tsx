@@ -9,7 +9,6 @@ import { Link } from "react-router-dom";
 import { CheckCircle2, ArrowRight, Sparkles } from "lucide-react";
 import { useEmployeeReadiness } from "@/hooks/useEmployeeReadiness";
 import { useEffectiveEmployee } from "@/hooks/useEffectiveEmployee";
-import { PROFILE_STATUS_LABELS } from "@/lib/onboarding/profile-status";
 import type { NbaKind } from "@/lib/portal/next-best-action";
 
 interface Props {
@@ -28,7 +27,7 @@ export function ProfileReadinessStrip({ nbaKind }: Props) {
 
   if (isReady) {
     return (
-      <div className="rounded-xl border border-earning/20 bg-earning/[0.05] px-3.5 py-2 flex items-center gap-3">
+      <div className="rounded-2xl border border-earning/20 bg-earning/[0.05] px-3.5 py-2 flex items-center gap-3">
         <div className="h-7 w-7 rounded-lg bg-earning/12 flex items-center justify-center shrink-0">
           {r.status === "active"
             ? <Sparkles className="h-3.5 w-3.5 text-earning" />
@@ -36,10 +35,10 @@ export function ProfileReadinessStrip({ nbaKind }: Props) {
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-[12px] font-semibold text-foreground leading-tight">
-            Profile {PROFILE_STATUS_LABELS[r.status].toLowerCase()}
+            Perfil listo
           </p>
-          <p className="text-[10px] text-muted-foreground/70 leading-tight mt-0.5">
-            {r.progressPct}% complete · ready for shifts
+          <p className="text-[10.5px] text-muted-foreground/70 leading-tight mt-0.5">
+            {r.progressPct}% completo · listo para turnos
           </p>
         </div>
       </div>
@@ -50,18 +49,18 @@ export function ProfileReadinessStrip({ nbaKind }: Props) {
   // Show a discreet reminder with the progress bar.
   const onlyDocsMissing = r.missingPersonal.length === 0 && r.missingDocuments.length > 0;
   const ctaHref = onlyDocsMissing ? "/portal/documents" : "/portal/profile/complete";
+  const left = r.totalRequirements - r.completedRequirements;
 
   return (
     <Link to={ctaHref} className="block">
-      <div className="rounded-xl border border-border/40 bg-card px-3.5 py-2.5 active:scale-[0.99] transition-all shadow-sm">
+      <div className="rounded-2xl border border-border/50 bg-card px-3.5 py-2.5 active:scale-[0.99] transition-all shadow-sm">
         <div className="flex items-center gap-3">
           <div className="min-w-0 flex-1">
             <p className="text-[12px] font-semibold text-foreground leading-tight">
-              {onlyDocsMissing ? "Documents pending" : "Profile in progress"}
+              {onlyDocsMissing ? "Documentos pendientes" : "Perfil en progreso"}
             </p>
-            <p className="text-[10px] text-muted-foreground/70 mt-0.5">
-              {r.progressPct}% complete · {r.totalRequirements - r.completedRequirements} item
-              {r.totalRequirements - r.completedRequirements === 1 ? "" : "s"} left
+            <p className="text-[10.5px] text-muted-foreground/70 mt-0.5">
+              {r.progressPct}% completo · {left} {left === 1 ? "punto" : "puntos"} restantes
             </p>
           </div>
           <ArrowRight className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0" />

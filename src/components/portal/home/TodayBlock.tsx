@@ -8,6 +8,7 @@
 import { Link } from "react-router-dom";
 import { Clock, MapPin, Briefcase, Navigation, ChevronRight } from "lucide-react";
 import { format, parseISO, isToday, isTomorrow } from "date-fns";
+import { es } from "date-fns/locale";
 import type { NbaShift } from "@/lib/portal/next-best-action";
 import { formatDisplayName } from "@/lib/format-helpers";
 import { cn } from "@/lib/utils";
@@ -24,23 +25,23 @@ export function TodayBlock({ shift }: Props) {
   return (
     <Link
       to="/portal/shifts"
-      className="block rounded-2xl bg-card border border-border/40 px-4 py-3 active:scale-[0.99] transition-all shadow-sm"
+      className="block rounded-2xl bg-card border border-border/50 px-4 py-3 active:scale-[0.99] transition-all shadow-sm"
     >
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
           {today && (
             <span className="text-[9px] px-2 py-0.5 rounded-full font-bold bg-primary/12 text-primary tracking-wide">
-              Today
+              Hoy
             </span>
           )}
           {tomorrow && (
             <span className="text-[9px] px-2 py-0.5 rounded-full font-bold bg-accent/40 text-accent-foreground tracking-wide">
-              Tomorrow
+              Mañana
             </span>
           )}
           {!today && !tomorrow && (
-            <span className="text-[11px] font-semibold text-muted-foreground capitalize">
-              {format(d, "EEE d MMM")}
+            <span className="text-[11px] font-semibold text-muted-foreground first-letter:uppercase">
+              {format(d, "EEE d MMM", { locale: es })}
             </span>
           )}
           <span className="text-[13px] font-bold text-foreground tabular-nums">
