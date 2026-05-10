@@ -144,7 +144,7 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, responseStatu
     ? "Hoy"
     : isTomorrowShift
     ? "Mañana"
-    : format(parseISO(shift.date), "EEE d MMM", { locale: enUS });
+    : format(parseISO(shift.date), "EEE d MMM", { locale: es });
 
   const copyAddress = (text: string, label = "Dirección") => {
     navigator.clipboard.writeText(text);
