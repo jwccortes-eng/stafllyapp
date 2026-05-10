@@ -696,7 +696,7 @@ export default function PortalClock() {
               {acting ? (
                 <div className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
               ) : (
-                <><LogIn className="h-4 w-4" /> Clock In</>
+                <><LogIn className="h-4 w-4" /> Marcar entrada</>
               )}
             </Button>
           ) : (
