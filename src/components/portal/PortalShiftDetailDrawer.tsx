@@ -286,7 +286,7 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, responseStatu
                       <ClockMethodIcon className="h-3.5 w-3.5 text-muted-foreground/80" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-[10px] uppercase tracking-widest text-muted-foreground/55 font-bold">Clock-in</p>
+                      <p className="text-[10px] uppercase tracking-widest text-muted-foreground/55 font-bold">Entrada</p>
                       <p className="text-[13px] font-semibold text-foreground mt-0.5">{clockLabel}</p>
                     </div>
                   </div>
