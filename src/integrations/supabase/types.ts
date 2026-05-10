@@ -13330,6 +13330,103 @@ export type Database = {
           },
         ]
       }
+      shift_closeout_reports: {
+        Row: {
+          client_feedback: string | null
+          company_id: string
+          created_at: string
+          id: string
+          incident_count: number
+          late_count: number
+          no_show_count: number
+          notes: string | null
+          ready_for_admin_review: boolean
+          review_notes: string | null
+          review_status: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          role: string
+          shift_id: string
+          staff_count_reported: number | null
+          status: string
+          submitted_at: string | null
+          submitted_by: string
+          submitted_employee_id: string | null
+          uniform_ok: boolean | null
+          updated_at: string
+        }
+        Insert: {
+          client_feedback?: string | null
+          company_id: string
+          created_at?: string
+          id?: string
+          incident_count?: number
+          late_count?: number
+          no_show_count?: number
+          notes?: string | null
+          ready_for_admin_review?: boolean
+          review_notes?: string | null
+          review_status?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          role: string
+          shift_id: string
+          staff_count_reported?: number | null
+          status?: string
+          submitted_at?: string | null
+          submitted_by: string
+          submitted_employee_id?: string | null
+          uniform_ok?: boolean | null
+          updated_at?: string
+        }
+        Update: {
+          client_feedback?: string | null
+          company_id?: string
+          created_at?: string
+          id?: string
+          incident_count?: number
+          late_count?: number
+          no_show_count?: number
+          notes?: string | null
+          ready_for_admin_review?: boolean
+          review_notes?: string | null
+          review_status?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          role?: string
+          shift_id?: string
+          staff_count_reported?: number | null
+          status?: string
+          submitted_at?: string | null
+          submitted_by?: string
+          submitted_employee_id?: string | null
+          uniform_ok?: boolean | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shift_closeout_reports_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_closeout_reports_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_closeout_reports_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: true
+            referencedRelation: "scheduled_shifts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shift_comments: {
         Row: {
           attachments: Json | null
@@ -16294,6 +16391,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      shift_closeout_can_admin: { Args: { _company: string }; Returns: boolean }
       supersede_employee_invitations: {
         Args: {
           _company_id: string
