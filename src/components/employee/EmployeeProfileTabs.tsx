@@ -693,6 +693,11 @@ export function EmployeeProfileTabs({
         <TabsTrigger value="shifts" className="text-[10px] data-[state=active]:bg-card rounded-md gap-1 font-medium flex-1 min-w-0 px-1.5 h-7">
           <CalendarDays className="h-3 w-3 shrink-0" /><span className="hidden sm:inline">Turnos</span>
         </TabsTrigger>
+        {isPrivileged && (
+          <TabsTrigger value="fit" className="text-[10px] data-[state=active]:bg-card rounded-md gap-1 font-medium flex-1 min-w-0 px-1.5 h-7">
+            <Star className="h-3 w-3 shrink-0" /><span className="hidden sm:inline">Fit</span>
+          </TabsTrigger>
+        )}
         <TabsTrigger value="activity" className="text-[10px] data-[state=active]:bg-card rounded-md gap-1 font-medium flex-1 min-w-0 px-1.5 h-7">
           <Activity className="h-3 w-3 shrink-0" /><span className="hidden sm:inline">Log</span>
         </TabsTrigger>
