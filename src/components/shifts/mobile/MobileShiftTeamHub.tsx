@@ -256,11 +256,12 @@ function MobileShiftTeamHubImpl({
   const { toast } = useToast();
   const [tab, setTab] = useState<TabKey>("overview");
 
-  // ── Phase 2: safe action dialog state.
+  // ── Phase 2 + Phase 3: safe action dialog state.
   const [actionDialogOpen, setActionDialogOpen] = useState(false);
   const [actionMode, setActionMode] = useState<
     | { kind: "assignment_state"; assignmentId: string; nextStatus: AssignmentNextStatus; workerName: string }
     | { kind: "claim_decision"; requestId: string; decision: ClaimDecision; workerName: string }
+    | { kind: "assign_worker"; shiftId: string; employeeId: string; workerName: string; graceWarning?: string | null }
     | null
   >(null);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -282,6 +283,25 @@ function MobileShiftTeamHubImpl({
       }
     }
     setActionMode({ kind: "claim_decision", requestId, decision, workerName });
+    setActionDialogOpen(true);
+  };
+  const openAssignWorkerAction = (employeeId: string, workerName: string) => {
+    const r = computeReadiness(empById.get(employeeId), companyId);
+    if (!r.canBeApproved) {
+      toast({
+        title: "Worker not ready to be assigned",
+        description: r.helper,
+        variant: "destructive",
+      });
+      return;
+    }
+    setActionMode({
+      kind: "assign_worker",
+      shiftId: shift.id,
+      employeeId,
+      workerName,
+      graceWarning: r.state === "grace_period" ? r.helper : null,
+    });
     setActionDialogOpen(true);
   };
   const handleMutated = () => {
