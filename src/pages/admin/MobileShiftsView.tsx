@@ -214,6 +214,46 @@ export default function MobileShiftsView() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab]);
 
+  // Deep-link: open a specific shift's operations sheet via
+  // ?shift=<id> (preferred) or legacy #shift-<id>. Optional ?manageTeam=1
+  // immediately opens the Manage Team hub. Consumed once per load to avoid
+  // reopening on filter/tab changes; URL is cleaned after consumption.
+  useEffect(() => {
+    if (loading || deepLinkConsumed) return;
+
+    const queryShiftId = searchParams.get("shift");
+    const hash = typeof window !== "undefined" ? window.location.hash : "";
+    const hashShiftId = hash.startsWith("#shift-") ? hash.slice("#shift-".length) : null;
+    const targetId = queryShiftId || hashShiftId;
+    if (!targetId) return;
+
+    const wantManageTeam = searchParams.get("manageTeam") === "1"
+      || searchParams.get("openTeamHub") === "1";
+
+    const target = shifts.find(s => s.id === targetId);
+    if (target) {
+      setDetailShift(target);
+      setDetailManageTeam(wantManageTeam);
+      setDetailOpen(true);
+    } else {
+      toast("Shift not found in this view.", {
+        description: "Try switching tabs or removing filters.",
+      });
+    }
+
+    // Clean intent params + hash so refresh doesn't reopen the sheet.
+    const next = new URLSearchParams(searchParams);
+    next.delete("shift");
+    next.delete("manageTeam");
+    next.delete("openTeamHub");
+    setSearchParams(next, { replace: true });
+    if (hashShiftId && typeof window !== "undefined") {
+      window.history.replaceState(null, "", window.location.pathname + window.location.search);
+    }
+    setDeepLinkConsumed(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, shifts]);
+
   // ── Apply tab + filters
   const todayStr = format(new Date(), "yyyy-MM-dd");
   const tomorrowStr = format(addDays(new Date(), 1), "yyyy-MM-dd");
