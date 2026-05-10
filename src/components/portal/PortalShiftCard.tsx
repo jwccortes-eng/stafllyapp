@@ -278,7 +278,7 @@ export function PortalShiftCard({
               disabled={responding}
             >
               <CheckCircle2 className="h-3.5 w-3.5" />
-              {shift.status === "needs_reacceptance" ? "Accept changes" : "Confirm"}
+              {shift.status === "needs_reacceptance" ? "Aceptar cambios" : "Confirmar"}
             </Button>
             <Button
               variant="ghost"
@@ -287,7 +287,7 @@ export function PortalShiftCard({
               onClick={onReject}
               disabled={responding}
             >
-              Decline
+              Rechazar
             </Button>
           </div>
         )}
@@ -300,7 +300,7 @@ export function PortalShiftCard({
               onClick={onClockIn}
             >
               <LogIn className="h-3.5 w-3.5" />
-              Clock In
+              Marcar entrada
             </Button>
           </div>
         )}
