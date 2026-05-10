@@ -214,7 +214,7 @@ export function PortalShiftCard({
         <div className="bg-primary/[0.05] px-4 py-1.5 flex items-center gap-2 border-b border-primary/10">
           <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse shrink-0" />
           <span className="text-[10px] font-bold text-primary tracking-wide uppercase">
-            Starts {countdown}
+            Empieza {countdown}
           </span>
         </div>
       )}
