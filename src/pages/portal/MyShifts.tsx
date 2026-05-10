@@ -419,7 +419,7 @@ export default function MyShifts() {
       {/* Minimal header — title only, subtitle merged into active tab context */}
       <div className="pt-1 pb-3">
         <h1 className="text-[22px] font-bold font-heading tracking-tight text-foreground leading-none">
-          My Shifts
+          Mis turnos
         </h1>
       </div>
 
