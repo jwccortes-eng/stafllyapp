@@ -227,12 +227,20 @@ export default function PayrollReviewQueue() {
         : { data: [] as any[] };
 
       // 8) time_entries in period (by clock_in date)
+      // Read-only review tolerance: widen window by ±1 day to avoid missing
+      // edge clock-ins due to NY timezone drift vs UTC. This is for review
+      // surfacing only — payroll calculation is unaffected and still uses
+      // period_base_pay / historical_payroll_entries as source of truth.
+      const windowStart = new Date(`${period.start_date}T00:00:00Z`);
+      windowStart.setUTCDate(windowStart.getUTCDate() - 1);
+      const windowEnd = new Date(`${period.end_date}T00:00:00Z`);
+      windowEnd.setUTCDate(windowEnd.getUTCDate() + 2); // end_date + 1 day, exclusive
       const { data: timeEntries } = await supabase
         .from("time_entries")
         .select("id, employee_id, shift_id, clock_in, clock_out, status")
         .eq("company_id", cid)
-        .gte("clock_in", `${period.start_date}T00:00:00Z`)
-        .lt("clock_in", `${period.end_date}T23:59:59Z`);
+        .gte("clock_in", windowStart.toISOString())
+        .lt("clock_in", windowEnd.toISOString());
 
       // 9) shift_closeout_reports for these shifts
       const { data: closeouts } = shiftIds.length
@@ -374,26 +382,35 @@ export default function PayrollReviewQueue() {
         };
       });
 
-    // 5. Clock/pay without assignment
-    const clockNoAssign: BucketRow[] = [
-      ...d.timeEntries
-        .filter(t => !assignEmpSet.has(t.employee_id))
-        .map(t => ({
-          key: `te-${t.id}`,
-          primary: empName(t.employee_id),
-          secondary: `Clock-in ${t.clock_in ? format(parseISO(t.clock_in), "MMM d HH:mm") : "—"} · no assignment`,
-          link: { to: "/app/timeclock", label: "Open Time Clock" },
-        })),
-      ...d.pbp
-        .filter(r => r.employee_id && !assignEmpSet.has(r.employee_id))
-        .map(r => ({
-          key: `pbp-noassign-${r.id}`,
-          primary: empName(r.employee_id),
-          secondary: "Pay row exists · no assignment in period",
-          amount: Number(r.base_total_pay ?? 0),
-          link: empLink(r.employee_id),
-        })),
-    ];
+    // 5. Clock/pay without assignment — dedup by employee_id, combine signals
+    const noAssignMap = new Map<string, { hasClock: boolean; hasPay: boolean; payAmount: number; firstClockIn?: string }>();
+    for (const t of d.timeEntries) {
+      if (assignEmpSet.has(t.employee_id)) continue;
+      const cur = noAssignMap.get(t.employee_id) ?? { hasClock: false, hasPay: false, payAmount: 0 };
+      cur.hasClock = true;
+      if (!cur.firstClockIn && t.clock_in) cur.firstClockIn = t.clock_in;
+      noAssignMap.set(t.employee_id, cur);
+    }
+    for (const r of d.pbp) {
+      if (!r.employee_id || assignEmpSet.has(r.employee_id)) continue;
+      const cur = noAssignMap.get(r.employee_id) ?? { hasClock: false, hasPay: false, payAmount: 0 };
+      cur.hasPay = true;
+      cur.payAmount += Number(r.base_total_pay ?? 0);
+      noAssignMap.set(r.employee_id, cur);
+    }
+    const clockNoAssign: BucketRow[] = Array.from(noAssignMap.entries()).map(([empId, info]) => {
+      const parts: string[] = [];
+      if (info.hasClock) parts.push(`Clock-in ${info.firstClockIn ? format(parseISO(info.firstClockIn), "MMM d HH:mm") : "—"}`);
+      if (info.hasPay) parts.push("Pay row exists");
+      parts.push("no assignment in period");
+      return {
+        key: `noassign-${empId}`,
+        primary: empName(empId),
+        secondary: parts.join(" · "),
+        amount: info.hasPay ? info.payAmount : undefined,
+        link: info.hasPay ? empLink(empId) : { to: "/app/timeclock", label: "Open Time Clock" },
+      };
+    });
 
     // 6. Day-pay needs validation
     const dayPayShifts = d.shifts.filter(s => s.pay_type === "day_pay" || s.day_type);
@@ -530,7 +547,7 @@ export default function PayrollReviewQueue() {
 
     return [
       { id: "ready",          title: "Ready to review",                  description: "Matched rows, no conflicts, no anomalies.",                                  severity: "info",  affectsPay: true,  rows: ready },
-      { id: "needs-match",    title: "Needs employee match",             description: "Imported rows without a matched employee or flagged for identity review.",  severity: "block", affectsPay: true,  rows: needsMatch },
+      { id: "needs-match",    title: "Needs employee match",             description: "Unmatched rows from historical_payroll_entries (Connecteam imports). May be empty if period was committed directly into period_base_pay (no unmatched import rows).",  severity: "block", affectsPay: true,  rows: needsMatch },
       { id: "time-mismatch",  title: "Time mismatch",                    description: "Variance flagged by reconciliation engine or pbp anomaly.",                  severity: "warn",  affectsPay: true,  rows: timeMismatch },
       { id: "assign-no-ev",   title: "Assignment without clock / pay",   description: "Worker accepted the shift but no clock and no pay row exist.",               severity: "warn",  affectsPay: true,  rows: assignNoEvidence },
       { id: "ev-no-assign",   title: "Clock / pay without assignment",   description: "Time entry or pay row exists but worker was not assigned in this period.",   severity: "warn",  affectsPay: true,  rows: clockNoAssign },
