@@ -282,9 +282,9 @@ export default function PortalShiftDetail() {
           disabled={requesting}
         >
           {requesting ? (
-            <><Loader2 className="h-4 w-4 animate-spin" /> Sending request...</>
+            <><Loader2 className="h-4 w-4 animate-spin" /> Enviando solicitud...</>
           ) : (
-            <><HandMetal className="h-4 w-4" /> Request this shift</>
+            <><HandMetal className="h-4 w-4" /> Solicitar este turno</>
           )}
         </Button>
       )}
@@ -296,7 +296,7 @@ export default function PortalShiftDetail() {
           className="w-full h-12 text-sm font-semibold rounded-xl gap-2"
           onClick={() => navigate("/portal/shifts")}
         >
-          <Hourglass className="h-4 w-4" /> Back to my shifts
+          <Hourglass className="h-4 w-4" /> Volver a mis turnos
         </Button>
       )}
 
@@ -307,7 +307,7 @@ export default function PortalShiftDetail() {
           className="w-full h-12 text-sm font-semibold rounded-xl"
           onClick={() => navigate("/portal/shifts")}
         >
-          Back to my shifts
+          Volver a mis turnos
         </Button>
       )}
     </div>
