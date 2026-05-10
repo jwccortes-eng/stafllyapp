@@ -382,26 +382,35 @@ export default function PayrollReviewQueue() {
         };
       });
 
-    // 5. Clock/pay without assignment
-    const clockNoAssign: BucketRow[] = [
-      ...d.timeEntries
-        .filter(t => !assignEmpSet.has(t.employee_id))
-        .map(t => ({
-          key: `te-${t.id}`,
-          primary: empName(t.employee_id),
-          secondary: `Clock-in ${t.clock_in ? format(parseISO(t.clock_in), "MMM d HH:mm") : "—"} · no assignment`,
-          link: { to: "/app/timeclock", label: "Open Time Clock" },
-        })),
-      ...d.pbp
-        .filter(r => r.employee_id && !assignEmpSet.has(r.employee_id))
-        .map(r => ({
-          key: `pbp-noassign-${r.id}`,
-          primary: empName(r.employee_id),
-          secondary: "Pay row exists · no assignment in period",
-          amount: Number(r.base_total_pay ?? 0),
-          link: empLink(r.employee_id),
-        })),
-    ];
+    // 5. Clock/pay without assignment — dedup by employee_id, combine signals
+    const noAssignMap = new Map<string, { hasClock: boolean; hasPay: boolean; payAmount: number; firstClockIn?: string }>();
+    for (const t of d.timeEntries) {
+      if (assignEmpSet.has(t.employee_id)) continue;
+      const cur = noAssignMap.get(t.employee_id) ?? { hasClock: false, hasPay: false, payAmount: 0 };
+      cur.hasClock = true;
+      if (!cur.firstClockIn && t.clock_in) cur.firstClockIn = t.clock_in;
+      noAssignMap.set(t.employee_id, cur);
+    }
+    for (const r of d.pbp) {
+      if (!r.employee_id || assignEmpSet.has(r.employee_id)) continue;
+      const cur = noAssignMap.get(r.employee_id) ?? { hasClock: false, hasPay: false, payAmount: 0 };
+      cur.hasPay = true;
+      cur.payAmount += Number(r.base_total_pay ?? 0);
+      noAssignMap.set(r.employee_id, cur);
+    }
+    const clockNoAssign: BucketRow[] = Array.from(noAssignMap.entries()).map(([empId, info]) => {
+      const parts: string[] = [];
+      if (info.hasClock) parts.push(`Clock-in ${info.firstClockIn ? format(parseISO(info.firstClockIn), "MMM d HH:mm") : "—"}`);
+      if (info.hasPay) parts.push("Pay row exists");
+      parts.push("no assignment in period");
+      return {
+        key: `noassign-${empId}`,
+        primary: empName(empId),
+        secondary: parts.join(" · "),
+        amount: info.hasPay ? info.payAmount : undefined,
+        link: info.hasPay ? empLink(empId) : { to: "/app/timeclock", label: "Open Time Clock" },
+      };
+    });
 
     // 6. Day-pay needs validation
     const dayPayShifts = d.shifts.filter(s => s.pay_type === "day_pay" || s.day_type);
