@@ -50,10 +50,10 @@ export function QuickActions({ actions }: Props) {
   if (actions.length === 0) return null;
 
   return (
-    <section aria-label="Quick actions" className="space-y-2">
+    <section aria-label="Más" className="space-y-2">
       <div className="flex items-center justify-between px-1">
         <h2 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground/60">
-          Quick actions
+          Más
         </h2>
       </div>
       <div className="grid grid-cols-2 gap-2">
