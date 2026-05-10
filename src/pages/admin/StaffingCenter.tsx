@@ -83,6 +83,7 @@ type ShiftMetrics = {
   claimsPending: number;
   openSpots: number;
   hasLocation: boolean;
+  hasMeetingPoint: boolean;
   isToday: boolean;
   withinNext48h: boolean;
   isLarge: boolean;
