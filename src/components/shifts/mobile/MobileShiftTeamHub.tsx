@@ -1400,7 +1400,7 @@ function RecommendedTab({
 
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [companyId, shift?.id, shift?.date, eligible.length]);
+  }, [companyId, shift?.id, shift?.date, eligible.length, prefRefreshKey]);
 
   const roleNeeds = useMemo(() => inferShiftRoleNeeds(shift), [shift?.id]);
 
