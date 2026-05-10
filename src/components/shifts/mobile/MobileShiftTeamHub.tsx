@@ -175,6 +175,8 @@ interface Props {
   locationName?: string | null;
   /** scheduled_shifts.shift_admin_id, used for Captain badge. */
   shiftAdminId?: string | null;
+  /** Tenant the shift/employees belong to (drives the grace-period decision). */
+  companyId?: string | null;
   /** Optional callback so the parent sheet can refetch after a safe mutation. */
   onMutated?: () => void;
 }
