@@ -39,6 +39,10 @@ interface ShiftInfo {
 interface PortalShiftDetailDrawerProps {
   shift: ShiftInfo | null;
   assignmentStatus?: string;
+  responseStatus?: string;
+  onAccept?: () => void;
+  onReject?: () => void;
+  responding?: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -63,22 +67,22 @@ function getCountdown(dateStr: string, startTime: string): string | null {
   if (diff < 0 || diff > 24 * 60 * 60 * 1000) return null;
   const hrs = Math.floor(diff / 3600000);
   const mins = Math.floor((diff % 3600000) / 60000);
-  if (hrs > 0) return `Starts in ${hrs}h ${mins}m`;
-  return `Starts in ${mins}m`;
+  if (hrs > 0) return `Empieza en ${hrs}h ${mins}m`;
+  return `Empieza en ${mins}m`;
 }
 
 function getStatusMeta(status?: string): { tone: OpsStatusTone; label: string } {
   switch (status) {
     case "confirmed":
     case "accepted":
-      return { tone: "success", label: "Confirmed" };
+      return { tone: "success", label: "Confirmado" };
     case "needs_reacceptance":
-      return { tone: "warning", label: "Re-accept" };
+      return { tone: "warning", label: "Re-confirmar" };
     case "rejected":
-      return { tone: "critical", label: "Rejected" };
+      return { tone: "critical", label: "Rechazado" };
     case "pending":
     default:
-      return { tone: "warning", label: "Pending" };
+      return { tone: "warning", label: "Pendiente" };
   }
 }
 
