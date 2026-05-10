@@ -277,6 +277,10 @@ interface Props {
   /** Optional UI labels passed from parent for header context. */
   clientName?: string | null;
   locationName?: string | null;
+  /** Optional meeting-point text — used to clarify "missing job site" issues. */
+  meetingPoint?: string | null;
+  /** Whether a meeting_point_location_id is linked (separate from job site). */
+  hasMeetingPointLocation?: boolean;
   /** scheduled_shifts.shift_admin_id, used for Captain badge. */
   shiftAdminId?: string | null;
   /** Tenant the shift/employees belong to (drives the grace-period decision). */
