@@ -52,7 +52,7 @@ describe("selectNextBestAction", () => {
     }));
     expect(r.kind).toBe("clock_in_now");
     expect(r.ctaHref).toContain("/portal/clock?shiftId=");
-    expect(r.subtitle).toMatch(/Starts in/);
+    expect(r.subtitle).toMatch(/Empieza en/);
   });
 
   it("returns confirm_shift when there are pending assignments", () => {
