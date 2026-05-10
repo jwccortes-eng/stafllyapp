@@ -206,7 +206,7 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, responseStatu
         {/* ─── Content ─── */}
         <div
           className="px-5 pb-6 overflow-y-auto"
-          style={{ maxHeight: "calc(94vh - 220px)" }}
+          style={{ maxHeight: showStickyFooter ? "calc(94vh - 280px)" : "calc(94vh - 200px)" }}
         >
           {!secondaryView && (
             <div className="space-y-4 pt-4">
