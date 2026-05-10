@@ -438,16 +438,16 @@ export default function MyShifts() {
               )}
             >
               <span>{t.label}</span>
-              {t.count > 0 && (
+              {t.showCount && t.count > 0 && (
                 <span className={cn(
-                  "inline-flex items-center justify-center min-w-[18px] h-[16px] px-1 rounded-full text-[9.5px] font-bold tabular-nums",
+                  "inline-flex items-center justify-center min-w-[18px] h-[16px] px-1 rounded-full text-[10px] font-bold tabular-nums",
                   active
                     ? accent
                       ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
                       : "bg-muted text-foreground/70"
                     : "bg-muted/40 text-muted-foreground/55",
                 )}>
-                  {t.count > 99 ? "99+" : t.count}
+                  {t.count > 9 ? "9+" : t.count}
                 </span>
               )}
               {active && (
