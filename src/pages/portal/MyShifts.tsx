@@ -248,18 +248,40 @@ export default function MyShifts() {
     } catch { /* non-blocking */ }
   };
 
+  // Phase 5B — prefer audited RPC, fall back to direct update for resiliency.
+  const respondViaRpc = async (
+    assignmentId: string,
+    response: "accepted" | "rejected",
+    reason?: string | null,
+  ): Promise<{ ok: boolean; error?: string }> => {
+    const { data, error } = await (supabase as any).rpc("worker_respond_to_shift_assignment", {
+      p_assignment_id: assignmentId,
+      p_response: response,
+      p_reason: reason ?? null,
+      p_source: "worker_portal",
+    });
+    if (error) return { ok: false, error: error.message };
+    if (data && data.ok === false) return { ok: false, error: "rpc_rejected" };
+    return { ok: true };
+  };
+
   const acceptAssignment = async (assignmentId: string) => {
     setResponding(assignmentId);
     const assignment = assignments.find(a => a.id === assignmentId);
     const version = assignment?.shift?.operational_version ?? 1;
-    const { error } = await supabase.from("shift_assignments").update({
-      status: "confirmed",
-      responded_at: new Date().toISOString(),
-      response_status: "accepted",
-      response_required: false,
-      accepted_at: new Date().toISOString(),
-      accepted_shift_version: version,
-    } as any).eq("id", assignmentId);
+    const rpc = await respondViaRpc(assignmentId, "accepted");
+    let error: { message: string } | null = null;
+    if (!rpc.ok) {
+      const fallback = await supabase.from("shift_assignments").update({
+        status: "confirmed",
+        responded_at: new Date().toISOString(),
+        response_status: "accepted",
+        response_required: false,
+        accepted_at: new Date().toISOString(),
+        accepted_shift_version: version,
+      } as any).eq("id", assignmentId);
+      error = fallback.error;
+    }
     if (error) toast.error("Error", { description: error.message });
     else { toast.success("Shift confirmed!"); notifyAdminOfResponse(assignmentId, "confirmed"); await load(); }
     setResponding(null);
@@ -268,14 +290,20 @@ export default function MyShifts() {
   const rejectAssignment = async () => {
     if (!rejectDialogId) return;
     setResponding(rejectDialogId);
-    const { error } = await supabase.from("shift_assignments").update({
-      status: "rejected",
-      responded_at: new Date().toISOString(),
-      rejection_reason: rejectReason.trim() || null,
-      response_status: "rejected",
-      response_required: false,
-      rejected_at: new Date().toISOString(),
-    } as any).eq("id", rejectDialogId);
+    const reason = rejectReason.trim() || null;
+    const rpc = await respondViaRpc(rejectDialogId, "rejected", reason);
+    let error: { message: string } | null = null;
+    if (!rpc.ok) {
+      const fallback = await supabase.from("shift_assignments").update({
+        status: "rejected",
+        responded_at: new Date().toISOString(),
+        rejection_reason: reason,
+        response_status: "rejected",
+        response_required: false,
+        rejected_at: new Date().toISOString(),
+      } as any).eq("id", rejectDialogId);
+      error = fallback.error;
+    }
     if (error) toast.error("Error", { description: error.message });
     else { toast.success("Shift rejected"); notifyAdminOfResponse(rejectDialogId, "rejected"); await load(); }
     setResponding(null); setRejectDialogId(null); setRejectReason("");
