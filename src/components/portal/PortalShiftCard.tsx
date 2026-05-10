@@ -38,14 +38,14 @@ function getStatusMeta(status: string): { tone: OpsStatusTone; label: string; ra
   switch (status) {
     case "confirmed":
     case "accepted":
-      return { tone: "success", label: "Confirmed", rail: "bg-earning/70" };
+      return { tone: "success", label: "Confirmado", rail: "bg-earning/70" };
     case "needs_reacceptance":
-      return { tone: "warning", label: "Re-accept", rail: "bg-warning" };
+      return { tone: "warning", label: "Re-aceptar", rail: "bg-warning" };
     case "rejected":
-      return { tone: "critical", label: "Rejected", rail: "bg-destructive" };
+      return { tone: "critical", label: "Rechazado", rail: "bg-destructive" };
     case "pending":
     default:
-      return { tone: "warning", label: "Pending", rail: "bg-warning/80" };
+      return { tone: "warning", label: "Pendiente", rail: "bg-warning/80" };
   }
 }
 
