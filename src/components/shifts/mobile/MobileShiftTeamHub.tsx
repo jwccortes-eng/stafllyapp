@@ -27,17 +27,24 @@ import {
   X, Users, ShieldCheck, Clock, ExternalLink, Inbox,
   CheckCircle2, AlertCircle, UserMinus, UserX, Phone, MessageSquare,
   Copy, AlertTriangle, Sparkles, Star, MapPin, Briefcase,
+  MoreVertical, Check, XCircle,
 } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { formatShiftCode, type Shift, type Employee } from "@/components/shifts/types";
 import { supabase } from "@/integrations/supabase/client";
 import { normalizePhone, buildWhatsAppTargets } from "@/lib/phone";
 import { useToast } from "@/hooks/use-toast";
+import { allowedNextStatusesFor, type AssignmentNextStatus, type ClaimDecision } from "@/lib/shifts/team-actions";
+import { MobileTeamActionDialog } from "@/components/shifts/mobile/MobileTeamActionDialog";
 
 const HUB_COPY = {
   intro: "Read-only team view. Staffing changes still happen on desktop.",
