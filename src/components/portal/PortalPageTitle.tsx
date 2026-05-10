@@ -1,17 +1,17 @@
 import { useLocation } from "react-router-dom";
 
 const PAGE_TITLES: Record<string, string> = {
-  "/portal": "Home",
-  "/portal/shifts": "My Shifts",
-  "/portal/clock": "Clock",
-  "/portal/pay-reports": "My Pay Reports",
-  "/portal/profile": "Profile",
-  "/portal/availability": "Availability",
-  "/portal/announcements": "Announcements",
+  "/portal": "Inicio",
+  "/portal/shifts": "Mis turnos",
+  "/portal/clock": "Marcar entrada",
+  "/portal/pay-reports": "Mis pagos",
+  "/portal/profile": "Perfil",
+  "/portal/availability": "Disponibilidad",
+  "/portal/announcements": "Anuncios",
   "/portal/chat": "Chat",
-  "/portal/resources": "Resources",
+  "/portal/resources": "Recursos",
   "/portal/w9": "W-9",
-  "/portal/documents": "My Documents",
+  "/portal/documents": "Mis documentos",
 };
 
 export function PortalPageTitle() {
