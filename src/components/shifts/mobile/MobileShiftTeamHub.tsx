@@ -543,14 +543,16 @@ function OverviewTab({
 }
 
 function AssignedTab({
-  assignments, grouped, order, empById, shiftAdminId, onCopyPhone,
+  assignments, grouped, order, empById, shiftAdminId, canManage, onCopyPhone, onAssignmentAction,
 }: {
   assignments: HubAssignment[];
   grouped: Record<Bucket, HubAssignment[]>;
   order: Bucket[];
   empById: Map<string, Employee>;
   shiftAdminId: string | null;
+  canManage: boolean;
   onCopyPhone: (p: string) => void;
+  onAssignmentAction: (assignmentId: string, nextStatus: AssignmentNextStatus, workerName: string) => void;
 }) {
   return (
     <section aria-label="Assigned workers">
@@ -593,7 +595,9 @@ function AssignedTab({
                       assignment={a}
                       employee={empById.get(a.employee_id)}
                       isCaptain={!!shiftAdminId && a.employee_id === shiftAdminId}
+                      canManage={canManage}
                       onCopyPhone={onCopyPhone}
+                      onAssignmentAction={onAssignmentAction}
                     />
                   ))}
                 </ul>
@@ -606,18 +610,33 @@ function AssignedTab({
   );
 }
 
+const ASSIGN_ACTION_LABEL: Record<AssignmentNextStatus, string> = {
+  confirmed: "Confirm",
+  rejected: "Mark rejected",
+  removed: "Remove from shift",
+};
+const ASSIGN_ACTION_ICON: Record<AssignmentNextStatus, React.ComponentType<{ className?: string }>> = {
+  confirmed: Check,
+  rejected: XCircle,
+  removed: UserMinus,
+};
+
 function WorkerRow({
-  assignment, employee, isCaptain, onCopyPhone,
+  assignment, employee, isCaptain, canManage, onCopyPhone, onAssignmentAction,
 }: {
   assignment: HubAssignment;
   employee: Employee | undefined;
   isCaptain: boolean;
+  canManage: boolean;
   onCopyPhone: (p: string) => void;
+  onAssignmentAction: (assignmentId: string, nextStatus: AssignmentNextStatus, workerName: string) => void;
 }) {
   const name = fullName(employee);
   const phoneDigits = normalizePhone(employee?.phone_number);
   const hasPhone = phoneDigits.length >= 10;
   const wa = hasPhone ? buildWhatsAppTargets(phoneDigits, "") : null;
+  const allowedActions = allowedNextStatusesFor(assignment.status);
+  const showMenu = canManage && allowedActions.length > 0;
 
   const subBits: string[] = [];
   if (assignment.assignment_role) subBits.push(assignment.assignment_role);
@@ -654,6 +673,39 @@ function WorkerRow({
             <p className="text-[10px] text-amber-700 dark:text-amber-400 mt-0.5">{HUB_COPY.noPhone}</p>
           )}
         </div>
+
+        {showMenu && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className="h-8 w-8 shrink-0 rounded-full grid place-items-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                aria-label={`Change status for ${name}`}
+              >
+                <MoreVertical className="h-4 w-4" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                Logged action
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {allowedActions.map((next) => {
+                const Icon = ASSIGN_ACTION_ICON[next];
+                return (
+                  <DropdownMenuItem
+                    key={next}
+                    onClick={() => onAssignmentAction(assignment.id, next, name)}
+                    className={next === "removed" || next === "rejected" ? "text-destructive focus:text-destructive" : undefined}
+                  >
+                    <Icon className="h-4 w-4 mr-2" />
+                    {ASSIGN_ACTION_LABEL[next]}
+                  </DropdownMenuItem>
+                );
+              })}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
 
       {hasPhone && (
