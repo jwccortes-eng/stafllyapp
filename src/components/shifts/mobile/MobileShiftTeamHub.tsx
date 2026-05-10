@@ -277,6 +277,10 @@ interface Props {
   /** Optional UI labels passed from parent for header context. */
   clientName?: string | null;
   locationName?: string | null;
+  /** Optional meeting-point text — used to clarify "missing job site" issues. */
+  meetingPoint?: string | null;
+  /** Whether a meeting_point_location_id is linked (separate from job site). */
+  hasMeetingPointLocation?: boolean;
   /** scheduled_shifts.shift_admin_id, used for Captain badge. */
   shiftAdminId?: string | null;
   /** Tenant the shift/employees belong to (drives the grace-period decision). */
@@ -354,7 +358,8 @@ type TabKey = "overview" | "assigned" | "claims" | "issues" | "recommended";
 
 function MobileShiftTeamHubImpl({
   open, onOpenChange, shift, assignments, employees, canManage,
-  clientName, locationName, shiftAdminId, companyId, onMutated,
+  clientName, locationName, meetingPoint, hasMeetingPointLocation,
+  shiftAdminId, companyId, onMutated,
 }: Props) {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -510,11 +515,14 @@ function MobileShiftTeamHubImpl({
       });
     }
     if (!shift.location_id) {
+      const hasMP = !!hasMeetingPointLocation || !!(meetingPoint && meetingPoint.trim());
       items.push({
         key: "no-location",
         tone: "warn", icon: MapPin,
-        title: "No location set",
-        helper: "Workers won't know where to go.",
+        title: hasMP ? "Missing job site / venue" : "No location or meeting point",
+        helper: hasMP
+          ? "Meeting point is set, but the actual work location is missing."
+          : "Workers may not know where to go or meet.",
       });
     }
     if (!shift.client_id) {
@@ -533,7 +541,7 @@ function MobileShiftTeamHubImpl({
       });
     }
     return items;
-  }, [grouped, openSpots, empById, shift.location_id, shift.client_id, claimsPending]);
+  }, [grouped, openSpots, empById, shift.location_id, shift.client_id, claimsPending, hasMeetingPointLocation, meetingPoint]);
 
   const order: Bucket[] = [
     "confirmed", "accepted", "pending",
@@ -578,8 +586,13 @@ function MobileShiftTeamHubImpl({
                 {clientName && clientName !== "—" ? clientName : (shift.title || "Shift")}
               </h2>
               <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                {locationName || "No location"} · {shift.date} · {shift.start_time}–{shift.end_time}
+                {locationName || "Job site missing"} · {shift.date} · {shift.start_time}–{shift.end_time}
               </p>
+              {!shift.location_id && (meetingPoint || hasMeetingPointLocation) && (
+                <p className="text-[10.5px] text-amber-700 dark:text-amber-400 mt-0.5 truncate">
+                  Meeting point set{meetingPoint ? ` · ${meetingPoint}` : ""}
+                </p>
+              )}
               <p className="text-[11px] text-muted-foreground mt-0.5">
                 {staffedCount}/{slots || "—"} staffed · {openSpots} open
               </p>
@@ -1642,7 +1655,7 @@ function RecommendedTab({
   const FILTERS: { key: RecFilter; label: string }[] = [
     { key: "all", label: "All" },
     { key: "best", label: "Best match" },
-    { key: "strong_history", label: "Strong venue history" },
+    ...(shift.location_id ? [{ key: "strong_history" as const, label: "Strong venue history" }] : []),
     { key: "no_risk", label: "No risk flags" },
     { key: "ready", label: "Ready" },
     { key: "grace", label: "Grace period" },
@@ -1658,6 +1671,12 @@ function RecommendedTab({
       <SectionTitle icon={Sparkles} helper="Ranked by readiness, availability, history, contact, and reliability.">
         Add workers
       </SectionTitle>
+
+      {!shift.location_id && (
+        <p className="text-[11px] text-muted-foreground rounded-lg border border-dashed border-border/60 bg-muted/30 px-3 py-2 leading-snug">
+          Add a job site to use venue history ranking. Meeting points are not used as worked-here history.
+        </p>
+      )}
 
       {/* Search */}
       <div className="relative">

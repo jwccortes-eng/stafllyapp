@@ -83,6 +83,7 @@ type ShiftMetrics = {
   claimsPending: number;
   openSpots: number;
   hasLocation: boolean;
+  hasMeetingPoint: boolean;
   isToday: boolean;
   withinNext48h: boolean;
   isLarge: boolean;
@@ -110,6 +111,7 @@ function computeMetrics(shift: ShiftRow, asgs: AssignmentRow[], claims: number):
 
   const openSpots = Math.max(required - staffed, 0);
   const hasLocation = !!(shift.location_id || shift.job_site_location_id);
+  const hasMeetingPoint = !!(shift.meeting_point_location_id || (shift.meeting_point && shift.meeting_point.trim()));
   const todayStr = format(new Date(), "yyyy-MM-dd");
   const isToday = shift.date === todayStr;
   const shiftStart = shift.start_time
@@ -124,7 +126,7 @@ function computeMetrics(shift: ShiftRow, asgs: AssignmentRow[], claims: number):
   const reasons: string[] = [];
   if (isToday && openSpots > 0) { score += 100; reasons.push("Needs staff today"); }
   else if (openSpots > 0) reasons.push("Needs staff");
-  if (!hasLocation) { score += 80; reasons.push("No location"); }
+  if (!hasLocation) { score += 80; reasons.push(hasMeetingPoint ? "Missing job site" : "No location"); }
   if (pending > 0) { score += 60; reasons.push(`${pending} pending response${pending === 1 ? "" : "s"}`); }
   if (rejected > 0) { score += 60; reasons.push(`${rejected} rejected`); }
   if (claims > 0) { score += 50; reasons.push(`${claims} claim${claims === 1 ? "" : "s"} pending`); }
@@ -135,7 +137,7 @@ function computeMetrics(shift: ShiftRow, asgs: AssignmentRow[], claims: number):
 
   return {
     required, staffed, accepted, pending, rejected, removed, absent,
-    claimsPending: claims, openSpots, hasLocation, isToday, withinNext48h,
+    claimsPending: claims, openSpots, hasLocation, hasMeetingPoint, isToday, withinNext48h,
     isLarge, coveragePct, riskScore: score, reasons,
   };
 }
@@ -215,7 +217,7 @@ function ShiftCard({
             </div>
             <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
               <MapPin className="h-3 w-3 shrink-0" />
-              <span className="truncate">{locationName ?? (metrics.hasLocation ? "Location set" : "No location")}</span>
+              <span className="truncate">{locationName ?? (metrics.hasLocation ? "Location set" : (metrics.hasMeetingPoint ? "Job site missing · meeting point set" : "No location"))}</span>
             </div>
           </div>
           <div className="text-right shrink-0">
@@ -250,7 +252,8 @@ function ShiftCard({
         {metrics.reasons.length > 0 && (
           <div className="flex flex-wrap gap-1">
             {metrics.openSpots > 0 && <Chip tone="warn" icon={Users}>Needs staff</Chip>}
-            {!metrics.hasLocation && <Chip tone="bad" icon={MapPin}>No location</Chip>}
+            {!metrics.hasLocation && <Chip tone={metrics.hasMeetingPoint ? "warn" : "bad"} icon={MapPin}>{metrics.hasMeetingPoint ? "Missing job site" : "No location"}</Chip>}
+            {!metrics.hasLocation && metrics.hasMeetingPoint && <Chip tone="muted" icon={MapPin}>Meeting point set</Chip>}
             {metrics.pending > 0 && <Chip tone="warn" icon={Clock}>Pending responses</Chip>}
             {metrics.rejected > 0 && <Chip tone="bad" icon={UserX}>Rejected workers</Chip>}
             {metrics.claimsPending > 0 && <Chip tone="info" icon={Inbox}>Claims</Chip>}

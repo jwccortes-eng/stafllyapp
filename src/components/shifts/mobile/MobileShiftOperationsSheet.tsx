@@ -72,8 +72,10 @@ const MOBILE_SHIFT_COPY = {
   shiftDetailsHelper: "Review the core shift information.",
   noClientTitle: "No client set",
   noClientHelper: "Add the client from desktop so this shift is easier to identify.",
-  noLocationTitle: "No location set",
-  noLocationHelper: "Add the location from desktop before publishing or dispatching.",
+  noLocationTitle: "Missing job site / venue",
+  noLocationHelper: "Add the job site from desktop. Meeting points are different — they're worker pickup spots, not the actual venue.",
+  noLocationOrMeetingTitle: "No location or meeting point",
+  noLocationOrMeetingHelper: "Workers won't know where to go or where to meet. Add a job site from desktop.",
   noMeetingPoint: "No meeting point set.",
 
   // Notes section
@@ -323,7 +325,7 @@ export function MobileShiftOperationsSheet({
   if (draft && fullyStaffed) briefMessages.push({ tone: "info", text: "Ready to publish" });
   if (assignedCount === 0) briefMessages.push({ tone: "bad", text: "No workers assigned" });
   if (noClient) briefMessages.push({ tone: "warn", text: "No client linked" });
-  if (noLocation) briefMessages.push({ tone: "warn", text: "No location linked" });
+  if (noLocation) briefMessages.push({ tone: "warn", text: meetingPoint ? "Missing job site (meeting point set)" : "No location linked" });
   if (dateBucket === "today") briefMessages.push({ tone: "info", text: "Starts today" });
   else if (dateBucket === "tomorrow") briefMessages.push({ tone: "info", text: "Upcoming tomorrow" });
   if (briefMessages.length === 0) briefMessages.push({ tone: "good", text: "Looks good — no action needed" });
@@ -412,8 +414,14 @@ export function MobileShiftOperationsSheet({
               </h2>
               <div className="flex items-center gap-1 text-sm text-muted-foreground mt-0.5 truncate">
                 <MapPin className="h-3.5 w-3.5 shrink-0" />
-                <span className="truncate">{locationName || "No location"}</span>
+                <span className="truncate">{locationName || (meetingPoint ? "Job site missing" : "No location")}</span>
               </div>
+              {!locationName && meetingPoint && (
+                <div className="flex items-center gap-1 text-[11px] text-amber-700 dark:text-amber-400 mt-0.5 truncate">
+                  <MapPin className="h-3 w-3 shrink-0 opacity-70" />
+                  <span className="truncate">Meeting point: {meetingPoint}</span>
+                </div>
+              )}
             </div>
             <Button
               variant="ghost"
@@ -461,9 +469,9 @@ export function MobileShiftOperationsSheet({
               <Badge
                 variant="outline"
                 className="h-[22px] px-2 text-[11px] font-medium border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10"
-                aria-label="Warning: no location linked to this shift"
+                aria-label={meetingPoint ? "Warning: missing job site (meeting point is set)" : "Warning: no location linked to this shift"}
               >
-                No location
+                {meetingPoint ? "Missing job site" : "No location"}
               </Badge>
             )}
             {weekendLabel && (
@@ -791,13 +799,13 @@ export function MobileShiftOperationsSheet({
                 <div className="px-4 py-3">
                   <EmptyBlock
                     icon={MapPin}
-                    title={MOBILE_SHIFT_COPY.noLocationTitle}
-                    helper={MOBILE_SHIFT_COPY.noLocationHelper}
+                    title={meetingPoint ? MOBILE_SHIFT_COPY.noLocationTitle : MOBILE_SHIFT_COPY.noLocationOrMeetingTitle}
+                    helper={meetingPoint ? MOBILE_SHIFT_COPY.noLocationHelper : MOBILE_SHIFT_COPY.noLocationOrMeetingHelper}
                     compact
                   />
                 </div>
               ) : (
-                <DetailRow icon={MapPin} label="Location" value={locationName || "—"} muted={!locationName} />
+                <DetailRow icon={MapPin} label="Job site" value={locationName || "—"} muted={!locationName} />
               )}
               {meetingPoint ? (
                 <DetailRow icon={MapPin} label="Meeting point" value={meetingPoint} />
@@ -892,6 +900,8 @@ export function MobileShiftOperationsSheet({
       canManage={canValidate}
       clientName={clientName}
       locationName={locationName}
+      meetingPoint={meetingPoint}
+      hasMeetingPointLocation={!!(shift as unknown as { meeting_point_location_id?: string | null })?.meeting_point_location_id}
       shiftAdminId={shiftAdminId}
       companyId={selectedCompanyId}
       onMutated={() => setReloadKey(k => k + 1)}
@@ -1362,7 +1372,7 @@ function buildShiftLinked(args: {
     { label: "Shift ID", value: shift.id.slice(0, 8) + "…", hint: shift.id },
     { label: "Shift code", value: shift.shift_code ? formatShiftCode(shift.shift_code) : null },
     { label: "Client", value: clientName && clientName !== "—" ? clientName : null },
-    { label: "Location", value: locationName || null },
+    { label: "Job site", value: locationName || null },
     { label: "Assignments", value: String(assignedCount) },
     { label: "Open slots", value: slots > 0 ? String(open) : "—" },
     {
@@ -1392,7 +1402,7 @@ function buildShiftRisks(args: {
   if (args.published && args.understaffed) risks.push({ label: "Needs more staff", tone: "warn" });
   if (args.assignedCount === 0) risks.push({ label: "No workers assigned", tone: "bad" });
   if (args.noClient) risks.push({ label: "No client linked", tone: "warn" });
-  if (args.noLocation) risks.push({ label: "No location linked", tone: "warn" });
+  if (args.noLocation) risks.push({ label: "No job site linked", tone: "warn" });
   if (!args.hasShiftCode) risks.push({ label: "No shift code", tone: "warn" });
   if (args.imported) risks.push({ label: "Imported from a batch", tone: "info" });
   return risks;
