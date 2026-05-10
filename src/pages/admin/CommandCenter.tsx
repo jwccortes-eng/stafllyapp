@@ -732,6 +732,9 @@ function CompanyCommandCenter({
           {/* Historical Payroll Closeout summary */}
           <HistoricalPayrollCloseoutPanel companyId={companyId} />
 
+          {/* Phase 17C — Daily close (operational evidence, no payroll impact) */}
+          <DailyCloseKpiPanel companyId={companyId} />
+
           {/* Ecosystem */}
           <section className="space-y-3">
             <SectionHeader icon={Layers} title="Ecosistema" subtitle="Acceso rápido a tus módulos" />
