@@ -90,7 +90,13 @@ export type ReasonChipKey =
   | "low_reliability"
   | "driver"
   | "captain"
-  | "role_match";
+  | "role_match"
+  | "preferred"
+  | "prequalified"
+  | "captain_preferred"
+  | "driver_preferred"
+  | "blocked_here"
+  | "not_recommended";
 
 export interface RankedCandidate {
   employee: Employee;
