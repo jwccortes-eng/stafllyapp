@@ -61,6 +61,18 @@ export default function Locations() {
       setSearchParams(prev => { const p = new URLSearchParams(prev); p.delete("create"); return p; }, { replace: true });
     }
   }, [searchParams]);
+
+  // Deep-link: ?edit=<id> opens edit dialog for that location once it's loaded.
+  useEffect(() => {
+    const editId = searchParams.get("edit");
+    if (!editId || locations.length === 0) return;
+    const target = locations.find(l => l.id === editId);
+    if (target) {
+      openEdit(target);
+      setSearchParams(prev => { const p = new URLSearchParams(prev); p.delete("edit"); return p; }, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, locations]);
   const [editing, setEditing] = useState<Location | null>(null);
   const [showDeleted, setShowDeleted] = useState("active");
 
