@@ -721,12 +721,13 @@ const ASSIGN_ACTION_ICON: Record<AssignmentNextStatus, React.ComponentType<{ cla
 };
 
 function WorkerRow({
-  assignment, employee, isCaptain, canManage, onCopyPhone, onAssignmentAction,
+  assignment, employee, isCaptain, canManage, companyId, onCopyPhone, onAssignmentAction,
 }: {
   assignment: HubAssignment;
   employee: Employee | undefined;
   isCaptain: boolean;
   canManage: boolean;
+  companyId: string | null;
   onCopyPhone: (p: string) => void;
   onAssignmentAction: (assignmentId: string, nextStatus: AssignmentNextStatus, workerName: string) => void;
 }) {
@@ -736,7 +737,7 @@ function WorkerRow({
   const wa = hasPhone ? buildWhatsAppTargets(phoneDigits, "") : null;
   const allowedActions = allowedNextStatusesFor(assignment.status);
   const showMenu = canManage && allowedActions.length > 0;
-  const readiness = computeReadiness(employee);
+  const readiness = computeReadiness(employee, companyId);
 
   const subBits: string[] = [];
   if (assignment.assignment_role) subBits.push(assignment.assignment_role);
