@@ -595,6 +595,10 @@ function MobileShiftTeamHubImpl({
 
           {tab === "recommended" && (
             <RecommendedTab
+              employees={employees}
+              assignments={assignments}
+              companyId={companyId}
+              onAssign={openAssignWorkerAction}
               onOpenDesktop={() => {
                 onOpenChange(false);
                 navigate("/app/shifts");
