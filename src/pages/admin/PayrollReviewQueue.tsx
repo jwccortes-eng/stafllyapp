@@ -227,12 +227,20 @@ export default function PayrollReviewQueue() {
         : { data: [] as any[] };
 
       // 8) time_entries in period (by clock_in date)
+      // Read-only review tolerance: widen window by ±1 day to avoid missing
+      // edge clock-ins due to NY timezone drift vs UTC. This is for review
+      // surfacing only — payroll calculation is unaffected and still uses
+      // period_base_pay / historical_payroll_entries as source of truth.
+      const windowStart = new Date(`${period.start_date}T00:00:00Z`);
+      windowStart.setUTCDate(windowStart.getUTCDate() - 1);
+      const windowEnd = new Date(`${period.end_date}T00:00:00Z`);
+      windowEnd.setUTCDate(windowEnd.getUTCDate() + 2); // end_date + 1 day, exclusive
       const { data: timeEntries } = await supabase
         .from("time_entries")
         .select("id, employee_id, shift_id, clock_in, clock_out, status")
         .eq("company_id", cid)
-        .gte("clock_in", `${period.start_date}T00:00:00Z`)
-        .lt("clock_in", `${period.end_date}T23:59:59Z`);
+        .gte("clock_in", windowStart.toISOString())
+        .lt("clock_in", windowEnd.toISOString());
 
       // 9) shift_closeout_reports for these shifts
       const { data: closeouts } = shiftIds.length
