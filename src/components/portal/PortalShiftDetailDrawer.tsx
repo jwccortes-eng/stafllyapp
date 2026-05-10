@@ -359,7 +359,7 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, responseStatu
 
               {/* Disclaimer — minimal */}
               <p className="text-[10px] text-muted-foreground/40 leading-relaxed px-1 italic">
-                Scheduled hours are estimates. Payroll uses actual clocked hours.
+                Las horas programadas son una estimación. La nómina usa las horas reales registradas.
               </p>
             </div>
           )}
