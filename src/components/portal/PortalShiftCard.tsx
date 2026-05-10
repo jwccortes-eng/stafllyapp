@@ -77,7 +77,7 @@ function dayLabel(dateStr: string): string {
   const d = parseISO(dateStr);
   if (isToday(d)) return "Hoy";
   if (isTomorrow(d)) return "Mañana";
-  return format(d, "EEE d MMM", { locale: enUS });
+  return format(d, "EEE d MMM", { locale: es });
 }
 
 export function PortalShiftCard({
