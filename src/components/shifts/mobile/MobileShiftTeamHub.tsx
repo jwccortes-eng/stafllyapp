@@ -1314,7 +1314,15 @@ function RecommendedTab({
   onOpenDesktop: () => void;
 }) {
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<RecFilter>("best");
+  const [filter, setFilter] = useState<RecFilter>("all");
+  const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
+  const toggleExpanded = (id: string) => {
+    setExpanded(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
   const [signals, setSignals] = useState<RecommendationSignals>(EMPTY_SIGNALS);
   const [signalsLoading, setSignalsLoading] = useState(false);
   const [prefRefreshKey, setPrefRefreshKey] = useState(0);
