@@ -283,7 +283,7 @@ export default function MyShifts() {
       error = fallback.error;
     }
     if (error) toast.error("Error", { description: error.message });
-    else { toast.success("Shift confirmed!"); notifyAdminOfResponse(assignmentId, "confirmed"); await load(); }
+    else { toast.success("¡Turno confirmado!"); notifyAdminOfResponse(assignmentId, "confirmed"); await load(); }
     setResponding(null);
   };
 
