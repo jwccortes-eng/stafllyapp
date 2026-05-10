@@ -816,7 +816,7 @@ export default function PortalClock() {
               )}
             >
               <FileText className="h-3.5 w-3.5" />
-              Report time
+              Reportar tiempo
             </Button>
           )}
         </div>
