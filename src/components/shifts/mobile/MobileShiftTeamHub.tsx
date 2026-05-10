@@ -1655,7 +1655,7 @@ function RecommendedTab({
   const FILTERS: { key: RecFilter; label: string }[] = [
     { key: "all", label: "All" },
     { key: "best", label: "Best match" },
-    { key: "strong_history", label: "Strong venue history" },
+    ...(shift.location_id ? [{ key: "strong_history" as const, label: "Strong venue history" }] : []),
     { key: "no_risk", label: "No risk flags" },
     { key: "ready", label: "Ready" },
     { key: "grace", label: "Grace period" },
