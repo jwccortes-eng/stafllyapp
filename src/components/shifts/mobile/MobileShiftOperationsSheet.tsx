@@ -150,6 +150,9 @@ export function MobileShiftOperationsSheet({
     response_status: string | null;
     attendance_status: string | null;
     assignment_role: string | null;
+    accepted_at: string | null;
+    rejected_at: string | null;
+    responded_at: string | null;
   };
   const [asgnExtras, setAsgnExtras] = useState<AsgnExtra[]>([]);
   const [clockByEmp, setClockByEmp] = useState<Record<string, { clock_in: string | null; clock_out: string | null }>>({});
