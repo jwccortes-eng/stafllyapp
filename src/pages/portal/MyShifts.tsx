@@ -181,7 +181,7 @@ export default function MyShifts() {
 
       // Check for existing request/assignment to prevent duplicates
       const { data: existing } = await supabase.from("shift_requests").select("id").eq("shift_id", shiftId).eq("employee_id", employeeId).maybeSingle();
-      if (existing) throw new Error("You already requested this shift");
+      if (existing) throw new Error("Ya solicitaste este turno");
 
       // Race condition guard: re-check slot availability
       const { data: currentShift } = await supabase.from("scheduled_shifts")
