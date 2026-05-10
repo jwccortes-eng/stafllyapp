@@ -1372,7 +1372,7 @@ function buildShiftLinked(args: {
     { label: "Shift ID", value: shift.id.slice(0, 8) + "…", hint: shift.id },
     { label: "Shift code", value: shift.shift_code ? formatShiftCode(shift.shift_code) : null },
     { label: "Client", value: clientName && clientName !== "—" ? clientName : null },
-    { label: "Location", value: locationName || null },
+    { label: "Job site", value: locationName || null },
     { label: "Assignments", value: String(assignedCount) },
     { label: "Open slots", value: slots > 0 ? String(open) : "—" },
     {
