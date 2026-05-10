@@ -100,6 +100,8 @@ interface Props {
   locationName: string;
   /** Optional — if a meeting point text is available, pass it. */
   meetingPoint?: string | null;
+  /** When true and the sheet opens, immediately open the Manage Team hub. */
+  initialOpenTeamHub?: boolean;
 }
 
 function formatTimeShort(t: string): string {
