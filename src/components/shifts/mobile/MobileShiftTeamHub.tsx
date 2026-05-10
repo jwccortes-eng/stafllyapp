@@ -27,8 +27,9 @@ import {
   X, Users, ShieldCheck, Clock, ExternalLink, Inbox,
   CheckCircle2, AlertCircle, UserMinus, UserX, Phone, MessageSquare,
   Copy, AlertTriangle, Sparkles, Star, MapPin, Briefcase,
-  MoreVertical, Check, XCircle, UserCog,
+  MoreVertical, Check, XCircle, UserCog, Search, UserPlus,
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
