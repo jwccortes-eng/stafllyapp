@@ -252,7 +252,8 @@ function ShiftCard({
         {metrics.reasons.length > 0 && (
           <div className="flex flex-wrap gap-1">
             {metrics.openSpots > 0 && <Chip tone="warn" icon={Users}>Needs staff</Chip>}
-            {!metrics.hasLocation && <Chip tone="bad" icon={MapPin}>No location</Chip>}
+            {!metrics.hasLocation && <Chip tone={metrics.hasMeetingPoint ? "warn" : "bad"} icon={MapPin}>{metrics.hasMeetingPoint ? "Missing job site" : "No location"}</Chip>}
+            {!metrics.hasLocation && metrics.hasMeetingPoint && <Chip tone="muted" icon={MapPin}>Meeting point set</Chip>}
             {metrics.pending > 0 && <Chip tone="warn" icon={Clock}>Pending responses</Chip>}
             {metrics.rejected > 0 && <Chip tone="bad" icon={UserX}>Rejected workers</Chip>}
             {metrics.claimsPending > 0 && <Chip tone="info" icon={Inbox}>Claims</Chip>}
