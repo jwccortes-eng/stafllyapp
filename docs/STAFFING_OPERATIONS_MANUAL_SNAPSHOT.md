@@ -262,3 +262,64 @@ The Manage Team module is the primary operator interface for per-shift staffing.
 - **No schema changes:** ✅
 - **No DB writes:** ✅
 - **Next review:** On completion of Phase 16 development
+
+---
+
+## Daily Close / Captain Verification (Phase 17C)
+
+### 1. Purpose
+- Captures **operational evidence** after a shift ends (staff present, no-shows, lates, incidents, uniform compliance, client feedback).
+- Lets admins / María / Keury review what actually happened on the ground.
+- **Does NOT approve payroll.** Payroll remains driven by `time_entries` and the existing reconciliation pipeline. Closeout is purely operational truth.
+
+### 2. Data Model
+- **Table:** `shift_closeout_reports` (one row per shift).
+- **Lifecycle status:** `draft` → `submitted` → `reviewed` | `rejected`.
+- **Admin review_status:** `approved`, `needs_followup`, `escalated`, `rejected`.
+- **Auto-stamped by triggers:** `submitted_at`, `reviewed_at`, `reviewed_by`.
+- **Audit actions written to `shift_audit_log`:**
+  - `closeout_updated`
+  - `closeout_submitted`
+  - `closeout_reviewed`
+
+### 3. Permissions
+- **Submit operational facts:** captain, shift_admin, admin, manager, owner, developer.
+- **Review (set review_status / move to reviewed/rejected):** admin, manager, owner, developer only.
+- **Submitter cannot self-review** — enforced by `trg_shift_closeout_guard` + RLS policy `closeout_update_submitter_operational`.
+- **Reviewed/rejected rows are locked** for non-admin users (no further edits).
+- Immutable for non-admins: `company_id`, `shift_id`, `submitted_by`, `role`.
+
+### 4. UI Surfaces
+- **`MobileShiftOperationsSheet`** → new **Daily Close** section:
+  - `CaptainCloseoutForm` (counts, notes, uniform, feedback, Save draft / Submit).
+  - `AdminCloseoutReview` (approved / needs_followup / escalated / rejected).
+  - `CloseoutSummaryCard` (compact summary or empty state).
+- **Manage Team → Issues tab** flags today / past published shifts:
+  - `closeout-missing` (warn)
+  - `closeout-pending-review` (info)
+  - `closeout-incidents` (bad)
+- **Command Center → `DailyCloseKpiPanel`** — trailing 14 days:
+  - Missing closeouts
+  - Pending review
+  - Shifts with incidents
+
+### 5. Safety Rules (hard guarantees)
+- ❌ Does **not** create or edit `time_entries`.
+- ❌ Does **not** modify payroll (`payroll_adjustments`, periods, totals).
+- ❌ Does **not** modify `attendance_status` or attendance calculations.
+- ❌ Does **not** approve pay.
+- ❌ Does **not** modify `shift_assignments`.
+- ❌ Does **not** modify `scheduled_shifts`.
+- ❌ Does **not** touch worker portal auth.
+- ✅ Writes only to `shift_closeout_reports` (+ best-effort `shift_audit_log`).
+
+### 6. QA Evidence (Phase 17C-6, PASS)
+- **Tenant:** Quality Staff by Keury
+- **Shift:** YF PRODUCTIONS / Turno — `e63c27c4-b4f9-4a06-877b-1ac4bda88b93`
+- **Closeout row:** `b86e8707-b27b-4fbe-bcd0-f1adb9f959b2`
+- **Audit IDs (`shift_audit_log`):**
+  - draft / update → `fac64658-8712-4739-b05f-b3bde8736842`
+  - submitted → `b13cc917-3241-4468-8304-cac739362b70`
+  - reviewed → `d7af5c4f-46dd-4429-a402-987bb3ed15f6`
+- **Confirmed untouched:** payroll, `time_entries`, `attendance_status`, `shift_assignments`, `scheduled_shifts`, schema.
+
