@@ -799,13 +799,13 @@ export function MobileShiftOperationsSheet({
                 <div className="px-4 py-3">
                   <EmptyBlock
                     icon={MapPin}
-                    title={MOBILE_SHIFT_COPY.noLocationTitle}
-                    helper={MOBILE_SHIFT_COPY.noLocationHelper}
+                    title={meetingPoint ? MOBILE_SHIFT_COPY.noLocationTitle : MOBILE_SHIFT_COPY.noLocationOrMeetingTitle}
+                    helper={meetingPoint ? MOBILE_SHIFT_COPY.noLocationHelper : MOBILE_SHIFT_COPY.noLocationOrMeetingHelper}
                     compact
                   />
                 </div>
               ) : (
-                <DetailRow icon={MapPin} label="Location" value={locationName || "—"} muted={!locationName} />
+                <DetailRow icon={MapPin} label="Job site" value={locationName || "—"} muted={!locationName} />
               )}
               {meetingPoint ? (
                 <DetailRow icon={MapPin} label="Meeting point" value={meetingPoint} />
