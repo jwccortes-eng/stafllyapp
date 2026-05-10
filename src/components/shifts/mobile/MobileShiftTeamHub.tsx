@@ -694,6 +694,7 @@ function AssignedTab({
                       employee={empById.get(a.employee_id)}
                       isCaptain={!!shiftAdminId && a.employee_id === shiftAdminId}
                       canManage={canManage}
+                      companyId={companyId}
                       onCopyPhone={onCopyPhone}
                       onAssignmentAction={onAssignmentAction}
                     />
