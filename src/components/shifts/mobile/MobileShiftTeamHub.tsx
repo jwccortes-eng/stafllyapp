@@ -1207,7 +1207,10 @@ function IssuesTab({
 }
 
 type RecFilter =
+  | "all"
   | "best"
+  | "strong_history"
+  | "no_risk"
   | "ready"
   | "grace"
   | "phone"
@@ -1215,6 +1218,90 @@ type RecFilter =
   | "drivers"
   | "captains"
   | "available";
+
+/* ─── Phase 13A: group classification (UI only, does not change ranking) ─── */
+type RecGroup = "best" | "good" | "caution";
+
+function classifyGroup(c: RankedCandidate): RecGroup {
+  // Anything we can't assign or that has hard risks → caution.
+  if (!c.canAssign) return "caution";
+  if (c.conflictDetected) return "caution";
+  if (c.riskFlags && c.riskFlags.length > 0) return "caution";
+  if (c.readinessState !== "ready" && c.readinessState !== "grace_period") return "caution";
+
+  // Best match: assignable, ready, no risk, strong score.
+  if (c.score >= 150 && c.readinessState === "ready") return "best";
+
+  // Good options: decent score, or grace, or has history.
+  if (c.score >= 80) return "good";
+  if (c.readinessState === "grace_period") return "good";
+  if ((c.locationHistoryCount ?? 0) > 0 || (c.clientHistoryCount ?? 0) > 0) return "good";
+
+  return "caution";
+}
+
+const GROUP_META: Record<RecGroup, { label: string; helper: string; tone: string }> = {
+  best: {
+    label: "Best match",
+    helper: "Assignable, ready, no risk flags, strong score.",
+    tone: "border-emerald-500/40 text-emerald-700 dark:text-emerald-400 bg-emerald-500/10",
+  },
+  good: {
+    label: "Good options",
+    helper: "Solid candidates with grace period or worked-here history.",
+    tone: "border-sky-500/40 text-sky-700 dark:text-sky-400 bg-sky-500/10",
+  },
+  caution: {
+    label: "Use with caution",
+    helper: "Low score, risk flags, conflict, or otherwise blocked.",
+    tone: "border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10",
+  },
+};
+
+/* ─── Phase 13B: qualitative "Why?" reasons (no point breakdown leak) ─── */
+function buildWhyReasons(c: RankedCandidate): string[] {
+  const reasons = new Set(c.reasons ?? []);
+  const risks = new Set(c.riskFlags ?? []);
+  const lines: string[] = [];
+
+  // Readiness
+  if (c.readinessState === "ready") lines.push("Profile ready for shifts.");
+  else if (c.readinessState === "grace_period") lines.push("In grace period — can still be approved.");
+  else lines.push("Profile not ready (blocked).");
+
+  // Contact / availability
+  if (c.phone) lines.push("Has a phone on file.");
+  else lines.push("No phone on file — can't be contacted.");
+  if (c.availabilitySignal === "available") lines.push("Marked available for this date.");
+  else if (c.availabilitySignal === "unavailable") lines.push("Marked unavailable for this date.");
+
+  // Venue / client history
+  if ((c.locationHistoryCount ?? 0) > 0) lines.push(`Worked this location ${c.locationHistoryCount} time${c.locationHistoryCount === 1 ? "" : "s"}.`);
+  if ((c.clientHistoryCount ?? 0) > 0) lines.push(`Worked this client ${c.clientHistoryCount} time${c.clientHistoryCount === 1 ? "" : "s"}.`);
+
+  // Reliability (qualitative only — no reviewer names / scores)
+  if (reasons.has("high_reliability") && risks.has("low_reliability")) lines.push("Good rating, but 1 reliability risk flag.");
+  else if (reasons.has("high_reliability")) lines.push("Good reliability rating.");
+  else if (risks.has("low_reliability")) lines.push("Reliability risk flagged.");
+
+  // Preferences
+  if (reasons.has("preferred")) lines.push("Marked preferred for this client/location.");
+  if (reasons.has("prequalified")) lines.push("Prequalified for this client/location.");
+  if (reasons.has("captain_preferred")) lines.push("Captain-preferred here.");
+  if (reasons.has("driver_preferred")) lines.push("Driver-preferred here.");
+  if (risks.has("blocked_here")) lines.push("Blocked from this client/location.");
+  if (risks.has("not_recommended")) lines.push("Marked not recommended here.");
+
+  // Conflicts
+  if (c.conflictDetected) lines.push("Has an overlapping shift on this date.");
+
+  // Role
+  if (reasons.has("captain")) lines.push("Captain.");
+  if (reasons.has("driver")) lines.push("Driver.");
+  if (reasons.has("role_match")) lines.push("Matches the role required.");
+
+  return lines;
+}
 
 function RecommendedTab({
   shift, employees, assignments, companyId, onAssign, onOpenDesktop,
@@ -1227,7 +1314,15 @@ function RecommendedTab({
   onOpenDesktop: () => void;
 }) {
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<RecFilter>("best");
+  const [filter, setFilter] = useState<RecFilter>("all");
+  const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
+  const toggleExpanded = (id: string) => {
+    setExpanded(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
   const [signals, setSignals] = useState<RecommendationSignals>(EMPTY_SIGNALS);
   const [signalsLoading, setSignalsLoading] = useState(false);
   const [prefRefreshKey, setPrefRefreshKey] = useState(0);
@@ -1512,6 +1607,9 @@ function RecommendedTab({
   const visible = useMemo(() => {
     const q = search.trim().toLowerCase();
     const filtered = ranked.filter(c => {
+      if (filter === "best" && classifyGroup(c) !== "best") return false;
+      if (filter === "strong_history" && (c.locationHistoryCount ?? 0) < 5) return false;
+      if (filter === "no_risk" && ((c.riskFlags?.length ?? 0) > 0 || c.conflictDetected)) return false;
       if (filter === "ready" && c.readinessState !== "ready") return false;
       if (filter === "grace" && c.readinessState !== "grace_period") return false;
       if (filter === "phone" && !c.phone) return false;
@@ -1534,8 +1632,18 @@ function RecommendedTab({
     return filtered.slice(0, 60);
   }, [ranked, search, filter]);
 
+  // Phase 13A: split visible candidates into 3 visual groups, preserving sort.
+  const grouped = useMemo(() => {
+    const out: Record<RecGroup, RankedCandidate[]> = { best: [], good: [], caution: [] };
+    for (const c of visible) out[classifyGroup(c)].push(c);
+    return out;
+  }, [visible]);
+
   const FILTERS: { key: RecFilter; label: string }[] = [
+    { key: "all", label: "All" },
     { key: "best", label: "Best match" },
+    { key: "strong_history", label: "Strong venue history" },
+    { key: "no_risk", label: "No risk flags" },
     { key: "ready", label: "Ready" },
     { key: "grace", label: "Grace period" },
     { key: "phone", label: "Has phone" },
@@ -1585,15 +1693,63 @@ function RecommendedTab({
         <p className="text-[11px] text-muted-foreground px-1">Refining recommendations…</p>
       )}
 
-      {visible.length === 0 ? (
-        <EmptyBlock
-          title="No workers match"
-          helper="Try a different search or clear filters. Workers already on this shift are hidden."
-        />
-      ) : (
-        <ul className="space-y-2">
-          {visible.map((c) => {
+      {(() => {
+        // Phase 13D: smarter empty states.
+        if (visible.length > 0) return null;
+        const hasSearch = search.trim().length > 0;
+        const hasFilter = filter !== "all";
+        if (ranked.length === 0) {
+          return (
+            <EmptyBlock
+              title="No candidates"
+              helper="Everyone eligible is already assigned or blocked by filters."
+            />
+          );
+        }
+        if (hasSearch) {
+          return (
+            <EmptyBlock
+              title="No workers match this search"
+              helper="Try a different name, phone, email, or worker ID."
+            />
+          );
+        }
+        if (hasFilter) {
+          return (
+            <EmptyBlock
+              title="No workers match this filter"
+              helper="Try Best match or clear the filter."
+            />
+          );
+        }
+        return (
+          <EmptyBlock
+            title="No workers match"
+            helper="Workers already on this shift are hidden."
+          />
+        );
+      })()}
+
+      {visible.length > 0 && (
+        <div className="space-y-4">
+          {(["best", "good", "caution"] as RecGroup[]).map(g => {
+            const list = grouped[g];
+            if (list.length === 0) return null;
+            const meta = GROUP_META[g];
+            return (
+              <div key={g} className="space-y-2">
+                <div className="flex items-center gap-2 px-0.5">
+                  <span className={cn("rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider", meta.tone)}>
+                    {meta.label}
+                  </span>
+                  <span className="text-[10px] tabular-nums text-muted-foreground">{list.length}</span>
+                </div>
+                <p className="text-[10.5px] text-muted-foreground px-1 leading-snug">{meta.helper}</p>
+                <ul className="space-y-2">
+                  {list.map((c) => {
             const display = buildRecommendedDisplay(c);
+            const isExpanded = expanded.has(c.employee.id);
+            const whyLines = isExpanded ? buildWhyReasons(c) : [];
             const badgeTone =
               c.readinessState === "ready"
                 ? "border-emerald-300/60 text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30"
@@ -1612,11 +1768,11 @@ function RecommendedTab({
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <p className="text-sm font-semibold text-foreground truncate">{c.name}</p>
-                    <span className={cn("rounded-full border px-1.5 py-0 text-[10px] font-semibold", badgeTone)}>
+                    <span className={cn("h-[18px] inline-flex items-center rounded-full border px-1.5 text-[10px] font-semibold", badgeTone)}>
                       {c.readinessState === "ready" ? "Ready" : c.readinessState === "grace_period" ? "Grace" : "Blocked"}
                     </span>
                     <span
-                      className="rounded-md border border-border/50 bg-muted/40 px-1.5 py-0 text-[10px] font-mono tabular-nums text-muted-foreground"
+                      className="h-[18px] inline-flex items-center rounded-md border border-border/50 bg-muted/40 px-1.5 text-[10px] font-mono tabular-nums text-muted-foreground"
                       title={`Score ${c.score}`}
                     >
                       Score {c.score}
@@ -1624,21 +1780,27 @@ function RecommendedTab({
                   </div>
                   {display.chips.length > 0 && (
                     <div className="mt-1 flex flex-wrap gap-1">
-                      {display.chips.map(ch => (
-                        <span
-                          key={`d-${ch.key}`}
-                          className={cn(
-                            "text-[10px] font-medium px-1.5 py-0.5 rounded-md",
-                            ch.tone === "good"
-                              ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400"
-                              : ch.tone === "risk"
-                                ? "bg-rose-50 text-rose-700 dark:bg-rose-950/30 dark:text-rose-400"
-                                : "bg-muted text-muted-foreground",
-                          )}
-                        >
-                          {ch.label}
-                        </span>
-                      ))}
+                      {display.chips.map(ch => {
+                        // Phase 13E: only "blocked" / "conflict" chips render alarming.
+                        const isAlarming = ch.tone === "risk" && (ch.key === "blocked_here" || ch.key === "conflict");
+                        return (
+                          <span
+                            key={`d-${ch.key}`}
+                            className={cn(
+                              "text-[10px] font-medium px-1.5 py-0.5 rounded-md",
+                              ch.tone === "good"
+                                ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400"
+                                : isAlarming
+                                  ? "bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300"
+                                  : ch.tone === "risk"
+                                    ? "bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400"
+                                    : "bg-muted text-muted-foreground",
+                            )}
+                          >
+                            {ch.label}
+                          </span>
+                        );
+                      })}
                     </div>
                   )}
                   {display.summary && (
@@ -1648,6 +1810,21 @@ function RecommendedTab({
                     <p className="mt-1 text-[11px] text-muted-foreground tabular-nums">{c.phone}</p>
                   ) : (
                     <p className="mt-1 text-[11px] text-amber-700 dark:text-amber-400">No phone on file</p>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => toggleExpanded(c.employee.id)}
+                    className="mt-1.5 inline-flex items-center gap-1 text-[10.5px] font-semibold text-muted-foreground hover:text-foreground"
+                    aria-expanded={isExpanded}
+                  >
+                    {isExpanded ? "Hide why" : "Why?"}
+                  </button>
+                  {isExpanded && (
+                    <ul className="mt-1.5 space-y-0.5 rounded-lg bg-muted/30 px-2 py-1.5">
+                      {whyLines.map((w, i) => (
+                        <li key={i} className="text-[11px] text-foreground/80 leading-snug">• {w}</li>
+                      ))}
+                    </ul>
                   )}
                 </div>
                 <div className="flex flex-col items-end gap-1 shrink-0">
@@ -1680,7 +1857,7 @@ function RecommendedTab({
                       <DropdownMenuTrigger asChild>
                         <button
                           type="button"
-                          className="h-7 px-2 rounded-md text-[10px] font-semibold text-muted-foreground hover:bg-muted/60 inline-flex items-center gap-1"
+                          className="h-6 px-1.5 rounded-md text-[10px] font-medium text-muted-foreground/80 hover:bg-muted/60 inline-flex items-center gap-0.5"
                           aria-label={`Set fit for ${c.name}`}
                         >
                           <MoreVertical className="h-3 w-3" /> Fit
@@ -1727,8 +1904,12 @@ function RecommendedTab({
                 </div>
               </li>
             );
+                  })}
+                </ul>
+              </div>
+            );
           })}
-        </ul>
+        </div>
       )}
 
       <button
