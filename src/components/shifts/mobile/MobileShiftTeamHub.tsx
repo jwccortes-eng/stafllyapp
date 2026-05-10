@@ -159,6 +159,10 @@ export type HubAssignment = {
   response_status?: string | null;
   attendance_status?: string | null;
   assignment_role?: string | null;
+  /** Phase 5B — surfaced timestamps for worker response visibility. */
+  accepted_at?: string | null;
+  rejected_at?: string | null;
+  responded_at?: string | null;
 };
 
 interface Props {
