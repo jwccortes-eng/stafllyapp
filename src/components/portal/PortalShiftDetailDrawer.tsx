@@ -253,21 +253,31 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, responseStatu
 
                   {/* Meeting point row — merged into same block */}
                   {shift.meeting_point && (
-                    <a
-                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(shift.meeting_point)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-3 px-4 py-3 border-t border-border/30 hover:bg-muted/30 transition-colors"
-                    >
+                    <div className="flex items-center gap-3 px-4 py-3 border-t border-border/30">
                       <div className="h-8 w-8 rounded-lg bg-muted/60 flex items-center justify-center shrink-0">
                         <Navigation className="h-3.5 w-3.5 text-muted-foreground/80" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-[10px] uppercase tracking-widest text-muted-foreground/55 font-bold">Meeting Point</p>
+                        <p className="text-[10px] uppercase tracking-widest text-muted-foreground/55 font-bold">Punto de encuentro</p>
                         <p className="text-[13px] font-semibold text-foreground mt-0.5 truncate">{shift.meeting_point}</p>
                       </div>
-                      <ChevronRight className="h-4 w-4 text-muted-foreground/30 shrink-0" />
-                    </a>
+                      <button
+                        className="p-2 rounded-lg hover:bg-muted text-muted-foreground/50 hover:text-foreground transition-colors"
+                        onClick={() => copyAddress(shift.meeting_point!, "Punto de encuentro")}
+                        aria-label="Copiar punto de encuentro"
+                      >
+                        <Copy className="h-3.5 w-3.5" />
+                      </button>
+                      <a
+                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(shift.meeting_point)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-2 rounded-lg hover:bg-muted text-muted-foreground/50 hover:text-foreground transition-colors"
+                        aria-label="Abrir mapa"
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </a>
+                    </div>
                   )}
 
                   {/* Clock-in method — merged */}
