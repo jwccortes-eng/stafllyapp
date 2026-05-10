@@ -616,7 +616,9 @@ function MobileShiftTeamHubImpl({
               ? { kind: "assignment_state", assignmentId: actionMode.assignmentId, nextStatus: actionMode.nextStatus }
               : actionMode?.kind === "claim_decision"
                 ? { kind: "claim_decision", requestId: actionMode.requestId, decision: actionMode.decision }
-                : null
+                : actionMode?.kind === "assign_worker"
+                  ? { kind: "assign_worker", shiftId: actionMode.shiftId, employeeId: actionMode.employeeId, graceWarning: actionMode.graceWarning }
+                  : null
           }
           onSuccess={handleMutated}
         />
