@@ -553,8 +553,37 @@ function MobileShiftTeamHubImpl({
         helper: "Review on desktop to approve or reject.",
       });
     }
+    // Daily close (Phase 17C). Only flag for today/past shifts.
+    try {
+      const today = new Date(); today.setHours(0,0,0,0);
+      const sd = shift.date ? new Date(`${shift.date}T00:00:00`) : null;
+      const isPastOrToday = sd ? sd.getTime() <= today.getTime() : false;
+      const isPublished = (shift.publication_status ?? "published") === "published";
+      if (isPastOrToday && isPublished) {
+        if (!closeout) {
+          items.push({
+            key: "closeout-missing",
+            tone: "warn", icon: ClipboardCheck,
+            title: "Daily closeout missing",
+            helper: "Captain or shift admin hasn't submitted yet.",
+          });
+        } else if (closeout.status === "submitted") {
+          items.push({
+            key: "closeout-pending-review",
+            tone: "info", icon: ClipboardCheck,
+            title: "Closeout needs admin review",
+          });
+        } else if (closeout.status === "reviewed" && (closeout.incident_count ?? 0) > 0) {
+          items.push({
+            key: "closeout-incidents",
+            tone: "bad", icon: AlertTriangle,
+            title: `${closeout.incident_count} incident${closeout.incident_count === 1 ? "" : "s"} reported`,
+          });
+        }
+      }
+    } catch { /* best-effort */ }
     return items;
-  }, [grouped, openSpots, empById, shift.location_id, shift.client_id, claimsPending, hasMeetingPointLocation, meetingPoint]);
+  }, [grouped, openSpots, empById, shift.location_id, shift.client_id, shift.date, shift.publication_status, claimsPending, hasMeetingPointLocation, meetingPoint, closeout]);
 
   const order: Bucket[] = [
     "confirmed", "accepted", "pending",
