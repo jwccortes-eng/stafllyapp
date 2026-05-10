@@ -586,8 +586,13 @@ function MobileShiftTeamHubImpl({
                 {clientName && clientName !== "—" ? clientName : (shift.title || "Shift")}
               </h2>
               <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                {locationName || "No location"} · {shift.date} · {shift.start_time}–{shift.end_time}
+                {locationName || "Job site missing"} · {shift.date} · {shift.start_time}–{shift.end_time}
               </p>
+              {!shift.location_id && (meetingPoint || hasMeetingPointLocation) && (
+                <p className="text-[10.5px] text-amber-700 dark:text-amber-400 mt-0.5 truncate">
+                  Meeting point set{meetingPoint ? ` · ${meetingPoint}` : ""}
+                </p>
+              )}
               <p className="text-[11px] text-muted-foreground mt-0.5">
                 {staffedCount}/{slots || "—"} staffed · {openSpots} open
               </p>
