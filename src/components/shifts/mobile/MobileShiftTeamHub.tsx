@@ -1142,6 +1142,71 @@ function RecommendedTab({
   const [filter, setFilter] = useState<RecFilter>("best");
   const [signals, setSignals] = useState<RecommendationSignals>(EMPTY_SIGNALS);
   const [signalsLoading, setSignalsLoading] = useState(false);
+  const [prefRefreshKey, setPrefRefreshKey] = useState(0);
+  const { toast: hubToast } = useToast();
+
+  const handleSetPreference = async (
+    employeeId: string,
+    workerName: string,
+    preferenceType: WorkerPreferenceType,
+  ) => {
+    if (!shift.client_id && !shift.location_id) {
+      hubToast({
+        title: "Can't save preference",
+        description: "This shift has no client or location set.",
+        variant: "destructive",
+      });
+      return;
+    }
+    try {
+      const { error } = await supabase.rpc("set_worker_client_preference", {
+        p_employee_id: employeeId,
+        p_client_id: shift.client_id ?? null,
+        p_location_id: shift.client_id ? null : shift.location_id ?? null,
+        p_preference_type: preferenceType,
+        p_reason: null,
+        p_notes: null,
+      });
+      if (error) throw error;
+      hubToast({
+        title: "Preference saved",
+        description: `${workerName} marked as ${preferenceType.replace("_", " ")} for this ${shift.client_id ? "client" : "location"}.`,
+      });
+      setPrefRefreshKey(k => k + 1);
+    } catch (e: any) {
+      hubToast({
+        title: "Couldn't save preference",
+        description: e?.message ?? "Try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleClearPreferences = async (employeeId: string, workerName: string) => {
+    const list = signals.preferencesByEmp.get(employeeId) ?? [];
+    if (list.length === 0) return;
+    try {
+      const results = await Promise.all(
+        list.map(p => supabase.rpc("archive_worker_client_preference", {
+          p_preference_id: p.id,
+          p_reason: null,
+        })),
+      );
+      const failed = results.find(r => r.error);
+      if (failed?.error) throw failed.error;
+      hubToast({
+        title: "Preference cleared",
+        description: `${workerName}'s preferences for this ${shift.client_id ? "client" : "location"} were cleared.`,
+      });
+      setPrefRefreshKey(k => k + 1);
+    } catch (e: any) {
+      hubToast({
+        title: "Couldn't clear preference",
+        description: e?.message ?? "Try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   // Active assignment ids (anything except rejected/removed counts as taken).
   const takenIds = useMemo(() => {
