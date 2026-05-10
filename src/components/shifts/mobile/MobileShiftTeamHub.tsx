@@ -1207,7 +1207,10 @@ function IssuesTab({
 }
 
 type RecFilter =
+  | "all"
   | "best"
+  | "strong_history"
+  | "no_risk"
   | "ready"
   | "grace"
   | "phone"
@@ -1215,6 +1218,90 @@ type RecFilter =
   | "drivers"
   | "captains"
   | "available";
+
+/* ─── Phase 13A: group classification (UI only, does not change ranking) ─── */
+type RecGroup = "best" | "good" | "caution";
+
+function classifyGroup(c: RankedCandidate): RecGroup {
+  // Anything we can't assign or that has hard risks → caution.
+  if (!c.canAssign) return "caution";
+  if (c.conflictDetected) return "caution";
+  if (c.riskFlags && c.riskFlags.length > 0) return "caution";
+  if (c.readinessState !== "ready" && c.readinessState !== "grace_period") return "caution";
+
+  // Best match: assignable, ready, no risk, strong score.
+  if (c.score >= 150 && c.readinessState === "ready") return "best";
+
+  // Good options: decent score, or grace, or has history.
+  if (c.score >= 80) return "good";
+  if (c.readinessState === "grace_period") return "good";
+  if ((c.locationHistoryCount ?? 0) > 0 || (c.clientHistoryCount ?? 0) > 0) return "good";
+
+  return "caution";
+}
+
+const GROUP_META: Record<RecGroup, { label: string; helper: string; tone: string }> = {
+  best: {
+    label: "Best match",
+    helper: "Assignable, ready, no risk flags, strong score.",
+    tone: "border-emerald-500/40 text-emerald-700 dark:text-emerald-400 bg-emerald-500/10",
+  },
+  good: {
+    label: "Good options",
+    helper: "Solid candidates with grace period or worked-here history.",
+    tone: "border-sky-500/40 text-sky-700 dark:text-sky-400 bg-sky-500/10",
+  },
+  caution: {
+    label: "Use with caution",
+    helper: "Low score, risk flags, conflict, or otherwise blocked.",
+    tone: "border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10",
+  },
+};
+
+/* ─── Phase 13B: qualitative "Why?" reasons (no point breakdown leak) ─── */
+function buildWhyReasons(c: RankedCandidate): string[] {
+  const reasons = new Set(c.reasons ?? []);
+  const risks = new Set(c.riskFlags ?? []);
+  const lines: string[] = [];
+
+  // Readiness
+  if (c.readinessState === "ready") lines.push("Profile ready for shifts.");
+  else if (c.readinessState === "grace_period") lines.push("In grace period — can still be approved.");
+  else lines.push("Profile not ready (blocked).");
+
+  // Contact / availability
+  if (c.phone) lines.push("Has a phone on file.");
+  else lines.push("No phone on file — can't be contacted.");
+  if (c.availabilitySignal === "available") lines.push("Marked available for this date.");
+  else if (c.availabilitySignal === "blocked") lines.push("Marked unavailable for this date.");
+
+  // Venue / client history
+  if ((c.locationHistoryCount ?? 0) > 0) lines.push(`Worked this location ${c.locationHistoryCount} time${c.locationHistoryCount === 1 ? "" : "s"}.`);
+  if ((c.clientHistoryCount ?? 0) > 0) lines.push(`Worked this client ${c.clientHistoryCount} time${c.clientHistoryCount === 1 ? "" : "s"}.`);
+
+  // Reliability (qualitative only — no reviewer names / scores)
+  if (reasons.has("high_reliability") && risks.has("low_reliability")) lines.push("Good rating, but 1 reliability risk flag.");
+  else if (reasons.has("high_reliability")) lines.push("Good reliability rating.");
+  else if (risks.has("low_reliability")) lines.push("Reliability risk flagged.");
+
+  // Preferences
+  if (reasons.has("preferred")) lines.push("Marked preferred for this client/location.");
+  if (reasons.has("prequalified")) lines.push("Prequalified for this client/location.");
+  if (reasons.has("captain_preferred")) lines.push("Captain-preferred here.");
+  if (reasons.has("driver_preferred")) lines.push("Driver-preferred here.");
+  if (risks.has("blocked_here")) lines.push("Blocked from this client/location.");
+  if (risks.has("not_recommended")) lines.push("Marked not recommended here.");
+
+  // Conflicts
+  if (c.conflictDetected) lines.push("Has an overlapping shift on this date.");
+
+  // Role
+  if (reasons.has("captain")) lines.push("Captain.");
+  if (reasons.has("driver")) lines.push("Driver.");
+  if (reasons.has("role_match")) lines.push("Matches the role required.");
+
+  return lines;
+}
 
 function RecommendedTab({
   shift, employees, assignments, companyId, onAssign, onOpenDesktop,
