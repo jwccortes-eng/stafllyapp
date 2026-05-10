@@ -195,7 +195,7 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, responseStatu
           </div>
 
           {/* Countdown — only when actionable */}
-          {countdown && isConfirmed && (
+          {countdown && isAccepted && (
             <div className="flex items-center gap-2 text-[10.5px] font-bold text-primary bg-primary/[0.06] rounded-lg px-2.5 py-1.5 border border-primary/10">
               <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse shrink-0" />
               <span className="tracking-wide uppercase">{countdown}</span>
