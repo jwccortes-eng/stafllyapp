@@ -1402,7 +1402,7 @@ function buildShiftRisks(args: {
   if (args.published && args.understaffed) risks.push({ label: "Needs more staff", tone: "warn" });
   if (args.assignedCount === 0) risks.push({ label: "No workers assigned", tone: "bad" });
   if (args.noClient) risks.push({ label: "No client linked", tone: "warn" });
-  if (args.noLocation) risks.push({ label: "No location linked", tone: "warn" });
+  if (args.noLocation) risks.push({ label: "No job site linked", tone: "warn" });
   if (!args.hasShiftCode) risks.push({ label: "No shift code", tone: "warn" });
   if (args.imported) risks.push({ label: "Imported from a batch", tone: "info" });
   return risks;
