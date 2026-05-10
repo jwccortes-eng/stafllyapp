@@ -508,6 +508,20 @@ export default function PortalClock() {
 
   return (
     <div className="animate-fade-in pb-24">
+      {/* ─── Stage 1 advisory — Connecteam remains payroll source ─── */}
+      <div className="mb-3 rounded-xl border border-warning/25 bg-warning/[0.06] p-3 flex items-start gap-2.5">
+        <Clock className="h-4 w-4 text-warning mt-0.5 shrink-0" />
+        <div className="min-w-0">
+          <p className="text-[12px] font-semibold text-foreground leading-tight">
+            Stage 1: keep clocking in/out in Connecteam
+          </p>
+          <p className="text-[11px] text-muted-foreground/85 mt-0.5 leading-snug">
+            Stafly TimeClock is not the payroll source yet. Use Connecteam as
+            usual; we'll let you know when Stafly takes over.
+          </p>
+        </div>
+      </div>
+
       {/* ─── Profile photo gate — high-priority blocker ─── */}
       {!hasProfilePhoto && (
         <button
