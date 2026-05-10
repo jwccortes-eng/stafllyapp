@@ -1273,7 +1273,7 @@ function buildWhyReasons(c: RankedCandidate): string[] {
   if (c.phone) lines.push("Has a phone on file.");
   else lines.push("No phone on file — can't be contacted.");
   if (c.availabilitySignal === "available") lines.push("Marked available for this date.");
-  else if (c.availabilitySignal === "blocked") lines.push("Marked unavailable for this date.");
+  else if (c.availabilitySignal === "unavailable") lines.push("Marked unavailable for this date.");
 
   // Venue / client history
   if ((c.locationHistoryCount ?? 0) > 0) lines.push(`Worked this location ${c.locationHistoryCount} time${c.locationHistoryCount === 1 ? "" : "s"}.`);
