@@ -631,7 +631,23 @@ export default function MyShifts() {
       {/* Shift detail drawer */}
       <PortalShiftDetailDrawer
         shift={selectedShift?.shift ?? null}
-        assignmentStatus={selectedShift?.status}
+        assignmentStatus={selectedShift ? getDisplayStatus(selectedShift) : undefined}
+        responseStatus={selectedShift?.response_status}
+        onAccept={
+          selectedShift &&
+          (selectedShift.response_status === "pending" || selectedShift.response_status === "needs_reacceptance") &&
+          !isBefore(parseISO(selectedShift.shift.date), today)
+            ? () => acceptAssignment(selectedShift.id)
+            : undefined
+        }
+        onReject={
+          selectedShift &&
+          (selectedShift.response_status === "pending" || selectedShift.response_status === "needs_reacceptance") &&
+          !isBefore(parseISO(selectedShift.shift.date), today)
+            ? () => { setRejectDialogId(selectedShift.id); setRejectReason(""); }
+            : undefined
+        }
+        responding={!!selectedShift && responding === selectedShift.id}
         open={!!selectedShift}
         onOpenChange={o => { if (!o) setSelectedShift(null); }}
       />
