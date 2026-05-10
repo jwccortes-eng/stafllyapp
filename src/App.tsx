@@ -56,6 +56,7 @@ const EmployeeMerge = lazy(() => import("./pages/admin/EmployeeMerge"));
 const Directory = lazy(() => import("./pages/admin/Directory"));
 const Clients = lazy(() => import("./pages/admin/Clients"));
 const ClientProfile = lazy(() => import("./pages/admin/ClientProfile"));
+const LocationProfile = lazy(() => import("./pages/admin/LocationProfile"));
 const Locations = lazy(() => import("./pages/admin/Locations"));
 const ImportSchedule = lazy(() => import("./pages/admin/ImportSchedule"));
 const BackfillShift = lazy(() => import("./pages/admin/BackfillShift"));
