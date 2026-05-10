@@ -48,6 +48,12 @@ import { allowedNextStatusesFor, type AssignmentNextStatus, type ClaimDecision }
 import { MobileTeamActionDialog } from "@/components/shifts/mobile/MobileTeamActionDialog";
 import { isOnboardingComplete } from "@/lib/onboarding";
 import { isGraceEligibleCompany, isWithinGraceWindow, GRACE_POLICY_DAYS } from "@/lib/shifts/readiness-grace";
+import { formatDistanceToNowStrict } from "date-fns";
+
+function formatRelative(iso: string): string {
+  try { return formatDistanceToNowStrict(new Date(iso), { addSuffix: true }); }
+  catch { return ""; }
+}
 
 /* ─── Worker readiness (read-only, mirrors backend EMPLOYEE_NOT_READY guard) ─── */
 
@@ -159,6 +165,10 @@ export type HubAssignment = {
   response_status?: string | null;
   attendance_status?: string | null;
   assignment_role?: string | null;
+  /** Phase 5B — surfaced timestamps for worker response visibility. */
+  accepted_at?: string | null;
+  rejected_at?: string | null;
+  responded_at?: string | null;
 };
 
 interface Props {
@@ -771,6 +781,10 @@ function WorkerRow({
   if (assignment.attendance_status && assignment.attendance_status !== "pending") {
     subBits.push(assignment.attendance_status);
   }
+  const responseTs = assignment.accepted_at || assignment.rejected_at || assignment.responded_at || null;
+  const responseLabel = responseTs
+    ? (assignment.accepted_at ? "Accepted " : assignment.rejected_at ? "Rejected " : "Responded ") + formatRelative(responseTs)
+    : null;
 
   return (
     <li className="px-3 py-2.5">
@@ -797,6 +811,14 @@ function WorkerRow({
           <p className="text-[11px] text-muted-foreground truncate">
             {subBits.length ? subBits.join(" · ") : "—"}
           </p>
+          {responseLabel && (
+            <p className={cn(
+              "text-[10px] mt-0.5 font-medium",
+              assignment.accepted_at ? "text-emerald-700 dark:text-emerald-400" : "text-rose-700 dark:text-rose-400"
+            )}>
+              {responseLabel}
+            </p>
+          )}
           {readiness.state !== "ready" && readiness.state !== "missing_phone" && (
             <div className="mt-0.5"><ReadinessChip readiness={readiness} /></div>
           )}

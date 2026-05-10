@@ -150,6 +150,9 @@ export function MobileShiftOperationsSheet({
     response_status: string | null;
     attendance_status: string | null;
     assignment_role: string | null;
+    accepted_at: string | null;
+    rejected_at: string | null;
+    responded_at: string | null;
   };
   const [asgnExtras, setAsgnExtras] = useState<AsgnExtra[]>([]);
   const [clockByEmp, setClockByEmp] = useState<Record<string, { clock_in: string | null; clock_out: string | null }>>({});
@@ -167,7 +170,7 @@ export function MobileShiftOperationsSheet({
       const [asgnRes, teRes, shiftRes] = await Promise.all([
         supabase
           .from("shift_assignments")
-          .select("id, employee_id, status, response_status, attendance_status, assignment_role")
+          .select("id, employee_id, status, response_status, attendance_status, assignment_role, accepted_at, rejected_at, responded_at")
           .eq("shift_id", shift.id),
         supabase
           .from("time_entries")
@@ -872,6 +875,9 @@ export function MobileShiftOperationsSheet({
         response_status: a.response_status,
         attendance_status: a.attendance_status,
         assignment_role: a.assignment_role,
+        accepted_at: a.accepted_at,
+        rejected_at: a.rejected_at,
+        responded_at: a.responded_at,
       }))}
       employees={employees}
       canManage={canValidate}
