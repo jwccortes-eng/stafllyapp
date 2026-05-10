@@ -607,16 +607,16 @@ export default function PortalClock() {
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-earning opacity-60" />
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-earning" />
               </span>
-              <span className="text-[10.5px] font-bold uppercase tracking-widest text-earning">On shift</span>
+              <span className="text-[10.5px] font-bold uppercase tracking-widest text-earning">En turno</span>
             </div>
             <p className="text-[10.5px] text-muted-foreground/70 tabular-nums">
-              Started {format(new Date(activeEntry!.clock_in), "HH:mm")}
+              Iniciado {format(new Date(activeEntry!.clock_in), "HH:mm")}
             </p>
           </div>
         ) : (
           <div className="px-4 pt-3.5 pb-1 flex items-center justify-between gap-2">
             <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/55">
-              {focusShift ? "Ready to clock in" : "No shift selected"}
+              {focusShift ? "Listo para marcar entrada" : "Sin turno seleccionado"}
             </p>
             <p className="text-[10.5px] text-muted-foreground/70 tabular-nums">
               {format(now, "HH:mm:ss")}
