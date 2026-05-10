@@ -27,17 +27,24 @@ import {
   X, Users, ShieldCheck, Clock, ExternalLink, Inbox,
   CheckCircle2, AlertCircle, UserMinus, UserX, Phone, MessageSquare,
   Copy, AlertTriangle, Sparkles, Star, MapPin, Briefcase,
+  MoreVertical, Check, XCircle,
 } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { formatShiftCode, type Shift, type Employee } from "@/components/shifts/types";
 import { supabase } from "@/integrations/supabase/client";
 import { normalizePhone, buildWhatsAppTargets } from "@/lib/phone";
 import { useToast } from "@/hooks/use-toast";
+import { allowedNextStatusesFor, type AssignmentNextStatus, type ClaimDecision } from "@/lib/shifts/team-actions";
+import { MobileTeamActionDialog } from "@/components/shifts/mobile/MobileTeamActionDialog";
 
 const HUB_COPY = {
   intro: "Read-only team view. Staffing changes still happen on desktop.",
@@ -94,6 +101,8 @@ interface Props {
   locationName?: string | null;
   /** scheduled_shifts.shift_admin_id, used for Captain badge. */
   shiftAdminId?: string | null;
+  /** Optional callback so the parent sheet can refetch after a safe mutation. */
+  onMutated?: () => void;
 }
 
 type Bucket =
@@ -165,11 +174,33 @@ type TabKey = "overview" | "assigned" | "claims" | "issues" | "recommended";
 
 function MobileShiftTeamHubImpl({
   open, onOpenChange, shift, assignments, employees, canManage,
-  clientName, locationName, shiftAdminId,
+  clientName, locationName, shiftAdminId, onMutated,
 }: Props) {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [tab, setTab] = useState<TabKey>("overview");
+
+  // ── Phase 2: safe action dialog state.
+  const [actionDialogOpen, setActionDialogOpen] = useState(false);
+  const [actionMode, setActionMode] = useState<
+    | { kind: "assignment_state"; assignmentId: string; nextStatus: AssignmentNextStatus; workerName: string }
+    | { kind: "claim_decision"; requestId: string; decision: ClaimDecision; workerName: string }
+    | null
+  >(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const openAssignmentAction = (assignmentId: string, nextStatus: AssignmentNextStatus, workerName: string) => {
+    setActionMode({ kind: "assignment_state", assignmentId, nextStatus, workerName });
+    setActionDialogOpen(true);
+  };
+  const openClaimAction = (requestId: string, decision: ClaimDecision, workerName: string) => {
+    setActionMode({ kind: "claim_decision", requestId, decision, workerName });
+    setActionDialogOpen(true);
+  };
+  const handleMutated = () => {
+    setRefreshKey((k) => k + 1);
+    onMutated?.();
+  };
 
   // ── Claims (shift_requests) — single scoped read.
   const [claims, setClaims] = useState<ShiftRequestRow[]>([]);
@@ -197,7 +228,7 @@ function MobileShiftTeamHubImpl({
       setClaimsLoading(false);
     })();
     return () => { cancelled = true; };
-  }, [open, shift?.id]);
+  }, [open, shift?.id, refreshKey]);
 
   const empById = useMemo(() => {
     const m = new Map<string, Employee>();
@@ -417,10 +448,12 @@ function MobileShiftTeamHubImpl({
               order={order}
               empById={empById}
               shiftAdminId={shiftAdminId ?? null}
+              canManage={canManage}
               onCopyPhone={(p) => {
                 navigator.clipboard?.writeText(p).catch(() => {});
                 toast({ title: "Phone copied" });
               }}
+              onAssignmentAction={openAssignmentAction}
             />
           )}
 
@@ -430,6 +463,8 @@ function MobileShiftTeamHubImpl({
               error={claimsError}
               claims={claims}
               empById={empById}
+              canManage={canManage}
+              onClaimAction={openClaimAction}
               onOpenDesktop={() => {
                 onOpenChange(false);
                 navigate("/app/shifts/requests");
@@ -454,6 +489,20 @@ function MobileShiftTeamHubImpl({
             {HUB_COPY.safetyNote}
           </p>
         </div>
+
+        <MobileTeamActionDialog
+          open={actionDialogOpen}
+          onOpenChange={setActionDialogOpen}
+          workerName={actionMode?.workerName ?? ""}
+          mode={
+            actionMode?.kind === "assignment_state"
+              ? { kind: "assignment_state", assignmentId: actionMode.assignmentId, nextStatus: actionMode.nextStatus }
+              : actionMode?.kind === "claim_decision"
+                ? { kind: "claim_decision", requestId: actionMode.requestId, decision: actionMode.decision }
+                : null
+          }
+          onSuccess={handleMutated}
+        />
       </SheetContent>
     </Sheet>
   );
@@ -494,14 +543,16 @@ function OverviewTab({
 }
 
 function AssignedTab({
-  assignments, grouped, order, empById, shiftAdminId, onCopyPhone,
+  assignments, grouped, order, empById, shiftAdminId, canManage, onCopyPhone, onAssignmentAction,
 }: {
   assignments: HubAssignment[];
   grouped: Record<Bucket, HubAssignment[]>;
   order: Bucket[];
   empById: Map<string, Employee>;
   shiftAdminId: string | null;
+  canManage: boolean;
   onCopyPhone: (p: string) => void;
+  onAssignmentAction: (assignmentId: string, nextStatus: AssignmentNextStatus, workerName: string) => void;
 }) {
   return (
     <section aria-label="Assigned workers">
@@ -544,7 +595,9 @@ function AssignedTab({
                       assignment={a}
                       employee={empById.get(a.employee_id)}
                       isCaptain={!!shiftAdminId && a.employee_id === shiftAdminId}
+                      canManage={canManage}
                       onCopyPhone={onCopyPhone}
+                      onAssignmentAction={onAssignmentAction}
                     />
                   ))}
                 </ul>
@@ -557,18 +610,33 @@ function AssignedTab({
   );
 }
 
+const ASSIGN_ACTION_LABEL: Record<AssignmentNextStatus, string> = {
+  confirmed: "Confirm",
+  rejected: "Mark rejected",
+  removed: "Remove from shift",
+};
+const ASSIGN_ACTION_ICON: Record<AssignmentNextStatus, React.ComponentType<{ className?: string }>> = {
+  confirmed: Check,
+  rejected: XCircle,
+  removed: UserMinus,
+};
+
 function WorkerRow({
-  assignment, employee, isCaptain, onCopyPhone,
+  assignment, employee, isCaptain, canManage, onCopyPhone, onAssignmentAction,
 }: {
   assignment: HubAssignment;
   employee: Employee | undefined;
   isCaptain: boolean;
+  canManage: boolean;
   onCopyPhone: (p: string) => void;
+  onAssignmentAction: (assignmentId: string, nextStatus: AssignmentNextStatus, workerName: string) => void;
 }) {
   const name = fullName(employee);
   const phoneDigits = normalizePhone(employee?.phone_number);
   const hasPhone = phoneDigits.length >= 10;
   const wa = hasPhone ? buildWhatsAppTargets(phoneDigits, "") : null;
+  const allowedActions = allowedNextStatusesFor(assignment.status);
+  const showMenu = canManage && allowedActions.length > 0;
 
   const subBits: string[] = [];
   if (assignment.assignment_role) subBits.push(assignment.assignment_role);
@@ -605,6 +673,39 @@ function WorkerRow({
             <p className="text-[10px] text-amber-700 dark:text-amber-400 mt-0.5">{HUB_COPY.noPhone}</p>
           )}
         </div>
+
+        {showMenu && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className="h-8 w-8 shrink-0 rounded-full grid place-items-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                aria-label={`Change status for ${name}`}
+              >
+                <MoreVertical className="h-4 w-4" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                Logged action
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {allowedActions.map((next) => {
+                const Icon = ASSIGN_ACTION_ICON[next];
+                return (
+                  <DropdownMenuItem
+                    key={next}
+                    onClick={() => onAssignmentAction(assignment.id, next, name)}
+                    className={next === "removed" || next === "rejected" ? "text-destructive focus:text-destructive" : undefined}
+                  >
+                    <Icon className="h-4 w-4 mr-2" />
+                    {ASSIGN_ACTION_LABEL[next]}
+                  </DropdownMenuItem>
+                );
+              })}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
 
       {hasPhone && (
@@ -651,12 +752,14 @@ function ContactBtn({
 }
 
 function ClaimsTab({
-  loading, error, claims, empById, onOpenDesktop,
+  loading, error, claims, empById, canManage, onClaimAction, onOpenDesktop,
 }: {
   loading: boolean;
   error: string | null;
   claims: ShiftRequestRow[];
   empById: Map<string, Employee>;
+  canManage: boolean;
+  onClaimAction: (requestId: string, decision: ClaimDecision, workerName: string) => void;
   onOpenDesktop: () => void;
 }) {
   return (
@@ -684,9 +787,11 @@ function ClaimsTab({
         <ul className="space-y-2">
           {claims.map((c) => {
             const e = empById.get(c.employee_id);
+            const workerName = e ? fullName(e) : "this worker";
             const tone =
               c.status === "approved" ? "good" :
               c.status === "rejected" ? "bad" : "warn";
+            const isPending = c.status === "pending";
             return (
               <li key={c.id} className="rounded-2xl border border-border/50 bg-card p-3">
                 <div className="flex items-start gap-2.5">
@@ -717,6 +822,27 @@ function ClaimsTab({
                       {c.created_at ? new Date(c.created_at).toLocaleString() : ""}
                       {c.reviewed_at ? ` · reviewed ${new Date(c.reviewed_at).toLocaleString()}` : ""}
                     </p>
+
+                    {isPending && canManage && (
+                      <div className="mt-2 flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => onClaimAction(c.id, "approved", workerName)}
+                          className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-emerald-600 text-white text-[11px] font-semibold hover:bg-emerald-700 transition-colors"
+                        >
+                          <Check className="h-3 w-3" />
+                          Approve
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onClaimAction(c.id, "rejected", workerName)}
+                          className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-muted hover:bg-muted/80 text-foreground text-[11px] font-semibold transition-colors"
+                        >
+                          <XCircle className="h-3 w-3" />
+                          Reject
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               </li>
@@ -726,7 +852,11 @@ function ClaimsTab({
       )}
 
       <div className="mt-3 rounded-2xl border border-dashed border-border/60 bg-muted/20 px-4 py-3">
-        <p className="text-[12px] text-muted-foreground">{HUB_COPY.claimsManagedDesktop}</p>
+        <p className="text-[12px] text-muted-foreground">
+          {canManage
+            ? "Approve or reject above. Logged actions don't affect payroll or worked time."
+            : HUB_COPY.claimsManagedDesktop}
+        </p>
         <button
           type="button"
           onClick={onOpenDesktop}

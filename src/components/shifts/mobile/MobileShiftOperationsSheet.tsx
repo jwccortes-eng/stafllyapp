@@ -878,6 +878,7 @@ export function MobileShiftOperationsSheet({
       clientName={clientName}
       locationName={locationName}
       shiftAdminId={shiftAdminId}
+      onMutated={() => setReloadKey(k => k + 1)}
     />
     </>
   );
