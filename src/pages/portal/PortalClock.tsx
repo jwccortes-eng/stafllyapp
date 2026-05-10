@@ -632,7 +632,7 @@ export default function PortalClock() {
                 {getElapsed()}
               </p>
               <p className="text-[10px] uppercase tracking-widest text-muted-foreground/55 mt-2 font-semibold">
-                Elapsed
+                Transcurrido
               </p>
             </>
           ) : focusShift ? (
