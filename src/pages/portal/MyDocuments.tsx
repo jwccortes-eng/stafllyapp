@@ -37,6 +37,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { PROFILE_STATUS_LABELS } from "@/lib/onboarding/profile-status";
+import { resolveEmployeeDocumentUrl } from "@/lib/employee-documents";
 
 type ReviewStatus = "pending" | "approved" | "rejected";
 
