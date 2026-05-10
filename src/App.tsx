@@ -256,6 +256,7 @@ function App() {
                 <Route path="daily-close" element={<CompanyRequiredGuard><DailyClose /></CompanyRequiredGuard>} />
                 <Route path="today" element={<Today />} />
                 <Route path="command-center" element={<CommandCenter />} />
+                <Route path="staffing-center" element={<StaffingCenter />} />
                 <Route path="dev-command-center" element={<DevCommandCenter />} />
                 <Route path="owner-command-center" element={<DevCommandCenter />} />
                 <Route path="employees" element={<CompanyRequiredGuard><Employees /></CompanyRequiredGuard>} />
