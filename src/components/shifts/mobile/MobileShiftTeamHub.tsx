@@ -515,11 +515,14 @@ function MobileShiftTeamHubImpl({
       });
     }
     if (!shift.location_id) {
+      const hasMP = !!hasMeetingPointLocation || !!(meetingPoint && meetingPoint.trim());
       items.push({
         key: "no-location",
         tone: "warn", icon: MapPin,
-        title: "No location set",
-        helper: "Workers won't know where to go.",
+        title: hasMP ? "Missing job site / venue" : "No location or meeting point",
+        helper: hasMP
+          ? "Meeting point is set, but the actual work location is missing."
+          : "Workers may not know where to go or meet.",
       });
     }
     if (!shift.client_id) {
