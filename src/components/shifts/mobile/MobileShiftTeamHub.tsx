@@ -752,12 +752,14 @@ function ContactBtn({
 }
 
 function ClaimsTab({
-  loading, error, claims, empById, onOpenDesktop,
+  loading, error, claims, empById, canManage, onClaimAction, onOpenDesktop,
 }: {
   loading: boolean;
   error: string | null;
   claims: ShiftRequestRow[];
   empById: Map<string, Employee>;
+  canManage: boolean;
+  onClaimAction: (requestId: string, decision: ClaimDecision, workerName: string) => void;
   onOpenDesktop: () => void;
 }) {
   return (
@@ -785,9 +787,11 @@ function ClaimsTab({
         <ul className="space-y-2">
           {claims.map((c) => {
             const e = empById.get(c.employee_id);
+            const workerName = e ? fullName(e) : "this worker";
             const tone =
               c.status === "approved" ? "good" :
               c.status === "rejected" ? "bad" : "warn";
+            const isPending = c.status === "pending";
             return (
               <li key={c.id} className="rounded-2xl border border-border/50 bg-card p-3">
                 <div className="flex items-start gap-2.5">
@@ -818,6 +822,27 @@ function ClaimsTab({
                       {c.created_at ? new Date(c.created_at).toLocaleString() : ""}
                       {c.reviewed_at ? ` · reviewed ${new Date(c.reviewed_at).toLocaleString()}` : ""}
                     </p>
+
+                    {isPending && canManage && (
+                      <div className="mt-2 flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => onClaimAction(c.id, "approved", workerName)}
+                          className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-emerald-600 text-white text-[11px] font-semibold hover:bg-emerald-700 transition-colors"
+                        >
+                          <Check className="h-3 w-3" />
+                          Approve
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onClaimAction(c.id, "rejected", workerName)}
+                          className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-muted hover:bg-muted/80 text-foreground text-[11px] font-semibold transition-colors"
+                        >
+                          <XCircle className="h-3 w-3" />
+                          Reject
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               </li>
@@ -827,7 +852,11 @@ function ClaimsTab({
       )}
 
       <div className="mt-3 rounded-2xl border border-dashed border-border/60 bg-muted/20 px-4 py-3">
-        <p className="text-[12px] text-muted-foreground">{HUB_COPY.claimsManagedDesktop}</p>
+        <p className="text-[12px] text-muted-foreground">
+          {canManage
+            ? "Approve or reject above. Logged actions don't affect payroll or worked time."
+            : HUB_COPY.claimsManagedDesktop}
+        </p>
         <button
           type="button"
           onClick={onOpenDesktop}
