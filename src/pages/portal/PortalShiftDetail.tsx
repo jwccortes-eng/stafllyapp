@@ -243,29 +243,29 @@ export default function PortalShiftDetail() {
           {/* Meta rows */}
           <div className="space-y-2 pt-1">
             {shift.client?.name && (
-              <Row icon={<Briefcase className="h-3.5 w-3.5" />} label="Client" value={shift.client.name} />
+              <Row icon={<Briefcase className="h-3.5 w-3.5" />} label="Cliente" value={shift.client.name} />
             )}
             {shift.location?.name && (
-              <Row icon={<MapPin className="h-3.5 w-3.5" />} label="Location" value={shift.location.name} />
+              <Row icon={<MapPin className="h-3.5 w-3.5" />} label="Dónde" value={shift.location.name} />
             )}
             {shift.meeting_point && (
               <div className="flex items-start gap-2 px-3 py-2 rounded-xl bg-primary/[0.05] border border-primary/10">
                 <Navigation className="h-3.5 w-3.5 text-primary mt-0.5 shrink-0" />
                 <div className="min-w-0">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-primary/70">Meeting point</p>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-primary/70">Punto de encuentro</p>
                   <p className="text-[12px] text-foreground font-medium">{shift.meeting_point}</p>
                 </div>
               </div>
             )}
             {shift.notes && (
               <div className="rounded-xl bg-muted/30 border border-border/30 p-3">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70 mb-1">Notes</p>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70 mb-1">Notas</p>
                 <p className="text-[12px] text-foreground/80 leading-relaxed whitespace-pre-line">{shift.notes}</p>
               </div>
             )}
             {shift.special_instructions && (
               <div className="rounded-xl bg-amber-500/[0.08] border border-amber-500/20 p-3">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 mb-1">Important</p>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 mb-1">Importante</p>
                 <p className="text-[12px] text-foreground/90 leading-relaxed whitespace-pre-line">{shift.special_instructions}</p>
               </div>
             )}
