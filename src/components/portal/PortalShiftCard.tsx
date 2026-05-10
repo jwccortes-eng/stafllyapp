@@ -3,7 +3,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, parseISO, isToday, isTomorrow, differenceInMinutes } from "date-fns";
-import { enUS } from "date-fns/locale";
+import { es } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { OpsStatusChip, type OpsStatusTone } from "@/components/operations/OpsStatusChip";
 import { formatDisplayName } from "@/lib/format-helpers";
