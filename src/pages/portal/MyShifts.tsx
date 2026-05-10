@@ -503,9 +503,9 @@ export default function MyShifts() {
 
           type Bucket = { key: string; label: string; items: ShiftAssignment[] };
           const buckets: Bucket[] = [
-            { key: "this-week", label: "This week", items: [] },
-            { key: "last-week", label: "Last week", items: [] },
-            { key: "earlier", label: "Earlier", items: [] },
+            { key: "this-week", label: "Esta semana", items: [] },
+            { key: "last-week", label: "Semana pasada", items: [] },
+            { key: "earlier", label: "Anteriores", items: [] },
           ];
 
           for (const a of visible) {
@@ -517,6 +517,11 @@ export default function MyShifts() {
 
           return (
             <div className="space-y-4">
+              {/* Discrete total — replaces the noisy "99+" badge in the tab */}
+              <p className="text-[11px] text-muted-foreground/60 px-1 -mt-1">
+                {filtered.length} turno{filtered.length === 1 ? "" : "s"} en total
+              </p>
+
               {buckets.filter(b => b.items.length > 0).map((b) => (
                 <div key={b.key} className="space-y-1.5">
                   <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground/55 px-1">
@@ -536,7 +541,7 @@ export default function MyShifts() {
                     onClick={() => setHistoryVisible(v => v + HISTORY_PAGE)}
                     className="w-full h-10 text-[12px] font-semibold rounded-xl text-muted-foreground hover:text-foreground"
                   >
-                    Load {Math.min(remaining, HISTORY_PAGE)} more · {remaining} remaining
+                    Cargar {Math.min(remaining, HISTORY_PAGE)} más · {remaining} restantes
                   </Button>
                 </div>
               )}
