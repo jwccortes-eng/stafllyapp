@@ -1558,26 +1558,81 @@ function RecommendedTab({
                     <p className="mt-1 text-[11px] text-amber-700 dark:text-amber-400">No phone on file</p>
                   )}
                 </div>
-                {c.canAssign ? (
-                  <Button
-                    size="sm"
-                    onClick={() => onAssign(c.employee.id, c.name)}
-                    className="h-8 px-2.5 text-[12px] gap-1 shrink-0"
-                  >
-                    <UserPlus className="h-3.5 w-3.5" />
-                    Assign
-                  </Button>
-                ) : (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled
-                    className="h-8 px-2.5 text-[12px] shrink-0"
-                    title={c.conflictDetected ? "Worker has an overlapping shift" : "Worker can't be assigned"}
-                  >
-                    {c.conflictDetected ? "Conflict" : "Blocked"}
-                  </Button>
-                )}
+                <div className="flex flex-col items-end gap-1 shrink-0">
+                  {c.canAssign ? (
+                    <Button
+                      size="sm"
+                      onClick={() => onAssign(c.employee.id, c.name)}
+                      className="h-8 px-2.5 text-[12px] gap-1"
+                    >
+                      <UserPlus className="h-3.5 w-3.5" />
+                      Assign
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled
+                      className="h-8 px-2.5 text-[12px]"
+                      title={
+                        c.preferenceBlocked ? "Worker is blocked for this client/location"
+                        : c.conflictDetected ? "Worker has an overlapping shift"
+                        : "Worker can't be assigned"
+                      }
+                    >
+                      {c.preferenceBlocked ? "Blocked here" : c.conflictDetected ? "Conflict" : "Blocked"}
+                    </Button>
+                  )}
+                  {(shift.client_id || shift.location_id) && canManage && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button
+                          type="button"
+                          className="h-7 px-2 rounded-md text-[10px] font-semibold text-muted-foreground hover:bg-muted/60 inline-flex items-center gap-1"
+                          aria-label={`Set fit for ${c.name}`}
+                        >
+                          <MoreVertical className="h-3 w-3" /> Fit
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-52">
+                        <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                          Mark for this {shift.client_id ? "client" : "location"}
+                        </DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => handleSetPreference(c.employee.id, c.name, "preferred")}>
+                          Mark preferred
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleSetPreference(c.employee.id, c.name, "prequalified")}>
+                          Mark prequalified
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleSetPreference(c.employee.id, c.name, "captain_preferred")}>
+                          Captain preferred
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleSetPreference(c.employee.id, c.name, "driver_preferred")}>
+                          Driver preferred
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => handleSetPreference(c.employee.id, c.name, "not_recommended")}>
+                          Mark not recommended
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="text-rose-600 focus:text-rose-600"
+                          onClick={() => handleSetPreference(c.employee.id, c.name, "blocked")}
+                        >
+                          Block here
+                        </DropdownMenuItem>
+                        {(signals.preferencesByEmp.get(c.employee.id) ?? []).length > 0 && (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => handleClearPreferences(c.employee.id, c.name)}>
+                              Clear preferences
+                            </DropdownMenuItem>
+                          </>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                </div>
               </li>
             );
           })}
