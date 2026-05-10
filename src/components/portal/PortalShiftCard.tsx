@@ -108,93 +108,138 @@ export function PortalShiftCard({
   // Pattern: [rail] · [day chip] · [time] · [title · subtitle] · [chip] · [chevron]
   // Acceptance/clock-in actions shown only when needed, on a second collapsed row.
   if (compact) {
+    const dayChip = isTodayShift
+      ? "Hoy"
+      : isTomorrow(parseISO(shift.date))
+      ? "Mañana"
+      : format(parseISO(shift.date), "EEE d MMM", { locale: enUS });
+
     return (
       <div
-        className={cn(
-          "group relative bg-card rounded-xl border border-border/40 overflow-hidden",
-          "transition-colors duration-150 active:bg-muted/30 cursor-pointer",
-          isTodayShift && isConfirmed && "border-primary/25",
-        )}
+        role="button"
+        tabIndex={0}
         onClick={onClick}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onClick?.();
+          }
+        }}
+        className={cn(
+          "group relative w-full text-left rounded-2xl border border-border/50 bg-card p-4 cursor-pointer select-none",
+          "shadow-sm hover:shadow-md hover:border-border transition-all active:scale-[0.98]",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+          isTodayShift && isConfirmed && "border-primary/30",
+        )}
       >
-        {/* Severity rail — flush left, full height */}
-        <span aria-hidden className={cn("absolute left-0 top-0 bottom-0 w-[2px]", meta.rail)} />
-
-        {/* Primary row */}
-        <div className="flex items-center gap-3 pl-3.5 pr-3 py-2.5">
-          {/* Day + time block — fixed width for column alignment */}
-          <div className="shrink-0 w-[60px]">
-            <p className={cn(
-              "text-[11px] font-bold uppercase tracking-wider leading-none",
-              isTodayShift ? "text-primary" : "text-muted-foreground/65",
-            )}>
-              {isTodayShift ? "Hoy" : isTomorrow(parseISO(shift.date)) ? "Mañana" : format(parseISO(shift.date), "EEE", { locale: enUS })}
-            </p>
-            <p className="text-[14px] font-bold text-foreground/90 tabular-nums leading-tight mt-1">
-              {shift.start_time?.slice(0, 5)}
-            </p>
-          </div>
-
-          {/* Title + subtitle */}
+        {/* Header: title + status chip */}
+        <div className="flex items-start justify-between gap-2 mb-2.5">
           <div className="min-w-0 flex-1">
-            <p className="text-[14.5px] font-semibold text-foreground truncate leading-tight">
+            <p className="text-base font-semibold tracking-tight leading-snug line-clamp-2 text-foreground">
               {titleDisplay}
             </p>
-            <p className="text-[12px] text-muted-foreground/75 truncate mt-0.5">
-              <span className="tabular-nums">{shift.start_time?.slice(0, 5)}–{shift.end_time?.slice(0, 5)}</span>
-              {subtitle && <> · {subtitle}</>}
-            </p>
+            {clientDisplay && clientDisplay !== titleDisplay && (
+              <p className="text-xs text-muted-foreground mt-0.5 truncate flex items-center gap-1">
+                <Briefcase className="h-3 w-3 shrink-0 text-muted-foreground/60" />
+                <span className="truncate">{clientDisplay}</span>
+              </p>
+            )}
           </div>
-
-          {/* Status chip + chevron — chip hidden on past confirmed shifts */}
           <div className="flex items-center gap-1.5 shrink-0">
             {showStatusChip && <OpsStatusChip tone={meta.tone} label={meta.label} size="sm" />}
-            <ChevronRight className="h-4 w-4 text-muted-foreground/30" />
+            <ChevronRight className="h-4 w-4 text-muted-foreground/50 group-hover:text-muted-foreground transition-colors" />
           </div>
         </div>
 
-        {/* Inline actions — only shown when explicit response or clock-in is required */}
-        {(isPending && (onAccept || onReject)) && (
-          <div
-            className="flex items-center gap-2 px-3.5 pb-2.5 pt-0"
-            onClick={(e) => e.stopPropagation()}
+        {/* Hero time row */}
+        <div className="flex items-center gap-2 mb-3">
+          <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
+          <span className="text-xl font-mono font-semibold tabular-nums leading-none text-foreground">
+            {shift.start_time?.slice(0, 5)}–{shift.end_time?.slice(0, 5)}
+          </span>
+          <span className="text-xs text-muted-foreground/70 tabular-nums">· {duration}</span>
+          <span
+            className={cn(
+              "ml-auto text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md shrink-0",
+              isTodayShift
+                ? "bg-primary/10 text-primary"
+                : "bg-muted text-muted-foreground",
+            )}
           >
-            <Button
-              size="sm"
-              className="flex-1 h-10 text-[13px] font-semibold rounded-lg gap-1.5"
-              onClick={onAccept}
-              disabled={responding}
-            >
-              <CheckCircle2 className="h-4 w-4" />
-              {shift.status === "needs_reacceptance" ? "Aceptar cambios" : "Confirmar"}
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-10 px-3 text-[13px] text-muted-foreground hover:text-destructive rounded-lg"
-              onClick={onReject}
-              disabled={responding}
-            >
-              Rechazar
-            </Button>
+            {dayChip}
+          </span>
+        </div>
+
+        {/* Countdown inline (only when starting soon) */}
+        {countdown && isConfirmed && (
+          <div className="flex items-center gap-1.5 mb-2">
+            <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+            <span className="text-[11px] font-semibold text-primary tracking-wide">
+              Empieza {countdown}
+            </span>
           </div>
         )}
 
-        {isConfirmed && isTodayShift && onClockIn && (
-          <div className="px-3.5 pb-2.5" onClick={(e) => e.stopPropagation()}>
-            <Button
-              size="sm"
-              className="w-full h-10 text-[13px] font-semibold rounded-lg gap-1.5 shadow-sm shadow-primary/15"
-              onClick={onClockIn}
-            >
-              <LogIn className="h-4 w-4" />
-              Marcar entrada{countdown && ` · empieza ${countdown}`}
-            </Button>
+        {/* Location */}
+        {locationDisplay && (
+          <div className="flex items-start gap-1.5 text-xs text-muted-foreground mb-1.5">
+            <MapPin className="h-3.5 w-3.5 shrink-0 mt-0.5 text-muted-foreground/60" />
+            <span className="line-clamp-2 leading-snug">{locationDisplay}</span>
+          </div>
+        )}
+
+        {/* Meeting point */}
+        {shift.meeting_point && (
+          <div className="flex items-start gap-1.5 text-xs text-muted-foreground">
+            <span className="text-[13px] leading-none mt-0.5">📍</span>
+            <span className="line-clamp-2 leading-snug">
+              <span className="font-medium text-foreground/80">Punto de encuentro:</span>{" "}
+              {shift.meeting_point}
+            </span>
+          </div>
+        )}
+
+        {/* Footer actions */}
+        {((isPending && (onAccept || onReject)) || (isConfirmed && isTodayShift && onClockIn)) && (
+          <div
+            className="mt-3 pt-3 border-t border-border/40 flex items-center gap-2"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {isPending && onAccept && (
+              <Button
+                className="flex-1 h-11 text-sm font-semibold rounded-xl gap-1.5"
+                onClick={onAccept}
+                disabled={responding}
+              >
+                <CheckCircle2 className="h-4 w-4" />
+                {shift.status === "needs_reacceptance" ? "Aceptar cambios" : "Confirmar"}
+              </Button>
+            )}
+            {isPending && onReject && (
+              <Button
+                variant="outline"
+                className="h-11 px-4 text-sm font-medium rounded-xl text-muted-foreground hover:text-destructive hover:border-destructive/40"
+                onClick={onReject}
+                disabled={responding}
+              >
+                Rechazar
+              </Button>
+            )}
+            {isConfirmed && isTodayShift && onClockIn && (
+              <Button
+                className="flex-1 h-11 text-sm font-semibold rounded-xl gap-1.5 shadow-sm shadow-primary/20"
+                onClick={onClockIn}
+              >
+                <LogIn className="h-4 w-4" />
+                Marcar entrada
+              </Button>
+            )}
           </div>
         )}
       </div>
     );
   }
+
 
   // ───────── Full card — used in detail / hero contexts ─────────
   return (
