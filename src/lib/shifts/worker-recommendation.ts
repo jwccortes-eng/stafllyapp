@@ -110,6 +110,7 @@ export interface RankedCandidate {
   canAssign: boolean;
   alreadyAssigned: boolean;
   conflictDetected: boolean;
+  preferenceBlocked: boolean;
   availabilitySignal: "available" | "unavailable" | "unknown";
   clientHistoryCount: number;
   locationHistoryCount: number;
