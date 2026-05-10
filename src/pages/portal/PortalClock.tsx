@@ -573,13 +573,13 @@ export default function PortalClock() {
             <Timer className="h-4 w-4 text-warning" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-[12.5px] font-semibold text-foreground">Unclosed shift detected</p>
+            <p className="text-[12.5px] font-semibold text-foreground">Turno sin cerrar</p>
             <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">
-              {staleOpenEntry.shift?.title ?? "A shift"} stayed open since{" "}
+              {staleOpenEntry.shift?.title ?? "Un turno"} quedó abierto desde{" "}
               <span className="tabular-nums font-medium">
-                {format(new Date(staleOpenEntry.entry.clock_in), "MMM d, HH:mm")}
+                {format(new Date(staleOpenEntry.entry.clock_in), "d MMM, HH:mm")}
               </span>
-              . Tap Clock out below to close it.
+              . Toca Marcar salida abajo para cerrarlo.
             </p>
           </div>
         </div>
