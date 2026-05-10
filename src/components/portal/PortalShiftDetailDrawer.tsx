@@ -335,7 +335,7 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, responseStatu
                     onClick={() => setSecondaryView("chat")}
                   >
                     <MessageCircle className="h-4 w-4 text-muted-foreground/70 shrink-0" />
-                    <span className="text-[13px] font-semibold text-foreground flex-1">Shift chat</span>
+                    <span className="text-[13px] font-semibold text-foreground flex-1">Chat del turno</span>
                     <ChevronRight className="h-4 w-4 text-muted-foreground/30" />
                   </button>
                 </div>
