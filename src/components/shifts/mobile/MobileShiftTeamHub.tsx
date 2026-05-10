@@ -228,7 +228,7 @@ function MobileShiftTeamHubImpl({
       setClaimsLoading(false);
     })();
     return () => { cancelled = true; };
-  }, [open, shift?.id]);
+  }, [open, shift?.id, refreshKey]);
 
   const empById = useMemo(() => {
     const m = new Map<string, Employee>();
