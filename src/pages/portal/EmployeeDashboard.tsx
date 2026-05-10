@@ -6,9 +6,9 @@ import { useEmployeeReadiness } from "@/hooks/useEmployeeReadiness";
 import { Link } from "react-router-dom";
 import { usePortalModules } from "@/hooks/usePortalModules";
 import {
-  Wallet, Clock, CalendarDays, ArrowRight, Timer,
-  Bell, ChevronRight, TrendingUp,
-  User, FileText, MessageCircle, LifeBuoy,
+  Wallet, Clock, CalendarDays, ArrowRight,
+  ChevronRight,
+  User, FileText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, parseISO, isToday, isTomorrow, startOfWeek, endOfWeek } from "date-fns";
