@@ -346,7 +346,7 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, responseStatu
                 <section className="flex items-center gap-2.5 p-3 rounded-2xl border border-border/40 bg-card">
                   <Star className="h-4 w-4 text-warning shrink-0" />
                   <div className="flex-1">
-                    <p className="text-[10px] uppercase tracking-widest text-muted-foreground/55 font-bold">Rate this shift</p>
+                    <p className="text-[10px] uppercase tracking-widest text-muted-foreground/55 font-bold">Califica este turno</p>
                   </div>
                   <ShiftReviewButton
                     shiftId={shift.id}
