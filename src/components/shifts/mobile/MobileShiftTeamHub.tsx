@@ -49,6 +49,10 @@ import { MobileTeamActionDialog } from "@/components/shifts/mobile/MobileTeamAct
 import { isOnboardingComplete } from "@/lib/onboarding";
 import { isGraceEligibleCompany, isWithinGraceWindow, GRACE_POLICY_DAYS } from "@/lib/shifts/readiness-grace";
 import { formatDistanceToNowStrict } from "date-fns";
+import {
+  rankCandidate, inferShiftRoleNeeds, EMPTY_SIGNALS, REASON_CHIP_LABEL,
+  type RecommendationSignals, type ReviewSignal, type RankedCandidate,
+} from "@/lib/shifts/worker-recommendation";
 
 function formatRelative(iso: string): string {
   try { return formatDistanceToNowStrict(new Date(iso), { addSuffix: true }); }
