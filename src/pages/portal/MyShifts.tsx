@@ -212,7 +212,7 @@ export default function MyShifts() {
       } catch {}
       if (navigator.vibrate) navigator.vibrate(100);
 
-      toast.success("✅ Request sent!", { description: claimedShift ? `Shift "${claimedShift.title}" requested successfully.` : "Your request has been submitted." });
+      toast.success("✅ ¡Solicitud enviada!", { description: claimedShift ? `Turno "${claimedShift.title}" solicitado.` : "Tu solicitud fue enviada." });
       await load();
     } catch (err: any) {
       // Rollback optimistic update
