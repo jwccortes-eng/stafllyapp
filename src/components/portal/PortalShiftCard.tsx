@@ -112,7 +112,7 @@ export function PortalShiftCard({
       ? "Hoy"
       : isTomorrow(parseISO(shift.date))
       ? "Mañana"
-      : format(parseISO(shift.date), "EEE d MMM", { locale: enUS });
+      : format(parseISO(shift.date), "EEE d MMM", { locale: es });
 
     return (
       <div
