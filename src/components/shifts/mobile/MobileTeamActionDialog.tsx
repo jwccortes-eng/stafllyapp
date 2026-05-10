@@ -18,16 +18,20 @@ import { Textarea } from "@/components/ui/textarea";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
-  setShiftAssignmentState, resolveShiftRequest,
+  setShiftAssignmentState, resolveShiftRequest, assignWorkerToShift,
   type AssignmentNextStatus, type ClaimDecision,
 } from "@/lib/shifts/team-actions";
 
 const SAFETY_COPY =
   "This action updates the worker's assignment status and is logged. It does not affect payroll or worked time. Attendance and payroll review remain separate.";
 
+const ASSIGN_SAFETY_COPY =
+  "This assigns the worker to this shift as a pending invitation and is logged. The worker still needs to accept. It does not affect payroll or worked time.";
+
 type Mode =
   | { kind: "assignment_state"; assignmentId: string; nextStatus: AssignmentNextStatus }
-  | { kind: "claim_decision"; requestId: string; decision: ClaimDecision };
+  | { kind: "claim_decision"; requestId: string; decision: ClaimDecision }
+  | { kind: "assign_worker"; shiftId: string; employeeId: string; graceWarning?: string | null };
 
 interface Props {
   open: boolean;
@@ -59,12 +63,17 @@ export function MobileTeamActionDialog({
     ? ""
     : mode.kind === "assignment_state"
       ? `${ASSIGNMENT_VERB[mode.nextStatus]} ${workerName}?`
-      : `${CLAIM_VERB[mode.decision]} from ${workerName}?`;
+      : mode.kind === "claim_decision"
+        ? `${CLAIM_VERB[mode.decision]} from ${workerName}?`
+        : `Assign ${workerName} to this shift?`;
 
   const isDestructiveTone =
     !!mode &&
     ((mode.kind === "assignment_state" && (mode.nextStatus === "removed" || mode.nextStatus === "rejected")) ||
       (mode.kind === "claim_decision" && mode.decision === "rejected"));
+
+  const safetyCopy = mode?.kind === "assign_worker" ? ASSIGN_SAFETY_COPY : SAFETY_COPY;
+  const graceWarning = mode?.kind === "assign_worker" ? mode.graceWarning ?? null : null;
 
   const handleConfirm = async () => {
     if (!mode || submitting) return;
@@ -77,13 +86,20 @@ export function MobileTeamActionDialog({
           reason: reason.trim() || null,
         });
         toast({ title: `${ASSIGNMENT_VERB[mode.nextStatus]} · ${workerName}` });
-      } else {
+      } else if (mode.kind === "claim_decision") {
         await resolveShiftRequest({
           requestId: mode.requestId,
           decision: mode.decision,
           reason: reason.trim() || null,
         });
         toast({ title: `${CLAIM_VERB[mode.decision]} · ${workerName}` });
+      } else {
+        await assignWorkerToShift({
+          shiftId: mode.shiftId,
+          employeeId: mode.employeeId,
+          reason: reason.trim() || null,
+        });
+        toast({ title: `Worker assigned · ${workerName}` });
       }
       setReason("");
       onOpenChange(false);
@@ -94,7 +110,11 @@ export function MobileTeamActionDialog({
         /forbidden/i.test(msg) ? "You don't have permission for this action." :
         /invalid_transition/i.test(msg) ? "That status change isn't allowed." :
         /request_not_pending/i.test(msg) ? "This claim was already reviewed." :
-        /EMPLOYEE_NOT_READY/i.test(msg) ? "This worker needs to complete their profile before approval." :
+        /already_assigned/i.test(msg) ? "This worker is already assigned to this shift." :
+        /employee_inactive/i.test(msg) ? "Reactivate the worker before assigning." :
+        /employee_wrong_company/i.test(msg) ? "Worker doesn't belong to this company." :
+        /shift_not_found/i.test(msg) ? "Shift no longer exists." :
+        /employee_not_ready|EMPLOYEE_NOT_READY/i.test(msg) ? "This worker needs to complete their profile before being assigned." :
         msg;
       toast({ title: "Action failed", description: friendly, variant: "destructive" });
     } finally {
@@ -108,9 +128,15 @@ export function MobileTeamActionDialog({
         <AlertDialogHeader>
           <AlertDialogTitle className="text-base">{title}</AlertDialogTitle>
           <AlertDialogDescription className="text-[12px] leading-snug">
-            {SAFETY_COPY}
+            {safetyCopy}
           </AlertDialogDescription>
         </AlertDialogHeader>
+
+        {graceWarning ? (
+          <div className="rounded-lg border border-amber-300/60 bg-amber-50 dark:bg-amber-950/30 px-3 py-2 text-[12px] text-amber-800 dark:text-amber-300 leading-snug">
+            {graceWarning}
+          </div>
+        ) : null}
 
         <div className="space-y-1.5">
           <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
