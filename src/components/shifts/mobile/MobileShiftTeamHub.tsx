@@ -27,7 +27,7 @@ import {
   X, Users, ShieldCheck, Clock, ExternalLink, Inbox,
   CheckCircle2, AlertCircle, UserMinus, UserX, Phone, MessageSquare,
   Copy, AlertTriangle, Sparkles, Star, MapPin, Briefcase,
-  MoreVertical, Check, XCircle,
+  MoreVertical, Check, XCircle, UserCog,
 } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -45,6 +45,55 @@ import { normalizePhone, buildWhatsAppTargets } from "@/lib/phone";
 import { useToast } from "@/hooks/use-toast";
 import { allowedNextStatusesFor, type AssignmentNextStatus, type ClaimDecision } from "@/lib/shifts/team-actions";
 import { MobileTeamActionDialog } from "@/components/shifts/mobile/MobileTeamActionDialog";
+import { isOnboardingComplete } from "@/lib/onboarding";
+
+/* ─── Worker readiness (read-only, mirrors backend EMPLOYEE_NOT_READY guard) ─── */
+
+type ReadinessState =
+  | "ready" | "incomplete_profile" | "pending_documents"
+  | "onboarding_pending" | "missing_phone" | "inactive" | "unknown";
+
+interface Readiness {
+  state: ReadinessState;
+  canBeApproved: boolean;
+  label: string;
+  helper: string;
+}
+
+function computeReadiness(e: Employee | undefined): Readiness {
+  if (!e) return { state: "unknown", canBeApproved: false, label: "Needs review", helper: "Worker record not loaded." };
+  if (e.is_active === false) return { state: "inactive", canBeApproved: false, label: "Inactive", helper: "Reactivate the worker before approving." };
+  if (e.profile_status === "incomplete") return { state: "incomplete_profile", canBeApproved: false, label: "Profile incomplete", helper: "Complete worker profile before approving this claim." };
+  if (e.profile_status === "pending_documents") return { state: "pending_documents", canBeApproved: false, label: "Missing documents", helper: "Worker needs to upload required documents." };
+  if (!normalizePhone(e.phone_number)) return { state: "missing_phone", canBeApproved: false, label: "Missing phone", helper: "Add a phone number before approving." };
+  if (e.onboarding_status && !isOnboardingComplete(e.onboarding_status) && e.profile_status !== "active") {
+    return { state: "onboarding_pending", canBeApproved: false, label: "Onboarding pending", helper: "Worker hasn't finished onboarding yet." };
+  }
+  return { state: "ready", canBeApproved: true, label: "Ready", helper: "Worker is ready for shifts." };
+}
+
+const READINESS_TONE: Record<ReadinessState, "good" | "info" | "warn" | "bad" | "muted"> = {
+  ready: "good", incomplete_profile: "warn", pending_documents: "warn",
+  onboarding_pending: "warn", missing_phone: "warn", inactive: "bad", unknown: "muted",
+};
+
+function ReadinessChip({ readiness, className }: { readiness: Readiness; className?: string }) {
+  if (readiness.state === "ready") return null;
+  return (
+    <Badge
+      variant="outline"
+      className={cn("h-[18px] px-1.5 text-[10px] font-semibold whitespace-nowrap inline-flex items-center", toneToClass(READINESS_TONE[readiness.state]), className)}
+      title={readiness.helper}
+    >
+      <AlertCircle className="h-2.5 w-2.5 mr-0.5" />
+      {readiness.label}
+    </Badge>
+  );
+}
+
+function buildReminderText(workerName: string): string {
+  return `Hi ${workerName}, please finish your worker profile in the Stafly portal so we can confirm your shifts. Thanks!`;
+}
 
 const HUB_COPY = {
   intro: "Read-only team view. Staffing changes still happen on desktop.",
