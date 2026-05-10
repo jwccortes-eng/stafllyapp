@@ -43,6 +43,9 @@ export default function ClientProfile() {
   const { clientId } = useParams<{ clientId: string }>();
   const navigate = useNavigate();
   const [tab, setTab] = useState<string>("overview");
+  const { canAccessAdminForCompany } = useAuth();
+  const { selectedCompanyId } = useCompany();
+  const isPrivileged = canAccessAdminForCompany(selectedCompanyId);
 
   const clientQ = useClient(clientId);
   const contactsQ = useClientContacts(clientId);
