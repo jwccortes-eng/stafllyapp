@@ -327,7 +327,7 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, responseStatu
                     onClick={() => setSecondaryView("team")}
                   >
                     <Users className="h-4 w-4 text-muted-foreground/70 shrink-0" />
-                    <span className="text-[13px] font-semibold text-foreground flex-1">Team on this shift</span>
+                    <span className="text-[13px] font-semibold text-foreground flex-1">Equipo del turno</span>
                     <ChevronRight className="h-4 w-4 text-muted-foreground/30" />
                   </button>
                   <button
