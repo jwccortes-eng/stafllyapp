@@ -1693,15 +1693,63 @@ function RecommendedTab({
         <p className="text-[11px] text-muted-foreground px-1">Refining recommendations…</p>
       )}
 
-      {visible.length === 0 ? (
-        <EmptyBlock
-          title="No workers match"
-          helper="Try a different search or clear filters. Workers already on this shift are hidden."
-        />
-      ) : (
-        <ul className="space-y-2">
-          {visible.map((c) => {
+      {(() => {
+        // Phase 13D: smarter empty states.
+        if (visible.length > 0) return null;
+        const hasSearch = search.trim().length > 0;
+        const hasFilter = filter !== "all";
+        if (ranked.length === 0) {
+          return (
+            <EmptyBlock
+              title="No candidates"
+              helper="Everyone eligible is already assigned or blocked by filters."
+            />
+          );
+        }
+        if (hasSearch) {
+          return (
+            <EmptyBlock
+              title="No workers match this search"
+              helper="Try a different name, phone, email, or worker ID."
+            />
+          );
+        }
+        if (hasFilter) {
+          return (
+            <EmptyBlock
+              title="No workers match this filter"
+              helper="Try Best match or clear the filter."
+            />
+          );
+        }
+        return (
+          <EmptyBlock
+            title="No workers match"
+            helper="Workers already on this shift are hidden."
+          />
+        );
+      })()}
+
+      {visible.length > 0 && (
+        <div className="space-y-4">
+          {(["best", "good", "caution"] as RecGroup[]).map(g => {
+            const list = grouped[g];
+            if (list.length === 0) return null;
+            const meta = GROUP_META[g];
+            return (
+              <div key={g} className="space-y-2">
+                <div className="flex items-center gap-2 px-0.5">
+                  <span className={cn("rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider", meta.tone)}>
+                    {meta.label}
+                  </span>
+                  <span className="text-[10px] tabular-nums text-muted-foreground">{list.length}</span>
+                </div>
+                <p className="text-[10.5px] text-muted-foreground px-1 leading-snug">{meta.helper}</p>
+                <ul className="space-y-2">
+                  {list.map((c) => {
             const display = buildRecommendedDisplay(c);
+            const isExpanded = expanded.has(c.employee.id);
+            const whyLines = isExpanded ? buildWhyReasons(c) : [];
             const badgeTone =
               c.readinessState === "ready"
                 ? "border-emerald-300/60 text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30"
@@ -1720,11 +1768,11 @@ function RecommendedTab({
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <p className="text-sm font-semibold text-foreground truncate">{c.name}</p>
-                    <span className={cn("rounded-full border px-1.5 py-0 text-[10px] font-semibold", badgeTone)}>
+                    <span className={cn("h-[18px] inline-flex items-center rounded-full border px-1.5 text-[10px] font-semibold", badgeTone)}>
                       {c.readinessState === "ready" ? "Ready" : c.readinessState === "grace_period" ? "Grace" : "Blocked"}
                     </span>
                     <span
-                      className="rounded-md border border-border/50 bg-muted/40 px-1.5 py-0 text-[10px] font-mono tabular-nums text-muted-foreground"
+                      className="h-[18px] inline-flex items-center rounded-md border border-border/50 bg-muted/40 px-1.5 text-[10px] font-mono tabular-nums text-muted-foreground"
                       title={`Score ${c.score}`}
                     >
                       Score {c.score}
@@ -1732,21 +1780,27 @@ function RecommendedTab({
                   </div>
                   {display.chips.length > 0 && (
                     <div className="mt-1 flex flex-wrap gap-1">
-                      {display.chips.map(ch => (
-                        <span
-                          key={`d-${ch.key}`}
-                          className={cn(
-                            "text-[10px] font-medium px-1.5 py-0.5 rounded-md",
-                            ch.tone === "good"
-                              ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400"
-                              : ch.tone === "risk"
-                                ? "bg-rose-50 text-rose-700 dark:bg-rose-950/30 dark:text-rose-400"
-                                : "bg-muted text-muted-foreground",
-                          )}
-                        >
-                          {ch.label}
-                        </span>
-                      ))}
+                      {display.chips.map(ch => {
+                        // Phase 13E: only "blocked" / "conflict" chips render alarming.
+                        const isAlarming = ch.tone === "risk" && (ch.key === "blocked_here" || ch.key === "conflict");
+                        return (
+                          <span
+                            key={`d-${ch.key}`}
+                            className={cn(
+                              "text-[10px] font-medium px-1.5 py-0.5 rounded-md",
+                              ch.tone === "good"
+                                ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400"
+                                : isAlarming
+                                  ? "bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300"
+                                  : ch.tone === "risk"
+                                    ? "bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400"
+                                    : "bg-muted text-muted-foreground",
+                            )}
+                          >
+                            {ch.label}
+                          </span>
+                        );
+                      })}
                     </div>
                   )}
                   {display.summary && (
@@ -1756,6 +1810,21 @@ function RecommendedTab({
                     <p className="mt-1 text-[11px] text-muted-foreground tabular-nums">{c.phone}</p>
                   ) : (
                     <p className="mt-1 text-[11px] text-amber-700 dark:text-amber-400">No phone on file</p>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => toggleExpanded(c.employee.id)}
+                    className="mt-1.5 inline-flex items-center gap-1 text-[10.5px] font-semibold text-muted-foreground hover:text-foreground"
+                    aria-expanded={isExpanded}
+                  >
+                    {isExpanded ? "Hide why" : "Why?"}
+                  </button>
+                  {isExpanded && (
+                    <ul className="mt-1.5 space-y-0.5 rounded-lg bg-muted/30 px-2 py-1.5">
+                      {whyLines.map((w, i) => (
+                        <li key={i} className="text-[11px] text-foreground/80 leading-snug">• {w}</li>
+                      ))}
+                    </ul>
                   )}
                 </div>
                 <div className="flex flex-col items-end gap-1 shrink-0">
@@ -1788,7 +1857,7 @@ function RecommendedTab({
                       <DropdownMenuTrigger asChild>
                         <button
                           type="button"
-                          className="h-7 px-2 rounded-md text-[10px] font-semibold text-muted-foreground hover:bg-muted/60 inline-flex items-center gap-1"
+                          className="h-6 px-1.5 rounded-md text-[10px] font-medium text-muted-foreground/80 hover:bg-muted/60 inline-flex items-center gap-0.5"
                           aria-label={`Set fit for ${c.name}`}
                         >
                           <MoreVertical className="h-3 w-3" /> Fit
@@ -1835,8 +1904,12 @@ function RecommendedTab({
                 </div>
               </li>
             );
+                  })}
+                </ul>
+              </div>
+            );
           })}
-        </ul>
+        </div>
       )}
 
       <button
