@@ -242,7 +242,18 @@ function MobileShiftTeamHubImpl({
     setActionMode({ kind: "assignment_state", assignmentId, nextStatus, workerName });
     setActionDialogOpen(true);
   };
-  const openClaimAction = (requestId: string, decision: ClaimDecision, workerName: string) => {
+  const openClaimAction = (requestId: string, decision: ClaimDecision, workerName: string, employeeId?: string) => {
+    if (decision === "approved" && employeeId) {
+      const r = computeReadiness(empById.get(employeeId));
+      if (!r.canBeApproved) {
+        toast({
+          title: "Worker not ready to be approved",
+          description: r.helper,
+          variant: "destructive",
+        });
+        return;
+      }
+    }
     setActionMode({ kind: "claim_decision", requestId, decision, workerName });
     setActionDialogOpen(true);
   };
