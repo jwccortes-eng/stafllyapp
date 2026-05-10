@@ -217,7 +217,7 @@ function ShiftCard({
             </div>
             <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
               <MapPin className="h-3 w-3 shrink-0" />
-              <span className="truncate">{locationName ?? (metrics.hasLocation ? "Location set" : "No location")}</span>
+              <span className="truncate">{locationName ?? (metrics.hasLocation ? "Location set" : (metrics.hasMeetingPoint ? "Job site missing · meeting point set" : "No location"))}</span>
             </div>
           </div>
           <div className="text-right shrink-0">
