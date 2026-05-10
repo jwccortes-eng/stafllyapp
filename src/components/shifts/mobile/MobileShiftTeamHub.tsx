@@ -52,6 +52,7 @@ import { formatDistanceToNowStrict } from "date-fns";
 import {
   rankCandidate, inferShiftRoleNeeds, EMPTY_SIGNALS, REASON_CHIP_LABEL,
   type RecommendationSignals, type ReviewSignal, type RankedCandidate,
+  type WorkerPreferenceRow, type WorkerPreferenceType,
 } from "@/lib/shifts/worker-recommendation";
 
 function formatRelative(iso: string): string {
