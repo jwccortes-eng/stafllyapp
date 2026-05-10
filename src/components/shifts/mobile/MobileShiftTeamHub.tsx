@@ -50,7 +50,7 @@ import { isOnboardingComplete } from "@/lib/onboarding";
 import { isGraceEligibleCompany, isWithinGraceWindow, GRACE_POLICY_DAYS } from "@/lib/shifts/readiness-grace";
 import { formatDistanceToNowStrict } from "date-fns";
 import {
-  rankCandidate, inferShiftRoleNeeds, EMPTY_SIGNALS, REASON_CHIP_LABEL,
+  rankCandidate, inferShiftRoleNeeds, EMPTY_SIGNALS,
   type RecommendationSignals, type ReviewSignal, type RankedCandidate,
   type WorkerPreferenceRow, type WorkerPreferenceType,
 } from "@/lib/shifts/worker-recommendation";
@@ -58,6 +58,94 @@ import {
 function formatRelative(iso: string): string {
   try { return formatDistanceToNowStrict(new Date(iso), { addSuffix: true }); }
   catch { return ""; }
+}
+
+/* ─── Phase 12: chip display polish for Recommended ─── */
+
+type DisplayChip = { key: string; label: string; tone: "good" | "risk" | "neutral" };
+
+/**
+ * Build prioritized, deduplicated chips for a candidate. Replaces raw history
+ * keys with count-aware labels ("Worked here 22x") and resolves the
+ * "high reliability + reliability risk" collision into "Good rating" + "1 risk
+ * flag". Caps to 4 chips total. Also returns a one-line operator summary.
+ */
+function buildRecommendedDisplay(c: RankedCandidate): {
+  chips: DisplayChip[];
+  summary: string | null;
+} {
+  const reasonSet = new Set<string>(c.reasons);
+  const riskSet = new Set<string>(c.riskFlags);
+  const hasGoodRating = reasonSet.has("high_reliability");
+  const hasRatingRisk = riskSet.has("low_reliability");
+
+  // Build candidate chips in priority order (Phase 12 spec).
+  const candidates: DisplayChip[] = [];
+
+  // 1. Preference signals (strongest)
+  if (riskSet.has("blocked_here")) candidates.push({ key: "blocked_here", label: "Blocked here", tone: "risk" });
+  if (riskSet.has("not_recommended")) candidates.push({ key: "not_recommended", label: "Not recommended", tone: "risk" });
+  if (reasonSet.has("preferred")) candidates.push({ key: "preferred", label: "Preferred", tone: "good" });
+  if (reasonSet.has("prequalified")) candidates.push({ key: "prequalified", label: "Prequalified", tone: "good" });
+  if (reasonSet.has("captain_preferred")) candidates.push({ key: "captain_preferred", label: "Captain preferred", tone: "good" });
+  if (reasonSet.has("driver_preferred")) candidates.push({ key: "driver_preferred", label: "Driver preferred", tone: "good" });
+
+  // 2. Conflict / availability
+  if (riskSet.has("conflict")) candidates.push({ key: "conflict", label: "Conflict", tone: "risk" });
+  if (riskSet.has("unavailable")) candidates.push({ key: "unavailable", label: "Unavailable", tone: "risk" });
+
+  // 3. Readiness
+  if (reasonSet.has("ready")) candidates.push({ key: "ready", label: "Ready", tone: "good" });
+  else if (reasonSet.has("grace_period")) candidates.push({ key: "grace_period", label: "Grace period", tone: "good" });
+
+  // 4. Venue / client history (count-aware)
+  if (c.locationHistoryCount > 0) {
+    candidates.push({ key: "worked_location", label: `Worked here ${c.locationHistoryCount}x`, tone: "good" });
+  }
+  if (c.clientHistoryCount > 0) {
+    candidates.push({ key: "worked_client", label: `Worked client ${c.clientHistoryCount}x`, tone: "good" });
+  }
+
+  // 5. Reliability (collision-aware)
+  if (hasGoodRating && hasRatingRisk) {
+    candidates.push({ key: "good_rating", label: "Good rating", tone: "good" });
+    candidates.push({ key: "risk_flag", label: "1 risk flag", tone: "risk" });
+  } else if (hasGoodRating) {
+    candidates.push({ key: "high_reliability", label: "High reliability", tone: "good" });
+  } else if (hasRatingRisk) {
+    candidates.push({ key: "low_reliability", label: "Reliability risk", tone: "risk" });
+  }
+
+  // 6. Role / driver / captain (lowest priority)
+  if (reasonSet.has("captain")) candidates.push({ key: "captain", label: "Captain", tone: "good" });
+  if (reasonSet.has("driver")) candidates.push({ key: "driver", label: "Driver", tone: "good" });
+  if (reasonSet.has("role_match")) candidates.push({ key: "role_match", label: "Role match", tone: "good" });
+
+  // Dedupe by key, cap to 4
+  const seen = new Set<string>();
+  const chips: DisplayChip[] = [];
+  for (const ch of candidates) {
+    if (seen.has(ch.key)) continue;
+    seen.add(ch.key);
+    chips.push(ch);
+    if (chips.length >= 4) break;
+  }
+
+  // One-line summary: lead with strongest positive signal + reliability if present.
+  const parts: string[] = [];
+  const lead =
+    reasonSet.has("preferred") ? "Preferred worker"
+    : reasonSet.has("prequalified") ? "Prequalified"
+    : c.locationHistoryCount >= 5 ? `Strong fit: worked here ${c.locationHistoryCount} times`
+    : c.locationHistoryCount > 0 ? `Worked here ${c.locationHistoryCount}x`
+    : c.clientHistoryCount > 0 ? `Worked client ${c.clientHistoryCount}x`
+    : null;
+  if (lead) parts.push(lead);
+  if (hasGoodRating && !hasRatingRisk) parts.push("high reliability");
+  else if (hasGoodRating && hasRatingRisk) parts.push("good rating · 1 risk flag");
+
+  const summary = parts.length > 0 ? parts.join(" · ") : null;
+  return { chips, summary };
 }
 
 /* ─── Worker readiness (read-only, mirrors backend EMPLOYEE_NOT_READY guard) ─── */
@@ -1505,8 +1593,7 @@ function RecommendedTab({
       ) : (
         <ul className="space-y-2">
           {visible.map((c) => {
-            const reasonChips = c.reasons.slice(0, 4);
-            const riskChips = c.riskFlags.slice(0, 2);
+            const display = buildRecommendedDisplay(c);
             const badgeTone =
               c.readinessState === "ready"
                 ? "border-emerald-300/60 text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30"
@@ -1528,29 +1615,34 @@ function RecommendedTab({
                     <span className={cn("rounded-full border px-1.5 py-0 text-[10px] font-semibold", badgeTone)}>
                       {c.readinessState === "ready" ? "Ready" : c.readinessState === "grace_period" ? "Grace" : "Blocked"}
                     </span>
-                    <span className="text-[10px] font-mono tabular-nums text-muted-foreground" title={`Score ${c.score}`}>
-                      {c.score}
+                    <span
+                      className="rounded-md border border-border/50 bg-muted/40 px-1.5 py-0 text-[10px] font-mono tabular-nums text-muted-foreground"
+                      title={`Score ${c.score}`}
+                    >
+                      Score {c.score}
                     </span>
                   </div>
-                  {(reasonChips.length > 0 || riskChips.length > 0) && (
+                  {display.chips.length > 0 && (
                     <div className="mt-1 flex flex-wrap gap-1">
-                      {reasonChips.map(k => (
+                      {display.chips.map(ch => (
                         <span
-                          key={`r-${k}`}
-                          className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400"
+                          key={`d-${ch.key}`}
+                          className={cn(
+                            "text-[10px] font-medium px-1.5 py-0.5 rounded-md",
+                            ch.tone === "good"
+                              ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400"
+                              : ch.tone === "risk"
+                                ? "bg-rose-50 text-rose-700 dark:bg-rose-950/30 dark:text-rose-400"
+                                : "bg-muted text-muted-foreground",
+                          )}
                         >
-                          {REASON_CHIP_LABEL[k]}
-                        </span>
-                      ))}
-                      {riskChips.map(k => (
-                        <span
-                          key={`x-${k}`}
-                          className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-rose-50 text-rose-700 dark:bg-rose-950/30 dark:text-rose-400"
-                        >
-                          {REASON_CHIP_LABEL[k]}
+                          {ch.label}
                         </span>
                       ))}
                     </div>
+                  )}
+                  {display.summary && (
+                    <p className="mt-1 text-[11px] text-foreground/80 leading-snug">{display.summary}</p>
                   )}
                   {c.phone ? (
                     <p className="mt-1 text-[11px] text-muted-foreground tabular-nums">{c.phone}</p>
