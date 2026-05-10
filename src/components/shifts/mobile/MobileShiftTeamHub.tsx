@@ -640,7 +640,7 @@ function OverviewTab({
 }
 
 function AssignedTab({
-  assignments, grouped, order, empById, shiftAdminId, canManage, onCopyPhone, onAssignmentAction,
+  assignments, grouped, order, empById, shiftAdminId, canManage, companyId, onCopyPhone, onAssignmentAction,
 }: {
   assignments: HubAssignment[];
   grouped: Record<Bucket, HubAssignment[]>;
@@ -648,6 +648,7 @@ function AssignedTab({
   empById: Map<string, Employee>;
   shiftAdminId: string | null;
   canManage: boolean;
+  companyId: string | null;
   onCopyPhone: (p: string) => void;
   onAssignmentAction: (assignmentId: string, nextStatus: AssignmentNextStatus, workerName: string) => void;
 }) {
