@@ -892,6 +892,8 @@ export function MobileShiftOperationsSheet({
       canManage={canValidate}
       clientName={clientName}
       locationName={locationName}
+      meetingPoint={meetingPoint}
+      hasMeetingPointLocation={!!(shift as unknown as { meeting_point_location_id?: string | null })?.meeting_point_location_id}
       shiftAdminId={shiftAdminId}
       companyId={selectedCompanyId}
       onMutated={() => setReloadKey(k => k + 1)}
