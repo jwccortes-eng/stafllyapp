@@ -18,16 +18,20 @@ import { Textarea } from "@/components/ui/textarea";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
-  setShiftAssignmentState, resolveShiftRequest,
+  setShiftAssignmentState, resolveShiftRequest, assignWorkerToShift,
   type AssignmentNextStatus, type ClaimDecision,
 } from "@/lib/shifts/team-actions";
 
 const SAFETY_COPY =
   "This action updates the worker's assignment status and is logged. It does not affect payroll or worked time. Attendance and payroll review remain separate.";
 
+const ASSIGN_SAFETY_COPY =
+  "This assigns the worker to this shift as a pending invitation and is logged. The worker still needs to accept. It does not affect payroll or worked time.";
+
 type Mode =
   | { kind: "assignment_state"; assignmentId: string; nextStatus: AssignmentNextStatus }
-  | { kind: "claim_decision"; requestId: string; decision: ClaimDecision };
+  | { kind: "claim_decision"; requestId: string; decision: ClaimDecision }
+  | { kind: "assign_worker"; shiftId: string; employeeId: string; graceWarning?: string | null };
 
 interface Props {
   open: boolean;
