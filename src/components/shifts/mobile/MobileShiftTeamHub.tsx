@@ -1583,7 +1583,7 @@ function RecommendedTab({
                       {c.preferenceBlocked ? "Blocked here" : c.conflictDetected ? "Conflict" : "Blocked"}
                     </Button>
                   )}
-                  {(shift.client_id || shift.location_id) && canManage && (
+                  {(shift.client_id || shift.location_id) && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <button
