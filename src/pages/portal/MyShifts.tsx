@@ -379,7 +379,7 @@ export default function MyShifts() {
     return (
       <div className="pt-4">
         <ErrorBlock
-          title="We couldn't load your shifts"
+          title="No pudimos cargar tus turnos"
           message={loadError}
           onRetry={load}
         />
