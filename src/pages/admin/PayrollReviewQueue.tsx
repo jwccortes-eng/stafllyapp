@@ -547,7 +547,7 @@ export default function PayrollReviewQueue() {
 
     return [
       { id: "ready",          title: "Ready to review",                  description: "Matched rows, no conflicts, no anomalies.",                                  severity: "info",  affectsPay: true,  rows: ready },
-      { id: "needs-match",    title: "Needs employee match",             description: "Imported rows without a matched employee or flagged for identity review.",  severity: "block", affectsPay: true,  rows: needsMatch },
+      { id: "needs-match",    title: "Needs employee match",             description: "Unmatched rows from historical_payroll_entries (Connecteam imports). May be empty if period was committed directly into period_base_pay (no unmatched import rows).",  severity: "block", affectsPay: true,  rows: needsMatch },
       { id: "time-mismatch",  title: "Time mismatch",                    description: "Variance flagged by reconciliation engine or pbp anomaly.",                  severity: "warn",  affectsPay: true,  rows: timeMismatch },
       { id: "assign-no-ev",   title: "Assignment without clock / pay",   description: "Worker accepted the shift but no clock and no pay row exist.",               severity: "warn",  affectsPay: true,  rows: assignNoEvidence },
       { id: "ev-no-assign",   title: "Clock / pay without assignment",   description: "Time entry or pay row exists but worker was not assigned in this period.",   severity: "warn",  affectsPay: true,  rows: clockNoAssign },
