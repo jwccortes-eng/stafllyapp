@@ -174,11 +174,33 @@ type TabKey = "overview" | "assigned" | "claims" | "issues" | "recommended";
 
 function MobileShiftTeamHubImpl({
   open, onOpenChange, shift, assignments, employees, canManage,
-  clientName, locationName, shiftAdminId,
+  clientName, locationName, shiftAdminId, onMutated,
 }: Props) {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [tab, setTab] = useState<TabKey>("overview");
+
+  // ── Phase 2: safe action dialog state.
+  const [actionDialogOpen, setActionDialogOpen] = useState(false);
+  const [actionMode, setActionMode] = useState<
+    | { kind: "assignment_state"; assignmentId: string; nextStatus: AssignmentNextStatus; workerName: string }
+    | { kind: "claim_decision"; requestId: string; decision: ClaimDecision; workerName: string }
+    | null
+  >(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const openAssignmentAction = (assignmentId: string, nextStatus: AssignmentNextStatus, workerName: string) => {
+    setActionMode({ kind: "assignment_state", assignmentId, nextStatus, workerName });
+    setActionDialogOpen(true);
+  };
+  const openClaimAction = (requestId: string, decision: ClaimDecision, workerName: string) => {
+    setActionMode({ kind: "claim_decision", requestId, decision, workerName });
+    setActionDialogOpen(true);
+  };
+  const handleMutated = () => {
+    setRefreshKey((k) => k + 1);
+    onMutated?.();
+  };
 
   // ── Claims (shift_requests) — single scoped read.
   const [claims, setClaims] = useState<ShiftRequestRow[]>([]);
