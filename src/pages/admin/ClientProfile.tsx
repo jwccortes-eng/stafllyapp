@@ -211,6 +211,24 @@ export default function ClientProfile() {
             locations={locationsQ.data ?? []}
           />
         </TabsContent>
+        {isPrivileged && selectedCompanyId && clientId && (
+          <TabsContent value="fit" className="mt-0">
+            <Card className="p-4 space-y-3">
+              <div>
+                <h3 className="text-sm font-semibold">Preferred workers</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Preferred workers appear higher in Recommended for this client. Blocked workers can't be assigned from Recommended until cleared. Internal — not visible to workers.
+                </p>
+              </div>
+              <WorkerPreferenceList
+                mode="client"
+                companyId={selectedCompanyId}
+                targetId={clientId}
+                canManage={isPrivileged}
+              />
+            </Card>
+          </TabsContent>
+        )}
         <TabsContent value="notes" className="mt-0">
           <NotesPanel clientId={clientId} initialNotes={client.notes ?? ""} />
         </TabsContent>
