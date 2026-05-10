@@ -56,6 +56,7 @@ const EmployeeMerge = lazy(() => import("./pages/admin/EmployeeMerge"));
 const Directory = lazy(() => import("./pages/admin/Directory"));
 const Clients = lazy(() => import("./pages/admin/Clients"));
 const ClientProfile = lazy(() => import("./pages/admin/ClientProfile"));
+const LocationProfile = lazy(() => import("./pages/admin/LocationProfile"));
 const Locations = lazy(() => import("./pages/admin/Locations"));
 const ImportSchedule = lazy(() => import("./pages/admin/ImportSchedule"));
 const BackfillShift = lazy(() => import("./pages/admin/BackfillShift"));
@@ -285,6 +286,7 @@ function App() {
                 <Route path="clients" element={<CompanyRequiredGuard><ModuleGate moduleKey="clients"><Clients /></ModuleGate></CompanyRequiredGuard>} />
                 <Route path="clients/:clientId" element={<CompanyRequiredGuard><ModuleGate moduleKey="clients"><ClientProfile /></ModuleGate></CompanyRequiredGuard>} />
                 <Route path="locations" element={<CompanyRequiredGuard><ModuleGate moduleKey="locations"><Locations /></ModuleGate></CompanyRequiredGuard>} />
+                <Route path="locations/:locationId" element={<CompanyRequiredGuard><ModuleGate moduleKey="locations"><LocationProfile /></ModuleGate></CompanyRequiredGuard>} />
                 <Route path="shifts" element={<CompanyRequiredGuard><Shifts /></CompanyRequiredGuard>} />
                 <Route path="import-schedule" element={<CompanyRequiredGuard><ModuleGate moduleKey="import"><ImportSchedule /></ModuleGate></CompanyRequiredGuard>} />
                 <Route path="backfill-shift/:shiftCode" element={<CompanyRequiredGuard><BackfillShift /></CompanyRequiredGuard>} />

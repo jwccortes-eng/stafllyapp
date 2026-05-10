@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import AuditPanel from "@/components/audit/AuditPanel";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -61,6 +61,18 @@ export default function Locations() {
       setSearchParams(prev => { const p = new URLSearchParams(prev); p.delete("create"); return p; }, { replace: true });
     }
   }, [searchParams]);
+
+  // Deep-link: ?edit=<id> opens edit dialog for that location once it's loaded.
+  useEffect(() => {
+    const editId = searchParams.get("edit");
+    if (!editId || locations.length === 0) return;
+    const target = locations.find(l => l.id === editId);
+    if (target) {
+      openEdit(target);
+      setSearchParams(prev => { const p = new URLSearchParams(prev); p.delete("edit"); return p; }, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, locations]);
   const [editing, setEditing] = useState<Location | null>(null);
   const [showDeleted, setShowDeleted] = useState("active");
 
@@ -381,12 +393,17 @@ export default function Locations() {
             <TableBody>
               {filtered.map(l => (
                 <TableRow key={l.id}>
-                  <TableCell>
-                    <div>
-                      <span className="font-medium">{l.name}</span>
-                      {l.state && <span className="text-[10px] text-muted-foreground ml-1.5">({l.state})</span>}
-                    </div>
-                  </TableCell>
+                <TableCell>
+                  <div>
+                    <Link
+                      to={`/app/locations/${l.id}`}
+                      className="font-medium hover:underline hover:text-primary transition-colors"
+                    >
+                      {l.name}
+                    </Link>
+                    {l.state && <span className="text-[10px] text-muted-foreground ml-1.5">({l.state})</span>}
+                  </div>
+                </TableCell>
                   <TableCell className="hidden md:table-cell text-muted-foreground text-sm">
                     {[l.address, l.city].filter(Boolean).join(", ") || "—"}
                   </TableCell>
