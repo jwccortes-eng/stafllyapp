@@ -228,6 +228,30 @@ export function rankCandidate(input: ScoreInput): RankedCandidate {
     reasons.push("role_match");
   }
 
+  // ── Preferences (admin-set, per client/location)
+  const prefs = signals.preferencesByEmp.get(e.id) ?? [];
+  let preferenceBlocked = false;
+  for (const p of prefs) {
+    // Already pre-filtered by client_id/location_id at fetch time, but be defensive.
+    const matchesClient = shift.client_id && p.client_id === shift.client_id;
+    const matchesLocation = shift.location_id && p.location_id === shift.location_id;
+    if (!matchesClient && !matchesLocation) continue;
+    switch (p.preference_type) {
+      case "preferred":
+        score += 60; reasons.push("preferred"); break;
+      case "prequalified":
+        score += 60; reasons.push("prequalified"); break;
+      case "captain_preferred":
+        score += 40; reasons.push("captain_preferred"); break;
+      case "driver_preferred":
+        score += 40; reasons.push("driver_preferred"); break;
+      case "not_recommended":
+        score -= 80; risks.push("not_recommended"); break;
+      case "blocked":
+        score -= 999; risks.push("blocked_here"); preferenceBlocked = true; break;
+    }
+  }
+
   return {
     employee: e,
     name,
@@ -237,9 +261,10 @@ export function rankCandidate(input: ScoreInput): RankedCandidate {
     reasons,
     riskFlags: risks,
     readinessState,
-    canAssign: canBeApproved && !conflictDetected && readinessState !== "inactive",
+    canAssign: canBeApproved && !conflictDetected && !preferenceBlocked && readinessState !== "inactive",
     alreadyAssigned,
     conflictDetected,
+    preferenceBlocked,
     availabilitySignal: availability,
     clientHistoryCount,
     locationHistoryCount,
@@ -263,6 +288,12 @@ export const REASON_CHIP_LABEL: Record<ReasonChipKey, string> = {
   driver: "Driver",
   captain: "Captain",
   role_match: "Role match",
+  preferred: "Preferred",
+  prequalified: "Prequalified",
+  captain_preferred: "Captain preferred",
+  driver_preferred: "Driver preferred",
+  blocked_here: "Blocked here",
+  not_recommended: "Not recommended",
 };
 
 /** Detect whether the shift signals a driver/captain need from title/notes. */
