@@ -48,6 +48,12 @@ import { allowedNextStatusesFor, type AssignmentNextStatus, type ClaimDecision }
 import { MobileTeamActionDialog } from "@/components/shifts/mobile/MobileTeamActionDialog";
 import { isOnboardingComplete } from "@/lib/onboarding";
 import { isGraceEligibleCompany, isWithinGraceWindow, GRACE_POLICY_DAYS } from "@/lib/shifts/readiness-grace";
+import { formatDistanceToNowStrict } from "date-fns";
+
+function formatRelative(iso: string): string {
+  try { return formatDistanceToNowStrict(new Date(iso), { addSuffix: true }); }
+  catch { return ""; }
+}
 
 /* ─── Worker readiness (read-only, mirrors backend EMPLOYEE_NOT_READY guard) ─── */
 
