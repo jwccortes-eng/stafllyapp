@@ -446,6 +446,19 @@ function MobileShiftTeamHubImpl({
     return () => { cancelled = true; };
   }, [open, shift?.id, refreshKey]);
 
+  // ── Daily close (Phase 17C) — surfaces closeout state in Issues tab.
+  const [closeout, setCloseout] = useState<import("@/lib/shifts/closeout").ShiftCloseout | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    if (!open || !shift?.id) return;
+    import("@/lib/shifts/closeout").then(({ getShiftCloseout }) =>
+      getShiftCloseout(shift.id).then((r) => {
+        if (!cancelled) setCloseout(r);
+      })
+    );
+    return () => { cancelled = true; };
+  }, [open, shift?.id, refreshKey]);
+
   const empById = useMemo(() => {
     const m = new Map<string, Employee>();
     for (const e of employees) m.set(e.id, e);
