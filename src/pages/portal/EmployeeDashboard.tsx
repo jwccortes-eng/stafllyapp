@@ -185,9 +185,9 @@ export default function EmployeeDashboard() {
 
   const greeting = (() => {
     const h = new Date().getHours();
-    if (h < 12) return "Good morning";
-    if (h < 18) return "Good afternoon";
-    return "Good evening";
+    if (h < 12) return "Buenos días";
+    if (h < 19) return "Buenas tardes";
+    return "Buenas noches";
   })();
 
   const firstName = empName.split(" ")[0] || "";
