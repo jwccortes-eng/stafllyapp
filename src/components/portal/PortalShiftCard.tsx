@@ -68,15 +68,15 @@ function getCountdown(dateStr: string, startTime: string): string | null {
   if (diff < 0 || diff > 24 * 60 * 60 * 1000) return null;
   const hrs = Math.floor(diff / 3600000);
   const mins = Math.floor((diff % 3600000) / 60000);
-  if (hrs > 0) return `in ${hrs}h ${mins}m`;
-  return `in ${mins}m`;
+  if (hrs > 0) return `en ${hrs}h ${mins}m`;
+  return `en ${mins}m`;
 }
 
 /** Day label used in compact + full views. */
 function dayLabel(dateStr: string): string {
   const d = parseISO(dateStr);
-  if (isToday(d)) return "Today";
-  if (isTomorrow(d)) return "Tomorrow";
+  if (isToday(d)) return "Hoy";
+  if (isTomorrow(d)) return "Mañana";
   return format(d, "EEE d MMM", { locale: enUS });
 }
 
