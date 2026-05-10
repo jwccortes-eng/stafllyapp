@@ -286,6 +286,7 @@ function App() {
                 <Route path="clients" element={<CompanyRequiredGuard><ModuleGate moduleKey="clients"><Clients /></ModuleGate></CompanyRequiredGuard>} />
                 <Route path="clients/:clientId" element={<CompanyRequiredGuard><ModuleGate moduleKey="clients"><ClientProfile /></ModuleGate></CompanyRequiredGuard>} />
                 <Route path="locations" element={<CompanyRequiredGuard><ModuleGate moduleKey="locations"><Locations /></ModuleGate></CompanyRequiredGuard>} />
+                <Route path="locations/:locationId" element={<CompanyRequiredGuard><ModuleGate moduleKey="locations"><LocationProfile /></ModuleGate></CompanyRequiredGuard>} />
                 <Route path="shifts" element={<CompanyRequiredGuard><Shifts /></CompanyRequiredGuard>} />
                 <Route path="import-schedule" element={<CompanyRequiredGuard><ModuleGate moduleKey="import"><ImportSchedule /></ModuleGate></CompanyRequiredGuard>} />
                 <Route path="backfill-shift/:shiftCode" element={<CompanyRequiredGuard><BackfillShift /></CompanyRequiredGuard>} />
