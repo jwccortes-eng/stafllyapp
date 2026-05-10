@@ -83,6 +83,7 @@ const Billing = lazy(() => import("./pages/admin/Billing"));
 const SystemHealth = lazy(() => import("./pages/admin/SystemHealth"));
 const Implementations = lazy(() => import("./pages/admin/Implementations"));
 const CommandCenter = lazy(() => import("./pages/admin/CommandCenter"));
+const StaffingCenter = lazy(() => import("./pages/admin/StaffingCenter"));
 const DevCommandCenter = lazy(() => import("./pages/admin/DevCommandCenter"));
 const DocumentsCenter = lazy(() => import("./pages/admin/DocumentsCenter"));
 const NeedsAttention = lazy(() => import("./pages/admin/NeedsAttention"));
@@ -255,6 +256,7 @@ function App() {
                 <Route path="daily-close" element={<CompanyRequiredGuard><DailyClose /></CompanyRequiredGuard>} />
                 <Route path="today" element={<Today />} />
                 <Route path="command-center" element={<CommandCenter />} />
+                <Route path="staffing-center" element={<StaffingCenter />} />
                 <Route path="dev-command-center" element={<DevCommandCenter />} />
                 <Route path="owner-command-center" element={<DevCommandCenter />} />
                 <Route path="employees" element={<CompanyRequiredGuard><Employees /></CompanyRequiredGuard>} />
