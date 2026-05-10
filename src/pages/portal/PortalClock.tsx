@@ -684,7 +684,7 @@ export default function PortalClock() {
               {acting ? (
                 <div className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
               ) : (
-                <><LogOut className="h-4 w-4" /> Clock Out</>
+                <><LogOut className="h-4 w-4" /> Marcar salida</>
               )}
             </Button>
           ) : focusShift ? (
