@@ -720,7 +720,21 @@ export function EmployeeProfileTabs({
       </TabsContent>
       <TabsContent value="advances" className="mt-0"><EmployeeAdvancesTab employeeId={employee.id} companyId={companyId} /></TabsContent>
       <TabsContent value="shifts" className="mt-0"><ShiftsTab employee={employee} companyId={companyId} /></TabsContent>
-      <TabsContent value="time" className="mt-0"><TimeTab employee={employee} companyId={companyId} /></TabsContent>
+      {isPrivileged && (
+        <TabsContent value="fit" className="mt-0">
+          <Card className="rounded-lg border-border/30">
+            <CardContent className="p-3 space-y-3">
+              <div>
+                <h3 className="text-xs font-semibold">Client &amp; location fit</h3>
+                <p className="text-[10px] text-muted-foreground mt-0.5">
+                  Preferred workers appear higher in Recommended for that client/location. Blocked workers can't be assigned from Recommended until cleared. Internal — not visible to workers.
+                </p>
+              </div>
+              <WorkerPreferenceList mode="worker" companyId={companyId} targetId={employee.id} canManage={isPrivileged} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+      )}
       <TabsContent value="access" className="mt-0"><EmployeeAccessTab employee={employee} companyId={companyId} companyName={companyName} isPrivileged={isPrivileged} onEmployeeUpdate={onEmployeeUpdate} onInvite={onInvite} invitation={invitation} /></TabsContent>
       <TabsContent value="docs" className="mt-0"><DocumentsTab employee={employee} companyId={companyId} /></TabsContent>
       <TabsContent value="activity" className="mt-0"><ActivityTab employee={employee} /></TabsContent>
