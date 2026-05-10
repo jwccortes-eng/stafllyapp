@@ -159,10 +159,10 @@ export default function PortalShiftDetail() {
       if (error) throw error;
 
       if (navigator.vibrate) navigator.vibrate(80);
-      toast.success("✅ Request sent!", { description: "We'll notify you when it's reviewed." });
+      toast.success("✅ ¡Solicitud enviada!", { description: "Te avisaremos cuando se revise." });
       setState("pending_approval");
     } catch (e: any) {
-      toast.error("Could not request", { description: e.message });
+      toast.error("No pudimos enviar la solicitud", { description: e.message });
       await load();
     } finally {
       setRequesting(false);
