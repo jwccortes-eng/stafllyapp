@@ -271,7 +271,7 @@ function MobileShiftTeamHubImpl({
   };
   const openClaimAction = (requestId: string, decision: ClaimDecision, workerName: string, employeeId?: string) => {
     if (decision === "approved" && employeeId) {
-      const r = computeReadiness(empById.get(employeeId));
+      const r = computeReadiness(empById.get(employeeId), companyId);
       if (!r.canBeApproved) {
         toast({
           title: "Worker not ready to be approved",
