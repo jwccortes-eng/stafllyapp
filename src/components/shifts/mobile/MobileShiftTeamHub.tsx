@@ -46,12 +46,15 @@ import { useToast } from "@/hooks/use-toast";
 import { allowedNextStatusesFor, type AssignmentNextStatus, type ClaimDecision } from "@/lib/shifts/team-actions";
 import { MobileTeamActionDialog } from "@/components/shifts/mobile/MobileTeamActionDialog";
 import { isOnboardingComplete } from "@/lib/onboarding";
+import { isGraceEligibleCompany, isWithinGraceWindow, GRACE_POLICY_DAYS } from "@/lib/shifts/readiness-grace";
 
 /* ─── Worker readiness (read-only, mirrors backend EMPLOYEE_NOT_READY guard) ─── */
 
 type ReadinessState =
-  | "ready" | "incomplete_profile" | "pending_documents"
-  | "onboarding_pending" | "missing_phone" | "inactive" | "unknown";
+  | "ready" | "grace_period"
+  | "incomplete_blocked" | "pending_documents_blocked"
+  | "onboarding_pending" | "missing_phone"
+  | "inactive" | "unknown";
 
 interface Readiness {
   state: ReadinessState;
@@ -60,21 +63,43 @@ interface Readiness {
   helper: string;
 }
 
-function computeReadiness(e: Employee | undefined): Readiness {
+const GRACE_HELPER = `Worker can be approved during the ${GRACE_POLICY_DAYS}-day grace period. Profile still needs completion.`;
+
+function computeReadiness(e: Employee | undefined, companyId?: string | null): Readiness {
   if (!e) return { state: "unknown", canBeApproved: false, label: "Needs review", helper: "Worker record not loaded." };
   if (e.is_active === false) return { state: "inactive", canBeApproved: false, label: "Inactive", helper: "Reactivate the worker before approving." };
-  if (e.profile_status === "incomplete") return { state: "incomplete_profile", canBeApproved: false, label: "Profile incomplete", helper: "Complete worker profile before approving this claim." };
-  if (e.profile_status === "pending_documents") return { state: "pending_documents", canBeApproved: false, label: "Missing documents", helper: "Worker needs to upload required documents." };
-  if (!normalizePhone(e.phone_number)) return { state: "missing_phone", canBeApproved: false, label: "Missing phone", helper: "Add a phone number before approving." };
+
+  const profileIncomplete = e.profile_status === "incomplete" || e.profile_status === "pending_documents";
+  const inGrace = profileIncomplete && isGraceEligibleCompany(companyId) && isWithinGraceWindow();
+
+  if (e.profile_status === "incomplete") {
+    if (inGrace) return { state: "grace_period", canBeApproved: true, label: "Profile incomplete · grace period", helper: GRACE_HELPER };
+    return { state: "incomplete_blocked", canBeApproved: false, label: "Profile incomplete · blocked", helper: "Complete worker profile before approving this claim." };
+  }
+  if (e.profile_status === "pending_documents") {
+    if (inGrace) return { state: "grace_period", canBeApproved: true, label: "Missing documents · grace period", helper: GRACE_HELPER };
+    return { state: "pending_documents_blocked", canBeApproved: false, label: "Missing documents · blocked", helper: "Worker needs to upload required documents." };
+  }
+  if (!normalizePhone(e.phone_number)) {
+    // Soft warning — backend doesn't block on phone alone, but operators need contact info.
+    return { state: "missing_phone", canBeApproved: true, label: "Missing phone", helper: "Add a phone number — workers can't be contacted without it." };
+  }
   if (e.onboarding_status && !isOnboardingComplete(e.onboarding_status) && e.profile_status !== "active") {
-    return { state: "onboarding_pending", canBeApproved: false, label: "Onboarding pending", helper: "Worker hasn't finished onboarding yet." };
+    // Soft warning — backend allows ready/active to confirm regardless of onboarding text.
+    return { state: "onboarding_pending", canBeApproved: true, label: "Onboarding pending", helper: "Worker hasn't finished onboarding yet." };
   }
   return { state: "ready", canBeApproved: true, label: "Ready", helper: "Worker is ready for shifts." };
 }
 
 const READINESS_TONE: Record<ReadinessState, "good" | "info" | "warn" | "bad" | "muted"> = {
-  ready: "good", incomplete_profile: "warn", pending_documents: "warn",
-  onboarding_pending: "warn", missing_phone: "warn", inactive: "bad", unknown: "muted",
+  ready: "good",
+  grace_period: "warn",
+  incomplete_blocked: "bad",
+  pending_documents_blocked: "bad",
+  onboarding_pending: "warn",
+  missing_phone: "warn",
+  inactive: "bad",
+  unknown: "muted",
 };
 
 function ReadinessChip({ readiness, className }: { readiness: Readiness; className?: string }) {
@@ -150,6 +175,8 @@ interface Props {
   locationName?: string | null;
   /** scheduled_shifts.shift_admin_id, used for Captain badge. */
   shiftAdminId?: string | null;
+  /** Tenant the shift/employees belong to (drives the grace-period decision). */
+  companyId?: string | null;
   /** Optional callback so the parent sheet can refetch after a safe mutation. */
   onMutated?: () => void;
 }
@@ -223,7 +250,7 @@ type TabKey = "overview" | "assigned" | "claims" | "issues" | "recommended";
 
 function MobileShiftTeamHubImpl({
   open, onOpenChange, shift, assignments, employees, canManage,
-  clientName, locationName, shiftAdminId, onMutated,
+  clientName, locationName, shiftAdminId, companyId, onMutated,
 }: Props) {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -244,7 +271,7 @@ function MobileShiftTeamHubImpl({
   };
   const openClaimAction = (requestId: string, decision: ClaimDecision, workerName: string, employeeId?: string) => {
     if (decision === "approved" && employeeId) {
-      const r = computeReadiness(empById.get(employeeId));
+      const r = computeReadiness(empById.get(employeeId), companyId);
       if (!r.canBeApproved) {
         toast({
           title: "Worker not ready to be approved",
@@ -509,6 +536,7 @@ function MobileShiftTeamHubImpl({
               empById={empById}
               shiftAdminId={shiftAdminId ?? null}
               canManage={canManage}
+              companyId={companyId ?? null}
               onCopyPhone={(p) => {
                 navigator.clipboard?.writeText(p).catch(() => {});
                 toast({ title: "Phone copied" });
@@ -524,6 +552,7 @@ function MobileShiftTeamHubImpl({
               claims={claims}
               empById={empById}
               canManage={canManage}
+              companyId={companyId ?? null}
               onClaimAction={openClaimAction}
               onOpenDesktop={() => {
                 onOpenChange(false);
@@ -611,7 +640,7 @@ function OverviewTab({
 }
 
 function AssignedTab({
-  assignments, grouped, order, empById, shiftAdminId, canManage, onCopyPhone, onAssignmentAction,
+  assignments, grouped, order, empById, shiftAdminId, canManage, companyId, onCopyPhone, onAssignmentAction,
 }: {
   assignments: HubAssignment[];
   grouped: Record<Bucket, HubAssignment[]>;
@@ -619,6 +648,7 @@ function AssignedTab({
   empById: Map<string, Employee>;
   shiftAdminId: string | null;
   canManage: boolean;
+  companyId: string | null;
   onCopyPhone: (p: string) => void;
   onAssignmentAction: (assignmentId: string, nextStatus: AssignmentNextStatus, workerName: string) => void;
 }) {
@@ -664,6 +694,7 @@ function AssignedTab({
                       employee={empById.get(a.employee_id)}
                       isCaptain={!!shiftAdminId && a.employee_id === shiftAdminId}
                       canManage={canManage}
+                      companyId={companyId}
                       onCopyPhone={onCopyPhone}
                       onAssignmentAction={onAssignmentAction}
                     />
@@ -690,12 +721,13 @@ const ASSIGN_ACTION_ICON: Record<AssignmentNextStatus, React.ComponentType<{ cla
 };
 
 function WorkerRow({
-  assignment, employee, isCaptain, canManage, onCopyPhone, onAssignmentAction,
+  assignment, employee, isCaptain, canManage, companyId, onCopyPhone, onAssignmentAction,
 }: {
   assignment: HubAssignment;
   employee: Employee | undefined;
   isCaptain: boolean;
   canManage: boolean;
+  companyId: string | null;
   onCopyPhone: (p: string) => void;
   onAssignmentAction: (assignmentId: string, nextStatus: AssignmentNextStatus, workerName: string) => void;
 }) {
@@ -705,7 +737,7 @@ function WorkerRow({
   const wa = hasPhone ? buildWhatsAppTargets(phoneDigits, "") : null;
   const allowedActions = allowedNextStatusesFor(assignment.status);
   const showMenu = canManage && allowedActions.length > 0;
-  const readiness = computeReadiness(employee);
+  const readiness = computeReadiness(employee, companyId);
 
   const subBits: string[] = [];
   if (assignment.assignment_role) subBits.push(assignment.assignment_role);
@@ -824,7 +856,7 @@ function ContactBtn({
 }
 
 function ClaimsTab({
-  loading, error, claims, empById, canManage, onClaimAction, onOpenDesktop,
+  loading, error, claims, empById, canManage, companyId, onClaimAction, onOpenDesktop,
   onViewWorker, onCopyReminder,
 }: {
   loading: boolean;
@@ -832,6 +864,7 @@ function ClaimsTab({
   claims: ShiftRequestRow[];
   empById: Map<string, Employee>;
   canManage: boolean;
+  companyId: string | null;
   onClaimAction: (requestId: string, decision: ClaimDecision, workerName: string, employeeId?: string) => void;
   onOpenDesktop: () => void;
   onViewWorker: (employeeId: string) => void;
@@ -867,7 +900,7 @@ function ClaimsTab({
               c.status === "approved" ? "good" :
               c.status === "rejected" ? "bad" : "warn";
             const isPending = c.status === "pending";
-            const readiness = computeReadiness(e);
+            const readiness = computeReadiness(e, companyId);
             const blocked = isPending && !readiness.canBeApproved;
             return (
               <li key={c.id} className="rounded-2xl border border-border/50 bg-card p-3">

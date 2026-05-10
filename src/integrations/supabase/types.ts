@@ -15857,6 +15857,10 @@ export type Database = {
           phone_number: string
         }[]
       }
+      get_employee_shift_readiness: {
+        Args: { _company_id?: string; _employee_id: string }
+        Returns: string
+      }
       get_invitation_by_token: {
         Args: { _token: string }
         Returns: {
