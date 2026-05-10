@@ -536,6 +536,7 @@ function MobileShiftTeamHubImpl({
               empById={empById}
               shiftAdminId={shiftAdminId ?? null}
               canManage={canManage}
+              companyId={companyId ?? null}
               onCopyPhone={(p) => {
                 navigator.clipboard?.writeText(p).catch(() => {});
                 toast({ title: "Phone copied" });
@@ -551,6 +552,7 @@ function MobileShiftTeamHubImpl({
               claims={claims}
               empById={empById}
               canManage={canManage}
+              companyId={companyId ?? null}
               onClaimAction={openClaimAction}
               onOpenDesktop={() => {
                 onOpenChange(false);
