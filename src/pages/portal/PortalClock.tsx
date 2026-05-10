@@ -803,7 +803,7 @@ export default function PortalClock() {
               className="flex-1 h-10 rounded-xl text-[12px] font-medium text-muted-foreground gap-1.5 hover:bg-muted/40 hover:text-foreground"
             >
               <ScanLine className="h-3.5 w-3.5" />
-              Scan QR
+              Escanear QR
             </Button>
           )}
           {!isClockedIn && allowManual && (
