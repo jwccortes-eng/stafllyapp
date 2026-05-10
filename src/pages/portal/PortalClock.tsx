@@ -828,16 +828,16 @@ export default function PortalClock() {
           <DialogHeader>
             <DialogTitle className="text-base flex items-center gap-2">
               <FileText className="h-4 w-4 text-primary" />
-              Report uncaptured time
+              Reportar tiempo no registrado
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
-            <p className="text-xs text-muted-foreground">Describe what hours you worked and why you couldn't clock in.</p>
+            <p className="text-xs text-muted-foreground">Describe las horas que trabajaste y por qué no pudiste marcar entrada.</p>
             <Textarea value={requestMessage} onChange={e => setRequestMessage(e.target.value)}
-              placeholder="E.g.: I worked from 8:00 to 17:00 but couldn't clock in because..." rows={4} className="text-sm resize-none rounded-xl" />
+              placeholder="Ej: Trabajé de 8:00 a 17:00 pero no pude marcar entrada porque..." rows={4} className="text-sm resize-none rounded-xl" />
             <Button onClick={handleSendTimeRequest} disabled={sendingRequest || !requestMessage.trim()} className="w-full h-11 text-sm font-bold rounded-xl">
               {sendingRequest ? <div className="h-3.5 w-3.5 border-2 border-current border-t-transparent rounded-full animate-spin mr-1.5" /> : null}
-              Send request
+              Enviar solicitud
             </Button>
           </div>
         </DialogContent>
