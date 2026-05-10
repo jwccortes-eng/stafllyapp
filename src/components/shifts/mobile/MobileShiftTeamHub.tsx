@@ -811,6 +811,14 @@ function WorkerRow({
           <p className="text-[11px] text-muted-foreground truncate">
             {subBits.length ? subBits.join(" · ") : "—"}
           </p>
+          {responseLabel && (
+            <p className={cn(
+              "text-[10px] mt-0.5 font-medium",
+              assignment.accepted_at ? "text-emerald-700 dark:text-emerald-400" : "text-rose-700 dark:text-rose-400"
+            )}>
+              {responseLabel}
+            </p>
+          )}
           {readiness.state !== "ready" && readiness.state !== "missing_phone" && (
             <div className="mt-0.5"><ReadinessChip readiness={readiness} /></div>
           )}
