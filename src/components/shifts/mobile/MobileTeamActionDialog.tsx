@@ -85,21 +85,30 @@ export function MobileTeamActionDialog({
           nextStatus: mode.nextStatus,
           reason: reason.trim() || null,
         });
-        toast({ title: `${ASSIGNMENT_VERB[mode.nextStatus]} · ${workerName}` });
+        toast({
+          title: `${ASSIGNMENT_VERB[mode.nextStatus]} · ${workerName}`,
+          description: "Worker notified in the Stafly app.",
+        });
       } else if (mode.kind === "claim_decision") {
         await resolveShiftRequest({
           requestId: mode.requestId,
           decision: mode.decision,
           reason: reason.trim() || null,
         });
-        toast({ title: `${CLAIM_VERB[mode.decision]} · ${workerName}` });
+        toast({
+          title: `${CLAIM_VERB[mode.decision]} · ${workerName}`,
+          description: "Worker notified in the Stafly app.",
+        });
       } else {
         await assignWorkerToShift({
           shiftId: mode.shiftId,
           employeeId: mode.employeeId,
           reason: reason.trim() || null,
         });
-        toast({ title: `Worker assigned · ${workerName}` });
+        toast({
+          title: `Worker assigned · ${workerName}`,
+          description: "Worker notified — they still need to accept in the Stafly app.",
+        });
       }
       setReason("");
       onOpenChange(false);
