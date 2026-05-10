@@ -24,6 +24,7 @@ import { staffedAssignments } from "@/lib/shifts/assignment-coverage";
 import { canManageShifts } from "@/lib/shifts/shift-permissions";
 import { ShiftAttendancePanel } from "@/components/shifts/ShiftAttendancePanel";
 import { MobileShiftTeamHub } from "@/components/shifts/mobile/MobileShiftTeamHub";
+import { ShiftCloseoutSection } from "@/components/shifts/closeout/ShiftCloseoutSection";
 import {
   TraceabilitySnapshot,
   type TraceRisk,
@@ -848,6 +849,17 @@ export function MobileShiftOperationsSheet({
               />
             )}
           </section>
+
+          {/* Daily close — Phase 17C operational evidence (no payroll/time impact) */}
+          {shift && selectedCompanyId ? (
+            <ShiftCloseoutSection
+              shiftId={shift.id}
+              companyId={selectedCompanyId}
+              canSubmit={canValidate || shiftAdminId != null}
+              canReview={canValidate}
+              role={canValidate ? "admin" : "shift_admin"}
+            />
+          ) : null}
 
           {/* Inline secondary actions */}
           <section className="grid grid-cols-2 gap-2">

@@ -24,6 +24,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { HistoricalPayrollCloseoutPanel } from "@/components/command-center/HistoricalPayrollCloseoutPanel";
+import { DailyCloseKpiPanel } from "@/components/command-center/DailyCloseKpiPanel";
 import { SmartActionQueue } from "@/components/command-center/SmartActionQueue";
 import { format } from "date-fns";
 import {
@@ -730,6 +731,9 @@ function CompanyCommandCenter({
 
           {/* Historical Payroll Closeout summary */}
           <HistoricalPayrollCloseoutPanel companyId={companyId} />
+
+          {/* Phase 17C — Daily close (operational evidence, no payroll impact) */}
+          <DailyCloseKpiPanel companyId={companyId} />
 
           {/* Ecosystem */}
           <section className="space-y-3">
