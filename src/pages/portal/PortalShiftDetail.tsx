@@ -345,32 +345,32 @@ function StateBanner({ state }: { state: AvailabilityState }) {
   const config: Record<string, { icon: React.ReactNode; label: string; sub: string; tone: string }> = {
     pending_approval: {
       icon: <Hourglass className="h-4 w-4" />,
-      label: "Request pending",
-      sub: "We'll notify you when it's reviewed.",
+      label: "Solicitud pendiente",
+      sub: "Te avisaremos cuando se revise.",
       tone: "bg-amber-500/[0.08] border-amber-500/20 text-amber-700 dark:text-amber-400",
     },
     assigned: {
       icon: <CheckCircle2 className="h-4 w-4" />,
-      label: "Already assigned to you",
-      sub: "Find it on My Shifts.",
+      label: "Ya estás asignado",
+      sub: "Búscalo en Mis turnos.",
       tone: "bg-emerald-500/[0.08] border-emerald-500/20 text-emerald-700 dark:text-emerald-400",
     },
     full: {
       icon: <AlertCircle className="h-4 w-4" />,
-      label: "No spots left",
-      sub: "All slots have been filled.",
+      label: "Sin cupos disponibles",
+      sub: "Todos los lugares están ocupados.",
       tone: "bg-muted/40 border-border/40 text-muted-foreground",
     },
     not_claimable: {
       icon: <AlertCircle className="h-4 w-4" />,
-      label: "Not open for requests",
-      sub: "This shift is not currently accepting claims.",
+      label: "No abierto a solicitudes",
+      sub: "Este turno no acepta solicitudes en este momento.",
       tone: "bg-muted/40 border-border/40 text-muted-foreground",
     },
     past: {
       icon: <XCircle className="h-4 w-4" />,
-      label: "Shift in the past",
-      sub: "This shift has already passed.",
+      label: "Turno ya pasó",
+      sub: "Este turno ya finalizó.",
       tone: "bg-muted/40 border-border/40 text-muted-foreground",
     },
   };
