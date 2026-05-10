@@ -568,24 +568,24 @@ export default function MyShifts() {
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-widest bg-emerald-500/15 text-emerald-700 dark:text-emerald-400">
-                      Available
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-widest bg-emerald-500/15 text-emerald-700 dark:text-emerald-400">
+                      Disponible
                     </span>
                     {s.slots && (
-                      <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">
-                        {s.slots - s.assignedCount} spot{(s.slots - s.assignedCount) !== 1 ? "s" : ""}
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">
+                        {s.slots - s.assignedCount} {(s.slots - s.assignedCount) === 1 ? "lugar" : "lugares"}
                       </span>
                     )}
                   </div>
-                  <p className="text-[13.5px] font-bold text-foreground truncate">{formatDisplayName(s.title)}</p>
-                  <p className="text-[11px] text-muted-foreground/75 mt-0.5">
-                    {isToday(parseISO(s.date)) ? "Today" : isTomorrow(parseISO(s.date)) ? "Tomorrow" : format(parseISO(s.date), "EEE d MMM", { locale: enUS })}
+                  <p className="text-[14px] font-bold text-foreground truncate">{formatDisplayName(s.title)}</p>
+                  <p className="text-[12px] text-muted-foreground/80 mt-0.5">
+                    {isToday(parseISO(s.date)) ? "Hoy" : isTomorrow(parseISO(s.date)) ? "Mañana" : format(parseISO(s.date), "EEE d MMM", { locale: enUS })}
                     {" · "}
                     <span className="tabular-nums">{s.start_time?.slice(0, 5)}–{s.end_time?.slice(0, 5)}</span>
                   </p>
                   {s.location && (
-                    <p className="text-[11px] text-muted-foreground/65 mt-0.5 flex items-center gap-1 truncate">
-                      <MapPin className="h-2.5 w-2.5 shrink-0" /> {formatDisplayName(s.location.name)}
+                    <p className="text-[12px] text-muted-foreground/70 mt-0.5 flex items-center gap-1 truncate">
+                      <MapPin className="h-3 w-3 shrink-0" /> {formatDisplayName(s.location.name)}
                     </p>
                   )}
                 </div>
@@ -596,7 +596,7 @@ export default function MyShifts() {
                 onClick={(e) => { e.stopPropagation(); claimShift(s.id); }}
                 disabled={claiming === s.id}
               >
-                {claiming === s.id ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />Requesting...</> : <><HandMetal className="h-3.5 w-3.5" />Request shift</>}
+                {claiming === s.id ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />Solicitando...</> : <><HandMetal className="h-3.5 w-3.5" />Solicitar turno</>}
               </Button>
             </div>
           ))}
