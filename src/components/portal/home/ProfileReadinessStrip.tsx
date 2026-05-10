@@ -9,7 +9,6 @@ import { Link } from "react-router-dom";
 import { CheckCircle2, ArrowRight, Sparkles } from "lucide-react";
 import { useEmployeeReadiness } from "@/hooks/useEmployeeReadiness";
 import { useEffectiveEmployee } from "@/hooks/useEffectiveEmployee";
-import { PROFILE_STATUS_LABELS } from "@/lib/onboarding/profile-status";
 import type { NbaKind } from "@/lib/portal/next-best-action";
 
 interface Props {
