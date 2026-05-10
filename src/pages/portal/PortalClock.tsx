@@ -704,12 +704,12 @@ export default function PortalClock() {
             <div className="rounded-xl bg-muted/30 border border-border/30 px-4 py-3.5 flex flex-col items-center text-center gap-1">
               <CalendarDays className="h-5 w-5 text-muted-foreground/45" />
               <p className="text-[12.5px] font-semibold text-foreground">
-                {hasDailyOnlyShifts ? "Daily-pay shifts today" : "No shifts to clock"}
+                {hasDailyOnlyShifts ? "Turnos de pago diario hoy" : "Sin turnos para marcar"}
               </p>
               <p className="text-[10.5px] text-muted-foreground/65 max-w-[260px] leading-relaxed">
                 {hasDailyOnlyShifts
-                  ? "Today's shifts don't require clocking in. Pay is calculated automatically."
-                  : "Contact your supervisor if a shift is missing."}
+                  ? "Los turnos de hoy no requieren marcar entrada. El pago se calcula automáticamente."
+                  : "Contacta a tu supervisor si falta algún turno."}
               </p>
             </div>
           )}
