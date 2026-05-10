@@ -738,6 +738,9 @@ function WorkerRow({
           <p className="text-[11px] text-muted-foreground truncate">
             {subBits.length ? subBits.join(" · ") : "—"}
           </p>
+          {readiness.state !== "ready" && readiness.state !== "missing_phone" && (
+            <div className="mt-0.5"><ReadinessChip readiness={readiness} /></div>
+          )}
           {!hasPhone && (
             <p className="text-[10px] text-amber-700 dark:text-amber-400 mt-0.5">{HUB_COPY.noPhone}</p>
           )}
