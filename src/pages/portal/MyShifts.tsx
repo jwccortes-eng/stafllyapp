@@ -350,9 +350,9 @@ export default function MyShifts() {
   };
 
   const subtitle = (() => {
-    if (todayCount > 0) return `${todayCount} shift${todayCount > 1 ? "s" : ""} today`;
-    if (upcomingCount > 0) return `${upcomingCount} upcoming`;
-    return "No scheduled shifts";
+    if (todayCount > 0) return `${todayCount} turno${todayCount > 1 ? "s" : ""} hoy`;
+    if (upcomingCount > 0) return `${upcomingCount} próximo${upcomingCount > 1 ? "s" : ""}`;
+    return "Sin turnos programados";
   })();
 
   if (loading) {
