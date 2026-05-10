@@ -452,3 +452,41 @@ The Manage Team module is the primary operator interface for per-shift staffing.
 | Payroll-impacting incidents traced to Stafly | **0** |
 | María signs off on Payroll Review Queue usefulness | Yes |
 | Stage 1 → Stage 2 exit | 2 consecutive weeks meeting all targets |
+
+---
+
+## Worker Portal Readiness / Stage 1 Activation
+
+**Audit:** Phase 25 — Worker Portal Readiness / Activation Audit (Quality Staff by Keury)
+**Result:** **PASS WITH RISKS → PASS** after Phase 25.1 + 25.2 cleanup.
+
+### Phase 25.1 — Cleanup applied
+- **Alejandra Sanchez #1120** — `portal_access_enabled` flipped `false → true` (single field; phone, user_id, access_pin, must_change_pin untouched).
+- **"Empleado Test"** — QA `shift_assignments` row removed from real shift (`981b6cc3-3a1a-4d9b-bd0d-641fca9c647f`). Employee record, time_entries, payroll, scheduled_shifts untouched.
+
+### Phase 25.2 — Carlos Alvarez #1243
+Approved as **documented manual exception** for Stage 1.
+- employee_id: `ba56dbe8-a10a-4c6a-b22c-9eff5658849f`
+- assignment_id: `a25a4417-3e5b-4ed0-91a8-8770775ac4a1`
+- shift_id: `242fb2e7-2773-4f9c-bc8f-22e76182fdec`
+- shift date: **2026-05-17**
+- captain: **Brayant Paulino**
+- reason: missing phone / user_id / portal_access_enabled
+- mitigation: manual WhatsApp coordination (Jorge / Keury / Brayant) + Connecteam TimeClock remains authority
+- re-open activation when operator provides Carlos's phone (returns to Phase 25.2 Option 1)
+
+### Final Stage 1 readiness — Quality Staff
+| Check | Status |
+|---|---|
+| Upcoming workers portal-ready (next 14d) | **25/26** ✅ (Carlos #1243 documented exception) |
+| Captains ready | **2/2** ✅ (Keury Camilo, Brayant Paulino) |
+| Connecteam TimeClock authority | ✅ active |
+| WhatsApp fallback | ✅ active |
+| Documented exceptions | Carlos Alvarez #1243 (2026-05-17) |
+
+### Stage 1 rule (binding)
+- Workers use **Stafly** for shift visibility, acceptance, rejection, and operational coordination.
+- Workers continue clocking **in/out in Connecteam**.
+- **No payroll source switch.** Connecteam remains payroll authority.
+- **No Stafly TimeClock for payroll** in Stage 1. Native `time_entries` are evidence/review only.
+- Documented manual exceptions (e.g. Carlos #1243) are coordinated by WhatsApp and clock in Connecteam — they are NOT counted as portal-ready.
