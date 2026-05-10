@@ -15749,6 +15749,45 @@ export type Database = {
         }
         Returns: undefined
       }
+      assign_worker_to_shift: {
+        Args: {
+          p_assignment_role?: string
+          p_employee_id: string
+          p_reason?: string
+          p_shift_id: string
+          p_source?: string
+        }
+        Returns: {
+          accepted_at: string | null
+          accepted_shift_version: number | null
+          assignment_role: string | null
+          attendance_notes: string | null
+          attendance_status: string
+          attendance_validated_at: string | null
+          attendance_validated_by: string | null
+          company_id: string
+          created_at: string
+          employee_id: string
+          id: string
+          import_batch_id: string | null
+          is_draft_reservation: boolean
+          last_notified_at: string | null
+          rejected_at: string | null
+          rejection_reason: string | null
+          responded_at: string | null
+          response_required: boolean
+          response_status: string
+          role_slot_id: string | null
+          shift_id: string
+          status: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "shift_assignments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       can_manage_shift_company: {
         Args: { _company_id: string }
         Returns: boolean
