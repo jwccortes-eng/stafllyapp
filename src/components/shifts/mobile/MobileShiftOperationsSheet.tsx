@@ -72,8 +72,10 @@ const MOBILE_SHIFT_COPY = {
   shiftDetailsHelper: "Review the core shift information.",
   noClientTitle: "No client set",
   noClientHelper: "Add the client from desktop so this shift is easier to identify.",
-  noLocationTitle: "No location set",
-  noLocationHelper: "Add the location from desktop before publishing or dispatching.",
+  noLocationTitle: "Missing job site / venue",
+  noLocationHelper: "Add the job site from desktop. Meeting points are different — they're worker pickup spots, not the actual venue.",
+  noLocationOrMeetingTitle: "No location or meeting point",
+  noLocationOrMeetingHelper: "Workers won't know where to go or where to meet. Add a job site from desktop.",
   noMeetingPoint: "No meeting point set.",
 
   // Notes section
