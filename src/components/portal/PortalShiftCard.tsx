@@ -3,7 +3,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, parseISO, isToday, isTomorrow, differenceInMinutes } from "date-fns";
-import { enUS } from "date-fns/locale";
+import { es } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { OpsStatusChip, type OpsStatusTone } from "@/components/operations/OpsStatusChip";
 import { formatDisplayName } from "@/lib/format-helpers";
@@ -77,7 +77,7 @@ function dayLabel(dateStr: string): string {
   const d = parseISO(dateStr);
   if (isToday(d)) return "Hoy";
   if (isTomorrow(d)) return "Mañana";
-  return format(d, "EEE d MMM", { locale: enUS });
+  return format(d, "EEE d MMM", { locale: es });
 }
 
 export function PortalShiftCard({
@@ -112,7 +112,7 @@ export function PortalShiftCard({
       ? "Hoy"
       : isTomorrow(parseISO(shift.date))
       ? "Mañana"
-      : format(parseISO(shift.date), "EEE d MMM", { locale: enUS });
+      : format(parseISO(shift.date), "EEE d MMM", { locale: es });
 
     return (
       <div

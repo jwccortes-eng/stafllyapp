@@ -144,7 +144,7 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, responseStatu
     ? "Hoy"
     : isTomorrowShift
     ? "Mañana"
-    : format(parseISO(shift.date), "EEE d MMM", { locale: enUS });
+    : format(parseISO(shift.date), "EEE d MMM", { locale: es });
 
   const copyAddress = (text: string, label = "Dirección") => {
     navigator.clipboard.writeText(text);
@@ -220,7 +220,7 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, responseStatu
                     </div>
                     <div className="min-w-0">
                       <p className="text-[10px] uppercase tracking-widest text-muted-foreground/55 font-bold">Cuándo</p>
-                      <p className="text-[13px] font-semibold text-foreground capitalize mt-0.5">
+                      <p className="text-[13px] font-semibold text-foreground first-letter:uppercase mt-0.5">
                         {format(parseISO(shift.date), "EEEE d 'de' MMMM", { locale: es })}
                       </p>
                     </div>
