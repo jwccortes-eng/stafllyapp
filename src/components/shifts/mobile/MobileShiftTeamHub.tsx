@@ -52,6 +52,7 @@ import { formatDistanceToNowStrict } from "date-fns";
 import {
   rankCandidate, inferShiftRoleNeeds, EMPTY_SIGNALS, REASON_CHIP_LABEL,
   type RecommendationSignals, type ReviewSignal, type RankedCandidate,
+  type WorkerPreferenceRow, type WorkerPreferenceType,
 } from "@/lib/shifts/worker-recommendation";
 
 function formatRelative(iso: string): string {
@@ -1141,6 +1142,71 @@ function RecommendedTab({
   const [filter, setFilter] = useState<RecFilter>("best");
   const [signals, setSignals] = useState<RecommendationSignals>(EMPTY_SIGNALS);
   const [signalsLoading, setSignalsLoading] = useState(false);
+  const [prefRefreshKey, setPrefRefreshKey] = useState(0);
+  const { toast: hubToast } = useToast();
+
+  const handleSetPreference = async (
+    employeeId: string,
+    workerName: string,
+    preferenceType: WorkerPreferenceType,
+  ) => {
+    if (!shift.client_id && !shift.location_id) {
+      hubToast({
+        title: "Can't save preference",
+        description: "This shift has no client or location set.",
+        variant: "destructive",
+      });
+      return;
+    }
+    try {
+      const { error } = await supabase.rpc("set_worker_client_preference", {
+        p_employee_id: employeeId,
+        p_client_id: shift.client_id ?? null,
+        p_location_id: shift.client_id ? null : shift.location_id ?? null,
+        p_preference_type: preferenceType,
+        p_reason: null,
+        p_notes: null,
+      });
+      if (error) throw error;
+      hubToast({
+        title: "Preference saved",
+        description: `${workerName} marked as ${preferenceType.replace("_", " ")} for this ${shift.client_id ? "client" : "location"}.`,
+      });
+      setPrefRefreshKey(k => k + 1);
+    } catch (e: any) {
+      hubToast({
+        title: "Couldn't save preference",
+        description: e?.message ?? "Try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleClearPreferences = async (employeeId: string, workerName: string) => {
+    const list = signals.preferencesByEmp.get(employeeId) ?? [];
+    if (list.length === 0) return;
+    try {
+      const results = await Promise.all(
+        list.map(p => supabase.rpc("archive_worker_client_preference", {
+          p_preference_id: p.id,
+          p_reason: null,
+        })),
+      );
+      const failed = results.find(r => r.error);
+      if (failed?.error) throw failed.error;
+      hubToast({
+        title: "Preference cleared",
+        description: `${workerName}'s preferences for this ${shift.client_id ? "client" : "location"} were cleared.`,
+      });
+      setPrefRefreshKey(k => k + 1);
+    } catch (e: any) {
+      hubToast({
+        title: "Couldn't clear preference",
+        description: e?.message ?? "Try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   // Active assignment ids (anything except rejected/removed counts as taken).
   const takenIds = useMemo(() => {
@@ -1183,6 +1249,7 @@ function RecommendedTab({
       const locationHistoryByEmp = new Map<string, number>();
       const reviewByEmp = new Map<string, ReviewSignal>();
       const conflictEmpIds = new Set<string>();
+      const preferencesByEmp = new Map<string, WorkerPreferenceRow[]>();
 
       // Fire all queries in parallel; ignore individual failures gracefully.
       const queries = [
@@ -1227,9 +1294,26 @@ function RecommendedTab({
           .eq("scheduled_shifts.date", shift.date)
           .neq("shift_id", shift.id)
           .limit(1000),
+        // 6) Active worker preferences for this client/location.
+        (() => {
+          let q = supabase
+            .from("worker_client_preferences")
+            .select("id, employee_id, preference_type, client_id, location_id")
+            .eq("company_id", companyId)
+            .in("employee_id", empIds)
+            .is("archived_at", null);
+          const orParts: string[] = [];
+          if (shift.client_id) orParts.push(`client_id.eq.${shift.client_id}`);
+          if (shift.location_id) orParts.push(`location_id.eq.${shift.location_id}`);
+          if (orParts.length === 0) {
+            // No client/location → no rows can match; short-circuit with impossible filter.
+            return q.eq("id", "00000000-0000-0000-0000-000000000000");
+          }
+          return q.or(orParts.join(","));
+        })(),
       ];
 
-      const [ovRes, cfgRes, revRes, histRes, sameDayRes] = await Promise.allSettled(queries);
+      const [ovRes, cfgRes, revRes, histRes, sameDayRes, prefRes] = await Promise.allSettled(queries);
 
       if (cancelled) return;
 
@@ -1292,9 +1376,22 @@ function RecommendedTab({
           if (overlaps) conflictEmpIds.add(row.employee_id);
         }
       }
+      if (prefRes.status === "fulfilled" && !prefRes.value.error) {
+        for (const row of (prefRes.value.data ?? []) as any[]) {
+          const list = preferencesByEmp.get(row.employee_id) ?? [];
+          list.push({
+            id: row.id,
+            preference_type: row.preference_type as WorkerPreferenceType,
+            client_id: row.client_id,
+            location_id: row.location_id,
+          });
+          preferencesByEmp.set(row.employee_id, list);
+        }
+      }
 
       setSignals({
-        overrideByEmp, configByEmp, clientHistoryByEmp, locationHistoryByEmp, reviewByEmp, conflictEmpIds,
+        overrideByEmp, configByEmp, clientHistoryByEmp, locationHistoryByEmp,
+        reviewByEmp, conflictEmpIds, preferencesByEmp,
       });
       setSignalsLoading(false);
     })().catch(() => {
@@ -1303,7 +1400,7 @@ function RecommendedTab({
 
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [companyId, shift?.id, shift?.date, eligible.length]);
+  }, [companyId, shift?.id, shift?.date, eligible.length, prefRefreshKey]);
 
   const roleNeeds = useMemo(() => inferShiftRoleNeeds(shift), [shift?.id]);
 
@@ -1461,26 +1558,81 @@ function RecommendedTab({
                     <p className="mt-1 text-[11px] text-amber-700 dark:text-amber-400">No phone on file</p>
                   )}
                 </div>
-                {c.canAssign ? (
-                  <Button
-                    size="sm"
-                    onClick={() => onAssign(c.employee.id, c.name)}
-                    className="h-8 px-2.5 text-[12px] gap-1 shrink-0"
-                  >
-                    <UserPlus className="h-3.5 w-3.5" />
-                    Assign
-                  </Button>
-                ) : (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled
-                    className="h-8 px-2.5 text-[12px] shrink-0"
-                    title={c.conflictDetected ? "Worker has an overlapping shift" : "Worker can't be assigned"}
-                  >
-                    {c.conflictDetected ? "Conflict" : "Blocked"}
-                  </Button>
-                )}
+                <div className="flex flex-col items-end gap-1 shrink-0">
+                  {c.canAssign ? (
+                    <Button
+                      size="sm"
+                      onClick={() => onAssign(c.employee.id, c.name)}
+                      className="h-8 px-2.5 text-[12px] gap-1"
+                    >
+                      <UserPlus className="h-3.5 w-3.5" />
+                      Assign
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled
+                      className="h-8 px-2.5 text-[12px]"
+                      title={
+                        c.preferenceBlocked ? "Worker is blocked for this client/location"
+                        : c.conflictDetected ? "Worker has an overlapping shift"
+                        : "Worker can't be assigned"
+                      }
+                    >
+                      {c.preferenceBlocked ? "Blocked here" : c.conflictDetected ? "Conflict" : "Blocked"}
+                    </Button>
+                  )}
+                  {(shift.client_id || shift.location_id) && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button
+                          type="button"
+                          className="h-7 px-2 rounded-md text-[10px] font-semibold text-muted-foreground hover:bg-muted/60 inline-flex items-center gap-1"
+                          aria-label={`Set fit for ${c.name}`}
+                        >
+                          <MoreVertical className="h-3 w-3" /> Fit
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-52">
+                        <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                          Mark for this {shift.client_id ? "client" : "location"}
+                        </DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => handleSetPreference(c.employee.id, c.name, "preferred")}>
+                          Mark preferred
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleSetPreference(c.employee.id, c.name, "prequalified")}>
+                          Mark prequalified
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleSetPreference(c.employee.id, c.name, "captain_preferred")}>
+                          Captain preferred
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleSetPreference(c.employee.id, c.name, "driver_preferred")}>
+                          Driver preferred
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => handleSetPreference(c.employee.id, c.name, "not_recommended")}>
+                          Mark not recommended
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="text-rose-600 focus:text-rose-600"
+                          onClick={() => handleSetPreference(c.employee.id, c.name, "blocked")}
+                        >
+                          Block here
+                        </DropdownMenuItem>
+                        {(signals.preferencesByEmp.get(c.employee.id) ?? []).length > 0 && (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => handleClearPreferences(c.employee.id, c.name)}>
+                              Clear preferences
+                            </DropdownMenuItem>
+                          </>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                </div>
               </li>
             );
           })}

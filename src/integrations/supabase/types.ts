@@ -14775,6 +14775,83 @@ export type Database = {
         }
         Relationships: []
       }
+      worker_client_preferences: {
+        Row: {
+          archived_at: string | null
+          client_id: string | null
+          company_id: string
+          created_at: string
+          created_by: string | null
+          employee_id: string
+          id: string
+          location_id: string | null
+          notes: string | null
+          preference_type: string
+          reason: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          archived_at?: string | null
+          client_id?: string | null
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          employee_id: string
+          id?: string
+          location_id?: string | null
+          notes?: string | null
+          preference_type: string
+          reason?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          archived_at?: string | null
+          client_id?: string | null
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          employee_id?: string
+          id?: string
+          location_id?: string | null
+          notes?: string | null
+          preference_type?: string
+          reason?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_client_preferences_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_client_preferences_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_client_preferences_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_client_preferences_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       worker_consent_records: {
         Row: {
           consent_type: Database["public"]["Enums"]["consent_type"]
@@ -15749,6 +15826,30 @@ export type Database = {
         }
         Returns: undefined
       }
+      archive_worker_client_preference: {
+        Args: { p_preference_id: string; p_reason?: string }
+        Returns: {
+          archived_at: string | null
+          client_id: string | null
+          company_id: string
+          created_at: string
+          created_by: string | null
+          employee_id: string
+          id: string
+          location_id: string | null
+          notes: string | null
+          preference_type: string
+          reason: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "worker_client_preferences"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       assign_worker_to_shift: {
         Args: {
           p_assignment_role?: string
@@ -16162,6 +16263,37 @@ export type Database = {
         }
       }
       set_switch_pin: { Args: { _pin: string }; Returns: undefined }
+      set_worker_client_preference: {
+        Args: {
+          p_client_id: string
+          p_employee_id: string
+          p_location_id: string
+          p_notes?: string
+          p_preference_type: string
+          p_reason?: string
+        }
+        Returns: {
+          archived_at: string | null
+          client_id: string | null
+          company_id: string
+          created_at: string
+          created_by: string | null
+          employee_id: string
+          id: string
+          location_id: string | null
+          notes: string | null
+          preference_type: string
+          reason: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "worker_client_preferences"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       supersede_employee_invitations: {
         Args: {
           _company_id: string
