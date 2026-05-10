@@ -16,10 +16,10 @@ interface TabItem {
  * Profile / Payments / Availability / Announcements live in the More sheet.
  */
 const TABS: TabItem[] = [
-  { id: "home", to: "/portal", icon: Home, label: "Home", end: true },
-  { id: "shifts", to: "/portal/shifts", icon: CalendarDays, label: "Shifts" },
-  { id: "clock", to: "/portal/clock", icon: Clock, label: "Clock" },
-  { id: "more", icon: MoreHorizontal, label: "More" },
+  { id: "home", to: "/portal", icon: Home, label: "Inicio", end: true },
+  { id: "shifts", to: "/portal/shifts", icon: CalendarDays, label: "Turnos" },
+  { id: "clock", to: "/portal/clock", icon: Clock, label: "Reloj" },
+  { id: "more", icon: MoreHorizontal, label: "Más" },
 ];
 
 const MORE_PATHS = [
