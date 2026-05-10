@@ -8,6 +8,7 @@
 import { Link } from "react-router-dom";
 import { Clock, MapPin, Briefcase, Navigation, ChevronRight } from "lucide-react";
 import { format, parseISO, isToday, isTomorrow } from "date-fns";
+import { es } from "date-fns/locale";
 import type { NbaShift } from "@/lib/portal/next-best-action";
 import { formatDisplayName } from "@/lib/format-helpers";
 import { cn } from "@/lib/utils";
