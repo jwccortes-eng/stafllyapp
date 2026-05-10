@@ -33,6 +33,21 @@ export interface ReviewSignal {
   total_reviews: number | null;
 }
 
+export type WorkerPreferenceType =
+  | "preferred"
+  | "prequalified"
+  | "blocked"
+  | "not_recommended"
+  | "captain_preferred"
+  | "driver_preferred";
+
+export interface WorkerPreferenceRow {
+  id: string;
+  preference_type: WorkerPreferenceType;
+  client_id: string | null;
+  location_id: string | null;
+}
+
 /** Per-employee batch signals fetched once per Recommended tab open. */
 export interface RecommendationSignals {
   /** date (YYYY-MM-DD) -> per-employee availability override (true/false). */
@@ -47,6 +62,8 @@ export interface RecommendationSignals {
   reviewByEmp: Map<string, ReviewSignal>;
   /** employee ids with an overlapping non-rejected/non-removed assignment on the same date. */
   conflictEmpIds: Set<string>;
+  /** Active preferences for this shift's client/location, keyed by employee_id. */
+  preferencesByEmp: Map<string, WorkerPreferenceRow[]>;
 }
 
 export const EMPTY_SIGNALS: RecommendationSignals = {
@@ -56,6 +73,7 @@ export const EMPTY_SIGNALS: RecommendationSignals = {
   locationHistoryByEmp: new Map(),
   reviewByEmp: new Map(),
   conflictEmpIds: new Set(),
+  preferencesByEmp: new Map(),
 };
 
 export type ReasonChipKey =
