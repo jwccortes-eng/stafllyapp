@@ -188,7 +188,7 @@ export default function MyShifts() {
         .select("slots, shift_assignments(id)").eq("id", shiftId).maybeSingle();
       if (currentShift) {
         const filled = currentShift.shift_assignments?.length ?? 0;
-        if (currentShift.slots && filled >= currentShift.slots) throw new Error("This shift is already full");
+        if (currentShift.slots && filled >= currentShift.slots) throw new Error("Este turno ya está lleno");
       }
 
       const { error } = await supabase.from("shift_requests").insert({
