@@ -266,16 +266,24 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, responseStatu
                     </div>
                   )}
 
-                  {/* Meeting point row — merged into same block */}
+                  {/* Punto de encuentro — protagonista con hora si existe */}
                   {shift.meeting_point && (
-                    <div className="flex items-center gap-3 px-4 py-3 border-t border-border/30">
+                    <div className="flex items-start gap-3 px-4 py-3 border-t border-border/30">
                       <div className="h-8 w-8 rounded-lg bg-muted/60 flex items-center justify-center shrink-0">
                         <Navigation className="h-3.5 w-3.5 text-muted-foreground/80" />
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="text-[10px] uppercase tracking-widest text-muted-foreground/55 font-bold">Punto de encuentro</p>
-                        <p className="text-[13px] font-semibold text-foreground mt-0.5 truncate">{shift.meeting_point}</p>
+                        <p className="text-[13px] font-semibold text-foreground mt-0.5 line-clamp-2 leading-snug">{shift.meeting_point}</p>
                       </div>
+                      {shift.meeting_time && (
+                        <div className="shrink-0 text-right pr-1">
+                          <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-muted-foreground/70 leading-none mb-1">Hora</p>
+                          <p className="text-[16px] font-bold font-mono tabular-nums text-foreground leading-none">
+                            {shift.meeting_time.slice(0, 5)}
+                          </p>
+                        </div>
+                      )}
                       <button
                         className="p-2 rounded-lg hover:bg-muted text-muted-foreground/50 hover:text-foreground transition-colors"
                         onClick={() => copyAddress(shift.meeting_point!, "Punto de encuentro")}
