@@ -137,6 +137,7 @@ export function PortalMoreSheet({
           {canAccessAdmin && (
             <>
               <Separator className="my-3 opacity-30" />
+              <p className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-widest px-4 pb-2">Administración</p>
               <NavLink
                 to="/app"
                 onClick={onClose}

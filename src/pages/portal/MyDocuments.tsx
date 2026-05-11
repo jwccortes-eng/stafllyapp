@@ -134,7 +134,7 @@ export default function MyDocuments() {
   const handleUpload = async (category: DocumentCategory, file: File) => {
     if (!employeeId || !companyId) return;
     if (file.size > MAX_FILE_BYTES) {
-      toast({ title: "File too large", description: "Max 15 MB per document.", variant: "destructive" });
+      toast({ title: "Archivo demasiado grande", description: "Máximo 15 MB por documento.", variant: "destructive" });
       return;
     }
     setUploadingCat(category);
@@ -164,12 +164,12 @@ export default function MyDocuments() {
         throw rowErr;
       }
 
-      toast({ title: "Document uploaded", description: "Pending admin review." });
+      toast({ title: "Documento subido", description: "Pendiente de revisión por admin." });
       await refresh();
       // Refresh readiness so banners across the portal update without a hard reload.
       readiness.refresh();
     } catch (err: any) {
-      toast({ title: "Upload failed", description: err?.message ?? "Try again.", variant: "destructive" });
+      toast({ title: "Error al subir", description: err?.message ?? "Inténtalo de nuevo.", variant: "destructive" });
     } finally {
       setUploadingCat(null);
     }
@@ -177,7 +177,7 @@ export default function MyDocuments() {
 
   const handleDelete = async (doc: DocRow) => {
     if (!employeeId) return;
-    if (!confirm(`Delete "${doc.name}"?`)) return;
+    if (!confirm(`¿Eliminar "${doc.name}"?`)) return;
     try {
       // file_url stores the path inside the bucket
       if (doc.file_url) {
@@ -186,9 +186,9 @@ export default function MyDocuments() {
       await supabase.from("employee_documents" as any).delete().eq("id", doc.id);
       await refresh();
       readiness.refresh();
-      toast({ title: "Document removed" });
+      toast({ title: "Documento eliminado" });
     } catch (err: any) {
-      toast({ title: "Could not delete", description: err?.message ?? "Try again.", variant: "destructive" });
+      toast({ title: "No se pudo eliminar", description: err?.message ?? "Inténtalo de nuevo.", variant: "destructive" });
     }
   };
 
@@ -198,10 +198,10 @@ export default function MyDocuments() {
       // Use the resolver so legacy rows that stored a full public URL (or a
       // previously-signed URL) are normalized to a path before signing.
       const url = await resolveEmployeeDocumentUrl(doc.file_url);
-      if (!url) throw new Error("File not accessible");
+      if (!url) throw new Error("Archivo no accesible");
       window.open(url, "_blank", "noopener,noreferrer");
     } catch (err: any) {
-      toast({ title: "Could not open file", description: err?.message ?? "Try again.", variant: "destructive" });
+      toast({ title: "No se pudo abrir el archivo", description: err?.message ?? "Inténtalo de nuevo.", variant: "destructive" });
     }
   };
 
@@ -223,7 +223,7 @@ export default function MyDocuments() {
         to="/portal/profile"
         className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
       >
-        <ArrowLeft className="h-3.5 w-3.5" /> Profile
+        <ArrowLeft className="h-3.5 w-3.5" /> Perfil
       </Link>
 
       {/* Header card */}
@@ -250,14 +250,14 @@ export default function MyDocuments() {
           </div>
           <div className="min-w-0 flex-1">
             <h1 className="text-base font-bold font-heading text-foreground leading-tight">
-              My documents
+              Mis documentos
             </h1>
             <p className="text-[11px] text-muted-foreground/80 mt-0.5">
               {allRequiredDone
-                ? "All required documents are approved."
+                ? "Todos los documentos requeridos están aprobados."
                 : pendingReviewCount > 0
-                  ? `${approvedCount} of ${required.length} approved · ${pendingReviewCount} pending review`
-                  : `${approvedCount} of ${required.length} required approved.`}
+                  ? `${approvedCount} de ${required.length} aprobados · ${pendingReviewCount} en revisión`
+                  : `${approvedCount} de ${required.length} requeridos aprobados.`}
             </p>
           </div>
           {readiness.status && (
@@ -291,19 +291,19 @@ export default function MyDocuments() {
 
         <p className="text-[10.5px] text-muted-foreground/70 mt-3 flex items-start gap-1.5">
           <ShieldCheck className="h-3 w-3 mt-0.5 shrink-0" />
-          Your files are private. Only your company admins can review them.
+          Tus archivos son privados. Solo los administradores de tu compañía pueden revisarlos.
         </p>
       </div>
 
       {/* Required categories */}
       <div className="space-y-2.5">
         <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70 px-1">
-          Required
+          Requeridos
         </p>
         {required.length === 0 ? (
           <div className="rounded-2xl border border-border/40 bg-card p-4 text-center">
             <p className="text-xs text-muted-foreground">
-              Your company hasn't required any documents yet.
+              Tu compañía aún no ha solicitado documentos.
             </p>
           </div>
         ) : (
@@ -315,10 +315,10 @@ export default function MyDocuments() {
 
             // Visual tokens per state
             const tone = {
-              approved: { border: "border-earning/25", iconBg: "bg-earning/12", icon: "text-earning", badge: "bg-earning/10 text-earning", label: "Approved" },
-              pending:  { border: "border-warning/25", iconBg: "bg-warning/12", icon: "text-warning", badge: "bg-warning/10 text-warning", label: "Pending review" },
-              rejected: { border: "border-deduction/30", iconBg: "bg-deduction/12", icon: "text-deduction", badge: "bg-deduction/10 text-deduction", label: "Rejected" },
-              missing:  { border: "border-warning/30", iconBg: "bg-muted", icon: "text-muted-foreground", badge: "bg-warning/10 text-warning", label: "Required" },
+              approved: { border: "border-earning/25", iconBg: "bg-earning/12", icon: "text-earning", badge: "bg-earning/10 text-earning", label: "Aprobado" },
+              pending:  { border: "border-warning/25", iconBg: "bg-warning/12", icon: "text-warning", badge: "bg-warning/10 text-warning", label: "Pendiente de revisión" },
+              rejected: { border: "border-deduction/30", iconBg: "bg-deduction/12", icon: "text-deduction", badge: "bg-deduction/10 text-deduction", label: "Rechazado" },
+              missing:  { border: "border-warning/30", iconBg: "bg-muted", icon: "text-muted-foreground", badge: "bg-warning/10 text-warning", label: "Requerido" },
             }[state];
 
             const Icon =
@@ -331,10 +331,10 @@ export default function MyDocuments() {
             const lastRejection = items.find((d) => d.review_status === "rejected" && d.rejection_reason);
 
             const ctaLabel =
-              state === "approved" ? "Replace / add another" :
-              state === "rejected" ? "Upload a new file" :
-              state === "pending"  ? "Add another file" :
-              "Upload document";
+              state === "approved" ? "Reemplazar o agregar otro" :
+              state === "rejected" ? "Subir nuevo archivo" :
+              state === "pending"  ? "Agregar otro archivo" :
+              "Subir documento";
 
             return (
               <div
@@ -363,7 +363,7 @@ export default function MyDocuments() {
                 {state === "rejected" && lastRejection?.rejection_reason && (
                   <div className="mt-3 rounded-xl border border-deduction/20 bg-deduction/[0.05] p-2.5">
                     <p className="text-[10px] uppercase tracking-wider font-bold text-deduction mb-1">
-                      Reason for rejection
+                      Motivo de rechazo
                     </p>
                     <p className="text-[11.5px] text-foreground/90 leading-snug">
                       {lastRejection.rejection_reason}
@@ -380,9 +380,9 @@ export default function MyDocuments() {
                         d.review_status === "rejected" ? "bg-deduction/10 text-deduction" :
                         "bg-warning/10 text-warning";
                       const itemLabel =
-                        d.review_status === "approved" ? "Approved" :
-                        d.review_status === "rejected" ? "Rejected" :
-                        "Pending";
+                        d.review_status === "approved" ? "Aprobado" :
+                        d.review_status === "rejected" ? "Rechazado" :
+                        "Pendiente";
                       return (
                         <div key={d.id} className="flex items-center gap-2 rounded-xl bg-muted/30 px-2.5 py-2">
                           <FileText className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
@@ -394,7 +394,7 @@ export default function MyDocuments() {
                             type="button"
                             onClick={() => handleView(d)}
                             className="h-7 w-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-background"
-                            aria-label="View"
+                            aria-label="Ver documento"
                           >
                             <Eye className="h-3.5 w-3.5" />
                           </button>
@@ -402,7 +402,7 @@ export default function MyDocuments() {
                             type="button"
                             onClick={() => handleDelete(d)}
                             className="h-7 w-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                            aria-label="Delete"
+                            aria-label="Eliminar"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </button>
@@ -446,11 +446,11 @@ export default function MyDocuments() {
       {/* Other / optional documents */}
       <div className="space-y-2.5 pt-2">
         <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70 px-1">
-          Other documents
+          Otros documentos
         </p>
         <div className="rounded-2xl border border-border/40 bg-card p-3.5 shadow-xs">
           <p className="text-[11.5px] text-muted-foreground leading-relaxed">
-            Anything else your company asked for? Upload it here.
+            Cualquier otro documento que tu compañía solicite. Súbelo aquí.
           </p>
 
           {otherDocs.length > 0 && (
@@ -466,7 +466,7 @@ export default function MyDocuments() {
                     type="button"
                     onClick={() => handleView(d)}
                     className="h-7 w-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-background"
-                    aria-label="View"
+                    aria-label="Ver documento"
                   >
                     <Eye className="h-3.5 w-3.5" />
                   </button>
@@ -474,7 +474,7 @@ export default function MyDocuments() {
                     type="button"
                     onClick={() => handleDelete(d)}
                     className="h-7 w-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                    aria-label="Delete"
+                    aria-label="Eliminar"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
@@ -508,7 +508,7 @@ export default function MyDocuments() {
               ) : (
                 <Upload className="h-3.5 w-3.5" />
               )}
-              Upload another document
+              Subir otro documento
             </Button>
           </div>
         </div>
@@ -516,8 +516,8 @@ export default function MyDocuments() {
         {!canDrive && (
           <p className="text-[10px] text-muted-foreground/60 px-1 flex items-start gap-1.5">
             <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />
-            If you'll be driving for the company, ask your supervisor to enable that
-            in your profile so your driver's license becomes a required document.
+            Si vas a manejar para la compañía, pídele a tu supervisor que lo active en tu perfil
+            para que tu licencia de conducir sea un documento requerido.
           </p>
         )}
       </div>

@@ -76,12 +76,12 @@ export default function PortalProfile() {
     if (!file || !employeeId) return;
 
     if (!file.type.startsWith("image/")) {
-      toast({ title: "Error", description: "Only images are allowed.", variant: "destructive" });
+      toast({ title: "Error", description: "Solo se permiten imágenes.", variant: "destructive" });
       return;
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      toast({ title: "Error", description: "Image cannot exceed 5MB.", variant: "destructive" });
+      toast({ title: "Error", description: "La imagen no puede superar 5MB.", variant: "destructive" });
       return;
     }
 
@@ -110,9 +110,9 @@ export default function PortalProfile() {
       if (updateError) throw updateError;
 
       setProfile(prev => prev ? { ...prev, avatar_url: avatarUrl } : prev);
-      toast({ title: "Photo updated" });
+      toast({ title: "Foto actualizada" });
     } catch (err: any) {
-      toast({ title: "Error uploading photo", description: err.message, variant: "destructive" });
+      toast({ title: "Error al subir foto", description: err.message, variant: "destructive" });
     } finally {
       setUploading(false);
     }
@@ -133,30 +133,30 @@ export default function PortalProfile() {
         <div className="h-14 w-14 mx-auto rounded-2xl bg-muted/30 flex items-center justify-center">
           <User className="h-7 w-7 text-muted-foreground/20" />
         </div>
-        <p className="text-sm font-bold text-foreground">Could not load your profile</p>
-        <p className="text-xs text-muted-foreground/60 max-w-[240px] mx-auto">Try signing out and back in.</p>
+        <p className="text-sm font-bold text-foreground">No pudimos cargar tu perfil</p>
+        <p className="text-xs text-muted-foreground/60 max-w-[240px] mx-auto">Intenta cerrar sesión y volver a entrar.</p>
       </div>
     );
   }
 
   const infoItems = [
-    { icon: Mail, label: "Email", value: profile.email },
-    { icon: Phone, label: "Phone", value: profile.phone_number },
-    { icon: Shield, label: "Role", value: profile.employee_role },
-    { icon: CalendarDays, label: "Start date", value: profile.start_date },
+    { icon: Mail, label: "Correo", value: profile.email },
+    { icon: Phone, label: "Teléfono", value: profile.phone_number },
+    { icon: Shield, label: "Rol", value: profile.employee_role },
+    { icon: CalendarDays, label: "Fecha de inicio", value: profile.start_date },
   ].filter(i => i.value);
 
   const menuItems = [
-    { to: "/portal/pay-reports", icon: Wallet, label: "My Pay Reports", description: "Finalized weekly payroll" },
-    { to: "/portal/accumulated", icon: BarChart3, label: "Accumulated", description: "Total history" },
-    { to: "/portal/shifts", icon: CalendarDays, label: "My shifts", description: "Assignments and requests" },
+    { to: "/portal/pay-reports", icon: Wallet, label: "Mis pagos", description: "Resumen semanal de nómina" },
+    { to: "/portal/accumulated", icon: BarChart3, label: "Acumulado", description: "Historial total" },
+    { to: "/portal/shifts", icon: CalendarDays, label: "Mis turnos", description: "Asignaciones y solicitudes" },
   ];
 
   return (
     <div className="space-y-5 animate-fade-in pb-24">
       {/* Header */}
       <div>
-        <h1 className="text-xl font-bold font-heading tracking-tight text-foreground">My Profile</h1>
+        <h1 className="text-xl font-bold font-heading tracking-tight text-foreground">Mi perfil</h1>
         <p className="text-xs text-muted-foreground mt-0.5">{companyName}</p>
       </div>
 
@@ -240,7 +240,7 @@ export default function PortalProfile() {
         <div className="space-y-2">
           {profile.groups && (
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Groups:</span>
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Grupos:</span>
               {profile.groups.split(",").map(g => (
                 <span key={g.trim()} className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
                   {g.trim()}
@@ -250,7 +250,7 @@ export default function PortalProfile() {
           )}
           {profile.tags && (
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Tags:</span>
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Etiquetas:</span>
               {profile.tags.split(",").map(t => (
                 <span key={t.trim()} className="text-[10px] px-2 py-0.5 rounded-full bg-accent text-accent-foreground font-medium">
                   {t.trim()}
@@ -291,8 +291,8 @@ export default function PortalProfile() {
             <MoreHorizontal className="h-[18px] w-[18px] text-muted-foreground" />
           </div>
           <div className="flex-1 min-w-0">
-             <p className="text-sm font-semibold">More options</p>
-             <p className="text-[10px] text-muted-foreground">Payments, availability, announcements and more</p>
+             <p className="text-sm font-semibold">Más opciones</p>
+             <p className="text-[10px] text-muted-foreground">Pagos, disponibilidad, anuncios y más</p>
            </div>
           <ChevronRight className="h-4 w-4 text-muted-foreground/40" />
         </button>
@@ -308,7 +308,7 @@ export default function PortalProfile() {
           className="w-full h-11 text-sm gap-2 text-destructive hover:text-destructive border-destructive/20 hover:bg-destructive/5"
         >
           <LogOut className="h-4 w-4" />
-          Sign out
+          Cerrar sesión
         </Button>
       </LogoutConfirmDialog>
     </div>
@@ -325,11 +325,11 @@ function ChangePinSection() {
 
   const handleChangePin = async () => {
     if (!/^\d{4}$/.test(newPin)) {
-      toast({ title: "Error", description: "New PIN must be exactly 4 digits", variant: "destructive" });
+      toast({ title: "Error", description: "El nuevo PIN debe tener exactamente 4 dígitos", variant: "destructive" });
       return;
     }
     if (newPin !== confirmPin) {
-      toast({ title: "Error", description: "PINs don't match", variant: "destructive" });
+      toast({ title: "Error", description: "Los PIN no coinciden", variant: "destructive" });
       return;
     }
     setSaving(true);
@@ -339,13 +339,13 @@ function ChangePinSection() {
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      toast({ title: "PIN updated ✅", description: "Your new PIN is active" });
+      toast({ title: "PIN actualizado ✅", description: "Tu nuevo PIN ya está activo" });
       setCurrentPin("");
       setNewPin("");
       setConfirmPin("");
       setExpanded(false);
     } catch (err: any) {
-      toast({ title: "Error", description: err.message || "Could not change PIN", variant: "destructive" });
+      toast({ title: "Error", description: err.message || "No se pudo cambiar el PIN", variant: "destructive" });
     } finally {
       setSaving(false);
     }
@@ -361,8 +361,8 @@ function ChangePinSection() {
           <KeyRound className="h-[18px] w-[18px] text-primary/70" />
         </div>
         <div className="flex-1 min-w-0 text-left">
-           <p className="text-sm font-semibold">Change PIN</p>
-           <p className="text-[10px] text-muted-foreground">Update your access code</p>
+           <p className="text-sm font-semibold">Cambiar PIN</p>
+           <p className="text-[10px] text-muted-foreground">Actualiza tu código de acceso</p>
         </div>
         <ChevronRight className="h-4 w-4 text-muted-foreground/40" />
       </button>
@@ -373,12 +373,12 @@ function ChangePinSection() {
     <div className="rounded-2xl border border-border/40 bg-card p-5 space-y-4 shadow-xs">
       <div className="flex items-center gap-2">
         <KeyRound className="h-4 w-4 text-primary" />
-        <h3 className="text-sm font-semibold">Change PIN</h3>
+        <h3 className="text-sm font-semibold">Cambiar PIN</h3>
       </div>
 
       <div className="space-y-3">
         <div className="space-y-1.5">
-          <Label className="text-xs">Current PIN (optional)</Label>
+          <Label className="text-xs">PIN actual (opcional)</Label>
           <Input
             type="password"
             inputMode="numeric"
@@ -390,7 +390,7 @@ function ChangePinSection() {
           />
         </div>
         <div className="space-y-1.5">
-          <Label className="text-xs">New PIN *</Label>
+          <Label className="text-xs">Nuevo PIN *</Label>
           <Input
             type="password"
             inputMode="numeric"
@@ -402,7 +402,7 @@ function ChangePinSection() {
           />
         </div>
         <div className="space-y-1.5">
-          <Label className="text-xs">Confirm new PIN *</Label>
+          <Label className="text-xs">Confirmar nuevo PIN *</Label>
           <Input
             type="password"
             inputMode="numeric"
@@ -417,10 +417,10 @@ function ChangePinSection() {
 
       <div className="flex gap-2">
         <Button variant="outline" size="sm" className="flex-1" onClick={() => setExpanded(false)}>
-          Cancel
+          Cancelar
         </Button>
         <Button size="sm" className="flex-1" onClick={handleChangePin} disabled={saving || !newPin || !confirmPin}>
-          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save PIN"}
+          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Guardar PIN"}
         </Button>
       </div>
     </div>
