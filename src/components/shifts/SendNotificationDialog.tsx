@@ -87,41 +87,80 @@ export function SendNotificationDialog({
     setTemplates((data ?? []) as NotificationTemplate[]);
   }, [selectedCompanyId]);
 
+  // Work Route helpers — pure presentational, no DB/logic touched.
+  const entrada = shift.start_time?.slice(0, 5) ?? "";
+  const terminaAprox = shift.end_time?.slice(0, 5) ?? "";
+  const horaEncuentro = (meetingTime ?? "").slice(0, 5);
+  const fechaAmigable = friendlyDate ?? shift.date;
+  const trabajo = clientName ?? "";
+  const ubicacion = jobSiteName ?? "";
+  const instrucciones = (specialInstructions ?? "").trim();
+  const puntoEncuentro = (meetingPointProp ?? "").trim();
+
+  const buildDefaultBody = useCallback(() => {
+    const lines: string[] = [
+      "Hola, te confirmamos tu turno.",
+      "",
+      `📅 ${fechaAmigable}`,
+      `⏰ Entrada ${entrada} · Termina aprox. ${terminaAprox}`,
+    ];
+    if (puntoEncuentro) lines.push(`📍 Punto de encuentro: ${puntoEncuentro}`);
+    if (horaEncuentro) lines.push(`🕒 Hora de encuentro: ${horaEncuentro}`);
+    if (trabajo || ubicacion) {
+      lines.push(`🏢 ${[trabajo, ubicacion].filter(Boolean).join(" — ")}`);
+    }
+    if (instrucciones) {
+      lines.push("");
+      lines.push(instrucciones);
+    }
+    return lines.join("\n");
+  }, [fechaAmigable, entrada, terminaAprox, puntoEncuentro, horaEncuentro, trabajo, ubicacion, instrucciones]);
+
   useEffect(() => {
     if (open) {
       loadTemplates();
       setTarget("all");
       setSelectedEmployeeId("");
-      setSubject(`Turno: ${shift.title}`);
-      setBody("");
-      setMeetingPoint("");
+      const subjectBase = trabajo
+        ? `Turno: ${trabajo} — ${fechaAmigable}`
+        : `Turno: ${shift.title}`;
+      setSubject(subjectBase);
+      // Pre-fill body with Work Route default when we have any enrichment;
+      // otherwise leave blank to preserve legacy behavior.
+      const hasEnrichment = !!(puntoEncuentro || horaEncuentro || trabajo || ubicacion || instrucciones || friendlyDate);
+      setBody(hasEnrichment ? buildDefaultBody() : "");
+      setMeetingPoint(puntoEncuentro);
       setAttachments([]);
       setSelectedTemplate("");
       setValidated(false);
       setValidationErrors([]);
     }
-  }, [open, shift, loadTemplates]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, shift]);
 
   const applyTemplate = (templateId: string) => {
     const tmpl = templates.find(t => t.id === templateId);
     if (!tmpl) return;
     setSelectedTemplate(templateId);
 
-    // Replace variables in template
-    let processedSubject = tmpl.subject
-      .replace("{turno}", shift.title)
-      .replace("{fecha}", shift.date)
-      .replace("{hora_inicio}", shift.start_time.slice(0, 5))
-      .replace("{hora_fin}", shift.end_time.slice(0, 5));
+    const replaceVars = (s: string) => s
+      // Legacy vars (kept for backwards compatibility)
+      .replace(/\{turno\}/g, shift.title)
+      .replace(/\{fecha\}/g, shift.date)
+      .replace(/\{hora_inicio\}/g, entrada)
+      .replace(/\{hora_fin\}/g, terminaAprox)
+      // Work Route vars (new)
+      .replace(/\{entrada\}/g, entrada)
+      .replace(/\{termina_aprox\}/g, terminaAprox)
+      .replace(/\{fecha_amigable\}/g, fechaAmigable)
+      .replace(/\{punto_encuentro\}/g, puntoEncuentro)
+      .replace(/\{hora_encuentro\}/g, horaEncuentro)
+      .replace(/\{trabajo\}/g, trabajo)
+      .replace(/\{ubicacion\}/g, ubicacion)
+      .replace(/\{instrucciones\}/g, instrucciones);
 
-    let processedBody = tmpl.body
-      .replace("{turno}", shift.title)
-      .replace("{fecha}", shift.date)
-      .replace("{hora_inicio}", shift.start_time.slice(0, 5))
-      .replace("{hora_fin}", shift.end_time.slice(0, 5));
-
-    setSubject(processedSubject);
-    setBody(processedBody);
+    setSubject(replaceVars(tmpl.subject));
+    setBody(replaceVars(tmpl.body));
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
