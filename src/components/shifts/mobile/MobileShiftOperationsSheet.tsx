@@ -1048,7 +1048,7 @@ export function MobileShiftOperationsSheet({
             </Button>
           )}
           <p className="mt-2 text-center text-[11px] text-muted-foreground">
-            La edición del turno está disponible desde escritorio por ahora.
+            Acciones seguras disponibles en móvil. Cambios avanzados siguen en escritorio.
           </p>
         </div>
       </SheetContent>
