@@ -709,10 +709,10 @@ export function MobileShiftOperationsSheet({
             {understaffed && (
               <div className="mt-2.5 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-3.5">
                 <div className="text-sm font-semibold text-amber-800 dark:text-amber-300">
-                  Cambios de personal disponibles desde escritorio por ahora.
+                  Faltan {slots - assignedCount} cupo{slots - assignedCount === 1 ? "" : "s"}
                 </div>
                 <div className="text-xs text-amber-700/80 dark:text-amber-300/80 mt-1 leading-relaxed">
-                  {slots - assignedCount} cupo{slots - assignedCount === 1 ? "" : "s"} abierto{slots - assignedCount === 1 ? "" : "s"}. Puedes revisar la cobertura y contactar al equipo asignado desde el móvil.
+                  Puedes revisar, contactar y asignar trabajadores desde móvil con Gestionar equipo. Cambios avanzados siguen en escritorio.
                 </div>
               </div>
             )}
