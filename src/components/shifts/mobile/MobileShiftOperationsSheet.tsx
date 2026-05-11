@@ -377,7 +377,7 @@ export function MobileShiftOperationsSheet({
       await navigator.clipboard.writeText(summaryText);
       toast.success("Resumen del turno copiado");
     } catch {
-      toast.error("Couldn't copy to clipboard");
+      toast.error("No se pudo copiar al portapapeles");
     }
   };
 
