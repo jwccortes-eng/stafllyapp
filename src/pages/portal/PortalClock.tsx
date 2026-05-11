@@ -68,7 +68,7 @@ function isClockOutWithinSchedule(shift: TodayShift | null): { withinSchedule: b
   const [sh, sm] = shift.start_time.split(":").map(Number);
   const shiftStart = new Date(); shiftStart.setHours(sh, sm, 0, 0);
   if (now < shiftStart || now > shiftEnd) {
-    return { withinSchedule: false, message: `Clock-out is outside scheduled hours (${shift.start_time.slice(0, 5)} - ${shift.end_time.slice(0, 5)}).` };
+    return { withinSchedule: false, message: `Estás fuera de la ventana estimada (entrada ${shift.start_time.slice(0, 5)} · salida estimada ${shift.end_time.slice(0, 5)}).` };
   }
   return { withinSchedule: true, message: "" };
 }
