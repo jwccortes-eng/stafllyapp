@@ -375,7 +375,7 @@ type TabKey = "overview" | "assigned" | "claims" | "issues" | "recommended";
 
 function MobileShiftTeamHubImpl({
   open, onOpenChange, shift, assignments, employees, canManage,
-  clientName, locationName, meetingPoint, hasMeetingPointLocation,
+  clientName, locationName, meetingPoint, meetingTime, hasMeetingPointLocation,
   shiftAdminId, companyId, onMutated,
 }: Props) {
   const navigate = useNavigate();
