@@ -28,7 +28,7 @@ export function TodayBlock({ shift }: Props) {
       className="block rounded-2xl bg-card border border-border/50 px-4 py-3 active:scale-[0.99] transition-all shadow-sm"
     >
       <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 min-w-0">
           {today && (
             <span className="text-[9px] px-2 py-0.5 rounded-full font-bold bg-primary/12 text-primary tracking-wide">
               Hoy
@@ -44,11 +44,23 @@ export function TodayBlock({ shift }: Props) {
               {format(d, "EEE d MMM", { locale: es })}
             </span>
           )}
-          <span className="text-[13px] font-bold text-foreground tabular-nums">
-            {shift.start_time?.slice(0, 5)} – {shift.end_time?.slice(0, 5)}
-          </span>
         </div>
         <ChevronRight className="h-4 w-4 text-muted-foreground/30" />
+      </div>
+
+      {/* Stafly Work Route — Entrada protagonista; Termina aprox. secundario */}
+      <div className="flex items-baseline gap-2 mb-1">
+        <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground/70">
+          Entrada
+        </span>
+        <span className="text-[15px] font-bold text-foreground tabular-nums font-mono leading-none">
+          {shift.start_time?.slice(0, 5)}
+        </span>
+        {shift.end_time && (
+          <span className="text-[11px] text-muted-foreground/75 truncate">
+            · Termina aprox. <span className="font-mono tabular-nums">{shift.end_time.slice(0, 5)}</span>
+          </span>
+        )}
       </div>
 
       <p className="text-[13px] font-semibold text-foreground leading-snug line-clamp-2">

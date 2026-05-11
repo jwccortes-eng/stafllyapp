@@ -763,8 +763,11 @@ export default function PortalClock() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-[13px] font-semibold text-foreground truncate">{s.title}</p>
-                    <p className="text-[11px] text-muted-foreground/70 mt-0.5 tabular-nums">
-                      {s.start_time.slice(0, 5)}–{s.end_time.slice(0, 5)}
+                    <p className="text-[11px] text-muted-foreground/70 mt-0.5">
+                      <span className="font-semibold text-foreground">Entrada <span className="tabular-nums font-mono">{s.start_time.slice(0, 5)}</span></span>
+                      {s.end_time && (
+                        <span className="text-muted-foreground/60"> · Termina aprox. <span className="tabular-nums font-mono">{s.end_time.slice(0, 5)}</span></span>
+                      )}
                       {s.location_name && <> · <span className="text-muted-foreground/55">{s.location_name}</span></>}
                     </p>
                   </div>
