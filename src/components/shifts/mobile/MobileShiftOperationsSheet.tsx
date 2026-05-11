@@ -128,7 +128,7 @@ function dateLabel(dateStr: string): string {
     const d = parseISO(dateStr);
     if (isToday(d)) return "Hoy";
     if (isTomorrow(d)) return "Mañana";
-    return format(d, "EEEE, MMM d", { locale: es });
+    return format(d, "EEEE, d 'de' MMMM", { locale: es });
   } catch { return dateStr; }
 }
 
