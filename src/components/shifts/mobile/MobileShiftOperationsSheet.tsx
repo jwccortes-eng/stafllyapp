@@ -1232,9 +1232,9 @@ const WorkerRow = memo(function WorkerRow({
     if (!phone) return;
     try {
       await navigator.clipboard.writeText(phone);
-      toast.success("Phone copied");
+      toast.success("Teléfono copiado");
     } catch {
-      toast.error("Couldn't copy phone");
+      toast.error("No se pudo copiar el teléfono");
     }
   };
 
