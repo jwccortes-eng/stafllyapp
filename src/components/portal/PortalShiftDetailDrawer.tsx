@@ -102,7 +102,7 @@ function getStatusMeta(status?: string): { tone: OpsStatusTone; label: string } 
  *    (rendered inline as overlay) only when the user opts in.
  *  • Footer holds a single dominant CTA.
  */
-export function PortalShiftDetailDrawer({ shift, assignmentStatus, responseStatus, onAccept, onReject, responding, open, onOpenChange }: PortalShiftDetailDrawerProps) {
+export function PortalShiftDetailDrawer({ shift, assignmentStatus, responseStatus, onAccept, onReject, responding, open, onOpenChange, historyInfo, historyLoading }: PortalShiftDetailDrawerProps) {
   const navigate = useNavigate();
   const { effectiveEmployeeId: employeeId } = useEffectiveEmployee();
   const { toast } = useToast();
