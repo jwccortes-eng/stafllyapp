@@ -626,7 +626,7 @@ function MobileShiftTeamHubImpl({
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5 mb-1">
                 <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
-                  Team management
+                  Gestionar equipo
                 </span>
                 {shift.shift_code && (
                   <span className="text-[10px] font-mono font-semibold text-muted-foreground/80">
@@ -640,10 +640,10 @@ function MobileShiftTeamHubImpl({
                 )}
               </div>
               <h2 className="text-lg font-semibold tracking-tight leading-tight line-clamp-2">
-                {clientName && clientName !== "—" ? clientName : (shift.title || "Shift")}
+                {clientName && clientName !== "—" ? clientName : (shift.title || "Turno")}
               </h2>
               <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                {dateLabel(shift.date)} · <span className="text-foreground/85 font-semibold">{locationName || "Job site missing"}</span>
+                {dateLabel(shift.date)} · <span className="text-foreground/85 font-semibold">{locationName || "Falta ubicación del trabajo"}</span>
               </p>
               {/* Stafly Work Route — Entrada protagonista; Termina aprox. secundario. */}
               <div className="mt-1 flex items-baseline gap-1.5 flex-wrap">
@@ -655,23 +655,23 @@ function MobileShiftTeamHubImpl({
                 <p className="text-[11px] text-muted-foreground mt-1 truncate flex items-center gap-1">
                   <MapPin className="h-3 w-3 shrink-0 opacity-70" />
                   <span className="truncate">
-                    Punto de encuentro: <span className="text-foreground/90 font-medium">{meetingPoint || "—"}</span>
+                    Encuentro: <span className="text-foreground/90 font-medium">{meetingPoint || "—"}</span>
                     {meetingTime && <> · <span className="font-mono tabular-nums">{formatTimeShort(meetingTime)}</span></>}
                   </span>
                 </p>
               )}
               <p className="text-[11px] text-muted-foreground mt-0.5">
-                {staffedCount}/{slots || "—"} staffed · {openSpots} open
+                {staffedCount}/{slots || "—"} asignados{openSpots > 0 ? ` · faltan ${openSpots}` : ""}
               </p>
             </div>
             <Button
               variant="ghost" size="sm"
               className="h-9 px-2 rounded-full shrink-0 -mt-1 -mr-1 text-xs gap-1"
               onClick={() => onOpenChange(false)}
-              aria-label="Back to shift overview"
+              aria-label="Volver al turno"
             >
               <X className="h-4 w-4" />
-              Back
+              Volver
             </Button>
           </div>
 
