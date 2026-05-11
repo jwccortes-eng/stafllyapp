@@ -1782,7 +1782,7 @@ function RecommendedTab({
         <Input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search by name, phone, email, or ID…"
+          placeholder="Buscar por nombre, teléfono, email o ID…"
           className="pl-9 h-10 text-sm"
         />
       </div>
@@ -1807,7 +1807,7 @@ function RecommendedTab({
       </div>
 
       {signalsLoading && (
-        <p className="text-[11px] text-muted-foreground px-1">Refining recommendations…</p>
+        <p className="text-[11px] text-muted-foreground px-1">Afinando recomendaciones…</p>
       )}
 
       {(() => {
@@ -1818,31 +1818,31 @@ function RecommendedTab({
         if (ranked.length === 0) {
           return (
             <EmptyBlock
-              title="No candidates"
-              helper="Everyone eligible is already assigned or blocked by filters."
+              title="Sin candidatos"
+              helper="Todos los elegibles ya están asignados o bloqueados por filtros."
             />
           );
         }
         if (hasSearch) {
           return (
             <EmptyBlock
-              title="No workers match this search"
-              helper="Try a different name, phone, email, or worker ID."
+              title="Ningún trabajador coincide con la búsqueda"
+              helper="Prueba otro nombre, teléfono, email o ID."
             />
           );
         }
         if (hasFilter) {
           return (
             <EmptyBlock
-              title="No workers match this filter"
-              helper="Try Best match or clear the filter."
+              title="Ningún trabajador coincide con el filtro"
+              helper="Prueba 'Mejor opción' o quita el filtro."
             />
           );
         }
         return (
           <EmptyBlock
-            title="No workers match"
-            helper="Workers already on this shift are hidden."
+            title="Sin coincidencias"
+            helper="Los trabajadores ya asignados a este turno están ocultos."
           />
         );
       })()}
