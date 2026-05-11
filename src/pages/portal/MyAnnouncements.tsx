@@ -322,6 +322,6 @@ export default function MyAnnouncements() {
           })}
         </div>
       )}
-    </div>
+    </StaflyPageShell>
   );
 }
