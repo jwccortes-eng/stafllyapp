@@ -30,6 +30,8 @@ import {
   type AgendaItem,
   type AgendaStatus,
 } from "@/components/mobile-agenda";
+import { HistoryShiftRow } from "@/components/mobile-agenda/HistoryShiftRow";
+import { useWorkedShiftHistory } from "@/hooks/useWorkedShiftHistory";
 
 interface ShiftAssignment {
   id: string;
