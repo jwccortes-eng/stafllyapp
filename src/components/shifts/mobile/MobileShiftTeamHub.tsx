@@ -98,43 +98,43 @@ function buildRecommendedDisplay(c: RankedCandidate): {
   const candidates: DisplayChip[] = [];
 
   // 1. Preference signals (strongest)
-  if (riskSet.has("blocked_here")) candidates.push({ key: "blocked_here", label: "Blocked here", tone: "risk" });
-  if (riskSet.has("not_recommended")) candidates.push({ key: "not_recommended", label: "Not recommended", tone: "risk" });
-  if (reasonSet.has("preferred")) candidates.push({ key: "preferred", label: "Preferred", tone: "good" });
-  if (reasonSet.has("prequalified")) candidates.push({ key: "prequalified", label: "Prequalified", tone: "good" });
-  if (reasonSet.has("captain_preferred")) candidates.push({ key: "captain_preferred", label: "Captain preferred", tone: "good" });
-  if (reasonSet.has("driver_preferred")) candidates.push({ key: "driver_preferred", label: "Driver preferred", tone: "good" });
+  if (riskSet.has("blocked_here")) candidates.push({ key: "blocked_here", label: "Bloqueado aquí", tone: "risk" });
+  if (riskSet.has("not_recommended")) candidates.push({ key: "not_recommended", label: "No recomendado", tone: "risk" });
+  if (reasonSet.has("preferred")) candidates.push({ key: "preferred", label: "Preferido", tone: "good" });
+  if (reasonSet.has("prequalified")) candidates.push({ key: "prequalified", label: "Precalificado", tone: "good" });
+  if (reasonSet.has("captain_preferred")) candidates.push({ key: "captain_preferred", label: "Capitán preferido", tone: "good" });
+  if (reasonSet.has("driver_preferred")) candidates.push({ key: "driver_preferred", label: "Conductor preferido", tone: "good" });
 
   // 2. Conflict / availability
-  if (riskSet.has("conflict")) candidates.push({ key: "conflict", label: "Conflict", tone: "risk" });
-  if (riskSet.has("unavailable")) candidates.push({ key: "unavailable", label: "Unavailable", tone: "risk" });
+  if (riskSet.has("conflict")) candidates.push({ key: "conflict", label: "Conflicto", tone: "risk" });
+  if (riskSet.has("unavailable")) candidates.push({ key: "unavailable", label: "No disponible", tone: "risk" });
 
   // 3. Readiness
-  if (reasonSet.has("ready")) candidates.push({ key: "ready", label: "Ready", tone: "good" });
-  else if (reasonSet.has("grace_period")) candidates.push({ key: "grace_period", label: "Grace period", tone: "good" });
+  if (reasonSet.has("ready")) candidates.push({ key: "ready", label: "Listo", tone: "good" });
+  else if (reasonSet.has("grace_period")) candidates.push({ key: "grace_period", label: "Período de gracia", tone: "good" });
 
   // 4. Venue / client history (count-aware)
   if (c.locationHistoryCount > 0) {
-    candidates.push({ key: "worked_location", label: `Worked here ${c.locationHistoryCount}x`, tone: "good" });
+    candidates.push({ key: "worked_location", label: `Trabajó aquí ${c.locationHistoryCount}x`, tone: "good" });
   }
   if (c.clientHistoryCount > 0) {
-    candidates.push({ key: "worked_client", label: `Worked client ${c.clientHistoryCount}x`, tone: "good" });
+    candidates.push({ key: "worked_client", label: `Trabajó cliente ${c.clientHistoryCount}x`, tone: "good" });
   }
 
   // 5. Reliability (collision-aware)
   if (hasGoodRating && hasRatingRisk) {
-    candidates.push({ key: "good_rating", label: "Good rating", tone: "good" });
-    candidates.push({ key: "risk_flag", label: "1 risk flag", tone: "risk" });
+    candidates.push({ key: "good_rating", label: "Buena calificación", tone: "good" });
+    candidates.push({ key: "risk_flag", label: "1 alerta", tone: "risk" });
   } else if (hasGoodRating) {
-    candidates.push({ key: "high_reliability", label: "High reliability", tone: "good" });
+    candidates.push({ key: "high_reliability", label: "Alta confiabilidad", tone: "good" });
   } else if (hasRatingRisk) {
-    candidates.push({ key: "low_reliability", label: "Reliability risk", tone: "risk" });
+    candidates.push({ key: "low_reliability", label: "Alerta de confiabilidad", tone: "risk" });
   }
 
   // 6. Role / driver / captain (lowest priority)
-  if (reasonSet.has("captain")) candidates.push({ key: "captain", label: "Captain", tone: "good" });
-  if (reasonSet.has("driver")) candidates.push({ key: "driver", label: "Driver", tone: "good" });
-  if (reasonSet.has("role_match")) candidates.push({ key: "role_match", label: "Role match", tone: "good" });
+  if (reasonSet.has("captain")) candidates.push({ key: "captain", label: "Capitán", tone: "good" });
+  if (reasonSet.has("driver")) candidates.push({ key: "driver", label: "Conductor", tone: "good" });
+  if (reasonSet.has("role_match")) candidates.push({ key: "role_match", label: "Rol coincide", tone: "good" });
 
   // Dedupe by key, cap to 4
   const seen = new Set<string>();
@@ -149,15 +149,15 @@ function buildRecommendedDisplay(c: RankedCandidate): {
   // One-line summary: lead with strongest positive signal + reliability if present.
   const parts: string[] = [];
   const lead =
-    reasonSet.has("preferred") ? "Preferred worker"
-    : reasonSet.has("prequalified") ? "Prequalified"
-    : c.locationHistoryCount >= 5 ? `Strong fit: worked here ${c.locationHistoryCount} times`
-    : c.locationHistoryCount > 0 ? `Worked here ${c.locationHistoryCount}x`
-    : c.clientHistoryCount > 0 ? `Worked client ${c.clientHistoryCount}x`
+    reasonSet.has("preferred") ? "Trabajador preferido"
+    : reasonSet.has("prequalified") ? "Precalificado"
+    : c.locationHistoryCount >= 5 ? `Buen perfil: trabajó aquí ${c.locationHistoryCount} veces`
+    : c.locationHistoryCount > 0 ? `Trabajó aquí ${c.locationHistoryCount}x`
+    : c.clientHistoryCount > 0 ? `Trabajó cliente ${c.clientHistoryCount}x`
     : null;
   if (lead) parts.push(lead);
-  if (hasGoodRating && !hasRatingRisk) parts.push("high reliability");
-  else if (hasGoodRating && hasRatingRisk) parts.push("good rating · 1 risk flag");
+  if (hasGoodRating && !hasRatingRisk) parts.push("alta confiabilidad");
+  else if (hasGoodRating && hasRatingRisk) parts.push("buena calificación · 1 alerta");
 
   const summary = parts.length > 0 ? parts.join(" · ") : null;
   return { chips, summary };
@@ -181,29 +181,27 @@ interface Readiness {
 const GRACE_HELPER = `Worker can be approved during the ${GRACE_POLICY_DAYS}-day grace period. Profile still needs completion.`;
 
 function computeReadiness(e: Employee | undefined, companyId?: string | null): Readiness {
-  if (!e) return { state: "unknown", canBeApproved: false, label: "Needs review", helper: "Worker record not loaded." };
-  if (e.is_active === false) return { state: "inactive", canBeApproved: false, label: "Inactive", helper: "Reactivate the worker before approving." };
+  if (!e) return { state: "unknown", canBeApproved: false, label: "Requiere revisión", helper: "No se pudo cargar el registro del trabajador." };
+  if (e.is_active === false) return { state: "inactive", canBeApproved: false, label: "Inactivo", helper: "Reactiva al trabajador antes de aprobar." };
 
   const profileIncomplete = e.profile_status === "incomplete" || e.profile_status === "pending_documents";
   const inGrace = profileIncomplete && isGraceEligibleCompany(companyId) && isWithinGraceWindow();
 
   if (e.profile_status === "incomplete") {
-    if (inGrace) return { state: "grace_period", canBeApproved: true, label: "Profile incomplete · grace period", helper: GRACE_HELPER };
-    return { state: "incomplete_blocked", canBeApproved: false, label: "Profile incomplete · blocked", helper: "Complete worker profile before approving this claim." };
+    if (inGrace) return { state: "grace_period", canBeApproved: true, label: "Perfil incompleto · período de gracia", helper: GRACE_HELPER };
+    return { state: "incomplete_blocked", canBeApproved: false, label: "Perfil incompleto · bloqueado", helper: "Completa el perfil del trabajador antes de aprobar esta solicitud." };
   }
   if (e.profile_status === "pending_documents") {
-    if (inGrace) return { state: "grace_period", canBeApproved: true, label: "Missing documents · grace period", helper: GRACE_HELPER };
-    return { state: "pending_documents_blocked", canBeApproved: false, label: "Missing documents · blocked", helper: "Worker needs to upload required documents." };
+    if (inGrace) return { state: "grace_period", canBeApproved: true, label: "Faltan documentos · período de gracia", helper: GRACE_HELPER };
+    return { state: "pending_documents_blocked", canBeApproved: false, label: "Faltan documentos · bloqueado", helper: "El trabajador debe subir los documentos requeridos." };
   }
   if (!normalizePhone(e.phone_number)) {
-    // Soft warning — backend doesn't block on phone alone, but operators need contact info.
-    return { state: "missing_phone", canBeApproved: true, label: "Missing phone", helper: "Add a phone number — workers can't be contacted without it." };
+    return { state: "missing_phone", canBeApproved: true, label: "Sin teléfono", helper: "Agrega un teléfono — sin él no se puede contactar al trabajador." };
   }
   if (e.onboarding_status && !isOnboardingComplete(e.onboarding_status) && e.profile_status !== "active") {
-    // Soft warning — backend allows ready/active to confirm regardless of onboarding text.
-    return { state: "onboarding_pending", canBeApproved: true, label: "Onboarding pending", helper: "Worker hasn't finished onboarding yet." };
+    return { state: "onboarding_pending", canBeApproved: true, label: "Onboarding pendiente", helper: "El trabajador aún no completó el onboarding." };
   }
-  return { state: "ready", canBeApproved: true, label: "Ready", helper: "Worker is ready for shifts." };
+  return { state: "ready", canBeApproved: true, label: "Listo", helper: "Trabajador listo para turnos." };
 }
 
 const READINESS_TONE: Record<ReadinessState, "good" | "info" | "warn" | "bad" | "muted"> = {
@@ -232,36 +230,36 @@ function ReadinessChip({ readiness, className }: { readiness: Readiness; classNa
 }
 
 function buildReminderText(workerName: string): string {
-  return `Hi ${workerName}, please finish your worker profile in the Stafly portal so we can confirm your shifts. Thanks!`;
+  return `Hola ${workerName}, por favor termina tu perfil de trabajador en el portal de Stafly para poder confirmar tus turnos. ¡Gracias!`;
 }
 
 const HUB_COPY = {
-  intro: "Read-only team view. Staffing changes still happen on desktop.",
-  safetyNote: "Staffing changes are available from desktop for now. This mobile view is read-only.",
-  loadError: "Couldn't load team data. Check your connection and try again.",
-  tabsAria: "Team management sections",
-  // Overview
-  overviewHelper: "Live snapshot of staffing for this shift.",
-  // Assigned
-  assignedHelper: "Grouped by lifecycle status. Tap to contact workers.",
-  emptyAssignedTitle: "No workers assigned yet",
-  emptyAssignedHelper: "Use desktop staffing tools to add workers.",
-  noPhone: "No phone on file",
-  // Claims
-  claimsHelper: "Workers who claimed or requested this shift.",
-  claimsManagedDesktop: "Approving claims is still done on desktop.",
-  emptyClaimsTitle: "No open requests",
-  emptyClaimsHelper: "Worker claims for this shift will show here.",
-  // Issues
-  issuesHelper: "Items that may need attention before the shift starts.",
-  emptyIssuesTitle: "No issues detected",
-  emptyIssuesHelper: "Coverage looks healthy and worker contact data is complete.",
-  // Recommended
-  recommendedHelper: "Smart recommendations are coming in a later phase.",
+  intro: "Vista de equipo. Algunos cambios avanzados aún se hacen en escritorio.",
+  safetyNote: "Desde móvil puedes revisar cobertura y contactar trabajadores. Los cambios avanzados de personal están disponibles desde escritorio por ahora.",
+  loadError: "No se pudieron cargar los datos del equipo. Revisa tu conexión e inténtalo de nuevo.",
+  tabsAria: "Secciones de gestión del equipo",
+  // Resumen
+  overviewHelper: "Resumen rápido de cobertura para este turno.",
+  // Asignados
+  assignedHelper: "Agrupados por estado. Toca para contactar al trabajador.",
+  emptyAssignedTitle: "Aún no hay trabajadores asignados",
+  emptyAssignedHelper: "Usa las herramientas de escritorio para agregar trabajadores.",
+  noPhone: "Sin teléfono registrado",
+  // Solicitudes
+  claimsHelper: "Trabajadores que solicitaron este turno.",
+  claimsManagedDesktop: "Aprobar solicitudes aún se hace desde escritorio.",
+  emptyClaimsTitle: "Sin solicitudes",
+  emptyClaimsHelper: "Las solicitudes de trabajadores aparecerán aquí.",
+  // Alertas
+  issuesHelper: "Puntos que debes revisar antes del turno.",
+  emptyIssuesTitle: "Sin alertas",
+  emptyIssuesHelper: "La cobertura se ve bien y los datos de contacto están completos.",
+  // Recomendados
+  recommendedHelper: "Recomendaciones inteligentes según disponibilidad, historial y perfil.",
   recommendedPlaceholder:
-    "Recommended workers will combine availability, rating, role fit, and history. Available in a later phase.",
-  openDesktopStaffing: "Open desktop staffing tools",
-  permissionGate: "You don't have permission to manage this shift.",
+    "Los trabajadores recomendados combinan disponibilidad, calificación, rol e historial.",
+  openDesktopStaffing: "Abrir herramientas de escritorio",
+  permissionGate: "No tienes permiso para gestionar este turno.",
 } as const;
 
 export type HubAssignment = {
@@ -330,13 +328,13 @@ const BUCKET_META: Record<Bucket, {
   label: string; icon: React.ComponentType<{ className?: string }>;
   tone: "good" | "info" | "warn" | "muted" | "bad";
 }> = {
-  confirmed: { label: "Confirmed", icon: ShieldCheck, tone: "good" },
-  accepted: { label: "Accepted", icon: CheckCircle2, tone: "info" },
-  pending: { label: "Pending", icon: Clock, tone: "warn" },
-  rejected_by_worker: { label: "Rejected", icon: UserX, tone: "bad" },
-  removed: { label: "Removed", icon: UserMinus, tone: "muted" },
-  no_show: { label: "No-show / Absent", icon: AlertTriangle, tone: "bad" },
-  other: { label: "Other", icon: AlertCircle, tone: "muted" },
+  confirmed: { label: "Confirmados", icon: ShieldCheck, tone: "good" },
+  accepted: { label: "Aceptados", icon: CheckCircle2, tone: "info" },
+  pending: { label: "Pendientes", icon: Clock, tone: "warn" },
+  rejected_by_worker: { label: "Rechazados", icon: UserX, tone: "bad" },
+  removed: { label: "Removidos", icon: UserMinus, tone: "muted" },
+  no_show: { label: "No-show / Ausente", icon: AlertTriangle, tone: "bad" },
+  other: { label: "Otros", icon: AlertCircle, tone: "muted" },
 };
 
 function toneToClass(tone: "good" | "info" | "warn" | "muted" | "bad"): string {
@@ -505,30 +503,30 @@ function MobileShiftTeamHubImpl({
       items.push({
         key: "open-spots",
         tone: "warn", icon: Users,
-        title: `${openSpots} open ${openSpots === 1 ? "spot" : "spots"}`,
-        helper: "Staff this shift to reach required coverage.",
+        title: `Faltan ${openSpots} ${openSpots === 1 ? "cupo" : "cupos"}`,
+        helper: "Completa el equipo requerido para este turno.",
       });
     }
     if (grouped.no_show.length > 0) {
       items.push({
         key: "no-show",
         tone: "bad", icon: AlertTriangle,
-        title: `${grouped.no_show.length} marked absent / no-show`,
+        title: `${grouped.no_show.length} marcados como ausentes / no-show`,
       });
     }
     if (grouped.pending.length > 0) {
       items.push({
         key: "pending",
         tone: "warn", icon: Clock,
-        title: `${grouped.pending.length} pending ${grouped.pending.length === 1 ? "response" : "responses"}`,
-        helper: "Workers haven't accepted yet.",
+        title: `${grouped.pending.length} ${grouped.pending.length === 1 ? "respuesta pendiente" : "respuestas pendientes"}`,
+        helper: "Trabajadores que aún no aceptan.",
       });
     }
     if (grouped.rejected_by_worker.length > 0) {
       items.push({
         key: "rejected",
         tone: "bad", icon: UserX,
-        title: `${grouped.rejected_by_worker.length} rejected`,
+        title: `${grouped.rejected_by_worker.length} rechazados`,
       });
     }
     // Missing phone on staffed workers.
@@ -540,8 +538,8 @@ function MobileShiftTeamHubImpl({
       items.push({
         key: "missing-phone",
         tone: "warn", icon: Phone,
-        title: `${missingPhone.length} worker${missingPhone.length === 1 ? "" : "s"} without phone`,
-        helper: "Contact actions won't be available for these workers.",
+        title: `${missingPhone.length} ${missingPhone.length === 1 ? "trabajador sin teléfono" : "trabajadores sin teléfono"}`,
+        helper: "No podrás llamarlos, enviar SMS o WhatsApp desde móvil.",
       });
     }
     if (!shift.location_id) {
@@ -549,25 +547,25 @@ function MobileShiftTeamHubImpl({
       items.push({
         key: "no-location",
         tone: "warn", icon: MapPin,
-        title: hasMP ? "Missing job site / venue" : "No location or meeting point",
+        title: hasMP ? "Falta ubicación del trabajo" : "Sin ubicación ni punto de encuentro",
         helper: hasMP
-          ? "Meeting point is set, but the actual work location is missing."
-          : "Workers may not know where to go or meet.",
+          ? "Hay punto de encuentro, pero falta el lugar donde se realiza el trabajo."
+          : "Es posible que los trabajadores no sepan dónde ir.",
       });
     }
     if (!shift.client_id) {
       items.push({
         key: "no-client",
         tone: "info", icon: Briefcase,
-        title: "No client linked",
+        title: "Sin cliente vinculado",
       });
     }
     if (claimsPending > 0) {
       items.push({
         key: "claims",
         tone: "info", icon: Inbox,
-        title: `${claimsPending} pending claim${claimsPending === 1 ? "" : "s"}`,
-        helper: "Review on desktop to approve or reject.",
+        title: `${claimsPending} ${claimsPending === 1 ? "solicitud pendiente" : "solicitudes pendientes"}`,
+        helper: "Revísalas en escritorio para aprobar o rechazar.",
       });
     }
     // Daily close (Phase 17C). Only flag for today/past shifts.
@@ -581,20 +579,20 @@ function MobileShiftTeamHubImpl({
           items.push({
             key: "closeout-missing",
             tone: "warn", icon: ClipboardCheck,
-            title: "Daily closeout missing",
-            helper: "Captain or shift admin hasn't submitted yet.",
+            title: "Falta el cierre diario",
+            helper: "El capitán o admin del turno aún no lo ha enviado.",
           });
         } else if (closeout.status === "submitted") {
           items.push({
             key: "closeout-pending-review",
             tone: "info", icon: ClipboardCheck,
-            title: "Closeout needs admin review",
+            title: "Cierre pendiente de revisión",
           });
         } else if (closeout.status === "reviewed" && (closeout.incident_count ?? 0) > 0) {
           items.push({
             key: "closeout-incidents",
             tone: "bad", icon: AlertTriangle,
-            title: `${closeout.incident_count} incident${closeout.incident_count === 1 ? "" : "s"} reported`,
+            title: `${closeout.incident_count} ${closeout.incident_count === 1 ? "incidente reportado" : "incidentes reportados"}`,
           });
         }
       }
@@ -608,11 +606,11 @@ function MobileShiftTeamHubImpl({
   ];
 
   const TABS: { key: TabKey; label: string; badge?: number }[] = [
-    { key: "overview", label: "Overview" },
-    { key: "assigned", label: "Assigned", badge: assignments.length || undefined },
-    { key: "claims", label: "Claims", badge: claimsPending || undefined },
-    { key: "issues", label: "Issues", badge: issues.length || undefined },
-    { key: "recommended", label: "Recommended" },
+    { key: "overview", label: "Resumen" },
+    { key: "assigned", label: "Asignados", badge: assignments.length || undefined },
+    { key: "claims", label: "Solicitudes", badge: claimsPending || undefined },
+    { key: "issues", label: "Alertas", badge: issues.length || undefined },
+    { key: "recommended", label: "Recomendados" },
   ];
 
   return (
@@ -628,7 +626,7 @@ function MobileShiftTeamHubImpl({
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5 mb-1">
                 <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
-                  Team management
+                  Gestionar equipo
                 </span>
                 {shift.shift_code && (
                   <span className="text-[10px] font-mono font-semibold text-muted-foreground/80">
@@ -642,10 +640,10 @@ function MobileShiftTeamHubImpl({
                 )}
               </div>
               <h2 className="text-lg font-semibold tracking-tight leading-tight line-clamp-2">
-                {clientName && clientName !== "—" ? clientName : (shift.title || "Shift")}
+                {clientName && clientName !== "—" ? clientName : (shift.title || "Turno")}
               </h2>
               <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                {dateLabel(shift.date)} · <span className="text-foreground/85 font-semibold">{locationName || "Job site missing"}</span>
+                {dateLabel(shift.date)} · <span className="text-foreground/85 font-semibold">{locationName || "Falta ubicación del trabajo"}</span>
               </p>
               {/* Stafly Work Route — Entrada protagonista; Termina aprox. secundario. */}
               <div className="mt-1 flex items-baseline gap-1.5 flex-wrap">
@@ -657,23 +655,23 @@ function MobileShiftTeamHubImpl({
                 <p className="text-[11px] text-muted-foreground mt-1 truncate flex items-center gap-1">
                   <MapPin className="h-3 w-3 shrink-0 opacity-70" />
                   <span className="truncate">
-                    Punto de encuentro: <span className="text-foreground/90 font-medium">{meetingPoint || "—"}</span>
+                    Encuentro: <span className="text-foreground/90 font-medium">{meetingPoint || "—"}</span>
                     {meetingTime && <> · <span className="font-mono tabular-nums">{formatTimeShort(meetingTime)}</span></>}
                   </span>
                 </p>
               )}
               <p className="text-[11px] text-muted-foreground mt-0.5">
-                {staffedCount}/{slots || "—"} staffed · {openSpots} open
+                {staffedCount}/{slots || "—"} asignados{openSpots > 0 ? ` · faltan ${openSpots}` : ""}
               </p>
             </div>
             <Button
               variant="ghost" size="sm"
               className="h-9 px-2 rounded-full shrink-0 -mt-1 -mr-1 text-xs gap-1"
               onClick={() => onOpenChange(false)}
-              aria-label="Back to shift overview"
+              aria-label="Volver al turno"
             >
               <X className="h-4 w-4" />
-              Back
+              Volver
             </Button>
           </div>
 
@@ -834,19 +832,19 @@ function OverviewTab({
   return (
     <section aria-label="Operational overview">
       <SectionTitle icon={Users} helper={HUB_COPY.overviewHelper}>
-        Overview
+        Resumen
       </SectionTitle>
       <div className="grid grid-cols-3 gap-2">
-        <StatTile label="Required" value={slots || "—"} />
-        <StatTile label="Staffed" value={staffedCount} />
-        <StatTile label="Open" value={openSpots} accent={openSpots > 0 ? "warn" : "good"} />
-        <StatTile label="Confirmed" value={grouped.confirmed.length} accent="good" />
-        <StatTile label="Accepted" value={grouped.accepted.length} accent="info" />
-        <StatTile label="Pending" value={grouped.pending.length} accent="warn" />
-        <StatTile label="Rejected" value={grouped.rejected_by_worker.length} accent={grouped.rejected_by_worker.length ? "bad" : "muted"} />
-        <StatTile label="Removed" value={grouped.removed.length} />
+        <StatTile label="Requeridos" value={slots || "—"} />
+        <StatTile label="Asignados" value={staffedCount} />
+        <StatTile label="Faltan" value={openSpots} accent={openSpots > 0 ? "warn" : "good"} />
+        <StatTile label="Confirmados" value={grouped.confirmed.length} accent="good" />
+        <StatTile label="Aceptados" value={grouped.accepted.length} accent="info" />
+        <StatTile label="Pendientes" value={grouped.pending.length} accent="warn" />
+        <StatTile label="Rechazados" value={grouped.rejected_by_worker.length} accent={grouped.rejected_by_worker.length ? "bad" : "muted"} />
+        <StatTile label="Removidos" value={grouped.removed.length} />
         <StatTile label="No-show" value={grouped.no_show.length} accent={grouped.no_show.length ? "bad" : "muted"} />
-        <StatTile label="Claims" value={claimsPending} accent={claimsPending ? "info" : "muted"} />
+        <StatTile label="Solicitudes" value={claimsPending} accent={claimsPending ? "info" : "muted"} />
       </div>
     </section>
   );
@@ -866,9 +864,9 @@ function AssignedTab({
   onAssignmentAction: (assignmentId: string, nextStatus: AssignmentNextStatus, workerName: string) => void;
 }) {
   return (
-    <section aria-label="Assigned workers">
+    <section aria-label="Trabajadores asignados">
       <SectionTitle icon={ShieldCheck} helper={HUB_COPY.assignedHelper}>
-        Assigned workers
+        Asignados
         <span className="ml-1.5 text-xs font-normal text-muted-foreground normal-case tracking-normal">
           ({assignments.length})
         </span>
@@ -923,9 +921,9 @@ function AssignedTab({
 }
 
 const ASSIGN_ACTION_LABEL: Record<AssignmentNextStatus, string> = {
-  confirmed: "Confirm",
-  rejected: "Mark rejected",
-  removed: "Remove from shift",
+  confirmed: "Confirmar",
+  rejected: "Marcar como rechazado",
+  removed: "Remover del turno",
 };
 const ASSIGN_ACTION_ICON: Record<AssignmentNextStatus, React.ComponentType<{ className?: string }>> = {
   confirmed: Check,
@@ -959,23 +957,23 @@ function WorkerRow({
   }
   const responseTs = assignment.accepted_at || assignment.rejected_at || assignment.responded_at || null;
   const responseLabel = responseTs
-    ? (assignment.accepted_at ? "Accepted " : assignment.rejected_at ? "Rejected " : "Responded ") + formatRelative(responseTs)
+    ? (assignment.accepted_at ? "Aceptó " : assignment.rejected_at ? "Rechazó " : "Respondió ") + formatRelative(responseTs)
     : null;
 
   // Status pill — derived from existing bucketize logic; presentational only.
   const bucket = bucketize(assignment);
   const STATUS_PILL: Record<string, { label: string; cls: string }> = {
-    confirmed:          { label: "Confirmed",   cls: "border-emerald-500/40 text-emerald-700 dark:text-emerald-400 bg-emerald-500/10" },
-    accepted:           { label: "Accepted",    cls: "border-emerald-500/40 text-emerald-700 dark:text-emerald-400 bg-emerald-500/10" },
-    pending:            { label: "Pending",     cls: "border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10" },
-    rejected_by_worker: { label: "Rejected",    cls: "border-rose-500/40 text-rose-700 dark:text-rose-400 bg-rose-500/10" },
-    removed:            { label: "Removed",     cls: "border-border/60 text-muted-foreground bg-muted/40" },
-    no_show:            { label: "No-show",     cls: "border-rose-500/40 text-rose-700 dark:text-rose-400 bg-rose-500/10" },
-    other:              { label: assignment.status || "Unknown", cls: "border-border/60 text-muted-foreground bg-muted/40" },
+    confirmed:          { label: "Confirmado", cls: "border-emerald-500/40 text-emerald-700 dark:text-emerald-400 bg-emerald-500/10" },
+    accepted:           { label: "Aceptado",   cls: "border-emerald-500/40 text-emerald-700 dark:text-emerald-400 bg-emerald-500/10" },
+    pending:            { label: "Pendiente",  cls: "border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10" },
+    rejected_by_worker: { label: "Rechazado",  cls: "border-rose-500/40 text-rose-700 dark:text-rose-400 bg-rose-500/10" },
+    removed:            { label: "Removido",   cls: "border-border/60 text-muted-foreground bg-muted/40" },
+    no_show:            { label: "No-show",    cls: "border-rose-500/40 text-rose-700 dark:text-rose-400 bg-rose-500/10" },
+    other:              { label: assignment.status || "Desconocido", cls: "border-border/60 text-muted-foreground bg-muted/40" },
   };
   const attendancePill =
     assignment.attendance_status === "present" || assignment.attendance_status === "checked_in"
-      ? { label: "On site", cls: "border-sky-500/40 text-sky-700 dark:text-sky-400 bg-sky-500/10" }
+      ? { label: "En sitio", cls: "border-sky-500/40 text-sky-700 dark:text-sky-400 bg-sky-500/10" }
       : null;
   const statusPill = attendancePill ?? STATUS_PILL[bucket];
 
@@ -1007,7 +1005,7 @@ function WorkerRow({
                 className="h-[16px] px-1 text-[9px] uppercase tracking-wider border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10"
               >
                 <Star className="h-2.5 w-2.5 mr-0.5" />
-                Captain
+                Capitán
               </Badge>
             )}
           </div>
@@ -1043,7 +1041,7 @@ function WorkerRow({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-                Logged action
+                Acción registrada
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               {allowedActions.map((next) => {
@@ -1066,7 +1064,7 @@ function WorkerRow({
 
       {hasPhone && (
         <div className="mt-2 flex items-center gap-1.5">
-          <ContactBtn href={`tel:${phoneDigits}`} icon={Phone} label="Call" />
+          <ContactBtn href={`tel:${phoneDigits}`} icon={Phone} label="Llamar" />
           <ContactBtn href={`sms:${phoneDigits}`} icon={MessageSquare} label="SMS" />
           {wa?.waMeUrl && (
             <ContactBtn href={wa.waMeUrl} icon={MessageSquare} label="WhatsApp" external />
@@ -1075,7 +1073,7 @@ function WorkerRow({
             type="button"
             onClick={() => onCopyPhone(phoneDigits)}
             className="ml-auto h-7 w-7 rounded-full grid place-items-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-            aria-label="Copy phone number"
+            aria-label="Copiar número de teléfono"
           >
             <Copy className="h-3.5 w-3.5" />
           </button>
@@ -1123,9 +1121,9 @@ function ClaimsTab({
   onCopyReminder: (workerName: string) => void;
 }) {
   return (
-    <section aria-label="Worker claims and requests">
+    <section aria-label="Solicitudes de trabajadores">
       <SectionTitle icon={Inbox} helper={HUB_COPY.claimsHelper}>
-        Claims
+        Solicitudes
         {claims.length > 0 && (
           <span className="ml-1.5 text-xs font-normal text-muted-foreground normal-case tracking-normal">
             ({claims.length})
@@ -1139,7 +1137,7 @@ function ClaimsTab({
         </div>
       ) : loading ? (
         <div className="rounded-2xl border border-border/50 bg-muted/20 px-4 py-5 text-center text-[12px] text-muted-foreground">
-          Loading claims…
+          Cargando solicitudes…
         </div>
       ) : claims.length === 0 ? (
         <EmptyBlock title={HUB_COPY.emptyClaimsTitle} helper={HUB_COPY.emptyClaimsHelper} />
@@ -1147,13 +1145,17 @@ function ClaimsTab({
         <ul className="space-y-2">
           {claims.map((c) => {
             const e = empById.get(c.employee_id);
-            const workerName = e ? fullName(e) : "this worker";
+            const workerName = e ? fullName(e) : "este trabajador";
             const tone =
               c.status === "approved" ? "good" :
               c.status === "rejected" ? "bad" : "warn";
             const isPending = c.status === "pending";
             const readiness = computeReadiness(e, companyId);
             const blocked = isPending && !readiness.canBeApproved;
+            const statusLabel =
+              c.status === "approved" ? "Aprobada" :
+              c.status === "rejected" ? "Rechazada" :
+              c.status === "pending" ? "Pendiente" : (c.status ?? "");
             return (
               <li key={c.id} className="rounded-2xl border border-border/50 bg-card p-3">
                 <div className="flex items-start gap-2.5">
@@ -1166,13 +1168,13 @@ function ClaimsTab({
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-2">
                       <p className="text-sm font-semibold leading-tight truncate">
-                        {e ? fullName(e) : "Claim request pending"}
+                        {e ? fullName(e) : "Solicitud pendiente"}
                       </p>
                       <Badge
                         variant="outline"
-                        className={cn("h-[18px] px-1.5 text-[10px] font-semibold capitalize", toneToClass(tone))}
+                        className={cn("h-[18px] px-1.5 text-[10px] font-semibold", toneToClass(tone))}
                       >
-                        {c.status}
+                        {statusLabel}
                       </Badge>
                     </div>
                     {readiness.state !== "ready" && (
@@ -1187,7 +1189,7 @@ function ClaimsTab({
                     )}
                     <p className="mt-1 text-[10px] text-muted-foreground">
                       {c.created_at ? new Date(c.created_at).toLocaleString() : ""}
-                      {c.reviewed_at ? ` · reviewed ${new Date(c.reviewed_at).toLocaleString()}` : ""}
+                      {c.reviewed_at ? ` · revisada ${new Date(c.reviewed_at).toLocaleString()}` : ""}
                     </p>
 
                     {blocked && (
@@ -1212,7 +1214,7 @@ function ClaimsTab({
                           )}
                         >
                           <Check className="h-3 w-3" />
-                          Approve
+                          Aprobar
                         </button>
                         <button
                           type="button"
@@ -1220,7 +1222,7 @@ function ClaimsTab({
                           className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-muted hover:bg-muted/80 text-foreground text-[11px] font-semibold transition-colors"
                         >
                           <XCircle className="h-3 w-3" />
-                          Reject
+                          Rechazar
                         </button>
                         {blocked && e && (
                           <>
@@ -1230,7 +1232,7 @@ function ClaimsTab({
                               className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-muted/60 hover:bg-muted text-foreground text-[11px] font-semibold transition-colors"
                             >
                               <UserCog className="h-3 w-3" />
-                              View profile
+                              Ver perfil
                             </button>
                             <button
                               type="button"
@@ -1238,7 +1240,7 @@ function ClaimsTab({
                               className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-muted/60 hover:bg-muted text-foreground text-[11px] font-semibold transition-colors"
                             >
                               <Copy className="h-3 w-3" />
-                              Copy reminder
+                              Copiar recordatorio
                             </button>
                           </>
                         )}
@@ -1255,7 +1257,7 @@ function ClaimsTab({
       <div className="mt-3 rounded-2xl border border-dashed border-border/60 bg-muted/20 px-4 py-3">
         <p className="text-[12px] text-muted-foreground">
           {canManage
-            ? "Approve or reject above. Logged actions don't affect payroll or worked time."
+            ? "Aprueba o rechaza arriba. Las acciones registradas no afectan nómina ni tiempo trabajado."
             : HUB_COPY.claimsManagedDesktop}
         </p>
         <button
@@ -1263,7 +1265,7 @@ function ClaimsTab({
           onClick={onOpenDesktop}
           className="mt-2 inline-flex items-center gap-1 text-[12px] font-semibold text-primary"
         >
-          Review claims on desktop <ExternalLink className="h-3 w-3" />
+          Revisar solicitudes en escritorio <ExternalLink className="h-3 w-3" />
         </button>
       </div>
     </section>
@@ -1276,9 +1278,9 @@ function IssuesTab({
   issues: Array<{ key: string; tone: "warn" | "bad" | "info"; icon: React.ComponentType<{ className?: string }>; title: string; helper?: string }>;
 }) {
   return (
-    <section aria-label="Issues that need attention">
+    <section aria-label="Alertas que requieren atención">
       <SectionTitle icon={AlertTriangle} helper={HUB_COPY.issuesHelper}>
-        Issues
+        Alertas
         {issues.length > 0 && (
           <span className="ml-1.5 text-xs font-normal text-muted-foreground normal-case tracking-normal">
             ({issues.length})
@@ -1351,18 +1353,18 @@ function classifyGroup(c: RankedCandidate): RecGroup {
 
 const GROUP_META: Record<RecGroup, { label: string; helper: string; tone: string }> = {
   best: {
-    label: "Best match",
-    helper: "Assignable, ready, no risk flags, strong score.",
+    label: "Mejor opción",
+    helper: "Asignables, listos, sin alertas y con buen puntaje.",
     tone: "border-emerald-500/40 text-emerald-700 dark:text-emerald-400 bg-emerald-500/10",
   },
   good: {
-    label: "Good options",
-    helper: "Solid candidates with grace period or worked-here history.",
+    label: "Buenas opciones",
+    helper: "Candidatos sólidos con período de gracia o historial aquí.",
     tone: "border-sky-500/40 text-sky-700 dark:text-sky-400 bg-sky-500/10",
   },
   caution: {
-    label: "Use with caution",
-    helper: "Low score, risk flags, conflict, or otherwise blocked.",
+    label: "Usar con precaución",
+    helper: "Puntaje bajo, alertas, conflicto u otro bloqueo.",
     tone: "border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10",
   },
 };
@@ -1374,40 +1376,40 @@ function buildWhyReasons(c: RankedCandidate): string[] {
   const lines: string[] = [];
 
   // Readiness
-  if (c.readinessState === "ready") lines.push("Profile ready for shifts.");
-  else if (c.readinessState === "grace_period") lines.push("In grace period — can still be approved.");
-  else lines.push("Profile not ready (blocked).");
+  if (c.readinessState === "ready") lines.push("Perfil listo para turnos.");
+  else if (c.readinessState === "grace_period") lines.push("En período de gracia — puede aprobarse.");
+  else lines.push("Perfil no está listo (bloqueado).");
 
   // Contact / availability
-  if (c.phone) lines.push("Has a phone on file.");
-  else lines.push("No phone on file — can't be contacted.");
-  if (c.availabilitySignal === "available") lines.push("Marked available for this date.");
-  else if (c.availabilitySignal === "unavailable") lines.push("Marked unavailable for this date.");
+  if (c.phone) lines.push("Tiene teléfono registrado.");
+  else lines.push("Sin teléfono registrado — no se puede contactar.");
+  if (c.availabilitySignal === "available") lines.push("Marcado como disponible esta fecha.");
+  else if (c.availabilitySignal === "unavailable") lines.push("Marcado como no disponible esta fecha.");
 
   // Venue / client history
-  if ((c.locationHistoryCount ?? 0) > 0) lines.push(`Worked this location ${c.locationHistoryCount} time${c.locationHistoryCount === 1 ? "" : "s"}.`);
-  if ((c.clientHistoryCount ?? 0) > 0) lines.push(`Worked this client ${c.clientHistoryCount} time${c.clientHistoryCount === 1 ? "" : "s"}.`);
+  if ((c.locationHistoryCount ?? 0) > 0) lines.push(`Ha trabajado este lugar ${c.locationHistoryCount} ${c.locationHistoryCount === 1 ? "vez" : "veces"}.`);
+  if ((c.clientHistoryCount ?? 0) > 0) lines.push(`Ha trabajado con este cliente ${c.clientHistoryCount} ${c.clientHistoryCount === 1 ? "vez" : "veces"}.`);
 
   // Reliability (qualitative only — no reviewer names / scores)
-  if (reasons.has("high_reliability") && risks.has("low_reliability")) lines.push("Good rating, but 1 reliability risk flag.");
-  else if (reasons.has("high_reliability")) lines.push("Good reliability rating.");
-  else if (risks.has("low_reliability")) lines.push("Reliability risk flagged.");
+  if (reasons.has("high_reliability") && risks.has("low_reliability")) lines.push("Buena calificación, pero con 1 alerta de confiabilidad.");
+  else if (reasons.has("high_reliability")) lines.push("Buena calificación de confiabilidad.");
+  else if (risks.has("low_reliability")) lines.push("Alerta de confiabilidad.");
 
   // Preferences
-  if (reasons.has("preferred")) lines.push("Marked preferred for this client/location.");
-  if (reasons.has("prequalified")) lines.push("Prequalified for this client/location.");
-  if (reasons.has("captain_preferred")) lines.push("Captain-preferred here.");
-  if (reasons.has("driver_preferred")) lines.push("Driver-preferred here.");
-  if (risks.has("blocked_here")) lines.push("Blocked from this client/location.");
-  if (risks.has("not_recommended")) lines.push("Marked not recommended here.");
+  if (reasons.has("preferred")) lines.push("Marcado como preferido para este cliente/lugar.");
+  if (reasons.has("prequalified")) lines.push("Precalificado para este cliente/lugar.");
+  if (reasons.has("captain_preferred")) lines.push("Capitán preferido aquí.");
+  if (reasons.has("driver_preferred")) lines.push("Conductor preferido aquí.");
+  if (risks.has("blocked_here")) lines.push("Bloqueado para este cliente/lugar.");
+  if (risks.has("not_recommended")) lines.push("Marcado como no recomendado aquí.");
 
   // Conflicts
-  if (c.conflictDetected) lines.push("Has an overlapping shift on this date.");
+  if (c.conflictDetected) lines.push("Tiene un turno superpuesto esta fecha.");
 
   // Role
-  if (reasons.has("captain")) lines.push("Captain.");
-  if (reasons.has("driver")) lines.push("Driver.");
-  if (reasons.has("role_match")) lines.push("Matches the role required.");
+  if (reasons.has("captain")) lines.push("Capitán.");
+  if (reasons.has("driver")) lines.push("Conductor.");
+  if (reasons.has("role_match")) lines.push("Coincide con el rol requerido.");
 
   return lines;
 }
@@ -1749,28 +1751,28 @@ function RecommendedTab({
   }, [visible]);
 
   const FILTERS: { key: RecFilter; label: string }[] = [
-    { key: "all", label: "All" },
-    { key: "best", label: "Best match" },
-    ...(shift.location_id ? [{ key: "strong_history" as const, label: "Strong venue history" }] : []),
-    { key: "no_risk", label: "No risk flags" },
-    { key: "ready", label: "Ready" },
-    { key: "grace", label: "Grace period" },
-    { key: "phone", label: "Has phone" },
-    { key: "history", label: "Worked here" },
-    { key: "available", label: "Available" },
-    { key: "drivers", label: "Drivers" },
-    { key: "captains", label: "Captains" },
+    { key: "all", label: "Todos" },
+    { key: "best", label: "Mejor opción" },
+    ...(shift.location_id ? [{ key: "strong_history" as const, label: "Historial sólido aquí" }] : []),
+    { key: "no_risk", label: "Sin alertas" },
+    { key: "ready", label: "Listos" },
+    { key: "grace", label: "Período de gracia" },
+    { key: "phone", label: "Con teléfono" },
+    { key: "history", label: "Ha trabajado aquí" },
+    { key: "available", label: "Disponibles" },
+    { key: "drivers", label: "Conductores" },
+    { key: "captains", label: "Capitanes" },
   ];
 
   return (
-    <section aria-label="Recommended workers" className="space-y-3">
-      <SectionTitle icon={Sparkles} helper="Ranked by readiness, availability, history, contact, and reliability.">
-        Add workers
+    <section aria-label="Trabajadores recomendados" className="space-y-3">
+      <SectionTitle icon={Sparkles} helper="Ordenados por preparación, disponibilidad, historial, contacto y confiabilidad.">
+        Agregar trabajadores
       </SectionTitle>
 
       {!shift.location_id && (
         <p className="text-[11px] text-muted-foreground rounded-lg border border-dashed border-border/60 bg-muted/30 px-3 py-2 leading-snug">
-          Add a job site to use venue history ranking. Meeting points are not used as worked-here history.
+          Agrega una ubicación de trabajo para usar el historial. El punto de encuentro no cuenta como lugar trabajado.
         </p>
       )}
 
@@ -1780,7 +1782,7 @@ function RecommendedTab({
         <Input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search by name, phone, email, or ID…"
+          placeholder="Buscar por nombre, teléfono, email o ID…"
           className="pl-9 h-10 text-sm"
         />
       </div>
@@ -1805,7 +1807,7 @@ function RecommendedTab({
       </div>
 
       {signalsLoading && (
-        <p className="text-[11px] text-muted-foreground px-1">Refining recommendations…</p>
+        <p className="text-[11px] text-muted-foreground px-1">Afinando recomendaciones…</p>
       )}
 
       {(() => {
@@ -1816,31 +1818,31 @@ function RecommendedTab({
         if (ranked.length === 0) {
           return (
             <EmptyBlock
-              title="No candidates"
-              helper="Everyone eligible is already assigned or blocked by filters."
+              title="Sin candidatos"
+              helper="Todos los elegibles ya están asignados o bloqueados por filtros."
             />
           );
         }
         if (hasSearch) {
           return (
             <EmptyBlock
-              title="No workers match this search"
-              helper="Try a different name, phone, email, or worker ID."
+              title="Ningún trabajador coincide con la búsqueda"
+              helper="Prueba otro nombre, teléfono, email o ID."
             />
           );
         }
         if (hasFilter) {
           return (
             <EmptyBlock
-              title="No workers match this filter"
-              helper="Try Best match or clear the filter."
+              title="Ningún trabajador coincide con el filtro"
+              helper="Prueba 'Mejor opción' o quita el filtro."
             />
           );
         }
         return (
           <EmptyBlock
-            title="No workers match"
-            helper="Workers already on this shift are hidden."
+            title="Sin coincidencias"
+            helper="Los trabajadores ya asignados a este turno están ocultos."
           />
         );
       })()}
@@ -1884,13 +1886,13 @@ function RecommendedTab({
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <p className="text-sm font-semibold text-foreground truncate">{c.name}</p>
                     <span className={cn("h-[18px] inline-flex items-center rounded-full border px-1.5 text-[10px] font-semibold", badgeTone)}>
-                      {c.readinessState === "ready" ? "Ready" : c.readinessState === "grace_period" ? "Grace" : "Blocked"}
+                      {c.readinessState === "ready" ? "Listo" : c.readinessState === "grace_period" ? "Gracia" : "Bloqueado"}
                     </span>
                     <span
                       className="h-[18px] inline-flex items-center rounded-md border border-border/50 bg-muted/40 px-1.5 text-[10px] font-mono tabular-nums text-muted-foreground"
-                      title={`Score ${c.score}`}
+                      title={`Puntaje ${c.score}`}
                     >
-                      Score {c.score}
+                      Puntaje {c.score}
                     </span>
                   </div>
                   {display.chips.length > 0 && (
@@ -1924,7 +1926,7 @@ function RecommendedTab({
                   {c.phone ? (
                     <p className="mt-1 text-[11px] text-muted-foreground tabular-nums">{c.phone}</p>
                   ) : (
-                    <p className="mt-1 text-[11px] text-amber-700 dark:text-amber-400">No phone on file</p>
+                    <p className="mt-1 text-[11px] text-amber-700 dark:text-amber-400">Sin teléfono registrado</p>
                   )}
                   <button
                     type="button"
@@ -1932,7 +1934,7 @@ function RecommendedTab({
                     className="mt-1.5 inline-flex items-center gap-1 text-[10.5px] font-semibold text-muted-foreground hover:text-foreground"
                     aria-expanded={isExpanded}
                   >
-                    {isExpanded ? "Hide why" : "Why?"}
+                    {isExpanded ? "Ocultar" : "¿Por qué?"}
                   </button>
                   {isExpanded && (
                     <ul className="mt-1.5 space-y-0.5 rounded-lg bg-muted/30 px-2 py-1.5">
@@ -1950,7 +1952,7 @@ function RecommendedTab({
                       className="h-8 px-2.5 text-[12px] gap-1"
                     >
                       <UserPlus className="h-3.5 w-3.5" />
-                      Assign
+                      Asignar
                     </Button>
                   ) : (
                     <Button
@@ -1959,12 +1961,12 @@ function RecommendedTab({
                       disabled
                       className="h-8 px-2.5 text-[12px]"
                       title={
-                        c.preferenceBlocked ? "Worker is blocked for this client/location"
-                        : c.conflictDetected ? "Worker has an overlapping shift"
-                        : "Worker can't be assigned"
+                        c.preferenceBlocked ? "Trabajador bloqueado para este cliente/lugar"
+                        : c.conflictDetected ? "Tiene un turno superpuesto"
+                        : "No se puede asignar"
                       }
                     >
-                      {c.preferenceBlocked ? "Blocked here" : c.conflictDetected ? "Conflict" : "Blocked"}
+                      {c.preferenceBlocked ? "Bloqueado aquí" : c.conflictDetected ? "Conflicto" : "Bloqueado"}
                     </Button>
                   )}
                   {(shift.client_id || shift.location_id) && (
@@ -1973,43 +1975,43 @@ function RecommendedTab({
                         <button
                           type="button"
                           className="h-6 px-1.5 rounded-md text-[10px] font-medium text-muted-foreground/80 hover:bg-muted/60 inline-flex items-center gap-0.5"
-                          aria-label={`Set fit for ${c.name}`}
+                          aria-label={`Marcar afinidad para ${c.name}`}
                         >
-                          <MoreVertical className="h-3 w-3" /> Fit
+                          <MoreVertical className="h-3 w-3" /> Afinidad
                         </button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-52">
                         <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-                          Mark for this {shift.client_id ? "client" : "location"}
+                          Marcar para este {shift.client_id ? "cliente" : "lugar"}
                         </DropdownMenuLabel>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={() => handleSetPreference(c.employee.id, c.name, "preferred")}>
-                          Mark preferred
+                          Marcar como preferido
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleSetPreference(c.employee.id, c.name, "prequalified")}>
-                          Mark prequalified
+                          Marcar como precalificado
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleSetPreference(c.employee.id, c.name, "captain_preferred")}>
-                          Captain preferred
+                          Capitán preferido
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleSetPreference(c.employee.id, c.name, "driver_preferred")}>
-                          Driver preferred
+                          Conductor preferido
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={() => handleSetPreference(c.employee.id, c.name, "not_recommended")}>
-                          Mark not recommended
+                          Marcar no recomendado
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           className="text-rose-600 focus:text-rose-600"
                           onClick={() => handleSetPreference(c.employee.id, c.name, "blocked")}
                         >
-                          Block here
+                          Bloquear aquí
                         </DropdownMenuItem>
                         {(signals.preferencesByEmp.get(c.employee.id) ?? []).length > 0 && (
                           <>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem onClick={() => handleClearPreferences(c.employee.id, c.name)}>
-                              Clear preferences
+                              Limpiar preferencias
                             </DropdownMenuItem>
                           </>
                         )}
@@ -2032,7 +2034,7 @@ function RecommendedTab({
         onClick={onOpenDesktop}
         className="mt-1 inline-flex items-center gap-1 text-[12px] font-semibold text-primary"
       >
-        Open desktop staffing <ExternalLink className="h-3 w-3" />
+        Abrir herramientas de escritorio <ExternalLink className="h-3 w-3" />
       </button>
     </section>
   );
