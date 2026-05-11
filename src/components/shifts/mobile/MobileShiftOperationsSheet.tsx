@@ -1514,19 +1514,27 @@ const WorkerRow = memo(function WorkerRow({
           </button>
         </div>
       ) : (
-        <div
-          className="mt-2.5 rounded-xl border border-dashed border-border/60 bg-muted/30 px-3 py-2"
-          aria-label={`Sin teléfono registrado para ${workerName}. Agrega un número en el perfil para habilitar contactos.`}
-        >
+        <div className="mt-2.5 rounded-xl border border-dashed border-border/60 bg-muted/30 px-3 py-2">
           <div className="flex items-start gap-2">
             <Phone className="h-3.5 w-3.5 mt-0.5 text-muted-foreground shrink-0" aria-hidden="true" />
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <div className="text-[11px] font-semibold text-foreground/80 leading-tight">
                 {MOBILE_SHIFT_COPY.noPhoneTitle}
               </div>
               <div className="text-[10.5px] text-muted-foreground leading-snug mt-0.5">
                 {MOBILE_SHIFT_COPY.noPhoneHelper}
               </div>
+              {canManagePhone && (
+                <button
+                  type="button"
+                  onClick={handleAddPhone}
+                  disabled={savingPhone}
+                  className="mt-1.5 inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-primary text-primary-foreground text-[11px] font-semibold disabled:opacity-60"
+                >
+                  <Phone className="h-3 w-3" />
+                  {savingPhone ? "Guardando…" : "Agregar teléfono"}
+                </button>
+              )}
             </div>
           </div>
         </div>
