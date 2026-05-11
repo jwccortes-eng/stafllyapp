@@ -1136,7 +1136,7 @@ function DesktopShifts() {
         shift.title,
         "shift_published",
         `Turno publicado: ${shift.title}`,
-        `Tu turno "${shift.title}" del ${shift.date} (${shift.start_time.slice(0, 5)}-${shift.end_time.slice(0, 5)}) ha sido publicado.`,
+        `Tu turno "${shift.title}" — ${shift.date} · ${workRouteLine(shift.start_time, shift.end_time, (shift as any).meeting_point ?? null)} ya fue publicado.`,
         employeeIds,
         { broadcast: true }
       );
