@@ -204,7 +204,6 @@ export default function PortalShiftDetail() {
     ? "Mañana"
     : format(parseISO(shift.date), "EEEE d MMM", { locale: es });
 
-  const timeLabel = `${shift.start_time?.slice(0, 5)} – ${shift.end_time?.slice(0, 5)}`;
   const slotsLeft = shift.slots ? Math.max(0, shift.slots - shift.assignedCount) : null;
 
   return (
