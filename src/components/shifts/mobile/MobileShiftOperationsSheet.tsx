@@ -128,7 +128,7 @@ function dateLabel(dateStr: string): string {
     const d = parseISO(dateStr);
     if (isToday(d)) return "Hoy";
     if (isTomorrow(d)) return "Mañana";
-    return format(d, "EEEE, MMM d", { locale: enUS });
+    return format(d, "EEEE, MMM d", { locale: es });
   } catch { return dateStr; }
 }
 
@@ -346,8 +346,8 @@ export function MobileShiftOperationsSheet({
   const snapshot = (() => {
     const when = dateBucket === "today" ? "Today"
       : dateBucket === "tomorrow" ? "Tomorrow"
-      : dateBucket === "past" ? `On ${format(parseISO(shift.date), "MMM d", { locale: enUS })}`
-      : `On ${format(parseISO(shift.date), "EEE MMM d", { locale: enUS })}`;
+      : dateBucket === "past" ? `On ${format(parseISO(shift.date), "MMM d", { locale: es })}`
+      : `On ${format(parseISO(shift.date), "EEE MMM d", { locale: es })}`;
     const where = locationName ? ` at ${locationName}` : (clientName && clientName !== "—" ? ` for ${clientName}` : "");
     const cov = slots > 0 ? `Coverage is ${assignedCount}/${slots} workers.` : `${assignedCount} worker${assignedCount === 1 ? "" : "s"} assigned.`;
     const pubText = draft ? "It is still a draft" : published ? "It is published" : "Status pending";
@@ -363,7 +363,7 @@ export function MobileShiftOperationsSheet({
     const code = shift.shift_code ? `Shift #${formatShiftCode(shift.shift_code)} · ` : "";
     const placeBits = [locationName, clientName && clientName !== "—" ? clientName : null].filter(Boolean).join(" · ");
     const dateBit = (() => {
-      try { return format(parseISO(shift.date), "MMM d", { locale: enUS }); } catch { return shift.date; }
+      try { return format(parseISO(shift.date), "MMM d", { locale: es }); } catch { return shift.date; }
     })();
     const cov = slots > 0
       ? `Assigned ${assignedCount}/${slots}${understaffed ? ` · Needs ${slots - assignedCount} worker${slots - assignedCount === 1 ? "" : "s"}` : ""}`
@@ -760,7 +760,7 @@ export function MobileShiftOperationsSheet({
                   </p>
                   <div className="rounded-2xl border border-border/50 bg-card divide-y divide-border/40">
                     <DetailRow icon={CalendarDays} label="Fecha" value={(() => {
-                      try { return format(parseISO(shift.date), "EEEE, MMMM d, yyyy", { locale: enUS }); } catch { return shift.date; }
+                      try { return format(parseISO(shift.date), "EEEE, MMMM d, yyyy", { locale: es }); } catch { return shift.date; }
                     })()} />
                     <DetailRow icon={Clock} label="Entrada" value={startShort} />
                     <DetailRow icon={Clock} label="Termina aprox." value={endShort} muted />
@@ -1464,7 +1464,7 @@ function buildShiftRisks(args: {
 function buildShiftAudit(shift: Shift): TraceLinkedRecord[] {
   const fmtTs = (ts: string | null | undefined) => {
     if (!ts) return null;
-    try { return format(parseISO(ts), "MMM d, yyyy · HH:mm", { locale: enUS }); }
+    try { return format(parseISO(ts), "MMM d, yyyy · HH:mm", { locale: es }); }
     catch { return ts; }
   };
   return [
