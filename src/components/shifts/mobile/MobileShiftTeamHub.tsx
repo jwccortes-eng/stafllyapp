@@ -183,25 +183,25 @@ const GRACE_HELPER = `Worker can be approved during the ${GRACE_POLICY_DAYS}-day
 function computeReadiness(e: Employee | undefined, companyId?: string | null): Readiness {
   if (!e) return { state: "unknown", canBeApproved: false, label: "Requiere revisión", helper: "No se pudo cargar el registro del trabajador." };
   if (e.is_active === false) return { state: "inactive", canBeApproved: false, label: "Inactivo", helper: "Reactiva al trabajador antes de aprobar." };
-  const profileStatus = getProfileStatus(e);
-  const inGrace = isInGracePeriod(e);
-  if (profileStatus === "incomplete") {
+
+  const profileIncomplete = e.profile_status === "incomplete" || e.profile_status === "pending_documents";
+  const inGrace = profileIncomplete && isGraceEligibleCompany(companyId) && isWithinGraceWindow();
+
+  if (e.profile_status === "incomplete") {
     if (inGrace) return { state: "grace_period", canBeApproved: true, label: "Perfil incompleto · período de gracia", helper: GRACE_HELPER };
     return { state: "incomplete_blocked", canBeApproved: false, label: "Perfil incompleto · bloqueado", helper: "Completa el perfil del trabajador antes de aprobar esta solicitud." };
   }
-  if (profileStatus === "pending_documents") {
+  if (e.profile_status === "pending_documents") {
     if (inGrace) return { state: "grace_period", canBeApproved: true, label: "Faltan documentos · período de gracia", helper: GRACE_HELPER };
     return { state: "pending_documents_blocked", canBeApproved: false, label: "Faltan documentos · bloqueado", helper: "El trabajador debe subir los documentos requeridos." };
   }
-  const phone = normalizePhone(e.phone_number);
-  if (!phone) {
+  if (!normalizePhone(e.phone_number)) {
     return { state: "missing_phone", canBeApproved: true, label: "Sin teléfono", helper: "Agrega un teléfono — sin él no se puede contactar al trabajador." };
   }
-  const status = (e as any).onboarding_status;
-  if (status && status !== "completed" && status !== "active") {
-    return { state: "onboarding_pending", canBeApproved: true, label: "Onboarding pendiente", helper: "El trabajador aún no completa el onboarding." };
+  if (e.onboarding_status && !isOnboardingComplete(e.onboarding_status) && e.profile_status !== "active") {
+    return { state: "onboarding_pending", canBeApproved: true, label: "Onboarding pendiente", helper: "El trabajador aún no completó el onboarding." };
   }
-  return { state: "ready", canBeApproved: true, label: "Listo", helper: "El trabajador está listo para turnos." };
+  return { state: "ready", canBeApproved: true, label: "Listo", helper: "Trabajador listo para turnos." };
 }
 
 const READINESS_TONE: Record<ReadinessState, "good" | "info" | "warn" | "bad" | "muted"> = {
