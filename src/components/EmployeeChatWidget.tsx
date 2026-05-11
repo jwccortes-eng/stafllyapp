@@ -158,7 +158,7 @@ export default function EmployeeChatWidget() {
               <p className="text-[11px] text-muted-foreground">Pregunta sobre tus pagos</p>
             </div>
             {messages.length > 0 && (
-              <button
+            <button
                 onClick={clearHistory}
                 className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
                 title="Borrar historial"
