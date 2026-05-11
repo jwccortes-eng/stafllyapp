@@ -48,6 +48,9 @@ interface PortalShiftDetailDrawerProps {
   responding?: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Optional H4 — read-only worked-history info for past shifts. */
+  historyInfo?: WorkedShiftEntry;
+  historyLoading?: boolean;
 }
 
 function calcHours(start: string, end: string): string {
