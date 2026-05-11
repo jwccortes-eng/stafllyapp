@@ -606,11 +606,11 @@ function MobileShiftTeamHubImpl({
   ];
 
   const TABS: { key: TabKey; label: string; badge?: number }[] = [
-    { key: "overview", label: "Overview" },
-    { key: "assigned", label: "Assigned", badge: assignments.length || undefined },
-    { key: "claims", label: "Claims", badge: claimsPending || undefined },
-    { key: "issues", label: "Issues", badge: issues.length || undefined },
-    { key: "recommended", label: "Recommended" },
+    { key: "overview", label: "Resumen" },
+    { key: "assigned", label: "Asignados", badge: assignments.length || undefined },
+    { key: "claims", label: "Solicitudes", badge: claimsPending || undefined },
+    { key: "issues", label: "Alertas", badge: issues.length || undefined },
+    { key: "recommended", label: "Recomendados" },
   ];
 
   return (
