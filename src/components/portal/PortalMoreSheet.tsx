@@ -64,14 +64,14 @@ export function PortalMoreSheet({
         onClick={onClose}
       />
 
-      <div className="relative w-full max-h-[85vh] overflow-hidden bg-card border-t border-border/30 rounded-t-3xl shadow-2xl animate-in slide-in-from-bottom duration-300">
+      <div className="relative w-full max-h-[90vh] flex flex-col bg-card border-t border-border/30 rounded-t-3xl shadow-2xl animate-in slide-in-from-bottom duration-300">
         {/* Handle */}
-        <div className="flex justify-center pt-3 pb-1">
+        <div className="shrink-0 flex justify-center pt-3 pb-1">
           <div className="w-10 h-1 rounded-full bg-border/50" />
         </div>
 
         {/* Profile header */}
-        <div className="px-6 pb-3 pt-2 flex items-center gap-3.5">
+        <div className="shrink-0 px-6 pb-3 pt-2 flex items-center gap-3.5">
           <EmployeeAvatar
             firstName={firstName}
             lastName={lastName}
@@ -88,10 +88,10 @@ export function PortalMoreSheet({
           </Button>
         </div>
 
-        <Separator className="opacity-30" />
+        <Separator className="shrink-0 opacity-30" />
 
-        {/* Menu items */}
-        <div className="px-4 py-3 overflow-y-auto max-h-[50vh]">
+        {/* Menu items (scrollable) */}
+        <div className="flex-1 min-h-0 overflow-y-auto px-4 py-3">
           <p className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-widest px-4 pb-2">Más opciones</p>
           <div className="space-y-0.5">
             {visibleItems.map((item) => {
@@ -156,8 +156,8 @@ export function PortalMoreSheet({
           )}
         </div>
 
-        {/* Footer */}
-        <div className="flex items-center justify-between px-6 py-3.5 border-t border-border/20">
+        {/* Footer (always visible, never clipped) */}
+        <div className="shrink-0 flex items-center justify-between px-6 py-3.5 border-t border-border/20 bg-card pb-[calc(env(safe-area-inset-bottom,0px)+14px)]">
           <button
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
             className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors px-3 py-2 rounded-xl hover:bg-muted/30"
@@ -172,7 +172,7 @@ export function PortalMoreSheet({
             </button>
           </LogoutConfirmDialog>
         </div>
-        <div className="flex justify-center pb-2">
+        <div className="shrink-0 flex justify-center pb-1">
           <BuildVersionBadge />
         </div>
       </div>

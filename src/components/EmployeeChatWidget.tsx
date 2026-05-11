@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useLocation, matchPath } from "react-router-dom";
 import { safeRandomUUID } from "@/lib/safe-storage";
 import { MessageCircle, X, Send, Loader2, Bot, User, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -29,6 +30,13 @@ export default function EmployeeChatWidget() {
   const inputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const { user } = useAuth();
+  const location = useLocation();
+
+  // Lift FAB higher on routes with primary action buttons near the bottom
+  // (Clock In/Out and shift detail accept/reject) so it never overlaps them.
+  const liftHigher =
+    !!matchPath("/portal/clock", location.pathname) ||
+    !!matchPath("/portal/shifts/:shiftId", location.pathname);
 
   const scrollToBottom = useCallback(() => {
     setTimeout(() => {
@@ -121,9 +129,11 @@ export default function EmployeeChatWidget() {
           "h-12 w-12 md:h-14 md:w-14 flex items-center justify-center",
           // Lift above the 48px bottom nav + 6-12px gap + safe area inset
           "right-4 md:right-8",
-          "bottom-[calc(env(safe-area-inset-bottom,0px)+72px)] md:bottom-8"
+          liftHigher
+            ? "bottom-[calc(env(safe-area-inset-bottom,0px)+148px)] md:bottom-8"
+            : "bottom-[calc(env(safe-area-inset-bottom,0px)+72px)] md:bottom-8"
         )}
-        aria-label={open ? "Close chat" : "Open assistant"}
+        aria-label={open ? "Cerrar chat" : "Abrir asistente"}
       >
         {open ? <X className="h-5 w-5 md:h-6 md:w-6" /> : <MessageCircle className="h-5 w-5 md:h-6 md:w-6" />}
       </button>
@@ -148,7 +158,7 @@ export default function EmployeeChatWidget() {
               <p className="text-[11px] text-muted-foreground">Pregunta sobre tus pagos</p>
             </div>
             {messages.length > 0 && (
-              <button
+            <button
                 onClick={clearHistory}
                 className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
                 title="Borrar historial"

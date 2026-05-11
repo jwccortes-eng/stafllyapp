@@ -110,33 +110,33 @@ const FILTER_ICONS: Record<FilterTab, React.ReactNode> = {
 };
 
 const FILTER_LABELS: Record<FilterTab, string> = {
-  all: "All",
-  shifts: "Shifts",
-  clock: "Clock",
-  people: "People",
-  other: "Other",
+  all: "Todas",
+  shifts: "Turnos",
+  clock: "Reloj",
+  people: "Personas",
+  other: "Otras",
 };
 
 const TYPE_LABELS: Record<string, string> = {
-  shift_request_new: "Request",
-  shift_assigned: "Assigned",
-  shift_published: "Published",
-  shift_available: "Available",
-  shift_claimable: "Available",
-  shift_updated: "Updated",
-  shift_confirmed: "Confirmed",
-  shift_rejected: "Rejected",
-  clock_request: "Clock",
-  announcement: "Announcement",
-  payment_ready: "Payment",
-  shift_reminder: "Reminder",
-  no_clock: "No clock",
-  period_closed: "Period",
-  payroll_email: "Payroll",
-  new_application: "Application",
-  invitation_accepted: "Invitation",
-  invitation_expired: "Expired",
-  review_pending: "Review",
+  shift_request_new: "Solicitud",
+  shift_assigned: "Asignado",
+  shift_published: "Publicado",
+  shift_available: "Disponible",
+  shift_claimable: "Disponible",
+  shift_updated: "Actualizado",
+  shift_confirmed: "Confirmado",
+  shift_rejected: "Rechazado",
+  clock_request: "Reloj",
+  announcement: "Anuncio",
+  payment_ready: "Pago",
+  shift_reminder: "Recordatorio",
+  no_clock: "Sin reloj",
+  period_closed: "Periodo",
+  payroll_email: "Nómina",
+  new_application: "Aplicación",
+  invitation_accepted: "Invitación",
+  invitation_expired: "Expirada",
+  review_pending: "Reseña",
 };
 
 const NotificationBell = forwardRef<HTMLDivElement>(function NotificationBell(_props, _ref) {
@@ -181,7 +181,7 @@ const NotificationBell = forwardRef<HTMLDivElement>(function NotificationBell(_p
       <PopoverContent align="end" className="w-[380px] p-0 rounded-2xl shadow-xl border-border/50" sideOffset={8}>
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border/30">
-          <h3 className="text-sm font-heading font-bold">Notifications</h3>
+          <h3 className="text-sm font-heading font-bold">Notificaciones</h3>
           <div className="flex items-center gap-3">
             {unreadCount > 0 && (
               <button
@@ -189,14 +189,14 @@ const NotificationBell = forwardRef<HTMLDivElement>(function NotificationBell(_p
                 className="flex items-center gap-1.5 text-[11px] font-medium text-primary hover:underline"
               >
                 <CheckCheck className="h-3.5 w-3.5" />
-                Mark all read
+                Marcar todas leídas
               </button>
             )}
             <button
               onClick={() => { setOpen(false); navigate("/app/notifications"); }}
               className="text-[11px] font-medium text-muted-foreground hover:text-foreground"
             >
-              View all
+              Ver todas
             </button>
           </div>
         </div>
@@ -234,7 +234,7 @@ const NotificationBell = forwardRef<HTMLDivElement>(function NotificationBell(_p
             <div className="flex flex-col items-center justify-center py-10 text-center">
               <Bell className="h-8 w-8 text-muted-foreground/30 mb-2" />
               <p className="text-sm text-muted-foreground/60">
-                {filter === "all" ? "No notifications" : "No notifications in this category"}
+                {filter === "all" ? "No hay notificaciones" : "No hay notificaciones en esta categoría"}
               </p>
             </div>
           ) : (
