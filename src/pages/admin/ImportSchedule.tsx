@@ -1233,25 +1233,43 @@ export default function ImportSchedule() {
                   if (!error) {
                     totalAssignments++;
                   } else {
+                    const ft = classifySupabaseError(error.message);
                     assignmentFailures.push(buildFailure({
                       ...failureCtx(meta.group),
                       raw_employee_name: meta.rawName,
                       employee_id: payload.employee_id,
                       match_method: meta.method,
-                      failure_type: classifySupabaseError(error.message),
+                      failure_type: ft,
                       error_message: error.message,
                     }));
+                    if (ft === "overlap") {
+                      importWarnings.push(buildImportWarning("WORKER_OMITTED_OVERLAP_NEEDS_REVIEW", {
+                        ...warnCtx(meta.group),
+                        raw_employee_name: meta.rawName,
+                        matched_employee_id: payload.employee_id,
+                        details: { error: error.message },
+                      }));
+                    }
                   }
                 } catch (ex: any) {
                   const exMsg = ex?.message ?? String(ex);
+                  const ft = classifySupabaseError(exMsg);
                   assignmentFailures.push(buildFailure({
                     ...failureCtx(meta.group),
                     raw_employee_name: meta.rawName,
                     employee_id: payload.employee_id,
                     match_method: meta.method,
-                    failure_type: classifySupabaseError(exMsg),
+                    failure_type: ft,
                     error_message: exMsg,
                   }));
+                  if (ft === "overlap") {
+                    importWarnings.push(buildImportWarning("WORKER_OMITTED_OVERLAP_NEEDS_REVIEW", {
+                      ...warnCtx(meta.group),
+                      raw_employee_name: meta.rawName,
+                      matched_employee_id: payload.employee_id,
+                      details: { error: exMsg },
+                    }));
+                  }
                 }
               }
             } else {
