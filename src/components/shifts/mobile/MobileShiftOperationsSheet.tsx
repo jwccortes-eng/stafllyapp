@@ -562,7 +562,6 @@ export function MobileShiftOperationsSheet({
               title = "Siguiente paso recomendado";
               text = `Faltan ${missing} trabajador${missing === 1 ? "" : "es"} para completar este turno.`;
               primary = { label: "Gestionar equipo", onClick: () => setHubOpen(true), icon: Users };
-              secondary = { label: "Notificar equipo", onClick: () => setNotifyOpen(true), icon: Bell };
             } else if (noLocation) {
               title = "Siguiente paso recomendado";
               text = "Falta la ubicación del trabajo. La edición completa está disponible desde escritorio por ahora.";
