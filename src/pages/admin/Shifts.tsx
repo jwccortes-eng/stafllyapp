@@ -1300,7 +1300,7 @@ function DesktopShifts() {
         shift.title,
         "shift_assigned",
         `Asignado a turno: ${shift.title}`,
-        `Has sido asignado al turno "${shift.title}" del ${shift.date} (${shift.start_time.slice(0, 5)}-${shift.end_time.slice(0, 5)}).`,
+        `Has sido asignado a "${shift.title}" — ${shift.date} · ${workRouteLine(shift.start_time, shift.end_time, (shift as any).meeting_point ?? null)}.`,
         employeeIds
       );
     }
