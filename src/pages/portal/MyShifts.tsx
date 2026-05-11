@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffectiveEmployee } from "@/hooks/useEffectiveEmployee";
 import {
-  CalendarDays, Clock, MapPin, HandMetal, Loader2,
+  CalendarDays, Clock, MapPin, HandMetal, Loader2, Check, X, LogIn,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -21,6 +21,15 @@ import { CLAIMABLE_VISIBLE_STATUSES, isShiftClaimableForEmployee } from "@/lib/s
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorBlock } from "@/components/ui/error-block";
 import { formatDisplayName } from "@/lib/format-helpers";
+import {
+  OperationalAgendaHero,
+  OperationalTimeline,
+  OperationalTimelineRow,
+  AgendaSectionHeader,
+  AgendaEmptyState,
+  type AgendaItem,
+  type AgendaStatus,
+} from "@/components/mobile-agenda";
 
 interface ShiftAssignment {
   id: string;
