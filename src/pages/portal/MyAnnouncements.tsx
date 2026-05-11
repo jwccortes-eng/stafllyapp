@@ -179,10 +179,12 @@ export default function MyAnnouncements() {
             const annReactions = reactions[a.id] ?? [];
 
             return (
-              <article
+              <StaflyCard
                 key={a.id}
+                tone="default"
+                padding="none"
                 className={cn(
-                  "rounded-2xl border bg-card overflow-hidden transition-all",
+                  "overflow-hidden transition-all",
                   a.pinned && "ring-1 ring-primary/20",
                   a.priority === "urgent" && "border-destructive/30"
                 )}
