@@ -699,6 +699,11 @@ export function MobileShiftOperationsSheet({
                         role={extra?.assignment_role ?? null}
                         clock={clockByEmp[w.id]}
                         isShiftAdmin={shiftAdminId === w.id}
+                        acceptedAt={extra?.accepted_at ?? null}
+                        respondedAt={extra?.responded_at ?? null}
+                        importBatchId={extra?.import_batch_id ?? null}
+                        canManagePhone={canValidate}
+                        onPhoneSaved={() => setReloadKey(k => k + 1)}
                       />
                     );
                   })}
