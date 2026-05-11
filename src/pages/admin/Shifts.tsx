@@ -997,7 +997,7 @@ function DesktopShifts() {
         await sendShiftNotifications(
           shiftId, shiftTitle, "shift_claimable",
           "Turno disponible para reclamar",
-          `"${shiftTitle}" el ${dateLabel} (${oldShift.start_time.slice(0, 5)}–${oldShift.end_time.slice(0, 5)}). Aplica y te notificaremos si eres aceptado.`,
+          `"${shiftTitle}" · ${dateLabel} · ${workRouteLine(oldShift.start_time, oldShift.end_time, (oldShift as any).meeting_point ?? null)}. Aplica y te notificaremos si eres aceptado.`,
           claimRecipients, { claimable: true }
         );
       }
