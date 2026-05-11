@@ -22,6 +22,13 @@ export interface ShiftShareContext {
   date: string; // ISO date
   startTime: string; // HH:mm[:ss]
   recipientName?: string | null;
+  // ── Work Route extensions (all optional; omit lines when missing). ──────
+  endTime?: string | null;        // muted "Termina aprox.", never used for pay
+  meetingPoint?: string | null;   // free-text address
+  meetingTime?: string | null;    // HH:mm[:ss]
+  jobSite?: string | null;        // resolved job-site / location label
+  instructions?: string | null;
+  clientName?: string | null;
 }
 
 function formatDateEs(iso: string): string {
@@ -29,9 +36,9 @@ function formatDateEs(iso: string): string {
   try {
     const [y, m, d] = iso.split("-").map(Number);
     return new Date(y, (m ?? 1) - 1, d ?? 1).toLocaleDateString("es-CO", {
-      weekday: "short",
+      weekday: "long",
       day: "numeric",
-      month: "short",
+      month: "long",
     });
   } catch {
     return iso;
@@ -42,13 +49,53 @@ function formatTime(t: string): string {
   return (t ?? "").slice(0, 5);
 }
 
+function clean(v?: string | null): string | null {
+  const s = (v ?? "").trim();
+  return s.length ? s : null;
+}
+
+/**
+ * Stafly Work Route message. Lines are appended only when the underlying
+ * field is present, so legacy callers that only pass {title,date,startTime,url}
+ * still get a sensible compact message.
+ *
+ * Never represents scheduled hours as payroll. `endTime` is shown as
+ * "Termina aprox." to signal it's an estimate.
+ */
 export function buildShiftMessage(ctx: ShiftShareContext): string {
   const greeting = ctx.recipientName
     ? `Hola ${ctx.recipientName.trim().split(/\s+/)[0]},`
     : "Hola,";
-  const when = `${formatDateEs(ctx.date)} a las ${formatTime(ctx.startTime)}`;
-  const titleLine = ctx.title ? `\n📋 ${ctx.title}` : "";
-  return `${greeting}\n\nTienes un turno asignado:${titleLine}\n📅 ${when}\n\n👉 ${ctx.url}\n\nÁbrelo para confirmar o ver los detalles.`;
+
+  const lines: string[] = [];
+  const client = clean(ctx.clientName);
+  const title = clean(ctx.title);
+  // Client takes precedence; fall back to title if no client.
+  if (client) lines.push(`Cliente: ${client}`);
+  else if (title) lines.push(`Turno: ${title}`);
+
+  const date = clean(ctx.date);
+  if (date) lines.push(`Fecha: ${formatDateEs(date)}`);
+
+  const start = clean(ctx.startTime);
+  if (start) lines.push(`Entrada: ${formatTime(start)}`);
+
+  const mp = clean(ctx.meetingPoint);
+  if (mp) lines.push(`Punto de encuentro: ${mp}`);
+
+  const mt = clean(ctx.meetingTime);
+  if (mt) lines.push(`Hora de encuentro: ${formatTime(mt)}`);
+
+  const job = clean(ctx.jobSite);
+  if (job && job !== mp) lines.push(`Trabajo: ${job}`);
+
+  const end = clean(ctx.endTime);
+  if (end) lines.push(`Termina aprox.: ${formatTime(end)}`);
+
+  const instr = clean(ctx.instructions);
+  if (instr) lines.push(`Instrucciones: ${instr}`);
+
+  return `${greeting}\n\nTienes un turno:\n${lines.join("\n")}\n\nConfirma tu disponibilidad en Stafly:\n${ctx.url}`;
 }
 
 export async function copyLink(url: string): Promise<void> {
