@@ -33,7 +33,7 @@ export function MobileAdminModuleShell({
   className,
 }: MobileAdminModuleShellProps) {
   return (
-    <div className={cn("min-h-full flex flex-col", MOBILE_PAGE_PB, className)}>
+    <div className={cn("min-h-full flex flex-col", STAFLY_BOTTOM_NAV_CLEARANCE, className)}>
       {header}
       {tabs}
       {summary && <div className="mb-3">{summary}</div>}
