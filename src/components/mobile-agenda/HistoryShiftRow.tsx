@@ -148,8 +148,15 @@ export function HistoryShiftRow({
               Reloj sin cerrar{ci ? ` desde ${ci}` : ""}
             </div>
           ) : (
-            <div className="mt-2 text-[12px] text-muted-foreground/80 italic">
-              {loading ? "Cargando…" : "Sin horas registradas"}
+            <div className="mt-2">
+              <p className="text-[12px] text-muted-foreground/85 font-medium">
+                {loading ? "Cargando…" : "Sin horas en Stafly todavía"}
+              </p>
+              {!loading && (
+                <p className="text-[10.5px] text-muted-foreground/65 italic mt-0.5">
+                  Puede estar en revisión o venir de Connecteam.
+                </p>
+              )}
             </div>
           )}
 
