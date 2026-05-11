@@ -32,6 +32,7 @@ import {
 } from "@/components/mobile-agenda";
 import { HistoryShiftRow } from "@/components/mobile-agenda/HistoryShiftRow";
 import { useWorkedShiftHistory } from "@/hooks/useWorkedShiftHistory";
+import { WeekHistorySummary } from "@/components/portal/WeekHistorySummary";
 
 interface ShiftAssignment {
   id: string;
