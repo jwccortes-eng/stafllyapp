@@ -144,6 +144,8 @@ export function MobileShiftOperationsSheet({
 }: Props) {
   const navigate = useNavigate();
   const [traceOpen, setTraceOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [closeoutOpen, setCloseoutOpen] = useState(false);
   const [hubOpen, setHubOpen] = useState(false);
   const [notifyOpen, setNotifyOpen] = useState(false);
 
