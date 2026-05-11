@@ -1278,9 +1278,9 @@ function IssuesTab({
   issues: Array<{ key: string; tone: "warn" | "bad" | "info"; icon: React.ComponentType<{ className?: string }>; title: string; helper?: string }>;
 }) {
   return (
-    <section aria-label="Issues that need attention">
+    <section aria-label="Alertas que requieren atención">
       <SectionTitle icon={AlertTriangle} helper={HUB_COPY.issuesHelper}>
-        Issues
+        Alertas
         {issues.length > 0 && (
           <span className="ml-1.5 text-xs font-normal text-muted-foreground normal-case tracking-normal">
             ({issues.length})
