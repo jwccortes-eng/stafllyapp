@@ -41,6 +41,8 @@ import {
   type RawShiftRow,
   type NormalizedRowInput,
 } from "@/lib/import/schedule-traceability";
+import { parseShiftNote } from "@/lib/import/note-parser";
+import { buildImportWarning, type ImportWarning } from "@/lib/import/import-warnings";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const ACCEPTED_EXTENSIONS = ".xls,.xlsx,.csv";
