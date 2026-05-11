@@ -1050,9 +1050,9 @@ function ErrorBlock({
                   variant="ghost"
                   className="h-8 rounded-lg"
                   onClick={onBack}
-                  aria-label="Back to shifts"
+                  aria-label="Volver a turnos"
                 >
-                  Back
+                  Volver
                 </Button>
               )}
             </div>
