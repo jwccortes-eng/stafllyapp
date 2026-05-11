@@ -149,6 +149,7 @@ export function MobileShiftOperationsSheet({
   const [closeoutOpen, setCloseoutOpen] = useState(false);
   const [hubOpen, setHubOpen] = useState(false);
   const [notifyOpen, setNotifyOpen] = useState(false);
+  const [locationReportOpen, setLocationReportOpen] = useState(false);
 
   // Auto-open Manage Team hub when requested by deep-link intent.
   useEffect(() => {
