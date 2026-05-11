@@ -1353,18 +1353,18 @@ function classifyGroup(c: RankedCandidate): RecGroup {
 
 const GROUP_META: Record<RecGroup, { label: string; helper: string; tone: string }> = {
   best: {
-    label: "Best match",
-    helper: "Assignable, ready, no risk flags, strong score.",
+    label: "Mejor opción",
+    helper: "Asignables, listos, sin alertas y con buen puntaje.",
     tone: "border-emerald-500/40 text-emerald-700 dark:text-emerald-400 bg-emerald-500/10",
   },
   good: {
-    label: "Good options",
-    helper: "Solid candidates with grace period or worked-here history.",
+    label: "Buenas opciones",
+    helper: "Candidatos sólidos con período de gracia o historial aquí.",
     tone: "border-sky-500/40 text-sky-700 dark:text-sky-400 bg-sky-500/10",
   },
   caution: {
-    label: "Use with caution",
-    helper: "Low score, risk flags, conflict, or otherwise blocked.",
+    label: "Usar con precaución",
+    helper: "Puntaje bajo, alertas, conflicto u otro bloqueo.",
     tone: "border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10",
   },
 };
