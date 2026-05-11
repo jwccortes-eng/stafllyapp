@@ -1121,9 +1121,9 @@ function ClaimsTab({
   onCopyReminder: (workerName: string) => void;
 }) {
   return (
-    <section aria-label="Worker claims and requests">
+    <section aria-label="Solicitudes de trabajadores">
       <SectionTitle icon={Inbox} helper={HUB_COPY.claimsHelper}>
-        Claims
+        Solicitudes
         {claims.length > 0 && (
           <span className="ml-1.5 text-xs font-normal text-muted-foreground normal-case tracking-normal">
             ({claims.length})
@@ -1137,7 +1137,7 @@ function ClaimsTab({
         </div>
       ) : loading ? (
         <div className="rounded-2xl border border-border/50 bg-muted/20 px-4 py-5 text-center text-[12px] text-muted-foreground">
-          Loading claims…
+          Cargando solicitudes…
         </div>
       ) : claims.length === 0 ? (
         <EmptyBlock title={HUB_COPY.emptyClaimsTitle} helper={HUB_COPY.emptyClaimsHelper} />
@@ -1145,13 +1145,17 @@ function ClaimsTab({
         <ul className="space-y-2">
           {claims.map((c) => {
             const e = empById.get(c.employee_id);
-            const workerName = e ? fullName(e) : "this worker";
+            const workerName = e ? fullName(e) : "este trabajador";
             const tone =
               c.status === "approved" ? "good" :
               c.status === "rejected" ? "bad" : "warn";
             const isPending = c.status === "pending";
             const readiness = computeReadiness(e, companyId);
             const blocked = isPending && !readiness.canBeApproved;
+            const statusLabel =
+              c.status === "approved" ? "Aprobada" :
+              c.status === "rejected" ? "Rechazada" :
+              c.status === "pending" ? "Pendiente" : (c.status ?? "");
             return (
               <li key={c.id} className="rounded-2xl border border-border/50 bg-card p-3">
                 <div className="flex items-start gap-2.5">
@@ -1164,13 +1168,13 @@ function ClaimsTab({
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-2">
                       <p className="text-sm font-semibold leading-tight truncate">
-                        {e ? fullName(e) : "Claim request pending"}
+                        {e ? fullName(e) : "Solicitud pendiente"}
                       </p>
                       <Badge
                         variant="outline"
-                        className={cn("h-[18px] px-1.5 text-[10px] font-semibold capitalize", toneToClass(tone))}
+                        className={cn("h-[18px] px-1.5 text-[10px] font-semibold", toneToClass(tone))}
                       >
-                        {c.status}
+                        {statusLabel}
                       </Badge>
                     </div>
                     {readiness.state !== "ready" && (
