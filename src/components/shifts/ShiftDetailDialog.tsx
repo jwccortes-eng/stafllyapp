@@ -1506,7 +1506,19 @@ export function ShiftDetailDialog({
 
     {notifyOpen && (
       <Suspense fallback={null}>
-        <SendNotificationDialog open={notifyOpen} onOpenChange={setNotifyOpen} shift={shift} assignments={assignments} employees={employees} />
+        <SendNotificationDialog
+          open={notifyOpen}
+          onOpenChange={setNotifyOpen}
+          shift={shift}
+          assignments={assignments}
+          employees={employees}
+          meetingPoint={(shift as any).meeting_point ?? null}
+          meetingTime={(shift as any).meeting_time ?? null}
+          clientName={client?.name ?? null}
+          jobSiteName={location?.name ?? null}
+          specialInstructions={shift.notes ?? null}
+          friendlyDate={format(parseISO(shift.date), "EEE d MMM", { locale: es })}
+        />
       </Suspense>
     )}
     </>
