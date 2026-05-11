@@ -294,6 +294,8 @@ interface Props {
   locationName?: string | null;
   /** Optional meeting-point text — used to clarify "missing job site" issues. */
   meetingPoint?: string | null;
+  /** Optional meeting time (HH:mm or HH:mm:ss). Presentational only. */
+  meetingTime?: string | null;
   /** Whether a meeting_point_location_id is linked (separate from job site). */
   hasMeetingPointLocation?: boolean;
   /** scheduled_shifts.shift_admin_id, used for Captain badge. */
