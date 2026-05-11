@@ -623,40 +623,6 @@ export function MobileShiftOperationsSheet({
             );
           })()}
 
-          {/* 3. Acciones rápidas — núcleo (3 botones máximo) */}
-          <section>
-            <SectionTitle icon={Sparkles}>Acciones rápidas</SectionTitle>
-            <div className="grid grid-cols-3 gap-2">
-              {canValidate && (
-                <Button
-                  variant="outline"
-                  className="h-14 rounded-xl flex-col gap-1 text-[11px] font-semibold px-1"
-                  onClick={() => setHubOpen(true)}
-                >
-                  <Users className="h-4 w-4" />
-                  <span>Equipo</span>
-                </Button>
-              )}
-              <Button
-                variant="outline"
-                className="h-14 rounded-xl flex-col gap-1 text-[11px] font-semibold px-1"
-                onClick={handleViewAttendance}
-              >
-                <ClipboardList className="h-4 w-4" />
-                <span>Asistencia</span>
-              </Button>
-              {canValidate && (
-                <Button
-                  variant="outline"
-                  className="h-14 rounded-xl flex-col gap-1 text-[11px] font-semibold px-1"
-                  onClick={() => setNotifyOpen(true)}
-                >
-                  <Bell className="h-4 w-4" />
-                  <span>Notificar</span>
-                </Button>
-              )}
-            </div>
-          </section>
 
           {/* 3. Equipo asignado */}
           <section>
