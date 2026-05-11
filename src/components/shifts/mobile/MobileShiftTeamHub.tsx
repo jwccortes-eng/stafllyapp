@@ -1886,13 +1886,13 @@ function RecommendedTab({
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <p className="text-sm font-semibold text-foreground truncate">{c.name}</p>
                     <span className={cn("h-[18px] inline-flex items-center rounded-full border px-1.5 text-[10px] font-semibold", badgeTone)}>
-                      {c.readinessState === "ready" ? "Ready" : c.readinessState === "grace_period" ? "Grace" : "Blocked"}
+                      {c.readinessState === "ready" ? "Listo" : c.readinessState === "grace_period" ? "Gracia" : "Bloqueado"}
                     </span>
                     <span
                       className="h-[18px] inline-flex items-center rounded-md border border-border/50 bg-muted/40 px-1.5 text-[10px] font-mono tabular-nums text-muted-foreground"
-                      title={`Score ${c.score}`}
+                      title={`Puntaje ${c.score}`}
                     >
-                      Score {c.score}
+                      Puntaje {c.score}
                     </span>
                   </div>
                   {display.chips.length > 0 && (
@@ -1926,7 +1926,7 @@ function RecommendedTab({
                   {c.phone ? (
                     <p className="mt-1 text-[11px] text-muted-foreground tabular-nums">{c.phone}</p>
                   ) : (
-                    <p className="mt-1 text-[11px] text-amber-700 dark:text-amber-400">No phone on file</p>
+                    <p className="mt-1 text-[11px] text-amber-700 dark:text-amber-400">Sin teléfono registrado</p>
                   )}
                   <button
                     type="button"
@@ -1934,7 +1934,7 @@ function RecommendedTab({
                     className="mt-1.5 inline-flex items-center gap-1 text-[10.5px] font-semibold text-muted-foreground hover:text-foreground"
                     aria-expanded={isExpanded}
                   >
-                    {isExpanded ? "Hide why" : "Why?"}
+                    {isExpanded ? "Ocultar" : "¿Por qué?"}
                   </button>
                   {isExpanded && (
                     <ul className="mt-1.5 space-y-0.5 rounded-lg bg-muted/30 px-2 py-1.5">
