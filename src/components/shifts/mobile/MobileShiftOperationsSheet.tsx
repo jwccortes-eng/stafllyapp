@@ -52,16 +52,17 @@ import {
  */
 const MOBILE_SHIFT_COPY = {
   // Shared
-  readOnlyMobile: "Solo lectura en móvil",
+  readOnlyMobile: "Operación móvil",
+  mobileSafeActions: "Acciones seguras disponibles en móvil.",
 
   // Coverage section
   coverageHelper: "Cupos requeridos, trabajadores asignados y estado actual de personal.",
 
   // Assigned workers section
-  assignedWorkersHelper: "Revisa el equipo asignado y contáctalos desde el móvil.",
+  assignedWorkersHelper: "Revisa, contacta y gestiona el equipo desde móvil.",
   assignedSortedHelper: "Ordenado por rol y estado de asistencia.",
   noWorkersTitle: "Aún no hay trabajadores asignados",
-  noWorkersHelper: "Agrega trabajadores desde escritorio antes de revisar cobertura o asistencia.",
+  noWorkersHelper: "Asigna trabajadores desde Gestionar equipo o usa las herramientas avanzadas en escritorio.",
 
   // Attendance section
   attendanceSectionHelper: "Revisa la actividad de entrada y salida.",
@@ -75,19 +76,19 @@ const MOBILE_SHIFT_COPY = {
   noClientTitle: "Falta cliente",
   noClientHelper: "Agrega el cliente desde escritorio para identificar este turno fácilmente.",
   noLocationTitle: "Falta ubicación del trabajo",
-  noLocationHelper: "Agrega la ubicación desde escritorio. El punto de encuentro es distinto — es donde se reúnen los trabajadores, no el lugar real.",
+  noLocationHelper: "El punto de encuentro es distinto — es donde se reúnen los trabajadores, no el lugar real. Puedes reportar la ubicación correcta desde móvil; los cambios avanzados siguen en escritorio.",
   noLocationOrMeetingTitle: "Falta ubicación y punto de encuentro",
-  noLocationOrMeetingHelper: "Los trabajadores no sabrán a dónde ir. Agrega una ubicación desde escritorio.",
+  noLocationOrMeetingHelper: "Los trabajadores no sabrán a dónde ir. Reporta la ubicación correcta desde móvil o edítala en escritorio.",
   noMeetingPoint: "Sin punto de encuentro.",
 
   // Notes section
   notesSectionHelper: "Notas internas de este turno.",
   noNotesTitle: "Sin notas",
-  noNotesHelper: "Las notas internas se pueden agregar desde escritorio por ahora.",
+  noNotesHelper: "Las notas internas se pueden agregar desde escritorio.",
 
   // Worker row — no phone state
   noPhoneTitle: "Sin teléfono registrado",
-  noPhoneHelper: "Agrega un número en el perfil del trabajador para habilitar llamada, SMS y WhatsApp.",
+  noPhoneHelper: "Agrega el número desde móvil para habilitar llamada, SMS y WhatsApp.",
 
   // Error states
   teamErrorTitle: "No se pudo cargar el equipo",
@@ -148,6 +149,7 @@ export function MobileShiftOperationsSheet({
   const [closeoutOpen, setCloseoutOpen] = useState(false);
   const [hubOpen, setHubOpen] = useState(false);
   const [notifyOpen, setNotifyOpen] = useState(false);
+  const [locationReportOpen, setLocationReportOpen] = useState(false);
 
   // Auto-open Manage Team hub when requested by deep-link intent.
   useEffect(() => {
@@ -169,6 +171,7 @@ export function MobileShiftOperationsSheet({
     accepted_at: string | null;
     rejected_at: string | null;
     responded_at: string | null;
+    import_batch_id: string | null;
   };
   const [asgnExtras, setAsgnExtras] = useState<AsgnExtra[]>([]);
   const [clockByEmp, setClockByEmp] = useState<Record<string, { clock_in: string | null; clock_out: string | null }>>({});
@@ -187,7 +190,7 @@ export function MobileShiftOperationsSheet({
       const [asgnRes, teRes, shiftRes] = await Promise.all([
         supabase
           .from("shift_assignments")
-          .select("id, employee_id, status, response_status, attendance_status, assignment_role, accepted_at, rejected_at, responded_at")
+          .select("id, employee_id, status, response_status, attendance_status, assignment_role, accepted_at, rejected_at, responded_at, import_batch_id")
           .eq("shift_id", shift.id),
         supabase
           .from("time_entries")
@@ -564,8 +567,8 @@ export function MobileShiftOperationsSheet({
               primary = { label: "Gestionar equipo", onClick: () => setHubOpen(true), icon: Users };
             } else if (noLocation) {
               title = "Siguiente paso recomendado";
-              text = "Falta la ubicación del trabajo. La edición completa está disponible desde escritorio por ahora.";
-              helper = "Editar ubicación desde escritorio";
+              text = "Falta la ubicación del trabajo. Repórtala desde móvil o edítala en escritorio para fijarla en el sistema.";
+              primary = { label: "Reportar ubicación", onClick: () => setLocationReportOpen(true), icon: MapPin };
             } else if (!mp) {
               title = "Siguiente paso recomendado";
               text = "Falta punto de encuentro para los trabajadores.";
@@ -696,6 +699,11 @@ export function MobileShiftOperationsSheet({
                         role={extra?.assignment_role ?? null}
                         clock={clockByEmp[w.id]}
                         isShiftAdmin={shiftAdminId === w.id}
+                        acceptedAt={extra?.accepted_at ?? null}
+                        respondedAt={extra?.responded_at ?? null}
+                        importBatchId={extra?.import_batch_id ?? null}
+                        canManagePhone={canValidate}
+                        onPhoneSaved={() => setReloadKey(k => k + 1)}
                       />
                     );
                   })}
@@ -706,10 +714,10 @@ export function MobileShiftOperationsSheet({
             {understaffed && (
               <div className="mt-2.5 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-3.5">
                 <div className="text-sm font-semibold text-amber-800 dark:text-amber-300">
-                  Cambios de personal disponibles desde escritorio por ahora.
+                  Faltan {slots - assignedCount} cupo{slots - assignedCount === 1 ? "" : "s"}
                 </div>
                 <div className="text-xs text-amber-700/80 dark:text-amber-300/80 mt-1 leading-relaxed">
-                  {slots - assignedCount} cupo{slots - assignedCount === 1 ? "" : "s"} abierto{slots - assignedCount === 1 ? "" : "s"}. Puedes revisar la cobertura y contactar al equipo asignado desde el móvil.
+                  Puedes revisar, contactar y asignar trabajadores desde móvil con Gestionar equipo. Cambios avanzados siguen en escritorio.
                 </div>
               </div>
             )}
@@ -1045,7 +1053,7 @@ export function MobileShiftOperationsSheet({
             </Button>
           )}
           <p className="mt-2 text-center text-[11px] text-muted-foreground">
-            La edición del turno está disponible desde escritorio por ahora.
+            Acciones seguras disponibles en móvil. Cambios avanzados siguen en escritorio.
           </p>
         </div>
       </SheetContent>
@@ -1314,6 +1322,11 @@ function areWorkerRowPropsEqual(
     role: string | null;
     clock: { clock_in: string | null; clock_out: string | null } | undefined;
     isShiftAdmin: boolean;
+    acceptedAt: string | null;
+    respondedAt: string | null;
+    importBatchId: string | null;
+    canManagePhone: boolean;
+    onPhoneSaved: () => void;
   },
   next: {
     worker: Employee;
@@ -1322,6 +1335,11 @@ function areWorkerRowPropsEqual(
     role: string | null;
     clock: { clock_in: string | null; clock_out: string | null } | undefined;
     isShiftAdmin: boolean;
+    acceptedAt: string | null;
+    respondedAt: string | null;
+    importBatchId: string | null;
+    canManagePhone: boolean;
+    onPhoneSaved: () => void;
   },
 ): boolean {
   if (prev.worker.id !== next.worker.id) return false;
@@ -1335,11 +1353,16 @@ function areWorkerRowPropsEqual(
   if (prev.isShiftAdmin !== next.isShiftAdmin) return false;
   if (prev.clock?.clock_in !== next.clock?.clock_in) return false;
   if (prev.clock?.clock_out !== next.clock?.clock_out) return false;
+  if (prev.acceptedAt !== next.acceptedAt) return false;
+  if (prev.respondedAt !== next.respondedAt) return false;
+  if (prev.importBatchId !== next.importBatchId) return false;
+  if (prev.canManagePhone !== next.canManagePhone) return false;
   return true;
 }
 
 const WorkerRow = memo(function WorkerRow({
   worker, assignmentStatus, attendanceStatus, role, clock, isShiftAdmin,
+  acceptedAt, respondedAt, importBatchId, canManagePhone, onPhoneSaved,
 }: {
   worker: Employee;
   assignmentStatus: string | null;
@@ -1347,6 +1370,11 @@ const WorkerRow = memo(function WorkerRow({
   role: string | null;
   clock: { clock_in: string | null; clock_out: string | null } | undefined;
   isShiftAdmin: boolean;
+  acceptedAt?: string | null;
+  respondedAt?: string | null;
+  importBatchId?: string | null;
+  canManagePhone?: boolean;
+  onPhoneSaved?: () => void;
 }) {
   const phone = worker.phone_number?.trim();
   const normalized = normalizePhone(phone);
@@ -1356,7 +1384,11 @@ const WorkerRow = memo(function WorkerRow({
   const att = attendanceBadgeFor(attendanceStatus, clock);
   const roleBadge = roleBadgeFor(role, isShiftAdmin);
   const statusLow = (assignmentStatus ?? "").toLowerCase();
+  const isImportedNotResponded =
+    !!importBatchId && !acceptedAt && !respondedAt &&
+    (statusLow === "accepted" || statusLow === "assigned");
   const showAssignStatus = statusLow && !["accepted", "confirmed", "assigned"].includes(statusLow);
+  const [savingPhone, setSavingPhone] = useState(false);
 
   const handleCopy = async () => {
     if (!phone) return;
@@ -1365,6 +1397,30 @@ const WorkerRow = memo(function WorkerRow({
       toast.success("Teléfono copiado");
     } catch {
       toast.error("No se pudo copiar el teléfono");
+    }
+  };
+
+  const handleAddPhone = async () => {
+    const raw = window.prompt(`Agregar teléfono para ${workerName} (10 dígitos)`, "");
+    if (raw == null) return;
+    const digits = normalizePhone(raw);
+    if (digits.length < 10) {
+      toast.error("Número inválido. Debe tener 10 dígitos.");
+      return;
+    }
+    setSavingPhone(true);
+    try {
+      const { error } = await supabase
+        .from("employees")
+        .update({ phone_number: digits })
+        .eq("id", worker.id);
+      if (error) throw error;
+      toast.success("Teléfono guardado");
+      onPhoneSaved?.();
+    } catch (e: any) {
+      toast.error(e?.message ?? "No se pudo guardar el teléfono");
+    } finally {
+      setSavingPhone(false);
     }
   };
 
@@ -1399,12 +1455,24 @@ const WorkerRow = memo(function WorkerRow({
             {roleBadge.label}
           </span>
         )}
-        {showAssignStatus && (
+        {isImportedNotResponded ? (
+          <span
+            className="inline-flex items-center h-5 px-1.5 rounded-full border border-sky-500/40 bg-sky-500/10 text-sky-700 dark:text-sky-400 text-[10px] font-semibold"
+            title="Importado desde Connecteam. Aún no confirmado en Stafly."
+          >
+            Asignado/importado
+          </span>
+        ) : showAssignStatus ? (
           <span className="inline-flex items-center h-5 px-1.5 rounded-full bg-muted text-muted-foreground text-[10px] font-semibold capitalize">
             {statusLow.replace(/_/g, " ")}
           </span>
-        )}
+        ) : null}
       </div>
+      {isImportedNotResponded && (
+        <p className="mt-1 text-[10.5px] text-muted-foreground/90 leading-snug">
+          Importado desde Connecteam. Aún no confirmado en Stafly.
+        </p>
+      )}
 
       {phone ? (
         <div className="flex items-center gap-1.5 mt-2.5">
@@ -1446,19 +1514,27 @@ const WorkerRow = memo(function WorkerRow({
           </button>
         </div>
       ) : (
-        <div
-          className="mt-2.5 rounded-xl border border-dashed border-border/60 bg-muted/30 px-3 py-2"
-          aria-label={`Sin teléfono registrado para ${workerName}. Agrega un número en el perfil para habilitar contactos.`}
-        >
+        <div className="mt-2.5 rounded-xl border border-dashed border-border/60 bg-muted/30 px-3 py-2">
           <div className="flex items-start gap-2">
             <Phone className="h-3.5 w-3.5 mt-0.5 text-muted-foreground shrink-0" aria-hidden="true" />
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <div className="text-[11px] font-semibold text-foreground/80 leading-tight">
                 {MOBILE_SHIFT_COPY.noPhoneTitle}
               </div>
               <div className="text-[10.5px] text-muted-foreground leading-snug mt-0.5">
                 {MOBILE_SHIFT_COPY.noPhoneHelper}
               </div>
+              {canManagePhone && (
+                <button
+                  type="button"
+                  onClick={handleAddPhone}
+                  disabled={savingPhone}
+                  className="mt-1.5 inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-primary text-primary-foreground text-[11px] font-semibold disabled:opacity-60"
+                >
+                  <Phone className="h-3 w-3" />
+                  {savingPhone ? "Guardando…" : "Agregar teléfono"}
+                </button>
+              )}
             </div>
           </div>
         </div>
