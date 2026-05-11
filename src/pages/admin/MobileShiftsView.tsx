@@ -718,10 +718,10 @@ function ShiftCard({
       {(understaffed || noClient) && (
         <div className="flex flex-wrap items-center gap-1.5 mt-2">
           {understaffed && (
-            <Warning icon={Users} label="Needs staff" tone="bad" />
+            <Warning icon={Users} label="Falta personal" tone="bad" />
           )}
           {noClient && (
-            <Warning icon={Building2} label="No client" tone="warn" />
+            <Warning icon={Building2} label="Sin cliente" tone="warn" />
           )}
         </div>
       )}
