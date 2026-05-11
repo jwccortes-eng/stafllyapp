@@ -1154,15 +1154,15 @@ function attendanceBadgeFor(
   attendanceStatus: string | null,
   clock: { clock_in: string | null; clock_out: string | null } | undefined,
 ): { label: string; cls: string } {
-  if (clock?.clock_out) return { label: "Clocked out", cls: "bg-muted text-muted-foreground" };
-  if (clock?.clock_in) return { label: "Clocked in", cls: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400" };
+  if (clock?.clock_out) return { label: "Salió", cls: "bg-muted text-muted-foreground" };
+  if (clock?.clock_in) return { label: "Registrado", cls: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400" };
   switch ((attendanceStatus ?? "").toLowerCase()) {
-    case "present": return { label: "Present", cls: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400" };
-    case "late":    return { label: "Late", cls: "bg-amber-500/15 text-amber-700 dark:text-amber-400" };
-    case "absent":  return { label: "Absent", cls: "bg-rose-500/15 text-rose-700 dark:text-rose-400" };
-    case "excused": return { label: "Excused", cls: "bg-muted text-muted-foreground" };
-    case "needs_review": return { label: "Needs review", cls: "bg-primary/15 text-primary" };
-    default: return { label: "Not started", cls: "bg-muted text-muted-foreground" };
+    case "present": return { label: "Presente", cls: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400" };
+    case "late":    return { label: "Tarde", cls: "bg-amber-500/15 text-amber-700 dark:text-amber-400" };
+    case "absent":  return { label: "Ausente", cls: "bg-rose-500/15 text-rose-700 dark:text-rose-400" };
+    case "excused": return { label: "Justificado", cls: "bg-muted text-muted-foreground" };
+    case "needs_review": return { label: "Por revisar", cls: "bg-primary/15 text-primary" };
+    default: return { label: "Sin iniciar", cls: "bg-muted text-muted-foreground" };
   }
 }
 
