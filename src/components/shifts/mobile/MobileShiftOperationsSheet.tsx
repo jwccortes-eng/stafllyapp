@@ -562,7 +562,6 @@ export function MobileShiftOperationsSheet({
               title = "Siguiente paso recomendado";
               text = `Faltan ${missing} trabajador${missing === 1 ? "" : "es"} para completar este turno.`;
               primary = { label: "Gestionar equipo", onClick: () => setHubOpen(true), icon: Users };
-              secondary = { label: "Notificar equipo", onClick: () => setNotifyOpen(true), icon: Bell };
             } else if (noLocation) {
               title = "Siguiente paso recomendado";
               text = "Falta la ubicación del trabajo. La edición completa está disponible desde escritorio por ahora.";
@@ -595,9 +594,9 @@ export function MobileShiftOperationsSheet({
                   </div>
                   <p className="text-[13px] text-foreground/85 leading-snug mb-3">{text}</p>
                   {primary && (
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-col gap-2">
                       <Button
-                        className="flex-1 h-12 rounded-xl text-sm font-bold gap-2"
+                        className="w-full h-12 rounded-xl text-sm font-bold gap-2"
                         onClick={primary.onClick}
                       >
                         <primary.icon className="h-4 w-4" />
@@ -606,7 +605,7 @@ export function MobileShiftOperationsSheet({
                       {secondary && (
                         <Button
                           variant="outline"
-                          className="h-12 rounded-xl text-sm font-semibold gap-2 px-4"
+                          className="w-full h-10 rounded-xl text-sm font-semibold gap-2"
                           onClick={secondary.onClick}
                         >
                           <secondary.icon className="h-4 w-4" />
@@ -623,40 +622,6 @@ export function MobileShiftOperationsSheet({
             );
           })()}
 
-          {/* 3. Acciones rápidas — núcleo (3 botones máximo) */}
-          <section>
-            <SectionTitle icon={Sparkles}>Acciones rápidas</SectionTitle>
-            <div className="grid grid-cols-3 gap-2">
-              {canValidate && (
-                <Button
-                  variant="outline"
-                  className="h-14 rounded-xl flex-col gap-1 text-[11px] font-semibold px-1"
-                  onClick={() => setHubOpen(true)}
-                >
-                  <Users className="h-4 w-4" />
-                  <span>Equipo</span>
-                </Button>
-              )}
-              <Button
-                variant="outline"
-                className="h-14 rounded-xl flex-col gap-1 text-[11px] font-semibold px-1"
-                onClick={handleViewAttendance}
-              >
-                <ClipboardList className="h-4 w-4" />
-                <span>Asistencia</span>
-              </Button>
-              {canValidate && (
-                <Button
-                  variant="outline"
-                  className="h-14 rounded-xl flex-col gap-1 text-[11px] font-semibold px-1"
-                  onClick={() => setNotifyOpen(true)}
-                >
-                  <Bell className="h-4 w-4" />
-                  <span>Notificar</span>
-                </Button>
-              )}
-            </div>
-          </section>
 
           {/* 3. Equipo asignado */}
           <section>
@@ -835,25 +800,38 @@ export function MobileShiftOperationsSheet({
             {moreOpen ? (
               <div className="space-y-4">
                 {/* Acciones secundarias */}
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1 h-10 rounded-lg gap-1.5 text-xs font-medium"
-                    onClick={handleShare}
-                  >
-                    <Share2 className="h-3.5 w-3.5" />
-                    Compartir turno
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1 h-10 rounded-lg gap-1.5 text-xs font-medium"
-                    onClick={handleCopySummary}
-                  >
-                    <Copy className="h-3.5 w-3.5" />
-                    Copiar resumen
-                  </Button>
+                <div className="flex flex-col gap-2">
+                  {canValidate && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full h-10 rounded-lg gap-1.5 text-xs font-medium"
+                      onClick={() => setNotifyOpen(true)}
+                    >
+                      <Bell className="h-3.5 w-3.5" />
+                      Notificar equipo
+                    </Button>
+                  )}
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 h-10 rounded-lg gap-1.5 text-xs font-medium"
+                      onClick={handleShare}
+                    >
+                      <Share2 className="h-3.5 w-3.5" />
+                      Compartir turno
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 h-10 rounded-lg gap-1.5 text-xs font-medium"
+                      onClick={handleCopySummary}
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                      Copiar resumen
+                    </Button>
+                  </div>
                 </div>
 
                 {/* Cierre diario (movido aquí) */}
