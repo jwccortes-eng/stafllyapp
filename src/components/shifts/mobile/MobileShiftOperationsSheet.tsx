@@ -169,6 +169,7 @@ export function MobileShiftOperationsSheet({
   const [asgnExtras, setAsgnExtras] = useState<AsgnExtra[]>([]);
   const [clockByEmp, setClockByEmp] = useState<Record<string, { clock_in: string | null; clock_out: string | null }>>({});
   const [shiftAdminId, setShiftAdminId] = useState<string | null>(null);
+  const [shiftMeeting, setShiftMeeting] = useState<{ point: string | null; time: string | null }>({ point: null, time: null });
   const [loadingTeam, setLoadingTeam] = useState(false);
   const [teamError, setTeamError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
@@ -191,7 +192,7 @@ export function MobileShiftOperationsSheet({
           .neq("status", "rejected"),
         supabase
           .from("scheduled_shifts")
-          .select("shift_admin_id")
+          .select("shift_admin_id, meeting_point, meeting_time")
           .eq("id", shift.id)
           .maybeSingle(),
       ]);
@@ -200,7 +201,9 @@ export function MobileShiftOperationsSheet({
         setTeamError(MOBILE_SHIFT_COPY.teamErrorTitle);
       }
       setAsgnExtras(((asgnRes.data ?? []) as any));
-      setShiftAdminId(((shiftRes.data as any)?.shift_admin_id) ?? null);
+      const sd = (shiftRes.data as any) ?? null;
+      setShiftAdminId(sd?.shift_admin_id ?? null);
+      setShiftMeeting({ point: sd?.meeting_point ?? null, time: sd?.meeting_time ?? null });
       const map: Record<string, { clock_in: string | null; clock_out: string | null }> = {};
       for (const te of (teRes.data ?? []) as any[]) {
         const prev = map[te.employee_id];
@@ -343,7 +346,8 @@ export function MobileShiftOperationsSheet({
     const tail = published && understaffed
       ? ` and needs ${slots - assignedCount} more worker${slots - assignedCount === 1 ? "" : "s"} before start time.`
       : draft ? " — workers will not see it until published." : ".";
-    return `This shift is scheduled for ${when}, ${formatTimeShort(shift.start_time)}–${formatTimeShort(shift.end_time)}${where}. ${cov} ${pubText}${tail}`;
+    const meetBit = shiftMeeting.point ? ` Meeting point: ${shiftMeeting.point}${shiftMeeting.time ? ` at ${formatTimeShort(shiftMeeting.time)}` : ""}.` : "";
+    return `This shift is scheduled for ${when}, starts at ${formatTimeShort(shift.start_time)} (ends approx. ${formatTimeShort(shift.end_time)})${where}.${meetBit} ${cov} ${pubText}${tail}`;
   })();
 
   // ── Actions
@@ -356,7 +360,8 @@ export function MobileShiftOperationsSheet({
     const cov = slots > 0
       ? `Assigned ${assignedCount}/${slots}${understaffed ? ` · Needs ${slots - assignedCount} worker${slots - assignedCount === 1 ? "" : "s"}` : ""}`
       : `Assigned ${assignedCount}`;
-    return `${code}${placeBits || "Shift"} · ${dateBit} · ${formatTimeShort(shift.start_time)}–${formatTimeShort(shift.end_time)} · ${cov}`;
+    const meetBit = shiftMeeting.point ? ` · Meeting: ${shiftMeeting.point}${shiftMeeting.time ? ` ${formatTimeShort(shiftMeeting.time)}` : ""}` : "";
+    return `${code}${placeBits || "Shift"} · ${dateBit} · Entrada ${formatTimeShort(shift.start_time)} (ends ~${formatTimeShort(shift.end_time)})${meetBit} · ${cov}`;
   })();
 
   const handleCopySummary = async () => {
@@ -382,6 +387,12 @@ export function MobileShiftOperationsSheet({
     onOpenChange(false);
     navigate(`/app/attendance?shift=${shift.id}`);
   };
+
+  // Stafly Work Route — meeting point/time effective values.
+  const mp = shiftMeeting.point ?? meetingPoint ?? null;
+  const mt = shiftMeeting.time ? formatTimeShort(shiftMeeting.time) : null;
+  const startShort = formatTimeShort(shift.start_time);
+  const endShort = formatTimeShort(shift.end_time);
 
   return (
     <>
@@ -413,7 +424,7 @@ export function MobileShiftOperationsSheet({
             <div
               className="px-5 pt-3 pb-2.5 border-b border-border/40 bg-background/95 backdrop-blur-sm"
               role="region"
-              aria-label={`Shift context for ${clientName && clientName !== "—" ? clientName : (shift.title || "shift")}, ${dateLabel(shift.date)}, ${formatTimeShort(shift.start_time)} to ${formatTimeShort(shift.end_time)}`}
+              aria-label={`Shift context for ${clientName && clientName !== "—" ? clientName : (shift.title || "shift")}, ${dateLabel(shift.date)}, entrada ${startShort}, termina aprox. ${endShort}`}
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
@@ -434,12 +445,28 @@ export function MobileShiftOperationsSheet({
                     {clientName && clientName !== "—" ? clientName : (shift.title || "Shift")}
                   </h2>
                   <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                    {dateLabel(shift.date)} · {formatTimeShort(shift.start_time)}–{formatTimeShort(shift.end_time)} · <span className="font-semibold tabular-nums text-foreground/80">{coverageBit}</span> assigned
+                    {dateLabel(shift.date)} · <span className="font-semibold tabular-nums text-foreground/80">{coverageBit}</span> asignados
                   </p>
-                  <p className="text-[11px] text-muted-foreground mt-0.5 truncate flex items-center gap-1">
-                    <MapPin className="h-3 w-3 shrink-0 opacity-70" />
-                    <span className="truncate">{locationName || (meetingPoint ? `Meeting: ${meetingPoint}` : "No location")}</span>
-                  </p>
+                  {/* Stafly Work Route — Entrada protagonista; Termina aprox. secundario. */}
+                  <div className="mt-1.5 flex items-baseline gap-2">
+                    <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground/70">Entrada</span>
+                    <span className="text-xl font-bold font-mono tabular-nums text-foreground leading-none">{startShort}</span>
+                    <span className="text-[11px] text-muted-foreground/80 truncate">· Termina aprox. <span className="font-mono tabular-nums">{endShort}</span></span>
+                  </div>
+                  {mp ? (
+                    <p className="text-[11px] text-muted-foreground mt-1 truncate flex items-center gap-1">
+                      <MapPin className="h-3 w-3 shrink-0 opacity-70" />
+                      <span className="truncate">
+                        Punto de encuentro: <span className="text-foreground/90 font-medium">{mp}</span>
+                        {mt && <> · <span className="font-mono tabular-nums">{mt}</span></>}
+                      </span>
+                    </p>
+                  ) : (
+                    <p className="text-[11px] text-muted-foreground mt-1 truncate flex items-center gap-1">
+                      <MapPin className="h-3 w-3 shrink-0 opacity-70" />
+                      <span className="truncate">{locationName || "No location"}</span>
+                    </p>
+                  )}
                 </div>
                 <div className="flex flex-col items-end gap-1.5 shrink-0">
                   <Button
@@ -675,8 +702,8 @@ export function MobileShiftOperationsSheet({
               <DetailRow icon={CalendarDays} label="Date" value={(() => {
                 try { return format(parseISO(shift.date), "EEEE, MMMM d, yyyy", { locale: enUS }); } catch { return shift.date; }
               })()} />
-              <DetailRow icon={Clock} label="Start" value={formatTimeShort(shift.start_time)} />
-              <DetailRow icon={Clock} label="End" value={formatTimeShort(shift.end_time)} />
+              <DetailRow icon={Clock} label="Entrada" value={startShort} />
+              <DetailRow icon={Clock} label="Termina aprox." value={endShort} muted />
               {noClient ? (
                 <div className="px-4 py-3">
                   <EmptyBlock
@@ -701,8 +728,12 @@ export function MobileShiftOperationsSheet({
               ) : (
                 <DetailRow icon={MapPin} label="Job site" value={locationName || "—"} muted={!locationName} />
               )}
-              {meetingPoint ? (
-                <DetailRow icon={MapPin} label="Meeting point" value={meetingPoint} />
+              {mp ? (
+                <DetailRow
+                  icon={MapPin}
+                  label="Punto de encuentro"
+                  value={mt ? `${mp} · ${mt}` : mp}
+                />
               ) : (
                 <div className="flex items-center gap-2 px-4 py-2.5 text-xs text-muted-foreground">
                   <MapPin className="h-3.5 w-3.5 opacity-60" />
