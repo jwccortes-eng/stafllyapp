@@ -38,6 +38,13 @@ interface ShiftShareMenuProps {
   startTime: string;
   recipientName?: string | null;
   recipientPhone?: string | null;
+  // ── Work Route extensions (all optional). ──
+  endTime?: string | null;
+  meetingPoint?: string | null;
+  meetingTime?: string | null;
+  jobSite?: string | null;
+  instructions?: string | null;
+  clientName?: string | null;
   /** Visual variant */
   variant?: "default" | "ghost" | "outline";
   size?: "sm" | "default";
