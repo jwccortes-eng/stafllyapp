@@ -519,31 +519,49 @@ export default function MyShifts() {
         })}
       </div>
 
-      {/* Shift list — compact rows. History tab adds week grouping + pagination. */}
-      {activeTab !== "available" && filtered.length > 0 && (() => {
-        const renderCard = (a: ShiftAssignment) => {
-          // A response is owed whenever response_status is pending OR
-          // needs_reacceptance — independent of the assignment.status, which may
-          // already be "confirmed" when the admin auto-assigned the worker.
-          const responseOwed =
-            (a.response_status === "pending" || a.response_status === "needs_reacceptance") &&
-            !isBefore(parseISO(a.shift.date), today);
-          // Treat the worker as confirmed only when they have explicitly accepted.
-          const workerAccepted = a.response_status === "accepted";
-          return (
-            <PortalShiftCard
-              key={a.id}
-              shift={toCardData(a)}
-              compact
+      {/* HERO — "Tu próxima jornada" on Today/Upcoming when an actionable shift exists. */}
+      {nextHeroAssignment && (activeTab === "today" || activeTab === "upcoming") && (() => {
+        const a = nextHeroAssignment;
+        const owed = responseOwedFor(a);
+        const accepted = a.response_status === "accepted";
+        const isClockable = accepted && isToday(parseISO(a.shift.date));
+        return (
+          <div className="mb-4">
+            <OperationalAgendaHero
+              eyebrow="Tu próxima jornada"
+              item={mapToAgendaItem(a)}
               onClick={() => setSelectedShift(a)}
-              onAccept={responseOwed ? () => acceptAssignment(a.id) : undefined}
-              onReject={responseOwed ? () => { setRejectDialogId(a.id); setRejectReason(""); } : undefined}
-              onClockIn={
-                workerAccepted && isToday(parseISO(a.shift.date))
-                  ? () => navigate(`/portal/clock?shiftId=${a.shift.id}`)
+              primaryAction={
+                isClockable
+                  ? { label: "Marcar entrada", onClick: () => navigate(`/portal/clock?shiftId=${a.shift.id}`), variant: "primary", icon: LogIn }
+                  : owed
+                  ? { label: "Confirmar", onClick: () => acceptAssignment(a.id), variant: "primary", icon: Check, loading: responding === a.id }
                   : undefined
               }
-              responding={responding === a.id}
+              secondaryAction={
+                owed
+                  ? { label: "Rechazar", onClick: () => { setRejectDialogId(a.id); setRejectReason(""); }, variant: "ghost", icon: X }
+                  : undefined
+              }
+            />
+          </div>
+        );
+      })()}
+
+      {/* Timeline list — Today/Upcoming use comfortable density, History uses compact + buckets. */}
+      {activeTab !== "available" && filtered.length > 0 && (() => {
+        const heroId = nextHeroAssignment?.id;
+        const renderRow = (a: ShiftAssignment, idx: number, density: "comfortable" | "compact" = "comfortable") => {
+          const owed = responseOwedFor(a);
+          return (
+            <OperationalTimelineRow
+              key={a.id}
+              item={mapToAgendaItem(a)}
+              index={idx}
+              density={density}
+              onClick={() => setSelectedShift(a)}
+              inlineActionLabel={owed ? "Confirmar" : undefined}
+              onInlineAction={owed ? () => acceptAssignment(a.id) : undefined}
             />
           );
         };
@@ -573,22 +591,20 @@ export default function MyShifts() {
             else buckets[2].items.push(a);
           }
 
+          let globalIdx = 0;
           return (
             <div className="space-y-4">
-              {/* Discrete total — replaces the noisy "99+" badge in the tab */}
               <p className="text-[11px] text-muted-foreground/60 px-1 -mt-1">
                 {filtered.length} turno{filtered.length === 1 ? "" : "s"} en total
               </p>
 
-              {buckets.filter(b => b.items.length > 0).map((b) => (
-                <div key={b.key} className="space-y-1.5">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground/55 px-1">
-                    {b.label}
-                  </p>
-                  <div className="space-y-1.5">
-                    {b.items.map(renderCard)}
-                  </div>
-                </div>
+              {buckets.filter((b) => b.items.length > 0).map((b) => (
+                <section key={b.key} className="space-y-2">
+                  <AgendaSectionHeader title={b.label} />
+                  <OperationalTimeline>
+                    {b.items.map((a) => renderRow(a, globalIdx++, "compact"))}
+                  </OperationalTimeline>
+                </section>
               ))}
 
               {remaining > 0 && (
@@ -596,7 +612,7 @@ export default function MyShifts() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => setHistoryVisible(v => v + HISTORY_PAGE)}
+                    onClick={() => setHistoryVisible((v) => v + HISTORY_PAGE)}
                     className="w-full h-10 text-[12px] font-semibold rounded-xl text-muted-foreground hover:text-foreground"
                   >
                     Cargar {Math.min(remaining, HISTORY_PAGE)} más · {remaining} restantes
@@ -607,12 +623,22 @@ export default function MyShifts() {
           );
         }
 
+        // Today / Upcoming — exclude hero item from the timeline to avoid duplication.
+        const list = filtered.filter((a) => a.id !== heroId);
+        if (list.length === 0) return null;
         return (
-          <div className="space-y-1.5">
-            {filtered.map(renderCard)}
-          </div>
+          <section className="space-y-2">
+            <AgendaSectionHeader
+              title={activeTab === "today" ? "Hoy" : "Esta semana"}
+              caption={list.length === 1 ? "1 turno" : `${list.length} turnos`}
+            />
+            <OperationalTimeline>
+              {list.map((a, i) => renderRow(a, i, "comfortable"))}
+            </OperationalTimeline>
+          </section>
         );
       })()}
+
 
       {/* AVAILABLE TAB — claimable shifts as primary content */}
       {activeTab === "available" && claimable.length > 0 && (
