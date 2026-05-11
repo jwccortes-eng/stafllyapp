@@ -606,7 +606,7 @@ export default function MyShifts() {
             else buckets[2].items.push(a);
           }
 
-          let globalIdx = 0;
+          
           return (
             <div className="space-y-4">
               <p className="text-[11px] text-muted-foreground/60 px-1 -mt-1">
