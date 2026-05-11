@@ -1158,7 +1158,7 @@ function DesktopShifts() {
             shift.title,
             "shift_claimable",
             "Turno disponible para reclamar",
-            `"${shift.title}" el ${dateLabel} (${shift.start_time.slice(0, 5)}–${shift.end_time.slice(0, 5)}). Aplica y te notificaremos si eres aceptado.`,
+            `"${shift.title}" · ${dateLabel} · ${workRouteLine(shift.start_time, shift.end_time, (shift as any).meeting_point ?? null)}. Aplica y te notificaremos si eres aceptado.`,
             claimRecipients,
             { claimable: true }
           );
