@@ -31,6 +31,11 @@ export default function EmployeeLayout() {
   const isMobile = useIsMobile();
   const { isModuleEnabled, enabledModules, loading: modulesLoading } = usePortalModules();
   const [moreOpen, setMoreOpen] = useState(false);
+  // DS1D-a2: chrome mode opt-out. Default "legacy" preserves px-4 py-4 chrome
+  // for all current portal routes. Pages migrating to <StaflyPageShell> can
+  // call setChromeMode("shell") on mount (and "legacy" on unmount) to drop
+  // the layout-level padding and own their chrome via Stafly tokens.
+  const [chromeMode, setChromeMode] = useState<"legacy" | "shell">("legacy");
   const [avatarUrl, setAvatarUrl] = useState<string | null | undefined>(undefined);
   const [empName, setEmpName] = useState<string>("");
 
@@ -178,8 +183,13 @@ export default function EmployeeLayout() {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto overflow-x-hidden w-full max-w-full px-4 py-4 animate-fade-in">
-          <Outlet context={{ openMore: () => setMoreOpen(true) }} />
+        <main
+          className={cn(
+            "flex-1 overflow-y-auto overflow-x-hidden w-full max-w-full animate-fade-in",
+            chromeMode === "legacy" && "px-4 py-4"
+          )}
+        >
+          <Outlet context={{ openMore: () => setMoreOpen(true), chromeMode, setChromeMode }} />
         </main>
 
         {navAndSheet}
@@ -205,7 +215,7 @@ export default function EmployeeLayout() {
         </div>
       </header>
       <main className="max-w-3xl mx-auto px-6 py-8 animate-fade-in">
-        <Outlet context={{ openMore: () => setMoreOpen(true) }} />
+        <Outlet context={{ openMore: () => setMoreOpen(true), chromeMode, setChromeMode }} />
       </main>
       {navAndSheet}
     </div>
