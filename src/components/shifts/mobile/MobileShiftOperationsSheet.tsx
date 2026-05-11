@@ -63,8 +63,8 @@ const MOBILE_SHIFT_COPY = {
   coverageHelper: "Cupos requeridos, trabajadores asignados y estado actual de personal.",
 
   // Assigned workers section
-  assignedWorkersHelper: "Revisa, contacta y gestiona el equipo desde móvil.",
-  assignedSortedHelper: "Ordenado por rol y estado de asistencia.",
+  assignedWorkersHelper: "Revisa estado, contacto y alertas del equipo.",
+  assignedSortedHelper: "Lista rápida del equipo y estado operativo.",
   noWorkersTitle: "Aún no hay trabajadores asignados",
   noWorkersHelper: "Asigna trabajadores desde Gestionar equipo o usa las herramientas avanzadas en escritorio.",
 
