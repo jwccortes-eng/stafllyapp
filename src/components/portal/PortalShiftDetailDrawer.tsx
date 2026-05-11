@@ -145,6 +145,16 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, responseStatu
   const showResponseActions = isPending && !!(onAccept || onReject);
   const showClockInAction = isAccepted && isTodayShift;
   const showStickyFooter = !secondaryView && (showResponseActions || showClockInAction);
+  // H4 — show worked-history block for past shifts (or whenever historyInfo is provided).
+  const isPastShift = (() => {
+    try {
+      const d = parseISO(shift.date);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return d.getTime() < today.getTime();
+    } catch { return false; }
+  })();
+  const showHistoryBlock = isPastShift || !!historyInfo;
 
   const dayLabel = isTodayShift
     ? "Hoy"
