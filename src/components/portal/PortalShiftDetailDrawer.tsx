@@ -18,6 +18,8 @@ import { useEffectiveEmployee } from "@/hooks/useEffectiveEmployee";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { OpsStatusChip, type OpsStatusTone } from "@/components/operations/OpsStatusChip";
+import { HistoricalShiftWorkSummary } from "@/components/portal/HistoricalShiftWorkSummary";
+import type { WorkedShiftEntry } from "@/hooks/useWorkedShiftHistory";
 
 interface ShiftInfo {
   id: string;
