@@ -620,39 +620,43 @@ function MobileShiftTeamHubImpl({
         hideClose
         className="h-[92vh] p-0 rounded-t-3xl flex flex-col overflow-hidden bg-background"
       >
-        {/* Sticky header */}
-        <div className="px-5 pt-3 pb-2 border-b border-border/40 bg-background/95 backdrop-blur-sm">
-          <div className="flex items-start justify-between gap-3">
+        {/* Sticky header — compact operational summary */}
+        <div className="px-4 pt-2.5 pb-1.5 border-b border-border/40 bg-background/95 backdrop-blur-sm">
+          <div className="flex items-start justify-between gap-2">
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1.5 mb-1">
+              <div className="flex items-center gap-1.5">
                 <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
                   Gestionar equipo
                 </span>
                 {shift.shift_code && (
-                  <span className="text-[10px] font-mono font-semibold text-muted-foreground/80">
+                  <span className="text-[10px] font-mono font-semibold text-muted-foreground/80 truncate">
                     #{formatShiftCode(shift.shift_code)}
                   </span>
                 )}
                 {shift.publication_status && shift.publication_status !== "published" && (
-                  <Badge variant="outline" className="h-[18px] px-1.5 text-[9px] uppercase tracking-wider">
+                  <Badge variant="outline" className="h-[16px] px-1 text-[9px] uppercase tracking-wider">
                     {shift.publication_status}
                   </Badge>
                 )}
               </div>
-              <h2 className="text-lg font-semibold tracking-tight leading-tight line-clamp-2">
+              <h2 className="text-[15px] font-semibold tracking-tight leading-snug line-clamp-1 mt-0.5">
                 {clientName && clientName !== "—" ? clientName : (shift.title || "Turno")}
               </h2>
-              <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                {dateLabel(shift.date)} · <span className="text-foreground/85 font-semibold">{locationName || "Falta ubicación del trabajo"}</span>
+              <p className="text-[11px] text-muted-foreground truncate">
+                {dateLabel(shift.date)} · <span className="text-foreground/85 font-semibold">{locationName || "Falta ubicación"}</span>
               </p>
-              {/* Stafly Work Route — Entrada protagonista; Termina aprox. secundario. */}
+              {/* Stafly Work Route — Entrada + termina aprox. + coverage en una línea compacta. */}
               <div className="mt-1 flex items-baseline gap-1.5 flex-wrap">
-                <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground/70">Entrada</span>
-                <span className="text-base font-bold font-mono tabular-nums text-foreground leading-none">{formatTimeShort(shift.start_time)}</span>
-                <span className="text-[11px] text-muted-foreground/80">· Termina aprox. <span className="font-mono tabular-nums">{formatTimeShort(shift.end_time)}</span></span>
+                <span className="text-[9.5px] font-bold uppercase tracking-[0.14em] text-muted-foreground/70">Entrada</span>
+                <span className="text-[15px] font-bold font-mono tabular-nums text-foreground leading-none">{formatTimeShort(shift.start_time)}</span>
+                <span className="text-[10.5px] text-muted-foreground/80">· termina aprox. <span className="font-mono tabular-nums">{formatTimeShort(shift.end_time)}</span></span>
+                <span className="text-[10.5px] text-muted-foreground/60">·</span>
+                <span className="text-[10.5px] font-semibold text-foreground/85 tabular-nums">
+                  {staffedCount}/{slots || "—"}{openSpots > 0 ? ` · faltan ${openSpots}` : ""}
+                </span>
               </div>
               {(meetingPoint || hasMeetingPointLocation) && (
-                <p className="text-[11px] text-muted-foreground mt-1 truncate flex items-center gap-1">
+                <p className="text-[10.5px] text-muted-foreground mt-0.5 truncate flex items-center gap-1">
                   <MapPin className="h-3 w-3 shrink-0 opacity-70" />
                   <span className="truncate">
                     Encuentro: <span className="text-foreground/90 font-medium">{meetingPoint || "—"}</span>
@@ -660,26 +664,23 @@ function MobileShiftTeamHubImpl({
                   </span>
                 </p>
               )}
-              <p className="text-[11px] text-muted-foreground mt-0.5">
-                {staffedCount}/{slots || "—"} asignados{openSpots > 0 ? ` · faltan ${openSpots}` : ""}
-              </p>
             </div>
             <Button
               variant="ghost" size="sm"
-              className="h-9 px-2 rounded-full shrink-0 -mt-1 -mr-1 text-xs gap-1"
+              className="h-8 px-2 rounded-full shrink-0 -mt-0.5 -mr-1 text-[11px] gap-1"
               onClick={() => onOpenChange(false)}
               aria-label="Volver al turno"
             >
-              <X className="h-4 w-4" />
+              <X className="h-3.5 w-3.5" />
               Volver
             </Button>
           </div>
 
-          {/* Tabs */}
+          {/* Tabs — horizontal scroll with edge fade; compact pills. */}
           <div
             role="tablist"
             aria-label={HUB_COPY.tabsAria}
-            className="mt-2.5 -mx-1 flex gap-1 overflow-x-auto scrollbar-hide"
+            className="mt-2 -mx-4 px-4 pb-0.5 flex gap-1.5 overflow-x-auto scrollbar-hide snap-x"
           >
             {TABS.map((t) => {
               const active = tab === t.key;
@@ -690,7 +691,7 @@ function MobileShiftTeamHubImpl({
                   aria-selected={active}
                   onClick={() => setTab(t.key)}
                   className={cn(
-                    "shrink-0 px-3 h-8 rounded-full text-[12px] font-semibold transition-colors flex items-center gap-1.5",
+                    "shrink-0 snap-start px-2.5 h-7 rounded-full text-[11.5px] font-semibold transition-colors flex items-center gap-1 whitespace-nowrap",
                     active
                       ? "bg-foreground text-background"
                       : "bg-muted/50 text-muted-foreground hover:bg-muted",
@@ -699,7 +700,7 @@ function MobileShiftTeamHubImpl({
                   {t.label}
                   {typeof t.badge === "number" && t.badge > 0 && (
                     <span className={cn(
-                      "min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold flex items-center justify-center tabular-nums",
+                      "min-w-[16px] h-[16px] px-1 rounded-full text-[9.5px] font-bold flex items-center justify-center tabular-nums",
                       active ? "bg-background/20 text-background" : "bg-foreground/10 text-foreground",
                     )}>
                       {t.badge}
@@ -1876,35 +1877,34 @@ function RecommendedTab({
             return (
               <li
                 key={c.employee.id}
-                className="rounded-2xl border border-border/50 bg-card px-3 py-2.5 flex items-start gap-3"
+                className="rounded-2xl border border-border/50 bg-card px-3 py-2 flex items-start gap-2.5 min-w-0"
               >
-                <Avatar className="h-9 w-9 mt-0.5">
+                <Avatar className="h-9 w-9 mt-0.5 shrink-0">
                   {c.employee.avatar_url ? <AvatarImage src={c.employee.avatar_url} alt={c.name} /> : null}
                   <AvatarFallback className="text-[11px] font-semibold">{c.initials}</AvatarFallback>
                 </Avatar>
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <p className="text-sm font-semibold text-foreground truncate">{c.name}</p>
-                    <span className={cn("h-[18px] inline-flex items-center rounded-full border px-1.5 text-[10px] font-semibold", badgeTone)}>
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <p className="text-[13.5px] font-semibold text-foreground truncate">{c.name}</p>
+                    <span className={cn("h-[16px] inline-flex items-center rounded-full border px-1.5 text-[9.5px] font-semibold shrink-0", badgeTone)}>
                       {c.readinessState === "ready" ? "Listo" : c.readinessState === "grace_period" ? "Gracia" : "Bloqueado"}
                     </span>
-                    <span
-                      className="h-[18px] inline-flex items-center rounded-md border border-border/50 bg-muted/40 px-1.5 text-[10px] font-mono tabular-nums text-muted-foreground"
-                      title={`Puntaje ${c.score}`}
-                    >
-                      Puntaje {c.score}
-                    </span>
                   </div>
+                  {c.phone ? (
+                    <p className="text-[10.5px] text-muted-foreground tabular-nums truncate">{c.phone}</p>
+                  ) : (
+                    <p className="text-[10.5px] text-amber-700 dark:text-amber-400">Sin teléfono</p>
+                  )}
                   {display.chips.length > 0 && (
                     <div className="mt-1 flex flex-wrap gap-1">
-                      {display.chips.map(ch => {
+                      {(isExpanded ? display.chips : display.chips.slice(0, 3)).map(ch => {
                         // Phase 13E: only "blocked" / "conflict" chips render alarming.
                         const isAlarming = ch.tone === "risk" && (ch.key === "blocked_here" || ch.key === "conflict");
                         return (
                           <span
                             key={`d-${ch.key}`}
                             className={cn(
-                              "text-[10px] font-medium px-1.5 py-0.5 rounded-md",
+                              "text-[9.5px] font-medium px-1.5 py-0.5 rounded-md",
                               ch.tone === "good"
                                 ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400"
                                 : isAlarming
@@ -1918,30 +1918,33 @@ function RecommendedTab({
                           </span>
                         );
                       })}
+                      {!isExpanded && display.chips.length > 3 && (
+                        <span className="text-[9.5px] text-muted-foreground/80 px-1">+{display.chips.length - 3}</span>
+                      )}
                     </div>
-                  )}
-                  {display.summary && (
-                    <p className="mt-1 text-[11px] text-foreground/80 leading-snug">{display.summary}</p>
-                  )}
-                  {c.phone ? (
-                    <p className="mt-1 text-[11px] text-muted-foreground tabular-nums">{c.phone}</p>
-                  ) : (
-                    <p className="mt-1 text-[11px] text-amber-700 dark:text-amber-400">Sin teléfono registrado</p>
                   )}
                   <button
                     type="button"
                     onClick={() => toggleExpanded(c.employee.id)}
-                    className="mt-1.5 inline-flex items-center gap-1 text-[10.5px] font-semibold text-muted-foreground hover:text-foreground"
+                    className="mt-1 inline-flex items-center gap-1 text-[10px] font-semibold text-muted-foreground hover:text-foreground"
                     aria-expanded={isExpanded}
                   >
                     {isExpanded ? "Ocultar" : "¿Por qué?"}
+                    <span className="font-mono tabular-nums text-muted-foreground/70">· {c.score}</span>
                   </button>
                   {isExpanded && (
-                    <ul className="mt-1.5 space-y-0.5 rounded-lg bg-muted/30 px-2 py-1.5">
-                      {whyLines.map((w, i) => (
-                        <li key={i} className="text-[11px] text-foreground/80 leading-snug">• {w}</li>
-                      ))}
-                    </ul>
+                    <>
+                      {display.summary && (
+                        <p className="mt-1 text-[11px] text-foreground/80 leading-snug">{display.summary}</p>
+                      )}
+                      {whyLines.length > 0 && (
+                        <ul className="mt-1.5 space-y-0.5 rounded-lg bg-muted/30 px-2 py-1.5">
+                          {whyLines.map((w, i) => (
+                            <li key={i} className="text-[11px] text-foreground/80 leading-snug">• {w}</li>
+                          ))}
+                        </ul>
+                      )}
+                    </>
                   )}
                 </div>
                 <div className="flex flex-col items-end gap-1 shrink-0">
@@ -1949,7 +1952,7 @@ function RecommendedTab({
                     <Button
                       size="sm"
                       onClick={() => onAssign(c.employee.id, c.name)}
-                      className="h-8 px-2.5 text-[12px] gap-1"
+                      className="h-8 px-3 text-[12px] gap-1 font-semibold"
                     >
                       <UserPlus className="h-3.5 w-3.5" />
                       Asignar
@@ -1959,14 +1962,14 @@ function RecommendedTab({
                       size="sm"
                       variant="outline"
                       disabled
-                      className="h-8 px-2.5 text-[12px]"
+                      className="h-8 px-2.5 text-[11px]"
                       title={
                         c.preferenceBlocked ? "Trabajador bloqueado para este cliente/lugar"
                         : c.conflictDetected ? "Tiene un turno superpuesto"
                         : "No se puede asignar"
                       }
                     >
-                      {c.preferenceBlocked ? "Bloqueado aquí" : c.conflictDetected ? "Conflicto" : "Bloqueado"}
+                      {c.preferenceBlocked ? "Bloqueado" : c.conflictDetected ? "Conflicto" : "Bloqueado"}
                     </Button>
                   )}
                   {(shift.client_id || shift.location_id) && (
@@ -1974,7 +1977,7 @@ function RecommendedTab({
                       <DropdownMenuTrigger asChild>
                         <button
                           type="button"
-                          className="h-6 px-1.5 rounded-md text-[10px] font-medium text-muted-foreground/80 hover:bg-muted/60 inline-flex items-center gap-0.5"
+                          className="h-5 px-1 rounded-md text-[9.5px] font-medium text-muted-foreground/70 hover:bg-muted/60 inline-flex items-center gap-0.5"
                           aria-label={`Marcar afinidad para ${c.name}`}
                         >
                           <MoreVertical className="h-3 w-3" /> Afinidad
