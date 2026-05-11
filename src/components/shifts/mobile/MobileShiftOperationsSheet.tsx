@@ -467,41 +467,15 @@ export function MobileShiftOperationsSheet({
 
         {/* Scroll area */}
         <div className="flex-1 overflow-y-auto px-5 pt-4 pb-4 space-y-5">
-          {/* Coverage */}
-          <section>
-            <SectionTitle
-              icon={ClipboardList}
-              helper={MOBILE_SHIFT_COPY.coverageHelper}
-            >
-              Coverage
-            </SectionTitle>
-            <div className="grid grid-cols-2 gap-2">
-              <StatCard label="Slots" value={slots > 0 ? `${assignedCount}/${slots}` : `${assignedCount}`} />
-              <StatCard
-                label="Coverage"
-                value={`${coverage}%`}
-                accent={coverage >= 100 ? "good" : coverage >= 60 ? "warn" : "bad"}
-              />
-              <StatCard label="Workers" value={assignedCount} />
-              <StatCard label="Hours / slot" value={hours ? hours.toFixed(1) : "—"} />
-            </div>
-          </section>
-
-          {/* Smart brief */}
+          {/* Smart brief — single source of "what needs attention".
+              Phase 1A: Coverage StatCards + Operations snapshot removed
+              (info already in header meta line + Coverage chips below). */}
           <section>
             <SectionTitle icon={Sparkles}>What needs attention</SectionTitle>
             <div className="space-y-1.5">
               {briefMessages.map((m, i) => (
                 <BriefRow key={i} tone={m.tone} text={m.text} />
               ))}
-            </div>
-          </section>
-
-          {/* Operations snapshot */}
-          <section>
-            <SectionTitle icon={Sparkles}>Operations snapshot</SectionTitle>
-            <div className="rounded-2xl border border-border/50 bg-muted/30 p-4">
-              <p className="text-sm leading-relaxed text-foreground/90">{snapshot}</p>
             </div>
           </section>
 
