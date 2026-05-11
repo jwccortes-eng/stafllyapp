@@ -230,7 +230,7 @@ function ReadinessChip({ readiness, className }: { readiness: Readiness; classNa
 }
 
 function buildReminderText(workerName: string): string {
-  return `Hi ${workerName}, please finish your worker profile in the Stafly portal so we can confirm your shifts. Thanks!`;
+  return `Hola ${workerName}, por favor termina tu perfil de trabajador en el portal de Stafly para poder confirmar tus turnos. ¡Gracias!`;
 }
 
 const HUB_COPY = {
