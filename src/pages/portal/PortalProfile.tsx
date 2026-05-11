@@ -291,8 +291,8 @@ export default function PortalProfile() {
             <MoreHorizontal className="h-[18px] w-[18px] text-muted-foreground" />
           </div>
           <div className="flex-1 min-w-0">
-             <p className="text-sm font-semibold">More options</p>
-             <p className="text-[10px] text-muted-foreground">Payments, availability, announcements and more</p>
+             <p className="text-sm font-semibold">Más opciones</p>
+             <p className="text-[10px] text-muted-foreground">Pagos, disponibilidad, anuncios y más</p>
            </div>
           <ChevronRight className="h-4 w-4 text-muted-foreground/40" />
         </button>
@@ -308,7 +308,7 @@ export default function PortalProfile() {
           className="w-full h-11 text-sm gap-2 text-destructive hover:text-destructive border-destructive/20 hover:bg-destructive/5"
         >
           <LogOut className="h-4 w-4" />
-          Sign out
+          Cerrar sesión
         </Button>
       </LogoutConfirmDialog>
     </div>
