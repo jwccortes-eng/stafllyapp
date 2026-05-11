@@ -1,11 +1,12 @@
 import { useEffect } from "react";
-import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { MessageCircle, Wallet, BarChart3, CalendarDays, FileText, Settings, HelpCircle, BookOpen } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { StaflyPageShell } from "@/components/stafly-ui/StaflyPageShell";
+import { StaflyCard } from "@/components/stafly-ui/StaflyCard";
 import { usePortalChrome } from "@/components/stafly-ui/usePortalChrome";
 import { cn } from "@/lib/utils";
+
 
 const resources = [
   { to: "/portal/pay-reports", icon: Wallet, label: "Pay Reports", description: "Finalized weekly payroll", color: "bg-primary/10 text-primary" },
