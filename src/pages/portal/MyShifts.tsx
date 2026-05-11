@@ -344,6 +344,19 @@ export default function MyShifts() {
   const upcomingCount = assignments.filter(a => !isBefore(parseISO(a.shift.date), today) && !isToday(parseISO(a.shift.date))).length;
   const pastCount = assignments.filter(a => isBefore(parseISO(a.shift.date), today)).length;
 
+  // ── Phase H1/H2 — enrich History tab with REAL clock & period status.
+  // Hook is called unconditionally (Rules of Hooks). It is a no-op when the
+  // visible set is empty, so non-history tabs do not trigger any query.
+  const portalCompanyId = assignments.find(a => a.shift.company_id)?.shift.company_id ?? null;
+  const visibleHistoryShifts = activeTab === "history"
+    ? filtered.slice(0, historyVisible).map(a => ({ shiftId: a.shift.id, date: a.shift.date }))
+    : [];
+  const workedHistory = useWorkedShiftHistory({
+    employeeId: employeeId ?? null,
+    companyId: portalCompanyId,
+    visibleShifts: visibleHistoryShifts,
+  });
+
   // History count is intentionally not shown as a badge — it grows unbounded
   // and creates noise (e.g. "99+"). Today/Upcoming/Available keep their counts.
   const tabs: { key: TabFilter; label: string; count: number; showCount: boolean }[] = [
