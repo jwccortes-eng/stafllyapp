@@ -61,6 +61,20 @@ function formatRelative(iso: string): string {
   catch { return ""; }
 }
 
+function formatTimeShort(t?: string | null): string {
+  if (!t) return "—";
+  return t.length >= 5 ? t.slice(0, 5) : t;
+}
+
+function dateLabel(iso: string): string {
+  try {
+    const d = parseISO(iso);
+    if (isToday(d)) return "Today";
+    if (isTomorrow(d)) return "Tomorrow";
+    return format(d, "EEE, MMM d", { locale: enUS });
+  } catch { return iso; }
+}
+
 /* ─── Phase 12: chip display polish for Recommended ─── */
 
 type DisplayChip = { key: string; label: string; tone: "good" | "risk" | "neutral" };
