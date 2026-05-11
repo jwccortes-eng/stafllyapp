@@ -65,7 +65,7 @@ export default function PortalShiftDetail() {
     // Fetch shift WITHOUT filtering deleted_at — we want to detect deleted state
     const { data: s } = await supabase
       .from("scheduled_shifts")
-      .select(`id, title, date, start_time, end_time, notes, meeting_point, special_instructions,
+      .select(`id, title, date, start_time, end_time, notes, meeting_point, meeting_time, special_instructions,
                slots, claimable, status, shift_code, deleted_at, publication_status,
                locations (name, address), clients (name),
                shift_assignments (id, employee_id, status, is_draft_reservation)`)
