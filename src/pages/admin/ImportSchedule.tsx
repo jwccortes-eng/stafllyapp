@@ -944,6 +944,48 @@ export default function ImportSchedule() {
           }
         }
 
+        // ── DS5.1 Hardening parity on reconcile path ──
+        // Mirrors the new-shift path: emits structured warnings + non-destructively
+        // backfills location/meeting fields ONLY when the existing shift has them
+        // empty/null. Manual admin corrections are NEVER overwritten.
+        const clientIdForLoc = clientId; // resolved earlier in this function
+        const jobSiteLocationId = await resolveAddressToLocation(group.address || "", clientIdForLoc);
+        if (group.address) {
+          importWarnings.push(buildImportWarning("ADDRESS_MAPPED_TO_LOCATION", {
+            ...warnCtx(group),
+            details: { address: group.address, location_id: jobSiteLocationId, dry_run: isDryRun, on_reconcile: true },
+          }));
+        }
+        const parsedNote = parseShiftNote(group.note);
+        if (parsedNote.meetingPointText || parsedNote.meetingTime || parsedNote.driverHint) {
+          importWarnings.push(buildImportWarning("NOTE_MEETING_POINT_PARSED", {
+            ...warnCtx(group),
+            details: {
+              meeting_point_text: parsedNote.meetingPointText,
+              meeting_time: parsedNote.meetingTime,
+              driver_hint: parsedNote.driverHint,
+              confidence: parsedNote.confidence,
+              on_reconcile: true,
+            },
+          }));
+        }
+        if (group.note && parsedNote.confidence === "low") {
+          importWarnings.push(buildImportWarning("NOTE_PARSE_NEEDS_REVIEW", {
+            ...warnCtx(group),
+            details: { raw_note: group.note, on_reconcile: true },
+          }));
+        }
+        for (let _ei = 0; _ei < group.employees.length; _ei++) {
+          const _statusRaw = (group.employeeStatuses[_ei] || "").toLowerCase();
+          if (_statusRaw === "accept") {
+            importWarnings.push(buildImportWarning("IMPORTED_ACCEPT_NOT_STAFLY_RESPONSE", {
+              ...warnCtx(group),
+              raw_employee_name: group.employees[_ei],
+              details: { on_reconcile: true },
+            }));
+          }
+        }
+
         // Grow slots only if the Excel brings more real employees than current capacity.
         // Always stamp traceability fields (idempotent — safe on every reconcile pass).
         const numericCodeForHash = group.shiftCode ? group.shiftCode.match(/^(\d+)/)?.[1] || group.shiftCode : "";
@@ -953,7 +995,20 @@ export default function ImportSchedule() {
         };
         if (batchId) updatePayload.import_batch_id = batchId;
         if (realEmployees.length > existingSlots) updatePayload.slots = realEmployees.length;
+
+        // Conservative non-destructive backfill: only fill empty fields.
         if (!isDryRun) {
+          const { data: cur } = await supabase
+            .from("scheduled_shifts")
+            .select("location_id, job_site_location_id, meeting_point, meeting_time")
+            .eq("id", existingShiftId)
+            .maybeSingle();
+          if (cur) {
+            if (!cur.location_id && jobSiteLocationId) updatePayload.location_id = jobSiteLocationId;
+            if (!cur.job_site_location_id && jobSiteLocationId) updatePayload.job_site_location_id = jobSiteLocationId;
+            if (!cur.meeting_point && parsedNote.meetingPointText) updatePayload.meeting_point = parsedNote.meetingPointText;
+            if (!cur.meeting_time && parsedNote.meetingTime) updatePayload.meeting_time = parsedNote.meetingTime;
+          }
           await supabase
             .from("scheduled_shifts")
             .update(updatePayload)
