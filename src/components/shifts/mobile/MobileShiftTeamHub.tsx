@@ -940,7 +940,7 @@ const ASSIGN_ACTION_ICON: Record<AssignmentNextStatus, React.ComponentType<{ cla
 };
 
 function WorkerRow({
-  assignment, employee, isCaptain, canManage, companyId, onCopyPhone, onAssignmentAction,
+  assignment, employee, isCaptain, canManage, companyId, onCopyPhone, onAssignmentAction, onPhoneSaved,
 }: {
   assignment: HubAssignment;
   employee: Employee | undefined;
@@ -949,7 +949,9 @@ function WorkerRow({
   companyId: string | null;
   onCopyPhone: (p: string) => void;
   onAssignmentAction: (assignmentId: string, nextStatus: AssignmentNextStatus, workerName: string) => void;
+  onPhoneSaved?: () => void;
 }) {
+  const { toast } = useToast();
   const name = fullName(employee);
   const phoneDigits = normalizePhone(employee?.phone_number);
   const hasPhone = phoneDigits.length >= 10;
@@ -957,6 +959,33 @@ function WorkerRow({
   const allowedActions = allowedNextStatusesFor(assignment.status);
   const showMenu = canManage && allowedActions.length > 0;
   const readiness = computeReadiness(employee, companyId);
+  const [phoneDialogOpen, setPhoneDialogOpen] = useState(false);
+  const [phoneInput, setPhoneInput] = useState("");
+  const [savingPhone, setSavingPhone] = useState(false);
+
+  const submitPhone = async () => {
+    if (!employee) return;
+    const digits = normalizePhone(phoneInput);
+    if (digits.length < 10) {
+      toast({ title: "Número inválido", description: "Debe tener 10 dígitos.", variant: "destructive" });
+      return;
+    }
+    setSavingPhone(true);
+    try {
+      const { error } = await supabase
+        .from("employees")
+        .update({ phone_number: digits })
+        .eq("id", employee.id);
+      if (error) throw error;
+      toast({ title: "Teléfono guardado" });
+      setPhoneDialogOpen(false);
+      onPhoneSaved?.();
+    } catch (e: any) {
+      toast({ title: "No se pudo guardar el teléfono", description: e?.message, variant: "destructive" });
+    } finally {
+      setSavingPhone(false);
+    }
+  };
 
   const subBits: string[] = [];
   if (assignment.assignment_role) subBits.push(assignment.assignment_role);
