@@ -1105,7 +1105,7 @@ export function MobileShiftOperationsSheet({
     <LocationReportDialog
       open={locationReportOpen}
       onOpenChange={setLocationReportOpen}
-      shiftCode={formatShiftCode(shift)}
+      shiftCode={shift.shift_code ? formatShiftCode(shift.shift_code) : null}
       clientName={clientName}
       jobSiteName={locationName}
       meetingPoint={shiftMeeting.point ?? meetingPoint ?? null}
