@@ -518,7 +518,7 @@ function PayReportCard({
           <div className="flex items-center gap-2 flex-wrap">
             {row.period.sequence_number != null && (
               <span className="text-[10px] font-bold tabular-nums text-muted-foreground/70 uppercase tracking-wide">
-                Period #{row.period.sequence_number}
+                Periodo #{row.period.sequence_number}
               </span>
             )}
             <span
