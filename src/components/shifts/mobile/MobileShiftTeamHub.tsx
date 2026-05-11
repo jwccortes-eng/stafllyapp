@@ -1240,7 +1240,7 @@ function ClaimsTab({
                               className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-muted/60 hover:bg-muted text-foreground text-[11px] font-semibold transition-colors"
                             >
                               <Copy className="h-3 w-3" />
-                              Copy reminder
+                              Copiar recordatorio
                             </button>
                           </>
                         )}
