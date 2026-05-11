@@ -1076,6 +1076,7 @@ export function MobileShiftOperationsSheet({
         accepted_at: a.accepted_at,
         rejected_at: a.rejected_at,
         responded_at: a.responded_at,
+        import_batch_id: a.import_batch_id,
       }))}
       employees={employees}
       canManage={canValidate}
@@ -1100,6 +1101,15 @@ export function MobileShiftOperationsSheet({
       jobSiteName={locationName}
       specialInstructions={shift.notes ?? null}
       friendlyDate={dateLabel(shift.date)}
+    />
+    <LocationReportDialog
+      open={locationReportOpen}
+      onOpenChange={setLocationReportOpen}
+      shiftCode={formatShiftCode(shift)}
+      clientName={clientName}
+      jobSiteName={locationName}
+      meetingPoint={shiftMeeting.point ?? meetingPoint ?? null}
+      notes={shift.notes ?? null}
     />
     </>
   );
