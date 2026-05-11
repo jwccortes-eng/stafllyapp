@@ -1751,28 +1751,28 @@ function RecommendedTab({
   }, [visible]);
 
   const FILTERS: { key: RecFilter; label: string }[] = [
-    { key: "all", label: "All" },
-    { key: "best", label: "Best match" },
-    ...(shift.location_id ? [{ key: "strong_history" as const, label: "Strong venue history" }] : []),
-    { key: "no_risk", label: "No risk flags" },
-    { key: "ready", label: "Ready" },
-    { key: "grace", label: "Grace period" },
-    { key: "phone", label: "Has phone" },
-    { key: "history", label: "Worked here" },
-    { key: "available", label: "Available" },
-    { key: "drivers", label: "Drivers" },
-    { key: "captains", label: "Captains" },
+    { key: "all", label: "Todos" },
+    { key: "best", label: "Mejor opción" },
+    ...(shift.location_id ? [{ key: "strong_history" as const, label: "Historial sólido aquí" }] : []),
+    { key: "no_risk", label: "Sin alertas" },
+    { key: "ready", label: "Listos" },
+    { key: "grace", label: "Período de gracia" },
+    { key: "phone", label: "Con teléfono" },
+    { key: "history", label: "Ha trabajado aquí" },
+    { key: "available", label: "Disponibles" },
+    { key: "drivers", label: "Conductores" },
+    { key: "captains", label: "Capitanes" },
   ];
 
   return (
-    <section aria-label="Recommended workers" className="space-y-3">
-      <SectionTitle icon={Sparkles} helper="Ranked by readiness, availability, history, contact, and reliability.">
-        Add workers
+    <section aria-label="Trabajadores recomendados" className="space-y-3">
+      <SectionTitle icon={Sparkles} helper="Ordenados por preparación, disponibilidad, historial, contacto y confiabilidad.">
+        Agregar trabajadores
       </SectionTitle>
 
       {!shift.location_id && (
         <p className="text-[11px] text-muted-foreground rounded-lg border border-dashed border-border/60 bg-muted/30 px-3 py-2 leading-snug">
-          Add a job site to use venue history ranking. Meeting points are not used as worked-here history.
+          Agrega una ubicación de trabajo para usar el historial. El punto de encuentro no cuenta como lugar trabajado.
         </p>
       )}
 
