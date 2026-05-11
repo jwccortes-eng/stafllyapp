@@ -52,46 +52,46 @@ import {
  */
 const MOBILE_SHIFT_COPY = {
   // Shared
-  readOnlyMobile: "Read-only on mobile",
+  readOnlyMobile: "Solo lectura en móvil",
 
   // Coverage section
-  coverageHelper: "Required spots, assigned workers, and current staffing status.",
+  coverageHelper: "Cupos requeridos, trabajadores asignados y estado actual de personal.",
 
   // Assigned workers section
-  assignedWorkersHelper: "Review assigned workers and contact them safely from mobile.",
-  assignedSortedHelper: "Sorted by role and attendance status.",
-  noWorkersTitle: "No workers assigned yet",
-  noWorkersHelper: "Add workers from desktop before reviewing coverage or attendance.",
+  assignedWorkersHelper: "Revisa el equipo asignado y contáctalos desde el móvil.",
+  assignedSortedHelper: "Ordenado por rol y estado de asistencia.",
+  noWorkersTitle: "Aún no hay trabajadores asignados",
+  noWorkersHelper: "Agrega trabajadores desde escritorio antes de revisar cobertura o asistencia.",
 
   // Attendance section
-  attendanceSectionHelper: "Review clock-in and clock-out activity.",
-  attendanceUnavailableTitle: "Attendance unavailable",
-  attendanceUnavailableHelper: "Assign workers first before reviewing attendance.",
-  noClockActivityTitle: "No clock activity yet",
-  noClockActivityHelper: "Clock-in and clock-out activity will appear here when workers start.",
+  attendanceSectionHelper: "Revisa la actividad de entrada y salida.",
+  attendanceUnavailableTitle: "Asistencia no disponible",
+  attendanceUnavailableHelper: "Asigna trabajadores antes de revisar la asistencia.",
+  noClockActivityTitle: "Sin actividad de reloj",
+  noClockActivityHelper: "La actividad de entrada y salida aparecerá aquí cuando los trabajadores empiecen.",
 
   // Shift details section
-  shiftDetailsHelper: "Review the core shift information.",
-  noClientTitle: "No client set",
-  noClientHelper: "Add the client from desktop so this shift is easier to identify.",
-  noLocationTitle: "Missing job site / venue",
-  noLocationHelper: "Add the job site from desktop. Meeting points are different — they're worker pickup spots, not the actual venue.",
-  noLocationOrMeetingTitle: "No location or meeting point",
-  noLocationOrMeetingHelper: "Workers won't know where to go or where to meet. Add a job site from desktop.",
-  noMeetingPoint: "No meeting point set.",
+  shiftDetailsHelper: "Información principal del turno.",
+  noClientTitle: "Falta cliente",
+  noClientHelper: "Agrega el cliente desde escritorio para identificar este turno fácilmente.",
+  noLocationTitle: "Falta ubicación del trabajo",
+  noLocationHelper: "Agrega la ubicación desde escritorio. El punto de encuentro es distinto — es donde se reúnen los trabajadores, no el lugar real.",
+  noLocationOrMeetingTitle: "Falta ubicación y punto de encuentro",
+  noLocationOrMeetingHelper: "Los trabajadores no sabrán a dónde ir. Agrega una ubicación desde escritorio.",
+  noMeetingPoint: "Sin punto de encuentro.",
 
   // Notes section
-  notesSectionHelper: "Internal notes for this shift.",
-  noNotesTitle: "No notes yet",
-  noNotesHelper: "Internal notes can be added from desktop for now.",
+  notesSectionHelper: "Notas internas de este turno.",
+  noNotesTitle: "Sin notas",
+  noNotesHelper: "Las notas internas se pueden agregar desde escritorio por ahora.",
 
   // Worker row — no phone state
-  noPhoneTitle: "No phone on file",
-  noPhoneHelper: "Add a phone number from the worker profile to enable call, SMS, and WhatsApp.",
+  noPhoneTitle: "Sin teléfono registrado",
+  noPhoneHelper: "Agrega un número en el perfil del trabajador para habilitar llamada, SMS y WhatsApp.",
 
   // Error states
-  teamErrorTitle: "Couldn't load team data",
-  teamErrorHelper: "Check your connection and try again. No shift data was changed.",
+  teamErrorTitle: "No se pudo cargar el equipo",
+  teamErrorHelper: "Revisa tu conexión e intenta de nuevo. No se cambió ningún dato del turno.",
 } as const;
 
 interface Props {
@@ -126,8 +126,8 @@ function calcHours(start: string, end: string): number {
 function dateLabel(dateStr: string): string {
   try {
     const d = parseISO(dateStr);
-    if (isToday(d)) return "Today";
-    if (isTomorrow(d)) return "Tomorrow";
+    if (isToday(d)) return "Hoy";
+    if (isTomorrow(d)) return "Mañana";
     return format(d, "EEEE, MMM d", { locale: enUS });
   } catch { return dateStr; }
 }
@@ -144,6 +144,8 @@ export function MobileShiftOperationsSheet({
 }: Props) {
   const navigate = useNavigate();
   const [traceOpen, setTraceOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [closeoutOpen, setCloseoutOpen] = useState(false);
   const [hubOpen, setHubOpen] = useState(false);
   const [notifyOpen, setNotifyOpen] = useState(false);
 
@@ -320,21 +322,25 @@ export function MobileShiftOperationsSheet({
 
   if (!shift || !data) return null;
 
-  // ── Smart brief (deterministic)
+  // ── Smart brief (deterministic) — only actionable issues, ordered by urgency.
   const briefMessages: { tone: "good" | "warn" | "bad" | "info"; text: string }[] = [];
-  if (draft) briefMessages.push({ tone: "warn", text: "Draft — workers won't see this yet" });
   if (published && understaffed) {
     const missing = slots - assignedCount;
-    briefMessages.push({ tone: "bad", text: `Needs ${missing} more worker${missing === 1 ? "" : "s"}` });
+    briefMessages.push({ tone: "bad", text: `Faltan ${missing} trabajador${missing === 1 ? "" : "es"}` });
   }
-  if (published && fullyStaffed) briefMessages.push({ tone: "good", text: "Fully staffed and published" });
-  if (draft && fullyStaffed) briefMessages.push({ tone: "info", text: "Ready to publish" });
-  if (assignedCount === 0) briefMessages.push({ tone: "bad", text: "No workers assigned" });
-  if (noClient) briefMessages.push({ tone: "warn", text: "No client linked" });
-  if (noLocation) briefMessages.push({ tone: "warn", text: meetingPoint ? "Missing job site (meeting point set)" : "No location linked" });
-  if (dateBucket === "today") briefMessages.push({ tone: "info", text: "Starts today" });
-  else if (dateBucket === "tomorrow") briefMessages.push({ tone: "info", text: "Upcoming tomorrow" });
-  if (briefMessages.length === 0) briefMessages.push({ tone: "good", text: "Looks good — no action needed" });
+  if (assignedCount === 0) briefMessages.push({ tone: "bad", text: "Sin trabajadores asignados" });
+  if (noLocation) briefMessages.push({ tone: "warn", text: meetingPoint ? "Falta ubicación del trabajo (hay punto de encuentro)" : "Falta ubicación del trabajo" });
+  if (!(shiftMeeting.point ?? meetingPoint)) briefMessages.push({ tone: "warn", text: "Falta punto de encuentro" });
+  if (noClient) briefMessages.push({ tone: "warn", text: "Falta cliente" });
+  if (draft) briefMessages.push({ tone: "warn", text: "Borrador — los trabajadores aún no lo ven" });
+  if (draft && fullyStaffed) briefMessages.push({ tone: "info", text: "Listo para publicar" });
+  if (
+    dateBucket === "today" &&
+    assignedWorkers.length > 0 &&
+    Object.keys(clockByEmp).length === 0
+  ) {
+    briefMessages.push({ tone: "warn", text: "Sin actividad de reloj" });
+  }
 
   // ── Snapshot text
   const snapshot = (() => {
@@ -369,9 +375,9 @@ export function MobileShiftOperationsSheet({
   const handleCopySummary = async () => {
     try {
       await navigator.clipboard.writeText(summaryText);
-      toast.success("Shift summary copied");
+      toast.success("Resumen del turno copiado");
     } catch {
-      toast.error("Couldn't copy to clipboard");
+      toast.error("No se pudo copiar al portapapeles");
     }
   };
 
@@ -409,24 +415,24 @@ export function MobileShiftOperationsSheet({
           // Single priority status pill: Unstaffed > Missing job site > No client > Draft > Published > OK.
           const pill: { label: string; cls: string } | null =
             published && understaffed
-              ? { label: "Unstaffed", cls: "border-rose-500/40 text-rose-700 dark:text-rose-400 bg-rose-500/10" }
+              ? { label: "Falta personal", cls: "border-rose-500/40 text-rose-700 dark:text-rose-400 bg-rose-500/10" }
               : noLocation
-                ? { label: meetingPoint ? "Missing job site" : "No location", cls: "border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10" }
+                ? { label: meetingPoint ? "Falta ubicación" : "Falta ubicación", cls: "border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10" }
                 : noClient
-                  ? { label: "No client", cls: "border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10" }
+                  ? { label: "Falta cliente", cls: "border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10" }
                   : draft
-                    ? { label: "Draft", cls: "border-border/60 text-muted-foreground bg-muted/40" }
+                    ? { label: "Borrador", cls: "border-border/60 text-muted-foreground bg-muted/40" }
                     : published && fullyStaffed
-                      ? { label: "Fully staffed", cls: "border-emerald-500/40 text-emerald-700 dark:text-emerald-400 bg-emerald-500/10" }
+                      ? { label: "Personal completo", cls: "border-emerald-500/40 text-emerald-700 dark:text-emerald-400 bg-emerald-500/10" }
                       : published
-                        ? { label: "Published", cls: "border-primary/30 text-primary bg-primary/5" }
+                        ? { label: "Publicado", cls: "border-primary/30 text-primary bg-primary/5" }
                         : null;
           const coverageBit = slots > 0 ? `${assignedCount}/${slots}` : `${assignedCount}`;
           return (
             <div
               className="px-5 pt-3 pb-2.5 border-b border-border/40 bg-background/95 backdrop-blur-sm"
               role="region"
-              aria-label={`Shift context for ${clientName && clientName !== "—" ? clientName : (shift.title || "shift")}, ${dateLabel(shift.date)}, entrada ${startShort}, termina aprox. ${endShort}`}
+              aria-label={`Contexto del turno para ${clientName && clientName !== "—" ? clientName : (shift.title || "turno")}, ${dateLabel(shift.date)}, entrada ${startShort}, termina aprox. ${endShort}`}
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
@@ -475,10 +481,10 @@ export function MobileShiftOperationsSheet({
                     variant="ghost" size="sm"
                     className="h-8 px-2 rounded-full -mt-1 -mr-1 text-xs gap-1"
                     onClick={() => onOpenChange(false)}
-                    aria-label="Back to shifts"
+                    aria-label="Volver a turnos"
                   >
                     <X className="h-4 w-4" />
-                    Back
+                    Volver
                   </Button>
                   {pill && (
                     <Badge
@@ -496,80 +502,76 @@ export function MobileShiftOperationsSheet({
 
         {/* Scroll area */}
         <div className="flex-1 overflow-y-auto px-5 pt-4 pb-4 space-y-5">
-          {/* Smart brief — single source of "what needs attention".
-              Phase 1A: Coverage StatCards + Operations snapshot removed
-              (info already in header meta line + Coverage chips below). */}
+          {/* 1. Qué necesita atención — solo problemas accionables */}
+          {briefMessages.length > 0 && (
+            <section>
+              <SectionTitle icon={Sparkles}>Qué necesita atención</SectionTitle>
+              <div className="space-y-1.5">
+                {briefMessages.map((m, i) => (
+                  <BriefRow key={i} tone={m.tone} text={m.text} />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* 2. Acciones rápidas — 2x2 grid */}
           <section>
-            <SectionTitle icon={Sparkles}>What needs attention</SectionTitle>
-            <div className="space-y-1.5">
-              {briefMessages.map((m, i) => (
-                <BriefRow key={i} tone={m.tone} text={m.text} />
-              ))}
+            <SectionTitle icon={Sparkles}>Acciones rápidas</SectionTitle>
+            <div className="grid grid-cols-2 gap-2">
+              {canValidate && (
+                <Button
+                  className="h-12 rounded-xl justify-start gap-2 text-sm font-semibold"
+                  onClick={() => setHubOpen(true)}
+                >
+                  <Users className="h-4 w-4" />
+                  <span>Gestionar equipo</span>
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                className="h-12 rounded-xl justify-start gap-2 text-sm font-medium"
+                onClick={handleViewAttendance}
+              >
+                <ClipboardList className="h-4 w-4" />
+                <span>Asistencia</span>
+              </Button>
+              {canValidate && (
+                <Button
+                  variant="outline"
+                  className="h-12 rounded-xl justify-start gap-2 text-sm font-medium"
+                  onClick={() => setNotifyOpen(true)}
+                >
+                  <Bell className="h-4 w-4" />
+                  <span>Notificar equipo</span>
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                className="h-12 rounded-xl justify-start gap-2 text-sm font-medium"
+                onClick={handleShare}
+              >
+                <Share2 className="h-4 w-4" />
+                <span>Compartir turno</span>
+              </Button>
+              <Button
+                variant="outline"
+                className="h-12 rounded-xl justify-start gap-2 text-sm font-medium col-span-2"
+                onClick={handleCopySummary}
+              >
+                <Copy className="h-4 w-4" />
+                <span>Copiar resumen</span>
+              </Button>
             </div>
           </section>
 
-          {/* Traceability (collapsed by default to keep sheet light) */}
-          <section>
-            <button
-              type="button"
-              onClick={() => setTraceOpen(v => !v)}
-              className="w-full flex items-center justify-between gap-2 mb-2.5 px-0.5 text-left"
-              aria-expanded={traceOpen}
-            >
-              <div className="flex items-center gap-1.5">
-                <Workflow className="h-4 w-4 text-muted-foreground" />
-                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Source &amp; history
-                </span>
-              </div>
-              <ChevronDown
-                className={cn(
-                  "h-4 w-4 text-muted-foreground transition-transform",
-                  traceOpen && "rotate-180"
-                )}
-              />
-            </button>
-            {traceOpen ? (
-              <TraceabilitySnapshot
-                compact
-                source={shiftTraceSource(draft, published)}
-                sourceNote="Scheduled shift · payroll uses real clock entries only"
-                timeline={buildShiftTimeline(shift)}
-                linked={buildShiftLinked({
-                  shift, clientName, locationName, assignedCount, slots,
-                })}
-                risks={buildShiftRisks({
-                  draft, published, understaffed, assignedCount,
-                  noClient, noLocation, hasShiftCode: !!shift.shift_code,
-                  imported: !!shift.import_batch_id,
-                })}
-                audit={buildShiftAudit(shift)}
-              />
-            ) : (
-              <p className="px-0.5 text-xs text-muted-foreground">
-                Tap to see where this shift came from, recent changes, and linked records.
-              </p>
-            )}
-            <p className="mt-2 px-0.5 text-[11px] text-muted-foreground">
-              Clock entries are reviewed from Time Clock.{" "}
-              <button
-                type="button"
-                onClick={handleViewAttendance}
-                className="font-semibold text-primary underline-offset-2 hover:underline"
-              >
-                View attendance
-              </button>
-            </p>
-          </section>
-
-          {/* Assigned workers */}
+          {/* 3. Equipo asignado */}
           <section>
             <SectionTitle
               icon={Users}
               helper={MOBILE_SHIFT_COPY.assignedWorkersHelper}
               badge={MOBILE_SHIFT_COPY.readOnlyMobile}
             >
-              Assigned workers
+              Equipo asignado
               <span className="ml-1.5 text-xs font-normal text-muted-foreground normal-case tracking-normal">
                 ({assignedCount}{slots > 0 ? `/${slots}` : ""})
               </span>
@@ -586,11 +588,11 @@ export function MobileShiftOperationsSheet({
               }
               return (
                 <div className="flex flex-wrap gap-1.5 mb-2.5">
-                  <CoverChip label="Required" value={slots > 0 ? slots : "—"} />
-                  <CoverChip label="Assigned" value={assignedCount} />
-                  <CoverChip label="Checked in" value={checkedIn} tone={checkedIn > 0 ? "good" : "muted"} />
-                  <CoverChip label="Out" value={checkedOut} tone="muted" />
-                  <CoverChip label="Missing" value={missing} tone={missing > 0 && dateBucket === "today" ? "bad" : "muted"} />
+                  <CoverChip label="requeridos" value={slots > 0 ? slots : "—"} />
+                  <CoverChip label="asignados" value={assignedCount} />
+                  <CoverChip label="registrados" value={checkedIn} tone={checkedIn > 0 ? "good" : "muted"} />
+                  <CoverChip label="salieron" value={checkedOut} tone="muted" />
+                  <CoverChip label="ausentes" value={missing} tone={missing > 0 && dateBucket === "today" ? "bad" : "muted"} />
                 </div>
               );
             })()}
@@ -607,7 +609,7 @@ export function MobileShiftOperationsSheet({
                 helper={MOBILE_SHIFT_COPY.teamErrorHelper}
                 devHint={teamError}
                 retryDisabled={loadingTeam}
-                retryLabel={loadingTeam ? "Retrying..." : "Retry"}
+                retryLabel={loadingTeam ? "Reintentando..." : "Reintentar"}
                 onRetry={() => setReloadKey(k => k + 1)}
                 onBack={() => onOpenChange(false)}
               />
@@ -645,23 +647,22 @@ export function MobileShiftOperationsSheet({
             {understaffed && (
               <div className="mt-2.5 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-3.5">
                 <div className="text-sm font-semibold text-amber-800 dark:text-amber-300">
-                  Staffing changes are available from desktop for now.
+                  Cambios de personal disponibles desde escritorio por ahora.
                 </div>
                 <div className="text-xs text-amber-700/80 dark:text-amber-300/80 mt-1 leading-relaxed">
-                  {slots - assignedCount} spot{slots - assignedCount === 1 ? "" : "s"} open. You can review coverage and contact assigned workers from mobile.
+                  {slots - assignedCount} cupo{slots - assignedCount === 1 ? "" : "s"} abierto{slots - assignedCount === 1 ? "" : "s"}. Puedes revisar la cobertura y contactar al equipo asignado desde el móvil.
                 </div>
               </div>
             )}
           </section>
 
-          {/* Attendance — unified premium panel (same as desktop)
-              Source of truth: ShiftAttendancePanel. */}
+          {/* 4. Asistencia */}
           <section>
             <SectionTitle
               icon={ClipboardList}
               helper={MOBILE_SHIFT_COPY.attendanceSectionHelper}
             >
-              Attendance
+              Asistencia
             </SectionTitle>
             {assignedWorkers.length === 0 ? (
               <EmptyBlock
@@ -685,127 +686,199 @@ export function MobileShiftOperationsSheet({
                   canManage={canValidate}
                 />
                 <p className="mt-2 px-0.5 text-[11px] text-muted-foreground">
-                  Attendance data is loaded from the attendance system.
+                  Datos cargados desde el sistema de asistencia.
                 </p>
               </>
             ) : null}
           </section>
 
-          {/* Shift details */}
-          <section>
-            <SectionTitle
-              icon={Tag}
-              helper={MOBILE_SHIFT_COPY.shiftDetailsHelper}
-              badge={MOBILE_SHIFT_COPY.readOnlyMobile}
-            >
-              Shift details
-            </SectionTitle>
-            <div className="rounded-2xl border border-border/50 bg-card divide-y divide-border/40">
-              <DetailRow icon={CalendarDays} label="Date" value={(() => {
-                try { return format(parseISO(shift.date), "EEEE, MMMM d, yyyy", { locale: enUS }); } catch { return shift.date; }
-              })()} />
-              <DetailRow icon={Clock} label="Entrada" value={startShort} />
-              <DetailRow icon={Clock} label="Termina aprox." value={endShort} muted />
-              {noClient ? (
-                <div className="px-4 py-3">
-                  <EmptyBlock
-                    icon={Building2}
-                    title={MOBILE_SHIFT_COPY.noClientTitle}
-                    helper={MOBILE_SHIFT_COPY.noClientHelper}
-                    compact
-                  />
+          {/* 5. Cierre diario — colapsable */}
+          {shift && selectedCompanyId ? (
+            <section>
+              <button
+                type="button"
+                onClick={() => setCloseoutOpen(v => !v)}
+                className="w-full flex items-center justify-between gap-2 mb-2.5 px-0.5 text-left"
+                aria-expanded={closeoutOpen}
+              >
+                <div className="flex items-center gap-1.5">
+                  <ShieldCheck className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-semibold text-foreground">
+                    Cierre diario
+                  </span>
                 </div>
-              ) : (
-                <DetailRow icon={Building2} label="Client" value={clientName && clientName !== "—" ? clientName : "—"} muted={!clientName || clientName === "—"} />
-              )}
-              {noLocation ? (
-                <div className="px-4 py-3">
-                  <EmptyBlock
-                    icon={MapPin}
-                    title={meetingPoint ? MOBILE_SHIFT_COPY.noLocationTitle : MOBILE_SHIFT_COPY.noLocationOrMeetingTitle}
-                    helper={meetingPoint ? MOBILE_SHIFT_COPY.noLocationHelper : MOBILE_SHIFT_COPY.noLocationOrMeetingHelper}
-                    compact
-                  />
-                </div>
-              ) : (
-                <DetailRow icon={MapPin} label="Job site" value={locationName || "—"} muted={!locationName} />
-              )}
-              {mp ? (
-                <DetailRow
-                  icon={MapPin}
-                  label="Punto de encuentro"
-                  value={mt ? `${mp} · ${mt}` : mp}
+                <ChevronDown
+                  className={cn(
+                    "h-4 w-4 text-muted-foreground transition-transform",
+                    closeoutOpen && "rotate-180"
+                  )}
+                />
+              </button>
+              {closeoutOpen ? (
+                <ShiftCloseoutSection
+                  shiftId={shift.id}
+                  companyId={selectedCompanyId}
+                  canSubmit={canValidate || shiftAdminId != null}
+                  canReview={canValidate}
+                  role={canValidate ? "admin" : "shift_admin"}
                 />
               ) : (
-                <div className="flex items-center gap-2 px-4 py-2.5 text-xs text-muted-foreground">
-                  <MapPin className="h-3.5 w-3.5 opacity-60" />
-                  <span>{MOBILE_SHIFT_COPY.noMeetingPoint}</span>
-                </div>
-              )}
-              <DetailRow
-                icon={FileEdit}
-                label="Publication"
-                value={draft ? "Draft" : published ? "Published" : (shift.publication_status ?? "—")}
-              />
-              {shift.claimable && (
-                <DetailRow icon={Sparkles} label="Claimable" value="Open to worker claims" />
-              )}
-            </div>
-          </section>
-
-          {/* Notes */}
-          <section>
-            <SectionTitle
-              icon={StickyNote}
-              helper={MOBILE_SHIFT_COPY.notesSectionHelper}
-            >
-              Notes
-            </SectionTitle>
-            {shift.notes ? (
-              <div className="rounded-2xl border border-border/50 bg-card px-4 py-3">
-                <p className="text-sm leading-relaxed text-foreground/90 whitespace-pre-wrap">
-                  {shift.notes}
+                <p className="px-0.5 text-xs text-muted-foreground">
+                  Toca para revisar o registrar el cierre operativo del día.
                 </p>
-              </div>
-            ) : (
-              <EmptyBlock
-                icon={StickyNote}
-                title={MOBILE_SHIFT_COPY.noNotesTitle}
-                helper={MOBILE_SHIFT_COPY.noNotesHelper}
-              />
-            )}
-          </section>
-
-          {/* Daily close — Phase 17C operational evidence (no payroll/time impact) */}
-          {shift && selectedCompanyId ? (
-            <ShiftCloseoutSection
-              shiftId={shift.id}
-              companyId={selectedCompanyId}
-              canSubmit={canValidate || shiftAdminId != null}
-              canReview={canValidate}
-              role={canValidate ? "admin" : "shift_admin"}
-            />
+              )}
+            </section>
           ) : null}
 
-          {/* Inline secondary actions */}
-          <section className="grid grid-cols-2 gap-2">
-            <Button variant="outline" className="h-12 rounded-xl justify-start gap-2 text-sm font-medium" onClick={handleCopySummary}>
-              <Copy className="h-4 w-4" />
-              <span>Copy summary</span>
-            </Button>
-            <Button variant="outline" className="h-12 rounded-xl justify-start gap-2 text-sm font-medium" onClick={handleShare}>
-              <Share2 className="h-4 w-4" />
-              <span>Share shift</span>
-            </Button>
-            <Button variant="outline" className="h-12 rounded-xl justify-start gap-2 text-sm font-medium" onClick={handleViewAttendance}>
-              <ClipboardList className="h-4 w-4" />
-              <span>Attendance</span>
-            </Button>
-            {canValidate && (
-              <Button variant="outline" className="h-12 rounded-xl justify-start gap-2 text-sm font-medium" onClick={() => setNotifyOpen(true)}>
-                <Bell className="h-4 w-4" />
-                <span>Notify team</span>
-              </Button>
+          {/* 6. Más detalles — colapsado por defecto */}
+          <section>
+            <button
+              type="button"
+              onClick={() => setMoreOpen(v => !v)}
+              className="w-full flex items-center justify-between gap-2 mb-2.5 px-0.5 text-left"
+              aria-expanded={moreOpen}
+            >
+              <div className="flex items-center gap-1.5">
+                <Tag className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-semibold text-foreground">
+                  Más detalles
+                </span>
+              </div>
+              <ChevronDown
+                className={cn(
+                  "h-4 w-4 text-muted-foreground transition-transform",
+                  moreOpen && "rotate-180"
+                )}
+              />
+            </button>
+            {moreOpen ? (
+              <div className="space-y-4">
+                {/* Detalles del turno */}
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5 px-0.5">
+                    Detalles del turno
+                  </p>
+                  <div className="rounded-2xl border border-border/50 bg-card divide-y divide-border/40">
+                    <DetailRow icon={CalendarDays} label="Fecha" value={(() => {
+                      try { return format(parseISO(shift.date), "EEEE, MMMM d, yyyy", { locale: enUS }); } catch { return shift.date; }
+                    })()} />
+                    <DetailRow icon={Clock} label="Entrada" value={startShort} />
+                    <DetailRow icon={Clock} label="Termina aprox." value={endShort} muted />
+                    {noClient ? (
+                      <div className="px-4 py-3">
+                        <EmptyBlock
+                          icon={Building2}
+                          title={MOBILE_SHIFT_COPY.noClientTitle}
+                          helper={MOBILE_SHIFT_COPY.noClientHelper}
+                          compact
+                        />
+                      </div>
+                    ) : (
+                      <DetailRow icon={Building2} label="Cliente" value={clientName && clientName !== "—" ? clientName : "—"} muted={!clientName || clientName === "—"} />
+                    )}
+                    {noLocation ? (
+                      <div className="px-4 py-3">
+                        <EmptyBlock
+                          icon={MapPin}
+                          title={meetingPoint ? MOBILE_SHIFT_COPY.noLocationTitle : MOBILE_SHIFT_COPY.noLocationOrMeetingTitle}
+                          helper={meetingPoint ? MOBILE_SHIFT_COPY.noLocationHelper : MOBILE_SHIFT_COPY.noLocationOrMeetingHelper}
+                          compact
+                        />
+                      </div>
+                    ) : (
+                      <DetailRow icon={MapPin} label="Ubicación" value={locationName || "—"} muted={!locationName} />
+                    )}
+                    {mp ? (
+                      <DetailRow
+                        icon={MapPin}
+                        label="Punto de encuentro"
+                        value={mt ? `${mp} · ${mt}` : mp}
+                      />
+                    ) : (
+                      <div className="flex items-center gap-2 px-4 py-2.5 text-xs text-muted-foreground">
+                        <MapPin className="h-3.5 w-3.5 opacity-60" />
+                        <span>{MOBILE_SHIFT_COPY.noMeetingPoint}</span>
+                      </div>
+                    )}
+                    <DetailRow
+                      icon={FileEdit}
+                      label="Publicación"
+                      value={draft ? "Borrador" : published ? "Publicado" : (shift.publication_status ?? "—")}
+                    />
+                    {shift.claimable && (
+                      <DetailRow icon={Sparkles} label="Reclamable" value="Abierto a reclamos del equipo" />
+                    )}
+                  </div>
+                </div>
+
+                {/* Notas */}
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5 px-0.5">
+                    Notas
+                  </p>
+                  {shift.notes ? (
+                    <div className="rounded-2xl border border-border/50 bg-card px-4 py-3">
+                      <p className="text-sm leading-relaxed text-foreground/90 whitespace-pre-wrap">
+                        {shift.notes}
+                      </p>
+                    </div>
+                  ) : (
+                    <EmptyBlock
+                      icon={StickyNote}
+                      title={MOBILE_SHIFT_COPY.noNotesTitle}
+                      helper={MOBILE_SHIFT_COPY.noNotesHelper}
+                    />
+                  )}
+                </div>
+
+                {/* Origen e historial */}
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => setTraceOpen(v => !v)}
+                    className="w-full flex items-center justify-between gap-2 mb-2 px-0.5 text-left"
+                    aria-expanded={traceOpen}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <Workflow className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                        Origen e historial
+                      </span>
+                    </div>
+                    <ChevronDown
+                      className={cn(
+                        "h-4 w-4 text-muted-foreground transition-transform",
+                        traceOpen && "rotate-180"
+                      )}
+                    />
+                  </button>
+                  {traceOpen ? (
+                    <TraceabilitySnapshot
+                      compact
+                      source={shiftTraceSource(draft, published)}
+                      sourceNote="Turno programado · la nómina solo usa entradas reales de reloj"
+                      timeline={buildShiftTimeline(shift)}
+                      linked={buildShiftLinked({
+                        shift, clientName, locationName, assignedCount, slots,
+                      })}
+                      risks={buildShiftRisks({
+                        draft, published, understaffed, assignedCount,
+                        noClient, noLocation, hasShiftCode: !!shift.shift_code,
+                        imported: !!shift.import_batch_id,
+                      })}
+                      audit={buildShiftAudit(shift)}
+                    />
+                  ) : (
+                    <p className="px-0.5 text-xs text-muted-foreground">
+                      Toca para ver de dónde viene este turno, cambios recientes y registros vinculados.
+                    </p>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <p className="px-0.5 text-xs text-muted-foreground">
+                Detalles del turno, notas, publicación y origen.
+              </p>
             )}
           </section>
         </div>
@@ -817,19 +890,19 @@ export function MobileShiftOperationsSheet({
               <Button
                 className="flex-1 h-12 rounded-xl text-sm font-semibold gap-2"
                 onClick={() => setHubOpen(true)}
-                aria-label="Open team management for this shift"
+                aria-label="Abrir gestión de equipo de este turno"
               >
                 <Users className="h-4 w-4" />
-                Manage team
+                Gestionar equipo
               </Button>
               <Button
                 variant="outline"
                 className="h-12 px-4 rounded-xl text-sm font-semibold gap-2"
                 onClick={handleViewAttendance}
-                aria-label="View attendance"
+                aria-label="Ver asistencia"
               >
                 <ClipboardList className="h-4 w-4" />
-                Attendance
+                Asistencia
               </Button>
             </div>
           ) : (
@@ -838,11 +911,11 @@ export function MobileShiftOperationsSheet({
               onClick={handleViewAttendance}
             >
               <ClipboardList className="h-4 w-4" />
-              View attendance
+              Ver asistencia
             </Button>
           )}
           <p className="mt-2 text-center text-[11px] text-muted-foreground">
-            Editing shift details is available from desktop for now.
+            La edición del turno está disponible desde escritorio por ahora.
           </p>
         </div>
       </SheetContent>
@@ -934,8 +1007,8 @@ function ErrorBlock({
   retryLabel?: string;
 }) {
   const isDev = typeof import.meta !== "undefined" && (import.meta as any)?.env?.DEV;
-  const label = retryLabel ?? "Retry";
-  const isRetrying = !!retryDisabled && label !== "Retry";
+  const label = retryLabel ?? "Reintentar";
+  const isRetrying = !!retryDisabled && label !== "Reintentar";
   return (
     <div
       role="alert"
@@ -977,9 +1050,9 @@ function ErrorBlock({
                   variant="ghost"
                   className="h-8 rounded-lg"
                   onClick={onBack}
-                  aria-label="Back to shifts"
+                  aria-label="Volver a turnos"
                 >
-                  Back
+                  Volver
                 </Button>
               )}
             </div>
@@ -1081,24 +1154,24 @@ function attendanceBadgeFor(
   attendanceStatus: string | null,
   clock: { clock_in: string | null; clock_out: string | null } | undefined,
 ): { label: string; cls: string } {
-  if (clock?.clock_out) return { label: "Clocked out", cls: "bg-muted text-muted-foreground" };
-  if (clock?.clock_in) return { label: "Clocked in", cls: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400" };
+  if (clock?.clock_out) return { label: "Salió", cls: "bg-muted text-muted-foreground" };
+  if (clock?.clock_in) return { label: "Registrado", cls: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400" };
   switch ((attendanceStatus ?? "").toLowerCase()) {
-    case "present": return { label: "Present", cls: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400" };
-    case "late":    return { label: "Late", cls: "bg-amber-500/15 text-amber-700 dark:text-amber-400" };
-    case "absent":  return { label: "Absent", cls: "bg-rose-500/15 text-rose-700 dark:text-rose-400" };
-    case "excused": return { label: "Excused", cls: "bg-muted text-muted-foreground" };
-    case "needs_review": return { label: "Needs review", cls: "bg-primary/15 text-primary" };
-    default: return { label: "Not started", cls: "bg-muted text-muted-foreground" };
+    case "present": return { label: "Presente", cls: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400" };
+    case "late":    return { label: "Tarde", cls: "bg-amber-500/15 text-amber-700 dark:text-amber-400" };
+    case "absent":  return { label: "Ausente", cls: "bg-rose-500/15 text-rose-700 dark:text-rose-400" };
+    case "excused": return { label: "Justificado", cls: "bg-muted text-muted-foreground" };
+    case "needs_review": return { label: "Por revisar", cls: "bg-primary/15 text-primary" };
+    default: return { label: "Sin iniciar", cls: "bg-muted text-muted-foreground" };
   }
 }
 
 function roleBadgeFor(role: string | null, isShiftAdmin: boolean): { label: string; cls: string } | null {
-  if (isShiftAdmin) return { label: "Shift admin", cls: "bg-primary/15 text-primary border-primary/30" };
+  if (isShiftAdmin) return { label: "Admin del turno", cls: "bg-primary/15 text-primary border-primary/30" };
   if (!role) return null;
   const r = role.toLowerCase();
-  if (r === "captain") return { label: "Captain", cls: "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30" };
-  if (r === "lead" || r === "admin") return { label: "Lead", cls: "bg-primary/15 text-primary border-primary/30" };
+  if (r === "captain") return { label: "Capitán", cls: "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30" };
+  if (r === "lead" || r === "admin") return { label: "Líder", cls: "bg-primary/15 text-primary border-primary/30" };
   if (r === "staff" || r === "worker") return null;
   return { label: role, cls: "bg-muted text-muted-foreground border-border" };
 }
@@ -1148,7 +1221,7 @@ const WorkerRow = memo(function WorkerRow({
   const phone = worker.phone_number?.trim();
   const normalized = normalizePhone(phone);
   const wa = phone ? buildWhatsAppTargets(phone, "") : null;
-  const workerName = `${worker.first_name ?? ""} ${worker.last_name ?? ""}`.trim() || "worker";
+  const workerName = `${worker.first_name ?? ""} ${worker.last_name ?? ""}`.trim() || "trabajador";
   const initialsStr = (worker.first_name?.[0] ?? "").toUpperCase() + (worker.last_name?.[0] ?? "").toUpperCase();
   const att = attendanceBadgeFor(attendanceStatus, clock);
   const roleBadge = roleBadgeFor(role, isShiftAdmin);
@@ -1159,9 +1232,9 @@ const WorkerRow = memo(function WorkerRow({
     if (!phone) return;
     try {
       await navigator.clipboard.writeText(phone);
-      toast.success("Phone copied");
+      toast.success("Teléfono copiado");
     } catch {
-      toast.error("Couldn't copy phone");
+      toast.error("No se pudo copiar el teléfono");
     }
   };
 
@@ -1208,15 +1281,15 @@ const WorkerRow = memo(function WorkerRow({
           <a
             href={`tel:${phone}`}
             className="flex-1 inline-flex items-center justify-center gap-1.5 h-9 rounded-xl bg-primary/10 text-primary hover:bg-primary/15 active:scale-[0.98] transition text-xs font-semibold"
-            aria-label={`Call ${workerName}`}
+            aria-label={`Llamar a ${workerName}`}
           >
             <Phone className="h-3.5 w-3.5" aria-hidden="true" />
-            Call
+            Llamar
           </a>
           <a
             href={`sms:${normalized || phone}`}
             className="flex-1 inline-flex items-center justify-center gap-1.5 h-9 rounded-xl bg-muted text-foreground hover:bg-muted/80 active:scale-[0.98] transition text-xs font-semibold"
-            aria-label={`Send SMS to ${workerName}`}
+            aria-label={`Enviar SMS a ${workerName}`}
           >
             <MessageSquare className="h-3.5 w-3.5" aria-hidden="true" />
             SMS
@@ -1227,7 +1300,7 @@ const WorkerRow = memo(function WorkerRow({
               target="_blank"
               rel="noopener noreferrer"
               className="flex-1 inline-flex items-center justify-center gap-1.5 h-9 rounded-xl bg-[#25D366]/10 text-[#128C4F] dark:text-[#25D366] hover:bg-[#25D366]/15 active:scale-[0.98] transition text-xs font-semibold"
-              aria-label={`Open WhatsApp for ${workerName}`}
+              aria-label={`Abrir WhatsApp para ${workerName}`}
             >
               <MessageCircle className="h-3.5 w-3.5" aria-hidden="true" />
               WhatsApp
@@ -1237,7 +1310,7 @@ const WorkerRow = memo(function WorkerRow({
             type="button"
             onClick={handleCopy}
             className="inline-flex items-center justify-center h-9 w-9 rounded-xl bg-muted text-muted-foreground hover:bg-muted/80 active:scale-[0.98] transition"
-            aria-label={`Copy phone number for ${workerName}`}
+            aria-label={`Copiar teléfono de ${workerName}`}
           >
             <Copy className="h-3.5 w-3.5" aria-hidden="true" />
           </button>
@@ -1245,7 +1318,7 @@ const WorkerRow = memo(function WorkerRow({
       ) : (
         <div
           className="mt-2.5 rounded-xl border border-dashed border-border/60 bg-muted/30 px-3 py-2"
-          aria-label={`No phone on file for ${workerName}. Add a phone number from the worker profile to enable contact actions.`}
+          aria-label={`Sin teléfono registrado para ${workerName}. Agrega un número en el perfil para habilitar contactos.`}
         >
           <div className="flex items-start gap-2">
             <Phone className="h-3.5 w-3.5 mt-0.5 text-muted-foreground shrink-0" aria-hidden="true" />
