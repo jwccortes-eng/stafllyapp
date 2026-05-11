@@ -445,12 +445,28 @@ export function MobileShiftOperationsSheet({
                     {clientName && clientName !== "—" ? clientName : (shift.title || "Shift")}
                   </h2>
                   <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                    {dateLabel(shift.date)} · {formatTimeShort(shift.start_time)}–{formatTimeShort(shift.end_time)} · <span className="font-semibold tabular-nums text-foreground/80">{coverageBit}</span> assigned
+                    {dateLabel(shift.date)} · <span className="font-semibold tabular-nums text-foreground/80">{coverageBit}</span> asignados
                   </p>
-                  <p className="text-[11px] text-muted-foreground mt-0.5 truncate flex items-center gap-1">
-                    <MapPin className="h-3 w-3 shrink-0 opacity-70" />
-                    <span className="truncate">{locationName || (meetingPoint ? `Meeting: ${meetingPoint}` : "No location")}</span>
-                  </p>
+                  {/* Stafly Work Route — Entrada protagonista; Termina aprox. secundario. */}
+                  <div className="mt-1.5 flex items-baseline gap-2">
+                    <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground/70">Entrada</span>
+                    <span className="text-xl font-bold font-mono tabular-nums text-foreground leading-none">{startShort}</span>
+                    <span className="text-[11px] text-muted-foreground/80 truncate">· Termina aprox. <span className="font-mono tabular-nums">{endShort}</span></span>
+                  </div>
+                  {mp ? (
+                    <p className="text-[11px] text-muted-foreground mt-1 truncate flex items-center gap-1">
+                      <MapPin className="h-3 w-3 shrink-0 opacity-70" />
+                      <span className="truncate">
+                        Punto de encuentro: <span className="text-foreground/90 font-medium">{mp}</span>
+                        {mt && <> · <span className="font-mono tabular-nums">{mt}</span></>}
+                      </span>
+                    </p>
+                  ) : (
+                    <p className="text-[11px] text-muted-foreground mt-1 truncate flex items-center gap-1">
+                      <MapPin className="h-3 w-3 shrink-0 opacity-70" />
+                      <span className="truncate">{locationName || "No location"}</span>
+                    </p>
+                  )}
                 </div>
                 <div className="flex flex-col items-end gap-1.5 shrink-0">
                   <Button
