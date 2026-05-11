@@ -730,7 +730,7 @@ function ShiftCard({
       <div className="mt-3 pt-3 border-t border-border/40 flex items-center justify-between gap-2">
         <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
           <Eye className="h-3.5 w-3.5" />
-          View operations
+          Ver operaciones
         </span>
         <button
           type="button"
@@ -740,7 +740,7 @@ function ShiftCard({
           }}
           className="inline-flex items-center gap-1 h-8 px-3 rounded-lg text-xs font-semibold bg-primary/10 text-primary hover:bg-primary/15 active:scale-95 transition"
         >
-          Operations
+          Operaciones
           <ChevronRight className="h-3.5 w-3.5" />
         </button>
       </div>
