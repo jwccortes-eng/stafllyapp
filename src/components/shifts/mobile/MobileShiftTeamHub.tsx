@@ -857,7 +857,7 @@ function OverviewTab({
 }
 
 function AssignedTab({
-  assignments, grouped, order, empById, shiftAdminId, canManage, companyId, onCopyPhone, onAssignmentAction,
+  assignments, grouped, order, empById, shiftAdminId, canManage, companyId, onCopyPhone, onAssignmentAction, onPhoneSaved,
 }: {
   assignments: HubAssignment[];
   grouped: Record<Bucket, HubAssignment[]>;
@@ -868,6 +868,7 @@ function AssignedTab({
   companyId: string | null;
   onCopyPhone: (p: string) => void;
   onAssignmentAction: (assignmentId: string, nextStatus: AssignmentNextStatus, workerName: string) => void;
+  onPhoneSaved?: () => void;
 }) {
   return (
     <section aria-label="Trabajadores asignados">
@@ -914,6 +915,7 @@ function AssignedTab({
                       companyId={companyId}
                       onCopyPhone={onCopyPhone}
                       onAssignmentAction={onAssignmentAction}
+                      onPhoneSaved={onPhoneSaved}
                     />
                   ))}
                 </ul>
