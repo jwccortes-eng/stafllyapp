@@ -1015,6 +1015,47 @@ export default function ImportSchedule() {
             }
           }
 
+          // ── DS5.1 Hardening: Address → location_id (NOT meeting_point) ──
+          const jobSiteLocationId = await resolveAddressToLocation(group.address || "", clientId);
+          if (group.address) {
+            importWarnings.push(buildImportWarning("ADDRESS_MAPPED_TO_LOCATION", {
+              ...warnCtx(group),
+              details: { address: group.address, location_id: jobSiteLocationId, dry_run: isDryRun },
+            }));
+          }
+
+          // ── DS5.1 Hardening: parse Note → meeting_point text + meeting_time + driver hint ──
+          const parsedNote = parseShiftNote(group.note);
+          let meetingPointText: string | null = parsedNote.meetingPointText;
+          let meetingTimeValue: string | null = parsedNote.meetingTime;
+          if (parsedNote.meetingPointText || parsedNote.meetingTime || parsedNote.driverHint) {
+            importWarnings.push(buildImportWarning("NOTE_MEETING_POINT_PARSED", {
+              ...warnCtx(group),
+              details: {
+                meeting_point_text: parsedNote.meetingPointText,
+                meeting_time: parsedNote.meetingTime,
+                driver_hint: parsedNote.driverHint,
+                confidence: parsedNote.confidence,
+              },
+            }));
+          }
+          if (group.note && parsedNote.confidence === "low") {
+            importWarnings.push(buildImportWarning("NOTE_PARSE_NEEDS_REVIEW", {
+              ...warnCtx(group),
+              details: { raw_note: group.note },
+            }));
+          }
+          // Emit IMPORTED_ACCEPT_NOT_STAFLY_RESPONSE warning per worker with `accept` source status.
+          for (let _ei = 0; _ei < group.employees.length; _ei++) {
+            const _statusRaw = (group.employeeStatuses[_ei] || "").toLowerCase();
+            if (_statusRaw === "accept") {
+              importWarnings.push(buildImportWarning("IMPORTED_ACCEPT_NOT_STAFLY_RESPONSE", {
+                ...warnCtx(group),
+                raw_employee_name: group.employees[_ei],
+              }));
+            }
+          }
+
           const reconHash = buildShiftHash(selectedCompanyId, numericCode || "", group.date, group.startTime, group.endTime);
           shiftPayloads.push({
             company_id: selectedCompanyId,
@@ -1024,7 +1065,11 @@ export default function ImportSchedule() {
             end_time: group.endTime,
             client_id: clientId,
             notes: group.note || null,
-            meeting_point: group.address || null,
+            // Address NEVER goes to meeting_point — only the parsed note text does.
+            meeting_point: meetingPointText,
+            meeting_time: meetingTimeValue,
+            location_id: jobSiteLocationId,
+            job_site_location_id: jobSiteLocationId,
             shift_code: numericCode || null,
             status: shiftStatus,
             slots: realEmployees.length || 1,
