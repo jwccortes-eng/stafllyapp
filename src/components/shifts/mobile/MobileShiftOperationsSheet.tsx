@@ -595,9 +595,9 @@ export function MobileShiftOperationsSheet({
                   </div>
                   <p className="text-[13px] text-foreground/85 leading-snug mb-3">{text}</p>
                   {primary && (
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-col gap-2">
                       <Button
-                        className="flex-1 h-12 rounded-xl text-sm font-bold gap-2"
+                        className="w-full h-12 rounded-xl text-sm font-bold gap-2"
                         onClick={primary.onClick}
                       >
                         <primary.icon className="h-4 w-4" />
@@ -606,7 +606,7 @@ export function MobileShiftOperationsSheet({
                       {secondary && (
                         <Button
                           variant="outline"
-                          className="h-12 rounded-xl text-sm font-semibold gap-2 px-4"
+                          className="w-full h-10 rounded-xl text-sm font-semibold gap-2"
                           onClick={secondary.onClick}
                         >
                           <secondary.icon className="h-4 w-4" />
