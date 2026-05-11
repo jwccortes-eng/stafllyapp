@@ -1257,7 +1257,7 @@ function ClaimsTab({
       <div className="mt-3 rounded-2xl border border-dashed border-border/60 bg-muted/20 px-4 py-3">
         <p className="text-[12px] text-muted-foreground">
           {canManage
-            ? "Approve or reject above. Logged actions don't affect payroll or worked time."
+            ? "Aprueba o rechaza arriba. Las acciones registradas no afectan nómina ni tiempo trabajado."
             : HUB_COPY.claimsManagedDesktop}
         </p>
         <button
@@ -1265,7 +1265,7 @@ function ClaimsTab({
           onClick={onOpenDesktop}
           className="mt-2 inline-flex items-center gap-1 text-[12px] font-semibold text-primary"
         >
-          Review claims on desktop <ExternalLink className="h-3 w-3" />
+          Revisar solicitudes en escritorio <ExternalLink className="h-3 w-3" />
         </button>
       </div>
     </section>
