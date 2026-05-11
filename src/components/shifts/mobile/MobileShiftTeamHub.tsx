@@ -48,7 +48,8 @@ import { allowedNextStatusesFor, type AssignmentNextStatus, type ClaimDecision }
 import { MobileTeamActionDialog } from "@/components/shifts/mobile/MobileTeamActionDialog";
 import { isOnboardingComplete } from "@/lib/onboarding";
 import { isGraceEligibleCompany, isWithinGraceWindow, GRACE_POLICY_DAYS } from "@/lib/shifts/readiness-grace";
-import { formatDistanceToNowStrict } from "date-fns";
+import { formatDistanceToNowStrict, format, parseISO, isToday, isTomorrow } from "date-fns";
+import { enUS } from "date-fns/locale";
 import {
   rankCandidate, inferShiftRoleNeeds, EMPTY_SIGNALS,
   type RecommendationSignals, type ReviewSignal, type RankedCandidate,
