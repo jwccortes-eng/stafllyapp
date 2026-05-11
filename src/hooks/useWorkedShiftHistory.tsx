@@ -231,10 +231,10 @@ export function useWorkedShiftHistory({
 
 export const WORKER_STATUS_LABEL_ES: Record<WorkerShiftStatus, string> = {
   paid: "Pagado",
-  published: "Publicado",
+  published: "Disponible en reporte",
   in_review: "En revisión",
   pending_validation: "Pendiente de validación",
   open_clock: "Reloj sin cerrar",
-  no_hours: "Sin horas registradas",
-  no_period_yet: "No disponible todavía",
+  no_hours: "Sin horas en Stafly",
+  no_period_yet: "Pendiente",
 };
