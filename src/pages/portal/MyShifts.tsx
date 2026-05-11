@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffectiveEmployee } from "@/hooks/useEffectiveEmployee";
 import {
-  CalendarDays, Clock, MapPin, HandMetal, Loader2,
+  CalendarDays, Clock, MapPin, HandMetal, Loader2, Check, X, LogIn,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -21,6 +21,15 @@ import { CLAIMABLE_VISIBLE_STATUSES, isShiftClaimableForEmployee } from "@/lib/s
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorBlock } from "@/components/ui/error-block";
 import { formatDisplayName } from "@/lib/format-helpers";
+import {
+  OperationalAgendaHero,
+  OperationalTimeline,
+  OperationalTimelineRow,
+  AgendaSectionHeader,
+  AgendaEmptyState,
+  type AgendaItem,
+  type AgendaStatus,
+} from "@/components/mobile-agenda";
 
 interface ShiftAssignment {
   id: string;
@@ -38,6 +47,7 @@ interface ShiftAssignment {
     slots: number | null;
     shift_code?: string | null;
     meeting_point?: string | null;
+    meeting_time?: string | null;
     special_instructions?: string | null;
     company_id?: string;
     operational_version?: number;
@@ -96,7 +106,7 @@ export default function MyShifts() {
     // selection or upstream bug can never leak cross-tenant assignments.
     const { data: assignData } = await supabase
       .from("shift_assignments")
-      .select(`id, status, response_status, accepted_shift_version, scheduled_shifts!inner (id, title, date, start_time, end_time, notes, status, slots, shift_code, meeting_point, special_instructions, company_id, operational_version, locations (name), clients (name))`)
+      .select(`id, status, response_status, accepted_shift_version, scheduled_shifts!inner (id, title, date, start_time, end_time, notes, status, slots, shift_code, meeting_point, meeting_time, special_instructions, company_id, operational_version, locations (name), clients (name))`)
       .eq("employee_id", employeeId)
       .eq("company_id", emp.company_id)
       .eq("is_draft_reservation", false)
@@ -117,6 +127,7 @@ export default function MyShifts() {
         end_time: a.scheduled_shifts.end_time, notes: a.scheduled_shifts.notes,
         status: a.scheduled_shifts.status, slots: a.scheduled_shifts.slots,
         shift_code: a.scheduled_shifts.shift_code, meeting_point: a.scheduled_shifts.meeting_point,
+        meeting_time: a.scheduled_shifts.meeting_time,
         special_instructions: a.scheduled_shifts.special_instructions,
         company_id: a.scheduled_shifts.company_id,
         operational_version: a.scheduled_shifts.operational_version,
@@ -414,8 +425,55 @@ export default function MyShifts() {
     meeting_point: a.shift.meeting_point,
   });
 
+  // Maps a worker assignment to the presentation-only AgendaItem contract
+  // used by the mobile-agenda library. No business logic here.
+  const mapToAgendaItem = (a: ShiftAssignment): AgendaItem => {
+    const ds = getDisplayStatus(a);
+    const status: AgendaStatus =
+      ds === "confirmed" ? "confirmed"
+      : ds === "needs_reacceptance" ? "needs_reacceptance"
+      : ds === "rejected" ? "rejected"
+      : isBefore(parseISO(a.shift.date), today) ? "past"
+      : "pending";
+    const start = (a.shift.start_time ?? "").slice(0, 5);
+    const end = a.shift.end_time ? a.shift.end_time.slice(0, 5) : null;
+    const meetingTime = a.shift.meeting_time ? a.shift.meeting_time.slice(0, 5) : null;
+    return {
+      id: a.id,
+      date: a.shift.date,
+      startTime: start,
+      endTime: end,
+      title: formatDisplayName(a.shift.title) || "Turno",
+      subtitle: a.shift.client?.name
+        ? `${formatDisplayName(a.shift.client.name)}${a.shift.location?.name ? ` · ${formatDisplayName(a.shift.location.name)}` : ""}`
+        : a.shift.location?.name ? formatDisplayName(a.shift.location.name) : null,
+      meetingPoint: a.shift.meeting_point
+        ? { address: a.shift.meeting_point, time: meetingTime }
+        : null,
+      status,
+    };
+  };
+
+  // Next upcoming assignment that still matters operationally (accepted, pending,
+  // or needs_reacceptance). Used for the hero card on Today/Upcoming tabs.
+  const nextHeroAssignment: ShiftAssignment | null = (() => {
+    if (activeTab !== "today" && activeTab !== "upcoming") return null;
+    return (
+      filtered.find(
+        (a) =>
+          !isBefore(parseISO(a.shift.date), today) &&
+          ["accepted", "pending", "needs_reacceptance"].includes(a.response_status),
+      ) ?? null
+    );
+  })();
+
+  const responseOwedFor = (a: ShiftAssignment) =>
+    (a.response_status === "pending" || a.response_status === "needs_reacceptance") &&
+    !isBefore(parseISO(a.shift.date), today);
+
+
   return (
-    <div className="animate-fade-in pb-24">
+    <div className="animate-fade-in pb-24 -mx-3 px-3 -mt-3 pt-3 bg-gradient-to-b from-sky-500/[0.04] via-background to-background min-h-[calc(100vh-4rem)]">
       {/* Minimal header — title only, subtitle merged into active tab context */}
       <div className="pt-1 pb-3">
         <h1 className="text-[22px] font-bold font-heading tracking-tight text-foreground leading-none">
@@ -461,31 +519,49 @@ export default function MyShifts() {
         })}
       </div>
 
-      {/* Shift list — compact rows. History tab adds week grouping + pagination. */}
-      {activeTab !== "available" && filtered.length > 0 && (() => {
-        const renderCard = (a: ShiftAssignment) => {
-          // A response is owed whenever response_status is pending OR
-          // needs_reacceptance — independent of the assignment.status, which may
-          // already be "confirmed" when the admin auto-assigned the worker.
-          const responseOwed =
-            (a.response_status === "pending" || a.response_status === "needs_reacceptance") &&
-            !isBefore(parseISO(a.shift.date), today);
-          // Treat the worker as confirmed only when they have explicitly accepted.
-          const workerAccepted = a.response_status === "accepted";
-          return (
-            <PortalShiftCard
-              key={a.id}
-              shift={toCardData(a)}
-              compact
+      {/* HERO — "Tu próxima jornada" on Today/Upcoming when an actionable shift exists. */}
+      {nextHeroAssignment && (activeTab === "today" || activeTab === "upcoming") && (() => {
+        const a = nextHeroAssignment;
+        const owed = responseOwedFor(a);
+        const accepted = a.response_status === "accepted";
+        const isClockable = accepted && isToday(parseISO(a.shift.date));
+        return (
+          <div className="mb-4">
+            <OperationalAgendaHero
+              eyebrow="Tu próxima jornada"
+              item={mapToAgendaItem(a)}
               onClick={() => setSelectedShift(a)}
-              onAccept={responseOwed ? () => acceptAssignment(a.id) : undefined}
-              onReject={responseOwed ? () => { setRejectDialogId(a.id); setRejectReason(""); } : undefined}
-              onClockIn={
-                workerAccepted && isToday(parseISO(a.shift.date))
-                  ? () => navigate(`/portal/clock?shiftId=${a.shift.id}`)
+              primaryAction={
+                isClockable
+                  ? { label: "Marcar entrada", onClick: () => navigate(`/portal/clock?shiftId=${a.shift.id}`), variant: "primary", icon: LogIn }
+                  : owed
+                  ? { label: "Confirmar", onClick: () => acceptAssignment(a.id), variant: "primary", icon: Check, loading: responding === a.id }
                   : undefined
               }
-              responding={responding === a.id}
+              secondaryAction={
+                owed
+                  ? { label: "Rechazar", onClick: () => { setRejectDialogId(a.id); setRejectReason(""); }, variant: "ghost", icon: X }
+                  : undefined
+              }
+            />
+          </div>
+        );
+      })()}
+
+      {/* Timeline list — Today/Upcoming use comfortable density, History uses compact + buckets. */}
+      {activeTab !== "available" && filtered.length > 0 && (() => {
+        const heroId = nextHeroAssignment?.id;
+        const renderRow = (a: ShiftAssignment, idx: number, density: "comfortable" | "compact" = "comfortable") => {
+          const owed = responseOwedFor(a);
+          return (
+            <OperationalTimelineRow
+              key={a.id}
+              item={mapToAgendaItem(a)}
+              index={idx}
+              density={density}
+              onClick={() => setSelectedShift(a)}
+              inlineActionLabel={owed ? "Confirmar" : undefined}
+              onInlineAction={owed ? () => acceptAssignment(a.id) : undefined}
             />
           );
         };
@@ -515,22 +591,20 @@ export default function MyShifts() {
             else buckets[2].items.push(a);
           }
 
+          let globalIdx = 0;
           return (
             <div className="space-y-4">
-              {/* Discrete total — replaces the noisy "99+" badge in the tab */}
               <p className="text-[11px] text-muted-foreground/60 px-1 -mt-1">
                 {filtered.length} turno{filtered.length === 1 ? "" : "s"} en total
               </p>
 
-              {buckets.filter(b => b.items.length > 0).map((b) => (
-                <div key={b.key} className="space-y-1.5">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground/55 px-1">
-                    {b.label}
-                  </p>
-                  <div className="space-y-1.5">
-                    {b.items.map(renderCard)}
-                  </div>
-                </div>
+              {buckets.filter((b) => b.items.length > 0).map((b) => (
+                <section key={b.key} className="space-y-2">
+                  <AgendaSectionHeader title={b.label} />
+                  <OperationalTimeline>
+                    {b.items.map((a) => renderRow(a, globalIdx++, "compact"))}
+                  </OperationalTimeline>
+                </section>
               ))}
 
               {remaining > 0 && (
@@ -538,7 +612,7 @@ export default function MyShifts() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => setHistoryVisible(v => v + HISTORY_PAGE)}
+                    onClick={() => setHistoryVisible((v) => v + HISTORY_PAGE)}
                     className="w-full h-10 text-[12px] font-semibold rounded-xl text-muted-foreground hover:text-foreground"
                   >
                     Cargar {Math.min(remaining, HISTORY_PAGE)} más · {remaining} restantes
@@ -549,12 +623,22 @@ export default function MyShifts() {
           );
         }
 
+        // Today / Upcoming — exclude hero item from the timeline to avoid duplication.
+        const list = filtered.filter((a) => a.id !== heroId);
+        if (list.length === 0) return null;
         return (
-          <div className="space-y-1.5">
-            {filtered.map(renderCard)}
-          </div>
+          <section className="space-y-2">
+            <AgendaSectionHeader
+              title={activeTab === "today" ? "Hoy" : "Esta semana"}
+              caption={list.length === 1 ? "1 turno" : `${list.length} turnos`}
+            />
+            <OperationalTimeline>
+              {list.map((a, i) => renderRow(a, i, "comfortable"))}
+            </OperationalTimeline>
+          </section>
         );
       })()}
+
 
       {/* AVAILABLE TAB — claimable shifts as primary content */}
       {activeTab === "available" && claimable.length > 0 && (
