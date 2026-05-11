@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useLocation, matchPath } from "react-router-dom";
 import { safeRandomUUID } from "@/lib/safe-storage";
 import { MessageCircle, X, Send, Loader2, Bot, User, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
