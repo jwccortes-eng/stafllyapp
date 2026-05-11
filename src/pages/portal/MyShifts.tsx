@@ -38,6 +38,7 @@ interface ShiftAssignment {
     slots: number | null;
     shift_code?: string | null;
     meeting_point?: string | null;
+    meeting_time?: string | null;
     special_instructions?: string | null;
     company_id?: string;
     operational_version?: number;
