@@ -597,14 +597,20 @@ export default function ImportSchedule() {
       });
       const targetDiagnostics = new Map<string, TargetShiftDiagnostic>();
       // Cache resolution per name to avoid double-counting telemetry.
-      const resolveCache = new Map<string, { id: string | null; ambiguous: boolean; method: MatchMethod | null }>();
-      const resolveOnce = (name: string): { id: string | null; ambiguous: boolean; method: MatchMethod | null } => {
+      const resolveCache = new Map<string, { id: string | null; ambiguous: boolean; method: MatchMethod | null; replacedInactiveId?: string; needsActiveDuplicateReview?: boolean }>();
+      const resolveOnce = (name: string) => {
         const cached = resolveCache.get(name);
         if (cached) return cached;
         const ambiguousBefore = resolver.ambiguous.length;
         const r = resolver.resolveByName(name);
         const ambiguousAfter = resolver.ambiguous.length;
-        const result = { id: r?.employeeId ?? null, ambiguous: ambiguousAfter > ambiguousBefore, method: r?.method ?? null };
+        const result = {
+          id: r?.employeeId ?? null,
+          ambiguous: ambiguousAfter > ambiguousBefore,
+          method: r?.method ?? null,
+          replacedInactiveId: r?.replacedInactiveId,
+          needsActiveDuplicateReview: r?.needsActiveDuplicateReview,
+        };
         resolveCache.set(name, result);
         return result;
       };
@@ -612,6 +618,26 @@ export default function ImportSchedule() {
       for (const empName of allEmpNames) {
         if (/^system\s/i.test(empName)) continue;
         resolveOnce(empName);
+      }
+      // Pre-emit name-level warnings (one per unique raw name) for the
+      // inactive-fallback paths so admins see them even when the assignment
+      // ultimately succeeds.
+      const importWarningsForResolver: ImportWarning[] = [];
+      for (const [rawName, r] of resolveCache) {
+        if (r.replacedInactiveId && !r.needsActiveDuplicateReview) {
+          importWarningsForResolver.push(buildImportWarning("INACTIVE_MATCH_REPLACED_WITH_ACTIVE", {
+            raw_employee_name: rawName,
+            matched_employee_id: r.id,
+            details: { inactive_employee_id: r.replacedInactiveId, active_employee_id: r.id },
+          }));
+        }
+        if (r.needsActiveDuplicateReview) {
+          importWarningsForResolver.push(buildImportWarning("MULTIPLE_ACTIVE_DUPLICATES_NEED_REVIEW", {
+            raw_employee_name: rawName,
+            matched_employee_id: r.id,
+            details: { inactive_employee_id: r.replacedInactiveId },
+          }));
+        }
       }
 
       let totalShifts = 0;
