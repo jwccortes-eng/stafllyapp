@@ -262,10 +262,18 @@ export default function PortalShiftDetail() {
             {shift.meeting_point && (
               <div className="flex items-start gap-2 px-3 py-2 rounded-xl bg-primary/[0.05] border border-primary/10">
                 <Navigation className="h-3.5 w-3.5 text-primary mt-0.5 shrink-0" />
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-primary/70">Punto de encuentro</p>
-                  <p className="text-[12px] text-foreground font-medium">{shift.meeting_point}</p>
+                  <p className="text-[12px] text-foreground font-medium leading-snug">{shift.meeting_point}</p>
                 </div>
+                {shift.meeting_time && (
+                  <div className="shrink-0 text-right">
+                    <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-primary/70 leading-none mb-0.5">Hora</p>
+                    <p className="text-[15px] font-bold font-mono tabular-nums text-foreground leading-none">
+                      {shift.meeting_time.slice(0, 5)}
+                    </p>
+                  </div>
+                )}
               </div>
             )}
             {shift.notes && (
