@@ -594,7 +594,7 @@ function PayReportDetailDialog({
     <Dialog open={!!row} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle className="font-heading">Pay report details</DialogTitle>
+          <DialogTitle className="font-heading">Detalle del pago</DialogTitle>
           <DialogDescription>
             {fmtRange(row.period.start_date, row.period.end_date)}
           </DialogDescription>
@@ -604,7 +604,7 @@ function PayReportDetailDialog({
           {/* Hero amount */}
           <div className="rounded-2xl bg-muted/30 border border-border/40 p-4 text-center">
             <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-              Total paid
+              Total pagado
             </p>
             <p className="text-3xl font-bold font-heading tabular-nums text-foreground mt-1">
               {fmtMoney(row.base_total_pay)}
@@ -622,15 +622,15 @@ function PayReportDetailDialog({
 
           {/* Breakdown */}
           <div className="space-y-2">
-            <DetailRow label="Date range" value={fmtRange(row.period.start_date, row.period.end_date)} />
+            <DetailRow label="Rango de fechas" value={fmtRange(row.period.start_date, row.period.end_date)} />
             {row.period.sequence_number != null && (
-              <DetailRow label="Period #" value={String(row.period.sequence_number)} mono />
+              <DetailRow label="Periodo #" value={String(row.period.sequence_number)} mono />
             )}
-            <DetailRow label="Source" value={sourceLabel(row)} />
-            <DetailRow label="Validation" value={validationLabel(row)} />
+            <DetailRow label="Fuente" value={sourceLabel(row)} />
+            <DetailRow label="Validación" value={validationLabel(row)} />
             {row.import_info?.created_at && (
               <DetailRow
-                label="Imported on"
+                label="Importado el"
                 value={fmtDateFriendly(row.import_info.created_at)}
               />
             )}
@@ -643,14 +643,14 @@ function PayReportDetailDialog({
             )}
             {hasOvertime && (
               <DetailRow
-                label="Overtime"
+                label="Horas extra"
                 value={fmtMoney(row.total_overtime ?? 0)}
                 mono
               />
             )}
             {hasHours && (
               <DetailRow
-                label="Hours"
+                label="Horas"
                 value={`${(row.total_paid_hours ?? row.weekly_total_hours ?? 0).toFixed(2)} h`}
                 mono
               />
@@ -662,9 +662,9 @@ function PayReportDetailDialog({
             <div className="rounded-xl bg-muted/40 border border-border/40 p-3 flex gap-2">
               <Info className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5" />
               <p className="text-[11px] leading-relaxed text-muted-foreground">
-                Final paid amount from historical payroll file. This summary
-                reflects the final payroll record imported from Connecteam.
-                Scheduled hours are not used to calculate payment.
+                Monto final pagado según el archivo histórico de payroll
+                importado desde Connecteam. Las horas programadas no se usan
+                para calcular el pago.
               </p>
             </div>
           )}
@@ -682,13 +682,13 @@ function PayReportDetailDialog({
               }}
               className="w-full"
             >
-              {copied ? (<><Check className="h-3.5 w-3.5 mr-1.5" /> Copied</>) : (<><Copy className="h-3.5 w-3.5 mr-1.5" /> Copy</>)}
+              {copied ? (<><Check className="h-3.5 w-3.5 mr-1.5" /> Copiado</>) : (<><Copy className="h-3.5 w-3.5 mr-1.5" /> Copiar</>)}
             </Button>
             <Button type="button" variant="outline" size="sm" onClick={onPrint} className="w-full">
-              <Printer className="h-3.5 w-3.5 mr-1.5" /> Print
+              <Printer className="h-3.5 w-3.5 mr-1.5" /> Imprimir
             </Button>
             <Button type="button" variant="default" size="sm" onClick={() => onViewDetails(row)} className="w-full">
-              <Info className="h-3.5 w-3.5 mr-1.5" /> Details
+              <Info className="h-3.5 w-3.5 mr-1.5" /> Ver detalle
             </Button>
           </div>
         </div>
