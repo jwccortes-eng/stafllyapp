@@ -1138,6 +1138,35 @@ function WorkerRow({
           </button>
         </div>
       )}
+      <Dialog open={phoneDialogOpen} onOpenChange={setPhoneDialogOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Agregar teléfono</DialogTitle>
+            <DialogDescription>{name} · 10 dígitos. Solo actualiza este perfil.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor={`hub-phone-${assignment.id}`}>Número de teléfono</Label>
+            <Input
+              id={`hub-phone-${assignment.id}`}
+              inputMode="tel"
+              autoFocus
+              placeholder="(555) 123-4567"
+              value={phoneInput}
+              onChange={(e) => setPhoneInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") submitPhone(); }}
+            />
+            <p className="text-[11px] text-muted-foreground">
+              No se envían notificaciones. No se modifican registros duplicados.
+            </p>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="ghost" onClick={() => setPhoneDialogOpen(false)} disabled={savingPhone}>Cancelar</Button>
+            <Button onClick={submitPhone} disabled={savingPhone}>
+              {savingPhone ? "Guardando…" : "Guardar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </li>
   );
 }
