@@ -52,16 +52,17 @@ import {
  */
 const MOBILE_SHIFT_COPY = {
   // Shared
-  readOnlyMobile: "Solo lectura en móvil",
+  readOnlyMobile: "Operación móvil",
+  mobileSafeActions: "Acciones seguras disponibles en móvil.",
 
   // Coverage section
   coverageHelper: "Cupos requeridos, trabajadores asignados y estado actual de personal.",
 
   // Assigned workers section
-  assignedWorkersHelper: "Revisa el equipo asignado y contáctalos desde el móvil.",
+  assignedWorkersHelper: "Revisa, contacta y gestiona el equipo desde móvil.",
   assignedSortedHelper: "Ordenado por rol y estado de asistencia.",
   noWorkersTitle: "Aún no hay trabajadores asignados",
-  noWorkersHelper: "Agrega trabajadores desde escritorio antes de revisar cobertura o asistencia.",
+  noWorkersHelper: "Asigna trabajadores desde Gestionar equipo o usa las herramientas avanzadas en escritorio.",
 
   // Attendance section
   attendanceSectionHelper: "Revisa la actividad de entrada y salida.",
