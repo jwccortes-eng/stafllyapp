@@ -72,6 +72,14 @@ export type {
 export { StaflySectionHeader } from "./StaflySectionHeader";
 export type { StaflySectionHeaderProps } from "./StaflySectionHeader";
 
+export { ShiftRouteHeader } from "./ShiftRouteHeader";
+export type {
+  ShiftRouteHeaderProps,
+  ShiftRouteHeaderVariant,
+  ShiftRouteHeaderDensity,
+  ShiftRouteHeaderTone,
+} from "./ShiftRouteHeader";
+
 // Hooks
 export { usePortalChrome } from "./usePortalChrome";
 export type { PortalChromeMode, PortalOutletContext } from "./usePortalChrome";
