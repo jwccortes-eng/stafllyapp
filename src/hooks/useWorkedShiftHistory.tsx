@@ -136,7 +136,7 @@ export function useWorkedShiftHistory({
         if (periodsRes.error) throw periodsRes.error;
         // rides may legitimately fail under RLS — silent fallback
 
-        const periods = (periodsRes.data ?? []) as Array<{
+        const periods = ((periodsRes.data ?? []) as any[]) as Array<{
           id: string;
           start_date: string;
           end_date: string;
