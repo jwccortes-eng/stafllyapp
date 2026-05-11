@@ -1189,7 +1189,7 @@ function ClaimsTab({
                     )}
                     <p className="mt-1 text-[10px] text-muted-foreground">
                       {c.created_at ? new Date(c.created_at).toLocaleString() : ""}
-                      {c.reviewed_at ? ` · reviewed ${new Date(c.reviewed_at).toLocaleString()}` : ""}
+                      {c.reviewed_at ? ` · revisada ${new Date(c.reviewed_at).toLocaleString()}` : ""}
                     </p>
 
                     {blocked && (
