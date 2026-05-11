@@ -718,7 +718,10 @@ export default function MyShifts() {
                   <p className="text-[12px] text-muted-foreground/80 mt-0.5">
                     {isToday(parseISO(s.date)) ? "Hoy" : isTomorrow(parseISO(s.date)) ? "Mañana" : format(parseISO(s.date), "EEE d MMM", { locale: enUS })}
                     {" · "}
-                    <span className="tabular-nums">{s.start_time?.slice(0, 5)}–{s.end_time?.slice(0, 5)}</span>
+                    <span className="font-semibold text-foreground">Entrada <span className="tabular-nums font-mono">{s.start_time?.slice(0, 5)}</span></span>
+                    {s.end_time && (
+                      <span className="text-muted-foreground/70"> · Termina aprox. <span className="tabular-nums font-mono">{s.end_time?.slice(0, 5)}</span></span>
+                    )}
                   </p>
                   {s.location && (
                     <p className="text-[12px] text-muted-foreground/70 mt-0.5 flex items-center gap-1 truncate">

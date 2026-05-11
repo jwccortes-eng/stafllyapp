@@ -346,12 +346,13 @@ export default function EmployeeDashboard() {
                       <p className="text-[12.5px] font-semibold text-foreground truncate">
                         {formatDisplayName(s.title)}
                       </p>
-                      <div className="flex items-center gap-2 text-[10.5px] text-muted-foreground/70 mt-0.5">
-                        <span className="flex items-center gap-1 font-medium tabular-nums">
-                          <Clock className="h-2.5 w-2.5" />
-                          {s.start_time?.slice(0, 5)} – {s.end_time?.slice(0, 5)}
-                        </span>
-                        {s.location_name && <span className="truncate">{formatDisplayName(s.location_name)}</span>}
+                      <div className="flex items-center gap-1.5 text-[10.5px] text-muted-foreground/70 mt-0.5 min-w-0">
+                        <Clock className="h-2.5 w-2.5 shrink-0" />
+                        <span className="font-semibold text-foreground">Entrada <span className="tabular-nums font-mono">{s.start_time?.slice(0, 5)}</span></span>
+                        {s.end_time && (
+                          <span className="text-muted-foreground/65 truncate">· Termina aprox. <span className="tabular-nums font-mono">{s.end_time?.slice(0, 5)}</span></span>
+                        )}
+                        {s.location_name && <span className="truncate">· {formatDisplayName(s.location_name)}</span>}
                       </div>
                     </div>
                     <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/25 shrink-0" />
