@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { StaflyPageShell } from "@/components/stafly-ui/StaflyPageShell";
+import { StaflyCard } from "@/components/stafly-ui/StaflyCard";
 import { usePortalChrome } from "@/components/stafly-ui/usePortalChrome";
 import { useEffectiveEmployee } from "@/hooks/useEffectiveEmployee";
 import { Megaphone, Pin, ExternalLink, AlertTriangle, Bell, Heart, ThumbsUp, Laugh, PartyPopper, Play } from "lucide-react";
@@ -178,10 +179,12 @@ export default function MyAnnouncements() {
             const annReactions = reactions[a.id] ?? [];
 
             return (
-              <article
+              <StaflyCard
                 key={a.id}
+                tone="default"
+                padding="none"
                 className={cn(
-                  "rounded-2xl border bg-card overflow-hidden transition-all",
+                  "overflow-hidden transition-all",
                   a.pinned && "ring-1 ring-primary/20",
                   a.priority === "urgent" && "border-destructive/30"
                 )}
@@ -317,7 +320,7 @@ export default function MyAnnouncements() {
                     </div>
                   </div>
                 </div>
-              </article>
+              </StaflyCard>
             );
           })}
         </div>
