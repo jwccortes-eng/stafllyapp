@@ -1031,11 +1031,27 @@ function WorkerRow({
               {responseLabel}
             </p>
           )}
+          {isImportedNotResponded && (
+            <p className="text-[10px] text-muted-foreground mt-0.5">
+              Importado desde Connecteam. Aún no confirmado en Stafly.
+            </p>
+          )}
           {readiness.state !== "ready" && readiness.state !== "missing_phone" && (
             <div className="mt-0.5"><ReadinessChip readiness={readiness} /></div>
           )}
           {!hasPhone && (
-            <p className="text-[10px] text-amber-700 dark:text-amber-400 mt-0.5">{HUB_COPY.noPhone}</p>
+            <div className="mt-1 flex items-center gap-2 flex-wrap">
+              <span className="text-[10px] text-amber-700 dark:text-amber-400">{HUB_COPY.noPhone}</span>
+              {canManage && (
+                <button
+                  type="button"
+                  onClick={() => setPhoneDialogOpen(true)}
+                  className="inline-flex items-center gap-1 h-6 px-2 rounded-full bg-primary text-primary-foreground text-[10px] font-semibold"
+                >
+                  <Phone className="h-2.5 w-2.5" /> Agregar teléfono
+                </button>
+              )}
+            </div>
           )}
         </div>
 
