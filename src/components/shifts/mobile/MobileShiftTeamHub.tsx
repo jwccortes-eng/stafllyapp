@@ -1064,7 +1064,7 @@ function WorkerRow({
 
       {hasPhone && (
         <div className="mt-2 flex items-center gap-1.5">
-          <ContactBtn href={`tel:${phoneDigits}`} icon={Phone} label="Call" />
+          <ContactBtn href={`tel:${phoneDigits}`} icon={Phone} label="Llamar" />
           <ContactBtn href={`sms:${phoneDigits}`} icon={MessageSquare} label="SMS" />
           {wa?.waMeUrl && (
             <ContactBtn href={wa.waMeUrl} icon={MessageSquare} label="WhatsApp" external />
