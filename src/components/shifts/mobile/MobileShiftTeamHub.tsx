@@ -751,6 +751,7 @@ function MobileShiftTeamHubImpl({
                 toast({ title: "Phone copied" });
               }}
               onAssignmentAction={openAssignmentAction}
+              onPhoneSaved={handleMutated}
             />
           )}
 
