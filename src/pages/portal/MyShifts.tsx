@@ -473,7 +473,7 @@ export default function MyShifts() {
 
 
   return (
-    <div className="animate-fade-in pb-24">
+    <div className="animate-fade-in pb-24 -mx-3 px-3 -mt-3 pt-3 bg-gradient-to-b from-sky-500/[0.04] via-background to-background min-h-[calc(100vh-4rem)]">
       {/* Minimal header — title only, subtitle merged into active tab context */}
       <div className="pt-1 pb-3">
         <h1 className="text-[22px] font-bold font-heading tracking-tight text-foreground leading-none">
