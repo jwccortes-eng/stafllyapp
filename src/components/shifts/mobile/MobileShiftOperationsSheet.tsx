@@ -566,8 +566,8 @@ export function MobileShiftOperationsSheet({
               primary = { label: "Gestionar equipo", onClick: () => setHubOpen(true), icon: Users };
             } else if (noLocation) {
               title = "Siguiente paso recomendado";
-              text = "Falta la ubicación del trabajo. La edición completa está disponible desde escritorio por ahora.";
-              helper = "Editar ubicación desde escritorio";
+              text = "Falta la ubicación del trabajo. Repórtala desde móvil o edítala en escritorio para fijarla en el sistema.";
+              primary = { label: "Reportar ubicación", onClick: () => setLocationReportOpen(true), icon: MapPin };
             } else if (!mp) {
               title = "Siguiente paso recomendado";
               text = "Falta punto de encuentro para los trabajadores.";
