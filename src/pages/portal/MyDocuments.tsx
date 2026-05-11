@@ -177,7 +177,7 @@ export default function MyDocuments() {
 
   const handleDelete = async (doc: DocRow) => {
     if (!employeeId) return;
-    if (!confirm(`Delete "${doc.name}"?`)) return;
+    if (!confirm(`¿Eliminar "${doc.name}"?`)) return;
     try {
       // file_url stores the path inside the bucket
       if (doc.file_url) {
@@ -186,9 +186,9 @@ export default function MyDocuments() {
       await supabase.from("employee_documents" as any).delete().eq("id", doc.id);
       await refresh();
       readiness.refresh();
-      toast({ title: "Document removed" });
+      toast({ title: "Documento eliminado" });
     } catch (err: any) {
-      toast({ title: "Could not delete", description: err?.message ?? "Try again.", variant: "destructive" });
+      toast({ title: "No se pudo eliminar", description: err?.message ?? "Inténtalo de nuevo.", variant: "destructive" });
     }
   };
 
@@ -198,10 +198,10 @@ export default function MyDocuments() {
       // Use the resolver so legacy rows that stored a full public URL (or a
       // previously-signed URL) are normalized to a path before signing.
       const url = await resolveEmployeeDocumentUrl(doc.file_url);
-      if (!url) throw new Error("File not accessible");
+      if (!url) throw new Error("Archivo no accesible");
       window.open(url, "_blank", "noopener,noreferrer");
     } catch (err: any) {
-      toast({ title: "Could not open file", description: err?.message ?? "Try again.", variant: "destructive" });
+      toast({ title: "No se pudo abrir el archivo", description: err?.message ?? "Inténtalo de nuevo.", variant: "destructive" });
     }
   };
 
