@@ -169,6 +169,7 @@ export function MobileShiftOperationsSheet({
   const [asgnExtras, setAsgnExtras] = useState<AsgnExtra[]>([]);
   const [clockByEmp, setClockByEmp] = useState<Record<string, { clock_in: string | null; clock_out: string | null }>>({});
   const [shiftAdminId, setShiftAdminId] = useState<string | null>(null);
+  const [shiftMeeting, setShiftMeeting] = useState<{ point: string | null; time: string | null }>({ point: null, time: null });
   const [loadingTeam, setLoadingTeam] = useState(false);
   const [teamError, setTeamError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
