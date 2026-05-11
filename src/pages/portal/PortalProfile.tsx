@@ -76,12 +76,12 @@ export default function PortalProfile() {
     if (!file || !employeeId) return;
 
     if (!file.type.startsWith("image/")) {
-      toast({ title: "Error", description: "Only images are allowed.", variant: "destructive" });
+      toast({ title: "Error", description: "Solo se permiten imágenes.", variant: "destructive" });
       return;
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      toast({ title: "Error", description: "Image cannot exceed 5MB.", variant: "destructive" });
+      toast({ title: "Error", description: "La imagen no puede superar 5MB.", variant: "destructive" });
       return;
     }
 
