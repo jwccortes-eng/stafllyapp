@@ -101,6 +101,7 @@ export default function PortalShiftDetail() {
       end_time: s.end_time,
       notes: s.notes,
       meeting_point: (s as any).meeting_point ?? null,
+      meeting_time: (s as any).meeting_time ?? null,
       special_instructions: (s as any).special_instructions ?? null,
       slots: s.slots,
       claimable: (s as any).claimable ?? false,
