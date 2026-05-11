@@ -976,11 +976,17 @@ function WorkerRow({
     no_show:            { label: "No-show",    cls: "border-rose-500/40 text-rose-700 dark:text-rose-400 bg-rose-500/10" },
     other:              { label: assignment.status || "Desconocido", cls: "border-border/60 text-muted-foreground bg-muted/40" },
   };
+  const isImportedNotResponded =
+    !!assignment.import_batch_id && !assignment.accepted_at && !assignment.responded_at &&
+    (assignment.status === "accepted" || assignment.status === "assigned" || assignment.status === "confirmed");
+  const importedPill = isImportedNotResponded
+    ? { label: "Asignado/importado", cls: "border-sky-500/40 text-sky-700 dark:text-sky-400 bg-sky-500/10" }
+    : null;
   const attendancePill =
     assignment.attendance_status === "present" || assignment.attendance_status === "checked_in"
       ? { label: "En sitio", cls: "border-sky-500/40 text-sky-700 dark:text-sky-400 bg-sky-500/10" }
       : null;
-  const statusPill = attendancePill ?? STATUS_PILL[bucket];
+  const statusPill = attendancePill ?? importedPill ?? STATUS_PILL[bucket];
 
   return (
     <li className="px-3 py-2.5">
