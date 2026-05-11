@@ -31,6 +31,10 @@ export interface EmployeeRecord {
   email?: string | null;
   employer_identification?: string | null;
   connecteam_employee_id?: string | null;
+  /** Whether the worker is active in Stafly. Used by the inactive-duplicate
+   * fallback so the resolver can prefer an active record when the matched
+   * employee is inactive but a same-name active duplicate exists. */
+  is_active?: boolean | null;
 }
 
 /** Auxiliary record from the Connecteam Users export (parseConnecteamFile). */
