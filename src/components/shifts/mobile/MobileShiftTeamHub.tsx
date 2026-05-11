@@ -243,7 +243,7 @@ const HUB_COPY = {
   // Resumen
   overviewHelper: "Resumen rápido de cobertura para este turno.",
   // Asignados
-  assignedHelper: "Agrupados por estado. Toca para contactar al trabajador.",
+  assignedHelper: "Lista rápida del equipo y estado operativo.",
   emptyAssignedTitle: "Aún no hay trabajadores asignados",
   emptyAssignedHelper: "Usa Recomendados para asignar trabajadores rápidamente.",
   noPhone: "Sin teléfono registrado",
