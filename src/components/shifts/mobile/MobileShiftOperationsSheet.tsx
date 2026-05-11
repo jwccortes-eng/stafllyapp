@@ -170,6 +170,7 @@ export function MobileShiftOperationsSheet({
     accepted_at: string | null;
     rejected_at: string | null;
     responded_at: string | null;
+    import_batch_id: string | null;
   };
   const [asgnExtras, setAsgnExtras] = useState<AsgnExtra[]>([]);
   const [clockByEmp, setClockByEmp] = useState<Record<string, { clock_in: string | null; clock_out: string | null }>>({});
