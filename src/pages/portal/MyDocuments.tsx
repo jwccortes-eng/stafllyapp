@@ -363,7 +363,7 @@ export default function MyDocuments() {
                 {state === "rejected" && lastRejection?.rejection_reason && (
                   <div className="mt-3 rounded-xl border border-deduction/20 bg-deduction/[0.05] p-2.5">
                     <p className="text-[10px] uppercase tracking-wider font-bold text-deduction mb-1">
-                      Reason for rejection
+                      Motivo de rechazo
                     </p>
                     <p className="text-[11.5px] text-foreground/90 leading-snug">
                       {lastRejection.rejection_reason}
@@ -380,9 +380,9 @@ export default function MyDocuments() {
                         d.review_status === "rejected" ? "bg-deduction/10 text-deduction" :
                         "bg-warning/10 text-warning";
                       const itemLabel =
-                        d.review_status === "approved" ? "Approved" :
-                        d.review_status === "rejected" ? "Rejected" :
-                        "Pending";
+                        d.review_status === "approved" ? "Aprobado" :
+                        d.review_status === "rejected" ? "Rechazado" :
+                        "Pendiente";
                       return (
                         <div key={d.id} className="flex items-center gap-2 rounded-xl bg-muted/30 px-2.5 py-2">
                           <FileText className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
@@ -394,7 +394,7 @@ export default function MyDocuments() {
                             type="button"
                             onClick={() => handleView(d)}
                             className="h-7 w-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-background"
-                            aria-label="View"
+                            aria-label="Ver documento"
                           >
                             <Eye className="h-3.5 w-3.5" />
                           </button>
@@ -402,7 +402,7 @@ export default function MyDocuments() {
                             type="button"
                             onClick={() => handleDelete(d)}
                             className="h-7 w-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                            aria-label="Delete"
+                            aria-label="Eliminar"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </button>
