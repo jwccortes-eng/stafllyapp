@@ -133,30 +133,30 @@ export default function PortalProfile() {
         <div className="h-14 w-14 mx-auto rounded-2xl bg-muted/30 flex items-center justify-center">
           <User className="h-7 w-7 text-muted-foreground/20" />
         </div>
-        <p className="text-sm font-bold text-foreground">Could not load your profile</p>
-        <p className="text-xs text-muted-foreground/60 max-w-[240px] mx-auto">Try signing out and back in.</p>
+        <p className="text-sm font-bold text-foreground">No pudimos cargar tu perfil</p>
+        <p className="text-xs text-muted-foreground/60 max-w-[240px] mx-auto">Intenta cerrar sesión y volver a entrar.</p>
       </div>
     );
   }
 
   const infoItems = [
-    { icon: Mail, label: "Email", value: profile.email },
-    { icon: Phone, label: "Phone", value: profile.phone_number },
-    { icon: Shield, label: "Role", value: profile.employee_role },
-    { icon: CalendarDays, label: "Start date", value: profile.start_date },
+    { icon: Mail, label: "Correo", value: profile.email },
+    { icon: Phone, label: "Teléfono", value: profile.phone_number },
+    { icon: Shield, label: "Rol", value: profile.employee_role },
+    { icon: CalendarDays, label: "Fecha de inicio", value: profile.start_date },
   ].filter(i => i.value);
 
   const menuItems = [
-    { to: "/portal/pay-reports", icon: Wallet, label: "My Pay Reports", description: "Finalized weekly payroll" },
-    { to: "/portal/accumulated", icon: BarChart3, label: "Accumulated", description: "Total history" },
-    { to: "/portal/shifts", icon: CalendarDays, label: "My shifts", description: "Assignments and requests" },
+    { to: "/portal/pay-reports", icon: Wallet, label: "Mis pagos", description: "Resumen semanal de nómina" },
+    { to: "/portal/accumulated", icon: BarChart3, label: "Acumulado", description: "Historial total" },
+    { to: "/portal/shifts", icon: CalendarDays, label: "Mis turnos", description: "Asignaciones y solicitudes" },
   ];
 
   return (
     <div className="space-y-5 animate-fade-in pb-24">
       {/* Header */}
       <div>
-        <h1 className="text-xl font-bold font-heading tracking-tight text-foreground">My Profile</h1>
+        <h1 className="text-xl font-bold font-heading tracking-tight text-foreground">Mi perfil</h1>
         <p className="text-xs text-muted-foreground mt-0.5">{companyName}</p>
       </div>
 
