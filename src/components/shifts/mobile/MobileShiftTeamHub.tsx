@@ -1376,40 +1376,40 @@ function buildWhyReasons(c: RankedCandidate): string[] {
   const lines: string[] = [];
 
   // Readiness
-  if (c.readinessState === "ready") lines.push("Profile ready for shifts.");
-  else if (c.readinessState === "grace_period") lines.push("In grace period — can still be approved.");
-  else lines.push("Profile not ready (blocked).");
+  if (c.readinessState === "ready") lines.push("Perfil listo para turnos.");
+  else if (c.readinessState === "grace_period") lines.push("En período de gracia — puede aprobarse.");
+  else lines.push("Perfil no está listo (bloqueado).");
 
   // Contact / availability
-  if (c.phone) lines.push("Has a phone on file.");
-  else lines.push("No phone on file — can't be contacted.");
-  if (c.availabilitySignal === "available") lines.push("Marked available for this date.");
-  else if (c.availabilitySignal === "unavailable") lines.push("Marked unavailable for this date.");
+  if (c.phone) lines.push("Tiene teléfono registrado.");
+  else lines.push("Sin teléfono registrado — no se puede contactar.");
+  if (c.availabilitySignal === "available") lines.push("Marcado como disponible esta fecha.");
+  else if (c.availabilitySignal === "unavailable") lines.push("Marcado como no disponible esta fecha.");
 
   // Venue / client history
-  if ((c.locationHistoryCount ?? 0) > 0) lines.push(`Worked this location ${c.locationHistoryCount} time${c.locationHistoryCount === 1 ? "" : "s"}.`);
-  if ((c.clientHistoryCount ?? 0) > 0) lines.push(`Worked this client ${c.clientHistoryCount} time${c.clientHistoryCount === 1 ? "" : "s"}.`);
+  if ((c.locationHistoryCount ?? 0) > 0) lines.push(`Ha trabajado este lugar ${c.locationHistoryCount} ${c.locationHistoryCount === 1 ? "vez" : "veces"}.`);
+  if ((c.clientHistoryCount ?? 0) > 0) lines.push(`Ha trabajado con este cliente ${c.clientHistoryCount} ${c.clientHistoryCount === 1 ? "vez" : "veces"}.`);
 
   // Reliability (qualitative only — no reviewer names / scores)
-  if (reasons.has("high_reliability") && risks.has("low_reliability")) lines.push("Good rating, but 1 reliability risk flag.");
-  else if (reasons.has("high_reliability")) lines.push("Good reliability rating.");
-  else if (risks.has("low_reliability")) lines.push("Reliability risk flagged.");
+  if (reasons.has("high_reliability") && risks.has("low_reliability")) lines.push("Buena calificación, pero con 1 alerta de confiabilidad.");
+  else if (reasons.has("high_reliability")) lines.push("Buena calificación de confiabilidad.");
+  else if (risks.has("low_reliability")) lines.push("Alerta de confiabilidad.");
 
   // Preferences
-  if (reasons.has("preferred")) lines.push("Marked preferred for this client/location.");
-  if (reasons.has("prequalified")) lines.push("Prequalified for this client/location.");
-  if (reasons.has("captain_preferred")) lines.push("Captain-preferred here.");
-  if (reasons.has("driver_preferred")) lines.push("Driver-preferred here.");
-  if (risks.has("blocked_here")) lines.push("Blocked from this client/location.");
-  if (risks.has("not_recommended")) lines.push("Marked not recommended here.");
+  if (reasons.has("preferred")) lines.push("Marcado como preferido para este cliente/lugar.");
+  if (reasons.has("prequalified")) lines.push("Precalificado para este cliente/lugar.");
+  if (reasons.has("captain_preferred")) lines.push("Capitán preferido aquí.");
+  if (reasons.has("driver_preferred")) lines.push("Conductor preferido aquí.");
+  if (risks.has("blocked_here")) lines.push("Bloqueado para este cliente/lugar.");
+  if (risks.has("not_recommended")) lines.push("Marcado como no recomendado aquí.");
 
   // Conflicts
-  if (c.conflictDetected) lines.push("Has an overlapping shift on this date.");
+  if (c.conflictDetected) lines.push("Tiene un turno superpuesto esta fecha.");
 
   // Role
-  if (reasons.has("captain")) lines.push("Captain.");
-  if (reasons.has("driver")) lines.push("Driver.");
-  if (reasons.has("role_match")) lines.push("Matches the role required.");
+  if (reasons.has("captain")) lines.push("Capitán.");
+  if (reasons.has("driver")) lines.push("Conductor.");
+  if (reasons.has("role_match")) lines.push("Coincide con el rol requerido.");
 
   return lines;
 }
