@@ -1,7 +1,10 @@
+import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { MessageCircle, Wallet, BarChart3, CalendarDays, FileText, Settings, HelpCircle, BookOpen } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
+import { StaflyPageShell } from "@/components/stafly-ui/StaflyPageShell";
+import { usePortalChrome } from "@/components/stafly-ui/usePortalChrome";
 import { cn } from "@/lib/utils";
 
 const resources = [
@@ -13,9 +16,17 @@ const resources = [
 
 export default function PortalResources() {
   const { fullName } = useAuth();
+  const { setChromeMode } = usePortalChrome();
+
+  // DS1D-a3 pilot: opt out of EmployeeLayout legacy px-4 py-4 chrome so
+  // StaflyPageShell can own padding via Stafly tokens. Restore on unmount.
+  useEffect(() => {
+    setChromeMode?.("shell");
+    return () => setChromeMode?.("legacy");
+  }, [setChromeMode]);
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <StaflyPageShell density="worker" className="animate-fade-in">
       <PageHeader
         variant="4"
         eyebrow="SOPORTE"
@@ -47,6 +58,7 @@ export default function PortalResources() {
         <HelpCircle className="h-6 w-6 text-muted-foreground/30 mx-auto" />
         <p className="text-xs text-muted-foreground/70">¿Necesitas ayuda? Contacta a tu administrador</p>
       </div>
-    </div>
+    </StaflyPageShell>
   );
 }
+
