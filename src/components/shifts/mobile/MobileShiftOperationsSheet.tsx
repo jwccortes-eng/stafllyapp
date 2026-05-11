@@ -890,19 +890,19 @@ export function MobileShiftOperationsSheet({
               <Button
                 className="flex-1 h-12 rounded-xl text-sm font-semibold gap-2"
                 onClick={() => setHubOpen(true)}
-                aria-label="Open team management for this shift"
+                aria-label="Abrir gestión de equipo de este turno"
               >
                 <Users className="h-4 w-4" />
-                Manage team
+                Gestionar equipo
               </Button>
               <Button
                 variant="outline"
                 className="h-12 px-4 rounded-xl text-sm font-semibold gap-2"
                 onClick={handleViewAttendance}
-                aria-label="View attendance"
+                aria-label="Ver asistencia"
               >
                 <ClipboardList className="h-4 w-4" />
-                Attendance
+                Asistencia
               </Button>
             </div>
           ) : (
@@ -911,11 +911,11 @@ export function MobileShiftOperationsSheet({
               onClick={handleViewAttendance}
             >
               <ClipboardList className="h-4 w-4" />
-              View attendance
+              Ver asistencia
             </Button>
           )}
           <p className="mt-2 text-center text-[11px] text-muted-foreground">
-            Editing shift details is available from desktop for now.
+            La edición del turno está disponible desde escritorio por ahora.
           </p>
         </div>
       </SheetContent>
