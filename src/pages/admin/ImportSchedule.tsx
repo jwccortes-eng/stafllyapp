@@ -877,26 +877,44 @@ export default function ImportSchedule() {
               if (diagRow) { diagRow.assignmentResult = "inserted"; diagRow.reason = null; }
             } else {
               if (diagRow) { diagRow.assignmentResult = "insert_error"; diagRow.reason = error.message; }
+              const ft = classifySupabaseError(error.message);
               assignmentFailures.push(buildFailure({
                 ...failureCtx(group),
                 raw_employee_name: r.rawName,
                 employee_id: r.empId,
                 match_method: diagRow?.matchMethod ?? null,
-                failure_type: classifySupabaseError(error.message),
+                failure_type: ft,
                 error_message: error.message,
               }));
+              if (ft === "overlap") {
+                importWarnings.push(buildImportWarning("WORKER_OMITTED_OVERLAP_NEEDS_REVIEW", {
+                  ...warnCtx(group),
+                  raw_employee_name: r.rawName,
+                  matched_employee_id: r.empId,
+                  details: { error: error.message },
+                }));
+              }
             }
           } catch (ex: any) {
             const exMsg = ex?.message ?? String(ex);
             if (diagRow) { diagRow.insertAttempt = "yes"; diagRow.assignmentResult = "insert_exception"; diagRow.reason = exMsg; }
+            const ft = classifySupabaseError(exMsg);
             assignmentFailures.push(buildFailure({
               ...failureCtx(group),
               raw_employee_name: r.rawName,
               employee_id: r.empId,
               match_method: diagRow?.matchMethod ?? null,
-              failure_type: classifySupabaseError(exMsg),
+              failure_type: ft,
               error_message: exMsg,
             }));
+            if (ft === "overlap") {
+              importWarnings.push(buildImportWarning("WORKER_OMITTED_OVERLAP_NEEDS_REVIEW", {
+                ...warnCtx(group),
+                raw_employee_name: r.rawName,
+                matched_employee_id: r.empId,
+                details: { error: exMsg },
+              }));
+            }
           }
         }
 
