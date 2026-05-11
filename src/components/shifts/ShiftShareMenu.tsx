@@ -84,6 +84,12 @@ export function ShiftShareMenu({
   startTime,
   recipientName,
   recipientPhone,
+  endTime,
+  meetingPoint,
+  meetingTime,
+  jobSite,
+  instructions,
+  clientName,
   variant = "outline",
   size = "sm",
   compact = false,
@@ -106,13 +112,19 @@ export function ShiftShareMenu({
           date,
           startTime,
           recipientName,
+          endTime,
+          meetingPoint,
+          meetingTime,
+          jobSite,
+          instructions,
+          clientName,
         };
         await fn(ctx);
       } finally {
         setBusy(false);
       }
     },
-    [shiftId, token, title, date, startTime, recipientName],
+    [shiftId, token, title, date, startTime, recipientName, endTime, meetingPoint, meetingTime, jobSite, instructions, clientName],
   );
 
   if (compact) {
