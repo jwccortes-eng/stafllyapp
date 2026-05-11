@@ -1393,6 +1393,8 @@ const WorkerRow = memo(function WorkerRow({
     (statusLow === "accepted" || statusLow === "assigned");
   const showAssignStatus = statusLow && !["accepted", "confirmed", "assigned"].includes(statusLow);
   const [savingPhone, setSavingPhone] = useState(false);
+  const [phoneDialogOpen, setPhoneDialogOpen] = useState(false);
+  const [phoneInput, setPhoneInput] = useState("");
 
   const handleCopy = async () => {
     if (!phone) return;
@@ -1404,10 +1406,13 @@ const WorkerRow = memo(function WorkerRow({
     }
   };
 
-  const handleAddPhone = async () => {
-    const raw = window.prompt(`Agregar teléfono para ${workerName} (10 dígitos)`, "");
-    if (raw == null) return;
-    const digits = normalizePhone(raw);
+  const openPhoneDialog = () => {
+    setPhoneInput("");
+    setPhoneDialogOpen(true);
+  };
+
+  const submitPhone = async () => {
+    const digits = normalizePhone(phoneInput);
     if (digits.length < 10) {
       toast.error("Número inválido. Debe tener 10 dígitos.");
       return;
@@ -1420,6 +1425,7 @@ const WorkerRow = memo(function WorkerRow({
         .eq("id", worker.id);
       if (error) throw error;
       toast.success("Teléfono guardado");
+      setPhoneDialogOpen(false);
       onPhoneSaved?.();
     } catch (e: any) {
       toast.error(e?.message ?? "No se pudo guardar el teléfono");
