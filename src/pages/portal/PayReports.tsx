@@ -145,7 +145,7 @@ interface StatusBadgeStyle {
 function statusBadge(row: PayReportRow): StatusBadgeStyle {
   if (row.is_historical_import) {
     return {
-      label: "Historical Import",
+      label: "Histórico Connecteam",
       cls: "bg-muted text-muted-foreground border-border/60",
       icon: Archive,
     };
@@ -153,41 +153,35 @@ function statusBadge(row: PayReportRow): StatusBadgeStyle {
   const p = row.period;
   if (p.paid_at) {
     return {
-      label: "Paid",
+      label: "Pagado",
       cls: "bg-[hsl(var(--status-confirmed)/0.12)] text-[hsl(var(--status-confirmed))] border-[hsl(var(--status-confirmed)/0.25)]",
       icon: CheckCircle2,
     };
   }
   if (p.published_at) {
     return {
-      label: "Published",
+      label: "Publicado",
       cls: "bg-primary/10 text-primary border-primary/25",
       icon: CheckCircle2,
     };
   }
-  if (p.status === "closed") {
-    return {
-      label: "Closed",
-      cls: "bg-warning/15 text-warning border-warning/25",
-      icon: CheckCircle2,
-    };
-  }
+  // Note: rows without published_at are filtered out before render.
   return {
-    label: "Open",
-    cls: "bg-muted text-muted-foreground border-border/60",
-    icon: CalendarRange,
+    label: "Publicado",
+    cls: "bg-primary/10 text-primary border-primary/25",
+    icon: CheckCircle2,
   };
 }
 
 function sourceLabel(row: PayReportRow): string {
-  return row.is_historical_import ? "Connecteam final payroll" : "Stafly payroll";
+  return row.is_historical_import ? "Payroll histórico Connecteam" : "Payroll Stafly";
 }
 
 function validationLabel(row: PayReportRow): string {
-  if (row.is_historical_import) return "Historical";
+  if (row.is_historical_import) return "Histórico";
   if (row.period.paid_at) return "Final";
-  if (row.period.published_at) return "Published";
-  return "Imported";
+  if (row.period.published_at) return "Publicado";
+  return "Publicado";
 }
 
 // ============================================================================
