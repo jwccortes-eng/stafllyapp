@@ -31,6 +31,11 @@ export default function EmployeeLayout() {
   const isMobile = useIsMobile();
   const { isModuleEnabled, enabledModules, loading: modulesLoading } = usePortalModules();
   const [moreOpen, setMoreOpen] = useState(false);
+  // DS1D-a2: chrome mode opt-out. Default "legacy" preserves px-4 py-4 chrome
+  // for all current portal routes. Pages migrating to <StaflyPageShell> can
+  // call setChromeMode("shell") on mount (and "legacy" on unmount) to drop
+  // the layout-level padding and own their chrome via Stafly tokens.
+  const [chromeMode, setChromeMode] = useState<"legacy" | "shell">("legacy");
   const [avatarUrl, setAvatarUrl] = useState<string | null | undefined>(undefined);
   const [empName, setEmpName] = useState<string>("");
 
