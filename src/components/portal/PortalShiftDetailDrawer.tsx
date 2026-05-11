@@ -240,6 +240,15 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, responseStatu
         >
           {!secondaryView && (
             <div className="space-y-4 pt-4">
+              {/* H4 — Historical worked summary, only on past shifts */}
+              {showHistoryBlock && (
+                <HistoricalShiftWorkSummary
+                  scheduledStart={shift.start_time}
+                  scheduledEnd={shift.end_time}
+                  info={historyInfo}
+                  loading={historyLoading}
+                />
+              )}
               {/* When & Where — single consolidated block */}
               {(shift.location || locationCoords) && (
                 <section className="rounded-2xl border border-border/40 bg-card overflow-hidden">
