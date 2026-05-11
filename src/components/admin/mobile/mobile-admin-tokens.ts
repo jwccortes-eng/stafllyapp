@@ -28,7 +28,7 @@ export const MOBILE_PAGE_PX = STAFLY_PAGE_PX;
 export const TXT_EYEBROW = STAFLY_SECTION_EYEBROW;
 export const TXT_TITLE = "text-2xl font-semibold tracking-tight leading-tight";
 export const TXT_SUBTITLE = "text-sm text-muted-foreground";
-export const TXT_KPI = `text-xl font-semibold ${STAFLY_TIME_TEXT.split(" ").includes("tabular-nums") ? "tabular-nums" : "tabular-nums"}`;
+export const TXT_KPI = "text-xl font-semibold tabular-nums";
 /** @deprecated Use STAFLY_MUTED_CAPTION. */
 export const TXT_LABEL = STAFLY_MUTED_CAPTION;
 export const TXT_BODY = "text-sm";
