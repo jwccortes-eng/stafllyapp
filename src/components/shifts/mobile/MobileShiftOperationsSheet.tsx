@@ -189,7 +189,7 @@ export function MobileShiftOperationsSheet({
       const [asgnRes, teRes, shiftRes] = await Promise.all([
         supabase
           .from("shift_assignments")
-          .select("id, employee_id, status, response_status, attendance_status, assignment_role, accepted_at, rejected_at, responded_at")
+          .select("id, employee_id, status, response_status, attendance_status, assignment_role, accepted_at, rejected_at, responded_at, import_batch_id")
           .eq("shift_id", shift.id),
         supabase
           .from("time_entries")
