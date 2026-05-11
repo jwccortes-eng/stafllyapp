@@ -432,7 +432,7 @@ export function MobileShiftOperationsSheet({
             <div
               className="px-5 pt-3 pb-2.5 border-b border-border/40 bg-background/95 backdrop-blur-sm"
               role="region"
-              aria-label={`Shift context for ${clientName && clientName !== "—" ? clientName : (shift.title || "shift")}, ${dateLabel(shift.date)}, entrada ${startShort}, termina aprox. ${endShort}`}
+              aria-label={`Contexto del turno para ${clientName && clientName !== "—" ? clientName : (shift.title || "turno")}, ${dateLabel(shift.date)}, entrada ${startShort}, termina aprox. ${endShort}`}
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
