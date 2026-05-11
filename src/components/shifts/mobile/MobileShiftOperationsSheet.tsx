@@ -1322,6 +1322,11 @@ function areWorkerRowPropsEqual(
     role: string | null;
     clock: { clock_in: string | null; clock_out: string | null } | undefined;
     isShiftAdmin: boolean;
+    acceptedAt: string | null;
+    respondedAt: string | null;
+    importBatchId: string | null;
+    canManagePhone: boolean;
+    onPhoneSaved: () => void;
   },
   next: {
     worker: Employee;
@@ -1330,6 +1335,11 @@ function areWorkerRowPropsEqual(
     role: string | null;
     clock: { clock_in: string | null; clock_out: string | null } | undefined;
     isShiftAdmin: boolean;
+    acceptedAt: string | null;
+    respondedAt: string | null;
+    importBatchId: string | null;
+    canManagePhone: boolean;
+    onPhoneSaved: () => void;
   },
 ): boolean {
   if (prev.worker.id !== next.worker.id) return false;
@@ -1343,6 +1353,10 @@ function areWorkerRowPropsEqual(
   if (prev.isShiftAdmin !== next.isShiftAdmin) return false;
   if (prev.clock?.clock_in !== next.clock?.clock_in) return false;
   if (prev.clock?.clock_out !== next.clock?.clock_out) return false;
+  if (prev.acceptedAt !== next.acceptedAt) return false;
+  if (prev.respondedAt !== next.respondedAt) return false;
+  if (prev.importBatchId !== next.importBatchId) return false;
+  if (prev.canManagePhone !== next.canManagePhone) return false;
   return true;
 }
 
