@@ -325,11 +325,11 @@ function ChangePinSection() {
 
   const handleChangePin = async () => {
     if (!/^\d{4}$/.test(newPin)) {
-      toast({ title: "Error", description: "New PIN must be exactly 4 digits", variant: "destructive" });
+      toast({ title: "Error", description: "El nuevo PIN debe tener exactamente 4 dígitos", variant: "destructive" });
       return;
     }
     if (newPin !== confirmPin) {
-      toast({ title: "Error", description: "PINs don't match", variant: "destructive" });
+      toast({ title: "Error", description: "Los PIN no coinciden", variant: "destructive" });
       return;
     }
     setSaving(true);
@@ -339,13 +339,13 @@ function ChangePinSection() {
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      toast({ title: "PIN updated ✅", description: "Your new PIN is active" });
+      toast({ title: "PIN actualizado ✅", description: "Tu nuevo PIN ya está activo" });
       setCurrentPin("");
       setNewPin("");
       setConfirmPin("");
       setExpanded(false);
     } catch (err: any) {
-      toast({ title: "Error", description: err.message || "Could not change PIN", variant: "destructive" });
+      toast({ title: "Error", description: err.message || "No se pudo cambiar el PIN", variant: "destructive" });
     } finally {
       setSaving(false);
     }
