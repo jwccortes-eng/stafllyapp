@@ -346,8 +346,8 @@ export function MobileShiftOperationsSheet({
     const tail = published && understaffed
       ? ` and needs ${slots - assignedCount} more worker${slots - assignedCount === 1 ? "" : "s"} before start time.`
       : draft ? " — workers will not see it until published." : ".";
-    const meetBit = shiftMeeting.point ? ` Meeting point: ${shiftMeeting.point}${shiftMeeting.time ? ` at ${formatTimeShort(shiftMeeting.time)}` : ""}.` : "";
-    return `This shift is scheduled for ${when}, starts at ${formatTimeShort(shift.start_time)} (ends approx. ${formatTimeShort(shift.end_time)})${where}.${meetBit} ${cov} ${pubText}${tail}`;
+    const meetBit = shiftMeeting.point ? ` Punto de encuentro: ${shiftMeeting.point}${shiftMeeting.time ? ` at ${formatTimeShort(shiftMeeting.time)}` : ""}.` : "";
+    return `This shift is scheduled for ${when}, Entrada ${formatTimeShort(shift.start_time)} · Termina aprox. ${formatTimeShort(shift.end_time)}${where}.${meetBit} ${cov} ${pubText}${tail}`;
   })();
 
   // ── Actions
