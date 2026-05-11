@@ -129,9 +129,11 @@ export default function EmployeeChatWidget() {
           "h-12 w-12 md:h-14 md:w-14 flex items-center justify-center",
           // Lift above the 48px bottom nav + 6-12px gap + safe area inset
           "right-4 md:right-8",
-          "bottom-[calc(env(safe-area-inset-bottom,0px)+72px)] md:bottom-8"
+          liftHigher
+            ? "bottom-[calc(env(safe-area-inset-bottom,0px)+148px)] md:bottom-8"
+            : "bottom-[calc(env(safe-area-inset-bottom,0px)+72px)] md:bottom-8"
         )}
-        aria-label={open ? "Close chat" : "Open assistant"}
+        aria-label={open ? "Cerrar chat" : "Abrir asistente"}
       >
         {open ? <X className="h-5 w-5 md:h-6 md:w-6" /> : <MessageCircle className="h-5 w-5 md:h-6 md:w-6" />}
       </button>
