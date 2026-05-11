@@ -481,10 +481,10 @@ export function MobileShiftOperationsSheet({
                     variant="ghost" size="sm"
                     className="h-8 px-2 rounded-full -mt-1 -mr-1 text-xs gap-1"
                     onClick={() => onOpenChange(false)}
-                    aria-label="Back to shifts"
+                    aria-label="Volver a turnos"
                   >
                     <X className="h-4 w-4" />
-                    Back
+                    Volver
                   </Button>
                   {pill && (
                     <Badge
