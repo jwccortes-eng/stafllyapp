@@ -297,13 +297,46 @@ export class EmployeeResolver {
       }
     }
 
-    // 2) Exact normalized name
+    // 2) Exact normalized name (with inactive-duplicate fallback)
     const exact = this.empIndex.byName.get(norm);
     if (exact && exact.length === 1) {
+      const onlyId = exact[0];
+      // If the only exact match is inactive, look for an active same-name twin.
+      if (!this.empIndex.activeIds.has(onlyId)) {
+        const activeTwins = this.empIndex.byNameActive.get(norm) ?? [];
+        if (activeTwins.length === 1) {
+          this.telemetry.exact_name++;
+          return {
+            employeeId: activeTwins[0],
+            method: "exact_name",
+            confidence: "high",
+            replacedInactiveId: onlyId,
+          };
+        }
+        if (activeTwins.length > 1) {
+          this.recordAmbiguous(trimmed, activeTwins, "exact_name");
+          this.telemetry.ambiguous++;
+          return {
+            employeeId: activeTwins[0],
+            method: "exact_name",
+            confidence: "low",
+            needsActiveDuplicateReview: true,
+            replacedInactiveId: onlyId,
+          };
+        }
+        // No active twin — keep current behavior (return inactive id; caller
+        // decides whether to flag EMPLOYEE_INACTIVE).
+      }
       this.telemetry.exact_name++;
-      return { employeeId: exact[0], method: "exact_name", confidence: "high" };
+      return { employeeId: onlyId, method: "exact_name", confidence: "high" };
     }
     if (exact && exact.length > 1) {
+      // Multiple matches — prefer active subset when possible.
+      const activeTwins = this.empIndex.byNameActive.get(norm) ?? [];
+      if (activeTwins.length === 1) {
+        this.telemetry.exact_name++;
+        return { employeeId: activeTwins[0], method: "exact_name", confidence: "high" };
+      }
       this.recordAmbiguous(trimmed, exact, "exact_name");
       this.telemetry.ambiguous++;
       return null;
