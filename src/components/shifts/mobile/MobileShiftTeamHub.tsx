@@ -275,6 +275,8 @@ export type HubAssignment = {
   accepted_at?: string | null;
   rejected_at?: string | null;
   responded_at?: string | null;
+  /** DS5 — distinguish imported assignments from real Stafly responses (UI only). */
+  import_batch_id?: string | null;
 };
 
 interface Props {
