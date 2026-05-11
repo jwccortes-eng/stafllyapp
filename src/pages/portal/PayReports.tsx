@@ -145,7 +145,7 @@ interface StatusBadgeStyle {
 function statusBadge(row: PayReportRow): StatusBadgeStyle {
   if (row.is_historical_import) {
     return {
-      label: "Historical Import",
+      label: "Histórico Connecteam",
       cls: "bg-muted text-muted-foreground border-border/60",
       icon: Archive,
     };
@@ -153,41 +153,35 @@ function statusBadge(row: PayReportRow): StatusBadgeStyle {
   const p = row.period;
   if (p.paid_at) {
     return {
-      label: "Paid",
+      label: "Pagado",
       cls: "bg-[hsl(var(--status-confirmed)/0.12)] text-[hsl(var(--status-confirmed))] border-[hsl(var(--status-confirmed)/0.25)]",
       icon: CheckCircle2,
     };
   }
   if (p.published_at) {
     return {
-      label: "Published",
+      label: "Publicado",
       cls: "bg-primary/10 text-primary border-primary/25",
       icon: CheckCircle2,
     };
   }
-  if (p.status === "closed") {
-    return {
-      label: "Closed",
-      cls: "bg-warning/15 text-warning border-warning/25",
-      icon: CheckCircle2,
-    };
-  }
+  // Note: rows without published_at are filtered out before render.
   return {
-    label: "Open",
-    cls: "bg-muted text-muted-foreground border-border/60",
-    icon: CalendarRange,
+    label: "Publicado",
+    cls: "bg-primary/10 text-primary border-primary/25",
+    icon: CheckCircle2,
   };
 }
 
 function sourceLabel(row: PayReportRow): string {
-  return row.is_historical_import ? "Connecteam final payroll" : "Stafly payroll";
+  return row.is_historical_import ? "Payroll histórico Connecteam" : "Payroll Stafly";
 }
 
 function validationLabel(row: PayReportRow): string {
-  if (row.is_historical_import) return "Historical";
+  if (row.is_historical_import) return "Histórico";
   if (row.period.paid_at) return "Final";
-  if (row.period.published_at) return "Published";
-  return "Imported";
+  if (row.period.published_at) return "Publicado";
+  return "Publicado";
 }
 
 // ============================================================================
@@ -286,7 +280,13 @@ export default function PayReports() {
             is_historical_import: isHistoricalImport(importInfo),
           } satisfies PayReportRow;
         })
-        .filter(Boolean) as PayReportRow[];
+        .filter(Boolean)
+        // Visibility filter (portal-only): hide live Stafly rows that are not
+        // yet published. Historical Connecteam imports always remain visible.
+        // This is UI-side only; payroll data and RLS are unchanged.
+        .filter((r: PayReportRow | null): r is PayReportRow =>
+          !!r && (r.is_historical_import || !!r.period.published_at),
+        ) as PayReportRow[];
 
       // Sort: most recent period first.
       built.sort((a, b) =>
@@ -331,19 +331,19 @@ export default function PayReports() {
   // ----- Copy summary -----
   const copySummary = useCallback(
     async (row: PayReportRow) => {
-      const text = `Pay Report · ${fmtRange(
+      const text = `Reporte de pago · ${fmtRange(
         row.period.start_date,
         row.period.end_date,
-      )} · Total paid ${fmtMoney(row.base_total_pay)} · Source ${sourceLabel(row)} · ${
-        row.is_historical_import ? "Final historical record" : validationLabel(row) + " record"
+      )} · Total pagado ${fmtMoney(row.base_total_pay)} · Fuente ${sourceLabel(row)} · ${
+        row.is_historical_import ? "Registro histórico final" : "Registro " + validationLabel(row).toLowerCase()
       }`;
       try {
         await navigator.clipboard.writeText(text);
-        toast({ title: "Summary copied", description: text });
+        toast({ title: "Resumen copiado", description: text });
       } catch {
         toast({
-          title: "Couldn't copy",
-          description: "Please try again.",
+          title: "No se pudo copiar",
+          description: "Inténtalo de nuevo.",
           variant: "destructive",
         });
       }
@@ -363,22 +363,22 @@ export default function PayReports() {
           <Link
             to="/portal"
             className="h-9 w-9 rounded-xl bg-muted/60 flex items-center justify-center active:scale-95 transition"
-            aria-label="Back to portal home"
+            aria-label="Volver al portal"
           >
             <ArrowLeft className="h-4 w-4 text-foreground" />
           </Link>
           <div className="flex-1 min-w-0">
             <h1 className="text-base font-bold font-heading text-foreground leading-tight">
-              My Weekly Pay Reports
+              Mis pagos
             </h1>
             <p className="text-[11px] text-muted-foreground leading-tight">
-              Your weekly payment summaries and historical payroll records.
+              Reportes semanales de tus pagos publicados.
             </p>
           </div>
           <button
             onClick={handlePrint}
             className="h-9 w-9 rounded-xl bg-muted/60 flex items-center justify-center active:scale-95 transition"
-            aria-label="Print pay reports"
+            aria-label="Imprimir reportes"
           >
             <Printer className="h-4 w-4 text-foreground" />
           </button>
@@ -388,30 +388,30 @@ export default function PayReports() {
       <main className="px-4 pt-4 space-y-4 print:px-0 print:pt-2">
         {/* KPIs */}
         <section
-          aria-label="Pay reports summary"
+          aria-label="Resumen de pagos"
           className="grid grid-cols-2 gap-2"
         >
           <KpiCard
             icon={FileText}
-            label="Total reports"
+            label="Total reportes"
             value={String(kpis.total)}
             tone="muted"
           />
           <KpiCard
             icon={Wallet}
-            label="Latest payment"
+            label="Último pago"
             value={fmtMoney(kpis.latest)}
             tone="earning"
           />
           <KpiCard
             icon={CalendarRange}
-            label="Year-to-date"
+            label="Acumulado del año"
             value={fmtMoney(kpis.ytd)}
             tone="primary"
           />
           <KpiCard
             icon={Archive}
-            label="Historical imported"
+            label="Histórico Connecteam"
             value={fmtMoney(kpis.historical)}
             tone="warning"
           />
@@ -425,9 +425,9 @@ export default function PayReports() {
         ) : rows.length === 0 ? (
           <EmptyState />
         ) : (
-          <section aria-label="Pay reports" className="space-y-2.5">
+          <section aria-label="Reportes de pago" className="space-y-2.5">
             <h2 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground/60 px-1">
-              Reports
+              Reportes
             </h2>
             {rows.map((row) => (
               <PayReportCard
@@ -518,7 +518,7 @@ function PayReportCard({
           <div className="flex items-center gap-2 flex-wrap">
             {row.period.sequence_number != null && (
               <span className="text-[10px] font-bold tabular-nums text-muted-foreground/70 uppercase tracking-wide">
-                Period #{row.period.sequence_number}
+                Periodo #{row.period.sequence_number}
               </span>
             )}
             <span
@@ -543,7 +543,7 @@ function PayReportCard({
             {fmtMoney(row.base_total_pay)}
           </p>
           <p className="text-[9.5px] font-semibold text-muted-foreground/65 uppercase tracking-wider mt-1.5">
-            Total paid
+            Total pagado
           </p>
         </div>
       </div>
@@ -557,9 +557,9 @@ function EmptyState() {
       <div className="h-12 w-12 rounded-2xl bg-muted/60 flex items-center justify-center mx-auto mb-4">
         <FileText className="h-5 w-5 text-muted-foreground" />
       </div>
-      <p className="text-sm font-semibold text-foreground">No pay reports yet</p>
+      <p className="text-sm font-semibold text-foreground">Aún no hay reportes de pago</p>
       <p className="text-[12px] text-muted-foreground mt-1.5 max-w-xs mx-auto leading-relaxed">
-        Your weekly payment summaries will appear here once payroll is finalized.
+        Tus resúmenes semanales aparecerán aquí cuando tu pago esté publicado.
       </p>
     </div>
   );
@@ -594,7 +594,7 @@ function PayReportDetailDialog({
     <Dialog open={!!row} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle className="font-heading">Pay report details</DialogTitle>
+          <DialogTitle className="font-heading">Detalle del pago</DialogTitle>
           <DialogDescription>
             {fmtRange(row.period.start_date, row.period.end_date)}
           </DialogDescription>
@@ -604,7 +604,7 @@ function PayReportDetailDialog({
           {/* Hero amount */}
           <div className="rounded-2xl bg-muted/30 border border-border/40 p-4 text-center">
             <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-              Total paid
+              Total pagado
             </p>
             <p className="text-3xl font-bold font-heading tabular-nums text-foreground mt-1">
               {fmtMoney(row.base_total_pay)}
@@ -622,15 +622,15 @@ function PayReportDetailDialog({
 
           {/* Breakdown */}
           <div className="space-y-2">
-            <DetailRow label="Date range" value={fmtRange(row.period.start_date, row.period.end_date)} />
+            <DetailRow label="Rango de fechas" value={fmtRange(row.period.start_date, row.period.end_date)} />
             {row.period.sequence_number != null && (
-              <DetailRow label="Period #" value={String(row.period.sequence_number)} mono />
+              <DetailRow label="Periodo #" value={String(row.period.sequence_number)} mono />
             )}
-            <DetailRow label="Source" value={sourceLabel(row)} />
-            <DetailRow label="Validation" value={validationLabel(row)} />
+            <DetailRow label="Fuente" value={sourceLabel(row)} />
+            <DetailRow label="Validación" value={validationLabel(row)} />
             {row.import_info?.created_at && (
               <DetailRow
-                label="Imported on"
+                label="Importado el"
                 value={fmtDateFriendly(row.import_info.created_at)}
               />
             )}
@@ -643,14 +643,14 @@ function PayReportDetailDialog({
             )}
             {hasOvertime && (
               <DetailRow
-                label="Overtime"
+                label="Horas extra"
                 value={fmtMoney(row.total_overtime ?? 0)}
                 mono
               />
             )}
             {hasHours && (
               <DetailRow
-                label="Hours"
+                label="Horas"
                 value={`${(row.total_paid_hours ?? row.weekly_total_hours ?? 0).toFixed(2)} h`}
                 mono
               />
@@ -662,9 +662,9 @@ function PayReportDetailDialog({
             <div className="rounded-xl bg-muted/40 border border-border/40 p-3 flex gap-2">
               <Info className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5" />
               <p className="text-[11px] leading-relaxed text-muted-foreground">
-                Final paid amount from historical payroll file. This summary
-                reflects the final payroll record imported from Connecteam.
-                Scheduled hours are not used to calculate payment.
+                Monto final pagado según el archivo histórico de payroll
+                importado desde Connecteam. Las horas programadas no se usan
+                para calcular el pago.
               </p>
             </div>
           )}
@@ -682,13 +682,13 @@ function PayReportDetailDialog({
               }}
               className="w-full"
             >
-              {copied ? (<><Check className="h-3.5 w-3.5 mr-1.5" /> Copied</>) : (<><Copy className="h-3.5 w-3.5 mr-1.5" /> Copy</>)}
+              {copied ? (<><Check className="h-3.5 w-3.5 mr-1.5" /> Copiado</>) : (<><Copy className="h-3.5 w-3.5 mr-1.5" /> Copiar</>)}
             </Button>
             <Button type="button" variant="outline" size="sm" onClick={onPrint} className="w-full">
-              <Printer className="h-3.5 w-3.5 mr-1.5" /> Print
+              <Printer className="h-3.5 w-3.5 mr-1.5" /> Imprimir
             </Button>
             <Button type="button" variant="default" size="sm" onClick={() => onViewDetails(row)} className="w-full">
-              <Info className="h-3.5 w-3.5 mr-1.5" /> Details
+              <Info className="h-3.5 w-3.5 mr-1.5" /> Ver detalle
             </Button>
           </div>
         </div>

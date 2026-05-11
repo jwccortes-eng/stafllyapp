@@ -47,7 +47,7 @@ export default function WorkerPayBreakdownDialog({
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle className="font-heading">Pay details</DialogTitle>
+          <DialogTitle className="font-heading">Detalle del pago</DialogTitle>
           <DialogDescription>{periodLabel}</DialogDescription>
         </DialogHeader>
         {loading ? (
@@ -59,11 +59,11 @@ export default function WorkerPayBreakdownDialog({
             />
           </div>
         ) : !data ? (
-          <p className="text-sm text-muted-foreground py-6 text-center">No data available.</p>
+          <p className="text-sm text-muted-foreground py-6 text-center">No hay datos disponibles.</p>
         ) : (
           <div className="space-y-3">
             <div className="rounded-xl bg-muted/30 border border-border/40 p-4 text-center">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">Total paid</p>
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">Total pagado</p>
               <p className="text-3xl font-bold font-heading tabular-nums mt-1">{fmtMoney(data.final_total)}</p>
             </div>
 
@@ -72,8 +72,8 @@ export default function WorkerPayBreakdownDialog({
                 <Info className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5" />
                 <p className="text-[11px] leading-relaxed text-muted-foreground">
                   {isHistorical
-                    ? "Historical payroll record imported from Connecteam. Final paid amount. Some rows may not link to Stafly shifts."
-                    : "Final total only — source detail unavailable."}
+                    ? "Registro histórico de payroll importado desde Connecteam. Monto final pagado. Algunas filas pueden no estar vinculadas a turnos en Stafly."
+                    : "Solo total final — no hay desglose detallado disponible."}
                 </p>
               </div>
             ) : (
@@ -92,12 +92,12 @@ export default function WorkerPayBreakdownDialog({
 
             {isHistorical && (
               <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                <Archive className="h-3 w-3" /> Historical Import
+                <Archive className="h-3 w-3" /> Histórico Connecteam
               </div>
             )}
 
             <p className="text-[10px] text-muted-foreground border-t pt-2">
-              Payroll is based on finalized/imported records. Scheduled hours are not used for payment.
+              El pago se basa en registros finalizados/importados. Las horas programadas no se usan para calcular el pago.
             </p>
           </div>
         )}
