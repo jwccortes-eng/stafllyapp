@@ -1281,15 +1281,15 @@ const WorkerRow = memo(function WorkerRow({
           <a
             href={`tel:${phone}`}
             className="flex-1 inline-flex items-center justify-center gap-1.5 h-9 rounded-xl bg-primary/10 text-primary hover:bg-primary/15 active:scale-[0.98] transition text-xs font-semibold"
-            aria-label={`Call ${workerName}`}
+            aria-label={`Llamar a ${workerName}`}
           >
             <Phone className="h-3.5 w-3.5" aria-hidden="true" />
-            Call
+            Llamar
           </a>
           <a
             href={`sms:${normalized || phone}`}
             className="flex-1 inline-flex items-center justify-center gap-1.5 h-9 rounded-xl bg-muted text-foreground hover:bg-muted/80 active:scale-[0.98] transition text-xs font-semibold"
-            aria-label={`Send SMS to ${workerName}`}
+            aria-label={`Enviar SMS a ${workerName}`}
           >
             <MessageSquare className="h-3.5 w-3.5" aria-hidden="true" />
             SMS
@@ -1300,7 +1300,7 @@ const WorkerRow = memo(function WorkerRow({
               target="_blank"
               rel="noopener noreferrer"
               className="flex-1 inline-flex items-center justify-center gap-1.5 h-9 rounded-xl bg-[#25D366]/10 text-[#128C4F] dark:text-[#25D366] hover:bg-[#25D366]/15 active:scale-[0.98] transition text-xs font-semibold"
-              aria-label={`Open WhatsApp for ${workerName}`}
+              aria-label={`Abrir WhatsApp para ${workerName}`}
             >
               <MessageCircle className="h-3.5 w-3.5" aria-hidden="true" />
               WhatsApp
@@ -1310,7 +1310,7 @@ const WorkerRow = memo(function WorkerRow({
             type="button"
             onClick={handleCopy}
             className="inline-flex items-center justify-center h-9 w-9 rounded-xl bg-muted text-muted-foreground hover:bg-muted/80 active:scale-[0.98] transition"
-            aria-label={`Copy phone number for ${workerName}`}
+            aria-label={`Copiar teléfono de ${workerName}`}
           >
             <Copy className="h-3.5 w-3.5" aria-hidden="true" />
           </button>
@@ -1318,7 +1318,7 @@ const WorkerRow = memo(function WorkerRow({
       ) : (
         <div
           className="mt-2.5 rounded-xl border border-dashed border-border/60 bg-muted/30 px-3 py-2"
-          aria-label={`No phone on file for ${workerName}. Add a phone number from the worker profile to enable contact actions.`}
+          aria-label={`Sin teléfono registrado para ${workerName}. Agrega un número en el perfil para habilitar contactos.`}
         >
           <div className="flex items-start gap-2">
             <Phone className="h-3.5 w-3.5 mt-0.5 text-muted-foreground shrink-0" aria-hidden="true" />
