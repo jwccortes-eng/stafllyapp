@@ -80,6 +80,20 @@ const FIELD_LABELS: Record<string, string> = {
   notes: "Notas", claimable: "Reclamable", status: "Estado",
 };
 
+// WR6 — Work Route line for worker-facing notification bodies.
+// Presentational only: never used for payroll/scheduled-hours math.
+// Mirrors the canonical Work Route standard (Entrada protagonist, Termina aprox. secondary).
+const workRouteLine = (
+  start?: string | null,
+  end?: string | null,
+  meetingPoint?: string | null,
+) => {
+  const entrada = start ? start.slice(0, 5) : "—";
+  const termina = end ? end.slice(0, 5) : "—";
+  const meeting = meetingPoint && meetingPoint.trim() ? ` · Encuentro ${meetingPoint.trim()}` : "";
+  return `Entrada ${entrada} · Termina aprox. ${termina}${meeting}`;
+};
+
 
 // Local create-shift dialog component. Wraps the new ShiftFormShell with the
 // summary panel computed from useShiftFormSignals. Defined inline so we don't
@@ -788,7 +802,7 @@ function DesktopShifts() {
             title.trim(),
             "shift_claimable",
             "Turno disponible para reclamar",
-            `"${title.trim()}" el ${dateLabel} (${startTime.slice(0, 5)}–${endTime.slice(0, 5)}). Aplica y te notificaremos si eres aceptado.`,
+            `"${title.trim()}" · ${dateLabel} · ${workRouteLine(startTime, endTime, meetingPoint)}. Aplica y te notificaremos si eres aceptado.`,
             claimRecipients,
             { claimable: true }
           );
@@ -983,7 +997,7 @@ function DesktopShifts() {
         await sendShiftNotifications(
           shiftId, shiftTitle, "shift_claimable",
           "Turno disponible para reclamar",
-          `"${shiftTitle}" el ${dateLabel} (${oldShift.start_time.slice(0, 5)}–${oldShift.end_time.slice(0, 5)}). Aplica y te notificaremos si eres aceptado.`,
+          `"${shiftTitle}" · ${dateLabel} · ${workRouteLine(oldShift.start_time, oldShift.end_time, (oldShift as any).meeting_point ?? null)}. Aplica y te notificaremos si eres aceptado.`,
           claimRecipients, { claimable: true }
         );
       }
@@ -1022,7 +1036,7 @@ function DesktopShifts() {
       shift.title,
       "shift_published",
       `Turno publicado: ${shift.title}`,
-      `Tu turno "${shift.title}" del ${shift.date} (${shift.start_time.slice(0, 5)}-${shift.end_time.slice(0, 5)}) ha sido publicado.`,
+      `Tu turno "${shift.title}" — ${shift.date} · ${workRouteLine(shift.start_time, shift.end_time, (shift as any).meeting_point ?? null)} ya fue publicado.`,
       employeeIds,
       { broadcast: true }
     );
@@ -1041,7 +1055,7 @@ function DesktopShifts() {
         await sendShiftNotifications(
           shift.id, shift.title, "shift_claimable",
           "Turno disponible para reclamar",
-          `"${shift.title}" el ${dateLabel} (${shift.start_time.slice(0, 5)}–${shift.end_time.slice(0, 5)}). Aplica y te notificaremos si eres aceptado.`,
+          `"${shift.title}" · ${dateLabel} · ${workRouteLine(shift.start_time, shift.end_time, (shift as any).meeting_point ?? null)}. Aplica y te notificaremos si eres aceptado.`,
           claimRecipients, { claimable: true }
         );
       }
@@ -1122,7 +1136,7 @@ function DesktopShifts() {
         shift.title,
         "shift_published",
         `Turno publicado: ${shift.title}`,
-        `Tu turno "${shift.title}" del ${shift.date} (${shift.start_time.slice(0, 5)}-${shift.end_time.slice(0, 5)}) ha sido publicado.`,
+        `Tu turno "${shift.title}" — ${shift.date} · ${workRouteLine(shift.start_time, shift.end_time, (shift as any).meeting_point ?? null)} ya fue publicado.`,
         employeeIds,
         { broadcast: true }
       );
@@ -1144,7 +1158,7 @@ function DesktopShifts() {
             shift.title,
             "shift_claimable",
             "Turno disponible para reclamar",
-            `"${shift.title}" el ${dateLabel} (${shift.start_time.slice(0, 5)}–${shift.end_time.slice(0, 5)}). Aplica y te notificaremos si eres aceptado.`,
+            `"${shift.title}" · ${dateLabel} · ${workRouteLine(shift.start_time, shift.end_time, (shift as any).meeting_point ?? null)}. Aplica y te notificaremos si eres aceptado.`,
             claimRecipients,
             { claimable: true }
           );
@@ -1286,7 +1300,7 @@ function DesktopShifts() {
         shift.title,
         "shift_assigned",
         `Asignado a turno: ${shift.title}`,
-        `Has sido asignado al turno "${shift.title}" del ${shift.date} (${shift.start_time.slice(0, 5)}-${shift.end_time.slice(0, 5)}).`,
+        `Has sido asignado a "${shift.title}" — ${shift.date} · ${workRouteLine(shift.start_time, shift.end_time, (shift as any).meeting_point ?? null)}.`,
         employeeIds
       );
     }
