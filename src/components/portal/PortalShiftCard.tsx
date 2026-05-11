@@ -152,16 +152,22 @@ export function PortalShiftCard({
           </div>
         </div>
 
-        {/* Hero time row */}
-        <div className="flex items-center gap-2 mb-3">
-          <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
-          <span className="text-xl font-mono font-semibold tabular-nums leading-none text-foreground">
-            {shift.start_time?.slice(0, 5)}–{shift.end_time?.slice(0, 5)}
-          </span>
-          <span className="text-xs text-muted-foreground/70 tabular-nums">· {duration}</span>
+        {/* Hero time — Entrada protagonista, Termina aprox. secundario */}
+        <div className="flex items-end justify-between gap-3 mb-3">
+          <div className="min-w-0">
+            <p className="text-[9.5px] font-bold uppercase tracking-[0.16em] text-muted-foreground/65 leading-none mb-1">
+              Entrada
+            </p>
+            <p className="text-[28px] leading-none font-bold font-mono tabular-nums text-foreground">
+              {shift.start_time?.slice(0, 5)}
+            </p>
+            <p className="text-[10.5px] text-muted-foreground/65 mt-1.5 tabular-nums">
+              Termina aprox. {shift.end_time?.slice(0, 5)} · {duration} estimadas
+            </p>
+          </div>
           <span
             className={cn(
-              "ml-auto text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md shrink-0",
+              "text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md shrink-0",
               isTodayShift
                 ? "bg-primary/10 text-primary"
                 : "bg-muted text-muted-foreground",
@@ -181,22 +187,36 @@ export function PortalShiftCard({
           </div>
         )}
 
-        {/* Location */}
-        {locationDisplay && (
-          <div className="flex items-start gap-1.5 text-xs text-muted-foreground mb-1.5">
-            <MapPin className="h-3.5 w-3.5 shrink-0 mt-0.5 text-muted-foreground/60" />
-            <span className="line-clamp-2 leading-snug">{locationDisplay}</span>
+        {/* Meeting point — protagonista si existe (con meeting_time si lo hay) */}
+        {shift.meeting_point && (
+          <div className="flex items-start gap-2 rounded-xl border border-border/40 bg-muted/30 px-2.5 py-2 mb-1.5">
+            <MapPin className="h-3.5 w-3.5 shrink-0 mt-0.5 text-muted-foreground" />
+            <div className="min-w-0 flex-1">
+              <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-muted-foreground/70 leading-none mb-0.5">
+                Punto de encuentro
+              </p>
+              <p className="text-[12px] font-semibold text-foreground line-clamp-2 leading-snug">
+                {shift.meeting_point}
+              </p>
+            </div>
+            {shift.meeting_time && (
+              <div className="shrink-0 text-right">
+                <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-muted-foreground/70 leading-none mb-0.5">
+                  Hora
+                </p>
+                <p className="text-[14px] font-bold font-mono tabular-nums text-foreground leading-none">
+                  {shift.meeting_time.slice(0, 5)}
+                </p>
+              </div>
+            )}
           </div>
         )}
 
-        {/* Meeting point */}
-        {shift.meeting_point && (
-          <div className="flex items-start gap-1.5 text-xs text-muted-foreground">
-            <span className="text-[13px] leading-none mt-0.5">📍</span>
-            <span className="line-clamp-2 leading-snug">
-              <span className="font-medium text-foreground/80">Punto de encuentro:</span>{" "}
-              {shift.meeting_point}
-            </span>
+        {/* Location secundaria si no hay meeting point */}
+        {!shift.meeting_point && locationDisplay && (
+          <div className="flex items-start gap-1.5 text-xs text-muted-foreground mb-1.5">
+            <MapPin className="h-3.5 w-3.5 shrink-0 mt-0.5 text-muted-foreground/60" />
+            <span className="line-clamp-2 leading-snug">{locationDisplay}</span>
           </div>
         )}
 
