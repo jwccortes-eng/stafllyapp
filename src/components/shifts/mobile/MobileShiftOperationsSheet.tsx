@@ -873,6 +873,19 @@ export function MobileShiftOperationsSheet({
       companyId={selectedCompanyId}
       onMutated={() => setReloadKey(k => k + 1)}
     />
+    <SendNotificationDialog
+      open={notifyOpen}
+      onOpenChange={setNotifyOpen}
+      shift={shift}
+      assignments={assignments}
+      employees={employees}
+      meetingPoint={shiftMeeting.point ?? meetingPoint ?? null}
+      meetingTime={shiftMeeting.time ?? null}
+      clientName={clientName}
+      jobSiteName={locationName}
+      specialInstructions={shift.notes ?? null}
+      friendlyDate={dateLabel(shift.date)}
+    />
     </>
   );
 }
