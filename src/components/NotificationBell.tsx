@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { formatDistanceToNow, format } from "date-fns";
-import { enUS } from "date-fns/locale";
+import { es } from "date-fns/locale";
 
 const TYPE_ROUTES: Record<string, string> = {
   shift_request_new: "/app/requests",
