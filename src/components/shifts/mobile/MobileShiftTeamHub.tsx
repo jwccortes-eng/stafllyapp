@@ -98,43 +98,43 @@ function buildRecommendedDisplay(c: RankedCandidate): {
   const candidates: DisplayChip[] = [];
 
   // 1. Preference signals (strongest)
-  if (riskSet.has("blocked_here")) candidates.push({ key: "blocked_here", label: "Blocked here", tone: "risk" });
-  if (riskSet.has("not_recommended")) candidates.push({ key: "not_recommended", label: "Not recommended", tone: "risk" });
-  if (reasonSet.has("preferred")) candidates.push({ key: "preferred", label: "Preferred", tone: "good" });
-  if (reasonSet.has("prequalified")) candidates.push({ key: "prequalified", label: "Prequalified", tone: "good" });
-  if (reasonSet.has("captain_preferred")) candidates.push({ key: "captain_preferred", label: "Captain preferred", tone: "good" });
-  if (reasonSet.has("driver_preferred")) candidates.push({ key: "driver_preferred", label: "Driver preferred", tone: "good" });
+  if (riskSet.has("blocked_here")) candidates.push({ key: "blocked_here", label: "Bloqueado aquí", tone: "risk" });
+  if (riskSet.has("not_recommended")) candidates.push({ key: "not_recommended", label: "No recomendado", tone: "risk" });
+  if (reasonSet.has("preferred")) candidates.push({ key: "preferred", label: "Preferido", tone: "good" });
+  if (reasonSet.has("prequalified")) candidates.push({ key: "prequalified", label: "Precalificado", tone: "good" });
+  if (reasonSet.has("captain_preferred")) candidates.push({ key: "captain_preferred", label: "Capitán preferido", tone: "good" });
+  if (reasonSet.has("driver_preferred")) candidates.push({ key: "driver_preferred", label: "Conductor preferido", tone: "good" });
 
   // 2. Conflict / availability
-  if (riskSet.has("conflict")) candidates.push({ key: "conflict", label: "Conflict", tone: "risk" });
-  if (riskSet.has("unavailable")) candidates.push({ key: "unavailable", label: "Unavailable", tone: "risk" });
+  if (riskSet.has("conflict")) candidates.push({ key: "conflict", label: "Conflicto", tone: "risk" });
+  if (riskSet.has("unavailable")) candidates.push({ key: "unavailable", label: "No disponible", tone: "risk" });
 
   // 3. Readiness
-  if (reasonSet.has("ready")) candidates.push({ key: "ready", label: "Ready", tone: "good" });
-  else if (reasonSet.has("grace_period")) candidates.push({ key: "grace_period", label: "Grace period", tone: "good" });
+  if (reasonSet.has("ready")) candidates.push({ key: "ready", label: "Listo", tone: "good" });
+  else if (reasonSet.has("grace_period")) candidates.push({ key: "grace_period", label: "Período de gracia", tone: "good" });
 
   // 4. Venue / client history (count-aware)
   if (c.locationHistoryCount > 0) {
-    candidates.push({ key: "worked_location", label: `Worked here ${c.locationHistoryCount}x`, tone: "good" });
+    candidates.push({ key: "worked_location", label: `Trabajó aquí ${c.locationHistoryCount}x`, tone: "good" });
   }
   if (c.clientHistoryCount > 0) {
-    candidates.push({ key: "worked_client", label: `Worked client ${c.clientHistoryCount}x`, tone: "good" });
+    candidates.push({ key: "worked_client", label: `Trabajó cliente ${c.clientHistoryCount}x`, tone: "good" });
   }
 
   // 5. Reliability (collision-aware)
   if (hasGoodRating && hasRatingRisk) {
-    candidates.push({ key: "good_rating", label: "Good rating", tone: "good" });
-    candidates.push({ key: "risk_flag", label: "1 risk flag", tone: "risk" });
+    candidates.push({ key: "good_rating", label: "Buena calificación", tone: "good" });
+    candidates.push({ key: "risk_flag", label: "1 alerta", tone: "risk" });
   } else if (hasGoodRating) {
-    candidates.push({ key: "high_reliability", label: "High reliability", tone: "good" });
+    candidates.push({ key: "high_reliability", label: "Alta confiabilidad", tone: "good" });
   } else if (hasRatingRisk) {
-    candidates.push({ key: "low_reliability", label: "Reliability risk", tone: "risk" });
+    candidates.push({ key: "low_reliability", label: "Alerta de confiabilidad", tone: "risk" });
   }
 
   // 6. Role / driver / captain (lowest priority)
-  if (reasonSet.has("captain")) candidates.push({ key: "captain", label: "Captain", tone: "good" });
-  if (reasonSet.has("driver")) candidates.push({ key: "driver", label: "Driver", tone: "good" });
-  if (reasonSet.has("role_match")) candidates.push({ key: "role_match", label: "Role match", tone: "good" });
+  if (reasonSet.has("captain")) candidates.push({ key: "captain", label: "Capitán", tone: "good" });
+  if (reasonSet.has("driver")) candidates.push({ key: "driver", label: "Conductor", tone: "good" });
+  if (reasonSet.has("role_match")) candidates.push({ key: "role_match", label: "Rol coincide", tone: "good" });
 
   // Dedupe by key, cap to 4
   const seen = new Set<string>();
