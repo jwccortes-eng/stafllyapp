@@ -346,8 +346,8 @@ export function MobileShiftOperationsSheet({
     const tail = published && understaffed
       ? ` and needs ${slots - assignedCount} more worker${slots - assignedCount === 1 ? "" : "s"} before start time.`
       : draft ? " — workers will not see it until published." : ".";
-    const meetBit = shiftMeeting.point ? ` Meeting point: ${shiftMeeting.point}${shiftMeeting.time ? ` at ${formatTimeShort(shiftMeeting.time)}` : ""}.` : "";
-    return `This shift is scheduled for ${when}, starts at ${formatTimeShort(shift.start_time)} (ends approx. ${formatTimeShort(shift.end_time)})${where}.${meetBit} ${cov} ${pubText}${tail}`;
+    const meetBit = shiftMeeting.point ? ` Punto de encuentro: ${shiftMeeting.point}${shiftMeeting.time ? ` at ${formatTimeShort(shiftMeeting.time)}` : ""}.` : "";
+    return `This shift is scheduled for ${when}, Entrada ${formatTimeShort(shift.start_time)} · Termina aprox. ${formatTimeShort(shift.end_time)}${where}.${meetBit} ${cov} ${pubText}${tail}`;
   })();
 
   // ── Actions
@@ -360,8 +360,8 @@ export function MobileShiftOperationsSheet({
     const cov = slots > 0
       ? `Assigned ${assignedCount}/${slots}${understaffed ? ` · Needs ${slots - assignedCount} worker${slots - assignedCount === 1 ? "" : "s"}` : ""}`
       : `Assigned ${assignedCount}`;
-    const meetBit = shiftMeeting.point ? ` · Meeting: ${shiftMeeting.point}${shiftMeeting.time ? ` ${formatTimeShort(shiftMeeting.time)}` : ""}` : "";
-    return `${code}${placeBits || "Shift"} · ${dateBit} · Entrada ${formatTimeShort(shift.start_time)} (ends ~${formatTimeShort(shift.end_time)})${meetBit} · ${cov}`;
+    const meetBit = shiftMeeting.point ? ` · Punto de encuentro: ${shiftMeeting.point}${shiftMeeting.time ? ` ${formatTimeShort(shiftMeeting.time)}` : ""}` : "";
+    return `${code}${placeBits || "Shift"} · ${dateBit} · Entrada ${formatTimeShort(shift.start_time)} · Termina aprox. ${formatTimeShort(shift.end_time)}${meetBit} · ${cov}`;
   })();
 
   const handleCopySummary = async () => {
