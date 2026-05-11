@@ -415,17 +415,17 @@ export function MobileShiftOperationsSheet({
           // Single priority status pill: Unstaffed > Missing job site > No client > Draft > Published > OK.
           const pill: { label: string; cls: string } | null =
             published && understaffed
-              ? { label: "Unstaffed", cls: "border-rose-500/40 text-rose-700 dark:text-rose-400 bg-rose-500/10" }
+              ? { label: "Falta personal", cls: "border-rose-500/40 text-rose-700 dark:text-rose-400 bg-rose-500/10" }
               : noLocation
-                ? { label: meetingPoint ? "Missing job site" : "No location", cls: "border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10" }
+                ? { label: meetingPoint ? "Falta ubicación" : "Falta ubicación", cls: "border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10" }
                 : noClient
-                  ? { label: "No client", cls: "border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10" }
+                  ? { label: "Falta cliente", cls: "border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10" }
                   : draft
-                    ? { label: "Draft", cls: "border-border/60 text-muted-foreground bg-muted/40" }
+                    ? { label: "Borrador", cls: "border-border/60 text-muted-foreground bg-muted/40" }
                     : published && fullyStaffed
-                      ? { label: "Fully staffed", cls: "border-emerald-500/40 text-emerald-700 dark:text-emerald-400 bg-emerald-500/10" }
+                      ? { label: "Personal completo", cls: "border-emerald-500/40 text-emerald-700 dark:text-emerald-400 bg-emerald-500/10" }
                       : published
-                        ? { label: "Published", cls: "border-primary/30 text-primary bg-primary/5" }
+                        ? { label: "Publicado", cls: "border-primary/30 text-primary bg-primary/5" }
                         : null;
           const coverageBit = slots > 0 ? `${assignedCount}/${slots}` : `${assignedCount}`;
           return (
