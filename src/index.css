@@ -318,6 +318,15 @@
     @apply border-border;
   }
 
+  /* Mobile overflow guard — prevents 1px horizontal scroll on real iOS
+     caused by safe-area insets, shadow bleed, or fixed-position children.
+     Vertical scroll remains untouched. */
+  html, body, #root {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
   body {
     @apply bg-background text-foreground font-body antialiased;
   }

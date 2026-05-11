@@ -28,10 +28,10 @@ interface PortalMoreSheetProps {
 }
 
 const ALL_MORE_ITEMS: (MoreItem & { moduleKey?: string })[] = [
-  { id: "pay-reports", to: "/portal/pay-reports", icon: Wallet, label: "My Pay Reports", description: "Finalized weekly payroll", moduleKey: "my_payments" },
+  { id: "pay-reports", to: "/portal/pay-reports", icon: Wallet, label: "Mis pagos", description: "Resumen semanal de nómina", moduleKey: "my_payments" },
   { id: "availability", to: "/portal/availability", icon: CalendarCheck, label: "Disponibilidad", description: "Gestiona tu horario", moduleKey: "my_availability" },
   { id: "announcements", to: "/portal/announcements", icon: Megaphone, label: "Anuncios", description: "Noticias de la empresa", moduleKey: "my_announcements" },
-  { id: "documents", to: "/portal/documents", icon: FolderOpen, label: "My documents", description: "Required onboarding documents" },
+  { id: "documents", to: "/portal/documents", icon: FolderOpen, label: "Mis documentos", description: "Documentos requeridos" },
   { id: "w9", to: "/portal/w9", icon: FileText, label: "Formulario W-9", description: "Información fiscal", moduleKey: "my_w9" },
   { id: "resources", to: "/portal/resources", icon: BookOpen, label: "Recursos", description: "Material de apoyo", moduleKey: "my_resources" },
 ];
