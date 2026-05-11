@@ -149,15 +149,15 @@ function buildRecommendedDisplay(c: RankedCandidate): {
   // One-line summary: lead with strongest positive signal + reliability if present.
   const parts: string[] = [];
   const lead =
-    reasonSet.has("preferred") ? "Preferred worker"
-    : reasonSet.has("prequalified") ? "Prequalified"
-    : c.locationHistoryCount >= 5 ? `Strong fit: worked here ${c.locationHistoryCount} times`
-    : c.locationHistoryCount > 0 ? `Worked here ${c.locationHistoryCount}x`
-    : c.clientHistoryCount > 0 ? `Worked client ${c.clientHistoryCount}x`
+    reasonSet.has("preferred") ? "Trabajador preferido"
+    : reasonSet.has("prequalified") ? "Precalificado"
+    : c.locationHistoryCount >= 5 ? `Buen perfil: trabajó aquí ${c.locationHistoryCount} veces`
+    : c.locationHistoryCount > 0 ? `Trabajó aquí ${c.locationHistoryCount}x`
+    : c.clientHistoryCount > 0 ? `Trabajó cliente ${c.clientHistoryCount}x`
     : null;
   if (lead) parts.push(lead);
-  if (hasGoodRating && !hasRatingRisk) parts.push("high reliability");
-  else if (hasGoodRating && hasRatingRisk) parts.push("good rating · 1 risk flag");
+  if (hasGoodRating && !hasRatingRisk) parts.push("alta confiabilidad");
+  else if (hasGoodRating && hasRatingRisk) parts.push("buena calificación · 1 alerta");
 
   const summary = parts.length > 0 ? parts.join(" · ") : null;
   return { chips, summary };
