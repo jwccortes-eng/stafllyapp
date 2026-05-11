@@ -744,16 +744,6 @@ function ShiftCard({
   );
 }
 
-function StatusBadge({ isDraft, understaffed }: { isDraft: boolean; understaffed: boolean }) {
-  const base = "text-[11px] font-medium h-[22px] px-2 leading-none";
-  if (isDraft) {
-    return <Badge variant="outline" className={cn(base, "border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10")}>Draft</Badge>;
-  }
-  if (understaffed) {
-    return <Badge variant="outline" className={cn(base, "border-rose-500/40 text-rose-700 dark:text-rose-400 bg-rose-500/10")}>Unstaffed</Badge>;
-  }
-  return <Badge variant="outline" className={cn(base, "border-emerald-500/40 text-emerald-700 dark:text-emerald-400 bg-emerald-500/10")}>Published</Badge>;
-}
 
 function Warning({ icon: Icon, label, tone }: { icon: any; label: string; tone: "bad" | "warn" }) {
   const cls = tone === "bad"
