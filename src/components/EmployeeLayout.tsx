@@ -163,23 +163,22 @@ export default function EmployeeLayout() {
 
   if (isMobile) {
     return (
-      <div className="min-h-[100dvh] bg-background flex flex-col">
+      <div className="min-h-[100dvh] w-full max-w-full overflow-x-hidden bg-background flex flex-col">
         <header className="sticky top-0 z-30 shrink-0 bg-background/80 backdrop-blur-2xl border-b border-border/20">
-          <div className="flex items-center justify-between px-5 h-12">
-            <div className="flex items-center gap-2.5">
+          <div className="flex items-center justify-between gap-2 px-4 h-12 max-w-full">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
               <StaflyLogo size={20} />
-              {companySwitcher || <PortalPageTitle />}
+              <div className="min-w-0 flex-1">
+                {companySwitcher || <PortalPageTitle />}
+              </div>
             </div>
-            <div className="flex items-center gap-1">
-              <ProductSwitcher compact />
-              <ModeSwitcher compact />
-              <SoundStatusControl compact />
+            <div className="flex items-center gap-1 shrink-0">
               <NotificationBell />
             </div>
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto px-4 py-4 animate-fade-in">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden w-full max-w-full px-4 py-4 animate-fade-in">
           <Outlet context={{ openMore: () => setMoreOpen(true) }} />
         </main>
 
