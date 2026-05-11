@@ -1537,7 +1537,7 @@ const WorkerRow = memo(function WorkerRow({
               {canManagePhone && (
                 <button
                   type="button"
-                  onClick={handleAddPhone}
+                  onClick={openPhoneDialog}
                   disabled={savingPhone}
                   className="mt-1.5 inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-primary text-primary-foreground text-[11px] font-semibold disabled:opacity-60"
                 >
@@ -1549,6 +1549,36 @@ const WorkerRow = memo(function WorkerRow({
           </div>
         </div>
       )}
+
+      <Dialog open={phoneDialogOpen} onOpenChange={setPhoneDialogOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Agregar teléfono</DialogTitle>
+            <DialogDescription>{workerName} · 10 dígitos. Solo actualiza este perfil.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor={`phone-${worker.id}`}>Número de teléfono</Label>
+            <Input
+              id={`phone-${worker.id}`}
+              inputMode="tel"
+              autoFocus
+              placeholder="(555) 123-4567"
+              value={phoneInput}
+              onChange={(e) => setPhoneInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") submitPhone(); }}
+            />
+            <p className="text-[11px] text-muted-foreground">
+              No se envían notificaciones. No se modifican registros duplicados.
+            </p>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="ghost" onClick={() => setPhoneDialogOpen(false)} disabled={savingPhone}>Cancelar</Button>
+            <Button onClick={submitPhone} disabled={savingPhone}>
+              {savingPhone ? "Guardando…" : "Guardar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }, areWorkerRowPropsEqual);
