@@ -32,6 +32,7 @@ import {
 } from "@/components/mobile-agenda";
 import { HistoryShiftRow } from "@/components/mobile-agenda/HistoryShiftRow";
 import { useWorkedShiftHistory } from "@/hooks/useWorkedShiftHistory";
+import { WeekHistorySummary } from "@/components/portal/WeekHistorySummary";
 
 interface ShiftAssignment {
   id: string;
@@ -613,9 +614,19 @@ export default function MyShifts() {
                 {filtered.length} turno{filtered.length === 1 ? "" : "s"} en total
               </p>
 
-              {buckets.filter((b) => b.items.length > 0).map((b) => (
+              {buckets.filter((b) => b.items.length > 0).map((b) => {
+                const slices = b.items.map((a) => {
+                  const w = workedHistory.byShiftId[a.shift.id];
+                  return {
+                    hasClosedTimeEntry: w?.hasClosedTimeEntry ?? false,
+                    workedMinutes: w?.workedMinutes ?? 0,
+                    workerStatus: w?.workerStatus ?? "no_period_yet",
+                  };
+                });
+                return (
                 <section key={b.key} className="space-y-2">
                   <AgendaSectionHeader title={b.label} />
+                  <WeekHistorySummary total={b.items.length} slices={slices} />
                   <OperationalTimeline>
                     {b.items.map((a) => {
                       const w = workedHistory.byShiftId[a.shift.id];
@@ -646,7 +657,8 @@ export default function MyShifts() {
                     })}
                   </OperationalTimeline>
                 </section>
-              ))}
+                );
+              })}
 
               {remaining > 0 && (
                 <div className="pt-1">
