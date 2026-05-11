@@ -18,6 +18,8 @@ import { useEffectiveEmployee } from "@/hooks/useEffectiveEmployee";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { OpsStatusChip, type OpsStatusTone } from "@/components/operations/OpsStatusChip";
+import { HistoricalShiftWorkSummary } from "@/components/portal/HistoricalShiftWorkSummary";
+import type { WorkedShiftEntry } from "@/hooks/useWorkedShiftHistory";
 
 interface ShiftInfo {
   id: string;
@@ -46,6 +48,9 @@ interface PortalShiftDetailDrawerProps {
   responding?: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Optional H4 — read-only worked-history info for past shifts. */
+  historyInfo?: WorkedShiftEntry;
+  historyLoading?: boolean;
 }
 
 function calcHours(start: string, end: string): string {
@@ -97,7 +102,7 @@ function getStatusMeta(status?: string): { tone: OpsStatusTone; label: string } 
  *    (rendered inline as overlay) only when the user opts in.
  *  • Footer holds a single dominant CTA.
  */
-export function PortalShiftDetailDrawer({ shift, assignmentStatus, responseStatus, onAccept, onReject, responding, open, onOpenChange }: PortalShiftDetailDrawerProps) {
+export function PortalShiftDetailDrawer({ shift, assignmentStatus, responseStatus, onAccept, onReject, responding, open, onOpenChange, historyInfo, historyLoading }: PortalShiftDetailDrawerProps) {
   const navigate = useNavigate();
   const { effectiveEmployeeId: employeeId } = useEffectiveEmployee();
   const { toast } = useToast();
@@ -140,6 +145,16 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, responseStatu
   const showResponseActions = isPending && !!(onAccept || onReject);
   const showClockInAction = isAccepted && isTodayShift;
   const showStickyFooter = !secondaryView && (showResponseActions || showClockInAction);
+  // H4 — show worked-history block for past shifts (or whenever historyInfo is provided).
+  const isPastShift = (() => {
+    try {
+      const d = parseISO(shift.date);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return d.getTime() < today.getTime();
+    } catch { return false; }
+  })();
+  const showHistoryBlock = isPastShift || !!historyInfo;
 
   const dayLabel = isTodayShift
     ? "Hoy"
@@ -225,6 +240,15 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, responseStatu
         >
           {!secondaryView && (
             <div className="space-y-4 pt-4">
+              {/* H4 — Historical worked summary, only on past shifts */}
+              {showHistoryBlock && (
+                <HistoricalShiftWorkSummary
+                  scheduledStart={shift.start_time}
+                  scheduledEnd={shift.end_time}
+                  info={historyInfo}
+                  loading={historyLoading}
+                />
+              )}
               {/* When & Where — single consolidated block */}
               {(shift.location || locationCoords) && (
                 <section className="rounded-2xl border border-border/40 bg-card overflow-hidden">

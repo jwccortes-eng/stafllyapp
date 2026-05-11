@@ -785,6 +785,8 @@ export default function MyShifts() {
             : undefined
         }
         responding={!!selectedShift && responding === selectedShift.id}
+        historyInfo={selectedShift ? workedHistory.byShiftId[selectedShift.shift.id] : undefined}
+        historyLoading={workedHistory.loading}
         open={!!selectedShift}
         onOpenChange={o => { if (!o) setSelectedShift(null); }}
       />
