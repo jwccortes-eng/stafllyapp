@@ -38,11 +38,18 @@ const EMOJI_OPTIONS = [
 
 export default function MyAnnouncements() {
   const { effectiveEmployeeId: employeeId } = useEffectiveEmployee();
+  const { setChromeMode } = usePortalChrome();
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [reactions, setReactions] = useState<Record<string, ReactionCount[]>>({});
   const [loading, setLoading] = useState(true);
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [expandedMedia, setExpandedMedia] = useState<string | null>(null);
+
+  useEffect(() => {
+    setChromeMode?.("shell");
+    return () => setChromeMode?.("legacy");
+  }, [setChromeMode]);
+
 
   const loadAnnouncements = useCallback(async () => {
     if (!employeeId) return;
