@@ -802,7 +802,7 @@ function DesktopShifts() {
             title.trim(),
             "shift_claimable",
             "Turno disponible para reclamar",
-            `"${title.trim()}" el ${dateLabel} (${startTime.slice(0, 5)}–${endTime.slice(0, 5)}). Aplica y te notificaremos si eres aceptado.`,
+            `"${title.trim()}" · ${dateLabel} · ${workRouteLine(startTime, endTime, meetingPoint)}. Aplica y te notificaremos si eres aceptado.`,
             claimRecipients,
             { claimable: true }
           );
