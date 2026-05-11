@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
 import { cn } from "@/lib/utils";
-import { MOBILE_PAGE_PB } from "./mobile-admin-tokens";
+import { STAFLY_BOTTOM_NAV_CLEARANCE } from "@/components/stafly-ui/tokens";
 
 interface MobileAdminModuleShellProps {
   /** MobileAdminHeader */
@@ -33,7 +33,7 @@ export function MobileAdminModuleShell({
   className,
 }: MobileAdminModuleShellProps) {
   return (
-    <div className={cn("min-h-full flex flex-col", MOBILE_PAGE_PB, className)}>
+    <div className={cn("min-h-full flex flex-col", STAFLY_BOTTOM_NAV_CLEARANCE, className)}>
       {header}
       {tabs}
       {summary && <div className="mb-3">{summary}</div>}
