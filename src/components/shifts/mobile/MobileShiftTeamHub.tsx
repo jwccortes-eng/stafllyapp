@@ -1073,7 +1073,7 @@ function WorkerRow({
             type="button"
             onClick={() => onCopyPhone(phoneDigits)}
             className="ml-auto h-7 w-7 rounded-full grid place-items-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-            aria-label="Copy phone number"
+            aria-label="Copiar número de teléfono"
           >
             <Copy className="h-3.5 w-3.5" />
           </button>
