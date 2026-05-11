@@ -771,17 +771,39 @@ export function MobileShiftOperationsSheet({
           </section>
         </div>
 
-        {/* Sticky footer — single safe primary action for Mobile Shifts v1 */}
+        {/* Sticky footer — Phase 1A: primary = Manage team (operational), secondary = Attendance. */}
         <div className="px-5 pt-3 pb-[max(env(safe-area-inset-bottom,0px),12px)] border-t border-border/40 bg-background/95 backdrop-blur-sm">
-          <Button
-            className="w-full h-12 rounded-xl text-sm font-semibold gap-2"
-            onClick={handleViewAttendance}
-          >
-            <ClipboardList className="h-4 w-4" />
-            View attendance
-          </Button>
+          {canValidate ? (
+            <div className="flex items-center gap-2">
+              <Button
+                className="flex-1 h-12 rounded-xl text-sm font-semibold gap-2"
+                onClick={() => setHubOpen(true)}
+                aria-label="Open team management for this shift"
+              >
+                <Users className="h-4 w-4" />
+                Manage team
+              </Button>
+              <Button
+                variant="outline"
+                className="h-12 px-4 rounded-xl text-sm font-semibold gap-2"
+                onClick={handleViewAttendance}
+                aria-label="View attendance"
+              >
+                <ClipboardList className="h-4 w-4" />
+                Attendance
+              </Button>
+            </div>
+          ) : (
+            <Button
+              className="w-full h-12 rounded-xl text-sm font-semibold gap-2"
+              onClick={handleViewAttendance}
+            >
+              <ClipboardList className="h-4 w-4" />
+              View attendance
+            </Button>
+          )}
           <p className="mt-2 text-center text-[11px] text-muted-foreground">
-            Editing shift details and staffing is available from desktop for now.
+            Editing shift details is available from desktop for now.
           </p>
         </div>
       </SheetContent>
