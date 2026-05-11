@@ -181,7 +181,7 @@ const NotificationBell = forwardRef<HTMLDivElement>(function NotificationBell(_p
       <PopoverContent align="end" className="w-[380px] p-0 rounded-2xl shadow-xl border-border/50" sideOffset={8}>
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border/30">
-          <h3 className="text-sm font-heading font-bold">Notifications</h3>
+          <h3 className="text-sm font-heading font-bold">Notificaciones</h3>
           <div className="flex items-center gap-3">
             {unreadCount > 0 && (
               <button
@@ -189,14 +189,14 @@ const NotificationBell = forwardRef<HTMLDivElement>(function NotificationBell(_p
                 className="flex items-center gap-1.5 text-[11px] font-medium text-primary hover:underline"
               >
                 <CheckCheck className="h-3.5 w-3.5" />
-                Mark all read
+                Marcar todas leídas
               </button>
             )}
             <button
               onClick={() => { setOpen(false); navigate("/app/notifications"); }}
               className="text-[11px] font-medium text-muted-foreground hover:text-foreground"
             >
-              View all
+              Ver todas
             </button>
           </div>
         </div>
