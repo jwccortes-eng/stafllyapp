@@ -280,7 +280,13 @@ export default function PayReports() {
             is_historical_import: isHistoricalImport(importInfo),
           } satisfies PayReportRow;
         })
-        .filter(Boolean) as PayReportRow[];
+        .filter(Boolean)
+        // Visibility filter (portal-only): hide live Stafly rows that are not
+        // yet published. Historical Connecteam imports always remain visible.
+        // This is UI-side only; payroll data and RLS are unchanged.
+        .filter((r: PayReportRow | null): r is PayReportRow =>
+          !!r && (r.is_historical_import || !!r.period.published_at),
+        ) as PayReportRow[];
 
       // Sort: most recent period first.
       built.sort((a, b) =>
