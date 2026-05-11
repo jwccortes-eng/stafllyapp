@@ -320,21 +320,25 @@ export function MobileShiftOperationsSheet({
 
   if (!shift || !data) return null;
 
-  // ── Smart brief (deterministic)
+  // ── Smart brief (deterministic) — only actionable issues, ordered by urgency.
   const briefMessages: { tone: "good" | "warn" | "bad" | "info"; text: string }[] = [];
-  if (draft) briefMessages.push({ tone: "warn", text: "Draft — workers won't see this yet" });
   if (published && understaffed) {
     const missing = slots - assignedCount;
-    briefMessages.push({ tone: "bad", text: `Needs ${missing} more worker${missing === 1 ? "" : "s"}` });
+    briefMessages.push({ tone: "bad", text: `Faltan ${missing} trabajador${missing === 1 ? "" : "es"}` });
   }
-  if (published && fullyStaffed) briefMessages.push({ tone: "good", text: "Fully staffed and published" });
-  if (draft && fullyStaffed) briefMessages.push({ tone: "info", text: "Ready to publish" });
-  if (assignedCount === 0) briefMessages.push({ tone: "bad", text: "No workers assigned" });
-  if (noClient) briefMessages.push({ tone: "warn", text: "No client linked" });
-  if (noLocation) briefMessages.push({ tone: "warn", text: meetingPoint ? "Missing job site (meeting point set)" : "No location linked" });
-  if (dateBucket === "today") briefMessages.push({ tone: "info", text: "Starts today" });
-  else if (dateBucket === "tomorrow") briefMessages.push({ tone: "info", text: "Upcoming tomorrow" });
-  if (briefMessages.length === 0) briefMessages.push({ tone: "good", text: "Looks good — no action needed" });
+  if (assignedCount === 0) briefMessages.push({ tone: "bad", text: "Sin trabajadores asignados" });
+  if (noLocation) briefMessages.push({ tone: "warn", text: meetingPoint ? "Falta ubicación del trabajo (hay punto de encuentro)" : "Falta ubicación del trabajo" });
+  if (!mp) briefMessages.push({ tone: "warn", text: "Falta punto de encuentro" });
+  if (noClient) briefMessages.push({ tone: "warn", text: "Falta cliente" });
+  if (draft) briefMessages.push({ tone: "warn", text: "Borrador — los trabajadores aún no lo ven" });
+  if (draft && fullyStaffed) briefMessages.push({ tone: "info", text: "Listo para publicar" });
+  if (
+    dateBucket === "today" &&
+    assignedWorkers.length > 0 &&
+    Object.keys(clockByEmp).length === 0
+  ) {
+    briefMessages.push({ tone: "warn", text: "Sin actividad de reloj" });
+  }
 
   // ── Snapshot text
   const snapshot = (() => {
