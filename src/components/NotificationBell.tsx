@@ -272,11 +272,11 @@ const NotificationBell = forwardRef<HTMLDivElement>(function NotificationBell(_p
                     </p>
                     <div className="flex items-center gap-2 mt-1">
                       <p className="text-[10px] text-muted-foreground/40">
-                        {formatDistanceToNow(new Date(n.created_at), { addSuffix: true, locale: es })}
+                        {formatDistanceToNow(new Date(n.created_at), { addSuffix: true, locale: enUS })}
                       </p>
                       <span className="text-[10px] text-muted-foreground/25">·</span>
                       <p className="text-[10px] text-muted-foreground/30 tabular-nums">
-                        {format(new Date(n.created_at), "dd MMM, HH:mm", { locale: es })}
+                        {format(new Date(n.created_at), "dd MMM, HH:mm", { locale: enUS })}
                       </p>
                     </div>
                   </div>
