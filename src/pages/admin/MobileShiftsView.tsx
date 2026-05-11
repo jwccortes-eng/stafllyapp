@@ -633,6 +633,21 @@ function ShiftCard({
     }
   };
 
+  // Status chip mapped to ShiftRouteHeader tone
+  let statusLabel: string | null = null;
+  let statusTone: ShiftRouteHeaderTone = "neutral";
+  if (isDraft) { statusLabel = "Draft"; statusTone = "warning"; }
+  else if (understaffed) { statusLabel = "Unstaffed"; statusTone = "danger"; }
+  else { statusLabel = "Published"; statusTone = "success"; }
+
+  const coverageLabel = slots > 0
+    ? `${assignedEmployees.length}/${slots} asignados${understaffed ? ` · faltan ${slots - assignedEmployees.length}` : ""}`
+    : null;
+
+  // Title shown by header is shift.title (or fallback to client). Client name
+  // surfaces under jobSiteName slot via clientName prop.
+  const headerTitle = shift.title?.trim() || clientName;
+
   return (
     <div
       role="button"
@@ -645,38 +660,26 @@ function ShiftCard({
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
       )}
     >
-      {/* Top row: client + status */}
-      <div className="flex items-start justify-between gap-2 mb-2.5">
-        <div className="min-w-0 flex-1">
-          <div className="text-base font-semibold tracking-tight leading-snug line-clamp-1">
-            {clientName}
-          </div>
-          {locationName && (
-            <div className="flex items-center gap-1 text-xs text-muted-foreground truncate mt-1 leading-snug">
-              <MapPin className="h-3.5 w-3.5 shrink-0" />
-              <span className="truncate">{locationName}</span>
-            </div>
-          )}
-        </div>
-        <div className="flex items-center gap-1.5 shrink-0">
-          <StatusBadge isDraft={isDraft} understaffed={understaffed} />
-          <ChevronRight className="h-4 w-4 text-muted-foreground/60 group-hover:text-muted-foreground transition-colors" />
-        </div>
-      </div>
-
-      {/* Time */}
-      <div className="flex items-baseline gap-2 mb-3">
-        <Clock className="h-4 w-4 text-muted-foreground self-center" />
-        <span className="text-xl font-mono font-semibold tabular-nums leading-none">
-          {formatTimeShort(shift.start_time)}–{formatTimeShort(shift.end_time)}
-        </span>
-        {shift.title && shift.title !== clientName && (
-          <span className="text-xs text-muted-foreground truncate">· {shift.title}</span>
-        )}
-      </div>
+      {/* Stafly Work Route header (admin / compact) */}
+      <ShiftRouteHeader
+        variant="admin"
+        density="compact"
+        title={headerTitle}
+        clientName={clientName !== headerTitle ? clientName : null}
+        shiftCode={shift.shift_code}
+        date={shift.date}
+        startTime={shift.start_time}
+        endTime={shift.end_time}
+        jobSiteName={locationName || null}
+        statusLabel={statusLabel}
+        statusTone={statusTone}
+        coverageLabel={coverageLabel}
+        trailing={<ChevronRight className="h-4 w-4 text-muted-foreground/60 group-hover:text-muted-foreground transition-colors" />}
+        className="!bg-transparent !border-0 !shadow-none !p-0 !rounded-none"
+      />
 
       {/* Workers + coverage */}
-      <div className="flex items-center justify-between gap-3 mb-2">
+      <div className="flex items-center justify-between gap-3 mt-3 mb-2">
         <div className="flex items-center gap-1.5 min-w-0">
           <Users className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
           <span className="text-xs text-muted-foreground truncate">
@@ -708,13 +711,10 @@ function ShiftCard({
       )}
 
       {/* Warnings */}
-      {(understaffed || isDraft || noClient) && (
+      {(understaffed || noClient) && (
         <div className="flex flex-wrap items-center gap-1.5 mt-2">
           {understaffed && (
             <Warning icon={Users} label="Needs staff" tone="bad" />
-          )}
-          {isDraft && (
-            <Warning icon={FileEdit} label="Draft" tone="warn" />
           )}
           {noClient && (
             <Warning icon={Building2} label="No client" tone="warn" />
