@@ -126,8 +126,8 @@ function calcHours(start: string, end: string): number {
 function dateLabel(dateStr: string): string {
   try {
     const d = parseISO(dateStr);
-    if (isToday(d)) return "Today";
-    if (isTomorrow(d)) return "Tomorrow";
+    if (isToday(d)) return "Hoy";
+    if (isTomorrow(d)) return "Mañana";
     return format(d, "EEEE, MMM d", { locale: enUS });
   } catch { return dateStr; }
 }
