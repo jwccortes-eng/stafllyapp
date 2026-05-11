@@ -1021,121 +1021,132 @@ function WorkerRow({
   const statusPill = attendancePill ?? importedPill ?? STATUS_PILL[bucket];
 
   return (
-    <li className="px-3 py-2.5">
-      <div className="flex items-center gap-2.5">
-        <Avatar className="h-9 w-9 shrink-0">
+    <li className="px-2.5 py-1.5">
+      <div className="flex items-center gap-2">
+        <Avatar className="h-8 w-8 shrink-0">
           {employee?.avatar_url ? <AvatarImage src={employee.avatar_url} alt="" /> : null}
           <AvatarFallback className="text-[10px] font-semibold">
             {initialsOf(employee)}
           </AvatarFallback>
         </Avatar>
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <p className="text-sm font-semibold leading-tight truncate">{name}</p>
+          <div className="flex items-center gap-1 min-w-0">
+            <p className="text-[13px] font-semibold leading-tight truncate">{name}</p>
+            {isCaptain && <Star className="h-3 w-3 text-amber-600 shrink-0" />}
+          </div>
+          <div className="flex items-center gap-1 mt-0.5 flex-wrap">
             {statusPill && (
               <span
                 className={cn(
-                  "inline-flex items-center h-[17px] px-1.5 rounded-full text-[9.5px] font-bold uppercase tracking-wider border whitespace-nowrap",
+                  "inline-flex items-center h-[15px] px-1.5 rounded-full text-[9.5px] font-bold uppercase tracking-wide border whitespace-nowrap",
                   statusPill.cls,
                 )}
+                title={isImportedNotResponded ? "Importado desde Connecteam. Aún no confirmado en Stafly." : undefined}
               >
                 {statusPill.label}
               </span>
             )}
-            {isCaptain && (
-              <Badge
-                variant="outline"
-                className="h-[16px] px-1 text-[9px] uppercase tracking-wider border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10"
-              >
-                <Star className="h-2.5 w-2.5 mr-0.5" />
-                Capitán
-              </Badge>
+            {assignment.assignment_role && (
+              <span className="inline-flex items-center h-[15px] px-1 rounded-full bg-muted text-muted-foreground text-[9.5px] font-bold uppercase tracking-wide">
+                {assignment.assignment_role}
+              </span>
+            )}
+            {!hasPhone && (
+              <span className="inline-flex items-center h-[15px] px-1.5 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-400 text-[9.5px] font-bold uppercase tracking-wide">
+                Sin tel.
+              </span>
+            )}
+            {readiness.state !== "ready" && readiness.state !== "missing_phone" && (
+              <ReadinessChip readiness={readiness} />
             )}
           </div>
-          <p className="text-[11px] text-muted-foreground truncate">
-            {subBits.length ? subBits.join(" · ") : "—"}
-          </p>
-          {responseLabel && (
-            <p className={cn(
-              "text-[10px] mt-0.5 font-medium",
-              assignment.accepted_at ? "text-emerald-700 dark:text-emerald-400" : "text-rose-700 dark:text-rose-400"
-            )}>
-              {responseLabel}
-            </p>
-          )}
-          {isImportedNotResponded && (
-            <p className="text-[10px] text-muted-foreground mt-0.5">
-              Importado desde Connecteam. Aún no confirmado en Stafly.
-            </p>
-          )}
-          {readiness.state !== "ready" && readiness.state !== "missing_phone" && (
-            <div className="mt-0.5"><ReadinessChip readiness={readiness} /></div>
-          )}
-          {!hasPhone && (
-            <div className="mt-1 flex items-center gap-2 flex-wrap">
-              <span className="text-[10px] text-amber-700 dark:text-amber-400">{HUB_COPY.noPhone}</span>
-              {canManage && (
-                <button
-                  type="button"
-                  onClick={() => setPhoneDialogOpen(true)}
-                  className="inline-flex items-center gap-1 h-6 px-2 rounded-full bg-primary text-primary-foreground text-[10px] font-semibold"
-                >
-                  <Phone className="h-2.5 w-2.5" /> Agregar teléfono
-                </button>
-              )}
-            </div>
-          )}
         </div>
 
-        {showMenu && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                type="button"
-                className="h-8 w-8 shrink-0 rounded-full grid place-items-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                aria-label={`Change status for ${name}`}
+        {/* Right-side compact contact icons */}
+        <div className="flex items-center gap-0.5 shrink-0">
+          {hasPhone ? (
+            <>
+              <a
+                href={`tel:${phoneDigits}`}
+                className="h-7 w-7 inline-flex items-center justify-center rounded-full bg-primary/10 text-primary"
+                aria-label={`Llamar a ${name}`}
               >
-                <MoreVertical className="h-4 w-4" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-                Acción registrada
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              {allowedActions.map((next) => {
-                const Icon = ASSIGN_ACTION_ICON[next];
-                return (
-                  <DropdownMenuItem
-                    key={next}
-                    onClick={() => onAssignmentAction(assignment.id, next, name)}
-                    className={next === "removed" || next === "rejected" ? "text-destructive focus:text-destructive" : undefined}
-                  >
-                    <Icon className="h-4 w-4 mr-2" />
-                    {ASSIGN_ACTION_LABEL[next]}
-                  </DropdownMenuItem>
-                );
-              })}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
-      </div>
-
-      {hasPhone && (
-        <div className="mt-2 flex items-center gap-1.5">
-          <ContactBtn href={`tel:${phoneDigits}`} icon={Phone} label="Llamar" />
-          <ContactBtn href={`sms:${phoneDigits}`} icon={MessageSquare} label="SMS" />
-          {wa?.waMeUrl && (
-            <ContactBtn href={wa.waMeUrl} icon={MessageSquare} label="WhatsApp" external />
+                <Phone className="h-3.5 w-3.5" />
+              </a>
+              {wa?.waMeUrl && (
+                <a
+                  href={wa.waMeUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="h-7 w-7 inline-flex items-center justify-center rounded-full bg-[#25D366]/10 text-[#128C4F] dark:text-[#25D366]"
+                  aria-label="WhatsApp"
+                >
+                  <MessageSquare className="h-3.5 w-3.5" />
+                </a>
+              )}
+            </>
+          ) : canManage ? (
+            <button
+              type="button"
+              onClick={() => setPhoneDialogOpen(true)}
+              className="h-7 px-2 inline-flex items-center gap-1 rounded-full bg-primary text-primary-foreground text-[10px] font-semibold"
+              aria-label={`Agregar teléfono de ${name}`}
+            >
+              <Phone className="h-3 w-3" /> Tel
+            </button>
+          ) : null}
+          {showMenu && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="h-7 w-7 rounded-full grid place-items-center text-muted-foreground hover:text-foreground hover:bg-muted"
+                  aria-label={`Cambiar estado de ${name}`}
+                >
+                  <MoreVertical className="h-4 w-4" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                  Acción registrada
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {hasPhone && (
+                  <>
+                    <DropdownMenuItem onClick={() => onCopyPhone(phoneDigits)}>
+                      <Copy className="h-4 w-4 mr-2" /> Copiar teléfono
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <a href={`sms:${phoneDigits}`}>
+                        <MessageSquare className="h-4 w-4 mr-2" /> Enviar SMS
+                      </a>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                  </>
+                )}
+                {allowedActions.map((next) => {
+                  const Icon = ASSIGN_ACTION_ICON[next];
+                  return (
+                    <DropdownMenuItem
+                      key={next}
+                      onClick={() => onAssignmentAction(assignment.id, next, name)}
+                      className={next === "removed" || next === "rejected" ? "text-destructive focus:text-destructive" : undefined}
+                    >
+                      <Icon className="h-4 w-4 mr-2" />
+                      {ASSIGN_ACTION_LABEL[next]}
+                    </DropdownMenuItem>
+                  );
+                })}
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
-          <button
-            type="button"
-            onClick={() => onCopyPhone(phoneDigits)}
-            className="ml-auto h-7 w-7 rounded-full grid place-items-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-            aria-label="Copiar número de teléfono"
-          >
-            <Copy className="h-3.5 w-3.5" />
-          </button>
+        </div>
+      </div>
+      {(responseLabel || isImportedNotResponded) && (
+        <div className="ml-10 mt-0.5 text-[10px] text-muted-foreground leading-snug">
+          {isImportedNotResponded
+            ? "Importado desde Connecteam. Aún no confirmado en Stafly."
+            : responseLabel}
         </div>
       )}
       <Dialog open={phoneDialogOpen} onOpenChange={setPhoneDialogOpen}>
