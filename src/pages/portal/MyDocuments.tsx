@@ -298,12 +298,12 @@ export default function MyDocuments() {
       {/* Required categories */}
       <div className="space-y-2.5">
         <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70 px-1">
-          Required
+          Requeridos
         </p>
         {required.length === 0 ? (
           <div className="rounded-2xl border border-border/40 bg-card p-4 text-center">
             <p className="text-xs text-muted-foreground">
-              Your company hasn't required any documents yet.
+              Tu compañía aún no ha solicitado documentos.
             </p>
           </div>
         ) : (
@@ -315,10 +315,10 @@ export default function MyDocuments() {
 
             // Visual tokens per state
             const tone = {
-              approved: { border: "border-earning/25", iconBg: "bg-earning/12", icon: "text-earning", badge: "bg-earning/10 text-earning", label: "Approved" },
-              pending:  { border: "border-warning/25", iconBg: "bg-warning/12", icon: "text-warning", badge: "bg-warning/10 text-warning", label: "Pending review" },
-              rejected: { border: "border-deduction/30", iconBg: "bg-deduction/12", icon: "text-deduction", badge: "bg-deduction/10 text-deduction", label: "Rejected" },
-              missing:  { border: "border-warning/30", iconBg: "bg-muted", icon: "text-muted-foreground", badge: "bg-warning/10 text-warning", label: "Required" },
+              approved: { border: "border-earning/25", iconBg: "bg-earning/12", icon: "text-earning", badge: "bg-earning/10 text-earning", label: "Aprobado" },
+              pending:  { border: "border-warning/25", iconBg: "bg-warning/12", icon: "text-warning", badge: "bg-warning/10 text-warning", label: "Pendiente de revisión" },
+              rejected: { border: "border-deduction/30", iconBg: "bg-deduction/12", icon: "text-deduction", badge: "bg-deduction/10 text-deduction", label: "Rechazado" },
+              missing:  { border: "border-warning/30", iconBg: "bg-muted", icon: "text-muted-foreground", badge: "bg-warning/10 text-warning", label: "Requerido" },
             }[state];
 
             const Icon =
@@ -331,10 +331,10 @@ export default function MyDocuments() {
             const lastRejection = items.find((d) => d.review_status === "rejected" && d.rejection_reason);
 
             const ctaLabel =
-              state === "approved" ? "Replace / add another" :
-              state === "rejected" ? "Upload a new file" :
-              state === "pending"  ? "Add another file" :
-              "Upload document";
+              state === "approved" ? "Reemplazar o agregar otro" :
+              state === "rejected" ? "Subir nuevo archivo" :
+              state === "pending"  ? "Agregar otro archivo" :
+              "Subir documento";
 
             return (
               <div
