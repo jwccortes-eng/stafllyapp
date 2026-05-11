@@ -375,7 +375,7 @@ export function MobileShiftOperationsSheet({
   const handleCopySummary = async () => {
     try {
       await navigator.clipboard.writeText(summaryText);
-      toast.success("Shift summary copied");
+      toast.success("Resumen del turno copiado");
     } catch {
       toast.error("Couldn't copy to clipboard");
     }
