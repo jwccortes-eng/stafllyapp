@@ -68,7 +68,7 @@ function isClockOutWithinSchedule(shift: TodayShift | null): { withinSchedule: b
   const [sh, sm] = shift.start_time.split(":").map(Number);
   const shiftStart = new Date(); shiftStart.setHours(sh, sm, 0, 0);
   if (now < shiftStart || now > shiftEnd) {
-    return { withinSchedule: false, message: `Clock-out is outside scheduled hours (${shift.start_time.slice(0, 5)} - ${shift.end_time.slice(0, 5)}).` };
+    return { withinSchedule: false, message: `Estás fuera de la ventana estimada (entrada ${shift.start_time.slice(0, 5)} · salida estimada ${shift.end_time.slice(0, 5)}).` };
   }
   return { withinSchedule: true, message: "" };
 }
@@ -640,18 +640,29 @@ export default function PortalClock() {
               <p className="text-[16px] font-bold text-foreground leading-tight line-clamp-2">
                 {focusShift.title}
               </p>
-              <div className="flex items-center justify-center gap-1.5 mt-2 text-[12px] text-muted-foreground/85">
-                <Clock className="h-3 w-3 opacity-60" />
-                <span className="tabular-nums font-medium">
-                  {focusShift.start_time.slice(0, 5)}–{focusShift.end_time.slice(0, 5)}
-                </span>
-                {focusShift.location_name && (
-                  <>
-                    <span className="text-muted-foreground/30">·</span>
-                    <span className="truncate max-w-[140px]">{focusShift.location_name}</span>
-                  </>
-                )}
+              <div className="mt-3 flex items-center justify-center gap-5">
+                <div className="text-center">
+                  <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-muted-foreground/65 leading-none mb-1">
+                    Entrada esperada
+                  </p>
+                  <p className="text-[22px] font-bold font-mono tabular-nums text-foreground leading-none">
+                    {focusShift.start_time.slice(0, 5)}
+                  </p>
+                </div>
+                <div className="text-center opacity-70">
+                  <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-muted-foreground/55 leading-none mb-1">
+                    Salida estimada
+                  </p>
+                  <p className="text-[16px] font-semibold font-mono tabular-nums text-muted-foreground leading-none">
+                    {focusShift.end_time.slice(0, 5)}
+                  </p>
+                </div>
               </div>
+              {focusShift.location_name && (
+                <p className="mt-2 text-[11px] text-muted-foreground/70 truncate">
+                  {focusShift.location_name}
+                </p>
+              )}
             </>
           ) : (
             <>

@@ -30,6 +30,7 @@ interface ShiftInfo {
   slots: number | null;
   shift_code?: string | null;
   meeting_point?: string | null;
+  meeting_time?: string | null;
   special_instructions?: string | null;
   location?: { name: string; latitude?: number | null; longitude?: number | null } | null;
   client?: { name: string } | null;
@@ -158,8 +159,8 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, responseStatu
     <Drawer open={open} onOpenChange={(o) => { onOpenChange(o); if (!o) setSecondaryView(null); }}>
       <DrawerContent className="max-h-[94vh] overflow-hidden p-0 bg-background">
         {/* ─── Header — one block, one identity ─── */}
-        <DrawerHeader className="px-5 pt-4 pb-4 space-y-2.5 border-b border-border/40 bg-card sticky top-0 z-10">
-          {/* Top meta — day, time, duration, status */}
+        <DrawerHeader className="px-5 pt-4 pb-4 space-y-3 border-b border-border/40 bg-card sticky top-0 z-10">
+          {/* Top meta — day + status */}
           <div className="flex items-center gap-2 text-[12px]">
             <span className={cn(
               "px-2 py-0.5 rounded-md font-bold uppercase tracking-widest text-[10px]",
@@ -167,16 +168,15 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, responseStatu
             )}>
               {dayLabel}
             </span>
-            <span className="font-semibold text-foreground tabular-nums">
-              {shift.start_time?.slice(0, 5)}–{shift.end_time?.slice(0, 5)}
+            <span className="text-muted-foreground/60 first-letter:uppercase">
+              {format(parseISO(shift.date), "EEE d MMM", { locale: es })}
             </span>
-            <span className="text-muted-foreground/55 tabular-nums">· {hoursLabel}</span>
             <div className="ml-auto">
               <OpsStatusChip tone={statusMeta.tone} label={statusMeta.label} size="sm" />
             </div>
           </div>
 
-          {/* Title + client — single hierarchical block */}
+          {/* Title + client */}
           <div className="space-y-1">
             <DrawerTitle className="text-left text-[19px] font-bold leading-tight line-clamp-2 text-foreground">
               {shift.title}
@@ -192,6 +192,21 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, responseStatu
                 )}
               </p>
             )}
+          </div>
+
+          {/* Tu ruta de trabajo — Entrada protagonista, salida estimada secundaria */}
+          <div className="flex items-end gap-4 pt-1">
+            <div className="min-w-0">
+              <p className="text-[9.5px] font-bold uppercase tracking-[0.16em] text-muted-foreground/65 leading-none mb-1">
+                Entrada
+              </p>
+              <p className="text-[34px] leading-none font-bold font-mono tabular-nums text-foreground">
+                {shift.start_time?.slice(0, 5)}
+              </p>
+              <p className="text-[10.5px] text-muted-foreground/65 mt-1.5 tabular-nums">
+                Termina aprox. {shift.end_time?.slice(0, 5)} · {hoursLabel} estimadas
+              </p>
+            </div>
           </div>
 
           {/* Countdown — only when actionable */}
@@ -251,16 +266,24 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, responseStatu
                     </div>
                   )}
 
-                  {/* Meeting point row — merged into same block */}
+                  {/* Punto de encuentro — protagonista con hora si existe */}
                   {shift.meeting_point && (
-                    <div className="flex items-center gap-3 px-4 py-3 border-t border-border/30">
+                    <div className="flex items-start gap-3 px-4 py-3 border-t border-border/30">
                       <div className="h-8 w-8 rounded-lg bg-muted/60 flex items-center justify-center shrink-0">
                         <Navigation className="h-3.5 w-3.5 text-muted-foreground/80" />
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="text-[10px] uppercase tracking-widest text-muted-foreground/55 font-bold">Punto de encuentro</p>
-                        <p className="text-[13px] font-semibold text-foreground mt-0.5 truncate">{shift.meeting_point}</p>
+                        <p className="text-[13px] font-semibold text-foreground mt-0.5 line-clamp-2 leading-snug">{shift.meeting_point}</p>
                       </div>
+                      {shift.meeting_time && (
+                        <div className="shrink-0 text-right pr-1">
+                          <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-muted-foreground/70 leading-none mb-1">Hora</p>
+                          <p className="text-[16px] font-bold font-mono tabular-nums text-foreground leading-none">
+                            {shift.meeting_time.slice(0, 5)}
+                          </p>
+                        </div>
+                      )}
                       <button
                         className="p-2 rounded-lg hover:bg-muted text-muted-foreground/50 hover:text-foreground transition-colors"
                         onClick={() => copyAddress(shift.meeting_point!, "Punto de encuentro")}

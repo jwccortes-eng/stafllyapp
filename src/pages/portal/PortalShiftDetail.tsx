@@ -39,6 +39,7 @@ interface ShiftDetail {
   end_time: string;
   notes: string | null;
   meeting_point: string | null;
+  meeting_time: string | null;
   special_instructions: string | null;
   slots: number | null;
   claimable: boolean;
@@ -64,7 +65,7 @@ export default function PortalShiftDetail() {
     // Fetch shift WITHOUT filtering deleted_at — we want to detect deleted state
     const { data: s } = await supabase
       .from("scheduled_shifts")
-      .select(`id, title, date, start_time, end_time, notes, meeting_point, special_instructions,
+      .select(`id, title, date, start_time, end_time, notes, meeting_point, meeting_time, special_instructions,
                slots, claimable, status, shift_code, deleted_at, publication_status,
                locations (name, address), clients (name),
                shift_assignments (id, employee_id, status, is_draft_reservation)`)
@@ -100,6 +101,7 @@ export default function PortalShiftDetail() {
       end_time: s.end_time,
       notes: s.notes,
       meeting_point: (s as any).meeting_point ?? null,
+      meeting_time: (s as any).meeting_time ?? null,
       special_instructions: (s as any).special_instructions ?? null,
       slots: s.slots,
       claimable: (s as any).claimable ?? false,
@@ -202,7 +204,6 @@ export default function PortalShiftDetail() {
     ? "Mañana"
     : format(parseISO(shift.date), "EEEE d MMM", { locale: es });
 
-  const timeLabel = `${shift.start_time?.slice(0, 5)} – ${shift.end_time?.slice(0, 5)}`;
   const slotsLeft = shift.slots ? Math.max(0, shift.slots - shift.assignedCount) : null;
 
   return (
@@ -215,24 +216,34 @@ export default function PortalShiftDetail() {
       {/* ── Hero card */}
       <div className="rounded-2xl bg-card border border-border/40 shadow-sm overflow-hidden mb-4">
         <div className="p-4 space-y-3">
-          {/* Date / time */}
+          {/* Date chip + slots */}
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className={cn(
-                "text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-widest",
-                isToday(parseISO(shift.date)) ? "bg-primary text-primary-foreground" :
-                isTomorrow(parseISO(shift.date)) ? "bg-accent text-accent-foreground" :
-                "bg-muted text-muted-foreground"
-              )}>
-                {dateLabel}
-              </span>
-              <span className="text-sm font-bold text-foreground tabular-nums">{timeLabel}</span>
-            </div>
+            <span className={cn(
+              "text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-widest",
+              isToday(parseISO(shift.date)) ? "bg-primary text-primary-foreground" :
+              isTomorrow(parseISO(shift.date)) ? "bg-accent text-accent-foreground" :
+              "bg-muted text-muted-foreground"
+            )}>
+              {dateLabel}
+            </span>
             {slotsLeft !== null && state === "available" && (
               <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-primary/10 text-primary">
                 {slotsLeft} {slotsLeft === 1 ? "cupo disponible" : "cupos disponibles"}
               </span>
             )}
+          </div>
+
+          {/* Tu ruta de trabajo — Entrada protagonista */}
+          <div>
+            <p className="text-[9.5px] font-bold uppercase tracking-[0.16em] text-muted-foreground/65 leading-none mb-1">
+              Entrada
+            </p>
+            <p className="text-[32px] leading-none font-bold font-mono tabular-nums text-foreground">
+              {shift.start_time?.slice(0, 5)}
+            </p>
+            <p className="text-[10.5px] text-muted-foreground/65 mt-1.5 tabular-nums">
+              Termina aprox. {shift.end_time?.slice(0, 5)} · salida estimada
+            </p>
           </div>
 
           {/* Title */}
@@ -251,10 +262,18 @@ export default function PortalShiftDetail() {
             {shift.meeting_point && (
               <div className="flex items-start gap-2 px-3 py-2 rounded-xl bg-primary/[0.05] border border-primary/10">
                 <Navigation className="h-3.5 w-3.5 text-primary mt-0.5 shrink-0" />
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-primary/70">Punto de encuentro</p>
-                  <p className="text-[12px] text-foreground font-medium">{shift.meeting_point}</p>
+                  <p className="text-[12px] text-foreground font-medium leading-snug">{shift.meeting_point}</p>
                 </div>
+                {shift.meeting_time && (
+                  <div className="shrink-0 text-right">
+                    <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-primary/70 leading-none mb-0.5">Hora</p>
+                    <p className="text-[15px] font-bold font-mono tabular-nums text-foreground leading-none">
+                      {shift.meeting_time.slice(0, 5)}
+                    </p>
+                  </div>
+                )}
               </div>
             )}
             {shift.notes && (
