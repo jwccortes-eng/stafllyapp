@@ -643,30 +643,42 @@ export function MobileShiftOperationsSheet({
               </span>
             </SectionTitle>
 
-            {/* Coverage chips */}
+            {/* Coverage chips + operational counts */}
             {(() => {
-              let checkedIn = 0, checkedOut = 0, missing = 0;
+              let checkedIn = 0, checkedOut = 0, missing = 0, imported = 0, noPhone = 0, rejected = 0, pending = 0;
               for (const w of assignedWorkers) {
                 const c = clockByEmp[w.id];
                 if (c?.clock_out) checkedOut++;
                 else if (c?.clock_in) checkedIn++;
                 else missing++;
+                const extra = asgnByEmployeeId.get(w.id) ?? null;
+                const sLow = (extra?.status ?? "").toLowerCase();
+                if (extra?.import_batch_id && !extra?.accepted_at && !extra?.responded_at &&
+                    (sLow === "accepted" || sLow === "assigned" || sLow === "confirmed")) imported++;
+                if (sLow === "rejected") rejected++;
+                if (sLow === "pending") pending++;
+                if (!w.phone_number) noPhone++;
               }
+              const missingSlots = slots > 0 ? Math.max(0, slots - assignedCount) : 0;
               return (
-                <div className="flex flex-wrap gap-1.5 mb-2.5">
-                  <CoverChip label="requeridos" value={slots > 0 ? slots : "—"} />
-                  <CoverChip label="asignados" value={assignedCount} />
-                  <CoverChip label="registrados" value={checkedIn} tone={checkedIn > 0 ? "good" : "muted"} />
-                  <CoverChip label="salieron" value={checkedOut} tone="muted" />
-                  <CoverChip label="ausentes" value={missing} tone={missing > 0 && dateBucket === "today" ? "bad" : "muted"} />
+                <div className="flex flex-wrap gap-1 mb-2.5">
+                  <CoverChip label="req." value={slots > 0 ? slots : "—"} />
+                  <CoverChip label="asign." value={assignedCount} />
+                  {missingSlots > 0 && <CoverChip label="falta" value={missingSlots} tone="warn" />}
+                  {checkedIn > 0 && <CoverChip label="en sitio" value={checkedIn} tone="good" />}
+                  {checkedOut > 0 && <CoverChip label="salieron" value={checkedOut} tone="muted" />}
+                  {imported > 0 && <CoverChip label="import." value={imported} tone="info" />}
+                  {pending > 0 && <CoverChip label="pend." value={pending} tone="warn" />}
+                  {rejected > 0 && <CoverChip label="rech." value={rejected} tone="bad" />}
+                  {noPhone > 0 && <CoverChip label="sin tel." value={noPhone} tone="warn" />}
                 </div>
               );
             })()}
 
             {loadingTeam ? (
-              <div className="space-y-1.5">
-                {[0, 1].map(i => (
-                  <div key={i} className="h-16 rounded-2xl bg-muted/40 animate-pulse" />
+              <div className="space-y-1">
+                {[0, 1, 2].map(i => (
+                  <div key={i} className="h-12 rounded-xl bg-muted/40 animate-pulse" />
                 ))}
               </div>
             ) : teamError ? (
@@ -691,8 +703,8 @@ export function MobileShiftOperationsSheet({
                 <p className="text-[11px] text-muted-foreground mb-1.5 px-0.5">
                   {MOBILE_SHIFT_COPY.assignedSortedHelper}
                 </p>
-                <div className="space-y-1.5">
-                  {sortedAssignedWorkers.map(w => {
+                <div className="space-y-1">
+                  {sortedAssignedWorkers.slice(0, 6).map(w => {
                     const extra = asgnByEmployeeId.get(w.id) ?? null;
                     return (
                       <WorkerRow
@@ -712,6 +724,16 @@ export function MobileShiftOperationsSheet({
                     );
                   })}
                 </div>
+                {sortedAssignedWorkers.length > 6 && (
+                  <button
+                    type="button"
+                    onClick={() => setHubOpen(true)}
+                    className="mt-2 w-full inline-flex items-center justify-center gap-1.5 h-9 rounded-xl border border-border/60 bg-card text-xs font-semibold text-foreground hover:bg-muted/40 transition"
+                  >
+                    Ver equipo completo ({sortedAssignedWorkers.length})
+                    <ChevronDown className="h-3.5 w-3.5 -rotate-90" />
+                  </button>
+                )}
               </>
             )}
 
