@@ -39,6 +39,7 @@ interface ShiftDetail {
   end_time: string;
   notes: string | null;
   meeting_point: string | null;
+  meeting_time: string | null;
   special_instructions: string | null;
   slots: number | null;
   claimable: boolean;
