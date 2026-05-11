@@ -234,7 +234,7 @@ const NotificationBell = forwardRef<HTMLDivElement>(function NotificationBell(_p
             <div className="flex flex-col items-center justify-center py-10 text-center">
               <Bell className="h-8 w-8 text-muted-foreground/30 mb-2" />
               <p className="text-sm text-muted-foreground/60">
-                {filter === "all" ? "No notifications" : "No notifications in this category"}
+                {filter === "all" ? "No hay notificaciones" : "No hay notificaciones en esta categoría"}
               </p>
             </div>
           ) : (
