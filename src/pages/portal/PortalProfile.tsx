@@ -361,8 +361,8 @@ function ChangePinSection() {
           <KeyRound className="h-[18px] w-[18px] text-primary/70" />
         </div>
         <div className="flex-1 min-w-0 text-left">
-           <p className="text-sm font-semibold">Change PIN</p>
-           <p className="text-[10px] text-muted-foreground">Update your access code</p>
+           <p className="text-sm font-semibold">Cambiar PIN</p>
+           <p className="text-[10px] text-muted-foreground">Actualiza tu código de acceso</p>
         </div>
         <ChevronRight className="h-4 w-4 text-muted-foreground/40" />
       </button>
@@ -373,12 +373,12 @@ function ChangePinSection() {
     <div className="rounded-2xl border border-border/40 bg-card p-5 space-y-4 shadow-xs">
       <div className="flex items-center gap-2">
         <KeyRound className="h-4 w-4 text-primary" />
-        <h3 className="text-sm font-semibold">Change PIN</h3>
+        <h3 className="text-sm font-semibold">Cambiar PIN</h3>
       </div>
 
       <div className="space-y-3">
         <div className="space-y-1.5">
-          <Label className="text-xs">Current PIN (optional)</Label>
+          <Label className="text-xs">PIN actual (opcional)</Label>
           <Input
             type="password"
             inputMode="numeric"
@@ -390,7 +390,7 @@ function ChangePinSection() {
           />
         </div>
         <div className="space-y-1.5">
-          <Label className="text-xs">New PIN *</Label>
+          <Label className="text-xs">Nuevo PIN *</Label>
           <Input
             type="password"
             inputMode="numeric"
@@ -402,7 +402,7 @@ function ChangePinSection() {
           />
         </div>
         <div className="space-y-1.5">
-          <Label className="text-xs">Confirm new PIN *</Label>
+          <Label className="text-xs">Confirmar nuevo PIN *</Label>
           <Input
             type="password"
             inputMode="numeric"
@@ -417,10 +417,10 @@ function ChangePinSection() {
 
       <div className="flex gap-2">
         <Button variant="outline" size="sm" className="flex-1" onClick={() => setExpanded(false)}>
-          Cancel
+          Cancelar
         </Button>
         <Button size="sm" className="flex-1" onClick={handleChangePin} disabled={saving || !newPin || !confirmPin}>
-          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save PIN"}
+          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Guardar PIN"}
         </Button>
       </div>
     </div>
