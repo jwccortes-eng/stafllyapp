@@ -240,7 +240,7 @@ export default function PortalProfile() {
         <div className="space-y-2">
           {profile.groups && (
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Groups:</span>
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Grupos:</span>
               {profile.groups.split(",").map(g => (
                 <span key={g.trim()} className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
                   {g.trim()}
@@ -250,7 +250,7 @@ export default function PortalProfile() {
           )}
           {profile.tags && (
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Tags:</span>
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Etiquetas:</span>
               {profile.tags.split(",").map(t => (
                 <span key={t.trim()} className="text-[10px] px-2 py-0.5 rounded-full bg-accent text-accent-foreground font-medium">
                   {t.trim()}
