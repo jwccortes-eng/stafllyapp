@@ -391,198 +391,91 @@ export function MobileShiftOperationsSheet({
         hideClose
         className="h-[92vh] p-0 rounded-t-3xl flex flex-col overflow-hidden bg-background"
       >
-        {/* Sticky Context Header — "You are reviewing this shift" */}
-        <div
-          className="px-5 pt-3 pb-3 border-b border-border/40 bg-background/95 backdrop-blur-sm"
-          role="region"
-          aria-label={`Shift context for ${clientName && clientName !== "—" ? clientName : (shift.title || "shift")}, ${dateLabel(shift.date)}, ${formatTimeShort(shift.start_time)} to ${formatTimeShort(shift.end_time)}`}
-        >
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1.5 mb-1">
-                <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
-                  Shift context
-                </span>
-                {shift.shift_code && (
-                  <span className="inline-flex items-center gap-0.5 text-[10px] font-mono font-semibold text-muted-foreground/80">
-                    <Hash className="h-3 w-3" />
-                    {formatShiftCode(shift.shift_code)}
-                  </span>
-                )}
-              </div>
-              <h2 className="text-xl font-semibold tracking-tight leading-tight line-clamp-2">
-                {clientName && clientName !== "—" ? clientName : (shift.title || "Shift")}
-              </h2>
-              <div className="flex items-center gap-1 text-sm text-muted-foreground mt-0.5 truncate">
-                <MapPin className="h-3.5 w-3.5 shrink-0" />
-                <span className="truncate">{locationName || (meetingPoint ? "Job site missing" : "No location")}</span>
-              </div>
-              {!locationName && meetingPoint && (
-                <div className="flex items-center gap-1 text-[11px] text-amber-700 dark:text-amber-400 mt-0.5 truncate">
-                  <MapPin className="h-3 w-3 shrink-0 opacity-70" />
-                  <span className="truncate">Meeting point: {meetingPoint}</span>
-                </div>
-              )}
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-9 px-2 rounded-full shrink-0 -mt-1 -mr-1 text-xs gap-1"
-              onClick={() => onOpenChange(false)}
-              aria-label="Back to shifts"
-            >
-              <X className="h-4 w-4" />
-              Back
-            </Button>
-          </div>
-
-          {/* Status / publication / context badges */}
-          <div className="mt-2.5 flex flex-wrap items-center gap-1.5" role="group" aria-label="Shift status badges">
-            <PublicationBadge status={shift.publication_status} draft={draft} published={published} />
-            {understaffed && (
-              <Badge
-                variant="outline"
-                className="h-[22px] px-2 text-[11px] font-medium border-rose-500/40 text-rose-700 dark:text-rose-400 bg-rose-500/10"
-                aria-label={`Unstaffed — needs ${Math.max(slots - assignedCount, 0)} more worker${slots - assignedCount === 1 ? "" : "s"}`}
-              >
-                Unstaffed
-              </Badge>
-            )}
-            {fullyStaffed && published && (
-              <Badge
-                variant="outline"
-                className="h-[22px] px-2 text-[11px] font-medium border-emerald-500/40 text-emerald-700 dark:text-emerald-400 bg-emerald-500/10"
-                aria-label="Fully staffed"
-              >
-                Fully staffed
-              </Badge>
-            )}
-            {noClient && (
-              <Badge
-                variant="outline"
-                className="h-[22px] px-2 text-[11px] font-medium border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10"
-                aria-label="Warning: no client linked to this shift"
-              >
-                No client
-              </Badge>
-            )}
-            {noLocation && (
-              <Badge
-                variant="outline"
-                className="h-[22px] px-2 text-[11px] font-medium border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10"
-                aria-label={meetingPoint ? "Warning: missing job site (meeting point is set)" : "Warning: no location linked to this shift"}
-              >
-                {meetingPoint ? "Missing job site" : "No location"}
-              </Badge>
-            )}
-            {weekendLabel && (
-              <Badge
-                variant="outline"
-                className="h-[22px] px-2 text-[11px] font-medium border-border/60 text-muted-foreground bg-muted/40"
-                aria-label={`Weekend shift: ${weekendLabel}`}
-              >
-                {weekendLabel}
-              </Badge>
-            )}
-            {weekBucket && (
-              <Badge
-                variant="outline"
-                className={cn(
-                  "h-[22px] px-2 text-[11px] font-medium",
-                  weekBucket.tone === "info"
-                    ? "border-primary/30 text-primary bg-primary/5"
-                    : "border-border/60 text-muted-foreground bg-muted/40",
-                )}
-                title="Calendar week context — pay period not loaded"
-                aria-label={`Calendar week context: ${weekBucket.label}. Pay period not loaded.`}
-              >
-                {weekBucket.label}
-              </Badge>
-            )}
-          </div>
-
-          {/* Date + time + slots context strip */}
-          <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
-            <div className="flex items-center gap-1.5 px-2.5 h-8 rounded-lg bg-muted/60">
-              <CalendarDays className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="text-xs font-medium">{dateLabel(shift.date)}</span>
-            </div>
-            <div className="flex items-center gap-1.5 px-2.5 h-8 rounded-lg bg-muted/60">
-              <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="text-xs font-mono font-semibold tabular-nums">
-                {formatTimeShort(shift.start_time)}–{formatTimeShort(shift.end_time)}
-              </span>
-            </div>
+        {/* Sticky Context Header — Phase 1A compact: title + 1 meta line + 1 priority pill. */}
+        {(() => {
+          // Single priority status pill: Unstaffed > Missing job site > No client > Draft > Published > OK.
+          const pill: { label: string; cls: string } | null =
+            published && understaffed
+              ? { label: "Unstaffed", cls: "border-rose-500/40 text-rose-700 dark:text-rose-400 bg-rose-500/10" }
+              : noLocation
+                ? { label: meetingPoint ? "Missing job site" : "No location", cls: "border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10" }
+                : noClient
+                  ? { label: "No client", cls: "border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10" }
+                  : draft
+                    ? { label: "Draft", cls: "border-border/60 text-muted-foreground bg-muted/40" }
+                    : published && fullyStaffed
+                      ? { label: "Fully staffed", cls: "border-emerald-500/40 text-emerald-700 dark:text-emerald-400 bg-emerald-500/10" }
+                      : published
+                        ? { label: "Published", cls: "border-primary/30 text-primary bg-primary/5" }
+                        : null;
+          const coverageBit = slots > 0 ? `${assignedCount}/${slots}` : `${assignedCount}`;
+          return (
             <div
-              className="flex items-center gap-1.5 px-2.5 h-8 rounded-lg bg-muted/60"
-              aria-label={
-                slots > 0
-                  ? `${assignedCount} of ${slots} workers assigned`
-                  : `${assignedCount} worker${assignedCount === 1 ? "" : "s"} assigned`
-              }
+              className="px-5 pt-3 pb-2.5 border-b border-border/40 bg-background/95 backdrop-blur-sm"
+              role="region"
+              aria-label={`Shift context for ${clientName && clientName !== "—" ? clientName : (shift.title || "shift")}, ${dateLabel(shift.date)}, ${formatTimeShort(shift.start_time)} to ${formatTimeShort(shift.end_time)}`}
             >
-              <Users className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
-              <span className="text-xs font-semibold tabular-nums" aria-hidden="true">
-                {slots > 0 ? `${assignedCount}/${slots}` : `${assignedCount}`}
-              </span>
-              <span className="text-[11px] text-muted-foreground" aria-hidden="true">assigned</span>
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    {shift.shift_code && (
+                      <span className="inline-flex items-center gap-0.5 text-[10px] font-mono font-semibold text-muted-foreground/80">
+                        <Hash className="h-3 w-3" />
+                        {formatShiftCode(shift.shift_code)}
+                      </span>
+                    )}
+                    {weekendLabel && (
+                      <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                        · {weekendLabel}
+                      </span>
+                    )}
+                  </div>
+                  <h2 className="text-lg font-semibold tracking-tight leading-tight line-clamp-2">
+                    {clientName && clientName !== "—" ? clientName : (shift.title || "Shift")}
+                  </h2>
+                  <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                    {dateLabel(shift.date)} · {formatTimeShort(shift.start_time)}–{formatTimeShort(shift.end_time)} · <span className="font-semibold tabular-nums text-foreground/80">{coverageBit}</span> assigned
+                  </p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5 truncate flex items-center gap-1">
+                    <MapPin className="h-3 w-3 shrink-0 opacity-70" />
+                    <span className="truncate">{locationName || (meetingPoint ? `Meeting: ${meetingPoint}` : "No location")}</span>
+                  </p>
+                </div>
+                <div className="flex flex-col items-end gap-1.5 shrink-0">
+                  <Button
+                    variant="ghost" size="sm"
+                    className="h-8 px-2 rounded-full -mt-1 -mr-1 text-xs gap-1"
+                    onClick={() => onOpenChange(false)}
+                    aria-label="Back to shifts"
+                  >
+                    <X className="h-4 w-4" />
+                    Back
+                  </Button>
+                  {pill && (
+                    <Badge
+                      variant="outline"
+                      className={cn("h-[20px] px-2 text-[10px] font-semibold", pill.cls)}
+                    >
+                      {pill.label}
+                    </Badge>
+                  )}
+                </div>
+              </div>
             </div>
-          </div>
-
-          <p className="mt-2 text-[11px] text-muted-foreground leading-snug">
-            Review this shift before making changes.
-          </p>
-
-          {canValidate && (
-            <Button
-              size="sm"
-              className="mt-2.5 w-full h-9 rounded-xl text-xs font-semibold gap-1.5"
-              onClick={() => setHubOpen(true)}
-              aria-label="Open team management for this shift"
-            >
-              <Users className="h-3.5 w-3.5" />
-              Manage team
-            </Button>
-          )}
-        </div>
+          );
+        })()}
 
         {/* Scroll area */}
         <div className="flex-1 overflow-y-auto px-5 pt-4 pb-4 space-y-5">
-          {/* Coverage */}
-          <section>
-            <SectionTitle
-              icon={ClipboardList}
-              helper={MOBILE_SHIFT_COPY.coverageHelper}
-            >
-              Coverage
-            </SectionTitle>
-            <div className="grid grid-cols-2 gap-2">
-              <StatCard label="Slots" value={slots > 0 ? `${assignedCount}/${slots}` : `${assignedCount}`} />
-              <StatCard
-                label="Coverage"
-                value={`${coverage}%`}
-                accent={coverage >= 100 ? "good" : coverage >= 60 ? "warn" : "bad"}
-              />
-              <StatCard label="Workers" value={assignedCount} />
-              <StatCard label="Hours / slot" value={hours ? hours.toFixed(1) : "—"} />
-            </div>
-          </section>
-
-          {/* Smart brief */}
+          {/* Smart brief — single source of "what needs attention".
+              Phase 1A: Coverage StatCards + Operations snapshot removed
+              (info already in header meta line + Coverage chips below). */}
           <section>
             <SectionTitle icon={Sparkles}>What needs attention</SectionTitle>
             <div className="space-y-1.5">
               {briefMessages.map((m, i) => (
                 <BriefRow key={i} tone={m.tone} text={m.text} />
               ))}
-            </div>
-          </section>
-
-          {/* Operations snapshot */}
-          <section>
-            <SectionTitle icon={Sparkles}>Operations snapshot</SectionTitle>
-            <div className="rounded-2xl border border-border/50 bg-muted/30 p-4">
-              <p className="text-sm leading-relaxed text-foreground/90">{snapshot}</p>
             </div>
           </section>
 
@@ -701,7 +594,7 @@ export function MobileShiftOperationsSheet({
                 <p className="text-[11px] text-muted-foreground mb-1.5 px-0.5">
                   {MOBILE_SHIFT_COPY.assignedSortedHelper}
                 </p>
-                <div className="space-y-1.5 max-h-[360px] overflow-y-auto pr-1 -mr-1">
+                <div className="space-y-1.5">
                   {sortedAssignedWorkers.map(w => {
                     const extra = asgnByEmployeeId.get(w.id) ?? null;
                     return (
@@ -878,17 +771,39 @@ export function MobileShiftOperationsSheet({
           </section>
         </div>
 
-        {/* Sticky footer — single safe primary action for Mobile Shifts v1 */}
+        {/* Sticky footer — Phase 1A: primary = Manage team (operational), secondary = Attendance. */}
         <div className="px-5 pt-3 pb-[max(env(safe-area-inset-bottom,0px),12px)] border-t border-border/40 bg-background/95 backdrop-blur-sm">
-          <Button
-            className="w-full h-12 rounded-xl text-sm font-semibold gap-2"
-            onClick={handleViewAttendance}
-          >
-            <ClipboardList className="h-4 w-4" />
-            View attendance
-          </Button>
+          {canValidate ? (
+            <div className="flex items-center gap-2">
+              <Button
+                className="flex-1 h-12 rounded-xl text-sm font-semibold gap-2"
+                onClick={() => setHubOpen(true)}
+                aria-label="Open team management for this shift"
+              >
+                <Users className="h-4 w-4" />
+                Manage team
+              </Button>
+              <Button
+                variant="outline"
+                className="h-12 px-4 rounded-xl text-sm font-semibold gap-2"
+                onClick={handleViewAttendance}
+                aria-label="View attendance"
+              >
+                <ClipboardList className="h-4 w-4" />
+                Attendance
+              </Button>
+            </div>
+          ) : (
+            <Button
+              className="w-full h-12 rounded-xl text-sm font-semibold gap-2"
+              onClick={handleViewAttendance}
+            >
+              <ClipboardList className="h-4 w-4" />
+              View attendance
+            </Button>
+          )}
           <p className="mt-2 text-center text-[11px] text-muted-foreground">
-            Editing shift details and staffing is available from desktop for now.
+            Editing shift details is available from desktop for now.
           </p>
         </div>
       </SheetContent>
