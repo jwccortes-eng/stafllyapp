@@ -4,8 +4,9 @@ import {
   X, Clock, MapPin, Building2, Users, Phone, FileEdit, AlertTriangle,
   CheckCircle2, CalendarDays, Sparkles, UserPlus, Share2, ClipboardList,
   ExternalLink, Copy, StickyNote, Hash, Tag, Workflow, ChevronDown,
-  ShieldCheck, MessageCircle, MessageSquare, Crown, Loader2,
+  ShieldCheck, MessageCircle, MessageSquare, Crown, Loader2, Bell,
 } from "lucide-react";
+import { SendNotificationDialog } from "@/components/shifts/SendNotificationDialog";
 import { buildWhatsAppTargets, normalizePhone } from "@/lib/phone";
 import { format, parseISO, isToday, isTomorrow, isPast, isThisWeek } from "date-fns";
 import { enUS } from "date-fns/locale";
@@ -144,6 +145,7 @@ export function MobileShiftOperationsSheet({
   const navigate = useNavigate();
   const [traceOpen, setTraceOpen] = useState(false);
   const [hubOpen, setHubOpen] = useState(false);
+  const [notifyOpen, setNotifyOpen] = useState(false);
 
   // Auto-open Manage Team hub when requested by deep-link intent.
   useEffect(() => {
@@ -799,6 +801,12 @@ export function MobileShiftOperationsSheet({
               <ClipboardList className="h-4 w-4" />
               <span>Attendance</span>
             </Button>
+            {canValidate && (
+              <Button variant="outline" className="h-12 rounded-xl justify-start gap-2 text-sm font-medium" onClick={() => setNotifyOpen(true)}>
+                <Bell className="h-4 w-4" />
+                <span>Notify team</span>
+              </Button>
+            )}
           </section>
         </div>
 
@@ -864,6 +872,19 @@ export function MobileShiftOperationsSheet({
       shiftAdminId={shiftAdminId}
       companyId={selectedCompanyId}
       onMutated={() => setReloadKey(k => k + 1)}
+    />
+    <SendNotificationDialog
+      open={notifyOpen}
+      onOpenChange={setNotifyOpen}
+      shift={shift}
+      assignments={assignments}
+      employees={employees}
+      meetingPoint={shiftMeeting.point ?? meetingPoint ?? null}
+      meetingTime={shiftMeeting.time ?? null}
+      clientName={clientName}
+      jobSiteName={locationName}
+      specialInstructions={shift.notes ?? null}
+      friendlyDate={dateLabel(shift.date)}
     />
     </>
   );
