@@ -1448,7 +1448,23 @@ export default function ImportSchedule() {
           duplicatesSkipped: skippedDuplicates,
           clientsCreated: createdClients,
           unmatchedEmployees: Array.from(unmatchedEmployeesSet),
-          warnings: assignmentFailures.slice(0, 50),
+          warnings: [
+            ...importWarningsForResolver,
+            ...importWarnings,
+            ...assignmentFailures.slice(0, 50).map(f => ({
+              code: f.failure_type === "overlap" ? "WORKER_OMITTED_OVERLAP_NEEDS_REVIEW" : "ASSIGNMENT_FAILURE",
+              severity: "warn",
+              shift_code: f.shift_code,
+              date: f.date,
+              start_time: f.start_time,
+              end_time: f.end_time,
+              job: f.client,
+              raw_employee_name: f.raw_employee_name,
+              matched_employee_id: f.employee_id,
+              recommended_action: f.suggested_action,
+              details: { error: f.error_message, failure_type: f.failure_type },
+            })),
+          ].slice(0, 200),
         });
         // Restore the dry-run marker after finalize() defaulted status to "completed".
         if (isDryRun) {
