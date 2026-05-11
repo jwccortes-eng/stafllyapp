@@ -320,7 +320,7 @@ export default function MyAnnouncements() {
                     </div>
                   </div>
                 </div>
-              </article>
+              </StaflyCard>
             );
           })}
         </div>
