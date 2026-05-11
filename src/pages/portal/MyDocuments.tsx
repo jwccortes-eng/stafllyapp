@@ -223,7 +223,7 @@ export default function MyDocuments() {
         to="/portal/profile"
         className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
       >
-        <ArrowLeft className="h-3.5 w-3.5" /> Profile
+        <ArrowLeft className="h-3.5 w-3.5" /> Perfil
       </Link>
 
       {/* Header card */}
@@ -250,14 +250,14 @@ export default function MyDocuments() {
           </div>
           <div className="min-w-0 flex-1">
             <h1 className="text-base font-bold font-heading text-foreground leading-tight">
-              My documents
+              Mis documentos
             </h1>
             <p className="text-[11px] text-muted-foreground/80 mt-0.5">
               {allRequiredDone
-                ? "All required documents are approved."
+                ? "Todos los documentos requeridos están aprobados."
                 : pendingReviewCount > 0
-                  ? `${approvedCount} of ${required.length} approved · ${pendingReviewCount} pending review`
-                  : `${approvedCount} of ${required.length} required approved.`}
+                  ? `${approvedCount} de ${required.length} aprobados · ${pendingReviewCount} en revisión`
+                  : `${approvedCount} de ${required.length} requeridos aprobados.`}
             </p>
           </div>
           {readiness.status && (
@@ -291,7 +291,7 @@ export default function MyDocuments() {
 
         <p className="text-[10.5px] text-muted-foreground/70 mt-3 flex items-start gap-1.5">
           <ShieldCheck className="h-3 w-3 mt-0.5 shrink-0" />
-          Your files are private. Only your company admins can review them.
+          Tus archivos son privados. Solo los administradores de tu compañía pueden revisarlos.
         </p>
       </div>
 
