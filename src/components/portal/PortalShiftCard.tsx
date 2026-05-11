@@ -122,11 +122,55 @@ export function PortalShiftCard({
   // Pattern: [rail] · [day chip] · [time] · [title · subtitle] · [chip] · [chevron]
   // Acceptance/clock-in actions shown only when needed, on a second collapsed row.
   if (compact) {
-    const dayChip = isTodayShift
-      ? "Hoy"
-      : isTomorrow(parseISO(shift.date))
-      ? "Mañana"
-      : format(parseISO(shift.date), "EEE d MMM", { locale: es });
+    const showActions =
+      (isPending && (onAccept || onReject)) ||
+      (isConfirmed && isTodayShift && !!onClockIn);
+
+    const actionsNode = showActions ? (
+      <div
+        className="mt-3 pt-3 border-t border-border/40 flex items-center gap-2"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {isPending && onAccept && (
+          <Button
+            className="flex-1 h-11 text-sm font-semibold rounded-xl gap-1.5"
+            onClick={onAccept}
+            disabled={responding}
+          >
+            <CheckCircle2 className="h-4 w-4" />
+            {shift.status === "needs_reacceptance" ? "Aceptar cambios" : "Confirmar"}
+          </Button>
+        )}
+        {isPending && onReject && (
+          <Button
+            variant="outline"
+            className="h-11 px-4 text-sm font-medium rounded-xl text-muted-foreground hover:text-destructive hover:border-destructive/40"
+            onClick={onReject}
+            disabled={responding}
+          >
+            Rechazar
+          </Button>
+        )}
+        {isConfirmed && isTodayShift && onClockIn && (
+          <Button
+            className="flex-1 h-11 text-sm font-semibold rounded-xl gap-1.5 shadow-sm shadow-primary/20"
+            onClick={onClockIn}
+          >
+            <LogIn className="h-4 w-4" />
+            Marcar entrada
+          </Button>
+        )}
+      </div>
+    ) : null;
+
+    const countdownNode = countdown && isConfirmed ? (
+      <div className="flex items-center gap-1.5 mt-2">
+        <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+        <span className="text-[11px] font-semibold text-primary tracking-wide">
+          Empieza {countdown}
+        </span>
+      </div>
+    ) : null;
 
     return (
       <div
@@ -140,136 +184,36 @@ export function PortalShiftCard({
           }
         }}
         className={cn(
-          "group relative w-full text-left rounded-2xl border border-border/50 bg-card p-4 cursor-pointer select-none",
-          "shadow-sm hover:shadow-md hover:border-border transition-all active:scale-[0.98]",
+          "group relative w-full text-left cursor-pointer select-none rounded-2xl",
+          "transition-all active:scale-[0.98]",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-          isTodayShift && isConfirmed && "border-primary/30",
+          isTodayShift && isConfirmed && "ring-1 ring-primary/30",
         )}
       >
-        {/* Header: title + status chip */}
-        <div className="flex items-start justify-between gap-2 mb-2.5">
-          <div className="min-w-0 flex-1">
-            <p className="text-base font-semibold tracking-tight leading-snug line-clamp-2 text-foreground">
-              {titleDisplay}
-            </p>
-            {clientDisplay && clientDisplay !== titleDisplay && (
-              <p className="text-xs text-muted-foreground mt-0.5 truncate flex items-center gap-1">
-                <Briefcase className="h-3 w-3 shrink-0 text-muted-foreground/60" />
-                <span className="truncate">{clientDisplay}</span>
-              </p>
-            )}
-          </div>
-          <div className="flex items-center gap-1.5 shrink-0">
-            {showStatusChip && <OpsStatusChip tone={meta.tone} label={meta.label} size="sm" />}
+        <ShiftRouteHeader
+          variant="worker"
+          density="compact"
+          title={titleDisplay}
+          date={shift.date}
+          startTime={shift.start_time}
+          endTime={shift.end_time}
+          clientName={clientDisplay}
+          jobSiteName={!shift.meeting_point ? locationDisplay : null}
+          meetingPoint={shift.meeting_point ?? null}
+          meetingTime={shift.meeting_time ?? null}
+          statusLabel={showStatusChip ? meta.label : null}
+          statusTone={mapStatusTone(meta.tone)}
+          actions={
+            <>
+              {countdownNode}
+              {actionsNode}
+            </>
+          }
+          trailing={
             <ChevronRight className="h-4 w-4 text-muted-foreground/50 group-hover:text-muted-foreground transition-colors" />
-          </div>
-        </div>
-
-        {/* Hero time — Entrada protagonista, Termina aprox. secundario */}
-        <div className="flex items-end justify-between gap-3 mb-3">
-          <div className="min-w-0">
-            <p className="text-[9.5px] font-bold uppercase tracking-[0.16em] text-muted-foreground/65 leading-none mb-1">
-              Entrada
-            </p>
-            <p className="text-[28px] leading-none font-bold font-mono tabular-nums text-foreground">
-              {shift.start_time?.slice(0, 5)}
-            </p>
-            <p className="text-[10.5px] text-muted-foreground/65 mt-1.5 tabular-nums">
-              Termina aprox. {shift.end_time?.slice(0, 5)} · {duration} estimadas
-            </p>
-          </div>
-          <span
-            className={cn(
-              "text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md shrink-0",
-              isTodayShift
-                ? "bg-primary/10 text-primary"
-                : "bg-muted text-muted-foreground",
-            )}
-          >
-            {dayChip}
-          </span>
-        </div>
-
-        {/* Countdown inline (only when starting soon) */}
-        {countdown && isConfirmed && (
-          <div className="flex items-center gap-1.5 mb-2">
-            <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
-            <span className="text-[11px] font-semibold text-primary tracking-wide">
-              Empieza {countdown}
-            </span>
-          </div>
-        )}
-
-        {/* Meeting point — protagonista si existe (con meeting_time si lo hay) */}
-        {shift.meeting_point && (
-          <div className="flex items-start gap-2 rounded-xl border border-border/40 bg-muted/30 px-2.5 py-2 mb-1.5">
-            <MapPin className="h-3.5 w-3.5 shrink-0 mt-0.5 text-muted-foreground" />
-            <div className="min-w-0 flex-1">
-              <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-muted-foreground/70 leading-none mb-0.5">
-                Punto de encuentro
-              </p>
-              <p className="text-[12px] font-semibold text-foreground line-clamp-2 leading-snug">
-                {shift.meeting_point}
-              </p>
-            </div>
-            {shift.meeting_time && (
-              <div className="shrink-0 text-right">
-                <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-muted-foreground/70 leading-none mb-0.5">
-                  Hora
-                </p>
-                <p className="text-[14px] font-bold font-mono tabular-nums text-foreground leading-none">
-                  {shift.meeting_time.slice(0, 5)}
-                </p>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Location secundaria si no hay meeting point */}
-        {!shift.meeting_point && locationDisplay && (
-          <div className="flex items-start gap-1.5 text-xs text-muted-foreground mb-1.5">
-            <MapPin className="h-3.5 w-3.5 shrink-0 mt-0.5 text-muted-foreground/60" />
-            <span className="line-clamp-2 leading-snug">{locationDisplay}</span>
-          </div>
-        )}
-
-        {/* Footer actions */}
-        {((isPending && (onAccept || onReject)) || (isConfirmed && isTodayShift && onClockIn)) && (
-          <div
-            className="mt-3 pt-3 border-t border-border/40 flex items-center gap-2"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {isPending && onAccept && (
-              <Button
-                className="flex-1 h-11 text-sm font-semibold rounded-xl gap-1.5"
-                onClick={onAccept}
-                disabled={responding}
-              >
-                <CheckCircle2 className="h-4 w-4" />
-                {shift.status === "needs_reacceptance" ? "Aceptar cambios" : "Confirmar"}
-              </Button>
-            )}
-            {isPending && onReject && (
-              <Button
-                variant="outline"
-                className="h-11 px-4 text-sm font-medium rounded-xl text-muted-foreground hover:text-destructive hover:border-destructive/40"
-                onClick={onReject}
-                disabled={responding}
-              >
-                Rechazar
-              </Button>
-            )}
-            {isConfirmed && isTodayShift && onClockIn && (
-              <Button
-                className="flex-1 h-11 text-sm font-semibold rounded-xl gap-1.5 shadow-sm shadow-primary/20"
-                onClick={onClockIn}
-              >
-                <LogIn className="h-4 w-4" />
-                Marcar entrada
-              </Button>
-            )}
-          </div>
-        )}
+          }
+          className="hover:shadow-md hover:border-border"
+        />
       </div>
     );
   }
