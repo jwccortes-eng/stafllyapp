@@ -118,7 +118,9 @@ export function useWorkedShiftHistory({
           .gte("end_date", minDate);
 
         // 3) Optional: ride flag. RLS may deny — swallow error.
-        const ridesPromise = supabase
+        // Cast to any: chained generics on shift_rides expand the type tree
+        // beyond TS's recursion limit when combined with .in().
+        const ridesPromise = (supabase as any)
           .from("shift_rides")
           .select("shift_id")
           .eq("employee_id", employeeId)
