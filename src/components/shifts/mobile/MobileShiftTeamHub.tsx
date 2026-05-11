@@ -921,9 +921,9 @@ function AssignedTab({
 }
 
 const ASSIGN_ACTION_LABEL: Record<AssignmentNextStatus, string> = {
-  confirmed: "Confirm",
-  rejected: "Mark rejected",
-  removed: "Remove from shift",
+  confirmed: "Confirmar",
+  rejected: "Marcar como rechazado",
+  removed: "Remover del turno",
 };
 const ASSIGN_ACTION_ICON: Record<AssignmentNextStatus, React.ComponentType<{ className?: string }>> = {
   confirmed: Check,
