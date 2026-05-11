@@ -832,19 +832,19 @@ function OverviewTab({
   return (
     <section aria-label="Operational overview">
       <SectionTitle icon={Users} helper={HUB_COPY.overviewHelper}>
-        Overview
+        Resumen
       </SectionTitle>
       <div className="grid grid-cols-3 gap-2">
-        <StatTile label="Required" value={slots || "—"} />
-        <StatTile label="Staffed" value={staffedCount} />
-        <StatTile label="Open" value={openSpots} accent={openSpots > 0 ? "warn" : "good"} />
-        <StatTile label="Confirmed" value={grouped.confirmed.length} accent="good" />
-        <StatTile label="Accepted" value={grouped.accepted.length} accent="info" />
-        <StatTile label="Pending" value={grouped.pending.length} accent="warn" />
-        <StatTile label="Rejected" value={grouped.rejected_by_worker.length} accent={grouped.rejected_by_worker.length ? "bad" : "muted"} />
-        <StatTile label="Removed" value={grouped.removed.length} />
+        <StatTile label="Requeridos" value={slots || "—"} />
+        <StatTile label="Asignados" value={staffedCount} />
+        <StatTile label="Faltan" value={openSpots} accent={openSpots > 0 ? "warn" : "good"} />
+        <StatTile label="Confirmados" value={grouped.confirmed.length} accent="good" />
+        <StatTile label="Aceptados" value={grouped.accepted.length} accent="info" />
+        <StatTile label="Pendientes" value={grouped.pending.length} accent="warn" />
+        <StatTile label="Rechazados" value={grouped.rejected_by_worker.length} accent={grouped.rejected_by_worker.length ? "bad" : "muted"} />
+        <StatTile label="Removidos" value={grouped.removed.length} />
         <StatTile label="No-show" value={grouped.no_show.length} accent={grouped.no_show.length ? "bad" : "muted"} />
-        <StatTile label="Claims" value={claimsPending} accent={claimsPending ? "info" : "muted"} />
+        <StatTile label="Solicitudes" value={claimsPending} accent={claimsPending ? "info" : "muted"} />
       </div>
     </section>
   );
