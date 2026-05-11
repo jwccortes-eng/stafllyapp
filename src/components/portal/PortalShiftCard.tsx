@@ -19,6 +19,7 @@ export interface PortalShiftData {
   location_name?: string | null;
   client_name?: string | null;
   meeting_point?: string | null;
+  meeting_time?: string | null;
   notes?: string | null;
 }
 
