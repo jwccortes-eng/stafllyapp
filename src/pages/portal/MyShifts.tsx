@@ -656,7 +656,8 @@ export default function MyShifts() {
                     })}
                   </OperationalTimeline>
                 </section>
-              ))}
+                );
+              })}
 
               {remaining > 0 && (
                 <div className="pt-1">
