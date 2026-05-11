@@ -801,6 +801,12 @@ export function MobileShiftOperationsSheet({
               <ClipboardList className="h-4 w-4" />
               <span>Attendance</span>
             </Button>
+            {canValidate && (
+              <Button variant="outline" className="h-12 rounded-xl justify-start gap-2 text-sm font-medium" onClick={() => setNotifyOpen(true)}>
+                <Bell className="h-4 w-4" />
+                <span>Notify team</span>
+              </Button>
+            )}
           </section>
         </div>
 
