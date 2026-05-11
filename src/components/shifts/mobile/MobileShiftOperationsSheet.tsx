@@ -9,7 +9,7 @@ import {
 import { SendNotificationDialog } from "@/components/shifts/SendNotificationDialog";
 import { buildWhatsAppTargets, normalizePhone } from "@/lib/phone";
 import { format, parseISO, isToday, isTomorrow, isPast, isThisWeek } from "date-fns";
-import { enUS } from "date-fns/locale";
+import { es } from "date-fns/locale";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
