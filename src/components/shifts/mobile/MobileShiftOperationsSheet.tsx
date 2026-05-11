@@ -1007,8 +1007,8 @@ function ErrorBlock({
   retryLabel?: string;
 }) {
   const isDev = typeof import.meta !== "undefined" && (import.meta as any)?.env?.DEV;
-  const label = retryLabel ?? "Retry";
-  const isRetrying = !!retryDisabled && label !== "Retry";
+  const label = retryLabel ?? "Reintentar";
+  const isRetrying = !!retryDisabled && label !== "Reintentar";
   return (
     <div
       role="alert"
