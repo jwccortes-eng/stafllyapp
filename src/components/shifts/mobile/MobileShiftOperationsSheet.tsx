@@ -14,6 +14,10 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { isDraftShift, isPublishedShift } from "@/lib/shifts/shift-guards";
 import { formatShiftCode, type Shift, type Assignment, type Employee } from "@/components/shifts/types";
 import { cn } from "@/lib/utils";
@@ -1072,6 +1076,7 @@ export function MobileShiftOperationsSheet({
         accepted_at: a.accepted_at,
         rejected_at: a.rejected_at,
         responded_at: a.responded_at,
+        import_batch_id: a.import_batch_id,
       }))}
       employees={employees}
       canManage={canValidate}
@@ -1096,6 +1101,15 @@ export function MobileShiftOperationsSheet({
       jobSiteName={locationName}
       specialInstructions={shift.notes ?? null}
       friendlyDate={dateLabel(shift.date)}
+    />
+    <LocationReportDialog
+      open={locationReportOpen}
+      onOpenChange={setLocationReportOpen}
+      shiftCode={shift.shift_code ? formatShiftCode(shift.shift_code) : null}
+      clientName={clientName}
+      jobSiteName={locationName}
+      meetingPoint={shiftMeeting.point ?? meetingPoint ?? null}
+      notes={shift.notes ?? null}
     />
     </>
   );
@@ -1389,6 +1403,8 @@ const WorkerRow = memo(function WorkerRow({
     (statusLow === "accepted" || statusLow === "assigned");
   const showAssignStatus = statusLow && !["accepted", "confirmed", "assigned"].includes(statusLow);
   const [savingPhone, setSavingPhone] = useState(false);
+  const [phoneDialogOpen, setPhoneDialogOpen] = useState(false);
+  const [phoneInput, setPhoneInput] = useState("");
 
   const handleCopy = async () => {
     if (!phone) return;
@@ -1400,10 +1416,13 @@ const WorkerRow = memo(function WorkerRow({
     }
   };
 
-  const handleAddPhone = async () => {
-    const raw = window.prompt(`Agregar teléfono para ${workerName} (10 dígitos)`, "");
-    if (raw == null) return;
-    const digits = normalizePhone(raw);
+  const openPhoneDialog = () => {
+    setPhoneInput("");
+    setPhoneDialogOpen(true);
+  };
+
+  const submitPhone = async () => {
+    const digits = normalizePhone(phoneInput);
     if (digits.length < 10) {
       toast.error("Número inválido. Debe tener 10 dígitos.");
       return;
@@ -1416,6 +1435,7 @@ const WorkerRow = memo(function WorkerRow({
         .eq("id", worker.id);
       if (error) throw error;
       toast.success("Teléfono guardado");
+      setPhoneDialogOpen(false);
       onPhoneSaved?.();
     } catch (e: any) {
       toast.error(e?.message ?? "No se pudo guardar el teléfono");
@@ -1527,7 +1547,7 @@ const WorkerRow = memo(function WorkerRow({
               {canManagePhone && (
                 <button
                   type="button"
-                  onClick={handleAddPhone}
+                  onClick={openPhoneDialog}
                   disabled={savingPhone}
                   className="mt-1.5 inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-primary text-primary-foreground text-[11px] font-semibold disabled:opacity-60"
                 >
@@ -1539,6 +1559,36 @@ const WorkerRow = memo(function WorkerRow({
           </div>
         </div>
       )}
+
+      <Dialog open={phoneDialogOpen} onOpenChange={setPhoneDialogOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Agregar teléfono</DialogTitle>
+            <DialogDescription>{workerName} · 10 dígitos. Solo actualiza este perfil.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor={`phone-${worker.id}`}>Número de teléfono</Label>
+            <Input
+              id={`phone-${worker.id}`}
+              inputMode="tel"
+              autoFocus
+              placeholder="(555) 123-4567"
+              value={phoneInput}
+              onChange={(e) => setPhoneInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") submitPhone(); }}
+            />
+            <p className="text-[11px] text-muted-foreground">
+              No se envían notificaciones. No se modifican registros duplicados.
+            </p>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="ghost" onClick={() => setPhoneDialogOpen(false)} disabled={savingPhone}>Cancelar</Button>
+            <Button onClick={submitPhone} disabled={savingPhone}>
+              {savingPhone ? "Guardando…" : "Guardar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }, areWorkerRowPropsEqual);
@@ -1730,3 +1780,90 @@ function getWorkerSortScore(
   return score;
 }
 
+
+/* ───── LocationReportDialog ─────
+ * Non-destructive: does NOT update location_id / meeting_point / shift fields.
+ * Builds a structured note and copies it to clipboard for admin review.
+ * No DB write, no schema, no audit table dependency.
+ */
+function LocationReportDialog({
+  open, onOpenChange, shiftCode, clientName, jobSiteName, meetingPoint, notes,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  shiftCode: string | null;
+  clientName: string;
+  jobSiteName: string;
+  meetingPoint: string | null;
+  notes: string | null;
+}) {
+  const [correction, setCorrection] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => { if (open) setCorrection(""); }, [open]);
+
+  const handleSave = async () => {
+    if (!correction.trim()) {
+      toast.error("Agrega una nota de corrección.");
+      return;
+    }
+    setSaving(true);
+    const payload = [
+      `Reporte de ubicación${shiftCode ? ` — Turno #${shiftCode}` : ""}`,
+      `Cliente: ${clientName || "—"}`,
+      `Trabajo: ${jobSiteName || "(falta)"}`,
+      `Encuentro: ${meetingPoint || "(falta)"}`,
+      notes ? `Notas: ${notes}` : null,
+      `Corrección sugerida: ${correction.trim()}`,
+    ].filter(Boolean).join("\n");
+    try {
+      await navigator.clipboard.writeText(payload);
+      toast.success("Reporte copiado para revisión", {
+        description: "Pégalo en el chat de operaciones o pásalo a un administrador.",
+      });
+      onOpenChange(false);
+    } catch {
+      toast.error("No se pudo copiar el reporte. Intenta de nuevo.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Reportar ubicación</DialogTitle>
+          <DialogDescription>
+            No cambia el turno. Solo prepara un reporte para revisión administrativa.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-2 text-[12.5px]">
+          <div className="rounded-lg border border-border/60 bg-muted/30 p-2.5 space-y-1">
+            {shiftCode && <div><span className="text-muted-foreground">Turno: </span><span className="font-semibold">#{shiftCode}</span></div>}
+            <div><span className="text-muted-foreground">Cliente: </span>{clientName || "—"}</div>
+            <div><span className="text-muted-foreground">Trabajo: </span>{jobSiteName || <span className="text-amber-700 dark:text-amber-400">(falta)</span>}</div>
+            <div><span className="text-muted-foreground">Encuentro: </span>{meetingPoint || <span className="text-muted-foreground">—</span>}</div>
+            {notes && <div className="text-[11.5px] text-muted-foreground line-clamp-3">Notas: {notes}</div>}
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="loc-correction">Nota de corrección</Label>
+            <Textarea
+              id="loc-correction"
+              rows={3}
+              placeholder="Ej.: La dirección real del trabajo es 123 Main St, NY. La actual es el punto de encuentro."
+              value={correction}
+              onChange={(e) => setCorrection(e.target.value)}
+            />
+          </div>
+        </div>
+        <DialogFooter className="gap-2 sm:gap-2">
+          <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={saving}>Cancelar</Button>
+          <Button onClick={handleSave} disabled={saving}>
+            {saving ? "Copiando…" : "Guardar reporte"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}

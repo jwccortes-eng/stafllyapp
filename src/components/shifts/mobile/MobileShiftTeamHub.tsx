@@ -30,6 +30,8 @@ import {
   MoreVertical, Check, XCircle, UserCog, Search, UserPlus, ClipboardCheck,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -234,8 +236,8 @@ function buildReminderText(workerName: string): string {
 }
 
 const HUB_COPY = {
-  intro: "Vista de equipo. Algunos cambios avanzados aún se hacen en escritorio.",
-  safetyNote: "Desde móvil puedes revisar cobertura y contactar trabajadores. Los cambios avanzados de personal están disponibles desde escritorio por ahora.",
+  intro: "Operación móvil. Puedes revisar, contactar y gestionar el equipo.",
+  safetyNote: "Puedes revisar, contactar y gestionar el equipo desde móvil. Cambios avanzados siguen en escritorio.",
   loadError: "No se pudieron cargar los datos del equipo. Revisa tu conexión e inténtalo de nuevo.",
   tabsAria: "Secciones de gestión del equipo",
   // Resumen
@@ -243,11 +245,11 @@ const HUB_COPY = {
   // Asignados
   assignedHelper: "Agrupados por estado. Toca para contactar al trabajador.",
   emptyAssignedTitle: "Aún no hay trabajadores asignados",
-  emptyAssignedHelper: "Usa las herramientas de escritorio para agregar trabajadores.",
+  emptyAssignedHelper: "Usa Recomendados para asignar trabajadores rápidamente.",
   noPhone: "Sin teléfono registrado",
   // Solicitudes
   claimsHelper: "Trabajadores que solicitaron este turno.",
-  claimsManagedDesktop: "Aprobar solicitudes aún se hace desde escritorio.",
+  claimsManagedDesktop: "La aprobación de solicitudes sigue en escritorio.",
   emptyClaimsTitle: "Sin solicitudes",
   emptyClaimsHelper: "Las solicitudes de trabajadores aparecerán aquí.",
   // Alertas
@@ -258,7 +260,7 @@ const HUB_COPY = {
   recommendedHelper: "Recomendaciones inteligentes según disponibilidad, historial y perfil.",
   recommendedPlaceholder:
     "Los trabajadores recomendados combinan disponibilidad, calificación, rol e historial.",
-  openDesktopStaffing: "Abrir herramientas de escritorio",
+  openDesktopStaffing: "Más opciones en escritorio",
   permissionGate: "No tienes permiso para gestionar este turno.",
 } as const;
 
@@ -275,6 +277,8 @@ export type HubAssignment = {
   accepted_at?: string | null;
   rejected_at?: string | null;
   responded_at?: string | null;
+  /** DS5 — distinguish imported assignments from real Stafly responses (UI only). */
+  import_batch_id?: string | null;
 };
 
 interface Props {
@@ -747,6 +751,7 @@ function MobileShiftTeamHubImpl({
                 toast({ title: "Phone copied" });
               }}
               onAssignmentAction={openAssignmentAction}
+              onPhoneSaved={handleMutated}
             />
           )}
 
@@ -852,7 +857,7 @@ function OverviewTab({
 }
 
 function AssignedTab({
-  assignments, grouped, order, empById, shiftAdminId, canManage, companyId, onCopyPhone, onAssignmentAction,
+  assignments, grouped, order, empById, shiftAdminId, canManage, companyId, onCopyPhone, onAssignmentAction, onPhoneSaved,
 }: {
   assignments: HubAssignment[];
   grouped: Record<Bucket, HubAssignment[]>;
@@ -863,6 +868,7 @@ function AssignedTab({
   companyId: string | null;
   onCopyPhone: (p: string) => void;
   onAssignmentAction: (assignmentId: string, nextStatus: AssignmentNextStatus, workerName: string) => void;
+  onPhoneSaved?: () => void;
 }) {
   return (
     <section aria-label="Trabajadores asignados">
@@ -909,6 +915,7 @@ function AssignedTab({
                       companyId={companyId}
                       onCopyPhone={onCopyPhone}
                       onAssignmentAction={onAssignmentAction}
+                      onPhoneSaved={onPhoneSaved}
                     />
                   ))}
                 </ul>
@@ -933,7 +940,7 @@ const ASSIGN_ACTION_ICON: Record<AssignmentNextStatus, React.ComponentType<{ cla
 };
 
 function WorkerRow({
-  assignment, employee, isCaptain, canManage, companyId, onCopyPhone, onAssignmentAction,
+  assignment, employee, isCaptain, canManage, companyId, onCopyPhone, onAssignmentAction, onPhoneSaved,
 }: {
   assignment: HubAssignment;
   employee: Employee | undefined;
@@ -942,7 +949,9 @@ function WorkerRow({
   companyId: string | null;
   onCopyPhone: (p: string) => void;
   onAssignmentAction: (assignmentId: string, nextStatus: AssignmentNextStatus, workerName: string) => void;
+  onPhoneSaved?: () => void;
 }) {
+  const { toast } = useToast();
   const name = fullName(employee);
   const phoneDigits = normalizePhone(employee?.phone_number);
   const hasPhone = phoneDigits.length >= 10;
@@ -950,6 +959,33 @@ function WorkerRow({
   const allowedActions = allowedNextStatusesFor(assignment.status);
   const showMenu = canManage && allowedActions.length > 0;
   const readiness = computeReadiness(employee, companyId);
+  const [phoneDialogOpen, setPhoneDialogOpen] = useState(false);
+  const [phoneInput, setPhoneInput] = useState("");
+  const [savingPhone, setSavingPhone] = useState(false);
+
+  const submitPhone = async () => {
+    if (!employee) return;
+    const digits = normalizePhone(phoneInput);
+    if (digits.length < 10) {
+      toast({ title: "Número inválido", description: "Debe tener 10 dígitos.", variant: "destructive" });
+      return;
+    }
+    setSavingPhone(true);
+    try {
+      const { error } = await supabase
+        .from("employees")
+        .update({ phone_number: digits })
+        .eq("id", employee.id);
+      if (error) throw error;
+      toast({ title: "Teléfono guardado" });
+      setPhoneDialogOpen(false);
+      onPhoneSaved?.();
+    } catch (e: any) {
+      toast({ title: "No se pudo guardar el teléfono", description: e?.message, variant: "destructive" });
+    } finally {
+      setSavingPhone(false);
+    }
+  };
 
   const subBits: string[] = [];
   if (assignment.assignment_role) subBits.push(assignment.assignment_role);
@@ -972,11 +1008,17 @@ function WorkerRow({
     no_show:            { label: "No-show",    cls: "border-rose-500/40 text-rose-700 dark:text-rose-400 bg-rose-500/10" },
     other:              { label: assignment.status || "Desconocido", cls: "border-border/60 text-muted-foreground bg-muted/40" },
   };
+  const isImportedNotResponded =
+    !!assignment.import_batch_id && !assignment.accepted_at && !assignment.responded_at &&
+    (assignment.status === "accepted" || assignment.status === "assigned" || assignment.status === "confirmed");
+  const importedPill = isImportedNotResponded
+    ? { label: "Asignado/importado", cls: "border-sky-500/40 text-sky-700 dark:text-sky-400 bg-sky-500/10" }
+    : null;
   const attendancePill =
     assignment.attendance_status === "present" || assignment.attendance_status === "checked_in"
       ? { label: "En sitio", cls: "border-sky-500/40 text-sky-700 dark:text-sky-400 bg-sky-500/10" }
       : null;
-  const statusPill = attendancePill ?? STATUS_PILL[bucket];
+  const statusPill = attendancePill ?? importedPill ?? STATUS_PILL[bucket];
 
   return (
     <li className="px-3 py-2.5">
@@ -1021,11 +1063,27 @@ function WorkerRow({
               {responseLabel}
             </p>
           )}
+          {isImportedNotResponded && (
+            <p className="text-[10px] text-muted-foreground mt-0.5">
+              Importado desde Connecteam. Aún no confirmado en Stafly.
+            </p>
+          )}
           {readiness.state !== "ready" && readiness.state !== "missing_phone" && (
             <div className="mt-0.5"><ReadinessChip readiness={readiness} /></div>
           )}
           {!hasPhone && (
-            <p className="text-[10px] text-amber-700 dark:text-amber-400 mt-0.5">{HUB_COPY.noPhone}</p>
+            <div className="mt-1 flex items-center gap-2 flex-wrap">
+              <span className="text-[10px] text-amber-700 dark:text-amber-400">{HUB_COPY.noPhone}</span>
+              {canManage && (
+                <button
+                  type="button"
+                  onClick={() => setPhoneDialogOpen(true)}
+                  className="inline-flex items-center gap-1 h-6 px-2 rounded-full bg-primary text-primary-foreground text-[10px] font-semibold"
+                >
+                  <Phone className="h-2.5 w-2.5" /> Agregar teléfono
+                </button>
+              )}
+            </div>
           )}
         </div>
 
@@ -1080,6 +1138,35 @@ function WorkerRow({
           </button>
         </div>
       )}
+      <Dialog open={phoneDialogOpen} onOpenChange={setPhoneDialogOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Agregar teléfono</DialogTitle>
+            <DialogDescription>{name} · 10 dígitos. Solo actualiza este perfil.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor={`hub-phone-${assignment.id}`}>Número de teléfono</Label>
+            <Input
+              id={`hub-phone-${assignment.id}`}
+              inputMode="tel"
+              autoFocus
+              placeholder="(555) 123-4567"
+              value={phoneInput}
+              onChange={(e) => setPhoneInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") submitPhone(); }}
+            />
+            <p className="text-[11px] text-muted-foreground">
+              No se envían notificaciones. No se modifican registros duplicados.
+            </p>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="ghost" onClick={() => setPhoneDialogOpen(false)} disabled={savingPhone}>Cancelar</Button>
+            <Button onClick={submitPhone} disabled={savingPhone}>
+              {savingPhone ? "Guardando…" : "Guardar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </li>
   );
 }
