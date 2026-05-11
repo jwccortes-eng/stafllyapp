@@ -297,12 +297,31 @@ export function SendNotificationDialog({
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Shift info */}
+          {/* Shift info — Work Route layout */}
           <div className="rounded-lg bg-muted/30 p-3 text-xs space-y-1">
-            <p className="font-semibold">{shift.title}</p>
-            <p className="text-muted-foreground">
-              {shift.date} · {shift.start_time.slice(0, 5)} – {shift.end_time.slice(0, 5)}
+            <p className="font-semibold">
+              {trabajo ? `${trabajo}${ubicacion ? ` — ${ubicacion}` : ""}` : shift.title}
             </p>
+            <p className="text-muted-foreground">{fechaAmigable}</p>
+            <p>
+              <span className="font-semibold text-foreground">Entrada {entrada}</span>
+              <span className="text-muted-foreground"> · Termina aprox. {terminaAprox}</span>
+            </p>
+            {puntoEncuentro && (
+              <p className="flex items-start gap-1 text-foreground">
+                <MapPin className="h-3 w-3 mt-0.5 shrink-0 text-primary" />
+                <span>
+                  <span className="font-medium">Punto de encuentro:</span> {puntoEncuentro}
+                  {horaEncuentro && <span className="text-muted-foreground"> · 🕒 {horaEncuentro}</span>}
+                </span>
+              </p>
+            )}
+            {!puntoEncuentro && horaEncuentro && (
+              <p className="text-muted-foreground">🕒 Hora de encuentro: {horaEncuentro}</p>
+            )}
+            {instrucciones && (
+              <p className="text-muted-foreground italic line-clamp-2">{instrucciones}</p>
+            )}
           </div>
 
           {/* Empty-state: no assignees → block + redirect to claim flow */}
