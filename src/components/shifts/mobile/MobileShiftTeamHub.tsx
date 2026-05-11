@@ -643,11 +643,21 @@ function MobileShiftTeamHubImpl({
                 {clientName && clientName !== "—" ? clientName : (shift.title || "Shift")}
               </h2>
               <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                {locationName || "Job site missing"} · {shift.date} · {shift.start_time}–{shift.end_time}
+                {dateLabel(shift.date)} · <span className="text-foreground/85 font-semibold">{locationName || "Job site missing"}</span>
               </p>
-              {!shift.location_id && (meetingPoint || hasMeetingPointLocation) && (
-                <p className="text-[10.5px] text-amber-700 dark:text-amber-400 mt-0.5 truncate">
-                  Meeting point set{meetingPoint ? ` · ${meetingPoint}` : ""}
+              {/* Stafly Work Route — Entrada protagonista; Termina aprox. secundario. */}
+              <div className="mt-1 flex items-baseline gap-1.5 flex-wrap">
+                <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground/70">Entrada</span>
+                <span className="text-base font-bold font-mono tabular-nums text-foreground leading-none">{formatTimeShort(shift.start_time)}</span>
+                <span className="text-[11px] text-muted-foreground/80">· Termina aprox. <span className="font-mono tabular-nums">{formatTimeShort(shift.end_time)}</span></span>
+              </div>
+              {(meetingPoint || hasMeetingPointLocation) && (
+                <p className="text-[11px] text-muted-foreground mt-1 truncate flex items-center gap-1">
+                  <MapPin className="h-3 w-3 shrink-0 opacity-70" />
+                  <span className="truncate">
+                    Punto de encuentro: <span className="text-foreground/90 font-medium">{meetingPoint || "—"}</span>
+                    {meetingTime && <> · <span className="font-mono tabular-nums">{formatTimeShort(meetingTime)}</span></>}
+                  </span>
                 </p>
               )}
               <p className="text-[11px] text-muted-foreground mt-0.5">
