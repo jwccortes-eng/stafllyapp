@@ -363,22 +363,22 @@ export default function PayReports() {
           <Link
             to="/portal"
             className="h-9 w-9 rounded-xl bg-muted/60 flex items-center justify-center active:scale-95 transition"
-            aria-label="Back to portal home"
+            aria-label="Volver al portal"
           >
             <ArrowLeft className="h-4 w-4 text-foreground" />
           </Link>
           <div className="flex-1 min-w-0">
             <h1 className="text-base font-bold font-heading text-foreground leading-tight">
-              My Weekly Pay Reports
+              Mis pagos
             </h1>
             <p className="text-[11px] text-muted-foreground leading-tight">
-              Your weekly payment summaries and historical payroll records.
+              Reportes semanales de tus pagos publicados.
             </p>
           </div>
           <button
             onClick={handlePrint}
             className="h-9 w-9 rounded-xl bg-muted/60 flex items-center justify-center active:scale-95 transition"
-            aria-label="Print pay reports"
+            aria-label="Imprimir reportes"
           >
             <Printer className="h-4 w-4 text-foreground" />
           </button>
@@ -388,30 +388,30 @@ export default function PayReports() {
       <main className="px-4 pt-4 space-y-4 print:px-0 print:pt-2">
         {/* KPIs */}
         <section
-          aria-label="Pay reports summary"
+          aria-label="Resumen de pagos"
           className="grid grid-cols-2 gap-2"
         >
           <KpiCard
             icon={FileText}
-            label="Total reports"
+            label="Total reportes"
             value={String(kpis.total)}
             tone="muted"
           />
           <KpiCard
             icon={Wallet}
-            label="Latest payment"
+            label="Último pago"
             value={fmtMoney(kpis.latest)}
             tone="earning"
           />
           <KpiCard
             icon={CalendarRange}
-            label="Year-to-date"
+            label="Acumulado del año"
             value={fmtMoney(kpis.ytd)}
             tone="primary"
           />
           <KpiCard
             icon={Archive}
-            label="Historical imported"
+            label="Histórico Connecteam"
             value={fmtMoney(kpis.historical)}
             tone="warning"
           />
@@ -425,9 +425,9 @@ export default function PayReports() {
         ) : rows.length === 0 ? (
           <EmptyState />
         ) : (
-          <section aria-label="Pay reports" className="space-y-2.5">
+          <section aria-label="Reportes de pago" className="space-y-2.5">
             <h2 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground/60 px-1">
-              Reports
+              Reportes
             </h2>
             {rows.map((row) => (
               <PayReportCard
