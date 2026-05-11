@@ -30,6 +30,13 @@ export default function EmployeeChatWidget() {
   const inputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const { user } = useAuth();
+  const location = useLocation();
+
+  // Lift FAB higher on routes with primary action buttons near the bottom
+  // (Clock In/Out and shift detail accept/reject) so it never overlaps them.
+  const liftHigher =
+    !!matchPath("/portal/clock", location.pathname) ||
+    !!matchPath("/portal/shifts/:shiftId", location.pathname);
 
   const scrollToBottom = useCallback(() => {
     setTimeout(() => {
