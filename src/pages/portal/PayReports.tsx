@@ -543,7 +543,7 @@ function PayReportCard({
             {fmtMoney(row.base_total_pay)}
           </p>
           <p className="text-[9.5px] font-semibold text-muted-foreground/65 uppercase tracking-wider mt-1.5">
-            Total paid
+            Total pagado
           </p>
         </div>
       </div>
@@ -557,9 +557,9 @@ function EmptyState() {
       <div className="h-12 w-12 rounded-2xl bg-muted/60 flex items-center justify-center mx-auto mb-4">
         <FileText className="h-5 w-5 text-muted-foreground" />
       </div>
-      <p className="text-sm font-semibold text-foreground">No pay reports yet</p>
+      <p className="text-sm font-semibold text-foreground">Aún no hay reportes de pago</p>
       <p className="text-[12px] text-muted-foreground mt-1.5 max-w-xs mx-auto leading-relaxed">
-        Your weekly payment summaries will appear here once payroll is finalized.
+        Tus resúmenes semanales aparecerán aquí cuando tu pago esté publicado.
       </p>
     </div>
   );
