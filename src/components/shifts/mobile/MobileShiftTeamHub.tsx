@@ -48,7 +48,8 @@ import { allowedNextStatusesFor, type AssignmentNextStatus, type ClaimDecision }
 import { MobileTeamActionDialog } from "@/components/shifts/mobile/MobileTeamActionDialog";
 import { isOnboardingComplete } from "@/lib/onboarding";
 import { isGraceEligibleCompany, isWithinGraceWindow, GRACE_POLICY_DAYS } from "@/lib/shifts/readiness-grace";
-import { formatDistanceToNowStrict } from "date-fns";
+import { formatDistanceToNowStrict, format, parseISO, isToday, isTomorrow } from "date-fns";
+import { enUS } from "date-fns/locale";
 import {
   rankCandidate, inferShiftRoleNeeds, EMPTY_SIGNALS,
   type RecommendationSignals, type ReviewSignal, type RankedCandidate,
@@ -58,6 +59,20 @@ import {
 function formatRelative(iso: string): string {
   try { return formatDistanceToNowStrict(new Date(iso), { addSuffix: true }); }
   catch { return ""; }
+}
+
+function formatTimeShort(t?: string | null): string {
+  if (!t) return "—";
+  return t.length >= 5 ? t.slice(0, 5) : t;
+}
+
+function dateLabel(iso: string): string {
+  try {
+    const d = parseISO(iso);
+    if (isToday(d)) return "Today";
+    if (isTomorrow(d)) return "Tomorrow";
+    return format(d, "EEE, MMM d", { locale: enUS });
+  } catch { return iso; }
 }
 
 /* ─── Phase 12: chip display polish for Recommended ─── */
@@ -279,6 +294,8 @@ interface Props {
   locationName?: string | null;
   /** Optional meeting-point text — used to clarify "missing job site" issues. */
   meetingPoint?: string | null;
+  /** Optional meeting time (HH:mm or HH:mm:ss). Presentational only. */
+  meetingTime?: string | null;
   /** Whether a meeting_point_location_id is linked (separate from job site). */
   hasMeetingPointLocation?: boolean;
   /** scheduled_shifts.shift_admin_id, used for Captain badge. */
@@ -358,7 +375,7 @@ type TabKey = "overview" | "assigned" | "claims" | "issues" | "recommended";
 
 function MobileShiftTeamHubImpl({
   open, onOpenChange, shift, assignments, employees, canManage,
-  clientName, locationName, meetingPoint, hasMeetingPointLocation,
+  clientName, locationName, meetingPoint, meetingTime, hasMeetingPointLocation,
   shiftAdminId, companyId, onMutated,
 }: Props) {
   const navigate = useNavigate();
@@ -628,11 +645,21 @@ function MobileShiftTeamHubImpl({
                 {clientName && clientName !== "—" ? clientName : (shift.title || "Shift")}
               </h2>
               <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                {locationName || "Job site missing"} · {shift.date} · {shift.start_time}–{shift.end_time}
+                {dateLabel(shift.date)} · <span className="text-foreground/85 font-semibold">{locationName || "Job site missing"}</span>
               </p>
-              {!shift.location_id && (meetingPoint || hasMeetingPointLocation) && (
-                <p className="text-[10.5px] text-amber-700 dark:text-amber-400 mt-0.5 truncate">
-                  Meeting point set{meetingPoint ? ` · ${meetingPoint}` : ""}
+              {/* Stafly Work Route — Entrada protagonista; Termina aprox. secundario. */}
+              <div className="mt-1 flex items-baseline gap-1.5 flex-wrap">
+                <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground/70">Entrada</span>
+                <span className="text-base font-bold font-mono tabular-nums text-foreground leading-none">{formatTimeShort(shift.start_time)}</span>
+                <span className="text-[11px] text-muted-foreground/80">· Termina aprox. <span className="font-mono tabular-nums">{formatTimeShort(shift.end_time)}</span></span>
+              </div>
+              {(meetingPoint || hasMeetingPointLocation) && (
+                <p className="text-[11px] text-muted-foreground mt-1 truncate flex items-center gap-1">
+                  <MapPin className="h-3 w-3 shrink-0 opacity-70" />
+                  <span className="truncate">
+                    Punto de encuentro: <span className="text-foreground/90 font-medium">{meetingPoint || "—"}</span>
+                    {meetingTime && <> · <span className="font-mono tabular-nums">{formatTimeShort(meetingTime)}</span></>}
+                  </span>
                 </p>
               )}
               <p className="text-[11px] text-muted-foreground mt-0.5">
@@ -935,6 +962,23 @@ function WorkerRow({
     ? (assignment.accepted_at ? "Accepted " : assignment.rejected_at ? "Rejected " : "Responded ") + formatRelative(responseTs)
     : null;
 
+  // Status pill — derived from existing bucketize logic; presentational only.
+  const bucket = bucketize(assignment);
+  const STATUS_PILL: Record<string, { label: string; cls: string }> = {
+    confirmed:          { label: "Confirmed",   cls: "border-emerald-500/40 text-emerald-700 dark:text-emerald-400 bg-emerald-500/10" },
+    accepted:           { label: "Accepted",    cls: "border-emerald-500/40 text-emerald-700 dark:text-emerald-400 bg-emerald-500/10" },
+    pending:            { label: "Pending",     cls: "border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10" },
+    rejected_by_worker: { label: "Rejected",    cls: "border-rose-500/40 text-rose-700 dark:text-rose-400 bg-rose-500/10" },
+    removed:            { label: "Removed",     cls: "border-border/60 text-muted-foreground bg-muted/40" },
+    no_show:            { label: "No-show",     cls: "border-rose-500/40 text-rose-700 dark:text-rose-400 bg-rose-500/10" },
+    other:              { label: assignment.status || "Unknown", cls: "border-border/60 text-muted-foreground bg-muted/40" },
+  };
+  const attendancePill =
+    assignment.attendance_status === "present" || assignment.attendance_status === "checked_in"
+      ? { label: "On site", cls: "border-sky-500/40 text-sky-700 dark:text-sky-400 bg-sky-500/10" }
+      : null;
+  const statusPill = attendancePill ?? STATUS_PILL[bucket];
+
   return (
     <li className="px-3 py-2.5">
       <div className="flex items-center gap-2.5">
@@ -945,8 +989,18 @@ function WorkerRow({
           </AvatarFallback>
         </Avatar>
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 flex-wrap">
             <p className="text-sm font-semibold leading-tight truncate">{name}</p>
+            {statusPill && (
+              <span
+                className={cn(
+                  "inline-flex items-center h-[17px] px-1.5 rounded-full text-[9.5px] font-bold uppercase tracking-wider border whitespace-nowrap",
+                  statusPill.cls,
+                )}
+              >
+                {statusPill.label}
+              </span>
+            )}
             {isCaptain && (
               <Badge
                 variant="outline"
