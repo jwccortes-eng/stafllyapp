@@ -503,30 +503,30 @@ function MobileShiftTeamHubImpl({
       items.push({
         key: "open-spots",
         tone: "warn", icon: Users,
-        title: `${openSpots} open ${openSpots === 1 ? "spot" : "spots"}`,
-        helper: "Staff this shift to reach required coverage.",
+        title: `Faltan ${openSpots} ${openSpots === 1 ? "cupo" : "cupos"}`,
+        helper: "Completa el equipo requerido para este turno.",
       });
     }
     if (grouped.no_show.length > 0) {
       items.push({
         key: "no-show",
         tone: "bad", icon: AlertTriangle,
-        title: `${grouped.no_show.length} marked absent / no-show`,
+        title: `${grouped.no_show.length} marcados como ausentes / no-show`,
       });
     }
     if (grouped.pending.length > 0) {
       items.push({
         key: "pending",
         tone: "warn", icon: Clock,
-        title: `${grouped.pending.length} pending ${grouped.pending.length === 1 ? "response" : "responses"}`,
-        helper: "Workers haven't accepted yet.",
+        title: `${grouped.pending.length} ${grouped.pending.length === 1 ? "respuesta pendiente" : "respuestas pendientes"}`,
+        helper: "Trabajadores que aún no aceptan.",
       });
     }
     if (grouped.rejected_by_worker.length > 0) {
       items.push({
         key: "rejected",
         tone: "bad", icon: UserX,
-        title: `${grouped.rejected_by_worker.length} rejected`,
+        title: `${grouped.rejected_by_worker.length} rechazados`,
       });
     }
     // Missing phone on staffed workers.
@@ -538,8 +538,8 @@ function MobileShiftTeamHubImpl({
       items.push({
         key: "missing-phone",
         tone: "warn", icon: Phone,
-        title: `${missingPhone.length} worker${missingPhone.length === 1 ? "" : "s"} without phone`,
-        helper: "Contact actions won't be available for these workers.",
+        title: `${missingPhone.length} ${missingPhone.length === 1 ? "trabajador sin teléfono" : "trabajadores sin teléfono"}`,
+        helper: "No podrás llamarlos, enviar SMS o WhatsApp desde móvil.",
       });
     }
     if (!shift.location_id) {
@@ -547,25 +547,25 @@ function MobileShiftTeamHubImpl({
       items.push({
         key: "no-location",
         tone: "warn", icon: MapPin,
-        title: hasMP ? "Missing job site / venue" : "No location or meeting point",
+        title: hasMP ? "Falta ubicación del trabajo" : "Sin ubicación ni punto de encuentro",
         helper: hasMP
-          ? "Meeting point is set, but the actual work location is missing."
-          : "Workers may not know where to go or meet.",
+          ? "Hay punto de encuentro, pero falta el lugar donde se realiza el trabajo."
+          : "Es posible que los trabajadores no sepan dónde ir.",
       });
     }
     if (!shift.client_id) {
       items.push({
         key: "no-client",
         tone: "info", icon: Briefcase,
-        title: "No client linked",
+        title: "Sin cliente vinculado",
       });
     }
     if (claimsPending > 0) {
       items.push({
         key: "claims",
         tone: "info", icon: Inbox,
-        title: `${claimsPending} pending claim${claimsPending === 1 ? "" : "s"}`,
-        helper: "Review on desktop to approve or reject.",
+        title: `${claimsPending} ${claimsPending === 1 ? "solicitud pendiente" : "solicitudes pendientes"}`,
+        helper: "Revísalas en escritorio para aprobar o rechazar.",
       });
     }
     // Daily close (Phase 17C). Only flag for today/past shifts.
@@ -579,20 +579,20 @@ function MobileShiftTeamHubImpl({
           items.push({
             key: "closeout-missing",
             tone: "warn", icon: ClipboardCheck,
-            title: "Daily closeout missing",
-            helper: "Captain or shift admin hasn't submitted yet.",
+            title: "Falta el cierre diario",
+            helper: "El capitán o admin del turno aún no lo ha enviado.",
           });
         } else if (closeout.status === "submitted") {
           items.push({
             key: "closeout-pending-review",
             tone: "info", icon: ClipboardCheck,
-            title: "Closeout needs admin review",
+            title: "Cierre pendiente de revisión",
           });
         } else if (closeout.status === "reviewed" && (closeout.incident_count ?? 0) > 0) {
           items.push({
             key: "closeout-incidents",
             tone: "bad", icon: AlertTriangle,
-            title: `${closeout.incident_count} incident${closeout.incident_count === 1 ? "" : "s"} reported`,
+            title: `${closeout.incident_count} ${closeout.incident_count === 1 ? "incidente reportado" : "incidentes reportados"}`,
           });
         }
       }
