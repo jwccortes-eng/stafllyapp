@@ -118,6 +118,7 @@ export default function MyShifts() {
         end_time: a.scheduled_shifts.end_time, notes: a.scheduled_shifts.notes,
         status: a.scheduled_shifts.status, slots: a.scheduled_shifts.slots,
         shift_code: a.scheduled_shifts.shift_code, meeting_point: a.scheduled_shifts.meeting_point,
+        meeting_time: a.scheduled_shifts.meeting_time,
         special_instructions: a.scheduled_shifts.special_instructions,
         company_id: a.scheduled_shifts.company_id,
         operational_version: a.scheduled_shifts.operational_version,
