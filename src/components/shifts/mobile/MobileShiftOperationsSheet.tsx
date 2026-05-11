@@ -381,6 +381,11 @@ export function MobileShiftOperationsSheet({
     handleCopySummary();
   };
 
+  const handleViewAttendance = () => {
+    onOpenChange(false);
+    navigate(`/app/attendance?shift=${shift.id}`);
+  };
+
   // Stafly Work Route — meeting point/time effective values.
   const mp = shiftMeeting.point ?? meetingPoint ?? null;
   const mt = shiftMeeting.time ? formatTimeShort(shiftMeeting.time) : null;
