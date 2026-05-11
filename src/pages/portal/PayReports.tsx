@@ -331,19 +331,19 @@ export default function PayReports() {
   // ----- Copy summary -----
   const copySummary = useCallback(
     async (row: PayReportRow) => {
-      const text = `Pay Report · ${fmtRange(
+      const text = `Reporte de pago · ${fmtRange(
         row.period.start_date,
         row.period.end_date,
-      )} · Total paid ${fmtMoney(row.base_total_pay)} · Source ${sourceLabel(row)} · ${
-        row.is_historical_import ? "Final historical record" : validationLabel(row) + " record"
+      )} · Total pagado ${fmtMoney(row.base_total_pay)} · Fuente ${sourceLabel(row)} · ${
+        row.is_historical_import ? "Registro histórico final" : "Registro " + validationLabel(row).toLowerCase()
       }`;
       try {
         await navigator.clipboard.writeText(text);
-        toast({ title: "Summary copied", description: text });
+        toast({ title: "Resumen copiado", description: text });
       } catch {
         toast({
-          title: "Couldn't copy",
-          description: "Please try again.",
+          title: "No se pudo copiar",
+          description: "Inténtalo de nuevo.",
           variant: "destructive",
         });
       }
