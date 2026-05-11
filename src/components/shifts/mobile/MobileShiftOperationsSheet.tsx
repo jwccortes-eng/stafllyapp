@@ -9,7 +9,7 @@ import {
 import { SendNotificationDialog } from "@/components/shifts/SendNotificationDialog";
 import { buildWhatsAppTargets, normalizePhone } from "@/lib/phone";
 import { format, parseISO, isToday, isTomorrow, isPast, isThisWeek } from "date-fns";
-import { enUS } from "date-fns/locale";
+import { es } from "date-fns/locale";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -128,7 +128,7 @@ function dateLabel(dateStr: string): string {
     const d = parseISO(dateStr);
     if (isToday(d)) return "Hoy";
     if (isTomorrow(d)) return "Mañana";
-    return format(d, "EEEE, MMM d", { locale: enUS });
+    return format(d, "EEEE, d 'de' MMMM", { locale: es });
   } catch { return dateStr; }
 }
 
@@ -346,8 +346,8 @@ export function MobileShiftOperationsSheet({
   const snapshot = (() => {
     const when = dateBucket === "today" ? "Today"
       : dateBucket === "tomorrow" ? "Tomorrow"
-      : dateBucket === "past" ? `On ${format(parseISO(shift.date), "MMM d", { locale: enUS })}`
-      : `On ${format(parseISO(shift.date), "EEE MMM d", { locale: enUS })}`;
+      : dateBucket === "past" ? `On ${format(parseISO(shift.date), "MMM d", { locale: es })}`
+      : `On ${format(parseISO(shift.date), "EEE MMM d", { locale: es })}`;
     const where = locationName ? ` at ${locationName}` : (clientName && clientName !== "—" ? ` for ${clientName}` : "");
     const cov = slots > 0 ? `Coverage is ${assignedCount}/${slots} workers.` : `${assignedCount} worker${assignedCount === 1 ? "" : "s"} assigned.`;
     const pubText = draft ? "It is still a draft" : published ? "It is published" : "Status pending";
@@ -363,7 +363,7 @@ export function MobileShiftOperationsSheet({
     const code = shift.shift_code ? `Shift #${formatShiftCode(shift.shift_code)} · ` : "";
     const placeBits = [locationName, clientName && clientName !== "—" ? clientName : null].filter(Boolean).join(" · ");
     const dateBit = (() => {
-      try { return format(parseISO(shift.date), "MMM d", { locale: enUS }); } catch { return shift.date; }
+      try { return format(parseISO(shift.date), "MMM d", { locale: es }); } catch { return shift.date; }
     })();
     const cov = slots > 0
       ? `Assigned ${assignedCount}/${slots}${understaffed ? ` · Needs ${slots - assignedCount} worker${slots - assignedCount === 1 ? "" : "s"}` : ""}`
@@ -410,29 +410,45 @@ export function MobileShiftOperationsSheet({
         hideClose
         className="h-[92vh] p-0 rounded-t-3xl flex flex-col overflow-hidden bg-background"
       >
-        {/* Sticky Context Header — Phase 1A compact: title + 1 meta line + 1 priority pill. */}
+        {/* Sticky Context Header — DS4.1: explicit operational summary. */}
         {(() => {
-          // Single priority status pill: Unstaffed > Missing job site > No client > Draft > Published > OK.
+          const missing = slots > 0 ? Math.max(0, slots - assignedCount) : 0;
+          // Single priority status pill: Unstaffed > Missing job site > No client > Draft > Complete > Published.
           const pill: { label: string; cls: string } | null =
             published && understaffed
-              ? { label: "Falta personal", cls: "border-rose-500/40 text-rose-700 dark:text-rose-400 bg-rose-500/10" }
+              ? { label: `Faltan ${missing}`, cls: "border-rose-500/40 text-rose-700 dark:text-rose-400 bg-rose-500/10" }
               : noLocation
-                ? { label: meetingPoint ? "Falta ubicación" : "Falta ubicación", cls: "border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10" }
+                ? { label: "Falta ubicación", cls: "border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10" }
                 : noClient
                   ? { label: "Falta cliente", cls: "border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10" }
                   : draft
                     ? { label: "Borrador", cls: "border-border/60 text-muted-foreground bg-muted/40" }
                     : published && fullyStaffed
-                      ? { label: "Personal completo", cls: "border-emerald-500/40 text-emerald-700 dark:text-emerald-400 bg-emerald-500/10" }
+                      ? { label: "Completo", cls: "border-emerald-500/40 text-emerald-700 dark:text-emerald-400 bg-emerald-500/10" }
                       : published
                         ? { label: "Publicado", cls: "border-primary/30 text-primary bg-primary/5" }
                         : null;
-          const coverageBit = slots > 0 ? `${assignedCount}/${slots}` : `${assignedCount}`;
+
+          // Status text line (under title)
+          const statusText: string = draft
+            ? "No visible para trabajadores"
+            : slots > 0
+              ? understaffed
+                ? `${assignedCount}/${slots} asignados · faltan ${missing}`
+                : `${assignedCount}/${slots} asignados`
+              : `${assignedCount} asignados`;
+
+          // Header title + subtitle
+          const headerTitle = (clientName && clientName !== "—") ? clientName : (shift.title || "Turno");
+          const subtitle = (clientName && clientName !== "—" && shift.title && shift.title.trim() && shift.title !== clientName)
+            ? shift.title
+            : null;
+
           return (
             <div
-              className="px-5 pt-3 pb-2.5 border-b border-border/40 bg-background/95 backdrop-blur-sm"
+              className="px-5 pt-3 pb-3 border-b border-border/40 bg-background/95 backdrop-blur-sm"
               role="region"
-              aria-label={`Contexto del turno para ${clientName && clientName !== "—" ? clientName : (shift.title || "turno")}, ${dateLabel(shift.date)}, entrada ${startShort}, termina aprox. ${endShort}`}
+              aria-label={`Contexto del turno para ${headerTitle}, ${dateLabel(shift.date)}, entrada ${startShort}, termina aprox. ${endShort}`}
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
@@ -443,38 +459,56 @@ export function MobileShiftOperationsSheet({
                         {formatShiftCode(shift.shift_code)}
                       </span>
                     )}
-                    {weekendLabel && (
-                      <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                        · {weekendLabel}
-                      </span>
-                    )}
+                    <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground truncate">
+                      {dateLabel(shift.date)}
+                    </span>
                   </div>
                   <h2 className="text-lg font-semibold tracking-tight leading-tight line-clamp-2">
-                    {clientName && clientName !== "—" ? clientName : (shift.title || "Shift")}
+                    {headerTitle}
                   </h2>
-                  <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                    {dateLabel(shift.date)} · <span className="font-semibold tabular-nums text-foreground/80">{coverageBit}</span> asignados
+                  {subtitle && (
+                    <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                      {subtitle}
+                    </p>
+                  )}
+                  {/* Status line */}
+                  <p className={cn(
+                    "text-xs mt-1.5 font-semibold tabular-nums",
+                    published && understaffed ? "text-rose-700 dark:text-rose-400"
+                      : draft ? "text-muted-foreground"
+                      : "text-foreground/85"
+                  )}>
+                    {statusText}
                   </p>
-                  {/* Stafly Work Route — Entrada protagonista; Termina aprox. secundario. */}
+                  {/* Schedule line */}
                   <div className="mt-1.5 flex items-baseline gap-2">
                     <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground/70">Entrada</span>
                     <span className="text-xl font-bold font-mono tabular-nums text-foreground leading-none">{startShort}</span>
                     <span className="text-[11px] text-muted-foreground/80 truncate">· Termina aprox. <span className="font-mono tabular-nums">{endShort}</span></span>
                   </div>
-                  {mp ? (
-                    <p className="text-[11px] text-muted-foreground mt-1 truncate flex items-center gap-1">
-                      <MapPin className="h-3 w-3 shrink-0 opacity-70" />
-                      <span className="truncate">
-                        Punto de encuentro: <span className="text-foreground/90 font-medium">{mp}</span>
-                        {mt && <> · <span className="font-mono tabular-nums">{mt}</span></>}
-                      </span>
-                    </p>
-                  ) : (
-                    <p className="text-[11px] text-muted-foreground mt-1 truncate flex items-center gap-1">
-                      <MapPin className="h-3 w-3 shrink-0 opacity-70" />
-                      <span className="truncate">{locationName || "No location"}</span>
-                    </p>
-                  )}
+                  {/* Trabajo + Encuentro */}
+                  <div className="mt-2 space-y-1">
+                    <div className="flex items-start gap-1.5 text-[11px]">
+                      <Building2 className="h-3 w-3 shrink-0 mt-0.5 opacity-70 text-muted-foreground" />
+                      <span className="text-muted-foreground shrink-0">Trabajo:</span>
+                      {locationName ? (
+                        <span className="text-foreground/90 font-medium line-clamp-2">{locationName}</span>
+                      ) : (
+                        <span className="text-amber-700 dark:text-amber-400 font-medium">Falta ubicación</span>
+                      )}
+                    </div>
+                    <div className="flex items-start gap-1.5 text-[11px]">
+                      <MapPin className="h-3 w-3 shrink-0 mt-0.5 opacity-70 text-muted-foreground" />
+                      <span className="text-muted-foreground shrink-0">Encuentro:</span>
+                      {mp ? (
+                        <span className="text-foreground/90 font-medium line-clamp-2">
+                          {mp}{mt && <> · <span className="font-mono tabular-nums">{mt}</span></>}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground/80">Sin punto de encuentro</span>
+                      )}
+                    </div>
+                  </div>
                 </div>
                 <div className="flex flex-col items-end gap-1.5 shrink-0">
                   <Button
@@ -489,7 +523,7 @@ export function MobileShiftOperationsSheet({
                   {pill && (
                     <Badge
                       variant="outline"
-                      className={cn("h-[20px] px-2 text-[10px] font-semibold", pill.cls)}
+                      className={cn("h-[22px] px-2.5 text-[11px] font-bold tabular-nums", pill.cls)}
                     >
                       {pill.label}
                     </Badge>
@@ -514,22 +548,98 @@ export function MobileShiftOperationsSheet({
             </section>
           )}
 
-          {/* 2. Acciones rápidas — 2x2 grid */}
+          {/* 2. Siguiente paso recomendado — primary recommended action */}
+          {(() => {
+            // Decide the single most urgent recommendation.
+            const missing = slots > 0 ? Math.max(0, slots - assignedCount) : 0;
+            let title = "Listo para operar";
+            let text = "El turno está cubierto y publicado.";
+            let primary: { label: string; onClick: () => void; icon: any } | null = null;
+            let secondary: { label: string; onClick: () => void; icon: any } | null = null;
+            let helper: string | null = null;
+
+            if (published && understaffed && canValidate) {
+              title = "Siguiente paso recomendado";
+              text = `Faltan ${missing} trabajador${missing === 1 ? "" : "es"} para completar este turno.`;
+              primary = { label: "Gestionar equipo", onClick: () => setHubOpen(true), icon: Users };
+              secondary = { label: "Notificar equipo", onClick: () => setNotifyOpen(true), icon: Bell };
+            } else if (noLocation) {
+              title = "Siguiente paso recomendado";
+              text = "Falta la ubicación del trabajo. La edición completa está disponible desde escritorio por ahora.";
+              helper = "Editar ubicación desde escritorio";
+            } else if (!mp) {
+              title = "Siguiente paso recomendado";
+              text = "Falta punto de encuentro para los trabajadores.";
+              if (canValidate) {
+                primary = { label: "Notificar equipo", onClick: () => setNotifyOpen(true), icon: Bell };
+              } else {
+                helper = "Agrega el punto de encuentro desde escritorio.";
+              }
+            } else if (draft && canValidate) {
+              title = "Siguiente paso recomendado";
+              text = "Borrador — los trabajadores aún no lo ven. Revisa el equipo y publica desde escritorio.";
+              primary = { label: "Gestionar equipo", onClick: () => setHubOpen(true), icon: Users };
+            } else if (canValidate) {
+              primary = { label: "Gestionar equipo", onClick: () => setHubOpen(true), icon: Users };
+              secondary = { label: "Asistencia", onClick: handleViewAttendance, icon: ClipboardList };
+            } else {
+              return null;
+            }
+
+            return (
+              <section>
+                <div className="rounded-2xl border border-primary/30 bg-primary/[0.04] p-4">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <Sparkles className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-bold text-foreground">{title}</span>
+                  </div>
+                  <p className="text-[13px] text-foreground/85 leading-snug mb-3">{text}</p>
+                  {primary && (
+                    <div className="flex items-center gap-2">
+                      <Button
+                        className="flex-1 h-12 rounded-xl text-sm font-bold gap-2"
+                        onClick={primary.onClick}
+                      >
+                        <primary.icon className="h-4 w-4" />
+                        {primary.label}
+                      </Button>
+                      {secondary && (
+                        <Button
+                          variant="outline"
+                          className="h-12 rounded-xl text-sm font-semibold gap-2 px-4"
+                          onClick={secondary.onClick}
+                        >
+                          <secondary.icon className="h-4 w-4" />
+                          {secondary.label}
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                  {helper && !primary && (
+                    <p className="text-[11px] text-muted-foreground italic">{helper}</p>
+                  )}
+                </div>
+              </section>
+            );
+          })()}
+
+          {/* 3. Acciones rápidas — núcleo (3 botones máximo) */}
           <section>
             <SectionTitle icon={Sparkles}>Acciones rápidas</SectionTitle>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-3 gap-2">
               {canValidate && (
                 <Button
-                  className="h-12 rounded-xl justify-start gap-2 text-sm font-semibold"
+                  variant="outline"
+                  className="h-14 rounded-xl flex-col gap-1 text-[11px] font-semibold px-1"
                   onClick={() => setHubOpen(true)}
                 >
                   <Users className="h-4 w-4" />
-                  <span>Gestionar equipo</span>
+                  <span>Equipo</span>
                 </Button>
               )}
               <Button
                 variant="outline"
-                className="h-12 rounded-xl justify-start gap-2 text-sm font-medium"
+                className="h-14 rounded-xl flex-col gap-1 text-[11px] font-semibold px-1"
                 onClick={handleViewAttendance}
               >
                 <ClipboardList className="h-4 w-4" />
@@ -538,29 +648,13 @@ export function MobileShiftOperationsSheet({
               {canValidate && (
                 <Button
                   variant="outline"
-                  className="h-12 rounded-xl justify-start gap-2 text-sm font-medium"
+                  className="h-14 rounded-xl flex-col gap-1 text-[11px] font-semibold px-1"
                   onClick={() => setNotifyOpen(true)}
                 >
                   <Bell className="h-4 w-4" />
-                  <span>Notificar equipo</span>
+                  <span>Notificar</span>
                 </Button>
               )}
-              <Button
-                variant="outline"
-                className="h-12 rounded-xl justify-start gap-2 text-sm font-medium"
-                onClick={handleShare}
-              >
-                <Share2 className="h-4 w-4" />
-                <span>Compartir turno</span>
-              </Button>
-              <Button
-                variant="outline"
-                className="h-12 rounded-xl justify-start gap-2 text-sm font-medium col-span-2"
-                onClick={handleCopySummary}
-              >
-                <Copy className="h-4 w-4" />
-                <span>Copiar resumen</span>
-              </Button>
             </div>
           </section>
 
@@ -692,41 +786,28 @@ export function MobileShiftOperationsSheet({
             ) : null}
           </section>
 
-          {/* 5. Cierre diario — colapsable */}
-          {shift && selectedCompanyId ? (
+          {/* 5. Cierre diario — alerta compacta solo si urgente (hoy / pasado) */}
+          {shift && selectedCompanyId && (dateBucket === "today" || dateBucket === "past") ? (
             <section>
-              <button
-                type="button"
-                onClick={() => setCloseoutOpen(v => !v)}
-                className="w-full flex items-center justify-between gap-2 mb-2.5 px-0.5 text-left"
-                aria-expanded={closeoutOpen}
-              >
-                <div className="flex items-center gap-1.5">
-                  <ShieldCheck className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-semibold text-foreground">
-                    Cierre diario
+              <div className="rounded-2xl border border-amber-500/30 bg-amber-500/[0.06] p-3 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <ShieldCheck className="h-4 w-4 text-amber-700 dark:text-amber-400 shrink-0" />
+                  <span className="text-[13px] font-semibold text-foreground truncate">
+                    Cierre diario pendiente
                   </span>
                 </div>
-                <ChevronDown
-                  className={cn(
-                    "h-4 w-4 text-muted-foreground transition-transform",
-                    closeoutOpen && "rotate-180"
-                  )}
-                />
-              </button>
-              {closeoutOpen ? (
-                <ShiftCloseoutSection
-                  shiftId={shift.id}
-                  companyId={selectedCompanyId}
-                  canSubmit={canValidate || shiftAdminId != null}
-                  canReview={canValidate}
-                  role={canValidate ? "admin" : "shift_admin"}
-                />
-              ) : (
-                <p className="px-0.5 text-xs text-muted-foreground">
-                  Toca para revisar o registrar el cierre operativo del día.
-                </p>
-              )}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 rounded-lg text-xs font-semibold"
+                  onClick={() => {
+                    setMoreOpen(true);
+                    setCloseoutOpen(true);
+                  }}
+                >
+                  Revisar cierre
+                </Button>
+              </div>
             </section>
           ) : null}
 
@@ -753,6 +834,66 @@ export function MobileShiftOperationsSheet({
             </button>
             {moreOpen ? (
               <div className="space-y-4">
+                {/* Acciones secundarias */}
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 h-10 rounded-lg gap-1.5 text-xs font-medium"
+                    onClick={handleShare}
+                  >
+                    <Share2 className="h-3.5 w-3.5" />
+                    Compartir turno
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 h-10 rounded-lg gap-1.5 text-xs font-medium"
+                    onClick={handleCopySummary}
+                  >
+                    <Copy className="h-3.5 w-3.5" />
+                    Copiar resumen
+                  </Button>
+                </div>
+
+                {/* Cierre diario (movido aquí) */}
+                {shift && selectedCompanyId ? (
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => setCloseoutOpen(v => !v)}
+                      className="w-full flex items-center justify-between gap-2 mb-2 px-0.5 text-left"
+                      aria-expanded={closeoutOpen}
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <ShieldCheck className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                          Cierre diario
+                        </span>
+                      </div>
+                      <ChevronDown
+                        className={cn(
+                          "h-4 w-4 text-muted-foreground transition-transform",
+                          closeoutOpen && "rotate-180"
+                        )}
+                      />
+                    </button>
+                    {closeoutOpen ? (
+                      <ShiftCloseoutSection
+                        shiftId={shift.id}
+                        companyId={selectedCompanyId}
+                        canSubmit={canValidate || shiftAdminId != null}
+                        canReview={canValidate}
+                        role={canValidate ? "admin" : "shift_admin"}
+                      />
+                    ) : (
+                      <p className="px-0.5 text-xs text-muted-foreground">
+                        Toca para revisar o registrar el cierre operativo del día.
+                      </p>
+                    )}
+                  </div>
+                ) : null}
+
                 {/* Detalles del turno */}
                 <div>
                   <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5 px-0.5">
@@ -760,7 +901,7 @@ export function MobileShiftOperationsSheet({
                   </p>
                   <div className="rounded-2xl border border-border/50 bg-card divide-y divide-border/40">
                     <DetailRow icon={CalendarDays} label="Fecha" value={(() => {
-                      try { return format(parseISO(shift.date), "EEEE, MMMM d, yyyy", { locale: enUS }); } catch { return shift.date; }
+                      try { return format(parseISO(shift.date), "EEEE, d 'de' MMMM, yyyy", { locale: es }); } catch { return shift.date; }
                     })()} />
                     <DetailRow icon={Clock} label="Entrada" value={startShort} />
                     <DetailRow icon={Clock} label="Termina aprox." value={endShort} muted />
@@ -780,8 +921,8 @@ export function MobileShiftOperationsSheet({
                       <div className="px-4 py-3">
                         <EmptyBlock
                           icon={MapPin}
-                          title={meetingPoint ? MOBILE_SHIFT_COPY.noLocationTitle : MOBILE_SHIFT_COPY.noLocationOrMeetingTitle}
-                          helper={meetingPoint ? MOBILE_SHIFT_COPY.noLocationHelper : MOBILE_SHIFT_COPY.noLocationOrMeetingHelper}
+                          title={MOBILE_SHIFT_COPY.noLocationTitle}
+                          helper={MOBILE_SHIFT_COPY.noLocationHelper}
                           compact
                         />
                       </div>
@@ -789,11 +930,22 @@ export function MobileShiftOperationsSheet({
                       <DetailRow icon={MapPin} label="Ubicación" value={locationName || "—"} muted={!locationName} />
                     )}
                     {mp ? (
-                      <DetailRow
-                        icon={MapPin}
-                        label="Punto de encuentro"
-                        value={mt ? `${mp} · ${mt}` : mp}
-                      />
+                      <div className="px-4 py-3">
+                        <div className="flex items-start gap-2">
+                          <MapPin className="h-3.5 w-3.5 mt-0.5 text-muted-foreground shrink-0" />
+                          <div className="min-w-0">
+                            <p className="text-[13px] font-semibold text-foreground leading-tight">
+                              Punto de encuentro registrado
+                            </p>
+                            <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug">
+                              Este es el lugar donde se reúnen antes de ir al trabajo.
+                            </p>
+                            <p className="text-[12px] text-foreground/85 mt-1">
+                              {mp}{mt && <> · <span className="font-mono tabular-nums">{mt}</span></>}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
                     ) : (
                       <div className="flex items-center gap-2 px-4 py-2.5 text-xs text-muted-foreground">
                         <MapPin className="h-3.5 w-3.5 opacity-60" />
@@ -877,7 +1029,7 @@ export function MobileShiftOperationsSheet({
               </div>
             ) : (
               <p className="px-0.5 text-xs text-muted-foreground">
-                Detalles del turno, notas, publicación y origen.
+                Acciones adicionales, cierre, detalles del turno, notas y origen.
               </p>
             )}
           </section>
@@ -1464,7 +1616,7 @@ function buildShiftRisks(args: {
 function buildShiftAudit(shift: Shift): TraceLinkedRecord[] {
   const fmtTs = (ts: string | null | undefined) => {
     if (!ts) return null;
-    try { return format(parseISO(ts), "MMM d, yyyy · HH:mm", { locale: enUS }); }
+    try { return format(parseISO(ts), "MMM d, yyyy · HH:mm", { locale: es }); }
     catch { return ts; }
   };
   return [

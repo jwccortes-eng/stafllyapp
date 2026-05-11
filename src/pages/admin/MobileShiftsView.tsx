@@ -636,9 +636,13 @@ function ShiftCard({
   // Status chip mapped to ShiftRouteHeader tone
   let statusLabel: string | null = null;
   let statusTone: ShiftRouteHeaderTone = "neutral";
-  if (isDraft) { statusLabel = "Draft"; statusTone = "warning"; }
-  else if (understaffed) { statusLabel = "Unstaffed"; statusTone = "danger"; }
-  else { statusLabel = "Published"; statusTone = "success"; }
+  if (isDraft) { statusLabel = "Borrador"; statusTone = "warning"; }
+  else if (understaffed) {
+    const missing = slots - assignedEmployees.length;
+    statusLabel = `Faltan ${missing}`;
+    statusTone = "danger";
+  }
+  else { statusLabel = "Publicado"; statusTone = "success"; }
 
   const coverageLabel = slots > 0
     ? `${assignedEmployees.length}/${slots} asignados${understaffed ? ` · faltan ${slots - assignedEmployees.length}` : ""}`
@@ -684,11 +688,11 @@ function ShiftCard({
           <Users className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
           <span className="text-xs text-muted-foreground truncate">
             {assignedEmployees.length === 0
-              ? slots > 0 ? `0 / ${slots} workers` : "Unassigned"
+              ? slots > 0 ? `0 / ${slots} trabajadores` : "Sin asignar"
               : (
                 <>
                   {visibleNames.join(", ")}
-                  {more > 0 && <span className="font-medium"> +{more} more</span>}
+                  {more > 0 && <span className="font-medium"> +{more} más</span>}
                 </>
               )}
           </span>
@@ -714,10 +718,10 @@ function ShiftCard({
       {(understaffed || noClient) && (
         <div className="flex flex-wrap items-center gap-1.5 mt-2">
           {understaffed && (
-            <Warning icon={Users} label="Needs staff" tone="bad" />
+            <Warning icon={Users} label="Falta personal" tone="bad" />
           )}
           {noClient && (
-            <Warning icon={Building2} label="No client" tone="warn" />
+            <Warning icon={Building2} label="Sin cliente" tone="warn" />
           )}
         </div>
       )}
@@ -726,7 +730,7 @@ function ShiftCard({
       <div className="mt-3 pt-3 border-t border-border/40 flex items-center justify-between gap-2">
         <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
           <Eye className="h-3.5 w-3.5" />
-          View operations
+          Ver operaciones
         </span>
         <button
           type="button"
@@ -736,7 +740,7 @@ function ShiftCard({
           }}
           className="inline-flex items-center gap-1 h-8 px-3 rounded-lg text-xs font-semibold bg-primary/10 text-primary hover:bg-primary/15 active:scale-95 transition"
         >
-          Operations
+          Operaciones
           <ChevronRight className="h-3.5 w-3.5" />
         </button>
       </div>
