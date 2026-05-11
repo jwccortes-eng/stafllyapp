@@ -702,8 +702,8 @@ export function MobileShiftOperationsSheet({
               <DetailRow icon={CalendarDays} label="Date" value={(() => {
                 try { return format(parseISO(shift.date), "EEEE, MMMM d, yyyy", { locale: enUS }); } catch { return shift.date; }
               })()} />
-              <DetailRow icon={Clock} label="Start" value={formatTimeShort(shift.start_time)} />
-              <DetailRow icon={Clock} label="End" value={formatTimeShort(shift.end_time)} />
+              <DetailRow icon={Clock} label="Entrada" value={startShort} />
+              <DetailRow icon={Clock} label="Termina aprox." value={endShort} muted />
               {noClient ? (
                 <div className="px-4 py-3">
                   <EmptyBlock
