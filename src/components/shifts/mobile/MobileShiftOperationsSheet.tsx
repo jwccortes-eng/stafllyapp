@@ -1167,11 +1167,11 @@ function attendanceBadgeFor(
 }
 
 function roleBadgeFor(role: string | null, isShiftAdmin: boolean): { label: string; cls: string } | null {
-  if (isShiftAdmin) return { label: "Shift admin", cls: "bg-primary/15 text-primary border-primary/30" };
+  if (isShiftAdmin) return { label: "Admin del turno", cls: "bg-primary/15 text-primary border-primary/30" };
   if (!role) return null;
   const r = role.toLowerCase();
-  if (r === "captain") return { label: "Captain", cls: "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30" };
-  if (r === "lead" || r === "admin") return { label: "Lead", cls: "bg-primary/15 text-primary border-primary/30" };
+  if (r === "captain") return { label: "Capitán", cls: "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30" };
+  if (r === "lead" || r === "admin") return { label: "Líder", cls: "bg-primary/15 text-primary border-primary/30" };
   if (r === "staff" || r === "worker") return null;
   return { label: role, cls: "bg-muted text-muted-foreground border-border" };
 }
