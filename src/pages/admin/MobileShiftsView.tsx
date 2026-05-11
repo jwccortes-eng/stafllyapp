@@ -2,8 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   CalendarDays, SlidersHorizontal, ChevronRight,
-  Users, Clock, AlertTriangle, FileEdit, MapPin, Building2, Eye,
+  Users, AlertTriangle, FileEdit, Building2, Eye,
 } from "lucide-react";
+import { ShiftRouteHeader, type ShiftRouteHeaderTone } from "@/components/stafly-ui";
 import { format, parseISO, isToday, isTomorrow, addDays } from "date-fns";
 import { enUS } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
