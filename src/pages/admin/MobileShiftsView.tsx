@@ -688,11 +688,11 @@ function ShiftCard({
           <Users className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
           <span className="text-xs text-muted-foreground truncate">
             {assignedEmployees.length === 0
-              ? slots > 0 ? `0 / ${slots} workers` : "Unassigned"
+              ? slots > 0 ? `0 / ${slots} trabajadores` : "Sin asignar"
               : (
                 <>
                   {visibleNames.join(", ")}
-                  {more > 0 && <span className="font-medium"> +{more} more</span>}
+                  {more > 0 && <span className="font-medium"> +{more} más</span>}
                 </>
               )}
           </span>
