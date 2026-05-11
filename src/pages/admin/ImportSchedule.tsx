@@ -542,7 +542,7 @@ export default function ImportSchedule() {
       const [{ data: employees }, { data: clients }] = await Promise.all([
         supabase
           .from("employees")
-          .select("id, first_name, last_name, phone_number, email, employer_identification, connecteam_employee_id")
+          .select("id, first_name, last_name, phone_number, email, employer_identification, connecteam_employee_id, is_active")
           .eq("company_id", selectedCompanyId),
         supabase.from("clients").select("id, name").eq("company_id", selectedCompanyId).is("deleted_at", null),
       ]);
