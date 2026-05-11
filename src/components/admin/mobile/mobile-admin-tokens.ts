@@ -10,7 +10,7 @@ import {
   STAFLY_BOTTOM_NAV_CLEARANCE,
   STAFLY_PAGE_PX,
   STAFLY_SECTION_EYEBROW,
-  STAFLY_TIME_TEXT,
+  
   STAFLY_MUTED_CAPTION,
   STAFLY_CARD_BASE,
 } from "@/components/stafly-ui/tokens";
