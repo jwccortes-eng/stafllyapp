@@ -636,9 +636,13 @@ function ShiftCard({
   // Status chip mapped to ShiftRouteHeader tone
   let statusLabel: string | null = null;
   let statusTone: ShiftRouteHeaderTone = "neutral";
-  if (isDraft) { statusLabel = "Draft"; statusTone = "warning"; }
-  else if (understaffed) { statusLabel = "Unstaffed"; statusTone = "danger"; }
-  else { statusLabel = "Published"; statusTone = "success"; }
+  if (isDraft) { statusLabel = "Borrador"; statusTone = "warning"; }
+  else if (understaffed) {
+    const missing = slots - assignedEmployees.length;
+    statusLabel = `Faltan ${missing}`;
+    statusTone = "danger";
+  }
+  else { statusLabel = "Publicado"; statusTone = "success"; }
 
   const coverageLabel = slots > 0
     ? `${assignedEmployees.length}/${slots} asignados${understaffed ? ` · faltan ${slots - assignedEmployees.length}` : ""}`
