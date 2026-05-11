@@ -216,24 +216,34 @@ export default function PortalShiftDetail() {
       {/* ── Hero card */}
       <div className="rounded-2xl bg-card border border-border/40 shadow-sm overflow-hidden mb-4">
         <div className="p-4 space-y-3">
-          {/* Date / time */}
+          {/* Date chip + slots */}
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className={cn(
-                "text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-widest",
-                isToday(parseISO(shift.date)) ? "bg-primary text-primary-foreground" :
-                isTomorrow(parseISO(shift.date)) ? "bg-accent text-accent-foreground" :
-                "bg-muted text-muted-foreground"
-              )}>
-                {dateLabel}
-              </span>
-              <span className="text-sm font-bold text-foreground tabular-nums">{timeLabel}</span>
-            </div>
+            <span className={cn(
+              "text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-widest",
+              isToday(parseISO(shift.date)) ? "bg-primary text-primary-foreground" :
+              isTomorrow(parseISO(shift.date)) ? "bg-accent text-accent-foreground" :
+              "bg-muted text-muted-foreground"
+            )}>
+              {dateLabel}
+            </span>
             {slotsLeft !== null && state === "available" && (
               <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-primary/10 text-primary">
                 {slotsLeft} {slotsLeft === 1 ? "cupo disponible" : "cupos disponibles"}
               </span>
             )}
+          </div>
+
+          {/* Tu ruta de trabajo — Entrada protagonista */}
+          <div>
+            <p className="text-[9.5px] font-bold uppercase tracking-[0.16em] text-muted-foreground/65 leading-none mb-1">
+              Entrada
+            </p>
+            <p className="text-[32px] leading-none font-bold font-mono tabular-nums text-foreground">
+              {shift.start_time?.slice(0, 5)}
+            </p>
+            <p className="text-[10.5px] text-muted-foreground/65 mt-1.5 tabular-nums">
+              Termina aprox. {shift.end_time?.slice(0, 5)} · salida estimada
+            </p>
           </div>
 
           {/* Title */}
