@@ -548,22 +548,98 @@ export function MobileShiftOperationsSheet({
             </section>
           )}
 
-          {/* 2. Acciones rápidas — 2x2 grid */}
+          {/* 2. Siguiente paso recomendado — primary recommended action */}
+          {(() => {
+            // Decide the single most urgent recommendation.
+            const missing = slots > 0 ? Math.max(0, slots - assignedCount) : 0;
+            let title = "Listo para operar";
+            let text = "El turno está cubierto y publicado.";
+            let primary: { label: string; onClick: () => void; icon: any } | null = null;
+            let secondary: { label: string; onClick: () => void; icon: any } | null = null;
+            let helper: string | null = null;
+
+            if (published && understaffed && canValidate) {
+              title = "Siguiente paso recomendado";
+              text = `Faltan ${missing} trabajador${missing === 1 ? "" : "es"} para completar este turno.`;
+              primary = { label: "Gestionar equipo", onClick: () => setHubOpen(true), icon: Users };
+              secondary = { label: "Notificar equipo", onClick: () => setNotifyOpen(true), icon: Bell };
+            } else if (noLocation) {
+              title = "Siguiente paso recomendado";
+              text = "Falta la ubicación del trabajo. La edición completa está disponible desde escritorio por ahora.";
+              helper = "Editar ubicación desde escritorio";
+            } else if (!mp) {
+              title = "Siguiente paso recomendado";
+              text = "Falta punto de encuentro para los trabajadores.";
+              if (canValidate) {
+                primary = { label: "Notificar equipo", onClick: () => setNotifyOpen(true), icon: Bell };
+              } else {
+                helper = "Agrega el punto de encuentro desde escritorio.";
+              }
+            } else if (draft && canValidate) {
+              title = "Siguiente paso recomendado";
+              text = "Borrador — los trabajadores aún no lo ven. Revisa el equipo y publica desde escritorio.";
+              primary = { label: "Gestionar equipo", onClick: () => setHubOpen(true), icon: Users };
+            } else if (canValidate) {
+              primary = { label: "Gestionar equipo", onClick: () => setHubOpen(true), icon: Users };
+              secondary = { label: "Asistencia", onClick: handleViewAttendance, icon: ClipboardList };
+            } else {
+              return null;
+            }
+
+            return (
+              <section>
+                <div className="rounded-2xl border border-primary/30 bg-primary/[0.04] p-4">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <Sparkles className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-bold text-foreground">{title}</span>
+                  </div>
+                  <p className="text-[13px] text-foreground/85 leading-snug mb-3">{text}</p>
+                  {primary && (
+                    <div className="flex items-center gap-2">
+                      <Button
+                        className="flex-1 h-12 rounded-xl text-sm font-bold gap-2"
+                        onClick={primary.onClick}
+                      >
+                        <primary.icon className="h-4 w-4" />
+                        {primary.label}
+                      </Button>
+                      {secondary && (
+                        <Button
+                          variant="outline"
+                          className="h-12 rounded-xl text-sm font-semibold gap-2 px-4"
+                          onClick={secondary.onClick}
+                        >
+                          <secondary.icon className="h-4 w-4" />
+                          {secondary.label}
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                  {helper && !primary && (
+                    <p className="text-[11px] text-muted-foreground italic">{helper}</p>
+                  )}
+                </div>
+              </section>
+            );
+          })()}
+
+          {/* 3. Acciones rápidas — núcleo (3 botones máximo) */}
           <section>
             <SectionTitle icon={Sparkles}>Acciones rápidas</SectionTitle>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-3 gap-2">
               {canValidate && (
                 <Button
-                  className="h-12 rounded-xl justify-start gap-2 text-sm font-semibold"
+                  variant="outline"
+                  className="h-14 rounded-xl flex-col gap-1 text-[11px] font-semibold px-1"
                   onClick={() => setHubOpen(true)}
                 >
                   <Users className="h-4 w-4" />
-                  <span>Gestionar equipo</span>
+                  <span>Equipo</span>
                 </Button>
               )}
               <Button
                 variant="outline"
-                className="h-12 rounded-xl justify-start gap-2 text-sm font-medium"
+                className="h-14 rounded-xl flex-col gap-1 text-[11px] font-semibold px-1"
                 onClick={handleViewAttendance}
               >
                 <ClipboardList className="h-4 w-4" />
@@ -572,29 +648,13 @@ export function MobileShiftOperationsSheet({
               {canValidate && (
                 <Button
                   variant="outline"
-                  className="h-12 rounded-xl justify-start gap-2 text-sm font-medium"
+                  className="h-14 rounded-xl flex-col gap-1 text-[11px] font-semibold px-1"
                   onClick={() => setNotifyOpen(true)}
                 >
                   <Bell className="h-4 w-4" />
-                  <span>Notificar equipo</span>
+                  <span>Notificar</span>
                 </Button>
               )}
-              <Button
-                variant="outline"
-                className="h-12 rounded-xl justify-start gap-2 text-sm font-medium"
-                onClick={handleShare}
-              >
-                <Share2 className="h-4 w-4" />
-                <span>Compartir turno</span>
-              </Button>
-              <Button
-                variant="outline"
-                className="h-12 rounded-xl justify-start gap-2 text-sm font-medium col-span-2"
-                onClick={handleCopySummary}
-              >
-                <Copy className="h-4 w-4" />
-                <span>Copiar resumen</span>
-              </Button>
             </div>
           </section>
 
