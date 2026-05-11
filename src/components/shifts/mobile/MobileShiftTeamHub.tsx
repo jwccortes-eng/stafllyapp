@@ -962,6 +962,23 @@ function WorkerRow({
     ? (assignment.accepted_at ? "Accepted " : assignment.rejected_at ? "Rejected " : "Responded ") + formatRelative(responseTs)
     : null;
 
+  // Status pill — derived from existing bucketize logic; presentational only.
+  const bucket = bucketize(assignment);
+  const STATUS_PILL: Record<string, { label: string; cls: string }> = {
+    confirmed:          { label: "Confirmed",   cls: "border-emerald-500/40 text-emerald-700 dark:text-emerald-400 bg-emerald-500/10" },
+    accepted:           { label: "Accepted",    cls: "border-emerald-500/40 text-emerald-700 dark:text-emerald-400 bg-emerald-500/10" },
+    pending:            { label: "Pending",     cls: "border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10" },
+    rejected_by_worker: { label: "Rejected",    cls: "border-rose-500/40 text-rose-700 dark:text-rose-400 bg-rose-500/10" },
+    removed:            { label: "Removed",     cls: "border-border/60 text-muted-foreground bg-muted/40" },
+    no_show:            { label: "No-show",     cls: "border-rose-500/40 text-rose-700 dark:text-rose-400 bg-rose-500/10" },
+    other:              { label: assignment.status || "Unknown", cls: "border-border/60 text-muted-foreground bg-muted/40" },
+  };
+  const attendancePill =
+    assignment.attendance_status === "present" || assignment.attendance_status === "checked_in"
+      ? { label: "On site", cls: "border-sky-500/40 text-sky-700 dark:text-sky-400 bg-sky-500/10" }
+      : null;
+  const statusPill = attendancePill ?? STATUS_PILL[bucket];
+
   return (
     <li className="px-3 py-2.5">
       <div className="flex items-center gap-2.5">
@@ -972,8 +989,18 @@ function WorkerRow({
           </AvatarFallback>
         </Avatar>
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 flex-wrap">
             <p className="text-sm font-semibold leading-tight truncate">{name}</p>
+            {statusPill && (
+              <span
+                className={cn(
+                  "inline-flex items-center h-[17px] px-1.5 rounded-full text-[9.5px] font-bold uppercase tracking-wider border whitespace-nowrap",
+                  statusPill.cls,
+                )}
+              >
+                {statusPill.label}
+              </span>
+            )}
             {isCaptain && (
               <Badge
                 variant="outline"
