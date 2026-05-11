@@ -1444,104 +1444,144 @@ const WorkerRow = memo(function WorkerRow({
     }
   };
 
+  const [expanded, setExpanded] = useState(false);
+
+  // Compact status chips. Tones: emerald=ok, amber=warn, rose=bad, sky=info, muted.
+  type Chip = { label: string; tone: "good" | "warn" | "bad" | "info" | "muted"; title?: string };
+  const chips: Chip[] = [];
+
+  // Attendance / clock state
+  if (clock?.clock_out) chips.push({ label: "Salió", tone: "muted" });
+  else if (clock?.clock_in) chips.push({ label: "En sitio", tone: "good" });
+  else {
+    const aLow = (attendanceStatus ?? "").toLowerCase();
+    if (aLow === "present") chips.push({ label: "Presente", tone: "good" });
+    else if (aLow === "late") chips.push({ label: "Tarde", tone: "warn" });
+    else if (aLow === "absent") chips.push({ label: "No-show", tone: "bad" });
+    else if (aLow === "excused") chips.push({ label: "Justif.", tone: "muted" });
+    else if (aLow === "needs_review") chips.push({ label: "Revisar", tone: "info" });
+    else chips.push({ label: "Sin iniciar", tone: "muted" });
+  }
+
+  // Response / assignment state
+  if (isImportedNotResponded) {
+    chips.push({ label: "Importado", tone: "info", title: "Importado desde Connecteam. Aún no confirmado en Stafly." });
+  } else if (statusLow === "rejected") chips.push({ label: "Rechazó", tone: "bad" });
+  else if (statusLow === "removed") chips.push({ label: "Removido", tone: "bad" });
+  else if (statusLow === "pending") chips.push({ label: "Pend.", tone: "warn" });
+  else if (statusLow === "confirmed") chips.push({ label: "Confirmado", tone: "good" });
+  else if (statusLow === "accepted" && acceptedAt) chips.push({ label: "Aceptó", tone: "good" });
+
+  if (!phone) chips.push({ label: "Sin tel.", tone: "warn" });
+
+  const chipToneCls = (tone: Chip["tone"]) =>
+    tone === "good" ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400" :
+    tone === "warn" ? "bg-amber-500/15 text-amber-700 dark:text-amber-400" :
+    tone === "bad"  ? "bg-rose-500/15 text-rose-700 dark:text-rose-400" :
+    tone === "info" ? "bg-sky-500/15 text-sky-700 dark:text-sky-400" :
+                      "bg-muted text-muted-foreground";
+
   return (
-    <div className="rounded-2xl border border-border/50 bg-card px-3 py-2.5">
-      <div className="flex items-center gap-3">
-        <Avatar className="h-10 w-10 shrink-0">
+    <div className="rounded-xl border border-border/50 bg-card overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setExpanded(v => !v)}
+        className="w-full flex items-center gap-2.5 px-2.5 py-2 text-left active:bg-muted/40 transition"
+        aria-expanded={expanded}
+        aria-label={`${workerName} — detalles`}
+      >
+        <Avatar className="h-8 w-8 shrink-0">
           {worker.avatar_url ? <AvatarImage src={worker.avatar_url} alt="" /> : null}
-          <AvatarFallback className="text-xs font-semibold bg-muted">
+          <AvatarFallback className="text-[10px] font-semibold bg-muted">
             {initialsStr || "·"}
           </AvatarFallback>
         </Avatar>
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="text-sm font-medium leading-snug truncate">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className="text-[13px] font-semibold leading-tight truncate">
               {worker.first_name} {worker.last_name}
             </span>
-            {isShiftAdmin && <Crown className="h-3.5 w-3.5 text-primary shrink-0" />}
+            {isShiftAdmin && <Crown className="h-3 w-3 text-primary shrink-0" />}
+            {roleBadge && (
+              <span className={cn("inline-flex items-center h-[15px] px-1 rounded-full border text-[9px] font-bold uppercase tracking-wider shrink-0", roleBadge.cls)}>
+                {roleBadge.label}
+              </span>
+            )}
           </div>
-          <div className="text-[11px] text-muted-foreground truncate mt-0.5">
-            {phone ? phone : MOBILE_SHIFT_COPY.noPhoneTitle}
+          <div className="flex items-center gap-1 mt-0.5 flex-wrap">
+            {chips.slice(0, 3).map((c, i) => (
+              <span
+                key={i}
+                title={c.title}
+                className={cn("inline-flex items-center h-[15px] px-1.5 rounded-full text-[9.5px] font-bold uppercase tracking-wide", chipToneCls(c.tone))}
+              >
+                {c.label}
+              </span>
+            ))}
+            {chips.length > 3 && (
+              <span className="text-[9.5px] text-muted-foreground font-medium">+{chips.length - 3}</span>
+            )}
           </div>
         </div>
-      </div>
-
-      <div className="flex items-center gap-1.5 flex-wrap mt-2">
-        <span className={cn("inline-flex items-center h-5 px-1.5 rounded-full text-[10px] font-semibold", att.cls)}>
-          {att.label}
-        </span>
-        {roleBadge && (
-          <span className={cn("inline-flex items-center h-5 px-1.5 rounded-full border text-[10px] font-semibold", roleBadge.cls)}>
-            {roleBadge.label}
-          </span>
-        )}
-        {isImportedNotResponded ? (
-          <span
-            className="inline-flex items-center h-5 px-1.5 rounded-full border border-sky-500/40 bg-sky-500/10 text-sky-700 dark:text-sky-400 text-[10px] font-semibold"
-            title="Importado desde Connecteam. Aún no confirmado en Stafly."
-          >
-            Asignado/importado
-          </span>
-        ) : showAssignStatus ? (
-          <span className="inline-flex items-center h-5 px-1.5 rounded-full bg-muted text-muted-foreground text-[10px] font-semibold capitalize">
-            {statusLow.replace(/_/g, " ")}
-          </span>
-        ) : null}
-      </div>
-      {isImportedNotResponded && (
-        <p className="mt-1 text-[10.5px] text-muted-foreground/90 leading-snug">
-          Importado desde Connecteam. Aún no confirmado en Stafly.
-        </p>
-      )}
-
-      {phone ? (
-        <div className="flex items-center gap-1.5 mt-2.5">
-          <a
-            href={`tel:${phone}`}
-            className="flex-1 inline-flex items-center justify-center gap-1.5 h-9 rounded-xl bg-primary/10 text-primary hover:bg-primary/15 active:scale-[0.98] transition text-xs font-semibold"
-            aria-label={`Llamar a ${workerName}`}
-          >
-            <Phone className="h-3.5 w-3.5" aria-hidden="true" />
-            Llamar
-          </a>
-          <a
-            href={`sms:${normalized || phone}`}
-            className="flex-1 inline-flex items-center justify-center gap-1.5 h-9 rounded-xl bg-muted text-foreground hover:bg-muted/80 active:scale-[0.98] transition text-xs font-semibold"
-            aria-label={`Enviar SMS a ${workerName}`}
-          >
-            <MessageSquare className="h-3.5 w-3.5" aria-hidden="true" />
-            SMS
-          </a>
-          {wa?.waMeUrl && (
+        <div className="flex items-center gap-1 shrink-0">
+          {phone && (
             <a
-              href={wa.waMeUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex-1 inline-flex items-center justify-center gap-1.5 h-9 rounded-xl bg-[#25D366]/10 text-[#128C4F] dark:text-[#25D366] hover:bg-[#25D366]/15 active:scale-[0.98] transition text-xs font-semibold"
-              aria-label={`Abrir WhatsApp para ${workerName}`}
+              href={`tel:${phone}`}
+              onClick={(e) => e.stopPropagation()}
+              className="h-7 w-7 inline-flex items-center justify-center rounded-full bg-primary/10 text-primary"
+              aria-label={`Llamar a ${workerName}`}
             >
-              <MessageCircle className="h-3.5 w-3.5" aria-hidden="true" />
-              WhatsApp
+              <Phone className="h-3.5 w-3.5" />
             </a>
           )}
-          <button
-            type="button"
-            onClick={handleCopy}
-            className="inline-flex items-center justify-center h-9 w-9 rounded-xl bg-muted text-muted-foreground hover:bg-muted/80 active:scale-[0.98] transition"
-            aria-label={`Copiar teléfono de ${workerName}`}
-          >
-            <Copy className="h-3.5 w-3.5" aria-hidden="true" />
-          </button>
+          <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", expanded && "rotate-180")} />
         </div>
-      ) : (
-        <div className="mt-2.5 rounded-xl border border-dashed border-border/60 bg-muted/30 px-3 py-2">
-          <div className="flex items-start gap-2">
-            <Phone className="h-3.5 w-3.5 mt-0.5 text-muted-foreground shrink-0" aria-hidden="true" />
-            <div className="min-w-0 flex-1">
-              <div className="text-[11px] font-semibold text-foreground/80 leading-tight">
-                {MOBILE_SHIFT_COPY.noPhoneTitle}
-              </div>
-              <div className="text-[10.5px] text-muted-foreground leading-snug mt-0.5">
+      </button>
+
+      {expanded && (
+        <div className="px-2.5 pb-2.5 pt-1 border-t border-border/40">
+          {isImportedNotResponded && (
+            <p className="text-[10.5px] text-muted-foreground mb-1.5">
+              Importado desde Connecteam. Aún no confirmado en Stafly.
+            </p>
+          )}
+          {phone ? (
+            <div className="flex items-center gap-1.5">
+              <a
+                href={`tel:${phone}`}
+                className="flex-1 inline-flex items-center justify-center gap-1.5 h-8 rounded-lg bg-primary/10 text-primary text-[11px] font-semibold"
+              >
+                <Phone className="h-3 w-3" /> Llamar
+              </a>
+              <a
+                href={`sms:${normalized || phone}`}
+                className="flex-1 inline-flex items-center justify-center gap-1.5 h-8 rounded-lg bg-muted text-foreground text-[11px] font-semibold"
+              >
+                <MessageSquare className="h-3 w-3" /> SMS
+              </a>
+              {wa?.waMeUrl && (
+                <a
+                  href={wa.waMeUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 inline-flex items-center justify-center gap-1.5 h-8 rounded-lg bg-[#25D366]/10 text-[#128C4F] dark:text-[#25D366] text-[11px] font-semibold"
+                >
+                  <MessageCircle className="h-3 w-3" /> WA
+                </a>
+              )}
+              <button
+                type="button"
+                onClick={handleCopy}
+                className="h-8 w-8 inline-flex items-center justify-center rounded-lg bg-muted text-muted-foreground"
+                aria-label="Copiar teléfono"
+              >
+                <Copy className="h-3 w-3" />
+              </button>
+            </div>
+          ) : (
+            <div className="rounded-lg border border-dashed border-border/60 bg-muted/30 px-2.5 py-2 flex items-center gap-2">
+              <Phone className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+              <div className="min-w-0 flex-1 text-[10.5px] text-muted-foreground leading-snug">
                 {MOBILE_SHIFT_COPY.noPhoneHelper}
               </div>
               {canManagePhone && (
@@ -1549,14 +1589,14 @@ const WorkerRow = memo(function WorkerRow({
                   type="button"
                   onClick={openPhoneDialog}
                   disabled={savingPhone}
-                  className="mt-1.5 inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-primary text-primary-foreground text-[11px] font-semibold disabled:opacity-60"
+                  className="shrink-0 inline-flex items-center gap-1 h-7 px-2 rounded-full bg-primary text-primary-foreground text-[10.5px] font-semibold disabled:opacity-60"
                 >
                   <Phone className="h-3 w-3" />
-                  {savingPhone ? "Guardando…" : "Agregar teléfono"}
+                  {savingPhone ? "…" : "Agregar"}
                 </button>
               )}
             </div>
-          </div>
+          )}
         </div>
       )}
 
