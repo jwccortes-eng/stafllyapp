@@ -1005,7 +1005,7 @@ function WorkerRow({
                 className="h-[16px] px-1 text-[9px] uppercase tracking-wider border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10"
               >
                 <Star className="h-2.5 w-2.5 mr-0.5" />
-                Captain
+                Capitán
               </Badge>
             )}
           </div>
