@@ -1,5 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { StaflyPageShell } from "@/components/stafly-ui/StaflyPageShell";
+import { usePortalChrome } from "@/components/stafly-ui/usePortalChrome";
 import { useEffectiveEmployee } from "@/hooks/useEffectiveEmployee";
 import { Megaphone, Pin, ExternalLink, AlertTriangle, Bell, Heart, ThumbsUp, Laugh, PartyPopper, Play } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
