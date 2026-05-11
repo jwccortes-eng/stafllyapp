@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
 import { cn } from "@/lib/utils";
-import { MOBILE_PAGE_PB } from "./mobile-admin-tokens";
+import { STAFLY_BOTTOM_NAV_CLEARANCE } from "@/components/stafly-ui/tokens";
 
 interface MobileAdminModuleShellProps {
   /** MobileAdminHeader */
