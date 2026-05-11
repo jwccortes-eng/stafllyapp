@@ -1214,7 +1214,7 @@ function ClaimsTab({
                           )}
                         >
                           <Check className="h-3 w-3" />
-                          Approve
+                          Aprobar
                         </button>
                         <button
                           type="button"
@@ -1222,7 +1222,7 @@ function ClaimsTab({
                           className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-muted hover:bg-muted/80 text-foreground text-[11px] font-semibold transition-colors"
                         >
                           <XCircle className="h-3 w-3" />
-                          Reject
+                          Rechazar
                         </button>
                         {blocked && e && (
                           <>
