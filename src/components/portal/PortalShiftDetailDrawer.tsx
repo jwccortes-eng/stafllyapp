@@ -30,6 +30,7 @@ interface ShiftInfo {
   slots: number | null;
   shift_code?: string | null;
   meeting_point?: string | null;
+  meeting_time?: string | null;
   special_instructions?: string | null;
   location?: { name: string; latitude?: number | null; longitude?: number | null } | null;
   client?: { name: string } | null;
