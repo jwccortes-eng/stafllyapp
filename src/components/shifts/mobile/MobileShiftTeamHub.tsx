@@ -234,8 +234,8 @@ function buildReminderText(workerName: string): string {
 }
 
 const HUB_COPY = {
-  intro: "Vista de equipo. Algunos cambios avanzados aún se hacen en escritorio.",
-  safetyNote: "Desde móvil puedes revisar cobertura y contactar trabajadores. Los cambios avanzados de personal están disponibles desde escritorio por ahora.",
+  intro: "Operación móvil. Puedes revisar, contactar y gestionar el equipo.",
+  safetyNote: "Puedes revisar, contactar y gestionar el equipo desde móvil. Cambios avanzados siguen en escritorio.",
   loadError: "No se pudieron cargar los datos del equipo. Revisa tu conexión e inténtalo de nuevo.",
   tabsAria: "Secciones de gestión del equipo",
   // Resumen
@@ -243,11 +243,11 @@ const HUB_COPY = {
   // Asignados
   assignedHelper: "Agrupados por estado. Toca para contactar al trabajador.",
   emptyAssignedTitle: "Aún no hay trabajadores asignados",
-  emptyAssignedHelper: "Usa las herramientas de escritorio para agregar trabajadores.",
+  emptyAssignedHelper: "Usa Recomendados para asignar trabajadores rápidamente.",
   noPhone: "Sin teléfono registrado",
   // Solicitudes
   claimsHelper: "Trabajadores que solicitaron este turno.",
-  claimsManagedDesktop: "Aprobar solicitudes aún se hace desde escritorio.",
+  claimsManagedDesktop: "La aprobación de solicitudes sigue en escritorio.",
   emptyClaimsTitle: "Sin solicitudes",
   emptyClaimsHelper: "Las solicitudes de trabajadores aparecerán aquí.",
   // Alertas
@@ -258,7 +258,7 @@ const HUB_COPY = {
   recommendedHelper: "Recomendaciones inteligentes según disponibilidad, historial y perfil.",
   recommendedPlaceholder:
     "Los trabajadores recomendados combinan disponibilidad, calificación, rol e historial.",
-  openDesktopStaffing: "Abrir herramientas de escritorio",
+  openDesktopStaffing: "Más opciones en escritorio",
   permissionGate: "No tienes permiso para gestionar este turno.",
 } as const;
 
