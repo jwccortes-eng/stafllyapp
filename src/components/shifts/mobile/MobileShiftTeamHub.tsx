@@ -1952,7 +1952,7 @@ function RecommendedTab({
                       className="h-8 px-2.5 text-[12px] gap-1"
                     >
                       <UserPlus className="h-3.5 w-3.5" />
-                      Assign
+                      Asignar
                     </Button>
                   ) : (
                     <Button
@@ -1961,12 +1961,12 @@ function RecommendedTab({
                       disabled
                       className="h-8 px-2.5 text-[12px]"
                       title={
-                        c.preferenceBlocked ? "Worker is blocked for this client/location"
-                        : c.conflictDetected ? "Worker has an overlapping shift"
-                        : "Worker can't be assigned"
+                        c.preferenceBlocked ? "Trabajador bloqueado para este cliente/lugar"
+                        : c.conflictDetected ? "Tiene un turno superpuesto"
+                        : "No se puede asignar"
                       }
                     >
-                      {c.preferenceBlocked ? "Blocked here" : c.conflictDetected ? "Conflict" : "Blocked"}
+                      {c.preferenceBlocked ? "Bloqueado aquí" : c.conflictDetected ? "Conflicto" : "Bloqueado"}
                     </Button>
                   )}
                   {(shift.client_id || shift.location_id) && (
@@ -1975,43 +1975,43 @@ function RecommendedTab({
                         <button
                           type="button"
                           className="h-6 px-1.5 rounded-md text-[10px] font-medium text-muted-foreground/80 hover:bg-muted/60 inline-flex items-center gap-0.5"
-                          aria-label={`Set fit for ${c.name}`}
+                          aria-label={`Marcar afinidad para ${c.name}`}
                         >
-                          <MoreVertical className="h-3 w-3" /> Fit
+                          <MoreVertical className="h-3 w-3" /> Afinidad
                         </button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-52">
                         <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-                          Mark for this {shift.client_id ? "client" : "location"}
+                          Marcar para este {shift.client_id ? "cliente" : "lugar"}
                         </DropdownMenuLabel>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={() => handleSetPreference(c.employee.id, c.name, "preferred")}>
-                          Mark preferred
+                          Marcar como preferido
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleSetPreference(c.employee.id, c.name, "prequalified")}>
-                          Mark prequalified
+                          Marcar como precalificado
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleSetPreference(c.employee.id, c.name, "captain_preferred")}>
-                          Captain preferred
+                          Capitán preferido
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleSetPreference(c.employee.id, c.name, "driver_preferred")}>
-                          Driver preferred
+                          Conductor preferido
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={() => handleSetPreference(c.employee.id, c.name, "not_recommended")}>
-                          Mark not recommended
+                          Marcar no recomendado
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           className="text-rose-600 focus:text-rose-600"
                           onClick={() => handleSetPreference(c.employee.id, c.name, "blocked")}
                         >
-                          Block here
+                          Bloquear aquí
                         </DropdownMenuItem>
                         {(signals.preferencesByEmp.get(c.employee.id) ?? []).length > 0 && (
                           <>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem onClick={() => handleClearPreferences(c.employee.id, c.name)}>
-                              Clear preferences
+                              Limpiar preferencias
                             </DropdownMenuItem>
                           </>
                         )}
@@ -2034,7 +2034,7 @@ function RecommendedTab({
         onClick={onOpenDesktop}
         className="mt-1 inline-flex items-center gap-1 text-[12px] font-semibold text-primary"
       >
-        Open desktop staffing <ExternalLink className="h-3 w-3" />
+        Abrir herramientas de escritorio <ExternalLink className="h-3 w-3" />
       </button>
     </section>
   );
