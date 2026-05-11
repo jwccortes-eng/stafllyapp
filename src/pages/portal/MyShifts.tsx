@@ -617,7 +617,33 @@ export default function MyShifts() {
                 <section key={b.key} className="space-y-2">
                   <AgendaSectionHeader title={b.label} />
                   <OperationalTimeline>
-                    {b.items.map((a) => renderRow(a, globalIdx++, "compact"))}
+                    {b.items.map((a) => {
+                      const w = workedHistory.byShiftId[a.shift.id];
+                      const subtitleParts = [
+                        a.shift.client?.name,
+                        a.shift.location?.name,
+                      ].filter(Boolean) as string[];
+                      return (
+                        <HistoryShiftRow
+                          key={a.id}
+                          shiftId={a.shift.id}
+                          date={a.shift.date}
+                          title={formatDisplayName(a.shift.title) || "Turno"}
+                          subtitle={subtitleParts.length ? subtitleParts.map(formatDisplayName).join(" · ") : null}
+                          scheduledStart={a.shift.start_time}
+                          scheduledEnd={a.shift.end_time}
+                          clockIn={w?.clockIn ?? null}
+                          clockOut={w?.clockOut ?? null}
+                          workedMinutes={w?.workedMinutes ?? 0}
+                          hasOpenClock={w?.hasOpenClock ?? false}
+                          hasClosedTimeEntry={w?.hasClosedTimeEntry ?? false}
+                          workerStatus={w?.workerStatus ?? "no_period_yet"}
+                          hasRide={w?.hasRide ?? false}
+                          loading={workedHistory.loading && !w}
+                          onClick={() => setSelectedShift(a)}
+                        />
+                      );
+                    })}
                   </OperationalTimeline>
                 </section>
               ))}
