@@ -110,9 +110,9 @@ export default function PortalProfile() {
       if (updateError) throw updateError;
 
       setProfile(prev => prev ? { ...prev, avatar_url: avatarUrl } : prev);
-      toast({ title: "Photo updated" });
+      toast({ title: "Foto actualizada" });
     } catch (err: any) {
-      toast({ title: "Error uploading photo", description: err.message, variant: "destructive" });
+      toast({ title: "Error al subir foto", description: err.message, variant: "destructive" });
     } finally {
       setUploading(false);
     }
