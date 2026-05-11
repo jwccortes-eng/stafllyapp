@@ -80,6 +80,20 @@ const FIELD_LABELS: Record<string, string> = {
   notes: "Notas", claimable: "Reclamable", status: "Estado",
 };
 
+// WR6 — Work Route line for worker-facing notification bodies.
+// Presentational only: never used for payroll/scheduled-hours math.
+// Mirrors the canonical Work Route standard (Entrada protagonist, Termina aprox. secondary).
+const workRouteLine = (
+  start?: string | null,
+  end?: string | null,
+  meetingPoint?: string | null,
+) => {
+  const entrada = start ? start.slice(0, 5) : "—";
+  const termina = end ? end.slice(0, 5) : "—";
+  const meeting = meetingPoint && meetingPoint.trim() ? ` · Encuentro ${meetingPoint.trim()}` : "";
+  return `Entrada ${entrada} · Termina aprox. ${termina}${meeting}`;
+};
+
 
 // Local create-shift dialog component. Wraps the new ShiftFormShell with the
 // summary panel computed from useShiftFormSignals. Defined inline so we don't
