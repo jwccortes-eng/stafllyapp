@@ -328,7 +328,7 @@ export function MobileShiftOperationsSheet({
   }
   if (assignedCount === 0) briefMessages.push({ tone: "bad", text: "Sin trabajadores asignados" });
   if (noLocation) briefMessages.push({ tone: "warn", text: meetingPoint ? "Falta ubicación del trabajo (hay punto de encuentro)" : "Falta ubicación del trabajo" });
-  if (!mp) briefMessages.push({ tone: "warn", text: "Falta punto de encuentro" });
+  if (!(shiftMeeting.point ?? meetingPoint)) briefMessages.push({ tone: "warn", text: "Falta punto de encuentro" });
   if (noClient) briefMessages.push({ tone: "warn", text: "Falta cliente" });
   if (draft) briefMessages.push({ tone: "warn", text: "Borrador — los trabajadores aún no lo ven" });
   if (draft && fullyStaffed) briefMessages.push({ tone: "info", text: "Listo para publicar" });
