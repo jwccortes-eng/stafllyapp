@@ -146,14 +146,16 @@ export default function MyAnnouncements() {
 
   if (loading) {
     return (
-      <div className="space-y-3">
-        {[1, 2, 3].map(i => <div key={i} className="h-32 animate-pulse bg-muted rounded-2xl" />)}
-      </div>
+      <StaflyPageShell density="worker">
+        <div className="space-y-3">
+          {[1, 2, 3].map(i => <div key={i} className="h-32 animate-pulse bg-muted rounded-2xl" />)}
+        </div>
+      </StaflyPageShell>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <StaflyPageShell density="worker" className="animate-fade-in">
       <PageHeader
         variant="1"
         icon={Megaphone}
