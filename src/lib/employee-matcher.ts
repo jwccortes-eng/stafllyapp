@@ -172,20 +172,31 @@ export function buildEmployeeIndex(employees: EmployeeRecord[]): EmployeeIndex {
     byPhone: new Map(),
     byEmail: new Map(),
     byName: new Map(),
+    byNameActive: new Map(),
     byReversed: new Map(),
     allNames: [],
+    activeIds: new Set(),
   };
 
   for (const e of employees) {
     const display = `${e.first_name ?? ""} ${e.last_name ?? ""}`.trim();
     const norm = normalizeName(display);
     const reversed = reverseNormalizedName(display);
+    // Treat undefined as active to keep callers that don't pass `is_active`
+    // from breaking — they simply skip the inactive-fallback path.
+    const isActive = e.is_active !== false;
+    if (isActive) idx.activeIds.add(e.id);
 
     if (norm) {
       const arr = idx.byName.get(norm) ?? [];
       arr.push(e.id);
       idx.byName.set(norm, arr);
       idx.allNames.push({ id: e.id, norm, display });
+      if (isActive) {
+        const arrA = idx.byNameActive.get(norm) ?? [];
+        arrA.push(e.id);
+        idx.byNameActive.set(norm, arrA);
+      }
     }
     if (reversed) {
       const arr = idx.byReversed.get(reversed) ?? [];
