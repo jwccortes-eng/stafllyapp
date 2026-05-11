@@ -60,6 +60,11 @@ export interface MatchResult {
   employeeId: string;
   method: MatchMethod;
   confidence: "high" | "medium" | "low";
+  /** Set when the original exact-name match was an inactive employee and the
+   * resolver replaced it with the only active same-name duplicate. */
+  replacedInactiveId?: string;
+  /** True when the exact-name match resolved to multiple active duplicates. */
+  needsActiveDuplicateReview?: boolean;
 }
 
 export interface MatchTelemetry {
