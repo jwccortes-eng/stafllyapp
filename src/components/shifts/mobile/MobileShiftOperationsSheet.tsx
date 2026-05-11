@@ -1780,3 +1780,90 @@ function getWorkerSortScore(
   return score;
 }
 
+
+/* ───── LocationReportDialog ─────
+ * Non-destructive: does NOT update location_id / meeting_point / shift fields.
+ * Builds a structured note and copies it to clipboard for admin review.
+ * No DB write, no schema, no audit table dependency.
+ */
+function LocationReportDialog({
+  open, onOpenChange, shiftCode, clientName, jobSiteName, meetingPoint, notes,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  shiftCode: string | null;
+  clientName: string;
+  jobSiteName: string;
+  meetingPoint: string | null;
+  notes: string | null;
+}) {
+  const [correction, setCorrection] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => { if (open) setCorrection(""); }, [open]);
+
+  const handleSave = async () => {
+    if (!correction.trim()) {
+      toast.error("Agrega una nota de corrección.");
+      return;
+    }
+    setSaving(true);
+    const payload = [
+      `Reporte de ubicación${shiftCode ? ` — Turno #${shiftCode}` : ""}`,
+      `Cliente: ${clientName || "—"}`,
+      `Trabajo: ${jobSiteName || "(falta)"}`,
+      `Encuentro: ${meetingPoint || "(falta)"}`,
+      notes ? `Notas: ${notes}` : null,
+      `Corrección sugerida: ${correction.trim()}`,
+    ].filter(Boolean).join("\n");
+    try {
+      await navigator.clipboard.writeText(payload);
+      toast.success("Reporte copiado para revisión", {
+        description: "Pégalo en el chat de operaciones o pásalo a un administrador.",
+      });
+      onOpenChange(false);
+    } catch {
+      toast.error("No se pudo copiar el reporte. Intenta de nuevo.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Reportar ubicación</DialogTitle>
+          <DialogDescription>
+            No cambia el turno. Solo prepara un reporte para revisión administrativa.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-2 text-[12.5px]">
+          <div className="rounded-lg border border-border/60 bg-muted/30 p-2.5 space-y-1">
+            {shiftCode && <div><span className="text-muted-foreground">Turno: </span><span className="font-semibold">#{shiftCode}</span></div>}
+            <div><span className="text-muted-foreground">Cliente: </span>{clientName || "—"}</div>
+            <div><span className="text-muted-foreground">Trabajo: </span>{jobSiteName || <span className="text-amber-700 dark:text-amber-400">(falta)</span>}</div>
+            <div><span className="text-muted-foreground">Encuentro: </span>{meetingPoint || <span className="text-muted-foreground">—</span>}</div>
+            {notes && <div className="text-[11.5px] text-muted-foreground line-clamp-3">Notas: {notes}</div>}
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="loc-correction">Nota de corrección</Label>
+            <Textarea
+              id="loc-correction"
+              rows={3}
+              placeholder="Ej.: La dirección real del trabajo es 123 Main St, NY. La actual es el punto de encuentro."
+              value={correction}
+              onChange={(e) => setCorrection(e.target.value)}
+            />
+          </div>
+        </div>
+        <DialogFooter className="gap-2 sm:gap-2">
+          <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={saving}>Cancelar</Button>
+          <Button onClick={handleSave} disabled={saving}>
+            {saving ? "Copiando…" : "Guardar reporte"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
