@@ -512,6 +512,12 @@ export function ShiftDetailDialog({
                 title={shift.title || "Turno"}
                 date={shift.date}
                 startTime={shift.start_time}
+                endTime={shift.end_time}
+                clientName={client ? client.name : null}
+                jobSite={location?.name ?? null}
+                meetingPoint={(shift as unknown as { meeting_point?: string | null }).meeting_point ?? null}
+                meetingTime={(shift as unknown as { meeting_time?: string | null }).meeting_time ?? null}
+                instructions={shift.notes}
                 variant="outline"
                 size="sm"
                 className="h-7 px-2"
