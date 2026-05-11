@@ -864,9 +864,9 @@ function AssignedTab({
   onAssignmentAction: (assignmentId: string, nextStatus: AssignmentNextStatus, workerName: string) => void;
 }) {
   return (
-    <section aria-label="Assigned workers">
+    <section aria-label="Trabajadores asignados">
       <SectionTitle icon={ShieldCheck} helper={HUB_COPY.assignedHelper}>
-        Assigned workers
+        Asignados
         <span className="ml-1.5 text-xs font-normal text-muted-foreground normal-case tracking-normal">
           ({assignments.length})
         </span>
