@@ -410,29 +410,45 @@ export function MobileShiftOperationsSheet({
         hideClose
         className="h-[92vh] p-0 rounded-t-3xl flex flex-col overflow-hidden bg-background"
       >
-        {/* Sticky Context Header — Phase 1A compact: title + 1 meta line + 1 priority pill. */}
+        {/* Sticky Context Header — DS4.1: explicit operational summary. */}
         {(() => {
-          // Single priority status pill: Unstaffed > Missing job site > No client > Draft > Published > OK.
+          const missing = slots > 0 ? Math.max(0, slots - assignedCount) : 0;
+          // Single priority status pill: Unstaffed > Missing job site > No client > Draft > Complete > Published.
           const pill: { label: string; cls: string } | null =
             published && understaffed
-              ? { label: "Falta personal", cls: "border-rose-500/40 text-rose-700 dark:text-rose-400 bg-rose-500/10" }
+              ? { label: `Faltan ${missing}`, cls: "border-rose-500/40 text-rose-700 dark:text-rose-400 bg-rose-500/10" }
               : noLocation
-                ? { label: meetingPoint ? "Falta ubicación" : "Falta ubicación", cls: "border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10" }
+                ? { label: "Falta ubicación", cls: "border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10" }
                 : noClient
                   ? { label: "Falta cliente", cls: "border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10" }
                   : draft
                     ? { label: "Borrador", cls: "border-border/60 text-muted-foreground bg-muted/40" }
                     : published && fullyStaffed
-                      ? { label: "Personal completo", cls: "border-emerald-500/40 text-emerald-700 dark:text-emerald-400 bg-emerald-500/10" }
+                      ? { label: "Completo", cls: "border-emerald-500/40 text-emerald-700 dark:text-emerald-400 bg-emerald-500/10" }
                       : published
                         ? { label: "Publicado", cls: "border-primary/30 text-primary bg-primary/5" }
                         : null;
-          const coverageBit = slots > 0 ? `${assignedCount}/${slots}` : `${assignedCount}`;
+
+          // Status text line (under title)
+          const statusText: string = draft
+            ? "No visible para trabajadores"
+            : slots > 0
+              ? understaffed
+                ? `${assignedCount}/${slots} asignados · faltan ${missing}`
+                : `${assignedCount}/${slots} asignados`
+              : `${assignedCount} asignados`;
+
+          // Header title + subtitle
+          const headerTitle = (clientName && clientName !== "—") ? clientName : (shift.title || "Turno");
+          const subtitle = (clientName && clientName !== "—" && shift.title && shift.title.trim() && shift.title !== clientName)
+            ? shift.title
+            : null;
+
           return (
             <div
-              className="px-5 pt-3 pb-2.5 border-b border-border/40 bg-background/95 backdrop-blur-sm"
+              className="px-5 pt-3 pb-3 border-b border-border/40 bg-background/95 backdrop-blur-sm"
               role="region"
-              aria-label={`Contexto del turno para ${clientName && clientName !== "—" ? clientName : (shift.title || "turno")}, ${dateLabel(shift.date)}, entrada ${startShort}, termina aprox. ${endShort}`}
+              aria-label={`Contexto del turno para ${headerTitle}, ${dateLabel(shift.date)}, entrada ${startShort}, termina aprox. ${endShort}`}
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
@@ -443,38 +459,56 @@ export function MobileShiftOperationsSheet({
                         {formatShiftCode(shift.shift_code)}
                       </span>
                     )}
-                    {weekendLabel && (
-                      <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                        · {weekendLabel}
-                      </span>
-                    )}
+                    <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground truncate">
+                      {dateLabel(shift.date)}
+                    </span>
                   </div>
                   <h2 className="text-lg font-semibold tracking-tight leading-tight line-clamp-2">
-                    {clientName && clientName !== "—" ? clientName : (shift.title || "Shift")}
+                    {headerTitle}
                   </h2>
-                  <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                    {dateLabel(shift.date)} · <span className="font-semibold tabular-nums text-foreground/80">{coverageBit}</span> asignados
+                  {subtitle && (
+                    <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                      {subtitle}
+                    </p>
+                  )}
+                  {/* Status line */}
+                  <p className={cn(
+                    "text-xs mt-1.5 font-semibold tabular-nums",
+                    published && understaffed ? "text-rose-700 dark:text-rose-400"
+                      : draft ? "text-muted-foreground"
+                      : "text-foreground/85"
+                  )}>
+                    {statusText}
                   </p>
-                  {/* Stafly Work Route — Entrada protagonista; Termina aprox. secundario. */}
+                  {/* Schedule line */}
                   <div className="mt-1.5 flex items-baseline gap-2">
                     <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground/70">Entrada</span>
                     <span className="text-xl font-bold font-mono tabular-nums text-foreground leading-none">{startShort}</span>
                     <span className="text-[11px] text-muted-foreground/80 truncate">· Termina aprox. <span className="font-mono tabular-nums">{endShort}</span></span>
                   </div>
-                  {mp ? (
-                    <p className="text-[11px] text-muted-foreground mt-1 truncate flex items-center gap-1">
-                      <MapPin className="h-3 w-3 shrink-0 opacity-70" />
-                      <span className="truncate">
-                        Punto de encuentro: <span className="text-foreground/90 font-medium">{mp}</span>
-                        {mt && <> · <span className="font-mono tabular-nums">{mt}</span></>}
-                      </span>
-                    </p>
-                  ) : (
-                    <p className="text-[11px] text-muted-foreground mt-1 truncate flex items-center gap-1">
-                      <MapPin className="h-3 w-3 shrink-0 opacity-70" />
-                      <span className="truncate">{locationName || "No location"}</span>
-                    </p>
-                  )}
+                  {/* Trabajo + Encuentro */}
+                  <div className="mt-2 space-y-1">
+                    <div className="flex items-start gap-1.5 text-[11px]">
+                      <Building2 className="h-3 w-3 shrink-0 mt-0.5 opacity-70 text-muted-foreground" />
+                      <span className="text-muted-foreground shrink-0">Trabajo:</span>
+                      {locationName ? (
+                        <span className="text-foreground/90 font-medium line-clamp-2">{locationName}</span>
+                      ) : (
+                        <span className="text-amber-700 dark:text-amber-400 font-medium">Falta ubicación</span>
+                      )}
+                    </div>
+                    <div className="flex items-start gap-1.5 text-[11px]">
+                      <MapPin className="h-3 w-3 shrink-0 mt-0.5 opacity-70 text-muted-foreground" />
+                      <span className="text-muted-foreground shrink-0">Encuentro:</span>
+                      {mp ? (
+                        <span className="text-foreground/90 font-medium line-clamp-2">
+                          {mp}{mt && <> · <span className="font-mono tabular-nums">{mt}</span></>}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground/80">Sin punto de encuentro</span>
+                      )}
+                    </div>
+                  </div>
                 </div>
                 <div className="flex flex-col items-end gap-1.5 shrink-0">
                   <Button
@@ -489,7 +523,7 @@ export function MobileShiftOperationsSheet({
                   {pill && (
                     <Badge
                       variant="outline"
-                      className={cn("h-[20px] px-2 text-[10px] font-semibold", pill.cls)}
+                      className={cn("h-[22px] px-2.5 text-[11px] font-bold tabular-nums", pill.cls)}
                     >
                       {pill.label}
                     </Badge>
