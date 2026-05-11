@@ -446,11 +446,11 @@ export default function MyDocuments() {
       {/* Other / optional documents */}
       <div className="space-y-2.5 pt-2">
         <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70 px-1">
-          Other documents
+          Otros documentos
         </p>
         <div className="rounded-2xl border border-border/40 bg-card p-3.5 shadow-xs">
           <p className="text-[11.5px] text-muted-foreground leading-relaxed">
-            Anything else your company asked for? Upload it here.
+            Cualquier otro documento que tu compañía solicite. Súbelo aquí.
           </p>
 
           {otherDocs.length > 0 && (
@@ -466,7 +466,7 @@ export default function MyDocuments() {
                     type="button"
                     onClick={() => handleView(d)}
                     className="h-7 w-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-background"
-                    aria-label="View"
+                    aria-label="Ver documento"
                   >
                     <Eye className="h-3.5 w-3.5" />
                   </button>
@@ -474,7 +474,7 @@ export default function MyDocuments() {
                     type="button"
                     onClick={() => handleDelete(d)}
                     className="h-7 w-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                    aria-label="Delete"
+                    aria-label="Eliminar"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
@@ -508,7 +508,7 @@ export default function MyDocuments() {
               ) : (
                 <Upload className="h-3.5 w-3.5" />
               )}
-              Upload another document
+              Subir otro documento
             </Button>
           </div>
         </div>
@@ -516,8 +516,8 @@ export default function MyDocuments() {
         {!canDrive && (
           <p className="text-[10px] text-muted-foreground/60 px-1 flex items-start gap-1.5">
             <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />
-            If you'll be driving for the company, ask your supervisor to enable that
-            in your profile so your driver's license becomes a required document.
+            Si vas a manejar para la compañía, pídele a tu supervisor que lo active en tu perfil
+            para que tu licencia de conducir sea un documento requerido.
           </p>
         )}
       </div>
