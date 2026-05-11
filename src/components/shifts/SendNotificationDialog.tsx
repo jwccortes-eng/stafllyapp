@@ -23,6 +23,15 @@ interface SendNotificationDialogProps {
   shift: Shift;
   assignments: Assignment[];
   employees: Employee[];
+  /** Work Route enrichments (all optional, frontend-only). When provided
+   *  the dialog renders a Work Route summary and exposes extra template
+   *  variables. Legacy callers that omit them keep working unchanged. */
+  meetingPoint?: string | null;
+  meetingTime?: string | null;
+  clientName?: string | null;
+  jobSiteName?: string | null;
+  specialInstructions?: string | null;
+  friendlyDate?: string | null;
 }
 
 interface NotificationTemplate {
