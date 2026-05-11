@@ -1455,12 +1455,24 @@ const WorkerRow = memo(function WorkerRow({
             {roleBadge.label}
           </span>
         )}
-        {showAssignStatus && (
+        {isImportedNotResponded ? (
+          <span
+            className="inline-flex items-center h-5 px-1.5 rounded-full border border-sky-500/40 bg-sky-500/10 text-sky-700 dark:text-sky-400 text-[10px] font-semibold"
+            title="Importado desde Connecteam. Aún no confirmado en Stafly."
+          >
+            Asignado/importado
+          </span>
+        ) : showAssignStatus ? (
           <span className="inline-flex items-center h-5 px-1.5 rounded-full bg-muted text-muted-foreground text-[10px] font-semibold capitalize">
             {statusLow.replace(/_/g, " ")}
           </span>
-        )}
+        ) : null}
       </div>
+      {isImportedNotResponded && (
+        <p className="mt-1 text-[10.5px] text-muted-foreground/90 leading-snug">
+          Importado desde Connecteam. Aún no confirmado en Stafly.
+        </p>
+      )}
 
       {phone ? (
         <div className="flex items-center gap-1.5 mt-2.5">
