@@ -41,6 +41,8 @@ import {
   type RawShiftRow,
   type NormalizedRowInput,
 } from "@/lib/import/schedule-traceability";
+import { parseShiftNote } from "@/lib/import/note-parser";
+import { buildImportWarning, type ImportWarning } from "@/lib/import/import-warnings";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const ACCEPTED_EXTENSIONS = ".xls,.xlsx,.csv";
@@ -540,7 +542,7 @@ export default function ImportSchedule() {
       const [{ data: employees }, { data: clients }] = await Promise.all([
         supabase
           .from("employees")
-          .select("id, first_name, last_name, phone_number, email, employer_identification, connecteam_employee_id")
+          .select("id, first_name, last_name, phone_number, email, employer_identification, connecteam_employee_id, is_active")
           .eq("company_id", selectedCompanyId),
         supabase.from("clients").select("id, name").eq("company_id", selectedCompanyId).is("deleted_at", null),
       ]);
@@ -595,14 +597,20 @@ export default function ImportSchedule() {
       });
       const targetDiagnostics = new Map<string, TargetShiftDiagnostic>();
       // Cache resolution per name to avoid double-counting telemetry.
-      const resolveCache = new Map<string, { id: string | null; ambiguous: boolean; method: MatchMethod | null }>();
-      const resolveOnce = (name: string): { id: string | null; ambiguous: boolean; method: MatchMethod | null } => {
+      const resolveCache = new Map<string, { id: string | null; ambiguous: boolean; method: MatchMethod | null; replacedInactiveId?: string; needsActiveDuplicateReview?: boolean }>();
+      const resolveOnce = (name: string) => {
         const cached = resolveCache.get(name);
         if (cached) return cached;
         const ambiguousBefore = resolver.ambiguous.length;
         const r = resolver.resolveByName(name);
         const ambiguousAfter = resolver.ambiguous.length;
-        const result = { id: r?.employeeId ?? null, ambiguous: ambiguousAfter > ambiguousBefore, method: r?.method ?? null };
+        const result = {
+          id: r?.employeeId ?? null,
+          ambiguous: ambiguousAfter > ambiguousBefore,
+          method: r?.method ?? null,
+          replacedInactiveId: r?.replacedInactiveId,
+          needsActiveDuplicateReview: r?.needsActiveDuplicateReview,
+        };
         resolveCache.set(name, result);
         return result;
       };
@@ -610,6 +618,26 @@ export default function ImportSchedule() {
       for (const empName of allEmpNames) {
         if (/^system\s/i.test(empName)) continue;
         resolveOnce(empName);
+      }
+      // Pre-emit name-level warnings (one per unique raw name) for the
+      // inactive-fallback paths so admins see them even when the assignment
+      // ultimately succeeds.
+      const importWarningsForResolver: ImportWarning[] = [];
+      for (const [rawName, r] of resolveCache) {
+        if (r.replacedInactiveId && !r.needsActiveDuplicateReview) {
+          importWarningsForResolver.push(buildImportWarning("INACTIVE_MATCH_REPLACED_WITH_ACTIVE", {
+            raw_employee_name: rawName,
+            matched_employee_id: r.id,
+            details: { inactive_employee_id: r.replacedInactiveId, active_employee_id: r.id },
+          }));
+        }
+        if (r.needsActiveDuplicateReview) {
+          importWarningsForResolver.push(buildImportWarning("MULTIPLE_ACTIVE_DUPLICATES_NEED_REVIEW", {
+            raw_employee_name: rawName,
+            matched_employee_id: r.id,
+            details: { inactive_employee_id: r.replacedInactiveId },
+          }));
+        }
       }
 
       let totalShifts = 0;
@@ -619,8 +647,12 @@ export default function ImportSchedule() {
       let matchedClients = 0;
       let unmatchedClientsSet = new Set<string>();
       const assignmentFailures: AssignmentFailure[] = [];
+      // ── DS5.1 Import Hardening: structured warnings persisted to import_batches.warnings ──
+      const importWarnings: ImportWarning[] = [];
+      // Cache of address → location_id created/reused during this import
+      const locationCache = new Map<string, string | null>();
 
-      /** Helper: build the shift-context fields from a ShiftGroup. */
+      /** Build the shift-context fields from a ShiftGroup. */
       const failureCtx = (group: ShiftGroup) => {
         const numericCode = group.shiftCode ? group.shiftCode.match(/^(\d+)/)?.[1] || group.shiftCode : "";
         return {
@@ -630,6 +662,69 @@ export default function ImportSchedule() {
           end_time: group.endTime,
           client: group.job,
         };
+      };
+
+      /** Build the shift-scope payload reused by every warning emitted in this import. */
+      const warnCtx = (group: ShiftGroup) => {
+        const numericCode = group.shiftCode ? group.shiftCode.match(/^(\d+)/)?.[1] || group.shiftCode : "";
+        return {
+          shift_code: numericCode,
+          date: group.date,
+          start_time: group.startTime,
+          end_time: group.endTime,
+          job: group.job,
+        };
+      };
+
+      /**
+       * Look up or create a canonical `locations` row for the given Connecteam
+       * Address. Returns the location_id, or null if the address is empty.
+       * Idempotent within an import via locationCache. Skipped in dry-run.
+       */
+      const resolveAddressToLocation = async (
+        address: string,
+        clientId: string | null,
+      ): Promise<string | null> => {
+        const norm = (address ?? "").trim();
+        if (!norm) return null;
+        const cacheKey = `${clientId ?? "_"}|${norm.toLowerCase()}`;
+        if (locationCache.has(cacheKey)) return locationCache.get(cacheKey) ?? null;
+        if (isDryRun) {
+          locationCache.set(cacheKey, null);
+          return null;
+        }
+        // Try reuse: same company + same address (case-insensitive)
+        const { data: existing } = await supabase
+          .from("locations")
+          .select("id")
+          .eq("company_id", selectedCompanyId)
+          .ilike("address", norm)
+          .is("deleted_at", null)
+          .limit(1)
+          .maybeSingle();
+        if (existing?.id) {
+          locationCache.set(cacheKey, existing.id);
+          return existing.id;
+        }
+        // Create canonical location row. Name = first segment of address.
+        const shortName = norm.split(",")[0]?.trim().slice(0, 80) || norm.slice(0, 80);
+        const { data: created, error: createErr } = await supabase
+          .from("locations")
+          .insert({
+            company_id: selectedCompanyId,
+            client_id: clientId,
+            name: shortName,
+            address: norm,
+            status: "active",
+          } as any)
+          .select("id")
+          .single();
+        if (createErr || !created) {
+          locationCache.set(cacheKey, null);
+          return null;
+        }
+        locationCache.set(cacheKey, created.id);
+        return created.id;
       };
 
       // ── Fetch existing shifts for deduplication (composite key) ──
@@ -808,26 +903,44 @@ export default function ImportSchedule() {
               if (diagRow) { diagRow.assignmentResult = "inserted"; diagRow.reason = null; }
             } else {
               if (diagRow) { diagRow.assignmentResult = "insert_error"; diagRow.reason = error.message; }
+              const ft = classifySupabaseError(error.message);
               assignmentFailures.push(buildFailure({
                 ...failureCtx(group),
                 raw_employee_name: r.rawName,
                 employee_id: r.empId,
                 match_method: diagRow?.matchMethod ?? null,
-                failure_type: classifySupabaseError(error.message),
+                failure_type: ft,
                 error_message: error.message,
               }));
+              if (ft === "overlap") {
+                importWarnings.push(buildImportWarning("WORKER_OMITTED_OVERLAP_NEEDS_REVIEW", {
+                  ...warnCtx(group),
+                  raw_employee_name: r.rawName,
+                  matched_employee_id: r.empId,
+                  details: { error: error.message },
+                }));
+              }
             }
           } catch (ex: any) {
             const exMsg = ex?.message ?? String(ex);
             if (diagRow) { diagRow.insertAttempt = "yes"; diagRow.assignmentResult = "insert_exception"; diagRow.reason = exMsg; }
+            const ft = classifySupabaseError(exMsg);
             assignmentFailures.push(buildFailure({
               ...failureCtx(group),
               raw_employee_name: r.rawName,
               employee_id: r.empId,
               match_method: diagRow?.matchMethod ?? null,
-              failure_type: classifySupabaseError(exMsg),
+              failure_type: ft,
               error_message: exMsg,
             }));
+            if (ft === "overlap") {
+              importWarnings.push(buildImportWarning("WORKER_OMITTED_OVERLAP_NEEDS_REVIEW", {
+                ...warnCtx(group),
+                raw_employee_name: r.rawName,
+                matched_employee_id: r.empId,
+                details: { error: exMsg },
+              }));
+            }
           }
         }
 
@@ -946,6 +1059,47 @@ export default function ImportSchedule() {
             }
           }
 
+          // ── DS5.1 Hardening: Address → location_id (NOT meeting_point) ──
+          const jobSiteLocationId = await resolveAddressToLocation(group.address || "", clientId);
+          if (group.address) {
+            importWarnings.push(buildImportWarning("ADDRESS_MAPPED_TO_LOCATION", {
+              ...warnCtx(group),
+              details: { address: group.address, location_id: jobSiteLocationId, dry_run: isDryRun },
+            }));
+          }
+
+          // ── DS5.1 Hardening: parse Note → meeting_point text + meeting_time + driver hint ──
+          const parsedNote = parseShiftNote(group.note);
+          let meetingPointText: string | null = parsedNote.meetingPointText;
+          let meetingTimeValue: string | null = parsedNote.meetingTime;
+          if (parsedNote.meetingPointText || parsedNote.meetingTime || parsedNote.driverHint) {
+            importWarnings.push(buildImportWarning("NOTE_MEETING_POINT_PARSED", {
+              ...warnCtx(group),
+              details: {
+                meeting_point_text: parsedNote.meetingPointText,
+                meeting_time: parsedNote.meetingTime,
+                driver_hint: parsedNote.driverHint,
+                confidence: parsedNote.confidence,
+              },
+            }));
+          }
+          if (group.note && parsedNote.confidence === "low") {
+            importWarnings.push(buildImportWarning("NOTE_PARSE_NEEDS_REVIEW", {
+              ...warnCtx(group),
+              details: { raw_note: group.note },
+            }));
+          }
+          // Emit IMPORTED_ACCEPT_NOT_STAFLY_RESPONSE warning per worker with `accept` source status.
+          for (let _ei = 0; _ei < group.employees.length; _ei++) {
+            const _statusRaw = (group.employeeStatuses[_ei] || "").toLowerCase();
+            if (_statusRaw === "accept") {
+              importWarnings.push(buildImportWarning("IMPORTED_ACCEPT_NOT_STAFLY_RESPONSE", {
+                ...warnCtx(group),
+                raw_employee_name: group.employees[_ei],
+              }));
+            }
+          }
+
           const reconHash = buildShiftHash(selectedCompanyId, numericCode || "", group.date, group.startTime, group.endTime);
           shiftPayloads.push({
             company_id: selectedCompanyId,
@@ -955,7 +1109,11 @@ export default function ImportSchedule() {
             end_time: group.endTime,
             client_id: clientId,
             notes: group.note || null,
-            meeting_point: group.address || null,
+            // Address NEVER goes to meeting_point — only the parsed note text does.
+            meeting_point: meetingPointText,
+            meeting_time: meetingTimeValue,
+            location_id: jobSiteLocationId,
+            job_site_location_id: jobSiteLocationId,
             shift_code: numericCode || null,
             status: shiftStatus,
             slots: realEmployees.length || 1,
@@ -1101,25 +1259,43 @@ export default function ImportSchedule() {
                   if (!error) {
                     totalAssignments++;
                   } else {
+                    const ft = classifySupabaseError(error.message);
                     assignmentFailures.push(buildFailure({
                       ...failureCtx(meta.group),
                       raw_employee_name: meta.rawName,
                       employee_id: payload.employee_id,
                       match_method: meta.method,
-                      failure_type: classifySupabaseError(error.message),
+                      failure_type: ft,
                       error_message: error.message,
                     }));
+                    if (ft === "overlap") {
+                      importWarnings.push(buildImportWarning("WORKER_OMITTED_OVERLAP_NEEDS_REVIEW", {
+                        ...warnCtx(meta.group),
+                        raw_employee_name: meta.rawName,
+                        matched_employee_id: payload.employee_id,
+                        details: { error: error.message },
+                      }));
+                    }
                   }
                 } catch (ex: any) {
                   const exMsg = ex?.message ?? String(ex);
+                  const ft = classifySupabaseError(exMsg);
                   assignmentFailures.push(buildFailure({
                     ...failureCtx(meta.group),
                     raw_employee_name: meta.rawName,
                     employee_id: payload.employee_id,
                     match_method: meta.method,
-                    failure_type: classifySupabaseError(exMsg),
+                    failure_type: ft,
                     error_message: exMsg,
                   }));
+                  if (ft === "overlap") {
+                    importWarnings.push(buildImportWarning("WORKER_OMITTED_OVERLAP_NEEDS_REVIEW", {
+                      ...warnCtx(meta.group),
+                      raw_employee_name: meta.rawName,
+                      matched_employee_id: payload.employee_id,
+                      details: { error: exMsg },
+                    }));
+                  }
                 }
               }
             } else {
@@ -1272,7 +1448,23 @@ export default function ImportSchedule() {
           duplicatesSkipped: skippedDuplicates,
           clientsCreated: createdClients,
           unmatchedEmployees: Array.from(unmatchedEmployeesSet),
-          warnings: assignmentFailures.slice(0, 50),
+          warnings: [
+            ...importWarningsForResolver,
+            ...importWarnings,
+            ...assignmentFailures.slice(0, 50).map(f => ({
+              code: f.failure_type === "overlap" ? "WORKER_OMITTED_OVERLAP_NEEDS_REVIEW" : "ASSIGNMENT_FAILURE",
+              severity: "warn",
+              shift_code: f.shift_code,
+              date: f.date,
+              start_time: f.start_time,
+              end_time: f.end_time,
+              job: f.client,
+              raw_employee_name: f.raw_employee_name,
+              matched_employee_id: f.employee_id,
+              recommended_action: f.suggested_action,
+              details: { error: f.error_message, failure_type: f.failure_type },
+            })),
+          ].slice(0, 200),
         });
         // Restore the dry-run marker after finalize() defaulted status to "completed".
         if (isDryRun) {

@@ -31,6 +31,10 @@ export interface EmployeeRecord {
   email?: string | null;
   employer_identification?: string | null;
   connecteam_employee_id?: string | null;
+  /** Whether the worker is active in Stafly. Used by the inactive-duplicate
+   * fallback so the resolver can prefer an active record when the matched
+   * employee is inactive but a same-name active duplicate exists. */
+  is_active?: boolean | null;
 }
 
 /** Auxiliary record from the Connecteam Users export (parseConnecteamFile). */
@@ -56,6 +60,11 @@ export interface MatchResult {
   employeeId: string;
   method: MatchMethod;
   confidence: "high" | "medium" | "low";
+  /** Set when the original exact-name match was an inactive employee and the
+   * resolver replaced it with the only active same-name duplicate. */
+  replacedInactiveId?: string;
+  /** True when the exact-name match resolved to multiple active duplicates. */
+  needsActiveDuplicateReview?: boolean;
 }
 
 export interface MatchTelemetry {
@@ -145,8 +154,10 @@ interface EmployeeIndex {
   byPhone: Map<string, string>;            // 10-digit phone → empId
   byEmail: Map<string, string>;            // normalized email → empId
   byName: Map<string, string[]>;           // normalized full name → empIds[]
+  byNameActive: Map<string, string[]>;     // normalized full name → ACTIVE empIds[]
   byReversed: Map<string, string[]>;       // reversed normalized name → empIds[]
   allNames: Array<{ id: string; norm: string; display: string }>; // for fuzzy
+  activeIds: Set<string>;                  // ids known to be active
 }
 
 /** Auxiliary index: maps normalized name → identifiers from the Users export. */
@@ -161,20 +172,31 @@ export function buildEmployeeIndex(employees: EmployeeRecord[]): EmployeeIndex {
     byPhone: new Map(),
     byEmail: new Map(),
     byName: new Map(),
+    byNameActive: new Map(),
     byReversed: new Map(),
     allNames: [],
+    activeIds: new Set(),
   };
 
   for (const e of employees) {
     const display = `${e.first_name ?? ""} ${e.last_name ?? ""}`.trim();
     const norm = normalizeName(display);
     const reversed = reverseNormalizedName(display);
+    // Treat undefined as active to keep callers that don't pass `is_active`
+    // from breaking — they simply skip the inactive-fallback path.
+    const isActive = e.is_active !== false;
+    if (isActive) idx.activeIds.add(e.id);
 
     if (norm) {
       const arr = idx.byName.get(norm) ?? [];
       arr.push(e.id);
       idx.byName.set(norm, arr);
       idx.allNames.push({ id: e.id, norm, display });
+      if (isActive) {
+        const arrA = idx.byNameActive.get(norm) ?? [];
+        arrA.push(e.id);
+        idx.byNameActive.set(norm, arrA);
+      }
     }
     if (reversed) {
       const arr = idx.byReversed.get(reversed) ?? [];
@@ -275,13 +297,46 @@ export class EmployeeResolver {
       }
     }
 
-    // 2) Exact normalized name
+    // 2) Exact normalized name (with inactive-duplicate fallback)
     const exact = this.empIndex.byName.get(norm);
     if (exact && exact.length === 1) {
+      const onlyId = exact[0];
+      // If the only exact match is inactive, look for an active same-name twin.
+      if (!this.empIndex.activeIds.has(onlyId)) {
+        const activeTwins = this.empIndex.byNameActive.get(norm) ?? [];
+        if (activeTwins.length === 1) {
+          this.telemetry.exact_name++;
+          return {
+            employeeId: activeTwins[0],
+            method: "exact_name",
+            confidence: "high",
+            replacedInactiveId: onlyId,
+          };
+        }
+        if (activeTwins.length > 1) {
+          this.recordAmbiguous(trimmed, activeTwins, "exact_name");
+          this.telemetry.ambiguous++;
+          return {
+            employeeId: activeTwins[0],
+            method: "exact_name",
+            confidence: "low",
+            needsActiveDuplicateReview: true,
+            replacedInactiveId: onlyId,
+          };
+        }
+        // No active twin — keep current behavior (return inactive id; caller
+        // decides whether to flag EMPLOYEE_INACTIVE).
+      }
       this.telemetry.exact_name++;
-      return { employeeId: exact[0], method: "exact_name", confidence: "high" };
+      return { employeeId: onlyId, method: "exact_name", confidence: "high" };
     }
     if (exact && exact.length > 1) {
+      // Multiple matches — prefer active subset when possible.
+      const activeTwins = this.empIndex.byNameActive.get(norm) ?? [];
+      if (activeTwins.length === 1) {
+        this.telemetry.exact_name++;
+        return { employeeId: activeTwins[0], method: "exact_name", confidence: "high" };
+      }
       this.recordAmbiguous(trimmed, exact, "exact_name");
       this.telemetry.ambiguous++;
       return null;
