@@ -328,13 +328,13 @@ const BUCKET_META: Record<Bucket, {
   label: string; icon: React.ComponentType<{ className?: string }>;
   tone: "good" | "info" | "warn" | "muted" | "bad";
 }> = {
-  confirmed: { label: "Confirmed", icon: ShieldCheck, tone: "good" },
-  accepted: { label: "Accepted", icon: CheckCircle2, tone: "info" },
-  pending: { label: "Pending", icon: Clock, tone: "warn" },
-  rejected_by_worker: { label: "Rejected", icon: UserX, tone: "bad" },
-  removed: { label: "Removed", icon: UserMinus, tone: "muted" },
-  no_show: { label: "No-show / Absent", icon: AlertTriangle, tone: "bad" },
-  other: { label: "Other", icon: AlertCircle, tone: "muted" },
+  confirmed: { label: "Confirmados", icon: ShieldCheck, tone: "good" },
+  accepted: { label: "Aceptados", icon: CheckCircle2, tone: "info" },
+  pending: { label: "Pendientes", icon: Clock, tone: "warn" },
+  rejected_by_worker: { label: "Rechazados", icon: UserX, tone: "bad" },
+  removed: { label: "Removidos", icon: UserMinus, tone: "muted" },
+  no_show: { label: "No-show / Ausente", icon: AlertTriangle, tone: "bad" },
+  other: { label: "Otros", icon: AlertCircle, tone: "muted" },
 };
 
 function toneToClass(tone: "good" | "info" | "warn" | "muted" | "bad"): string {
