@@ -44,6 +44,12 @@ interface NotificationTemplate {
 
 export function SendNotificationDialog({
   open, onOpenChange, shift, assignments, employees,
+  meetingPoint: meetingPointProp = null,
+  meetingTime = null,
+  clientName = null,
+  jobSiteName = null,
+  specialInstructions = null,
+  friendlyDate = null,
 }: SendNotificationDialogProps) {
   const { user } = useAuth();
   const { selectedCompanyId } = useCompany();
