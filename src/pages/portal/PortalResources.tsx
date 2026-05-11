@@ -61,6 +61,7 @@ export default function PortalResources() {
         <HelpCircle className="h-6 w-6 text-muted-foreground/30 mx-auto" />
         <p className="text-xs text-muted-foreground/70">¿Necesitas ayuda? Contacta a tu administrador</p>
       </StaflyCard>
+    </StaflyPageShell>
   );
 }
 
