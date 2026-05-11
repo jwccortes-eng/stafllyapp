@@ -183,8 +183,13 @@ export default function EmployeeLayout() {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto overflow-x-hidden w-full max-w-full px-4 py-4 animate-fade-in">
-          <Outlet context={{ openMore: () => setMoreOpen(true) }} />
+        <main
+          className={cn(
+            "flex-1 overflow-y-auto overflow-x-hidden w-full max-w-full animate-fade-in",
+            chromeMode === "legacy" && "px-4 py-4"
+          )}
+        >
+          <Outlet context={{ openMore: () => setMoreOpen(true), chromeMode, setChromeMode }} />
         </main>
 
         {navAndSheet}
