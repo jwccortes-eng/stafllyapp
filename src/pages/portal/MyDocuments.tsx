@@ -134,7 +134,7 @@ export default function MyDocuments() {
   const handleUpload = async (category: DocumentCategory, file: File) => {
     if (!employeeId || !companyId) return;
     if (file.size > MAX_FILE_BYTES) {
-      toast({ title: "File too large", description: "Max 15 MB per document.", variant: "destructive" });
+      toast({ title: "Archivo demasiado grande", description: "Máximo 15 MB por documento.", variant: "destructive" });
       return;
     }
     setUploadingCat(category);
@@ -164,12 +164,12 @@ export default function MyDocuments() {
         throw rowErr;
       }
 
-      toast({ title: "Document uploaded", description: "Pending admin review." });
+      toast({ title: "Documento subido", description: "Pendiente de revisión por admin." });
       await refresh();
       // Refresh readiness so banners across the portal update without a hard reload.
       readiness.refresh();
     } catch (err: any) {
-      toast({ title: "Upload failed", description: err?.message ?? "Try again.", variant: "destructive" });
+      toast({ title: "Error al subir", description: err?.message ?? "Inténtalo de nuevo.", variant: "destructive" });
     } finally {
       setUploadingCat(null);
     }
