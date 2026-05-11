@@ -97,7 +97,7 @@ export default function MyShifts() {
     // selection or upstream bug can never leak cross-tenant assignments.
     const { data: assignData } = await supabase
       .from("shift_assignments")
-      .select(`id, status, response_status, accepted_shift_version, scheduled_shifts!inner (id, title, date, start_time, end_time, notes, status, slots, shift_code, meeting_point, special_instructions, company_id, operational_version, locations (name), clients (name))`)
+      .select(`id, status, response_status, accepted_shift_version, scheduled_shifts!inner (id, title, date, start_time, end_time, notes, status, slots, shift_code, meeting_point, meeting_time, special_instructions, company_id, operational_version, locations (name), clients (name))`)
       .eq("employee_id", employeeId)
       .eq("company_id", emp.company_id)
       .eq("is_draft_reservation", false)
