@@ -1041,7 +1041,7 @@ function WorkerRow({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-                Logged action
+                Acción registrada
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               {allowedActions.map((next) => {
