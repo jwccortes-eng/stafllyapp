@@ -76,19 +76,19 @@ const MOBILE_SHIFT_COPY = {
   noClientTitle: "Falta cliente",
   noClientHelper: "Agrega el cliente desde escritorio para identificar este turno fácilmente.",
   noLocationTitle: "Falta ubicación del trabajo",
-  noLocationHelper: "Agrega la ubicación desde escritorio. El punto de encuentro es distinto — es donde se reúnen los trabajadores, no el lugar real.",
+  noLocationHelper: "El punto de encuentro es distinto — es donde se reúnen los trabajadores, no el lugar real. Puedes reportar la ubicación correcta desde móvil; los cambios avanzados siguen en escritorio.",
   noLocationOrMeetingTitle: "Falta ubicación y punto de encuentro",
-  noLocationOrMeetingHelper: "Los trabajadores no sabrán a dónde ir. Agrega una ubicación desde escritorio.",
+  noLocationOrMeetingHelper: "Los trabajadores no sabrán a dónde ir. Reporta la ubicación correcta desde móvil o edítala en escritorio.",
   noMeetingPoint: "Sin punto de encuentro.",
 
   // Notes section
   notesSectionHelper: "Notas internas de este turno.",
   noNotesTitle: "Sin notas",
-  noNotesHelper: "Las notas internas se pueden agregar desde escritorio por ahora.",
+  noNotesHelper: "Las notas internas se pueden agregar desde escritorio.",
 
   // Worker row — no phone state
   noPhoneTitle: "Sin teléfono registrado",
-  noPhoneHelper: "Agrega un número en el perfil del trabajador para habilitar llamada, SMS y WhatsApp.",
+  noPhoneHelper: "Agrega el número desde móvil para habilitar llamada, SMS y WhatsApp.",
 
   // Error states
   teamErrorTitle: "No se pudo cargar el equipo",
