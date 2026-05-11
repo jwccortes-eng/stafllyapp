@@ -594,7 +594,7 @@ export function MobileShiftOperationsSheet({
                 <p className="text-[11px] text-muted-foreground mb-1.5 px-0.5">
                   {MOBILE_SHIFT_COPY.assignedSortedHelper}
                 </p>
-                <div className="space-y-1.5 max-h-[360px] overflow-y-auto pr-1 -mr-1">
+                <div className="space-y-1.5">
                   {sortedAssignedWorkers.map(w => {
                     const extra = asgnByEmployeeId.get(w.id) ?? null;
                     return (
