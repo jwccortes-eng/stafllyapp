@@ -30,6 +30,8 @@ import {
   type AgendaItem,
   type AgendaStatus,
 } from "@/components/mobile-agenda";
+import { HistoryShiftRow } from "@/components/mobile-agenda/HistoryShiftRow";
+import { useWorkedShiftHistory } from "@/hooks/useWorkedShiftHistory";
 
 interface ShiftAssignment {
   id: string;
@@ -342,6 +344,19 @@ export default function MyShifts() {
   const upcomingCount = assignments.filter(a => !isBefore(parseISO(a.shift.date), today) && !isToday(parseISO(a.shift.date))).length;
   const pastCount = assignments.filter(a => isBefore(parseISO(a.shift.date), today)).length;
 
+  // ── Phase H1/H2 — enrich History tab with REAL clock & period status.
+  // Hook is called unconditionally (Rules of Hooks). It is a no-op when the
+  // visible set is empty, so non-history tabs do not trigger any query.
+  const portalCompanyId = assignments.find(a => a.shift.company_id)?.shift.company_id ?? null;
+  const visibleHistoryShifts = activeTab === "history"
+    ? filtered.slice(0, historyVisible).map(a => ({ shiftId: a.shift.id, date: a.shift.date }))
+    : [];
+  const workedHistory = useWorkedShiftHistory({
+    employeeId: employeeId ?? null,
+    companyId: portalCompanyId,
+    visibleShifts: visibleHistoryShifts,
+  });
+
   // History count is intentionally not shown as a badge — it grows unbounded
   // and creates noise (e.g. "99+"). Today/Upcoming/Available keep their counts.
   const tabs: { key: TabFilter; label: string; count: number; showCount: boolean }[] = [
@@ -591,7 +606,7 @@ export default function MyShifts() {
             else buckets[2].items.push(a);
           }
 
-          let globalIdx = 0;
+          
           return (
             <div className="space-y-4">
               <p className="text-[11px] text-muted-foreground/60 px-1 -mt-1">
@@ -602,7 +617,33 @@ export default function MyShifts() {
                 <section key={b.key} className="space-y-2">
                   <AgendaSectionHeader title={b.label} />
                   <OperationalTimeline>
-                    {b.items.map((a) => renderRow(a, globalIdx++, "compact"))}
+                    {b.items.map((a) => {
+                      const w = workedHistory.byShiftId[a.shift.id];
+                      const subtitleParts = [
+                        a.shift.client?.name,
+                        a.shift.location?.name,
+                      ].filter(Boolean) as string[];
+                      return (
+                        <HistoryShiftRow
+                          key={a.id}
+                          shiftId={a.shift.id}
+                          date={a.shift.date}
+                          title={formatDisplayName(a.shift.title) || "Turno"}
+                          subtitle={subtitleParts.length ? subtitleParts.map(formatDisplayName).join(" · ") : null}
+                          scheduledStart={a.shift.start_time}
+                          scheduledEnd={a.shift.end_time}
+                          clockIn={w?.clockIn ?? null}
+                          clockOut={w?.clockOut ?? null}
+                          workedMinutes={w?.workedMinutes ?? 0}
+                          hasOpenClock={w?.hasOpenClock ?? false}
+                          hasClosedTimeEntry={w?.hasClosedTimeEntry ?? false}
+                          workerStatus={w?.workerStatus ?? "no_period_yet"}
+                          hasRide={w?.hasRide ?? false}
+                          loading={workedHistory.loading && !w}
+                          onClick={() => setSelectedShift(a)}
+                        />
+                      );
+                    })}
                   </OperationalTimeline>
                 </section>
               ))}
