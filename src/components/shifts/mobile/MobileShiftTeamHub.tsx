@@ -234,32 +234,32 @@ function buildReminderText(workerName: string): string {
 }
 
 const HUB_COPY = {
-  intro: "Read-only team view. Staffing changes still happen on desktop.",
-  safetyNote: "Staffing changes are available from desktop for now. This mobile view is read-only.",
-  loadError: "Couldn't load team data. Check your connection and try again.",
-  tabsAria: "Team management sections",
-  // Overview
-  overviewHelper: "Live snapshot of staffing for this shift.",
-  // Assigned
-  assignedHelper: "Grouped by lifecycle status. Tap to contact workers.",
-  emptyAssignedTitle: "No workers assigned yet",
-  emptyAssignedHelper: "Use desktop staffing tools to add workers.",
-  noPhone: "No phone on file",
-  // Claims
-  claimsHelper: "Workers who claimed or requested this shift.",
-  claimsManagedDesktop: "Approving claims is still done on desktop.",
-  emptyClaimsTitle: "No open requests",
-  emptyClaimsHelper: "Worker claims for this shift will show here.",
-  // Issues
-  issuesHelper: "Items that may need attention before the shift starts.",
-  emptyIssuesTitle: "No issues detected",
-  emptyIssuesHelper: "Coverage looks healthy and worker contact data is complete.",
-  // Recommended
-  recommendedHelper: "Smart recommendations are coming in a later phase.",
+  intro: "Vista de equipo. Algunos cambios avanzados aún se hacen en escritorio.",
+  safetyNote: "Desde móvil puedes revisar cobertura y contactar trabajadores. Los cambios avanzados de personal están disponibles desde escritorio por ahora.",
+  loadError: "No se pudieron cargar los datos del equipo. Revisa tu conexión e inténtalo de nuevo.",
+  tabsAria: "Secciones de gestión del equipo",
+  // Resumen
+  overviewHelper: "Resumen rápido de cobertura para este turno.",
+  // Asignados
+  assignedHelper: "Agrupados por estado. Toca para contactar al trabajador.",
+  emptyAssignedTitle: "Aún no hay trabajadores asignados",
+  emptyAssignedHelper: "Usa las herramientas de escritorio para agregar trabajadores.",
+  noPhone: "Sin teléfono registrado",
+  // Solicitudes
+  claimsHelper: "Trabajadores que solicitaron este turno.",
+  claimsManagedDesktop: "Aprobar solicitudes aún se hace desde escritorio.",
+  emptyClaimsTitle: "Sin solicitudes",
+  emptyClaimsHelper: "Las solicitudes de trabajadores aparecerán aquí.",
+  // Alertas
+  issuesHelper: "Puntos que debes revisar antes del turno.",
+  emptyIssuesTitle: "Sin alertas",
+  emptyIssuesHelper: "La cobertura se ve bien y los datos de contacto están completos.",
+  // Recomendados
+  recommendedHelper: "Recomendaciones inteligentes según disponibilidad, historial y perfil.",
   recommendedPlaceholder:
-    "Recommended workers will combine availability, rating, role fit, and history. Available in a later phase.",
-  openDesktopStaffing: "Open desktop staffing tools",
-  permissionGate: "You don't have permission to manage this shift.",
+    "Los trabajadores recomendados combinan disponibilidad, calificación, rol e historial.",
+  openDesktopStaffing: "Abrir herramientas de escritorio",
+  permissionGate: "No tienes permiso para gestionar este turno.",
 } as const;
 
 export type HubAssignment = {
