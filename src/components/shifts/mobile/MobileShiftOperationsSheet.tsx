@@ -1309,15 +1309,16 @@ function BriefRow({ tone, text }: { tone: "good" | "warn" | "bad" | "info"; text
 
 function CoverChip({
   label, value, tone = "default",
-}: { label: string; value: number | string; tone?: "default" | "good" | "warn" | "bad" | "muted" }) {
+}: { label: string; value: number | string; tone?: "default" | "good" | "warn" | "bad" | "muted" | "info" }) {
   const cls =
     tone === "good" ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30" :
     tone === "warn" ? "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30" :
     tone === "bad"  ? "bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/30" :
+    tone === "info" ? "bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-500/30" :
     tone === "muted" ? "bg-muted/50 text-muted-foreground border-border/50" :
     "bg-card text-foreground border-border/60";
   return (
-    <div className={cn("inline-flex items-center gap-1.5 h-8 px-2.5 rounded-full border text-[11px] font-medium", cls)}>
+    <div className={cn("inline-flex items-center gap-1 h-7 px-2 rounded-full border text-[10.5px] font-medium", cls)}>
       <span className="font-semibold tabular-nums">{value}</span>
       <span className="opacity-80">{label}</span>
     </div>
