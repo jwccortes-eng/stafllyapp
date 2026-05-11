@@ -621,8 +621,12 @@ export default function ImportSchedule() {
       let matchedClients = 0;
       let unmatchedClientsSet = new Set<string>();
       const assignmentFailures: AssignmentFailure[] = [];
+      // ── DS5.1 Import Hardening: structured warnings persisted to import_batches.warnings ──
+      const importWarnings: ImportWarning[] = [];
+      // Cache of address → location_id created/reused during this import
+      const locationCache = new Map<string, string | null>();
 
-      /** Helper: build the shift-context fields from a ShiftGroup. */
+      /** Build the shift-context fields from a ShiftGroup. */
       const failureCtx = (group: ShiftGroup) => {
         const numericCode = group.shiftCode ? group.shiftCode.match(/^(\d+)/)?.[1] || group.shiftCode : "";
         return {
@@ -632,6 +636,69 @@ export default function ImportSchedule() {
           end_time: group.endTime,
           client: group.job,
         };
+      };
+
+      /** Build the shift-scope payload reused by every warning emitted in this import. */
+      const warnCtx = (group: ShiftGroup) => {
+        const numericCode = group.shiftCode ? group.shiftCode.match(/^(\d+)/)?.[1] || group.shiftCode : "";
+        return {
+          shift_code: numericCode,
+          date: group.date,
+          start_time: group.startTime,
+          end_time: group.endTime,
+          job: group.job,
+        };
+      };
+
+      /**
+       * Look up or create a canonical `locations` row for the given Connecteam
+       * Address. Returns the location_id, or null if the address is empty.
+       * Idempotent within an import via locationCache. Skipped in dry-run.
+       */
+      const resolveAddressToLocation = async (
+        address: string,
+        clientId: string | null,
+      ): Promise<string | null> => {
+        const norm = (address ?? "").trim();
+        if (!norm) return null;
+        const cacheKey = `${clientId ?? "_"}|${norm.toLowerCase()}`;
+        if (locationCache.has(cacheKey)) return locationCache.get(cacheKey) ?? null;
+        if (isDryRun) {
+          locationCache.set(cacheKey, null);
+          return null;
+        }
+        // Try reuse: same company + same address (case-insensitive)
+        const { data: existing } = await supabase
+          .from("locations")
+          .select("id")
+          .eq("company_id", selectedCompanyId)
+          .ilike("address", norm)
+          .is("deleted_at", null)
+          .limit(1)
+          .maybeSingle();
+        if (existing?.id) {
+          locationCache.set(cacheKey, existing.id);
+          return existing.id;
+        }
+        // Create canonical location row. Name = first segment of address.
+        const shortName = norm.split(",")[0]?.trim().slice(0, 80) || norm.slice(0, 80);
+        const { data: created, error: createErr } = await supabase
+          .from("locations")
+          .insert({
+            company_id: selectedCompanyId,
+            client_id: clientId,
+            name: shortName,
+            address: norm,
+            status: "active",
+          } as any)
+          .select("id")
+          .single();
+        if (createErr || !created) {
+          locationCache.set(cacheKey, null);
+          return null;
+        }
+        locationCache.set(cacheKey, created.id);
+        return created.id;
       };
 
       // ── Fetch existing shifts for deduplication (composite key) ──
