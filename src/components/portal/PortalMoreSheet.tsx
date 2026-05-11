@@ -64,9 +64,9 @@ export function PortalMoreSheet({
         onClick={onClose}
       />
 
-      <div className="relative w-full max-h-[85vh] overflow-hidden bg-card border-t border-border/30 rounded-t-3xl shadow-2xl animate-in slide-in-from-bottom duration-300">
+      <div className="relative w-full max-h-[90vh] flex flex-col bg-card border-t border-border/30 rounded-t-3xl shadow-2xl animate-in slide-in-from-bottom duration-300">
         {/* Handle */}
-        <div className="flex justify-center pt-3 pb-1">
+        <div className="shrink-0 flex justify-center pt-3 pb-1">
           <div className="w-10 h-1 rounded-full bg-border/50" />
         </div>
 
