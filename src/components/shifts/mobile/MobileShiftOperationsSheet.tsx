@@ -192,7 +192,7 @@ export function MobileShiftOperationsSheet({
           .neq("status", "rejected"),
         supabase
           .from("scheduled_shifts")
-          .select("shift_admin_id")
+          .select("shift_admin_id, meeting_point, meeting_time")
           .eq("id", shift.id)
           .maybeSingle(),
       ]);
@@ -201,7 +201,9 @@ export function MobileShiftOperationsSheet({
         setTeamError(MOBILE_SHIFT_COPY.teamErrorTitle);
       }
       setAsgnExtras(((asgnRes.data ?? []) as any));
-      setShiftAdminId(((shiftRes.data as any)?.shift_admin_id) ?? null);
+      const sd = (shiftRes.data as any) ?? null;
+      setShiftAdminId(sd?.shift_admin_id ?? null);
+      setShiftMeeting({ point: sd?.meeting_point ?? null, time: sd?.meeting_time ?? null });
       const map: Record<string, { clock_in: string | null; clock_out: string | null }> = {};
       for (const te of (teRes.data ?? []) as any[]) {
         const prev = map[te.employee_id];
