@@ -425,6 +425,53 @@ export default function MyShifts() {
     meeting_point: a.shift.meeting_point,
   });
 
+  // Maps a worker assignment to the presentation-only AgendaItem contract
+  // used by the mobile-agenda library. No business logic here.
+  const mapToAgendaItem = (a: ShiftAssignment): AgendaItem => {
+    const ds = getDisplayStatus(a);
+    const status: AgendaStatus =
+      ds === "confirmed" ? "confirmed"
+      : ds === "needs_reacceptance" ? "needs_reacceptance"
+      : ds === "rejected" ? "rejected"
+      : isBefore(parseISO(a.shift.date), today) ? "past"
+      : "pending";
+    const start = (a.shift.start_time ?? "").slice(0, 5);
+    const end = a.shift.end_time ? a.shift.end_time.slice(0, 5) : null;
+    const meetingTime = a.shift.meeting_time ? a.shift.meeting_time.slice(0, 5) : null;
+    return {
+      id: a.id,
+      date: a.shift.date,
+      startTime: start,
+      endTime: end,
+      title: formatDisplayName(a.shift.title) || "Turno",
+      subtitle: a.shift.client?.name
+        ? `${formatDisplayName(a.shift.client.name)}${a.shift.location?.name ? ` · ${formatDisplayName(a.shift.location.name)}` : ""}`
+        : a.shift.location?.name ? formatDisplayName(a.shift.location.name) : null,
+      meetingPoint: a.shift.meeting_point
+        ? { address: a.shift.meeting_point, time: meetingTime }
+        : null,
+      status,
+    };
+  };
+
+  // Next upcoming assignment that still matters operationally (accepted, pending,
+  // or needs_reacceptance). Used for the hero card on Today/Upcoming tabs.
+  const nextHeroAssignment: ShiftAssignment | null = (() => {
+    if (activeTab !== "today" && activeTab !== "upcoming") return null;
+    return (
+      filtered.find(
+        (a) =>
+          !isBefore(parseISO(a.shift.date), today) &&
+          ["accepted", "pending", "needs_reacceptance"].includes(a.response_status),
+      ) ?? null
+    );
+  })();
+
+  const responseOwedFor = (a: ShiftAssignment) =>
+    (a.response_status === "pending" || a.response_status === "needs_reacceptance") &&
+    !isBefore(parseISO(a.shift.date), today);
+
+
   return (
     <div className="animate-fade-in pb-24">
       {/* Minimal header — title only, subtitle merged into active tab context */}
