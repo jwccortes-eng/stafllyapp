@@ -52,46 +52,46 @@ import {
  */
 const MOBILE_SHIFT_COPY = {
   // Shared
-  readOnlyMobile: "Read-only on mobile",
+  readOnlyMobile: "Solo lectura en móvil",
 
   // Coverage section
-  coverageHelper: "Required spots, assigned workers, and current staffing status.",
+  coverageHelper: "Cupos requeridos, trabajadores asignados y estado actual de personal.",
 
   // Assigned workers section
-  assignedWorkersHelper: "Review assigned workers and contact them safely from mobile.",
-  assignedSortedHelper: "Sorted by role and attendance status.",
-  noWorkersTitle: "No workers assigned yet",
-  noWorkersHelper: "Add workers from desktop before reviewing coverage or attendance.",
+  assignedWorkersHelper: "Revisa el equipo asignado y contáctalos desde el móvil.",
+  assignedSortedHelper: "Ordenado por rol y estado de asistencia.",
+  noWorkersTitle: "Aún no hay trabajadores asignados",
+  noWorkersHelper: "Agrega trabajadores desde escritorio antes de revisar cobertura o asistencia.",
 
   // Attendance section
-  attendanceSectionHelper: "Review clock-in and clock-out activity.",
-  attendanceUnavailableTitle: "Attendance unavailable",
-  attendanceUnavailableHelper: "Assign workers first before reviewing attendance.",
-  noClockActivityTitle: "No clock activity yet",
-  noClockActivityHelper: "Clock-in and clock-out activity will appear here when workers start.",
+  attendanceSectionHelper: "Revisa la actividad de entrada y salida.",
+  attendanceUnavailableTitle: "Asistencia no disponible",
+  attendanceUnavailableHelper: "Asigna trabajadores antes de revisar la asistencia.",
+  noClockActivityTitle: "Sin actividad de reloj",
+  noClockActivityHelper: "La actividad de entrada y salida aparecerá aquí cuando los trabajadores empiecen.",
 
   // Shift details section
-  shiftDetailsHelper: "Review the core shift information.",
-  noClientTitle: "No client set",
-  noClientHelper: "Add the client from desktop so this shift is easier to identify.",
-  noLocationTitle: "Missing job site / venue",
-  noLocationHelper: "Add the job site from desktop. Meeting points are different — they're worker pickup spots, not the actual venue.",
-  noLocationOrMeetingTitle: "No location or meeting point",
-  noLocationOrMeetingHelper: "Workers won't know where to go or where to meet. Add a job site from desktop.",
-  noMeetingPoint: "No meeting point set.",
+  shiftDetailsHelper: "Información principal del turno.",
+  noClientTitle: "Falta cliente",
+  noClientHelper: "Agrega el cliente desde escritorio para identificar este turno fácilmente.",
+  noLocationTitle: "Falta ubicación del trabajo",
+  noLocationHelper: "Agrega la ubicación desde escritorio. El punto de encuentro es distinto — es donde se reúnen los trabajadores, no el lugar real.",
+  noLocationOrMeetingTitle: "Falta ubicación y punto de encuentro",
+  noLocationOrMeetingHelper: "Los trabajadores no sabrán a dónde ir. Agrega una ubicación desde escritorio.",
+  noMeetingPoint: "Sin punto de encuentro.",
 
   // Notes section
-  notesSectionHelper: "Internal notes for this shift.",
-  noNotesTitle: "No notes yet",
-  noNotesHelper: "Internal notes can be added from desktop for now.",
+  notesSectionHelper: "Notas internas de este turno.",
+  noNotesTitle: "Sin notas",
+  noNotesHelper: "Las notas internas se pueden agregar desde escritorio por ahora.",
 
   // Worker row — no phone state
-  noPhoneTitle: "No phone on file",
-  noPhoneHelper: "Add a phone number from the worker profile to enable call, SMS, and WhatsApp.",
+  noPhoneTitle: "Sin teléfono registrado",
+  noPhoneHelper: "Agrega un número en el perfil del trabajador para habilitar llamada, SMS y WhatsApp.",
 
   // Error states
-  teamErrorTitle: "Couldn't load team data",
-  teamErrorHelper: "Check your connection and try again. No shift data was changed.",
+  teamErrorTitle: "No se pudo cargar el equipo",
+  teamErrorHelper: "Revisa tu conexión e intenta de nuevo. No se cambió ningún dato del turno.",
 } as const;
 
 interface Props {
