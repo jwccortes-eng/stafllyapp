@@ -3,7 +3,7 @@
  * Use these instead of ad-hoc tailwind classes.
  *
  * DS1B: This file is now a thin compatibility layer over `stafly-ui/tokens.ts`.
- * Prefer importing the STAFLY_* tokens directly. The MOBILE_*/CARD_*/TXT_*
+ * Prefer importing the STAFLY_* tokens directly. The MOBILE_, CARD_ and TXT_
  * names below remain as deprecated aliases for incremental migration.
  */
 import {
