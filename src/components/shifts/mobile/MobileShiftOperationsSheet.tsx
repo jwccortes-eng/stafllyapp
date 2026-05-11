@@ -360,8 +360,8 @@ export function MobileShiftOperationsSheet({
     const cov = slots > 0
       ? `Assigned ${assignedCount}/${slots}${understaffed ? ` · Needs ${slots - assignedCount} worker${slots - assignedCount === 1 ? "" : "s"}` : ""}`
       : `Assigned ${assignedCount}`;
-    const meetBit = shiftMeeting.point ? ` · Meeting: ${shiftMeeting.point}${shiftMeeting.time ? ` ${formatTimeShort(shiftMeeting.time)}` : ""}` : "";
-    return `${code}${placeBits || "Shift"} · ${dateBit} · Entrada ${formatTimeShort(shift.start_time)} (ends ~${formatTimeShort(shift.end_time)})${meetBit} · ${cov}`;
+    const meetBit = shiftMeeting.point ? ` · Punto de encuentro: ${shiftMeeting.point}${shiftMeeting.time ? ` ${formatTimeShort(shiftMeeting.time)}` : ""}` : "";
+    return `${code}${placeBits || "Shift"} · ${dateBit} · Entrada ${formatTimeShort(shift.start_time)} · Termina aprox. ${formatTimeShort(shift.end_time)}${meetBit} · ${cov}`;
   })();
 
   const handleCopySummary = async () => {
