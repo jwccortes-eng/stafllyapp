@@ -46,7 +46,7 @@ const DOMINANT_TONE: Partial<Record<WorkerShiftStatus, string>> = {
   published: "bg-sky-500/12 text-sky-700 dark:text-sky-400 border-sky-500/30",
   in_review: "bg-violet-500/12 text-violet-700 dark:text-violet-400 border-violet-500/30",
   pending_validation: "bg-amber-500/12 text-amber-700 dark:text-amber-400 border-amber-500/30",
-  no_period_yet: "bg-muted text-muted-foreground border-border/50",
+  no_period_yet: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/25",
 };
 
 function pickDominant(slices: WorkedSlice[]): WorkerShiftStatus | null {
