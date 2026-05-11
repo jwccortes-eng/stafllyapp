@@ -154,8 +154,10 @@ interface EmployeeIndex {
   byPhone: Map<string, string>;            // 10-digit phone → empId
   byEmail: Map<string, string>;            // normalized email → empId
   byName: Map<string, string[]>;           // normalized full name → empIds[]
+  byNameActive: Map<string, string[]>;     // normalized full name → ACTIVE empIds[]
   byReversed: Map<string, string[]>;       // reversed normalized name → empIds[]
   allNames: Array<{ id: string; norm: string; display: string }>; // for fuzzy
+  activeIds: Set<string>;                  // ids known to be active
 }
 
 /** Auxiliary index: maps normalized name → identifiers from the Users export. */
