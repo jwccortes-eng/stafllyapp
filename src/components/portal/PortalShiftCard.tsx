@@ -7,6 +7,19 @@ import { es } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { OpsStatusChip, type OpsStatusTone } from "@/components/operations/OpsStatusChip";
 import { formatDisplayName } from "@/lib/format-helpers";
+import { ShiftRouteHeader, type ShiftRouteHeaderTone } from "@/components/stafly-ui";
+
+/** Map ops chip tone → ShiftRouteHeader tone (visual parity preserved). */
+function mapStatusTone(tone: OpsStatusTone): ShiftRouteHeaderTone {
+  switch (tone) {
+    case "success": return "success";
+    case "warning": return "warning";
+    case "critical": return "danger";
+    case "info":
+    case "primary": return "info";
+    default: return "neutral";
+  }
+}
 
 export interface PortalShiftData {
   id: string;
