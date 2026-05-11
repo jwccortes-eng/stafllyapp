@@ -38,6 +38,13 @@ interface ShiftShareMenuProps {
   startTime: string;
   recipientName?: string | null;
   recipientPhone?: string | null;
+  // ── Work Route extensions (all optional). ──
+  endTime?: string | null;
+  meetingPoint?: string | null;
+  meetingTime?: string | null;
+  jobSite?: string | null;
+  instructions?: string | null;
+  clientName?: string | null;
   /** Visual variant */
   variant?: "default" | "ghost" | "outline";
   size?: "sm" | "default";
@@ -77,6 +84,12 @@ export function ShiftShareMenu({
   startTime,
   recipientName,
   recipientPhone,
+  endTime,
+  meetingPoint,
+  meetingTime,
+  jobSite,
+  instructions,
+  clientName,
   variant = "outline",
   size = "sm",
   compact = false,
@@ -99,13 +112,19 @@ export function ShiftShareMenu({
           date,
           startTime,
           recipientName,
+          endTime,
+          meetingPoint,
+          meetingTime,
+          jobSite,
+          instructions,
+          clientName,
         };
         await fn(ctx);
       } finally {
         setBusy(false);
       }
     },
-    [shiftId, token, title, date, startTime, recipientName],
+    [shiftId, token, title, date, startTime, recipientName, endTime, meetingPoint, meetingTime, jobSite, instructions, clientName],
   );
 
   if (compact) {
