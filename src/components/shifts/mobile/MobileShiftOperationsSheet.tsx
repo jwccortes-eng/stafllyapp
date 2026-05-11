@@ -1362,6 +1362,7 @@ function areWorkerRowPropsEqual(
 
 const WorkerRow = memo(function WorkerRow({
   worker, assignmentStatus, attendanceStatus, role, clock, isShiftAdmin,
+  acceptedAt, respondedAt, importBatchId, canManagePhone, onPhoneSaved,
 }: {
   worker: Employee;
   assignmentStatus: string | null;
@@ -1369,6 +1370,11 @@ const WorkerRow = memo(function WorkerRow({
   role: string | null;
   clock: { clock_in: string | null; clock_out: string | null } | undefined;
   isShiftAdmin: boolean;
+  acceptedAt?: string | null;
+  respondedAt?: string | null;
+  importBatchId?: string | null;
+  canManagePhone?: boolean;
+  onPhoneSaved?: () => void;
 }) {
   const phone = worker.phone_number?.trim();
   const normalized = normalizePhone(phone);
@@ -1378,7 +1384,11 @@ const WorkerRow = memo(function WorkerRow({
   const att = attendanceBadgeFor(attendanceStatus, clock);
   const roleBadge = roleBadgeFor(role, isShiftAdmin);
   const statusLow = (assignmentStatus ?? "").toLowerCase();
+  const isImportedNotResponded =
+    !!importBatchId && !acceptedAt && !respondedAt &&
+    (statusLow === "accepted" || statusLow === "assigned");
   const showAssignStatus = statusLow && !["accepted", "confirmed", "assigned"].includes(statusLow);
+  const [savingPhone, setSavingPhone] = useState(false);
 
   const handleCopy = async () => {
     if (!phone) return;
@@ -1387,6 +1397,30 @@ const WorkerRow = memo(function WorkerRow({
       toast.success("Teléfono copiado");
     } catch {
       toast.error("No se pudo copiar el teléfono");
+    }
+  };
+
+  const handleAddPhone = async () => {
+    const raw = window.prompt(`Agregar teléfono para ${workerName} (10 dígitos)`, "");
+    if (raw == null) return;
+    const digits = normalizePhone(raw);
+    if (digits.length < 10) {
+      toast.error("Número inválido. Debe tener 10 dígitos.");
+      return;
+    }
+    setSavingPhone(true);
+    try {
+      const { error } = await supabase
+        .from("employees")
+        .update({ phone_number: digits })
+        .eq("id", worker.id);
+      if (error) throw error;
+      toast.success("Teléfono guardado");
+      onPhoneSaved?.();
+    } catch (e: any) {
+      toast.error(e?.message ?? "No se pudo guardar el teléfono");
+    } finally {
+      setSavingPhone(false);
     }
   };
 
