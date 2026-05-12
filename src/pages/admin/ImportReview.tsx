@@ -13,6 +13,22 @@ import type { ImportWarning, ImportWarningCode } from "@/lib/import/import-warni
 import { buildReviewModel } from "@/lib/import-review/build-review-model";
 import type { DiffStatus, ReviewModel, ReviewShift } from "@/lib/import-review/types";
 import { reviewToCsv, downloadCsv } from "@/lib/import-review/csv-export";
+import { downloadDiffXlsx } from "@/lib/import-review/xlsx-export";
+import { downloadDiffPdf } from "@/lib/import-review/pdf-export";
+import { downloadWeeklySchedule } from "@/lib/import-review/weekly-export";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+
+type FilterKey =
+  | "all"
+  | "needs_review"
+  | "possible_duplicate"
+  | "missing_workers"
+  | "location_issues"
+  | "duplicate_workers"
+  | "imported_accept"
+  | "pay_ride"
+  | "placeholder";
 
 const STATUS_LABEL: Record<DiffStatus, string> = {
   matched_exact: "Matched exactly",
@@ -59,6 +75,12 @@ export default function ImportReview() {
   const [loading, setLoading] = useState(false);
   const [openShift, setOpenShift] = useState<ReviewShift | null>(null);
   const [reviewedTick, setReviewedTick] = useState(0);
+  const [filter, setFilter] = useState<FilterKey>("all");
+  const [clientFilter, setClientFilter] = useState<string>("");
+  const [dateFilter, setDateFilter] = useState<string>("");
+  const [weekFrom, setWeekFrom] = useState<string>("");
+  const [weekTo, setWeekTo] = useState<string>("");
+  const [exportingWeek, setExportingWeek] = useState(false);
 
   // Load recent dry-run batches
   useEffect(() => {
