@@ -27,6 +27,8 @@ import { TeamSection } from "./form/TeamSection";
 import { PaySection } from "./form/PaySection";
 import { AdvancedDetailsSection } from "./form/AdvancedDetailsSection";
 import { ShiftSummaryPanel } from "./form/ShiftSummaryPanel";
+import { ShiftWorkspaceLayout } from "./workspace/ShiftWorkspaceLayout";
+import { buildShiftDisplayName, isAutoDisplayName } from "@/lib/shifts/display-name";
 
 // ────────────────────────────────────────────────────────────────────────────
 // Types
