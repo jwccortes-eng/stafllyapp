@@ -86,7 +86,7 @@ function PrePublishDialogImpl({ open, onOpenChange, data, saving, onConfirm }: P
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto overflow-x-hidden p-0">
         <div className="px-6 pt-6 pb-4 border-b border-border/40">
           <DialogHeader>
             <DialogTitle className="text-lg font-bold font-heading">Antes de publicar</DialogTitle>
@@ -108,7 +108,7 @@ function PrePublishDialogImpl({ open, onOpenChange, data, saving, onConfirm }: P
                 </Badge>
               )}
             </div>
-            <dl className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
+            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
               <SummaryRow icon={Clock} label="Fecha" value={fmtDate(data.date)} muted={!data.date} />
               <SummaryRow
                 icon={Clock}
@@ -227,12 +227,13 @@ function PrePublishDialogImpl({ open, onOpenChange, data, saving, onConfirm }: P
           )}
         </div>
 
-        <DialogFooter className="px-6 py-4 border-t border-border/40 bg-muted/10 gap-2">
+        <DialogFooter className="px-6 py-4 border-t border-border/40 bg-muted/10 gap-2 flex-col-reverse sm:flex-row">
           <Button
             variant="outline"
             size="sm"
             onClick={() => onOpenChange(false)}
             disabled={saving}
+            className="w-full sm:w-auto"
           >
             Volver a editar
           </Button>
@@ -240,7 +241,7 @@ function PrePublishDialogImpl({ open, onOpenChange, data, saving, onConfirm }: P
             size="sm"
             onClick={() => void onConfirm()}
             disabled={ctaDisabled}
-            className="gap-1.5 font-semibold"
+            className="gap-1.5 font-semibold w-full sm:w-auto"
           >
             {saving ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
