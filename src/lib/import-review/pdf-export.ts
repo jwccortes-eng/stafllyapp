@@ -5,14 +5,11 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import type { ReviewModel } from "./types";
+import { WARNING_HUMAN_LABEL, DIFF_STATUS_HUMAN_LABEL } from "./labels";
+import type { ImportWarningCode } from "@/lib/import/import-warnings";
 
-const STATUS_LABEL: Record<string, string> = {
-  matched_exact: "Matched",
-  matched_fallback: "Fallback",
-  would_create: "Would create",
-  possible_duplicate: "Duplicate?",
-  needs_review: "Needs review",
-};
+const STATUS_LABEL: Record<string, string> = DIFF_STATUS_HUMAN_LABEL;
+const humanWarn = (code: string) => WARNING_HUMAN_LABEL[code as ImportWarningCode] ?? code;
 
 export function downloadDiffPdf(model: ReviewModel, fileName: string) {
   const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "letter" });
@@ -52,11 +49,11 @@ export function downloadDiffPdf(model: ReviewModel, fileName: string) {
   if (warnRows.length) {
     autoTable(doc, {
       startY: (doc as any).lastAutoTable.finalY + 14,
-      head: [["Warning code", "Count"]],
-      body: warnRows,
-      styles: { fontSize: 8, font: "courier" },
+      head: [["Warning", "Count", "Technical code"]],
+      body: warnRows.map(([code, n]) => [humanWarn(code), n, code]),
+      styles: { fontSize: 8 },
       headStyles: { fillColor: [226, 232, 240], textColor: 20 },
-      columnStyles: { 1: { halign: "right", cellWidth: 60 } },
+      columnStyles: { 1: { halign: "right", cellWidth: 50 }, 2: { font: "courier", cellWidth: 110 } },
     });
   }
 

@@ -5,14 +5,12 @@
  */
 import ExcelJS from "exceljs";
 import type { ReviewModel } from "./types";
+import { WARNING_HUMAN_LABEL, DIFF_STATUS_HUMAN_LABEL, WORKER_STATUS_HUMAN_LABEL } from "./labels";
+import type { ImportWarningCode } from "@/lib/import/import-warnings";
 
-const STATUS_LABEL: Record<string, string> = {
-  matched_exact: "Matched exactly",
-  matched_fallback: "Matched by fallback",
-  would_create: "Would create new",
-  possible_duplicate: "Possible duplicate",
-  needs_review: "Needs review",
-};
+const humanWarn = (code: string) => WARNING_HUMAN_LABEL[code as ImportWarningCode] ?? code;
+
+const STATUS_LABEL: Record<string, string> = DIFF_STATUS_HUMAN_LABEL;
 
 function autoWidth(ws: ExcelJS.Worksheet) {
   ws.columns.forEach(col => {
@@ -55,10 +53,10 @@ export async function downloadDiffXlsx(model: ReviewModel, fileName: string) {
   sum.addRow(["Possible duplicate", model.totals.possibleDuplicate]);
   sum.addRow(["Needs review", model.totals.needsReview]);
   sum.addRow([]);
-  sum.addRow(["Warning code", "Count"]);
+  sum.addRow(["Warning", "Count", "Technical code"]);
   Object.entries(model.warningCounts)
     .sort((a, b) => b[1] - a[1])
-    .forEach(([code, n]) => sum.addRow([code, n]));
+    .forEach(([code, n]) => sum.addRow([humanWarn(code), n, code]));
   sum.getRow(1).font = { bold: true, size: 14 };
   sum.getRow(8).font = { bold: true };
   sum.getRow(16).font = { bold: true };
@@ -74,7 +72,7 @@ export async function downloadDiffXlsx(model: ReviewModel, fileName: string) {
     "Missing in Stafly", "Extra in Stafly",
     "Source address", "Stafly location",
     "Source note", "Stafly meeting point", "Stafly meeting time",
-    "Warning codes",
+    "Warnings", "Technical warning codes",
   ]);
   for (const s of model.shifts) {
     const expected = s.workers.filter(w => w.status !== "extra_in_stafly");
@@ -93,6 +91,7 @@ export async function downloadDiffXlsx(model: ReviewModel, fileName: string) {
       extra.map(w => w.name).join("; "),
       s.sourceAddress ?? "", s.location.currentLocationName ?? "",
       s.sourceNote ?? "", s.note.currentMeetingPoint ?? "", s.note.currentMeetingTime ?? "",
+      s.warnings.map(w => humanWarn(w.code)).join(", "),
       s.warnings.map(w => w.code).join(", "),
     ]);
   }
@@ -105,7 +104,8 @@ export async function downloadDiffXlsx(model: ReviewModel, fileName: string) {
     "Date", "Start", "End", "Job/Client", "Stafly shift #",
     "Source worker name", "Matched Stafly employee", "Employer #",
     "Match method", "Match confidence",
-    "Status", "Imported accept only", "Warning codes",
+    "Status", "Status (technical)", "Imported accept only",
+    "Warnings", "Technical warning codes",
   ]);
   for (const s of model.shifts) {
     for (const w of s.workers) {
@@ -113,7 +113,9 @@ export async function downloadDiffXlsx(model: ReviewModel, fileName: string) {
         s.date, s.startTime, s.endTime, s.job ?? "", s.staflyShiftCode ?? "",
         w.rawName, w.displayName, w.employerId ?? "",
         w.matchMethod ?? "", w.matchConfidence ?? "",
-        w.status, w.status === "imported_accept_only" ? "yes" : "",
+        WORKER_STATUS_HUMAN_LABEL[w.status] ?? w.status, w.status,
+        w.status === "imported_accept_only" ? "yes" : "",
+        w.warnings.map(x => humanWarn(x.code)).join(", "),
         w.warnings.map(x => x.code).join(", "),
       ]);
     }
@@ -123,13 +125,13 @@ export async function downloadDiffXlsx(model: ReviewModel, fileName: string) {
 
   // ---------- Warnings sheet ----------
   const warns = wb.addWorksheet("Warnings");
-  warns.addRow(["Code", "Severity", "Date", "Start", "End", "Job", "Worker", "Recommended action"]);
+  warns.addRow(["Warning", "Severity", "Date", "Start", "End", "Job", "Worker", "Recommended action", "Technical code"]);
   for (const s of model.shifts) {
     for (const w of s.warnings) {
       warns.addRow([
-        w.code, w.severity, w.date ?? s.date, w.start_time ?? s.startTime,
+        humanWarn(w.code), w.severity, w.date ?? s.date, w.start_time ?? s.startTime,
         w.end_time ?? s.endTime, w.job ?? s.job ?? "",
-        w.raw_employee_name ?? "", w.recommended_action ?? "",
+        w.raw_employee_name ?? "", w.recommended_action ?? "", w.code,
       ]);
     }
   }
