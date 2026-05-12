@@ -1041,12 +1041,24 @@ function DesktopShifts() {
     loadData();
   };
 
+  // Phase 4.2 — gate single-shift publish behind PrePublishDialog so the
+  // operator sees pending info, worker preview, and confirms when publishing
+  // with incomplete data. The actual publish handler below is unchanged.
+  const [pendingPublishShift, setPendingPublishShift] = useState<Shift | null>(null);
+  const [publishingGated, setPublishingGated] = useState(false);
+
   const handlePublishShift = async (shift: Shift) => {
     // require_shift_admin gate
     if (shiftsConfig.require_shift_admin && !(shift as any).shift_admin_id) {
       toast.error("A shift lead must be assigned before publishing");
       return;
     }
+    // Open the review dialog instead of publishing immediately. The
+    // confirmation handler below calls executePublishShift unchanged.
+    setPendingPublishShift(shift);
+  };
+
+  const executePublishShift = async (shift: Shift) => {
     // Use the RPC so draft reservations are lifted atomically and the
     // publication lifecycle stays consistent (publication_status + status).
     const { error: rpcError } = await supabase.rpc("publish_shift_draft" as any, { _shift_id: shift.id });
