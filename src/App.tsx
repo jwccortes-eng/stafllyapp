@@ -59,6 +59,7 @@ const ClientProfile = lazy(() => import("./pages/admin/ClientProfile"));
 const LocationProfile = lazy(() => import("./pages/admin/LocationProfile"));
 const Locations = lazy(() => import("./pages/admin/Locations"));
 const ImportSchedule = lazy(() => import("./pages/admin/ImportSchedule"));
+const ImportReview = lazy(() => import("./pages/admin/ImportReview"));
 const BackfillShift = lazy(() => import("./pages/admin/BackfillShift"));
 const ImportTimeClock = lazy(() => import("./pages/admin/ImportTimeClock"));
 const ImportPayrollExtras = lazy(() => import("./pages/admin/ImportPayrollExtras"));
