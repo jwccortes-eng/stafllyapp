@@ -490,77 +490,123 @@ export default function ImportReview() {
                 <SheetTitle>{openShift.job ?? "Shift"} · {openShift.date} · {openShift.startTime}–{openShift.endTime}</SheetTitle>
               </SheetHeader>
               <div className="space-y-4 mt-4 text-sm">
-                <div className="grid grid-cols-3 gap-3">
-                  <Card><CardHeader className="pb-2"><CardTitle className="text-xs uppercase text-muted-foreground">Connecteam</CardTitle></CardHeader>
-                    <CardContent className="space-y-1 text-xs">
-                      <div>Title: <span className="font-mono">{openShift.sourceShiftTitle ?? "—"}</span></div>
-                      <div>Code: <span className="font-mono">{openShift.sourceShiftCode ?? "—"}</span></div>
-                      <div>Address: {openShift.sourceAddress ?? "—"}</div>
-                      <div>Note: {openShift.sourceNote ?? "—"}</div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <Card>
+                    <CardHeader className="pb-2"><CardTitle className="text-xs font-semibold">Connecteam</CardTitle></CardHeader>
+                    <CardContent className="space-y-1.5 text-xs">
+                      <div><span className="text-muted-foreground">Título:</span> <span className="break-words">{openShift.sourceShiftTitle ?? "—"}</span></div>
+                      <div><span className="text-muted-foreground">Código:</span> <span className="font-mono">{openShift.sourceShiftCode ?? "—"}</span></div>
+                      <div><span className="text-muted-foreground">Dirección:</span> <span className="break-words">{openShift.sourceAddress ?? "—"}</span></div>
+                      <div><span className="text-muted-foreground">Nota:</span> <span className="break-words">{openShift.sourceNote ?? "—"}</span></div>
                     </CardContent>
                   </Card>
-                  <Card><CardHeader className="pb-2"><CardTitle className="text-xs uppercase text-muted-foreground">Stafly</CardTitle></CardHeader>
-                    <CardContent className="space-y-1 text-xs">
-                      <div>Shift: <span className="font-mono">{openShift.staflyShiftCode ? `#${openShift.staflyShiftCode}` : "—"}</span></div>
-                      <div className="font-mono text-[10px] text-muted-foreground break-all">{openShift.staflyShiftId ?? "—"}</div>
-                      <div>Slots: {openShift.staflySlots ?? "—"}</div>
-                      <div>Client: {openShift.staflyClientName ?? "—"}</div>
-                      <div>Location: {openShift.location.currentLocationName ?? "—"}</div>
-                      <div>Meeting: {openShift.note.currentMeetingPoint ?? "—"} {openShift.note.currentMeetingTime ?? ""}</div>
+                  <Card>
+                    <CardHeader className="pb-2"><CardTitle className="text-xs font-semibold">Stafly</CardTitle></CardHeader>
+                    <CardContent className="space-y-1.5 text-xs">
+                      <div><span className="text-muted-foreground">Turno:</span> <span className="font-mono">{openShift.staflyShiftCode ? `#${openShift.staflyShiftCode}` : "—"}</span></div>
+                      <div><span className="text-muted-foreground">Slots:</span> {openShift.staflySlots ?? "—"}</div>
+                      <div><span className="text-muted-foreground">Cliente:</span> <span className="break-words">{openShift.staflyClientName ?? "—"}</span></div>
+                      <div><span className="text-muted-foreground">Ubicación:</span> <span className="break-words">{openShift.location.currentLocationName ?? "—"}</span></div>
+                      <div><span className="text-muted-foreground">Encuentro:</span> <span className="break-words">{openShift.note.currentMeetingPoint ?? "—"} {openShift.note.currentMeetingTime ?? ""}</span></div>
+                      {openShift.note.parsed?.driverHint && (
+                        <div className="text-primary"><span className="text-muted-foreground">Driver sugerido:</span> {openShift.note.parsed.driverHint}</div>
+                      )}
+                      {openShift.staflyShiftId && (
+                        <Collapsible>
+                          <CollapsibleTrigger className="text-[10px] text-muted-foreground inline-flex items-center gap-1 hover:text-foreground">
+                            <ChevronDown className="h-3 w-3" />Más detalles técnicos
+                          </CollapsibleTrigger>
+                          <CollapsibleContent>
+                            <div className="font-mono text-[10px] text-muted-foreground break-all pt-1">{openShift.staflyShiftId}</div>
+                          </CollapsibleContent>
+                        </Collapsible>
+                      )}
                     </CardContent>
                   </Card>
-                  <Card><CardHeader className="pb-2"><CardTitle className="text-xs uppercase text-muted-foreground">Proposal</CardTitle></CardHeader>
-                    <CardContent className="space-y-1 text-xs">
-                      <div><Badge variant={STATUS_VARIANT[openShift.status]}>{STATUS_LABEL[openShift.status]}</Badge></div>
-                      <div>Location: {openShift.location.preserved ? "Preserve current" : openShift.location.willCreate ? "Create job-site" : "—"}</div>
-                      <div>Note: {openShift.note.preserved ? "Preserve current" : openShift.note.parsed ? `Parse → ${openShift.note.parsed.meetingPoint ?? "—"} @ ${openShift.note.parsed.meetingTime ?? "—"}` : openShift.note.needsReview ? "Needs review" : "—"}</div>
+                  <Card>
+                    <CardHeader className="pb-2"><CardTitle className="text-xs font-semibold">Propuesta</CardTitle></CardHeader>
+                    <CardContent className="space-y-1.5 text-xs">
+                      <div><span className="text-muted-foreground">Estado:</span> <Badge variant={STATUS_VARIANT[openShift.status]} className="ml-1">{STATUS_LABEL[openShift.status]}</Badge></div>
+                      <div><span className="text-muted-foreground">Acción ubicación:</span> {openShift.location.preserved ? "Preservar ubicación actual" : openShift.location.willCreate ? "Crear job-site" : "—"}</div>
+                      <div>
+                        <span className="text-muted-foreground">Acción nota:</span>{" "}
+                        {openShift.note.preserved
+                          ? "Preservar encuentro actual"
+                          : openShift.note.parsed
+                            ? `Parsear → ${openShift.note.parsed.meetingPoint ?? "—"}${openShift.note.parsed.meetingTime ? ` @ ${openShift.note.parsed.meetingTime}` : ""}`
+                            : openShift.note.needsReview ? "Requiere revisión" : "—"}
+                      </div>
+                      {openShift.note.parsed?.driverHint && (
+                        <div className="text-primary">Driver sugerido: {openShift.note.parsed.driverHint} <span className="text-muted-foreground">(solo sugerencia)</span></div>
+                      )}
                     </CardContent>
                   </Card>
                 </div>
 
                 <Card>
-                  <CardHeader className="pb-2"><CardTitle className="text-xs uppercase text-muted-foreground">Workers</CardTitle></CardHeader>
-                  <CardContent className="space-y-1">
+                  <CardHeader className="pb-2"><CardTitle className="text-xs font-semibold">Trabajadores</CardTitle></CardHeader>
+                  <CardContent className="space-y-2">
                     {openShift.workers.map((w, i) => {
                       const variant: "default" | "secondary" | "destructive" | "outline" =
                         w.status === "matched" ? "secondary"
                         : w.status === "canonical_duplicate_resolved" ? "default"
                         : w.status === "extra_in_stafly" ? "outline"
                         : "destructive";
+                      const helper = workerStatusHelper(w);
                       return (
-                        <div key={i} className="flex items-center gap-2 py-1 border-b last:border-0 text-xs flex-wrap">
-                          <span className="flex-1 min-w-0">
-                            {w.rawName && w.rawName !== w.displayName && (
-                              <span className="text-muted-foreground">{w.rawName} → </span>
-                            )}
-                            {w.displayName} {w.employerId && <span className="font-mono text-muted-foreground">#{w.employerId}</span>}
-                            {w.status === "canonical_duplicate_resolved" && w.sourceMatchedEmployerId && (
-                              <span className="ml-2 font-mono text-[10px] text-muted-foreground">
-                                (source matched {w.sourceMatchedReason ?? ""} #{w.sourceMatchedEmployerId})
-                              </span>
-                            )}
-                          </span>
-                          <Badge variant={variant} className="text-[10px]">{WORKER_STATUS_LABEL[w.status] ?? w.status}</Badge>
-                          {w.warnings.map((ww, j) => <WarningChip key={j} w={ww} />)}
+                        <div key={i} className="py-2 border-b last:border-0">
+                          <div className="flex items-start gap-2 flex-wrap">
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium text-sm break-words">
+                                {w.displayName}
+                                {w.employerId && <span className="ml-1 font-mono text-xs text-muted-foreground">#{w.employerId}</span>}
+                              </div>
+                              {helper && <div className="text-xs text-muted-foreground mt-0.5">{helper}</div>}
+                            </div>
+                            <Badge variant={variant} className="text-[10px] shrink-0">{WORKER_STATUS_LABEL[w.status] ?? w.status}</Badge>
+                          </div>
+                          {w.warnings.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {w.warnings.map((ww, j) => <WarningChip key={j} w={ww} />)}
+                            </div>
+                          )}
+                          {(w.rawName !== w.displayName || w.sourceMatchedEmployerId) && (
+                            <Collapsible>
+                              <CollapsibleTrigger className="text-[10px] text-muted-foreground inline-flex items-center gap-1 mt-1 hover:text-foreground">
+                                <ChevronDown className="h-3 w-3" />Más detalles técnicos
+                              </CollapsibleTrigger>
+                              <CollapsibleContent>
+                                <div className="font-mono text-[10px] text-muted-foreground pt-1 space-y-0.5">
+                                  {w.rawName !== w.displayName && <div>raw: {w.rawName}</div>}
+                                  {w.sourceMatchedEmployerId && (
+                                    <div>source matched {w.sourceMatchedReason ?? ""} #{w.sourceMatchedEmployerId}</div>
+                                  )}
+                                  {w.matchMethod && <div>match: {w.matchMethod}{w.matchConfidence != null ? ` · ${w.matchConfidence}` : ""}</div>}
+                                </div>
+                              </CollapsibleContent>
+                            </Collapsible>
+                          )}
                         </div>
                       );
                     })}
-                    {openShift.workers.length === 0 && <p className="text-xs text-muted-foreground">No workers.</p>}
+                    {openShift.workers.length === 0 && <p className="text-xs text-muted-foreground">No hay trabajadores.</p>}
                   </CardContent>
                 </Card>
 
                 <Card>
-                  <CardHeader className="pb-2"><CardTitle className="text-xs uppercase text-muted-foreground">Warnings ({openShift.warnings.length})</CardTitle></CardHeader>
-                  <CardContent className="space-y-1">
+                  <CardHeader className="pb-2"><CardTitle className="text-xs font-semibold">Alertas ({openShift.warnings.length})</CardTitle></CardHeader>
+                  <CardContent className="space-y-2">
                     {openShift.warnings.map((w, i) => (
                       <div key={i} className="flex items-start gap-2 text-xs py-1">
                         <WarningChip w={w} />
-                        <div className="flex-1">
-                          {w.raw_employee_name && <div className="text-muted-foreground">{w.raw_employee_name}</div>}
-                          <div>{w.recommended_action}</div>
+                        <div className="flex-1 min-w-0">
+                          {w.raw_employee_name && <div className="text-muted-foreground break-words">{w.raw_employee_name}</div>}
+                          <div className="break-words">{w.recommended_action}</div>
+                          <div className="font-mono text-[10px] text-muted-foreground/70 mt-0.5">{w.code}</div>
                         </div>
                       </div>
                     ))}
+                    {openShift.warnings.length === 0 && <p className="text-xs text-muted-foreground">Sin alertas.</p>}
                   </CardContent>
                 </Card>
               </div>
