@@ -19,7 +19,8 @@ export type ImportWarningCode =
   | "SHIFT_RECONCILED_BY_FALLBACK_KEY"
   | "MULTIPLE_EXISTING_SHIFT_MATCHES_NEED_REVIEW"
   | "PLACEHOLDER_SYSTEM_EXCLUDED"
-  | "PAY_RIDE_DETECTED";
+  | "PAY_RIDE_DETECTED"
+  | "CANONICAL_DUPLICATE_RESOLVED";
 
 export type ImportWarningSeverity = "info" | "warn" | "error";
 
