@@ -113,6 +113,14 @@ export interface ShiftFormFieldsProps {
    * in the right column instead.
    */
   renderInlineSummary?: boolean;
+
+  /**
+   * Layout mode:
+   *  - "stack" (default): vertical stack of sections, identical to legacy.
+   *  - "workspace": premium desktop 2-column grid with auto display-name banner.
+   *    Activate from the create/edit dialogs on lg+ viewports.
+   */
+  layout?: "stack" | "workspace";
 }
 
 // ────────────────────────────────────────────────────────────────────────────
