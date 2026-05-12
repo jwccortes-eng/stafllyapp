@@ -51,21 +51,6 @@ function ShiftBasicInfoSectionImpl({
   onQuickAddClient,
 }: Props) {
   const [datePickerOpen, setDatePickerOpen] = useState(false);
-  const [showAddClient, setShowAddClient] = useState(false);
-  const [newClientName, setNewClientName] = useState("");
-  const [adding, setAdding] = useState(false);
-
-  const submitNew = async () => {
-    if (!newClientName.trim() || !onQuickAddClient) return;
-    setAdding(true);
-    try {
-      await onQuickAddClient(newClientName.trim());
-      setNewClientName("");
-      setShowAddClient(false);
-    } finally {
-      setAdding(false);
-    }
-  };
 
   return (
     <SectionCard icon={Hash} title="Información principal" subtitle="Lo esencial del turno: qué, quién y cuándo.">
@@ -75,51 +60,12 @@ function ShiftBasicInfoSectionImpl({
         </p>
       )}
 
-      <div>
-        <Label className="text-[11px] text-muted-foreground font-medium">Cliente</Label>
-        <div className="flex gap-1 mt-1">
-          <Select
-            value={clientId || "none"}
-            onValueChange={(v) => onChange({ clientId: v === "none" ? "" : v })}
-          >
-            <SelectTrigger className="h-9 text-sm flex-1">
-              <SelectValue placeholder="Sin asignar" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">Sin asignar</SelectItem>
-              {clients.map((c) => (
-                <SelectItem key={c.id} value={c.id}>
-                  {formatDisplayText(c.name, "name")}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {onQuickAddClient && (
-            <Popover open={showAddClient} onOpenChange={setShowAddClient}>
-              <PopoverTrigger asChild>
-                <Button variant="outline" size="icon" className="h-9 w-9 shrink-0">
-                  <Plus className="h-3.5 w-3.5" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-64 p-3" align="end">
-                <p className="text-xs font-medium mb-2">Nuevo cliente</p>
-                <div className="flex gap-1.5">
-                  <Input
-                    value={newClientName}
-                    onChange={(e) => setNewClientName(e.target.value)}
-                    placeholder="Nombre del cliente"
-                    className="h-8 text-sm"
-                    onKeyDown={(e) => e.key === "Enter" && submitNew()}
-                  />
-                  <Button size="sm" className="h-8 px-3 text-xs" onClick={submitNew} disabled={adding || !newClientName.trim()}>
-                    {adding ? <Loader2 className="h-3 w-3 animate-spin" /> : "Crear"}
-                  </Button>
-                </div>
-              </PopoverContent>
-            </Popover>
-          )}
-        </div>
-      </div>
+      <PremiumClientSelector
+        clientId={clientId}
+        clients={clients}
+        onChange={(id) => onChange({ clientId: id })}
+        onQuickAddClient={onQuickAddClient}
+      />
 
       <div>
         <Label className="text-[11px] text-muted-foreground font-medium">Fecha</Label>
