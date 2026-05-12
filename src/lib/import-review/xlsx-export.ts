@@ -104,7 +104,8 @@ export async function downloadDiffXlsx(model: ReviewModel, fileName: string) {
     "Date", "Start", "End", "Job/Client", "Stafly shift #",
     "Source worker name", "Matched Stafly employee", "Employer #",
     "Match method", "Match confidence",
-    "Status", "Imported accept only", "Warning codes",
+    "Status", "Status (technical)", "Imported accept only",
+    "Warnings", "Technical warning codes",
   ]);
   for (const s of model.shifts) {
     for (const w of s.workers) {
@@ -112,7 +113,9 @@ export async function downloadDiffXlsx(model: ReviewModel, fileName: string) {
         s.date, s.startTime, s.endTime, s.job ?? "", s.staflyShiftCode ?? "",
         w.rawName, w.displayName, w.employerId ?? "",
         w.matchMethod ?? "", w.matchConfidence ?? "",
-        w.status, w.status === "imported_accept_only" ? "yes" : "",
+        WORKER_STATUS_HUMAN_LABEL[w.status] ?? w.status, w.status,
+        w.status === "imported_accept_only" ? "yes" : "",
+        w.warnings.map(x => humanWarn(x.code)).join(", "),
         w.warnings.map(x => x.code).join(", "),
       ]);
     }
