@@ -5,18 +5,17 @@
  * Memoized so typing in other sections doesn't re-render this one.
  */
 import { memo, useState } from "react";
-import { CalendarIcon, Clock, Hash, Plus, Loader2 } from "lucide-react";
+import { CalendarIcon, Clock, Hash } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format, parse } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { formatDisplayText } from "@/lib/format-helpers";
 import { SectionCard } from "./section-card";
+import { PremiumClientSelector } from "../workspace/PremiumClientSelector";
 import type { SelectOption } from "../types";
 
 interface Props {
