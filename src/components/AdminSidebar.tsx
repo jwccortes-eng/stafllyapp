@@ -10,7 +10,7 @@ import {
   Inbox, Wrench, Lock, Sparkles, ClipboardList, Receipt, Brain,
   Map as MapIcon, ContactRound, Award, GitCompareArrows,
   FileText, Bell, UserPlus, Star, ArrowLeftRight, Globe, ShieldCheck,
-  Monitor, Radio, UserPlus2, Banknote, Scale,
+  Monitor, Radio, UserPlus2, Banknote, Scale, FileSearch,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
