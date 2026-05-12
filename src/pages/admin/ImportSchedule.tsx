@@ -1111,6 +1111,66 @@ export default function ImportSchedule() {
             continue;
           }
 
+          // ── Part A: Fallback existing-shift match by date|start|end|client ──
+          // Connecteam "Shift title" sometimes differs from Stafly's `shift_code`
+          // (e.g. Excel "35" vs DB "239" for the same J EVENTS shift). When the
+          // strict (shift_code|date|start|end) key misses, attempt a conservative
+          // fallback by (date|start|end|client). Only auto-reconcile when EXACTLY
+          // ONE candidate matches; on multi-match we emit a review warning and
+          // skip insert to avoid silent duplicates.
+          {
+            const fbClientId = matchClient(group.job);
+            const fbCidKey = fbClientId
+              ? `cid:${group.date}|${group.startTime}|${group.endTime}|${fbClientId}`
+              : null;
+            const fbNameKey = `name:${group.date}|${group.startTime}|${group.endTime}|${normalizeJob(group.job)}`;
+            const candidates =
+              (fbCidKey && existingShiftFallbackMap.get(fbCidKey)) ||
+              existingShiftFallbackMap.get(fbNameKey) ||
+              [];
+            if (candidates.length === 1) {
+              const cand = candidates[0];
+              importWarnings.push(buildImportWarning("SHIFT_RECONCILED_BY_FALLBACK_KEY", {
+                shift_code: numericCodeForDedup || null,
+                date: group.date,
+                start_time: group.startTime,
+                end_time: group.endTime,
+                job: group.job ?? null,
+                details: {
+                  source_shift_title: group.shiftCode ?? null,
+                  source_shift_code: numericCodeForDedup || null,
+                  existing_shift_code: cand.shift_code,
+                  source_job: group.job ?? null,
+                  existing_client_id: fbClientId,
+                  matched_scheduled_shift_id: cand.id,
+                  fallback_key: fbCidKey ?? fbNameKey,
+                  reason: "shift_code_mismatch",
+                },
+              }));
+              await reconcileExistingShift(cand.id, cand.slots, group);
+              continue;
+            }
+            if (candidates.length > 1) {
+              importWarnings.push(buildImportWarning("MULTIPLE_EXISTING_SHIFT_MATCHES_NEED_REVIEW", {
+                shift_code: numericCodeForDedup || null,
+                date: group.date,
+                start_time: group.startTime,
+                end_time: group.endTime,
+                job: group.job ?? null,
+                details: {
+                  source_shift_title: group.shiftCode ?? null,
+                  source_job: group.job ?? null,
+                  candidate_shift_ids: candidates.map(c => c.id),
+                  candidate_shift_codes: candidates.map(c => c.shift_code),
+                  fallback_key: fbCidKey ?? fbNameKey,
+                  reason: "multiple_date_time_client_matches",
+                },
+              }));
+              // Skip both reconcile and new-shift insert to avoid silent duplicates.
+              continue;
+            }
+          }
+
           const clientId = matchClient(group.job);
           if (clientId) matchedClients++;
           else if (group.job) unmatchedClientsSet.add(group.job);
