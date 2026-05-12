@@ -314,42 +314,116 @@ export default function ImportReview() {
             </CardContent>
           </Card>
 
-          <div className="space-y-2">
-            {model.shifts.map(s => {
-              const reviewed = reviewedSet.has(s.signature);
-              return (
-                <Card key={s.signature} className={reviewed ? "opacity-60" : ""}>
-                  <CardContent className="p-3 flex items-center gap-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-mono text-xs text-muted-foreground">{s.date}</span>
-                        <span className="font-medium truncate">{s.job ?? "—"}</span>
-                        <span className="text-sm text-muted-foreground">{s.startTime}–{s.endTime}</span>
-                        {s.sourceShiftCode && <span className="font-mono text-xs">#{s.sourceShiftCode}</span>}
-                        {s.staflyShiftCode && s.staflyShiftCode !== s.sourceShiftCode && (
-                          <span className="font-mono text-xs text-primary">→ Stafly #{s.staflyShiftCode}</span>
-                        )}
+          <Card>
+            <CardHeader className="pb-2"><CardTitle className="text-sm">Weekly Stafly Export</CardTitle></CardHeader>
+            <CardContent className="flex flex-wrap items-end gap-2 text-sm">
+              <div>
+                <label className="text-xs text-muted-foreground">From</label>
+                <Input type="date" value={weekFrom || (model?.dateRangeFrom ?? "")} onChange={e => setWeekFrom(e.target.value)} className="h-8 w-40" />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">To</label>
+                <Input type="date" value={weekTo || (model?.dateRangeTo ?? "")} onChange={e => setWeekTo(e.target.value)} className="h-8 w-40" />
+              </div>
+              <Button size="sm" variant="outline" onClick={exportWeek} disabled={exportingWeek || !selectedCompanyId}>
+                <Download className="h-4 w-4 mr-1" />{exportingWeek ? "Exporting…" : "Export week XLSX"}
+              </Button>
+              <p className="text-xs text-muted-foreground ml-auto">Plan hours only — not payroll/worked hours.</p>
+            </CardContent>
+          </Card>
+
+          <Tabs defaultValue="shifts">
+            <TabsList>
+              <TabsTrigger value="shifts">Shifts ({filteredShifts.length}/{model.shifts.length})</TabsTrigger>
+              <TabsTrigger value="warnings">Warnings ({Object.values(model.warningCounts).reduce((a, b) => a + b, 0)})</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="shifts" className="space-y-2">
+              <Card>
+                <CardContent className="p-3 flex flex-wrap items-end gap-2">
+                  <Select value={filter} onValueChange={v => setFilter(v as FilterKey)}>
+                    <SelectTrigger className="h-8 w-[200px]"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All</SelectItem>
+                      <SelectItem value="needs_review">Needs review</SelectItem>
+                      <SelectItem value="possible_duplicate">Possible duplicates</SelectItem>
+                      <SelectItem value="missing_workers">Missing workers</SelectItem>
+                      <SelectItem value="location_issues">Location issues</SelectItem>
+                      <SelectItem value="duplicate_workers">Duplicate workers</SelectItem>
+                      <SelectItem value="imported_accept">Imported accept</SelectItem>
+                      <SelectItem value="pay_ride">PAY RIDE</SelectItem>
+                      <SelectItem value="placeholder">Placeholders</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Input placeholder="Client contains…" value={clientFilter} onChange={e => setClientFilter(e.target.value)} className="h-8 w-56" />
+                  <Input type="date" value={dateFilter} onChange={e => setDateFilter(e.target.value)} className="h-8 w-40" />
+                  <Button variant="ghost" size="sm" onClick={() => { setFilter("all"); setClientFilter(""); setDateFilter(""); }}>Clear</Button>
+                </CardContent>
+              </Card>
+
+              {filteredShifts.map(s => {
+                const reviewed = reviewedSet.has(s.signature);
+                return (
+                  <Card key={s.signature} className={reviewed ? "opacity-60" : ""}>
+                    <CardContent className="p-3 flex items-center gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-mono text-xs text-muted-foreground">{s.date}</span>
+                          <span className="font-medium truncate">{s.job ?? "—"}</span>
+                          <span className="text-sm text-muted-foreground">{s.startTime}–{s.endTime}</span>
+                          {s.sourceShiftCode && <span className="font-mono text-xs">#{s.sourceShiftCode}</span>}
+                          {s.staflyShiftCode && s.staflyShiftCode !== s.sourceShiftCode && (
+                            <span className="font-mono text-xs text-primary">→ Stafly #{s.staflyShiftCode}</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1 mt-1 flex-wrap">
+                          <Badge variant={STATUS_VARIANT[s.status]}>{STATUS_LABEL[s.status]}</Badge>
+                          <span className="text-xs text-muted-foreground">{s.workers.filter(w => w.status !== "extra_in_stafly").length} workers</span>
+                          {s.warnings.slice(0, 4).map((w, i) => <WarningChip key={i} w={w} />)}
+                          {s.warnings.length > 4 && <span className="text-xs text-muted-foreground">+{s.warnings.length - 4}</span>}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1 mt-1 flex-wrap">
-                        <Badge variant={STATUS_VARIANT[s.status]}>{STATUS_LABEL[s.status]}</Badge>
-                        <span className="text-xs text-muted-foreground">{s.workers.filter(w => w.status !== "extra_in_stafly").length} workers</span>
-                        {s.warnings.slice(0, 4).map((w, i) => <WarningChip key={i} w={w} />)}
-                        {s.warnings.length > 4 && <span className="text-xs text-muted-foreground">+{s.warnings.length - 4}</span>}
+                      <div className="flex items-center gap-1">
+                        <Button variant="ghost" size="sm" onClick={() => copyShiftSummary(s)} title="Copy summary"><Copy className="h-4 w-4" /></Button>
+                        <Button variant={reviewed ? "secondary" : "ghost"} size="sm" onClick={() => toggleReviewed(s.signature)} title="Mark reviewed">
+                          <CheckCircle2 className="h-4 w-4" />
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => setOpenShift(s)}>View</Button>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Button variant="ghost" size="sm" onClick={() => copyShiftSummary(s)} title="Copy summary"><Copy className="h-4 w-4" /></Button>
-                      <Button variant={reviewed ? "secondary" : "ghost"} size="sm" onClick={() => toggleReviewed(s.signature)} title="Mark reviewed">
-                        <CheckCircle2 className="h-4 w-4" />
-                      </Button>
-                      <Button variant="outline" size="sm" onClick={() => setOpenShift(s)}>View</Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-            {model.shifts.length === 0 && <p className="text-sm text-muted-foreground p-4 text-center">No shifts in this dry-run batch.</p>}
-          </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+              {filteredShifts.length === 0 && <p className="text-sm text-muted-foreground p-4 text-center">No shifts match the current filter.</p>}
+            </TabsContent>
+
+            <TabsContent value="warnings" className="space-y-2">
+              {Object.entries(model.warningCounts).sort((a, b) => b[1] - a[1]).map(([code, n]) => {
+                const items = model.shifts.flatMap(s => s.warnings.filter(w => w.code === code).map(w => ({ s, w })));
+                return (
+                  <Card key={code}>
+                    <CardHeader className="pb-1">
+                      <CardTitle className="text-xs font-mono flex items-center gap-2">
+                        {code}
+                        <Badge variant="outline">{n}</Badge>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-1 text-xs">
+                      {items.slice(0, 25).map(({ s, w }, i) => (
+                        <div key={i} className="flex items-start gap-2 py-1 border-b last:border-0">
+                          <span className="font-mono text-muted-foreground w-44 shrink-0">{s.date} {s.startTime}–{s.endTime}</span>
+                          <span className="flex-1 truncate">{s.job ?? "—"}{w.raw_employee_name ? ` · ${w.raw_employee_name}` : ""}</span>
+                          <Button variant="ghost" size="sm" className="h-6 px-2" onClick={() => setOpenShift(s)}>Open</Button>
+                        </div>
+                      ))}
+                      {items.length > 25 && <p className="text-muted-foreground">+{items.length - 25} more…</p>}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+              {Object.keys(model.warningCounts).length === 0 && <p className="text-sm text-muted-foreground p-4 text-center">No warnings in this batch.</p>}
+            </TabsContent>
+          </Tabs>
         </>
       )}
 
