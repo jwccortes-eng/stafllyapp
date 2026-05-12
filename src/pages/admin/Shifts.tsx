@@ -190,6 +190,7 @@ function CreateShiftDialogInline(props: {
       summary={summary}
     >
       <ShiftFormFields
+        layout="workspace"
         mode="create"
         companyId={props.selectedCompanyId}
         value={v}
