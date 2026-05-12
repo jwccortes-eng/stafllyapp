@@ -291,6 +291,7 @@ function App() {
                 <Route path="locations/:locationId" element={<CompanyRequiredGuard><ModuleGate moduleKey="locations"><LocationProfile /></ModuleGate></CompanyRequiredGuard>} />
                 <Route path="shifts" element={<CompanyRequiredGuard><Shifts /></CompanyRequiredGuard>} />
                 <Route path="import-schedule" element={<CompanyRequiredGuard><ModuleGate moduleKey="import"><ImportSchedule /></ModuleGate></CompanyRequiredGuard>} />
+                <Route path="import-review" element={<CompanyRequiredGuard><ImportReview /></CompanyRequiredGuard>} />
                 <Route path="backfill-shift/:shiftCode" element={<CompanyRequiredGuard><BackfillShift /></CompanyRequiredGuard>} />
                 <Route path="import-timeclock" element={<CompanyRequiredGuard><ModuleGate moduleKey="import"><ImportTimeClock /></ModuleGate></CompanyRequiredGuard>} />
                 <Route path="import-extras" element={<CompanyRequiredGuard><ModuleGate moduleKey="import"><ImportPayrollExtras /></ModuleGate></CompanyRequiredGuard>} />
