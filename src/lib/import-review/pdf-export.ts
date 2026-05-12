@@ -49,11 +49,11 @@ export function downloadDiffPdf(model: ReviewModel, fileName: string) {
   if (warnRows.length) {
     autoTable(doc, {
       startY: (doc as any).lastAutoTable.finalY + 14,
-      head: [["Warning code", "Count"]],
-      body: warnRows,
-      styles: { fontSize: 8, font: "courier" },
+      head: [["Warning", "Count", "Technical code"]],
+      body: warnRows.map(([code, n]) => [humanWarn(code), n, code]),
+      styles: { fontSize: 8 },
       headStyles: { fillColor: [226, 232, 240], textColor: 20 },
-      columnStyles: { 1: { halign: "right", cellWidth: 60 } },
+      columnStyles: { 1: { halign: "right", cellWidth: 50 }, 2: { font: "courier", cellWidth: 110 } },
     });
   }
 
