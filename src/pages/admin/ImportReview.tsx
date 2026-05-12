@@ -69,7 +69,7 @@ function WarningChip({ w }: { w: ImportWarning }) {
 function reviewedKey(batchId: string, sig: string) { return `import-review:${batchId}:${sig}`; }
 
 export default function ImportReview() {
-  const { selectedCompanyId } = useCompany();
+  const { selectedCompanyId, selectedCompany } = useCompany();
   const [batches, setBatches] = useState<Array<{ id: string; schedule_file_name: string | null; created_at: string }>>([]);
   const [batchId, setBatchId] = useState<string | null>(null);
   const [model, setModel] = useState<ReviewModel | null>(null);
