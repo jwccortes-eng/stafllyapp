@@ -219,7 +219,10 @@ export function buildEmployeeIndex(employees: EmployeeRecord[]): EmployeeIndex {
     byReversed: new Map(),
     allNames: [],
     activeIds: new Set(),
+    byId: new Map(),
   };
+
+  for (const e of employees) idx.byId.set(e.id, e);
 
   for (const e of employees) {
     const display = `${e.first_name ?? ""} ${e.last_name ?? ""}`.trim();
