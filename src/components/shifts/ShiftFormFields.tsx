@@ -361,7 +361,6 @@ export function ShiftFormFields({
   const basicInfoNode = (
     <ShiftBasicInfoSection
       mode={mode}
-      title={v.title}
       clientId={v.clientId}
       date={v.date}
       startTime={v.startTime}
