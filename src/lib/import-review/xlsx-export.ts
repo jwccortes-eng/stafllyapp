@@ -11,13 +11,6 @@ import type { ImportWarningCode } from "@/lib/import/import-warnings";
 const humanWarn = (code: string) => WARNING_HUMAN_LABEL[code as ImportWarningCode] ?? code;
 
 const STATUS_LABEL: Record<string, string> = DIFF_STATUS_HUMAN_LABEL;
-const _LEGACY_STATUS_LABEL_UNUSED: Record<string, string> = {
-  matched_exact: "Matched exactly",
-  matched_fallback: "Matched by fallback",
-  would_create: "Would create new",
-  possible_duplicate: "Possible duplicate",
-  needs_review: "Needs review",
-};
 
 function autoWidth(ws: ExcelJS.Worksheet) {
   ws.columns.forEach(col => {
