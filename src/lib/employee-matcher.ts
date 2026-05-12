@@ -167,6 +167,40 @@ interface EmployeeIndex {
   byReversed: Map<string, string[]>;       // reversed normalized name → empIds[]
   allNames: Array<{ id: string; norm: string; display: string }>; // for fuzzy
   activeIds: Set<string>;                  // ids known to be active
+  byId: Map<string, EmployeeRecord>;       // for completeness scoring
+}
+
+/**
+ * Score how "canonical" an employee record is. Used to break ties between
+ * multiple active same-name duplicates. Higher = more canonical.
+ *  - user_id      → linked to portal account (strongest signal)
+ *  - phone_number → reachable
+ *  - email        → identifiable
+ *  - employer_id  → has been formally numbered
+ */
+function completenessScore(r: EmployeeRecord | undefined): number {
+  if (!r) return 0;
+  let s = 0;
+  if (r.user_id) s += 8;
+  if (r.phone_number && r.phone_number.trim()) s += 4;
+  if (r.email && r.email.trim()) s += 2;
+  if (r.employer_identification && String(r.employer_identification).trim()) s += 1;
+  return s;
+}
+
+/** Pick the highest-scoring candidate. Returns null if there is no strict winner. */
+function pickCanonical(
+  ids: string[],
+  byId: Map<string, EmployeeRecord>,
+): { winner: string; losers: string[] } | null {
+  if (ids.length === 0) return null;
+  if (ids.length === 1) return { winner: ids[0], losers: [] };
+  const scored = ids.map(id => ({ id, score: completenessScore(byId.get(id)) }));
+  scored.sort((a, b) => b.score - a.score);
+  if (scored[0].score > scored[1].score) {
+    return { winner: scored[0].id, losers: scored.slice(1).map(x => x.id) };
+  }
+  return null; // tie — caller must surface for review
 }
 
 /** Auxiliary index: maps normalized name → identifiers from the Users export. */
