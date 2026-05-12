@@ -21,7 +21,6 @@ import type { SelectOption } from "../types";
 
 interface Props {
   mode: "create" | "edit";
-  title: string;
   clientId: string;
   date: string;
   startTime: string;
@@ -30,7 +29,6 @@ interface Props {
   slots: string;
   clients: SelectOption[];
   onChange: (patch: {
-    title?: string;
     clientId?: string;
     date?: string;
     startTime?: string;
@@ -43,7 +41,6 @@ interface Props {
 
 function ShiftBasicInfoSectionImpl({
   mode,
-  title,
   clientId,
   date,
   startTime,
