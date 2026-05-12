@@ -34,8 +34,8 @@ export function ShiftWorkspaceLayout({
 }: Props) {
   return (
     <div className="space-y-4">
-      {/* Auto display name banner */}
-      <div className="rounded-2xl border border-border/40 bg-gradient-to-br from-muted/30 to-background px-4 py-3">
+      {/* Auto display name banner — desktop only; mobile keeps a clean stack */}
+      <div className="hidden lg:block rounded-2xl border border-border/40 bg-gradient-to-br from-muted/30 to-background px-4 py-3">
         <p className="text-[10px] uppercase tracking-wider text-muted-foreground/70 font-semibold">
           Nombre del turno
         </p>
@@ -48,7 +48,7 @@ export function ShiftWorkspaceLayout({
       </div>
 
       {/* 2-column grid (collapses to single column under lg) */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="space-y-3 min-w-0">{whatWhere}</div>
         <div className="space-y-3 min-w-0">{teamOps}</div>
       </div>
