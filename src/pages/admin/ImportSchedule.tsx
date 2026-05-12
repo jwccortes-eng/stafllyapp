@@ -739,18 +739,44 @@ export default function ImportSchedule() {
       // ── Fetch existing shifts for deduplication (composite key) ──
       // Store shift_id + slots so we can reconcile assignments for shifts that already exist.
       setImportProgress({ current: 0, total: filteredGroups.length, phase: "Verificando duplicados..." });
-      const existingShiftMap = new Map<string, { id: string; slots: number }>();
+      const existingShiftMap = new Map<string, { id: string; slots: number; shift_code: string | null }>();
+      // Fallback index: date|start|end|client_id (or normalized job name when client_id absent).
+      // Stores ALL candidates per key so we can detect ambiguity (multi-match → review, not auto-reconcile).
+      type FallbackCandidate = { id: string; slots: number; shift_code: string | null };
+      const existingShiftFallbackMap = new Map<string, FallbackCandidate[]>();
+      // Reverse client lookup (id → normalized name) to build name-based fallback when source row has no client_id yet.
+      const clientIdToNameLower = new Map<string, string>();
+      clientMap.forEach((id, nameLower) => { if (!clientIdToNameLower.has(id)) clientIdToNameLower.set(id, nameLower); });
+      const normalizeJob = (j: string | null | undefined) =>
+        (j || "").replace(/^\d+\s*[-–]\s*/, "").trim().toLowerCase();
       {
         const { data: existingShifts } = await supabase
           .from("scheduled_shifts")
-          .select("id, shift_code, date, start_time, end_time, slots")
+          .select("id, shift_code, date, start_time, end_time, slots, client_id")
           .eq("company_id", selectedCompanyId)
           .is("deleted_at", null)
           .gte("date", filterFrom || "1900-01-01")
           .lte("date", filterTo || "2100-12-31");
         (existingShifts ?? []).forEach(s => {
-          const key = `${s.shift_code || ""}|${s.date}|${s.start_time?.slice(0,5)}|${s.end_time?.slice(0,5)}`;
-          existingShiftMap.set(key, { id: s.id, slots: s.slots ?? 1 });
+          const start = s.start_time?.slice(0, 5);
+          const end = s.end_time?.slice(0, 5);
+          const strictKey = `${s.shift_code || ""}|${s.date}|${start}|${end}`;
+          existingShiftMap.set(strictKey, { id: s.id, slots: s.slots ?? 1, shift_code: s.shift_code ?? null });
+          // Build fallback keys (date|start|end|client_id) and a parallel name key
+          const cand: FallbackCandidate = { id: s.id, slots: s.slots ?? 1, shift_code: s.shift_code ?? null };
+          if (s.client_id) {
+            const fbKey = `cid:${s.date}|${start}|${end}|${s.client_id}`;
+            const arr = existingShiftFallbackMap.get(fbKey) ?? [];
+            arr.push(cand);
+            existingShiftFallbackMap.set(fbKey, arr);
+            const nameLower = clientIdToNameLower.get(s.client_id);
+            if (nameLower) {
+              const nameKey = `name:${s.date}|${start}|${end}|${nameLower}`;
+              const arr2 = existingShiftFallbackMap.get(nameKey) ?? [];
+              arr2.push(cand);
+              existingShiftFallbackMap.set(nameKey, arr2);
+            }
+          }
         });
       }
 
