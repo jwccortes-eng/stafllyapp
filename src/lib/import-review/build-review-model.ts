@@ -534,6 +534,13 @@ export function buildReviewModel(input: BuildReviewInput): ReviewModel {
         warningCounts[w.code] = (warningCounts[w.code] ?? 0) + 1;
       }
     }
+    for (const wk of s.workers) {
+      for (const w of wk.warnings) {
+        if (w.code === "CANONICAL_DUPLICATE_RESOLVED") {
+          warningCounts[w.code] = (warningCounts[w.code] ?? 0) + 1;
+        }
+      }
+    }
   }
 
   return {
