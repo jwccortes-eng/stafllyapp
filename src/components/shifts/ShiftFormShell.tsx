@@ -23,6 +23,8 @@ import { format, parse } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
+import { toast } from "sonner";
+import { PrePublishDialog, type PrePublishReviewData } from "./workspace/PrePublishDialog";
 
 interface Props {
   open: boolean;
@@ -51,6 +53,9 @@ interface Props {
   children: React.ReactNode;
   /** Sticky right panel (typically <ShiftSummaryPanel/>). Optional. */
   summary?: React.ReactNode;
+  /** When provided, clicking the primary publish button opens a "Antes de publicar"
+   *  review modal instead of calling onSave directly. The modal forwards confirm to onSave. */
+  publishReview?: PrePublishReviewData | null;
 }
 
 function fmtDateChip(d: string): string {
@@ -80,12 +85,40 @@ export function ShiftFormShell({
   footerBanner,
   children,
   summary,
+  publishReview,
 }: Props) {
   const headerTitle = mode === "create" ? "Nuevo turno" : "Editar turno";
   const defaultSaveLabel = mode === "create"
     ? (onSaveDraft ? "Publish" : "Crear turno")
     : "Guardar cambios";
   const [confirmCloseOpen, setConfirmCloseOpen] = useState(false);
+  const [publishReviewOpen, setPublishReviewOpen] = useState(false);
+
+  const handlePrimaryClick = () => {
+    if (publishReview) {
+      setPublishReviewOpen(true);
+      return;
+    }
+    void onSave();
+  };
+
+  const handleConfirmPublish = async () => {
+    if (!publishReview) return;
+    const hadPending = publishReview.hasPending;
+    try {
+      await onSave();
+      // Existing handler already toasts "Turno publicado". Add a follow-up
+      // contextual notice when there is pending info so the admin understands
+      // the shift went out incomplete (no scary error language).
+      if (hadPending) {
+        toast.info("Turno publicado con información pendiente", {
+          description: "Los campos pendientes aparecerán como “por confirmar” para los trabajadores.",
+        });
+      }
+    } finally {
+      setPublishReviewOpen(false);
+    }
+  };
 
   const requestClose = () => {
     if (isDirty) {
@@ -169,7 +202,7 @@ export function ShiftFormShell({
               </Button>
             )}
             <Button
-              onClick={() => void onSave()}
+              onClick={handlePrimaryClick}
               disabled={saving || saveDisabled || draftSaving}
               size="sm"
               className="h-9 text-xs gap-1.5 font-semibold px-4"
@@ -239,6 +272,16 @@ export function ShiftFormShell({
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
+
+    {publishReview && (
+      <PrePublishDialog
+        open={publishReviewOpen}
+        onOpenChange={setPublishReviewOpen}
+        data={publishReview}
+        saving={saving}
+        onConfirm={handleConfirmPublish}
+      />
+    )}
     </>
   );
 }
