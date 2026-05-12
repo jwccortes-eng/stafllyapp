@@ -111,8 +111,8 @@ export function ShiftFormShell({
           "p-0 gap-0 overflow-hidden flex flex-col rounded-2xl border-border/30 shadow-xl",
           // Mobile: behaves like the old centered dialog
           "max-w-lg max-h-[88vh]",
-          // Desktop: full-screen-ish working canvas
-          "lg:max-w-[1200px] lg:w-[96vw] lg:h-[92vh] lg:max-h-[92vh]",
+          // Desktop: full-screen-ish working canvas — !important nukes shadcn's sm:max-w-lg
+          "lg:!max-w-[1280px] lg:w-[96vw] lg:h-[92vh] lg:max-h-[92vh]",
         )}
       >
         {/* Sticky header */}

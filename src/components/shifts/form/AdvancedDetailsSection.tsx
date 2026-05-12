@@ -5,7 +5,8 @@
  *  - QR section (edit only)
  */
 import { memo, useState } from "react";
-import { ChevronDown, FileText, ScanLine, QrCode } from "lucide-react";
+import { ChevronDown, FileText, ScanLine, QrCode, Tag } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -22,6 +23,7 @@ import type { Shift } from "../types";
 
 interface Props {
   mode: "create" | "edit";
+  title: string;
   notes: string;
   attendanceMode: ShiftAttendanceMode;
   clockMethod: "mobile" | "kiosk" | "both";
@@ -30,6 +32,7 @@ interface Props {
   qrToken?: string | null;
   onQrUpdate?: (updates: { qr_attendance_mode?: string; qr_token?: string | null }) => void;
   onChange: (patch: {
+    title?: string;
     notes?: string;
     attendanceMode?: ShiftAttendanceMode;
     clockMethod?: "mobile" | "kiosk" | "both";
@@ -38,6 +41,7 @@ interface Props {
 
 function AdvancedDetailsSectionImpl({
   mode,
+  title,
   notes,
   attendanceMode,
   clockMethod,
@@ -65,6 +69,21 @@ function AdvancedDetailsSectionImpl({
     >
       <Collapsible open={open}>
         <CollapsibleContent className="space-y-3">
+          <div>
+            <Label className="text-[11px] text-muted-foreground font-medium flex items-center gap-1">
+              <Tag className="h-3 w-3" /> Etiqueta interna / título manual <span className="text-muted-foreground/40">(opcional)</span>
+            </Label>
+            <Input
+              value={title}
+              onChange={(e) => onChange({ title: e.target.value })}
+              placeholder="Ej: Evento corporativo, Servicio VIP…"
+              className="h-9 text-sm mt-1"
+            />
+            <p className="text-[10px] text-muted-foreground/70 mt-1">
+              Solo úsalo si necesitas una etiqueta especial. Si lo dejas vacío, Stafly genera el nombre automáticamente desde cliente, tipo y hora.
+            </p>
+          </div>
+
           <div>
             <Label className="text-[11px] text-muted-foreground font-medium">
               Notas internas <span className="text-muted-foreground/40">(solo admins)</span>

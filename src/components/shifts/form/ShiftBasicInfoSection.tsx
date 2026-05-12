@@ -21,7 +21,6 @@ import type { SelectOption } from "../types";
 
 interface Props {
   mode: "create" | "edit";
-  title: string;
   clientId: string;
   date: string;
   startTime: string;
@@ -30,7 +29,6 @@ interface Props {
   slots: string;
   clients: SelectOption[];
   onChange: (patch: {
-    title?: string;
     clientId?: string;
     date?: string;
     startTime?: string;
@@ -43,7 +41,6 @@ interface Props {
 
 function ShiftBasicInfoSectionImpl({
   mode,
-  title,
   clientId,
   date,
   startTime,
@@ -73,22 +70,11 @@ function ShiftBasicInfoSectionImpl({
 
   return (
     <SectionCard icon={Hash} title="Información principal" subtitle="Lo esencial del turno: qué, quién y cuándo.">
-      <div>
-        <Label className="text-[11px] text-muted-foreground font-medium">
-          Título del turno <span className="text-muted-foreground/40">(opcional)</span>
-        </Label>
-        <Input
-          value={title}
-          onChange={(e) => onChange({ title: e.target.value })}
-          placeholder="Ej: Evento corporativo, Servicio VIP…"
-          className="h-9 text-sm mt-1"
-        />
-        {mode === "create" && (
-          <p className="text-[10px] text-muted-foreground/60 mt-1">
-            El código de turno (#0001) se asigna automáticamente.
-          </p>
-        )}
-      </div>
+      {mode === "create" && (
+        <p className="text-[10px] text-muted-foreground/70 -mt-1">
+          El código de turno (#0001) se asigna automáticamente. El nombre se genera desde cliente, tipo y hora — puedes añadir una etiqueta interna en Detalles adicionales.
+        </p>
+      )}
 
       <div>
         <Label className="text-[11px] text-muted-foreground font-medium">Cliente</Label>
