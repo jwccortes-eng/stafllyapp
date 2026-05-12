@@ -136,7 +136,7 @@ export default function ImportReview() {
         if (empIds.size) {
           const { data: e } = await supabase
             .from("employees")
-            .select("id, first_name, last_name, employer_identification, is_active")
+            .select("id, first_name, last_name, employer_identification, is_active, phone_number, email, user_id")
             .in("id", Array.from(empIds));
           employees = e ?? [];
         }
