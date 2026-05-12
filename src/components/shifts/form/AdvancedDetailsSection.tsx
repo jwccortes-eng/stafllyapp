@@ -5,7 +5,8 @@
  *  - QR section (edit only)
  */
 import { memo, useState } from "react";
-import { ChevronDown, FileText, ScanLine, QrCode } from "lucide-react";
+import { ChevronDown, FileText, ScanLine, QrCode, Tag } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -22,6 +23,7 @@ import type { Shift } from "../types";
 
 interface Props {
   mode: "create" | "edit";
+  title: string;
   notes: string;
   attendanceMode: ShiftAttendanceMode;
   clockMethod: "mobile" | "kiosk" | "both";
@@ -30,6 +32,7 @@ interface Props {
   qrToken?: string | null;
   onQrUpdate?: (updates: { qr_attendance_mode?: string; qr_token?: string | null }) => void;
   onChange: (patch: {
+    title?: string;
     notes?: string;
     attendanceMode?: ShiftAttendanceMode;
     clockMethod?: "mobile" | "kiosk" | "both";
