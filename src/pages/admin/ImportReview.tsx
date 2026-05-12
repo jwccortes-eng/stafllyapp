@@ -17,8 +17,16 @@ import { reviewToCsv, downloadCsv } from "@/lib/import-review/csv-export";
 import { downloadDiffXlsx } from "@/lib/import-review/xlsx-export";
 import { downloadDiffPdf } from "@/lib/import-review/pdf-export";
 import { downloadWeeklySchedule } from "@/lib/import-review/weekly-export";
+import {
+  WARNING_HUMAN_LABEL,
+  WORKER_STATUS_HUMAN_LABEL,
+  DIFF_STATUS_HUMAN_LABEL,
+  workerStatusHelper,
+} from "@/lib/import-review/labels";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ChevronDown } from "lucide-react";
 
 type FilterKey =
   | "all"
