@@ -89,6 +89,8 @@ const DEFAULT_ACTION: Record<ImportWarningCode, string> = {
     "Placeholder/System rows are excluded from real workers and will not be imported.",
   PAY_RIDE_DETECTED:
     "PAY RIDE row detected — handle via the rides flow, not as a worker assignment.",
+  CANONICAL_DUPLICATE_RESOLVED:
+    "Source matched an inactive/stub worker but Stafly already has the canonical active duplicate assigned. Display only — no DB change.",
 };
 
 export function buildImportWarning(
