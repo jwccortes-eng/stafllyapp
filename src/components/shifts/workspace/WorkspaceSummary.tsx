@@ -1,0 +1,168 @@
+/**
+ * WorkspaceSummary — composed right-rail for the desktop Shift Workspace.
+ *
+ * Stacks:
+ *   1) Pending-info badges (semaphore)
+ *   2) Publish-state descriptor (what happens when you save / publish)
+ *   3) Existing <ShiftSummaryPanel/> (live ops validations — unchanged)
+ *   4) Worker preview ("Así lo verá el trabajador")
+ *
+ * Phase 2: UI-only. No DB writes, no notifications, no portal touches.
+ */
+import { memo } from "react";
+import { Send } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { ShiftSummaryPanel } from "../form/ShiftSummaryPanel";
+import { PendingBadgeRow } from "./PendingBadgeRow";
+import { WorkerPreviewCard } from "./WorkerPreviewCard";
+import {
+  computeShiftPendingFlags,
+  describePublishState,
+  type PendingTone,
+} from "@/lib/shifts/pending-flags";
+
+interface Props {
+  mode: "create" | "edit";
+  // From form state
+  title: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  meetingTime: string;
+  clientId: string;
+  locationId: string;
+  jobSiteLocationId: string | null;
+  meetingPoint: string;
+  meetingPointLocationId: string | null;
+  transportRequired: boolean;
+  claimable: boolean;
+  // Derived
+  clientName: string | null;
+  jobSiteLabel: string | null;
+  meetingPointLabel: string | null;
+  slotsNum: number;
+  assignedCount: number;
+  ridesNeeded: number;
+  driversInTeam: number;
+  payTypeLabel: string;
+  // Validation signals (live ops)
+  dateMissing: boolean;
+  adminMissing: boolean;
+  adminInvalid: boolean;
+  noLocation: boolean;
+  noTeam: boolean;
+  driverMissing: boolean;
+  driversShortage: boolean;
+  capacityShortage: boolean;
+  hasConflicts: boolean;
+  conflictNames: string[];
+  payOverrideActive: boolean;
+  // Edit-only: real publication_status from DB if present
+  publicationStatus?: string | null;
+}
+
+const TONE_BG: Record<PendingTone, string> = {
+  urgent: "bg-destructive/5 border-destructive/30",
+  warn: "bg-[hsl(var(--status-pending)/0.06)] border-[hsl(var(--status-pending)/0.3)]",
+  info: "bg-primary/5 border-primary/30",
+  ready: "bg-[hsl(142_76%_36%/0.06)] border-[hsl(142_76%_36%/0.3)]",
+};
+
+function WorkspaceSummaryImpl(p: Props) {
+  const pending = computeShiftPendingFlags({
+    date: p.date,
+    startTime: p.startTime,
+    endTime: p.endTime,
+    clientId: p.clientId,
+    locationId: p.locationId,
+    jobSiteLocationId: p.jobSiteLocationId,
+    meetingPoint: p.meetingPoint,
+    meetingPointLocationId: p.meetingPointLocationId,
+    transportRequired: p.transportRequired,
+    claimable: p.claimable,
+    assignedCount: p.assignedCount,
+  });
+
+  const publish = describePublishState({
+    publicationStatus: p.publicationStatus ?? null,
+    claimable: p.claimable,
+    isReady: pending.isReady,
+  });
+
+  const jobsiteMissing = !p.locationId && !p.jobSiteLocationId;
+  const meetingMissing =
+    p.transportRequired && !p.meetingPoint.trim() && !p.meetingPointLocationId;
+  const clientMissing = !p.clientId;
+  const timeMissing = !p.startTime || !p.endTime;
+
+  return (
+    <div className="space-y-3">
+      {/* 1) Pending badges */}
+      <PendingBadgeRow flags={pending.flags} />
+
+      {/* 2) Publish-state descriptor */}
+      <div
+        className={cn(
+          "rounded-xl border px-3 py-2.5 flex items-start gap-2",
+          TONE_BG[publish.tone],
+        )}
+      >
+        <Send className="h-3.5 w-3.5 mt-0.5 shrink-0 opacity-80" />
+        <div className="min-w-0">
+          <div className="text-[12px] font-semibold leading-tight">{publish.label}</div>
+          <p className="text-[10px] text-muted-foreground leading-snug mt-0.5">
+            {publish.description}
+          </p>
+        </div>
+      </div>
+
+      {/* 3) Existing ops summary (unchanged) */}
+      <ShiftSummaryPanel
+        mode={p.mode}
+        title={p.title}
+        clientName={p.clientName}
+        date={p.date}
+        startTime={p.startTime}
+        endTime={p.endTime}
+        slotsNum={p.slotsNum}
+        assignedCount={p.assignedCount}
+        ridesNeeded={p.ridesNeeded}
+        transportRequired={p.transportRequired}
+        driversInTeam={p.driversInTeam}
+        jobSiteLabel={p.jobSiteLabel}
+        meetingPointLabel={p.meetingPointLabel}
+        dateMissing={p.dateMissing}
+        adminMissing={p.adminMissing}
+        adminInvalid={p.adminInvalid}
+        noLocation={p.noLocation}
+        noTeam={p.noTeam}
+        driverMissing={p.driverMissing}
+        driversShortage={p.driversShortage}
+        capacityShortage={p.capacityShortage}
+        hasConflicts={p.hasConflicts}
+        conflictNames={p.conflictNames}
+        payOverrideActive={p.payOverrideActive}
+        payTypeLabel={p.payTypeLabel}
+      />
+
+      {/* 4) Worker preview */}
+      <WorkerPreviewCard
+        clientName={p.clientName}
+        date={p.date}
+        startTime={p.startTime}
+        endTime={p.endTime}
+        meetingTime={p.meetingTime}
+        jobSiteLabel={p.jobSiteLabel}
+        meetingPointLabel={p.meetingPointLabel}
+        claimable={p.claimable}
+        hasPending={pending.hasPending}
+        jobsiteMissing={jobsiteMissing}
+        meetingMissing={meetingMissing}
+        clientMissing={clientMissing}
+        timeMissing={timeMissing}
+      />
+    </div>
+  );
+}
+
+export const WorkspaceSummary = memo(WorkspaceSummaryImpl);
