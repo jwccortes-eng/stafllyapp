@@ -5,8 +5,13 @@
  */
 import ExcelJS from "exceljs";
 import type { ReviewModel } from "./types";
+import { WARNING_HUMAN_LABEL, DIFF_STATUS_HUMAN_LABEL, WORKER_STATUS_HUMAN_LABEL } from "./labels";
+import type { ImportWarningCode } from "@/lib/import/import-warnings";
 
-const STATUS_LABEL: Record<string, string> = {
+const humanWarn = (code: string) => WARNING_HUMAN_LABEL[code as ImportWarningCode] ?? code;
+
+const STATUS_LABEL: Record<string, string> = DIFF_STATUS_HUMAN_LABEL;
+const _LEGACY_STATUS_LABEL_UNUSED: Record<string, string> = {
   matched_exact: "Matched exactly",
   matched_fallback: "Matched by fallback",
   would_create: "Would create new",
