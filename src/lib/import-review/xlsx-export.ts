@@ -53,10 +53,10 @@ export async function downloadDiffXlsx(model: ReviewModel, fileName: string) {
   sum.addRow(["Possible duplicate", model.totals.possibleDuplicate]);
   sum.addRow(["Needs review", model.totals.needsReview]);
   sum.addRow([]);
-  sum.addRow(["Warning code", "Count"]);
+  sum.addRow(["Warning", "Count", "Technical code"]);
   Object.entries(model.warningCounts)
     .sort((a, b) => b[1] - a[1])
-    .forEach(([code, n]) => sum.addRow([code, n]));
+    .forEach(([code, n]) => sum.addRow([humanWarn(code), n, code]));
   sum.getRow(1).font = { bold: true, size: 14 };
   sum.getRow(8).font = { bold: true };
   sum.getRow(16).font = { bold: true };
