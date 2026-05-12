@@ -83,6 +83,7 @@ const COMPANY_LINKS: LinkDef[] = [
   // SYSTEM
   { to: "/app/payroll-settings", icon: Settings2, label: "Settings", module: null, section: "System" },
   { to: "/app/migration", icon: ArrowLeftRight, label: "Migration", module: null, section: "System", roles: ["developer", "owner"] },
+  { to: "/app/import-review", icon: FileSearch, label: "Import Review", module: null, section: "System", roles: ["developer", "owner"] },
 ];
 
 /* ── Global/Platform-level links (developer/owner only) ── */
