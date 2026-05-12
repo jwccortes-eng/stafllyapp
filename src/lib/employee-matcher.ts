@@ -35,6 +35,9 @@ export interface EmployeeRecord {
    * fallback so the resolver can prefer an active record when the matched
    * employee is inactive but a same-name active duplicate exists. */
   is_active?: boolean | null;
+  /** Linked Supabase auth user (portal-enabled). Used as the strongest signal
+   * when scoring multiple active same-name duplicates. */
+  user_id?: string | null;
 }
 
 /** Auxiliary record from the Connecteam Users export (parseConnecteamFile). */
