@@ -179,6 +179,26 @@ function CreateShiftDialogInline(props: {
     />
   );
 
+  const publishReview = buildPrePublishReview({
+    manualTitle: v.title,
+    date: v.date,
+    startTime: v.startTime,
+    endTime: v.endTime,
+    meetingTime: v.meetingTime,
+    clientId: v.clientId,
+    locationId: v.locationId,
+    jobSiteLocationId: v.jobSiteLocationId,
+    meetingPoint: v.meetingPoint,
+    meetingPointLocationId: v.meetingPointLocationId,
+    transportRequired: v.transportRequired,
+    claimable: v.claimable,
+    assignedCount: signals.assignedCount,
+    slotsNum: signals.slotsNum,
+    clientName: signals.clientName,
+    jobSiteLabel: signals.jobSiteLabel,
+    meetingPointLabel: signals.meetingPointLabel,
+  });
+
   return (
     <ShiftFormShell
       open={props.open}
@@ -197,6 +217,7 @@ function CreateShiftDialogInline(props: {
       onSave={props.onRequestSave}
       onSaveDraft={props.onSaveDraft}
       summary={summary}
+      publishReview={publishReview}
     >
       <ShiftFormFields
         layout="workspace"
