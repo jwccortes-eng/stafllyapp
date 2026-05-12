@@ -23,12 +23,17 @@ export interface ReviewWorker {
     | "inactive_matched"
     | "placeholder"
     | "imported_accept_only"
+    | "canonical_duplicate_resolved"
     | "unmatched";
   // Display helpers
   displayName: string;
   employerId?: string | null;
   isActive?: boolean;
   warnings: ImportWarning[];
+  /** When status === canonical_duplicate_resolved, the original (low-quality) source match. */
+  sourceMatchedEmployeeId?: string | null;
+  sourceMatchedEmployerId?: string | null;
+  sourceMatchedReason?: "inactive" | "stub" | null;
 }
 
 export interface ReviewLocationProposal {
