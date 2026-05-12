@@ -119,6 +119,16 @@ const PAY_RIDE_PATTERN = /pay\s*ride|payride/i;
 
 const norm = (s: string | null | undefined) => (s ?? "").trim().toLowerCase();
 const slice5 = (t: string | null | undefined) => (t ? t.slice(0, 5) : "");
+const normName = (s: string | null | undefined) =>
+  (s ?? "").trim().toLowerCase().replace(/[.,]/g, "").replace(/\s+/g, " ");
+
+function isLowQualityStub(e: EmployeeLite | null | undefined): boolean {
+  if (!e) return false;
+  const noPhone = !e.phone_number || String(e.phone_number).trim().length < 7;
+  const noEmail = !e.email || !String(e.email).includes("@");
+  const noUser = !e.user_id;
+  return noPhone && noEmail && noUser;
+}
 
 function isPlaceholderName(name: string | null | undefined): boolean {
   const s = (name ?? "").trim();
