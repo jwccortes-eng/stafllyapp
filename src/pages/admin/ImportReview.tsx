@@ -200,6 +200,60 @@ export default function ImportReview() {
     downloadCsv(`import-review-${model.batchId.slice(0, 8)}.csv`, reviewToCsv(model));
   };
 
+  const exportXlsx = async () => {
+    if (!model) return;
+    await downloadDiffXlsx(model, `import-review-${model.batchId.slice(0, 8)}.xlsx`);
+  };
+
+  const exportPdf = () => {
+    if (!model) return;
+    downloadDiffPdf(model, `import-review-${model.batchId.slice(0, 8)}.pdf`);
+  };
+
+  const exportWeek = async () => {
+    if (!selectedCompanyId) return;
+    const from = weekFrom || model?.dateRangeFrom || "";
+    const to = weekTo || model?.dateRangeTo || "";
+    if (!from || !to) {
+      toast({ title: "Pick a range", description: "Select both From and To dates." });
+      return;
+    }
+    setExportingWeek(true);
+    try {
+      await downloadWeeklySchedule({ companyId: selectedCompanyId, from, to });
+      toast({ title: "Exported", description: `Weekly schedule ${from} → ${to}` });
+    } catch (e: any) {
+      toast({ title: "Export failed", description: e?.message ?? String(e), variant: "destructive" });
+    } finally {
+      setExportingWeek(false);
+    }
+  };
+
+  const filteredShifts = useMemo(() => {
+    if (!model) return [];
+    return model.shifts.filter(s => {
+      if (clientFilter && !(s.job ?? "").toLowerCase().includes(clientFilter.toLowerCase())) return false;
+      if (dateFilter && s.date !== dateFilter) return false;
+      switch (filter) {
+        case "all": return true;
+        case "needs_review": return s.status === "needs_review";
+        case "possible_duplicate": return s.status === "possible_duplicate";
+        case "missing_workers": {
+          const expectedIds = new Set(s.workers.filter(w => w.matchedEmployeeId).map(w => w.matchedEmployeeId));
+          const staflyIds = new Set(s.staflyAssignedWorkers.map(w => w.employeeId));
+          return [...expectedIds].some(id => id && !staflyIds.has(id));
+        }
+        case "location_issues": return s.location.willCreate || (!!s.sourceAddress && !s.location.currentLocationId);
+        case "duplicate_workers": return s.warnings.some(w =>
+          w.code === "MULTIPLE_ACTIVE_DUPLICATES_NEED_REVIEW" ||
+          w.code === "EMPLOYEE_MATCHED_TO_CANONICAL_ACTIVE_DUPLICATE");
+        case "imported_accept": return s.warnings.some(w => w.code === "IMPORTED_ACCEPT_NOT_STAFLY_RESPONSE");
+        case "pay_ride": return s.warnings.some(w => w.code === "PAY_RIDE_DETECTED");
+        case "placeholder": return s.warnings.some(w => w.code === "PLACEHOLDER_SYSTEM_EXCLUDED");
+      }
+    });
+  }, [model, filter, clientFilter, dateFilter]);
+
   return (
     <div className="container mx-auto p-4 space-y-4">
       <div className="flex items-center justify-between gap-4">
