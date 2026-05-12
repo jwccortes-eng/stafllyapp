@@ -56,6 +56,8 @@ const DEFAULT_SEVERITY: Record<ImportWarningCode, ImportWarningSeverity> = {
   IMPORTED_ACCEPT_NOT_STAFLY_RESPONSE: "info",
   SHIFT_RECONCILED_BY_FALLBACK_KEY: "info",
   MULTIPLE_EXISTING_SHIFT_MATCHES_NEED_REVIEW: "warn",
+  PLACEHOLDER_SYSTEM_EXCLUDED: "info",
+  PAY_RIDE_DETECTED: "info",
 };
 
 const DEFAULT_ACTION: Record<ImportWarningCode, string> = {
