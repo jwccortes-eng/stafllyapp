@@ -142,20 +142,28 @@ function CreateShiftDialogInline(props: {
       : "por hora";
 
   const summary = (
-    <ShiftSummaryPanel
+    <WorkspaceSummary
       mode="create"
       title={v.title}
-      clientName={signals.clientName}
       date={v.date}
       startTime={v.startTime}
       endTime={v.endTime}
+      meetingTime={v.meetingTime}
+      clientId={v.clientId}
+      locationId={v.locationId}
+      jobSiteLocationId={v.jobSiteLocationId}
+      meetingPoint={v.meetingPoint}
+      meetingPointLocationId={v.meetingPointLocationId}
+      transportRequired={v.transportRequired}
+      claimable={v.claimable}
+      clientName={signals.clientName}
+      jobSiteLabel={signals.jobSiteLabel}
+      meetingPointLabel={signals.meetingPointLabel}
       slotsNum={signals.slotsNum}
       assignedCount={signals.assignedCount}
       ridesNeeded={signals.ridesNeeded}
-      transportRequired={v.transportRequired}
       driversInTeam={signals.driversInTeam}
-      jobSiteLabel={signals.jobSiteLabel}
-      meetingPointLabel={signals.meetingPointLabel}
+      payTypeLabel={payTypeLabel}
       dateMissing={!v.date}
       adminMissing={signals.adminMissing}
       adminInvalid={signals.adminInvalid}
@@ -167,7 +175,7 @@ function CreateShiftDialogInline(props: {
       hasConflicts={signals.hasConflicts}
       conflictNames={signals.conflictNames}
       payOverrideActive={signals.payOverrideActive}
-      payTypeLabel={payTypeLabel}
+      publicationStatus={null}
     />
   );
 
