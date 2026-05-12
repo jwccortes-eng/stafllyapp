@@ -55,6 +55,7 @@ import { ShiftFormFields, useShiftFormSignals, type ShiftFormState } from "@/com
 import { ShiftFormShell } from "@/components/shifts/ShiftFormShell";
 import { ShiftSummaryPanel } from "@/components/shifts/form/ShiftSummaryPanel";
 import { WorkspaceSummary } from "@/components/shifts/workspace/WorkspaceSummary";
+import { buildPrePublishReview } from "@/lib/shifts/build-pre-publish-review";
 import type { Shift, Assignment, SelectOption, Employee, ViewMode } from "@/components/shifts/types";
 import { formatShiftCode } from "@/components/shifts/types";
 import { isDraftShift, isPublishedShift } from "@/lib/shifts/shift-guards";
