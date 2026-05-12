@@ -272,6 +272,16 @@ export function ShiftFormShell({
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
+
+    {publishReview && (
+      <PrePublishDialog
+        open={publishReviewOpen}
+        onOpenChange={setPublishReviewOpen}
+        data={publishReview}
+        saving={saving}
+        onConfirm={handleConfirmPublish}
+      />
+    )}
     </>
   );
 }
