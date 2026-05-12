@@ -457,9 +457,10 @@ export default function ImportReview() {
                 return (
                   <Card key={code}>
                     <CardHeader className="pb-1">
-                      <CardTitle className="text-xs font-mono flex items-center gap-2">
-                        {code}
+                      <CardTitle className="text-xs flex items-center gap-2">
+                        <span>{WARNING_HUMAN_LABEL[code as ImportWarningCode] ?? code}</span>
                         <Badge variant="outline">{n}</Badge>
+                        <span className="ml-auto font-mono text-[10px] text-muted-foreground">{code}</span>
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-1 text-xs">
