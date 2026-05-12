@@ -46,11 +46,14 @@ const DEFAULT_SEVERITY: Record<ImportWarningCode, ImportWarningSeverity> = {
   EMPLOYEE_INACTIVE: "warn",
   INACTIVE_MATCH_REPLACED_WITH_ACTIVE: "info",
   MULTIPLE_ACTIVE_DUPLICATES_NEED_REVIEW: "warn",
+  EMPLOYEE_MATCHED_TO_CANONICAL_ACTIVE_DUPLICATE: "info",
   WORKER_OMITTED_OVERLAP_NEEDS_REVIEW: "warn",
   ADDRESS_MAPPED_TO_LOCATION: "info",
   NOTE_MEETING_POINT_PARSED: "info",
   NOTE_PARSE_NEEDS_REVIEW: "info",
   IMPORTED_ACCEPT_NOT_STAFLY_RESPONSE: "info",
+  SHIFT_RECONCILED_BY_FALLBACK_KEY: "info",
+  MULTIPLE_EXISTING_SHIFT_MATCHES_NEED_REVIEW: "warn",
 };
 
 const DEFAULT_ACTION: Record<ImportWarningCode, string> = {
@@ -60,6 +63,8 @@ const DEFAULT_ACTION: Record<ImportWarningCode, string> = {
     "Confirm the active worker is the correct match.",
   MULTIPLE_ACTIVE_DUPLICATES_NEED_REVIEW:
     "Resolve duplicate workers in People before retrying the import.",
+  EMPLOYEE_MATCHED_TO_CANONICAL_ACTIVE_DUPLICATE:
+    "Confirm the canonical worker (with portal/phone/email) is the correct match; consider deactivating the stub.",
   WORKER_OMITTED_OVERLAP_NEEDS_REVIEW:
     "Review the overlapping shift; if it is a generic/legacy stub, cancel it and re-add the worker.",
   ADDRESS_MAPPED_TO_LOCATION:
@@ -70,6 +75,10 @@ const DEFAULT_ACTION: Record<ImportWarningCode, string> = {
     "Original note preserved. Open the shift to add meeting point/time manually if needed.",
   IMPORTED_ACCEPT_NOT_STAFLY_RESPONSE:
     "Worker has not yet accepted the shift in Stafly; UI must not display 'Aceptado'.",
+  SHIFT_RECONCILED_BY_FALLBACK_KEY:
+    "Existing shift reconciled via date+time+client fallback because shift_code differs from Connecteam title. Confirm the match is correct.",
+  MULTIPLE_EXISTING_SHIFT_MATCHES_NEED_REVIEW:
+    "Multiple existing shifts matched the date/time/client of this row. No new shift was created. Resolve duplicates manually.",
 };
 
 export function buildImportWarning(
