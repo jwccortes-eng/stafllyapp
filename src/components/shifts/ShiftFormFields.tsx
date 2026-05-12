@@ -27,6 +27,8 @@ import { TeamSection } from "./form/TeamSection";
 import { PaySection } from "./form/PaySection";
 import { AdvancedDetailsSection } from "./form/AdvancedDetailsSection";
 import { ShiftSummaryPanel } from "./form/ShiftSummaryPanel";
+import { ShiftWorkspaceLayout } from "./workspace/ShiftWorkspaceLayout";
+import { buildShiftDisplayName, isAutoDisplayName } from "@/lib/shifts/display-name";
 
 // ────────────────────────────────────────────────────────────────────────────
 // Types
@@ -111,6 +113,14 @@ export interface ShiftFormFieldsProps {
    * in the right column instead.
    */
   renderInlineSummary?: boolean;
+
+  /**
+   * Layout mode:
+   *  - "stack" (default): vertical stack of sections, identical to legacy.
+   *  - "workspace": premium desktop 2-column grid with auto display-name banner.
+   *    Activate from the create/edit dialogs on lg+ viewports.
+   */
+  layout?: "stack" | "workspace";
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -312,6 +322,7 @@ export function ShiftFormFields({
   adminError,
   companyId = null,
   renderInlineSummary = true,
+  layout = "stack",
 }: ShiftFormFieldsProps) {
   const signals = useShiftFormSignals({
     v,
@@ -347,133 +358,190 @@ export function ShiftFormFields({
   const payTypeLabel =
     v.payType === "daily" ? `por día · ${v.dayType === "full_day" ? "día completo" : "medio día"}` : "por hora";
 
+  const basicInfoNode = (
+    <ShiftBasicInfoSection
+      mode={mode}
+      title={v.title}
+      clientId={v.clientId}
+      date={v.date}
+      startTime={v.startTime}
+      endTime={v.endTime}
+      meetingTime={v.meetingTime}
+      slots={v.slots}
+      clients={clients}
+      onChange={handlePatch}
+      onQuickAddClient={onQuickAddClient}
+    />
+  );
+
+  const jobSiteNode = (
+    <JobSiteSection
+      companyId={companyId}
+      locationId={v.locationId}
+      jobSiteLocationId={v.jobSiteLocationId}
+      specialInstructions={v.specialInstructions}
+      locations={locations}
+      onChange={handlePatch}
+      onQuickAddLocation={onQuickAddLocation}
+    />
+  );
+
+  const transportationNode = (
+    <TransportationSection
+      mode={mode}
+      transportRequired={v.transportRequired}
+      carCapacity={v.carCapacity}
+      transportNotes={v.transportNotes}
+      driverEmployeeId={v.driverEmployeeId}
+      ridesNeeded={signals.ridesNeeded}
+      driversInTeam={signals.driversInTeam}
+      assignedCount={signals.assignedCount}
+      capacityShortage={signals.capacityShortage}
+      driversShortage={signals.driversShortage}
+      capacityCovered={signals.capacityCovered}
+      employees={employees}
+      onChange={handlePatch}
+    />
+  );
+
+  const meetingPointsNode = (
+    <MeetingPointsSection
+      transportRequired={v.transportRequired}
+      meetingPoint={v.meetingPoint}
+      meetingPointLocationId={v.meetingPointLocationId}
+      companyId={companyId}
+      onChange={handlePatch}
+    />
+  );
+
+  const teamNode = (
+    <TeamSection
+      mode={mode}
+      showEmployeePicker={showEmployeePicker}
+      allowClaims={allowClaims}
+      claimable={v.claimable}
+      selectedEmployees={v.selectedEmployees}
+      shiftAdminId={v.shiftAdminId}
+      adminCandidates={signals.adminCandidates}
+      employees={employees}
+      shifts={shifts}
+      assignments={assignments}
+      shiftDate={v.date}
+      shiftStart={v.startTime}
+      shiftEnd={v.endTime}
+      slotsNum={signals.slotsNum}
+      transportRequired={v.transportRequired}
+      availabilityConfigs={availabilityConfigs}
+      availabilityOverrides={availabilityOverrides}
+      assignedCount={signals.assignedCount}
+      adminError={adminError}
+      onToggleEmployee={toggleEmployee}
+      onAddNewEmployee={onAddNewEmployee}
+      onChange={handlePatch}
+    />
+  );
+
+  const payNode = (
+    <PaySection
+      payType={v.payType}
+      dayType={v.dayType}
+      payOverride={v.payOverride}
+      attendanceMode={v.attendanceMode}
+      locationId={v.locationId}
+      locations={locations}
+      onChange={handlePatch}
+    />
+  );
+
+  const advancedNode = (
+    <AdvancedDetailsSection
+      mode={mode}
+      notes={v.notes}
+      attendanceMode={v.attendanceMode}
+      clockMethod={v.clockMethod}
+      shift={shift}
+      qrAttendanceMode={qrAttendanceMode}
+      qrToken={qrToken}
+      onQrUpdate={onQrUpdate}
+      onChange={handlePatch}
+    />
+  );
+
+  const inlineSummaryNode = renderInlineSummary ? (
+    <ShiftSummaryPanel
+      mode={mode}
+      title={v.title}
+      clientName={signals.clientName}
+      date={v.date}
+      startTime={v.startTime}
+      endTime={v.endTime}
+      slotsNum={signals.slotsNum}
+      assignedCount={signals.assignedCount}
+      ridesNeeded={signals.ridesNeeded}
+      transportRequired={v.transportRequired}
+      driversInTeam={signals.driversInTeam}
+      jobSiteLabel={signals.jobSiteLabel}
+      meetingPointLabel={signals.meetingPointLabel}
+      dateMissing={!v.date}
+      adminMissing={signals.adminMissing}
+      adminInvalid={signals.adminInvalid}
+      noLocation={signals.noLocation}
+      noTeam={signals.noTeam}
+      driverMissing={signals.driverMissing}
+      driversShortage={signals.driversShortage}
+      capacityShortage={signals.capacityShortage}
+      hasConflicts={signals.hasConflicts}
+      conflictNames={signals.conflictNames}
+      payOverrideActive={signals.payOverrideActive}
+      payTypeLabel={payTypeLabel}
+    />
+  ) : null;
+
+  if (layout === "workspace") {
+    const displayNameInput = {
+      manualTitle: v.title,
+      clientName: signals.clientName,
+      startTime: v.startTime,
+    };
+    const displayName = buildShiftDisplayName(displayNameInput);
+    const auto = isAutoDisplayName(displayNameInput);
+    return (
+      <ShiftWorkspaceLayout
+        displayName={displayName}
+        displayNameHint={
+          auto
+            ? "Generado automáticamente desde cliente, tipo y hora. Puedes asignar una etiqueta interna en Información principal."
+            : "Etiqueta interna definida manualmente."
+        }
+        whatWhere={
+          <>
+            {basicInfoNode}
+            {jobSiteNode}
+            {meetingPointsNode}
+          </>
+        }
+        teamOps={
+          <>
+            {teamNode}
+            {transportationNode}
+            {payNode}
+          </>
+        }
+        advanced={advancedNode}
+      />
+    );
+  }
+
   return (
     <div className="space-y-3">
-      <ShiftBasicInfoSection
-        mode={mode}
-        title={v.title}
-        clientId={v.clientId}
-        date={v.date}
-        startTime={v.startTime}
-        endTime={v.endTime}
-        meetingTime={v.meetingTime}
-        slots={v.slots}
-        clients={clients}
-        onChange={handlePatch}
-        onQuickAddClient={onQuickAddClient}
-      />
-
-      <JobSiteSection
-        companyId={companyId}
-        locationId={v.locationId}
-        jobSiteLocationId={v.jobSiteLocationId}
-        specialInstructions={v.specialInstructions}
-        locations={locations}
-        onChange={handlePatch}
-        onQuickAddLocation={onQuickAddLocation}
-      />
-
-      <TransportationSection
-        mode={mode}
-        transportRequired={v.transportRequired}
-        carCapacity={v.carCapacity}
-        transportNotes={v.transportNotes}
-        driverEmployeeId={v.driverEmployeeId}
-        ridesNeeded={signals.ridesNeeded}
-        driversInTeam={signals.driversInTeam}
-        assignedCount={signals.assignedCount}
-        capacityShortage={signals.capacityShortage}
-        driversShortage={signals.driversShortage}
-        capacityCovered={signals.capacityCovered}
-        employees={employees}
-        onChange={handlePatch}
-      />
-
-      <MeetingPointsSection
-        transportRequired={v.transportRequired}
-        meetingPoint={v.meetingPoint}
-        meetingPointLocationId={v.meetingPointLocationId}
-        companyId={companyId}
-        onChange={handlePatch}
-      />
-
-      <TeamSection
-        mode={mode}
-        showEmployeePicker={showEmployeePicker}
-        allowClaims={allowClaims}
-        claimable={v.claimable}
-        selectedEmployees={v.selectedEmployees}
-        shiftAdminId={v.shiftAdminId}
-        adminCandidates={signals.adminCandidates}
-        employees={employees}
-        shifts={shifts}
-        assignments={assignments}
-        shiftDate={v.date}
-        shiftStart={v.startTime}
-        shiftEnd={v.endTime}
-        slotsNum={signals.slotsNum}
-        transportRequired={v.transportRequired}
-        availabilityConfigs={availabilityConfigs}
-        availabilityOverrides={availabilityOverrides}
-        assignedCount={signals.assignedCount}
-        adminError={adminError}
-        onToggleEmployee={toggleEmployee}
-        onAddNewEmployee={onAddNewEmployee}
-        onChange={handlePatch}
-      />
-
-      <PaySection
-        payType={v.payType}
-        dayType={v.dayType}
-        payOverride={v.payOverride}
-        attendanceMode={v.attendanceMode}
-        locationId={v.locationId}
-        locations={locations}
-        onChange={handlePatch}
-      />
-
-      <AdvancedDetailsSection
-        mode={mode}
-        notes={v.notes}
-        attendanceMode={v.attendanceMode}
-        clockMethod={v.clockMethod}
-        shift={shift}
-        qrAttendanceMode={qrAttendanceMode}
-        qrToken={qrToken}
-        onQrUpdate={onQrUpdate}
-        onChange={handlePatch}
-      />
-
-      {/* Inline summary for legacy callers (mobile dialogs without a side panel). */}
-      {renderInlineSummary && (
-        <ShiftSummaryPanel
-          mode={mode}
-          title={v.title}
-          clientName={signals.clientName}
-          date={v.date}
-          startTime={v.startTime}
-          endTime={v.endTime}
-          slotsNum={signals.slotsNum}
-          assignedCount={signals.assignedCount}
-          ridesNeeded={signals.ridesNeeded}
-          transportRequired={v.transportRequired}
-          driversInTeam={signals.driversInTeam}
-          jobSiteLabel={signals.jobSiteLabel}
-          meetingPointLabel={signals.meetingPointLabel}
-          dateMissing={!v.date}
-          adminMissing={signals.adminMissing}
-          adminInvalid={signals.adminInvalid}
-          noLocation={signals.noLocation}
-          noTeam={signals.noTeam}
-          driverMissing={signals.driverMissing}
-          driversShortage={signals.driversShortage}
-          capacityShortage={signals.capacityShortage}
-          hasConflicts={signals.hasConflicts}
-          conflictNames={signals.conflictNames}
-          payOverrideActive={signals.payOverrideActive}
-          payTypeLabel={payTypeLabel}
-        />
-      )}
+      {basicInfoNode}
+      {jobSiteNode}
+      {transportationNode}
+      {meetingPointsNode}
+      {teamNode}
+      {payNode}
+      {advancedNode}
+      {inlineSummaryNode}
     </div>
   );
 }
