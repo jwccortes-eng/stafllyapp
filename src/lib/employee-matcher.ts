@@ -35,6 +35,9 @@ export interface EmployeeRecord {
    * fallback so the resolver can prefer an active record when the matched
    * employee is inactive but a same-name active duplicate exists. */
   is_active?: boolean | null;
+  /** Linked Supabase auth user (portal-enabled). Used as the strongest signal
+   * when scoring multiple active same-name duplicates. */
+  user_id?: string | null;
 }
 
 /** Auxiliary record from the Connecteam Users export (parseConnecteamFile). */
@@ -65,6 +68,12 @@ export interface MatchResult {
   replacedInactiveId?: string;
   /** True when the exact-name match resolved to multiple active duplicates. */
   needsActiveDuplicateReview?: boolean;
+  /** True when multiple active duplicates existed and the resolver chose the
+   * one with the highest completeness score (user_id > phone > email > empnum).
+   * Caller should emit EMPLOYEE_MATCHED_TO_CANONICAL_ACTIVE_DUPLICATE. */
+  tiebrokenByCompleteness?: boolean;
+  /** Other active candidate ids that lost the completeness tiebreak. */
+  losingCandidateIds?: string[];
 }
 
 export interface MatchTelemetry {
@@ -158,6 +167,40 @@ interface EmployeeIndex {
   byReversed: Map<string, string[]>;       // reversed normalized name → empIds[]
   allNames: Array<{ id: string; norm: string; display: string }>; // for fuzzy
   activeIds: Set<string>;                  // ids known to be active
+  byId: Map<string, EmployeeRecord>;       // for completeness scoring
+}
+
+/**
+ * Score how "canonical" an employee record is. Used to break ties between
+ * multiple active same-name duplicates. Higher = more canonical.
+ *  - user_id      → linked to portal account (strongest signal)
+ *  - phone_number → reachable
+ *  - email        → identifiable
+ *  - employer_id  → has been formally numbered
+ */
+function completenessScore(r: EmployeeRecord | undefined): number {
+  if (!r) return 0;
+  let s = 0;
+  if (r.user_id) s += 8;
+  if (r.phone_number && r.phone_number.trim()) s += 4;
+  if (r.email && r.email.trim()) s += 2;
+  if (r.employer_identification && String(r.employer_identification).trim()) s += 1;
+  return s;
+}
+
+/** Pick the highest-scoring candidate. Returns null if there is no strict winner. */
+function pickCanonical(
+  ids: string[],
+  byId: Map<string, EmployeeRecord>,
+): { winner: string; losers: string[] } | null {
+  if (ids.length === 0) return null;
+  if (ids.length === 1) return { winner: ids[0], losers: [] };
+  const scored = ids.map(id => ({ id, score: completenessScore(byId.get(id)) }));
+  scored.sort((a, b) => b.score - a.score);
+  if (scored[0].score > scored[1].score) {
+    return { winner: scored[0].id, losers: scored.slice(1).map(x => x.id) };
+  }
+  return null; // tie — caller must surface for review
 }
 
 /** Auxiliary index: maps normalized name → identifiers from the Users export. */
@@ -176,7 +219,10 @@ export function buildEmployeeIndex(employees: EmployeeRecord[]): EmployeeIndex {
     byReversed: new Map(),
     allNames: [],
     activeIds: new Set(),
+    byId: new Map(),
   };
+
+  for (const e of employees) idx.byId.set(e.id, e);
 
   for (const e of employees) {
     const display = `${e.first_name ?? ""} ${e.last_name ?? ""}`.trim();
@@ -314,6 +360,20 @@ export class EmployeeResolver {
           };
         }
         if (activeTwins.length > 1) {
+          // Try completeness tiebreaker (user_id > phone > email > empnum).
+          const picked = pickCanonical(activeTwins, this.empIndex.byId);
+          if (picked) {
+            this.telemetry.exact_name++;
+            return {
+              employeeId: picked.winner,
+              method: "exact_name",
+              confidence: "medium",
+              replacedInactiveId: onlyId,
+              tiebrokenByCompleteness: true,
+              losingCandidateIds: picked.losers,
+            };
+          }
+          // True tie — needs review; do NOT silently pick.
           this.recordAmbiguous(trimmed, activeTwins, "exact_name");
           this.telemetry.ambiguous++;
           return {
@@ -322,6 +382,7 @@ export class EmployeeResolver {
             confidence: "low",
             needsActiveDuplicateReview: true,
             replacedInactiveId: onlyId,
+            losingCandidateIds: activeTwins.slice(1),
           };
         }
         // No active twin — keep current behavior (return inactive id; caller
@@ -331,12 +392,36 @@ export class EmployeeResolver {
       return { employeeId: onlyId, method: "exact_name", confidence: "high" };
     }
     if (exact && exact.length > 1) {
-      // Multiple matches — prefer active subset when possible.
+      // Multiple matches — prefer active subset; if more than one active,
+      // tiebreak by completeness; if true tie, return needs-review.
       const activeTwins = this.empIndex.byNameActive.get(norm) ?? [];
       if (activeTwins.length === 1) {
         this.telemetry.exact_name++;
         return { employeeId: activeTwins[0], method: "exact_name", confidence: "high" };
       }
+      if (activeTwins.length > 1) {
+        const picked = pickCanonical(activeTwins, this.empIndex.byId);
+        if (picked) {
+          this.telemetry.exact_name++;
+          return {
+            employeeId: picked.winner,
+            method: "exact_name",
+            confidence: "medium",
+            tiebrokenByCompleteness: true,
+            losingCandidateIds: picked.losers,
+          };
+        }
+        this.recordAmbiguous(trimmed, activeTwins, "exact_name");
+        this.telemetry.ambiguous++;
+        return {
+          employeeId: activeTwins[0],
+          method: "exact_name",
+          confidence: "low",
+          needsActiveDuplicateReview: true,
+          losingCandidateIds: activeTwins.slice(1),
+        };
+      }
+      // No active matches at all — record ambiguous (only inactive duplicates).
       this.recordAmbiguous(trimmed, exact, "exact_name");
       this.telemetry.ambiguous++;
       return null;
