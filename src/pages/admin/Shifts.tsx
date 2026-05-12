@@ -2149,6 +2149,58 @@ function DesktopShifts() {
         onUpdate={(partial) => updateShiftsConfig(partial as any)}
         loading={shiftsConfigLoading}
       />
+
+      {/* Phase 4.2 — Pre-publish review for single draft publish */}
+      {pendingPublishShift && (() => {
+        const s: any = pendingPublishShift;
+        const client = clients.find((c) => c.id === s.client_id) || null;
+        const jobLocId = s.job_site_location_id ?? s.location_id ?? null;
+        const jobLoc = jobLocId ? locations.find((l) => l.id === jobLocId) : null;
+        const meetingLoc = s.meeting_point_location_id
+          ? locations.find((l) => l.id === s.meeting_point_location_id)
+          : null;
+        const assignedCount = assignments.filter(
+          (a) => a.shift_id === s.id && a.status !== "rejected",
+        ).length;
+        const review = buildPrePublishReview({
+          manualTitle: s.title ?? "",
+          date: s.date ?? "",
+          startTime: s.start_time ?? "",
+          endTime: s.end_time ?? "",
+          meetingTime: s.meeting_time ?? "",
+          clientId: s.client_id ?? "",
+          locationId: s.location_id ?? "",
+          jobSiteLocationId: s.job_site_location_id ?? null,
+          meetingPoint: s.meeting_point ?? "",
+          meetingPointLocationId: s.meeting_point_location_id ?? null,
+          transportRequired: !!s.transportation_required,
+          claimable: !!s.claimable,
+          assignedCount,
+          slotsNum: s.slots ?? 0,
+          clientName: client?.name ?? null,
+          jobSiteLabel: jobLoc?.name ?? null,
+          meetingPointLabel: meetingLoc?.name ?? (s.meeting_point || null),
+        });
+        return (
+          <PrePublishDialog
+            open={!!pendingPublishShift}
+            onOpenChange={(o) => {
+              if (!o && !publishingGated) setPendingPublishShift(null);
+            }}
+            data={review}
+            saving={publishingGated}
+            onConfirm={async () => {
+              setPublishingGated(true);
+              try {
+                await executePublishShift(pendingPublishShift);
+                setPendingPublishShift(null);
+              } finally {
+                setPublishingGated(false);
+              }
+            }}
+          />
+        );
+      })()}
     </div>
   );
 }
