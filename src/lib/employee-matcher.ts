@@ -68,6 +68,12 @@ export interface MatchResult {
   replacedInactiveId?: string;
   /** True when the exact-name match resolved to multiple active duplicates. */
   needsActiveDuplicateReview?: boolean;
+  /** True when multiple active duplicates existed and the resolver chose the
+   * one with the highest completeness score (user_id > phone > email > empnum).
+   * Caller should emit EMPLOYEE_MATCHED_TO_CANONICAL_ACTIVE_DUPLICATE. */
+  tiebrokenByCompleteness?: boolean;
+  /** Other active candidate ids that lost the completeness tiebreak. */
+  losingCandidateIds?: string[];
 }
 
 export interface MatchTelemetry {
