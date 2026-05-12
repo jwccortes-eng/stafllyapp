@@ -178,6 +178,7 @@ export function ShiftEditDialog({
       summary={summary}
     >
       <ShiftFormFields
+        layout="workspace"
         mode="edit"
         companyId={(shift as any).company_id ?? null}
         value={form}
