@@ -276,7 +276,13 @@ export default function ImportReview() {
             </SelectContent>
           </Select>
           <Button variant="outline" size="sm" onClick={exportCsv} disabled={!model}>
-            <Download className="h-4 w-4 mr-1" />Export CSV
+            <Download className="h-4 w-4 mr-1" />CSV
+          </Button>
+          <Button variant="outline" size="sm" onClick={exportXlsx} disabled={!model}>
+            <Download className="h-4 w-4 mr-1" />Diff XLSX
+          </Button>
+          <Button variant="outline" size="sm" onClick={exportPdf} disabled={!model}>
+            <Download className="h-4 w-4 mr-1" />PDF
           </Button>
         </div>
       </div>
