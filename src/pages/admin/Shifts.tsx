@@ -54,6 +54,7 @@ import { QuickAddInviteWizard } from "@/components/employee/QuickAddInviteWizard
 import { ShiftFormFields, useShiftFormSignals, type ShiftFormState } from "@/components/shifts/ShiftFormFields";
 import { ShiftFormShell } from "@/components/shifts/ShiftFormShell";
 import { ShiftSummaryPanel } from "@/components/shifts/form/ShiftSummaryPanel";
+import { WorkspaceSummary } from "@/components/shifts/workspace/WorkspaceSummary";
 import type { Shift, Assignment, SelectOption, Employee, ViewMode } from "@/components/shifts/types";
 import { formatShiftCode } from "@/components/shifts/types";
 import { isDraftShift, isPublishedShift } from "@/lib/shifts/shift-guards";
