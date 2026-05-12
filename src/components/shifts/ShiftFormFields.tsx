@@ -455,6 +455,7 @@ export function ShiftFormFields({
   const advancedNode = (
     <AdvancedDetailsSection
       mode={mode}
+      title={v.title}
       notes={v.notes}
       attendanceMode={v.attendanceMode}
       clockMethod={v.clockMethod}
