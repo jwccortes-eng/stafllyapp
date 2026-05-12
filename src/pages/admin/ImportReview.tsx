@@ -356,8 +356,12 @@ export default function ImportReview() {
               </div>
               <div className="flex flex-wrap gap-1 pt-1">
                 {Object.entries(model.warningCounts).sort((a, b) => b[1] - a[1]).map(([code, n]) => (
-                  <span key={code} className="inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[10px] font-mono bg-muted/50">
-                    {code} · {n}
+                  <span
+                    key={code}
+                    title={code}
+                    className="inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[10px] font-medium bg-muted/50"
+                  >
+                    {WARNING_HUMAN_LABEL[code as ImportWarningCode] ?? code} · {n}
                   </span>
                 ))}
               </div>
