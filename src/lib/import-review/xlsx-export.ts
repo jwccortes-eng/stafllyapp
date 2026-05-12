@@ -72,7 +72,7 @@ export async function downloadDiffXlsx(model: ReviewModel, fileName: string) {
     "Missing in Stafly", "Extra in Stafly",
     "Source address", "Stafly location",
     "Source note", "Stafly meeting point", "Stafly meeting time",
-    "Warning codes",
+    "Warnings", "Technical warning codes",
   ]);
   for (const s of model.shifts) {
     const expected = s.workers.filter(w => w.status !== "extra_in_stafly");
