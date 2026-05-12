@@ -41,6 +41,7 @@ interface Props {
 
 function AdvancedDetailsSectionImpl({
   mode,
+  title,
   notes,
   attendanceMode,
   clockMethod,
