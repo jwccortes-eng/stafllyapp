@@ -56,6 +56,7 @@ import { ShiftFormShell } from "@/components/shifts/ShiftFormShell";
 import { ShiftSummaryPanel } from "@/components/shifts/form/ShiftSummaryPanel";
 import { WorkspaceSummary } from "@/components/shifts/workspace/WorkspaceSummary";
 import { buildPrePublishReview } from "@/lib/shifts/build-pre-publish-review";
+import { PrePublishDialog } from "@/components/shifts/workspace/PrePublishDialog";
 import type { Shift, Assignment, SelectOption, Employee, ViewMode } from "@/components/shifts/types";
 import { formatShiftCode } from "@/components/shifts/types";
 import { isDraftShift, isPublishedShift } from "@/lib/shifts/shift-guards";
@@ -1041,12 +1042,24 @@ function DesktopShifts() {
     loadData();
   };
 
+  // Phase 4.2 — gate single-shift publish behind PrePublishDialog so the
+  // operator sees pending info, worker preview, and confirms when publishing
+  // with incomplete data. The actual publish handler below is unchanged.
+  const [pendingPublishShift, setPendingPublishShift] = useState<Shift | null>(null);
+  const [publishingGated, setPublishingGated] = useState(false);
+
   const handlePublishShift = async (shift: Shift) => {
     // require_shift_admin gate
     if (shiftsConfig.require_shift_admin && !(shift as any).shift_admin_id) {
       toast.error("A shift lead must be assigned before publishing");
       return;
     }
+    // Open the review dialog instead of publishing immediately. The
+    // confirmation handler below calls executePublishShift unchanged.
+    setPendingPublishShift(shift);
+  };
+
+  const executePublishShift = async (shift: Shift) => {
     // Use the RPC so draft reservations are lifted atomically and the
     // publication lifecycle stays consistent (publication_status + status).
     const { error: rpcError } = await supabase.rpc("publish_shift_draft" as any, { _shift_id: shift.id });
@@ -2136,6 +2149,58 @@ function DesktopShifts() {
         onUpdate={(partial) => updateShiftsConfig(partial as any)}
         loading={shiftsConfigLoading}
       />
+
+      {/* Phase 4.2 — Pre-publish review for single draft publish */}
+      {pendingPublishShift && (() => {
+        const s: any = pendingPublishShift;
+        const client = clients.find((c) => c.id === s.client_id) || null;
+        const jobLocId = s.job_site_location_id ?? s.location_id ?? null;
+        const jobLoc = jobLocId ? locations.find((l) => l.id === jobLocId) : null;
+        const meetingLoc = s.meeting_point_location_id
+          ? locations.find((l) => l.id === s.meeting_point_location_id)
+          : null;
+        const assignedCount = assignments.filter(
+          (a) => a.shift_id === s.id && a.status !== "rejected",
+        ).length;
+        const review = buildPrePublishReview({
+          manualTitle: s.title ?? "",
+          date: s.date ?? "",
+          startTime: s.start_time ?? "",
+          endTime: s.end_time ?? "",
+          meetingTime: s.meeting_time ?? "",
+          clientId: s.client_id ?? "",
+          locationId: s.location_id ?? "",
+          jobSiteLocationId: s.job_site_location_id ?? null,
+          meetingPoint: s.meeting_point ?? "",
+          meetingPointLocationId: s.meeting_point_location_id ?? null,
+          transportRequired: !!s.transportation_required,
+          claimable: !!s.claimable,
+          assignedCount,
+          slotsNum: s.slots ?? 0,
+          clientName: client?.name ?? null,
+          jobSiteLabel: jobLoc?.name ?? null,
+          meetingPointLabel: meetingLoc?.name ?? (s.meeting_point || null),
+        });
+        return (
+          <PrePublishDialog
+            open={!!pendingPublishShift}
+            onOpenChange={(o) => {
+              if (!o && !publishingGated) setPendingPublishShift(null);
+            }}
+            data={review}
+            saving={publishingGated}
+            onConfirm={async () => {
+              setPublishingGated(true);
+              try {
+                await executePublishShift(pendingPublishShift);
+                setPendingPublishShift(null);
+              } finally {
+                setPublishingGated(false);
+              }
+            }}
+          />
+        );
+      })()}
     </div>
   );
 }
