@@ -506,13 +506,30 @@ export default function ImportReview() {
                 <Card>
                   <CardHeader className="pb-2"><CardTitle className="text-xs uppercase text-muted-foreground">Workers</CardTitle></CardHeader>
                   <CardContent className="space-y-1">
-                    {openShift.workers.map((w, i) => (
-                      <div key={i} className="flex items-center gap-2 py-1 border-b last:border-0 text-xs">
-                        <span className="flex-1">{w.displayName} {w.employerId && <span className="font-mono text-muted-foreground">#{w.employerId}</span>}</span>
-                        <Badge variant={w.status === "matched" ? "secondary" : w.status === "extra_in_stafly" ? "outline" : "destructive"} className="text-[10px]">{w.status}</Badge>
-                        {w.warnings.map((ww, j) => <WarningChip key={j} w={ww} />)}
-                      </div>
-                    ))}
+                    {openShift.workers.map((w, i) => {
+                      const variant: "default" | "secondary" | "destructive" | "outline" =
+                        w.status === "matched" ? "secondary"
+                        : w.status === "canonical_duplicate_resolved" ? "default"
+                        : w.status === "extra_in_stafly" ? "outline"
+                        : "destructive";
+                      return (
+                        <div key={i} className="flex items-center gap-2 py-1 border-b last:border-0 text-xs flex-wrap">
+                          <span className="flex-1 min-w-0">
+                            {w.rawName && w.rawName !== w.displayName && (
+                              <span className="text-muted-foreground">{w.rawName} → </span>
+                            )}
+                            {w.displayName} {w.employerId && <span className="font-mono text-muted-foreground">#{w.employerId}</span>}
+                            {w.status === "canonical_duplicate_resolved" && w.sourceMatchedEmployerId && (
+                              <span className="ml-2 font-mono text-[10px] text-muted-foreground">
+                                (source matched {w.sourceMatchedReason ?? ""} #{w.sourceMatchedEmployerId})
+                              </span>
+                            )}
+                          </span>
+                          <Badge variant={variant} className="text-[10px]">{WORKER_STATUS_LABEL[w.status] ?? w.status}</Badge>
+                          {w.warnings.map((ww, j) => <WarningChip key={j} w={ww} />)}
+                        </div>
+                      );
+                    })}
                     {openShift.workers.length === 0 && <p className="text-xs text-muted-foreground">No workers.</p>}
                   </CardContent>
                 </Card>
