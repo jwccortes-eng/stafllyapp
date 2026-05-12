@@ -322,6 +322,7 @@ export function ShiftFormFields({
   adminError,
   companyId = null,
   renderInlineSummary = true,
+  layout = "stack",
 }: ShiftFormFieldsProps) {
   const signals = useShiftFormSignals({
     v,
