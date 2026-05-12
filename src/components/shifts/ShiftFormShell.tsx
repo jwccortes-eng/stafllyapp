@@ -202,7 +202,7 @@ export function ShiftFormShell({
               </Button>
             )}
             <Button
-              onClick={() => void onSave()}
+              onClick={handlePrimaryClick}
               disabled={saving || saveDisabled || draftSaving}
               size="sm"
               className="h-9 text-xs gap-1.5 font-semibold px-4"
