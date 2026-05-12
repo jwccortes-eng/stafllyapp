@@ -39,13 +39,7 @@ type FilterKey =
   | "pay_ride"
   | "placeholder";
 
-const STATUS_LABEL: Record<DiffStatus, string> = {
-  matched_exact: "Matched exactly",
-  matched_fallback: "Matched by fallback",
-  would_create: "Would create new",
-  possible_duplicate: "Possible duplicate",
-  needs_review: "Needs review",
-};
+const STATUS_LABEL: Record<DiffStatus, string> = DIFF_STATUS_HUMAN_LABEL;
 
 const STATUS_VARIANT: Record<DiffStatus, "default" | "secondary" | "destructive" | "outline"> = {
   matched_exact: "secondary",
@@ -55,16 +49,7 @@ const STATUS_VARIANT: Record<DiffStatus, "default" | "secondary" | "destructive"
   needs_review: "destructive",
 };
 
-const WORKER_STATUS_LABEL: Record<string, string> = {
-  matched: "Asignado",
-  missing_in_stafly: "Falta en Stafly",
-  extra_in_stafly: "Extra en Stafly",
-  inactive_matched: "Inactivo detectado",
-  placeholder: "Placeholder",
-  imported_accept_only: "Importado/no confirmado",
-  canonical_duplicate_resolved: "Duplicado resuelto",
-  unmatched: "Sin match",
-};
+const WORKER_STATUS_LABEL: Record<string, string> = WORKER_STATUS_HUMAN_LABEL;
 
 const SEVERITY_ICON = {
   info: Info,
@@ -72,15 +57,21 @@ const SEVERITY_ICON = {
   error: AlertTriangle,
 } as const;
 
-function WarningChip({ w }: { w: ImportWarning }) {
+function WarningChip({ w, showCode = false }: { w: ImportWarning; showCode?: boolean }) {
   const Icon = SEVERITY_ICON[w.severity];
   const tone =
     w.severity === "error" ? "bg-destructive/10 text-destructive border-destructive/30" :
     w.severity === "warn" ? "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30" :
     "bg-muted text-muted-foreground border-border";
+  const label = WARNING_HUMAN_LABEL[w.code] ?? w.code;
   return (
-    <span className={`inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[10px] font-mono ${tone}`}>
-      <Icon className="h-3 w-3" />{w.code}
+    <span
+      title={w.code}
+      className={`inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[10px] font-medium ${tone}`}
+    >
+      <Icon className="h-3 w-3" />
+      {label}
+      {showCode && <span className="ml-1 font-mono opacity-60">· {w.code}</span>}
     </span>
   );
 }
