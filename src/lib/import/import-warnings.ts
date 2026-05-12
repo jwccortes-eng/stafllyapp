@@ -59,6 +59,7 @@ const DEFAULT_SEVERITY: Record<ImportWarningCode, ImportWarningSeverity> = {
   MULTIPLE_EXISTING_SHIFT_MATCHES_NEED_REVIEW: "warn",
   PLACEHOLDER_SYSTEM_EXCLUDED: "info",
   PAY_RIDE_DETECTED: "info",
+  CANONICAL_DUPLICATE_RESOLVED: "info",
 };
 
 const DEFAULT_ACTION: Record<ImportWarningCode, string> = {
