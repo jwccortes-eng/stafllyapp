@@ -597,7 +597,7 @@ export default function ImportSchedule() {
       });
       const targetDiagnostics = new Map<string, TargetShiftDiagnostic>();
       // Cache resolution per name to avoid double-counting telemetry.
-      const resolveCache = new Map<string, { id: string | null; ambiguous: boolean; method: MatchMethod | null; replacedInactiveId?: string; needsActiveDuplicateReview?: boolean }>();
+      const resolveCache = new Map<string, { id: string | null; ambiguous: boolean; method: MatchMethod | null; replacedInactiveId?: string; needsActiveDuplicateReview?: boolean; tiebrokenByCompleteness?: boolean; losingCandidateIds?: string[] }>();
       const resolveOnce = (name: string) => {
         const cached = resolveCache.get(name);
         if (cached) return cached;
@@ -610,6 +610,8 @@ export default function ImportSchedule() {
           method: r?.method ?? null,
           replacedInactiveId: r?.replacedInactiveId,
           needsActiveDuplicateReview: r?.needsActiveDuplicateReview,
+          tiebrokenByCompleteness: r?.tiebrokenByCompleteness,
+          losingCandidateIds: r?.losingCandidateIds,
         };
         resolveCache.set(name, result);
         return result;
@@ -624,7 +626,7 @@ export default function ImportSchedule() {
       // ultimately succeeds.
       const importWarningsForResolver: ImportWarning[] = [];
       for (const [rawName, r] of resolveCache) {
-        if (r.replacedInactiveId && !r.needsActiveDuplicateReview) {
+        if (r.replacedInactiveId && !r.needsActiveDuplicateReview && !r.tiebrokenByCompleteness) {
           importWarningsForResolver.push(buildImportWarning("INACTIVE_MATCH_REPLACED_WITH_ACTIVE", {
             raw_employee_name: rawName,
             matched_employee_id: r.id,
@@ -635,7 +637,14 @@ export default function ImportSchedule() {
           importWarningsForResolver.push(buildImportWarning("MULTIPLE_ACTIVE_DUPLICATES_NEED_REVIEW", {
             raw_employee_name: rawName,
             matched_employee_id: r.id,
-            details: { inactive_employee_id: r.replacedInactiveId },
+            details: { inactive_employee_id: r.replacedInactiveId, candidate_ids: r.losingCandidateIds },
+          }));
+        }
+        if (r.tiebrokenByCompleteness) {
+          importWarningsForResolver.push(buildImportWarning("EMPLOYEE_MATCHED_TO_CANONICAL_ACTIVE_DUPLICATE", {
+            raw_employee_name: rawName,
+            matched_employee_id: r.id,
+            details: { inactive_employee_id: r.replacedInactiveId, losing_candidate_ids: r.losingCandidateIds },
           }));
         }
       }
