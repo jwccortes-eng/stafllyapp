@@ -125,13 +125,13 @@ export async function downloadDiffXlsx(model: ReviewModel, fileName: string) {
 
   // ---------- Warnings sheet ----------
   const warns = wb.addWorksheet("Warnings");
-  warns.addRow(["Code", "Severity", "Date", "Start", "End", "Job", "Worker", "Recommended action"]);
+  warns.addRow(["Warning", "Severity", "Date", "Start", "End", "Job", "Worker", "Recommended action", "Technical code"]);
   for (const s of model.shifts) {
     for (const w of s.warnings) {
       warns.addRow([
-        w.code, w.severity, w.date ?? s.date, w.start_time ?? s.startTime,
+        humanWarn(w.code), w.severity, w.date ?? s.date, w.start_time ?? s.startTime,
         w.end_time ?? s.endTime, w.job ?? s.job ?? "",
-        w.raw_employee_name ?? "", w.recommended_action ?? "",
+        w.raw_employee_name ?? "", w.recommended_action ?? "", w.code,
       ]);
     }
   }
