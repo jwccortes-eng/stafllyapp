@@ -1,105 +1,165 @@
-## Import Review Center v1 — Read-only diff between Connecteam dry-run and Stafly
+# Daily Operations Command Center — Audit + Phased Plan
 
-### Goal
-A new admin-only screen that lets Jorge **see what a Connecteam import would do before approving it**. It compares an existing dry-run batch (already produced by `/app/import-schedule` in Auditoría mode) against current Stafly state and surfaces every shift-, worker-, location- and warning-level difference. **No writes, no real import** — pure review.
+Read-only. No code, no schema, no payroll, no time_entries, no RLS, no notifications were modified.
 
-### Why dry-run is the source
-The dry-run already persists everything we need:
+---
 
-- `import_batches` (status `dry_run`) — counters + `warnings` jsonb
-- `raw_schedule_import_rows` — every Excel row verbatim
-- `normalized_schedule_rows` — parsed shift+employee rows with `matched_employee_id`, `employee_match_method`, `employee_match_confidence`, `client_name`, `location_name`, `shift_title`, `notes`, `external_shift_id`, `availability_status`, `has_conflict`, `conflict_details`
-- The `SHIFT_RECONCILED_BY_FALLBACK_KEY` warning carries `matched_scheduled_shift_id`
+## 1. File / component inventory (current state)
 
-So v1 doesn't need any new ingestion — it builds the diff from existing audit rows.
+Admin pages already in the repo:
 
-### New route
-`/app/import-review` (admin-only, behind `canAccessAdminForCompany`). Sidebar entry under "Operations" next to "Import Schedule".
+| Route | File | Lines | Purpose today |
+|---|---|---|---|
+| `/app/shifts` | `src/pages/admin/Shifts.tsx` | 2101 | Calendar + create/edit/delete/duplicate. Owns DayView/WeekView/MonthView/WeekByJobView/WeekByEmployeeView. |
+| `/app/timeclock` | `src/pages/admin/TimeClock.tsx` → `components/timeclock/TimeClockCommandView.tsx` | 199 / 1094 | Open clocks, day/week/month, missing clocks. Reads `time_entries (+scheduled_shifts)`. |
+| `/app/operations` | `src/pages/admin/OperationsCommandCenter.tsx` | 891 | Already joins `scheduled_shifts + shift_assignments + time_entries` with realtime. **Closest existing surface to the desired CC.** |
+| `/app/command-center` | `src/pages/admin/CommandCenter.tsx` | 1022 | Counts/KPIs, partially overlaps with Operations. |
+| `/app/shift-operations` | `src/pages/admin/ShiftOperations.tsx` | 654 | Per-shift drawer-style operations. |
+| `/app/attendance` | `src/pages/admin/Attendance.tsx` | 667 | Attendance review. |
 
-### Page layout
+Mobile counterparts: `MobileShiftsView.tsx`, `MobileTimeClockView.tsx`, `components/admin/mobile/*` (Mobile Admin Module Shell — already standardized).
 
+Shared shift components:
+`ShiftCard`, `ShiftDetailDialog`, `ShiftAttendancePanel`, `ShiftTeamPanel`, `ShiftAuditTrail`, `ShiftActionBar`, `ShiftLiveMapPanel`, `StaffingRequiredBanner`, `UnstaffedAlert`, `WeeklySummaryBar`, `closeout/*`, `form/*`.
+
+Shared timeclock components:
+`TimeClockCommandView`, `DayDetailView`, `MonthClockView`, `WeekClockChipGrid`, `TimesheetView`.
+
+Shared design system (DS3a):
+`components/stafly-ui/ShiftRouteHeader` (Work Route standard — already used by portal), `mobile-agenda/OperationalTimeBlock`. **Reuse these — they already encode "Entrada protagonista / Termina aprox."**
+
+---
+
+## 2. Data availability map (already queryable, no schema changes required)
+
+`scheduled_shifts`: id, company_id, title, date, start_time, end_time, status, publication_status, claimable, slots, location_id, job_site_location_id, meeting_point, meeting_point_location_id, meeting_time, shift_admin_id, driver_employee_id, attendance_mode, deleted_at, shift_link_token.
+
+`shift_assignments`: shift_id, employee_id, status (pending/accepted/confirmed/rejected/removed), response_status, assignment_role, is_draft_reservation.
+
+`time_entries`: id, employee_id, shift_id (nullable), clock_in, clock_out, break_minutes, status, company_id. → drives "checked in / open clock / missing clock-out / unlinked clock".
+
+`employees`: id, first_name, last_name, phone_number, avatar_url, is_active, person_type_guess, payroll_safe.
+
+`locations`: name, address (used by ShiftRouteHeader for job site/meeting point).
+
+Derivable per shift, no new columns:
+- coverage = `assignments(status in accepted/confirmed)` count vs `slots`
+- clock state per assigned worker: `none | open | closed | missing_clock_out | unlinked`
+- shift bucket: `needs_staff | staffed_not_started | in_progress | needs_closeout | closed`
+- alert level: `info | warn | urgent` (warn = late > grace; urgent = no-show or open clock past end_time)
+
+**Missing for full Phase B fidelity (proposed, not built yet):**
+- A shared selector `getShiftOperationalState(shift, assignments, entries)` (UI helper, not DB).
+- A reusable hook `useTodayOperations(companyId, dateISO)` returning the joined+derived view.
+- Optional future view `vw_shift_today_ops` (Phase D only — flagged, not required).
+
+---
+
+## 3. Proposed information architecture
+
+```text
+/app/operations           ← Daily Operations Command Center (NEW canonical home)
+    Today | Tomorrow | This week
+    Modes: By shift · By worker · By alert
+    Drawer: Operate shift (team, clocks, attendance, comments, audit)
+
+/app/shifts               ← Scheduling Calendar (planning surface, simplified)
+    Day / Week / Month / WeekByJob / WeekByEmployee
+    Header CTA → "Open in Operations"
+
+/app/timeclock            ← Time Clock Detail (specialist surface)
+    Open clocks · Missing clocks · Unlinked entries · Day timesheet
+    Header CTA → "Open shift in Operations"
+
+/app/attendance           ← Attendance Review (validator surface, unchanged scope)
 ```
-┌─ Header ──────────────────────────────────────────────────────────────┐
-│  Import Review · <file_name> · <date_range>                          │
-│  [Batch selector ▾]   Status: dry_run · 10 shifts · 50 assignments   │
-└──────────────────────────────────────────────────────────────────────┘
-┌─ Summary strip ──────────────────────────────────────────────────────┐
-│  Matched exact: N · Matched by fallback: N · Would create: N         │
-│  Possible duplicate: N · Needs review: N                             │
-│  Warnings by code (chips with counts)                                │
-└──────────────────────────────────────────────────────────────────────┘
-┌─ Shift list (one card per parsed shift) ─────────────────────────────┐
-│  date · job · start–end · slots                                      │
-│  [Diff badge]  [N warnings]                                          │
-│  ▸ Expand → drawer                                                   │
-└──────────────────────────────────────────────────────────────────────┘
+
+`/app/command-center` and `/app/operations` overlap today → consolidate into `/app/operations`. CommandCenter route stays as a redirect for back-compat.
+
+---
+
+## 4. Component architecture (proposed, additive)
+
+```text
+src/components/operations/
+  TodayOpsShell.tsx                # filter chips, mode switcher, summary strip
+  TodayOpsModeByShift.tsx          # grid of OpsShiftCard
+  TodayOpsModeByWorker.tsx         # rows of OpsWorkerRow
+  TodayOpsModeByAlert.tsx          # urgency-sorted feed
+  OpsShiftCard.tsx                 # premium card: route header + coverage + clock chips + CTA
+  OpsCoverageBar.tsx               # assigned/required pill
+  OpsClockChip.tsx                 # checked_in | not_started | open_clock | missing_out
+  OpsAlertChip.tsx                 # late | no_show | open_past_end | unlinked
+  OperateShiftDrawer.tsx           # right drawer wrapping existing
+                                   #   ShiftTeamPanel + ShiftAttendancePanel +
+                                   #   ShiftCommentsPanel + ShiftAuditTrail
+src/hooks/
+  useTodayOperations.tsx           # joined query + derived state + realtime
+src/lib/operations/
+  derive-shift-ops-state.ts        # pure functions (testable)
+  alert-rules.ts                   # late/no-show/open-clock thresholds (reuses
+                                   # existing grace-period config)
 ```
 
-Each shift card expands into a drawer with **3 columns**: Connecteam (source), Stafly (current), Proposal (what import would do).
+Reuses (no rewrites):
+- `ShiftRouteHeader` for Entrada/Termina aprox./meeting point.
+- `ShiftTeamPanel`, `ShiftAttendancePanel`, `ShiftCommentsPanel`, `ShiftAuditTrail`, closeout components.
+- TimeClockCommandView stays specialist; gains a "Shift" deep-link column → `/app/operations?shift=:id`.
 
-### Per-shift drawer sections
-1. **Shift header diff** — date, start/end, job/client, address, note, source `Last Status`.
-2. **Stafly match** — `scheduled_shift.id`, `shift_code`, client, `location_id`/`job_site_location_id`, `meeting_point`/`meeting_time`, `slots`, `publication_status`, current `assigned workers`. Resolved via `SHIFT_RECONCILED_BY_FALLBACK_KEY.details.matched_scheduled_shift_id` for fallback rows; via strict `(shift_code|date|start|end)` lookup otherwise.
-3. **Diff status badge** — one of: `Matched exactly` · `Matched by fallback` · `Would create new` · `Possible duplicate` · `Needs review`. Derived from warning presence + match resolution.
-4. **Worker comparison table** — left=Connecteam expected (from `normalized_schedule_rows`), right=Stafly current (from `shift_assignments`). Columns: name, status (`matched` / `missing in Stafly` / `extra in Stafly` / `inactive matched` / `placeholder` / `imported accept only`), candidate links, warning chips.
-5. **Location proposal** — Connecteam Address vs current Stafly `location_id`. If `ADDRESS_MAPPED_TO_LOCATION` warning present → show "would create job-site location" with the address text and `on_reconcile` flag.
-6. **Note proposal** — Connecteam note vs current `meeting_point`/`meeting_time`. If `NOTE_MEETING_POINT_PARSED` → render parsed `meeting_point_text`, `meeting_time`, `driver_hint`, confidence; if `NOTE_PARSE_NEEDS_REVIEW` → render raw note + reason. Always indicate "current value preserved" if Stafly already has data (matches the conservative reconcile rule).
-7. **Warnings list** — full structured list of warnings scoped to this shift (filtered by `date` + `job` + `start_time` + `end_time` from `import_batches.warnings`).
+---
 
-### Warning badges supported
-All 12 codes the user listed render as named chips with severity color:
-`INACTIVE_MATCH_REPLACED_WITH_ACTIVE`, `MULTIPLE_ACTIVE_DUPLICATES_NEED_REVIEW`, `EMPLOYEE_MATCHED_TO_CANONICAL_ACTIVE_DUPLICATE`, `SHIFT_RECONCILED_BY_FALLBACK_KEY`, `MULTIPLE_EXISTING_SHIFT_MATCHES_NEED_REVIEW`, `WORKER_OMITTED_OVERLAP_NEEDS_REVIEW`, `ADDRESS_MAPPED_TO_LOCATION`, `NOTE_MEETING_POINT_PARSED`, `NOTE_PARSE_NEEDS_REVIEW`, `IMPORTED_ACCEPT_NOT_STAFLY_RESPONSE`, `PLACEHOLDER_SYSTEM_EXCLUDED` (derived from `person_type_guess` filter — emit at render time, no DB), `PAY_RIDE_DETECTED` (derived from raw row matching `PAY RIDE` pattern — render-time).
+## 5. Desktop vs mobile behavior
 
-### v1 actions (review-only, no DB writes)
-- **View details** (drawer, default).
-- **Copy summary** — copies a markdown digest of the shift drawer to clipboard.
-- **Mark reviewed** — local-only state via `localStorage` keyed by `batch_id:shift_signature`. No DB row created.
-- **Export review report** — generates a CSV in-browser (one row per shift) with diff status, warning codes, expected vs found workers. Downloaded client-side.
+| Surface | Desktop | Mobile |
+|---|---|---|
+| Daily Operations | 3-pane: filters/summary · shift grid · drawer | Single column reusing Mobile Admin Module Shell + EntityCard + OperationsSheet |
+| Scheduling | Full calendar views | `MobileShiftsView` (already shipped) |
+| Time Clock | `TimeClockCommandView` desktop layout | `MobileTimeClockView` |
+| Attendance | Validator table | Stack of EntityCards |
 
-Real "Apply import" is intentionally **out of scope** — the existing `/app/import-schedule` page remains the single applier.
+Drawer is right-side on desktop, full-screen Sheet on mobile (matches current `MobileShiftOperationsSheet`).
 
-### Files to add
-- `src/pages/admin/ImportReview.tsx` — page shell, batch selector, summary strip, shift list.
-- `src/components/admin/import-review/ShiftDiffCard.tsx` — list card + diff badge.
-- `src/components/admin/import-review/ShiftDiffDrawer.tsx` — 3-column drawer with the 7 sections.
-- `src/components/admin/import-review/WorkerDiffTable.tsx` — worker comparison table.
-- `src/components/admin/import-review/WarningChip.tsx` — labeled, color-severity chip per warning code.
-- `src/lib/import-review/build-review-model.ts` — pure function that turns `(batch, raw_rows, normalized_rows, scheduled_shifts, assignments, employees, locations, clients)` into the `ReviewModel[]` shape consumed by the UI. Includes derived warnings (`PLACEHOLDER_SYSTEM_EXCLUDED`, `PAY_RIDE_DETECTED`).
-- `src/lib/import-review/types.ts` — shared types.
-- `src/lib/import-review/csv-export.ts` — CSV serializer for the export report.
+---
 
-### Files to edit
-- `src/App.tsx` — add `/app/import-review` route guarded by `AdminLayout`.
-- `src/components/admin/AdminSidebar.tsx` — add "Import Review" link.
-- `src/components/admin/MobileAdminHome.tsx` — add the same tile (mobile parity).
+## 6. Phase plan (each phase is independently shippable, payroll-safe)
 
-### Data fetching
-Single tenant-scoped query bundle on mount:
-```
-import_batches (selectedCompanyId, status='dry_run', latest 10) → batch picker
-selected batch → raw_schedule_import_rows + normalized_schedule_rows
-distinct (shift_code|date|start|end) + matched_scheduled_shift_id from warnings
-→ scheduled_shifts (+ shift_assignments + employees joined)
-+ companies' clients + locations needed for proposal rendering
-```
-All filtered by `company_id = selectedCompanyId`. Standard tenant-isolation rules.
+### Phase A — Visual + read-only integration (1 PR)
+- Create `useTodayOperations` joining shifts + assignments + time_entries (subset of fields already used by OperationsCommandCenter).
+- Build `TodayOpsShell` + `TodayOpsModeByShift` + `OpsShiftCard` using `ShiftRouteHeader`.
+- Replace body of `/app/operations` with new shell; keep `/app/command-center` redirecting.
+- Add header CTA on `/app/shifts` and `/app/timeclock` → "Open in Operations".
+- **No writes. No payroll. No notifications. No schema. No RLS.**
 
-### Out of scope for v1 (explicit)
-- PDF parsing (job/client + worker PDFs). Excel-only for v1.
-- Any write paths (no `update`, no `insert` outside the existing dry-run flow which lives in `/app/import-schedule`).
-- Approving/applying changes from this screen.
-- Notifications, payroll, time_entries, attendance, employee merge, RLS/schema changes.
+### Phase B — Shift card clock indicators
+- Implement `derive-shift-ops-state.ts` + `alert-rules.ts` (pure).
+- Add `OpsCoverageBar`, `OpsClockChip`, `OpsAlertChip`.
+- Add "By worker" and "By alert" modes (read-only feed).
+- Time Clock alerts surfaced in shift context: `Carlos · YF Productions · 15:00 · open 17:05`.
+- Unit tests for derive/alert pure functions.
 
-### Restrictions honored
-- Read-only queries only.
-- Tenant-scoped: every query filtered by `selectedCompanyId`.
-- Admin-only via `canAccessAdminForCompany` on the `AdminLayout` guard.
-- Placeholder/system rule applied at render time (`person_type_guess` + `payroll_safe`) — never treats System N as real.
-- No `auth.uid()`-only queries.
-- `localStorage` only for "Mark reviewed" UI state — no PII.
+### Phase C — Operate Shift drawer
+- `OperateShiftDrawer` composes existing panels (team, attendance, comments, audit).
+- Wire **existing** RPCs only (`set_shift_assignment_state`, `resolve_shift_request`, `assign_worker_to_shift`) — already SECURITY DEFINER, audited, payroll-safe.
+- Mobile parity via `MobileShiftOperationsSheet`.
 
-### Acceptance / verification (after build)
-- TypeScript clean.
-- For batch `6dea996a-…`, J EVENTS #0239 expanded drawer shows: badge `Matched by fallback`, Stafly id `c4f4ad20-…`, Stafly `shift_code 239`, location preserved chip, parsed meeting point chip, 5 imported-accept worker chips, no "Would create" badge.
-- For YF PRODUCTIONS #0241, drawer surfaces 11 unmatched workers with the `ASSIGNMENT_FAILURE` reason.
-- Export CSV downloads with one row per shift, one column per warning code count, plus expected/found workers.
+### Phase D — Reports & exports (future)
+- Daily ops PDF/CSV (reuses Payroll Traceability + Worker History v1 patterns).
+- Optional read-only DB view `vw_shift_today_ops` only if perf demands; gated by separate proposal.
+
+---
+
+## 7. Hard restrictions honored across all phases
+
+- No changes to payroll logic, `time_entries` shape, or scheduled-hours-as-paid semantics.
+- No RLS or schema changes (Phase A–C). Phase D's view is opt-in and would be proposed separately.
+- No worker portal changes.
+- No notifications sent.
+- No mutations during the audit.
+
+---
+
+## 8. Open question before Phase A
+
+Do you want me to **consolidate `/app/command-center` into `/app/operations`** (recommended — they overlap), or keep both routes? This affects only navigation; no data is moved.
+
+Approve this plan and I'll start with Phase A (visual + read-only integration) behind no feature flag changes, with a single PR-sized diff.
