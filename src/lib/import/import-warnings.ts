@@ -19,7 +19,8 @@ export type ImportWarningCode =
   | "SHIFT_RECONCILED_BY_FALLBACK_KEY"
   | "MULTIPLE_EXISTING_SHIFT_MATCHES_NEED_REVIEW"
   | "PLACEHOLDER_SYSTEM_EXCLUDED"
-  | "PAY_RIDE_DETECTED";
+  | "PAY_RIDE_DETECTED"
+  | "CANONICAL_DUPLICATE_RESOLVED";
 
 export type ImportWarningSeverity = "info" | "warn" | "error";
 
@@ -58,6 +59,7 @@ const DEFAULT_SEVERITY: Record<ImportWarningCode, ImportWarningSeverity> = {
   MULTIPLE_EXISTING_SHIFT_MATCHES_NEED_REVIEW: "warn",
   PLACEHOLDER_SYSTEM_EXCLUDED: "info",
   PAY_RIDE_DETECTED: "info",
+  CANONICAL_DUPLICATE_RESOLVED: "info",
 };
 
 const DEFAULT_ACTION: Record<ImportWarningCode, string> = {
@@ -87,6 +89,8 @@ const DEFAULT_ACTION: Record<ImportWarningCode, string> = {
     "Placeholder/System rows are excluded from real workers and will not be imported.",
   PAY_RIDE_DETECTED:
     "PAY RIDE row detected — handle via the rides flow, not as a worker assignment.",
+  CANONICAL_DUPLICATE_RESOLVED:
+    "Source matched an inactive/stub worker but Stafly already has the canonical active duplicate assigned. Display only — no DB change.",
 };
 
 export function buildImportWarning(

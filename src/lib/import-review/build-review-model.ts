@@ -82,6 +82,9 @@ interface EmployeeLite {
   last_name: string | null;
   employer_identification: string | null;
   is_active: boolean | null;
+  phone_number?: string | null;
+  email?: string | null;
+  user_id?: string | null;
 }
 
 interface ClientLite {
@@ -116,6 +119,16 @@ const PAY_RIDE_PATTERN = /pay\s*ride|payride/i;
 
 const norm = (s: string | null | undefined) => (s ?? "").trim().toLowerCase();
 const slice5 = (t: string | null | undefined) => (t ? t.slice(0, 5) : "");
+const normName = (s: string | null | undefined) =>
+  (s ?? "").trim().toLowerCase().replace(/[.,]/g, "").replace(/\s+/g, " ");
+
+function isLowQualityStub(e: EmployeeLite | null | undefined): boolean {
+  if (!e) return false;
+  const noPhone = !e.phone_number || String(e.phone_number).trim().length < 7;
+  const noEmail = !e.email || !String(e.email).includes("@");
+  const noUser = !e.user_id;
+  return noPhone && noEmail && noUser;
+}
 
 function isPlaceholderName(name: string | null | undefined): boolean {
   const s = (name ?? "").trim();
@@ -341,6 +354,68 @@ export function buildReviewModel(input: BuildReviewInput): ReviewModel {
       }))
       : [];
 
+    // Canonical duplicate resolution: if source matched an inactive/stub employee
+    // but Stafly already has a same-name active assignment, prefer the active one.
+    const usedAssignedIds = new Set<string>(sourceEmpIds);
+    if (stafly && staflyAssigned.length) {
+      for (const w of workers) {
+        if (w.status !== "inactive_matched" && w.status !== "matched" && w.status !== "imported_accept_only") continue;
+        const srcEmp = w.matchedEmployeeId ? employeeById.get(w.matchedEmployeeId) ?? null : null;
+        const isInactive = !!srcEmp && srcEmp.is_active === false;
+        const isStub = !!srcEmp && srcEmp.is_active !== false && isLowQualityStub(srcEmp);
+        if (!isInactive && !isStub) continue;
+        const wantedName = normName(w.displayName || w.rawName);
+        if (!wantedName) continue;
+        const candidate = staflyAssigned.find(sa => {
+          if (usedAssignedIds.has(sa.employeeId)) return false;
+          if (sa.employeeId === w.matchedEmployeeId) return false;
+          const cand = employeeById.get(sa.employeeId);
+          if (cand && cand.is_active === false) return false;
+          return normName(sa.name) === wantedName;
+        });
+        if (!candidate) continue;
+        const cand = employeeById.get(candidate.employeeId);
+        const reason: "inactive" | "stub" = isInactive ? "inactive" : "stub";
+        const reasonLabel = isInactive
+          ? `inactive #${srcEmp?.employer_identification ?? "—"}`
+          : `stub #${srcEmp?.employer_identification ?? "—"}`;
+        const prevId = w.matchedEmployeeId;
+        const prevEmpId = w.employerId;
+        w.sourceMatchedEmployeeId = prevId;
+        w.sourceMatchedEmployerId = prevEmpId ?? null;
+        w.sourceMatchedReason = reason;
+        w.matchedEmployeeId = candidate.employeeId;
+        w.status = "canonical_duplicate_resolved";
+        w.displayName = cand
+          ? `${cand.first_name ?? ""} ${cand.last_name ?? ""}`.trim() || candidate.name
+          : candidate.name;
+        w.employerId = candidate.employerId ?? cand?.employer_identification ?? null;
+        w.isActive = true;
+        w.warnings = [
+          ...w.warnings,
+          {
+            code: "CANONICAL_DUPLICATE_RESOLVED" as ImportWarning["code"],
+            severity: "info",
+            date: g.date,
+            start_time: g.start,
+            end_time: g.end,
+            job: g.job ?? null,
+            raw_employee_name: w.rawName,
+            recommended_action: `Source matched ${reasonLabel}, but Stafly already has active #${w.employerId ?? "—"} assigned.`,
+            details: {
+              source_matched_employee_id: prevId,
+              source_matched_employer_id: prevEmpId,
+              canonical_employee_id: candidate.employeeId,
+              canonical_employer_id: w.employerId,
+              reason,
+            },
+          },
+        ];
+        usedAssignedIds.add(candidate.employeeId);
+        sourceEmpIds.add(candidate.employeeId);
+      }
+    }
+
     // Mark Stafly-only workers as "extra_in_stafly"
     if (stafly) {
       for (const sa of staflyAssigned) {
@@ -457,6 +532,13 @@ export function buildReviewModel(input: BuildReviewInput): ReviewModel {
     for (const w of s.warnings) {
       if (w.code === "PLACEHOLDER_SYSTEM_EXCLUDED" || w.code === "PAY_RIDE_DETECTED") {
         warningCounts[w.code] = (warningCounts[w.code] ?? 0) + 1;
+      }
+    }
+    for (const wk of s.workers) {
+      for (const w of wk.warnings) {
+        if (w.code === "CANONICAL_DUPLICATE_RESOLVED") {
+          warningCounts[w.code] = (warningCounts[w.code] ?? 0) + 1;
+        }
       }
     }
   }
