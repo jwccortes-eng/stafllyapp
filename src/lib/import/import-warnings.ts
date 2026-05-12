@@ -17,7 +17,9 @@ export type ImportWarningCode =
   | "NOTE_PARSE_NEEDS_REVIEW"
   | "IMPORTED_ACCEPT_NOT_STAFLY_RESPONSE"
   | "SHIFT_RECONCILED_BY_FALLBACK_KEY"
-  | "MULTIPLE_EXISTING_SHIFT_MATCHES_NEED_REVIEW";
+  | "MULTIPLE_EXISTING_SHIFT_MATCHES_NEED_REVIEW"
+  | "PLACEHOLDER_SYSTEM_EXCLUDED"
+  | "PAY_RIDE_DETECTED";
 
 export type ImportWarningSeverity = "info" | "warn" | "error";
 
@@ -54,6 +56,8 @@ const DEFAULT_SEVERITY: Record<ImportWarningCode, ImportWarningSeverity> = {
   IMPORTED_ACCEPT_NOT_STAFLY_RESPONSE: "info",
   SHIFT_RECONCILED_BY_FALLBACK_KEY: "info",
   MULTIPLE_EXISTING_SHIFT_MATCHES_NEED_REVIEW: "warn",
+  PLACEHOLDER_SYSTEM_EXCLUDED: "info",
+  PAY_RIDE_DETECTED: "info",
 };
 
 const DEFAULT_ACTION: Record<ImportWarningCode, string> = {
@@ -79,6 +83,10 @@ const DEFAULT_ACTION: Record<ImportWarningCode, string> = {
     "Existing shift reconciled via date+time+client fallback because shift_code differs from Connecteam title. Confirm the match is correct.",
   MULTIPLE_EXISTING_SHIFT_MATCHES_NEED_REVIEW:
     "Multiple existing shifts matched the date/time/client of this row. No new shift was created. Resolve duplicates manually.",
+  PLACEHOLDER_SYSTEM_EXCLUDED:
+    "Placeholder/System rows are excluded from real workers and will not be imported.",
+  PAY_RIDE_DETECTED:
+    "PAY RIDE row detected — handle via the rides flow, not as a worker assignment.",
 };
 
 export function buildImportWarning(

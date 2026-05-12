@@ -1,159 +1,105 @@
-## Phase 2 Foundation — Safe Mobile Team Actions
+## Import Review Center v1 — Read-only diff between Connecteam dry-run and Stafly
 
-Goal: move MobileShiftTeamHub from read-only to limited, auditable mutations without touching payroll, attendance, or time_entries.
+### Goal
+A new admin-only screen that lets Jorge **see what a Connecteam import would do before approving it**. It compares an existing dry-run batch (already produced by `/app/import-schedule` in Auditoría mode) against current Stafly state and surfaces every shift-, worker-, location- and warning-level difference. **No writes, no real import** — pure review.
 
-Schema confirmed from DB:
-- `shift_assignments` has: status, response_status, responded_at, accepted_at, rejected_at, attendance_status (untouched), rejection_reason.
-- `shift_requests` has: status, reviewed_by, reviewed_at, rejection_reason.
-- `shift_audit_log` does NOT exist — needs to be created.
-- `notifications` exists with recipient_id/recipient_type/type/title/body/metadata.
+### Why dry-run is the source
+The dry-run already persists everything we need:
 
----
+- `import_batches` (status `dry_run`) — counters + `warnings` jsonb
+- `raw_schedule_import_rows` — every Excel row verbatim
+- `normalized_schedule_rows` — parsed shift+employee rows with `matched_employee_id`, `employee_match_method`, `employee_match_confidence`, `client_name`, `location_name`, `shift_title`, `notes`, `external_shift_id`, `availability_status`, `has_conflict`, `conflict_details`
+- The `SHIFT_RECONCILED_BY_FALLBACK_KEY` warning carries `matched_scheduled_shift_id`
 
-### Phase 2A — Migration: `shift_audit_log`
+So v1 doesn't need any new ingestion — it builds the diff from existing audit rows.
 
-Single additive migration:
+### New route
+`/app/import-review` (admin-only, behind `canAccessAdminForCompany`). Sidebar entry under "Operations" next to "Import Schedule".
 
-```sql
-CREATE TABLE public.shift_audit_log (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  company_id uuid NOT NULL,
-  shift_id uuid NOT NULL,
-  assignment_id uuid,
-  employee_id uuid,
-  actor_user_id uuid NOT NULL DEFAULT auth.uid(),
-  action text NOT NULL,
-  before_data jsonb,
-  after_data jsonb,
-  reason text,
-  source text NOT NULL DEFAULT 'mobile_manage_team',
-  created_at timestamptz NOT NULL DEFAULT now()
-);
-
-CREATE INDEX idx_sal_company_shift ON shift_audit_log(company_id, shift_id);
-CREATE INDEX idx_sal_assignment   ON shift_audit_log(assignment_id);
-CREATE INDEX idx_sal_employee     ON shift_audit_log(employee_id);
-CREATE INDEX idx_sal_created_at   ON shift_audit_log(created_at DESC);
-
-ALTER TABLE shift_audit_log ENABLE ROW LEVEL SECURITY;
-```
-
-RLS: SELECT/INSERT only for `developer/owner/founder` global, or per-company `admin/manager/supervisor` via existing helpers (`has_role`, `is_company_admin`, `can_access_admin_for_company`). No worker access. No UPDATE/DELETE policies (immutable log).
-
----
-
-### Phase 2B — RPC `set_shift_assignment_state`
-
-`SECURITY DEFINER`, `search_path=public`. Signature:
+### Page layout
 
 ```
-set_shift_assignment_state(
-  p_assignment_id uuid,
-  p_next_status text,
-  p_next_response_status text,
-  p_reason text,
-  p_source text DEFAULT 'mobile_manage_team'
-) RETURNS shift_assignments
+┌─ Header ──────────────────────────────────────────────────────────────┐
+│  Import Review · <file_name> · <date_range>                          │
+│  [Batch selector ▾]   Status: dry_run · 10 shifts · 50 assignments   │
+└──────────────────────────────────────────────────────────────────────┘
+┌─ Summary strip ──────────────────────────────────────────────────────┐
+│  Matched exact: N · Matched by fallback: N · Would create: N         │
+│  Possible duplicate: N · Needs review: N                             │
+│  Warnings by code (chips with counts)                                │
+└──────────────────────────────────────────────────────────────────────┘
+┌─ Shift list (one card per parsed shift) ─────────────────────────────┐
+│  date · job · start–end · slots                                      │
+│  [Diff badge]  [N warnings]                                          │
+│  ▸ Expand → drawer                                                   │
+└──────────────────────────────────────────────────────────────────────┘
 ```
 
-Logic:
-1. Authorization: caller must satisfy `can_access_admin_for_company(company_id)` OR be developer/owner; else `RAISE EXCEPTION 'forbidden'`.
-2. Load assignment + shift; snapshot `before_data` (status, response_status, responded_at, accepted_at, rejected_at).
-3. Validate transition against allow-list:
-   - pending → confirmed | rejected | removed
-   - accepted → confirmed | removed
-   - confirmed → removed
-   - removed/rejected → no-op (raise unless dev override later)
-4. Apply timestamps:
-   - `confirmed`: set responded_at=now(), accepted_at=COALESCE(accepted_at, now())
-   - `rejected`: set responded_at=now(), rejected_at=now()
-   - `removed`: keep history; only update status
-5. NEVER touch: time_entries, attendance_status, payroll_*, scheduled hours, deleted_at, hard delete.
-6. Insert `shift_audit_log` row with action `assignment_state_change`.
-7. Best-effort `notifications` insert (worker-facing) for confirm/remove only — wrapped in `BEGIN ... EXCEPTION WHEN OTHERS THEN NULL`.
+Each shift card expands into a drawer with **3 columns**: Connecteam (source), Stafly (current), Proposal (what import would do).
 
----
+### Per-shift drawer sections
+1. **Shift header diff** — date, start/end, job/client, address, note, source `Last Status`.
+2. **Stafly match** — `scheduled_shift.id`, `shift_code`, client, `location_id`/`job_site_location_id`, `meeting_point`/`meeting_time`, `slots`, `publication_status`, current `assigned workers`. Resolved via `SHIFT_RECONCILED_BY_FALLBACK_KEY.details.matched_scheduled_shift_id` for fallback rows; via strict `(shift_code|date|start|end)` lookup otherwise.
+3. **Diff status badge** — one of: `Matched exactly` · `Matched by fallback` · `Would create new` · `Possible duplicate` · `Needs review`. Derived from warning presence + match resolution.
+4. **Worker comparison table** — left=Connecteam expected (from `normalized_schedule_rows`), right=Stafly current (from `shift_assignments`). Columns: name, status (`matched` / `missing in Stafly` / `extra in Stafly` / `inactive matched` / `placeholder` / `imported accept only`), candidate links, warning chips.
+5. **Location proposal** — Connecteam Address vs current Stafly `location_id`. If `ADDRESS_MAPPED_TO_LOCATION` warning present → show "would create job-site location" with the address text and `on_reconcile` flag.
+6. **Note proposal** — Connecteam note vs current `meeting_point`/`meeting_time`. If `NOTE_MEETING_POINT_PARSED` → render parsed `meeting_point_text`, `meeting_time`, `driver_hint`, confidence; if `NOTE_PARSE_NEEDS_REVIEW` → render raw note + reason. Always indicate "current value preserved" if Stafly already has data (matches the conservative reconcile rule).
+7. **Warnings list** — full structured list of warnings scoped to this shift (filtered by `date` + `job` + `start_time` + `end_time` from `import_batches.warnings`).
 
-### Phase 2C — RPC `resolve_shift_request`
+### Warning badges supported
+All 12 codes the user listed render as named chips with severity color:
+`INACTIVE_MATCH_REPLACED_WITH_ACTIVE`, `MULTIPLE_ACTIVE_DUPLICATES_NEED_REVIEW`, `EMPLOYEE_MATCHED_TO_CANONICAL_ACTIVE_DUPLICATE`, `SHIFT_RECONCILED_BY_FALLBACK_KEY`, `MULTIPLE_EXISTING_SHIFT_MATCHES_NEED_REVIEW`, `WORKER_OMITTED_OVERLAP_NEEDS_REVIEW`, `ADDRESS_MAPPED_TO_LOCATION`, `NOTE_MEETING_POINT_PARSED`, `NOTE_PARSE_NEEDS_REVIEW`, `IMPORTED_ACCEPT_NOT_STAFLY_RESPONSE`, `PLACEHOLDER_SYSTEM_EXCLUDED` (derived from `person_type_guess` filter — emit at render time, no DB), `PAY_RIDE_DETECTED` (derived from raw row matching `PAY RIDE` pattern — render-time).
 
+### v1 actions (review-only, no DB writes)
+- **View details** (drawer, default).
+- **Copy summary** — copies a markdown digest of the shift drawer to clipboard.
+- **Mark reviewed** — local-only state via `localStorage` keyed by `batch_id:shift_signature`. No DB row created.
+- **Export review report** — generates a CSV in-browser (one row per shift) with diff status, warning codes, expected vs found workers. Downloaded client-side.
+
+Real "Apply import" is intentionally **out of scope** — the existing `/app/import-schedule` page remains the single applier.
+
+### Files to add
+- `src/pages/admin/ImportReview.tsx` — page shell, batch selector, summary strip, shift list.
+- `src/components/admin/import-review/ShiftDiffCard.tsx` — list card + diff badge.
+- `src/components/admin/import-review/ShiftDiffDrawer.tsx` — 3-column drawer with the 7 sections.
+- `src/components/admin/import-review/WorkerDiffTable.tsx` — worker comparison table.
+- `src/components/admin/import-review/WarningChip.tsx` — labeled, color-severity chip per warning code.
+- `src/lib/import-review/build-review-model.ts` — pure function that turns `(batch, raw_rows, normalized_rows, scheduled_shifts, assignments, employees, locations, clients)` into the `ReviewModel[]` shape consumed by the UI. Includes derived warnings (`PLACEHOLDER_SYSTEM_EXCLUDED`, `PAY_RIDE_DETECTED`).
+- `src/lib/import-review/types.ts` — shared types.
+- `src/lib/import-review/csv-export.ts` — CSV serializer for the export report.
+
+### Files to edit
+- `src/App.tsx` — add `/app/import-review` route guarded by `AdminLayout`.
+- `src/components/admin/AdminSidebar.tsx` — add "Import Review" link.
+- `src/components/admin/MobileAdminHome.tsx` — add the same tile (mobile parity).
+
+### Data fetching
+Single tenant-scoped query bundle on mount:
 ```
-resolve_shift_request(
-  p_request_id uuid,
-  p_decision text,           -- 'approved' | 'rejected'
-  p_reason text,
-  p_source text DEFAULT 'mobile_manage_team'
-) RETURNS shift_requests
+import_batches (selectedCompanyId, status='dry_run', latest 10) → batch picker
+selected batch → raw_schedule_import_rows + normalized_schedule_rows
+distinct (shift_code|date|start|end) + matched_scheduled_shift_id from warnings
+→ scheduled_shifts (+ shift_assignments + employees joined)
++ companies' clients + locations needed for proposal rendering
 ```
+All filtered by `company_id = selectedCompanyId`. Standard tenant-isolation rules.
 
-Logic:
-1. Same authorization gate.
-2. Load request + shift; only act if current `status = 'pending'`.
-3. If `approved`:
-   - `UPDATE shift_requests SET status='approved', reviewed_by=auth.uid(), reviewed_at=now()`.
-   - Upsert `shift_assignments` for (shift_id, employee_id):
-     - INSERT with status='confirmed', response_status='accepted', accepted_at=now(), responded_at=now() if no row.
-     - If row exists: call internal logic equivalent to `set_shift_assignment_state` to advance to confirmed (no duplicate row).
-   - Insert audit row `claim_approved`.
-   - Best-effort notification.
-4. If `rejected`:
-   - `UPDATE shift_requests SET status='rejected', reviewed_by=auth.uid(), reviewed_at=now(), rejection_reason=p_reason`.
-   - Insert audit row `claim_rejected`.
-   - Best-effort notification.
-5. No location/meeting_point exposure logic in RPC (UI gate already in place).
+### Out of scope for v1 (explicit)
+- PDF parsing (job/client + worker PDFs). Excel-only for v1.
+- Any write paths (no `update`, no `insert` outside the existing dry-run flow which lives in `/app/import-schedule`).
+- Approving/applying changes from this screen.
+- Notifications, payroll, time_entries, attendance, employee merge, RLS/schema changes.
 
----
+### Restrictions honored
+- Read-only queries only.
+- Tenant-scoped: every query filtered by `selectedCompanyId`.
+- Admin-only via `canAccessAdminForCompany` on the `AdminLayout` guard.
+- Placeholder/system rule applied at render time (`person_type_guess` + `payroll_safe`) — never treats System N as real.
+- No `auth.uid()`-only queries.
+- `localStorage` only for "Mark reviewed" UI state — no PII.
 
-### Phase 2D — Mobile UI (MobileShiftTeamHub)
-
-Client wrapper: `src/lib/shifts/team-actions.ts` — typed wrappers around `supabase.rpc(...)` with toast + error mapping.
-
-Claims tab (`shift_requests`):
-- Approve / Reject buttons → confirm dialog (AlertDialog) → call `resolve_shift_request` → invalidate hub queries.
-- Existing Call action retained.
-
-Assigned tab — only when `canManageShifts`:
-- Per-row "Change status" menu (DropdownMenu) with Confirm / Reject / Remove (only valid transitions shown).
-- AlertDialog confirms with worker name, action label, optional reason `<Textarea>`.
-- On success: refetch assignments + requests, toast.
-
-Disabled actions: add worker, bulk assign, edit shift details, attendance edit, payroll.
-
----
-
-### Phase 2E — Safety Copy
-
-In every confirm dialog footer:
-> "This action updates the worker's assignment status and is logged. It does not affect payroll or worked time. Attendance and payroll review remain separate."
-
-In dropdown header: small muted "Logged action".
-
----
-
-### Files
-
-New:
-- `supabase/migrations/<ts>_shift_audit_log_and_team_rpcs.sql` (table + RLS + 2 RPCs)
-- `src/lib/shifts/team-actions.ts`
-- `src/components/shifts/mobile/MobileTeamActionDialog.tsx`
-
-Edited:
-- `src/components/shifts/mobile/MobileShiftTeamHub.tsx` — add action menus + dialogs in Claims & Assigned tabs, gated by `canManageShifts`.
-
-Untouched: payroll, time_entries, attendance, desktop staffing flows, worker portal logic, shift_assignments hard-delete paths.
-
----
-
-### QA Checklist
-
-1. Migration applies; table + indexes + RLS visible.
-2. Anon/worker role: cannot SELECT/INSERT audit log; cannot call RPCs (raises `forbidden`).
-3. Admin: approve claim → request approved, assignment row created/updated to confirmed, audit row inserted, no time_entries change.
-4. Admin: reject claim → request rejected, audit row, no assignment.
-5. Admin: confirm/reject/remove assignment → status updates, audit logged, no row deleted, time_entries untouched.
-6. Invalid transition (e.g. removed → confirmed) raises and UI shows toast.
-7. Desktop shift detail still works (reads same tables).
-8. Worker portal still loads shifts; only sees notifications for approved claims/removals.
-9. `rg "scheduled.*hours"` — no payroll usage added.
-10. Build + typecheck pass.
-
-Ready to implement on approval.
+### Acceptance / verification (after build)
+- TypeScript clean.
+- For batch `6dea996a-…`, J EVENTS #0239 expanded drawer shows: badge `Matched by fallback`, Stafly id `c4f4ad20-…`, Stafly `shift_code 239`, location preserved chip, parsed meeting point chip, 5 imported-accept worker chips, no "Would create" badge.
+- For YF PRODUCTIONS #0241, drawer surfaces 11 unmatched workers with the `ASSIGNMENT_FAILURE` reason.
+- Export CSV downloads with one row per shift, one column per warning code count, plus expected/found workers.
