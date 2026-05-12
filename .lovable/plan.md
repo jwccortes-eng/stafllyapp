@@ -1,165 +1,173 @@
-# Daily Operations Command Center — Audit + Phased Plan
+# Desktop Shift Workspace + Pending Operational Info
 
-Read-only. No code, no schema, no payroll, no time_entries, no RLS, no notifications were modified.
-
----
-
-## 1. File / component inventory (current state)
-
-Admin pages already in the repo:
-
-| Route | File | Lines | Purpose today |
-|---|---|---|---|
-| `/app/shifts` | `src/pages/admin/Shifts.tsx` | 2101 | Calendar + create/edit/delete/duplicate. Owns DayView/WeekView/MonthView/WeekByJobView/WeekByEmployeeView. |
-| `/app/timeclock` | `src/pages/admin/TimeClock.tsx` → `components/timeclock/TimeClockCommandView.tsx` | 199 / 1094 | Open clocks, day/week/month, missing clocks. Reads `time_entries (+scheduled_shifts)`. |
-| `/app/operations` | `src/pages/admin/OperationsCommandCenter.tsx` | 891 | Already joins `scheduled_shifts + shift_assignments + time_entries` with realtime. **Closest existing surface to the desired CC.** |
-| `/app/command-center` | `src/pages/admin/CommandCenter.tsx` | 1022 | Counts/KPIs, partially overlaps with Operations. |
-| `/app/shift-operations` | `src/pages/admin/ShiftOperations.tsx` | 654 | Per-shift drawer-style operations. |
-| `/app/attendance` | `src/pages/admin/Attendance.tsx` | 667 | Attendance review. |
-
-Mobile counterparts: `MobileShiftsView.tsx`, `MobileTimeClockView.tsx`, `components/admin/mobile/*` (Mobile Admin Module Shell — already standardized).
-
-Shared shift components:
-`ShiftCard`, `ShiftDetailDialog`, `ShiftAttendancePanel`, `ShiftTeamPanel`, `ShiftAuditTrail`, `ShiftActionBar`, `ShiftLiveMapPanel`, `StaffingRequiredBanner`, `UnstaffedAlert`, `WeeklySummaryBar`, `closeout/*`, `form/*`.
-
-Shared timeclock components:
-`TimeClockCommandView`, `DayDetailView`, `MonthClockView`, `WeekClockChipGrid`, `TimesheetView`.
-
-Shared design system (DS3a):
-`components/stafly-ui/ShiftRouteHeader` (Work Route standard — already used by portal), `mobile-agenda/OperationalTimeBlock`. **Reuse these — they already encode "Entrada protagonista / Termina aprox."**
+Read-only audit + phased plan. Schema-free v1. No payroll, no `time_entries`, no attendance, no RLS, no notifications, no portal changes.
 
 ---
 
-## 2. Data availability map (already queryable, no schema changes required)
+## 1. Audit — current state
 
-`scheduled_shifts`: id, company_id, title, date, start_time, end_time, status, publication_status, claimable, slots, location_id, job_site_location_id, meeting_point, meeting_point_location_id, meeting_time, shift_admin_id, driver_employee_id, attendance_mode, deleted_at, shift_link_token.
+### Files involved (what exists today)
 
-`shift_assignments`: shift_id, employee_id, status (pending/accepted/confirmed/rejected/removed), response_status, assignment_role, is_draft_reservation.
-
-`time_entries`: id, employee_id, shift_id (nullable), clock_in, clock_out, break_minutes, status, company_id. → drives "checked in / open clock / missing clock-out / unlinked clock".
-
-`employees`: id, first_name, last_name, phone_number, avatar_url, is_active, person_type_guess, payroll_safe.
-
-`locations`: name, address (used by ShiftRouteHeader for job site/meeting point).
-
-Derivable per shift, no new columns:
-- coverage = `assignments(status in accepted/confirmed)` count vs `slots`
-- clock state per assigned worker: `none | open | closed | missing_clock_out | unlinked`
-- shift bucket: `needs_staff | staffed_not_started | in_progress | needs_closeout | closed`
-- alert level: `info | warn | urgent` (warn = late > grace; urgent = no-show or open clock past end_time)
-
-**Missing for full Phase B fidelity (proposed, not built yet):**
-- A shared selector `getShiftOperationalState(shift, assignments, entries)` (UI helper, not DB).
-- A reusable hook `useTodayOperations(companyId, dateISO)` returning the joined+derived view.
-- Optional future view `vw_shift_today_ops` (Phase D only — flagged, not required).
-
----
-
-## 3. Proposed information architecture
-
-```text
-/app/operations           ← Daily Operations Command Center (NEW canonical home)
-    Today | Tomorrow | This week
-    Modes: By shift · By worker · By alert
-    Drawer: Operate shift (team, clocks, attendance, comments, audit)
-
-/app/shifts               ← Scheduling Calendar (planning surface, simplified)
-    Day / Week / Month / WeekByJob / WeekByEmployee
-    Header CTA → "Open in Operations"
-
-/app/timeclock            ← Time Clock Detail (specialist surface)
-    Open clocks · Missing clocks · Unlinked entries · Day timesheet
-    Header CTA → "Open shift in Operations"
-
-/app/attendance           ← Attendance Review (validator surface, unchanged scope)
-```
-
-`/app/command-center` and `/app/operations` overlap today → consolidate into `/app/operations`. CommandCenter route stays as a redirect for back-compat.
-
----
-
-## 4. Component architecture (proposed, additive)
-
-```text
-src/components/operations/
-  TodayOpsShell.tsx                # filter chips, mode switcher, summary strip
-  TodayOpsModeByShift.tsx          # grid of OpsShiftCard
-  TodayOpsModeByWorker.tsx         # rows of OpsWorkerRow
-  TodayOpsModeByAlert.tsx          # urgency-sorted feed
-  OpsShiftCard.tsx                 # premium card: route header + coverage + clock chips + CTA
-  OpsCoverageBar.tsx               # assigned/required pill
-  OpsClockChip.tsx                 # checked_in | not_started | open_clock | missing_out
-  OpsAlertChip.tsx                 # late | no_show | open_past_end | unlinked
-  OperateShiftDrawer.tsx           # right drawer wrapping existing
-                                   #   ShiftTeamPanel + ShiftAttendancePanel +
-                                   #   ShiftCommentsPanel + ShiftAuditTrail
-src/hooks/
-  useTodayOperations.tsx           # joined query + derived state + realtime
-src/lib/operations/
-  derive-shift-ops-state.ts        # pure functions (testable)
-  alert-rules.ts                   # late/no-show/open-clock thresholds (reuses
-                                   # existing grace-period config)
-```
-
-Reuses (no rewrites):
-- `ShiftRouteHeader` for Entrada/Termina aprox./meeting point.
-- `ShiftTeamPanel`, `ShiftAttendancePanel`, `ShiftCommentsPanel`, `ShiftAuditTrail`, closeout components.
-- TimeClockCommandView stays specialist; gains a "Shift" deep-link column → `/app/operations?shift=:id`.
-
----
-
-## 5. Desktop vs mobile behavior
-
-| Surface | Desktop | Mobile |
+| File | Lines | Role |
 |---|---|---|
-| Daily Operations | 3-pane: filters/summary · shift grid · drawer | Single column reusing Mobile Admin Module Shell + EntityCard + OperationsSheet |
-| Scheduling | Full calendar views | `MobileShiftsView` (already shipped) |
-| Time Clock | `TimeClockCommandView` desktop layout | `MobileTimeClockView` |
-| Attendance | Validator table | Stack of EntityCards |
+| `src/components/shifts/ShiftFormShell.tsx` | 244 | Modal shell. Already a desktop dialog (`lg:max-w-[1200px] lg:h-[92vh]`) with sticky header + `[1fr_360px]` form/summary grid + Save draft / Publish actions + dirty-close confirm. Solid foundation — does NOT need to be replaced, only extended. |
+| `src/components/shifts/ShiftFormFields.tsx` | 575 | Single source of truth for `ShiftFormState`, `shiftToFormState`, `formStateToShiftPayload`, and `useShiftFormSignals`. Composes 7 sections vertically. |
+| `src/components/shifts/form/ShiftBasicInfoSection.tsx` | 221 | Title (manual) + client + date + start/end + meeting time + slots. **Title is currently the lead field — exactly the regression we want to fix.** |
+| `src/components/shifts/form/JobSiteSection.tsx` | 88 | `location_id` + `job_site_location_id` + special instructions. |
+| `src/components/shifts/form/MeetingPointsSection.tsx` | 102 | `meeting_point` text + `meeting_point_location_id`. |
+| `src/components/shifts/form/TeamSection.tsx` | 170 | Slots, claimable, picker, shift admin, driver. |
+| `src/components/shifts/form/TransportationSection.tsx` | 171 | Transport, capacity, driver. |
+| `src/components/shifts/form/PaySection.tsx` | 114 | Pay type + override. |
+| `src/components/shifts/form/AdvancedDetailsSection.tsx` | 141 | Notes + attendance/clock + QR. |
+| `src/components/shifts/form/ShiftSummaryPanel.tsx` | 242 | Right-rail summary with readiness flags. |
+| `src/pages/admin/Shifts.tsx` | 2101 | Hosts both the in-page Create dialog (`CreateShiftDialog`, ~lines 100-240, 740-810) and Edit save path (~960-1010). Owns `publication_status`/`status` lifecycle and notification triggers. |
+| `src/components/shifts/ShiftEditDialog.tsx` | 202 | Edit dialog wrapping `ShiftFormShell` + `ShiftFormFields`. |
+| `src/components/shifts/QuickCreatePopover.tsx` | — | Calendar quick-create. Out of scope — keep. |
+| `src/pages/admin/DailyOps.tsx` + `src/lib/operations/derive-shift-ops-state.ts` | — | Phase A shipped. Reused as-is for readiness preview. |
 
-Drawer is right-side on desktop, full-screen Sheet on mobile (matches current `MobileShiftOperationsSheet`).
+### Fields already on `scheduled_shifts` (verified usable, no migration)
 
----
+`title, client_id, date, start_time, end_time, meeting_time, slots, location_id, job_site_location_id, meeting_point, meeting_point_location_id, notes, special_instructions, shift_admin_id, driver_employee_id, transport_required, claimable, publication_status (draft|published), status, attendance_mode, clock_method, qr_*`.
 
-## 6. Phase plan (each phase is independently shippable, payroll-safe)
-
-### Phase A — Visual + read-only integration (1 PR)
-- Create `useTodayOperations` joining shifts + assignments + time_entries (subset of fields already used by OperationsCommandCenter).
-- Build `TodayOpsShell` + `TodayOpsModeByShift` + `OpsShiftCard` using `ShiftRouteHeader`.
-- Replace body of `/app/operations` with new shell; keep `/app/command-center` redirecting.
-- Add header CTA on `/app/shifts` and `/app/timeclock` → "Open in Operations".
-- **No writes. No payroll. No notifications. No schema. No RLS.**
-
-### Phase B — Shift card clock indicators
-- Implement `derive-shift-ops-state.ts` + `alert-rules.ts` (pure).
-- Add `OpsCoverageBar`, `OpsClockChip`, `OpsAlertChip`.
-- Add "By worker" and "By alert" modes (read-only feed).
-- Time Clock alerts surfaced in shift context: `Carlos · YF Productions · 15:00 · open 17:05`.
-- Unit tests for derive/alert pure functions.
-
-### Phase C — Operate Shift drawer
-- `OperateShiftDrawer` composes existing panels (team, attendance, comments, audit).
-- Wire **existing** RPCs only (`set_shift_assignment_state`, `resolve_shift_request`, `assign_worker_to_shift`) — already SECURITY DEFINER, audited, payroll-safe.
-- Mobile parity via `MobileShiftOperationsSheet`.
-
-### Phase D — Reports & exports (future)
-- Daily ops PDF/CSV (reuses Payroll Traceability + Worker History v1 patterns).
-- Optional read-only DB view `vw_shift_today_ops` only if perf demands; gated by separate proposal.
+**All "pending state" UX can be derived purely from null/empty values on these columns.** No schema changes required for v1.
 
 ---
 
-## 7. Hard restrictions honored across all phases
+## 2. Proposed UX structure (desktop, ≥1024px)
 
-- No changes to payroll logic, `time_entries` shape, or scheduled-hours-as-paid semantics.
-- No RLS or schema changes (Phase A–C). Phase D's view is opt-in and would be proposed separately.
-- No worker portal changes.
-- No notifications sent.
-- No mutations during the audit.
+Reuse `ShiftFormShell`. Replace the single form column (currently vertical stack) with a 3-column grid inside the existing left "form" pane, while keeping the existing right summary rail. Net layout:
+
+```text
+┌── Sticky header: chip(Cliente or "Cliente pendiente") · Date · Time · readiness pill ─── [Cancel] [Save draft] [Publish ▾] ──┐
+│                                                                                                                              │
+│  ┌─ Col 1: What & Where ────────┐  ┌─ Col 2: Team & Operations ─┐  ┌─ Col 3 (existing right rail) ──────┐                    │
+│  │ ClientPicker (premium)       │  │ Slots                       │  │ Generated display name             │                    │
+│  │ Date / Entrada / Termina     │  │ Assigned workers + recs     │  │ Readiness checklist (pending list) │                    │
+│  │ Job site                     │  │ Claimable / open shift      │  │ Worker-visible preview card        │                    │
+│  │ Meeting point + meeting_time │  │ Transport / driver          │  │ Daily Ops bucket + alert preview   │                    │
+│  │ Worker-visible instructions  │  │ Operational responsible     │  │ Action group (draft / publish ▾)   │                    │
+│  └──────────────────────────────┘  └─────────────────────────────┘  └────────────────────────────────────┘                    │
+│                                                                                                                              │
+│  Additional details (collapsed): internal label, advanced notes, QR/attendance overrides                                     │
+└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+Below `lg`, fall back to the existing single-column stack (mobile parity preserved → Phase 6).
+
+### Display name rule (no schema change)
+
+Compute at render and on save into the existing `title` column ONLY when the user has not typed a manual title:
+
+```text
+display_name = [client.name] · [role/type or "Turno"] · [HH:mm]
+```
+
+If manual title is set, it wins and is shown as "Etiqueta interna" in the right rail. The manual `title` field moves to "Additional details" (collapsed by default).
+
+### Pending information model (derived, no migration)
+
+Pure helper `computeShiftPendingFlags(form)` returns:
+
+```ts
+{ client: bool, time: bool, jobSite: bool, meetingPoint: bool,
+  team: bool, instructions: bool, driver: bool, admin: bool }
+```
+
+Each missing field → a `Cliente pendiente` / `Hora pendiente` / etc. badge in the right rail and (when published) on the worker-visible preview card.
+
+### Publish actions
+
+Replace the single primary button with a split menu:
+
+- `Save draft` (existing path, `publication_status='draft'`).
+- `Publish complete` (only enabled when no pending flags).
+- `Publish with pending info` (always available; opens an `AlertDialog` confirm: "This shift will be visible to workers with pending details.").
+- `Publish and notify team` (existing notify path; unchanged trigger logic).
+
+All four routes call the **existing** save handlers in `Shifts.tsx`. No new RPC.
+
+### Daily Ops readiness preview
+
+Reuse `deriveShiftOpsState` from `src/lib/operations/derive-shift-ops-state.ts` with an empty assignments/entries slice for the in-progress draft to display the bucket pill + alert level the shift WILL have once saved. Pure function, payroll-safe.
 
 ---
 
-## 8. Open question before Phase A
+## 3. Schema-free implementation map
 
-Do you want me to **consolidate `/app/command-center` into `/app/operations`** (recommended — they overlap), or keep both routes? This affects only navigation; no data is moved.
+New (additive) files:
 
-Approve this plan and I'll start with Phase A (visual + read-only integration) behind no feature flag changes, with a single PR-sized diff.
+```text
+src/lib/shifts/pending-flags.ts                # computeShiftPendingFlags + label map (pure)
+src/lib/shifts/display-name.ts                 # buildShiftDisplayName(client, form) (pure)
+src/components/shifts/workspace/
+  ShiftWorkspaceLayout.tsx                     # 3-col grid; uses ShiftFormShell as outer
+  ShiftWorkspaceWhatWhere.tsx                  # col 1 — wraps existing BasicInfo+JobSite+MeetingPoints
+  ShiftWorkspaceTeamOps.tsx                    # col 2 — wraps existing Team+Transportation
+  ShiftWorkspaceLiveSummary.tsx                # col 3 — readiness, worker preview, ops bucket, actions
+  ClientPickerPremium.tsx                      # combobox: search + recent + quick-create + "Cliente pendiente"
+  PendingBadgeRow.tsx                          # renders pending flags as pastel chips
+  WorkerPreviewCard.tsx                        # "What worker will see" mini card
+  PublishMenu.tsx                              # split action menu + confirm dialog
+```
+
+Edited (surgical, no behavior change to save path):
+
+- `src/components/shifts/ShiftFormFields.tsx` — add `layout?: "stack" | "workspace"` prop. Default keeps current stack. When `workspace`, render via `ShiftWorkspaceLayout` instead of vertical sections. Title field moved to `AdvancedDetailsSection` when in workspace mode.
+- `src/components/shifts/ShiftEditDialog.tsx` — pass `layout="workspace"` on `lg+`.
+- `src/pages/admin/Shifts.tsx` `CreateShiftDialog` — same flag. Wire `Publish ▾` menu to existing `handleCreateShift({ publishNow, skipNotifications })` paths.
+
+Files **NOT to touch**:
+
+- `src/lib/operations/derive-shift-ops-state.ts` (read only)
+- `src/hooks/useTodayOperations.tsx`
+- `src/pages/admin/DailyOps.tsx`, `TimeClock.tsx`, `ShiftOperations.tsx`, `Attendance.tsx`
+- Any `time_entries`, payroll, RLS, notification edge function
+- Worker portal (`src/pages/portal/*`)
+- `Shifts.tsx` save/notify lifecycle (lines ~720-1170) — wire new buttons to existing handlers; no logic changes inside
+
+---
+
+## 4. Fields that would later need schema (NOT in v1)
+
+Optional, deferred — only if product requires hard "pending" semantics on the row itself:
+
+- `is_pending_info boolean default false`
+- `pending_fields jsonb default '[]'` — explicit set instead of derived from nulls
+
+v1 derives everything from null/empty, so these are optional follow-ups gated by a separate proposal.
+
+---
+
+## 5. Phase plan (each phase independently shippable, payroll-safe)
+
+| Phase | Scope | DB | Notif |
+|---|---|---|---|
+| **1. Desktop visual workspace** | New `ShiftWorkspaceLayout` (3-col grid); `ShiftFormFields` gains `layout` prop; Create+Edit dialogs use it on `lg+`; title demoted to "Additional details" with auto-generated display name fallback. | none | none |
+| **2. Pending info badges + worker preview** | `pending-flags.ts` + `PendingBadgeRow` in right rail; `WorkerPreviewCard` showing exactly what a worker would see (uses existing `ShiftRouteHeader` rules). | none | none |
+| **3. Premium client selector** | `ClientPickerPremium` (Command/combobox): search by name+code, recent clients, quick-create (already supported via `onQuickAddClient`), explicit "Cliente pendiente" entry that sets `client_id=null`. | none | none |
+| **4. Publish-with-pending flow** | `PublishMenu` split button + `AlertDialog` confirm. Wires to existing save handlers; only UX. | none | none (existing triggers only) |
+| **5. Daily Ops readiness preview** | Right-rail card calls `deriveShiftOpsState(form, [], [])` to render bucket + alert level the shift will have. | none | none |
+| **6. Mobile parity** | Map workspace columns to `MobileShiftOperationsSheet` accordion sections; preserve current single-column behavior under `lg`. | none | none |
+
+---
+
+## 6. Hard restrictions honored
+
+- No payroll logic touched.
+- Scheduled hours never converted to worked hours.
+- `time_entries` untouched.
+- Attendance untouched.
+- No RLS edits.
+- No new notifications; existing triggers unchanged.
+- Worker portal unchanged.
+- `/app/daily-ops`, `/app/shifts`, `/app/timeclock`, `/app/shift-operations`, Worker History v1, WR5/WR6/B4 not modified.
+
+---
+
+## 7. Open questions before Phase 1
+
+1. Confirm `display_name` should be **persisted into `title`** when no manual title is set, vs **only computed at render** (safer; recommended). I'll default to render-only unless you say otherwise.
+2. Confirm `Publish with pending info` should fire the standard published notifications, or a new "incomplete" worker copy. v1 default: same notifications, no copy change.
+3. Approve consolidation of manual title into "Additional details > Internal label". 
+
+Approve and I'll start Phase 1 only.
