@@ -85,12 +85,40 @@ export function ShiftFormShell({
   footerBanner,
   children,
   summary,
+  publishReview,
 }: Props) {
   const headerTitle = mode === "create" ? "Nuevo turno" : "Editar turno";
   const defaultSaveLabel = mode === "create"
     ? (onSaveDraft ? "Publish" : "Crear turno")
     : "Guardar cambios";
   const [confirmCloseOpen, setConfirmCloseOpen] = useState(false);
+  const [publishReviewOpen, setPublishReviewOpen] = useState(false);
+
+  const handlePrimaryClick = () => {
+    if (publishReview) {
+      setPublishReviewOpen(true);
+      return;
+    }
+    void onSave();
+  };
+
+  const handleConfirmPublish = async () => {
+    if (!publishReview) return;
+    const hadPending = publishReview.hasPending;
+    try {
+      await onSave();
+      // Existing handler already toasts "Turno publicado". Add a follow-up
+      // contextual notice when there is pending info so the admin understands
+      // the shift went out incomplete (no scary error language).
+      if (hadPending) {
+        toast.info("Turno publicado con información pendiente", {
+          description: "Los campos pendientes aparecerán como “por confirmar” para los trabajadores.",
+        });
+      }
+    } finally {
+      setPublishReviewOpen(false);
+    }
+  };
 
   const requestClose = () => {
     if (isDirty) {
