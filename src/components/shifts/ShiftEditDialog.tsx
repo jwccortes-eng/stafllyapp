@@ -122,20 +122,28 @@ export function ShiftEditDialog({
       : "por hora";
 
   const summary = (
-    <ShiftSummaryPanel
+    <WorkspaceSummary
       mode="edit"
       title={form.title}
-      clientName={signals.clientName}
       date={form.date}
       startTime={form.startTime}
       endTime={form.endTime}
+      meetingTime={form.meetingTime}
+      clientId={form.clientId}
+      locationId={form.locationId}
+      jobSiteLocationId={form.jobSiteLocationId}
+      meetingPoint={form.meetingPoint}
+      meetingPointLocationId={form.meetingPointLocationId}
+      transportRequired={form.transportRequired}
+      claimable={form.claimable}
+      clientName={signals.clientName}
+      jobSiteLabel={signals.jobSiteLabel}
+      meetingPointLabel={signals.meetingPointLabel}
       slotsNum={signals.slotsNum}
       assignedCount={signals.assignedCount}
       ridesNeeded={signals.ridesNeeded}
-      transportRequired={form.transportRequired}
       driversInTeam={signals.driversInTeam}
-      jobSiteLabel={signals.jobSiteLabel}
-      meetingPointLabel={signals.meetingPointLabel}
+      payTypeLabel={payTypeLabel}
       dateMissing={!form.date}
       adminMissing={signals.adminMissing}
       adminInvalid={signals.adminInvalid}
@@ -147,7 +155,7 @@ export function ShiftEditDialog({
       hasConflicts={signals.hasConflicts}
       conflictNames={signals.conflictNames}
       payOverrideActive={signals.payOverrideActive}
-      payTypeLabel={payTypeLabel}
+      publicationStatus={(shift as any).publication_status ?? null}
     />
   );
 
