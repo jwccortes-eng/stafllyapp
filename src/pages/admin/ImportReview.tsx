@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
+import { Building2, Inbox } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -68,7 +69,7 @@ function WarningChip({ w }: { w: ImportWarning }) {
 function reviewedKey(batchId: string, sig: string) { return `import-review:${batchId}:${sig}`; }
 
 export default function ImportReview() {
-  const { selectedCompanyId } = useCompany();
+  const { selectedCompanyId, selectedCompany } = useCompany();
   const [batches, setBatches] = useState<Array<{ id: string; schedule_file_name: string | null; created_at: string }>>([]);
   const [batchId, setBatchId] = useState<string | null>(null);
   const [model, setModel] = useState<ReviewModel | null>(null);
@@ -288,6 +289,45 @@ export default function ImportReview() {
       </div>
 
       {loading && <div className="space-y-2"><Skeleton className="h-24 w-full" /><Skeleton className="h-24 w-full" /></div>}
+
+      {!loading && batches.length === 0 && (
+        <Card className="mx-auto max-w-xl mt-8">
+          <CardContent className="p-6 sm:p-8 flex flex-col items-center text-center gap-3">
+            <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center">
+              <Inbox className="h-6 w-6 text-muted-foreground" />
+            </div>
+            <h2 className="text-lg font-semibold">No hay auditorías de importación para esta compañía</h2>
+            <p className="text-sm text-muted-foreground max-w-md">
+              Estás viendo la compañía activa actual. Los dry-runs de importación solo aparecen para la compañía donde fueron ejecutados.
+            </p>
+            {selectedCompany?.name && (
+              <div className="inline-flex items-center gap-2 rounded-full border bg-muted/40 px-3 py-1 text-xs">
+                <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="text-muted-foreground">Compañía actual:</span>
+                <span className="font-medium truncate max-w-[180px]">{selectedCompany.name}</span>
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground max-w-md">
+              Para revisar los batches de Quality Staff, cambia a Quality Staff desde el selector de compañía y completa el código de confirmación.
+            </p>
+            <p className="text-xs text-muted-foreground">Luego vuelve a /app/import-review.</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {!loading && batches.length > 0 && !batchId && (
+        <Card className="mx-auto max-w-xl mt-8">
+          <CardContent className="p-6 sm:p-8 flex flex-col items-center text-center gap-3">
+            <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center">
+              <FileSearch className="h-6 w-6 text-muted-foreground" />
+            </div>
+            <h2 className="text-lg font-semibold">Selecciona una auditoría</h2>
+            <p className="text-sm text-muted-foreground max-w-md">
+              Elige un dry-run para comparar Connecteam vs Stafly.
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {!loading && model && (
         <>
