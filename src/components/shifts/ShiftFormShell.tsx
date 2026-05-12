@@ -53,6 +53,9 @@ interface Props {
   children: React.ReactNode;
   /** Sticky right panel (typically <ShiftSummaryPanel/>). Optional. */
   summary?: React.ReactNode;
+  /** When provided, clicking the primary publish button opens a "Antes de publicar"
+   *  review modal instead of calling onSave directly. The modal forwards confirm to onSave. */
+  publishReview?: PrePublishReviewData | null;
 }
 
 function fmtDateChip(d: string): string {
