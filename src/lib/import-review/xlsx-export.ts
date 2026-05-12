@@ -91,6 +91,7 @@ export async function downloadDiffXlsx(model: ReviewModel, fileName: string) {
       extra.map(w => w.name).join("; "),
       s.sourceAddress ?? "", s.location.currentLocationName ?? "",
       s.sourceNote ?? "", s.note.currentMeetingPoint ?? "", s.note.currentMeetingTime ?? "",
+      s.warnings.map(w => humanWarn(w.code)).join(", "),
       s.warnings.map(w => w.code).join(", "),
     ]);
   }
