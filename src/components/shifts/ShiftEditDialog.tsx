@@ -11,7 +11,7 @@ import {
   type LocationOption,
 } from "./ShiftFormFields";
 import { ShiftFormShell } from "./ShiftFormShell";
-import { ShiftSummaryPanel } from "./form/ShiftSummaryPanel";
+import { WorkspaceSummary } from "./workspace/WorkspaceSummary";
 import type { Shift, SelectOption, Employee, Assignment } from "./types";
 
 interface ShiftEditDialogProps {
