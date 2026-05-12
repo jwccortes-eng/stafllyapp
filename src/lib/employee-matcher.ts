@@ -360,6 +360,20 @@ export class EmployeeResolver {
           };
         }
         if (activeTwins.length > 1) {
+          // Try completeness tiebreaker (user_id > phone > email > empnum).
+          const picked = pickCanonical(activeTwins, this.empIndex.byId);
+          if (picked) {
+            this.telemetry.exact_name++;
+            return {
+              employeeId: picked.winner,
+              method: "exact_name",
+              confidence: "medium",
+              replacedInactiveId: onlyId,
+              tiebrokenByCompleteness: true,
+              losingCandidateIds: picked.losers,
+            };
+          }
+          // True tie — needs review; do NOT silently pick.
           this.recordAmbiguous(trimmed, activeTwins, "exact_name");
           this.telemetry.ambiguous++;
           return {
@@ -368,6 +382,7 @@ export class EmployeeResolver {
             confidence: "low",
             needsActiveDuplicateReview: true,
             replacedInactiveId: onlyId,
+            losingCandidateIds: activeTwins.slice(1),
           };
         }
         // No active twin — keep current behavior (return inactive id; caller
@@ -377,12 +392,36 @@ export class EmployeeResolver {
       return { employeeId: onlyId, method: "exact_name", confidence: "high" };
     }
     if (exact && exact.length > 1) {
-      // Multiple matches — prefer active subset when possible.
+      // Multiple matches — prefer active subset; if more than one active,
+      // tiebreak by completeness; if true tie, return needs-review.
       const activeTwins = this.empIndex.byNameActive.get(norm) ?? [];
       if (activeTwins.length === 1) {
         this.telemetry.exact_name++;
         return { employeeId: activeTwins[0], method: "exact_name", confidence: "high" };
       }
+      if (activeTwins.length > 1) {
+        const picked = pickCanonical(activeTwins, this.empIndex.byId);
+        if (picked) {
+          this.telemetry.exact_name++;
+          return {
+            employeeId: picked.winner,
+            method: "exact_name",
+            confidence: "medium",
+            tiebrokenByCompleteness: true,
+            losingCandidateIds: picked.losers,
+          };
+        }
+        this.recordAmbiguous(trimmed, activeTwins, "exact_name");
+        this.telemetry.ambiguous++;
+        return {
+          employeeId: activeTwins[0],
+          method: "exact_name",
+          confidence: "low",
+          needsActiveDuplicateReview: true,
+          losingCandidateIds: activeTwins.slice(1),
+        };
+      }
+      // No active matches at all — record ambiguous (only inactive duplicates).
       this.recordAmbiguous(trimmed, exact, "exact_name");
       this.telemetry.ambiguous++;
       return null;
