@@ -47,6 +47,17 @@ const STATUS_VARIANT: Record<DiffStatus, "default" | "secondary" | "destructive"
   needs_review: "destructive",
 };
 
+const WORKER_STATUS_LABEL: Record<string, string> = {
+  matched: "Asignado",
+  missing_in_stafly: "Falta en Stafly",
+  extra_in_stafly: "Extra en Stafly",
+  inactive_matched: "Inactivo detectado",
+  placeholder: "Placeholder",
+  imported_accept_only: "Importado/no confirmado",
+  canonical_duplicate_resolved: "Duplicado resuelto",
+  unmatched: "Sin match",
+};
+
 const SEVERITY_ICON = {
   info: Info,
   warn: AlertTriangle,
