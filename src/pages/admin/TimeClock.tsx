@@ -75,6 +75,14 @@ function DesktopTimeClockView() {
           subtitle="Control en vivo de asistencia, horas abiertas, alertas y aprobaciones."
         />
         <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            className="h-9 text-xs gap-1.5 hidden sm:flex"
+            onClick={() => navigate("/app/daily-ops")}
+          >
+            <Monitor className="h-3.5 w-3.5" />
+            Open in Daily Ops
+          </Button>
           <TooltipProvider delayDuration={300}>
             <Tooltip>
               <TooltipTrigger asChild>

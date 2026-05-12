@@ -1578,6 +1578,14 @@ function DesktopShifts() {
         icon={CalendarRange}
         rightSlot={
           <>
+            <Button
+              size="sm"
+              className="h-8 text-xs gap-1.5"
+              onClick={() => navigate("/app/daily-ops")}
+            >
+              <ScanEye className="h-3.5 w-3.5" />
+              Daily Ops
+            </Button>
             {canEdit && (
               <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => setSettingsOpen(true)} title="Shift settings">
                 <Settings2 className="h-4 w-4 text-muted-foreground" />
