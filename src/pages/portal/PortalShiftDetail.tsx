@@ -322,7 +322,7 @@ export default function PortalShiftDetail() {
           {requesting ? (
             <><Loader2 className="h-4 w-4 animate-spin" /> Enviando solicitud...</>
           ) : (
-            <><HandMetal className="h-4 w-4" /> Solicitar este turno</>
+            <><HandMetal className="h-4 w-4" /> Solicitar turno</>
           )}
         </Button>
       )}
