@@ -29,6 +29,7 @@ import { staffedAssignments } from "@/lib/shifts/assignment-coverage";
 import { canManageShifts } from "@/lib/shifts/shift-permissions";
 import { ShiftAttendancePanel } from "@/components/shifts/ShiftAttendancePanel";
 import { MobileShiftTeamHub } from "@/components/shifts/mobile/MobileShiftTeamHub";
+import { ShiftShareMenu } from "@/components/shifts/ShiftShareMenu";
 import { ShiftCloseoutSection } from "@/components/shifts/closeout/ShiftCloseoutSection";
 import {
   TraceabilitySnapshot,
