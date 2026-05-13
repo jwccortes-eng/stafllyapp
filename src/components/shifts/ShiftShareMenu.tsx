@@ -18,11 +18,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Share2, Copy, MessageCircle, Loader2 } from "lucide-react";
+import { Share2, Copy, MessageCircle, Loader2, ClipboardList } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   shiftLinkUrl,
   copyLink,
+  copyMessage,
+  buildShiftBroadcastMessage,
   openWhatsApp,
   shareNative,
   type ShiftShareContext,
