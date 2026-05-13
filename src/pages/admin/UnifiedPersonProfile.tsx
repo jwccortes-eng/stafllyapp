@@ -184,12 +184,12 @@ export default function UnifiedPersonProfile() {
     // Reusable refetch for documents only — invoked from realtime subscription
     // so admin sees worker portal uploads/status changes without a hard reload.
     const refetchDocs = async () => {
-      const { data } = await sb
-        .from("employee_documents")
-        .select("review_status")
-        .eq("employee_id", id);
+      const [adminRes, onbRes] = await Promise.all([
+        sb.from("employee_documents").select("review_status").eq("employee_id", id),
+        sb.from("employee_onboarding_documents").select("status").eq("employee_id", id),
+      ]);
       if (cancelled) return;
-      const docs = (data ?? []) as any[];
+      const docs = (adminRes.data ?? []) as any[];
       const docAgg = docs.reduce(
         (acc: { approved: number; pending: number; rejected: number }, d: any) => {
           if (d.review_status === "approved") acc.approved++;
@@ -200,10 +200,22 @@ export default function UnifiedPersonProfile() {
         { approved: 0, pending: 0, rejected: 0 },
       );
       setDocsCount(docAgg);
+      const onb = (onbRes.data ?? []) as any[];
+      const onbAgg = onb.reduce(
+        (acc: { pending: number; rejected: number; expired: number }, d: any) => {
+          const s = String(d.status ?? "").toLowerCase();
+          if (s === "pending") acc.pending++;
+          else if (s === "rejected") acc.rejected++;
+          else if (s === "expired") acc.expired++;
+          return acc;
+        },
+        { pending: 0, rejected: 0, expired: 0 },
+      );
+      setOnboardingDocsCount(onbAgg);
     };
 
     (async () => {
-      const [docsRes, activityRes, shiftsRes, payrollRes, visitsRes] = await Promise.all([
+      const [docsRes, activityRes, shiftsRes, payrollRes, visitsRes, onbDocsRes] = await Promise.all([
         sb.from("employee_documents").select("review_status").eq("employee_id", id),
         sb
           .from("activity_log")
