@@ -98,6 +98,47 @@ export function buildShiftMessage(ctx: ShiftShareContext): string {
   return `${greeting}\n\nTienes un turno:\n${lines.join("\n")}\n\nConfirma tu disponibilidad en Stafly:\n${ctx.url}`;
 }
 
+/**
+ * Connecteam-handoff broadcast message. Plain, no greeting (admin will paste
+ * into a Connecteam channel or general WhatsApp). Missing fields render as
+ * "por confirmar" instead of being dropped, so workers always see the field.
+ */
+export function buildShiftBroadcastMessage(ctx: ShiftShareContext): string {
+  const start = clean(ctx.startTime);
+  const job =
+    clean(ctx.clientName) ?? clean(ctx.jobSite) ?? clean(ctx.title) ?? "por confirmar";
+  const mp = clean(ctx.meetingPoint) ?? "por confirmar";
+  const lines = [
+    "Nuevo turno disponible en Stafly",
+    `Entrada: ${start ? formatTime(start) : "por confirmar"}`,
+    `Trabajo: ${job}`,
+    `Punto de encuentro: ${mp}`,
+    "",
+    `Solicita el turno aquí: ${ctx.url}`,
+  ];
+  return lines.join("\n");
+}
+
+export async function copyMessage(message: string): Promise<void> {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(message);
+    } else {
+      const ta = document.createElement("textarea");
+      ta.value = message;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+    }
+    toast.success("Mensaje copiado");
+  } catch {
+    toast.error("No se pudo copiar el mensaje");
+  }
+}
+
 export async function copyLink(url: string): Promise<void> {
   try {
     if (navigator.clipboard?.writeText) {
