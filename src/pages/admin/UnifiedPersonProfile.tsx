@@ -125,6 +125,13 @@ export default function UnifiedPersonProfile() {
   const [docsCount, setDocsCount] = useState<{ approved: number; pending: number; rejected: number }>({
     approved: 0, pending: 0, rejected: 0,
   });
+  // Onboarding-doc compliance counts (read-only). employee_onboarding_documents is
+  // the only doc table that exposes a real "expired" status today; admin
+  // employee_documents has no expires_at column. Used exclusively to enrich the
+  // NextActionCard's doc signal — UI cards that already cite docsCount remain unchanged.
+  const [onboardingDocsCount, setOnboardingDocsCount] = useState<{
+    pending: number; rejected: number; expired: number;
+  }>({ pending: 0, rejected: 0, expired: 0 });
   const [attendance30d, setAttendance30d] = useState<{ shifts: number; lateCount: number; noShowCount: number }>({
     shifts: 0, lateCount: 0, noShowCount: 0,
   });
