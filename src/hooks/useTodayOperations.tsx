@@ -246,8 +246,21 @@ export function useTodayOperations(
         refresh,
       )
       .subscribe();
+    const ch4 = supabase
+      .channel(`daily-ops-claims-${companyId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "shift_requests",
+          filter: `company_id=eq.${companyId}`,
+        },
+        refresh,
+      )
+      .subscribe();
 
-    channelsRef.current = [ch1, ch2, ch3];
+    channelsRef.current = [ch1, ch2, ch3, ch4];
     return () => {
       channelsRef.current.forEach((ch) => supabase.removeChannel(ch));
       channelsRef.current = [];
@@ -270,6 +283,7 @@ export function useTodayOperations(
       missing_clock_outs: shifts.reduce((n, s) => n + s.ops.missing_clock_outs, 0),
       not_clocked_in: shifts.reduce((n, s) => n + s.ops.not_started, 0),
       urgent: shifts.filter((s) => s.ops.alert_level === "urgent").length,
+      pending_claims: shifts.reduce((n, s) => n + (s.pending_claims ?? 0), 0),
     };
   }, [shifts]);
 
