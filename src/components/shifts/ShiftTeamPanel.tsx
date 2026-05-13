@@ -89,7 +89,7 @@ export function ShiftTeamPanel({ shiftId, companyId, preloaded, compact = false 
   const responseBadge: Record<string, { label: string; cls: string }> = {
     accepted: { label: "Aceptado", cls: "text-earning bg-earning/10" },
     pending: { label: "Pendiente", cls: "text-warning bg-warning/10" },
-    needs_reacceptance: { label: "Re-aceptar", cls: "text-amber-600 bg-amber-500/10" },
+    needs_reacceptance: { label: "Re-confirmar", cls: "text-amber-600 bg-amber-500/10" },
     rejected: { label: "Rechazado", cls: "text-destructive bg-destructive/10" },
   };
 

@@ -161,13 +161,16 @@ export default function ShiftLink() {
   return (
     <div className="min-h-screen flex items-center justify-center p-6 bg-gradient-to-b from-background to-muted/30">
       <Card className="max-w-md w-full p-6 space-y-5 shadow-lg">
-        <header className="space-y-1 text-center">
+        <header className="space-y-1.5 text-center">
           <p className="text-xs uppercase tracking-wider text-muted-foreground">
             {preview.company_name}
           </p>
           <h1 className="text-lg font-semibold">
             {preview.preview.title || "Turno"}
           </h1>
+          <p className="text-[12.5px] text-muted-foreground/85 leading-snug pt-1">
+            Te están invitando a tomar este turno. Identifícate para continuar.
+          </p>
         </header>
 
         {/* Minimal safe preview — date/time/short location only. */}
