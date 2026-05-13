@@ -11,7 +11,9 @@ import { useCompany } from "@/hooks/useCompany";
 import { useAuth } from "@/hooks/useAuth";
 import { useOnboardingConfig } from "@/hooks/useOnboardingConfig";
 import { isInviteStatusFailure, isInviteStatusInFlight, mapEmailLogStatusToInviteStatus, type InviteDeliveryStatus } from "@/lib/invitation-status";
+import { humanizeInvitationError, type HumanInvitationError } from "@/lib/invitation-error-messages";
 import { buildWhatsAppTargets, normalizePhone } from "@/lib/phone";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Send, MessageCircle, Phone, Copy, Check, Mail, Smartphone, CheckCircle2, AlertTriangle, Link2, Loader2, RefreshCw, Clock, Shield, KeyRound, XCircle, AlertCircle, MailCheck, MailX, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { portalAuthUrl, inviteUrl } from "@/lib/app-url";
@@ -63,6 +65,9 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
   const [generatingPin, setGeneratingPin] = useState(false);
   const [livePin, setLivePin] = useState<string | null>(null);
   const [lastError, setLastError] = useState<string | null>(null);
+  const [humanError, setHumanError] = useState<HumanInvitationError | null>(null);
+  const [showTechDetail, setShowTechDetail] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [attempts, setAttempts] = useState(0);
   const [lastAttemptAt, setLastAttemptAt] = useState<string | null>(null);
   const [inviteRecipient, setInviteRecipient] = useState<string | null>(null);
@@ -89,7 +94,7 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
 
   // Reset livePin when dialog opens/closes; resolve PIN existence via RPC.
   useEffect(() => {
-    if (!open) { setLivePin(null); setLastError(null); return; }
+    if (!open) { setLivePin(null); setLastError(null); setHumanError(null); return; }
     let cancelled = false;
     (async () => {
       try {
@@ -101,30 +106,48 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
     return () => { cancelled = true; };
   }, [open, employee.id]);
 
+  const syncEmailStatus = async () => {
+    if (!providerMessageId) return;
+    const { data } = await supabase
+      .from("email_send_log")
+      .select("status, error_message, created_at")
+      .eq("message_id", providerMessageId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (!data) return;
+
+    const nextStatus = mapEmailLogStatusToInviteStatus(data.status, inviteStatus);
+    setInviteStatus(nextStatus);
+    setStatusChangedAt(data.created_at ?? null);
+    if (data.error_message) {
+      setLastError(data.error_message);
+      setHumanError(humanizeInvitationError(data.error_message));
+    }
+  };
+
+  const refreshDeliveryStatus = async () => {
+    if (!providerMessageId || refreshing) return;
+    setRefreshing(true);
+    try {
+      await syncEmailStatus();
+      toast({ title: "Estado actualizado" });
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   useEffect(() => {
     if (!open || !providerMessageId) return;
 
     let cancelled = false;
-    const syncEmailStatus = async () => {
-      const { data } = await supabase
-        .from("email_send_log")
-        .select("status, error_message, created_at")
-        .eq("message_id", providerMessageId)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (!data || cancelled) return;
-
-      const nextStatus = mapEmailLogStatusToInviteStatus(data.status, inviteStatus);
-      setInviteStatus(nextStatus);
-      setStatusChangedAt(data.created_at ?? null);
-      if (data.error_message) {
-        setLastError(data.error_message);
-      }
+    const tick = async () => {
+      if (cancelled) return;
+      await syncEmailStatus();
     };
 
-    void syncEmailStatus();
+    void tick();
     const shouldPoll = isInviteStatusInFlight(inviteStatus);
     if (!shouldPoll) {
       return () => {
@@ -133,13 +156,14 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
     }
 
     const interval = window.setInterval(() => {
-      void syncEmailStatus();
+      void tick();
     }, 5000);
 
     return () => {
       cancelled = true;
       window.clearInterval(interval);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, providerMessageId, inviteStatus]);
 
   // Load or create invitation when dialog opens
@@ -177,6 +201,7 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
         setInviteChannel(existing.channel);
         setInviteId(existing.id);
         setLastError(existing.last_error);
+        setHumanError(existing.last_error ? humanizeInvitationError(existing.last_error) : null);
         setAttempts(existing.attempts ?? 0);
         setLastAttemptAt(existing.last_attempt_at);
         setInviteRecipient(existing.invite_recipient);
@@ -457,8 +482,10 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
         description: `La invitación para ${employee.email} está siendo procesada. El estado se actualizará automáticamente.`,
       });
     } catch (err: any) {
-      const errorMsg = err.message ?? "Error desconocido";
+      const errorMsg = err?.message ?? "Error desconocido";
+      const human = humanizeInvitationError(err);
       setLastError(errorMsg);
+      setHumanError(human);
 
       // Update invitation with failure
       if (inviteId) {
@@ -471,7 +498,7 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
           .eq("id", inviteId);
       }
 
-      toast({ title: "Error al enviar", description: errorMsg, variant: "destructive" });
+      toast({ title: human.title, description: human.message, variant: "destructive" });
     } finally {
       setSending(false);
     }
@@ -504,10 +531,24 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
               <DialogTitle className="text-base font-bold">Invitar a {employee.first_name}</DialogTitle>
               <DialogDescription className="text-[11px] mt-0.5">Envía las credenciales de acceso al portal</DialogDescription>
             </div>
-            <Badge className={cn("text-[9px] px-2 py-0.5 font-semibold gap-1", statusConfig.color)}>
-              <StatusIcon className={cn("h-3 w-3", isQueued && "animate-spin")} />
-              {statusConfig.label}
-            </Badge>
+            <div className="flex items-center gap-1">
+              <Badge className={cn("text-[9px] px-2 py-0.5 font-semibold gap-1", statusConfig.color)}>
+                <StatusIcon className={cn("h-3 w-3", isQueued && "animate-spin")} />
+                {statusConfig.label}
+              </Badge>
+              {providerMessageId && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0"
+                  onClick={refreshDeliveryStatus}
+                  disabled={refreshing}
+                  title="Actualizar estado"
+                >
+                  <RefreshCw className={cn("h-3 w-3", refreshing && "animate-spin")} />
+                </Button>
+              )}
+            </div>
           </div>
           {/* Timeline info */}
           <div className="mt-2 space-y-0.5">
@@ -566,17 +607,42 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
             </div>
           )}
 
-          {/* Error display */}
+          {/* Error display — humanized */}
           {lastError && (
-            <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-[10px] space-y-1">
-              <div className="flex items-center gap-1.5 text-destructive font-medium">
+            <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-[11px] space-y-1.5">
+              <div className="flex items-center gap-1.5 text-destructive font-semibold">
                 <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-                Error de entrega
+                {humanError?.title ?? "No se pudo enviar"}
               </div>
-              <p className="text-destructive/80 break-words">{lastError}</p>
+              <p className="text-destructive/90 break-words leading-snug">
+                {humanError?.message ?? lastError}
+              </p>
               {lastAttemptAt && (
-                <p className="text-muted-foreground">Último intento: hace {formatDistanceToNow(new Date(lastAttemptAt), { locale: es })}</p>
+                <p className="text-[10px] text-muted-foreground">
+                  Último intento: hace {formatDistanceToNow(new Date(lastAttemptAt), { locale: es })}
+                </p>
               )}
+              <Collapsible open={showTechDetail} onOpenChange={setShowTechDetail}>
+                <CollapsibleTrigger asChild>
+                  <button
+                    type="button"
+                    className="text-[10px] text-muted-foreground hover:text-foreground underline-offset-2 hover:underline"
+                  >
+                    {showTechDetail ? "Ocultar detalle técnico" : "Ver detalle técnico"}
+                  </button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="mt-1 space-y-0.5">
+                  <pre className="text-[10px] bg-background/60 border border-border/40 rounded px-2 py-1 overflow-x-auto whitespace-pre-wrap break-words text-muted-foreground">
+{lastError}
+                  </pre>
+                  <div className="text-[10px] text-muted-foreground/80 space-y-0.5">
+                    {attempts > 0 && <div>Intentos: {attempts}</div>}
+                    {providerMessageId && <div>Message ID: <span className="font-mono">{providerMessageId}</span></div>}
+                    {inviteRecipient && <div>Destinatario: {inviteRecipient}</div>}
+                    {statusChangedAt && <div>Cambio de estado: {new Date(statusChangedAt).toLocaleString("es")}</div>}
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
             </div>
           )}
 
