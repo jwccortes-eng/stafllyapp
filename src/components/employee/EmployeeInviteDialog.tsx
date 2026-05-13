@@ -106,30 +106,48 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
     return () => { cancelled = true; };
   }, [open, employee.id]);
 
+  const syncEmailStatus = async () => {
+    if (!providerMessageId) return;
+    const { data } = await supabase
+      .from("email_send_log")
+      .select("status, error_message, created_at")
+      .eq("message_id", providerMessageId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (!data) return;
+
+    const nextStatus = mapEmailLogStatusToInviteStatus(data.status, inviteStatus);
+    setInviteStatus(nextStatus);
+    setStatusChangedAt(data.created_at ?? null);
+    if (data.error_message) {
+      setLastError(data.error_message);
+      setHumanError(humanizeInvitationError(data.error_message));
+    }
+  };
+
+  const refreshDeliveryStatus = async () => {
+    if (!providerMessageId || refreshing) return;
+    setRefreshing(true);
+    try {
+      await syncEmailStatus();
+      toast({ title: "Estado actualizado" });
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   useEffect(() => {
     if (!open || !providerMessageId) return;
 
     let cancelled = false;
-    const syncEmailStatus = async () => {
-      const { data } = await supabase
-        .from("email_send_log")
-        .select("status, error_message, created_at")
-        .eq("message_id", providerMessageId)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (!data || cancelled) return;
-
-      const nextStatus = mapEmailLogStatusToInviteStatus(data.status, inviteStatus);
-      setInviteStatus(nextStatus);
-      setStatusChangedAt(data.created_at ?? null);
-      if (data.error_message) {
-        setLastError(data.error_message);
-      }
+    const tick = async () => {
+      if (cancelled) return;
+      await syncEmailStatus();
     };
 
-    void syncEmailStatus();
+    void tick();
     const shouldPoll = isInviteStatusInFlight(inviteStatus);
     if (!shouldPoll) {
       return () => {
@@ -138,13 +156,14 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
     }
 
     const interval = window.setInterval(() => {
-      void syncEmailStatus();
+      void tick();
     }, 5000);
 
     return () => {
       cancelled = true;
       window.clearInterval(interval);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, providerMessageId, inviteStatus]);
 
   // Load or create invitation when dialog opens
