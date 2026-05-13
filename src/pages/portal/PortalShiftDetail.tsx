@@ -253,13 +253,19 @@ export default function PortalShiftDetail() {
 
           {/* Meta rows */}
           <div className="space-y-2 pt-1">
-            {shift.client?.name && (
-              <Row icon={<Briefcase className="h-3.5 w-3.5" />} label="Cliente" value={shift.client.name} />
-            )}
-            {shift.location?.name && (
-              <Row icon={<MapPin className="h-3.5 w-3.5" />} label="Dónde" value={shift.location.name} />
-            )}
-            {shift.meeting_point && (
+            <Row
+              icon={<Briefcase className="h-3.5 w-3.5" />}
+              label="Cliente"
+              value={shift.client?.name ?? "Por confirmar"}
+              muted={!shift.client?.name}
+            />
+            <Row
+              icon={<MapPin className="h-3.5 w-3.5" />}
+              label="Dónde"
+              value={shift.location?.name ?? "Por confirmar"}
+              muted={!shift.location?.name}
+            />
+            {shift.meeting_point ? (
               <div className="flex items-start gap-2 px-3 py-2 rounded-xl bg-primary/[0.05] border border-primary/10">
                 <Navigation className="h-3.5 w-3.5 text-primary mt-0.5 shrink-0" />
                 <div className="min-w-0 flex-1">
@@ -275,6 +281,14 @@ export default function PortalShiftDetail() {
                   </div>
                 )}
               </div>
+            ) : (
+              <div className="flex items-start gap-2 px-3 py-2 rounded-xl bg-muted/20 border border-dashed border-border/40">
+                <Navigation className="h-3.5 w-3.5 text-muted-foreground/60 mt-0.5 shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Punto de encuentro</p>
+                  <p className="text-[12px] italic text-muted-foreground/70 leading-snug">Por confirmar</p>
+                </div>
+              </div>
             )}
             {shift.notes && (
               <div className="rounded-xl bg-muted/30 border border-border/30 p-3">
@@ -289,6 +303,11 @@ export default function PortalShiftDetail() {
               </div>
             )}
           </div>
+
+          {/* Payroll disclaimer */}
+          <p className="text-[10px] text-muted-foreground/55 leading-relaxed italic pt-1">
+            Las horas programadas son una estimación. La nómina usa las horas reales registradas.
+          </p>
         </div>
       </div>
 
