@@ -283,7 +283,7 @@ function ReadinessChip({
  */
 export function WorkerRiskTags({
   risks,
-  max = 2,
+  max = 3,
   className,
 }: {
   risks: RiskKey[];
@@ -291,40 +291,62 @@ export function WorkerRiskTags({
   className?: string;
 }) {
   if (!risks || risks.length === 0) return null;
-  // Order by severity defined in RISK_ORDER.
-  const ordered = RISK_ORDER.filter((k) => risks.includes(k));
+
+  // Severity-first ordering: destructive > warning > muted, with RISK_ORDER as
+  // a stable tie-breaker so the list stays deterministic across renders.
+  const TONE_RANK: Record<"destructive" | "warning" | "muted", number> = {
+    destructive: 0,
+    warning: 1,
+    muted: 2,
+  };
+  const orderIndex = (k: RiskKey) => RISK_ORDER.indexOf(k);
+  const ordered = [...new Set(risks)].sort((a, b) => {
+    const ta = getRiskMeta(a).tone;
+    const tb = getRiskMeta(b).tone;
+    if (TONE_RANK[ta] !== TONE_RANK[tb]) return TONE_RANK[ta] - TONE_RANK[tb];
+    return orderIndex(a) - orderIndex(b);
+  });
+
   const visible = ordered.slice(0, max);
-  const overflow = ordered.length - visible.length;
+  const overflow = ordered.slice(max);
+
+  const toneCls = (tone: "destructive" | "warning" | "muted") =>
+    tone === "destructive"
+      ? "border-rose-200 bg-rose-50 text-rose-700"
+      : tone === "warning"
+      ? "border-amber-200 bg-amber-50 text-amber-700"
+      : "border-border/60 bg-muted/40 text-muted-foreground";
 
   return (
     <span className={cn("inline-flex items-center gap-1 flex-wrap", className)}>
       {visible.map((k) => {
         const meta = getRiskMeta(k);
-        const cls =
-          meta.tone === "destructive"
-            ? "border-rose-200 bg-rose-50 text-rose-700"
-            : meta.tone === "warning"
-            ? "border-amber-200 bg-amber-50 text-amber-700"
-            : "border-border/60 bg-muted/40 text-muted-foreground";
         return (
           <span
             key={k}
             title={meta.description}
             className={cn(
               "inline-flex items-center rounded-sm border px-1 py-px text-[9px] font-medium leading-none",
-              cls,
+              toneCls(meta.tone),
             )}
           >
             {meta.label}
           </span>
         );
       })}
-      {overflow > 0 && (
+      {overflow.length > 0 && (
         <span
-          title={ordered.slice(max).map((k) => getRiskMeta(k).label).join(", ")}
+          // Tooltip lists remaining risks ordered by severity, prefixed by tone.
+          title={overflow
+            .map((k) => {
+              const m = getRiskMeta(k);
+              const dot = m.tone === "destructive" ? "●" : m.tone === "warning" ? "▲" : "·";
+              return `${dot} ${m.label}`;
+            })
+            .join("\n")}
           className="inline-flex items-center rounded-sm border border-border/60 bg-muted/40 px-1 py-px text-[9px] font-medium leading-none text-muted-foreground"
         >
-          +{overflow}
+          +{overflow.length}
         </span>
       )}
     </span>
