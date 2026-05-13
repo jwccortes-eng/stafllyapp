@@ -94,7 +94,7 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
 
   // Reset livePin when dialog opens/closes; resolve PIN existence via RPC.
   useEffect(() => {
-    if (!open) { setLivePin(null); setLastError(null); return; }
+    if (!open) { setLivePin(null); setLastError(null); setHumanError(null); return; }
     let cancelled = false;
     (async () => {
       try {
