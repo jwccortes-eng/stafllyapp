@@ -365,13 +365,13 @@ function BackBar({ onBack }: { onBack: () => void }) {
   );
 }
 
-function Row({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+function Row({ icon, label, value, muted }: { icon: React.ReactNode; label: string; value: string; muted?: boolean }) {
   return (
     <div className="flex items-center gap-2.5">
       <div className="text-muted-foreground/50">{icon}</div>
       <div className="min-w-0 flex-1">
         <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground/60">{label}</p>
-        <p className="text-[12.5px] text-foreground font-medium truncate">{value}</p>
+        <p className={cn("text-[12.5px] truncate", muted ? "italic text-muted-foreground/70" : "text-foreground font-medium")}>{value}</p>
       </div>
     </div>
   );
