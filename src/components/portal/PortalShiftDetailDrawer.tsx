@@ -249,96 +249,116 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, responseStatu
                   loading={historyLoading}
                 />
               )}
-              {/* When & Where — single consolidated block */}
-              {(shift.location || locationCoords) && (
-                <section className="rounded-2xl border border-border/40 bg-card overflow-hidden">
-                  {/* Date row */}
-                  <div className="flex items-center gap-3 px-4 py-3 border-b border-border/30">
-                    <div className="h-8 w-8 rounded-lg bg-muted/60 flex items-center justify-center shrink-0">
-                      <Clock className="h-3.5 w-3.5 text-muted-foreground/80" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-[10px] uppercase tracking-widest text-muted-foreground/55 font-bold">Cuándo</p>
-                      <p className="text-[13px] font-semibold text-foreground first-letter:uppercase mt-0.5">
-                        {format(parseISO(shift.date), "EEEE d 'de' MMMM", { locale: es })}
-                      </p>
-                    </div>
+              {/* When & Where — always visible; missing fields render as "por confirmar" */}
+              <section className="rounded-2xl border border-border/40 bg-card overflow-hidden">
+                {/* Date row */}
+                <div className="flex items-center gap-3 px-4 py-3 border-b border-border/30">
+                  <div className="h-8 w-8 rounded-lg bg-muted/60 flex items-center justify-center shrink-0">
+                    <Clock className="h-3.5 w-3.5 text-muted-foreground/80" />
                   </div>
+                  <div className="min-w-0">
+                    <p className="text-[10px] uppercase tracking-widest text-muted-foreground/55 font-bold">Cuándo</p>
+                    <p className="text-[13px] font-semibold text-foreground first-letter:uppercase mt-0.5">
+                      {format(parseISO(shift.date), "EEEE d 'de' MMMM", { locale: es })}
+                    </p>
+                  </div>
+                </div>
 
-                  {/* Location row */}
-                  {shift.location && (
-                    <div className="px-4 py-3 space-y-2.5">
-                      <div className="flex items-center gap-3">
-                        <div className="h-8 w-8 rounded-lg bg-muted/60 flex items-center justify-center shrink-0">
-                          <MapPin className="h-3.5 w-3.5 text-muted-foreground/80" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-[10px] uppercase tracking-widest text-muted-foreground/55 font-bold">Dónde</p>
-                          <p className="text-[13px] font-semibold text-foreground mt-0.5 truncate">{shift.location.name}</p>
-                        </div>
-                        <button
-                          className="p-2 rounded-lg hover:bg-muted text-muted-foreground/50 hover:text-foreground transition-colors"
-                          onClick={() => copyAddress(shift.location!.name, "Dirección")}
-                          aria-label="Copiar dirección"
-                        >
-                          <Copy className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                      {locationCoords && (
-                        <NavigationButtons latitude={locationCoords.lat} longitude={locationCoords.lng} label="Abrir mapa" />
-                      )}
-                    </div>
-                  )}
-
-                  {/* Punto de encuentro — protagonista con hora si existe */}
-                  {shift.meeting_point && (
-                    <div className="flex items-start gap-3 px-4 py-3 border-t border-border/30">
+                {/* Location row — always present */}
+                {shift.location ? (
+                  <div className="px-4 py-3 space-y-2.5">
+                    <div className="flex items-center gap-3">
                       <div className="h-8 w-8 rounded-lg bg-muted/60 flex items-center justify-center shrink-0">
-                        <Navigation className="h-3.5 w-3.5 text-muted-foreground/80" />
+                        <MapPin className="h-3.5 w-3.5 text-muted-foreground/80" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-[10px] uppercase tracking-widest text-muted-foreground/55 font-bold">Punto de encuentro</p>
-                        <p className="text-[13px] font-semibold text-foreground mt-0.5 line-clamp-2 leading-snug">{shift.meeting_point}</p>
+                        <p className="text-[10px] uppercase tracking-widest text-muted-foreground/55 font-bold">Dónde</p>
+                        <p className="text-[13px] font-semibold text-foreground mt-0.5 truncate">{shift.location.name}</p>
                       </div>
-                      {shift.meeting_time && (
-                        <div className="shrink-0 text-right pr-1">
-                          <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-muted-foreground/70 leading-none mb-1">Hora</p>
-                          <p className="text-[16px] font-bold font-mono tabular-nums text-foreground leading-none">
-                            {shift.meeting_time.slice(0, 5)}
-                          </p>
-                        </div>
-                      )}
                       <button
                         className="p-2 rounded-lg hover:bg-muted text-muted-foreground/50 hover:text-foreground transition-colors"
-                        onClick={() => copyAddress(shift.meeting_point!, "Punto de encuentro")}
-                        aria-label="Copiar punto de encuentro"
+                        onClick={() => copyAddress(shift.location!.name, "Dirección")}
+                        aria-label="Copiar dirección"
                       >
                         <Copy className="h-3.5 w-3.5" />
                       </button>
-                      <a
-                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(shift.meeting_point)}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="p-2 rounded-lg hover:bg-muted text-muted-foreground/50 hover:text-foreground transition-colors"
-                        aria-label="Abrir mapa"
-                      >
-                        <ChevronRight className="h-4 w-4" />
-                      </a>
                     </div>
-                  )}
-
-                  {/* Clock-in method — merged */}
-                  <div className="flex items-center gap-3 px-4 py-3 border-t border-border/30">
-                    <div className="h-8 w-8 rounded-lg bg-muted/60 flex items-center justify-center shrink-0">
-                      <ClockMethodIcon className="h-3.5 w-3.5 text-muted-foreground/80" />
+                    {locationCoords && (
+                      <NavigationButtons latitude={locationCoords.lat} longitude={locationCoords.lng} label="Abrir mapa" />
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-3 px-4 py-3">
+                    <div className="h-8 w-8 rounded-lg bg-muted/40 flex items-center justify-center shrink-0">
+                      <MapPin className="h-3.5 w-3.5 text-muted-foreground/50" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-[10px] uppercase tracking-widest text-muted-foreground/55 font-bold">Entrada</p>
-                      <p className="text-[13px] font-semibold text-foreground mt-0.5">{clockLabel}</p>
+                      <p className="text-[10px] uppercase tracking-widest text-muted-foreground/55 font-bold">Dónde</p>
+                      <p className="text-[13px] italic text-muted-foreground/70 mt-0.5">Ubicación por confirmar</p>
                     </div>
                   </div>
-                </section>
-              )}
+                )}
+
+                {/* Punto de encuentro — always present */}
+                {shift.meeting_point ? (
+                  <div className="flex items-start gap-3 px-4 py-3 border-t border-border/30">
+                    <div className="h-8 w-8 rounded-lg bg-muted/60 flex items-center justify-center shrink-0">
+                      <Navigation className="h-3.5 w-3.5 text-muted-foreground/80" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[10px] uppercase tracking-widest text-muted-foreground/55 font-bold">Punto de encuentro</p>
+                      <p className="text-[13px] font-semibold text-foreground mt-0.5 line-clamp-2 leading-snug">{shift.meeting_point}</p>
+                    </div>
+                    {shift.meeting_time && (
+                      <div className="shrink-0 text-right pr-1">
+                        <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-muted-foreground/70 leading-none mb-1">Hora</p>
+                        <p className="text-[16px] font-bold font-mono tabular-nums text-foreground leading-none">
+                          {shift.meeting_time.slice(0, 5)}
+                        </p>
+                      </div>
+                    )}
+                    <button
+                      className="p-2 rounded-lg hover:bg-muted text-muted-foreground/50 hover:text-foreground transition-colors"
+                      onClick={() => copyAddress(shift.meeting_point!, "Punto de encuentro")}
+                      aria-label="Copiar punto de encuentro"
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                    </button>
+                    <a
+                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(shift.meeting_point)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-2 rounded-lg hover:bg-muted text-muted-foreground/50 hover:text-foreground transition-colors"
+                      aria-label="Abrir mapa"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </a>
+                  </div>
+                ) : (
+                  <div className="flex items-start gap-3 px-4 py-3 border-t border-border/30">
+                    <div className="h-8 w-8 rounded-lg bg-muted/40 flex items-center justify-center shrink-0">
+                      <Navigation className="h-3.5 w-3.5 text-muted-foreground/50" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[10px] uppercase tracking-widest text-muted-foreground/55 font-bold">Punto de encuentro</p>
+                      <p className="text-[13px] italic text-muted-foreground/70 mt-0.5 leading-snug">
+                        {shift.meeting_time ? `Por confirmar · ${shift.meeting_time.slice(0,5)}` : "Por confirmar"}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Clock-in method — merged */}
+                <div className="flex items-center gap-3 px-4 py-3 border-t border-border/30">
+                  <div className="h-8 w-8 rounded-lg bg-muted/60 flex items-center justify-center shrink-0">
+                    <ClockMethodIcon className="h-3.5 w-3.5 text-muted-foreground/80" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] uppercase tracking-widest text-muted-foreground/55 font-bold">Entrada</p>
+                    <p className="text-[13px] font-semibold text-foreground mt-0.5">{clockLabel}</p>
+                  </div>
+                </div>
+              </section>
 
               {/* Instructions — only when present, high-signal */}
               {shift.special_instructions && (
