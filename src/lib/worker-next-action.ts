@@ -172,9 +172,9 @@ export function selectWorkerNextAction(
   }
 
   // 6 / 7 / 8 — portal access state
-  const portalActive = extras.portalActive
-    ?? !!worker?.user_id
-    ?? worker?.profile_status === "active";
+  const portalActive = typeof extras.portalActive === "boolean"
+    ? extras.portalActive
+    : (!!worker?.user_id || worker?.profile_status === "active");
 
   if (!portalActive) {
     // 7. failed
