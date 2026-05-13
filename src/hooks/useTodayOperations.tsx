@@ -38,6 +38,7 @@ export interface TodayOpsShift {
   meeting_point: string | null;
   meeting_time: string | null;
   shift_admin_id: string | null;
+  pending_claims: number;
   ops: ShiftOpsState;
 }
 
@@ -64,6 +65,7 @@ export interface TodayOpsResult {
     missing_clock_outs: number;
     not_clocked_in: number;
     urgent: number;
+    pending_claims: number;
   };
   refresh: () => void;
 }
@@ -90,7 +92,7 @@ export function useTodayOperations(
     setLoading(true);
     setError(null);
 
-    const [shiftsRes, assignRes, entriesRes, clientsRes, locsRes, empsRes] =
+    const [shiftsRes, assignRes, entriesRes, clientsRes, locsRes, empsRes, claimsRes] =
       await Promise.all([
         supabase
           .from("scheduled_shifts")
@@ -121,6 +123,11 @@ export function useTodayOperations(
           .select("id, first_name, last_name, avatar_url, phone_number")
           .eq("company_id", companyId)
           .eq("is_active", true),
+        supabase
+          .from("shift_requests")
+          .select("id, shift_id, status")
+          .eq("company_id", companyId)
+          .eq("status", "pending"),
       ]);
 
     const firstErr =
@@ -129,7 +136,8 @@ export function useTodayOperations(
       entriesRes.error ||
       clientsRes.error ||
       locsRes.error ||
-      empsRes.error;
+      empsRes.error ||
+      claimsRes.error;
     if (firstErr) {
       setError(firstErr.message);
       setLoading(false);
@@ -144,6 +152,10 @@ export function useTodayOperations(
     );
     const allAssignments = (assignRes.data ?? []) as AssignmentLite[];
     const allEntries = (entriesRes.data ?? []) as EntryLite[];
+    const claimsByShift = new Map<string, number>();
+    for (const c of (claimsRes.data ?? []) as Array<{ shift_id: string }>) {
+      claimsByShift.set(c.shift_id, (claimsByShift.get(c.shift_id) ?? 0) + 1);
+    }
     const now = new Date();
 
     const rows: TodayOpsShift[] = (shiftsRes.data ?? []).map((s: any) => {
@@ -174,6 +186,7 @@ export function useTodayOperations(
         meeting_point: s.meeting_point ?? null,
         meeting_time: s.meeting_time ?? null,
         shift_admin_id: s.shift_admin_id ?? null,
+        pending_claims: claimsByShift.get(s.id) ?? 0,
         ops,
       };
     });
@@ -233,8 +246,21 @@ export function useTodayOperations(
         refresh,
       )
       .subscribe();
+    const ch4 = supabase
+      .channel(`daily-ops-claims-${companyId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "shift_requests",
+          filter: `company_id=eq.${companyId}`,
+        },
+        refresh,
+      )
+      .subscribe();
 
-    channelsRef.current = [ch1, ch2, ch3];
+    channelsRef.current = [ch1, ch2, ch3, ch4];
     return () => {
       channelsRef.current.forEach((ch) => supabase.removeChannel(ch));
       channelsRef.current = [];
@@ -257,6 +283,7 @@ export function useTodayOperations(
       missing_clock_outs: shifts.reduce((n, s) => n + s.ops.missing_clock_outs, 0),
       not_clocked_in: shifts.reduce((n, s) => n + s.ops.not_started, 0),
       urgent: shifts.filter((s) => s.ops.alert_level === "urgent").length,
+      pending_claims: shifts.reduce((n, s) => n + (s.pending_claims ?? 0), 0),
     };
   }, [shifts]);
 

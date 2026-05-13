@@ -248,8 +248,8 @@ const HUB_COPY = {
   emptyAssignedHelper: "Usa Recomendados para asignar trabajadores rápidamente.",
   noPhone: "Sin teléfono registrado",
   // Solicitudes
-  claimsHelper: "Trabajadores que solicitaron este turno.",
-  claimsManagedDesktop: "La aprobación de solicitudes sigue en escritorio.",
+  claimsHelper: "Revisa y decide las solicitudes pendientes.",
+  claimsManagedDesktop: "Aprobar agrega al trabajador al turno; todavía deberá confirmar si aplica.",
   emptyClaimsTitle: "Sin solicitudes",
   emptyClaimsHelper: "Las solicitudes de trabajadores aparecerán aquí.",
   // Alertas
@@ -569,7 +569,7 @@ function MobileShiftTeamHubImpl({
         key: "claims",
         tone: "info", icon: Inbox,
         title: `${claimsPending} ${claimsPending === 1 ? "solicitud pendiente" : "solicitudes pendientes"}`,
-        helper: "Revísalas en escritorio para aprobar o rechazar.",
+        helper: "Revísalas para aprobar o rechazar.",
       });
     }
     // Daily close (Phase 17C). Only flag for today/past shifts.

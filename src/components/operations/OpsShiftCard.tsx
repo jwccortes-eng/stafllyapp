@@ -10,7 +10,7 @@
 import { ShiftRouteHeader } from "@/components/stafly-ui";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Users, Clock, AlertTriangle, ChevronRight } from "lucide-react";
+import { Users, Clock, AlertTriangle, ChevronRight, Inbox } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   BUCKET_LABEL,
@@ -96,6 +96,13 @@ export function OpsShiftCard({ shift, onOperate }: Props) {
             icon={<AlertTriangle className="h-3 w-3" />}
             label={`${ops.not_started} not started`}
             tone={ops.alert_level === "urgent" ? "danger" : "warning"}
+          />
+        )}
+        {shift.pending_claims > 0 && (
+          <Chip
+            icon={<Inbox className="h-3 w-3" />}
+            label={`${shift.pending_claims} ${shift.pending_claims === 1 ? "solicitud" : "solicitudes"}`}
+            tone="warning"
           />
         )}
       </div>
