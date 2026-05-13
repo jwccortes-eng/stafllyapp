@@ -168,6 +168,9 @@ export function ShiftShareMenu({
         <DropdownMenuItem onClick={() => withCtx((ctx) => copyLink(ctx.url))}>
           <Copy className="h-4 w-4 mr-2" /> Copiar link
         </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => withCtx((ctx) => copyMessage(buildShiftBroadcastMessage(ctx)))}>
+          <ClipboardList className="h-4 w-4 mr-2" /> Copiar mensaje (Connecteam)
+        </DropdownMenuItem>
         <DropdownMenuItem onClick={() => withCtx((ctx) => openWhatsApp(ctx, recipientPhone))}>
           <MessageCircle className="h-4 w-4 mr-2 text-[#25D366]" /> WhatsApp
         </DropdownMenuItem>
