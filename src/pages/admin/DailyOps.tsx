@@ -31,6 +31,7 @@ import {
   Clock,
   Users,
   RefreshCw,
+  Inbox,
 } from "lucide-react";
 import { OpsShiftCard } from "@/components/operations/OpsShiftCard";
 import { cn } from "@/lib/utils";
@@ -159,10 +160,17 @@ export default function DailyOps() {
       </div>
 
       {/* Summary strip */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
         <SummaryTile label="Shifts" value={totals.shifts} icon={<CalendarDays className="h-3.5 w-3.5" />} />
         <SummaryTile label="Needs staff" value={totals.needs_staff} tone={totals.needs_staff > 0 ? "warning" : "neutral"} icon={<Users className="h-3.5 w-3.5" />} />
         <SummaryTile label="In progress" value={totals.in_progress} tone="info" icon={<Radar className="h-3.5 w-3.5" />} />
+        <SummaryTile
+          label="Solicitudes"
+          value={totals.pending_claims}
+          tone={totals.pending_claims > 0 ? "warning" : "neutral"}
+          icon={<Inbox className="h-3.5 w-3.5" />}
+          onClick={() => navigate("/app/shift-requests")}
+        />
         <SummaryTile label="Open clocks" value={totals.open_clocks} tone={totals.open_clocks > 0 ? "warning" : "neutral"} icon={<Clock className="h-3.5 w-3.5" />} />
         <SummaryTile label="Missing out" value={totals.missing_clock_outs} tone={totals.missing_clock_outs > 0 ? "danger" : "neutral"} icon={<AlertTriangle className="h-3.5 w-3.5" />} />
         <SummaryTile label="Urgent" value={totals.urgent} tone={totals.urgent > 0 ? "danger" : "neutral"} icon={<AlertTriangle className="h-3.5 w-3.5" />} />
@@ -230,11 +238,13 @@ function SummaryTile({
   value,
   icon,
   tone = "neutral",
+  onClick,
 }: {
   label: string;
   value: number;
   icon?: React.ReactNode;
   tone?: "neutral" | "info" | "warning" | "danger";
+  onClick?: () => void;
 }) {
   const toneCls = {
     neutral: "text-muted-foreground",
@@ -242,8 +252,16 @@ function SummaryTile({
     warning: "text-amber-600 dark:text-amber-400",
     danger: "text-destructive",
   }[tone];
+  const Comp: any = onClick ? "button" : "div";
   return (
-    <div className="rounded-xl border border-border/50 bg-card px-3 py-2.5">
+    <Comp
+      type={onClick ? "button" : undefined}
+      onClick={onClick}
+      className={cn(
+        "rounded-xl border border-border/50 bg-card px-3 py-2.5 text-left",
+        onClick && "hover:bg-muted/40 transition-colors",
+      )}
+    >
       <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">
         {icon}
         <span className="font-semibold">{label}</span>
@@ -251,7 +269,7 @@ function SummaryTile({
       <div className={cn("text-xl font-bold tabular-nums mt-0.5", toneCls)}>
         {value}
       </div>
-    </div>
+    </Comp>
   );
 }
 
