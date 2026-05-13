@@ -258,6 +258,19 @@ export default function UnifiedPersonProfile() {
       );
       setDocsCount(docAgg);
 
+      const onb = (onbDocsRes?.data ?? []) as any[];
+      const onbAgg = onb.reduce(
+        (acc: { pending: number; rejected: number; expired: number }, d: any) => {
+          const s = String(d.status ?? "").toLowerCase();
+          if (s === "pending") acc.pending++;
+          else if (s === "rejected") acc.rejected++;
+          else if (s === "expired") acc.expired++;
+          return acc;
+        },
+        { pending: 0, rejected: 0, expired: 0 },
+      );
+      setOnboardingDocsCount(onbAgg);
+
       setRecentActivity((activityRes.data ?? []) as any[]);
       const shifts = (shiftsRes.data ?? []) as any[];
       setRecentShifts(shifts);
