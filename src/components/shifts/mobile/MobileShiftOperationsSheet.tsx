@@ -29,6 +29,7 @@ import { staffedAssignments } from "@/lib/shifts/assignment-coverage";
 import { canManageShifts } from "@/lib/shifts/shift-permissions";
 import { ShiftAttendancePanel } from "@/components/shifts/ShiftAttendancePanel";
 import { MobileShiftTeamHub } from "@/components/shifts/mobile/MobileShiftTeamHub";
+import { ShiftShareMenu } from "@/components/shifts/ShiftShareMenu";
 import { ShiftCloseoutSection } from "@/components/shifts/closeout/ShiftCloseoutSection";
 import {
   TraceabilitySnapshot,
@@ -847,15 +848,35 @@ export function MobileShiftOperationsSheet({
                     </Button>
                   )}
                   <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex-1 h-10 rounded-lg gap-1.5 text-xs font-medium"
-                      onClick={handleShare}
-                    >
-                      <Share2 className="h-3.5 w-3.5" />
-                      Compartir turno
-                    </Button>
+                    {draft ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled
+                        className="flex-1 h-10 rounded-lg gap-1.5 text-xs font-medium"
+                        title="Publica el turno antes de compartir"
+                      >
+                        <Share2 className="h-3.5 w-3.5" />
+                        Compartir turno
+                      </Button>
+                    ) : (
+                      <ShiftShareMenu
+                        shiftId={shift.id}
+                        token={(shift as Shift & { shift_link_token?: string | null }).shift_link_token ?? null}
+                        title={shift.title || "Turno"}
+                        date={shift.date}
+                        startTime={shift.start_time}
+                        endTime={shift.end_time}
+                        clientName={clientName && clientName !== "—" ? clientName : null}
+                        jobSite={locationName || null}
+                        meetingPoint={shiftMeeting.point ?? meetingPoint ?? null}
+                        meetingTime={shiftMeeting.time}
+                        instructions={shift.notes ?? null}
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 h-10 rounded-lg text-xs font-medium"
+                      />
+                    )}
                     <Button
                       variant="outline"
                       size="sm"

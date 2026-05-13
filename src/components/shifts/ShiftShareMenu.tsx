@@ -18,11 +18,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Share2, Copy, MessageCircle, Loader2 } from "lucide-react";
+import { Share2, Copy, MessageCircle, Loader2, ClipboardList } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   shiftLinkUrl,
   copyLink,
+  copyMessage,
+  buildShiftBroadcastMessage,
   openWhatsApp,
   shareNative,
   type ShiftShareContext,
@@ -165,6 +167,9 @@ export function ShiftShareMenu({
       <DropdownMenuContent align="end" className="w-52">
         <DropdownMenuItem onClick={() => withCtx((ctx) => copyLink(ctx.url))}>
           <Copy className="h-4 w-4 mr-2" /> Copiar link
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => withCtx((ctx) => copyMessage(buildShiftBroadcastMessage(ctx)))}>
+          <ClipboardList className="h-4 w-4 mr-2" /> Copiar mensaje (Connecteam)
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => withCtx((ctx) => openWhatsApp(ctx, recipientPhone))}>
           <MessageCircle className="h-4 w-4 mr-2 text-[#25D366]" /> WhatsApp
