@@ -270,7 +270,7 @@ export function PortalShiftCard({
           {titleDisplay}
         </p>
 
-        {shift.meeting_point && (
+        {shift.meeting_point ? (
           <div className="flex items-start gap-2 rounded-xl border border-border/40 bg-muted/30 px-2.5 py-2">
             <MapPin className="h-3.5 w-3.5 shrink-0 mt-0.5 text-muted-foreground" />
             <div className="min-w-0 flex-1">
@@ -290,27 +290,35 @@ export function PortalShiftCard({
               </div>
             )}
           </div>
-        )}
-
-        {(locationDisplay || clientDisplay) && (
-          <div className="flex items-center gap-2 text-[11.5px] text-muted-foreground/85 min-w-0">
-            {clientDisplay && (
-              <span className="flex items-center gap-1.5 truncate min-w-0">
-                <Briefcase className="h-3 w-3 shrink-0 text-muted-foreground/50" />
-                <span className="truncate">{clientDisplay}</span>
-              </span>
-            )}
-            {clientDisplay && locationDisplay && (
-              <span className="text-muted-foreground/30 shrink-0">·</span>
-            )}
-            {locationDisplay && (
-              <span className="flex items-center gap-1.5 truncate min-w-0">
-                <MapPin className="h-3 w-3 shrink-0 text-muted-foreground/50" />
-                <span className="truncate">{locationDisplay}</span>
-              </span>
-            )}
+        ) : (
+          <div className="flex items-start gap-2 rounded-xl border border-dashed border-border/40 bg-muted/20 px-2.5 py-2">
+            <MapPin className="h-3.5 w-3.5 shrink-0 mt-0.5 text-muted-foreground/50" />
+            <div className="min-w-0 flex-1">
+              <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-muted-foreground/60 leading-none mb-0.5">
+                Punto de encuentro
+              </p>
+              <p className="text-[11.5px] italic text-muted-foreground/70 leading-snug">
+                Por confirmar
+              </p>
+            </div>
           </div>
         )}
+
+        <div className="flex items-center gap-2 text-[11.5px] text-muted-foreground/85 min-w-0">
+          <span className="flex items-center gap-1.5 truncate min-w-0">
+            <Briefcase className="h-3 w-3 shrink-0 text-muted-foreground/50" />
+            <span className={cn("truncate", !clientDisplay && "italic text-muted-foreground/60")}>
+              {clientDisplay || "Cliente por confirmar"}
+            </span>
+          </span>
+          <span className="text-muted-foreground/30 shrink-0">·</span>
+          <span className="flex items-center gap-1.5 truncate min-w-0">
+            <MapPin className="h-3 w-3 shrink-0 text-muted-foreground/50" />
+            <span className={cn("truncate", !locationDisplay && "italic text-muted-foreground/60")}>
+              {locationDisplay || "Ubicación por confirmar"}
+            </span>
+          </span>
+        </div>
 
         {showStatusChip && (
           <div className="flex items-center justify-between gap-2 pt-0.5">
