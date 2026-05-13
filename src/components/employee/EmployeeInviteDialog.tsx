@@ -531,10 +531,24 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
               <DialogTitle className="text-base font-bold">Invitar a {employee.first_name}</DialogTitle>
               <DialogDescription className="text-[11px] mt-0.5">Envía las credenciales de acceso al portal</DialogDescription>
             </div>
-            <Badge className={cn("text-[9px] px-2 py-0.5 font-semibold gap-1", statusConfig.color)}>
-              <StatusIcon className={cn("h-3 w-3", isQueued && "animate-spin")} />
-              {statusConfig.label}
-            </Badge>
+            <div className="flex items-center gap-1">
+              <Badge className={cn("text-[9px] px-2 py-0.5 font-semibold gap-1", statusConfig.color)}>
+                <StatusIcon className={cn("h-3 w-3", isQueued && "animate-spin")} />
+                {statusConfig.label}
+              </Badge>
+              {providerMessageId && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0"
+                  onClick={refreshDeliveryStatus}
+                  disabled={refreshing}
+                  title="Actualizar estado"
+                >
+                  <RefreshCw className={cn("h-3 w-3", refreshing && "animate-spin")} />
+                </Button>
+              )}
+            </div>
           </div>
           {/* Timeline info */}
           <div className="mt-2 space-y-0.5">
