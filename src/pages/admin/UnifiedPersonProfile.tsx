@@ -40,6 +40,8 @@ import {
 import { EmployeeProfileTabs } from "@/components/employee/EmployeeProfileTabs";
 import { EmployeeInviteDialog } from "@/components/employee/EmployeeInviteDialog";
 import { ArchiveEmployeeDialog } from "@/components/employee/ArchiveEmployeeDialog";
+import { NextActionCard } from "@/components/employee/NextActionCard";
+import { selectWorkerNextAction, type WorkerNextAction } from "@/lib/worker-next-action";
 import { canInviteWorker, canActivateWorker, canArchiveWorker } from "@/lib/worker-actions";
 
 import {
