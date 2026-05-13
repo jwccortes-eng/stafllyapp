@@ -242,6 +242,7 @@ export default function UnifiedPersonProfile() {
           .eq("employee_id", id)
           .order("checked_in_at", { ascending: false })
           .limit(8),
+        sb.from("employee_onboarding_documents").select("status").eq("employee_id", id),
       ]);
       if (cancelled) return;
 
