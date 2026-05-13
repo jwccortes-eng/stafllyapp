@@ -99,14 +99,31 @@ export function buildShiftMessage(ctx: ShiftShareContext): string {
 }
 
 /**
+ * Validates a shift link URL has a real token after `/s/`.
+ */
+export function isValidShiftUrl(url: string): boolean {
+  return !!url && !url.endsWith("/s/") && url.includes("/s/");
+}
+
+/**
  * Connecteam-handoff broadcast message. Plain, no greeting (admin will paste
  * into a Connecteam channel or general WhatsApp). Missing fields render as
  * "por confirmar" instead of being dropped, so workers always see the field.
+ *
+ * Returns `null` if the URL is missing or incomplete (ends with `/s/`),
+ * so the caller must show a human error instead of copying a broken message.
  */
-export function buildShiftBroadcastMessage(ctx: ShiftShareContext): string {
+export function buildShiftBroadcastMessage(
+  ctx: ShiftShareContext,
+): string | null {
+  if (!isValidShiftUrl(ctx.url)) return null;
+
   const start = clean(ctx.startTime);
   const job =
-    clean(ctx.clientName) ?? clean(ctx.jobSite) ?? clean(ctx.title) ?? "por confirmar";
+    clean(ctx.clientName) ??
+    clean(ctx.jobSite) ??
+    clean(ctx.title) ??
+    "por confirmar";
   const mp = clean(ctx.meetingPoint) ?? "por confirmar";
   const lines = [
     "Nuevo turno disponible en Stafly",
