@@ -136,7 +136,8 @@ export function useTodayOperations(
       entriesRes.error ||
       clientsRes.error ||
       locsRes.error ||
-      empsRes.error;
+      empsRes.error ||
+      claimsRes.error;
     if (firstErr) {
       setError(firstErr.message);
       setLoading(false);
@@ -151,6 +152,10 @@ export function useTodayOperations(
     );
     const allAssignments = (assignRes.data ?? []) as AssignmentLite[];
     const allEntries = (entriesRes.data ?? []) as EntryLite[];
+    const claimsByShift = new Map<string, number>();
+    for (const c of (claimsRes.data ?? []) as Array<{ shift_id: string }>) {
+      claimsByShift.set(c.shift_id, (claimsByShift.get(c.shift_id) ?? 0) + 1);
+    }
     const now = new Date();
 
     const rows: TodayOpsShift[] = (shiftsRes.data ?? []).map((s: any) => {
@@ -181,6 +186,7 @@ export function useTodayOperations(
         meeting_point: s.meeting_point ?? null,
         meeting_time: s.meeting_time ?? null,
         shift_admin_id: s.shift_admin_id ?? null,
+        pending_claims: claimsByShift.get(s.id) ?? 0,
         ops,
       };
     });
