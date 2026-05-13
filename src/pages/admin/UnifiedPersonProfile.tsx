@@ -939,9 +939,9 @@ export default function UnifiedPersonProfile() {
           {
             docs: {
               missingRequiredCount: readiness.missingDocuments.length,
-              expiredCount: 0,
-              rejectedCount: docsCount.rejected,
-              pendingCount: docsCount.pending,
+              expiredCount: onboardingDocsCount.expired,
+              rejectedCount: docsCount.rejected + onboardingDocsCount.rejected,
+              pendingCount: docsCount.pending + onboardingDocsCount.pending,
             },
             portalActive,
           },
