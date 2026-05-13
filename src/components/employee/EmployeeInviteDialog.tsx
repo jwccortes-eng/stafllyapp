@@ -201,6 +201,7 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
         setInviteChannel(existing.channel);
         setInviteId(existing.id);
         setLastError(existing.last_error);
+        setHumanError(existing.last_error ? humanizeInvitationError(existing.last_error) : null);
         setAttempts(existing.attempts ?? 0);
         setLastAttemptAt(existing.last_attempt_at);
         setInviteRecipient(existing.invite_recipient);
