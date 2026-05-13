@@ -897,6 +897,52 @@ export default function UnifiedPersonProfile() {
         })}
       </div>
 
+      {/* ─── PRÓXIMA ACCIÓN RECOMENDADA (Phase 4.4b) ─── */}
+      {(() => {
+        const nextAction = selectWorkerNextAction(
+          employee,
+          { missingPersonal: readiness.missingPersonal, missingDocuments: readiness.missingDocuments },
+          invitation ?? null,
+          {
+            docs: {
+              missingRequiredCount: readiness.missingDocuments.length,
+              expiredCount: 0,
+              rejectedCount: docsCount.rejected,
+              pendingCount: docsCount.pending,
+            },
+            portalActive,
+          },
+        );
+
+        const handleAction = (a: WorkerNextAction) => {
+          switch (a.cta) {
+            case "open_invite":
+              setInviteOpen(true);
+              return;
+            case "edit_contact":
+              setActiveTab(a.targetTab ?? "info");
+              if (!isEditing) setIsEditing(true);
+              break;
+            case "open_access":
+              setActiveTab("access");
+              break;
+            case "open_documents":
+              setActiveTab("docs");
+              break;
+            case "none":
+            default:
+              return;
+          }
+          requestAnimationFrame(() => {
+            document
+              .querySelector('[data-state="active"][role="tabpanel"]')
+              ?.scrollIntoView({ behavior: "smooth", block: "start" });
+          });
+        };
+
+        return <NextActionCard action={nextAction} onAction={handleAction} />;
+      })()}
+
       {/* ─── READINESS / OPS GAPS ───
           Surfaces every signal an admin needs to act on this worker:
           missing required profile fields, missing required documents,
