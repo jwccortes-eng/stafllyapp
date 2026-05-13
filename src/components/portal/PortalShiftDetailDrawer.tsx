@@ -196,17 +196,17 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, responseStatu
             <DrawerTitle className="text-left text-[19px] font-bold leading-tight line-clamp-2 text-foreground">
               {shift.title}
             </DrawerTitle>
-            {shift.client && (
-              <p className="text-[12.5px] text-muted-foreground/85 flex items-center gap-1.5">
-                <Briefcase className="h-3 w-3 text-muted-foreground/55 shrink-0" />
-                {shift.client.name}
-                {shift.shift_code && (
-                  <span className="ml-1 text-[10px] font-mono text-muted-foreground/55 tabular-nums">
-                    · #{shift.shift_code.padStart(4, "0")}
-                  </span>
-                )}
-              </p>
-            )}
+            <p className="text-[12.5px] text-muted-foreground/85 flex items-center gap-1.5">
+              <Briefcase className="h-3 w-3 text-muted-foreground/55 shrink-0" />
+              <span className={cn(!shift.client?.name && "italic text-muted-foreground/65")}>
+                {shift.client?.name ?? "Cliente por confirmar"}
+              </span>
+              {shift.shift_code && (
+                <span className="ml-1 text-[10px] font-mono text-muted-foreground/55 tabular-nums">
+                  · #{shift.shift_code.padStart(4, "0")}
+                </span>
+              )}
+            </p>
           </div>
 
           {/* Tu ruta de trabajo — Entrada protagonista, salida estimada secundaria */}
