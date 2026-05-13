@@ -607,17 +607,42 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
             </div>
           )}
 
-          {/* Error display */}
+          {/* Error display — humanized */}
           {lastError && (
-            <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-[10px] space-y-1">
-              <div className="flex items-center gap-1.5 text-destructive font-medium">
+            <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-[11px] space-y-1.5">
+              <div className="flex items-center gap-1.5 text-destructive font-semibold">
                 <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-                Error de entrega
+                {humanError?.title ?? "No se pudo enviar"}
               </div>
-              <p className="text-destructive/80 break-words">{lastError}</p>
+              <p className="text-destructive/90 break-words leading-snug">
+                {humanError?.message ?? lastError}
+              </p>
               {lastAttemptAt && (
-                <p className="text-muted-foreground">Último intento: hace {formatDistanceToNow(new Date(lastAttemptAt), { locale: es })}</p>
+                <p className="text-[10px] text-muted-foreground">
+                  Último intento: hace {formatDistanceToNow(new Date(lastAttemptAt), { locale: es })}
+                </p>
               )}
+              <Collapsible open={showTechDetail} onOpenChange={setShowTechDetail}>
+                <CollapsibleTrigger asChild>
+                  <button
+                    type="button"
+                    className="text-[10px] text-muted-foreground hover:text-foreground underline-offset-2 hover:underline"
+                  >
+                    {showTechDetail ? "Ocultar detalle técnico" : "Ver detalle técnico"}
+                  </button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="mt-1 space-y-0.5">
+                  <pre className="text-[10px] bg-background/60 border border-border/40 rounded px-2 py-1 overflow-x-auto whitespace-pre-wrap break-words text-muted-foreground">
+{lastError}
+                  </pre>
+                  <div className="text-[10px] text-muted-foreground/80 space-y-0.5">
+                    {attempts > 0 && <div>Intentos: {attempts}</div>}
+                    {providerMessageId && <div>Message ID: <span className="font-mono">{providerMessageId}</span></div>}
+                    {inviteRecipient && <div>Destinatario: {inviteRecipient}</div>}
+                    {statusChangedAt && <div>Cambio de estado: {new Date(statusChangedAt).toLocaleString("es")}</div>}
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
             </div>
           )}
 
