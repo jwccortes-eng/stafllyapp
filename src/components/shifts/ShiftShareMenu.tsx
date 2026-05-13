@@ -25,6 +25,7 @@ import {
   copyLink,
   copyMessage,
   buildShiftBroadcastMessage,
+  isValidShiftUrl,
   openWhatsApp,
   shareNative,
   type ShiftShareContext,
@@ -168,7 +169,22 @@ export function ShiftShareMenu({
         <DropdownMenuItem onClick={() => withCtx((ctx) => copyLink(ctx.url))}>
           <Copy className="h-4 w-4 mr-2" /> Copiar link
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => withCtx((ctx) => copyMessage(buildShiftBroadcastMessage(ctx)))}>
+        <DropdownMenuItem
+          onClick={() =>
+            withCtx((ctx) => {
+              if (!isValidShiftUrl(ctx.url)) {
+                toast.error("No se pudo generar el link del turno");
+                return;
+              }
+              const message = buildShiftBroadcastMessage(ctx);
+              if (!message) {
+                toast.error("No se pudo generar el link del turno");
+                return;
+              }
+              copyMessage(message);
+            })
+          }
+        >
           <ClipboardList className="h-4 w-4 mr-2" /> Copiar mensaje (Connecteam)
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => withCtx((ctx) => openWhatsApp(ctx, recipientPhone))}>
