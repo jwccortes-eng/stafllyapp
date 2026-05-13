@@ -481,8 +481,10 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
         description: `La invitación para ${employee.email} está siendo procesada. El estado se actualizará automáticamente.`,
       });
     } catch (err: any) {
-      const errorMsg = err.message ?? "Error desconocido";
+      const errorMsg = err?.message ?? "Error desconocido";
+      const human = humanizeInvitationError(err);
       setLastError(errorMsg);
+      setHumanError(human);
 
       // Update invitation with failure
       if (inviteId) {
@@ -495,7 +497,7 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
           .eq("id", inviteId);
       }
 
-      toast({ title: "Error al enviar", description: errorMsg, variant: "destructive" });
+      toast({ title: human.title, description: human.message, variant: "destructive" });
     } finally {
       setSending(false);
     }
