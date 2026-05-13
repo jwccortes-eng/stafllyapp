@@ -65,6 +65,9 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
   const [generatingPin, setGeneratingPin] = useState(false);
   const [livePin, setLivePin] = useState<string | null>(null);
   const [lastError, setLastError] = useState<string | null>(null);
+  const [humanError, setHumanError] = useState<HumanInvitationError | null>(null);
+  const [showTechDetail, setShowTechDetail] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [attempts, setAttempts] = useState(0);
   const [lastAttemptAt, setLastAttemptAt] = useState<string | null>(null);
   const [inviteRecipient, setInviteRecipient] = useState<string | null>(null);
