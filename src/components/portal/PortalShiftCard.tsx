@@ -138,7 +138,7 @@ export function PortalShiftCard({
             disabled={responding}
           >
             <CheckCircle2 className="h-4 w-4" />
-            {shift.status === "needs_reacceptance" ? "Aceptar cambios" : "Confirmar"}
+            {shift.status === "needs_reacceptance" ? "Re-confirmar" : "Confirmar"}
           </Button>
         )}
         {isPending && onReject && (
@@ -327,7 +327,7 @@ export function PortalShiftCard({
               disabled={responding}
             >
               <CheckCircle2 className="h-3.5 w-3.5" />
-              {shift.status === "needs_reacceptance" ? "Aceptar cambios" : "Confirmar"}
+              {shift.status === "needs_reacceptance" ? "Re-confirmar" : "Confirmar"}
             </Button>
             <Button
               variant="ghost"
