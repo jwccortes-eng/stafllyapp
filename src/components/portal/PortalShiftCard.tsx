@@ -54,7 +54,7 @@ function getStatusMeta(status: string): { tone: OpsStatusTone; label: string; ra
     case "accepted":
       return { tone: "success", label: "Confirmado", rail: "bg-earning/70" };
     case "needs_reacceptance":
-      return { tone: "warning", label: "Re-aceptar", rail: "bg-warning" };
+      return { tone: "warning", label: "Re-confirmar", rail: "bg-warning" };
     case "rejected":
       return { tone: "critical", label: "Rechazado", rail: "bg-destructive" };
     case "pending":
