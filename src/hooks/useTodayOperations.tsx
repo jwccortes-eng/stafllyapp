@@ -38,6 +38,7 @@ export interface TodayOpsShift {
   meeting_point: string | null;
   meeting_time: string | null;
   shift_admin_id: string | null;
+  pending_claims: number;
   ops: ShiftOpsState;
 }
 
@@ -64,6 +65,7 @@ export interface TodayOpsResult {
     missing_clock_outs: number;
     not_clocked_in: number;
     urgent: number;
+    pending_claims: number;
   };
   refresh: () => void;
 }
@@ -90,7 +92,7 @@ export function useTodayOperations(
     setLoading(true);
     setError(null);
 
-    const [shiftsRes, assignRes, entriesRes, clientsRes, locsRes, empsRes] =
+    const [shiftsRes, assignRes, entriesRes, clientsRes, locsRes, empsRes, claimsRes] =
       await Promise.all([
         supabase
           .from("scheduled_shifts")
@@ -121,6 +123,11 @@ export function useTodayOperations(
           .select("id, first_name, last_name, avatar_url, phone_number")
           .eq("company_id", companyId)
           .eq("is_active", true),
+        supabase
+          .from("shift_requests")
+          .select("id, shift_id, status")
+          .eq("company_id", companyId)
+          .eq("status", "pending"),
       ]);
 
     const firstErr =
