@@ -99,6 +99,19 @@ export function ShiftFormShell({
   const [confirmCloseOpen, setConfirmCloseOpen] = useState(false);
   const [publishReviewOpen, setPublishReviewOpen] = useState(false);
 
+  // S4 — beforeunload guard. Only attaches while the form is open AND dirty,
+  // so a clean form (or closed dialog) never blocks the user. No DB/RLS work.
+  useEffect(() => {
+    if (!open || !isDirty) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      // Modern browsers ignore the string but require returnValue to be set.
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [open, isDirty]);
+
   const handlePrimaryClick = () => {
     if (publishReview) {
       setPublishReviewOpen(true);
