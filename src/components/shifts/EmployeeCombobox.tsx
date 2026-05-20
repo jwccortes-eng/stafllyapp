@@ -225,7 +225,16 @@ export function EmployeeCombobox({
   };
 
   const readyCount = filtered.filter(e => getGroup(e) === "ready").length;
-  const driverCount = employees.filter(e => isDriver(e)).length;
+  const activeCount = useMemo(() => employees.filter(e => e.is_active !== false).length, [employees]);
+  const driverCount = useMemo(() => employees.filter(e => isDriver(e) && e.is_active !== false).length, [employees]);
+  const incompleteCount = useMemo(
+    () => employees.filter(e => e.is_active !== false && isProfileIncomplete(e)).length,
+    [employees],
+  );
+  const inactiveHiddenCount = useMemo(
+    () => employees.filter(e => e.is_active === false && !selected.includes(e.id)).length,
+    [employees, selected],
+  );
 
   // Bulk actions
   const selectAllReady = () => {
