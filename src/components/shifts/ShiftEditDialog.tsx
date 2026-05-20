@@ -235,9 +235,10 @@ export function ShiftEditDialog({
             const d: any = autosave.draftAvailable?.data;
             if (d?.form) setForm(d.form as ShiftFormState);
             if (typeof d?.qrAttendanceMode === "string") setQrAttendanceMode(d.qrAttendanceMode);
+            setTouched(true); // S4-FIX1 — restored draft = unsaved work
             autosave.dismissBanner();
           }}
-          onDiscard={() => autosave.clear()}
+          onDiscard={() => { autosave.clear(); setTouched(false); }}
         />
       )}
       <div className="flex justify-end">
