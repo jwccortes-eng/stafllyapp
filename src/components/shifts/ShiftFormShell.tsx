@@ -86,6 +86,7 @@ export function ShiftFormShell({
   draftLabel,
   draftSaving,
   isDirty,
+  onDiscard,
   footerBanner,
   children,
   summary,
