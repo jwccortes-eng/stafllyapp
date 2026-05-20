@@ -12,6 +12,9 @@ import {
 } from "./ShiftFormFields";
 import { ShiftFormShell } from "./ShiftFormShell";
 import { WorkspaceSummary } from "./workspace/WorkspaceSummary";
+import { ShiftDraftBanner, ShiftDraftStatusPill } from "./ShiftDraftBanner";
+import { useShiftDraftAutosave } from "@/hooks/useShiftDraftAutosave";
+import { useAuth } from "@/hooks/useAuth";
 import type { Shift, SelectOption, Employee, Assignment } from "./types";
 
 interface ShiftEditDialogProps {
@@ -42,6 +45,7 @@ export function ShiftEditDialog({
   const [qrAttendanceMode, setQrAttendanceMode] = useState("disabled");
   const [qrToken, setQrToken] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const { user } = useAuth();
 
   useEffect(() => {
     if (shift && open) {
@@ -51,6 +55,17 @@ export function ShiftEditDialog({
       setQrToken(s.qr_token || null);
     }
   }, [shift, open]);
+
+  // S3 — Local autosave (no DB writes). Snapshot only fields the operator edits.
+  const autosaveData = useMemo(() => ({ form, qrAttendanceMode }), [form, qrAttendanceMode]);
+  const autosave = useShiftDraftAutosave({
+    enabled: open && !!shift,
+    companyId: (shift as any)?.company_id ?? null,
+    userId: user?.id ?? null,
+    mode: "edit",
+    shiftId: shift?.id ?? null,
+    data: autosaveData,
+  });
 
   // Derived signals — recomputed only when their slice of state changes.
   const signals = useShiftFormSignals({
@@ -110,6 +125,7 @@ export function ShiftEditDialog({
     try {
       const payload = formStateToShiftPayload(form, allowClaims);
       await onSave(shift.id, { ...payload, qr_attendance_mode: qrAttendanceMode }, shift);
+      autosave.clear(); // S3 — successful save → drop local draft
       onOpenChange(false);
     } finally {
       setSaving(false);
@@ -185,6 +201,21 @@ export function ShiftEditDialog({
       footerBanner={footerBanner}
       summary={summary}
     >
+      {autosave.draftAvailable && (
+        <ShiftDraftBanner
+          savedAt={autosave.draftAvailable.savedAt}
+          onRestore={() => {
+            const d: any = autosave.draftAvailable?.data;
+            if (d?.form) setForm(d.form as ShiftFormState);
+            if (typeof d?.qrAttendanceMode === "string") setQrAttendanceMode(d.qrAttendanceMode);
+            autosave.dismissBanner();
+          }}
+          onDiscard={() => autosave.clear()}
+        />
+      )}
+      <div className="flex justify-end">
+        <ShiftDraftStatusPill status={autosave.status} />
+      </div>
       <ShiftFormFields
         layout="workspace"
         mode="edit"

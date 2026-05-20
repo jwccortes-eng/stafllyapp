@@ -53,6 +53,8 @@ import { QuickCreatePopover } from "@/components/shifts/QuickCreatePopover";
 import { QuickAddInviteWizard } from "@/components/employee/QuickAddInviteWizard";
 import { ShiftFormFields, useShiftFormSignals, type ShiftFormState } from "@/components/shifts/ShiftFormFields";
 import { ShiftFormShell } from "@/components/shifts/ShiftFormShell";
+import { ShiftDraftBanner, ShiftDraftStatusPill } from "@/components/shifts/ShiftDraftBanner";
+import { useShiftDraftAutosave, type DraftStatus } from "@/hooks/useShiftDraftAutosave";
 import { ShiftSummaryPanel } from "@/components/shifts/form/ShiftSummaryPanel";
 import { WorkspaceSummary } from "@/components/shifts/workspace/WorkspaceSummary";
 import { buildPrePublishReview } from "@/lib/shifts/build-pre-publish-review";
@@ -125,6 +127,8 @@ function CreateShiftDialogInline(props: {
   onAddNewEmployee: () => void;
   onClientCreated: (id: string, name: string) => void;
   onLocationCreated: (id: string, name: string, address: string) => void;
+  draftStatus?: DraftStatus;
+  draftBanner?: React.ReactNode;
 }) {
   const v = props.formState;
   const signals = useShiftFormSignals({
@@ -221,6 +225,12 @@ function CreateShiftDialogInline(props: {
       summary={summary}
       publishReview={publishReview}
     >
+      {props.draftBanner}
+      {props.draftStatus && (
+        <div className="flex justify-end">
+          <ShiftDraftStatusPill status={props.draftStatus} />
+        </div>
+      )}
       <ShiftFormFields
         layout="workspace"
         mode="create"
@@ -637,6 +647,58 @@ function DesktopShifts() {
     setRepeatConfig(DEFAULT_REPEAT);
   };
 
+  // ── S3 — Local autosave for the create-shift form (NO DB writes) ──
+  // Snapshot mirrors the formState built at <CreateShiftDialogInline /> usage.
+  const createFormSnapshot = useMemo(() => ({
+    title, date, startTime, endTime, slots,
+    clientId, locationId, notes, claimable,
+    meetingPoint, specialInstructions,
+    payType, dayType, payOverride, shiftAdminId, clockMethod,
+    attendanceMode, meetingTime,
+    transportRequired, carCapacity, transportNotes, driverEmployeeId,
+    selectedEmployees,
+    meetingPointLocationId, jobSiteLocationId,
+  }), [
+    title, date, startTime, endTime, slots,
+    clientId, locationId, notes, claimable,
+    meetingPoint, specialInstructions,
+    payType, dayType, payOverride, shiftAdminId, clockMethod,
+    attendanceMode, meetingTime,
+    transportRequired, carCapacity, transportNotes, driverEmployeeId,
+    selectedEmployees,
+    meetingPointLocationId, jobSiteLocationId,
+  ]);
+
+  const createAutosave = useShiftDraftAutosave({
+    enabled: createOpen,
+    companyId: selectedCompanyId,
+    userId: user?.id ?? null,
+    mode: "create",
+    shiftId: null,
+    data: createFormSnapshot,
+    isEmpty: (d) => !d.title.trim() && !d.date && !d.notes.trim()
+      && !d.clientId && !d.locationId && d.selectedEmployees.length === 0
+      && !d.meetingPoint.trim() && !d.specialInstructions.trim()
+      && !d.shiftAdminId && !d.driverEmployeeId,
+  });
+
+  const restoreCreateDraft = (d: typeof createFormSnapshot) => {
+    setTitle(d.title); setDate(d.date);
+    setStartTime(d.startTime); setEndTime(d.endTime); setSlots(d.slots);
+    setClientId(d.clientId); setLocationId(d.locationId); setNotes(d.notes);
+    setClaimable(d.claimable); setMeetingPoint(d.meetingPoint);
+    setSpecialInstructions(d.specialInstructions);
+    setPayType(d.payType); setDayType(d.dayType); setPayOverride(d.payOverride);
+    setShiftAdminId(d.shiftAdminId); setClockMethod(d.clockMethod);
+    setAttendanceMode(d.attendanceMode); setMeetingTime(d.meetingTime);
+    setTransportRequired(d.transportRequired); setCarCapacity(d.carCapacity);
+    setTransportNotes(d.transportNotes); setDriverEmployeeId(d.driverEmployeeId);
+    setSelectedEmployees(d.selectedEmployees);
+    setMeetingPointLocationId(d.meetingPointLocationId);
+    setJobSiteLocationId(d.jobSiteLocationId);
+  };
+
+
   // Quick-add client inline
   const handleQuickAddClient = async () => {
     if (!newClientName.trim() || !selectedCompanyId) return;
@@ -880,6 +942,7 @@ function DesktopShifts() {
       const baseShift = await createSingleShift(date, /* skipNotifications */ true, /* forceDraft */ true, /* publishNow */ false);
       if (!baseShift) return;
       toast.success("Borrador guardado");
+      createAutosave.clear(); // S3 — DB draft saved → drop local autosave
       setCreateOpen(false);
       resetForm();
       loadData();
@@ -923,6 +986,7 @@ function DesktopShifts() {
       toast.success("Turno publicado");
     }
 
+    createAutosave.clear(); // S3 — published successfully → drop local autosave
     setSaving(false); setCreateOpen(false); resetForm(); loadData();
   };
 
@@ -1978,6 +2042,17 @@ function DesktopShifts() {
           setLocationId(id);
           if (address) setMeetingPoint(address);
         }}
+        draftStatus={createAutosave.status}
+        draftBanner={createAutosave.draftAvailable && (
+          <ShiftDraftBanner
+            savedAt={createAutosave.draftAvailable.savedAt}
+            onRestore={() => {
+              restoreCreateDraft(createAutosave.draftAvailable!.data as typeof createFormSnapshot);
+              createAutosave.dismissBanner();
+            }}
+            onDiscard={() => createAutosave.clear()}
+          />
+        )}
       />
 
 
