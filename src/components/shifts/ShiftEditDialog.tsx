@@ -117,6 +117,7 @@ export function ShiftEditDialog({
   // Purely local; no DB reads/writes.
   const isDirty = useMemo(() => {
     if (!shift) return false;
+    if (touched) return true; // S4-FIX1 — explicit user interaction always wins
     const initial = shiftToFormState(shift);
     const initialQr = (shift as any)?.qr_attendance_mode || "disabled";
     try {
@@ -127,7 +128,7 @@ export function ShiftEditDialog({
     } catch {
       return true;
     }
-  }, [shift, form, qrAttendanceMode]);
+  }, [shift, form, qrAttendanceMode, touched]);
 
   const hasAcceptedAssignments = shiftAssignedIds.length > 0;
 
