@@ -2042,6 +2042,17 @@ function DesktopShifts() {
           setLocationId(id);
           if (address) setMeetingPoint(address);
         }}
+        draftStatus={createAutosave.status}
+        draftBanner={createAutosave.draftAvailable && (
+          <ShiftDraftBanner
+            savedAt={createAutosave.draftAvailable.savedAt}
+            onRestore={() => {
+              restoreCreateDraft(createAutosave.draftAvailable!.data as typeof createFormSnapshot);
+              createAutosave.dismissBanner();
+            }}
+            onDiscard={() => createAutosave.clear()}
+          />
+        )}
       />
 
 
