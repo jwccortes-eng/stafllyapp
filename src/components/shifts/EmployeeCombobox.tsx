@@ -166,10 +166,16 @@ export function EmployeeCombobox({
       list = list.filter((e) => matchScoreById.has(e.id));
     }
     if (quickFilter === "available") list = list.filter(e => getGroup(e) === "ready");
-    else if (quickFilter === "drivers") list = list.filter(e => isDriver(e));
+    else if (quickFilter === "drivers") list = list.filter(e => isDriver(e) && e.is_active !== false);
+    else if (quickFilter === "incomplete") list = list.filter(e => e.is_active !== false && isProfileIncomplete(e));
     else if (quickFilter === "no-conflict") list = list.filter(e => !conflictMap.has(e.id));
+    // S1: por defecto ocultar inactivos/históricos, salvo que ya estén asignados
+    // (visualización de histórico) o el toggle esté activo.
+    if (!showInactive) {
+      list = list.filter(e => e.is_active !== false || selected.includes(e.id));
+    }
     return list;
-  }, [employees, deferredSearch, matchScoreById, quickFilter, unavailableMap, conflictMap]);
+  }, [employees, deferredSearch, matchScoreById, quickFilter, unavailableMap, conflictMap, showInactive, selected]);
 
   // Smart sort: when searching, relevance score dominates so the most precise
   // match (exact ID/phone, then last name, then first name, then phonetic) leads.
