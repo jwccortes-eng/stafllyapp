@@ -217,6 +217,8 @@ export function ShiftEditDialog({
       saveDisabled={!form.date || (shiftAssignedIds.length > 0 && (!form.shiftAdminId || !adminIsAssigned))}
       footerBanner={footerBanner}
       summary={summary}
+      isDirty={isDirty}
+      onDiscard={() => autosave.clear()}
     >
       {autosave.draftAvailable && (
         <ShiftDraftBanner
