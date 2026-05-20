@@ -45,6 +45,11 @@ export function ShiftEditDialog({
   const [qrAttendanceMode, setQrAttendanceMode] = useState("disabled");
   const [qrToken, setQrToken] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  // S4-FIX1 — explicit user-interaction flag. JSON diff alone was unreliable
+  // for the edit dialog (re-mounted shift snapshots, field normalization,
+  // child callbacks that patch back identical values), so any actual user
+  // edit also flips this and forces the unsaved-changes guard to engage.
+  const [touched, setTouched] = useState(false);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -53,6 +58,7 @@ export function ShiftEditDialog({
       const s = shift as any;
       setQrAttendanceMode(s.qr_attendance_mode || "disabled");
       setQrToken(s.qr_token || null);
+      setTouched(false); // S4-FIX1 — fresh open = clean slate
     }
   }, [shift, open]);
 
@@ -111,6 +117,7 @@ export function ShiftEditDialog({
   // Purely local; no DB reads/writes.
   const isDirty = useMemo(() => {
     if (!shift) return false;
+    if (touched) return true; // S4-FIX1 — explicit user interaction always wins
     const initial = shiftToFormState(shift);
     const initialQr = (shift as any)?.qr_attendance_mode || "disabled";
     try {
@@ -121,7 +128,7 @@ export function ShiftEditDialog({
     } catch {
       return true;
     }
-  }, [shift, form, qrAttendanceMode]);
+  }, [shift, form, qrAttendanceMode, touched]);
 
   const hasAcceptedAssignments = shiftAssignedIds.length > 0;
 
@@ -143,6 +150,7 @@ export function ShiftEditDialog({
       const payload = formStateToShiftPayload(form, allowClaims);
       await onSave(shift.id, { ...payload, qr_attendance_mode: qrAttendanceMode }, shift);
       autosave.clear(); // S3 — successful save → drop local draft
+      setTouched(false); // S4-FIX1 — saved → no longer dirty
       onOpenChange(false);
     } finally {
       setSaving(false);
@@ -218,7 +226,7 @@ export function ShiftEditDialog({
       footerBanner={footerBanner}
       summary={summary}
       isDirty={isDirty}
-      onDiscard={() => autosave.clear()}
+      onDiscard={() => { autosave.clear(); setTouched(false); }}
     >
       {autosave.draftAvailable && (
         <ShiftDraftBanner
@@ -227,9 +235,10 @@ export function ShiftEditDialog({
             const d: any = autosave.draftAvailable?.data;
             if (d?.form) setForm(d.form as ShiftFormState);
             if (typeof d?.qrAttendanceMode === "string") setQrAttendanceMode(d.qrAttendanceMode);
+            setTouched(true); // S4-FIX1 — restored draft = unsaved work
             autosave.dismissBanner();
           }}
-          onDiscard={() => autosave.clear()}
+          onDiscard={() => { autosave.clear(); setTouched(false); }}
         />
       )}
       <div className="flex justify-end">
@@ -240,7 +249,7 @@ export function ShiftEditDialog({
         mode="edit"
         companyId={(shift as any).company_id ?? null}
         value={form}
-        onChange={(patch) => setForm((prev) => ({ ...prev, ...patch }))}
+        onChange={(patch) => { setForm((prev) => ({ ...prev, ...patch })); setTouched(true); }}
         clients={clients}
         locations={locations}
         employees={employees}
@@ -250,7 +259,7 @@ export function ShiftEditDialog({
         qrAttendanceMode={qrAttendanceMode}
         qrToken={qrToken}
         onQrUpdate={(updates) => {
-          if (updates.qr_attendance_mode !== undefined) setQrAttendanceMode(updates.qr_attendance_mode);
+          if (updates.qr_attendance_mode !== undefined) { setQrAttendanceMode(updates.qr_attendance_mode); setTouched(true); }
           if (updates.qr_token !== undefined) setQrToken(updates.qr_token);
         }}
         adminError={adminError}
