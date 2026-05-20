@@ -129,6 +129,7 @@ function CreateShiftDialogInline(props: {
   onLocationCreated: (id: string, name: string, address: string) => void;
   draftStatus?: DraftStatus;
   draftBanner?: React.ReactNode;
+  onDiscard?: () => void;
 }) {
   const v = props.formState;
   const signals = useShiftFormSignals({
@@ -217,6 +218,7 @@ function CreateShiftDialogInline(props: {
       saving={props.saving}
       draftSaving={props.draftSaving}
       isDirty={props.isDirty}
+      onDiscard={props.onDiscard}
       saveDisabled={!v.date}
       saveLabel="Publish"
       draftLabel="Save draft"
@@ -2053,6 +2055,7 @@ function DesktopShifts() {
             onDiscard={() => createAutosave.clear()}
           />
         )}
+        onDiscard={() => createAutosave.clear()}
       />
 
 

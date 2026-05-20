@@ -22,7 +22,7 @@ import { Loader2, Save, X, Calendar as CalendarIcon, Building2, FileText, Send }
 import { format, parse } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { PrePublishDialog, type PrePublishReviewData } from "./workspace/PrePublishDialog";
 
@@ -47,6 +47,10 @@ interface Props {
   draftSaving?: boolean;
   /** True when there are unsaved changes — used to show confirm-on-close. */
   isDirty?: boolean;
+  /** S4 — Called when the user explicitly chooses "Descartar" in the
+   *  unsaved-changes confirm dialog. Lets the parent drop the local autosave
+   *  draft (S3) so a fresh reopen doesn't restore the discarded work. */
+  onDiscard?: () => void;
   /** Optional banner above the save button (e.g. "requires re-acceptance"). */
   footerBanner?: React.ReactNode;
   /** Form column content (left). */
@@ -82,6 +86,7 @@ export function ShiftFormShell({
   draftLabel,
   draftSaving,
   isDirty,
+  onDiscard,
   footerBanner,
   children,
   summary,
@@ -93,6 +98,19 @@ export function ShiftFormShell({
     : "Guardar cambios";
   const [confirmCloseOpen, setConfirmCloseOpen] = useState(false);
   const [publishReviewOpen, setPublishReviewOpen] = useState(false);
+
+  // S4 — beforeunload guard. Only attaches while the form is open AND dirty,
+  // so a clean form (or closed dialog) never blocks the user. No DB/RLS work.
+  useEffect(() => {
+    if (!open || !isDirty) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      // Modern browsers ignore the string but require returnValue to be set.
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [open, isDirty]);
 
   const handlePrimaryClick = () => {
     if (publishReview) {
@@ -264,7 +282,11 @@ export function ShiftFormShell({
             </Button>
           )}
           <AlertDialogAction
-            onClick={() => { setConfirmCloseOpen(false); onOpenChange(false); }}
+            onClick={() => {
+              setConfirmCloseOpen(false);
+              onDiscard?.(); // S4 — drop local autosave draft (S3) on explicit discard
+              onOpenChange(false);
+            }}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
             Descartar
