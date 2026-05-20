@@ -2055,6 +2055,7 @@ function DesktopShifts() {
             onDiscard={() => createAutosave.clear()}
           />
         )}
+        onDiscard={() => createAutosave.clear()}
       />
 
 
