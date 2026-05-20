@@ -106,6 +106,23 @@ export function ShiftEditDialog({
     );
   }, [shift, form]);
 
+  // S4 — Dirty detection for unsaved-changes guard. Compares the live form +
+  // qrAttendanceMode against the snapshot derived from the original shift.
+  // Purely local; no DB reads/writes.
+  const isDirty = useMemo(() => {
+    if (!shift) return false;
+    const initial = shiftToFormState(shift);
+    const initialQr = (shift as any)?.qr_attendance_mode || "disabled";
+    try {
+      return (
+        JSON.stringify(form) !== JSON.stringify(initial) ||
+        qrAttendanceMode !== initialQr
+      );
+    } catch {
+      return true;
+    }
+  }, [shift, form, qrAttendanceMode]);
+
   const hasAcceptedAssignments = shiftAssignedIds.length > 0;
 
   if (!shift) return null;
