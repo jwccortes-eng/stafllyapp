@@ -14,7 +14,7 @@ import { ShiftFormShell } from "./ShiftFormShell";
 import { WorkspaceSummary } from "./workspace/WorkspaceSummary";
 import { ShiftDraftBanner, ShiftDraftStatusPill } from "./ShiftDraftBanner";
 import { useShiftDraftAutosave } from "@/hooks/useShiftDraftAutosave";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/hooks/useAuth";
 import type { Shift, SelectOption, Employee, Assignment } from "./types";
 
 interface ShiftEditDialogProps {
