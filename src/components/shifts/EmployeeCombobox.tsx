@@ -75,7 +75,7 @@ function getConflicts(
     .map(s => ({ shiftTitle: s.title, time: `${s.start_time.slice(0, 5)}–${s.end_time.slice(0, 5)}` }));
 }
 
-type QuickFilter = "all" | "available" | "drivers" | "no-conflict";
+type QuickFilter = "all" | "available" | "drivers" | "incomplete" | "no-conflict";
 type GroupKey = "ready" | "warning" | "blocked" | "inactive";
 
 import { isEmployeeDriver } from "./types";
@@ -99,6 +99,8 @@ export function EmployeeCombobox({
   // React 18 native debouncing: keeps input snappy while heavy filtering uses the deferred value.
   const deferredSearch = useDeferredValue(search);
   const [quickFilter, setQuickFilter] = useState<QuickFilter>("all");
+  // S1: inactivos/históricos ocultos por defecto. Toggle explícito para mostrarlos.
+  const [showInactive, setShowInactive] = useState(false);
 
   const conflictMap = useMemo(() => {
     const map = new Map<string, ConflictInfo[]>();
@@ -164,10 +166,16 @@ export function EmployeeCombobox({
       list = list.filter((e) => matchScoreById.has(e.id));
     }
     if (quickFilter === "available") list = list.filter(e => getGroup(e) === "ready");
-    else if (quickFilter === "drivers") list = list.filter(e => isDriver(e));
+    else if (quickFilter === "drivers") list = list.filter(e => isDriver(e) && e.is_active !== false);
+    else if (quickFilter === "incomplete") list = list.filter(e => e.is_active !== false && isProfileIncomplete(e));
     else if (quickFilter === "no-conflict") list = list.filter(e => !conflictMap.has(e.id));
+    // S1: por defecto ocultar inactivos/históricos, salvo que ya estén asignados
+    // (visualización de histórico) o el toggle esté activo.
+    if (!showInactive) {
+      list = list.filter(e => e.is_active !== false || selected.includes(e.id));
+    }
     return list;
-  }, [employees, deferredSearch, matchScoreById, quickFilter, unavailableMap, conflictMap]);
+  }, [employees, deferredSearch, matchScoreById, quickFilter, unavailableMap, conflictMap, showInactive, selected]);
 
   // Smart sort: when searching, relevance score dominates so the most precise
   // match (exact ID/phone, then last name, then first name, then phonetic) leads.
@@ -217,7 +225,16 @@ export function EmployeeCombobox({
   };
 
   const readyCount = filtered.filter(e => getGroup(e) === "ready").length;
-  const driverCount = employees.filter(e => isDriver(e)).length;
+  const activeCount = useMemo(() => employees.filter(e => e.is_active !== false).length, [employees]);
+  const driverCount = useMemo(() => employees.filter(e => isDriver(e) && e.is_active !== false).length, [employees]);
+  const incompleteCount = useMemo(
+    () => employees.filter(e => e.is_active !== false && isProfileIncomplete(e)).length,
+    [employees],
+  );
+  const inactiveHiddenCount = useMemo(
+    () => employees.filter(e => e.is_active === false && !selected.includes(e.id)).length,
+    [employees, selected],
+  );
 
   // Bulk actions
   const selectAllReady = () => {
@@ -286,7 +303,7 @@ export function EmployeeCombobox({
         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
         <Input
           value={search} onChange={e => setSearch(e.target.value)}
-          placeholder="Search worker..."
+          placeholder="Buscar trabajador..."
           className="h-7 text-xs pl-8 pr-8"
         />
         {search && (
@@ -299,9 +316,10 @@ export function EmployeeCombobox({
       {/* Filters + bulk row */}
       <div className="flex items-center gap-1 flex-wrap">
         {([
-          { key: "all" as QuickFilter, label: "All", count: employees.length },
-          { key: "available" as QuickFilter, label: "Ready", count: readyCount },
-          { key: "drivers" as QuickFilter, label: "Drivers", count: driverCount },
+          { key: "all" as QuickFilter, label: "Activos", count: activeCount },
+          { key: "available" as QuickFilter, label: "Listos", count: readyCount },
+          { key: "drivers" as QuickFilter, label: "Conductores", count: driverCount },
+          { key: "incomplete" as QuickFilter, label: "Incompletos", count: incompleteCount },
         ]).map(f => (
           <button
             key={f.key} onClick={() => setQuickFilter(f.key)}
@@ -331,7 +349,7 @@ export function EmployeeCombobox({
                 onClick={selectDrivers}
                 className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-all flex items-center gap-0.5"
               >
-                <Car className="h-2.5 w-2.5" /> +Driver
+                <Car className="h-2.5 w-2.5" /> +Conductor
               </button>
             )}
             {selected.length > 0 && (
@@ -345,6 +363,38 @@ export function EmployeeCombobox({
           </div>
         )}
       </div>
+
+      {/* S1: Inactive visibility toggle + count */}
+      {(inactiveHiddenCount > 0 || showInactive) && (
+        <div className="flex items-center justify-between gap-2 px-0.5 py-1 rounded-md bg-muted/30 border border-border/30">
+          <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+            <PauseCircle className="h-3 w-3" />
+            {showInactive ? (
+              <span>
+                Mostrando inactivos/históricos al final.{" "}
+                <span className="text-warning font-semibold">No disponibles para asignación normal.</span>
+              </span>
+            ) : (
+              <span>
+                Inactivos ocultos: <span className="font-semibold text-foreground">{inactiveHiddenCount}</span>
+              </span>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowInactive(v => !v)}
+            className={cn(
+              "text-[9px] font-bold px-2 py-0.5 rounded-full transition-all shrink-0",
+              showInactive
+                ? "bg-warning/15 text-warning hover:bg-warning/25"
+                : "bg-muted text-muted-foreground hover:bg-muted/80",
+            )}
+          >
+            {showInactive ? "Ocultar inactivos" : "Incluir inactivos/históricos"}
+          </button>
+        </div>
+      )}
+
 
       {debugMode && debugContext && (
         <details className="rounded-lg bg-muted/40 border border-border/40 text-[10px] font-mono text-muted-foreground">
@@ -414,10 +464,15 @@ export function EmployeeCombobox({
 
       {/* Summary */}
       <div className="flex items-center justify-between text-[9px] text-muted-foreground px-0.5">
-        <span>{filtered.length} workers</span>
+        <span>
+          {filtered.length} {filtered.length === 1 ? "trabajador" : "trabajadores"}
+          {!showInactive && inactiveHiddenCount > 0 && (
+            <span className="opacity-70"> · {inactiveHiddenCount} inactivos ocultos</span>
+          )}
+        </span>
         {selected.length > 0 && (
           <span className="font-semibold text-foreground">
-            {selected.length} selected
+            {selected.length} seleccionados
           </span>
         )}
       </div>
@@ -604,10 +659,10 @@ function VirtualEmployeeList(props: VirtualEmployeeListProps) {
               }
               if (item.type === "header") {
                 const labels: Record<GroupKey, { label: string; color: string; icon: React.ReactNode }> = {
-                  ready: { label: `Available · ${readyCount}`, color: "text-earning", icon: <UserCheck className="h-2.5 w-2.5" /> },
-                  warning: { label: "Warning", color: "text-warning", icon: <AlertTriangle className="h-2.5 w-2.5" /> },
-                  blocked: { label: "Unavailable", color: "text-destructive", icon: <CalendarOff className="h-2.5 w-2.5" /> },
-                  inactive: { label: "Inactive", color: "text-muted-foreground", icon: <PauseCircle className="h-2.5 w-2.5" /> },
+                  ready: { label: `Disponibles · ${readyCount}`, color: "text-earning", icon: <UserCheck className="h-2.5 w-2.5" /> },
+                  warning: { label: "Con conflicto", color: "text-warning", icon: <AlertTriangle className="h-2.5 w-2.5" /> },
+                  blocked: { label: "No disponibles", color: "text-destructive", icon: <CalendarOff className="h-2.5 w-2.5" /> },
+                  inactive: { label: "Inactivos / históricos — no disponibles para asignación normal", color: "text-muted-foreground", icon: <PauseCircle className="h-2.5 w-2.5" /> },
                 };
                 const g = labels[item.group];
                 return (
@@ -699,7 +754,7 @@ function VirtualEmployeeList(props: VirtualEmployeeListProps) {
                         </span>
                       )}
                       {isInactive && (
-                        <span className="h-3.5 px-1 rounded bg-muted text-muted-foreground text-[7px] font-bold shrink-0">Inactive</span>
+                        <span className="h-3.5 px-1 rounded bg-muted text-muted-foreground text-[7px] font-bold shrink-0">Inactivo</span>
                       )}
                     </div>
                     {(emp.phone_number || emp.email) && !isInactive && (
