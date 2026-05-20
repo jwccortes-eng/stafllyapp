@@ -129,6 +129,7 @@ function CreateShiftDialogInline(props: {
   onLocationCreated: (id: string, name: string, address: string) => void;
   draftStatus?: DraftStatus;
   draftBanner?: React.ReactNode;
+  onDiscard?: () => void;
 }) {
   const v = props.formState;
   const signals = useShiftFormSignals({
