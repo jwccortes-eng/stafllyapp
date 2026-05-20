@@ -303,7 +303,7 @@ export function EmployeeCombobox({
         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
         <Input
           value={search} onChange={e => setSearch(e.target.value)}
-          placeholder="Search worker..."
+          placeholder="Buscar trabajador..."
           className="h-7 text-xs pl-8 pr-8"
         />
         {search && (
@@ -316,9 +316,10 @@ export function EmployeeCombobox({
       {/* Filters + bulk row */}
       <div className="flex items-center gap-1 flex-wrap">
         {([
-          { key: "all" as QuickFilter, label: "All", count: employees.length },
-          { key: "available" as QuickFilter, label: "Ready", count: readyCount },
-          { key: "drivers" as QuickFilter, label: "Drivers", count: driverCount },
+          { key: "all" as QuickFilter, label: "Activos", count: activeCount },
+          { key: "available" as QuickFilter, label: "Listos", count: readyCount },
+          { key: "drivers" as QuickFilter, label: "Conductores", count: driverCount },
+          { key: "incomplete" as QuickFilter, label: "Incompletos", count: incompleteCount },
         ]).map(f => (
           <button
             key={f.key} onClick={() => setQuickFilter(f.key)}
@@ -348,7 +349,7 @@ export function EmployeeCombobox({
                 onClick={selectDrivers}
                 className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-all flex items-center gap-0.5"
               >
-                <Car className="h-2.5 w-2.5" /> +Driver
+                <Car className="h-2.5 w-2.5" /> +Conductor
               </button>
             )}
             {selected.length > 0 && (
@@ -362,6 +363,38 @@ export function EmployeeCombobox({
           </div>
         )}
       </div>
+
+      {/* S1: Inactive visibility toggle + count */}
+      {(inactiveHiddenCount > 0 || showInactive) && (
+        <div className="flex items-center justify-between gap-2 px-0.5 py-1 rounded-md bg-muted/30 border border-border/30">
+          <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+            <PauseCircle className="h-3 w-3" />
+            {showInactive ? (
+              <span>
+                Mostrando inactivos/históricos al final.{" "}
+                <span className="text-warning font-semibold">No disponibles para asignación normal.</span>
+              </span>
+            ) : (
+              <span>
+                Inactivos ocultos: <span className="font-semibold text-foreground">{inactiveHiddenCount}</span>
+              </span>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowInactive(v => !v)}
+            className={cn(
+              "text-[9px] font-bold px-2 py-0.5 rounded-full transition-all shrink-0",
+              showInactive
+                ? "bg-warning/15 text-warning hover:bg-warning/25"
+                : "bg-muted text-muted-foreground hover:bg-muted/80",
+            )}
+          >
+            {showInactive ? "Ocultar inactivos" : "Incluir inactivos/históricos"}
+          </button>
+        </div>
+      )}
+
 
       {debugMode && debugContext && (
         <details className="rounded-lg bg-muted/40 border border-border/40 text-[10px] font-mono text-muted-foreground">
