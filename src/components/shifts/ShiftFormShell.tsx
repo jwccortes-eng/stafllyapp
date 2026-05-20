@@ -282,7 +282,11 @@ export function ShiftFormShell({
             </Button>
           )}
           <AlertDialogAction
-            onClick={() => { setConfirmCloseOpen(false); onOpenChange(false); }}
+            onClick={() => {
+              setConfirmCloseOpen(false);
+              onDiscard?.(); // S4 — drop local autosave draft (S3) on explicit discard
+              onOpenChange(false);
+            }}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
             Descartar
