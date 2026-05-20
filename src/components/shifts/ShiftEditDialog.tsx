@@ -259,7 +259,7 @@ export function ShiftEditDialog({
         qrAttendanceMode={qrAttendanceMode}
         qrToken={qrToken}
         onQrUpdate={(updates) => {
-          if (updates.qr_attendance_mode !== undefined) setQrAttendanceMode(updates.qr_attendance_mode);
+          if (updates.qr_attendance_mode !== undefined) { setQrAttendanceMode(updates.qr_attendance_mode); setTouched(true); }
           if (updates.qr_token !== undefined) setQrToken(updates.qr_token);
         }}
         adminError={adminError}
