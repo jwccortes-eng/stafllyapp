@@ -201,6 +201,21 @@ export function ShiftEditDialog({
       footerBanner={footerBanner}
       summary={summary}
     >
+      {autosave.draftAvailable && (
+        <ShiftDraftBanner
+          savedAt={autosave.draftAvailable.savedAt}
+          onRestore={() => {
+            const d: any = autosave.draftAvailable?.data;
+            if (d?.form) setForm(d.form as ShiftFormState);
+            if (typeof d?.qrAttendanceMode === "string") setQrAttendanceMode(d.qrAttendanceMode);
+            autosave.dismissBanner();
+          }}
+          onDiscard={() => autosave.clear()}
+        />
+      )}
+      <div className="flex justify-end">
+        <ShiftDraftStatusPill status={autosave.status} />
+      </div>
       <ShiftFormFields
         layout="workspace"
         mode="edit"
