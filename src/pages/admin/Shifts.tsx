@@ -225,6 +225,12 @@ function CreateShiftDialogInline(props: {
       summary={summary}
       publishReview={publishReview}
     >
+      {props.draftBanner}
+      {props.draftStatus && (
+        <div className="flex justify-end">
+          <ShiftDraftStatusPill status={props.draftStatus} />
+        </div>
+      )}
       <ShiftFormFields
         layout="workspace"
         mode="create"
