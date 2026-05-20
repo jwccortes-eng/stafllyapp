@@ -45,6 +45,11 @@ export function ShiftEditDialog({
   const [qrAttendanceMode, setQrAttendanceMode] = useState("disabled");
   const [qrToken, setQrToken] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  // S4-FIX1 — explicit user-interaction flag. JSON diff alone was unreliable
+  // for the edit dialog (re-mounted shift snapshots, field normalization,
+  // child callbacks that patch back identical values), so any actual user
+  // edit also flips this and forces the unsaved-changes guard to engage.
+  const [touched, setTouched] = useState(false);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -53,6 +58,7 @@ export function ShiftEditDialog({
       const s = shift as any;
       setQrAttendanceMode(s.qr_attendance_mode || "disabled");
       setQrToken(s.qr_token || null);
+      setTouched(false); // S4-FIX1 — fresh open = clean slate
     }
   }, [shift, open]);
 
