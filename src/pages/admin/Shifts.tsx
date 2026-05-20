@@ -942,6 +942,7 @@ function DesktopShifts() {
       const baseShift = await createSingleShift(date, /* skipNotifications */ true, /* forceDraft */ true, /* publishNow */ false);
       if (!baseShift) return;
       toast.success("Borrador guardado");
+      createAutosave.clear(); // S3 — DB draft saved → drop local autosave
       setCreateOpen(false);
       resetForm();
       loadData();
