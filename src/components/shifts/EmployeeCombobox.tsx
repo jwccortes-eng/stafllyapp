@@ -754,7 +754,7 @@ function VirtualEmployeeList(props: VirtualEmployeeListProps) {
                         </span>
                       )}
                       {isInactive && (
-                        <span className="h-3.5 px-1 rounded bg-muted text-muted-foreground text-[7px] font-bold shrink-0">Inactive</span>
+                        <span className="h-3.5 px-1 rounded bg-muted text-muted-foreground text-[7px] font-bold shrink-0">Inactivo</span>
                       )}
                     </div>
                     {(emp.phone_number || emp.email) && !isInactive && (
