@@ -47,6 +47,10 @@ interface Props {
   draftSaving?: boolean;
   /** True when there are unsaved changes — used to show confirm-on-close. */
   isDirty?: boolean;
+  /** S4 — Called when the user explicitly chooses "Descartar" in the
+   *  unsaved-changes confirm dialog. Lets the parent drop the local autosave
+   *  draft (S3) so a fresh reopen doesn't restore the discarded work. */
+  onDiscard?: () => void;
   /** Optional banner above the save button (e.g. "requires re-acceptance"). */
   footerBanner?: React.ReactNode;
   /** Form column content (left). */
