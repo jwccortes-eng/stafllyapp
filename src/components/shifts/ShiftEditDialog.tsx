@@ -45,6 +45,7 @@ export function ShiftEditDialog({
   const [qrAttendanceMode, setQrAttendanceMode] = useState("disabled");
   const [qrToken, setQrToken] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const { user } = useAuth();
 
   useEffect(() => {
     if (shift && open) {
@@ -54,6 +55,17 @@ export function ShiftEditDialog({
       setQrToken(s.qr_token || null);
     }
   }, [shift, open]);
+
+  // S3 — Local autosave (no DB writes). Snapshot only fields the operator edits.
+  const autosaveData = useMemo(() => ({ form, qrAttendanceMode }), [form, qrAttendanceMode]);
+  const autosave = useShiftDraftAutosave({
+    enabled: open && !!shift,
+    companyId: (shift as any)?.company_id ?? null,
+    userId: user?.id ?? null,
+    mode: "edit",
+    shiftId: shift?.id ?? null,
+    data: autosaveData,
+  });
 
   // Derived signals — recomputed only when their slice of state changes.
   const signals = useShiftFormSignals({
