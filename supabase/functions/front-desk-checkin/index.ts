@@ -303,7 +303,7 @@ Deno.serve(async (req) => {
         .select(EMPLOYEE_SELECT)
         .single();
 
-      if (updErr) return jsonResp({ error: updErr.message }, 500);
+      if (updErr) console.error("[front-desk] updErr:", updErr); return jsonResp({ error: "Internal error" }, 500);
 
       // device_id column is UUID — only forward valid UUIDs.
       const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -409,7 +409,7 @@ Deno.serve(async (req) => {
         .select("id")
         .single();
 
-      if (insertErr) return jsonResp({ error: insertErr.message }, 500);
+      if (insertErr) console.error("[front-desk] insertErr:", insertErr); return jsonResp({ error: "Internal error" }, 500);
       return jsonResp({ success: true, visit_id: visit.id });
     }
 
@@ -490,7 +490,7 @@ Deno.serve(async (req) => {
         .select("id")
         .single();
 
-      if (insertErr) return jsonResp({ error: insertErr.message }, 500);
+      if (insertErr) console.error("[front-desk] insertErr:", insertErr); return jsonResp({ error: "Internal error" }, 500);
       return jsonResp({ success: true, visit_id: visit.id });
     }
 
@@ -509,7 +509,7 @@ Deno.serve(async (req) => {
         .update(update)
         .eq("id", visit_id);
 
-      if (updErr) return jsonResp({ error: updErr.message }, 500);
+      if (updErr) console.error("[front-desk] updErr:", updErr); return jsonResp({ error: "Internal error" }, 500);
       return jsonResp({ success: true });
     }
 
@@ -547,7 +547,7 @@ Deno.serve(async (req) => {
         .update(update)
         .eq("id", visit_id);
 
-      if (updErr) return jsonResp({ error: updErr.message }, 500);
+      if (updErr) console.error("[front-desk] updErr:", updErr); return jsonResp({ error: "Internal error" }, 500);
       return jsonResp({ success: true, duration_seconds: duration });
     }
 
@@ -603,7 +603,7 @@ Deno.serve(async (req) => {
         .select("id, case_number, case_code, intake_reason, status, checked_in_at")
         .single();
 
-      if (insertErr) return jsonResp({ error: insertErr.message }, 500);
+      if (insertErr) console.error("[front-desk] insertErr:", insertErr); return jsonResp({ error: "Internal error" }, 500);
       return jsonResp({ success: true, visit });
     }
 
@@ -661,7 +661,7 @@ Deno.serve(async (req) => {
         .select("id, case_number, case_code, status, final_resolution, rating, duration_seconds")
         .single();
 
-      if (updErr) return jsonResp({ error: updErr.message }, 500);
+      if (updErr) console.error("[front-desk] updErr:", updErr); return jsonResp({ error: "Internal error" }, 500);
       return jsonResp({ success: true, visit: updated });
     }
 
@@ -710,7 +710,7 @@ Deno.serve(async (req) => {
       const { error: upErr } = await adminClient.storage
         .from("employee-avatars")
         .upload(path, bytes, { contentType: mime, upsert: true });
-      if (upErr) return jsonResp({ error: `Error subiendo foto: ${upErr.message}` }, 500);
+      if (upErr) console.error("[front-desk] upErr:", upErr); return jsonResp({ error: "Internal error" }, 500);
 
       const { data: pub } = adminClient.storage.from("employee-avatars").getPublicUrl(path);
       const photoUrl = pub.publicUrl;
@@ -721,7 +721,7 @@ Deno.serve(async (req) => {
         .eq("id", employee_id)
         .select(EMPLOYEE_SELECT)
         .single();
-      if (empErr) return jsonResp({ error: empErr.message }, 500);
+      if (empErr) console.error("[front-desk] empErr:", empErr); return jsonResp({ error: "Internal error" }, 500);
 
       const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       if (visit_id && UUID_RE.test(visit_id)) {
@@ -758,15 +758,14 @@ Deno.serve(async (req) => {
         )
         .eq("id", visit_id)
         .maybeSingle();
-      if (getErr) return jsonResp({ error: getErr.message }, 500);
+      if (getErr) console.error("[front-desk] getErr:", getErr); return jsonResp({ error: "Internal error" }, 500);
       return jsonResp({ success: true, visit });
     }
 
     return jsonResp({ error: "Acción inválida" }, 400);
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Internal error";
-    console.error("front-desk-checkin error:", message);
-    return jsonResp({ error: message }, 500);
+    console.error("[front-desk-checkin] unhandled error:", err);
+    return jsonResp({ error: "Internal error" }, 500);
   }
 });
 
