@@ -218,6 +218,7 @@ function CreateShiftDialogInline(props: {
       saving={props.saving}
       draftSaving={props.draftSaving}
       isDirty={props.isDirty}
+      onDiscard={props.onDiscard}
       saveDisabled={!v.date}
       saveLabel="Publish"
       draftLabel="Save draft"
