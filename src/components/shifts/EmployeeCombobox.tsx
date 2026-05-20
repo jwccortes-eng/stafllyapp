@@ -464,10 +464,15 @@ export function EmployeeCombobox({
 
       {/* Summary */}
       <div className="flex items-center justify-between text-[9px] text-muted-foreground px-0.5">
-        <span>{filtered.length} workers</span>
+        <span>
+          {filtered.length} {filtered.length === 1 ? "trabajador" : "trabajadores"}
+          {!showInactive && inactiveHiddenCount > 0 && (
+            <span className="opacity-70"> · {inactiveHiddenCount} inactivos ocultos</span>
+          )}
+        </span>
         {selected.length > 0 && (
           <span className="font-semibold text-foreground">
-            {selected.length} selected
+            {selected.length} seleccionados
           </span>
         )}
       </div>
