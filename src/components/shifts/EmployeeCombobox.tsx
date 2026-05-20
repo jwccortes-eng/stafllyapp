@@ -99,6 +99,8 @@ export function EmployeeCombobox({
   // React 18 native debouncing: keeps input snappy while heavy filtering uses the deferred value.
   const deferredSearch = useDeferredValue(search);
   const [quickFilter, setQuickFilter] = useState<QuickFilter>("all");
+  // S1: inactivos/históricos ocultos por defecto. Toggle explícito para mostrarlos.
+  const [showInactive, setShowInactive] = useState(false);
 
   const conflictMap = useMemo(() => {
     const map = new Map<string, ConflictInfo[]>();
