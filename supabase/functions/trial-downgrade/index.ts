@@ -15,16 +15,13 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // CRON gate: require Bearer CRON_SECRET if configured.
-  // TODO(security): make fail-closed once CRON_SECRET is verified in pg_cron jobs.
+  // CRON gate: fail-closed. CRON_SECRET must be set and presented as Bearer.
   const cronSecret = Deno.env.get("CRON_SECRET");
-  if (cronSecret) {
-    const auth = req.headers.get("Authorization") ?? "";
-    if (auth !== `Bearer ${cronSecret}`) {
-      return new Response(JSON.stringify({ error: "unauthorized" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+  const auth = req.headers.get("Authorization") ?? "";
+  if (!cronSecret || auth !== `Bearer ${cronSecret}`) {
+    return new Response(JSON.stringify({ error: "unauthorized" }), {
+      status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
   const supabase = createClient(
