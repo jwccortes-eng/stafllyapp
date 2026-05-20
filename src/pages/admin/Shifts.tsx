@@ -986,6 +986,7 @@ function DesktopShifts() {
       toast.success("Turno publicado");
     }
 
+    createAutosave.clear(); // S3 — published successfully → drop local autosave
     setSaving(false); setCreateOpen(false); resetForm(); loadData();
   };
 
