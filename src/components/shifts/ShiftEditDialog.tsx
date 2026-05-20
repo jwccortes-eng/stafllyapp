@@ -226,7 +226,7 @@ export function ShiftEditDialog({
       footerBanner={footerBanner}
       summary={summary}
       isDirty={isDirty}
-      onDiscard={() => autosave.clear()}
+      onDiscard={() => { autosave.clear(); setTouched(false); }}
     >
       {autosave.draftAvailable && (
         <ShiftDraftBanner
