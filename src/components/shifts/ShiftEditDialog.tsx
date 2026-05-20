@@ -249,7 +249,7 @@ export function ShiftEditDialog({
         mode="edit"
         companyId={(shift as any).company_id ?? null}
         value={form}
-        onChange={(patch) => setForm((prev) => ({ ...prev, ...patch }))}
+        onChange={(patch) => { setForm((prev) => ({ ...prev, ...patch })); setTouched(true); }}
         clients={clients}
         locations={locations}
         employees={employees}
