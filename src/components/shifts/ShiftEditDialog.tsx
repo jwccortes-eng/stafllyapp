@@ -150,6 +150,7 @@ export function ShiftEditDialog({
       const payload = formStateToShiftPayload(form, allowClaims);
       await onSave(shift.id, { ...payload, qr_attendance_mode: qrAttendanceMode }, shift);
       autosave.clear(); // S3 — successful save → drop local draft
+      setTouched(false); // S4-FIX1 — saved → no longer dirty
       onOpenChange(false);
     } finally {
       setSaving(false);
