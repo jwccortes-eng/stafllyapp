@@ -75,7 +75,7 @@ function getConflicts(
     .map(s => ({ shiftTitle: s.title, time: `${s.start_time.slice(0, 5)}–${s.end_time.slice(0, 5)}` }));
 }
 
-type QuickFilter = "all" | "available" | "drivers" | "no-conflict";
+type QuickFilter = "all" | "available" | "drivers" | "incomplete" | "no-conflict";
 type GroupKey = "ready" | "warning" | "blocked" | "inactive";
 
 import { isEmployeeDriver } from "./types";
