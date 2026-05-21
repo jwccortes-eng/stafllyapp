@@ -571,7 +571,7 @@ export default function Attendance() {
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm" className="gap-1.5">
                   <CalendarIcon className="h-3.5 w-3.5" />
-                  {format(reportRange.from, "dd MMM", { locale: es })} – {format(reportRange.to, "dd MMM yyyy", { locale: es })}
+                  {formatDateUS(reportRange.from)} – {formatDateUS(reportRange.to)}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
