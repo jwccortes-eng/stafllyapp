@@ -1207,10 +1207,15 @@ export default function UnifiedPersonProfile() {
         );
       })()}
 
-      {/* ─── DEEP TABS (existing logic, unchanged) ─── */}
+      {/* ─── DEEP TABS (existing logic, unchanged — secondary navigation) ─── */}
       {selectedCompanyId && (
-        <Card className="border-border/50">
-          <CardContent className="p-4">
+        <div className="space-y-2">
+          <div className="flex items-center gap-1.5 text-[10.5px] font-medium uppercase tracking-wider text-muted-foreground/70 px-1">
+            <Code2 className="h-3 w-3" />
+            Vista detallada · navegación secundaria
+          </div>
+          <Card className="border-border/50">
+            <CardContent className="p-4">
             <EmployeeProfileTabs
               employee={employee}
               companyId={selectedCompanyId}
