@@ -1361,7 +1361,7 @@ export function ShiftDetailDialog({
                 <DropdownMenuItem onClick={() => { onOpenChange(false); onEdit(shift); }}>
                   <Pencil className="h-4 w-4 mr-2" /> Editar turno
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => { onOpenChange(false); window.location.href = `/app/shift-ops?id=${shift.id}`; }}>
+                <DropdownMenuItem onClick={() => { const id = shift.id; onOpenChange(false); setTimeout(() => navigate(`/app/shift-ops?id=${id}`), 0); }}>
                   <Radar className="h-4 w-4 mr-2" /> Centro de operaciones
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
