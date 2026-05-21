@@ -300,12 +300,28 @@ function InfoTab({ employee, companyId, isEditing, form, setForm, isPrivileged, 
         <h3 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50 mb-1.5">Empleo</h3>
         <Card className="rounded-lg border-border/30">
           <CardContent className="p-3">
-            {filteredEmployment.map(f => (
+            {employmentVisible.map(f => (
               <FieldRow key={f.key} field={f} employee={employee} isEditing={isEditing} form={form} setForm={setForm} />
             ))}
+            {employmentHidden.length > 0 && (
+              <Collapsible>
+                <CollapsibleTrigger className="group mt-2 inline-flex items-center gap-1 text-[10.5px] font-medium text-muted-foreground hover:text-foreground transition-colors">
+                  Ver campos adicionales ({employmentHidden.length})
+                  <ChevronDown className="h-3 w-3 transition-transform group-data-[state=open]:rotate-180" />
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <div className="mt-1">
+                    {employmentHidden.map(f => (
+                      <FieldRow key={f.key} field={f} employee={employee} isEditing={isEditing} form={form} setForm={setForm} />
+                    ))}
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            )}
           </CardContent>
         </Card>
       </div>
+
       <div>
         <h3 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50 mb-1.5">📅 Disponibilidad</h3>
         <EmployeeAvailabilitySection employeeId={employee.id} readOnly={!isEditing} />
