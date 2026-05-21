@@ -3,10 +3,8 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
 import { SmartDateInput } from "@/components/ui/smart-date-input";
-import { CalendarIcon, Repeat, Info } from "lucide-react";
+import { Repeat, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   format, parse, addDays, eachDayOfInterval, isBefore, isAfter, startOfDay,
