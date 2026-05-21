@@ -105,8 +105,6 @@ export function computeRepeatDates(baseDate: string, config: RepeatConfig): stri
 }
 
 export function ShiftRepeatSection({ shiftDate, config, onChange }: ShiftRepeatSectionProps) {
-  const [endPickerOpen, setEndPickerOpen] = useState(false);
-  const [startPickerOpen, setStartPickerOpen] = useState(false);
 
   const update = (partial: Partial<RepeatConfig>) => onChange({ ...config, ...partial });
 
