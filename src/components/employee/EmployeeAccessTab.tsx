@@ -7,9 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   CalendarDays, Clock, DollarSign, MessageCircle, Megaphone,
-  FileText, User, BookOpen, KeyRound, Loader2, Shield, RefreshCw, CheckCircle2,
+  FileText, User, BookOpen, KeyRound, Loader2, Shield, RefreshCw, CheckCircle2, ChevronDown,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { PortalAccessCard } from "./PortalAccessCard";
