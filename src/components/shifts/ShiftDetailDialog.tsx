@@ -45,6 +45,7 @@ import { searchEmployees } from "@/lib/employee-search";
 import { format, parseISO, differenceInMinutes } from "date-fns";
 import { es } from "date-fns/locale";
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
@@ -165,6 +166,7 @@ export function ShiftDetailDialog({
   initialTab,
 }: ShiftDetailDialogProps) {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const { selectedCompanyId, selectedCompany } = useCompany();
   const [showAddPanel, setShowAddPanel] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
@@ -1359,7 +1361,7 @@ export function ShiftDetailDialog({
                 <DropdownMenuItem onClick={() => { onOpenChange(false); onEdit(shift); }}>
                   <Pencil className="h-4 w-4 mr-2" /> Editar turno
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => { onOpenChange(false); window.location.href = `/app/shift-ops?id=${shift.id}`; }}>
+                <DropdownMenuItem onClick={() => { const id = shift.id; onOpenChange(false); setTimeout(() => navigate(`/app/shift-ops?id=${id}`), 0); }}>
                   <Radar className="h-4 w-4 mr-2" /> Centro de operaciones
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
