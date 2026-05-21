@@ -89,6 +89,7 @@ const CommandCenter = lazy(() => import("./pages/admin/CommandCenter"));
 const StaffingCenter = lazy(() => import("./pages/admin/StaffingCenter"));
 const DevCommandCenter = lazy(() => import("./pages/admin/DevCommandCenter"));
 const DocumentsCenter = lazy(() => import("./pages/admin/DocumentsCenter"));
+const ComplianceCenter = lazy(() => import("./pages/admin/ComplianceCenter"));
 const NeedsAttention = lazy(() => import("./pages/admin/NeedsAttention"));
 const DailyClose = lazy(() => import("./pages/admin/DailyClose"));
 const Today = lazy(() => import("./pages/admin/Today"));
@@ -170,6 +171,7 @@ const PortalChat = lazy(() => import("./pages/portal/PortalChat"));
 const MyW9 = lazy(() => import("./pages/portal/MyW9"));
 const MyDocuments = lazy(() => import("./pages/portal/MyDocuments"));
 const MyAvailability = lazy(() => import("./pages/portal/MyAvailability"));
+const UpdateCenter = lazy(() => import("./pages/portal/UpdateCenter"));
 
 // Parceros community — own layout
 const ParcerosLayout = lazy(() => import("./layouts/ParcerosLayout"));
@@ -266,6 +268,7 @@ function App() {
                 <Route path="employees" element={<CompanyRequiredGuard><Employees /></CompanyRequiredGuard>} />
                 <Route path="workers" element={<CompanyRequiredGuard><Navigate to="/app/employees" replace /></CompanyRequiredGuard>} />
                 <Route path="documents" element={<CompanyRequiredGuard><DocumentsCenter /></CompanyRequiredGuard>} />
+                <Route path="compliance-center" element={<CompanyRequiredGuard><ComplianceCenter /></CompanyRequiredGuard>} />
                 <Route path="employees/merge" element={<CompanyRequiredGuard><EmployeeMerge /></CompanyRequiredGuard>} />
                 <Route path="workforce" element={<CompanyRequiredGuard><Workforce /></CompanyRequiredGuard>} />
                 <Route path="employees/:id/onboarding" element={<CompanyRequiredGuard><EmployeeOnboarding /></CompanyRequiredGuard>} />
@@ -402,6 +405,7 @@ function App() {
                 <Route path="availability" element={<PortalModuleGuard moduleKey="my_availability"><MyAvailability /></PortalModuleGuard>} />
                 <Route path="w9" element={<PortalModuleGuard moduleKey="my_w9"><MyW9 /></PortalModuleGuard>} />
                 <Route path="documents" element={<PortalModuleGuard moduleKey="my_documents"><MyDocuments /></PortalModuleGuard>} />
+                <Route path="update-center" element={<UpdateCenter />} />
               </Route>
 
               <Route path="*" element={<NotFound />} />

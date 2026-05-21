@@ -19,6 +19,7 @@ import { ProfileReadinessStrip } from "@/components/portal/home/ProfileReadiness
 import { WorkerHero, type WorkerHeroStatus } from "@/components/portal/home/WorkerHero";
 import { QuickActions, type QuickAction } from "@/components/portal/home/QuickActions";
 import { selectNextBestAction, type NbaShift } from "@/lib/portal/next-best-action";
+import { PortalUpdateBanner } from "@/components/portal/PortalUpdateBanner";
 
 interface NextShift {
   id: string;
@@ -293,6 +294,9 @@ export default function EmployeeDashboard() {
         avatarUrl={empAvatar}
         status={heroStatus}
       />
+
+      {/* ── Update Center nudge (Phase 1, dismissible per session) ── */}
+      <PortalUpdateBanner />
 
       {/* ── Acción principal ── */}
       <NextBestActionCard nba={nba} />
