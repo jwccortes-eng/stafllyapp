@@ -15909,6 +15909,19 @@ export type Database = {
     }
     Functions: {
       _get_cron_secret: { Args: never; Returns: string }
+      admin_get_employees_with_fiscal: {
+        Args: { p_company_id: string }
+        Returns: {
+          connecteam_employee_id: string
+          email: string
+          employer_identification: string
+          first_name: string
+          id: string
+          last_name: string
+          phone_number: string
+          verification_ssn_ein: string
+        }[]
+      }
       anon_can_upload_onboarding_doc: {
         Args: { _path: string }
         Returns: boolean
