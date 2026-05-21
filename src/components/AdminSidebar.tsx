@@ -215,6 +215,7 @@ export default function AdminSidebar() {
       const next = new Set(prev);
       if (next.has(label)) next.delete(label);
       else next.add(label);
+      try { window.localStorage.setItem(SIDEBAR_OPEN_KEY, JSON.stringify([...next])); } catch { /* noop */ }
       return next;
     });
   };
