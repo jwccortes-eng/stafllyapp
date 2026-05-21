@@ -805,7 +805,17 @@ export default function Employees() {
       case "pending": return e.is_active !== false && !e.user_id && !invitations[e.id];
       case "inactive": return e.is_active === false;
       case "missing-docs": return isMissingDocs(e);
-      case "no-photo": return isMissingPhoto(e);
+      case "no-photo": {
+        if (!isMissingPhoto(e) && photoFilter !== "unreviewed") {
+          // Only show "review" workers if explicitly opted-in via filter
+          if (photoFilter === "all") return false;
+        }
+        const status = photoStatusFor(e);
+        if (photoFilter === "missing") return status === "required";
+        if (photoFilter === "unreviewed") return status === "review";
+        // "all" within tab → either required or review (uploaded but unreviewed)
+        return status === "required" || status === "review";
+      }
       case "drivers": return isDriver(e);
       case "no-activity": return isNoActivity(e);
       case "new": return isNew(e);
