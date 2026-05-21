@@ -179,9 +179,11 @@ function PhotoCard({
             size="sm"
           />
           <p className="text-[11.5px] text-muted-foreground/85 leading-snug">
-            Sube una foto tipo documento: rostro claro, fondo limpio y buena
-            iluminación.
+            {hasPhoto
+              ? "Foto tipo documento: rostro claro, fondo limpio y buena iluminación."
+              : "Tu foto profesional es requerida para mantener tu perfil listo para nuevas oportunidades."}
           </p>
+
         </div>
       </div>
 
