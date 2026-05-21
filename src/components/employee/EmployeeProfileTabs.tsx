@@ -127,6 +127,20 @@ function FieldRow({ field, employee, isEditing, form, setForm }: {
               inputClassName="h-7 text-[11px] px-2"
               aria-label={field.label}
             />
+          ) : field.key === "phone_number" ? (
+            <SmartPhoneInput
+              value={form[field.key] ?? ""}
+              onChange={(digits) => setForm(prev => ({ ...prev, [field.key]: digits }))}
+              className="h-7 text-[11px] px-2 text-right"
+              showValidation
+              aria-label={field.label}
+            />
+          ) : field.key === "gender" ? (
+            <GenderSelect
+              value={form[field.key] ?? ""}
+              onChange={v => setForm(prev => ({ ...prev, [field.key]: v }))}
+              className="h-7 text-[11px]"
+            />
           ) : (
             <Input value={form[field.key] ?? ""} onChange={ev => setForm(prev => ({ ...prev, [field.key]: ev.target.value }))} className="h-6 text-[11px] px-2" />
           )
@@ -138,6 +152,10 @@ function FieldRow({ field, employee, isEditing, form, setForm }: {
               ) : <span className="text-muted-foreground/30">No</span>
             ) : DATE_FIELDS.has(field.key) ? (
               employee?.[field.key] ? formatDateUS(employee[field.key] as string) : <span className="text-muted-foreground/30">—</span>
+            ) : field.key === "phone_number" ? (
+              employee?.[field.key] ? (formatPhoneUS(employee[field.key] as string) || employee[field.key]) : <span className="text-muted-foreground/30">—</span>
+            ) : field.key === "gender" ? (
+              employee?.[field.key] ? formatGenderLabel(employee[field.key] as string) : <span className="text-muted-foreground/30">—</span>
             ) : (
               employee?.[field.key] || <span className="text-muted-foreground/30">—</span>
             )}
