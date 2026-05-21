@@ -517,7 +517,29 @@ function DesktopShifts() {
       totalMinutes += diff;
     }
     const totalHours = `${Math.floor(totalMinutes / 60)}h ${String(totalMinutes % 60).padStart(2, "0")}m`;
-    return { todayShifts: todayShifts.length, uniqueWorkers, missingWorkers, totalHours };
+
+    // Operator-first additions (UI-only, read from already-loaded data)
+    const draftsCount = filteredShifts.filter(s => isDraftShift(s)).length;
+    const publishedCount = filteredShifts.filter(s => isPublishedShift(s) && s.status !== "locked").length;
+    const needsStaffCount = filteredShifts.filter(s => {
+      const slots = (s as any).slots ?? 0;
+      const assigned = assignments.filter(a => a.shift_id === s.id && a.status !== "rejected").length;
+      return slots > 0 && assigned < slots;
+    }).length;
+    const missingLocationCount = filteredShifts.filter(s =>
+      !s.location_id && !(s as any).meeting_point_location_id && !((s as any).meeting_point ?? "").trim()
+    ).length;
+
+    return {
+      todayShifts: todayShifts.length,
+      uniqueWorkers,
+      missingWorkers,
+      totalHours,
+      draftsCount,
+      publishedCount,
+      needsStaffCount,
+      missingLocationCount,
+    };
   }, [filteredShifts, assignments]);
 
   const weekDays = useMemo(() =>
