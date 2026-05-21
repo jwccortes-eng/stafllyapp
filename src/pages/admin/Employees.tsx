@@ -880,7 +880,7 @@ export default function Employees() {
   const kpis: PremiumPageHeaderKpi[] = [
     { label: "Total", value: statusCounts.all, onClick: () => setStatusTab("all"), active: statusTab === "all" },
     { label: "Activos", value: statusCounts.active, accent: "success", onClick: () => setStatusTab("active"), active: statusTab === "active" },
-    { label: "Pendientes de activación", value: statusCounts.pending, accent: statusCounts.pending > 0 ? "warning" : "default", onClick: () => setStatusTab("pending"), active: statusTab === "pending" },
+    { label: "Pendientes de activar app", value: statusCounts.pending, accent: statusCounts.pending > 0 ? "warning" : "default", onClick: () => setStatusTab("pending"), active: statusTab === "pending" },
     { label: "Documentos faltantes", value: statusCounts["missing-docs"], accent: statusCounts["missing-docs"] > 0 ? "destructive" : "default", onClick: () => setStatusTab("missing-docs"), active: statusTab === "missing-docs" },
     { label: "Conductores", value: statusCounts.drivers, accent: "primary", onClick: () => setStatusTab("drivers"), active: statusTab === "drivers" },
   ];
