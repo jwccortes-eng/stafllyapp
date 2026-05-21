@@ -1570,15 +1570,21 @@ export default function Employees() {
         ) : (
           <EmptyState
             icon={Users}
-            title={hiddenBySearch > 0 ? `${hiddenBySearch} match${hiddenBySearch === 1 ? "" : "es"} in another tab` : "No workers yet"}
+            title={
+              hiddenBySearch > 0
+                ? `${hiddenBySearch} coincidencia${hiddenBySearch === 1 ? "" : "s"} en otra vista`
+                : search
+                  ? "No encontramos trabajadores en esta vista."
+                  : "Aún no hay trabajadores"
+            }
             description={
               hiddenBySearch > 0
-                ? `There ${hiddenBySearch === 1 ? "is" : "are"} ${hiddenBySearch} worker${hiddenBySearch === 1 ? "" : "s"} matching "${search}" outside the current tab.`
+                ? `Hay ${hiddenBySearch} trabajador${hiddenBySearch === 1 ? "" : "es"} que coincide${hiddenBySearch === 1 ? "" : "n"} con "${search}" fuera de esta vista.`
                 : search
-                ? "Try a different term or clear the search."
-                : "Use 'Quick add' to create your first worker and optionally send them an invite."
+                  ? "Prueba cambiar filtros o revisar Todos."
+                  : "Usa 'Quick add' para crear tu primer trabajador y opcionalmente enviarle una invitación."
             }
-            actionLabel={hiddenBySearch > 0 ? "View in All" : (!search ? "Quick add" : undefined)}
+            actionLabel={hiddenBySearch > 0 ? "Ver en Todos" : (!search ? "Quick add" : undefined)}
             onAction={
               hiddenBySearch > 0
                 ? () => setStatusTab("all")
