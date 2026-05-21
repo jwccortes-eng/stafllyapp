@@ -196,7 +196,9 @@ export default function DocumentsCenter() {
 
   const fmtDate = (s: string | null) => {
     if (!s) return "—";
-    return formatDateUS(s) || "—";
+    const d = new Date(s);
+    if (isNaN(d.getTime())) return "—";
+    return formatDateUS(d) || "—";
   };
 
   const FILTERS: { key: FilterKey; label: string }[] = [
