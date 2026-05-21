@@ -1,69 +1,97 @@
-# StaflyCore Admin IA + Desktop Premium Cleanup v1
+## StaflyCore Employee Profile Cleanup + Field Standardization v1 — Phased Sprint Plan
 
-UI-only sprint. Zero backend, RLS, payroll, time_entries, scheduled_shifts, shift_assignments, edge function, schema, or notification changes. All existing routes preserved — only sidebar grouping, labels, and desktop density change.
+The scope as written is ~7 parts across `/app/employees/:id` (1,271 LoC), `EmployeeProfileTabs` (756 LoC), `EmployeeAccessTab` (276 LoC), `WorkerDataQualityReview`, plus new shared utilities and onboarding wiring. Shipping all of it in one drop would violate the strict no-regression policy (auth/portal/payroll/SSN). I'm proposing 4 reviewable phases. Each phase ends with QA and your go-ahead before the next starts.
 
-## 1. Sidebar IA refactor (`src/components/navigation/nav-items.ts` + AdminSidebar)
+---
 
-Replace current ad-hoc `section` strings with 6 canonical groups, in order:
+### Phase A — Shared utilities + field primitives (no UI behavior change)
 
-```text
-A. Operación diaria   → Centro de mando, Operación (ops-center), Turnos, Asistencia, Reloj, Live Map, Front Desk, Staffing Center, Command Center
-B. Equipo             → Equipo (workers), Directorio, Documentos, Aplicaciones, Invitaciones, Solicitudes (tickets/service-requests/staffing-requests)
-C. Clientes y lugares → Clientes, Ubicaciones, Service Categories
-D. Payroll & Finanzas → Compensación, Periodos, Import, Ajustes, Avances, Conceptos, Reconciliación, Pilot Close, Adopción Comp., Review Queue, Reportes, Facturas, W-9, 1099, Payroll Settings, Comparison
-E. Comunicación       → Anuncios, Chat, Notificaciones, AI Workforce, Leaderboard
-F. Sistema            → Configuración, Administración, Migración, Control Tower, Kiosk
-```
+Goal: land the reusable building blocks so every later phase consumes the same standard.
 
-Every existing nav id keeps its `to` route. Only `section` + `label` change. `roles` gates unchanged. `module` gates unchanged.
+1. **`src/lib/phone-format.ts`** (new, extends existing `src/lib/phone.ts`)
+   - `formatPhoneUS(value)` → `(347) 765-5057` (gracefully handles E.164, 10-digit, 11-digit-leading-1, dirty input)
+   - `normalizePhoneE164(value, defaultCountry = "US")` → `+13477655057`
+   - `validatePhoneUS(value)` → boolean
+   - `parsePhoneFlexible(value)` → `{ digits, e164, display, valid }`
+   - Re-exports existing `normalizePhone` / `getPhoneLookupVariants` untouched — does not break any current callers.
+2. **`src/lib/gender.ts`** (new)
+   - `GENDER_OPTIONS` with stable values `female | male | non_binary | prefer_not_to_say | other` and Spanish labels.
+   - `normalizeGender(raw)` maps legacy values (`F`, `M`, `Femenino`, `Masculino`, `Female`, `Male`, etc.) to canonical.
+   - `formatGenderLabel(raw)` returns Spanish label, or `Importado: <value>` for unknown legacy, `Sin definir` for null.
+3. **`src/components/ui/smart-phone-input.tsx`** (new)
+   - Controlled input + onBlur normalization + live formatting on typing.
+   - Stores raw `value` upward unchanged on every keystroke; emits normalized digits on blur.
+   - **Does not change DB storage.**
+4. **`src/components/ui/gender-select.tsx`** (new)
+   - shadcn Select wrapping `GENDER_OPTIONS`, with "Sin definir" placeholder.
 
-Group A stays expanded by default. Groups B–F collapsible, defaulting to collapsed on first paint when sidebar is large enough; group containing active route auto-expands (existing pattern in AdminSidebar). If AdminSidebar does not currently support collapsible groups by `section`, add minimal Collapsible wrapper around each section block — purely presentational state, no persistence change required (optional localStorage `stafly:sidebar:section:{name}` boolean).
+No UI consumers wired in Phase A — just utilities and tests for the formatter/validator.
 
-## 2. Spanish-first labels
+---
 
-Quality Staff and all admin tenants get Spanish labels per user list:
-Dashboard→Centro de mando, Operations→Operación, Scheduling→Turnos, Workers→Equipo, Attendance→Asistencia, Time Clock→Reloj, Documents→Documentos, Applications→Aplicaciones, Invitations→Invitaciones, Worker Requests→Solicitudes, Compensation→Compensación, Reconciliation→Reconciliación, Reports→Reportes, Invoices→Facturas, Settings→Configuración, Administration→Administración. Worker portal labels untouched (portal stays as-is). Memory note: Core says English UI standard — this batch overrides for admin sidebar copy only; portal/kiosk untouched. Will update mem://style/language-standard-english to note admin sidebar Spanish exception.
+### Phase B — Employee profile redesign (visible work)
 
-## 3. Desktop density polish (low-risk, surgical)
+Goal: split `/app/employees/:id` into the 6 tabs the brief requests, hide empty clutter, leave business logic untouched.
 
-Only touch presentational shells, not feature components:
+1. Restructure `UnifiedPersonProfile.tsx` tabs:
+   - `Resumen` (existing hero + snapshot + NextActionCard, compact)
+   - `Perfil` (clean form using SmartPhoneInput + GenderSelect, address, emergency contact)
+   - `Cumplimiento` (delegate to existing `WorkerDocumentsCompliance`)
+   - `Acceso` (new compact view — see Phase C)
+   - `Operación` (availability, driver/car, license, skills, tags)
+   - `Historial importado` (Connecteam/legacy/empty fields, collapsed by default behind "Ver datos importados")
+2. `EmployeeProfileTabs.tsx`: refactored into per-tab sections so each new tab can pull what it needs without touching pay/compensation/advances logic.
+3. **Hide-not-delete rule**: empty `manager`, `groups`, `tags`, `rating`, `recommended`, `license_*`, raw front-desk history → moved to "Historial importado" only if empty/no-action; preserved verbatim if they hold data or need action.
+4. Mobile 390px: verify no horizontal overflow; tabs convert to a horizontally scrollable strip (already a pattern in the app).
 
-- `src/layouts/AdminLayout.tsx` (or equivalent main wrapper): raise content `max-w` cap on ≥1280px from current value to `max-w-[1600px]`, tighten top padding from `py-8` → `py-5` on desktop, keep mobile spacing unchanged.
-- `src/components/ui/page-header.tsx`: reduce `mb-6` → `mb-4` on md+; no API change.
-- Dashboard (`/app` desktop variant `AdminDashboardDesktop` if present): no widget changes, only verify spacing tokens and remove redundant empty-state hero cards by gating them on data.length===0 with a slim inline empty hint instead of large card. Skip if any risk of touching data hooks.
+No edits to: payroll math, time_entries reads, scheduled_shifts, RLS, `verification_ssn_ein` access path (still via `admin_get_employees_with_fiscal` RPC where used).
 
-Out of scope: Workers table redesign (deferred to next batch per user), shift cards, payroll surfaces, portal.
+---
 
-## 4. Dashboard focus (read-only verification)
+### Phase C — Access panel + Readiness panel cleanup
 
-No data hook changes. Only reorder existing KPI/action panels on desktop so "Needs attention today" + "Scheduled" + "Pending" appear above fold. If AdminDashboardDesktop already renders these, just confirm ordering and adjust grid spans. No new queries, no new widgets.
+Goal: defang the "wall of toggles" + compact the readiness warnings.
 
-## 5. QA pass
+1. `EmployeeAccessTab.tsx`:
+   - Default view shows status pills (Portal / Invite / PIN) + module summary `X/Y activos` + 3 primary action buttons (Reenviar invitación, Resetear PIN, Gestionar módulos).
+   - Full module toggle list collapsed behind `Ver módulos del portal`.
+   - PIN handlers untouched — same `setEmployeePin` / `resetEmployeePin` RPC calls. No raw PIN ever shown beyond existing one-time reveal.
+2. Readiness panel inside `Resumen`:
+   - Top 3 missing required items + "Ver todos los pendientes" expander.
+   - Split compliance-critical from optional enrichment.
+   - Copy: *"Completa estos datos para mantener al trabajador listo para turnos y pagos."*
 
-Manual checklist run by user on:
-- Desktop 1280: /app, /app/employees, /app/shifts, /app/attendance, /app/timeclock, /app/ops-center
-- Mobile 390: drawer opens, no horizontal overflow
-- Every sidebar link routes (smoke-click)
-- Console clean
-- Confirm: no RLS, no migrations, no edge function, no payroll math touched
+---
 
-## Files to change
+### Phase D — Phone/Gender rollout + future-flow TODO doc
 
-1. `src/components/navigation/nav-items.ts` — regroup + relabel (only `section` and `label` fields)
-2. `src/components/navigation/AdminSidebar.tsx` (read first; add collapsible group wrapper if needed)
-3. `src/layouts/AdminLayout.tsx` (read first; widen max-w + tighten desktop padding)
-4. `src/components/ui/page-header.tsx` — tighten desktop bottom margin
-5. `mem://style/language-standard-english` — note admin sidebar Spanish exception
-6. `mem://index.md` — add memory entry for this batch
+1. Wire `SmartPhoneInput` into:
+   - Employee profile phone field
+   - Emergency contact phone (if rendered)
+   - Onboarding phone fields **only if** they already consume the same shared input pattern (no portal permission changes, no SMS pipeline edits).
+2. Wire `GenderSelect` into employee profile; render `Sin definir` / `Importado: <value>` for legacy values.
+3. Add `docs/WORKER_UPDATE_FLOW_TODO.md` with the staged worker-update plan (reminders, grace period, semi-blocking portal screen, restricted access after deadline, admin queue). **No implementation.**
+4. Save a memory entry summarizing the new standard.
 
-## Explicit non-goals
+---
 
-- Not touching: useAuth, RLS, payroll, time_entries, scheduled_shifts, shift_assignments, edge functions, migrations, worker portal, notifications, compensation logic, queries.
-- Not redesigning: workers table, shift cards, portal, kiosk.
-- Not adding: new charts, new widgets, new routes, new modules.
+### What this plan deliberately does NOT do
 
-## Risk
+- No DB migrations.
+- No RLS or security grant changes.
+- No payroll, time_entries, scheduled_shifts, shift_assignments, notification logic touched.
+- No SSN/EIN exposure changes; continues to flow through the Phase 1.5 RPC.
+- No data backfill / no rewriting of historical phone or gender values.
+- No portal blocking logic implemented (only documented).
 
-Low. All edits are presentational. Only risk is breaking a sidebar route if a `to` value is accidentally mutated — mitigated by only touching `section` and `label` fields in nav-items, plus smoke QA on every link.
+---
 
-Ready to implement on approval.
+### QA after each phase
+
+Desktop 1280 + mobile 390 sweep of `/app/employees`, `/app/employees/:id`, profile edit, access tab, docs/compliance tab, save flow. Verify no `permission denied for table employees`, no direct `verification_ssn_ein` reads, no console errors.
+
+---
+
+### Ask
+
+Confirm I should start with **Phase A (utilities only, zero visible change)** and then proceed sequentially. If you want a different phase order — for example "ship Phase B first because the cluttered UI is the most visible pain" — tell me and I'll re-sequence. If you want everything in one drop anyway, say so and I'll do it but flag the regression risk.
