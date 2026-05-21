@@ -17,6 +17,7 @@ import {
   FileWarning, Camera, X, Eye, Building2, Sparkles,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { EMPLOYEE_COLUMNS_NO_FISCAL } from "@/lib/employee-columns";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
 import { toast } from "@/hooks/use-toast";
@@ -124,7 +125,7 @@ export default function EmployeeOnboarding() {
       setLoading(true);
       const { data: emp, error } = await supabase
         .from("employees")
-        .select("*")
+        .select(EMPLOYEE_COLUMNS_NO_FISCAL)
         .eq("id", employeeId)
         .maybeSingle();
       if (error || !emp) {
