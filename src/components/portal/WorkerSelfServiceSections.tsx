@@ -72,7 +72,7 @@ export function WorkerSelfServiceSections({ employeeId, onUpdated }: Props) {
       )
       .eq("id", employeeId)
       .maybeSingle();
-    setEmployee(data as EmployeeRow | null);
+    setEmployee((data as unknown) as EmployeeRow | null);
     setLoading(false);
   };
 
