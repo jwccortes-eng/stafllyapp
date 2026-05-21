@@ -15,6 +15,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import { SmartDateInput } from "@/components/ui/smart-date-input";
+import { formatDateUS } from "@/lib/date-format";
 import {
   ScanEye, Users, Clock, AlertTriangle, CheckCircle2, XCircle,
   Search, CalendarIcon, ArrowUpDown, ChevronDown, Eye,
