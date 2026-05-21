@@ -969,14 +969,19 @@ export default function Employees() {
         title="Equipo"
         icon={Users}
         subtitle={
-          <span className="inline-flex items-center gap-2 flex-wrap">
-            <span>Gestiona trabajadores, portal, documentos y preparación operativa.</span>
-            {selectedCompany && (
-              <span className="inline-flex items-center gap-1.5 rounded-md border border-border/50 bg-muted/40 px-2 py-0.5 text-[9px] font-mono text-muted-foreground">
-                <Building2 className="h-3 w-3" />
-                <span className="font-semibold text-foreground">{selectedCompany.name}</span>
-              </span>
-            )}
+          <span className="inline-flex flex-col gap-1">
+            <span className="inline-flex items-center gap-2 flex-wrap">
+              <span>Identidad, disponibilidad y preparación operativa de tus trabajadores.</span>
+              {selectedCompany && (
+                <span className="inline-flex items-center gap-1.5 rounded-md border border-border/50 bg-muted/40 px-2 py-0.5 text-[9px] font-mono text-muted-foreground">
+                  <Building2 className="h-3 w-3" />
+                  <span className="font-semibold text-foreground">{selectedCompany.name}</span>
+                </span>
+              )}
+            </span>
+            <span className="text-[10px] text-muted-foreground/80">
+              ID Stafly conecta perfil, turnos y payroll.
+            </span>
           </span>
         }
         kpis={kpis}
