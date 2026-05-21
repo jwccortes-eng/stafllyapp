@@ -1224,25 +1224,25 @@ export default function Employees() {
           tenants keep a calm UI and stressed tenants get a glanceable alert. */}
       <div className="flex items-center gap-0.5 border-b border-border/40 overflow-x-auto">
         {([
-          { key: "active" as const, label: "Active", count: statusCounts.active },
-          { key: "invited" as const, label: "Invited", count: statusCounts.invited },
-          // Surface the failure backlog right next to "Invited" so it's actionable.
+          { key: "active" as const, label: "Activos", count: statusCounts.active },
+          { key: "invited" as const, label: "Invitados", count: statusCounts.invited },
+          // Surface the failure backlog right next to "Invitados" so it's actionable.
           // Hidden when zero to avoid noise in healthy tenants.
           ...(statusCounts.failed > 0
-            ? [{ key: "failed" as const, label: "Invite failed", count: statusCounts.failed, tone: "destructive" as const }]
+            ? [{ key: "failed" as const, label: "Invitación fallida", count: statusCounts.failed, tone: "destructive" as const }]
             : []),
-          { key: "pending" as const, label: "Pending activation", count: statusCounts.pending },
-          { key: "new" as const, label: "New", count: statusCounts.new },
+          { key: "pending" as const, label: "Pendientes de activación", count: statusCounts.pending },
+          { key: "new" as const, label: "Nuevos", count: statusCounts.new },
           {
             key: "missing-docs" as const,
-            label: "Missing docs",
+            label: "Documentos faltantes",
             count: statusCounts["missing-docs"],
             tone: statusCounts["missing-docs"] > 0 ? ("warning" as const) : undefined,
           },
-          { key: "drivers" as const, label: "Drivers", count: statusCounts.drivers },
-          { key: "no-activity" as const, label: "No recent activity", count: statusCounts["no-activity"] },
-          { key: "inactive" as const, label: "Inactive", count: statusCounts.inactive },
-          { key: "all" as const, label: "All", count: statusCounts.all },
+          { key: "drivers" as const, label: "Conductores", count: statusCounts.drivers },
+          { key: "no-activity" as const, label: "Sin actividad reciente", count: statusCounts["no-activity"] },
+          { key: "inactive" as const, label: "Inactivos", count: statusCounts.inactive },
+          { key: "all" as const, label: "Todos", count: statusCounts.all },
         ]).map(tab => {
           const isActive = statusTab === tab.key;
           const tone = (tab as any).tone as "destructive" | "warning" | undefined;
