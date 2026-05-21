@@ -82,6 +82,7 @@ import { buildBulkRemindersText } from "@/lib/data-quality-actions";
 import { useCompanyDocuments } from "@/hooks/useCompanyDocuments";
 import MobileDataQualitySummary from "@/components/employee/MobileDataQualitySummary";
 import MobileWorkersCommandView from "@/components/employee/MobileWorkersCommandView";
+import { WorkerPhotoStatusChip } from "@/components/employee/WorkerPhotoStatusChip";
 
 // Fields that only owner/admin can see
 const SENSITIVE_FIELD_KEYS = new Set([
@@ -1247,7 +1248,7 @@ export default function Employees() {
           },
           {
             key: "no-photo" as const,
-            label: "Sin foto profesional",
+            label: "Foto requerida",
             count: statusCounts["no-photo"],
             tone: statusCounts["no-photo"] > 0 ? ("warning" as const) : undefined,
           },
@@ -1621,7 +1622,7 @@ export default function Employees() {
                   <div className="flex items-center gap-1 flex-wrap">
                     <WorkerRiskTags risks={riskAnalysis.byId.get(e.id) ?? []} max={2} className="mt-0.5" />
                     {isMissingPhoto(e) && (
-                      <span className="mt-0.5 text-[9px] font-semibold text-warning bg-warning/10 px-1.5 py-0.5 rounded">Foto pendiente</span>
+                      <WorkerPhotoStatusChip status="required" className="mt-0.5" />
                     )}
                   </div>
                 </div>
@@ -1675,7 +1676,7 @@ export default function Employees() {
                     <div className="flex items-center gap-1 flex-wrap mt-1">
                       <WorkerRiskTags risks={riskAnalysis.byId.get(e.id) ?? []} max={2} />
                       {isMissingPhoto(e) && (
-                        <span className="text-[9px] font-semibold text-warning bg-warning/10 px-1.5 py-0.5 rounded">Foto pendiente</span>
+                        <WorkerPhotoStatusChip status="required" />
                       )}
                     </div>
                     {e.employee_role && <span className="inline-block mt-1 px-1.5 py-0.5 rounded text-[9px] font-semibold bg-primary/8 text-primary">{formatDisplayText(e.employee_role, "label")}</span>}
@@ -1840,7 +1841,7 @@ export default function Employees() {
                     </Tooltip>
                   </TableCell>
                   <TableCell className="py-1 pl-2 pr-0">
-                    <EmployeeAvatar firstName={e.first_name ?? ""} lastName={e.last_name ?? ""} avatarUrl={e.avatar_url} gender={e.gender} size="sm" />
+                    <EmployeeAvatar firstName={e.first_name ?? ""} lastName={e.last_name ?? ""} avatarUrl={e.avatar_url} gender={e.gender} size="md" />
                   </TableCell>
                   <TableCell className="py-1">
                     <div className="leading-tight">
@@ -1854,7 +1855,7 @@ export default function Employees() {
                       <div className="flex items-center gap-1 flex-wrap mt-1">
                         <WorkerRiskTags risks={riskAnalysis.byId.get(e.id) ?? []} max={2} />
                         {isMissingPhoto(e) && (
-                          <span className="text-[9px] font-semibold text-warning bg-warning/10 px-1.5 py-0.5 rounded">Foto pendiente</span>
+                          <WorkerPhotoStatusChip status="required" />
                         )}
                       </div>
                     </div>
