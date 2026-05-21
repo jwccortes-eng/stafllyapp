@@ -1762,11 +1762,16 @@ export default function Employees() {
                 </TableHead>
                 {visibleColumns.includes("employer_identification") && (
                   <TableHead
-                    className="text-[10px] w-[70px] cursor-pointer select-none hover:bg-muted/40 transition-colors"
+                    className="text-[10px] w-[80px] cursor-pointer select-none hover:bg-muted/40 transition-colors"
                     onClick={() => onSort("code")}
                     aria-sort={sort.key === "code" ? (sort.direction === "asc" ? "ascending" : "descending") : "none"}
                   >
-                    <span className="inline-flex items-center gap-1">ID <SortIndicator direction={directionFor("code")} /></span>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="inline-flex items-center gap-1">ID Stafly <SortIndicator direction={directionFor("code")} /></span>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="text-xs">ID Stafly · referencia de payroll</TooltipContent>
+                    </Tooltip>
                   </TableHead>
                 )}
                 {visibleColumns.includes("phone_number") && <TableHead className="hidden sm:table-cell text-[10px]">Phone</TableHead>}
