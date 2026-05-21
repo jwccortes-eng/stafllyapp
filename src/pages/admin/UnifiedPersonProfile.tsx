@@ -873,17 +873,21 @@ export default function UnifiedPersonProfile() {
         </div>
       </Card>
 
-      {/* ─── DEBUG / TECHNICAL INFO (admin/dev only) ─── */}
+      {/* ─── INFORMACIÓN TÉCNICA (admin/dev only, collapsed by default) ─── */}
       {isPrivileged && (
         <Collapsible>
           <CollapsibleTrigger className="group inline-flex items-center gap-1.5 text-[10.5px] font-medium uppercase tracking-wider text-muted-foreground/70 hover:text-foreground transition-colors">
             <Code2 className="h-3 w-3" />
-            Technical info
+            Información técnica
             <ChevronDown className="h-3 w-3 transition-transform group-data-[state=open]:rotate-180" />
           </CollapsibleTrigger>
           <CollapsibleContent>
             <Card className="mt-2 border-dashed border-border/60 bg-muted/20">
-              <CardContent className="p-3 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5 text-[11px] font-mono">
+              <CardContent className="p-3 space-y-2">
+                <p className="text-[10.5px] text-muted-foreground/80">
+                  Datos operativos y señales internas para administradores.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5 text-[11px] font-mono">
                 {[
                   ["employee_id", employee.id],
                   ["employer_identification", employee.employer_identification],
@@ -902,11 +906,13 @@ export default function UnifiedPersonProfile() {
                     <span className="text-foreground truncate" title={String(v)}>{String(v)}</span>
                   </div>
                 ))}
+                </div>
               </CardContent>
             </Card>
           </CollapsibleContent>
         </Collapsible>
       )}
+
 
       {/* ─── SNAPSHOT STRIP ─── */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
