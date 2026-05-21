@@ -7,7 +7,11 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { SmartDateInput } from "@/components/ui/smart-date-input";
+import { SmartPhoneInput } from "@/components/ui/smart-phone-input";
+import { GenderSelect } from "@/components/ui/gender-select";
 import { formatDateUS } from "@/lib/date-format";
+import { formatPhoneUS } from "@/lib/phone-format";
+import { formatGenderLabel } from "@/lib/gender";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { EmptyState } from "@/components/ui/empty-state";
