@@ -1862,7 +1862,7 @@ export default function Employees() {
                   {visibleColumns.includes("employer_identification") && (
                     <TableCell className="py-1">
                       {e.employer_identification ? (
-                        <span className="text-[11px] font-mono font-semibold text-primary/80">#{e.employer_identification}</span>
+                        <span className="text-[11px] font-mono font-semibold tabular-nums text-foreground">{e.employer_identification}</span>
                       ) : <span className="text-[11px] text-muted-foreground/25">—</span>}
                     </TableCell>
                   )}
