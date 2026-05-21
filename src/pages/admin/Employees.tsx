@@ -806,14 +806,14 @@ export default function Employees() {
       case "inactive": return e.is_active === false;
       case "missing-docs": return isMissingDocs(e);
       case "no-photo": {
-        if (!isMissingPhoto(e) && photoFilter !== "unreviewed") {
-          // Only show "review" workers if explicitly opted-in via filter
-          if (photoFilter === "all") return false;
-        }
+        // Photo Review Queue v1:
+        //   "all"        → both missing AND uploaded-but-unreviewed
+        //   "missing"    → only missing avatar
+        //   "unreviewed" → only uploaded photos (no review field yet → all of them)
         const status = photoStatusFor(e);
+        if (status === null) return false; // inactive
         if (photoFilter === "missing") return status === "required";
         if (photoFilter === "unreviewed") return status === "review";
-        // "all" within tab → either required or review (uploaded but unreviewed)
         return status === "required" || status === "review";
       }
       case "drivers": return isDriver(e);
