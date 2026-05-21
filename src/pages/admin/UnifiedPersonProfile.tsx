@@ -39,6 +39,7 @@ import {
   type ReadinessBand,
 } from "@/components/ui/readiness-badge";
 import { EmployeeProfileTabs } from "@/components/employee/EmployeeProfileTabs";
+import { ProfileSummaryGrid } from "@/components/employee/ProfileSummaryGrid";
 import { EmployeeInviteDialog } from "@/components/employee/EmployeeInviteDialog";
 import { ArchiveEmployeeDialog } from "@/components/employee/ArchiveEmployeeDialog";
 import { NextActionCard } from "@/components/employee/NextActionCard";
