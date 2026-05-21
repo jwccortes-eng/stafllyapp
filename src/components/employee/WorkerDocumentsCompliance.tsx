@@ -61,7 +61,7 @@ const STATUS_ICON: Record<UnifiedDocStatus, React.ComponentType<{ className?: st
 function fmtDate(s: string | null): string {
   if (!s) return "—";
   const d = parseISO(s);
-  return isValid(d) ? format(d, "MMM d, yyyy", { locale: enUS }) : "—";
+  return isValid(d) ? (formatDateUS(d) || "—") : "—";
 }
 
 function relativeTo(s: string | null): string | null {
