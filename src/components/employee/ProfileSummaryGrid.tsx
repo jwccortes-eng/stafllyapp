@@ -188,16 +188,18 @@ export function ProfileSummaryGrid({
       }`
     : null;
 
-  const optionalExtra: Array<[string, any]> = [
-    ["Manager", employee.direct_manager],
-    ["Grupos", employee.groups],
-    ["Etiquetas", employee.tags],
-    ["Rating", employee.qualify ?? employee.rating],
-    ["Recomendado por", employee.recommended_by],
-    ["Licencia", employee.driver_licence ?? employee.drivers_license],
-    ["País", employee.country ?? employee.country_code],
-    ["Inglés", employee.english_level],
-  ].filter(([, v]) => v != null && String(v).trim() !== "");
+  const optionalExtra: Array<[string, any]> = (
+    [
+      ["Manager", employee.direct_manager],
+      ["Grupos", employee.groups],
+      ["Etiquetas", employee.tags],
+      ["Rating", employee.qualify ?? employee.rating],
+      ["Recomendado por", employee.recommended_by],
+      ["Licencia", employee.driver_licence ?? employee.drivers_license],
+      ["País", employee.country ?? employee.country_code],
+      ["Inglés", employee.english_level],
+    ] as Array<[string, any]>
+  ).filter(([, v]) => v != null && String(v).trim() !== "");
 
   /* ───── Cumplimiento (compliance) ───── */
   const missingRequired = readiness.missingDocuments.length;
