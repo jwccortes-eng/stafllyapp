@@ -19,6 +19,7 @@ import {
   computePayrollReadiness,
   getRiskMeta,
   RISK_ORDER,
+  PRIMARY_RISK_KEYS,
   READINESS_LABEL,
   type PayrollReadiness,
   type RiskKey,
