@@ -71,8 +71,8 @@ function DesktopTimeClockView() {
       <div className="flex items-center justify-between">
         <PageHeader
           variant="3"
-          title="Centro de Mando de Tiempo"
-          subtitle="Control en vivo de asistencia, horas abiertas, alertas y aprobaciones."
+          title="Reloj de tiempo"
+          subtitle="Controla fichajes abiertos, alertas y registros que necesitan revisión."
         />
         <div className="flex items-center gap-2">
           <Button
@@ -81,7 +81,7 @@ function DesktopTimeClockView() {
             onClick={() => navigate("/app/daily-ops")}
           >
             <Monitor className="h-3.5 w-3.5" />
-            Open in Daily Ops
+            Abrir en operación diaria
           </Button>
           <TooltipProvider delayDuration={300}>
             <Tooltip>
