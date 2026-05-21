@@ -1336,7 +1336,7 @@ export default function Employees() {
       <PremiumFilterBar
         search={search}
         onSearchChange={setSearch}
-        searchPlaceholder="Buscar nombre, email, teléfono, código…"
+        searchPlaceholder="Buscar por nombre, teléfono, email o ID Stafly…"
         quickFilters={
           <>
             {uniqueRoles.length > 0 && (
