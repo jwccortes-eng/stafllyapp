@@ -346,12 +346,10 @@ export function usePayrollReconciliation() {
         raw: (r.truth_raw_json as any) || {},
       }));
 
-      // 2. Load system employees
+      // 2. Load system employees (SSN/EIN read through admin-gated RPC so
+      // the sensitive column stays revoked from the broad authenticated role).
       const { data: employees } = await supabase
-        .from("employees")
-        .select("id, first_name, last_name, phone_number, email, connecteam_employee_id, employer_identification, verification_ssn_ein")
-        .eq("company_id", selectedCompanyId)
-        .eq("is_active", true);
+        .rpc("admin_get_employees_with_fiscal", { p_company_id: selectedCompanyId });
 
       const systemData: SystemEmployeeData[] = (employees || []).map((e: any) => ({
         employee_id: e.id,
