@@ -6,6 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { SmartDateInput } from "@/components/ui/smart-date-input";
+import { formatDateUS } from "@/lib/date-format";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -66,6 +68,7 @@ const EmployeeCompensationTab = lazy(() => import("@/components/compensation/Emp
 type EmployeeRecord = Record<string, any>;
 
 const BOOLEAN_FIELDS = new Set(["has_car"]);
+const DATE_FIELDS = new Set(["start_date", "end_date", "birthday", "license_expiration", "expiration_date"]);
 
 const PERSONAL_FIELDS = [
   { key: "first_name", label: "Nombre", icon: User },
@@ -113,6 +116,13 @@ function FieldRow({ field, employee, isEditing, form, setForm }: {
               <Switch checked={form[field.key] === "Yes" || form[field.key] === "true" || form[field.key] === "Sí"} onCheckedChange={c => setForm(prev => ({ ...prev, [field.key]: c ? "Yes" : "No" }))} />
               <span className="text-[11px]">{form[field.key] === "Yes" || form[field.key] === "true" || form[field.key] === "Sí" ? "Sí" : "No"}</span>
             </div>
+          ) : DATE_FIELDS.has(field.key) ? (
+            <SmartDateInput
+              value={form[field.key] ?? ""}
+              onChange={iso => setForm(prev => ({ ...prev, [field.key]: iso }))}
+              inputClassName="h-7 text-[11px] px-2"
+              aria-label={field.label}
+            />
           ) : (
             <Input value={form[field.key] ?? ""} onChange={ev => setForm(prev => ({ ...prev, [field.key]: ev.target.value }))} className="h-6 text-[11px] px-2" />
           )
@@ -122,6 +132,8 @@ function FieldRow({ field, employee, isEditing, form, setForm }: {
               employee?.[field.key] === "Yes" || employee?.[field.key] === "true" || employee?.[field.key] === "Sí" ? (
                 <Badge variant="outline" className="bg-earning/10 text-earning border-earning/20 text-[9px]">🚗 Sí</Badge>
               ) : <span className="text-muted-foreground/30">No</span>
+            ) : DATE_FIELDS.has(field.key) ? (
+              employee?.[field.key] ? formatDateUS(employee[field.key] as string) : <span className="text-muted-foreground/30">—</span>
             ) : (
               employee?.[field.key] || <span className="text-muted-foreground/30">—</span>
             )}
