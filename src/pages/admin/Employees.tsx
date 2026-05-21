@@ -754,6 +754,11 @@ export default function Employees() {
   // and per-row enforcement used elsewhere.
   const isInviteFailed = (e: EmployeeRecord) => isWorkerInviteFailed(e, invitations[e.id]);
 
+  // Photo readiness signal (read-only). Conservative: only flags workers with
+  // no `avatar_url` at all. Active workers only — keeps inactive list quiet.
+  const isMissingPhoto = (e: EmployeeRecord) =>
+    e.is_active !== false && !(e.avatar_url && String(e.avatar_url).trim().length > 0);
+
   const statusCounts = {
     active: employees.filter(e => e.is_active !== false && !!e.user_id).length,
     invited: employees.filter(e => e.is_active !== false && !e.user_id && !!invitations[e.id]).length,
@@ -761,6 +766,7 @@ export default function Employees() {
     pending: employees.filter(e => e.is_active !== false && !e.user_id && !invitations[e.id]).length,
     inactive: employees.filter(e => e.is_active === false).length,
     "missing-docs": employees.filter(isMissingDocs).length,
+    "no-photo": employees.filter(isMissingPhoto).length,
     drivers: employees.filter(isDriver).length,
     "no-activity": employees.filter(isNoActivity).length,
     new: employees.filter(isNew).length,
@@ -778,6 +784,7 @@ export default function Employees() {
       case "pending": return e.is_active !== false && !e.user_id && !invitations[e.id];
       case "inactive": return e.is_active === false;
       case "missing-docs": return isMissingDocs(e);
+      case "no-photo": return isMissingPhoto(e);
       case "drivers": return isDriver(e);
       case "no-activity": return isNoActivity(e);
       case "new": return isNew(e);
