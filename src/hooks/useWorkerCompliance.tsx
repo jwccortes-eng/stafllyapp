@@ -58,7 +58,7 @@ export function useWorkerCompliance(
     );
 
     const snap: EmployeeComplianceSnapshot = {
-      ...(emp ?? {}),
+      ...((emp ?? {}) as Record<string, unknown>),
       approvedDocumentCategories: approved,
     } as EmployeeComplianceSnapshot;
 
