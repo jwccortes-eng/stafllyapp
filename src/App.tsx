@@ -89,6 +89,7 @@ const CommandCenter = lazy(() => import("./pages/admin/CommandCenter"));
 const StaffingCenter = lazy(() => import("./pages/admin/StaffingCenter"));
 const DevCommandCenter = lazy(() => import("./pages/admin/DevCommandCenter"));
 const DocumentsCenter = lazy(() => import("./pages/admin/DocumentsCenter"));
+const ComplianceCenter = lazy(() => import("./pages/admin/ComplianceCenter"));
 const NeedsAttention = lazy(() => import("./pages/admin/NeedsAttention"));
 const DailyClose = lazy(() => import("./pages/admin/DailyClose"));
 const Today = lazy(() => import("./pages/admin/Today"));
