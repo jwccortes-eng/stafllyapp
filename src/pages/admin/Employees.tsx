@@ -245,6 +245,7 @@ export default function Employees() {
     role: "all",
     group: "all",
     risk: "all",
+    photo: "all",
   });
   const search = urlFilters.q;
   const setSearch = (v: string) => setFilter({ q: v });
@@ -257,9 +258,13 @@ export default function Employees() {
   const setFilterGroup = (v: string) => setFilter({ group: v });
   const riskFilter = (urlFilters.risk as RiskKey | "all") || "all";
   const setRiskFilter = (v: RiskKey | "all") => setFilter({ risk: v });
+  type PhotoFilter = "all" | "missing" | "unreviewed";
+  const photoFilter = (urlFilters.photo as PhotoFilter) || "all";
+  const setPhotoFilter = (v: PhotoFilter) => setFilter({ photo: v });
 
-  // Persisted alphabetical sort by default; users can flip it.
-  const { sort, onSort, directionFor } = useSortPreference<"name" | "code" | "role" | "last_activity">(
+  // Persisted sort. v4 adds "photo" (missing/unreviewed first).
+  type SortKey = "name" | "code" | "role" | "last_activity" | "photo";
+  const { sort, onSort, directionFor, setSort } = useSortPreference<SortKey>(
     "employees",
     { key: "name", direction: "asc" },
   );
@@ -762,6 +767,19 @@ export default function Employees() {
   const isMissingPhoto = (e: EmployeeRecord) =>
     e.is_active !== false && !(e.avatar_url && String(e.avatar_url).trim().length > 0);
 
+  /**
+   * Photo Quality Gate v1 — Spanish-first status resolver.
+   * No DB review field exists yet, so we never claim "approved".
+   *   - active + no avatar           → "required"  (Foto requerida)
+   *   - active + has avatar          → "review"    (Revisar foto · sin revisar)
+   *   - inactive                     → null        (silent)
+   */
+  const photoStatusFor = (e: EmployeeRecord): "required" | "review" | null => {
+    if (e.is_active === false) return null;
+    const has = e.avatar_url && String(e.avatar_url).trim().length > 0;
+    return has ? "review" : "required";
+  };
+
   const statusCounts = {
     active: employees.filter(e => e.is_active !== false && !!e.user_id).length,
     invited: employees.filter(e => e.is_active !== false && !e.user_id && !!invitations[e.id]).length,
@@ -787,7 +805,17 @@ export default function Employees() {
       case "pending": return e.is_active !== false && !e.user_id && !invitations[e.id];
       case "inactive": return e.is_active === false;
       case "missing-docs": return isMissingDocs(e);
-      case "no-photo": return isMissingPhoto(e);
+      case "no-photo": {
+        if (!isMissingPhoto(e) && photoFilter !== "unreviewed") {
+          // Only show "review" workers if explicitly opted-in via filter
+          if (photoFilter === "all") return false;
+        }
+        const status = photoStatusFor(e);
+        if (photoFilter === "missing") return status === "required";
+        if (photoFilter === "unreviewed") return status === "review";
+        // "all" within tab → either required or review (uploaded but unreviewed)
+        return status === "required" || status === "review";
+      }
       case "drivers": return isDriver(e);
       case "no-activity": return isNoActivity(e);
       case "new": return isNew(e);
@@ -834,6 +862,16 @@ export default function Employees() {
       const ad = lastActivityDate(a)?.getTime() ?? 0;
       const bd = lastActivityDate(b)?.getTime() ?? 0;
       return (ad - bd) * dir;
+    }
+    if (sort.key === "photo") {
+      // Order: required (0) → review (1) → ok/null (2). Asc = problems first.
+      const rank = (e: EmployeeRecord) => {
+        const s = photoStatusFor(e);
+        if (s === "required") return 0;
+        if (s === "review") return 1;
+        return 2;
+      };
+      return (rank(a) - rank(b)) * dir;
     }
     return 0;
   });
@@ -1351,6 +1389,32 @@ export default function Employees() {
                 <SelectContent><SelectItem value="all">All groups</SelectItem>{uniqueGroups.map(g => (<SelectItem key={g} value={g}>{g}</SelectItem>))}</SelectContent>
               </Select>
             )}
+            {/* v4 Sort control — visible "Ordenar por" with asc/desc toggle */}
+            <Select
+              value={sort.key}
+              onValueChange={(v) => setSort({ key: v as SortKey, direction: sort.direction })}
+            >
+              <SelectTrigger className="w-[170px] h-8 text-xs" aria-label="Ordenar por">
+                <ArrowUpDown className="h-3 w-3 mr-1 text-muted-foreground" />
+                <SelectValue placeholder="Ordenar por" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="name">Ordenar: Nombre</SelectItem>
+                <SelectItem value="code">Ordenar: ID Stafly</SelectItem>
+                <SelectItem value="last_activity">Ordenar: Última actividad</SelectItem>
+                <SelectItem value="photo">Ordenar: Foto</SelectItem>
+                <SelectItem value="role">Ordenar: Rol</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 px-2 text-[11px]"
+              onClick={() => setSort({ key: sort.key, direction: sort.direction === "asc" ? "desc" : "asc" })}
+              title={sort.direction === "asc" ? "Ascendente" : "Descendente"}
+            >
+              {sort.direction === "asc" ? "Asc ↑" : "Desc ↓"}
+            </Button>
           </>
         }
         activeChips={activeChips}
@@ -1365,6 +1429,38 @@ export default function Employees() {
           </>
         }
       />
+
+      {/* ─── Photo Quality sub-filter — only when on "Foto requerida" tab ─── */}
+      {statusTab === "no-photo" && (
+        <div className="rounded-xl border border-warning/20 bg-warning/5 px-3 py-2 space-y-1.5">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-[10px] uppercase tracking-wide text-warning font-semibold mr-1">Foto:</span>
+            {([
+              { key: "all" as const, label: "Todas" },
+              { key: "missing" as const, label: "Sin foto" },
+              { key: "unreviewed" as const, label: "Subida sin revisar" },
+            ]).map((opt) => (
+              <button
+                key={opt.key}
+                type="button"
+                onClick={() => setPhotoFilter(opt.key)}
+                className={cn(
+                  "px-2 py-0.5 rounded-full text-[10px] font-semibold border transition",
+                  photoFilter === opt.key
+                    ? "bg-warning text-warning-foreground border-warning"
+                    : "bg-card text-muted-foreground border-border hover:text-foreground",
+                )}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+          <p className="text-[10.5px] text-muted-foreground leading-snug">
+            Foto profesional: rostro claro, fondo limpio, buena iluminación. No se aceptan paisajes, logos, caricaturas, fotos grupales ni contenido sugestivo.
+          </p>
+        </div>
+      )}
+
 
       {/* ─── Bulk actions bar — appears when ≥1 row selected ─── */}
       {(() => {
@@ -1595,11 +1691,7 @@ export default function Employees() {
       ) : effectiveViewMode === "roster" ? (
         /* ─── Roster (default desktop) — identity-card list ─── */
         <div className="space-y-2">
-          {statusTab === "no-photo" && (
-            <div className="rounded-xl border border-warning/20 bg-warning/5 px-3 py-2 text-[11px] text-warning">
-              Una foto profesional ayuda a identificar al trabajador en turnos, documentos y operación.
-            </div>
-          )}
+          {/* Photo guidance now lives in the filter-bar sub-strip (single source). */}
           <div className="rounded-2xl border border-border/50 bg-card overflow-hidden divide-y divide-border/30">
             {filtered.map((e) => {
               const phone = e.phone_number?.replace(/[^+\d]/g, "") ?? "";
@@ -1672,18 +1764,28 @@ export default function Employees() {
                     {/* Status line — max 2 risks + photo chip, rest behind +N */}
                     <div className="mt-1 flex items-center gap-1.5 flex-wrap">
                       <WorkerRiskTags risks={risks} max={2} />
-                      {isMissingPhoto(e) && (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span>
-                              <WorkerPhotoStatusChip status="required" />
-                            </span>
-                          </TooltipTrigger>
-                          <TooltipContent side="top" className="text-xs max-w-[220px]">
-                            Solicita una foto tipo documento: rostro claro, fondo limpio y buena iluminación.
-                          </TooltipContent>
-                        </Tooltip>
-                      )}
+                      {(() => {
+                        const ps = photoStatusFor(e);
+                        // Always surface "required". Only surface "review" while
+                        // the operator is auditing photos (no-photo tab).
+                        if (ps === "required" || (ps === "review" && statusTab === "no-photo")) {
+                          return (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span>
+                                  <WorkerPhotoStatusChip status={ps} />
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="text-xs max-w-[240px]">
+                                {ps === "required"
+                                  ? "Solicita una foto tipo documento: rostro claro, fondo limpio y buena iluminación."
+                                  : "Foto cargada — falta revisión manual antes de aprobar."}
+                              </TooltipContent>
+                            </Tooltip>
+                          );
+                        }
+                        return null;
+                      })()}
                     </div>
                   </div>
 
