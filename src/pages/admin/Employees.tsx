@@ -247,8 +247,8 @@ export default function Employees() {
   });
   const search = urlFilters.q;
   const setSearch = (v: string) => setFilter({ q: v });
-  type StatusTab = "active" | "invited" | "failed" | "inactive" | "pending" | "all" | "missing-docs" | "drivers" | "no-activity" | "new";
-  const statusTab = (urlFilters.status as StatusTab) || "active";
+ type StatusTab = "active" | "invited" | "failed" | "inactive" | "pending" | "all" | "missing-docs" | "no-photo" | "drivers" | "no-activity" | "new";
+ const statusTab = (urlFilters.status as StatusTab) || "active";
   const setStatusTab = (v: StatusTab) => setFilter({ status: v });
   const filterRole = urlFilters.role;
   const setFilterRole = (v: string) => setFilter({ role: v });
@@ -754,6 +754,11 @@ export default function Employees() {
   // and per-row enforcement used elsewhere.
   const isInviteFailed = (e: EmployeeRecord) => isWorkerInviteFailed(e, invitations[e.id]);
 
+  // Photo readiness signal (read-only). Conservative: only flags workers with
+  // no `avatar_url` at all. Active workers only — keeps inactive list quiet.
+  const isMissingPhoto = (e: EmployeeRecord) =>
+    e.is_active !== false && !(e.avatar_url && String(e.avatar_url).trim().length > 0);
+
   const statusCounts = {
     active: employees.filter(e => e.is_active !== false && !!e.user_id).length,
     invited: employees.filter(e => e.is_active !== false && !e.user_id && !!invitations[e.id]).length,
@@ -761,6 +766,7 @@ export default function Employees() {
     pending: employees.filter(e => e.is_active !== false && !e.user_id && !invitations[e.id]).length,
     inactive: employees.filter(e => e.is_active === false).length,
     "missing-docs": employees.filter(isMissingDocs).length,
+    "no-photo": employees.filter(isMissingPhoto).length,
     drivers: employees.filter(isDriver).length,
     "no-activity": employees.filter(isNoActivity).length,
     new: employees.filter(isNew).length,
@@ -778,6 +784,7 @@ export default function Employees() {
       case "pending": return e.is_active !== false && !e.user_id && !invitations[e.id];
       case "inactive": return e.is_active === false;
       case "missing-docs": return isMissingDocs(e);
+      case "no-photo": return isMissingPhoto(e);
       case "drivers": return isDriver(e);
       case "no-activity": return isNoActivity(e);
       case "new": return isNew(e);
@@ -873,7 +880,7 @@ export default function Employees() {
   const kpis: PremiumPageHeaderKpi[] = [
     { label: "Total", value: statusCounts.all, onClick: () => setStatusTab("all"), active: statusTab === "all" },
     { label: "Activos", value: statusCounts.active, accent: "success", onClick: () => setStatusTab("active"), active: statusTab === "active" },
-    { label: "Pendientes de activación", value: statusCounts.pending, accent: statusCounts.pending > 0 ? "warning" : "default", onClick: () => setStatusTab("pending"), active: statusTab === "pending" },
+    { label: "Pendientes de activar app", value: statusCounts.pending, accent: statusCounts.pending > 0 ? "warning" : "default", onClick: () => setStatusTab("pending"), active: statusTab === "pending" },
     { label: "Documentos faltantes", value: statusCounts["missing-docs"], accent: statusCounts["missing-docs"] > 0 ? "destructive" : "default", onClick: () => setStatusTab("missing-docs"), active: statusTab === "missing-docs" },
     { label: "Conductores", value: statusCounts.drivers, accent: "primary", onClick: () => setStatusTab("drivers"), active: statusTab === "drivers" },
   ];
@@ -1225,23 +1232,29 @@ export default function Employees() {
       <div className="flex items-center gap-0.5 border-b border-border/40 overflow-x-auto">
         {([
           { key: "active" as const, label: "Activos", count: statusCounts.active },
+          { key: "pending" as const, label: "Pendientes de activar app", count: statusCounts.pending },
           { key: "invited" as const, label: "Invitados", count: statusCounts.invited },
           // Surface the failure backlog right next to "Invitados" so it's actionable.
           // Hidden when zero to avoid noise in healthy tenants.
           ...(statusCounts.failed > 0
             ? [{ key: "failed" as const, label: "Invitación fallida", count: statusCounts.failed, tone: "destructive" as const }]
             : []),
-          { key: "pending" as const, label: "Pendientes de activación", count: statusCounts.pending },
-          { key: "new" as const, label: "Nuevos", count: statusCounts.new },
           {
             key: "missing-docs" as const,
             label: "Documentos faltantes",
             count: statusCounts["missing-docs"],
             tone: statusCounts["missing-docs"] > 0 ? ("warning" as const) : undefined,
           },
+          {
+            key: "no-photo" as const,
+            label: "Sin foto profesional",
+            count: statusCounts["no-photo"],
+            tone: statusCounts["no-photo"] > 0 ? ("warning" as const) : undefined,
+          },
+          { key: "new" as const, label: "Nuevos", count: statusCounts.new },
           { key: "drivers" as const, label: "Conductores", count: statusCounts.drivers },
           { key: "no-activity" as const, label: "Sin actividad reciente", count: statusCounts["no-activity"] },
-          { key: "inactive" as const, label: "Inactivos", count: statusCounts.inactive },
+          { key: "inactive" as const, label: "Históricos / Inactivos", count: statusCounts.inactive },
           { key: "all" as const, label: "Todos", count: statusCounts.all },
         ]).map(tab => {
           const isActive = statusTab === tab.key;
@@ -1591,8 +1604,23 @@ export default function Employees() {
               >
                 <PremiumAvatar firstName={e.first_name} lastName={e.last_name} avatarUrl={e.avatar_url} size="sm" status={status} />
                 <div className="flex-1 min-w-0">
-                  <span className="text-xs font-semibold truncate block">{formatPersonName(`${e.first_name} ${e.last_name}`)}</span>
-                  <WorkerRiskTags risks={riskAnalysis.byId.get(e.id) ?? []} max={2} className="mt-0.5" />
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="text-xs font-semibold truncate">{formatPersonName(`${e.first_name} ${e.last_name}`)}</span>
+                    {e.employer_identification && (
+                      <span className="shrink-0 text-[9px] font-mono font-semibold text-primary/80 bg-primary/8 px-1.5 py-0.5 rounded" title="ID Stafly · Payroll ID">
+                        ID Stafly #{e.employer_identification}
+                      </span>
+                    )}
+                    {!e.is_active && (
+                      <span className="shrink-0 text-[9px] font-semibold uppercase tracking-wide text-muted-foreground bg-muted px-1.5 py-0.5 rounded">Histórico</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1 flex-wrap">
+                    <WorkerRiskTags risks={riskAnalysis.byId.get(e.id) ?? []} max={2} className="mt-0.5" />
+                    {isMissingPhoto(e) && (
+                      <span className="mt-0.5 text-[9px] font-semibold text-warning bg-warning/10 px-1.5 py-0.5 rounded">Foto pendiente</span>
+                    )}
+                  </div>
                 </div>
                 {e.phone_number && <span className="text-[10px] text-muted-foreground hidden md:inline">{e.phone_number}</span>}
                 {isDriver(e) && <Car className="h-3 w-3 text-sky-500 shrink-0" aria-label="Driver" />}
@@ -1625,8 +1653,23 @@ export default function Employees() {
                 <div className="flex items-start gap-2.5">
                   <PremiumAvatar firstName={e.first_name} lastName={e.last_name} avatarUrl={e.avatar_url} size="md" status={status} />
                   <div className="min-w-0 flex-1">
-                    <p className="text-[13px] font-bold truncate leading-tight">{formatPersonName(`${e.first_name} ${e.last_name}`)}</p>
-                    <WorkerRiskTags risks={riskAnalysis.byId.get(e.id) ?? []} max={2} className="mt-1" />
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <p className="text-[13px] font-bold truncate leading-tight">{formatPersonName(`${e.first_name} ${e.last_name}`)}</p>
+                      {!e.is_active && (
+                        <span className="shrink-0 text-[9px] font-semibold uppercase tracking-wide text-muted-foreground bg-muted px-1.5 py-0.5 rounded">Histórico</span>
+                      )}
+                    </div>
+                    {e.employer_identification && (
+                      <span className="inline-block mt-1 text-[9px] font-mono font-semibold text-primary/80 bg-primary/8 px-1.5 py-0.5 rounded" title="ID Stafly · Payroll ID">
+                        ID Stafly #{e.employer_identification}
+                      </span>
+                    )}
+                    <div className="flex items-center gap-1 flex-wrap mt-1">
+                      <WorkerRiskTags risks={riskAnalysis.byId.get(e.id) ?? []} max={2} />
+                      {isMissingPhoto(e) && (
+                        <span className="text-[9px] font-semibold text-warning bg-warning/10 px-1.5 py-0.5 rounded">Foto pendiente</span>
+                      )}
+                    </div>
                     {e.employee_role && <span className="inline-block mt-1 px-1.5 py-0.5 rounded text-[9px] font-semibold bg-primary/8 text-primary">{formatDisplayText(e.employee_role, "label")}</span>}
                     <div className="mt-1 space-y-0.5">
                       {e.phone_number && <p className="text-[10px] text-muted-foreground truncate flex items-center gap-1"><Phone className="h-2.5 w-2.5" />{e.phone_number}</p>}
@@ -1788,9 +1831,24 @@ export default function Employees() {
                   </TableCell>
                   <TableCell className="py-1">
                     <div className="leading-tight">
-                      <span className="text-xs font-semibold">{formatPersonName(`${e.first_name} ${e.last_name}`)}</span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-xs font-semibold">{formatPersonName(`${e.first_name} ${e.last_name}`)}</span>
+                        {e.employer_identification && (
+                          <span className="text-[9px] font-mono font-semibold text-primary/80 bg-primary/8 px-1.5 py-0.5 rounded" title="ID Stafly · Payroll ID">
+                            ID Stafly #{e.employer_identification}
+                          </span>
+                        )}
+                        {!e.is_active && (
+                          <span className="text-[9px] font-semibold uppercase tracking-wide text-muted-foreground bg-muted px-1.5 py-0.5 rounded">Histórico</span>
+                        )}
+                      </div>
                       <span className="sm:hidden block text-[10px] text-muted-foreground mt-0.5">{e.phone_number || e.email || ""}</span>
-                      <WorkerRiskTags risks={riskAnalysis.byId.get(e.id) ?? []} max={2} className="mt-1" />
+                      <div className="flex items-center gap-1 flex-wrap mt-1">
+                        <WorkerRiskTags risks={riskAnalysis.byId.get(e.id) ?? []} max={2} />
+                        {isMissingPhoto(e) && (
+                          <span className="text-[9px] font-semibold text-warning bg-warning/10 px-1.5 py-0.5 rounded">Foto pendiente</span>
+                        )}
+                      </div>
                     </div>
                   </TableCell>
                   {visibleColumns.includes("employer_identification") && (
