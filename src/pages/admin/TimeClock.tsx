@@ -180,6 +180,10 @@ function DesktopTimeClockView() {
         </div>
       </div>
 
+      <p className="text-[11px] text-muted-foreground -mt-2">
+        El reloj muestra actividad real. Las horas programadas son referencia operativa; payroll se calcula con fichajes reales o validaciones aprobadas.
+      </p>
+
       <TimeClockCommandView />
 
       {/* Audit trail */}
