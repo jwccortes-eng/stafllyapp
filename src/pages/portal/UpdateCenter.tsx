@@ -29,6 +29,7 @@ import {
   CATEGORY_LABELS,
   type RequirementDef,
 } from "@/lib/compliance/requirement-catalog";
+import { WorkerSelfServiceSections } from "@/components/portal/WorkerSelfServiceSections";
 import { cn } from "@/lib/utils";
 
 const ICONS: Record<RequirementDef["icon"], React.ComponentType<{ className?: string }>> = {
