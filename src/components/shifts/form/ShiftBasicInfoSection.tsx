@@ -45,8 +45,6 @@ function ShiftBasicInfoSectionImpl({
   onChange,
   onQuickAddClient,
 }: Props) {
-  const [datePickerOpen, setDatePickerOpen] = useState(false);
-
   return (
     <SectionCard icon={Hash} title="Información principal" subtitle="Lo esencial del turno: qué, quién y cuándo.">
       {mode === "create" && (
@@ -64,35 +62,15 @@ function ShiftBasicInfoSectionImpl({
 
       <div>
         <Label className="text-[11px] text-muted-foreground font-medium">Fecha</Label>
-        <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              className={cn(
-                "w-full h-9 text-sm justify-start font-normal mt-1",
-                !date && "text-muted-foreground",
-              )}
-            >
-              <CalendarIcon className="h-3.5 w-3.5 mr-1.5" />
-              {date
-                ? format(parse(date, "yyyy-MM-dd", new Date()), "EEEE d 'de' MMMM yyyy", { locale: es })
-                : "Seleccionar"}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="start">
-            <Calendar
-              mode="single"
-              selected={date ? parse(date, "yyyy-MM-dd", new Date()) : undefined}
-              onSelect={(d) => {
-                if (d) {
-                  onChange({ date: format(d, "yyyy-MM-dd") });
-                  setDatePickerOpen(false);
-                }
-              }}
-              className={cn("p-3 pointer-events-auto")}
-            />
-          </PopoverContent>
-        </Popover>
+        <div className="mt-1">
+          <SmartDateInput
+            value={date}
+            onChange={(iso) => onChange({ date: iso })}
+            placeholder="MM/DD/YYYY"
+            aria-label="Fecha del turno"
+            inputClassName="h-9 text-sm"
+          />
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
