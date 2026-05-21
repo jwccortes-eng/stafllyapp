@@ -1248,7 +1248,7 @@ export default function Employees() {
           },
           {
             key: "no-photo" as const,
-            label: "Sin foto profesional",
+            label: "Foto requerida",
             count: statusCounts["no-photo"],
             tone: statusCounts["no-photo"] > 0 ? ("warning" as const) : undefined,
           },
