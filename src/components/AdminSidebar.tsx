@@ -371,13 +371,7 @@ export default function AdminSidebar() {
       <nav className="flex-1 px-2 py-2 space-y-0.5 overflow-y-auto sidebar-scroll">
         {visibleSections.map((s, i) => renderSection(s, i))}
 
-        {/* Admin link only in company mode for owners */}
-        {!isGlobalMode && isOwner && (
-          <>
-            <div className="sidebar-divider" />
-            {renderLink({ to: "/app/admin", icon: Wrench, label: "Administration", module: null, section: "", end: true })}
-          </>
-        )}
+        {/* Administración now lives inside the "Sistema" group (StaflyCore IA v1). */}
       </nav>
 
       {/* Trial banner */}
