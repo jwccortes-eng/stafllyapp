@@ -290,7 +290,9 @@ export default function Employees() {
   const [importStep, setImportStep] = useState<"upload" | "preview" | "done">("upload");
   const [importResult, setImportResult] = useState<{ created: number; skipped: number } | null>(null);
   const [importing, setImporting] = useState(false);
-  const [viewMode, setViewMode] = useState<ViewMode>("table");
+  // Default desktop view is the premium "roster" (identity-card list).
+  // Table remains available via the ViewSwitcher.
+  const [viewMode, setViewMode] = useState<ViewMode>("roster");
   const isMobile = useIsMobile();
   // On mobile we always render the premium card view to avoid horizontal overflow
   // and to hide noisy admin metadata (employer_identification etc.) from the list.
