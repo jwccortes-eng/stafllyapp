@@ -984,6 +984,43 @@ export default function UnifiedPersonProfile() {
         return <NextActionCard action={nextAction} onAction={handleAction} />;
       })()}
 
+      {/* ─── ONE-SCREEN PROFILE SUMMARY GRID (Phase: One-Screen Optimization v1) ───
+          Presentational, read-only 2-column card grid: Datos principales,
+          Cumplimiento, Acceso, Operación, Actividad reciente, Avanzado.
+          All actions deep-link into the existing tabs / handlers — no new
+          mutations, no schema changes, no payroll math. */}
+      <ProfileSummaryGrid
+        employee={employee}
+        portalActive={portalActive}
+        invitation={invitation ?? null}
+        readiness={{
+          missingDocuments: readiness.missingDocuments,
+          missingPersonal: readiness.missingPersonal,
+          progressPct: readiness.progressPct,
+          completedRequirements: readiness.completedRequirements,
+          totalRequirements: readiness.totalRequirements,
+        }}
+        docsCount={docsCount}
+        onboardingDocsCount={onboardingDocsCount}
+        lastClockIn={lastPayrollDate}
+        recentActivity={recentActivity}
+        recentShifts={recentShifts}
+        frontDeskVisits={frontDeskVisits}
+        onOpenTab={(tab) => {
+          setActiveTab(tab);
+          requestAnimationFrame(() => {
+            document
+              .querySelector('[data-state="active"][role="tabpanel"]')
+              ?.scrollIntoView({ behavior: "smooth", block: "start" });
+          });
+        }}
+        onEdit={() => setIsEditing(true)}
+        onInvite={() => setInviteOpen(true)}
+        onArchive={() => setArchiveOpen(true)}
+        isPrivileged={isPrivileged}
+      />
+
+
       {/* ─── READINESS / OPS GAPS ───
           Surfaces every signal an admin needs to act on this worker:
           missing required profile fields, missing required documents,
