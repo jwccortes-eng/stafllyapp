@@ -16,8 +16,9 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { format, parseISO, isValid, formatDistanceToNowStrict } from "date-fns";
+import { parseISO, isValid, formatDistanceToNowStrict } from "date-fns";
 import { enUS } from "date-fns/locale";
+import { formatDateUS } from "@/lib/date-format";
 import {
   FileText, ShieldCheck, Eye, FileX2, FileClock, CalendarClock, FileWarning, FileMinus,
   Sparkles,
