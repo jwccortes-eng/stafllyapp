@@ -15,6 +15,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import { SmartDateInput } from "@/components/ui/smart-date-input";
+import { formatDateUS } from "@/lib/date-format";
 import {
   ScanEye, Users, Clock, AlertTriangle, CheckCircle2, XCircle,
   Search, CalendarIcon, ArrowUpDown, ChevronDown, Eye,
@@ -461,17 +463,19 @@ export default function Attendance() {
 
           {/* Filters */}
           <div className="flex items-center gap-3 flex-wrap">
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-1.5">
-                  <CalendarIcon className="h-3.5 w-3.5" />
-                  {format(selectedDate, "dd MMM yyyy", { locale: es })}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar mode="single" selected={selectedDate} onSelect={(d) => d && setSelectedDate(d)} />
-              </PopoverContent>
-            </Popover>
+            <div className="w-[170px]">
+              <SmartDateInput
+                value={format(selectedDate, "yyyy-MM-dd")}
+                onChange={(iso) => {
+                  if (!iso) return;
+                  const [y, m, d] = iso.split("-").map(Number);
+                  setSelectedDate(new Date(y, m - 1, d));
+                }}
+                allowClear={false}
+                inputClassName="h-8 text-xs"
+                aria-label="Filtrar por fecha"
+              />
+            </div>
 
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-[160px] h-8 text-xs">
@@ -567,7 +571,7 @@ export default function Attendance() {
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm" className="gap-1.5">
                   <CalendarIcon className="h-3.5 w-3.5" />
-                  {format(reportRange.from, "dd MMM", { locale: es })} – {format(reportRange.to, "dd MMM yyyy", { locale: es })}
+                  {formatDateUS(reportRange.from)} – {formatDateUS(reportRange.to)}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
@@ -582,7 +586,7 @@ export default function Attendance() {
               </PopoverContent>
             </Popover>
 
-            <ReportActionsBar title="Reporte de Asistencia" subtitle={`${format(reportRange.from, "dd/MM/yyyy")} - ${format(reportRange.to, "dd/MM/yyyy")}`} onExportCSV={handleExportCSV} />
+            <ReportActionsBar title="Reporte de Asistencia" subtitle={`${formatDateUS(reportRange.from)} - ${formatDateUS(reportRange.to)}`} onExportCSV={handleExportCSV} />
           </div>
 
           {/* Report KPIs */}
