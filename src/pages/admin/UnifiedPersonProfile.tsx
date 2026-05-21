@@ -1227,47 +1227,55 @@ export default function UnifiedPersonProfile() {
         </Card>
       )}
 
-      {/* ─── FRONT DESK HISTORY ─── */}
+      {/* ─── HISTORIAL DE FRONT DESK (collapsed by default) ─── */}
       {frontDeskVisits.length > 0 && (
-        <Card className="border-border/50">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between mb-2">
-              <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground inline-flex items-center gap-1.5">
-                <ContactRound className="h-3.5 w-3.5" /> Front Desk history
+        <Collapsible>
+          <Card className="border-border/50">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between gap-2">
+                <CollapsibleTrigger className="group inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors">
+                  <ContactRound className="h-3.5 w-3.5" />
+                  Ver historial de Front Desk
+                  <Badge variant="outline" className="text-[9px] ml-1">{frontDeskVisits.length}</Badge>
+                  <ChevronDown className="h-3 w-3 transition-transform group-data-[state=open]:rotate-180" />
+                </CollapsibleTrigger>
+                <Link
+                  to="/app/front-desk"
+                  className="text-[11px] text-primary hover:underline inline-flex items-center gap-1"
+                >
+                  Abrir Front Desk <ExternalLink className="h-3 w-3" />
+                </Link>
               </div>
-              <Link
-                to="/app/front-desk"
-                className="text-[11px] text-primary hover:underline inline-flex items-center gap-1"
-              >
-                Open Front Desk <ExternalLink className="h-3 w-3" />
-              </Link>
-            </div>
-            <div className="divide-y divide-border/40">
-              {frontDeskVisits.slice(0, 6).map((v: any) => (
-                <div key={v.id} className="flex items-center gap-2 py-2 text-xs">
-                  {v.case_code && (
-                    <Badge variant="outline" className="text-[9px] font-mono">{v.case_code}</Badge>
-                  )}
-                  <span className="text-muted-foreground tabular-nums shrink-0">
-                    {new Date(v.checked_in_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                  </span>
-                  <span className="text-muted-foreground truncate">
-                    {String(v.visit_type ?? "").replace(/_/g, " ")}
-                  </span>
-                  {v.pending_count > 0 && (
-                    <Badge variant="outline" className="text-[9px] border-warning/30 bg-warning/10 text-warning">
-                      {v.pending_count} pending
-                    </Badge>
-                  )}
-                  <Badge variant="outline" className="ml-auto text-[9px] capitalize">
-                    {String(v.status ?? "").replace(/_/g, " ")}
-                  </Badge>
+              <CollapsibleContent>
+                <div className="mt-2 divide-y divide-border/40">
+                  {frontDeskVisits.slice(0, 6).map((v: any) => (
+                    <div key={v.id} className="flex items-center gap-2 py-2 text-xs">
+                      {v.case_code && (
+                        <Badge variant="outline" className="text-[9px] font-mono">{v.case_code}</Badge>
+                      )}
+                      <span className="text-muted-foreground tabular-nums shrink-0">
+                        {new Date(v.checked_in_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                      </span>
+                      <span className="text-muted-foreground truncate">
+                        {String(v.visit_type ?? "").replace(/_/g, " ")}
+                      </span>
+                      {v.pending_count > 0 && (
+                        <Badge variant="outline" className="text-[9px] border-warning/30 bg-warning/10 text-warning">
+                          {v.pending_count} pendiente{v.pending_count === 1 ? "" : "s"}
+                        </Badge>
+                      )}
+                      <Badge variant="outline" className="ml-auto text-[9px] capitalize">
+                        {String(v.status ?? "").replace(/_/g, " ")}
+                      </Badge>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+              </CollapsibleContent>
+            </CardContent>
+          </Card>
+        </Collapsible>
       )}
+
 
       {/* ─── Dialogs ─── */}
       {employee && (
