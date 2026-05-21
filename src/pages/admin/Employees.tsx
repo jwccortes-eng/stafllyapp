@@ -1604,8 +1604,23 @@ export default function Employees() {
               >
                 <PremiumAvatar firstName={e.first_name} lastName={e.last_name} avatarUrl={e.avatar_url} size="sm" status={status} />
                 <div className="flex-1 min-w-0">
-                  <span className="text-xs font-semibold truncate block">{formatPersonName(`${e.first_name} ${e.last_name}`)}</span>
-                  <WorkerRiskTags risks={riskAnalysis.byId.get(e.id) ?? []} max={2} className="mt-0.5" />
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="text-xs font-semibold truncate">{formatPersonName(`${e.first_name} ${e.last_name}`)}</span>
+                    {e.employer_identification && (
+                      <span className="shrink-0 text-[9px] font-mono font-semibold text-primary/80 bg-primary/8 px-1.5 py-0.5 rounded" title="ID Stafly · Payroll ID">
+                        ID Stafly #{e.employer_identification}
+                      </span>
+                    )}
+                    {!e.is_active && (
+                      <span className="shrink-0 text-[9px] font-semibold uppercase tracking-wide text-muted-foreground bg-muted px-1.5 py-0.5 rounded">Histórico</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1 flex-wrap">
+                    <WorkerRiskTags risks={riskAnalysis.byId.get(e.id) ?? []} max={2} className="mt-0.5" />
+                    {isMissingPhoto(e) && (
+                      <span className="mt-0.5 text-[9px] font-semibold text-warning bg-warning/10 px-1.5 py-0.5 rounded">Foto pendiente</span>
+                    )}
+                  </div>
                 </div>
                 {e.phone_number && <span className="text-[10px] text-muted-foreground hidden md:inline">{e.phone_number}</span>}
                 {isDriver(e) && <Car className="h-3 w-3 text-sky-500 shrink-0" aria-label="Driver" />}
