@@ -962,16 +962,24 @@ export default function PayrollReconciliationPage() {
   if (!activeBatch) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <PageHeader title="Payroll Reconciliation" subtitle="Motor de auditoría y reconciliación de nómina" />
-          <div className="flex items-center gap-2">
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-2">
+            <PageHeader
+              title="Reconciliación de payroll"
+              subtitle="Revisa fichajes reales, excepciones y validaciones antes de cerrar pagos."
+            />
+            <p className="text-[11px] text-muted-foreground/80 max-w-2xl leading-relaxed">
+              Payroll se calcula con fichajes reales o validaciones aprobadas. Las horas programadas son solo referencia operativa.
+            </p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
             {false && (
               <Button variant="outline" size="sm" className="rounded-xl gap-1.5">
                 <Clock className="h-4 w-4" />Placeholder
               </Button>
             )}
             <Button onClick={() => setShowCreateDialog(true)} size="sm" className="rounded-xl gap-1.5">
-              <Plus className="h-4 w-4" />Nuevo Batch
+              <Plus className="h-4 w-4" />Nuevo batch
             </Button>
           </div>
         </div>
@@ -979,7 +987,7 @@ export default function PayrollReconciliationPage() {
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 gap-3">
             <Loader2 className="h-6 w-6 animate-spin text-primary" />
-            <p className="text-sm text-muted-foreground">Cargando batches...</p>
+            <p className="text-sm text-muted-foreground">Cargando periodos de reconciliación…</p>
           </div>
         ) : batches.length === 0 ? (
           <Card className="border-dashed border-2 shadow-none">
@@ -987,13 +995,14 @@ export default function PayrollReconciliationPage() {
               <div className="p-4 rounded-2xl bg-muted/50 mb-4">
                 <FileText className="h-8 w-8 text-muted-foreground/50" />
               </div>
-              <p className="text-muted-foreground font-medium">No hay batches de reconciliación</p>
-              <p className="text-muted-foreground/70 text-sm mt-1 max-w-sm">Crea uno para comenzar a comparar el truth file contra los datos del sistema.</p>
+              <p className="text-muted-foreground font-medium">Selecciona un periodo para revisar payroll.</p>
+              <p className="text-muted-foreground/70 text-sm mt-1 max-w-sm">Aún no hay batches de reconciliación. Crea uno para comparar fichajes reales contra el archivo de cierre.</p>
               <Button onClick={() => setShowCreateDialog(true)} size="sm" className="mt-4 rounded-xl gap-1.5">
                 <Plus className="h-4 w-4" />Crear primer batch
               </Button>
             </CardContent>
           </Card>
+
         ) : (
           <div className="space-y-2">
             {batches.map(b => (
@@ -1130,20 +1139,24 @@ export default function PayrollReconciliationPage() {
             <span>Todos los batches</span>
           </button>
           <div className="flex items-center gap-3">
-            <h1 className="text-xl font-bold font-heading">Reconciliación</h1>
+            <h1 className="text-xl font-bold font-heading">Reconciliación de payroll</h1>
             {batchStatusBadge(activeBatch.status, truthCounts, (activeBatch as any).reconciliation_mode)}
           </div>
           <p className="text-xs text-muted-foreground mt-1">
-            {activeBatch.truth_source_file_name || "Sin archivo de verdad"}
+            {activeBatch.truth_source_file_name || "Sin archivo de cierre"}
             {activeBatch.payroll_period_start && (
               <span className="ml-2 font-mono text-[10px] bg-muted/50 px-1.5 py-0.5 rounded">
-                {activeBatch.payroll_period_start} → {activeBatch.payroll_period_end}
+                Periodo {activeBatch.payroll_period_start} → {activeBatch.payroll_period_end}
               </span>
             )}
             {!activeBatch.payroll_period_start && (
               <span className="ml-2 text-[10px] text-destructive font-medium">⚠ Sin periodo vinculado</span>
             )}
           </p>
+          <p className="text-[10px] text-muted-foreground/70 mt-1.5 max-w-2xl leading-relaxed">
+            Payroll se calcula con fichajes reales o validaciones aprobadas. Las horas programadas son solo referencia operativa.
+          </p>
+
         </div>
       </div>
 
