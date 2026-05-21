@@ -1,111 +1,69 @@
-# Security Hardening Sprint — StaflyApps
+# StaflyCore Admin IA + Desktop Premium Cleanup v1
 
-Security-only batch. No UI work, no payroll/business logic changes, no RLS loosening. Each fix is isolated and auditable.
+UI-only sprint. Zero backend, RLS, payroll, time_entries, scheduled_shifts, shift_assignments, edge function, schema, or notification changes. All existing routes preserved — only sidebar grouping, labels, and desktop density change.
 
-## Approach
+## 1. Sidebar IA refactor (`src/components/navigation/nav-items.ts` + AdminSidebar)
 
-One migration per finding (or tight group), reviewed before apply. Edge function edits are surgical. After each block I'll pause for QA before moving on, so we don't touch payroll/portal/shifts in an uncontrolled way.
+Replace current ad-hoc `section` strings with 6 canonical groups, in order:
 
-Order is by risk × blast radius (criticals first, hard ones last).
+```text
+A. Operación diaria   → Centro de mando, Operación (ops-center), Turnos, Asistencia, Reloj, Live Map, Front Desk, Staffing Center, Command Center
+B. Equipo             → Equipo (workers), Directorio, Documentos, Aplicaciones, Invitaciones, Solicitudes (tickets/service-requests/staffing-requests)
+C. Clientes y lugares → Clientes, Ubicaciones, Service Categories
+D. Payroll & Finanzas → Compensación, Periodos, Import, Ajustes, Avances, Conceptos, Reconciliación, Pilot Close, Adopción Comp., Review Queue, Reportes, Facturas, W-9, 1099, Payroll Settings, Comparison
+E. Comunicación       → Anuncios, Chat, Notificaciones, AI Workforce, Leaderboard
+F. Sistema            → Configuración, Administración, Migración, Control Tower, Kiosk
+```
 
----
+Every existing nav id keeps its `to` route. Only `section` + `label` change. `roles` gates unchanged. `module` gates unchanged.
 
-## Phase 1 — RLS hardening (DB migrations)
+Group A stays expanded by default. Groups B–F collapsible, defaulting to collapsed on first paint when sidebar is large enough; group containing active route auto-expands (existing pattern in AdminSidebar). If AdminSidebar does not currently support collapsible groups by `section`, add minimal Collapsible wrapper around each section block — purely presentational state, no persistence change required (optional localStorage `stafly:sidebar:section:{name}` boolean).
 
-### M1. `auth_rate_limits` (Finding #1)
-- Drop the `has_role(auth.uid(),'admin')` SELECT policy.
-- Replace with `is_global_owner(auth.uid())` only (service role already bypasses RLS for the edge functions that write it).
-- No writes touched.
+## 2. Spanish-first labels
 
-### M2. Compensation / pay-rate tables (Finding #2)
-Tables: `compensation_analysis_summary`, `compensation_change_log`, `company_compensation_rules`, `payroll_rate_snapshots`.
-- Replace broad member SELECT with the same gate used on `compensation_profiles`:
-  `is_global_owner(uid) OR is_company_owner(uid, company_id) OR user_is_company_admin(uid, company_id) OR has_action_permission(uid, company_id, 'manage_compensation')`.
-- Workers keep their own data via existing self-scoped policies (verify each table has one; if not, add a `WHERE employee_id = current employee` policy so the worker portal doesn't break).
+Quality Staff and all admin tenants get Spanish labels per user list:
+Dashboard→Centro de mando, Operations→Operación, Scheduling→Turnos, Workers→Equipo, Attendance→Asistencia, Time Clock→Reloj, Documents→Documentos, Applications→Aplicaciones, Invitations→Invitaciones, Worker Requests→Solicitudes, Compensation→Compensación, Reconciliation→Reconciliación, Reports→Reportes, Invoices→Facturas, Settings→Configuración, Administration→Administración. Worker portal labels untouched (portal stays as-is). Memory note: Core says English UI standard — this batch overrides for admin sidebar copy only; portal/kiosk untouched. Will update mem://style/language-standard-english to note admin sidebar Spanish exception.
 
-### M3. `locations_v2` cross-tenant writes (Finding #7)
-- Drop bare `has_role(...,'admin')` on INSERT/UPDATE/DELETE.
-- Replace with `is_global_owner(uid) OR user_is_company_admin(uid, company_id)`.
-- SELECT already scoped — untouched.
+## 3. Desktop density polish (low-risk, surgical)
 
----
+Only touch presentational shells, not feature components:
 
-## Phase 2 — SECURITY DEFINER audit (DB migration)
+- `src/layouts/AdminLayout.tsx` (or equivalent main wrapper): raise content `max-w` cap on ≥1280px from current value to `max-w-[1600px]`, tighten top padding from `py-8` → `py-5` on desktop, keep mobile spacing unchanged.
+- `src/components/ui/page-header.tsx`: reduce `mb-6` → `mb-4` on md+; no API change.
+- Dashboard (`/app` desktop variant `AdminDashboardDesktop` if present): no widget changes, only verify spacing tokens and remove redundant empty-state hero cards by gating them on data.length===0 with a slim inline empty hint instead of large card. Skip if any risk of touching data hooks.
 
-### M4. Findings #5, #10, #11
-- Run `supabase--linter` + query `pg_proc`/`pg_views` to list all SECURITY DEFINER functions and views in `public`.
-- For each:
-  - Add `SET search_path = public` if missing.
-  - `REVOKE EXECUTE ... FROM PUBLIC, anon, authenticated` unless intentionally callable.
-  - Re-`GRANT EXECUTE` only to the roles that actually need it (mostly `authenticated` for self-scoped RPCs, none for internal helpers).
-- For SECURITY DEFINER views: convert to SECURITY INVOKER where possible, or wrap behind an RPC.
-- Document each kept-as-is function with reason.
+Out of scope: Workers table redesign (deferred to next batch per user), shift cards, payroll surfaces, portal.
 
-Risk: this is the highest-blast-radius migration. I'll list every function + intended grant in the migration description and pause for explicit approval before applying.
+## 4. Dashboard focus (read-only verification)
 
----
+No data hook changes. Only reorder existing KPI/action panels on desktop so "Needs attention today" + "Scheduled" + "Pending" appear above fold. If AdminDashboardDesktop already renders these, just confirm ordering and adjust grid spans. No new queries, no new widgets.
 
-## Phase 3 — Storage policies
+## 5. QA pass
 
-### M5. `kiosk-photos` UPDATE/DELETE (Finding #9)
-Add scoped policies mirroring existing `kiosk_photos_insert_scoped`:
-- DELETE: `is_global_owner OR user_is_company_admin(uid, try_path_uuid(name,1))`
-- UPDATE: same gate.
+Manual checklist run by user on:
+- Desktop 1280: /app, /app/employees, /app/shifts, /app/attendance, /app/timeclock, /app/ops-center
+- Mobile 390: drawer opens, no horizontal overflow
+- Every sidebar link routes (smoke-click)
+- Console clean
+- Confirm: no RLS, no migrations, no edge function, no payroll math touched
 
----
+## Files to change
 
-## Phase 4 — Edge functions
+1. `src/components/navigation/nav-items.ts` — regroup + relabel (only `section` and `label` fields)
+2. `src/components/navigation/AdminSidebar.tsx` (read first; add collapsible group wrapper if needed)
+3. `src/layouts/AdminLayout.tsx` (read first; widen max-w + tighten desktop padding)
+4. `src/components/ui/page-header.tsx` — tighten desktop bottom margin
+5. `mem://style/language-standard-english` — note admin sidebar Spanish exception
+6. `mem://index.md` — add memory entry for this batch
 
-### EF1. Cron fail-closed (Finding #4)
-Files: `auto-close-periods`, `trial-downgrade`, `shift-reminders`, `invite-reminders`, `generate-reviews`.
-- Change gate from "check only if set" to:
-  ```ts
-  if (!cronSecret || auth !== `Bearer ${cronSecret}`) return 401;
-  ```
-- Remove the TODO comments.
-- Confirm `CRON_SECRET` is configured via `secrets--fetch_secrets`; if missing, ask user to add it before deploy so cron doesn't break.
+## Explicit non-goals
 
-### EF2. `front-desk-checkin` auth + error sanitization (Findings #3, #6)
-- `update_self`, `capture_kiosk_photo`: require `phone + pin`, verify against `employees.access_pin` (matches existing kiosk-clock pattern) before any write. Reject otherwise.
-- `list_payments`: require same phone+PIN gate.
-- `update_visit`, `close_visit`, `submit_rating`, `start_visit`: require the visit's `employee_id` to match the PIN-verified employee.
-- Replace every `err.message` returned to caller with static `"Internal error"`; keep `console.error` server-side for debugging.
-- Same sanitization on `auto-close-periods` line 48.
+- Not touching: useAuth, RLS, payroll, time_entries, scheduled_shifts, shift_assignments, edge functions, migrations, worker portal, notifications, compensation logic, queries.
+- Not redesigning: workers table, shift cards, portal, kiosk.
+- Not adding: new charts, new widgets, new routes, new modules.
 
----
+## Risk
 
-## Phase 5 — PINs (Finding #8)
+Low. All edits are presentational. Only risk is breaking a sidebar route if a `to` value is accidentally mutated — mitigated by only touching `section` and `label` fields in nav-items, plus smoke QA on every link.
 
-PIN hashing is a hard, multi-touch change (kiosk-clock, employee-auth provision/change, password reset flows, migration of existing rows). It also affects worker login at scale.
-
-**Recommendation:** do NOT bundle this into the security batch. Instead:
-- Open a dedicated tracked task (PIN-Hashing Sprint) with: bcrypt RPC, migration of existing PINs to hash on next successful login (lazy upgrade), kiosk-clock + employee-auth refactor, QA across portal/kiosk/invite/reset.
-- This batch: tighten the surface only — confirm no client query selects `access_pin` (already enforced via RPCs in `src/lib/access-pin.ts`), and grep to verify.
-
-I'll mark finding #8 as **deferred with documented plan**, not "fixed".
-
----
-
-## Phase 6 — QA
-
-After each phase:
-- `supabase--linter`
-- `bunx tsc --noEmit`
-- `bunx vitest run`
-- Re-run `security--run_security_scan`.
-- Manual smoke (you): admin shifts loads, worker portal loads, payroll page loads for admin only, kiosk clock-in still works, kiosk profile-update now requires PIN.
-
-Final report: per-finding PASS / DEFERRED / FALSE_POSITIVE table, files/migrations/policies/grants changed.
-
----
-
-## What I will NOT touch
-- `time_entries`, `scheduled_shifts`, `shift_assignments`, payroll math, notifications.
-- S1/S3/S4 shifts work (just shipped).
-- Worker portal UI.
-- Any business logic.
-
-## Open questions before I start
-1. Approve deferring PIN hashing (Finding #8) to its own sprint? Or do you want it in-scope now (much bigger change, higher regression risk)?
-2. For `front-desk-checkin` — confirm the kiosk uses phone+PIN (same pattern as `kiosk-clock`) as the auth gate? If kiosk has a different auth model (device token, etc.), tell me before I wire PIN verification.
-3. OK to apply migrations one phase at a time with your approval between each, or batch Phase 1+2+3 together?
+Ready to implement on approval.
