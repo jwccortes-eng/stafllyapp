@@ -1361,7 +1361,7 @@ export default function Employees() {
             <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setColPrefsOpen(true)} title="Column preferences">
               <Settings2 className="h-3.5 w-3.5 text-muted-foreground" />
             </Button>
-            <ViewSwitcher value={viewMode} onChange={setViewMode} />
+            <ViewSwitcher value={viewMode} onChange={setViewMode} modes={["roster", "table", "compact"]} />
           </>
         }
       />
