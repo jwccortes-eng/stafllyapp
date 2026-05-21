@@ -166,6 +166,7 @@ export function ShiftDetailDialog({
   initialTab,
 }: ShiftDetailDialogProps) {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const { selectedCompanyId, selectedCompany } = useCompany();
   const [showAddPanel, setShowAddPanel] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
