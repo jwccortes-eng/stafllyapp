@@ -196,7 +196,7 @@ export default function DocumentsCenter() {
 
   const fmtDate = (s: string | null) => {
     if (!s) return "—";
-    try { return format(new Date(s), "PP", { locale: enUS }); } catch { return "—"; }
+    return formatDateUS(s) || "—";
   };
 
   const FILTERS: { key: FilterKey; label: string }[] = [
