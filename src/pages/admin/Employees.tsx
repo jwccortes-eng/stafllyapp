@@ -863,6 +863,16 @@ export default function Employees() {
       const bd = lastActivityDate(b)?.getTime() ?? 0;
       return (ad - bd) * dir;
     }
+    if (sort.key === "photo") {
+      // Order: required (0) → review (1) → ok/null (2). Asc = problems first.
+      const rank = (e: EmployeeRecord) => {
+        const s = photoStatusFor(e);
+        if (s === "required") return 0;
+        if (s === "review") return 1;
+        return 2;
+      };
+      return (rank(a) - rank(b)) * dir;
+    }
     return 0;
   });
 
