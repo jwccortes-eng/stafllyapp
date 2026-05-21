@@ -1,8 +1,8 @@
-import { LayoutGrid, List, Rows3 } from "lucide-react";
+import { LayoutGrid, List, Rows3, IdCard } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
-export type ViewMode = "table" | "cards" | "compact";
+export type ViewMode = "roster" | "table" | "cards" | "compact";
 
 interface ViewSwitcherProps {
   value: ViewMode;
@@ -13,15 +13,16 @@ interface ViewSwitcherProps {
 }
 
 const MODE_META: Record<ViewMode, { Icon: typeof List; label: string }> = {
+  roster: { Icon: IdCard, label: "Roster" },
   table: { Icon: List, label: "Table" },
   cards: { Icon: LayoutGrid, label: "Cards" },
   compact: { Icon: Rows3, label: "Compact" },
 };
 
 /**
- * Segmented control to switch between Table / Cards / Compact list views.
+ * Segmented control to switch between Roster / Table / Cards / Compact views.
  */
-export function ViewSwitcher({ value, onChange, modes = ["table", "cards", "compact"], className }: ViewSwitcherProps) {
+export function ViewSwitcher({ value, onChange, modes = ["roster", "table", "cards", "compact"], className }: ViewSwitcherProps) {
   return (
     <div
       role="tablist"
