@@ -29,6 +29,7 @@ import {
   CATEGORY_LABELS,
   type RequirementDef,
 } from "@/lib/compliance/requirement-catalog";
+import { WorkerSelfServiceSections } from "@/components/portal/WorkerSelfServiceSections";
 import { cn } from "@/lib/utils";
 
 const ICONS: Record<RequirementDef["icon"], React.ComponentType<{ className?: string }>> = {
@@ -48,7 +49,7 @@ const ICONS: Record<RequirementDef["icon"], React.ComponentType<{ className?: st
 
 export default function UpdateCenter() {
   const { effectiveEmployeeId } = useEffectiveEmployee();
-  const { loading, items, summary } = useWorkerCompliance(effectiveEmployeeId);
+  const { loading, items, summary, refresh } = useWorkerCompliance(effectiveEmployeeId);
 
   return (
     <div className="space-y-4 animate-fade-in pb-28">
@@ -100,6 +101,14 @@ export default function UpdateCenter() {
             />
           </div>
         </div>
+      )}
+
+      {/* ── Self-service editable cards (Phase 1) ── */}
+      {effectiveEmployeeId && (
+        <WorkerSelfServiceSections
+          employeeId={effectiveEmployeeId}
+          onUpdated={() => { void refresh(); }}
+        />
       )}
 
       {/* ── Loading ── */}
