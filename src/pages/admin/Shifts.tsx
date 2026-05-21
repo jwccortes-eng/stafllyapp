@@ -1669,7 +1669,7 @@ function DesktopShifts() {
     setCreateOpen(true);
   };
 
-  // ── Operations KPI strip (replaces legacy 4-card grid) ──
+  // ── Operations KPI strip (operator-first) ──
   const opsKpis: OpsKpiItem[] = [
     {
       key: "today",
@@ -1679,54 +1679,102 @@ function DesktopShifts() {
       icon: <CalendarDays className="h-3.5 w-3.5" />,
     },
     {
-      key: "workers",
-      label: "Trabajadores",
-      value: loading ? "—" : kpiMetrics.uniqueWorkers,
-      tone: "success",
-      icon: <Users className="h-3.5 w-3.5" />,
-    },
-    {
-      key: "missing",
-      label: "Faltantes",
-      value: loading ? "—" : kpiMetrics.missingWorkers,
-      tone: kpiMetrics.missingWorkers > 0 ? "critical" : "success",
+      key: "needs",
+      label: "Necesitan personal",
+      value: loading ? "—" : kpiMetrics.needsStaffCount,
+      tone: kpiMetrics.needsStaffCount > 0 ? "critical" : "success",
       icon: <UserX className="h-3.5 w-3.5" />,
-      hint: kpiMetrics.missingWorkers > 0 ? "sin cubrir" : "cubierto",
     },
     {
-      key: "hours",
-      label: "Horas hoy",
-      value: loading ? "—" : kpiMetrics.totalHours,
+      key: "drafts",
+      label: "Borradores",
+      value: loading ? "—" : kpiMetrics.draftsCount,
+      tone: kpiMetrics.draftsCount > 0 ? "warning" : "muted",
+      icon: <FileText className="h-3.5 w-3.5" />,
+    },
+    {
+      key: "published",
+      label: "Publicados",
+      value: loading ? "—" : kpiMetrics.publishedCount,
       tone: "info",
-      icon: <Clock className="h-3.5 w-3.5" />,
+      icon: <Send className="h-3.5 w-3.5" />,
+    },
+    {
+      key: "incomplete",
+      label: "Sin ubicación",
+      value: loading ? "—" : kpiMetrics.missingLocationCount,
+      tone: kpiMetrics.missingLocationCount > 0 ? "warning" : "muted",
+      icon: <MapPin className="h-3.5 w-3.5" />,
     },
   ];
+
+  // ── Attention chips (deep-link to existing filters; no new logic) ──
+  const attentionChips = [
+    {
+      key: "needs",
+      label: "Sin personal completo",
+      count: kpiMetrics.needsStaffCount,
+      tone: "critical" as const,
+      icon: UserX,
+      active: !!filters.needsStaffingOnly,
+      onClick: () => setFilters({ ...filters, needsStaffingOnly: !filters.needsStaffingOnly }),
+    },
+    {
+      key: "drafts",
+      label: "Borradores listos para publicar",
+      count: kpiMetrics.draftsCount,
+      tone: "warning" as const,
+      icon: FileText,
+      active: filters.publishStatus === "draft",
+      onClick: () => setFilters({ ...filters, publishStatus: filters.publishStatus === "draft" ? "" : "draft" }),
+    },
+    {
+      key: "noloc",
+      label: "Sin ubicación / punto de encuentro",
+      count: kpiMetrics.missingLocationCount,
+      tone: "warning" as const,
+      icon: MapPin,
+      active: false,
+      onClick: undefined,
+    },
+  ].filter(c => c.count > 0);
 
   return (
     <div className="space-y-4">
       {/* ── PAGE HEADER (unified with rest of app) ── */}
       <PageHeader
         title="Turnos"
-        subtitle="Centro operativo de programación y cobertura"
+        subtitle="Planifica, publica y controla la cobertura de tu operación diaria."
         icon={CalendarRange}
         rightSlot={
           <>
+            {canEdit && (
+              <Button
+                size="sm"
+                className="h-8 text-xs gap-1.5"
+                onClick={() => { resetForm(); setCreateOpen(true); }}
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Nuevo turno
+              </Button>
+            )}
             <Button
               size="sm"
-              className="h-8 text-xs gap-1.5"
+              variant="ghost"
+              className="h-8 text-xs gap-1.5 text-muted-foreground"
               onClick={() => navigate("/app/daily-ops")}
             >
               <ScanEye className="h-3.5 w-3.5" />
-              Daily Ops
+              Operaciones del día
             </Button>
             {canEdit && (
-              <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => setSettingsOpen(true)} title="Shift settings">
+              <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => setSettingsOpen(true)} title="Configuración de turnos">
                 <Settings2 className="h-4 w-4 text-muted-foreground" />
               </Button>
             )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button size="sm" variant="outline" className="h-8 text-xs">
+                <Button size="sm" variant="ghost" className="h-8 text-xs text-muted-foreground">
                   <MoreHorizontal className="h-3.5 w-3.5 mr-1" /> Más
                 </Button>
               </DropdownMenuTrigger>
