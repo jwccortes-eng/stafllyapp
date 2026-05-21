@@ -1689,7 +1689,7 @@ function DesktopShifts() {
       key: "drafts",
       label: "Borradores",
       value: loading ? "—" : kpiMetrics.draftsCount,
-      tone: kpiMetrics.draftsCount > 0 ? "warning" : "muted",
+      tone: kpiMetrics.draftsCount > 0 ? "warning" : "neutral",
       icon: <FileText className="h-3.5 w-3.5" />,
     },
     {
@@ -1703,7 +1703,7 @@ function DesktopShifts() {
       key: "incomplete",
       label: "Sin ubicación",
       value: loading ? "—" : kpiMetrics.missingLocationCount,
-      tone: kpiMetrics.missingLocationCount > 0 ? "warning" : "muted",
+      tone: kpiMetrics.missingLocationCount > 0 ? "warning" : "neutral",
       icon: <MapPin className="h-3.5 w-3.5" />,
     },
   ];
