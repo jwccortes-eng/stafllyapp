@@ -254,7 +254,17 @@ function InfoTab({ employee, companyId, isEditing, form, setForm, isPrivileged, 
   onJumpToDocuments?: () => void;
 }) {
   const SENSITIVE = new Set(["access_pin", "driver_licence", "has_car", "country_code", "english_level"]);
+  // Optional/legacy fields hidden by default when empty in read-only mode.
+  // Keeps data accessible but reduces visual noise.
+  const LEGACY_OPTIONAL = new Set(["direct_manager", "groups", "tags", "qualify", "recommended_by", "driver_licence", "english_level"]);
+  const isEmptyVal = (v: any) => v == null || v === "" || (Array.isArray(v) && v.length === 0);
   const filteredEmployment = EMPLOYMENT_FIELDS.filter(f => isPrivileged || !SENSITIVE.has(f.key));
+  const employmentVisible = useMemo(
+    () => filteredEmployment.filter(f => isEditing || !LEGACY_OPTIONAL.has(f.key) || !isEmptyVal(employee?.[f.key])),
+    [filteredEmployment, isEditing, employee],
+  );
+  const employmentHidden = filteredEmployment.filter(f => !employmentVisible.includes(f));
+
 
   return (
     <div className="space-y-4">
