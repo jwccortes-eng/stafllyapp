@@ -179,9 +179,11 @@ function PhotoCard({
             size="sm"
           />
           <p className="text-[11.5px] text-muted-foreground/85 leading-snug">
-            Sube una foto tipo documento: rostro claro, fondo limpio y buena
-            iluminación.
+            {hasPhoto
+              ? "Foto tipo documento: rostro claro, fondo limpio y buena iluminación."
+              : "Tu foto profesional es requerida para mantener tu perfil listo para nuevas oportunidades."}
           </p>
+
         </div>
       </div>
 
@@ -224,6 +226,13 @@ function PhotoCard({
         TODO — Professional Photo Assistant (future, NOT in this sprint):
           crop face · clean background · improve lighting · optional formal attire
           worker + admin approval before replacing the original photo.
+
+        TODO — Progressive enforcement (future, NOT in this sprint):
+          Professional photo requirement should later gate READINESS &
+          OPPORTUNITY eligibility — accepting new shifts, applying to
+          campaigns, appearing publicly as provider, booking eligibility.
+          It must NEVER block login, /portal/update-center access, document
+          upload, or contact-with-support.
       */}
     </SectionShell>
   );

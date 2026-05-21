@@ -1766,9 +1766,11 @@ export default function Employees() {
                       <WorkerRiskTags risks={risks} max={2} />
                       {(() => {
                         const ps = photoStatusFor(e);
-                        // Always surface "required". Only surface "review" while
-                        // the operator is auditing photos (no-photo tab).
-                        if (ps === "required" || ps === "review") {
+                        // Roster hygiene: always surface "Foto requerida" so
+                        // missing photos are unmistakable. Only surface
+                        // "Revisar foto" inside the dedicated photo-audit tab
+                        // (no-photo) — otherwise it spams every active worker.
+                        if (ps === "required" || (ps === "review" && statusTab === "no-photo")) {
                           return (
                             <Tooltip>
                               <TooltipTrigger asChild>
@@ -1778,7 +1780,7 @@ export default function Employees() {
                               </TooltipTrigger>
                               <TooltipContent side="top" className="text-xs max-w-[240px]">
                                 {ps === "required"
-                                  ? "Solicita una foto tipo documento: rostro claro, fondo limpio y buena iluminación."
+                                  ? "Foto tipo documento: rostro claro, fondo limpio y buena iluminación. No se aceptan paisajes, logos, caricaturas, fotos grupales ni contenido sugestivo."
                                   : "Foto cargada — falta revisión manual antes de aprobar."}
                               </TooltipContent>
                             </Tooltip>
