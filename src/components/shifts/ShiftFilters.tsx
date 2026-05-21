@@ -108,7 +108,7 @@ export function ShiftFilters({ filters, onChange, clients, locations = [], allow
         onClick={() => update({ needsStaffingOnly: !filters.needsStaffingOnly })}
       >
         <AlertTriangle className="h-3 w-3" />
-        Needs staffing
+        Necesita personal
       </Button>
 
       <Button

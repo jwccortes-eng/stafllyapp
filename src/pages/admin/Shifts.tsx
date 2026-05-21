@@ -24,7 +24,7 @@ import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, A
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Calendar as CalendarWidget } from "@/components/ui/calendar";
-import { Plus, Loader2, ChevronLeft, ChevronRight, CalendarDays, LayoutGrid, Users, Building2, Calendar, CalendarIcon, AlertTriangle, CheckCircle2, Clock, Lock, Unlock, Send, Upload, MoreHorizontal, ScanEye, MessageSquare, Hash, CreditCard, FileText, Car, UserX, Map, Copy, Settings2, CalendarRange } from "lucide-react";
+import { Plus, Loader2, ChevronLeft, ChevronRight, CalendarDays, LayoutGrid, Users, Building2, Calendar, CalendarIcon, AlertTriangle, CheckCircle2, Clock, Lock, Unlock, Send, Upload, MoreHorizontal, ScanEye, MessageSquare, Hash, CreditCard, FileText, Car, UserX, Map, MapPin, Copy, Settings2, CalendarRange } from "lucide-react";
 import { formatDisplayText } from "@/lib/format-helpers";
 import { PageHeader } from "@/components/ui/page-header";
 import { OpsKpiStrip, type OpsKpiItem } from "@/components/operations/OpsKpiStrip";
@@ -517,7 +517,29 @@ function DesktopShifts() {
       totalMinutes += diff;
     }
     const totalHours = `${Math.floor(totalMinutes / 60)}h ${String(totalMinutes % 60).padStart(2, "0")}m`;
-    return { todayShifts: todayShifts.length, uniqueWorkers, missingWorkers, totalHours };
+
+    // Operator-first additions (UI-only, read from already-loaded data)
+    const draftsCount = filteredShifts.filter(s => isDraftShift(s)).length;
+    const publishedCount = filteredShifts.filter(s => isPublishedShift(s) && s.status !== "locked").length;
+    const needsStaffCount = filteredShifts.filter(s => {
+      const slots = (s as any).slots ?? 0;
+      const assigned = assignments.filter(a => a.shift_id === s.id && a.status !== "rejected").length;
+      return slots > 0 && assigned < slots;
+    }).length;
+    const missingLocationCount = filteredShifts.filter(s =>
+      !s.location_id && !(s as any).meeting_point_location_id && !((s as any).meeting_point ?? "").trim()
+    ).length;
+
+    return {
+      todayShifts: todayShifts.length,
+      uniqueWorkers,
+      missingWorkers,
+      totalHours,
+      draftsCount,
+      publishedCount,
+      needsStaffCount,
+      missingLocationCount,
+    };
   }, [filteredShifts, assignments]);
 
   const weekDays = useMemo(() =>
@@ -1647,7 +1669,7 @@ function DesktopShifts() {
     setCreateOpen(true);
   };
 
-  // ── Operations KPI strip (replaces legacy 4-card grid) ──
+  // ── Operations KPI strip (operator-first) ──
   const opsKpis: OpsKpiItem[] = [
     {
       key: "today",
@@ -1657,54 +1679,102 @@ function DesktopShifts() {
       icon: <CalendarDays className="h-3.5 w-3.5" />,
     },
     {
-      key: "workers",
-      label: "Trabajadores",
-      value: loading ? "—" : kpiMetrics.uniqueWorkers,
-      tone: "success",
-      icon: <Users className="h-3.5 w-3.5" />,
-    },
-    {
-      key: "missing",
-      label: "Faltantes",
-      value: loading ? "—" : kpiMetrics.missingWorkers,
-      tone: kpiMetrics.missingWorkers > 0 ? "critical" : "success",
+      key: "needs",
+      label: "Necesitan personal",
+      value: loading ? "—" : kpiMetrics.needsStaffCount,
+      tone: kpiMetrics.needsStaffCount > 0 ? "critical" : "success",
       icon: <UserX className="h-3.5 w-3.5" />,
-      hint: kpiMetrics.missingWorkers > 0 ? "sin cubrir" : "cubierto",
     },
     {
-      key: "hours",
-      label: "Horas hoy",
-      value: loading ? "—" : kpiMetrics.totalHours,
+      key: "drafts",
+      label: "Borradores",
+      value: loading ? "—" : kpiMetrics.draftsCount,
+      tone: kpiMetrics.draftsCount > 0 ? "warning" : "neutral",
+      icon: <FileText className="h-3.5 w-3.5" />,
+    },
+    {
+      key: "published",
+      label: "Publicados",
+      value: loading ? "—" : kpiMetrics.publishedCount,
       tone: "info",
-      icon: <Clock className="h-3.5 w-3.5" />,
+      icon: <Send className="h-3.5 w-3.5" />,
+    },
+    {
+      key: "incomplete",
+      label: "Sin ubicación",
+      value: loading ? "—" : kpiMetrics.missingLocationCount,
+      tone: kpiMetrics.missingLocationCount > 0 ? "warning" : "neutral",
+      icon: <MapPin className="h-3.5 w-3.5" />,
     },
   ];
+
+  // ── Attention chips (deep-link to existing filters; no new logic) ──
+  const attentionChips = [
+    {
+      key: "needs",
+      label: "Sin personal completo",
+      count: kpiMetrics.needsStaffCount,
+      tone: "critical" as const,
+      icon: UserX,
+      active: !!filters.needsStaffingOnly,
+      onClick: () => setFilters({ ...filters, needsStaffingOnly: !filters.needsStaffingOnly }),
+    },
+    {
+      key: "drafts",
+      label: "Borradores listos para publicar",
+      count: kpiMetrics.draftsCount,
+      tone: "warning" as const,
+      icon: FileText,
+      active: filters.publishStatus === "draft",
+      onClick: () => setFilters({ ...filters, publishStatus: filters.publishStatus === "draft" ? "" : "draft" }),
+    },
+    {
+      key: "noloc",
+      label: "Sin ubicación / punto de encuentro",
+      count: kpiMetrics.missingLocationCount,
+      tone: "warning" as const,
+      icon: MapPin,
+      active: false,
+      onClick: undefined,
+    },
+  ].filter(c => c.count > 0);
 
   return (
     <div className="space-y-4">
       {/* ── PAGE HEADER (unified with rest of app) ── */}
       <PageHeader
         title="Turnos"
-        subtitle="Centro operativo de programación y cobertura"
+        subtitle="Planifica, publica y controla la cobertura de tu operación diaria."
         icon={CalendarRange}
         rightSlot={
           <>
+            {canEdit && (
+              <Button
+                size="sm"
+                className="h-8 text-xs gap-1.5"
+                onClick={() => { resetForm(); setCreateOpen(true); }}
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Nuevo turno
+              </Button>
+            )}
             <Button
               size="sm"
-              className="h-8 text-xs gap-1.5"
+              variant="ghost"
+              className="h-8 text-xs gap-1.5 text-muted-foreground"
               onClick={() => navigate("/app/daily-ops")}
             >
               <ScanEye className="h-3.5 w-3.5" />
-              Daily Ops
+              Operaciones del día
             </Button>
             {canEdit && (
-              <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => setSettingsOpen(true)} title="Shift settings">
+              <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => setSettingsOpen(true)} title="Configuración de turnos">
                 <Settings2 className="h-4 w-4 text-muted-foreground" />
               </Button>
             )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button size="sm" variant="outline" className="h-8 text-xs">
+                <Button size="sm" variant="ghost" className="h-8 text-xs text-muted-foreground">
                   <MoreHorizontal className="h-3.5 w-3.5 mr-1" /> Más
                 </Button>
               </DropdownMenuTrigger>
@@ -1728,6 +1798,42 @@ function DesktopShifts() {
 
       {/* ── OPS KPI STRIP ── */}
       <OpsKpiStrip items={opsKpis} />
+
+      {/* ── Qué necesita atención ── compact action center (UI-only, deep-links to existing filters) */}
+      {!loading && attentionChips.length > 0 && (
+        <div className="flex items-center gap-2 flex-wrap rounded-xl border border-border/40 bg-card/60 px-3 py-2">
+          <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground shrink-0">
+            Qué necesita atención
+          </span>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {attentionChips.map(c => {
+              const Icon = c.icon;
+              const toneClass =
+                c.tone === "critical"
+                  ? "bg-destructive/10 text-destructive border-destructive/25 hover:bg-destructive/15"
+                  : "bg-warning/10 text-warning border-warning/25 hover:bg-warning/15";
+              const Cmp: any = c.onClick ? "button" : "span";
+              return (
+                <Cmp
+                  key={c.key}
+                  type={c.onClick ? "button" : undefined}
+                  onClick={c.onClick}
+                  className={cn(
+                    "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] font-medium transition-colors",
+                    toneClass,
+                    c.onClick ? "cursor-pointer" : "cursor-default",
+                    c.active && "ring-1 ring-current/40",
+                  )}
+                >
+                  <Icon className="h-3 w-3" />
+                  <span>{c.label}</span>
+                  <span className="font-mono tabular-nums opacity-80">{c.count}</span>
+                </Cmp>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* ── OPS TOOLBAR: view switcher · date nav · today ── */}
       <OpsToolbar
