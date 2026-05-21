@@ -1067,51 +1067,77 @@ export default function UnifiedPersonProfile() {
                 />
               </div>
 
-              <div className="mt-2.5 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
-                {readiness.missingPersonal.slice(0, 6).map((field) => (
-                  <div key={`p-${field}`} className="flex items-center gap-1.5">
-                    <span className="h-1 w-1 rounded-full bg-warning shrink-0" />
-                    <span className="capitalize truncate">Personal: {field.replace(/_/g, " ")}</span>
+              {(() => {
+                type Item = { key: string; icon: any; tone: "warning" | "destructive" | "muted"; text: string };
+                const items: Item[] = [];
+                // Critical first: rejected/missing required docs
+                readiness.missingDocuments.forEach((d) => items.push({
+                  key: `m-${d.category}`, icon: null, tone: "destructive",
+                  text: `Falta documento requerido: ${d.label}`,
+                }));
+                if (rejectedDocs > 0) items.push({
+                  key: "rej", icon: AlertTriangle, tone: "destructive",
+                  text: `${rejectedDocs} documento${rejectedDocs === 1 ? "" : "s"} rechazado${rejectedDocs === 1 ? "" : "s"} · requiere reemplazo`,
+                });
+                if (pendingDocs > 0) items.push({
+                  key: "pen", icon: Clock, tone: "warning",
+                  text: `${pendingDocs} documento${pendingDocs === 1 ? "" : "s"} en revisión`,
+                });
+                // Then personal fields
+                readiness.missingPersonal.forEach((field) => items.push({
+                  key: `p-${field}`, icon: null, tone: "warning",
+                  text: `Personal: ${field.replace(/_/g, " ")}`,
+                }));
+                // Then enrichment / optional
+                if (portalNotActive) items.push({
+                  key: "portal", icon: ShieldOff, tone: "muted",
+                  text: `Portal ${hasInvitation ? "invitado pero no activado" : "sin invitar todavía"}`,
+                });
+                items.push({
+                  key: "clock", icon: Clock, tone: "muted",
+                  text: lastPayrollDate ? `Último fichaje ${safeDistance(lastPayrollDate)}` : "Sin fichajes registrados",
+                });
+
+                const top = items.slice(0, 3);
+                const rest = items.slice(3);
+                const dotClass = (t: Item["tone"]) =>
+                  t === "destructive" ? "bg-destructive" : t === "warning" ? "bg-warning" : "bg-muted-foreground/40";
+                const iconClass = (t: Item["tone"]) =>
+                  t === "destructive" ? "text-destructive" : t === "warning" ? "text-warning" : "text-muted-foreground";
+                const renderRow = (it: Item) => (
+                  <div key={it.key} className="flex items-center gap-1.5">
+                    {it.icon
+                      ? <it.icon className={cn("h-3 w-3 shrink-0", iconClass(it.tone))} />
+                      : <span className={cn("h-1 w-1 rounded-full shrink-0", dotClass(it.tone))} />}
+                    <span className="truncate">{it.text}</span>
                   </div>
-                ))}
-                {readiness.missingDocuments.slice(0, 6).map((d) => (
-                  <div key={`m-${d.category}`} className="flex items-center gap-1.5">
-                    <span className="h-1 w-1 rounded-full bg-destructive shrink-0" />
-                    <span className="truncate">Required document missing: {d.label}</span>
-                  </div>
-                ))}
-                {pendingDocs > 0 && (
-                  <div className="flex items-center gap-1.5">
-                    <Clock className="h-3 w-3 text-warning shrink-0" />
-                    <span>{pendingDocs} document{pendingDocs === 1 ? "" : "s"} awaiting admin review</span>
-                  </div>
-                )}
-                {rejectedDocs > 0 && (
-                  <div className="flex items-center gap-1.5">
-                    <AlertTriangle className="h-3 w-3 text-destructive shrink-0" />
-                    <span>{rejectedDocs} document{rejectedDocs === 1 ? "" : "s"} rejected · replacement needed</span>
-                  </div>
-                )}
-                {portalNotActive && (
-                  <div className="flex items-center gap-1.5">
-                    <ShieldOff className="h-3 w-3 text-muted-foreground shrink-0" />
-                    <span>
-                      Portal {hasInvitation ? "invited but not activated" : "not invited yet"}
-                    </span>
-                  </div>
-                )}
-                {lastPayrollDate ? (
-                  <div className="flex items-center gap-1.5">
-                    <Clock className="h-3 w-3 text-muted-foreground shrink-0" />
-                    <span>Last clock-in {safeDistance(lastPayrollDate)}</span>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-1.5">
-                    <Clock className="h-3 w-3 text-muted-foreground shrink-0" />
-                    <span>No clock-ins on record</span>
-                  </div>
-                )}
-              </div>
+                );
+
+                return (
+                  <>
+                    <p className="mt-2.5 text-[10.5px] text-muted-foreground/80">
+                      Completa estos datos para mantener al trabajador listo para turnos y pagos.
+                    </p>
+                    <div className="mt-1.5 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
+                      {top.map(renderRow)}
+                    </div>
+                    {rest.length > 0 && (
+                      <Collapsible>
+                        <CollapsibleTrigger className="group mt-2 inline-flex items-center gap-1 text-[10.5px] font-medium text-muted-foreground hover:text-foreground transition-colors">
+                          Ver todos los pendientes ({rest.length})
+                          <ChevronDown className="h-3 w-3 transition-transform group-data-[state=open]:rotate-180" />
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                          <div className="mt-1.5 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
+                            {rest.map(renderRow)}
+                          </div>
+                        </CollapsibleContent>
+                      </Collapsible>
+                    )}
+                  </>
+                );
+              })()}
+
 
               {/* Recommended action */}
               <div className="mt-3 flex items-center justify-between gap-2 pt-2 border-t border-border/40">
