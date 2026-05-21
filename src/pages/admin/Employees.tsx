@@ -83,6 +83,7 @@ import { useCompanyDocuments } from "@/hooks/useCompanyDocuments";
 import MobileDataQualitySummary from "@/components/employee/MobileDataQualitySummary";
 import MobileWorkersCommandView from "@/components/employee/MobileWorkersCommandView";
 import { WorkerPhotoStatusChip } from "@/components/employee/WorkerPhotoStatusChip";
+import { PhotoReviewCriteriaCard } from "@/components/employee/PhotoReviewCriteriaCard";
 
 // Fields that only owner/admin can see
 const SENSITIVE_FIELD_KEYS = new Set([
@@ -806,14 +807,14 @@ export default function Employees() {
       case "inactive": return e.is_active === false;
       case "missing-docs": return isMissingDocs(e);
       case "no-photo": {
-        if (!isMissingPhoto(e) && photoFilter !== "unreviewed") {
-          // Only show "review" workers if explicitly opted-in via filter
-          if (photoFilter === "all") return false;
-        }
+        // Photo Review Queue v1:
+        //   "all"        → both missing AND uploaded-but-unreviewed
+        //   "missing"    → only missing avatar
+        //   "unreviewed" → only uploaded photos (no review field yet → all of them)
         const status = photoStatusFor(e);
+        if (status === null) return false; // inactive
         if (photoFilter === "missing") return status === "required";
         if (photoFilter === "unreviewed") return status === "review";
-        // "all" within tab → either required or review (uploaded but unreviewed)
         return status === "required" || status === "review";
       }
       case "drivers": return isDriver(e);
@@ -1430,35 +1431,20 @@ export default function Employees() {
         }
       />
 
-      {/* ─── Photo Quality sub-filter — only when on "Foto requerida" tab ─── */}
+      {/* ─── Photo Review Queue v1 — Foto requerida tab header ─── */}
       {statusTab === "no-photo" && (
-        <div className="rounded-xl border border-warning/20 bg-warning/5 px-3 py-2 space-y-1.5">
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="text-[10px] uppercase tracking-wide text-warning font-semibold mr-1">Foto:</span>
-            {([
-              { key: "all" as const, label: "Todas" },
-              { key: "missing" as const, label: "Sin foto" },
-              { key: "unreviewed" as const, label: "Subida sin revisar" },
-            ]).map((opt) => (
-              <button
-                key={opt.key}
-                type="button"
-                onClick={() => setPhotoFilter(opt.key)}
-                className={cn(
-                  "px-2 py-0.5 rounded-full text-[10px] font-semibold border transition",
-                  photoFilter === opt.key
-                    ? "bg-warning text-warning-foreground border-warning"
-                    : "bg-card text-muted-foreground border-border hover:text-foreground",
-                )}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
-          <p className="text-[10.5px] text-muted-foreground leading-snug">
-            Foto profesional: rostro claro, fondo limpio, buena iluminación. No se aceptan paisajes, logos, caricaturas, fotos grupales ni contenido sugestivo.
-          </p>
-        </div>
+        <PhotoReviewCriteriaCard
+          photoFilter={photoFilter}
+          onPhotoFilterChange={setPhotoFilter}
+          counts={{
+            all: employees.filter((e) => {
+              const s = photoStatusFor(e);
+              return s === "required" || s === "review";
+            }).length,
+            missing: employees.filter((e) => photoStatusFor(e) === "required").length,
+            unreviewed: employees.filter((e) => photoStatusFor(e) === "review").length,
+          }}
+        />
       )}
 
 
