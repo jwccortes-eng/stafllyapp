@@ -767,6 +767,19 @@ export default function Employees() {
   const isMissingPhoto = (e: EmployeeRecord) =>
     e.is_active !== false && !(e.avatar_url && String(e.avatar_url).trim().length > 0);
 
+  /**
+   * Photo Quality Gate v1 — Spanish-first status resolver.
+   * No DB review field exists yet, so we never claim "approved".
+   *   - active + no avatar           → "required"  (Foto requerida)
+   *   - active + has avatar          → "review"    (Revisar foto · sin revisar)
+   *   - inactive                     → null        (silent)
+   */
+  const photoStatusFor = (e: EmployeeRecord): "required" | "review" | null => {
+    if (e.is_active === false) return null;
+    const has = e.avatar_url && String(e.avatar_url).trim().length > 0;
+    return has ? "review" : "required";
+  };
+
   const statusCounts = {
     active: employees.filter(e => e.is_active !== false && !!e.user_id).length,
     invited: employees.filter(e => e.is_active !== false && !e.user_id && !!invitations[e.id]).length,
