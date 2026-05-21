@@ -157,11 +157,12 @@ function PhotoCard({
   lastName: string;
   onUploaded: (url: string) => void;
 }) {
+  const hasPhoto = !!avatarUrl;
   return (
     <SectionShell
       icon={<Camera className="h-3.5 w-3.5" />}
       title="Foto profesional"
-      complete={!!avatarUrl}
+      complete={hasPhoto}
     >
       <div className="flex items-center gap-3">
         <EmployeeAvatar
@@ -171,13 +172,44 @@ function PhotoCard({
           size="lg"
           className="shrink-0"
         />
-        <div className="flex-1 min-w-0">
-          <p className="text-[12px] text-muted-foreground/80 leading-snug">
-            Rostro claro, fondo limpio, buena iluminación. Sin paisajes,
-            logos ni avatares.
+        <div className="flex-1 min-w-0 space-y-1.5">
+          <WorkerPhotoStatusChip
+            status={hasPhoto ? "pending" : "required"}
+            size="sm"
+          />
+          <p className="text-[11.5px] text-muted-foreground/85 leading-snug">
+            Sube una foto tipo documento: rostro claro, fondo limpio y buena
+            iluminación.
           </p>
         </div>
       </div>
+
+      {/* Do / Don't guide — Photo Update Flow v2 */}
+      <div className="mt-3 grid grid-cols-2 gap-2 rounded-xl bg-muted/30 p-2.5 text-[10.5px] leading-snug">
+        <div className="space-y-0.5">
+          <p className="font-semibold text-emerald-600 dark:text-emerald-400 text-[10px]">Aceptado</p>
+          <p className="text-muted-foreground">✓ Rostro visible</p>
+          <p className="text-muted-foreground">✓ Cabeza y hombros</p>
+          <p className="text-muted-foreground">✓ Fondo limpio</p>
+          <p className="text-muted-foreground">✓ Sin filtros fuertes</p>
+        </div>
+        <div className="space-y-0.5">
+          <p className="font-semibold text-destructive text-[10px]">No aceptado</p>
+          <p className="text-muted-foreground">✗ Mascotas / paisajes</p>
+          <p className="text-muted-foreground">✗ Logos / caricaturas</p>
+          <p className="text-muted-foreground">✗ Fotos grupales</p>
+          <p className="text-muted-foreground">✗ Contenido sugestivo</p>
+          <p className="text-muted-foreground">✗ Borrosa u oscura</p>
+        </div>
+      </div>
+
+      {hasPhoto && (
+        <p className="mt-2 text-[10.5px] text-muted-foreground/70 leading-snug">
+          Tu foto se mostrará tal cual la subiste. Un administrador puede
+          pedirte una nueva si no cumple los requisitos profesionales.
+        </p>
+      )}
+
       <div className="mt-3">
         <ProfilePhotoUpload
           employeeId={employeeId}
@@ -187,6 +219,11 @@ function PhotoCard({
           onUploaded={onUploaded}
         />
       </div>
+      {/*
+        TODO — Professional Photo Assistant (future, NOT in this sprint):
+          crop face · clean background · improve lighting · optional formal attire
+          worker + admin approval before replacing the original photo.
+      */}
     </SectionShell>
   );
 }
