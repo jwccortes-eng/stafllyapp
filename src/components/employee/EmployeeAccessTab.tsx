@@ -43,6 +43,7 @@ export function EmployeeAccessTab({ employee, companyId, companyName, isPrivileg
   const [modules, setModules] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
+  const [modulesOpen, setModulesOpen] = useState(false);
   const { toast } = useToast();
 
   // PIN state — Phase 1: never display the stored PIN. Show only "configured / none"
