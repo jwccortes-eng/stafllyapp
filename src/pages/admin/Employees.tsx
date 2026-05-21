@@ -977,7 +977,7 @@ export default function Employees() {
             {isPrivileged && (
               <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => setCampaignOpen(true)}>
                 <Rocket className="h-3.5 w-3.5 mr-1.5" />
-                Activation Campaign
+                Campaña de activación
               </Button>
             )}
             {isPrivileged && (
@@ -986,10 +986,10 @@ export default function Employees() {
                 size="sm"
                 className="h-8 text-xs relative"
                 onClick={() => navigate("/app/workers/duplicates")}
-                title="Detect possible duplicate workers"
+                title="Detectar posibles trabajadores duplicados"
               >
                 <UserSearch className="h-3.5 w-3.5 mr-1.5" />
-                Detect duplicates
+                Detectar duplicados
                 {strongDuplicateCount > 0 && (
                   <Badge
                     variant="outline"
@@ -1002,12 +1002,12 @@ export default function Employees() {
             )}
             <BulkRateAssignment />
             <Button variant="outline" size="sm" className="h-8 text-xs" onClick={handleExport} disabled={filtered.length === 0}>
-              <Download className="h-3.5 w-3.5 mr-1.5" />Export
+              <Download className="h-3.5 w-3.5 mr-1.5" />Exportar
             </Button>
             {/* Update Dialog */}
             <Dialog open={updateOpen} onOpenChange={(v) => { setUpdateOpen(v); if (!v) resetUpdate(); }}>
               <DialogTrigger asChild>
-                <Button variant="outline" size="sm" className="h-8 text-xs"><ArrowUpDown className="h-3.5 w-3.5 mr-1.5" />Update</Button>
+                <Button variant="outline" size="sm" className="h-8 text-xs"><ArrowUpDown className="h-3.5 w-3.5 mr-1.5" />Actualizar</Button>
               </DialogTrigger>
               <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
                 <DialogHeader>
