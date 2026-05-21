@@ -956,11 +956,11 @@ export default function Employees() {
       {!isMobile && (<>
       {/* ─── Premium Header + KPI strip ─── */}
       <PremiumPageHeader
-        title="Workers"
+        title="Equipo"
         icon={Users}
         subtitle={
           <span className="inline-flex items-center gap-2 flex-wrap">
-            <span>{employees.length} registered</span>
+            <span>Gestiona trabajadores, portal, documentos y preparación operativa.</span>
             {selectedCompany && (
               <span className="inline-flex items-center gap-1.5 rounded-md border border-border/50 bg-muted/40 px-2 py-0.5 text-[9px] font-mono text-muted-foreground">
                 <Building2 className="h-3 w-3" />
