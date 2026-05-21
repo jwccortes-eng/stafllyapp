@@ -1234,6 +1234,7 @@ export default function UnifiedPersonProfile() {
             />
           </CardContent>
         </Card>
+        </div>
       )}
 
       {/* ─── RECENT SHIFTS ─── */}
