@@ -1768,7 +1768,7 @@ export default function Employees() {
                         const ps = photoStatusFor(e);
                         // Always surface "required". Only surface "review" while
                         // the operator is auditing photos (no-photo tab).
-                        if (ps === "required" || (ps === "review" && statusTab === "no-photo")) {
+                        if (ps === "required" || ps === "review") {
                           return (
                             <Tooltip>
                               <TooltipTrigger asChild>
