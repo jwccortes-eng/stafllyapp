@@ -969,14 +969,19 @@ export default function Employees() {
         title="Equipo"
         icon={Users}
         subtitle={
-          <span className="inline-flex items-center gap-2 flex-wrap">
-            <span>Gestiona trabajadores, portal, documentos y preparación operativa.</span>
-            {selectedCompany && (
-              <span className="inline-flex items-center gap-1.5 rounded-md border border-border/50 bg-muted/40 px-2 py-0.5 text-[9px] font-mono text-muted-foreground">
-                <Building2 className="h-3 w-3" />
-                <span className="font-semibold text-foreground">{selectedCompany.name}</span>
-              </span>
-            )}
+          <span className="inline-flex flex-col gap-1">
+            <span className="inline-flex items-center gap-2 flex-wrap">
+              <span>Identidad, disponibilidad y preparación operativa de tus trabajadores.</span>
+              {selectedCompany && (
+                <span className="inline-flex items-center gap-1.5 rounded-md border border-border/50 bg-muted/40 px-2 py-0.5 text-[9px] font-mono text-muted-foreground">
+                  <Building2 className="h-3 w-3" />
+                  <span className="font-semibold text-foreground">{selectedCompany.name}</span>
+                </span>
+              )}
+            </span>
+            <span className="text-[10px] text-muted-foreground/80">
+              ID Stafly conecta perfil, turnos y payroll.
+            </span>
           </span>
         }
         kpis={kpis}
@@ -1331,7 +1336,7 @@ export default function Employees() {
       <PremiumFilterBar
         search={search}
         onSearchChange={setSearch}
-        searchPlaceholder="Buscar nombre, email, teléfono, código…"
+        searchPlaceholder="Buscar por nombre, teléfono, email o ID Stafly…"
         quickFilters={
           <>
             {uniqueRoles.length > 0 && (
@@ -1356,7 +1361,7 @@ export default function Employees() {
             <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setColPrefsOpen(true)} title="Column preferences">
               <Settings2 className="h-3.5 w-3.5 text-muted-foreground" />
             </Button>
-            <ViewSwitcher value={viewMode} onChange={setViewMode} />
+            <ViewSwitcher value={viewMode} onChange={setViewMode} modes={["roster", "table", "compact"]} />
           </>
         }
       />
@@ -1565,15 +1570,21 @@ export default function Employees() {
         ) : (
           <EmptyState
             icon={Users}
-            title={hiddenBySearch > 0 ? `${hiddenBySearch} match${hiddenBySearch === 1 ? "" : "es"} in another tab` : "No workers yet"}
+            title={
+              hiddenBySearch > 0
+                ? `${hiddenBySearch} coincidencia${hiddenBySearch === 1 ? "" : "s"} en otra vista`
+                : search
+                  ? "No encontramos trabajadores en esta vista."
+                  : "Aún no hay trabajadores"
+            }
             description={
               hiddenBySearch > 0
-                ? `There ${hiddenBySearch === 1 ? "is" : "are"} ${hiddenBySearch} worker${hiddenBySearch === 1 ? "" : "s"} matching "${search}" outside the current tab.`
+                ? `Hay ${hiddenBySearch} trabajador${hiddenBySearch === 1 ? "" : "es"} que coincide${hiddenBySearch === 1 ? "" : "n"} con "${search}" fuera de esta vista.`
                 : search
-                ? "Try a different term or clear the search."
-                : "Use 'Quick add' to create your first worker and optionally send them an invite."
+                  ? "Prueba cambiar filtros o revisar Todos."
+                  : "Usa 'Quick add' para crear tu primer trabajador y opcionalmente enviarle una invitación."
             }
-            actionLabel={hiddenBySearch > 0 ? "View in All" : (!search ? "Quick add" : undefined)}
+            actionLabel={hiddenBySearch > 0 ? "Ver en Todos" : (!search ? "Quick add" : undefined)}
             onAction={
               hiddenBySearch > 0
                 ? () => setStatusTab("all")
