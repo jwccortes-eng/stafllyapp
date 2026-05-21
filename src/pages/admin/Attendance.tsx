@@ -463,17 +463,19 @@ export default function Attendance() {
 
           {/* Filters */}
           <div className="flex items-center gap-3 flex-wrap">
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-1.5">
-                  <CalendarIcon className="h-3.5 w-3.5" />
-                  {format(selectedDate, "dd MMM yyyy", { locale: es })}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar mode="single" selected={selectedDate} onSelect={(d) => d && setSelectedDate(d)} />
-              </PopoverContent>
-            </Popover>
+            <div className="w-[170px]">
+              <SmartDateInput
+                value={format(selectedDate, "yyyy-MM-dd")}
+                onChange={(iso) => {
+                  if (!iso) return;
+                  const [y, m, d] = iso.split("-").map(Number);
+                  setSelectedDate(new Date(y, m - 1, d));
+                }}
+                allowClear={false}
+                inputClassName="h-8 text-xs"
+                aria-label="Filtrar por fecha"
+              />
+            </div>
 
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-[160px] h-8 text-xs">
