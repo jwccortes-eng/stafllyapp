@@ -1653,8 +1653,23 @@ export default function Employees() {
                 <div className="flex items-start gap-2.5">
                   <PremiumAvatar firstName={e.first_name} lastName={e.last_name} avatarUrl={e.avatar_url} size="md" status={status} />
                   <div className="min-w-0 flex-1">
-                    <p className="text-[13px] font-bold truncate leading-tight">{formatPersonName(`${e.first_name} ${e.last_name}`)}</p>
-                    <WorkerRiskTags risks={riskAnalysis.byId.get(e.id) ?? []} max={2} className="mt-1" />
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <p className="text-[13px] font-bold truncate leading-tight">{formatPersonName(`${e.first_name} ${e.last_name}`)}</p>
+                      {!e.is_active && (
+                        <span className="shrink-0 text-[9px] font-semibold uppercase tracking-wide text-muted-foreground bg-muted px-1.5 py-0.5 rounded">Histórico</span>
+                      )}
+                    </div>
+                    {e.employer_identification && (
+                      <span className="inline-block mt-1 text-[9px] font-mono font-semibold text-primary/80 bg-primary/8 px-1.5 py-0.5 rounded" title="ID Stafly · Payroll ID">
+                        ID Stafly #{e.employer_identification}
+                      </span>
+                    )}
+                    <div className="flex items-center gap-1 flex-wrap mt-1">
+                      <WorkerRiskTags risks={riskAnalysis.byId.get(e.id) ?? []} max={2} />
+                      {isMissingPhoto(e) && (
+                        <span className="text-[9px] font-semibold text-warning bg-warning/10 px-1.5 py-0.5 rounded">Foto pendiente</span>
+                      )}
+                    </div>
                     {e.employee_role && <span className="inline-block mt-1 px-1.5 py-0.5 rounded text-[9px] font-semibold bg-primary/8 text-primary">{formatDisplayText(e.employee_role, "label")}</span>}
                     <div className="mt-1 space-y-0.5">
                       {e.phone_number && <p className="text-[10px] text-muted-foreground truncate flex items-center gap-1"><Phone className="h-2.5 w-2.5" />{e.phone_number}</p>}
