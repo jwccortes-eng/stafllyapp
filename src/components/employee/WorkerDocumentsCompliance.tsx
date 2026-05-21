@@ -16,8 +16,9 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { format, parseISO, isValid, formatDistanceToNowStrict } from "date-fns";
+import { parseISO, isValid, formatDistanceToNowStrict } from "date-fns";
 import { enUS } from "date-fns/locale";
+import { formatDateUS } from "@/lib/date-format";
 import {
   FileText, ShieldCheck, Eye, FileX2, FileClock, CalendarClock, FileWarning, FileMinus,
   Sparkles,
@@ -60,7 +61,7 @@ const STATUS_ICON: Record<UnifiedDocStatus, React.ComponentType<{ className?: st
 function fmtDate(s: string | null): string {
   if (!s) return "—";
   const d = parseISO(s);
-  return isValid(d) ? format(d, "MMM d, yyyy", { locale: enUS }) : "—";
+  return isValid(d) ? (formatDateUS(d) || "—") : "—";
 }
 
 function relativeTo(s: string | null): string | null {

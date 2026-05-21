@@ -31,8 +31,7 @@ import { PremiumPageHeader } from "@/components/ui/premium-page-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Search, Download, ExternalLink, UserSearch, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { format } from "date-fns";
-import { enUS } from "date-fns/locale";
+import { formatDateUS } from "@/lib/date-format";
 
 type FilterKey = "all" | "needs_review" | "missing" | "pending" | "expired" | "expiring_soon" | "rejected" | "approved";
 
@@ -197,7 +196,9 @@ export default function DocumentsCenter() {
 
   const fmtDate = (s: string | null) => {
     if (!s) return "—";
-    try { return format(new Date(s), "PP", { locale: enUS }); } catch { return "—"; }
+    const d = new Date(s);
+    if (isNaN(d.getTime())) return "—";
+    return formatDateUS(d) || "—";
   };
 
   const FILTERS: { key: FilterKey; label: string }[] = [
