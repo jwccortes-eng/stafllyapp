@@ -411,10 +411,13 @@ export default function Attendance() {
     <div className="space-y-6 max-w-[1400px] mx-auto">
       <PageHeader
         title="Asistencia"
-        subtitle="Monitoreo de fichajes y asistencia en tiempo real"
+        subtitle="Monitorea fichajes, llegadas tarde, ausencias y cierre diario."
         icon={ScanEye}
         variant="1"
       />
+      <p className="text-[11px] text-muted-foreground -mt-3">
+        Las horas programadas son referencia operativa. Payroll se calcula con fichajes reales o validaciones aprobadas.
+      </p>
 
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
@@ -515,7 +518,9 @@ export default function Attendance() {
                   {filteredRows.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={8} className="text-center text-muted-foreground py-12">
-                        {rows.length === 0 ? "No hay turnos programados para este día" : "No se encontraron resultados"}
+                        {rows.length === 0
+                          ? "No hay turnos programados para este día."
+                          : "Aún no hay fichajes registrados que coincidan con los filtros."}
                       </TableCell>
                     </TableRow>
                   ) : (
