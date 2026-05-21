@@ -1298,6 +1298,7 @@ export default function Employees() {
               documentSignals={documentSignals}
               riskFilter={riskFilter}
               onRiskFilterChange={setRiskFilter}
+              compact
             />
           </div>
           <MobileDataQualitySummary
