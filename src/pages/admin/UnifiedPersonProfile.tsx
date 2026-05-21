@@ -16,6 +16,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { EMPLOYEE_COLUMNS_NO_FISCAL } from "@/lib/employee-columns";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
 import { useEmployeeReadiness } from "@/hooks/useEmployeeReadiness";
