@@ -873,17 +873,21 @@ export default function UnifiedPersonProfile() {
         </div>
       </Card>
 
-      {/* ─── DEBUG / TECHNICAL INFO (admin/dev only) ─── */}
+      {/* ─── INFORMACIÓN TÉCNICA (admin/dev only, collapsed by default) ─── */}
       {isPrivileged && (
         <Collapsible>
           <CollapsibleTrigger className="group inline-flex items-center gap-1.5 text-[10.5px] font-medium uppercase tracking-wider text-muted-foreground/70 hover:text-foreground transition-colors">
             <Code2 className="h-3 w-3" />
-            Technical info
+            Información técnica
             <ChevronDown className="h-3 w-3 transition-transform group-data-[state=open]:rotate-180" />
           </CollapsibleTrigger>
           <CollapsibleContent>
             <Card className="mt-2 border-dashed border-border/60 bg-muted/20">
-              <CardContent className="p-3 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5 text-[11px] font-mono">
+              <CardContent className="p-3 space-y-2">
+                <p className="text-[10.5px] text-muted-foreground/80">
+                  Datos operativos y señales internas para administradores.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5 text-[11px] font-mono">
                 {[
                   ["employee_id", employee.id],
                   ["employer_identification", employee.employer_identification],
@@ -902,11 +906,13 @@ export default function UnifiedPersonProfile() {
                     <span className="text-foreground truncate" title={String(v)}>{String(v)}</span>
                   </div>
                 ))}
+                </div>
               </CardContent>
             </Card>
           </CollapsibleContent>
         </Collapsible>
       )}
+
 
       {/* ─── SNAPSHOT STRIP ─── */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
@@ -1061,51 +1067,77 @@ export default function UnifiedPersonProfile() {
                 />
               </div>
 
-              <div className="mt-2.5 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
-                {readiness.missingPersonal.slice(0, 6).map((field) => (
-                  <div key={`p-${field}`} className="flex items-center gap-1.5">
-                    <span className="h-1 w-1 rounded-full bg-warning shrink-0" />
-                    <span className="capitalize truncate">Personal: {field.replace(/_/g, " ")}</span>
+              {(() => {
+                type Item = { key: string; icon: any; tone: "warning" | "destructive" | "muted"; text: string };
+                const items: Item[] = [];
+                // Critical first: rejected/missing required docs
+                readiness.missingDocuments.forEach((d) => items.push({
+                  key: `m-${d.category}`, icon: null, tone: "destructive",
+                  text: `Falta documento requerido: ${d.label}`,
+                }));
+                if (rejectedDocs > 0) items.push({
+                  key: "rej", icon: AlertTriangle, tone: "destructive",
+                  text: `${rejectedDocs} documento${rejectedDocs === 1 ? "" : "s"} rechazado${rejectedDocs === 1 ? "" : "s"} · requiere reemplazo`,
+                });
+                if (pendingDocs > 0) items.push({
+                  key: "pen", icon: Clock, tone: "warning",
+                  text: `${pendingDocs} documento${pendingDocs === 1 ? "" : "s"} en revisión`,
+                });
+                // Then personal fields
+                readiness.missingPersonal.forEach((field) => items.push({
+                  key: `p-${field}`, icon: null, tone: "warning",
+                  text: `Personal: ${field.replace(/_/g, " ")}`,
+                }));
+                // Then enrichment / optional
+                if (portalNotActive) items.push({
+                  key: "portal", icon: ShieldOff, tone: "muted",
+                  text: `Portal ${hasInvitation ? "invitado pero no activado" : "sin invitar todavía"}`,
+                });
+                items.push({
+                  key: "clock", icon: Clock, tone: "muted",
+                  text: lastPayrollDate ? `Último fichaje ${safeDistance(lastPayrollDate)}` : "Sin fichajes registrados",
+                });
+
+                const top = items.slice(0, 3);
+                const rest = items.slice(3);
+                const dotClass = (t: Item["tone"]) =>
+                  t === "destructive" ? "bg-destructive" : t === "warning" ? "bg-warning" : "bg-muted-foreground/40";
+                const iconClass = (t: Item["tone"]) =>
+                  t === "destructive" ? "text-destructive" : t === "warning" ? "text-warning" : "text-muted-foreground";
+                const renderRow = (it: Item) => (
+                  <div key={it.key} className="flex items-center gap-1.5">
+                    {it.icon
+                      ? <it.icon className={cn("h-3 w-3 shrink-0", iconClass(it.tone))} />
+                      : <span className={cn("h-1 w-1 rounded-full shrink-0", dotClass(it.tone))} />}
+                    <span className="truncate">{it.text}</span>
                   </div>
-                ))}
-                {readiness.missingDocuments.slice(0, 6).map((d) => (
-                  <div key={`m-${d.category}`} className="flex items-center gap-1.5">
-                    <span className="h-1 w-1 rounded-full bg-destructive shrink-0" />
-                    <span className="truncate">Required document missing: {d.label}</span>
-                  </div>
-                ))}
-                {pendingDocs > 0 && (
-                  <div className="flex items-center gap-1.5">
-                    <Clock className="h-3 w-3 text-warning shrink-0" />
-                    <span>{pendingDocs} document{pendingDocs === 1 ? "" : "s"} awaiting admin review</span>
-                  </div>
-                )}
-                {rejectedDocs > 0 && (
-                  <div className="flex items-center gap-1.5">
-                    <AlertTriangle className="h-3 w-3 text-destructive shrink-0" />
-                    <span>{rejectedDocs} document{rejectedDocs === 1 ? "" : "s"} rejected · replacement needed</span>
-                  </div>
-                )}
-                {portalNotActive && (
-                  <div className="flex items-center gap-1.5">
-                    <ShieldOff className="h-3 w-3 text-muted-foreground shrink-0" />
-                    <span>
-                      Portal {hasInvitation ? "invited but not activated" : "not invited yet"}
-                    </span>
-                  </div>
-                )}
-                {lastPayrollDate ? (
-                  <div className="flex items-center gap-1.5">
-                    <Clock className="h-3 w-3 text-muted-foreground shrink-0" />
-                    <span>Last clock-in {safeDistance(lastPayrollDate)}</span>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-1.5">
-                    <Clock className="h-3 w-3 text-muted-foreground shrink-0" />
-                    <span>No clock-ins on record</span>
-                  </div>
-                )}
-              </div>
+                );
+
+                return (
+                  <>
+                    <p className="mt-2.5 text-[10.5px] text-muted-foreground/80">
+                      Completa estos datos para mantener al trabajador listo para turnos y pagos.
+                    </p>
+                    <div className="mt-1.5 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
+                      {top.map(renderRow)}
+                    </div>
+                    {rest.length > 0 && (
+                      <Collapsible>
+                        <CollapsibleTrigger className="group mt-2 inline-flex items-center gap-1 text-[10.5px] font-medium text-muted-foreground hover:text-foreground transition-colors">
+                          Ver todos los pendientes ({rest.length})
+                          <ChevronDown className="h-3 w-3 transition-transform group-data-[state=open]:rotate-180" />
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                          <div className="mt-1.5 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
+                            {rest.map(renderRow)}
+                          </div>
+                        </CollapsibleContent>
+                      </Collapsible>
+                    )}
+                  </>
+                );
+              })()}
+
 
               {/* Recommended action */}
               <div className="mt-3 flex items-center justify-between gap-2 pt-2 border-t border-border/40">
@@ -1195,47 +1227,55 @@ export default function UnifiedPersonProfile() {
         </Card>
       )}
 
-      {/* ─── FRONT DESK HISTORY ─── */}
+      {/* ─── HISTORIAL DE FRONT DESK (collapsed by default) ─── */}
       {frontDeskVisits.length > 0 && (
-        <Card className="border-border/50">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between mb-2">
-              <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground inline-flex items-center gap-1.5">
-                <ContactRound className="h-3.5 w-3.5" /> Front Desk history
+        <Collapsible>
+          <Card className="border-border/50">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between gap-2">
+                <CollapsibleTrigger className="group inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors">
+                  <ContactRound className="h-3.5 w-3.5" />
+                  Ver historial de Front Desk
+                  <Badge variant="outline" className="text-[9px] ml-1">{frontDeskVisits.length}</Badge>
+                  <ChevronDown className="h-3 w-3 transition-transform group-data-[state=open]:rotate-180" />
+                </CollapsibleTrigger>
+                <Link
+                  to="/app/front-desk"
+                  className="text-[11px] text-primary hover:underline inline-flex items-center gap-1"
+                >
+                  Abrir Front Desk <ExternalLink className="h-3 w-3" />
+                </Link>
               </div>
-              <Link
-                to="/app/front-desk"
-                className="text-[11px] text-primary hover:underline inline-flex items-center gap-1"
-              >
-                Open Front Desk <ExternalLink className="h-3 w-3" />
-              </Link>
-            </div>
-            <div className="divide-y divide-border/40">
-              {frontDeskVisits.slice(0, 6).map((v: any) => (
-                <div key={v.id} className="flex items-center gap-2 py-2 text-xs">
-                  {v.case_code && (
-                    <Badge variant="outline" className="text-[9px] font-mono">{v.case_code}</Badge>
-                  )}
-                  <span className="text-muted-foreground tabular-nums shrink-0">
-                    {new Date(v.checked_in_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                  </span>
-                  <span className="text-muted-foreground truncate">
-                    {String(v.visit_type ?? "").replace(/_/g, " ")}
-                  </span>
-                  {v.pending_count > 0 && (
-                    <Badge variant="outline" className="text-[9px] border-warning/30 bg-warning/10 text-warning">
-                      {v.pending_count} pending
-                    </Badge>
-                  )}
-                  <Badge variant="outline" className="ml-auto text-[9px] capitalize">
-                    {String(v.status ?? "").replace(/_/g, " ")}
-                  </Badge>
+              <CollapsibleContent>
+                <div className="mt-2 divide-y divide-border/40">
+                  {frontDeskVisits.slice(0, 6).map((v: any) => (
+                    <div key={v.id} className="flex items-center gap-2 py-2 text-xs">
+                      {v.case_code && (
+                        <Badge variant="outline" className="text-[9px] font-mono">{v.case_code}</Badge>
+                      )}
+                      <span className="text-muted-foreground tabular-nums shrink-0">
+                        {new Date(v.checked_in_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                      </span>
+                      <span className="text-muted-foreground truncate">
+                        {String(v.visit_type ?? "").replace(/_/g, " ")}
+                      </span>
+                      {v.pending_count > 0 && (
+                        <Badge variant="outline" className="text-[9px] border-warning/30 bg-warning/10 text-warning">
+                          {v.pending_count} pendiente{v.pending_count === 1 ? "" : "s"}
+                        </Badge>
+                      )}
+                      <Badge variant="outline" className="ml-auto text-[9px] capitalize">
+                        {String(v.status ?? "").replace(/_/g, " ")}
+                      </Badge>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+              </CollapsibleContent>
+            </CardContent>
+          </Card>
+        </Collapsible>
       )}
+
 
       {/* ─── Dialogs ─── */}
       {employee && (

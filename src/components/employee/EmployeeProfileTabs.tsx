@@ -1,4 +1,7 @@
-import { useState, useEffect, useRef, lazy, Suspense, useCallback } from "react";
+import { useState, useEffect, useRef, lazy, Suspense, useCallback, useMemo } from "react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ChevronDown } from "lucide-react";
+
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -251,7 +254,17 @@ function InfoTab({ employee, companyId, isEditing, form, setForm, isPrivileged, 
   onJumpToDocuments?: () => void;
 }) {
   const SENSITIVE = new Set(["access_pin", "driver_licence", "has_car", "country_code", "english_level"]);
+  // Optional/legacy fields hidden by default when empty in read-only mode.
+  // Keeps data accessible but reduces visual noise.
+  const LEGACY_OPTIONAL = new Set(["direct_manager", "groups", "tags", "qualify", "recommended_by", "driver_licence", "english_level"]);
+  const isEmptyVal = (v: any) => v == null || v === "" || (Array.isArray(v) && v.length === 0);
   const filteredEmployment = EMPLOYMENT_FIELDS.filter(f => isPrivileged || !SENSITIVE.has(f.key));
+  const employmentVisible = useMemo(
+    () => filteredEmployment.filter(f => isEditing || !LEGACY_OPTIONAL.has(f.key) || !isEmptyVal(employee?.[f.key])),
+    [filteredEmployment, isEditing, employee],
+  );
+  const employmentHidden = filteredEmployment.filter(f => !employmentVisible.includes(f));
+
 
   return (
     <div className="space-y-4">
@@ -287,12 +300,28 @@ function InfoTab({ employee, companyId, isEditing, form, setForm, isPrivileged, 
         <h3 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50 mb-1.5">Empleo</h3>
         <Card className="rounded-lg border-border/30">
           <CardContent className="p-3">
-            {filteredEmployment.map(f => (
+            {employmentVisible.map(f => (
               <FieldRow key={f.key} field={f} employee={employee} isEditing={isEditing} form={form} setForm={setForm} />
             ))}
+            {employmentHidden.length > 0 && (
+              <Collapsible>
+                <CollapsibleTrigger className="group mt-2 inline-flex items-center gap-1 text-[10.5px] font-medium text-muted-foreground hover:text-foreground transition-colors">
+                  Ver campos adicionales ({employmentHidden.length})
+                  <ChevronDown className="h-3 w-3 transition-transform group-data-[state=open]:rotate-180" />
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <div className="mt-1">
+                    {employmentHidden.map(f => (
+                      <FieldRow key={f.key} field={f} employee={employee} isEditing={isEditing} form={form} setForm={setForm} />
+                    ))}
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            )}
           </CardContent>
         </Card>
       </div>
+
       <div>
         <h3 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50 mb-1.5">📅 Disponibilidad</h3>
         <EmployeeAvailabilitySection employeeId={employee.id} readOnly={!isEditing} />
