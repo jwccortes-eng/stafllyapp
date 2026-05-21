@@ -30,6 +30,7 @@ import {
   type StructuredAddress,
 } from "@/lib/address";
 import { ProfilePhotoUpload } from "@/components/employee/ProfilePhotoUpload";
+import { WorkerPhotoStatusChip } from "@/components/employee/WorkerPhotoStatusChip";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import { formatPhoneUS, tenDigitUS } from "@/lib/phone-format";
 import { cn } from "@/lib/utils";
