@@ -1799,6 +1799,42 @@ function DesktopShifts() {
       {/* ── OPS KPI STRIP ── */}
       <OpsKpiStrip items={opsKpis} />
 
+      {/* ── Qué necesita atención ── compact action center (UI-only, deep-links to existing filters) */}
+      {!loading && attentionChips.length > 0 && (
+        <div className="flex items-center gap-2 flex-wrap rounded-xl border border-border/40 bg-card/60 px-3 py-2">
+          <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground shrink-0">
+            Qué necesita atención
+          </span>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {attentionChips.map(c => {
+              const Icon = c.icon;
+              const toneClass =
+                c.tone === "critical"
+                  ? "bg-destructive/10 text-destructive border-destructive/25 hover:bg-destructive/15"
+                  : "bg-warning/10 text-warning border-warning/25 hover:bg-warning/15";
+              const Cmp: any = c.onClick ? "button" : "span";
+              return (
+                <Cmp
+                  key={c.key}
+                  type={c.onClick ? "button" : undefined}
+                  onClick={c.onClick}
+                  className={cn(
+                    "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] font-medium transition-colors",
+                    toneClass,
+                    c.onClick ? "cursor-pointer" : "cursor-default",
+                    c.active && "ring-1 ring-current/40",
+                  )}
+                >
+                  <Icon className="h-3 w-3" />
+                  <span>{c.label}</span>
+                  <span className="font-mono tabular-nums opacity-80">{c.count}</span>
+                </Cmp>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* ── OPS TOOLBAR: view switcher · date nav · today ── */}
       <OpsToolbar
         sticky={false}
