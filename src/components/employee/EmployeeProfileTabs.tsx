@@ -68,6 +68,7 @@ const EmployeeCompensationTab = lazy(() => import("@/components/compensation/Emp
 type EmployeeRecord = Record<string, any>;
 
 const BOOLEAN_FIELDS = new Set(["has_car"]);
+const DATE_FIELDS = new Set(["start_date", "end_date", "birthday", "license_expiration", "expiration_date"]);
 
 const PERSONAL_FIELDS = [
   { key: "first_name", label: "Nombre", icon: User },
