@@ -212,45 +212,25 @@ export function ShiftRepeatSection({ shiftDate, config, onChange }: ShiftRepeatS
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <Label className="text-[10px] text-muted-foreground">Desde</Label>
-                <Popover open={startPickerOpen} onOpenChange={setStartPickerOpen}>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full h-8 text-[11px] justify-start mt-0.5">
-                      <CalendarIcon className="h-3 w-3 mr-1.5" />
-                      {config.rangeStart
-                        ? format(parse(config.rangeStart, "yyyy-MM-dd", new Date()), "d MMM yyyy", { locale: es })
-                        : "Inicio"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={config.rangeStart ? parse(config.rangeStart, "yyyy-MM-dd", new Date()) : undefined}
-                      onSelect={d => { if (d) { update({ rangeStart: format(d, "yyyy-MM-dd") }); setStartPickerOpen(false); } }}
-                      className="p-3 pointer-events-auto"
-                    />
-                  </PopoverContent>
-                </Popover>
+                <div className="mt-0.5">
+                  <SmartDateInput
+                    value={config.rangeStart || ""}
+                    onChange={(iso) => update({ rangeStart: iso })}
+                    inputClassName="h-8 text-[11px]"
+                    aria-label="Inicio del rango"
+                  />
+                </div>
               </div>
               <div>
                 <Label className="text-[10px] text-muted-foreground">Hasta</Label>
-                <Popover open={endPickerOpen} onOpenChange={setEndPickerOpen}>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full h-8 text-[11px] justify-start mt-0.5">
-                      <CalendarIcon className="h-3 w-3 mr-1.5" />
-                      {config.rangeEnd
-                        ? format(parse(config.rangeEnd, "yyyy-MM-dd", new Date()), "d MMM yyyy", { locale: es })
-                        : "Fin"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={config.rangeEnd ? parse(config.rangeEnd, "yyyy-MM-dd", new Date()) : undefined}
-                      onSelect={d => { if (d) { update({ rangeEnd: format(d, "yyyy-MM-dd") }); setEndPickerOpen(false); } }}
-                      className="p-3 pointer-events-auto"
-                    />
-                  </PopoverContent>
-                </Popover>
+                <div className="mt-0.5">
+                  <SmartDateInput
+                    value={config.rangeEnd || ""}
+                    onChange={(iso) => update({ rangeEnd: iso })}
+                    inputClassName="h-8 text-[11px]"
+                    aria-label="Fin del rango"
+                  />
+                </div>
               </div>
             </div>
           )}
