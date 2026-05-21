@@ -79,9 +79,12 @@ interface Props {
   /** Optional document signals — when provided, doc-compliance risks (missing/
    * pending/expired/expiring/rejected) are surfaced as cards too. */
   documentSignals?: Map<string, import("@/lib/documents-signals").WorkerDocumentSignals>;
+  /** Compact mode: curated subset of risk cards + toggle to reveal the full grid. */
+  compact?: boolean;
 }
 
-export default function DataQualityRiskPanel({ employees, documentSignals, riskFilter, onRiskFilterChange }: Props) {
+export default function DataQualityRiskPanel({ employees, documentSignals, riskFilter, onRiskFilterChange, compact = false }: Props) {
+  const [expanded, setExpanded] = useState(!compact);
   const { byId, counts } = useMemo(
     () => analyzeEmployeeRisks(employees, documentSignals),
     [employees, documentSignals],
