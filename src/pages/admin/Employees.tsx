@@ -1622,7 +1622,7 @@ export default function Employees() {
                   <div className="flex items-center gap-1 flex-wrap">
                     <WorkerRiskTags risks={riskAnalysis.byId.get(e.id) ?? []} max={2} className="mt-0.5" />
                     {isMissingPhoto(e) && (
-                      <span className="mt-0.5 text-[9px] font-semibold text-warning bg-warning/10 px-1.5 py-0.5 rounded">Foto pendiente</span>
+                      <WorkerPhotoStatusChip status="required" className="mt-0.5" />
                     )}
                   </div>
                 </div>
