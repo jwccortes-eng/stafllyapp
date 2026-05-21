@@ -312,9 +312,9 @@ export const RISK_ORDER: RiskKey[] = [
 ];
 
 export const READINESS_LABEL: Record<PayrollReadiness, string> = {
-  ready: "Payroll ready",
-  needs_review: "Needs review",
-  blocked_visual: "Payroll risk",
+  ready: "Listos para payroll",
+  needs_review: "Necesitan revisión",
+  blocked_visual: "Riesgo payroll",
 };
 
 /**
