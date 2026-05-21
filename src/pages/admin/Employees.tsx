@@ -1663,9 +1663,14 @@ export default function Employees() {
                       )}
                     </div>
                     {e.employer_identification && (
-                      <span className="inline-block mt-1 text-[9px] font-mono font-semibold text-primary/80 bg-primary/8 px-1.5 py-0.5 rounded" title="ID Stafly · Payroll ID">
-                        ID Stafly #{e.employer_identification}
-                      </span>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="inline-block mt-0.5 text-[10px] font-mono tabular-nums text-muted-foreground">
+                            ID Stafly · {e.employer_identification}
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="text-xs">Referencia de payroll</TooltipContent>
+                      </Tooltip>
                     )}
                     <div className="flex items-center gap-1 flex-wrap mt-1">
                       <WorkerRiskTags risks={riskAnalysis.byId.get(e.id) ?? []} max={2} />
