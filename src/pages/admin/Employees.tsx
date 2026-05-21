@@ -245,6 +245,7 @@ export default function Employees() {
     role: "all",
     group: "all",
     risk: "all",
+    photo: "all",
   });
   const search = urlFilters.q;
   const setSearch = (v: string) => setFilter({ q: v });
@@ -257,9 +258,13 @@ export default function Employees() {
   const setFilterGroup = (v: string) => setFilter({ group: v });
   const riskFilter = (urlFilters.risk as RiskKey | "all") || "all";
   const setRiskFilter = (v: RiskKey | "all") => setFilter({ risk: v });
+  type PhotoFilter = "all" | "missing" | "unreviewed";
+  const photoFilter = (urlFilters.photo as PhotoFilter) || "all";
+  const setPhotoFilter = (v: PhotoFilter) => setFilter({ photo: v });
 
-  // Persisted alphabetical sort by default; users can flip it.
-  const { sort, onSort, directionFor } = useSortPreference<"name" | "code" | "role" | "last_activity">(
+  // Persisted sort. v4 adds "photo" (missing/unreviewed first).
+  type SortKey = "name" | "code" | "role" | "last_activity" | "photo";
+  const { sort, onSort, directionFor, setSort } = useSortPreference<SortKey>(
     "employees",
     { key: "name", direction: "asc" },
   );
