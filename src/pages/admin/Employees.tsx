@@ -1846,11 +1846,6 @@ export default function Employees() {
                     <div className="leading-tight">
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="text-xs font-semibold">{formatPersonName(`${e.first_name} ${e.last_name}`)}</span>
-                        {e.employer_identification && (
-                          <span className="text-[9px] font-mono font-semibold text-primary/80 bg-primary/8 px-1.5 py-0.5 rounded" title="ID Stafly · Payroll ID">
-                            ID Stafly #{e.employer_identification}
-                          </span>
-                        )}
                         {!e.is_active && (
                           <span className="text-[9px] font-semibold uppercase tracking-wide text-muted-foreground bg-muted px-1.5 py-0.5 rounded">Histórico</span>
                         )}
