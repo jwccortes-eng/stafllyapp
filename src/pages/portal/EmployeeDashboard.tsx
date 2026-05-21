@@ -295,6 +295,9 @@ export default function EmployeeDashboard() {
         status={heroStatus}
       />
 
+      {/* ── Update Center nudge (Phase 1, dismissible per session) ── */}
+      <PortalUpdateBanner />
+
       {/* ── Acción principal ── */}
       <NextBestActionCard nba={nba} />
 
