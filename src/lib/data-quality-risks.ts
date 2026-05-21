@@ -47,26 +47,39 @@ export interface RiskTag {
 }
 
 const RISK_META: Record<RiskKey, Omit<RiskTag, "key">> = {
-  duplicate_review:    { label: "Duplicate review",   tone: "warning",     description: "Shares phone, email or worker code with another record." },
-  suspicious_email:    { label: "Suspicious email",   tone: "warning",     description: "Email looks shared, generic or like a placeholder." },
-  missing_role:        { label: "Missing role",       tone: "muted",       description: "No employee role assigned." },
-  phone_invalid:       { label: "Phone needs format", tone: "muted",       description: "Phone is not a normalized 10-digit US number." },
-  historical_active:   { label: "Historical active",  tone: "warning",     description: "Marked historical/legacy but portal access is still active." },
-  test_account:        { label: "Test account",       tone: "destructive", description: "Name or email looks like a test, demo or QA account." },
-  system_placeholder:  { label: "System placeholder", tone: "destructive", description: "Auto-generated placeholder (e.g. ‘System 3’). Not a real worker." },
-  missing_location:    { label: "Missing location",   tone: "muted",       description: "City and state are both blank." },
-  inactive_with_payroll: { label: "Inactive · payroll history", tone: "muted", description: "Inactive worker with prior payroll activity — keep for audit." },
-  missing_phone:       { label: "Missing phone",      tone: "warning",     description: "No phone on file. Required to invite, contact or run payroll comms." },
-  missing_email:       { label: "Missing email",      tone: "muted",       description: "No email on file. Optional but useful for invitations and pay reports." },
-  missing_photo:       { label: "Missing photo",      tone: "muted",       description: "Worker has no profile photo. Required for facial recognition and identity." },
-  missing_emergency_contact: { label: "No emergency contact", tone: "muted", description: "No emergency contact name or phone on file." },
-  portal_not_active:   { label: "Portal not active",  tone: "muted",       description: "Worker has not linked a portal account yet (no user_id)." },
-  missing_required_document: { label: "Missing docs",  tone: "warning",     description: "One or more required documents are not yet approved for this worker." },
-  pending_document_review:   { label: "Docs pending",  tone: "muted",       description: "Uploaded document(s) are awaiting admin review." },
-  expired_document:          { label: "Expired docs",  tone: "destructive", description: "At least one document has passed its expiration date." },
-  expiring_document:         { label: "Docs expiring", tone: "warning",     description: "At least one document expires within the next 30 days." },
-  rejected_document:         { label: "Docs rejected", tone: "warning",     description: "An uploaded document was rejected and needs a replacement." },
+  duplicate_review:    { label: "Revisión de duplicados", tone: "warning",     description: "Comparte teléfono, email o código con otro registro." },
+  suspicious_email:    { label: "Email sospechoso",     tone: "warning",     description: "Email parece compartido, genérico o un placeholder." },
+  missing_role:        { label: "Falta rol",             tone: "muted",       description: "Sin rol asignado." },
+  phone_invalid:       { label: "Teléfono mal formado",  tone: "muted",       description: "El teléfono no está normalizado a 10 dígitos US." },
+  historical_active:   { label: "Histórico activo",      tone: "warning",     description: "Marcado como histórico/legacy pero el portal sigue activo." },
+  test_account:        { label: "Cuenta de prueba",      tone: "destructive", description: "Nombre o email parece cuenta de test, demo o QA." },
+  system_placeholder:  { label: "Placeholder del sistema", tone: "destructive", description: "Placeholder auto-generado (p. ej. ‘System 3’). No es un trabajador real." },
+  missing_location:    { label: "Falta ubicación",       tone: "muted",       description: "Ciudad y estado están vacíos." },
+  inactive_with_payroll: { label: "Inactivo · historial payroll", tone: "muted", description: "Inactivo con historial de payroll — mantener para auditoría." },
+  missing_phone:       { label: "Falta teléfono",        tone: "warning",     description: "Sin teléfono. Requerido para invitar, contactar y comunicaciones de payroll." },
+  missing_email:       { label: "Falta email",           tone: "muted",       description: "Sin email. Opcional pero útil para invitaciones y reportes." },
+  missing_photo:       { label: "Falta foto",            tone: "muted",       description: "Sin foto de perfil. Requerida para reconocimiento facial e identidad." },
+  missing_emergency_contact: { label: "Sin contacto de emergencia", tone: "muted", description: "Sin nombre ni teléfono de contacto de emergencia." },
+  portal_not_active:   { label: "Portal inactivo",       tone: "muted",       description: "Aún no ha enlazado una cuenta de portal (sin user_id)." },
+  missing_required_document: { label: "Documentos faltantes", tone: "warning",     description: "Uno o más documentos requeridos aún no están aprobados." },
+  pending_document_review:   { label: "Documentos pendientes", tone: "muted",       description: "Documento(s) subidos esperando revisión del admin." },
+  expired_document:          { label: "Documentos expirados", tone: "destructive", description: "Al menos un documento pasó su fecha de expiración." },
+  expiring_document:         { label: "Documentos por expirar", tone: "warning",     description: "Al menos un documento expira en los próximos 30 días." },
+  rejected_document:         { label: "Documentos rechazados", tone: "warning",     description: "Un documento subido fue rechazado y necesita reemplazo." },
 };
+
+/**
+ * Curated subset surfaced in the compact Action Center on /app/employees.
+ * The full grid stays available behind the "Ver diagnóstico completo" toggle.
+ */
+export const PRIMARY_RISK_KEYS: RiskKey[] = [
+  "missing_required_document",
+  "duplicate_review",
+  "portal_not_active",
+  "missing_phone",
+  "missing_location",
+  "expired_document",
+];
 
 const SHARED_EXACT_EMAIL = new Set([
   "qualitystaff@gmail.com",
@@ -299,9 +312,9 @@ export const RISK_ORDER: RiskKey[] = [
 ];
 
 export const READINESS_LABEL: Record<PayrollReadiness, string> = {
-  ready: "Payroll ready",
-  needs_review: "Needs review",
-  blocked_visual: "Payroll risk",
+  ready: "Listos para payroll",
+  needs_review: "Necesitan revisión",
+  blocked_visual: "Riesgo payroll",
 };
 
 /**

@@ -8,7 +8,7 @@
  * `employees` array which is already scoped by selectedCompanyId.
  */
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,7 @@ import {
   computePayrollReadiness,
   getRiskMeta,
   RISK_ORDER,
+  PRIMARY_RISK_KEYS,
   READINESS_LABEL,
   type PayrollReadiness,
   type RiskKey,
@@ -78,9 +79,12 @@ interface Props {
   /** Optional document signals — when provided, doc-compliance risks (missing/
    * pending/expired/expiring/rejected) are surfaced as cards too. */
   documentSignals?: Map<string, import("@/lib/documents-signals").WorkerDocumentSignals>;
+  /** Compact mode: curated subset of risk cards + toggle to reveal the full grid. */
+  compact?: boolean;
 }
 
-export default function DataQualityRiskPanel({ employees, documentSignals, riskFilter, onRiskFilterChange }: Props) {
+export default function DataQualityRiskPanel({ employees, documentSignals, riskFilter, onRiskFilterChange, compact = false }: Props) {
+  const [expanded, setExpanded] = useState(!compact);
   const { byId, counts } = useMemo(
     () => analyzeEmployeeRisks(employees, documentSignals),
     [employees, documentSignals],
@@ -122,16 +126,19 @@ export default function DataQualityRiskPanel({ employees, documentSignals, riskF
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <h3 className="text-xs font-semibold tracking-wide uppercase text-foreground/80">
-                  Data Quality · Pre-payroll review
+                  Calidad de datos · Revisión pre-payroll
                 </h3>
                 <Badge variant="outline" className="text-[9px] uppercase tracking-wider border-amber-300/60 text-amber-700 bg-amber-50">
                   Beta
                 </Badge>
               </div>
-              <p className="text-[11px] text-muted-foreground mt-0.5 max-w-xl">
-                Readiness signals only — payroll calculations are not changed. Use these
-                cards to clean records before payroll, mass invites or critical assignments.
-              </p>
+              {!compact && (
+                <p className="text-[11px] text-muted-foreground mt-0.5 max-w-xl">
+                  Solo señales de preparación — no cambia los cálculos de payroll. Usa
+                  estas tarjetas para limpiar registros antes de payroll, invitaciones
+                  masivas o asignaciones críticas.
+                </p>
+              )}
             </div>
           </div>
 
@@ -160,25 +167,35 @@ export default function DataQualityRiskPanel({ employees, documentSignals, riskF
               className="h-7 text-[11px]"
               onClick={handleExport}
               disabled={totalAtRisk === 0}
-              title={totalAtRisk === 0 ? "No risks to export" : "Download visible risks as CSV"}
+              title={totalAtRisk === 0 ? "Sin riesgos para exportar" : "Descargar riesgos visibles como CSV"}
             >
               <Download className="h-3 w-3 mr-1" />
-              Export risks
+              Exportar riesgos
             </Button>
+            {compact && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 text-[11px]"
+                onClick={() => setExpanded((v) => !v)}
+              >
+                {expanded ? "Ocultar diagnóstico" : "Ver diagnóstico completo"}
+              </Button>
+            )}
           </div>
         </div>
 
         {/* Risk cards */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
           <RiskCard
-            label="All workers"
+            label="Todos los trabajadores"
             value={employees.length}
             active={riskFilter === "all"}
             onClick={() => onRiskFilterChange("all")}
             tone="muted"
             icon={Users2}
           />
-          {RISK_ORDER.map((key) => {
+          {(compact && !expanded ? PRIMARY_RISK_KEYS : RISK_ORDER).map((key) => {
             const meta = getRiskMeta(key);
             const Icon = RISK_ICON[key];
             return (

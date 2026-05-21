@@ -872,10 +872,10 @@ export default function Employees() {
   // KPI strip for the premium header.
   const kpis: PremiumPageHeaderKpi[] = [
     { label: "Total", value: statusCounts.all, onClick: () => setStatusTab("all"), active: statusTab === "all" },
-    { label: "Active", value: statusCounts.active, accent: "success", onClick: () => setStatusTab("active"), active: statusTab === "active" },
-    { label: "Pending activation", value: statusCounts.pending, accent: statusCounts.pending > 0 ? "warning" : "default", onClick: () => setStatusTab("pending"), active: statusTab === "pending" },
-    { label: "Missing docs", value: statusCounts["missing-docs"], accent: statusCounts["missing-docs"] > 0 ? "destructive" : "default", onClick: () => setStatusTab("missing-docs"), active: statusTab === "missing-docs" },
-    { label: "Drivers", value: statusCounts.drivers, accent: "primary", onClick: () => setStatusTab("drivers"), active: statusTab === "drivers" },
+    { label: "Activos", value: statusCounts.active, accent: "success", onClick: () => setStatusTab("active"), active: statusTab === "active" },
+    { label: "Pendientes de activación", value: statusCounts.pending, accent: statusCounts.pending > 0 ? "warning" : "default", onClick: () => setStatusTab("pending"), active: statusTab === "pending" },
+    { label: "Documentos faltantes", value: statusCounts["missing-docs"], accent: statusCounts["missing-docs"] > 0 ? "destructive" : "default", onClick: () => setStatusTab("missing-docs"), active: statusTab === "missing-docs" },
+    { label: "Conductores", value: statusCounts.drivers, accent: "primary", onClick: () => setStatusTab("drivers"), active: statusTab === "drivers" },
   ];
 
   // ── Strong duplicate signal count (lightweight, mirrors WorkerDuplicates filters) ──
@@ -956,11 +956,11 @@ export default function Employees() {
       {!isMobile && (<>
       {/* ─── Premium Header + KPI strip ─── */}
       <PremiumPageHeader
-        title="Workers"
+        title="Equipo"
         icon={Users}
         subtitle={
           <span className="inline-flex items-center gap-2 flex-wrap">
-            <span>{employees.length} registered</span>
+            <span>Gestiona trabajadores, portal, documentos y preparación operativa.</span>
             {selectedCompany && (
               <span className="inline-flex items-center gap-1.5 rounded-md border border-border/50 bg-muted/40 px-2 py-0.5 text-[9px] font-mono text-muted-foreground">
                 <Building2 className="h-3 w-3" />
@@ -977,7 +977,7 @@ export default function Employees() {
             {isPrivileged && (
               <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => setCampaignOpen(true)}>
                 <Rocket className="h-3.5 w-3.5 mr-1.5" />
-                Activation Campaign
+                Campaña de activación
               </Button>
             )}
             {isPrivileged && (
@@ -986,10 +986,10 @@ export default function Employees() {
                 size="sm"
                 className="h-8 text-xs relative"
                 onClick={() => navigate("/app/workers/duplicates")}
-                title="Detect possible duplicate workers"
+                title="Detectar posibles trabajadores duplicados"
               >
                 <UserSearch className="h-3.5 w-3.5 mr-1.5" />
-                Detect duplicates
+                Detectar duplicados
                 {strongDuplicateCount > 0 && (
                   <Badge
                     variant="outline"
@@ -1002,12 +1002,12 @@ export default function Employees() {
             )}
             <BulkRateAssignment />
             <Button variant="outline" size="sm" className="h-8 text-xs" onClick={handleExport} disabled={filtered.length === 0}>
-              <Download className="h-3.5 w-3.5 mr-1.5" />Export
+              <Download className="h-3.5 w-3.5 mr-1.5" />Exportar
             </Button>
             {/* Update Dialog */}
             <Dialog open={updateOpen} onOpenChange={(v) => { setUpdateOpen(v); if (!v) resetUpdate(); }}>
               <DialogTrigger asChild>
-                <Button variant="outline" size="sm" className="h-8 text-xs"><ArrowUpDown className="h-3.5 w-3.5 mr-1.5" />Update</Button>
+                <Button variant="outline" size="sm" className="h-8 text-xs"><ArrowUpDown className="h-3.5 w-3.5 mr-1.5" />Actualizar</Button>
               </DialogTrigger>
               <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
                 <DialogHeader>
@@ -1179,24 +1179,24 @@ export default function Employees() {
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold text-foreground">Data quality</span>
+                <span className="text-sm font-semibold text-foreground">Calidad de datos</span>
                 {strongDuplicateCount > 0 ? (
                   <Badge
                     variant="outline"
                     className="h-5 px-1.5 bg-warning/10 text-warning border-warning/30 text-[10px] font-semibold"
                   >
-                    {strongDuplicateCount} {strongDuplicateCount === 1 ? "group" : "groups"}
+                    {strongDuplicateCount} {strongDuplicateCount === 1 ? "grupo" : "grupos"}
                   </Badge>
                 ) : (
                   <Badge variant="outline" className="h-5 px-1.5 text-[10px] text-muted-foreground border-border">
-                    clean
+                    limpio
                   </Badge>
                 )}
               </div>
               <p className="text-xs text-muted-foreground mt-0.5 truncate">
                 {strongDuplicateCount > 0
-                  ? "Possible duplicate workers detected. Review before they contaminate shifts or payroll."
-                  : "No strong duplicate signals in the current view. Run a deep scan anytime."}
+                  ? "Posibles trabajadores duplicados detectados. Revisa antes de que contaminen turnos o payroll."
+                  : "Sin señales fuertes de duplicados en la vista actual. Lanza un escaneo profundo cuando quieras."}
               </p>
             </div>
             <Button
@@ -1209,7 +1209,7 @@ export default function Employees() {
               }}
             >
               <UserSearch className="h-3.5 w-3.5 mr-1.5" />
-              Detect duplicates
+              Detectar duplicados
             </Button>
           </CardContent>
         </Card>
@@ -1224,25 +1224,25 @@ export default function Employees() {
           tenants keep a calm UI and stressed tenants get a glanceable alert. */}
       <div className="flex items-center gap-0.5 border-b border-border/40 overflow-x-auto">
         {([
-          { key: "active" as const, label: "Active", count: statusCounts.active },
-          { key: "invited" as const, label: "Invited", count: statusCounts.invited },
-          // Surface the failure backlog right next to "Invited" so it's actionable.
+          { key: "active" as const, label: "Activos", count: statusCounts.active },
+          { key: "invited" as const, label: "Invitados", count: statusCounts.invited },
+          // Surface the failure backlog right next to "Invitados" so it's actionable.
           // Hidden when zero to avoid noise in healthy tenants.
           ...(statusCounts.failed > 0
-            ? [{ key: "failed" as const, label: "Invite failed", count: statusCounts.failed, tone: "destructive" as const }]
+            ? [{ key: "failed" as const, label: "Invitación fallida", count: statusCounts.failed, tone: "destructive" as const }]
             : []),
-          { key: "pending" as const, label: "Pending activation", count: statusCounts.pending },
-          { key: "new" as const, label: "New", count: statusCounts.new },
+          { key: "pending" as const, label: "Pendientes de activación", count: statusCounts.pending },
+          { key: "new" as const, label: "Nuevos", count: statusCounts.new },
           {
             key: "missing-docs" as const,
-            label: "Missing docs",
+            label: "Documentos faltantes",
             count: statusCounts["missing-docs"],
             tone: statusCounts["missing-docs"] > 0 ? ("warning" as const) : undefined,
           },
-          { key: "drivers" as const, label: "Drivers", count: statusCounts.drivers },
-          { key: "no-activity" as const, label: "No recent activity", count: statusCounts["no-activity"] },
-          { key: "inactive" as const, label: "Inactive", count: statusCounts.inactive },
-          { key: "all" as const, label: "All", count: statusCounts.all },
+          { key: "drivers" as const, label: "Conductores", count: statusCounts.drivers },
+          { key: "no-activity" as const, label: "Sin actividad reciente", count: statusCounts["no-activity"] },
+          { key: "inactive" as const, label: "Inactivos", count: statusCounts.inactive },
+          { key: "all" as const, label: "Todos", count: statusCounts.all },
         ]).map(tab => {
           const isActive = statusTab === tab.key;
           const tone = (tab as any).tone as "destructive" | "warning" | undefined;
@@ -1298,6 +1298,7 @@ export default function Employees() {
               documentSignals={documentSignals}
               riskFilter={riskFilter}
               onRiskFilterChange={setRiskFilter}
+              compact
             />
           </div>
           <MobileDataQualitySummary
@@ -1314,7 +1315,7 @@ export default function Employees() {
       <PremiumFilterBar
         search={search}
         onSearchChange={setSearch}
-        searchPlaceholder="Search name, email, phone, code…"
+        searchPlaceholder="Buscar nombre, email, teléfono, código…"
         quickFilters={
           <>
             {uniqueRoles.length > 0 && (
