@@ -586,7 +586,7 @@ export default function Attendance() {
               </PopoverContent>
             </Popover>
 
-            <ReportActionsBar title="Reporte de Asistencia" subtitle={`${format(reportRange.from, "dd/MM/yyyy")} - ${format(reportRange.to, "dd/MM/yyyy")}`} onExportCSV={handleExportCSV} />
+            <ReportActionsBar title="Reporte de Asistencia" subtitle={`${formatDateUS(reportRange.from)} - ${formatDateUS(reportRange.to)}`} onExportCSV={handleExportCSV} />
           </div>
 
           {/* Report KPIs */}
