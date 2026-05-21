@@ -226,6 +226,13 @@ function PhotoCard({
         TODO — Professional Photo Assistant (future, NOT in this sprint):
           crop face · clean background · improve lighting · optional formal attire
           worker + admin approval before replacing the original photo.
+
+        TODO — Progressive enforcement (future, NOT in this sprint):
+          Professional photo requirement should later gate READINESS &
+          OPPORTUNITY eligibility — accepting new shifts, applying to
+          campaigns, appearing publicly as provider, booking eligibility.
+          It must NEVER block login, /portal/update-center access, document
+          upload, or contact-with-support.
       */}
     </SectionShell>
   );
