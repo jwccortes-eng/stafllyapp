@@ -1841,7 +1841,7 @@ export default function Employees() {
                     </Tooltip>
                   </TableCell>
                   <TableCell className="py-1 pl-2 pr-0">
-                    <EmployeeAvatar firstName={e.first_name ?? ""} lastName={e.last_name ?? ""} avatarUrl={e.avatar_url} gender={e.gender} size="sm" />
+                    <EmployeeAvatar firstName={e.first_name ?? ""} lastName={e.last_name ?? ""} avatarUrl={e.avatar_url} gender={e.gender} size="md" />
                   </TableCell>
                   <TableCell className="py-1">
                     <div className="leading-tight">
