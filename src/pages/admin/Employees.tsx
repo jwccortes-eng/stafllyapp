@@ -1691,11 +1691,7 @@ export default function Employees() {
       ) : effectiveViewMode === "roster" ? (
         /* ─── Roster (default desktop) — identity-card list ─── */
         <div className="space-y-2">
-          {statusTab === "no-photo" && (
-            <div className="rounded-xl border border-warning/20 bg-warning/5 px-3 py-2 text-[11px] text-warning">
-              Una foto profesional ayuda a identificar al trabajador en turnos, documentos y operación.
-            </div>
-          )}
+          {/* Photo guidance now lives in the filter-bar sub-strip (single source). */}
           <div className="rounded-2xl border border-border/50 bg-card overflow-hidden divide-y divide-border/30">
             {filtered.map((e) => {
               const phone = e.phone_number?.replace(/[^+\d]/g, "") ?? "";
