@@ -1389,6 +1389,32 @@ export default function Employees() {
                 <SelectContent><SelectItem value="all">All groups</SelectItem>{uniqueGroups.map(g => (<SelectItem key={g} value={g}>{g}</SelectItem>))}</SelectContent>
               </Select>
             )}
+            {/* v4 Sort control — visible "Ordenar por" with asc/desc toggle */}
+            <Select
+              value={sort.key}
+              onValueChange={(v) => setSort({ key: v as SortKey, direction: sort.direction })}
+            >
+              <SelectTrigger className="w-[170px] h-8 text-xs" aria-label="Ordenar por">
+                <ArrowUpDown className="h-3 w-3 mr-1 text-muted-foreground" />
+                <SelectValue placeholder="Ordenar por" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="name">Ordenar: Nombre</SelectItem>
+                <SelectItem value="code">Ordenar: ID Stafly</SelectItem>
+                <SelectItem value="last_activity">Ordenar: Última actividad</SelectItem>
+                <SelectItem value="photo">Ordenar: Foto</SelectItem>
+                <SelectItem value="role">Ordenar: Rol</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 px-2 text-[11px]"
+              onClick={() => setSort({ key: sort.key, direction: sort.direction === "asc" ? "desc" : "asc" })}
+              title={sort.direction === "asc" ? "Ascendente" : "Descendente"}
+            >
+              {sort.direction === "asc" ? "Asc ↑" : "Desc ↓"}
+            </Button>
           </>
         }
         activeChips={activeChips}
@@ -1403,6 +1429,38 @@ export default function Employees() {
           </>
         }
       />
+
+      {/* ─── Photo Quality sub-filter — only when on "Foto requerida" tab ─── */}
+      {statusTab === "no-photo" && (
+        <div className="rounded-xl border border-warning/20 bg-warning/5 px-3 py-2 space-y-1.5">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-[10px] uppercase tracking-wide text-warning font-semibold mr-1">Foto:</span>
+            {([
+              { key: "all" as const, label: "Todas" },
+              { key: "missing" as const, label: "Sin foto" },
+              { key: "unreviewed" as const, label: "Subida sin revisar" },
+            ]).map((opt) => (
+              <button
+                key={opt.key}
+                type="button"
+                onClick={() => setPhotoFilter(opt.key)}
+                className={cn(
+                  "px-2 py-0.5 rounded-full text-[10px] font-semibold border transition",
+                  photoFilter === opt.key
+                    ? "bg-warning text-warning-foreground border-warning"
+                    : "bg-card text-muted-foreground border-border hover:text-foreground",
+                )}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+          <p className="text-[10.5px] text-muted-foreground leading-snug">
+            Foto profesional: rostro claro, fondo limpio, buena iluminación. No se aceptan paisajes, logos, caricaturas, fotos grupales ni contenido sugestivo.
+          </p>
+        </div>
+      )}
+
 
       {/* ─── Bulk actions bar — appears when ≥1 row selected ─── */}
       {(() => {
