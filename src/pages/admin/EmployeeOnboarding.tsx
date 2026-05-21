@@ -125,7 +125,7 @@ export default function EmployeeOnboarding() {
       setLoading(true);
       const { data: emp, error } = await supabase
         .from("employees")
-        .select("*")
+        .select(EMPLOYEE_COLUMNS_NO_FISCAL)
         .eq("id", employeeId)
         .maybeSingle();
       if (error || !emp) {
