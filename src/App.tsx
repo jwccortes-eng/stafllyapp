@@ -267,6 +267,7 @@ function App() {
                 <Route path="employees" element={<CompanyRequiredGuard><Employees /></CompanyRequiredGuard>} />
                 <Route path="workers" element={<CompanyRequiredGuard><Navigate to="/app/employees" replace /></CompanyRequiredGuard>} />
                 <Route path="documents" element={<CompanyRequiredGuard><DocumentsCenter /></CompanyRequiredGuard>} />
+                <Route path="compliance-center" element={<CompanyRequiredGuard><ComplianceCenter /></CompanyRequiredGuard>} />
                 <Route path="employees/merge" element={<CompanyRequiredGuard><EmployeeMerge /></CompanyRequiredGuard>} />
                 <Route path="workforce" element={<CompanyRequiredGuard><Workforce /></CompanyRequiredGuard>} />
                 <Route path="employees/:id/onboarding" element={<CompanyRequiredGuard><EmployeeOnboarding /></CompanyRequiredGuard>} />
