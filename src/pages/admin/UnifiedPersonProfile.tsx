@@ -150,7 +150,7 @@ export default function UnifiedPersonProfile() {
       setError(null);
       const { data, error } = await supabase
         .from("employees")
-        .select("*")
+        .select(EMPLOYEE_COLUMNS_NO_FISCAL)
         .eq("id", id)
         .maybeSingle();
       if (cancelled) return;
