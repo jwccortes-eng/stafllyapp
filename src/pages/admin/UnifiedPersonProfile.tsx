@@ -644,7 +644,17 @@ export default function UnifiedPersonProfile() {
                       {selectedCompany.name}
                     </Badge>
                   )}
+                  {!hasPhoto && employee.is_active !== false && (
+                    <WorkerPhotoStatusChip status="required" size="sm" />
+                  )}
                 </div>
+
+                {!hasPhoto && employee.is_active !== false && (
+                  <p className="mt-2 text-[11px] leading-snug text-muted-foreground max-w-md">
+                    <span className="font-medium text-foreground">Actualizar foto profesional · </span>
+                    {WORKER_PHOTO_HELP_COPY}
+                  </p>
+                )}
 
                 {/* Contact row — only renders rows with real values */}
                 <div className="mt-3 flex items-center gap-x-4 gap-y-1 flex-wrap text-xs text-muted-foreground">
