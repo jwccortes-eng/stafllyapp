@@ -518,7 +518,9 @@ export default function Attendance() {
                   {filteredRows.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={8} className="text-center text-muted-foreground py-12">
-                        {rows.length === 0 ? "No hay turnos programados para este día" : "No se encontraron resultados"}
+                        {rows.length === 0
+                          ? "No hay turnos programados para este día."
+                          : "Aún no hay fichajes registrados que coincidan con los filtros."}
                       </TableCell>
                     </TableRow>
                   ) : (
