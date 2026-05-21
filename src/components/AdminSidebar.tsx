@@ -114,7 +114,18 @@ export default function AdminSidebar() {
   const navigate = useNavigate();
   const { collapsed, setCollapsed } = useSidebarCollapsed();
 
-  const [openSections, setOpenSections] = useState<Set<string>>(new Set([...COMPANY_SECTION_ORDER, ...GLOBAL_SECTION_ORDER]));
+  const SIDEBAR_OPEN_KEY = "stafly:sidebar:open-sections:v1";
+  const [openSections, setOpenSections] = useState<Set<string>>(() => {
+    try {
+      const raw = typeof window !== "undefined" ? window.localStorage.getItem(SIDEBAR_OPEN_KEY) : null;
+      if (raw) {
+        const parsed = JSON.parse(raw) as string[];
+        if (Array.isArray(parsed)) return new Set(parsed);
+      }
+    } catch { /* noop */ }
+    // Default: only the first (daily ops) group open; others collapsed for less clutter.
+    return new Set(["Operación diaria", "Plataforma"]);
+  });
   const [badgeCounts, setBadgeCounts] = useState<Record<string, number>>({});
 
   useEffect(() => {
