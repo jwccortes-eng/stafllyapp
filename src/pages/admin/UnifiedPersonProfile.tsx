@@ -647,22 +647,20 @@ export default function UnifiedPersonProfile() {
                   {!hasPhoto && employee.is_active !== false && (
                     <WorkerPhotoStatusChip status="required" size="sm" />
                   )}
-                  {hasPhoto && employee.is_active !== false && (
-                    <WorkerPhotoStatusChip status="pending" size="sm" />
-                  )}
                 </div>
 
                 {!hasPhoto && employee.is_active !== false && (
                   <p className="mt-2 text-[11px] leading-snug text-muted-foreground max-w-md">
                     <span className="font-medium text-foreground">Actualizar foto profesional · </span>
-                    {WORKER_PHOTO_HELP_COPY}
+                    Foto tipo documento: rostro claro, fondo limpio y buena
+                    iluminación. No se aceptan paisajes, logos, caricaturas,
+                    fotos grupales ni contenido sugestivo.
                   </p>
                 )}
                 {hasPhoto && employee.is_active !== false && (
-                  <p className="mt-2 text-[11px] leading-snug text-muted-foreground max-w-md">
-                    <span className="font-medium text-foreground">Foto subida sin revisar · </span>
-                    Verifica que cumpla los requisitos: rostro claro, fondo limpio
-                    y buena iluminación. Si no cumple, pide al trabajador subir una nueva.
+                  <p className="mt-2 text-[11px] leading-snug text-muted-foreground/70 max-w-md">
+                    Foto subida sin revisar — verifica que cumpla los requisitos
+                    profesionales antes de aprobar.
                   </p>
                 )}
 
