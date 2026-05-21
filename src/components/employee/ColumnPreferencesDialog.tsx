@@ -16,13 +16,13 @@ export interface ColumnDef {
 }
 
 export const EMPLOYEE_COLUMNS: ColumnDef[] = [
-  { key: "employer_identification", label: "ID Empleado", defaultVisible: true },
+  { key: "employer_identification", label: "ID Stafly", defaultVisible: true },
   { key: "phone_number", label: "Teléfono", defaultVisible: true },
-  { key: "email", label: "Email", defaultVisible: true },
-  { key: "employee_role", label: "Rol", defaultVisible: true },
+  { key: "email", label: "Email", defaultVisible: false },
+  { key: "employee_role", label: "Rol", defaultVisible: false },
   { key: "groups", label: "Grupo", defaultVisible: false },
-  { key: "status", label: "Estado", defaultVisible: true },
-  { key: "last_login", label: "Último login", defaultVisible: true },
+  { key: "status", label: "Portal / App", defaultVisible: true },
+  { key: "last_login", label: "Última actividad", defaultVisible: true },
   { key: "start_date", label: "Fecha inicio", defaultVisible: false },
   { key: "onboarding_status", label: "Onboarding", defaultVisible: false },
   { key: "address_city", label: "Ciudad", defaultVisible: false },

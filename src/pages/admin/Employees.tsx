@@ -1607,9 +1607,12 @@ export default function Employees() {
                   <div className="flex items-center gap-1.5 min-w-0">
                     <span className="text-xs font-semibold truncate">{formatPersonName(`${e.first_name} ${e.last_name}`)}</span>
                     {e.employer_identification && (
-                      <span className="shrink-0 text-[9px] font-mono font-semibold text-primary/80 bg-primary/8 px-1.5 py-0.5 rounded" title="ID Stafly · Payroll ID">
-                        ID Stafly #{e.employer_identification}
-                      </span>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="shrink-0 text-[10px] font-mono tabular-nums text-muted-foreground">{e.employer_identification}</span>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="text-xs">ID Stafly · referencia de payroll</TooltipContent>
+                      </Tooltip>
                     )}
                     {!e.is_active && (
                       <span className="shrink-0 text-[9px] font-semibold uppercase tracking-wide text-muted-foreground bg-muted px-1.5 py-0.5 rounded">Histórico</span>
@@ -1660,9 +1663,14 @@ export default function Employees() {
                       )}
                     </div>
                     {e.employer_identification && (
-                      <span className="inline-block mt-1 text-[9px] font-mono font-semibold text-primary/80 bg-primary/8 px-1.5 py-0.5 rounded" title="ID Stafly · Payroll ID">
-                        ID Stafly #{e.employer_identification}
-                      </span>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="inline-block mt-0.5 text-[10px] font-mono tabular-nums text-muted-foreground">
+                            ID Stafly · {e.employer_identification}
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="text-xs">Referencia de payroll</TooltipContent>
+                      </Tooltip>
                     )}
                     <div className="flex items-center gap-1 flex-wrap mt-1">
                       <WorkerRiskTags risks={riskAnalysis.byId.get(e.id) ?? []} max={2} />
@@ -1754,11 +1762,16 @@ export default function Employees() {
                 </TableHead>
                 {visibleColumns.includes("employer_identification") && (
                   <TableHead
-                    className="text-[10px] w-[70px] cursor-pointer select-none hover:bg-muted/40 transition-colors"
+                    className="text-[10px] w-[80px] cursor-pointer select-none hover:bg-muted/40 transition-colors"
                     onClick={() => onSort("code")}
                     aria-sort={sort.key === "code" ? (sort.direction === "asc" ? "ascending" : "descending") : "none"}
                   >
-                    <span className="inline-flex items-center gap-1">ID <SortIndicator direction={directionFor("code")} /></span>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="inline-flex items-center gap-1">ID Stafly <SortIndicator direction={directionFor("code")} /></span>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="text-xs">ID Stafly · referencia de payroll</TooltipContent>
+                    </Tooltip>
                   </TableHead>
                 )}
                 {visibleColumns.includes("phone_number") && <TableHead className="hidden sm:table-cell text-[10px]">Phone</TableHead>}
@@ -1833,11 +1846,6 @@ export default function Employees() {
                     <div className="leading-tight">
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="text-xs font-semibold">{formatPersonName(`${e.first_name} ${e.last_name}`)}</span>
-                        {e.employer_identification && (
-                          <span className="text-[9px] font-mono font-semibold text-primary/80 bg-primary/8 px-1.5 py-0.5 rounded" title="ID Stafly · Payroll ID">
-                            ID Stafly #{e.employer_identification}
-                          </span>
-                        )}
                         {!e.is_active && (
                           <span className="text-[9px] font-semibold uppercase tracking-wide text-muted-foreground bg-muted px-1.5 py-0.5 rounded">Histórico</span>
                         )}
@@ -1854,7 +1862,7 @@ export default function Employees() {
                   {visibleColumns.includes("employer_identification") && (
                     <TableCell className="py-1">
                       {e.employer_identification ? (
-                        <span className="text-[11px] font-mono font-semibold text-primary/80">#{e.employer_identification}</span>
+                        <span className="text-[11px] font-mono font-semibold tabular-nums text-foreground">{e.employer_identification}</span>
                       ) : <span className="text-[11px] text-muted-foreground/25">—</span>}
                     </TableCell>
                   )}
