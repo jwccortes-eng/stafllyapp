@@ -103,6 +103,14 @@ export default function UpdateCenter() {
         </div>
       )}
 
+      {/* ── Self-service editable cards (Phase 1) ── */}
+      {effectiveEmployeeId && (
+        <WorkerSelfServiceSections
+          employeeId={effectiveEmployeeId}
+          onUpdated={() => { void refresh(); }}
+        />
+      )}
+
       {/* ── Loading ── */}
       {loading && (
         <div className="rounded-2xl border border-border/50 bg-card/60 p-6 text-center text-[12px] text-muted-foreground">
