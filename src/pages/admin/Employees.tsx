@@ -83,6 +83,7 @@ import { useCompanyDocuments } from "@/hooks/useCompanyDocuments";
 import MobileDataQualitySummary from "@/components/employee/MobileDataQualitySummary";
 import MobileWorkersCommandView from "@/components/employee/MobileWorkersCommandView";
 import { WorkerPhotoStatusChip } from "@/components/employee/WorkerPhotoStatusChip";
+import { PhotoReviewCriteriaCard } from "@/components/employee/PhotoReviewCriteriaCard";
 
 // Fields that only owner/admin can see
 const SENSITIVE_FIELD_KEYS = new Set([
