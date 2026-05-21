@@ -1768,18 +1768,28 @@ export default function Employees() {
                     {/* Status line — max 2 risks + photo chip, rest behind +N */}
                     <div className="mt-1 flex items-center gap-1.5 flex-wrap">
                       <WorkerRiskTags risks={risks} max={2} />
-                      {isMissingPhoto(e) && (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span>
-                              <WorkerPhotoStatusChip status="required" />
-                            </span>
-                          </TooltipTrigger>
-                          <TooltipContent side="top" className="text-xs max-w-[220px]">
-                            Solicita una foto tipo documento: rostro claro, fondo limpio y buena iluminación.
-                          </TooltipContent>
-                        </Tooltip>
-                      )}
+                      {(() => {
+                        const ps = photoStatusFor(e);
+                        // Always surface "required". Only surface "review" while
+                        // the operator is auditing photos (no-photo tab).
+                        if (ps === "required" || (ps === "review" && statusTab === "no-photo")) {
+                          return (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span>
+                                  <WorkerPhotoStatusChip status={ps} />
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="text-xs max-w-[240px]">
+                                {ps === "required"
+                                  ? "Solicita una foto tipo documento: rostro claro, fondo limpio y buena iluminación."
+                                  : "Foto cargada — falta revisión manual antes de aprobar."}
+                              </TooltipContent>
+                            </Tooltip>
+                          );
+                        }
+                        return null;
+                      })()}
                     </div>
                   </div>
 
