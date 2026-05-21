@@ -49,7 +49,7 @@ const ICONS: Record<RequirementDef["icon"], React.ComponentType<{ className?: st
 
 export default function UpdateCenter() {
   const { effectiveEmployeeId } = useEffectiveEmployee();
-  const { loading, items, summary } = useWorkerCompliance(effectiveEmployeeId);
+  const { loading, items, summary, refresh } = useWorkerCompliance(effectiveEmployeeId);
 
   return (
     <div className="space-y-4 animate-fade-in pb-28">
