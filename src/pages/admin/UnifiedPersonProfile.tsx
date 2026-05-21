@@ -45,6 +45,7 @@ import { ArchiveEmployeeDialog } from "@/components/employee/ArchiveEmployeeDial
 import { NextActionCard } from "@/components/employee/NextActionCard";
 import { selectWorkerNextAction, type WorkerNextAction } from "@/lib/worker-next-action";
 import { canInviteWorker, canActivateWorker, canArchiveWorker } from "@/lib/worker-actions";
+import { WorkerPhotoStatusChip, WORKER_PHOTO_HELP_COPY } from "@/components/employee/WorkerPhotoStatusChip";
 
 import {
   ArrowLeft,
