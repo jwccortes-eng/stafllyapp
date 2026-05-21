@@ -39,6 +39,7 @@ import {
   type ReadinessBand,
 } from "@/components/ui/readiness-badge";
 import { EmployeeProfileTabs } from "@/components/employee/EmployeeProfileTabs";
+import { ProfileSummaryGrid } from "@/components/employee/ProfileSummaryGrid";
 import { EmployeeInviteDialog } from "@/components/employee/EmployeeInviteDialog";
 import { ArchiveEmployeeDialog } from "@/components/employee/ArchiveEmployeeDialog";
 import { NextActionCard } from "@/components/employee/NextActionCard";
@@ -983,6 +984,43 @@ export default function UnifiedPersonProfile() {
         return <NextActionCard action={nextAction} onAction={handleAction} />;
       })()}
 
+      {/* ─── ONE-SCREEN PROFILE SUMMARY GRID (Phase: One-Screen Optimization v1) ───
+          Presentational, read-only 2-column card grid: Datos principales,
+          Cumplimiento, Acceso, Operación, Actividad reciente, Avanzado.
+          All actions deep-link into the existing tabs / handlers — no new
+          mutations, no schema changes, no payroll math. */}
+      <ProfileSummaryGrid
+        employee={employee}
+        portalActive={portalActive}
+        invitation={invitation ?? null}
+        readiness={{
+          missingDocuments: readiness.missingDocuments,
+          missingPersonal: readiness.missingPersonal,
+          progressPct: readiness.progressPct,
+          completedRequirements: readiness.completedRequirements,
+          totalRequirements: readiness.totalRequirements,
+        }}
+        docsCount={docsCount}
+        onboardingDocsCount={onboardingDocsCount}
+        lastClockIn={lastPayrollDate}
+        recentActivity={recentActivity}
+        recentShifts={recentShifts}
+        frontDeskVisits={frontDeskVisits}
+        onOpenTab={(tab) => {
+          setActiveTab(tab);
+          requestAnimationFrame(() => {
+            document
+              .querySelector('[data-state="active"][role="tabpanel"]')
+              ?.scrollIntoView({ behavior: "smooth", block: "start" });
+          });
+        }}
+        onEdit={() => setIsEditing(true)}
+        onInvite={() => setInviteOpen(true)}
+        onArchive={() => setArchiveOpen(true)}
+        isPrivileged={isPrivileged}
+      />
+
+
       {/* ─── READINESS / OPS GAPS ───
           Surfaces every signal an admin needs to act on this worker:
           missing required profile fields, missing required documents,
@@ -1169,10 +1207,15 @@ export default function UnifiedPersonProfile() {
         );
       })()}
 
-      {/* ─── DEEP TABS (existing logic, unchanged) ─── */}
+      {/* ─── DEEP TABS (existing logic, unchanged — secondary navigation) ─── */}
       {selectedCompanyId && (
-        <Card className="border-border/50">
-          <CardContent className="p-4">
+        <div className="space-y-2">
+          <div className="flex items-center gap-1.5 text-[10.5px] font-medium uppercase tracking-wider text-muted-foreground/70 px-1">
+            <Code2 className="h-3 w-3" />
+            Vista detallada · navegación secundaria
+          </div>
+          <Card className="border-border/50">
+            <CardContent className="p-4">
             <EmployeeProfileTabs
               employee={employee}
               companyId={selectedCompanyId}
@@ -1191,6 +1234,7 @@ export default function UnifiedPersonProfile() {
             />
           </CardContent>
         </Card>
+        </div>
       )}
 
       {/* ─── RECENT SHIFTS ─── */}
