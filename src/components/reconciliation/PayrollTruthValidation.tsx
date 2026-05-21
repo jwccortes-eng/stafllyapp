@@ -557,11 +557,11 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
 
     (async () => {
       const [employeesRes, aliasesRes] = await Promise.all([
-        supabase
-          .from("employees")
-          .select("id, first_name, last_name, phone_number, email, connecteam_employee_id, employer_identification, verification_ssn_ein")
-          .eq("company_id", companyId)
-          .eq("is_active", true),
+        // SSN/EIN must flow through the admin-gated RPC since Security Phase 1.5
+        // revoked the column from the broad `authenticated` role. Selecting
+        // `verification_ssn_ein` directly would error with
+        // "permission denied for table employees".
+        supabase.rpc("admin_get_employees_with_fiscal", { p_company_id: companyId }),
         supabase
           .from("employee_aliases")
           .select("alias_name_normalized, employee_id")
