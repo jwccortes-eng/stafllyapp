@@ -237,41 +237,54 @@ export function EmployeeAccessTab({ employee, companyId, companyName, isPrivileg
         </Card>
       </div>
 
-      {/* Portal Module Access */}
+      {/* Portal Module Access — compact: summary chip + collapsible toggle list */}
       <div>
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/60 flex items-center gap-1.5">
-            <Shield className="h-3.5 w-3.5" />
-            Módulos del portal
-          </h3>
-          <Badge variant="outline" className="text-[10px]">
-            {enabledCount}/{PORTAL_MODULES.length} activos
-          </Badge>
-        </div>
-        <Card className="rounded-xl border-border/40">
-          <CardContent className="p-0 divide-y divide-border/30">
-            {PORTAL_MODULES.map(mod => {
-              const Icon = mod.icon;
-              const enabled = modules[mod.key] ?? true;
-              return (
-                <div key={mod.key} className="flex items-center gap-3 px-4 py-3">
-                  <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 transition-colors ${enabled ? "bg-primary/10" : "bg-muted"}`}>
-                    <Icon className={`h-4 w-4 ${enabled ? "text-primary" : "text-muted-foreground/40"}`} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className={`text-sm font-medium ${!enabled ? "text-muted-foreground/50" : ""}`}>{mod.label}</p>
-                    <p className="text-[10px] text-muted-foreground/60 truncate">{mod.description}</p>
-                  </div>
-                  <Switch
-                    checked={enabled}
-                    onCheckedChange={v => toggleModule(mod.key, v)}
-                    disabled={!isPrivileged || saving === mod.key}
-                  />
-                </div>
-              );
-            })}
-          </CardContent>
-        </Card>
+        <Collapsible open={modulesOpen} onOpenChange={setModulesOpen}>
+          <CollapsibleTrigger asChild>
+            <button
+              type="button"
+              className="w-full flex items-center justify-between rounded-xl border border-border/40 bg-card px-4 py-3 hover:bg-muted/40 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <Shield className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="text-sm font-medium">Módulos del portal</span>
+                <Badge variant="outline" className="text-[10px] ml-1">
+                  {enabledCount}/{PORTAL_MODULES.length} activos
+                </Badge>
+              </div>
+              <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                {modulesOpen ? "Ocultar" : "Ver módulos del portal"}
+                <ChevronDown className={`h-3.5 w-3.5 transition-transform ${modulesOpen ? "rotate-180" : ""}`} />
+              </div>
+            </button>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <Card className="rounded-xl border-border/40 mt-2">
+              <CardContent className="p-0 divide-y divide-border/30">
+                {PORTAL_MODULES.map(mod => {
+                  const Icon = mod.icon;
+                  const enabled = modules[mod.key] ?? true;
+                  return (
+                    <div key={mod.key} className="flex items-center gap-3 px-4 py-3">
+                      <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 transition-colors ${enabled ? "bg-primary/10" : "bg-muted"}`}>
+                        <Icon className={`h-4 w-4 ${enabled ? "text-primary" : "text-muted-foreground/40"}`} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-sm font-medium ${!enabled ? "text-muted-foreground/50" : ""}`}>{mod.label}</p>
+                        <p className="text-[10px] text-muted-foreground/60 truncate">{mod.description}</p>
+                      </div>
+                      <Switch
+                        checked={enabled}
+                        onCheckedChange={v => toggleModule(mod.key, v)}
+                        disabled={!isPrivileged || saving === mod.key}
+                      />
+                    </div>
+                  );
+                })}
+              </CardContent>
+            </Card>
+          </CollapsibleContent>
+        </Collapsible>
       </div>
     </div>
   );
