@@ -290,7 +290,9 @@ export default function Employees() {
   const [importStep, setImportStep] = useState<"upload" | "preview" | "done">("upload");
   const [importResult, setImportResult] = useState<{ created: number; skipped: number } | null>(null);
   const [importing, setImporting] = useState(false);
-  const [viewMode, setViewMode] = useState<ViewMode>("table");
+  // Default desktop view is the premium "roster" (identity-card list).
+  // Table remains available via the ViewSwitcher.
+  const [viewMode, setViewMode] = useState<ViewMode>("roster");
   const isMobile = useIsMobile();
   // On mobile we always render the premium card view to avoid horizontal overflow
   // and to hide noisy admin metadata (employer_identification etc.) from the list.
@@ -1579,6 +1581,138 @@ export default function Employees() {
             }
           />
         )
+      ) : effectiveViewMode === "roster" ? (
+        /* ─── Roster (default desktop) — identity-card list ─── */
+        <div className="space-y-2">
+          {statusTab === "no-photo" && (
+            <div className="rounded-xl border border-warning/20 bg-warning/5 px-3 py-2 text-[11px] text-warning">
+              Una foto profesional ayuda a identificar al trabajador en turnos, documentos y operación.
+            </div>
+          )}
+          <div className="rounded-2xl border border-border/50 bg-card overflow-hidden divide-y divide-border/30">
+            {filtered.map((e) => {
+              const phone = e.phone_number?.replace(/[^+\d]/g, "") ?? "";
+              const status: PremiumAvatarStatus = e.is_active === false
+                ? "inactive"
+                : isMissingDocs(e) ? "missing-docs"
+                : isNew(e) ? "new"
+                : isDriver(e) ? "driver"
+                : !e.user_id ? "pending"
+                : "active";
+              const risks = riskAnalysis.byId.get(e.id) ?? [];
+              const lastSeen = lastActivityDate(e);
+              return (
+                <div
+                  key={e.id}
+                  onClick={() => navigate(`/app/employees/${e.id}`)}
+                  className={cn(
+                    "group flex items-center gap-3 px-3 sm:px-4 py-2.5 hover:bg-accent/30 transition-colors cursor-pointer",
+                    !e.is_active && "opacity-60",
+                  )}
+                >
+                  {/* Avatar — protagonist */}
+                  <PremiumAvatar
+                    firstName={e.first_name}
+                    lastName={e.last_name}
+                    avatarUrl={e.avatar_url}
+                    size="lg"
+                    status={status}
+                  />
+
+                  {/* Identity block */}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <p className="text-sm font-semibold truncate leading-tight">
+                        {formatPersonName(`${e.first_name} ${e.last_name}`)}
+                      </p>
+                      {!e.is_active && (
+                        <span className="shrink-0 text-[9px] font-semibold uppercase tracking-wide text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                          Histórico
+                        </span>
+                      )}
+                      {isDriver(e) && (
+                        <Car className="h-3 w-3 text-sky-500 shrink-0" aria-label="Driver" />
+                      )}
+                    </div>
+                    <div className="mt-0.5 flex items-center gap-1.5 text-[10.5px] text-muted-foreground">
+                      {e.employer_identification && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="font-mono tabular-nums">
+                              ID Stafly · {e.employer_identification}
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="text-xs">Referencia de payroll</TooltipContent>
+                        </Tooltip>
+                      )}
+                      {e.phone_number && (
+                        <>
+                          <span className="text-muted-foreground/40">·</span>
+                          <span className="truncate hidden md:inline">{e.phone_number}</span>
+                        </>
+                      )}
+                      {e.email && (
+                        <>
+                          <span className="text-muted-foreground/40 hidden lg:inline">·</span>
+                          <span className="truncate hidden lg:inline">{e.email}</span>
+                        </>
+                      )}
+                    </div>
+                    {/* Status line — max 2 risks + photo chip, rest behind +N */}
+                    <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+                      <WorkerRiskTags risks={risks} max={2} />
+                      {isMissingPhoto(e) && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span>
+                              <WorkerPhotoStatusChip status="required" />
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="text-xs max-w-[220px]">
+                            Solicita una foto tipo documento: rostro claro, fondo limpio y buena iluminación.
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Last activity (desktop only) */}
+                  {lastSeen && (
+                    <div className="hidden xl:flex flex-col items-end text-right shrink-0 w-[110px]">
+                      <span className="text-[9px] uppercase tracking-wide text-muted-foreground/70">Últ. actividad</span>
+                      <span className="text-[10.5px] text-muted-foreground">
+                        {formatDistanceToNow(lastSeen, { addSuffix: true, locale: enUS })}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Status + quick actions */}
+                  <div className="shrink-0 flex items-center gap-1.5">
+                    <EmpStatusBadge
+                      employee={e}
+                      invitation={invitations[e.id]}
+                      showInvite
+                      onInvite={() => { setViewEmployee(e); setInviteOpen(true); }}
+                      onCopyLink={copyInviteLink}
+                    />
+                    {phone && (
+                      <a
+                        href={`https://wa.me/${phone.replace(/^\+/, "")}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(ev) => ev.stopPropagation()}
+                        className="hidden sm:inline-flex items-center justify-center h-7 w-7 rounded-lg text-emerald-600 hover:bg-emerald-500/10 transition"
+                        aria-label={`WhatsApp ${e.first_name}`}
+                      >
+                        <MessageCircle className="h-3.5 w-3.5" />
+                      </a>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       ) : effectiveViewMode === "compact" ? (
         /* ─── Compact List ─── */
         <div className="rounded-xl border border-border/50 bg-card overflow-hidden divide-y divide-border/40">
