@@ -188,14 +188,40 @@ export function ProfilePhotoUpload({
               )}
             </div>
 
-            {/* Guidelines */}
-            <div className="space-y-1.5 text-[10px] text-muted-foreground bg-muted/30 rounded-xl p-3">
-              <p className="font-semibold text-foreground text-xs mb-1">Requisitos de la foto:</p>
-              <p>✓ Foto clara de tu rostro</p>
-              <p>✓ Sin lentes de sol cubriendo el rostro</p>
-              <p>✓ Sin fotos grupales</p>
-              <p>✓ Formato retrato preferido</p>
+            {/* Guidelines — Photo Update Flow v2 */}
+            <div className="space-y-2 text-[10px] text-muted-foreground bg-muted/30 rounded-xl p-3">
+              <p className="font-semibold text-foreground text-xs leading-snug">
+                Sube una foto tipo documento: rostro claro, fondo limpio y buena iluminación.
+              </p>
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                <div className="space-y-0.5">
+                  <p className="font-semibold text-emerald-600 dark:text-emerald-400 text-[10px]">Aceptado</p>
+                  <p>✓ Rostro visible</p>
+                  <p>✓ Cabeza y hombros</p>
+                  <p>✓ Fondo limpio</p>
+                  <p>✓ Sin filtros fuertes</p>
+                </div>
+                <div className="space-y-0.5">
+                  <p className="font-semibold text-destructive text-[10px]">No aceptado</p>
+                  <p>✗ Gatos / mascotas</p>
+                  <p>✗ Paisajes / logos</p>
+                  <p>✗ Caricaturas o avatares</p>
+                  <p>✗ Fotos grupales</p>
+                  <p>✗ Contenido sugestivo</p>
+                  <p>✗ Borrosa o muy oscura</p>
+                </div>
+              </div>
             </div>
+            {/*
+              TODO — Professional Photo Assistant (future, NOT in this sprint):
+                - crop face
+                - clean background
+                - improve lighting
+                - optional formal attire
+                - worker + admin approval before replacing the original photo
+              Constraints: never auto-replace, never mutate storage without approval,
+              keep audit trail of original vs generated photo.
+            */}
 
             {/* Action buttons */}
             {preview ? (
