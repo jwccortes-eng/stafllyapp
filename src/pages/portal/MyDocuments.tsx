@@ -38,6 +38,15 @@ import {
   classifyExpiration,
   EXPIRATION_STATE_LABEL,
 } from "@/lib/onboarding/document-expiration-policy";
+import {
+  policyFor,
+  uploadHintFor,
+  nameForSide,
+  inferDocumentSide,
+  missingSidesFor,
+  SIDE_LABEL,
+  type DocumentSide,
+} from "@/lib/documents/document-policy";
 import { SmartDateInput } from "@/components/ui/smart-date-input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
