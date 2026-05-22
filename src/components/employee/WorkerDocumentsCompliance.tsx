@@ -40,6 +40,12 @@ import {
   classifyExpiration,
   expirationPolicyFor,
 } from "@/lib/onboarding/document-expiration-policy";
+import {
+  policyFor,
+  inferDocumentSide,
+  missingSidesFor,
+  SIDE_LABEL,
+} from "@/lib/documents/document-policy";
 import { resolveEmployeeDocumentUrl } from "@/lib/employee-documents";
 import DocumentPreviewDialog from "@/components/documents/DocumentPreviewDialog";
 
