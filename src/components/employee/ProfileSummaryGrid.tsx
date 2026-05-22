@@ -614,55 +614,9 @@ export function ProfileSummaryGrid({
         )}
       </SectionCard>
 
-      {/* 6. AVANZADO E IMPORTADO */}
-      <Collapsible className="lg:col-span-2">
-        <Card className="border-dashed border-border/60 bg-muted/10">
-          <CardContent className="p-3">
-            <CollapsibleTrigger className="group w-full flex items-center justify-between gap-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors">
-              <span className="inline-flex items-center gap-1.5">
-                <Code2 className="h-3.5 w-3.5" />
-                Avanzado e importado
-              </span>
-              <ChevronDown className="h-3.5 w-3.5 transition-transform group-data-[state=open]:rotate-180" />
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <div className="mt-2 space-y-2">
-                <p className="text-[10.5px] text-muted-foreground/80">
-                  Información heredada o técnica para auditoría. No se usa como verdad de payroll sin validación.
-                </p>
-                {importedKeys.length > 0 ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 text-[11px] font-mono">
-                    {importedKeys.map(([k, v]) => (
-                      <div key={String(k)} className="flex items-start gap-2 min-w-0">
-                        <span className="text-muted-foreground shrink-0 w-40 truncate">{k}</span>
-                        <span className="text-foreground truncate" title={String(v)}>
-                          {String(v)}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-[11px] text-muted-foreground italic">
-                    Sin metadatos importados para este trabajador.
-                  </p>
-                )}
-                {isPrivileged && (
-                  <div className="pt-2 border-t border-border/40 flex flex-wrap gap-1.5">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-7 text-[11px] gap-1 text-muted-foreground hover:text-destructive"
-                      onClick={onArchive}
-                    >
-                      <Archive className="h-3 w-3" /> Archivar trabajador
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </CollapsibleContent>
-          </CardContent>
-        </Card>
-      </Collapsible>
+      {/* IA Cleanup v3: legacy/import data lives in a single collapsible
+          "Datos importados y auditoría" rendered by UnifiedPersonProfile,
+          admin/dev only. We intentionally do not repeat it here. */}
     </div>
   );
 }
