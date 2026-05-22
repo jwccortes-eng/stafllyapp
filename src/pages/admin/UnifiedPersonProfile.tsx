@@ -649,21 +649,6 @@ export default function UnifiedPersonProfile() {
                   )}
                 </div>
 
-                {!hasPhoto && employee.is_active !== false && (
-                  <p className="mt-2 text-[11px] leading-snug text-muted-foreground max-w-md">
-                    <span className="font-medium text-foreground">Actualizar foto profesional · </span>
-                    Foto tipo documento: rostro claro, fondo limpio y buena
-                    iluminación. No se aceptan paisajes, logos, caricaturas,
-                    fotos grupales ni contenido sugestivo.
-                  </p>
-                )}
-                {hasPhoto && employee.is_active !== false && (
-                  <p className="mt-2 text-[11px] leading-snug text-muted-foreground/70 max-w-md">
-                    Foto subida sin revisar — verifica que cumpla los requisitos
-                    profesionales antes de aprobar.
-                  </p>
-                )}
-
                 {/* Contact row — only renders rows with real values */}
                 <div className="mt-3 flex items-center gap-x-4 gap-y-1 flex-wrap text-xs text-muted-foreground">
                   {employee.phone_number && (
@@ -898,14 +883,15 @@ export default function UnifiedPersonProfile() {
         <Collapsible>
           <CollapsibleTrigger className="group inline-flex items-center gap-1.5 text-[10.5px] font-medium uppercase tracking-wider text-muted-foreground/70 hover:text-foreground transition-colors">
             <Code2 className="h-3 w-3" />
-            Información técnica
+            Datos importados y avanzados
             <ChevronDown className="h-3 w-3 transition-transform group-data-[state=open]:rotate-180" />
           </CollapsibleTrigger>
           <CollapsibleContent>
             <Card className="mt-2 border-dashed border-border/60 bg-muted/20">
               <CardContent className="p-3 space-y-2">
                 <p className="text-[10.5px] text-muted-foreground/80">
-                  Datos operativos y señales internas para administradores.
+                  Datos importados, identificadores internos, manager de Connecteam,
+                  grupos/tags legacy y metadata operativa. No se usan para payroll.
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5 text-[11px] font-mono">
                 {[
@@ -918,6 +904,15 @@ export default function UnifiedPersonProfile() {
                   ["source", employee.source ?? employee.import_source],
                   ["person_type_guess", employee.person_type_guess],
                   ["payroll_safe", employee.payroll_safe == null ? null : String(employee.payroll_safe)],
+                  ["connecteam_employee_id", employee.connecteam_employee_id],
+                  ["direct_manager", employee.direct_manager],
+                  ["recommended_by", employee.recommended_by],
+                  ["groups", Array.isArray(employee.groups) ? employee.groups.join(", ") : employee.groups],
+                  ["tags", Array.isArray(employee.tags) ? employee.tags.join(", ") : employee.tags],
+                  ["added_via", employee.added_via],
+                  ["added_by", employee.added_by],
+                  ["date_added", employee.date_added],
+                  ["created_from_reconciliation", employee.created_from_reconciliation == null ? null : String(employee.created_from_reconciliation)],
                   ["created_at", employee.created_at],
                   ["updated_at", employee.updated_at],
                 ].filter(([, v]) => v != null && v !== "").map(([k, v]) => (
@@ -1040,11 +1035,12 @@ export default function UnifiedPersonProfile() {
       />
 
 
-      {/* ─── READINESS / OPS GAPS ───
-          Surfaces every signal an admin needs to act on this worker:
-          missing required profile fields, missing required documents,
-          docs awaiting review, rejected docs, and a recommended next action.
-          Hides itself only when nothing is actionable. */}
+      {/* ─── ESTADO OPERACIONAL ───
+          Calm executive status card. Replaces the legacy red "Readiness &
+          action items" wall. Shows the worker's operational status, completion
+          %, the 3 most important blockers, and a collapsible "Ver todos los
+          pendientes" for the rest. The recommended next action lives in
+          NextActionCard above — we do not duplicate the CTA here. */}
       {(() => {
         const personalCount = readiness.missingPersonal.length;
         const missingDocsCount = readiness.missingDocuments.length;
@@ -1052,186 +1048,137 @@ export default function UnifiedPersonProfile() {
         const rejectedDocs = docsCount.rejected;
         const portalNotActive = !portalActive;
         const hasInvitation = !!invitations[employee.id];
-        const hasAnything =
-          personalCount > 0 ||
-          missingDocsCount > 0 ||
-          pendingDocs > 0 ||
-          rejectedDocs > 0 ||
-          portalNotActive;
-        if (!hasAnything) return null;
 
-        // Recommended next action — highest-priority blocker first.
-        let nextLabel = "Complete personal info";
-        let nextTab = "info";
-        let nextEdit = true;
-        if (rejectedDocs > 0) {
-          nextLabel = `Review ${rejectedDocs} rejected document${rejectedDocs === 1 ? "" : "s"}`;
-          nextTab = "docs";
-          nextEdit = false;
-        } else if (missingDocsCount > 0) {
-          nextLabel = personalCount > 0
-            ? "Resolve gaps · Documents first"
-            : "Upload required documents";
-          nextTab = "docs";
-          nextEdit = false;
-        } else if (pendingDocs > 0) {
-          nextLabel = `Review ${pendingDocs} pending upload${pendingDocs === 1 ? "" : "s"}`;
-          nextTab = "docs";
-          nextEdit = false;
-        } else if (personalCount > 0) {
-          nextLabel = "Complete personal info";
-          nextTab = "info";
-          nextEdit = true;
+        // Status label — calm, executive phrasing tied to existing readiness band.
+        let statusLabel = "Listo para oportunidades";
+        let statusTone: "ready" | "attention" | "critical" | "muted" = "ready";
+        if (employee.is_active === false) {
+          statusLabel = "Inactivo";
+          statusTone = "muted";
+        } else if (missingDocsCount > 0 || rejectedDocs > 0) {
+          statusLabel = "No listo para payroll";
+          statusTone = "critical";
+        } else if (personalCount > 0 || pendingDocs > 0) {
+          statusLabel = "Necesita actualización";
+          statusTone = "attention";
         } else if (portalNotActive) {
-          nextLabel = hasInvitation ? "Resend portal invite" : "Send portal invite";
-          nextTab = "access";
-          nextEdit = false;
+          statusLabel = "Pendiente de activación";
+          statusTone = "attention";
         }
 
-        const totalActionable =
-          personalCount + missingDocsCount + pendingDocs + rejectedDocs;
-        const tone = (rejectedDocs > 0 || missingDocsCount > 0)
-          ? "destructive"
-          : (pendingDocs > 0 || personalCount > 0 || portalNotActive)
-            ? "warning"
-            : "muted";
-        const toneClasses = tone === "destructive"
-          ? "border-destructive/30 bg-destructive/[0.04]"
-          : "border-warning/30 bg-warning/[0.04]";
-        const headerClasses = tone === "destructive" ? "text-destructive" : "text-warning";
-        const barBg = tone === "destructive" ? "bg-destructive/15" : "bg-warning/15";
-        const barFill = tone === "destructive" ? "bg-destructive" : "bg-warning";
-        const ctaClasses = tone === "destructive"
-          ? "border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
-          : "border-warning/40 text-warning hover:bg-warning/10 hover:text-warning";
+        type Item = { key: string; tone: "warning" | "destructive" | "muted"; text: string };
+        const items: Item[] = [];
+        readiness.missingDocuments.forEach((d) => items.push({
+          key: `m-${d.category}`, tone: "destructive",
+          text: `Falta documento requerido: ${d.label}`,
+        }));
+        if (rejectedDocs > 0) items.push({
+          key: "rej", tone: "destructive",
+          text: `${rejectedDocs} documento${rejectedDocs === 1 ? "" : "s"} rechazado${rejectedDocs === 1 ? "" : "s"} · requiere reemplazo`,
+        });
+        if (pendingDocs > 0) items.push({
+          key: "pen", tone: "warning",
+          text: `${pendingDocs} documento${pendingDocs === 1 ? "" : "s"} en revisión`,
+        });
+        readiness.missingPersonal.forEach((field) => items.push({
+          key: `p-${field}`, tone: "warning",
+          text: `Falta dato personal: ${field.replace(/_/g, " ")}`,
+        }));
+        if (!hasPhoto && employee.is_active !== false) items.push({
+          key: "photo", tone: "warning",
+          text: "Falta foto profesional",
+        });
+        if (portalNotActive) items.push({
+          key: "portal", tone: "muted",
+          text: `Portal ${hasInvitation ? "invitado, aún no activado" : "sin invitar"}`,
+        });
+
+        const top = items.slice(0, 3);
+        const rest = items.slice(3);
+
+        const dotClass = (t: Item["tone"]) =>
+          t === "destructive" ? "bg-destructive" : t === "warning" ? "bg-warning" : "bg-muted-foreground/40";
+
+        const statusBadgeClass =
+          statusTone === "ready"     ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30" :
+          statusTone === "attention" ? "bg-warning/10 text-warning border-warning/30" :
+          statusTone === "critical"  ? "bg-destructive/10 text-destructive border-destructive/30" :
+                                       "bg-muted/40 text-muted-foreground border-border/50";
+
+        const barFill =
+          statusTone === "ready"     ? "bg-emerald-500" :
+          statusTone === "attention" ? "bg-warning" :
+          statusTone === "critical"  ? "bg-destructive" :
+                                       "bg-muted-foreground/40";
 
         return (
-          <Card className={cn(toneClasses)}>
-            <CardContent className="p-3">
-              <div className={cn("flex items-center gap-2 text-xs font-semibold", headerClasses)}>
-                <ShieldOff className="h-3.5 w-3.5" />
-                Readiness &amp; action items
-                <span className="ml-auto text-[10px] font-normal text-muted-foreground tabular-nums">
-                  {readiness.completedRequirements}/{readiness.totalRequirements} required complete · {readiness.progressPct}%
+          <Card className="border-border/50">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Estado operacional
+                </span>
+                <Badge variant="outline" className={cn("text-[10px] px-2 py-0 h-5 font-semibold", statusBadgeClass)}>
+                  {statusLabel}
+                </Badge>
+                <span className="ml-auto text-[11px] text-muted-foreground tabular-nums">
+                  {readiness.completedRequirements}/{readiness.totalRequirements} · {readiness.progressPct}%
                 </span>
               </div>
 
-              {/* Progress bar (required readiness only) */}
-              <div className={cn("mt-2 h-1.5 w-full rounded-full overflow-hidden", barBg)}>
+              <div className="mt-2 h-1 w-full rounded-full overflow-hidden bg-muted/60">
                 <div
                   className={cn("h-full rounded-full transition-all duration-500 ease-out", barFill)}
                   style={{ width: `${readiness.progressPct}%` }}
                 />
               </div>
 
-              {(() => {
-                type Item = { key: string; icon: any; tone: "warning" | "destructive" | "muted"; text: string };
-                const items: Item[] = [];
-                // Critical first: rejected/missing required docs
-                readiness.missingDocuments.forEach((d) => items.push({
-                  key: `m-${d.category}`, icon: null, tone: "destructive",
-                  text: `Falta documento requerido: ${d.label}`,
-                }));
-                if (rejectedDocs > 0) items.push({
-                  key: "rej", icon: AlertTriangle, tone: "destructive",
-                  text: `${rejectedDocs} documento${rejectedDocs === 1 ? "" : "s"} rechazado${rejectedDocs === 1 ? "" : "s"} · requiere reemplazo`,
-                });
-                if (pendingDocs > 0) items.push({
-                  key: "pen", icon: Clock, tone: "warning",
-                  text: `${pendingDocs} documento${pendingDocs === 1 ? "" : "s"} en revisión`,
-                });
-                // Then personal fields
-                readiness.missingPersonal.forEach((field) => items.push({
-                  key: `p-${field}`, icon: null, tone: "warning",
-                  text: `Personal: ${field.replace(/_/g, " ")}`,
-                }));
-                // Then enrichment / optional
-                if (portalNotActive) items.push({
-                  key: "portal", icon: ShieldOff, tone: "muted",
-                  text: `Portal ${hasInvitation ? "invitado pero no activado" : "sin invitar todavía"}`,
-                });
-                items.push({
-                  key: "clock", icon: Clock, tone: "muted",
-                  text: lastPayrollDate ? `Último fichaje ${safeDistance(lastPayrollDate)}` : "Sin fichajes registrados",
-                });
-
-                const top = items.slice(0, 3);
-                const rest = items.slice(3);
-                const dotClass = (t: Item["tone"]) =>
-                  t === "destructive" ? "bg-destructive" : t === "warning" ? "bg-warning" : "bg-muted-foreground/40";
-                const iconClass = (t: Item["tone"]) =>
-                  t === "destructive" ? "text-destructive" : t === "warning" ? "text-warning" : "text-muted-foreground";
-                const renderRow = (it: Item) => (
-                  <div key={it.key} className="flex items-center gap-1.5">
-                    {it.icon
-                      ? <it.icon className={cn("h-3 w-3 shrink-0", iconClass(it.tone))} />
-                      : <span className={cn("h-1 w-1 rounded-full shrink-0", dotClass(it.tone))} />}
-                    <span className="truncate">{it.text}</span>
+              {items.length === 0 ? (
+                <p className="mt-3 text-[11.5px] text-muted-foreground">
+                  Sin pendientes. El trabajador está listo para operar.
+                </p>
+              ) : (
+                <>
+                  <div className="mt-3 space-y-1.5">
+                    {top.map((it) => (
+                      <div key={it.key} className="flex items-center gap-2 text-[12px] text-foreground/90">
+                        <span className={cn("h-1.5 w-1.5 rounded-full shrink-0", dotClass(it.tone))} />
+                        <span className="truncate">{it.text}</span>
+                      </div>
+                    ))}
                   </div>
-                );
-
-                return (
-                  <>
-                    <p className="mt-2.5 text-[10.5px] text-muted-foreground/80">
-                      Completa estos datos para mantener al trabajador listo para turnos y pagos.
-                    </p>
-                    <div className="mt-1.5 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
-                      {top.map(renderRow)}
-                    </div>
-                    {rest.length > 0 && (
-                      <Collapsible>
-                        <CollapsibleTrigger className="group mt-2 inline-flex items-center gap-1 text-[10.5px] font-medium text-muted-foreground hover:text-foreground transition-colors">
-                          Ver todos los pendientes ({rest.length})
-                          <ChevronDown className="h-3 w-3 transition-transform group-data-[state=open]:rotate-180" />
-                        </CollapsibleTrigger>
-                        <CollapsibleContent>
-                          <div className="mt-1.5 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
-                            {rest.map(renderRow)}
-                          </div>
-                        </CollapsibleContent>
-                      </Collapsible>
-                    )}
-                  </>
-                );
-              })()}
-
-
-              {/* Recommended action */}
-              <div className="mt-3 flex items-center justify-between gap-2 pt-2 border-t border-border/40">
-                <span className="text-[10.5px] text-muted-foreground/80">
-                  {totalActionable > 0
-                    ? `${totalActionable} item${totalActionable === 1 ? "" : "s"} need${totalActionable === 1 ? "s" : ""} attention`
-                    : "Worker is ready · finish portal activation"}
-                </span>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className={cn("h-7 text-[11px] gap-1.5", ctaClasses)}
-                  onClick={() => {
-                    setActiveTab(nextTab);
-                    if (nextTab === "info" && nextEdit && !isEditing) setIsEditing(true);
-                    requestAnimationFrame(() => {
-                      document
-                        .querySelector('[data-state="active"][role="tabpanel"]')
-                        ?.scrollIntoView({ behavior: "smooth", block: "start" });
-                    });
-                  }}
-                >
-                  {nextLabel}
-                  <ExternalLink className="h-3 w-3" />
-                </Button>
-              </div>
+                  {rest.length > 0 && (
+                    <Collapsible>
+                      <CollapsibleTrigger className="group mt-2.5 inline-flex items-center gap-1 text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors">
+                        Ver todos los pendientes ({rest.length})
+                        <ChevronDown className="h-3 w-3 transition-transform group-data-[state=open]:rotate-180" />
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                        <div className="mt-1.5 space-y-1.5">
+                          {rest.map((it) => (
+                            <div key={it.key} className="flex items-center gap-2 text-[12px] text-muted-foreground">
+                              <span className={cn("h-1.5 w-1.5 rounded-full shrink-0", dotClass(it.tone))} />
+                              <span className="truncate">{it.text}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </CollapsibleContent>
+                    </Collapsible>
+                  )}
+                </>
+              )}
             </CardContent>
           </Card>
         );
       })()}
 
+
       {/* ─── DEEP TABS (existing logic, unchanged — secondary navigation) ─── */}
       {selectedCompanyId && (
         <div className="space-y-2">
           <div className="flex items-center gap-1.5 text-[10.5px] font-medium uppercase tracking-wider text-muted-foreground/70 px-1">
-            <Code2 className="h-3 w-3" />
-            Vista detallada · navegación secundaria
+            <ChevronDown className="h-3 w-3 -rotate-90" />
+            Más detalles · navegación secundaria
           </div>
           <Card className="border-border/50">
             <CardContent className="p-4">
