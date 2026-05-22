@@ -649,21 +649,6 @@ export default function UnifiedPersonProfile() {
                   )}
                 </div>
 
-                {!hasPhoto && employee.is_active !== false && (
-                  <p className="mt-2 text-[11px] leading-snug text-muted-foreground max-w-md">
-                    <span className="font-medium text-foreground">Actualizar foto profesional · </span>
-                    Foto tipo documento: rostro claro, fondo limpio y buena
-                    iluminación. No se aceptan paisajes, logos, caricaturas,
-                    fotos grupales ni contenido sugestivo.
-                  </p>
-                )}
-                {hasPhoto && employee.is_active !== false && (
-                  <p className="mt-2 text-[11px] leading-snug text-muted-foreground/70 max-w-md">
-                    Foto subida sin revisar — verifica que cumpla los requisitos
-                    profesionales antes de aprobar.
-                  </p>
-                )}
-
                 {/* Contact row — only renders rows with real values */}
                 <div className="mt-3 flex items-center gap-x-4 gap-y-1 flex-wrap text-xs text-muted-foreground">
                   {employee.phone_number && (
