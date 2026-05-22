@@ -65,3 +65,5 @@ project_id = "jplhtputzixwqarqlrth"
     verify_jwt = false
   [functions.billing-generate-service-blocks]
     verify_jwt = false
+  [functions.document-extract]
+    verify_jwt = true
