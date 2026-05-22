@@ -252,10 +252,6 @@ export default function WorkerDocumentsCompliance({ employee }: Props) {
 
 function DocRow({ row, onView }: { row: UnifiedDocumentRow; onView: () => void }) {
   const StatusIcon = STATUS_ICON[row.status];
-  const onView = async () => {
-    const url = await resolveEmployeeDocumentUrl(row.file_path);
-    if (url) window.open(url, "_blank", "noopener,noreferrer");
-  };
   const expRel = relativeTo(row.expires_at);
   const expState = classifyExpiration(row.category, row.expires_at);
   const policy = expirationPolicyFor(row.category);
