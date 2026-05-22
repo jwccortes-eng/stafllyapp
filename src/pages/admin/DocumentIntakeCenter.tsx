@@ -79,11 +79,14 @@ function StatusBadge({ status }: { status: string }) {
   return <Badge variant="outline" className={m.cls}><Icon className="h-3 w-3 mr-1" />{m.label}</Badge>;
 }
 
+type QueueFilter = "pending" | "ready" | "indexed" | "rejected" | "all";
+
 export default function DocumentIntakeCenter() {
   const { selectedCompanyId } = useCompany();
   const { user, canAccessAdminForCompany } = useAuth() as any;
   const qc = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [filter, setFilter] = useState<QueueFilter>("pending");
   const [uploading, setUploading] = useState(false);
 
   const isAdmin = !selectedCompanyId
