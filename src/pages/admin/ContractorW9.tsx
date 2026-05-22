@@ -23,6 +23,7 @@ interface W9Record {
   business_name: string | null;
   tax_classification: string;
   tin_last4: string | null;
+  tax_id_type: string | null;
   address_line1: string | null;
   city: string | null;
   state: string | null;
@@ -30,6 +31,7 @@ interface W9Record {
   status: string;
   signed_at: string | null;
   submitted_at: string | null;
+  w9_file_url: string | null;
   employee?: { first_name: string; last_name: string };
 }
 
@@ -189,6 +191,21 @@ export default function ContractorW9() {
     fetchData();
   }
 
+  async function handleViewPdf(r: W9Record) {
+    if (!r.w9_file_url) {
+      toast({ title: "Sin PDF firmado", description: "Este registro fue creado antes de la firma guiada.", variant: "destructive" });
+      return;
+    }
+    const { data, error } = await supabase.storage
+      .from("employee-documents")
+      .createSignedUrl(r.w9_file_url, 60);
+    if (error || !data?.signedUrl) {
+      toast({ title: "No se pudo abrir el PDF", variant: "destructive" });
+      return;
+    }
+    window.open(data.signedUrl, "_blank", "noopener");
+  }
+
   const filtered = records.filter(r => {
     const name = `${r.employee?.first_name || ""} ${r.employee?.last_name || ""} ${r.legal_name}`.toLowerCase();
     return name.includes(search.toLowerCase());
@@ -241,9 +258,21 @@ export default function ContractorW9() {
                     <TableCell className="text-sm text-muted-foreground">
                       {TAX_CLASSIFICATIONS.find(t => t.value === r.tax_classification)?.label || r.tax_classification}
                     </TableCell>
-                    <TableCell>{r.tin_last4 ? `***-**-${r.tin_last4}` : "—"}</TableCell>
+                    <TableCell>
+                      <span className="font-mono text-xs">
+                        {r.tin_last4 ? `***-**-${r.tin_last4}` : "—"}
+                      </span>
+                      {r.tax_id_type && (
+                        <span className="ml-1 text-[10px] uppercase text-muted-foreground">{r.tax_id_type}</span>
+                      )}
+                    </TableCell>
                     <TableCell><Badge variant={s.variant}>{s.label}</Badge></TableCell>
                     <TableCell className="text-right space-x-1">
+                      {r.w9_file_url && (
+                        <Button variant="ghost" size="icon" onClick={() => handleViewPdf(r)} title="Ver PDF firmado">
+                          <FileText className="h-4 w-4" />
+                        </Button>
+                      )}
                       <Button variant="ghost" size="icon" onClick={() => openEdit(r)}><Eye className="h-4 w-4" /></Button>
                       {r.status === "submitted" && (
                       <Button variant="ghost" size="icon" onClick={() => handleApprove(r.id)}>
