@@ -75,7 +75,7 @@ export default function DocumentsCenter() {
     },
   });
 
-  const { rows, signals, loading } = useCompanyDocuments({
+  const { rows, signals, loading, refresh } = useCompanyDocuments({
     companyId: selectedCompanyId ?? null,
     employees,
   });
