@@ -259,7 +259,7 @@ export default function Employees() {
   const setFilterGroup = (v: string) => setFilter({ group: v });
   const riskFilter = (urlFilters.risk as RiskKey | "all") || "all";
   const setRiskFilter = (v: RiskKey | "all") => setFilter({ risk: v });
-  type PhotoFilter = "all" | "missing" | "unreviewed";
+  type PhotoFilter = "all" | "missing" | "unreviewed" | "rejected" | "approved";
   const photoFilter = (urlFilters.photo as PhotoFilter) || "all";
   const setPhotoFilter = (v: PhotoFilter) => setFilter({ photo: v });
 
