@@ -280,21 +280,7 @@ export function ProfileSummaryGrid({
           )}
         </div>
 
-        {optionalExtra.length > 0 && (
-          <Collapsible>
-            <CollapsibleTrigger className="group inline-flex items-center gap-1 text-[10.5px] font-medium text-muted-foreground hover:text-foreground transition-colors">
-              Ver campos adicionales ({optionalExtra.length})
-              <ChevronDown className="h-3 w-3 transition-transform group-data-[state=open]:rotate-180" />
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <div className="mt-1.5 space-y-1.5">
-                {optionalExtra.map(([k, v]) => (
-                  <Row key={k} label={k} value={String(v)} muted />
-                ))}
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
-        )}
+        </div>
       </SectionCard>
 
       {/* 2. CUMPLIMIENTO */}
