@@ -45,6 +45,7 @@ import { cn } from "@/lib/utils";
 import { PROFILE_STATUS_LABELS } from "@/lib/onboarding/profile-status";
 import { resolveEmployeeDocumentUrl } from "@/lib/employee-documents";
 import { formatDateUS } from "@/lib/date-format";
+import DocumentPreviewDialog from "@/components/documents/DocumentPreviewDialog";
 
 type ReviewStatus = "pending" | "approved" | "rejected";
 
@@ -85,6 +86,7 @@ export default function MyDocuments() {
   const [loading, setLoading] = useState(true);
   const [uploadingCat, setUploadingCat] = useState<DocumentCategory | null>(null);
   const [expirationDates, setExpirationDates] = useState<Record<string, string>>({});
+  const [previewDoc, setPreviewDoc] = useState<DocRow | null>(null);
 
   // Hidden file inputs keyed by category — clicking a category's button triggers its input.
   const inputsRef = useRef<Record<string, HTMLInputElement | null>>({});
@@ -174,10 +176,19 @@ export default function MyDocuments() {
         throw rowErr;
       }
 
-      toast({ title: "Documento subido", description: "Pendiente de revisión por admin." });
+      toast({ title: "Documento subido", description: "Revisaremos el documento antes de marcarlo como aprobado." });
       await refresh();
-      // Refresh readiness so banners across the portal update without a hard reload.
       readiness.refresh();
+      // Auto-open preview so the worker can see what they uploaded.
+      const { data: latest } = await supabase
+        .from("employee_documents" as any)
+        .select("id, name, file_url, file_type, file_size, category, created_at, review_status, rejection_reason, reviewed_at, expires_at")
+        .eq("employee_id", employeeId)
+        .eq("category", category)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (latest) setPreviewDoc(latest as any);
     } catch (err: any) {
       toast({ title: "Error al subir", description: err?.message ?? "Inténtalo de nuevo.", variant: "destructive" });
     } finally {
@@ -202,17 +213,9 @@ export default function MyDocuments() {
     }
   };
 
-  const handleView = async (doc: DocRow) => {
+  const handleView = (doc: DocRow) => {
     if (!doc.file_url) return;
-    try {
-      // Use the resolver so legacy rows that stored a full public URL (or a
-      // previously-signed URL) are normalized to a path before signing.
-      const url = await resolveEmployeeDocumentUrl(doc.file_url);
-      if (!url) throw new Error("Archivo no accesible");
-      window.open(url, "_blank", "noopener,noreferrer");
-    } catch (err: any) {
-      toast({ title: "No se pudo abrir el archivo", description: err?.message ?? "Inténtalo de nuevo.", variant: "destructive" });
-    }
+    setPreviewDoc(doc);
   };
 
   // ─── Render ───────────────────────────────────────────────────────────────
@@ -574,6 +577,26 @@ export default function MyDocuments() {
           </p>
         )}
       </div>
+
+      <DocumentPreviewDialog
+        open={!!previewDoc}
+        onOpenChange={(o) => { if (!o) setPreviewDoc(null); }}
+        item={previewDoc ? {
+          file_path: previewDoc.file_url,
+          file_type: previewDoc.file_type,
+          file_name: previewDoc.name,
+          document_type: (DOCUMENT_CATEGORIES as any)[previewDoc.category]?.label ?? previewDoc.category,
+          category: previewDoc.category,
+          uploaded_at: previewDoc.created_at,
+          expires_at: previewDoc.expires_at,
+          review_status: previewDoc.review_status,
+        } : null}
+        banner={
+          <div className="rounded-md border border-amber-200 bg-amber-50 text-amber-800 text-[11px] px-2.5 py-1.5">
+            Revisaremos el documento antes de marcarlo como aprobado.
+          </div>
+        }
+      />
     </div>
   );
 }

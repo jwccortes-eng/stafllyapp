@@ -1,231 +1,154 @@
+# Document Preview & Assisted Extraction v1 — Plan
 
-# Worker Update Center v1 — Plan
+## Audit findings
 
-Planning-only. No migrations, no RLS changes, no portal permission changes, no payroll/time_entries/shifts/notification edits. No worker is blocked by this plan.
+**Current preview capabilities**
+- `/app/documents` (DocumentsCenter): "View" button → opens signed URL in new tab. No inline preview.
+- Employee profile (`WorkerDocumentsCompliance.tsx`): same — open-in-new-tab only.
+- `/portal/documents` (MyDocuments): open-in-new-tab only. After upload, no preview shown to worker.
+- Helper `resolveEmployeeDocumentUrl` already returns short‑lived signed URLs from the private `employee-documents` bucket. ✅ safe to reuse.
 
-Worker tone (global): *"Queremos mantener tu perfil listo para recibir trabajos y cobrar sin problemas."*
+**OCR / AI infra**
+- No OCR. No Tesseract. No vision pipeline.
+- BUT Lovable AI Gateway is wired (`supabase/functions/ai-workforce`, uses `LOVABLE_API_KEY` + `ai.gateway.lovable.dev`). Vision-capable models (`google/gemini-2.5-flash`, `google/gemini-2.5-pro`) are available — image extraction is feasible without new infra.
+- No extraction-result storage anywhere today.
 
----
-
-## 1. Requirement matrix
-
-Categories × levels. "Level" = when it becomes required.
-
-| Category | Fields / sources | Level | Blocks (when overdue) |
-|---|---|---|---|
-| Identity | first_name, last_name, date_of_birth, gender (optional display) | Before assignment | assignment, claim |
-| Contact | phone_number (verified), email | Required immediately | claim, accept |
-| Address | address_structured (line/city/state/zip) | Before payroll | payroll-sensitive shifts |
-| Emergency contact | emergency_contact_name, emergency_contact_phone | Before assignment | assignment |
-| Work profile | employee_role, skills, languages, professional_summary | Recommended | none |
-| Availability | worker_availability windows | Recommended | none (visibility only) |
-| Documents — core | W-9 / W-4 / Government ID / SSN_last4 | Before payroll | payroll-sensitive shifts, payout visibility |
-| Documents — role | Food handler, OSHA, NDA, contracts | Before document-sensitive shifts | only those shift types |
-| Driver/vehicle | has_car, driver_licence, vehicle insurance doc | Required for drivers only | driver-tagged shifts |
-| Captain readiness | captain training ack, captain agreement | Required for captains only | captain assignment |
-| Portal access | portal_access_enabled, PIN set, photo uploaded | Required immediately | login UX nag (not block) |
-| Compliance acks | Code of conduct, anti-harassment, app TOS, privacy | Before assignment | assignment |
-| Payroll readiness | bank info OR check-pay ack, W-9/W-4 approved | Before payroll | new period inclusion warning (admin-side, not worker block in v1) |
-
-Never used as eligibility logic: gender, country_code (display only), languages-as-skill (recommendation only).
+**Verdict**: v1 = **Preview everywhere + manual extraction form**. AI suggestion ("Leer documento") is implemented behind a feature flag as a *suggestion-only* path, never auto-applied. No DB writes from AI.
 
 ---
 
-## 2. Deadline model
+## v1 scope (what we ship)
 
-Per requirement instance:
+### Part 1 — Inline preview (no DB changes)
+New shared component: `src/components/documents/DocumentPreview.tsx`
+- Resolves signed URL via existing helper.
+- If `file_type` starts with `image/` → `<img>` with `max-h-[70vh]`, contain.
+- If `application/pdf` → `<iframe>` of signed URL (height 70vh) + "Abrir en pestaña nueva" fallback button.
+- Other → file icon + "Abrir archivo" button only.
+- Header chips: file name · category · uploaded date · expiration (with state color) · review status · worker name.
+- Footer slot for `actions` (approve/reject/correct expiration buttons are passed by parent — no logic moved).
 
-```
-requested_at → friendly_reminder → required_by → grace_until → restricted_from
-       ↑                ↑                 ↑              ↑              ↑
-     created        T-14 / T-7         due date     +N days        hard scope cut
-```
+New shared dialog: `src/components/documents/DocumentPreviewDialog.tsx` (Sheet/Dialog wrapper).
 
-- **Friendly reminder**: portal banner + checklist item, dismissible per session.
-- **Required-by date**: copy turns serious, banner pinned.
-- **Grace period** (configurable per company, default 7 days): warning + countdown.
-- **Semi-blocking screen**: full-screen interstitial on portal entry with "Actualizar ahora" and "Recordar después" (allowed up to N times during grace).
-- **Restricted access**: scope-limited, never global lockout.
+Wire it in:
+- `DocumentsCenter.tsx` — "View" button opens the dialog (keeps new-tab as secondary action).
+- `WorkerDocumentsCompliance.tsx` — same.
+- `MyDocuments.tsx` — same, plus auto-open after successful upload (worker sees what they uploaded).
 
-**Restrictable scopes** (must be explicit per requirement):
-- accept new shifts
-- claim open shifts
-- be auto-assigned
-- clock in on document-sensitive shifts
-- take captain role
-- take driver role
+Mobile 390: dialog → full-screen Sheet; PDF iframe falls back to "Abrir archivo" button on touch devices where iframe PDF is unreliable (detect by `navigator.userAgent` iOS → button-only).
 
-**Always accessible regardless of overdue state**:
-- /portal/profile, /portal/documents (upload), /portal/support
-- /portal/pay-reports (legal/payroll history visibility)
-- compliance messages and the Update Center itself
-- emergency contact admin
-
----
-
-## 3. Worker portal UX
-
-New surface: `/portal/update-center` plus inline hooks across portal.
-
-Components:
-- **PortalUpdateBanner** — appears on /portal home when ≥1 active requirement; collapses to chip after dismiss.
-- **CompletionProgressCard** — % ready, segmented by category, with "Continuar" CTA.
-- **MissingItemsChecklist** — grouped by category, each row: icon, title, due chip (Pendiente / Vence en Xd / Vencido), inline CTA (Subir documento, Actualizar teléfono, Firmar, etc.).
-- **DueDateChip** variants: `neutral`, `warning`, `serious`, `overdue`.
-- **CategoryDrawer** — opens the right existing flow (document uploader, phone editor, address editor, ack modal).
-- **FriendlyWarningBanner** — on shift accept/claim if requirement blocks scope.
-- **SemiBlockingScreen** — full-screen interstitial; lists overdue items, primary CTA "Actualizar ahora", secondary "Hablar con soporte".
-
-Mobile 390×844: stack cards, 44px tap targets, bottom nav preserved, no horizontal overflow.
-
-Friendly empty state: *"Tu perfil está al día. Te avisaremos cuando necesitemos algo."*
-
----
-
-## 4. Admin UX
-
-New surface: `/app/compliance-center` (or tab inside existing Documents & Compliance).
-
-Views:
-- **Missing info queue**: table of workers with ≥1 open requirement, sortable by overdue/grace/required-by.
-- **Per-worker compliance drawer**: requirements list with status, due dates, last reminder sent, last worker view, current restriction scope, audit trail.
-- **Bulk actions**: re-request, extend grace, mark not required (with reason), mark complete (manual evidence).
-- **Filters**: category, level, scope blocked, company (tenant-scoped via canAccessAdminForCompany).
-- **KPI strip**: # workers compliant / in grace / overdue / restricted.
-
-Embedded into existing employee profile via new "Cumplimiento" deep-link from the ProfileSummaryGrid Cumplimiento card.
-
----
-
-## 5. Automation / reminder plan
-
-Cadence per requirement:
-- T-14d: portal banner appears (silent).
-- T-7d: portal banner + 1 in-app notification.
-- T-2d: portal banner serious + push (if iOS/Android available) + email.
-- Day 0 (required_by): pinned banner, push, email.
-- Grace start: SMS opt-in only; one nudge.
-- Grace mid: admin queue surfaces worker.
-- Grace end → restriction: portal interstitial; SMS once; admin notified.
-
-Anti-spam rules:
-- max 1 channel per 24h
-- max 3 reminders per requirement before manual admin action required
-- no SMS at night (worker tz, 21:00–08:00)
-- one consolidated message per worker per day across all requirements
-
-Channels priority: portal → push → email → SMS. Admin queue always.
-
----
-
-## 6. Proposed data model (NOT created in v1)
-
-```
-worker_profile_requirements      -- catalog of possible requirements
-  id, company_id, key, category, level,
-  default_required_by_offset_days, default_grace_days,
-  blocks_scope text[], applies_to jsonb (role/driver/captain filters),
-  copy_key, version, active
-
-worker_requirement_status        -- one row per (worker × requirement)
-  id, company_id, employee_id, requirement_id,
-  status enum(pending, in_grace, overdue, restricted, complete, waived, not_applicable),
-  requested_at, required_by, grace_until, restricted_from,
-  completed_at, completed_evidence jsonb,
-  waived_by, waived_reason,
-  notification_count, last_notified_at, last_seen_at
-
-worker_update_requests           -- explicit admin ask
-  id, company_id, employee_id, requirement_id,
-  requested_by, requested_at, message, channel, dismissed_at
-
-worker_update_events             -- audit trail (append-only)
-  id, company_id, employee_id, requirement_id,
-  event_type enum(requested, viewed, dismissed, reminded, completed,
-                  grace_started, restricted, waived, reactivated),
-  actor enum(system, worker, admin),
-  actor_id, channel, payload jsonb, created_at
-```
-
-RLS posture (future): worker reads only own rows; admin scoped by company_id via canAccessAdminForCompany; events insert-only from defined RPCs.
-
----
-
-## 7. Rules engine
-
-Pure functions, stateless, computed from current employee + documents + acks + worker_requirement_status. No payroll mutation.
+### Part 2 — Extraction result shape (TypeScript only, no DB yet)
+New file `src/lib/documents/extraction-types.ts`:
 
 ```ts
-computeProfileCompletion(worker) → { pct, missingByCategory }
-computeComplianceReadiness(worker) → { ok, blockingRequirements[] }
-computePayrollReadiness(worker) → { ok, missing[] } // read-only, does not gate existing payroll
-computeDriverReadiness(worker) → { ok, missing[] }
-computeShiftEligibility(worker, shift) → { eligible, reasons[] } // checks blocks_scope
-computePortalRestriction(worker) → { scopes: Set<Scope>, interstitial: boolean }
+export type ConfidenceLevel = 'high' | 'medium' | 'low';
+export type ExtractionSource = 'manual' | 'ai' | 'ocr';
+
+export interface DocumentExtraction {
+  extracted_full_name?: string | null;
+  extracted_document_type?: string | null;
+  extracted_document_number_masked?: string | null; // ALWAYS masked: last 4 only
+  extracted_issue_date?: string | null;             // ISO date
+  extracted_expiration_date?: string | null;        // ISO date
+  extracted_state_or_jurisdiction?: string | null;
+  extracted_birth_date?: string | null;             // optional, dropped for SSN/W-9 categories
+  confidence_score?: number | null;                 // 0..1
+  confidence_level?: ConfidenceLevel | null;
+  extraction_source: ExtractionSource;
+  extracted_at: string;
+  needs_human_confirmation: boolean;                // default true
+  confirmed_by?: string | null;
+  confirmed_at?: string | null;
+}
 ```
 
-v1 wires `computeShiftEligibility` to UI hints only (banners/warnings), never to backend acceptance until Phase 3 approval.
+Plus a masking helper `maskDocumentNumber(raw: string): string` → `••• ••• 1234`.
+
+### Part 3 — Manual extraction form (admin)
+New component `src/components/documents/AssistedExtractionPanel.tsx`, rendered inside the preview dialog (admin only):
+- Inputs: full name, doc type (select), document number (masked-on-blur), issue date (SmartDateInput), expiration (SmartDateInput), state/jurisdiction, birth date (collapsed, off by default).
+- Buttons:
+  - "Confirmar y guardar" → only writes `expires_at` to `employee_documents` via existing `updateDocumentExpiration` (no new column writes).
+  - Other fields display-only in v1 until DB schema is approved (see Part 8).
+- Banner: "Estos datos son sugerencias. Solo se guardará la fecha de vencimiento confirmada por un administrador."
+
+### Part 4 — "Leer documento" AI suggestion (feature-flagged, suggestion-only)
+- New edge function `supabase/functions/document-extract/index.ts` (verify_jwt = true).
+  - Input: `{ employee_document_id }`.
+  - Loads row, signs URL, fetches file bytes, posts to Lovable AI Gateway (`google/gemini-2.5-flash`) as image (PDFs: first-page render skipped in v1 — returns "PDF aún no soportado").
+  - Strict JSON response schema matching `DocumentExtraction` minus confirmation fields.
+  - **Always masks document number server-side** (regex keeps last 4).
+  - **Returns suggestion only — writes nothing to DB.**
+  - RLS gate: caller must be admin/owner of the document's `company_id` (reuse `has_role` / company membership helper used elsewhere).
+- Frontend: "Leer documento (beta)" button inside `AssistedExtractionPanel` (admin only, hidden behind `import.meta.env.DEV || feature flag`). On click → calls function → pre-fills form fields (read-only highlight). Admin must explicitly Confirm.
+
+### Part 5 — Portal upload flow
+In `MyDocuments.tsx`:
+- After upload → open `DocumentPreviewDialog` automatically.
+- If expiration is required by policy and missing → inline "Agrega la fecha de vencimiento" with `SmartDateInput` (already exists, just wire to post-upload state).
+- Helper text: "Revisaremos el documento antes de marcarlo como aprobado."
+- No worker access to extraction panel. No auto-approve.
+
+### Part 6 — Admin review flow additions
+In preview dialog (admin) show a "Mismatch warnings" strip computed client-side from row + employee:
+- Name on document differs from worker profile (only flagged if extraction confirmed by admin).
+- Expiration missing (uses existing policy).
+- Document expired (uses `classifyExpiration`).
+- Category may be wrong (only when AI suggestion's `extracted_document_type` differs from saved category — pure suggestion).
+
+Approve/reject buttons remain owned by `WorkerDocumentsCompliance` / existing action layer — preview dialog accepts them via prop, doesn't reimplement.
+
+### Part 7 — Privacy / security
+- Document number never stored raw client-side — masking helper applied before any state set.
+- Edge function masks before returning.
+- No new storage buckets. No policy changes. Signed URLs only (1h TTL, existing).
+- SSN/EIN doc categories (`w9`, `tax_form`) → AI button hidden, extraction panel shows "Categoría sensible — extracción asistida deshabilitada."
+- Audit trail: reuse existing `document_actions` audit log (already called by `updateDocumentExpiration`).
+
+### Part 8 — DB schema (deferred, propose only)
+**Not applied in this sprint.** Proposed for v1.1 if approved:
+```sql
+ALTER TABLE public.employee_documents
+  ADD COLUMN extraction jsonb,                       -- masked-only DocumentExtraction
+  ADD COLUMN extraction_confirmed_by uuid,           -- auth.users.id
+  ADD COLUMN extraction_confirmed_at timestamptz;
+```
+RLS: admins of the same `company_id` may read/write `extraction*`. Workers may read only `extraction_expiration_date` projection if confirmed (handled via view, not direct grant).
+
+Stop here for explicit approval before migrating.
 
 ---
 
-## 8. Copy examples (Spanish-first)
+## Files to change / create
 
-- **Friendly reminder banner**: *"Queremos mantener tu perfil listo para recibir trabajos y cobrar sin problemas. Te faltan {n} datos."*
-- **Serious reminder**: *"Faltan {n} datos importantes. Completa antes del {required_by} para seguir aceptando turnos."*
-- **Deadline warning**: *"Hoy vence: {item}. Si no lo completas hoy, tu acceso a algunos turnos quedará limitado."*
-- **Semi-blocking screen**: *"Necesitamos actualizar tu información antes de continuar. Esto toma menos de 2 minutos."* CTA: *Actualizar ahora* · *Hablar con soporte*
-- **Overdue restriction (scoped)**: *"Tu cuenta no puede aceptar nuevos turnos hasta completar: {item}. Tu historial de pago y soporte siguen disponibles."*
-- **Admin queue label**: *"Datos pendientes de actualización · {count} trabajadores"*
-- **Empty state**: *"Todo al día. Gracias por mantener tu información actualizada."*
+**Create**
+- `src/components/documents/DocumentPreview.tsx`
+- `src/components/documents/DocumentPreviewDialog.tsx`
+- `src/components/documents/AssistedExtractionPanel.tsx`
+- `src/lib/documents/extraction-types.ts`
+- `supabase/functions/document-extract/index.ts` (+ config.toml block with `verify_jwt = true`)
 
----
+**Edit**
+- `src/pages/admin/DocumentsCenter.tsx` — wire preview dialog into "View".
+- `src/pages/portal/MyDocuments.tsx` — preview dialog + post-upload auto-open + expiration prompt.
+- `src/components/employee/WorkerDocumentsCompliance.tsx` — wire preview dialog + pass approve/reject actions through.
 
-## 9. Implementation phases
-
-Each phase ships behind a feature flag, tenant-scoped, disabled by default.
-
-- **Phase 0 — Read-only audit (this plan)**: no code, no DB.
-- **Phase 1 — Catalog + read-only Update Center**
-  - Static requirement catalog in code (no new tables).
-  - `/portal/update-center` displays computed missing items from existing data (employees, employee_documents, employee_onboarding_documents, worker_availability).
-  - Banner on /portal home. No deadlines, no restrictions.
-  - Admin: read-only compliance tab fed by same rules engine.
-- **Phase 2 — Persistence + admin control**
-  - Create `worker_profile_requirements`, `worker_requirement_status`, `worker_update_events`.
-  - Admin can set required_by / grace_until per worker × requirement.
-  - Worker UI shows due chips. Still no enforcement.
-- **Phase 3 — Soft enforcement**
-  - Friendly warning banners on shift accept/claim screens when computeShiftEligibility flags blocks.
-  - SemiBlockingScreen on portal entry during grace.
-  - Still no backend block on accept/claim.
-- **Phase 4 — Scoped enforcement**
-  - Backend-side guard on accept/claim/assignment for restricted scopes.
-  - Driver/captain scope gates.
-  - All changes RLS-reviewed, payroll math untouched.
-- **Phase 5 — Automation**
-  - Reminder cadence cron edge function.
-  - Multi-channel (portal → push → email → SMS) with anti-spam guards.
-
-Approval gate required before each phase. No phase starts without explicit go.
+**Untouched (regression guard)**
+- payroll math, time_entries, scheduled_shifts, shift_assignments
+- employee ID generation
+- notifications / SMS / email
+- photo review pipeline
+- existing RLS, storage policies, buckets
+- existing approve/reject logic (only passed through)
 
 ---
 
-## 10. Risks & safety notes
+## QA checklist (run live after build)
+- Admin: open `/app/documents` → "View" → image and PDF previews render; expiration still editable; AI button hidden for w9/tax_form; "Leer documento" returns suggestion + does not write to DB.
+- Profile: same preview dialog opens in `WorkerDocumentsCompliance`.
+- Portal: upload → dialog opens → expiration prompt for required categories → "Revisaremos el documento..." copy visible → no auto-approve.
+- Mobile 390: dialog full-screen, no overflow, buttons tappable, iOS shows "Abrir archivo" fallback for PDFs.
+- Security: no SSN/EIN visible anywhere, document number always masked, signed URL still 1h, no new buckets/policies in network tab.
+- Regression: no payroll/time_entries/shifts/employee-id/notification/photo-review changes.
 
-- **Existing workers must not be locked out** at Phase 1–3. Restriction only after Phase 4 review and tenant opt-in.
-- **Payroll history must remain visible** regardless of compliance state.
-- **Document upload and support must remain accessible** always.
-- **Gender must not gate eligibility**; display-only.
-- **SSN/EIN never exposed**; only ssn_last4 referenced in UI/rules.
-- **Audit trail mandatory** from Phase 2 onward — every automated request, reminder, restriction, and waiver logged in `worker_update_events`.
-- **Tenant scoping**: admin views and reminders must use canAccessAdminForCompany; never bare has_role(admin).
-- **Anti-spam**: hard caps per worker per day across all channels; quiet hours respected.
-- **No regression** on /portal, /apply, /auth, /app — wrap new components in Error Boundaries; phase rollout behind per-tenant feature flag.
-- **Reversibility**: every restriction must be one-click revertible by admin (waive + audit event).
-
----
-
-## Deliverables for next loop (when approved)
-
-- Phase 1 PR: catalog file, rules engine module, `/portal/update-center` read-only, admin compliance tab read-only.
-- No DB migration, no RLS, no payroll, no enforcement.
+**Return after build**: files changed, whether edge function deployed, QA PASS/FAIL, and explicit ask for approval before applying Part 8 schema.

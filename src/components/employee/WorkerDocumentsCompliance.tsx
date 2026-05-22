@@ -41,6 +41,7 @@ import {
   expirationPolicyFor,
 } from "@/lib/onboarding/document-expiration-policy";
 import { resolveEmployeeDocumentUrl } from "@/lib/employee-documents";
+import DocumentPreviewDialog from "@/components/documents/DocumentPreviewDialog";
 
 interface Props {
   employee: any;
@@ -79,6 +80,7 @@ export default function WorkerDocumentsCompliance({ employee }: Props) {
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<UnifiedDocumentRow[]>([]);
   const [required, setRequired] = useState<DocumentCategory[]>([]);
+  const [previewRow, setPreviewRow] = useState<UnifiedDocumentRow | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -216,7 +218,7 @@ export default function WorkerDocumentsCompliance({ employee }: Props) {
           ) : (
             <ul className="space-y-1.5">
               {rows.map((r) => (
-                <DocRow key={r.id} row={r} />
+                <DocRow key={r.id} row={r} onView={() => setPreviewRow(r)} />
               ))}
             </ul>
           )}
@@ -227,16 +229,29 @@ export default function WorkerDocumentsCompliance({ employee }: Props) {
           Approve, reject and upload actions are available in the Documents tab below.
         </div>
       </div>
+
+      <DocumentPreviewDialog
+        open={!!previewRow}
+        onOpenChange={(o) => { if (!o) setPreviewRow(null); }}
+        item={previewRow ? {
+          file_path: previewRow.file_path,
+          file_name: previewRow.file_name,
+          document_type: previewRow.document_type,
+          category: String(previewRow.category),
+          worker_name: employee ? `${employee.first_name ?? ""} ${employee.last_name ?? ""}`.trim() : null,
+          uploaded_at: previewRow.created_at,
+          expires_at: previewRow.expires_at,
+          review_status:
+            previewRow.status === "approved" ? "approved" :
+            previewRow.status === "rejected" ? "rejected" : "pending",
+        } : null}
+      />
     </Card>
   );
 }
 
-function DocRow({ row }: { row: UnifiedDocumentRow }) {
+function DocRow({ row, onView }: { row: UnifiedDocumentRow; onView: () => void }) {
   const StatusIcon = STATUS_ICON[row.status];
-  const onView = async () => {
-    const url = await resolveEmployeeDocumentUrl(row.file_path);
-    if (url) window.open(url, "_blank", "noopener,noreferrer");
-  };
   const expRel = relativeTo(row.expires_at);
   const expState = classifyExpiration(row.category, row.expires_at);
   const policy = expirationPolicyFor(row.category);

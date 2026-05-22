@@ -25,6 +25,8 @@ import {
 } from "@/lib/onboarding/document-expiration-policy";
 import { updateDocumentExpiration } from "@/lib/document-actions";
 import { resolveEmployeeDocumentUrl } from "@/lib/employee-documents";
+import DocumentPreviewDialog from "@/components/documents/DocumentPreviewDialog";
+import AssistedExtractionPanel from "@/components/documents/AssistedExtractionPanel";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -37,7 +39,7 @@ import {
 } from "@/components/ui/table";
 import { PremiumPageHeader } from "@/components/ui/premium-page-header";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Search, Download, ExternalLink, UserSearch, FileText, CalendarClock, Pencil } from "lucide-react";
+import { Search, Download, ExternalLink, UserSearch, FileText, CalendarClock, Pencil, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatDateUS } from "@/lib/date-format";
 
@@ -173,11 +175,18 @@ export default function DocumentsCenter() {
     approved: rows.filter((r) => r.status === "approved").length,
   }), [rows, missingRows, missingExpirationRows]);
 
-  const handleView = async (row: UnifiedDocumentRow) => {
+  const [previewRow, setPreviewRow] = useState<UnifiedDocumentRow | null>(null);
+
+  const handleView = (row: UnifiedDocumentRow) => {
     if (!row.file_path) {
       toast({ title: "No file uploaded yet", description: "This is a missing-document placeholder." });
       return;
     }
+    setPreviewRow(row);
+  };
+
+  const handleOpenInTab = async (row: UnifiedDocumentRow) => {
+    if (!row.file_path) return;
     const url = await resolveEmployeeDocumentUrl(row.file_path);
     if (!url) {
       toast({ title: "Could not open document", description: "The file may have been removed.", variant: "destructive" });
@@ -325,8 +334,18 @@ export default function DocumentsCenter() {
                             onClick={() => handleView(r)}
                             disabled={!r.file_path}
                           >
-                            <ExternalLink className="h-3 w-3 mr-1" />
-                            View
+                            <Eye className="h-3 w-3 mr-1" />
+                            Preview
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 text-[11px]"
+                            onClick={() => handleOpenInTab(r)}
+                            disabled={!r.file_path}
+                            title="Open in new tab"
+                          >
+                            <ExternalLink className="h-3 w-3" />
                           </Button>
                           <Button asChild variant="ghost" size="sm" className="h-7 px-2 text-[11px]">
                             <Link to={`/app/employees/${r.employee_id}`}>
@@ -344,6 +363,38 @@ export default function DocumentsCenter() {
           )}
         </CardContent>
       </Card>
+
+      <DocumentPreviewDialog
+        open={!!previewRow}
+        onOpenChange={(o) => { if (!o) setPreviewRow(null); }}
+        item={previewRow ? {
+          file_path: previewRow.file_path,
+          file_type: undefined,
+          file_name: previewRow.file_name,
+          document_type: previewRow.document_type,
+          category: String(previewRow.category),
+          worker_name: previewRow.worker_name,
+          uploaded_at: previewRow.created_at,
+          expires_at: previewRow.expires_at,
+          review_status:
+            previewRow.status === "approved" ? "approved" :
+            previewRow.status === "rejected" ? "rejected" : "pending",
+        } : null}
+        side={previewRow && previewRow.source === "admin_upload" && previewRow.rawId ? (
+          <AssistedExtractionPanel
+            target={{
+              raw_id: previewRow.rawId,
+              source: "employee_documents",
+              employee_id: previewRow.employee_id,
+              company_id: previewRow.company_id,
+              name: previewRow.document_type,
+              category: String(previewRow.category),
+              current_expires_at: previewRow.expires_at,
+            }}
+            onSaved={() => { void refresh(); }}
+          />
+        ) : undefined}
+      />
     </div>
   );
 }
