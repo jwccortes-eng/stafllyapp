@@ -45,6 +45,7 @@ import { cn } from "@/lib/utils";
 import { PROFILE_STATUS_LABELS } from "@/lib/onboarding/profile-status";
 import { resolveEmployeeDocumentUrl } from "@/lib/employee-documents";
 import { formatDateUS } from "@/lib/date-format";
+import DocumentPreviewDialog from "@/components/documents/DocumentPreviewDialog";
 
 type ReviewStatus = "pending" | "approved" | "rejected";
 
