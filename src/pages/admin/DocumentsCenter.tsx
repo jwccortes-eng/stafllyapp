@@ -363,6 +363,38 @@ export default function DocumentsCenter() {
           )}
         </CardContent>
       </Card>
+
+      <DocumentPreviewDialog
+        open={!!previewRow}
+        onOpenChange={(o) => { if (!o) setPreviewRow(null); }}
+        item={previewRow ? {
+          file_path: previewRow.file_path,
+          file_type: undefined,
+          file_name: previewRow.file_name,
+          document_type: previewRow.document_type,
+          category: String(previewRow.category),
+          worker_name: previewRow.worker_name,
+          uploaded_at: previewRow.created_at,
+          expires_at: previewRow.expires_at,
+          review_status:
+            previewRow.status === "approved" ? "approved" :
+            previewRow.status === "rejected" ? "rejected" : "pending",
+        } : null}
+        side={previewRow && previewRow.source === "admin_upload" && previewRow.rawId ? (
+          <AssistedExtractionPanel
+            target={{
+              raw_id: previewRow.rawId,
+              source: "employee_documents",
+              employee_id: previewRow.employee_id,
+              company_id: previewRow.company_id,
+              name: previewRow.document_type,
+              category: String(previewRow.category),
+              current_expires_at: previewRow.expires_at,
+            }}
+            onSaved={() => { void refresh(); }}
+          />
+        ) : undefined}
+      />
     </div>
   );
 }
