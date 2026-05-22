@@ -65,7 +65,7 @@ export function fromEmployeeDocument(row: {
   id: string; employee_id: string; company_id: string; name: string;
   file_url: string; file_size: number | null; category: string | null;
   created_at: string; review_status: string; reviewed_at: string | null;
-  rejection_reason: string | null;
+  rejection_reason: string | null; expires_at?: string | null;
 }): UnifiedDocument {
   const reason = row.rejection_reason ?? null;
   const isReplacement = !!reason && reason.startsWith(REPLACEMENT_PREFIX);
@@ -84,6 +84,7 @@ export function fromEmployeeDocument(row: {
     file_size: row.file_size,
     created_at: row.created_at,
     reviewed_at: row.reviewed_at,
+    expires_at: row.expires_at ?? null,
     state,
     reason,
     replacement_reason: isReplacement
