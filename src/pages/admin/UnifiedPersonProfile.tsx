@@ -883,7 +883,7 @@ export default function UnifiedPersonProfile() {
         <Collapsible>
           <CollapsibleTrigger className="group inline-flex items-center gap-1.5 text-[10.5px] font-medium uppercase tracking-wider text-muted-foreground/70 hover:text-foreground transition-colors">
             <Code2 className="h-3 w-3" />
-            Información técnica
+            Datos importados y avanzados
             <ChevronDown className="h-3 w-3 transition-transform group-data-[state=open]:rotate-180" />
           </CollapsibleTrigger>
           <CollapsibleContent>
