@@ -1,154 +1,87 @@
-# Document Preview & Assisted Extraction v1 — Plan
+## Worker W-9 Guided Form v1 — Plan
 
-## Audit findings
+### Audit findings (already in the codebase)
 
-**Current preview capabilities**
-- `/app/documents` (DocumentsCenter): "View" button → opens signed URL in new tab. No inline preview.
-- Employee profile (`WorkerDocumentsCompliance.tsx`): same — open-in-new-tab only.
-- `/portal/documents` (MyDocuments): open-in-new-tab only. After upload, no preview shown to worker.
-- Helper `resolveEmployeeDocumentUrl` already returns short‑lived signed URLs from the private `employee-documents` bucket. ✅ safe to reuse.
+- **Table `contractor_w9` exists** with the right shape for safety:
+  - `legal_name, business_name, tax_classification, tin_last4` (only last 4 stored — no raw SSN/EIN column)
+  - `address_line1/2, city, state, zip_code, signed_at, signed_by, w9_file_url, status, submitted_at, reviewed_at, reviewed_by`
+  - RLS already enforces: employees can view/insert/update only their own row; company admins/global owners can manage company-scoped rows. No anon, no public.
+- **Worker portal page exists**: `src/pages/portal/MyW9.tsx` (`/portal/w9`) — basic form, no certification, no signature, no PDF, no `employee_documents` linkage.
+- **Admin page exists**: `src/pages/admin/ContractorW9.tsx` (`/app/contractor-w9`) — table view with approve action; W-9 is NOT surfaced in `/app/documents`.
+- **PDF generation is available**: `jspdf` + `jspdf-autotable` already used by `src/lib/passport-pdf.ts` and `src/lib/shift-pdf.ts`.
+- **Private buckets ready**: `employee-documents` and `worker-documents` are both `public:false`.
+- **`employee_documents` table** has: `category, file_url, file_type, file_size, review_status, expires_at, reviewed_by/at, rejection_reason` — already used by Documents Center + worker portal documents.
+- **Document policy** (`src/lib/documents/document-policy.ts`) already marks `w9` as sensitive, no expiration, AI extraction blocked.
 
-**OCR / AI infra**
-- No OCR. No Tesseract. No vision pipeline.
-- BUT Lovable AI Gateway is wired (`supabase/functions/ai-workforce`, uses `LOVABLE_API_KEY` + `ai.gateway.lovable.dev`). Vision-capable models (`google/gemini-2.5-flash`, `google/gemini-2.5-pro`) are available — image extraction is feasible without new infra.
-- No extraction-result storage anywhere today.
+### Recommended sensitive-storage model — Option A (preferred)
 
-**Verdict**: v1 = **Preview everywhere + manual extraction form**. AI suggestion ("Leer documento") is implemented behind a feature flag as a *suggestion-only* path, never auto-applied. No DB writes from AI.
+- Worker types full TIN in the form **only in memory during submission**.
+- We **never persist raw SSN/EIN** in any DB column or in the PDF stored on disk.
+- We store:
+  - `contractor_w9.tin_last4` (already exists) + `tax_id_type` ('ssn' | 'ein')
+  - Generated signed PDF in **private `employee-documents` bucket** at `company_id/employee_id/w9/w9_<timestamp>.pdf`
+  - An `employee_documents` row with `category='w9'`, `review_status='pending_review'`, `file_url=<storage path>` so the W-9 shows up in `/app/documents` and the existing review flow.
+  - `contractor_w9.w9_file_url` = same storage path (cross-link).
+- The PDF rendered inside the bucket shows **`***-**-1234`** for the TIN (masked). Raw TIN is discarded after the client builds the PDF.
+- No edge function needed for v1 — the worker browser builds the PDF with `jspdf` and uploads via the existing authenticated Supabase client (RLS already restricts).
 
----
+### Schema changes proposed (small, additive)
 
-## v1 scope (what we ship)
+Only if you approve, one migration adds:
 
-### Part 1 — Inline preview (no DB changes)
-New shared component: `src/components/documents/DocumentPreview.tsx`
-- Resolves signed URL via existing helper.
-- If `file_type` starts with `image/` → `<img>` with `max-h-[70vh]`, contain.
-- If `application/pdf` → `<iframe>` of signed URL (height 70vh) + "Abrir en pestaña nueva" fallback button.
-- Other → file icon + "Abrir archivo" button only.
-- Header chips: file name · category · uploaded date · expiration (with state color) · review status · worker name.
-- Footer slot for `actions` (approve/reject/correct expiration buttons are passed by parent — no logic moved).
+- `contractor_w9.tax_id_type text check (tax_id_type in ('ssn','ein')) null`
+- `contractor_w9.llc_tax_classification text null` (C/S/P when classification = LLC)
+- `contractor_w9.exempt_payee_code text null`
+- `contractor_w9.fatca_code text null`
+- `contractor_w9.account_numbers text null`
+- `contractor_w9.signature_name text null` (typed signature)
+- `contractor_w9.certification_accepted boolean default false`
 
-New shared dialog: `src/components/documents/DocumentPreviewDialog.tsx` (Sheet/Dialog wrapper).
+No raw TIN column. No SSN/EIN exposure. Existing RLS already covers new columns.
 
-Wire it in:
-- `DocumentsCenter.tsx` — "View" button opens the dialog (keeps new-tab as secondary action).
-- `WorkerDocumentsCompliance.tsx` — same.
-- `MyDocuments.tsx` — same, plus auto-open after successful upload (worker sees what they uploaded).
+### Worker portal UX (`/portal/w9`, also a card on `/portal/documents` and `/portal/update-center`)
 
-Mobile 390: dialog → full-screen Sheet; PDF iframe falls back to "Abrir archivo" button on touch devices where iframe PDF is unreliable (detect by `navigator.userAgent` iOS → button-only).
+1. Card titled **"Formulario W-9"** with copy *"Completa y firma tu W-9 para mantener tu información fiscal actualizada."*
+2. Full IRS-aligned field set (legal name, business name, federal classification, LLC sub-classification when LLC, exempt payee, FATCA, address line 1/2, city/state/zip, account numbers optional).
+3. Tax ID block: `tax_id_type` toggle (SSN / EIN), masked input (`type="password"`), helper text *"Tu número no se guarda en texto plano — solo los últimos 4 dígitos quedan visibles."*
+4. Certification block:
+   - Checkbox: *"Certifico bajo pena de perjurio que la información es correcta…"* (IRS-style summary, Spanish)
+   - Typed signature input (must exactly match `legal_name`)
+   - On submit: stamp `signed_at` (MM/DD/YYYY in UI), build PDF client-side, upload to private bucket, write `contractor_w9` row + `employee_documents` row with `status='pending_review'`.
+5. After submit: shows pending state, signed date, masked TIN, *"W-9 enviado para revisión."* If rejected, allow re-submit.
 
-### Part 2 — Extraction result shape (TypeScript only, no DB yet)
-New file `src/lib/documents/extraction-types.ts`:
+### Admin review
 
-```ts
-export type ConfidenceLevel = 'high' | 'medium' | 'low';
-export type ExtractionSource = 'manual' | 'ai' | 'ocr';
+- `/app/documents` now lists the new `employee_documents` row (`category=w9`) so it flows through the existing approve/reject UI and preview dialog.
+- `/app/contractor-w9` keeps its overview; the row gains a *"Ver PDF"* button that opens a short-lived signed URL.
+- Nowhere in admin lists or profile screens do we show raw SSN/EIN — only `***-**-1234`.
 
-export interface DocumentExtraction {
-  extracted_full_name?: string | null;
-  extracted_document_type?: string | null;
-  extracted_document_number_masked?: string | null; // ALWAYS masked: last 4 only
-  extracted_issue_date?: string | null;             // ISO date
-  extracted_expiration_date?: string | null;        // ISO date
-  extracted_state_or_jurisdiction?: string | null;
-  extracted_birth_date?: string | null;             // optional, dropped for SSN/W-9 categories
-  confidence_score?: number | null;                 // 0..1
-  confidence_level?: ConfidenceLevel | null;
-  extraction_source: ExtractionSource;
-  extracted_at: string;
-  needs_human_confirmation: boolean;                // default true
-  confirmed_by?: string | null;
-  confirmed_at?: string | null;
-}
-```
+### Things explicitly NOT done in v1
 
-Plus a masking helper `maskDocumentNumber(raw: string): string` → `••• ••• 1234`.
+- No IRS e-file, no SSN/EIN persistence, no AI/OCR (policy already blocks it).
+- No notifications, no auto-approval.
+- No portal-permission, payroll, time_entries, shifts, or employee-ID changes.
+- No public storage. No new broad SELECT grants.
 
-### Part 3 — Manual extraction form (admin)
-New component `src/components/documents/AssistedExtractionPanel.tsx`, rendered inside the preview dialog (admin only):
-- Inputs: full name, doc type (select), document number (masked-on-blur), issue date (SmartDateInput), expiration (SmartDateInput), state/jurisdiction, birth date (collapsed, off by default).
-- Buttons:
-  - "Confirmar y guardar" → only writes `expires_at` to `employee_documents` via existing `updateDocumentExpiration` (no new column writes).
-  - Other fields display-only in v1 until DB schema is approved (see Part 8).
-- Banner: "Estos datos son sugerencias. Solo se guardará la fecha de vencimiento confirmada por un administrador."
+### Files to touch (if approved)
 
-### Part 4 — "Leer documento" AI suggestion (feature-flagged, suggestion-only)
-- New edge function `supabase/functions/document-extract/index.ts` (verify_jwt = true).
-  - Input: `{ employee_document_id }`.
-  - Loads row, signs URL, fetches file bytes, posts to Lovable AI Gateway (`google/gemini-2.5-flash`) as image (PDFs: first-page render skipped in v1 — returns "PDF aún no soportado").
-  - Strict JSON response schema matching `DocumentExtraction` minus confirmation fields.
-  - **Always masks document number server-side** (regex keeps last 4).
-  - **Returns suggestion only — writes nothing to DB.**
-  - RLS gate: caller must be admin/owner of the document's `company_id` (reuse `has_role` / company membership helper used elsewhere).
-- Frontend: "Leer documento (beta)" button inside `AssistedExtractionPanel` (admin only, hidden behind `import.meta.env.DEV || feature flag`). On click → calls function → pre-fills form fields (read-only highlight). Admin must explicitly Confirm.
+- New: `src/lib/w9/w9-pdf.ts` (jsPDF builder, accepts in-memory full TIN to render masked PDF, never returns/saves raw)
+- New: `src/lib/w9/w9-types.ts` (form schema + zod validation)
+- New: `src/components/portal/W9GuidedForm.tsx`
+- Edit: `src/pages/portal/MyW9.tsx` (use new form + PDF upload + `employee_documents` insert)
+- Edit: `src/pages/portal/MyDocuments.tsx` and `src/pages/portal/UpdateCenter.tsx` (add W-9 card entry)
+- Edit: `src/pages/admin/ContractorW9.tsx` (add "Ver PDF" via signed URL; show masked TIN only)
+- Optional small touch: `src/pages/admin/DocumentsCenter.tsx` already lists `employee_documents` rows — verify W-9 appears with sensitive badge (no extraction button).
+- Migration: additive columns on `contractor_w9` (only with approval).
 
-### Part 5 — Portal upload flow
-In `MyDocuments.tsx`:
-- After upload → open `DocumentPreviewDialog` automatically.
-- If expiration is required by policy and missing → inline "Agrega la fecha de vencimiento" with `SmartDateInput` (already exists, just wire to post-upload state).
-- Helper text: "Revisaremos el documento antes de marcarlo como aprobado."
-- No worker access to extraction panel. No auto-approve.
+### QA plan (run after implementation)
 
-### Part 6 — Admin review flow additions
-In preview dialog (admin) show a "Mismatch warnings" strip computed client-side from row + employee:
-- Name on document differs from worker profile (only flagged if extraction confirmed by admin).
-- Expiration missing (uses existing policy).
-- Document expired (uses `classifyExpiration`).
-- Category may be wrong (only when AI suggestion's `extracted_document_type` differs from saved category — pure suggestion).
+- Worker `/portal/w9`: validate required fields; typed signature must equal legal name; submit creates PDF + `employee_documents` row + `contractor_w9` row; pending state visible; only `***-**-1234` shown after.
+- Admin `/app/documents`: W-9 visible as pending; signed-URL preview opens; approve/reject works; no SSN/EIN in DOM/network.
+- Network tab: submit request body contains TIN only in the encoded PDF blob (server side stores the masked PDF + last4); no raw TIN in `contractor_w9` payload.
+- RLS: a second worker cannot SELECT another's `contractor_w9` row; anon blocked.
+- Regression: payroll, shifts, time_entries, employee IDs, photo review, notifications — untouched.
 
-Approve/reject buttons remain owned by `WorkerDocumentsCompliance` / existing action layer — preview dialog accepts them via prop, doesn't reimplement.
+### Awaiting approval
 
-### Part 7 — Privacy / security
-- Document number never stored raw client-side — masking helper applied before any state set.
-- Edge function masks before returning.
-- No new storage buckets. No policy changes. Signed URLs only (1h TTL, existing).
-- SSN/EIN doc categories (`w9`, `tax_form`) → AI button hidden, extraction panel shows "Categoría sensible — extracción asistida deshabilitada."
-- Audit trail: reuse existing `document_actions` audit log (already called by `updateDocumentExpiration`).
-
-### Part 8 — DB schema (deferred, propose only)
-**Not applied in this sprint.** Proposed for v1.1 if approved:
-```sql
-ALTER TABLE public.employee_documents
-  ADD COLUMN extraction jsonb,                       -- masked-only DocumentExtraction
-  ADD COLUMN extraction_confirmed_by uuid,           -- auth.users.id
-  ADD COLUMN extraction_confirmed_at timestamptz;
-```
-RLS: admins of the same `company_id` may read/write `extraction*`. Workers may read only `extraction_expiration_date` projection if confirmed (handled via view, not direct grant).
-
-Stop here for explicit approval before migrating.
-
----
-
-## Files to change / create
-
-**Create**
-- `src/components/documents/DocumentPreview.tsx`
-- `src/components/documents/DocumentPreviewDialog.tsx`
-- `src/components/documents/AssistedExtractionPanel.tsx`
-- `src/lib/documents/extraction-types.ts`
-- `supabase/functions/document-extract/index.ts` (+ config.toml block with `verify_jwt = true`)
-
-**Edit**
-- `src/pages/admin/DocumentsCenter.tsx` — wire preview dialog into "View".
-- `src/pages/portal/MyDocuments.tsx` — preview dialog + post-upload auto-open + expiration prompt.
-- `src/components/employee/WorkerDocumentsCompliance.tsx` — wire preview dialog + pass approve/reject actions through.
-
-**Untouched (regression guard)**
-- payroll math, time_entries, scheduled_shifts, shift_assignments
-- employee ID generation
-- notifications / SMS / email
-- photo review pipeline
-- existing RLS, storage policies, buckets
-- existing approve/reject logic (only passed through)
-
----
-
-## QA checklist (run live after build)
-- Admin: open `/app/documents` → "View" → image and PDF previews render; expiration still editable; AI button hidden for w9/tax_form; "Leer documento" returns suggestion + does not write to DB.
-- Profile: same preview dialog opens in `WorkerDocumentsCompliance`.
-- Portal: upload → dialog opens → expiration prompt for required categories → "Revisaremos el documento..." copy visible → no auto-approve.
-- Mobile 390: dialog full-screen, no overflow, buttons tappable, iOS shows "Abrir archivo" fallback for PDFs.
-- Security: no SSN/EIN visible anywhere, document number always masked, signed URL still 1h, no new buckets/policies in network tab.
-- Regression: no payroll/time_entries/shifts/employee-id/notification/photo-review changes.
-
-**Return after build**: files changed, whether edge function deployed, QA PASS/FAIL, and explicit ask for approval before applying Part 8 schema.
+I will not run the migration or write any code until you confirm Storage Model A and the additive `contractor_w9` columns above.

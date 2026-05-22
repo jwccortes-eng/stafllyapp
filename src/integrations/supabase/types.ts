@@ -2403,69 +2403,90 @@ export type Database = {
       }
       contractor_w9: {
         Row: {
+          account_numbers: string | null
           address_line1: string | null
           address_line2: string | null
           business_name: string | null
+          certification_accepted: boolean
           city: string | null
           company_id: string
           created_at: string
           employee_id: string
+          exempt_payee_code: string | null
+          fatca_code: string | null
           id: string
           legal_name: string
+          llc_tax_classification: string | null
           reviewed_at: string | null
           reviewed_by: string | null
+          signature_name: string | null
           signed_at: string | null
           signed_by: string | null
           state: string | null
           status: string
           submitted_at: string | null
           tax_classification: string
+          tax_id_type: string | null
           tin_last4: string | null
           updated_at: string
           w9_file_url: string | null
           zip_code: string | null
         }
         Insert: {
+          account_numbers?: string | null
           address_line1?: string | null
           address_line2?: string | null
           business_name?: string | null
+          certification_accepted?: boolean
           city?: string | null
           company_id: string
           created_at?: string
           employee_id: string
+          exempt_payee_code?: string | null
+          fatca_code?: string | null
           id?: string
           legal_name?: string
+          llc_tax_classification?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
+          signature_name?: string | null
           signed_at?: string | null
           signed_by?: string | null
           state?: string | null
           status?: string
           submitted_at?: string | null
           tax_classification?: string
+          tax_id_type?: string | null
           tin_last4?: string | null
           updated_at?: string
           w9_file_url?: string | null
           zip_code?: string | null
         }
         Update: {
+          account_numbers?: string | null
           address_line1?: string | null
           address_line2?: string | null
           business_name?: string | null
+          certification_accepted?: boolean
           city?: string | null
           company_id?: string
           created_at?: string
           employee_id?: string
+          exempt_payee_code?: string | null
+          fatca_code?: string | null
           id?: string
           legal_name?: string
+          llc_tax_classification?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
+          signature_name?: string | null
           signed_at?: string | null
           signed_by?: string | null
           state?: string | null
           status?: string
           submitted_at?: string | null
           tax_classification?: string
+          tax_id_type?: string | null
           tin_last4?: string | null
           updated_at?: string
           w9_file_url?: string | null
