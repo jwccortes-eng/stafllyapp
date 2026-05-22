@@ -97,10 +97,10 @@ export default function AssistedExtractionPanel({ target, onSaved }: Props) {
         description: "Revisa y confirma manualmente. Nada se guardó automáticamente.",
       });
     } catch (err: any) {
+      console.warn("document-extract failed:", err);
       toast({
-        title: "No se pudo leer el documento",
-        description: err?.message ?? "Inténtalo de nuevo.",
-        variant: "destructive",
+        title: "No pudimos leerlo automáticamente",
+        description: "Puedes completar los datos manualmente.",
       });
     } finally {
       setAiLoading(false);
