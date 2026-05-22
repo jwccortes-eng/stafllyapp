@@ -484,31 +484,110 @@ export default function MyDocuments() {
                   </div>
                 )}
 
-                {/* Upload action */}
-                <div className="mt-3">
-                  <input
-                    ref={(el) => { inputsRef.current[cat] = el; }}
-                    type="file"
-                    accept="image/*,application/pdf"
-                    className="hidden"
-                    onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      if (f) handleUpload(cat, f, expirationDates[cat] || null);
-                      if (e.target) e.target.value = "";
-                    }}
-                  />
-                  <Button
-                    type="button"
-                    variant={state === "approved" ? "outline" : "default"}
-                    size="sm"
-                    className="w-full h-9 text-xs gap-1.5"
-                    disabled={isUploading}
-                    onClick={() => inputsRef.current[cat]?.click()}
-                  >
-                    {isUploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
-                    {ctaLabel}
-                  </Button>
-                </div>
+                {/* Side requirements — Frente / Reverso slots when needed */}
+                {(() => {
+                  const pol = policyFor(cat);
+                  const needsSides = pol.side === "front_back_required" || pol.side === "front_back_recommended";
+                  const missingSides = missingSidesFor(cat, items.map((d) => d.name));
+                  const inputKey = (s: DocumentSide) => `${cat}__${s}`;
+
+                  if (!needsSides) {
+                    return (
+                      <div className="mt-3 space-y-2">
+                        <p className="text-[10.5px] text-muted-foreground/80">
+                          {uploadHintFor(cat)}
+                        </p>
+                        <input
+                          ref={(el) => { inputsRef.current[cat] = el; }}
+                          type="file"
+                          accept="image/*,application/pdf"
+                          className="hidden"
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            if (f) handleUpload(cat, f, expirationDates[cat] || null, "full");
+                            if (e.target) e.target.value = "";
+                          }}
+                        />
+                        <Button
+                          type="button"
+                          variant={state === "approved" ? "outline" : "default"}
+                          size="sm"
+                          className="w-full h-9 text-xs gap-1.5"
+                          disabled={isUploading}
+                          onClick={() => inputsRef.current[cat]?.click()}
+                        >
+                          {isUploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+                          {ctaLabel}
+                        </Button>
+                      </div>
+                    );
+                  }
+
+                  const renderSlot = (side: "front" | "back", required: boolean) => {
+                    const sideLabel = SIDE_LABEL[side];
+                    const present = !missingSides.includes(side);
+                    return (
+                      <div key={side} className="rounded-xl border border-border/50 bg-muted/20 p-2.5 space-y-1.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[11px] font-semibold text-foreground">
+                            {sideLabel}
+                            <span className="ml-1.5 text-[9.5px] uppercase tracking-wider text-muted-foreground/70">
+                              {required ? "Requerido" : "Recomendado"}
+                            </span>
+                          </span>
+                          {present ? (
+                            <span className="text-[9px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded-full bg-earning/10 text-earning">
+                              Subido
+                            </span>
+                          ) : (
+                            <span className={cn(
+                              "text-[9px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded-full",
+                              required ? "bg-warning/10 text-warning" : "bg-muted text-muted-foreground"
+                            )}>
+                              Falta
+                            </span>
+                          )}
+                        </div>
+                        <input
+                          ref={(el) => { inputsRef.current[inputKey(side)] = el; }}
+                          type="file"
+                          accept="image/*,application/pdf"
+                          className="hidden"
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            if (f) handleUpload(cat, f, expirationDates[cat] || null, side);
+                            if (e.target) e.target.value = "";
+                          }}
+                        />
+                        <Button
+                          type="button"
+                          variant={present ? "outline" : "default"}
+                          size="sm"
+                          className="w-full h-8 text-[11px] gap-1.5"
+                          disabled={isUploading}
+                          onClick={() => inputsRef.current[inputKey(side)]?.click()}
+                        >
+                          {isUploading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
+                          {present ? `Reemplazar ${sideLabel.toLowerCase()}` : `Sube el ${sideLabel.toLowerCase()}`}
+                        </Button>
+                      </div>
+                    );
+                  };
+
+                  const backRequired = pol.side === "front_back_required";
+
+                  return (
+                    <div className="mt-3 space-y-2">
+                      <p className="text-[10.5px] text-muted-foreground/80">
+                        {uploadHintFor(cat)}
+                      </p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {renderSlot("front", true)}
+                        {renderSlot("back", backRequired)}
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             );
           })
