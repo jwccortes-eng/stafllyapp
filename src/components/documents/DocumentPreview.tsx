@@ -209,3 +209,61 @@ export function DocumentPreviewSkeleton() {
     </div>
   );
 }
+
+function PdfFallbackCard({ url }: { url: string }) {
+  const [blocked, setBlocked] = useState(false);
+
+  const tryOpen = () => {
+    // Native click on the anchor is preferred; this button is a backup retry.
+    const w = window.open(url, "_blank", "noopener,noreferrer");
+    if (!w || w.closed || typeof w.closed === "undefined") {
+      setBlocked(true);
+    } else {
+      setBlocked(false);
+    }
+  };
+
+  const copyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(url);
+      toast({ title: "Enlace seguro copiado", description: "Pégalo en una pestaña nueva para abrir el PDF." });
+    } catch {
+      toast({ title: "No se pudo copiar", description: "Selecciona y copia el enlace manualmente.", variant: "destructive" });
+    }
+  };
+
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[16rem] gap-3 p-6 text-center">
+      <FileText className="h-10 w-10 text-muted-foreground" />
+      <div className="space-y-1 max-w-md">
+        <p className="text-sm font-medium text-foreground">
+          Vista previa PDF no disponible en este navegador.
+        </p>
+        <p className="text-xs text-muted-foreground">
+          Puedes abrirlo en una pestaña segura. Si tu navegador lo bloquea, copia el enlace temporal.
+        </p>
+      </div>
+      <div className="flex flex-wrap items-center justify-center gap-2">
+        <Button asChild size="sm" onClick={() => setBlocked(false)}>
+          <a href={url} target="_blank" rel="noopener noreferrer">
+            <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+            Abrir PDF seguro
+          </a>
+        </Button>
+        <Button size="sm" variant="outline" onClick={copyLink}>
+          <ClipboardCopy className="h-3.5 w-3.5 mr-1.5" />
+          Copiar enlace seguro
+        </Button>
+        <Button size="sm" variant="ghost" onClick={tryOpen}>
+          <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+          Reintentar abrir
+        </Button>
+      </div>
+      {blocked && (
+        <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2 py-1.5 max-w-md">
+          Tu navegador bloqueó la vista del PDF. Copia el enlace seguro o intenta abrirlo desde otra ventana.
+        </p>
+      )}
+    </div>
+  );
+}
