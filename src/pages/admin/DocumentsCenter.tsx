@@ -18,22 +18,30 @@ import {
   type UnifiedDocStatus,
   type UnifiedDocumentRow,
 } from "@/lib/documents-signals";
+import {
+  classifyExpiration,
+  expirationPolicyFor,
+  EXPIRATION_STATE_LABEL,
+} from "@/lib/onboarding/document-expiration-policy";
+import { updateDocumentExpiration } from "@/lib/document-actions";
 import { resolveEmployeeDocumentUrl } from "@/lib/employee-documents";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { SmartDateInput } from "@/components/ui/smart-date-input";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { PremiumPageHeader } from "@/components/ui/premium-page-header";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Search, Download, ExternalLink, UserSearch, FileText } from "lucide-react";
+import { Search, Download, ExternalLink, UserSearch, FileText, CalendarClock, Pencil } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatDateUS } from "@/lib/date-format";
 
-type FilterKey = "all" | "needs_review" | "missing" | "pending" | "expired" | "expiring_soon" | "rejected" | "approved";
+type FilterKey = "all" | "needs_review" | "missing" | "pending" | "expired" | "expiring_soon" | "missing_expiration" | "rejected" | "approved";
 
 const STATUS_TONE: Record<UnifiedDocStatus, string> = {
   approved:       "border-emerald-200 bg-emerald-50 text-emerald-700",
