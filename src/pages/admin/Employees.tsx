@@ -1449,10 +1449,12 @@ export default function Employees() {
           counts={{
             all: employees.filter((e) => {
               const s = photoStatusFor(e);
-              return s === "required" || s === "review";
+              return s === "required" || s === "pending" || s === "invalid";
             }).length,
             missing: employees.filter((e) => photoStatusFor(e) === "required").length,
-            unreviewed: employees.filter((e) => photoStatusFor(e) === "review").length,
+            unreviewed: employees.filter((e) => photoStatusFor(e) === "pending").length,
+            rejected: employees.filter((e) => photoStatusFor(e) === "invalid").length,
+            approved: employees.filter((e) => photoStatusFor(e) === "approved").length,
           }}
         />
       )}
