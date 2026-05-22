@@ -154,20 +154,31 @@ function PhotoCard({
   avatarUrl,
   firstName,
   lastName,
+  reviewStatus,
+  rejectionReason,
   onUploaded,
 }: {
   employeeId: string;
   avatarUrl: string | null;
   firstName: string;
   lastName: string;
+  reviewStatus: "pending" | "approved" | "rejected" | null;
+  rejectionReason: string | null;
   onUploaded: (url: string) => void;
 }) {
   const hasPhoto = !!avatarUrl;
+  const chipStatus: "required" | "pending" | "approved" | "invalid" = !hasPhoto
+    ? "required"
+    : reviewStatus === "approved"
+      ? "approved"
+      : reviewStatus === "rejected"
+        ? "invalid"
+        : "pending";
   return (
     <SectionShell
       icon={<Camera className="h-3.5 w-3.5" />}
       title="Foto profesional"
-      complete={hasPhoto}
+      complete={chipStatus === "approved"}
     >
       <div className="flex items-center gap-3">
         <EmployeeAvatar
@@ -178,16 +189,21 @@ function PhotoCard({
           className="shrink-0"
         />
         <div className="flex-1 min-w-0 space-y-1.5">
-          <WorkerPhotoStatusChip
-            status={hasPhoto ? "pending" : "required"}
-            size="sm"
-          />
+          <WorkerPhotoStatusChip status={chipStatus} size="sm" />
           <p className="text-[11.5px] text-muted-foreground/85 leading-snug">
-            {hasPhoto
-              ? "Foto tipo documento: rostro claro, fondo limpio y buena iluminación."
-              : "Tu foto profesional es requerida para mantener tu perfil listo para nuevas oportunidades."}
+            {chipStatus === "approved"
+              ? "Tu foto profesional fue aprobada. ¡Listo!"
+              : chipStatus === "invalid"
+                ? (rejectionReason
+                    ? `Tu foto no fue aceptada: ${rejectionReason}. Sube una nueva foto profesional.`
+                    : "Tu foto no fue aceptada. Sube una nueva foto profesional.")
+                : chipStatus === "pending"
+                  ? "Tu foto está pendiente de revisión por un administrador."
+                  : "Tu foto profesional es requerida para mantener tu perfil listo para nuevas oportunidades."}
           </p>
-
+          <p className="text-[10.5px] text-muted-foreground/65 leading-snug">
+            Puedes seguir usando el portal para actualizar tu información, documentos y soporte.
+          </p>
         </div>
       </div>
 
