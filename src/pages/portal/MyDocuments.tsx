@@ -577,6 +577,26 @@ export default function MyDocuments() {
           </p>
         )}
       </div>
+
+      <DocumentPreviewDialog
+        open={!!previewDoc}
+        onOpenChange={(o) => { if (!o) setPreviewDoc(null); }}
+        item={previewDoc ? {
+          file_path: previewDoc.file_url,
+          file_type: previewDoc.file_type,
+          file_name: previewDoc.name,
+          document_type: (DOCUMENT_CATEGORIES as any)[previewDoc.category]?.label ?? previewDoc.category,
+          category: previewDoc.category,
+          uploaded_at: previewDoc.created_at,
+          expires_at: previewDoc.expires_at,
+          review_status: previewDoc.review_status,
+        } : null}
+        banner={
+          <div className="rounded-md border border-amber-200 bg-amber-50 text-amber-800 text-[11px] px-2.5 py-1.5">
+            Revisaremos el documento antes de marcarlo como aprobado.
+          </div>
+        }
+      />
     </div>
   );
 }
