@@ -190,6 +190,14 @@ export default function WorkerDocumentsCompliance({ employee }: Props) {
                 const label = (DOCUMENT_CATEGORIES as any)[cat]?.label ?? cat;
                 const missing = signals.missingRequiredLabels.includes(label);
                 const Icon = missing ? FileMinus : ShieldCheck;
+                // Side audit: only meaningful when at least one file has been uploaded
+                // and the category requires/recommends two sides.
+                const namesForCat = rows
+                  .filter((r) => r.category === cat)
+                  .map((r) => r.file_name ?? "");
+                const missingSides = namesForCat.length > 0
+                  ? missingSidesFor(cat, namesForCat)
+                  : [];
                 return (
                   <li
                     key={cat}
@@ -197,13 +205,19 @@ export default function WorkerDocumentsCompliance({ employee }: Props) {
                       "flex items-center gap-1.5 rounded-sm border px-2 py-1 text-[11px]",
                       missing
                         ? "border-amber-200 bg-amber-50 text-amber-800"
-                        : "border-emerald-200 bg-emerald-50/70 text-emerald-800",
+                        : missingSides.length > 0
+                          ? "border-amber-200 bg-amber-50/60 text-amber-800"
+                          : "border-emerald-200 bg-emerald-50/70 text-emerald-800",
                     )}
                   >
                     <Icon className="h-3 w-3 shrink-0" />
                     <span className="font-medium truncate">{label}</span>
                     <span className="ml-auto text-[10px] opacity-75">
-                      {missing ? "Missing" : "Approved"}
+                      {missing
+                        ? "Missing"
+                        : missingSides.length > 0
+                          ? `Falta ${missingSides.map((s) => SIDE_LABEL[s].toLowerCase()).join(" y ")}`
+                          : "Approved"}
                     </span>
                   </li>
                 );
