@@ -86,6 +86,8 @@ export function PhotoReviewCriteriaCard({ photoFilter, onPhotoFilterChange, coun
     { key: "all", label: "Todas", count: counts.all },
     { key: "missing", label: "Sin foto", count: counts.missing },
     { key: "unreviewed", label: "Subida sin revisar", count: counts.unreviewed },
+    { key: "rejected", label: "Rechazadas", count: counts.rejected },
+    { key: "approved", label: "Aprobadas", count: counts.approved },
   ];
 
   return (
