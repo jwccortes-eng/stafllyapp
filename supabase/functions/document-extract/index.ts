@@ -12,7 +12,7 @@
  *  - Sensitive categories (w9, tax_form) are blocked.
  */
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.50.0";
+import { createClient } from "npm:@supabase/supabase-js@2.50.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
