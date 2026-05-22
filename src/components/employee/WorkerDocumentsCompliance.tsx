@@ -80,6 +80,7 @@ export default function WorkerDocumentsCompliance({ employee }: Props) {
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<UnifiedDocumentRow[]>([]);
   const [required, setRequired] = useState<DocumentCategory[]>([]);
+  const [previewRow, setPreviewRow] = useState<UnifiedDocumentRow | null>(null);
 
   useEffect(() => {
     let cancelled = false;
