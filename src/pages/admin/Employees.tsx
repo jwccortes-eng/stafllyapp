@@ -763,22 +763,28 @@ export default function Employees() {
   // and per-row enforcement used elsewhere.
   const isInviteFailed = (e: EmployeeRecord) => isWorkerInviteFailed(e, invitations[e.id]);
 
-  // Photo readiness signal (read-only). Conservative: only flags workers with
-  // no `avatar_url` at all. Active workers only — keeps inactive list quiet.
+  // Photo readiness signal — Photo Review Status v2.
+  // Now backed by the real DB review fields. Inactive workers stay silent.
   const isMissingPhoto = (e: EmployeeRecord) =>
     e.is_active !== false && !(e.avatar_url && String(e.avatar_url).trim().length > 0);
 
   /**
-   * Photo Quality Gate v1 — Spanish-first status resolver.
-   * No DB review field exists yet, so we never claim "approved".
-   *   - active + no avatar           → "required"  (Foto requerida)
-   *   - active + has avatar          → "review"    (Revisar foto · sin revisar)
-   *   - inactive                     → null        (silent)
+   * Photo Quality Gate — Spanish-first status resolver (Photo Review Status v2).
+   *   - inactive                                           → null (silent)
+   *   - active + no avatar                                 → "required"
+   *   - active + avatar + photo_review_status='approved'   → "approved"
+   *   - active + avatar + photo_review_status='rejected'   → "invalid"
+   *   - active + avatar + (null or 'pending')              → "pending"
    */
-  const photoStatusFor = (e: EmployeeRecord): "required" | "review" | null => {
+  const photoStatusFor = (
+    e: EmployeeRecord,
+  ): "required" | "pending" | "approved" | "invalid" | null => {
     if (e.is_active === false) return null;
     const has = e.avatar_url && String(e.avatar_url).trim().length > 0;
-    return has ? "review" : "required";
+    if (!has) return "required";
+    if (e.photo_review_status === "approved") return "approved";
+    if (e.photo_review_status === "rejected") return "invalid";
+    return "pending";
   };
 
   const statusCounts = {
@@ -799,23 +805,26 @@ export default function Employees() {
     switch (tab) {
       case "all": return true;
       case "active": return e.is_active !== false && !!e.user_id;
-      // `invited` keeps its inclusive meaning (any invitation record, healthy or failed)
-      // to avoid breaking saved URLs and operator muscle memory.
       case "invited": return e.is_active !== false && !e.user_id && !!invitations[e.id];
       case "failed": return e.is_active !== false && !e.user_id && isInviteFailed(e);
       case "pending": return e.is_active !== false && !e.user_id && !invitations[e.id];
       case "inactive": return e.is_active === false;
       case "missing-docs": return isMissingDocs(e);
       case "no-photo": {
-        // Photo Review Queue v1:
-        //   "all"        → both missing AND uploaded-but-unreviewed
-        //   "missing"    → only missing avatar
-        //   "unreviewed" → only uploaded photos (no review field yet → all of them)
-        const status = photoStatusFor(e);
-        if (status === null) return false; // inactive
-        if (photoFilter === "missing") return status === "required";
-        if (photoFilter === "unreviewed") return status === "review";
-        return status === "required" || status === "review";
+        // Photo Review Queue v2 — filter pills:
+        //   "all"        → missing + pending + rejected (needs admin attention)
+        //   "missing"    → no avatar at all
+        //   "unreviewed" → avatar uploaded, not yet approved/rejected (pending)
+        //   "rejected"   → admin marked photo as not valid
+        //   "approved"   → admin-approved photos (browse only)
+        const s = photoStatusFor(e);
+        if (s === null) return false; // inactive
+        if (photoFilter === "missing")    return s === "required";
+        if (photoFilter === "unreviewed") return s === "pending";
+        if (photoFilter === "rejected")   return s === "invalid";
+        if (photoFilter === "approved")   return s === "approved";
+        // "all" = anything that still needs attention (excludes approved noise)
+        return s === "required" || s === "pending" || s === "invalid";
       }
       case "drivers": return isDriver(e);
       case "no-activity": return isNoActivity(e);
