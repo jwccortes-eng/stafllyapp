@@ -17,9 +17,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  CalendarClock, ExternalLink, FileText, ImageIcon, Loader2, ShieldAlert,
-  User2,
+  CalendarClock, ClipboardCopy, ExternalLink, FileText, ImageIcon, Loader2,
+  RefreshCw, ShieldAlert, User2,
 } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 import { resolveEmployeeDocumentUrl } from "@/lib/employee-documents";
 import { formatDateUS } from "@/lib/date-format";
 import {
@@ -164,23 +165,8 @@ export default function DocumentPreview({ item, actions, banner }: Props) {
             />
           </div>
         ) : kind === "pdf" ? (
-          <div className="flex flex-col items-center justify-center min-h-[16rem] gap-3 p-6 text-center">
-            <FileText className="h-10 w-10 text-muted-foreground" />
-            <div className="space-y-1 max-w-sm">
-              <p className="text-sm font-medium text-foreground">
-                Vista previa PDF no disponible en este navegador.
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Abre el documento en una pestaña segura para revisarlo.
-              </p>
-            </div>
-            <Button asChild size="sm">
-              <a href={url} target="_blank" rel="noopener noreferrer">
-                <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
-                Abrir PDF seguro
-              </a>
-            </Button>
-          </div>
+          <PdfFallbackCard url={url} />
+
         ) : (
           <div className="flex flex-col items-center justify-center h-64 gap-3 p-4 text-center">
             {kind === "image" ? <ImageIcon className="h-8 w-8 text-muted-foreground" /> : <FileText className="h-8 w-8 text-muted-foreground" />}
