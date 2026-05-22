@@ -242,6 +242,8 @@ function App() {
               <Route path="/invite" element={<AcceptInvite />} />
               <Route path="/activate/:token" element={<ActivateAccount />} />
               <Route path="/s/:token" element={<ShiftLink />} />
+              {/* Defensive redirect: top-level /document-intake → /app/document-intake */}
+              <Route path="/document-intake" element={<Navigate to="/app/document-intake" replace />} />
               <Route path="/client" element={<ClientLayout />}>
                 <Route index element={<ClientDashboard />} />
                 <Route path="requests" element={<ClientRequests />} />
