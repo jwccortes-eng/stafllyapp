@@ -32,6 +32,7 @@ import {
   isExtractionAllowed,
   maskDocumentNumber,
 } from "@/lib/documents/extraction-types";
+import { inferDocumentSide } from "@/lib/documents/document-policy";
 import { updateDocumentExpiration } from "@/lib/document-actions";
 
 export interface AssistedExtractionTarget {
