@@ -1764,25 +1764,36 @@ export default function Employees() {
                       <WorkerRiskTags risks={risks} max={2} />
                       {(() => {
                         const ps = photoStatusFor(e);
-                        // Roster hygiene: always surface "Foto requerida" so
-                        // missing photos are unmistakable. Only surface
-                        // "Revisar foto" inside the dedicated photo-audit tab
-                        // (no-photo) — otherwise it spams every active worker.
-                        if (ps === "required" || (ps === "review" && statusTab === "no-photo")) {
-                          return (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <span>
-                                  <WorkerPhotoStatusChip status={ps} />
-                                </span>
-                              </TooltipTrigger>
-                              <TooltipContent side="top" className="text-xs max-w-[240px]">
-                                {ps === "required"
-                                  ? "Foto tipo documento: rostro claro, fondo limpio y buena iluminación. No se aceptan paisajes, logos, caricaturas, fotos grupales ni contenido sugestivo."
-                                  : "Foto cargada — falta revisión manual antes de aprobar."}
-                              </TooltipContent>
-                            </Tooltip>
-                          );
+                        // Roster hygiene: always surface "Foto requerida" and
+                        // "Foto no válida" (rejected — needs worker action).
+                        // "Pendiente" stays inside the no-photo audit tab so
+                        // the main roster does not get spammed.
+                        const showHere =
+                          ps === "required" ||
+                          ps === "invalid" ||
+                          (ps === "pending" && statusTab === "no-photo") ||
+                          (ps === "approved" && statusTab === "no-photo" && photoFilter === "approved");
+                        if (!showHere || !ps) return null;
+                        const tip =
+                          ps === "required"
+                            ? "Foto tipo documento: rostro claro, fondo limpio y buena iluminación."
+                            : ps === "invalid"
+                              ? (e.photo_rejection_reason || "Foto marcada como no válida. Pide al trabajador una nueva foto.")
+                              : ps === "approved"
+                                ? "Foto aprobada por un administrador."
+                                : "Foto cargada — pendiente de revisión manual.";
+                        return (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span>
+                                <WorkerPhotoStatusChip status={ps} />
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="text-xs max-w-[240px]">
+                              {tip}
+                            </TooltipContent>
+                          </Tooltip>
+                        );
                         }
                         return null;
                       })()}
