@@ -351,3 +351,44 @@ export async function uploadAdminDocument(input: AdminUploadInput): Promise<{
   await writeAuditLog({ action: "document_uploaded_by_admin", doc });
   return { error: null, doc };
 }
+
+// ─── Update expiration (admin only) ─────────────────────────────────────────
+/**
+ * Set or clear the expiration date for an admin-managed employee document.
+ * Pass `null` (or empty string) to clear. v1 only supports employee_documents.
+ */
+export async function updateDocumentExpiration(
+  doc: Pick<UnifiedDocument, "raw_id" | "source" | "employee_id" | "company_id" | "name" | "category">,
+  expiresAtIso: string | null,
+): Promise<{ error: string | null }> {
+  if (doc.source !== "employee_documents") {
+    return { error: "Expiration editing is only supported for admin documents in v1." };
+  }
+  const value = expiresAtIso && expiresAtIso.trim() ? expiresAtIso : null;
+  const { error } = await (supabase.from("employee_documents" as any) as any)
+    .update({ expires_at: value })
+    .eq("id", doc.raw_id);
+  if (error) return { error: error.message };
+
+  try {
+    const { data: auth } = await supabase.auth.getUser();
+    const userId = auth?.user?.id;
+    if (userId) {
+      await supabase.from("activity_log" as any).insert({
+        user_id: userId,
+        company_id: doc.company_id,
+        action: "document_expiration_updated",
+        entity_type: "employee_document",
+        entity_id: doc.raw_id,
+        details: {
+          employee_id: doc.employee_id,
+          document_name: doc.name,
+          category: doc.category,
+          expires_at: value,
+        },
+      } as any);
+    }
+  } catch { /* never block on audit */ }
+
+  return { error: null };
+}
