@@ -176,10 +176,19 @@ export default function MyDocuments() {
         throw rowErr;
       }
 
-      toast({ title: "Documento subido", description: "Pendiente de revisión por admin." });
+      toast({ title: "Documento subido", description: "Revisaremos el documento antes de marcarlo como aprobado." });
       await refresh();
-      // Refresh readiness so banners across the portal update without a hard reload.
       readiness.refresh();
+      // Auto-open preview so the worker can see what they uploaded.
+      const { data: latest } = await supabase
+        .from("employee_documents" as any)
+        .select("id, name, file_url, file_type, file_size, category, created_at, review_status, rejection_reason, reviewed_at, expires_at")
+        .eq("employee_id", employeeId)
+        .eq("category", category)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (latest) setPreviewDoc(latest as any);
     } catch (err: any) {
       toast({ title: "Error al subir", description: err?.message ?? "Inténtalo de nuevo.", variant: "destructive" });
     } finally {
