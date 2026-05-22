@@ -30,6 +30,7 @@ import {
   type RequirementDef,
 } from "@/lib/compliance/requirement-catalog";
 import { WorkerSelfServiceSections } from "@/components/portal/WorkerSelfServiceSections";
+import { W9EntryCard } from "@/components/portal/W9EntryCard";
 import { cn } from "@/lib/utils";
 
 const ICONS: Record<RequirementDef["icon"], React.ComponentType<{ className?: string }>> = {
@@ -110,6 +111,9 @@ export default function UpdateCenter() {
           onUpdated={() => { void refresh(); }}
         />
       )}
+
+      {/* ── W-9 guided form entry ── */}
+      <W9EntryCard />
 
       {/* ── Loading ── */}
       {loading && (

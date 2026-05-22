@@ -55,6 +55,7 @@ import { PROFILE_STATUS_LABELS } from "@/lib/onboarding/profile-status";
 import { resolveEmployeeDocumentUrl } from "@/lib/employee-documents";
 import { formatDateUS } from "@/lib/date-format";
 import DocumentPreviewDialog from "@/components/documents/DocumentPreviewDialog";
+import { W9EntryCard } from "@/components/portal/W9EntryCard";
 
 type ReviewStatus = "pending" | "approved" | "rejected";
 
@@ -324,6 +325,9 @@ export default function MyDocuments() {
           Tus archivos son privados. Solo los administradores de tu compañía pueden revisarlos.
         </p>
       </div>
+
+      {/* W-9 guided form entry */}
+      <W9EntryCard />
 
       {/* Required categories */}
       <div className="space-y-2.5">
