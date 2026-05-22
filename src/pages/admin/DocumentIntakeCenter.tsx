@@ -8,6 +8,7 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
 import { useAuth } from "@/hooks/useAuth";
@@ -18,8 +19,10 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SmartDateInput } from "@/components/ui/smart-date-input";
+import { formatDateUS, todayIso } from "@/lib/date-format";
 import { toast } from "@/hooks/use-toast";
-import { Loader2, Upload, FileText, CheckCircle2, XCircle, Clock, ShieldAlert, Sparkles } from "lucide-react";
+import { Loader2, Upload, FileText, CheckCircle2, XCircle, Clock, ShieldAlert, Sparkles, ExternalLink, User as UserIcon } from "lucide-react";
 import { resolveEmployeeDocumentUrl } from "@/lib/employee-documents";
 
 type Item = any;
@@ -242,12 +245,15 @@ export default function DocumentIntakeCenter() {
 function IntakeItemRow({
   item, employees, empById, onChanged,
 }: { item: Item; employees: any[]; empById: Map<string, any>; onChanged: () => void }) {
+  const navigate = useNavigate();
+  const qc = useQueryClient();
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [empId, setEmpId] = useState<string>(item.suggested_employee_id ?? "");
   const [category, setCategory] = useState<string>(item.suggested_document_category ?? "");
   const [side, setSide] = useState<string>(item.suggested_document_side ?? "unknown");
   const [expires, setExpires] = useState<string>(item.suggested_expires_at ?? "");
   const [busy, setBusy] = useState(false);
+  const [hidden, setHidden] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -256,10 +262,17 @@ function IntakeItemRow({
   }, [item.storage_path]);
 
   const suggestedEmp = item.suggested_employee_id ? empById.get(item.suggested_employee_id) : null;
+  const assignedEmp = empId ? empById.get(empId) : null;
   const isImg = (item.mime_type ?? "").startsWith("image/");
   const isW9 = category === "w9" || /w-?9|tax/i.test(item.original_filename ?? "");
   const isIndexed = item.status === "indexed";
   const isRejected = item.status === "rejected";
+  const locked = isIndexed || isRejected;
+
+  const categoryLabel = CATEGORIES.find((c) => c.value === category)?.label ?? category ?? "—";
+  const sideLabel = SIDES.find((s) => s.value === side)?.label ?? side;
+  const expiresDisplay = expires ? formatDateUS(expires) : null;
+  const isExpired = !!expires && expires < todayIso();
 
   async function confirm(approveDirect: boolean) {
     if (!empId) { toast({ title: "Falta el trabajador", description: "Selecciona el trabajador antes de indexar.", variant: "destructive" }); return; }
@@ -267,7 +280,6 @@ function IntakeItemRow({
     if (isW9) { toast({ title: "Documento sensible", description: "Los W-9 deben procesarse desde el flujo de W-9 guiado.", variant: "destructive" }); return; }
     setBusy(true);
     try {
-      // Copy file to canonical onboarding path.
       const ts = Date.now();
       const safeName = (item.original_filename ?? "documento").replace(/[^a-zA-Z0-9._-]/g, "_");
       const sideSuffix = side && side !== "unknown" ? `_${side}` : "";
@@ -275,7 +287,7 @@ function IntakeItemRow({
       const { error: cpErr } = await supabase.storage.from("employee-documents").copy(item.storage_path, destPath);
       if (cpErr) throw cpErr;
 
-      const { data: docId, error: rpcErr } = await supabase.rpc("intake_confirm_and_index" as any, {
+      const { error: rpcErr } = await supabase.rpc("intake_confirm_and_index" as any, {
         p_intake_item_id: item.id,
         p_employee_id: empId,
         p_category: category,
@@ -287,7 +299,9 @@ function IntakeItemRow({
         p_review_status: approveDirect ? "approved" : "pending",
       });
       if (rpcErr) throw rpcErr;
-      toast({ title: "Documento indexado", description: `Asignado al trabajador. ID: ${String(docId).slice(0, 8)}…` });
+      toast({ title: "Documento indexado", description: "Ya está disponible en Documentos." });
+      qc.invalidateQueries({ queryKey: ["employee-documents"] });
+      qc.invalidateQueries({ queryKey: ["documents"] });
       onChanged();
     } catch (e: any) {
       toast({ title: "No se pudo indexar", description: e?.message ?? "Error", variant: "destructive" });
@@ -311,6 +325,8 @@ function IntakeItemRow({
     }
   }
 
+  if (hidden && isIndexed) return null;
+
   return (
     <Card className="p-4 grid gap-4 md:grid-cols-[200px_1fr]">
       <div className="space-y-2">
@@ -327,80 +343,124 @@ function IntakeItemRow({
       <div className="space-y-3">
         <div className="flex flex-wrap items-center gap-2">
           <StatusBadge status={item.status} />
-          <ConfidenceBadge score={item.confidence_score} reason={item.confidence_reason} />
-          {isW9 && (
+          {!isIndexed && <ConfidenceBadge score={item.confidence_score} reason={item.confidence_reason} />}
+          {isExpired && isIndexed && (
+            <Badge variant="outline" className="border-rose-200 bg-rose-50 text-rose-700">
+              Vencido
+            </Badge>
+          )}
+          {isW9 && !isIndexed && (
             <Badge variant="outline" className="border-rose-200 bg-rose-50 text-rose-700">
               <ShieldAlert className="h-3 w-3 mr-1" /> Sensible — revisar manualmente
             </Badge>
           )}
         </div>
 
-        {item.confidence_reason && (item.status === "needs_review" || item.status === "failed") && (
-          <p className="text-xs text-muted-foreground">Motivo: {item.confidence_reason}</p>
+        {isIndexed ? (
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 p-3 space-y-2">
+            <div className="flex items-center gap-2 text-emerald-800 font-medium text-sm">
+              <CheckCircle2 className="h-4 w-4" /> Documento indexado correctamente
+            </div>
+            <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+              <dt className="text-muted-foreground">Trabajador</dt>
+              <dd className="font-medium">
+                {assignedEmp ? `${assignedEmp.first_name ?? ""} ${assignedEmp.last_name ?? ""}`.trim() : "—"}
+                {assignedEmp?.employer_identification ? ` · #${assignedEmp.employer_identification}` : ""}
+              </dd>
+              <dt className="text-muted-foreground">Tipo</dt>
+              <dd className="font-medium">{categoryLabel}</dd>
+              <dt className="text-muted-foreground">Lado</dt>
+              <dd className="font-medium">{sideLabel}</dd>
+              <dt className="text-muted-foreground">Vencimiento</dt>
+              <dd className={`font-medium ${isExpired ? "text-rose-700" : ""}`}>
+                {expiresDisplay ?? "Sin fecha"}{isExpired ? " · Vencido" : ""}
+              </dd>
+            </dl>
+            <div className="flex flex-wrap gap-2 pt-1">
+              <Button size="sm" variant="default" onClick={() => navigate(`/app/documents?employee=${empId}`)}>
+                <ExternalLink className="h-4 w-4 mr-1.5" /> Ver en Documentos
+              </Button>
+              {empId && (
+                <Button size="sm" variant="outline" onClick={() => navigate(`/app/employees/${empId}`)}>
+                  <UserIcon className="h-4 w-4 mr-1.5" /> Abrir trabajador
+                </Button>
+              )}
+              <Button size="sm" variant="ghost" onClick={() => setHidden(true)}>
+                Ocultar de la bandeja
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <>
+            {item.confidence_reason && (item.status === "needs_review" || item.status === "failed") && (
+              <p className="text-xs text-muted-foreground">Motivo: {item.confidence_reason}</p>
+            )}
+
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="space-y-1">
+                <Label className="text-xs">Trabajador {suggestedEmp && <span className="text-muted-foreground">· Sugerencia: {suggestedEmp.first_name} {suggestedEmp.last_name}</span>}</Label>
+                <Select value={empId} onValueChange={setEmpId} disabled={locked}>
+                  <SelectTrigger><SelectValue placeholder="Selecciona trabajador" /></SelectTrigger>
+                  <SelectContent className="max-h-72">
+                    {employees.map((e) => (
+                      <SelectItem key={e.id} value={e.id}>
+                        {e.first_name} {e.last_name}{e.employer_identification ? ` · #${e.employer_identification}` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Tipo de documento</Label>
+                <Select value={category} onValueChange={setCategory} disabled={locked}>
+                  <SelectTrigger><SelectValue placeholder="Selecciona tipo" /></SelectTrigger>
+                  <SelectContent>
+                    {CATEGORIES.map((c) => (<SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Lado</Label>
+                <Select value={side} onValueChange={setSide} disabled={locked}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {SIDES.map((s) => (<SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Vencimiento</Label>
+                <SmartDateInput value={expires} onChange={setExpires} disabled={locked} />
+              </div>
+            </div>
+
+            {item.suggested_document_number_masked && (
+              <p className="text-xs text-muted-foreground">Número detectado (enmascarado): <span className="font-mono">{item.suggested_document_number_masked}</span></p>
+            )}
+
+            <div className="flex flex-wrap gap-2 pt-1">
+              <Button size="sm" onClick={() => confirm(false)} disabled={busy || locked || isW9}>
+                <CheckCircle2 className="h-4 w-4 mr-1.5" /> Confirmar e indexar
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => confirm(true)} disabled={busy || locked || isW9}>
+                Confirmar y aprobar
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setStatus("needs_review")} disabled={busy || locked}>
+                Dejar pendiente
+              </Button>
+              <Button size="sm" variant="ghost" className="text-rose-700 hover:text-rose-800" onClick={() => setStatus("rejected")} disabled={busy || locked}>
+                <XCircle className="h-4 w-4 mr-1.5" /> Rechazar
+              </Button>
+              {previewUrl && (
+                <a href={previewUrl} target="_blank" rel="noopener noreferrer" className="text-xs underline text-muted-foreground self-center ml-auto">
+                  Abrir archivo seguro
+                </a>
+              )}
+            </div>
+          </>
         )}
-
-        <div className="grid gap-3 md:grid-cols-2">
-          <div className="space-y-1">
-            <Label className="text-xs">Trabajador {suggestedEmp && <span className="text-muted-foreground">· Sugerencia: {suggestedEmp.first_name} {suggestedEmp.last_name}</span>}</Label>
-            <Select value={empId} onValueChange={setEmpId} disabled={isIndexed || isRejected}>
-              <SelectTrigger><SelectValue placeholder="Selecciona trabajador" /></SelectTrigger>
-              <SelectContent className="max-h-72">
-                {employees.map((e) => (
-                  <SelectItem key={e.id} value={e.id}>
-                    {e.first_name} {e.last_name}{e.employer_identification ? ` · #${e.employer_identification}` : ""}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1">
-            <Label className="text-xs">Tipo de documento</Label>
-            <Select value={category} onValueChange={setCategory} disabled={isIndexed || isRejected}>
-              <SelectTrigger><SelectValue placeholder="Selecciona tipo" /></SelectTrigger>
-              <SelectContent>
-                {CATEGORIES.map((c) => (<SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1">
-            <Label className="text-xs">Lado</Label>
-            <Select value={side} onValueChange={setSide} disabled={isIndexed || isRejected}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {SIDES.map((s) => (<SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1">
-            <Label className="text-xs">Vencimiento</Label>
-            <Input type="date" value={expires} onChange={(e) => setExpires(e.target.value)} disabled={isIndexed || isRejected} />
-          </div>
-        </div>
-
-        {item.suggested_document_number_masked && (
-          <p className="text-xs text-muted-foreground">Número detectado (enmascarado): <span className="font-mono">{item.suggested_document_number_masked}</span></p>
-        )}
-
-        <div className="flex flex-wrap gap-2 pt-1">
-          <Button size="sm" onClick={() => confirm(false)} disabled={busy || isIndexed || isRejected || isW9}>
-            <CheckCircle2 className="h-4 w-4 mr-1.5" /> Confirmar e indexar
-          </Button>
-          <Button size="sm" variant="outline" onClick={() => confirm(true)} disabled={busy || isIndexed || isRejected || isW9}>
-            Confirmar y aprobar
-          </Button>
-          <Button size="sm" variant="ghost" onClick={() => setStatus("needs_review")} disabled={busy || isIndexed || isRejected}>
-            Dejar pendiente
-          </Button>
-          <Button size="sm" variant="ghost" className="text-rose-700 hover:text-rose-800" onClick={() => setStatus("rejected")} disabled={busy || isIndexed || isRejected}>
-            <XCircle className="h-4 w-4 mr-1.5" /> Rechazar
-          </Button>
-          {previewUrl && (
-            <a href={previewUrl} target="_blank" rel="noopener noreferrer" className="text-xs underline text-muted-foreground self-center ml-auto">
-              Abrir archivo seguro
-            </a>
-          )}
-        </div>
       </div>
     </Card>
   );
 }
+
