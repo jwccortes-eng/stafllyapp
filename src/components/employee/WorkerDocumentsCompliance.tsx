@@ -40,6 +40,12 @@ import {
   classifyExpiration,
   expirationPolicyFor,
 } from "@/lib/onboarding/document-expiration-policy";
+import {
+  policyFor,
+  inferDocumentSide,
+  missingSidesFor,
+  SIDE_LABEL,
+} from "@/lib/documents/document-policy";
 import { resolveEmployeeDocumentUrl } from "@/lib/employee-documents";
 import DocumentPreviewDialog from "@/components/documents/DocumentPreviewDialog";
 
@@ -184,6 +190,14 @@ export default function WorkerDocumentsCompliance({ employee }: Props) {
                 const label = (DOCUMENT_CATEGORIES as any)[cat]?.label ?? cat;
                 const missing = signals.missingRequiredLabels.includes(label);
                 const Icon = missing ? FileMinus : ShieldCheck;
+                // Side audit: only meaningful when at least one file has been uploaded
+                // and the category requires/recommends two sides.
+                const namesForCat = rows
+                  .filter((r) => r.category === cat)
+                  .map((r) => r.file_name ?? "");
+                const missingSides = namesForCat.length > 0
+                  ? missingSidesFor(cat, namesForCat)
+                  : [];
                 return (
                   <li
                     key={cat}
@@ -191,13 +205,19 @@ export default function WorkerDocumentsCompliance({ employee }: Props) {
                       "flex items-center gap-1.5 rounded-sm border px-2 py-1 text-[11px]",
                       missing
                         ? "border-amber-200 bg-amber-50 text-amber-800"
-                        : "border-emerald-200 bg-emerald-50/70 text-emerald-800",
+                        : missingSides.length > 0
+                          ? "border-amber-200 bg-amber-50/60 text-amber-800"
+                          : "border-emerald-200 bg-emerald-50/70 text-emerald-800",
                     )}
                   >
                     <Icon className="h-3 w-3 shrink-0" />
                     <span className="font-medium truncate">{label}</span>
                     <span className="ml-auto text-[10px] opacity-75">
-                      {missing ? "Missing" : "Approved"}
+                      {missing
+                        ? "Missing"
+                        : missingSides.length > 0
+                          ? `Falta ${missingSides.map((s) => SIDE_LABEL[s].toLowerCase()).join(" y ")}`
+                          : "Approved"}
                     </span>
                   </li>
                 );
@@ -255,12 +275,22 @@ function DocRow({ row, onView }: { row: UnifiedDocumentRow; onView: () => void }
   const expRel = relativeTo(row.expires_at);
   const expState = classifyExpiration(row.category, row.expires_at);
   const policy = expirationPolicyFor(row.category);
+  const side = inferDocumentSide(row.file_name);
+  const showSideBadge =
+    policyFor(row.category).side === "front_back_required" ||
+    policyFor(row.category).side === "front_back_recommended" ||
+    side === "front" || side === "back";
   return (
     <li className="flex items-center gap-2 rounded-md border border-border/50 bg-card/70 p-2">
       <FileText className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5 flex-wrap">
           <span className="text-[11.5px] font-medium truncate">{row.document_type}</span>
+          {showSideBadge && (
+            <Badge variant="outline" className="text-[9px] py-0 leading-none border-border bg-muted/50 text-foreground/70">
+              {SIDE_LABEL[side]}
+            </Badge>
+          )}
           <Badge variant="outline" className={cn("text-[9px] py-0 leading-none", STATUS_TONE[row.status])}>
             <StatusIcon className="h-2.5 w-2.5 mr-1" />
             {DOC_STATUS_LABEL[row.status]}

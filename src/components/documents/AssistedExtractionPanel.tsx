@@ -32,6 +32,7 @@ import {
   isExtractionAllowed,
   maskDocumentNumber,
 } from "@/lib/documents/extraction-types";
+import { inferDocumentSide } from "@/lib/documents/document-policy";
 import { updateDocumentExpiration } from "@/lib/document-actions";
 
 export interface AssistedExtractionTarget {
@@ -151,6 +152,15 @@ export default function AssistedExtractionPanel({ target, onSaved }: Props) {
           se guarda. El número de documento siempre se muestra enmascarado.
         </AlertDescription>
       </Alert>
+
+      {!blocked && inferDocumentSide(target.name) === "back" && (
+        <Alert className="py-2 px-3">
+          <Info className="h-3.5 w-3.5" />
+          <AlertDescription className="text-[11px]">
+            La extracción funciona mejor con el frente del documento.
+          </AlertDescription>
+        </Alert>
+      )}
 
       {blocked ? (
         <Alert className="py-2 px-3">

@@ -82,27 +82,39 @@ Deno.serve(async (req) => {
       return json(403, { error: "Extraction disabled for this category" });
     }
 
-    // Authorization: caller must be admin/owner/manager in the document's company.
-    const { data: membership } = await adm
-      .from("user_roles")
-      .select("role, company_id")
-      .eq("user_id", userId)
-      .eq("company_id", doc.company_id);
+    // Authorization: caller must be admin/owner of the document's company,
+    // OR a global owner/developer. Use the same security-definer helpers that
+    // back the employee_documents RLS policy so we never drift.
+    let isAdmin = false;
+    try {
+      const [globalRes, ownerRes, adminRes] = await Promise.all([
+        adm.rpc("is_global_owner", { _user_id: userId }),
+        adm.rpc("is_company_owner", { _user_id: userId, _company_id: doc.company_id }),
+        adm.rpc("user_is_company_admin", { _user_id: userId, _company_id: doc.company_id }),
+      ]);
+      isAdmin = !!(globalRes.data || ownerRes.data || adminRes.data);
+    } catch (rpcErr) {
+      console.warn("admin rpc check failed, falling back to user_roles lookup", rpcErr);
+    }
 
-    const isAdmin = (membership ?? []).some((r: any) =>
-      ["company_owner", "company_admin", "company_manager", "developer", "owner", "admin", "manager"].includes(String(r.role))
-    );
-
-    // Fallback: developer/owner global role via has_role-like check.
     if (!isAdmin) {
-      const { data: globalRoles } = await adm
+      const { data: membership } = await adm
         .from("user_roles")
-        .select("role")
-        .eq("user_id", userId)
-        .in("role", ["developer", "owner"]);
-      if (!globalRoles || globalRoles.length === 0) {
-        return json(403, { error: "Admin access required" });
-      }
+        .select("role, company_id")
+        .eq("user_id", userId);
+      const ROLES_OK = new Set([
+        "company_owner", "company_admin", "company_manager",
+        "developer", "owner", "admin", "manager",
+      ]);
+      isAdmin = (membership ?? []).some((r: any) =>
+        ROLES_OK.has(String(r.role)) &&
+        (r.company_id === null || r.company_id === doc.company_id ||
+          ["developer", "owner"].includes(String(r.role))),
+      );
+    }
+
+    if (!isAdmin) {
+      return json(403, { error: "Admin access required" });
     }
 
     // Sign URL + fetch bytes.
