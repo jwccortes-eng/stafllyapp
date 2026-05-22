@@ -334,8 +334,18 @@ export default function DocumentsCenter() {
                             onClick={() => handleView(r)}
                             disabled={!r.file_path}
                           >
-                            <ExternalLink className="h-3 w-3 mr-1" />
-                            View
+                            <Eye className="h-3 w-3 mr-1" />
+                            Preview
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 text-[11px]"
+                            onClick={() => handleOpenInTab(r)}
+                            disabled={!r.file_path}
+                            title="Open in new tab"
+                          >
+                            <ExternalLink className="h-3 w-3" />
                           </Button>
                           <Button asChild variant="ghost" size="sm" className="h-7 px-2 text-[11px]">
                             <Link to={`/app/employees/${r.employee_id}`}>
