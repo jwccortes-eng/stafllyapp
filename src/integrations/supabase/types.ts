@@ -3158,6 +3158,7 @@ export type Database = {
           company_id: string
           created_at: string
           employee_id: string
+          expires_at: string | null
           file_size: number | null
           file_type: string | null
           file_url: string
@@ -3174,6 +3175,7 @@ export type Database = {
           company_id: string
           created_at?: string
           employee_id: string
+          expires_at?: string | null
           file_size?: number | null
           file_type?: string | null
           file_url: string
@@ -3190,6 +3192,7 @@ export type Database = {
           company_id?: string
           created_at?: string
           employee_id?: string
+          expires_at?: string | null
           file_size?: number | null
           file_type?: string | null
           file_url?: string
