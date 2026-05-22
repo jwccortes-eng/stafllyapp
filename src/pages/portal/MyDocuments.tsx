@@ -151,7 +151,12 @@ export default function MyDocuments() {
   ).length;
   const allRequiredDone = required.length > 0 && approvedCount === required.length;
 
-  const handleUpload = async (category: DocumentCategory, file: File, expiresAt?: string | null) => {
+  const handleUpload = async (
+    category: DocumentCategory,
+    file: File,
+    expiresAt?: string | null,
+    side: DocumentSide = "full",
+  ) => {
     if (!employeeId || !companyId) return;
     if (file.size > MAX_FILE_BYTES) {
       toast({ title: "Archivo demasiado grande", description: "Máximo 15 MB por documento.", variant: "destructive" });
@@ -162,17 +167,20 @@ export default function MyDocuments() {
       const ext = file.name.split(".").pop()?.toLowerCase() ?? "bin";
       const safeBase = file.name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 60);
       const timestamp = Date.now();
-      const path = `${companyId}/${employeeId}/onboarding/${category}/${timestamp}_${safeBase}`;
+      const sideTag = side === "front" ? "front" : side === "back" ? "back" : "full";
+      const path = `${companyId}/${employeeId}/onboarding/${category}/${timestamp}_${sideTag}_${safeBase}`;
 
       const { error: upErr } = await supabase.storage
         .from("employee-documents")
         .upload(path, file, { upsert: false, contentType: file.type || undefined });
       if (upErr) throw upErr;
 
+      const displayName = nameForSide(file.name, side);
+
       const { error: rowErr } = await (supabase.from("employee_documents" as any) as any).insert({
         employee_id: employeeId,
         company_id: companyId,
-        name: file.name,
+        name: displayName,
         file_url: path,
         file_type: file.type || ext,
         file_size: file.size,
