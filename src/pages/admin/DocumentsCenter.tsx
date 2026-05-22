@@ -311,7 +311,9 @@ export default function DocumentsCenter() {
                           {DOC_STATUS_LABEL[r.status]}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">{fmtDate(r.expires_at)}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        <ExpirationCell row={r} onSaved={refresh} />
+                      </TableCell>
                       <TableCell className="text-xs text-muted-foreground">{DOC_SOURCE_LABEL[r.source]}</TableCell>
                       <TableCell className="text-xs text-muted-foreground">{fmtDate(r.created_at)}</TableCell>
                       <TableCell className="text-right">
