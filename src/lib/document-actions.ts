@@ -10,7 +10,8 @@
  *   employee_documents
  *     review_status text in (pending|approved|rejected)
  *     reviewed_by uuid, reviewed_at timestamptz, rejection_reason text
- *     no notes, no expires_at, no replacement_requested column
+ *     expires_at date NULL (Documents Expiration Source-of-Truth v1)
+ *     no notes, no replacement_requested column
  *   employee_onboarding_documents
  *     status text in (pending|verified|rejected|expired)
  *     verified_by uuid, verified_at timestamptz, notes text
@@ -45,6 +46,7 @@ export interface UnifiedDocument {
   file_size: number | null;
   created_at: string;
   reviewed_at: string | null;
+  expires_at: string | null;        // ISO date or null — Phase 1: employee_documents only
   state: DocumentReviewState;
   reason: string | null;            // rejection_reason or notes (raw)
   replacement_reason: string | null; // text after prefix, when state === 'replacement_requested'
