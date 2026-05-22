@@ -340,12 +340,21 @@ function IntakeItemRow({
       const { error: cpErr } = await supabase.storage.from("employee-documents").copy(item.storage_path, destPath);
       if (cpErr) throw cpErr;
 
+      // Managed display label: "Permiso de trabajo · Frente" — shown as document_type
+      // in /app/documents instead of the raw filename. Original filename stays in
+      // storage path for traceability.
+      const catLabel = CATEGORIES.find((c) => c.value === category)?.label ?? category;
+      const sideLbl = SIDES.find((s) => s.value === side)?.label ?? "";
+      const managedName = side && side !== "unknown" && side !== "full"
+        ? `${catLabel} · ${sideLbl}`
+        : catLabel;
+
       const { error: rpcErr } = await supabase.rpc("intake_confirm_and_index" as any, {
         p_intake_item_id: item.id,
         p_employee_id: empId,
         p_category: category,
         p_file_url: destPath,
-        p_file_name: item.original_filename ?? "documento",
+        p_file_name: managedName,
         p_file_type: item.mime_type ?? null,
         p_file_size: null,
         p_expires_at: expires || null,
@@ -355,6 +364,7 @@ function IntakeItemRow({
       toast({ title: "Documento indexado", description: "Ya está disponible en Documentos." });
       qc.invalidateQueries({ queryKey: ["employee-documents"] });
       qc.invalidateQueries({ queryKey: ["documents"] });
+      qc.invalidateQueries({ queryKey: ["intake-items"] });
       onChanged();
     } catch (e: any) {
       toast({ title: "No se pudo indexar", description: e?.message ?? "Error", variant: "destructive" });
