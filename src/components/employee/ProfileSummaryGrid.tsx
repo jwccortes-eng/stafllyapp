@@ -279,8 +279,6 @@ export function ProfileSummaryGrid({
             </p>
           )}
         </div>
-
-        </div>
       </SectionCard>
 
       {/* 2. CUMPLIMIENTO */}
