@@ -347,3 +347,98 @@ export default function DocumentsCenter() {
     </div>
   );
 }
+
+// ─── ExpirationCell — admin-editable expiration date ─────────────────────────
+function ExpirationCell({
+  row,
+  onSaved,
+}: {
+  row: UnifiedDocumentRow;
+  onSaved: () => Promise<void> | void;
+}) {
+  const { toast } = useToast();
+  const [open, setOpen] = useState(false);
+  const [value, setValue] = useState<string>(row.expires_at ?? "");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => { setValue(row.expires_at ?? ""); }, [row.expires_at]);
+
+  const expState = classifyExpiration(row.category, row.expires_at);
+  const policy = expirationPolicyFor(row.category);
+  // v1: only admin documents are editable (onboarding table has no expires_at column).
+  const editable = row.source === "admin_upload" && !!row.rawId;
+
+  const display = (() => {
+    if (row.expires_at) {
+      const d = new Date(row.expires_at);
+      if (!isNaN(d.getTime())) return formatDateUS(d) || "—";
+    }
+    if (policy === "not_applicable") return "—";
+    if (policy === "required" || policy === "recommended") return "Missing";
+    return "—";
+  })();
+
+  const tone =
+    expState === "expired"            ? "border-rose-200 bg-rose-50 text-rose-700" :
+    expState === "expiring_soon"      ? "border-amber-200 bg-amber-50 text-amber-700" :
+    expState === "missing_expiration" ? "border-amber-200 bg-amber-50 text-amber-700" :
+    expState === "valid"              ? "border-emerald-200 bg-emerald-50 text-emerald-700" :
+                                        "border-muted-foreground/20 bg-muted/30 text-muted-foreground";
+
+  const handleSave = async () => {
+    setSaving(true);
+    const { error } = await updateDocumentExpiration(
+      {
+        raw_id: row.rawId,
+        source: "employee_documents",
+        employee_id: row.employee_id,
+        company_id: row.company_id,
+        name: row.document_type,
+        category: String(row.category),
+      },
+      value || null,
+    );
+    setSaving(false);
+    if (error) {
+      toast({ title: "Could not save expiration", description: error, variant: "destructive" });
+      return;
+    }
+    toast({ title: "Expiration updated" });
+    setOpen(false);
+    await onSaved();
+  };
+
+  const trigger = (
+    <div className="inline-flex items-center gap-1.5">
+      <Badge variant="outline" className={tone}>
+        <CalendarClock className="h-3 w-3 mr-1" />
+        {display}
+      </Badge>
+      <span className="text-[10px] text-muted-foreground/70">{EXPIRATION_STATE_LABEL[expState]}</span>
+    </div>
+  );
+
+  if (!editable) return trigger;
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button type="button" className="inline-flex items-center gap-1 hover:opacity-80">
+          {trigger}
+          <Pencil className="h-3 w-3 opacity-50" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-72 p-3 space-y-2" align="start">
+        <div className="text-[11px] font-semibold">Edit expiration date</div>
+        <SmartDateInput value={value} onChange={setValue} allowClear showCalendar />
+        <div className="text-[10px] text-muted-foreground">
+          Leave empty if this document has no expiration.
+        </div>
+        <div className="flex justify-end gap-1.5 pt-1">
+          <Button size="sm" variant="ghost" onClick={() => setOpen(false)} disabled={saving}>Cancel</Button>
+          <Button size="sm" onClick={handleSave} disabled={saving}>{saving ? "Saving…" : "Save"}</Button>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
