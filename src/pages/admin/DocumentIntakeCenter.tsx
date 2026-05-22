@@ -129,8 +129,8 @@ export default function DocumentIntakeCenter() {
     if (!files || files.length === 0 || !selectedCompanyId || !user?.id) return;
     setUploading(true);
     try {
-      const { data: batch, error: bErr } = await supabase
-        .from("document_intake_batches" as any)
+      const { data: batchData, error: bErr } = await (supabase
+        .from("document_intake_batches" as any) as any)
         .insert({
           company_id: selectedCompanyId,
           uploaded_by: user.id,
@@ -139,6 +139,7 @@ export default function DocumentIntakeCenter() {
         })
         .select()
         .single();
+      const batch = batchData as { id: string } | null;
       if (bErr || !batch) throw bErr ?? new Error("Could not create batch");
 
       const created: string[] = [];
@@ -151,8 +152,8 @@ export default function DocumentIntakeCenter() {
           .upload(path, f, { contentType: f.type, upsert: false });
         if (upErr) { console.error("upload error", upErr); continue; }
 
-        const { data: itemRow, error: iErr } = await supabase
-          .from("document_intake_items" as any)
+        const { data: itemRow, error: iErr } = await (supabase
+          .from("document_intake_items" as any) as any)
           .insert({
             batch_id: batch.id,
             company_id: selectedCompanyId,
@@ -164,11 +165,12 @@ export default function DocumentIntakeCenter() {
           .select()
           .single();
         if (iErr || !itemRow) { console.error("item insert error", iErr); continue; }
-        created.push((itemRow as any).id);
+        created.push((itemRow as { id: string }).id);
       }
 
-      await supabase.from("document_intake_batches" as any)
+      await (supabase.from("document_intake_batches" as any) as any)
         .update({ status: "ready_for_review" }).eq("id", batch.id);
+
 
       toast({ title: `Subidos ${created.length} archivos`, description: "Extrayendo sugerencias…" });
       qc.invalidateQueries({ queryKey: ["intake-items", selectedCompanyId] });
