@@ -228,22 +228,67 @@ export default function DocumentIntakeCenter() {
         </div>
       </div>
 
-      {itemsQ.isLoading ? (
-        <div className="flex items-center justify-center h-40"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
-      ) : (itemsQ.data ?? []).length === 0 ? (
-        <Card className="p-8 text-center text-sm text-muted-foreground">
-          No hay documentos en la bandeja. Sube imágenes o PDFs para empezar.
-        </Card>
-      ) : (
-        <div className="space-y-3">
-          {(itemsQ.data ?? []).map((it) => (
-            <IntakeItemRow key={it.id} item={it} employees={empQ.data ?? []} empById={empById} onChanged={() => qc.invalidateQueries({ queryKey: ["intake-items", selectedCompanyId] })} />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
+      {(() => {
+        const all = itemsQ.data ?? [];
+        const counts = {
+          pending: all.filter((i: any) => i.status === "pending_extraction" || i.status === "extracted" || i.status === "needs_review" || i.status === "failed").length,
+          ready: all.filter((i: any) => i.status === "extracted" || i.status === "needs_review").length,
+          indexed: all.filter((i: any) => i.status === "indexed").length,
+          rejected: all.filter((i: any) => i.status === "rejected").length,
+          all: all.length,
+        };
+        const filtered = all.filter((i: any) => {
+          switch (filter) {
+            case "pending": return ["pending_extraction", "extracted", "needs_review", "failed"].includes(i.status);
+            case "ready": return ["extracted", "needs_review"].includes(i.status);
+            case "indexed": return i.status === "indexed";
+            case "rejected": return i.status === "rejected";
+            case "all": return true;
+          }
+        });
+        const tabs: { key: QueueFilter; label: string; count: number }[] = [
+          { key: "pending", label: "Pendientes", count: counts.pending },
+          { key: "ready", label: "Listos para revisar", count: counts.ready },
+          { key: "indexed", label: "Indexados", count: counts.indexed },
+          { key: "rejected", label: "Rechazados", count: counts.rejected },
+          { key: "all", label: "Todos", count: counts.all },
+        ];
+        return (
+          <>
+            <div className="flex flex-wrap gap-1.5 border-b pb-2">
+              {tabs.map((t) => (
+                <Button
+                  key={t.key}
+                  size="sm"
+                  variant={filter === t.key ? "default" : "ghost"}
+                  onClick={() => setFilter(t.key)}
+                  className="h-8"
+                >
+                  {t.label}
+                  <Badge variant="outline" className="ml-2 bg-background/60 text-[10px] py-0">{t.count}</Badge>
+                </Button>
+              ))}
+            </div>
+            {itemsQ.isLoading ? (
+              <div className="flex items-center justify-center h-40"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+            ) : filtered.length === 0 ? (
+              <Card className="p-8 text-center text-sm text-muted-foreground">
+                {all.length === 0
+                  ? "No hay documentos en la bandeja. Sube imágenes o PDFs para empezar."
+                  : filter === "pending"
+                    ? "Bandeja al día. No hay documentos pendientes de revisión."
+                    : "Sin documentos en esta vista."}
+              </Card>
+            ) : (
+              <div className="space-y-3">
+                {filtered.map((it: any) => (
+                  <IntakeItemRow key={it.id} item={it} employees={empQ.data ?? []} empById={empById} onChanged={() => qc.invalidateQueries({ queryKey: ["intake-items", selectedCompanyId] })} />
+                ))}
+              </div>
+            )}
+          </>
+        );
+      })()}
 
 function IntakeItemRow({
   item, employees, empById, onChanged,
