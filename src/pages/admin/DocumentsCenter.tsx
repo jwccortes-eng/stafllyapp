@@ -18,22 +18,30 @@ import {
   type UnifiedDocStatus,
   type UnifiedDocumentRow,
 } from "@/lib/documents-signals";
+import {
+  classifyExpiration,
+  expirationPolicyFor,
+  EXPIRATION_STATE_LABEL,
+} from "@/lib/onboarding/document-expiration-policy";
+import { updateDocumentExpiration } from "@/lib/document-actions";
 import { resolveEmployeeDocumentUrl } from "@/lib/employee-documents";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { SmartDateInput } from "@/components/ui/smart-date-input";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { PremiumPageHeader } from "@/components/ui/premium-page-header";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Search, Download, ExternalLink, UserSearch, FileText } from "lucide-react";
+import { Search, Download, ExternalLink, UserSearch, FileText, CalendarClock, Pencil } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatDateUS } from "@/lib/date-format";
 
-type FilterKey = "all" | "needs_review" | "missing" | "pending" | "expired" | "expiring_soon" | "rejected" | "approved";
+type FilterKey = "all" | "needs_review" | "missing" | "pending" | "expired" | "expiring_soon" | "missing_expiration" | "rejected" | "approved";
 
 const STATUS_TONE: Record<UnifiedDocStatus, string> = {
   approved:       "border-emerald-200 bg-emerald-50 text-emerald-700",
@@ -67,7 +75,7 @@ export default function DocumentsCenter() {
     },
   });
 
-  const { rows, signals, loading } = useCompanyDocuments({
+  const { rows, signals, loading, refresh } = useCompanyDocuments({
     companyId: selectedCompanyId ?? null,
     employees,
   });
@@ -120,6 +128,17 @@ export default function DocumentsCenter() {
     return out;
   }, [signals, employeeMap, selectedCompanyId]);
 
+  const missingExpirationRows = useMemo(
+    () => rows.filter(
+      (r) =>
+        r.source === "admin_upload" &&
+        !r.expires_at &&
+        (expirationPolicyFor(r.category) === "required" ||
+          expirationPolicyFor(r.category) === "recommended"),
+    ),
+    [rows],
+  );
+
   const filtered = useMemo(() => {
     let base: UnifiedDocumentRow[] = rows;
     switch (activeFilter) {
@@ -127,6 +146,7 @@ export default function DocumentsCenter() {
       case "pending":      base = rows.filter((r) => r.status === "pending"); break;
       case "expired":      base = rows.filter((r) => r.status === "expired"); break;
       case "expiring_soon":base = rows.filter((r) => r.status === "expiring_soon"); break;
+      case "missing_expiration": base = missingExpirationRows; break;
       case "rejected":     base = rows.filter((r) => r.status === "rejected"); break;
       case "approved":     base = rows.filter((r) => r.status === "approved"); break;
       case "needs_review": base = rows.filter((r) => r.status !== "approved"); break;
@@ -139,7 +159,7 @@ export default function DocumentsCenter() {
       r.worker_name.toLowerCase().includes(q) ||
       r.document_type.toLowerCase().includes(q),
     );
-  }, [rows, missingRows, activeFilter, search]);
+  }, [rows, missingRows, missingExpirationRows, activeFilter, search]);
 
   const counts = useMemo(() => ({
     all: rows.length,
@@ -148,9 +168,10 @@ export default function DocumentsCenter() {
     pending: rows.filter((r) => r.status === "pending").length,
     expired: rows.filter((r) => r.status === "expired").length,
     expiring_soon: rows.filter((r) => r.status === "expiring_soon").length,
+    missing_expiration: missingExpirationRows.length,
     rejected: rows.filter((r) => r.status === "rejected").length,
     approved: rows.filter((r) => r.status === "approved").length,
-  }), [rows, missingRows]);
+  }), [rows, missingRows, missingExpirationRows]);
 
   const handleView = async (row: UnifiedDocumentRow) => {
     if (!row.file_path) {
@@ -208,6 +229,7 @@ export default function DocumentsCenter() {
     { key: "pending", label: "Pending" },
     { key: "expired", label: "Expired" },
     { key: "expiring_soon", label: "Expiring soon" },
+    { key: "missing_expiration", label: "Missing expiration" },
     { key: "rejected", label: "Rejected" },
     { key: "approved", label: "Approved" },
   ];
@@ -289,7 +311,9 @@ export default function DocumentsCenter() {
                           {DOC_STATUS_LABEL[r.status]}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">{fmtDate(r.expires_at)}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        <ExpirationCell row={r} onSaved={refresh} />
+                      </TableCell>
                       <TableCell className="text-xs text-muted-foreground">{DOC_SOURCE_LABEL[r.source]}</TableCell>
                       <TableCell className="text-xs text-muted-foreground">{fmtDate(r.created_at)}</TableCell>
                       <TableCell className="text-right">
@@ -321,5 +345,100 @@ export default function DocumentsCenter() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+// ─── ExpirationCell — admin-editable expiration date ─────────────────────────
+function ExpirationCell({
+  row,
+  onSaved,
+}: {
+  row: UnifiedDocumentRow;
+  onSaved: () => Promise<void> | void;
+}) {
+  const { toast } = useToast();
+  const [open, setOpen] = useState(false);
+  const [value, setValue] = useState<string>(row.expires_at ?? "");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => { setValue(row.expires_at ?? ""); }, [row.expires_at]);
+
+  const expState = classifyExpiration(row.category, row.expires_at);
+  const policy = expirationPolicyFor(row.category);
+  // v1: only admin documents are editable (onboarding table has no expires_at column).
+  const editable = row.source === "admin_upload" && !!row.rawId;
+
+  const display = (() => {
+    if (row.expires_at) {
+      const d = new Date(row.expires_at);
+      if (!isNaN(d.getTime())) return formatDateUS(d) || "—";
+    }
+    if (policy === "not_applicable") return "—";
+    if (policy === "required" || policy === "recommended") return "Missing";
+    return "—";
+  })();
+
+  const tone =
+    expState === "expired"            ? "border-rose-200 bg-rose-50 text-rose-700" :
+    expState === "expiring_soon"      ? "border-amber-200 bg-amber-50 text-amber-700" :
+    expState === "missing_expiration" ? "border-amber-200 bg-amber-50 text-amber-700" :
+    expState === "valid"              ? "border-emerald-200 bg-emerald-50 text-emerald-700" :
+                                        "border-muted-foreground/20 bg-muted/30 text-muted-foreground";
+
+  const handleSave = async () => {
+    setSaving(true);
+    const { error } = await updateDocumentExpiration(
+      {
+        raw_id: row.rawId,
+        source: "employee_documents",
+        employee_id: row.employee_id,
+        company_id: row.company_id,
+        name: row.document_type,
+        category: String(row.category),
+      },
+      value || null,
+    );
+    setSaving(false);
+    if (error) {
+      toast({ title: "Could not save expiration", description: error, variant: "destructive" });
+      return;
+    }
+    toast({ title: "Expiration updated" });
+    setOpen(false);
+    await onSaved();
+  };
+
+  const trigger = (
+    <div className="inline-flex items-center gap-1.5">
+      <Badge variant="outline" className={tone}>
+        <CalendarClock className="h-3 w-3 mr-1" />
+        {display}
+      </Badge>
+      <span className="text-[10px] text-muted-foreground/70">{EXPIRATION_STATE_LABEL[expState]}</span>
+    </div>
+  );
+
+  if (!editable) return trigger;
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button type="button" className="inline-flex items-center gap-1 hover:opacity-80">
+          {trigger}
+          <Pencil className="h-3 w-3 opacity-50" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-72 p-3 space-y-2" align="start">
+        <div className="text-[11px] font-semibold">Edit expiration date</div>
+        <SmartDateInput value={value} onChange={setValue} allowClear showCalendar />
+        <div className="text-[10px] text-muted-foreground">
+          Leave empty if this document has no expiration.
+        </div>
+        <div className="flex justify-end gap-1.5 pt-1">
+          <Button size="sm" variant="ghost" onClick={() => setOpen(false)} disabled={saving}>Cancel</Button>
+          <Button size="sm" onClick={handleSave} disabled={saving}>{saving ? "Saving…" : "Save"}</Button>
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }

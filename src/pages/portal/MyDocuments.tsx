@@ -23,7 +23,7 @@ import { useEffect, useState, useRef, useMemo, useCallback } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowLeft, FileText, Upload, CheckCircle2, AlertTriangle,
-  Loader2, Eye, Trash2, FileWarning, Sparkles, ShieldCheck,
+  Loader2, Eye, Trash2, FileWarning, Sparkles, ShieldCheck, CalendarClock,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffectiveEmployee } from "@/hooks/useEffectiveEmployee";
@@ -33,11 +33,18 @@ import {
   getRequiredDocumentsForCompany,
   type DocumentCategory,
 } from "@/lib/onboarding/required-documents";
+import {
+  expirationPolicyFor,
+  classifyExpiration,
+  EXPIRATION_STATE_LABEL,
+} from "@/lib/onboarding/document-expiration-policy";
+import { SmartDateInput } from "@/components/ui/smart-date-input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { PROFILE_STATUS_LABELS } from "@/lib/onboarding/profile-status";
 import { resolveEmployeeDocumentUrl } from "@/lib/employee-documents";
+import { formatDateUS } from "@/lib/date-format";
 
 type ReviewStatus = "pending" | "approved" | "rejected";
 
@@ -52,6 +59,7 @@ interface DocRow {
   review_status: ReviewStatus;
   rejection_reason: string | null;
   reviewed_at: string | null;
+  expires_at: string | null;
 }
 
 /** Aggregate state for a required category, picking the most favorable doc state. */
@@ -76,6 +84,7 @@ export default function MyDocuments() {
   const [docs, setDocs] = useState<DocRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploadingCat, setUploadingCat] = useState<DocumentCategory | null>(null);
+  const [expirationDates, setExpirationDates] = useState<Record<string, string>>({});
 
   // Hidden file inputs keyed by category — clicking a category's button triggers its input.
   const inputsRef = useRef<Record<string, HTMLInputElement | null>>({});
@@ -99,7 +108,7 @@ export default function MyDocuments() {
 
     const { data: rows } = await supabase
       .from("employee_documents" as any)
-      .select("id, name, file_url, file_type, file_size, category, created_at, review_status, rejection_reason, reviewed_at")
+      .select("id, name, file_url, file_type, file_size, category, created_at, review_status, rejection_reason, reviewed_at, expires_at")
       .eq("employee_id", employeeId)
       .order("created_at", { ascending: false });
 
@@ -131,7 +140,7 @@ export default function MyDocuments() {
   ).length;
   const allRequiredDone = required.length > 0 && approvedCount === required.length;
 
-  const handleUpload = async (category: DocumentCategory, file: File) => {
+  const handleUpload = async (category: DocumentCategory, file: File, expiresAt?: string | null) => {
     if (!employeeId || !companyId) return;
     if (file.size > MAX_FILE_BYTES) {
       toast({ title: "Archivo demasiado grande", description: "Máximo 15 MB por documento.", variant: "destructive" });
@@ -158,6 +167,7 @@ export default function MyDocuments() {
         file_size: file.size,
         category,
         review_status: "pending",
+        expires_at: expiresAt || null,
       });
       if (rowErr) {
         await supabase.storage.from("employee-documents").remove([path]).catch(() => undefined);
@@ -383,32 +393,74 @@ export default function MyDocuments() {
                         d.review_status === "approved" ? "Aprobado" :
                         d.review_status === "rejected" ? "Rechazado" :
                         "Pendiente";
+                      const expState = classifyExpiration(cat, d.expires_at);
+                      const showExpRow =
+                        d.expires_at ||
+                        expState === "missing_expiration" ||
+                        expState === "expired" ||
+                        expState === "expiring_soon";
                       return (
-                        <div key={d.id} className="flex items-center gap-2 rounded-xl bg-muted/30 px-2.5 py-2">
-                          <FileText className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                          <span className="text-[11.5px] text-foreground truncate flex-1">{d.name}</span>
-                          <span className={cn("text-[8.5px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded-full", itemBadge)}>
-                            {itemLabel}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => handleView(d)}
-                            className="h-7 w-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-background"
-                            aria-label="Ver documento"
-                          >
-                            <Eye className="h-3.5 w-3.5" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDelete(d)}
-                            className="h-7 w-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                            aria-label="Eliminar"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
+                        <div key={d.id} className="rounded-xl bg-muted/30 px-2.5 py-2 space-y-1">
+                          <div className="flex items-center gap-2">
+                            <FileText className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                            <span className="text-[11.5px] text-foreground truncate flex-1">{d.name}</span>
+                            <span className={cn("text-[8.5px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded-full", itemBadge)}>
+                              {itemLabel}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleView(d)}
+                              className="h-7 w-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-background"
+                              aria-label="Ver documento"
+                            >
+                              <Eye className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDelete(d)}
+                              className="h-7 w-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                              aria-label="Eliminar"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                          {showExpRow && (
+                            <div className="flex items-center gap-1.5 pl-5 text-[10.5px] text-muted-foreground">
+                              <CalendarClock className="h-3 w-3 shrink-0" />
+                              {d.expires_at ? (
+                                <span>
+                                  Vence {formatDateUS(new Date(d.expires_at)) || "—"} · {EXPIRATION_STATE_LABEL[expState]}
+                                </span>
+                              ) : (
+                                <span className="text-amber-700">
+                                  Falta fecha de vencimiento — vuelve a subir el archivo con la fecha o pídele a tu admin que la registre.
+                                </span>
+                              )}
+                            </div>
+                          )}
                         </div>
                       );
                     })}
+                  </div>
+                )}
+
+                {/* Expiration date input — only for expiration-required/recommended categories */}
+                {(expirationPolicyFor(cat) === "required" || expirationPolicyFor(cat) === "recommended") && (
+                  <div className="mt-3 space-y-1">
+                    <label className="text-[10.5px] font-semibold uppercase tracking-wider text-muted-foreground/80 flex items-center gap-1">
+                      <CalendarClock className="h-3 w-3" />
+                      Fecha de vencimiento {expirationPolicyFor(cat) === "required" ? "(requerida)" : "(recomendada)"}
+                    </label>
+                    <SmartDateInput
+                      value={expirationDates[cat] ?? ""}
+                      onChange={(iso) => setExpirationDates((prev) => ({ ...prev, [cat]: iso }))}
+                      allowClear
+                      showCalendar
+                      placeholder="MM/DD/YYYY"
+                    />
+                    <p className="text-[10px] text-muted-foreground/70">
+                      Se aplicará al próximo archivo que subas en esta categoría.
+                    </p>
                   </div>
                 )}
 
@@ -421,7 +473,7 @@ export default function MyDocuments() {
                     className="hidden"
                     onChange={(e) => {
                       const f = e.target.files?.[0];
-                      if (f) handleUpload(cat, f);
+                      if (f) handleUpload(cat, f, expirationDates[cat] || null);
                       if (e.target) e.target.value = "";
                     }}
                   />
@@ -442,6 +494,7 @@ export default function MyDocuments() {
           })
         )}
       </div>
+
 
       {/* Other / optional documents */}
       <div className="space-y-2.5 pt-2">
