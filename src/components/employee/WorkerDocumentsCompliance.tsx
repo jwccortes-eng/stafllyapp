@@ -36,6 +36,10 @@ import {
   DOCUMENT_CATEGORIES,
   type DocumentCategory,
 } from "@/lib/onboarding/required-documents";
+import {
+  classifyExpiration,
+  expirationPolicyFor,
+} from "@/lib/onboarding/document-expiration-policy";
 import { resolveEmployeeDocumentUrl } from "@/lib/employee-documents";
 
 interface Props {
@@ -234,6 +238,8 @@ function DocRow({ row }: { row: UnifiedDocumentRow }) {
     if (url) window.open(url, "_blank", "noopener,noreferrer");
   };
   const expRel = relativeTo(row.expires_at);
+  const expState = classifyExpiration(row.category, row.expires_at);
+  const policy = expirationPolicyFor(row.category);
   return (
     <li className="flex items-center gap-2 rounded-md border border-border/50 bg-card/70 p-2">
       <FileText className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
@@ -244,6 +250,12 @@ function DocRow({ row }: { row: UnifiedDocumentRow }) {
             <StatusIcon className="h-2.5 w-2.5 mr-1" />
             {DOC_STATUS_LABEL[row.status]}
           </Badge>
+          {expState === "missing_expiration" && (
+            <Badge variant="outline" className="text-[9px] py-0 leading-none border-amber-200 bg-amber-50 text-amber-700">
+              <CalendarClock className="h-2.5 w-2.5 mr-1" />
+              {policy === "required" ? "Missing expiration" : "Add expiration"}
+            </Badge>
+          )}
         </div>
         <div className="text-[10px] text-muted-foreground truncate">
           {DOC_SOURCE_LABEL[row.source]}
