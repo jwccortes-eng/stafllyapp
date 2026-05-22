@@ -25,6 +25,8 @@ import {
 } from "@/lib/onboarding/document-expiration-policy";
 import { updateDocumentExpiration } from "@/lib/document-actions";
 import { resolveEmployeeDocumentUrl } from "@/lib/employee-documents";
+import DocumentPreviewDialog from "@/components/documents/DocumentPreviewDialog";
+import AssistedExtractionPanel from "@/components/documents/AssistedExtractionPanel";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -37,7 +39,7 @@ import {
 } from "@/components/ui/table";
 import { PremiumPageHeader } from "@/components/ui/premium-page-header";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Search, Download, ExternalLink, UserSearch, FileText, CalendarClock, Pencil } from "lucide-react";
+import { Search, Download, ExternalLink, UserSearch, FileText, CalendarClock, Pencil, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatDateUS } from "@/lib/date-format";
 
