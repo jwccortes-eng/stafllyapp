@@ -644,8 +644,19 @@ export default function UnifiedPersonProfile() {
                       {selectedCompany.name}
                     </Badge>
                   )}
-                  {!hasPhoto && employee.is_active !== false && (
-                    <WorkerPhotoStatusChip status="required" size="sm" />
+                  {employee.is_active !== false && (
+                    <PhotoReviewActions
+                      employeeId={employee.id}
+                      avatarUrl={employee.avatar_url}
+                      reviewStatus={employee.photo_review_status ?? null}
+                      rejectionReason={employee.photo_rejection_reason ?? null}
+                      reviewedAt={employee.photo_reviewed_at ?? null}
+                      onChanged={({ status, reason }) =>
+                        setEmployee((prev: any) =>
+                          prev ? { ...prev, photo_review_status: status, photo_rejection_reason: reason } : prev
+                        )
+                      }
+                    />
                   )}
                 </div>
 
