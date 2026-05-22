@@ -51,6 +51,7 @@ const COMPANY_LINKS: LinkDef[] = [
   // B) EQUIPO
   { to: "/app/employees", icon: Users, label: "Equipo", module: "employees", section: "Equipo" },
   { to: "/app/documents", icon: FileText, label: "Documentos", module: null, section: "Equipo", badge: "documents_review" },
+  { to: "/app/document-intake", icon: FileText, label: "Bandeja de documentos", module: null, section: "Equipo" },
   { to: "/app/compliance-center", icon: ShieldCheck, label: "Cumplimiento", module: null, section: "Equipo" },
   { to: "/app/applications", icon: UserPlus2, label: "Aplicaciones", module: null, section: "Equipo" },
   { to: "/app/invite", icon: UserPlus, label: "Invitaciones", module: null, section: "Equipo" },
