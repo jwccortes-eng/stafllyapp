@@ -16333,6 +16333,20 @@ export type Database = {
         Returns: boolean
       }
       has_switch_pin: { Args: never; Returns: boolean }
+      intake_confirm_and_index: {
+        Args: {
+          p_category: string
+          p_employee_id: string
+          p_expires_at?: string
+          p_file_name: string
+          p_file_size?: number
+          p_file_type?: string
+          p_file_url: string
+          p_intake_item_id: string
+          p_review_status?: string
+        }
+        Returns: string
+      }
       is_company_owner: {
         Args: { _company_id: string; _user_id: string }
         Returns: boolean
