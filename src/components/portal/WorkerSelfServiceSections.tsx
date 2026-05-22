@@ -46,6 +46,8 @@ type EmployeeRow = {
   last_name: string | null;
   phone_number: string | null;
   avatar_url: string | null;
+  photo_review_status: "pending" | "approved" | "rejected" | null;
+  photo_rejection_reason: string | null;
   emergency_contact_name: string | null;
   emergency_contact_phone: string | null;
   address: string | null;
