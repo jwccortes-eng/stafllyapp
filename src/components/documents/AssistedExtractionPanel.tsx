@@ -153,6 +153,15 @@ export default function AssistedExtractionPanel({ target, onSaved }: Props) {
         </AlertDescription>
       </Alert>
 
+      {!blocked && inferDocumentSide(target.name) === "back" && (
+        <Alert className="py-2 px-3">
+          <Info className="h-3.5 w-3.5" />
+          <AlertDescription className="text-[11px]">
+            La extracción funciona mejor con el frente del documento.
+          </AlertDescription>
+        </Alert>
+      )}
+
       {blocked ? (
         <Alert className="py-2 px-3">
           <Lock className="h-3.5 w-3.5" />
