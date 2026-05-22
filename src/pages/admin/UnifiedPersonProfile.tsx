@@ -1145,7 +1145,7 @@ export default function UnifiedPersonProfile() {
         <div className="space-y-2">
           <div className="flex items-center gap-1.5 text-[10.5px] font-medium uppercase tracking-wider text-muted-foreground/70 px-1">
             <ChevronDown className="h-3 w-3 -rotate-90" />
-            Más detalles · navegación secundaria
+            Más detalles
           </div>
           <Card className="border-border/50">
             <CardContent className="p-4">
