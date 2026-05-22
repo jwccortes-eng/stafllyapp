@@ -1254,6 +1254,64 @@ export default function UnifiedPersonProfile() {
       )}
 
 
+      {/* ─── DATOS IMPORTADOS Y AUDITORÍA (admin/dev only, collapsed) ───
+          Single legacy/audit block. Holds Connecteam IDs, direct_manager,
+          recommended_by, groups/tags, added_via/added_by, source/import
+          metadata, profile_status, reconciliation flag and timestamps.
+          Hidden for non-privileged operators. Not used for payroll or
+          readiness. */}
+      {isPrivileged && (
+        <Collapsible>
+          <CollapsibleTrigger className="group inline-flex items-center gap-1.5 text-[10.5px] font-medium uppercase tracking-wider text-muted-foreground/70 hover:text-foreground transition-colors">
+            <Code2 className="h-3 w-3" />
+            Datos importados y auditoría
+            <ChevronDown className="h-3 w-3 transition-transform group-data-[state=open]:rotate-180" />
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <Card className="mt-2 border-dashed border-border/60 bg-muted/20">
+              <CardContent className="p-3 space-y-2">
+                <p className="text-[10.5px] text-muted-foreground/80">
+                  Datos heredados de importaciones o integraciones. No afectan payroll ni preparación operativa.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5 text-[11px] font-mono">
+                  {[
+                    ["employee_id", employee.id],
+                    ["employer_identification", employee.employer_identification],
+                    ["user_id", employee.user_id ?? employee.auth_user_id],
+                    ["company_id", employee.company_id],
+                    ["profile_status", employee.profile_status],
+                    ["is_active", String(employee.is_active)],
+                    ["source", employee.source ?? employee.import_source],
+                    ["person_type_guess", employee.person_type_guess],
+                    ["payroll_safe", employee.payroll_safe == null ? null : String(employee.payroll_safe)],
+                    ["connecteam_employee_id", employee.connecteam_employee_id],
+                    ["connecteam_manager", employee.connecteam_manager],
+                    ["direct_manager", employee.direct_manager],
+                    ["recommended_by", employee.recommended_by],
+                    ["groups", Array.isArray(employee.groups) ? employee.groups.join(", ") : employee.groups],
+                    ["tags", Array.isArray(employee.tags) ? employee.tags.join(", ") : employee.tags],
+                    ["added_via", employee.added_via],
+                    ["added_by", employee.added_by],
+                    ["date_added", employee.date_added],
+                    ["created_from_reconciliation", employee.created_from_reconciliation == null ? null : String(employee.created_from_reconciliation)],
+                    ["english_level", employee.english_level],
+                    ["qualify", employee.qualify],
+                    ["country_code", employee.country_code],
+                    ["created_at", employee.created_at],
+                    ["updated_at", employee.updated_at],
+                  ].filter(([, v]) => v != null && v !== "").map(([k, v]) => (
+                    <div key={String(k)} className="flex items-start gap-2 min-w-0">
+                      <span className="text-muted-foreground shrink-0 w-44 truncate">{k}</span>
+                      <span className="text-foreground truncate" title={String(v)}>{String(v)}</span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </CollapsibleContent>
+        </Collapsible>
+      )}
+
       {/* ─── Dialogs ─── */}
       {employee && (
         <EmployeeInviteDialog
