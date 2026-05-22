@@ -289,6 +289,11 @@ export default function DocumentIntakeCenter() {
           </>
         );
       })()}
+    </div>
+  );
+}
+
+
 
 function IntakeItemRow({
   item, employees, empById, onChanged,
