@@ -1,0 +1,1 @@
+GRANT SELECT (photo_review_status, photo_reviewed_at, photo_reviewed_by, photo_rejection_reason) ON public.employees TO authenticated, anon;
