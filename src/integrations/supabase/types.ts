@@ -4052,6 +4052,10 @@ export type Database = {
           onboarding_status: string | null
           passport_public: boolean
           phone_number: string | null
+          photo_rejection_reason: string | null
+          photo_review_status: string | null
+          photo_reviewed_at: string | null
+          photo_reviewed_by: string | null
           portal_access_enabled: boolean
           professional_summary: string | null
           profile_status: Database["public"]["Enums"]["employee_profile_status"]
@@ -4118,6 +4122,10 @@ export type Database = {
           onboarding_status?: string | null
           passport_public?: boolean
           phone_number?: string | null
+          photo_rejection_reason?: string | null
+          photo_review_status?: string | null
+          photo_reviewed_at?: string | null
+          photo_reviewed_by?: string | null
           portal_access_enabled?: boolean
           professional_summary?: string | null
           profile_status?: Database["public"]["Enums"]["employee_profile_status"]
@@ -4184,6 +4192,10 @@ export type Database = {
           onboarding_status?: string | null
           passport_public?: boolean
           phone_number?: string | null
+          photo_rejection_reason?: string | null
+          photo_review_status?: string | null
+          photo_reviewed_at?: string | null
+          photo_reviewed_by?: string | null
           portal_access_enabled?: boolean
           professional_summary?: string | null
           profile_status?: Database["public"]["Enums"]["employee_profile_status"]
