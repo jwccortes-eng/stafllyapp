@@ -275,12 +275,22 @@ function DocRow({ row, onView }: { row: UnifiedDocumentRow; onView: () => void }
   const expRel = relativeTo(row.expires_at);
   const expState = classifyExpiration(row.category, row.expires_at);
   const policy = expirationPolicyFor(row.category);
+  const side = inferDocumentSide(row.file_name);
+  const showSideBadge =
+    policyFor(row.category).side === "front_back_required" ||
+    policyFor(row.category).side === "front_back_recommended" ||
+    side === "front" || side === "back";
   return (
     <li className="flex items-center gap-2 rounded-md border border-border/50 bg-card/70 p-2">
       <FileText className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5 flex-wrap">
           <span className="text-[11.5px] font-medium truncate">{row.document_type}</span>
+          {showSideBadge && (
+            <Badge variant="outline" className="text-[9px] py-0 leading-none border-border bg-muted/50 text-foreground/70">
+              {SIDE_LABEL[side]}
+            </Badge>
+          )}
           <Badge variant="outline" className={cn("text-[9px] py-0 leading-none", STATUS_TONE[row.status])}>
             <StatusIcon className="h-2.5 w-2.5 mr-1" />
             {DOC_STATUS_LABEL[row.status]}
