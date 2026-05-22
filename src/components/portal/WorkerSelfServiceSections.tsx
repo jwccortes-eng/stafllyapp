@@ -113,7 +113,9 @@ export function WorkerSelfServiceSections({ employeeId, onUpdated }: Props) {
         avatarUrl={employee.avatar_url}
         firstName={employee.first_name ?? ""}
         lastName={employee.last_name ?? ""}
-        onUploaded={(url) => handlePatched({ avatar_url: url })}
+        reviewStatus={employee.photo_review_status}
+        rejectionReason={employee.photo_rejection_reason}
+        onUploaded={(url) => handlePatched({ avatar_url: url, photo_review_status: "pending", photo_rejection_reason: null })}
       />
 
       <PhoneCard
