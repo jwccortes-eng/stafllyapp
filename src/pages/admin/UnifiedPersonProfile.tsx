@@ -46,6 +46,7 @@ import { NextActionCard } from "@/components/employee/NextActionCard";
 import { selectWorkerNextAction, type WorkerNextAction } from "@/lib/worker-next-action";
 import { canInviteWorker, canActivateWorker, canArchiveWorker } from "@/lib/worker-actions";
 import { WorkerPhotoStatusChip } from "@/components/employee/WorkerPhotoStatusChip";
+import { PhotoReviewActions } from "@/components/employee/PhotoReviewActions";
 
 import {
   ArrowLeft,
