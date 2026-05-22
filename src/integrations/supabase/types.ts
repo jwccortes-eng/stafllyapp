@@ -2776,6 +2776,107 @@ export type Database = {
           },
         ]
       }
+      document_intake_batches: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          status: string
+          total_files: number
+          uploaded_by: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          status?: string
+          total_files?: number
+          uploaded_by: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          status?: string
+          total_files?: number
+          uploaded_by?: string
+        }
+        Relationships: []
+      }
+      document_intake_items: {
+        Row: {
+          batch_id: string
+          company_id: string
+          confidence_reason: string | null
+          confidence_score: number | null
+          created_at: string
+          extracted_json: Json | null
+          id: string
+          indexed_employee_document_id: string | null
+          mime_type: string | null
+          original_filename: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          storage_path: string
+          suggested_document_category: string | null
+          suggested_document_number_masked: string | null
+          suggested_document_side: string | null
+          suggested_employee_id: string | null
+          suggested_expires_at: string | null
+        }
+        Insert: {
+          batch_id: string
+          company_id: string
+          confidence_reason?: string | null
+          confidence_score?: number | null
+          created_at?: string
+          extracted_json?: Json | null
+          id?: string
+          indexed_employee_document_id?: string | null
+          mime_type?: string | null
+          original_filename?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          storage_path: string
+          suggested_document_category?: string | null
+          suggested_document_number_masked?: string | null
+          suggested_document_side?: string | null
+          suggested_employee_id?: string | null
+          suggested_expires_at?: string | null
+        }
+        Update: {
+          batch_id?: string
+          company_id?: string
+          confidence_reason?: string | null
+          confidence_score?: number | null
+          created_at?: string
+          extracted_json?: Json | null
+          id?: string
+          indexed_employee_document_id?: string | null
+          mime_type?: string | null
+          original_filename?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          storage_path?: string
+          suggested_document_category?: string | null
+          suggested_document_number_masked?: string | null
+          suggested_document_side?: string | null
+          suggested_employee_id?: string | null
+          suggested_expires_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_intake_items_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "document_intake_batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_send_log: {
         Row: {
           created_at: string
