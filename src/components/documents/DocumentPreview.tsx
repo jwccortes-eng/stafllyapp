@@ -53,10 +53,6 @@ const REVIEW_TONE: Record<string, string> = {
   rejected: "border-rose-200 bg-rose-50 text-rose-700",
 };
 
-function isIOS(): boolean {
-  if (typeof navigator === "undefined") return false;
-  return /iPad|iPhone|iPod/.test(navigator.userAgent);
-}
 
 function inferKind(item: DocumentPreviewItem): "image" | "pdf" | "other" {
   const mime = (item.file_type ?? "").toLowerCase();
@@ -167,19 +163,29 @@ export default function DocumentPreview({ item, actions, banner }: Props) {
               onError={() => setImgError(true)}
             />
           </div>
-        ) : kind === "pdf" && !isIOS() ? (
-          <iframe
-            src={url}
-            title={item.file_name ?? "PDF"}
-            className="w-full h-[60vh] bg-white"
-          />
+        ) : kind === "pdf" ? (
+          <div className="flex flex-col items-center justify-center min-h-[16rem] gap-3 p-6 text-center">
+            <FileText className="h-10 w-10 text-muted-foreground" />
+            <div className="space-y-1 max-w-sm">
+              <p className="text-sm font-medium text-foreground">
+                Vista previa PDF no disponible en este navegador.
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Abre el documento en una pestaña segura para revisarlo.
+              </p>
+            </div>
+            <Button asChild size="sm">
+              <a href={url} target="_blank" rel="noopener noreferrer">
+                <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+                Abrir PDF seguro
+              </a>
+            </Button>
+          </div>
         ) : (
           <div className="flex flex-col items-center justify-center h-64 gap-3 p-4 text-center">
             {kind === "image" ? <ImageIcon className="h-8 w-8 text-muted-foreground" /> : <FileText className="h-8 w-8 text-muted-foreground" />}
             <p className="text-xs text-muted-foreground">
-              {kind === "pdf"
-                ? "La vista previa de PDF no está disponible en este dispositivo."
-                : "Vista previa no disponible para este tipo de archivo."}
+              Vista previa no disponible para este tipo de archivo.
             </p>
             <Button asChild size="sm" variant="outline">
               <a href={url} target="_blank" rel="noopener noreferrer">
