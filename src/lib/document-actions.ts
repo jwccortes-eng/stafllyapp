@@ -121,6 +121,7 @@ export function fromOnboardingDocument(row: {
     file_size: null,
     created_at: row.created_at,
     reviewed_at: row.verified_at,
+    expires_at: null,
     state,
     reason,
     replacement_reason: isReplacement
@@ -136,7 +137,7 @@ export async function fetchUnifiedDocuments(
 ): Promise<UnifiedDocument[]> {
   const [{ data: ed }, { data: eod }] = await Promise.all([
     (supabase.from("employee_documents" as any) as any)
-      .select("id, employee_id, company_id, name, file_url, file_size, category, created_at, review_status, reviewed_at, rejection_reason")
+      .select("id, employee_id, company_id, name, file_url, file_size, category, created_at, review_status, reviewed_at, rejection_reason, expires_at")
       .eq("employee_id", employeeId).eq("company_id", companyId),
     (supabase.from("employee_onboarding_documents" as any) as any)
       .select("id, employee_id, company_id, document_type, file_url, file_name, status, verified_at, notes, created_at")
