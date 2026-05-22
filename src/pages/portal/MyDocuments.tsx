@@ -139,7 +139,7 @@ export default function MyDocuments() {
   ).length;
   const allRequiredDone = required.length > 0 && approvedCount === required.length;
 
-  const handleUpload = async (category: DocumentCategory, file: File) => {
+  const handleUpload = async (category: DocumentCategory, file: File, expiresAt?: string | null) => {
     if (!employeeId || !companyId) return;
     if (file.size > MAX_FILE_BYTES) {
       toast({ title: "Archivo demasiado grande", description: "Máximo 15 MB por documento.", variant: "destructive" });
@@ -166,6 +166,7 @@ export default function MyDocuments() {
         file_size: file.size,
         category,
         review_status: "pending",
+        expires_at: expiresAt || null,
       });
       if (rowErr) {
         await supabase.storage.from("employee-documents").remove([path]).catch(() => undefined);
