@@ -31,12 +31,12 @@ import { useToast } from "@/hooks/use-toast";
  *     replacing the original photo.
  */
 
-export type PhotoFilterKey = "all" | "missing" | "unreviewed";
+export type PhotoFilterKey = "all" | "missing" | "unreviewed" | "rejected" | "approved";
 
 interface Props {
   photoFilter: PhotoFilterKey;
   onPhotoFilterChange: (next: PhotoFilterKey) => void;
-  counts: { all: number; missing: number; unreviewed: number };
+  counts: { all: number; missing: number; unreviewed: number; rejected: number; approved: number };
 }
 
 const ACCEPTED = [
