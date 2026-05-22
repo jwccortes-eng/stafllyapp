@@ -79,11 +79,14 @@ function StatusBadge({ status }: { status: string }) {
   return <Badge variant="outline" className={m.cls}><Icon className="h-3 w-3 mr-1" />{m.label}</Badge>;
 }
 
+type QueueFilter = "pending" | "ready" | "indexed" | "rejected" | "all";
+
 export default function DocumentIntakeCenter() {
   const { selectedCompanyId } = useCompany();
   const { user, canAccessAdminForCompany } = useAuth() as any;
   const qc = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [filter, setFilter] = useState<QueueFilter>("pending");
   const [uploading, setUploading] = useState(false);
 
   const isAdmin = !selectedCompanyId
@@ -225,22 +228,72 @@ export default function DocumentIntakeCenter() {
         </div>
       </div>
 
-      {itemsQ.isLoading ? (
-        <div className="flex items-center justify-center h-40"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
-      ) : (itemsQ.data ?? []).length === 0 ? (
-        <Card className="p-8 text-center text-sm text-muted-foreground">
-          No hay documentos en la bandeja. Sube imágenes o PDFs para empezar.
-        </Card>
-      ) : (
-        <div className="space-y-3">
-          {(itemsQ.data ?? []).map((it) => (
-            <IntakeItemRow key={it.id} item={it} employees={empQ.data ?? []} empById={empById} onChanged={() => qc.invalidateQueries({ queryKey: ["intake-items", selectedCompanyId] })} />
-          ))}
-        </div>
-      )}
+      {(() => {
+        const all = itemsQ.data ?? [];
+        const counts = {
+          pending: all.filter((i: any) => i.status === "pending_extraction" || i.status === "extracted" || i.status === "needs_review" || i.status === "failed").length,
+          ready: all.filter((i: any) => i.status === "extracted" || i.status === "needs_review").length,
+          indexed: all.filter((i: any) => i.status === "indexed").length,
+          rejected: all.filter((i: any) => i.status === "rejected").length,
+          all: all.length,
+        };
+        const filtered = all.filter((i: any) => {
+          switch (filter) {
+            case "pending": return ["pending_extraction", "extracted", "needs_review", "failed"].includes(i.status);
+            case "ready": return ["extracted", "needs_review"].includes(i.status);
+            case "indexed": return i.status === "indexed";
+            case "rejected": return i.status === "rejected";
+            case "all": return true;
+          }
+        });
+        const tabs: { key: QueueFilter; label: string; count: number }[] = [
+          { key: "pending", label: "Pendientes", count: counts.pending },
+          { key: "ready", label: "Listos para revisar", count: counts.ready },
+          { key: "indexed", label: "Indexados", count: counts.indexed },
+          { key: "rejected", label: "Rechazados", count: counts.rejected },
+          { key: "all", label: "Todos", count: counts.all },
+        ];
+        return (
+          <>
+            <div className="flex flex-wrap gap-1.5 border-b pb-2">
+              {tabs.map((t) => (
+                <Button
+                  key={t.key}
+                  size="sm"
+                  variant={filter === t.key ? "default" : "ghost"}
+                  onClick={() => setFilter(t.key)}
+                  className="h-8"
+                >
+                  {t.label}
+                  <Badge variant="outline" className="ml-2 bg-background/60 text-[10px] py-0">{t.count}</Badge>
+                </Button>
+              ))}
+            </div>
+            {itemsQ.isLoading ? (
+              <div className="flex items-center justify-center h-40"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+            ) : filtered.length === 0 ? (
+              <Card className="p-8 text-center text-sm text-muted-foreground">
+                {all.length === 0
+                  ? "No hay documentos en la bandeja. Sube imágenes o PDFs para empezar."
+                  : filter === "pending"
+                    ? "Bandeja al día. No hay documentos pendientes de revisión."
+                    : "Sin documentos en esta vista."}
+              </Card>
+            ) : (
+              <div className="space-y-3">
+                {filtered.map((it: any) => (
+                  <IntakeItemRow key={it.id} item={it} employees={empQ.data ?? []} empById={empById} onChanged={() => qc.invalidateQueries({ queryKey: ["intake-items", selectedCompanyId] })} />
+                ))}
+              </div>
+            )}
+          </>
+        );
+      })()}
     </div>
   );
 }
+
+
 
 function IntakeItemRow({
   item, employees, empById, onChanged,
@@ -287,12 +340,21 @@ function IntakeItemRow({
       const { error: cpErr } = await supabase.storage.from("employee-documents").copy(item.storage_path, destPath);
       if (cpErr) throw cpErr;
 
+      // Managed display label: "Permiso de trabajo · Frente" — shown as document_type
+      // in /app/documents instead of the raw filename. Original filename stays in
+      // storage path for traceability.
+      const catLabel = CATEGORIES.find((c) => c.value === category)?.label ?? category;
+      const sideLbl = SIDES.find((s) => s.value === side)?.label ?? "";
+      const managedName = side && side !== "unknown" && side !== "full"
+        ? `${catLabel} · ${sideLbl}`
+        : catLabel;
+
       const { error: rpcErr } = await supabase.rpc("intake_confirm_and_index" as any, {
         p_intake_item_id: item.id,
         p_employee_id: empId,
         p_category: category,
         p_file_url: destPath,
-        p_file_name: item.original_filename ?? "documento",
+        p_file_name: managedName,
         p_file_type: item.mime_type ?? null,
         p_file_size: null,
         p_expires_at: expires || null,
@@ -302,6 +364,7 @@ function IntakeItemRow({
       toast({ title: "Documento indexado", description: "Ya está disponible en Documentos." });
       qc.invalidateQueries({ queryKey: ["employee-documents"] });
       qc.invalidateQueries({ queryKey: ["documents"] });
+      qc.invalidateQueries({ queryKey: ["intake-items"] });
       onChanged();
     } catch (e: any) {
       toast({ title: "No se pudo indexar", description: e?.message ?? "Error", variant: "destructive" });
