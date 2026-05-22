@@ -299,6 +299,8 @@ export interface AdminUploadInput {
   file: File;
   category: string;
   approveOnUpload: boolean;
+  /** Optional ISO YYYY-MM-DD expiration date. */
+  expiresAt?: string | null;
 }
 
 export async function uploadAdminDocument(input: AdminUploadInput): Promise<{
@@ -327,6 +329,7 @@ export async function uploadAdminDocument(input: AdminUploadInput): Promise<{
     category: input.category || "other",
     uploaded_by: userId,
     review_status: input.approveOnUpload ? "approved" : "pending",
+    expires_at: input.expiresAt || null,
     ...(input.approveOnUpload
       ? { reviewed_at: new Date().toISOString(), reviewed_by: userId }
       : {}),
@@ -335,7 +338,7 @@ export async function uploadAdminDocument(input: AdminUploadInput): Promise<{
   const { data: inserted, error: insertError } = await (supabase
     .from("employee_documents" as any) as any)
     .insert(insertPayload)
-    .select("id, employee_id, company_id, name, file_url, file_size, category, created_at, review_status, reviewed_at, rejection_reason")
+    .select("id, employee_id, company_id, name, file_url, file_size, category, created_at, review_status, reviewed_at, rejection_reason, expires_at")
     .single();
 
   if (insertError || !inserted) {
