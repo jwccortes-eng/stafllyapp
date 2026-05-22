@@ -86,6 +86,7 @@ export default function MyDocuments() {
   const [loading, setLoading] = useState(true);
   const [uploadingCat, setUploadingCat] = useState<DocumentCategory | null>(null);
   const [expirationDates, setExpirationDates] = useState<Record<string, string>>({});
+  const [previewDoc, setPreviewDoc] = useState<DocRow | null>(null);
 
   // Hidden file inputs keyed by category — clicking a category's button triggers its input.
   const inputsRef = useRef<Record<string, HTMLInputElement | null>>({});
