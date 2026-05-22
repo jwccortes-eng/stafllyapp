@@ -874,12 +874,13 @@ export default function Employees() {
       return (ad - bd) * dir;
     }
     if (sort.key === "photo") {
-      // Order: required (0) → review (1) → ok/null (2). Asc = problems first.
+      // Order: required (0) → invalid (1) → pending (2) → approved/null (3).
       const rank = (e: EmployeeRecord) => {
         const s = photoStatusFor(e);
         if (s === "required") return 0;
-        if (s === "review") return 1;
-        return 2;
+        if (s === "invalid") return 1;
+        if (s === "pending") return 2;
+        return 3;
       };
       return (rank(a) - rank(b)) * dir;
     }
