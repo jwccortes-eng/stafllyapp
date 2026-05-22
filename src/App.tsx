@@ -89,6 +89,7 @@ const CommandCenter = lazy(() => import("./pages/admin/CommandCenter"));
 const StaffingCenter = lazy(() => import("./pages/admin/StaffingCenter"));
 const DevCommandCenter = lazy(() => import("./pages/admin/DevCommandCenter"));
 const DocumentsCenter = lazy(() => import("./pages/admin/DocumentsCenter"));
+const DocumentIntakeCenter = lazy(() => import("./pages/admin/DocumentIntakeCenter"));
 const ComplianceCenter = lazy(() => import("./pages/admin/ComplianceCenter"));
 const NeedsAttention = lazy(() => import("./pages/admin/NeedsAttention"));
 const DailyClose = lazy(() => import("./pages/admin/DailyClose"));
@@ -268,6 +269,7 @@ function App() {
                 <Route path="employees" element={<CompanyRequiredGuard><Employees /></CompanyRequiredGuard>} />
                 <Route path="workers" element={<CompanyRequiredGuard><Navigate to="/app/employees" replace /></CompanyRequiredGuard>} />
                 <Route path="documents" element={<CompanyRequiredGuard><DocumentsCenter /></CompanyRequiredGuard>} />
+                <Route path="document-intake" element={<CompanyRequiredGuard><DocumentIntakeCenter /></CompanyRequiredGuard>} />
                 <Route path="compliance-center" element={<CompanyRequiredGuard><ComplianceCenter /></CompanyRequiredGuard>} />
                 <Route path="employees/merge" element={<CompanyRequiredGuard><EmployeeMerge /></CompanyRequiredGuard>} />
                 <Route path="workforce" element={<CompanyRequiredGuard><Workforce /></CompanyRequiredGuard>} />
