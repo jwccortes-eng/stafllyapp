@@ -1794,8 +1794,6 @@ export default function Employees() {
                             </TooltipContent>
                           </Tooltip>
                         );
-                        }
-                        return null;
                       })()}
                     </div>
                   </div>
