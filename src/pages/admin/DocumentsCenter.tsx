@@ -128,6 +128,17 @@ export default function DocumentsCenter() {
     return out;
   }, [signals, employeeMap, selectedCompanyId]);
 
+  const missingExpirationRows = useMemo(
+    () => rows.filter(
+      (r) =>
+        r.source === "admin_upload" &&
+        !r.expires_at &&
+        (expirationPolicyFor(r.category) === "required" ||
+          expirationPolicyFor(r.category) === "recommended"),
+    ),
+    [rows],
+  );
+
   const filtered = useMemo(() => {
     let base: UnifiedDocumentRow[] = rows;
     switch (activeFilter) {
@@ -135,6 +146,7 @@ export default function DocumentsCenter() {
       case "pending":      base = rows.filter((r) => r.status === "pending"); break;
       case "expired":      base = rows.filter((r) => r.status === "expired"); break;
       case "expiring_soon":base = rows.filter((r) => r.status === "expiring_soon"); break;
+      case "missing_expiration": base = missingExpirationRows; break;
       case "rejected":     base = rows.filter((r) => r.status === "rejected"); break;
       case "approved":     base = rows.filter((r) => r.status === "approved"); break;
       case "needs_review": base = rows.filter((r) => r.status !== "approved"); break;
@@ -147,7 +159,7 @@ export default function DocumentsCenter() {
       r.worker_name.toLowerCase().includes(q) ||
       r.document_type.toLowerCase().includes(q),
     );
-  }, [rows, missingRows, activeFilter, search]);
+  }, [rows, missingRows, missingExpirationRows, activeFilter, search]);
 
   const counts = useMemo(() => ({
     all: rows.length,
@@ -156,9 +168,10 @@ export default function DocumentsCenter() {
     pending: rows.filter((r) => r.status === "pending").length,
     expired: rows.filter((r) => r.status === "expired").length,
     expiring_soon: rows.filter((r) => r.status === "expiring_soon").length,
+    missing_expiration: missingExpirationRows.length,
     rejected: rows.filter((r) => r.status === "rejected").length,
     approved: rows.filter((r) => r.status === "approved").length,
-  }), [rows, missingRows]);
+  }), [rows, missingRows, missingExpirationRows]);
 
   const handleView = async (row: UnifiedDocumentRow) => {
     if (!row.file_path) {
@@ -216,6 +229,7 @@ export default function DocumentsCenter() {
     { key: "pending", label: "Pending" },
     { key: "expired", label: "Expired" },
     { key: "expiring_soon", label: "Expiring soon" },
+    { key: "missing_expiration", label: "Missing expiration" },
     { key: "rejected", label: "Rejected" },
     { key: "approved", label: "Approved" },
   ];
