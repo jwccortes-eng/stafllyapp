@@ -175,11 +175,18 @@ export default function DocumentsCenter() {
     approved: rows.filter((r) => r.status === "approved").length,
   }), [rows, missingRows, missingExpirationRows]);
 
-  const handleView = async (row: UnifiedDocumentRow) => {
+  const [previewRow, setPreviewRow] = useState<UnifiedDocumentRow | null>(null);
+
+  const handleView = (row: UnifiedDocumentRow) => {
     if (!row.file_path) {
       toast({ title: "No file uploaded yet", description: "This is a missing-document placeholder." });
       return;
     }
+    setPreviewRow(row);
+  };
+
+  const handleOpenInTab = async (row: UnifiedDocumentRow) => {
+    if (!row.file_path) return;
     const url = await resolveEmployeeDocumentUrl(row.file_path);
     if (!url) {
       toast({ title: "Could not open document", description: "The file may have been removed.", variant: "destructive" });
