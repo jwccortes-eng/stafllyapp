@@ -8,6 +8,7 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
 import { useAuth } from "@/hooks/useAuth";
@@ -18,8 +19,10 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SmartDateInput } from "@/components/ui/smart-date-input";
+import { formatDateUS, todayIso } from "@/lib/date-format";
 import { toast } from "@/hooks/use-toast";
-import { Loader2, Upload, FileText, CheckCircle2, XCircle, Clock, ShieldAlert, Sparkles } from "lucide-react";
+import { Loader2, Upload, FileText, CheckCircle2, XCircle, Clock, ShieldAlert, Sparkles, ExternalLink, User as UserIcon } from "lucide-react";
 import { resolveEmployeeDocumentUrl } from "@/lib/employee-documents";
 
 type Item = any;
