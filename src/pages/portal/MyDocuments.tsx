@@ -204,17 +204,9 @@ export default function MyDocuments() {
     }
   };
 
-  const handleView = async (doc: DocRow) => {
+  const handleView = (doc: DocRow) => {
     if (!doc.file_url) return;
-    try {
-      // Use the resolver so legacy rows that stored a full public URL (or a
-      // previously-signed URL) are normalized to a path before signing.
-      const url = await resolveEmployeeDocumentUrl(doc.file_url);
-      if (!url) throw new Error("Archivo no accesible");
-      window.open(url, "_blank", "noopener,noreferrer");
-    } catch (err: any) {
-      toast({ title: "No se pudo abrir el archivo", description: err?.message ?? "Inténtalo de nuevo.", variant: "destructive" });
-    }
+    setPreviewDoc(doc);
   };
 
   // ─── Render ───────────────────────────────────────────────────────────────
