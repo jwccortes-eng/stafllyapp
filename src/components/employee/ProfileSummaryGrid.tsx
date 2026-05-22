@@ -188,18 +188,10 @@ export function ProfileSummaryGrid({
       }`
     : null;
 
-  const optionalExtra: Array<[string, any]> = (
-    [
-      ["Manager", employee.direct_manager],
-      ["Grupos", employee.groups],
-      ["Etiquetas", employee.tags],
-      ["Rating", employee.qualify ?? employee.rating],
-      ["Recomendado por", employee.recommended_by],
-      ["Licencia", employee.driver_licence ?? employee.drivers_license],
-      ["País", employee.country ?? employee.country_code],
-      ["Inglés", employee.english_level],
-    ] as Array<[string, any]>
-  ).filter(([, v]) => v != null && String(v).trim() !== "");
+  // IA Cleanup v3: legacy/import fields (manager, grupos, tags, rating,
+  // recomendado, inglés, etc.) were removed from this main card. They still
+  // exist in DB and appear in the single "Datos importados y auditoría"
+  // collapsible at the bottom of the profile, admin/dev only.
 
   /* ───── Cumplimiento (compliance) ───── */
   const missingRequired = readiness.missingDocuments.length;
