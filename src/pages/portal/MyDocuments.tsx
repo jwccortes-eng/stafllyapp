@@ -23,7 +23,7 @@ import { useEffect, useState, useRef, useMemo, useCallback } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowLeft, FileText, Upload, CheckCircle2, AlertTriangle,
-  Loader2, Eye, Trash2, FileWarning, Sparkles, ShieldCheck,
+  Loader2, Eye, Trash2, FileWarning, Sparkles, ShieldCheck, CalendarClock,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffectiveEmployee } from "@/hooks/useEffectiveEmployee";
@@ -33,11 +33,18 @@ import {
   getRequiredDocumentsForCompany,
   type DocumentCategory,
 } from "@/lib/onboarding/required-documents";
+import {
+  expirationPolicyFor,
+  classifyExpiration,
+  EXPIRATION_STATE_LABEL,
+} from "@/lib/onboarding/document-expiration-policy";
+import { SmartDateInput } from "@/components/ui/smart-date-input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { PROFILE_STATUS_LABELS } from "@/lib/onboarding/profile-status";
 import { resolveEmployeeDocumentUrl } from "@/lib/employee-documents";
+import { formatDateUS } from "@/lib/date-format";
 
 type ReviewStatus = "pending" | "approved" | "rejected";
 
@@ -52,6 +59,7 @@ interface DocRow {
   review_status: ReviewStatus;
   rejection_reason: string | null;
   reviewed_at: string | null;
+  expires_at: string | null;
 }
 
 /** Aggregate state for a required category, picking the most favorable doc state. */
