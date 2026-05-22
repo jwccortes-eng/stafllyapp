@@ -41,6 +41,7 @@ import {
   expirationPolicyFor,
 } from "@/lib/onboarding/document-expiration-policy";
 import { resolveEmployeeDocumentUrl } from "@/lib/employee-documents";
+import DocumentPreviewDialog from "@/components/documents/DocumentPreviewDialog";
 
 interface Props {
   employee: any;
