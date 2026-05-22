@@ -88,7 +88,7 @@ export default function WorkerDocumentsCompliance({ employee }: Props) {
 
       const [adminRes, onbRes, req] = await Promise.all([
         sb.from("employee_documents")
-          .select("id, employee_id, company_id, name, file_url, file_type, file_size, category, created_at, review_status, reviewed_at, rejection_reason")
+          .select("id, employee_id, company_id, name, file_url, file_type, file_size, category, created_at, review_status, reviewed_at, rejection_reason, expires_at")
           .eq("employee_id", employee.id)
           .eq("company_id", employee.company_id)
           .order("created_at", { ascending: false }),
