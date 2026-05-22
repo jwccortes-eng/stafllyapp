@@ -890,7 +890,8 @@ export default function UnifiedPersonProfile() {
             <Card className="mt-2 border-dashed border-border/60 bg-muted/20">
               <CardContent className="p-3 space-y-2">
                 <p className="text-[10.5px] text-muted-foreground/80">
-                  Datos operativos y señales internas para administradores.
+                  Datos importados, identificadores internos, manager de Connecteam,
+                  grupos/tags legacy y metadata operativa. No se usan para payroll.
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5 text-[11px] font-mono">
                 {[
@@ -903,6 +904,15 @@ export default function UnifiedPersonProfile() {
                   ["source", employee.source ?? employee.import_source],
                   ["person_type_guess", employee.person_type_guess],
                   ["payroll_safe", employee.payroll_safe == null ? null : String(employee.payroll_safe)],
+                  ["connecteam_employee_id", employee.connecteam_employee_id],
+                  ["direct_manager", employee.direct_manager],
+                  ["recommended_by", employee.recommended_by],
+                  ["groups", Array.isArray(employee.groups) ? employee.groups.join(", ") : employee.groups],
+                  ["tags", Array.isArray(employee.tags) ? employee.tags.join(", ") : employee.tags],
+                  ["added_via", employee.added_via],
+                  ["added_by", employee.added_by],
+                  ["date_added", employee.date_added],
+                  ["created_from_reconciliation", employee.created_from_reconciliation == null ? null : String(employee.created_from_reconciliation)],
                   ["created_at", employee.created_at],
                   ["updated_at", employee.updated_at],
                 ].filter(([, v]) => v != null && v !== "").map(([k, v]) => (
