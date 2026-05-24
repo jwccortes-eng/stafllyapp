@@ -12411,6 +12411,7 @@ export type Database = {
           end_time: string
           id: string
           import_batch_id: string | null
+          job_site_address: string | null
           job_site_location_id: string | null
           location_id: string | null
           meeting_point: string | null
@@ -12455,6 +12456,7 @@ export type Database = {
           end_time: string
           id?: string
           import_batch_id?: string | null
+          job_site_address?: string | null
           job_site_location_id?: string | null
           location_id?: string | null
           meeting_point?: string | null
@@ -12499,6 +12501,7 @@ export type Database = {
           end_time?: string
           id?: string
           import_batch_id?: string | null
+          job_site_address?: string | null
           job_site_location_id?: string | null
           location_id?: string | null
           meeting_point?: string | null
