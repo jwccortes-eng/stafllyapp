@@ -1,31 +1,35 @@
 /**
- * JobSiteSection — protagonist card. The main work address.
+ * JobSiteSection — premium one-off-first Job Site card.
  *
- * Owns:
- *  - Saved location (Location row)
- *  - Premium structured Job Site (locations_v2 → job_site_location_id)
- *  - Worker-facing notes ("indicaciones para llegar" → special_instructions)
- *  - "Open in Google Maps" link when an address is available
+ * v1 (Shift Location UX v1 — Smart Address Search):
+ *   - Primary: smart address search (free text → scheduled_shifts.job_site_address)
+ *   - Secondary: "Usar ubicación guardada" (saved locations_v2 row)
+ *   - Optional save-for-reuse checkbox (default OFF) to promote a one-off
+ *     into a saved location_v2 row.
  *
- * Meeting points are NOT in this card. They live in MeetingPointsSection.
+ * The legacy `location_id` (FK → locations) is no longer surfaced here for
+ * new edits — the field stays in the form state for backwards compatibility
+ * with existing shifts and reads through `signals.jobSiteLabel`.
  */
 import { memo } from "react";
 import { MapPin, FileText } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { SectionCard } from "./section-card";
-import { SingleLocationPicker } from "../ShiftLocationsSection";
+import { SmartLocationField } from "./SmartLocationField";
 import type { LocationOption } from "../ShiftFormFields";
 
 interface Props {
   companyId: string | null;
   locationId: string;
   jobSiteLocationId: string | null;
+  jobSiteAddress: string;
   specialInstructions: string;
   locations: LocationOption[];
   onChange: (patch: {
     locationId?: string;
     jobSiteLocationId?: string | null;
+    jobSiteAddress?: string;
     specialInstructions?: string;
     meetingPoint?: string;
     clockMethod?: "mobile" | "kiosk" | "both";
@@ -37,33 +41,34 @@ interface Props {
 function JobSiteSectionImpl({
   companyId,
   jobSiteLocationId,
+  jobSiteAddress,
   specialInstructions,
   onChange,
 }: Props) {
   return (
     <SectionCard
       icon={MapPin}
-      title="Job Site"
-      subtitle="Dirección principal donde se realizará el trabajo."
+      title="Dirección del trabajo"
+      subtitle="Pega la dirección que te envió el cliente o busca en Google. Solo guárdala si la vas a reutilizar."
       variant="hero"
     >
-      {/* Premium structured Job Site — official source of truth.
-          The legacy "saved location" dropdown was removed to avoid duplicate
-          inputs; reuse of saved locations is already available inside the
-          picker (Reutilizar list). */}
-      {companyId && (
-        <SingleLocationPicker
-          label="Job Site"
-          icon={MapPin}
-          helper="No hay Job Site asignado."
-          companyId={companyId}
-          type="job_site"
-          selectedId={jobSiteLocationId}
-          onSelect={(id) => onChange({ jobSiteLocationId: id })}
-          emptyCtaLabel="Asignar Job Site"
-          changeCtaLabel="Cambiar ubicación"
-        />
-      )}
+      <SmartLocationField
+        companyId={companyId}
+        kind="job_site"
+        title="Dirección del trabajo"
+        helper="Para hoteles, playas, eventos privados o direcciones de WhatsApp."
+        freeTextValue={jobSiteAddress}
+        savedLocationId={jobSiteLocationId}
+        onFreeText={(text) => onChange({ jobSiteAddress: text })}
+        onSavedLocation={(id) =>
+          onChange({
+            jobSiteLocationId: id,
+            // When promoting to saved, clear the one-off text so payload is unambiguous
+            jobSiteAddress: id ? "" : jobSiteAddress,
+          })
+        }
+        placeholder="Ej: 1601 Broadway, New York, NY 10019"
+      />
 
       <div>
         <Label className="text-[11px] text-muted-foreground font-medium flex items-center gap-1">
@@ -77,7 +82,7 @@ function JobSiteSectionImpl({
           className="text-sm resize-none mt-1"
         />
         <p className="text-[10px] text-muted-foreground/60 mt-1">
-          Visible para el equipo en su portal — solo del Job Site, no del meeting point.
+          Visible para el equipo en su portal — solo del job site, no del punto de encuentro.
         </p>
       </div>
     </SectionCard>
@@ -85,4 +90,3 @@ function JobSiteSectionImpl({
 }
 
 export const JobSiteSection = memo(JobSiteSectionImpl);
-

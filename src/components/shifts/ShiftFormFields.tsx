@@ -74,6 +74,12 @@ export interface ShiftFormState {
   // Premium structured locations
   meetingPointLocationId: string | null;
   jobSiteLocationId: string | null;
+  /**
+   * One-off Job Site address (free text, written to `scheduled_shifts.job_site_address`).
+   * Used when the operator pastes/searches an address that should NOT pollute
+   * `locations_v2`. Empty when a saved/premium job site is picked.
+   */
+  jobSiteAddress: string;
 }
 
 export interface ShiftFormFieldsProps {
@@ -220,7 +226,11 @@ export function useShiftFormSignals({
   const adminInvalid = !!v.shiftAdminId && assignedCount > 0 && !shiftAssignedIds.includes(v.shiftAdminId);
   const driverMissing = v.transportRequired && !v.driverEmployeeId;
   const noLocation =
-    !v.locationId && !v.meetingPoint.trim() && !v.meetingPointLocationId && !v.jobSiteLocationId;
+    !v.locationId &&
+    !v.meetingPoint.trim() &&
+    !v.meetingPointLocationId &&
+    !v.jobSiteLocationId &&
+    !v.jobSiteAddress.trim();
   const noTeam = showEmployeePicker && assignedCount === 0 && !v.claimable;
 
   const currentShiftId = mode === "edit" && shift ? shift.id : null;
@@ -259,8 +269,12 @@ export function useShiftFormSignals({
       const loc = locations.find((l) => l.id === v.locationId);
       if (loc) return loc.address || loc.name || null;
     }
+    // One-off free-text address takes precedence over premium FK because
+    // SingleLocationPicker selection is resolved elsewhere (jobSiteLocationId)
+    // and its label is rendered by the section directly.
+    if (v.jobSiteAddress.trim()) return v.jobSiteAddress.trim();
     return null;
-  }, [v.locationId, locations]);
+  }, [v.locationId, v.jobSiteAddress, locations]);
 
   const meetingPointLabel = useMemo(() => {
     return v.meetingPoint.trim() || null;
@@ -379,6 +393,7 @@ export function ShiftFormFields({
       companyId={companyId}
       locationId={v.locationId}
       jobSiteLocationId={v.jobSiteLocationId}
+      jobSiteAddress={v.jobSiteAddress}
       specialInstructions={v.specialInstructions}
       locations={locations}
       onChange={handlePatch}
@@ -609,6 +624,7 @@ export const EMPTY_SHIFT_FORM_STATE: ShiftFormState = {
   selectedEmployees: [],
   meetingPointLocationId: null,
   jobSiteLocationId: null,
+  jobSiteAddress: "",
 };
 
 export function shiftToFormState(shift: Shift): ShiftFormState {
@@ -643,6 +659,7 @@ export function shiftToFormState(shift: Shift): ShiftFormState {
     selectedEmployees: [],
     meetingPointLocationId: s.meeting_point_location_id ?? null,
     jobSiteLocationId: s.job_site_location_id ?? null,
+    jobSiteAddress: s.job_site_address ?? "",
   };
 }
 
@@ -672,5 +689,6 @@ export function formStateToShiftPayload(s: ShiftFormState, allowClaims: boolean)
     driver_employee_id: s.driverEmployeeId || null,
     meeting_point_location_id: s.meetingPointLocationId || null,
     job_site_location_id: s.jobSiteLocationId || null,
+    job_site_address: s.jobSiteAddress.trim() || null,
   };
 }

@@ -1,17 +1,15 @@
 /**
- * MeetingPointsSection — separate card for "where the team gathers".
- * Hidden / collapsed when transport is OFF.
+ * MeetingPointsSection — premium one-off-first Meeting Point card.
+ * Hidden / muted when transport is OFF.
  *
- * Currently supports a single meeting point (legacy `meeting_point` text +
- * premium `meeting_point_location_id`). Multiple points are out of scope
- * because they would require a schema change.
+ * v1: same SmartLocationField pattern as JobSite. Free text is written to
+ * the existing `meeting_point` column. Saved-location pick mirrors its
+ * address into the text field so worker portal / notifications keep working.
  */
 import { memo } from "react";
-import { Compass, ExternalLink } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Compass } from "lucide-react";
 import { SectionCard } from "./section-card";
-import { SingleLocationPicker } from "../ShiftLocationsSection";
+import { SmartLocationField } from "./SmartLocationField";
 
 interface Props {
   transportRequired: boolean;
@@ -22,13 +20,6 @@ interface Props {
     meetingPoint?: string;
     meetingPointLocationId?: string | null;
   }) => void;
-}
-
-function buildMapsUrl(text: string | null | undefined): string | null {
-  if (!text) return null;
-  const a = text.trim();
-  if (!a) return null;
-  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(a)}`;
 }
 
 function MeetingPointsSectionImpl({
@@ -42,8 +33,8 @@ function MeetingPointsSectionImpl({
     return (
       <SectionCard
         icon={Compass}
-        title="Puntos de encuentro"
-        subtitle="Activa transporte si necesitas coordinar puntos de encuentro o drivers."
+        title="Punto de encuentro"
+        subtitle="Activa transporte si necesitas coordinar un punto de encuentro o drivers."
         variant="muted"
       >
         {null}
@@ -51,50 +42,29 @@ function MeetingPointsSectionImpl({
     );
   }
 
-  const mapsUrl = buildMapsUrl(meetingPoint);
-
   return (
     <SectionCard
       icon={Compass}
-      title="Puntos de encuentro"
-      subtitle="Lugares donde los trabajadores se reúnen antes de ir al Job Site."
+      title="Punto de encuentro"
+      subtitle="Lugar donde el equipo se reúne antes de ir al job site."
     >
-      <div>
-        <Label className="text-[11px] text-muted-foreground font-medium">Punto de encuentro principal</Label>
-        <Input
-          value={meetingPoint}
-          onChange={(e) => onChange({ meetingPoint: e.target.value })}
-          placeholder="Ej: Chase Bank 74 & Roosevelt"
-          className="h-9 text-sm mt-1"
-        />
-        {mapsUrl && (
-          <a
-            href={mapsUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-1 mt-1.5 text-[11px] text-primary hover:underline"
-          >
-            <ExternalLink className="h-3 w-3" /> Abrir en Google Maps
-          </a>
-        )}
-      </div>
-
-      {companyId && (
-        <SingleLocationPicker
-          label="Meeting point (premium)"
-          icon={Compass}
-          helper="Lugar donde el equipo se reúne antes de iniciar el turno."
-          companyId={companyId}
-          type="meeting_point"
-          selectedId={meetingPointLocationId}
-          onSelect={(id, addr) =>
-            onChange({
-              meetingPointLocationId: id,
-              meetingPoint: addr ?? meetingPoint,
-            })
-          }
-        />
-      )}
+      <SmartLocationField
+        companyId={companyId}
+        kind="meeting_point"
+        title="Punto de encuentro"
+        helper="Pega o busca la dirección. Solo guárdala si la vas a reutilizar."
+        freeTextValue={meetingPoint}
+        savedLocationId={meetingPointLocationId}
+        onFreeText={(text) => onChange({ meetingPoint: text })}
+        onSavedLocation={(id, addr) =>
+          onChange({
+            meetingPointLocationId: id,
+            // Mirror saved location's address into legacy text so portal/notifications keep working
+            meetingPoint: addr ?? (id ? meetingPoint : ""),
+          })
+        }
+        placeholder="Ej: Chase Bank 74 & Roosevelt"
+      />
     </SectionCard>
   );
 }
