@@ -30,6 +30,7 @@ import {
   buildTemplatePatch,
   type QuickTemplateId,
 } from "./quick-templates";
+import { QuickCreateReadinessHints } from "./QuickCreateReadinessHints";
 
 interface Props {
   displayName: string;
@@ -44,6 +45,10 @@ interface Props {
   formState: ShiftFormState;
   /** Existing patch handler from ShiftFormFields. No new write paths. */
   onPatch: (patch: Partial<ShiftFormState>) => void;
+  /** Parsed slots number for readiness hints. */
+  slotsNum: number;
+  /** Whether draft save is available in this context. */
+  isDraftContext?: boolean;
 }
 
 interface GroupDef {
@@ -65,6 +70,8 @@ export function QuickCreateWorkspace({
   advanced,
   formState,
   onPatch,
+  slotsNum,
+  isDraftContext = false,
 }: Props) {
   const [open, setOpen] = useState<string[]>([]);
   const [appliedId, setAppliedId] = useState<QuickTemplateId | null>(null);
@@ -190,6 +197,13 @@ export function QuickCreateWorkspace({
           })}
         </div>
       </div>
+
+      {/* Readiness hints — non-blocking, derived from formState only */}
+      <QuickCreateReadinessHints
+        formState={formState}
+        slotsNum={slotsNum}
+        isDraftContext={isDraftContext}
+      />
 
       {/* Primary — protagonist card, always visible */}
       <div>
