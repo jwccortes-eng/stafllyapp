@@ -92,7 +92,10 @@ export function ShiftFormShell({
   summary,
   publishReview,
 }: Props) {
-  const headerTitle = mode === "create" ? "Nuevo turno" : "Editar turno";
+  const headerTitle = mode === "create" ? "Nuevo turno rápido" : "Editar turno";
+  const headerSubtitle = mode === "create"
+    ? "Empieza con lo esencial o usa una plantilla."
+    : "Configura los detalles del turno.";
   const defaultSaveLabel = mode === "create"
     ? (onSaveDraft ? "Publish" : "Crear turno")
     : "Guardar cambios";
