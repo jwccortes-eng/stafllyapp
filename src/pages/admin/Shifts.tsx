@@ -2071,9 +2071,12 @@ function DesktopShifts() {
       {canEdit && (
         <button
           onClick={() => { resetForm(); setCreateOpen(true); }}
-          className="fixed bottom-6 right-6 z-40 h-14 w-14 rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 hover:scale-105 active:scale-95 transition-all duration-200 flex items-center justify-center"
+          title="Crear turno rápido con plantilla"
+          aria-label="Crear turno rápido con plantilla"
+          className="group fixed bottom-6 right-6 z-40 h-14 pl-4 pr-5 rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 hover:scale-[1.03] active:scale-95 transition-all duration-200 flex items-center gap-2"
         >
-          <Plus className="h-6 w-6" />
+          <Plus className="h-5 w-5" />
+          <span className="text-sm font-semibold">Turno rápido</span>
         </button>
       )}
 
