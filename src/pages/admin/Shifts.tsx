@@ -1957,7 +1957,18 @@ function DesktopShifts() {
       </div>
 
       {/* ── CONTENT ── */}
+      {canEdit && (
+        <div className="flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/[0.04] px-3 py-2 text-[11px] text-muted-foreground">
+          <Plus className="h-3.5 w-3.5 text-primary shrink-0" />
+          <span>
+            <span className="font-semibold text-foreground">Tip:</span>{" "}
+            haz click en <span className="font-mono bg-muted/60 px-1 rounded">+</span> sobre una fecha del calendario
+            para crear un turno rápido con plantilla.
+          </span>
+        </div>
+      )}
       <div className="relative rounded-2xl bg-card border border-border/40 shadow-xs p-4 sm:p-5 min-h-[420px]">
+
         {/* Subtle refetch indicator — keeps prior data visible to avoid layout shift */}
         {isRefetching && !loading && (
           <div className="absolute top-3 right-3 z-10 flex items-center gap-1.5 text-[10px] text-muted-foreground/70 bg-card/80 backdrop-blur px-2 py-1 rounded-lg border border-border/30">
@@ -2071,9 +2082,12 @@ function DesktopShifts() {
       {canEdit && (
         <button
           onClick={() => { resetForm(); setCreateOpen(true); }}
-          className="fixed bottom-6 right-6 z-40 h-14 w-14 rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 hover:scale-105 active:scale-95 transition-all duration-200 flex items-center justify-center"
+          title="Crear turno rápido con plantilla"
+          aria-label="Crear turno rápido con plantilla"
+          className="group fixed bottom-6 right-6 z-40 h-14 pl-4 pr-5 rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 hover:scale-[1.03] active:scale-95 transition-all duration-200 flex items-center gap-2"
         >
-          <Plus className="h-6 w-6" />
+          <Plus className="h-5 w-5" />
+          <span className="text-sm font-semibold">Turno rápido</span>
         </button>
       )}
 
