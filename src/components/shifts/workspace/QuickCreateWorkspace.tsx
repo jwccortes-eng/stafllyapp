@@ -70,6 +70,8 @@ export function QuickCreateWorkspace({
   advanced,
   formState,
   onPatch,
+  slotsNum,
+  isDraftContext = false,
 }: Props) {
   const [open, setOpen] = useState<string[]>([]);
   const [appliedId, setAppliedId] = useState<QuickTemplateId | null>(null);
