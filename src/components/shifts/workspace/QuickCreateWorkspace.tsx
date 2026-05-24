@@ -198,6 +198,13 @@ export function QuickCreateWorkspace({
         </div>
       </div>
 
+      {/* Readiness hints — non-blocking, derived from formState only */}
+      <QuickCreateReadinessHints
+        formState={formState}
+        slotsNum={slotsNum}
+        isDraftContext={isDraftContext}
+      />
+
       {/* Primary — protagonist card, always visible */}
       <div>
         <p className="text-[10px] uppercase tracking-wider text-muted-foreground/70 font-semibold mb-1.5 px-1">
