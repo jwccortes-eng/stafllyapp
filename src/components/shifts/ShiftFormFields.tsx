@@ -519,6 +519,8 @@ export function ShiftFormFields({
               ? "Generado automáticamente desde cliente, tipo y hora. Puedes asignar una etiqueta interna en Más detalles."
               : "Etiqueta interna definida manualmente."
           }
+          formState={v}
+          onPatch={handlePatch}
           primary={basicInfoNode}
           team={teamNode}
           location={
@@ -531,6 +533,7 @@ export function ShiftFormFields({
           pay={payNode}
           advanced={advancedNode}
         />
+
       );
     }
 
