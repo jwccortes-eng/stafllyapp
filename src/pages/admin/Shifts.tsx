@@ -453,6 +453,7 @@ function DesktopShifts() {
   const [meetingTime, setMeetingTime] = useState<string>("");
   const [meetingPointLocationId, setMeetingPointLocationId] = useState<string | null>(null);
   const [jobSiteLocationId, setJobSiteLocationId] = useState<string | null>(null);
+  const [jobSiteAddress, setJobSiteAddress] = useState<string>("");
   const [repeatConfig, setRepeatConfig] = useState<RepeatConfig>(DEFAULT_REPEAT);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [copyingWeek, setCopyingWeek] = useState(false);
@@ -666,7 +667,7 @@ function DesktopShifts() {
     setTransportRequired(false); setCarCapacity("5"); setTransportNotes(""); setDriverEmployeeId("");
     setClockMethod("both");
     setAttendanceMode("clock"); setMeetingTime("");
-    setMeetingPointLocationId(null); setJobSiteLocationId(null);
+    setMeetingPointLocationId(null); setJobSiteLocationId(null); setJobSiteAddress("");
     setNewLocationName(""); setNewLocationAddress(""); setShowAddLocation(false);
     setRepeatConfig(DEFAULT_REPEAT);
   };
@@ -681,7 +682,7 @@ function DesktopShifts() {
     attendanceMode, meetingTime,
     transportRequired, carCapacity, transportNotes, driverEmployeeId,
     selectedEmployees,
-    meetingPointLocationId, jobSiteLocationId,
+    meetingPointLocationId, jobSiteLocationId, jobSiteAddress,
   }), [
     title, date, startTime, endTime, slots,
     clientId, locationId, notes, claimable,
@@ -690,7 +691,7 @@ function DesktopShifts() {
     attendanceMode, meetingTime,
     transportRequired, carCapacity, transportNotes, driverEmployeeId,
     selectedEmployees,
-    meetingPointLocationId, jobSiteLocationId,
+    meetingPointLocationId, jobSiteLocationId, jobSiteAddress,
   ]);
 
   const createAutosave = useShiftDraftAutosave({
@@ -720,6 +721,7 @@ function DesktopShifts() {
     setSelectedEmployees(d.selectedEmployees);
     setMeetingPointLocationId(d.meetingPointLocationId);
     setJobSiteLocationId(d.jobSiteLocationId);
+    setJobSiteAddress(d.jobSiteAddress ?? "");
   };
 
 
@@ -875,6 +877,7 @@ function DesktopShifts() {
       status: initialStatus,
       meeting_point_location_id: meetingPointLocationId || null,
       job_site_location_id: jobSiteLocationId || null,
+      job_site_address: jobSiteAddress.trim() || null,
       // New lifecycle column — single source of truth for draft visibility.
       publication_status: isDraft ? "draft" : "published",
       published_at: isDraft ? null : new Date().toISOString(),
@@ -2103,7 +2106,7 @@ function DesktopShifts() {
           attendanceMode, meetingTime,
           transportRequired, carCapacity, transportNotes, driverEmployeeId,
           selectedEmployees,
-          meetingPointLocationId, jobSiteLocationId,
+          meetingPointLocationId, jobSiteLocationId, jobSiteAddress,
         }}
         onPatch={(patch) => {
           if (patch.title !== undefined) setTitle(patch.title);
@@ -2131,6 +2134,7 @@ function DesktopShifts() {
           if (patch.selectedEmployees !== undefined) setSelectedEmployees(patch.selectedEmployees);
           if (patch.meetingPointLocationId !== undefined) setMeetingPointLocationId(patch.meetingPointLocationId);
           if (patch.jobSiteLocationId !== undefined) setJobSiteLocationId(patch.jobSiteLocationId);
+          if (patch.jobSiteAddress !== undefined) setJobSiteAddress(patch.jobSiteAddress);
         }}
         clients={clients}
         locations={locations}
@@ -2370,7 +2374,7 @@ function DesktopShifts() {
           assignedCount,
           slotsNum: s.slots ?? 0,
           clientName: client?.name ?? null,
-          jobSiteLabel: jobLoc?.name ?? null,
+          jobSiteLabel: jobLoc?.name ?? s.job_site_address ?? null,
           meetingPointLabel: meetingLoc?.name ?? (s.meeting_point || null),
         });
         return (
