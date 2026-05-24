@@ -521,6 +521,8 @@ export function ShiftFormFields({
           }
           formState={v}
           onPatch={handlePatch}
+          slotsNum={signals.slotsNum}
+          isDraftContext={true}
           primary={basicInfoNode}
           team={teamNode}
           location={
@@ -533,7 +535,6 @@ export function ShiftFormFields({
           pay={payNode}
           advanced={advancedNode}
         />
-
       );
     }
 
