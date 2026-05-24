@@ -220,8 +220,8 @@ function CreateShiftDialogInline(props: {
       isDirty={props.isDirty}
       onDiscard={props.onDiscard}
       saveDisabled={!v.date}
-      saveLabel="Publish"
-      draftLabel="Save draft"
+      saveLabel="Publicar turno"
+      draftLabel="Guardar borrador"
       onSave={props.onRequestSave}
       onSaveDraft={props.onSaveDraft}
       summary={summary}

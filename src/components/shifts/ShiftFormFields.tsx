@@ -28,6 +28,7 @@ import { PaySection } from "./form/PaySection";
 import { AdvancedDetailsSection } from "./form/AdvancedDetailsSection";
 import { ShiftSummaryPanel } from "./form/ShiftSummaryPanel";
 import { ShiftWorkspaceLayout } from "./workspace/ShiftWorkspaceLayout";
+import { QuickCreateWorkspace } from "./workspace/QuickCreateWorkspace";
 import { buildShiftDisplayName, isAutoDisplayName } from "@/lib/shifts/display-name";
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -505,6 +506,34 @@ export function ShiftFormFields({
     };
     const displayName = buildShiftDisplayName(displayNameInput);
     const auto = isAutoDisplayName(displayNameInput);
+
+    // CREATE — premium quick-create flow: primary card first, secondary
+    // sections collapsed into accordion below so the operator can ship a
+    // shift in seconds and complete details later.
+    if (mode === "create") {
+      return (
+        <QuickCreateWorkspace
+          displayName={displayName}
+          displayNameHint={
+            auto
+              ? "Generado automáticamente desde cliente, tipo y hora. Puedes asignar una etiqueta interna en Más detalles."
+              : "Etiqueta interna definida manualmente."
+          }
+          primary={basicInfoNode}
+          team={teamNode}
+          location={
+            <>
+              {jobSiteNode}
+              {meetingPointsNode}
+            </>
+          }
+          transportation={transportationNode}
+          pay={payNode}
+          advanced={advancedNode}
+        />
+      );
+    }
+
     return (
       <ShiftWorkspaceLayout
         displayName={displayName}
