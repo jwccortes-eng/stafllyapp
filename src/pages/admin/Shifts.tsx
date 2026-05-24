@@ -1988,8 +1988,6 @@ function DesktopShifts() {
             onDropOnShift={handleDropOnShift}
             onDuplicateToDay={handleDuplicateToDay}
             onAddShift={canEdit ? handleAddShiftFromCalendar : undefined}
-            onQuickCreate={canEdit ? handleQuickCreate : undefined}
-            onOpenFull={canEdit ? handleOpenFullWithPrefill : undefined}
           />
         ) : viewMode === "week" ? (
           weekViewMode === "job" ? (
@@ -2028,8 +2026,6 @@ function DesktopShifts() {
               onDropOnShift={handleDropOnShift}
               onDuplicateToDay={handleDuplicateToDay}
               onAddShift={canEdit ? handleAddShiftFromCalendar : undefined}
-              onQuickCreate={canEdit ? handleQuickCreate : undefined}
-              onOpenFull={canEdit ? handleOpenFullWithPrefill : undefined}
             />
           )
         ) : viewMode === "month" ? (
@@ -2043,8 +2039,6 @@ function DesktopShifts() {
             onShiftClick={handleShiftClick}
             onDropOnShift={handleDropOnShift}
             onAddShift={canEdit ? handleAddShiftFromCalendar : undefined}
-            onQuickCreate={canEdit ? handleQuickCreate : undefined}
-            onOpenFull={canEdit ? handleOpenFullWithPrefill : undefined}
             availabilityConfigs={availConfigs}
             availabilityOverrides={availOverrides}
           />
