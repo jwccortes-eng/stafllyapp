@@ -2026,8 +2026,6 @@ function DesktopShifts() {
               onDropOnShift={handleDropOnShift}
               onDuplicateToDay={handleDuplicateToDay}
               onAddShift={canEdit ? handleAddShiftFromCalendar : undefined}
-              onQuickCreate={canEdit ? handleQuickCreate : undefined}
-              onOpenFull={canEdit ? handleOpenFullWithPrefill : undefined}
             />
           )
         ) : viewMode === "month" ? (
