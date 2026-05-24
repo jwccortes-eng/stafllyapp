@@ -76,12 +76,12 @@ export function QuickCreateReadinessHints({
       },
       {
         id: "location",
-        label: "Job site / ubicación",
+        label: "Job site / dirección",
         icon: MapPin,
-        ok: !!formState.locationId || !!formState.jobSiteLocationId,
+        ok: !!formState.locationId || !!formState.jobSiteLocationId || !!formState.jobSiteAddress.trim(),
       },
     ],
-    [formState.date, formState.startTime, formState.endTime, formState.clientId, formState.locationId, formState.jobSiteLocationId, slotsNum],
+    [formState.date, formState.startTime, formState.endTime, formState.clientId, formState.locationId, formState.jobSiteLocationId, formState.jobSiteAddress, slotsNum],
   );
 
   const recommendedChecks: CheckItem[] = useMemo(
