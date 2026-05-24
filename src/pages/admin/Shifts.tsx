@@ -2039,8 +2039,6 @@ function DesktopShifts() {
             onShiftClick={handleShiftClick}
             onDropOnShift={handleDropOnShift}
             onAddShift={canEdit ? handleAddShiftFromCalendar : undefined}
-            onQuickCreate={canEdit ? handleQuickCreate : undefined}
-            onOpenFull={canEdit ? handleOpenFullWithPrefill : undefined}
             availabilityConfigs={availConfigs}
             availabilityOverrides={availOverrides}
           />
