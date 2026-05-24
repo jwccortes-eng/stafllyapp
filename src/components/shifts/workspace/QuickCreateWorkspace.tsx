@@ -6,12 +6,16 @@
  * surface immediately. Everything else lives in collapsible groups below so
  * the form feels calm, not like a spreadsheet.
  *
- * Pure layout — no business logic, no state mutations. Receives the existing
- * memoized section nodes from ShiftFormFields and arranges them.
+ * v3 — adds optional "Plantilla rápida" chip rail above the primary card.
+ * Templates are frontend-only and apply via the existing onPatch path with
+ * "fill empty only" semantics, preserving the calendar-selected date/time.
+ *
+ * Pure layout — no business logic, no state mutations beyond forwarding the
+ * template patch to the existing onPatch handler.
  */
 import type { ReactNode } from "react";
 import { useState } from "react";
-import { Users, MapPin, Car, DollarSign, Settings2, Sparkles } from "lucide-react";
+import { Users, MapPin, Car, DollarSign, Settings2, Sparkles, Check } from "lucide-react";
 import {
   Accordion,
   AccordionContent,
@@ -19,6 +23,13 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import type { ShiftFormState } from "../ShiftFormFields";
+import {
+  QUICK_TEMPLATES,
+  buildTemplatePatch,
+  type QuickTemplateId,
+} from "./quick-templates";
 
 interface Props {
   displayName: string;
@@ -29,6 +40,10 @@ interface Props {
   transportation: ReactNode;
   pay: ReactNode;
   advanced: ReactNode;
+  /** Current form state — used for "fill empty only" template semantics. */
+  formState: ShiftFormState;
+  /** Existing patch handler from ShiftFormFields. No new write paths. */
+  onPatch: (patch: Partial<ShiftFormState>) => void;
 }
 
 interface GroupDef {
@@ -48,8 +63,29 @@ export function QuickCreateWorkspace({
   transportation,
   pay,
   advanced,
+  formState,
+  onPatch,
 }: Props) {
   const [open, setOpen] = useState<string[]>([]);
+  const [appliedId, setAppliedId] = useState<QuickTemplateId | null>(null);
+
+  const handleApplyTemplate = (id: QuickTemplateId) => {
+    const tpl = QUICK_TEMPLATES.find((t) => t.id === id);
+    if (!tpl) return;
+    const patch = buildTemplatePatch(formState, tpl);
+    if (Object.keys(patch).length === 0) {
+      toast.info(`Plantilla "${tpl.label}" no aplicó cambios`, {
+        description: "Los campos ya tenían valores propios. No se sobrescribió nada.",
+      });
+      setAppliedId(id);
+      return;
+    }
+    onPatch(patch);
+    setAppliedId(id);
+    toast.success(`Plantilla aplicada: ${tpl.label}`, {
+      description: "Ajusta los campos como necesites antes de publicar.",
+    });
+  };
 
   const groups: GroupDef[] = [
     {
@@ -112,6 +148,47 @@ export function QuickCreateWorkspace({
           Completa fecha, hora y personal requerido. Puedes asignar equipo,
           transporte y detalles después.
         </p>
+      </div>
+
+      {/* Plantilla rápida — optional, frontend-only presets */}
+      <div className="rounded-2xl border border-border/40 bg-card overflow-hidden">
+        <div className="px-4 py-2.5 border-b border-border/30 flex items-center justify-between gap-2">
+          <div className="min-w-0">
+            <p className="text-[13px] font-semibold leading-tight">Plantilla rápida</p>
+            <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug">
+              Empieza con una base y ajusta lo que necesites. Opcional.
+            </p>
+          </div>
+          <span className="text-[10px] uppercase tracking-wider text-muted-foreground/70 font-semibold shrink-0">
+            Opcional
+          </span>
+        </div>
+        <div className="p-3 flex flex-wrap gap-2">
+          {QUICK_TEMPLATES.map((t) => {
+            const isApplied = appliedId === t.id;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => handleApplyTemplate(t.id)}
+                title={t.hint}
+                className={cn(
+                  "group inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12px] font-medium transition-colors",
+                  "hover:bg-primary/[0.06] hover:border-primary/40",
+                  isApplied
+                    ? "bg-primary/10 border-primary/50 text-foreground"
+                    : "bg-background border-border/50 text-muted-foreground",
+                )}
+              >
+                <span aria-hidden className="text-[13px] leading-none">
+                  {t.emoji}
+                </span>
+                <span>{t.label}</span>
+                {isApplied && <Check className="h-3 w-3 text-primary" />}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Primary — protagonist card, always visible */}
