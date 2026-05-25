@@ -1111,10 +1111,10 @@ function AdminDashboardDesktop() {
              <div className="h-7 w-7 rounded-lg bg-warning/[0.08] flex items-center justify-center">
                <Activity className="h-3.5 w-3.5 text-warning" />
             </div>
-            <h2 className="text-sm font-semibold font-heading">Recent Activity</h2>
+            <h2 className="text-sm font-semibold font-heading">Actividad reciente</h2>
           </div>
           <Link to="/app/activity" className="text-[11px] text-primary font-medium hover:underline flex items-center gap-0.5 group">
-            View all <ChevronRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
+            Ver todo <ChevronRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
           </Link>
         </div>
         <Card className="rounded-2xl shadow-sm border-border/40">
@@ -1124,7 +1124,7 @@ function AdminDashboardDesktop() {
                 <div className="h-10 w-10 rounded-xl bg-muted/50 flex items-center justify-center mx-auto mb-2">
                   <Activity className="h-4 w-4 opacity-30" />
                 </div>
-                <p className="text-[11px] font-medium">No recent activity</p>
+                <p className="text-[11px] font-medium">Sin actividad reciente</p>
               </div>
             ) : (
               <div className="divide-y divide-border/30">
