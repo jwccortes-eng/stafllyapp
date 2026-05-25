@@ -428,7 +428,7 @@ function ContactButtons({ phone }: { phone: string | null }) {
     <div className="flex items-center gap-1 shrink-0">
       <a href={`tel:${raw}`} onClick={(e) => e.stopPropagation()}
         className="h-9 w-9 inline-flex items-center justify-center rounded-lg bg-primary/10 text-primary active:scale-95"
-        aria-label="Call"><Phone className="h-4 w-4" /></a>
+        aria-label="Llamar"><Phone className="h-4 w-4" /></a>
       <a href={`https://wa.me/${wa}`} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}
         className="h-9 w-9 inline-flex items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 active:scale-95"
         aria-label="WhatsApp"><MessageCircle className="h-4 w-4" /></a>
