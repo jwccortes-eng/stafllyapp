@@ -1211,7 +1211,7 @@ function AdminDashboardDesktop() {
                 </div>
                 <div className="flex items-center gap-3 mt-3 pt-3 border-t border-border/30">
                   <span className={cn("text-[10px] font-medium", c.is_active ? "text-earning" : "text-muted-foreground")}>
-                    {c.is_active ? "● Active" : "○ Inactive"}
+                    {c.is_active ? "● Activa" : "○ Inactiva"}
                   </span>
                   <ExternalLink className="h-3 w-3 text-muted-foreground/30 group-hover:text-primary ml-auto transition-colors" />
                 </div>
