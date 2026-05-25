@@ -2338,7 +2338,7 @@ function DesktopShifts() {
       <ModuleSettingsSheet
         open={settingsOpen}
         onOpenChange={setSettingsOpen}
-        title="Shift Settings"
+        title="Configuración de turnos"
         icon={Settings2}
         sections={shiftSettingsSections}
         config={shiftsConfig as any}
