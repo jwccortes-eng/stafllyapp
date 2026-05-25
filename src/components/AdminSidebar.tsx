@@ -37,21 +37,21 @@ interface LinkDef {
   roles?: string[];
 }
 
-/* ── Company-scoped links — StaflyCore IA v1 (6 grupos) ── */
+/* ── Company-scoped links — StaflyCore IA v1.1 (7 grupos, operator-first) ── */
 const COMPANY_LINKS: LinkDef[] = [
   // A) OPERACIÓN DIARIA
   { to: "/app", icon: LayoutDashboard, label: "Centro de mando", module: null, end: true, section: "Operación diaria" },
-  { to: "/app/ops-center", icon: Radio, label: "Operación", module: null, section: "Operación diaria" },
+  { to: "/app/ops-center", icon: Radio, label: "Operaciones del día", module: null, section: "Operación diaria" },
   { to: "/app/shifts", icon: CalendarDays, label: "Turnos", module: "shifts", section: "Operación diaria" },
   { to: "/app/attendance", icon: ShieldCheck, label: "Asistencia", module: null, section: "Operación diaria" },
   { to: "/app/timeclock", icon: Clock, label: "Reloj", module: "shifts", section: "Operación diaria" },
-  { to: "/app/live-map", icon: MapIcon, label: "Live Map", module: null, section: "Operación diaria" },
+  { to: "/app/live-map", icon: MapIcon, label: "Mapa en vivo", module: null, section: "Operación diaria" },
   { to: "/app/front-desk", icon: ContactRound, label: "Front Desk", module: null, section: "Operación diaria" },
 
   // B) EQUIPO
   { to: "/app/employees", icon: Users, label: "Equipo", module: "employees", section: "Equipo" },
   { to: "/app/documents", icon: FileText, label: "Documentos", module: null, section: "Equipo", badge: "documents_review" },
-  { to: "/app/document-intake", icon: FileText, label: "Bandeja de documentos", module: null, section: "Equipo" },
+  { to: "/app/document-intake", icon: Inbox, label: "Bandeja de documentos", module: null, section: "Equipo" },
   { to: "/app/compliance-center", icon: ShieldCheck, label: "Cumplimiento", module: null, section: "Equipo" },
   { to: "/app/applications", icon: UserPlus2, label: "Aplicaciones", module: null, section: "Equipo" },
   { to: "/app/invite", icon: UserPlus, label: "Invitaciones", module: null, section: "Equipo" },
@@ -64,29 +64,31 @@ const COMPANY_LINKS: LinkDef[] = [
   { to: "/app/invoicing/clients", icon: Receipt, label: "Clientes de facturación", module: "tenant_invoicing", section: "Clientes y lugares" },
   { to: "/app/invoicing/service-blocks", icon: ClipboardList, label: "Bloques de servicio", module: "tenant_invoicing", section: "Clientes y lugares" },
 
-  // D) PAYROLL & FINANZAS
-  { to: "/app/periods", icon: CalendarDays, label: "Periodos", module: "periods", section: "Payroll & Finanzas" },
-  { to: "/app/compensation-validation", icon: DollarSign, label: "Compensación", module: null, section: "Payroll & Finanzas" },
-  { to: "/app/movements", icon: DollarSign, label: "Ajustes", module: "movements", section: "Payroll & Finanzas" },
-  { to: "/app/advances-loans", icon: Banknote, label: "Avances", module: null, section: "Payroll & Finanzas" },
-  { to: "/app/concepts", icon: Tags, label: "Conceptos", module: "concepts", section: "Payroll & Finanzas" },
-  { to: "/app/payroll-reconciliation", icon: GitCompareArrows, label: "Reconciliación", module: null, section: "Payroll & Finanzas" },
-  { to: "/app/weekly-payroll-reconciliation", icon: Scale, label: "Recon. semanal", module: null, section: "Payroll & Finanzas" },
-  { to: "/app/summary", icon: FileSpreadsheet, label: "Reportes", module: "summary", section: "Payroll & Finanzas" },
-  { to: "/app/invoicing/invoices", icon: FileText, label: "Facturas", module: "tenant_invoicing", section: "Payroll & Finanzas" },
+  // D) PAYROLL Y FINANZAS
+  { to: "/app/periods", icon: CalendarDays, label: "Periodos", module: "periods", section: "Payroll y finanzas" },
+  { to: "/app/compensation-validation", icon: DollarSign, label: "Compensación", module: null, section: "Payroll y finanzas" },
+  { to: "/app/movements", icon: DollarSign, label: "Ajustes", module: "movements", section: "Payroll y finanzas" },
+  { to: "/app/advances-loans", icon: Banknote, label: "Avances", module: null, section: "Payroll y finanzas" },
+  { to: "/app/concepts", icon: Tags, label: "Conceptos", module: "concepts", section: "Payroll y finanzas" },
+  { to: "/app/payroll-reconciliation", icon: GitCompareArrows, label: "Reconciliación", module: null, section: "Payroll y finanzas" },
+  { to: "/app/weekly-payroll-reconciliation", icon: Scale, label: "Recon. semanal", module: null, section: "Payroll y finanzas" },
+  { to: "/app/invoicing/invoices", icon: FileText, label: "Facturas", module: "tenant_invoicing", section: "Payroll y finanzas" },
 
-  // E) COMUNICACIÓN
+  // E) REPORTES
+  { to: "/app/summary", icon: FileSpreadsheet, label: "Reportes de payroll", module: "summary", section: "Reportes" },
+  { to: "/app/import-review", icon: FileSearch, label: "Historial de importación", module: null, section: "Reportes", roles: ["developer", "owner", "company_owner", "admin"] },
+
+  // F) COMUNICACIÓN
   { to: "/app/announcements", icon: Megaphone, label: "Anuncios", module: "announcements", section: "Comunicación" },
   { to: "/app/chat", icon: MessageCircle, label: "Mensajes", module: null, section: "Comunicación" },
   { to: "/app/notifications", icon: Bell, label: "Notificaciones", module: null, section: "Comunicación" },
   { to: "/app/quality", icon: Star, label: "Reseñas", module: null, section: "Comunicación" },
 
-  // F) SISTEMA
-  { to: "/app/payroll-settings", icon: Settings2, label: "Configuración", module: null, section: "Sistema" },
-  { to: "/app/admin", icon: Wrench, label: "Administración", module: null, section: "Sistema", roles: ["developer", "owner", "company_owner"] },
-  { to: "/app/kiosk", icon: Monitor, label: "Kiosk", module: null, section: "Sistema" },
-  { to: "/app/migration", icon: ArrowLeftRight, label: "Migración", module: null, section: "Sistema", roles: ["developer", "owner"] },
-  { to: "/app/import-review", icon: FileSearch, label: "Revisión de import", module: null, section: "Sistema", roles: ["developer", "owner"] },
+  // G) CONFIGURACIÓN
+  { to: "/app/payroll-settings", icon: Settings2, label: "Ajustes de payroll", module: null, section: "Configuración" },
+  { to: "/app/kiosk", icon: Monitor, label: "Kiosk", module: null, section: "Configuración" },
+  { to: "/app/admin", icon: Wrench, label: "Administración", module: null, section: "Configuración", roles: ["developer", "owner", "company_owner"] },
+  { to: "/app/migration", icon: ArrowLeftRight, label: "Migración (interno)", module: null, section: "Configuración", roles: ["developer", "owner"] },
 ];
 
 /* ── Global/Platform-level links (developer/owner only) ── */
@@ -96,13 +98,13 @@ const GLOBAL_LINKS: LinkDef[] = [
   { to: "/app/directory", icon: Users, label: "Directorio", module: null, section: "Plataforma" },
   { to: "/app/activity", icon: FileText, label: "Actividad", module: null, section: "Plataforma" },
   { to: "/app/notifications", icon: Bell, label: "Notificaciones", module: null, section: "Plataforma" },
-  { to: "/app/admin", icon: Wrench, label: "Administración", module: null, section: "Sistema" },
-  { to: "/app/billing", icon: Receipt, label: "Facturación", module: null, section: "Sistema" },
-  { to: "/app/system-health", icon: BarChart3, label: "Estado del sistema", module: null, section: "Sistema" },
+  { to: "/app/admin", icon: Wrench, label: "Administración", module: null, section: "Configuración" },
+  { to: "/app/billing", icon: Receipt, label: "Facturación", module: null, section: "Configuración" },
+  { to: "/app/system-health", icon: BarChart3, label: "Estado del sistema", module: null, section: "Configuración" },
 ];
 
-const COMPANY_SECTION_ORDER = ["Operación diaria", "Equipo", "Clientes y lugares", "Payroll & Finanzas", "Comunicación", "Sistema"];
-const GLOBAL_SECTION_ORDER = ["Plataforma", "Sistema"];
+const COMPANY_SECTION_ORDER = ["Operación diaria", "Equipo", "Clientes y lugares", "Payroll y finanzas", "Reportes", "Comunicación", "Configuración"];
+const GLOBAL_SECTION_ORDER = ["Plataforma", "Configuración"];
 
 export default function AdminSidebar() {
   const { signOut, role: globalRole, hasModuleAccess, user, fullName, getRoleForCompany, canAccessAdminForCompany } = useAuth();
