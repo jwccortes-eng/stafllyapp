@@ -771,48 +771,48 @@ function AlertDetailSheet({
 
             <div className="rounded-2xl border border-border bg-card divide-y divide-border/50">
               <div className="flex items-center justify-between px-4 py-3 text-sm">
-                <span className="text-muted-foreground">Issue</span>
+                <span className="text-muted-foreground">Incidencia</span>
                 <span className="font-medium text-foreground">{item.reason}</span>
               </div>
               <div className="flex items-center justify-between px-4 py-3 text-sm">
-                <span className="text-muted-foreground">Clock-in</span>
+                <span className="text-muted-foreground">Entrada</span>
                 <span className="font-medium text-foreground tabular-nums">
                   {format(new Date(item.entry.clock_in), "PPp", { locale: enUS })}
                 </span>
               </div>
               <div className="flex items-center justify-between px-4 py-3 text-sm">
-                <span className="text-muted-foreground">Elapsed</span>
+                <span className="text-muted-foreground">Transcurrido</span>
                 <span className="font-medium text-foreground tabular-nums">
                   {formatDuration(item.minutes)}
                 </span>
               </div>
               {item.entry.scheduled_shifts && (
                 <div className="flex items-center justify-between px-4 py-3 text-sm">
-                  <span className="text-muted-foreground">Shift</span>
+                  <span className="text-muted-foreground">Turno</span>
                   <span className="font-medium text-foreground truncate ml-2">
                     {item.entry.scheduled_shifts.title}
                   </span>
                 </div>
               )}
               <div className="flex items-center justify-between px-4 py-3 text-sm">
-                <span className="text-muted-foreground">Status</span>
+                <span className="text-muted-foreground">Estado</span>
                 <span className="font-medium text-foreground">
-                  {item.entry.clock_out ? "Closed" : "Open"}
+                  {item.entry.clock_out ? "Cerrado" : "Abierto"}
                 </span>
               </div>
             </div>
 
             <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-800 dark:text-amber-300">
-              <strong className="block font-semibold mb-0.5">Suggested action</strong>
+              <strong className="block font-semibold mb-0.5">Acción sugerida</strong>
               {item.type === "stale_open"
-                ? "Reach out to confirm the worker is no longer on shift, then review the entry in Time."
+                ? "Contacta a la persona para confirmar si ya no está trabajando, luego revisa el fichaje en el reloj."
                 : item.type === "very_long"
-                ? "Review the entry for accuracy — duration exceeds 16h."
+                ? "Revisa el fichaje — la duración supera las 16h."
                 : item.type === "needs_review"
-                ? "Open Approvals in Time to validate the entry."
+                ? "Abre Aprobaciones para validar el fichaje."
                 : item.type === "no_shift"
-                ? "Link this clock to a scheduled shift if needed."
-                : "Reach out to the worker and confirm whether they are still working."}
+                ? "Vincula este fichaje a un turno programado si aplica."
+                : "Contacta a la persona y confirma si sigue trabajando."}
             </div>
 
             {/* Primary actions: contact + review in Time */}
