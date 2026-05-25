@@ -373,7 +373,7 @@ function TodayView({ live, missing, closedToday }: {
 
 function WeekView({ rollup }: { rollup: { employee: Employee; trackedMin: number; openCount: number; entries: number }[] }) {
   if (rollup.length === 0) {
-    return <Empty text="No activity this week yet." />;
+    return <Empty text="Aún no hay actividad esta semana." />;
   }
   return (
     <Card className="rounded-2xl border border-border/60 shadow-sm">
