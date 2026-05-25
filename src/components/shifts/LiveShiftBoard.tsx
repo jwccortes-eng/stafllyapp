@@ -281,11 +281,18 @@ export function LiveShiftBoard({
   }, [rows, groups, slots]);
 
   const nextAction = useMemo(() => {
+    if (counts.noLlegaron > 0) {
+      return {
+        tone: "warning" as const,
+        icon: AlertTriangle,
+        text: `${counts.noLlegaron} sin fichar`,
+      };
+    }
     if (counts.faltaSalida > 0) {
       return {
-        tone: "danger" as const,
-        icon: AlertTriangle,
-        text: `Falta salida de ${counts.faltaSalida} ${counts.faltaSalida === 1 ? "persona" : "personas"}`,
+        tone: "warning" as const,
+        icon: Clock,
+        text: `Equipo fichado · pendiente salida de ${counts.faltaSalida} ${counts.faltaSalida === 1 ? "persona" : "personas"}`,
       };
     }
     if (counts.extras > 0) {
@@ -295,13 +302,6 @@ export function LiveShiftBoard({
         text: `Hay ${counts.extras} extra${counts.extras === 1 ? "" : "s"} sin asignar`,
       };
     }
-    if (counts.noLlegaron > 0) {
-      return {
-        tone: "warning" as const,
-        icon: AlertTriangle,
-        text: `${counts.noLlegaron} sin fichar`,
-      };
-    }
     if (counts.asignados < counts.required) {
       return {
         tone: "warning" as const,
@@ -309,18 +309,18 @@ export function LiveShiftBoard({
         text: `Faltan ${counts.required - counts.asignados} de ${counts.required} asignaciones`,
       };
     }
-    if (counts.fichados > 0 && counts.fichados === counts.asignados) {
+    if (counts.asignados > 0 && counts.fichados + counts.salidas === counts.asignados) {
+      if (pastEnd && counts.salidas === counts.asignados) {
+        return {
+          tone: "success" as const,
+          icon: ShieldCheck,
+          text: "Turno listo para cierre",
+        };
+      }
       return {
         tone: "info" as const,
         icon: CheckCircle2,
         text: "Todo el equipo está fichado",
-      };
-    }
-    if (pastEnd && counts.fichados === 0 && counts.salidas === counts.asignados) {
-      return {
-        tone: "success" as const,
-        icon: ShieldCheck,
-        text: "Listo para cierre del turno",
       };
     }
     return {
