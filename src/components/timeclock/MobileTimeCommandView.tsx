@@ -479,10 +479,10 @@ function AlertRow({ item, onOpen }: { item: AlertItem; onOpen: () => void }) {
     : item.type === "needs_review" ? "bg-violet-500/10 text-violet-700 border-violet-500/30"
     : "bg-sky-500/10 text-sky-700 border-sky-500/30";
   const label =
-    item.type === "stale_open" ? "Stale" :
-    item.type === "long_open" ? "Long" :
-    item.type === "very_long" ? "Long" :
-    item.type === "needs_review" ? "Review" : "No shift";
+    item.type === "stale_open" ? "Vencido" :
+    item.type === "long_open" ? "Largo" :
+    item.type === "very_long" ? "Muy largo" :
+    item.type === "needs_review" ? "Revisar" : "Sin turno";
   return (
     <li className="flex items-center gap-3 px-3.5 py-2.5 active:bg-muted/40 cursor-pointer" onClick={onOpen}>
       <EmployeeAvatar avatarUrl={item.employee.avatar_url} firstName={item.employee.first_name} lastName={item.employee.last_name} size="sm" />
