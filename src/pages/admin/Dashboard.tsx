@@ -1181,16 +1181,16 @@ function AdminDashboardDesktop() {
             {greeting}
           </p>
           <h1 className="text-xl md:text-2xl font-bold font-heading tracking-tight text-foreground">
-            {fullName || "Dashboard"}
+            {fullName || "Centro de mando"}
           </h1>
-          <p className="text-xs text-muted-foreground/70 mt-0.5">Global View — {companies.length} companies</p>
+          <p className="text-xs text-muted-foreground/70 mt-0.5">Vista global — {companies.length} empresas</p>
         </div>
 
         {/* Company grid */}
         <div>
           <div className="flex items-center gap-2 mb-3">
             <Crown className="h-4 w-4 text-warning" />
-            <h2 className="text-sm font-semibold font-heading text-foreground">Select a company to operate</h2>
+            <h2 className="text-sm font-semibold font-heading text-foreground">Selecciona una empresa para operar</h2>
             <Badge variant="outline" className="text-[10px] ml-1">{companies.length}</Badge>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
