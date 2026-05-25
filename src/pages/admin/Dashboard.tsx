@@ -997,11 +997,11 @@ function AdminDashboardDesktop() {
                 <div className="h-7 w-7 rounded-lg bg-primary/[0.08] flex items-center justify-center">
                   <TrendingUp className="h-3.5 w-3.5 text-primary" />
                 </div>
-                <CardTitle className="text-sm font-semibold font-heading">Payment Trends</CardTitle>
+                <CardTitle className="text-sm font-semibold font-heading">Tendencias de pago</CardTitle>
               </div>
               {hasPendingPeriods && (
                 <Badge variant="warning" className="text-[10px] gap-1">
-                  <AlertTriangle className="h-2.5 w-2.5" /> Periods without base payroll
+                  <AlertTriangle className="h-2.5 w-2.5" /> Periodos sin nómina base
                 </Badge>
               )}
             </div>
