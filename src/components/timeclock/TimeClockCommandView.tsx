@@ -594,15 +594,15 @@ export default function TimeClockCommandView() {
                         {r.employee.first_name} {r.employee.last_name}
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        {r.entries} entr{r.entries === 1 ? "y" : "ies"}
+                        {r.entries} {r.entries === 1 ? "fichaje" : "fichajes"}
                         {r.openCount > 0 && (
-                          <> · <span className="text-amber-700 font-semibold">{r.openCount} open</span></>
+                          <> · <span className="text-amber-700 font-semibold">{r.openCount} {r.openCount === 1 ? "abierto" : "abiertos"}</span></>
                         )}
                       </div>
                     </div>
                     <div className="text-right">
                       <div className="text-sm font-bold tabular-nums">{formatDuration(Math.max(0, r.trackedMin))}</div>
-                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">this week</div>
+                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">esta semana</div>
                     </div>
                     <ChevronRight className="h-4 w-4 text-muted-foreground" />
                   </li>
