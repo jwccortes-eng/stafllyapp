@@ -570,7 +570,7 @@ export default function TimeClockCommandView() {
             <div className="px-5 py-4 border-b border-border/50">
               <h3 className="font-heading text-base font-semibold tracking-tight">Esta semana</h3>
               <p className="text-xs text-muted-foreground">
-                Rollup semanal por trabajador — total tracked y open issues. Solo lectura.
+                Resumen semanal por persona — total registrado e incidencias abiertas. Solo lectura.
               </p>
             </div>
             {weekRollup.length === 0 ? (
