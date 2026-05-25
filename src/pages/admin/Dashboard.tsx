@@ -20,7 +20,7 @@ import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, AreaChart, Area, Legend } from "recharts";
 import { format, parseISO, formatDistanceToNow, startOfWeek, addDays } from "date-fns";
-import { enUS } from "date-fns/locale";
+import { enUS, es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useDashboardWidgets } from "@/hooks/useDashboardWidgets";
 import { DashboardWidgetSettings } from "@/components/DashboardWidgetSettings";
@@ -267,7 +267,7 @@ function WeeklyShiftPreview({ companyId, navigate }: { companyId: string; naviga
                 )}
                 {d.assigns.length > 4 && (
                   <p className="text-[10px] text-muted-foreground/50 text-center font-medium pt-0.5">
-                    +{d.assigns.length - 4} more
+                    +{d.assigns.length - 4} más
                   </p>
                 )}
               </div>
@@ -303,13 +303,13 @@ function QuickAction({ label, description, icon: Icon, to, accent, navigate }: {
 /* ─── Activity Item ─── */
 function ActivityRow({ item }: { item: any }) {
   const actionLabels: Record<string, string> = {
-    create: "created", update: "updated", delete: "deleted",
-    insert: "added", import: "imported", publish: "published",
+    create: "creó", update: "actualizó", delete: "eliminó",
+    insert: "agregó", import: "importó", publish: "publicó",
   };
   const entityLabels: Record<string, string> = {
-    employee: "employee", movement: "adjustment", period: "period",
-    concept: "concept", shift: "shift", announcement: "announcement",
-    import: "import", client: "client", location: "location",
+    employee: "empleado", movement: "ajuste", period: "periodo",
+    concept: "concepto", shift: "turno", announcement: "anuncio",
+    import: "importación", client: "cliente", location: "ubicación",
   };
   const iconMap: Record<string, any> = {
     employee: Users, movement: DollarSign, period: CalendarDays,
@@ -327,11 +327,11 @@ function ActivityRow({ item }: { item: any }) {
         <div className="min-w-0 flex-1">
           <p className="text-[11px] text-foreground leading-relaxed">
             <span className="font-semibold capitalize">{actionLabels[item.action] || item.action}</span>
-            {" "}a{" "}
+            {" "}
             <span className="font-medium">{entityLabels[item.entity_type] || item.entity_type}</span>
           </p>
           <p className="text-[10px] text-muted-foreground/50 mt-0.5">
-            {formatDistanceToNow(parseISO(item.created_at), { addSuffix: true, locale: enUS })}
+            {formatDistanceToNow(parseISO(item.created_at), { addSuffix: true, locale: es })}
           </p>
         </div>
       </div>
@@ -847,11 +847,11 @@ function AdminDashboardDesktop() {
     pending_requests: () => {
       const totalPending = pendingCounts.shiftRequests + pendingCounts.pendingMovements + pendingCounts.openTickets + pendingCounts.pendingAttendance + missingPhotoCount;
       const items = [
-        { label: "Shift requests", count: pendingCounts.shiftRequests, icon: ClipboardList, color: "text-primary", bg: "bg-primary/[0.08]", to: "/app/shift-requests" },
-        { label: "Pending adjustments", count: pendingCounts.pendingMovements, icon: DollarSign, color: "text-warning", bg: "bg-warning/[0.08]", to: "/app/movements" },
-        { label: "Open tickets", count: pendingCounts.openTickets, icon: AlertCircle, color: "text-warning", bg: "bg-warning/[0.08]", to: "/app/requests" },
-        { label: "Unconfirmed attendance", count: pendingCounts.pendingAttendance, icon: UserCheck, color: "text-earning", bg: "bg-earning/[0.08]", to: "/app/shifts" },
-        { label: "Missing profile photo", count: missingPhotoCount, icon: Camera, color: "text-muted-foreground", bg: "bg-muted/50", to: "/app/employees" },
+        { label: "Solicitudes de turno", count: pendingCounts.shiftRequests, icon: ClipboardList, color: "text-primary", bg: "bg-primary/[0.08]", to: "/app/shift-requests" },
+        { label: "Ajustes pendientes", count: pendingCounts.pendingMovements, icon: DollarSign, color: "text-warning", bg: "bg-warning/[0.08]", to: "/app/movements" },
+        { label: "Tickets abiertos", count: pendingCounts.openTickets, icon: AlertCircle, color: "text-warning", bg: "bg-warning/[0.08]", to: "/app/requests" },
+        { label: "Asistencia sin confirmar", count: pendingCounts.pendingAttendance, icon: UserCheck, color: "text-earning", bg: "bg-earning/[0.08]", to: "/app/shifts" },
+        { label: "Foto de perfil faltante", count: missingPhotoCount, icon: Camera, color: "text-muted-foreground", bg: "bg-muted/50", to: "/app/employees" },
       ];
       return (
         <Card className="rounded-2xl shadow-sm border-border/40 overflow-hidden">
@@ -861,7 +861,7 @@ function AdminDashboardDesktop() {
                 <div className="h-7 w-7 rounded-lg bg-warning/[0.08] flex items-center justify-center">
                   <Inbox className="h-3.5 w-3.5 text-warning" />
                 </div>
-                <CardTitle className="text-sm font-semibold font-heading">Pending</CardTitle>
+                <CardTitle className="text-sm font-semibold font-heading">Qué necesita atención</CardTitle>
                 {totalPending > 0 && (
                   <Badge variant="warning" className="text-[10px] h-5 px-1.5 rounded-full">
                     {totalPending}
@@ -876,8 +876,8 @@ function AdminDashboardDesktop() {
                 <div className="h-10 w-10 rounded-xl bg-earning/[0.08] flex items-center justify-center mx-auto mb-2">
                   <CheckCircle2 className="h-4 w-4 text-earning" />
                 </div>
-                <p className="text-xs font-medium text-earning">All caught up!</p>
-                <p className="text-[10px] text-muted-foreground/60 mt-0.5">No pending requests</p>
+                <p className="text-xs font-medium text-earning">Todo al día</p>
+                <p className="text-[10px] text-muted-foreground/60 mt-0.5">Sin pendientes por revisar</p>
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-2">
@@ -909,18 +909,18 @@ function AdminDashboardDesktop() {
       <div>
         <div className="flex items-center gap-2 mb-3">
           <Briefcase className="h-3.5 w-3.5 text-primary" />
-          <h2 className="text-sm font-semibold font-heading text-foreground">Commercial</h2>
+          <h2 className="text-sm font-semibold font-heading text-foreground">Comercial</h2>
         </div>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <KpiStatCard label="Active clients" value={commercialKpis.activeClients} subtitle="operating" icon={Building2} color="primary" onClick={() => navigate("/app/clients")} />
-          <KpiStatCard label="Open requests" value={commercialKpis.openRequests} subtitle="in pipeline" icon={ClipboardList} color="warning" onClick={() => navigate("/app/staffing-requests")} />
-          <KpiStatCard label="Receivable" value={`$${commercialKpis.unpaidTotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}`} subtitle={`${commercialKpis.unpaidInvoices} invoices`} icon={Receipt} color="earning" onClick={() => navigate("/app/invoices")} />
-          <KpiStatCard label="Overdue" value={`$${commercialKpis.overdueTotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}`} subtitle={`${commercialKpis.overdueInvoices} invoices`} icon={AlertTriangle} color="deduction" onClick={() => navigate("/app/invoices")} />
+          <KpiStatCard label="Clientes activos" value={commercialKpis.activeClients} subtitle="operando" icon={Building2} color="primary" onClick={() => navigate("/app/clients")} />
+          <KpiStatCard label="Solicitudes abiertas" value={commercialKpis.openRequests} subtitle="en pipeline" icon={ClipboardList} color="warning" onClick={() => navigate("/app/staffing-requests")} />
+          <KpiStatCard label="Por cobrar" value={`$${commercialKpis.unpaidTotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}`} subtitle={`${commercialKpis.unpaidInvoices} facturas`} icon={Receipt} color="earning" onClick={() => navigate("/app/invoices")} />
+          <KpiStatCard label="Vencidas" value={`$${commercialKpis.overdueTotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}`} subtitle={`${commercialKpis.overdueInvoices} facturas`} icon={AlertTriangle} color="deduction" onClick={() => navigate("/app/invoices")} />
         </div>
       </div>
     ),
     today_summary: () => {
-      const todayStr = new Date().toLocaleDateString("en-US", { weekday: "long", day: "numeric", month: "long" });
+      const todayStr = new Date().toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" });
       return (
         <Card className="rounded-2xl shadow-sm border-border/40 overflow-hidden">
           <CardHeader className="pb-3 px-5 pt-5">
@@ -930,12 +930,12 @@ function AdminDashboardDesktop() {
                    <Calendar className="h-3.5 w-3.5 text-primary" />
                 </div>
                 <div>
-                  <CardTitle className="text-sm font-semibold font-heading">Today</CardTitle>
+                  <CardTitle className="text-sm font-semibold font-heading">Operación de hoy</CardTitle>
                   <p className="text-[10px] text-muted-foreground/60 capitalize">{todayStr}</p>
                 </div>
               </div>
               <Link to="/app/today" className="text-[11px] text-primary font-medium hover:underline flex items-center gap-0.5 group">
-                View detail <ChevronRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
+                Ver detalle <ChevronRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
               </Link>
             </div>
           </CardHeader>
@@ -944,17 +944,17 @@ function AdminDashboardDesktop() {
               <div className="flex flex-col items-center p-3 rounded-xl bg-primary/[0.04] border border-border/30">
                 <Clock className="h-4 w-4 text-primary mb-1.5" />
                 <p className="text-xl font-bold text-primary tabular-nums">{todaySummary.shiftsToday}</p>
-                <p className="text-[10px] text-muted-foreground/70 mt-0.5">Shifts</p>
+                <p className="text-[10px] text-muted-foreground/70 mt-0.5">Turnos</p>
               </div>
               <div className="flex flex-col items-center p-3 rounded-xl bg-earning/[0.04] border border-border/30">
                 <UserCheck className="h-4 w-4 text-earning mb-1.5" />
                 <p className="text-xl font-bold text-earning tabular-nums">{todaySummary.assignedToday}</p>
-                <p className="text-[10px] text-muted-foreground/70 mt-0.5">Assigned</p>
+                <p className="text-[10px] text-muted-foreground/70 mt-0.5">Asignados</p>
               </div>
               <div className="flex flex-col items-center p-3 rounded-xl bg-warning/[0.04] border border-border/30">
                 <Timer className="h-4 w-4 text-warning mb-1.5" />
                 <p className="text-xl font-bold text-warning tabular-nums">{todaySummary.openEntries}</p>
-                <p className="text-[10px] text-muted-foreground/70 mt-0.5">Clocked In</p>
+                <p className="text-[10px] text-muted-foreground/70 mt-0.5">Fichados ahora</p>
               </div>
             </div>
           </CardContent>
@@ -997,11 +997,11 @@ function AdminDashboardDesktop() {
                 <div className="h-7 w-7 rounded-lg bg-primary/[0.08] flex items-center justify-center">
                   <TrendingUp className="h-3.5 w-3.5 text-primary" />
                 </div>
-                <CardTitle className="text-sm font-semibold font-heading">Payment Trends</CardTitle>
+                <CardTitle className="text-sm font-semibold font-heading">Tendencias de pago</CardTitle>
               </div>
               {hasPendingPeriods && (
                 <Badge variant="warning" className="text-[10px] gap-1">
-                  <AlertTriangle className="h-2.5 w-2.5" /> Periods without base payroll
+                  <AlertTriangle className="h-2.5 w-2.5" /> Periodos sin nómina base
                 </Badge>
               )}
             </div>
@@ -1032,10 +1032,10 @@ function AdminDashboardDesktop() {
              <div className="h-7 w-7 rounded-lg bg-primary/[0.08] flex items-center justify-center">
                <Megaphone className="h-3.5 w-3.5 text-primary" />
             </div>
-            <h2 className="text-sm font-semibold font-heading">Announcements</h2>
+            <h2 className="text-sm font-semibold font-heading">Anuncios</h2>
           </div>
           <Link to="/app/announcements" className="text-[11px] text-primary font-medium hover:underline flex items-center gap-0.5 group">
-            View all <ChevronRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
+            Ver todos <ChevronRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
           </Link>
         </div>
         {feedAnnouncements.length === 0 ? (
@@ -1044,8 +1044,8 @@ function AdminDashboardDesktop() {
               <div className="h-12 w-12 rounded-xl bg-muted/50 flex items-center justify-center mx-auto mb-3">
                 <Megaphone className="h-5 w-5 opacity-30" />
               </div>
-              <p className="text-xs font-medium">No announcements published</p>
-              <p className="text-[10px] text-muted-foreground/60 mt-0.5">Announcements will appear here</p>
+              <p className="text-xs font-medium">Sin anuncios publicados</p>
+              <p className="text-[10px] text-muted-foreground/60 mt-0.5">Los anuncios aparecerán aquí</p>
             </CardContent>
           </Card>
         ) : (
@@ -1060,7 +1060,7 @@ function AdminDashboardDesktop() {
                 {a.priority === "urgent" && (
                   <div className="bg-warning/[0.06] px-4 py-1.5 flex items-center gap-1.5 border-b border-warning/10">
                     <AlertTriangle className="h-3 w-3 text-warning" />
-                    <span className="text-[10px] font-bold text-warning uppercase tracking-wider">Urgent</span>
+                    <span className="text-[10px] font-bold text-warning uppercase tracking-wider">Urgente</span>
                     </div>
                   )}
                   <CardContent className="p-4 space-y-2">
@@ -1071,7 +1071,7 @@ function AdminDashboardDesktop() {
                           <h3 className="text-[13px] font-semibold text-foreground leading-snug">{a.title}</h3>
                         </div>
                         <p className="text-[10px] text-muted-foreground/60 mt-0.5">
-                          {formatDistanceToNow(parseISO(a.published_at), { addSuffix: true, locale: enUS })}
+                          {formatDistanceToNow(parseISO(a.published_at), { addSuffix: true, locale: es })}
                         </p>
                       </div>
                     </div>
@@ -1093,7 +1093,7 @@ function AdminDashboardDesktop() {
                     {a.reaction_count > 0 && (
                       <div className="flex items-center gap-1 text-[10px] text-muted-foreground/60 pt-0.5">
                         <ThumbsUp className="h-2.5 w-2.5" />
-                        {a.reaction_count} reactions
+                        {a.reaction_count} reacciones
                       </div>
                     )}
                   </CardContent>
@@ -1111,10 +1111,10 @@ function AdminDashboardDesktop() {
              <div className="h-7 w-7 rounded-lg bg-warning/[0.08] flex items-center justify-center">
                <Activity className="h-3.5 w-3.5 text-warning" />
             </div>
-            <h2 className="text-sm font-semibold font-heading">Recent Activity</h2>
+            <h2 className="text-sm font-semibold font-heading">Actividad reciente</h2>
           </div>
           <Link to="/app/activity" className="text-[11px] text-primary font-medium hover:underline flex items-center gap-0.5 group">
-            View all <ChevronRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
+            Ver todo <ChevronRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
           </Link>
         </div>
         <Card className="rounded-2xl shadow-sm border-border/40">
@@ -1124,7 +1124,7 @@ function AdminDashboardDesktop() {
                 <div className="h-10 w-10 rounded-xl bg-muted/50 flex items-center justify-center mx-auto mb-2">
                   <Activity className="h-4 w-4 opacity-30" />
                 </div>
-                <p className="text-[11px] font-medium">No recent activity</p>
+                <p className="text-[11px] font-medium">Sin actividad reciente</p>
               </div>
             ) : (
               <div className="divide-y divide-border/30">
@@ -1144,17 +1144,17 @@ function AdminDashboardDesktop() {
             <div className="h-7 w-7 rounded-lg bg-earning/[0.08] flex items-center justify-center">
               <DollarSign className="h-3.5 w-3.5 text-earning" />
             </div>
-            <h2 className="text-sm font-semibold font-heading text-foreground">Compensation</h2>
+            <h2 className="text-sm font-semibold font-heading text-foreground">Compensación</h2>
           </div>
           <Link to="/app/payroll-settings" className="text-[11px] text-primary font-medium hover:underline flex items-center gap-0.5 group">
-            View all <ChevronRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
+            Ver todo <ChevronRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
           </Link>
         </div>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <KpiStatCard label="Rate changes" value={compKpis.rateChanges} subtitle="this month" icon={TrendingUp} color="warning" onClick={() => navigate("/app/payroll-settings")} />
-          <KpiStatCard label="Daily pay" value={compKpis.dailyPatterns} subtitle="employees detected" icon={CalendarDays} color="primary" onClick={() => navigate("/app/payroll-settings")} />
-          <KpiStatCard label="Ride payments" value={compKpis.ridePayments} subtitle="employees with ride" icon={MapPin} color="earning" onClick={() => navigate("/app/payroll-settings")} />
-          <KpiStatCard label="Alerts" value={compKpis.warnings} subtitle="need attention" icon={AlertTriangle} color="warning" onClick={() => navigate("/app/payroll-settings")} />
+          <KpiStatCard label="Cambios de tarifa" value={compKpis.rateChanges} subtitle="este mes" icon={TrendingUp} color="warning" onClick={() => navigate("/app/payroll-settings")} />
+          <KpiStatCard label="Pago diario" value={compKpis.dailyPatterns} subtitle="empleados detectados" icon={CalendarDays} color="primary" onClick={() => navigate("/app/payroll-settings")} />
+          <KpiStatCard label="Pago de transporte" value={compKpis.ridePayments} subtitle="empleados con ride" icon={MapPin} color="earning" onClick={() => navigate("/app/payroll-settings")} />
+          <KpiStatCard label="Alertas" value={compKpis.warnings} subtitle="requieren atención" icon={AlertTriangle} color="warning" onClick={() => navigate("/app/payroll-settings")} />
         </div>
       </div>
     ),
@@ -1168,7 +1168,7 @@ function AdminDashboardDesktop() {
   }
 
   if (fetchError) {
-    return <ErrorBlock title="Error loading dashboard" message="Could not load data. Check your connection and try again." onRetry={() => window.location.reload()} />;
+    return <ErrorBlock title="Error al cargar el panel" message="No pudimos cargar los datos. Revisa tu conexión e intenta de nuevo." onRetry={() => window.location.reload()} />;
   }
 
   /* ── Global Mode: Platform Overview ── */
@@ -1181,16 +1181,16 @@ function AdminDashboardDesktop() {
             {greeting}
           </p>
           <h1 className="text-xl md:text-2xl font-bold font-heading tracking-tight text-foreground">
-            {fullName || "Dashboard"}
+            {fullName || "Centro de mando"}
           </h1>
-          <p className="text-xs text-muted-foreground/70 mt-0.5">Global View — {companies.length} companies</p>
+          <p className="text-xs text-muted-foreground/70 mt-0.5">Vista global — {companies.length} empresas</p>
         </div>
 
         {/* Company grid */}
         <div>
           <div className="flex items-center gap-2 mb-3">
             <Crown className="h-4 w-4 text-warning" />
-            <h2 className="text-sm font-semibold font-heading text-foreground">Select a company to operate</h2>
+            <h2 className="text-sm font-semibold font-heading text-foreground">Selecciona una empresa para operar</h2>
             <Badge variant="outline" className="text-[10px] ml-1">{companies.length}</Badge>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -1211,7 +1211,7 @@ function AdminDashboardDesktop() {
                 </div>
                 <div className="flex items-center gap-3 mt-3 pt-3 border-t border-border/30">
                   <span className={cn("text-[10px] font-medium", c.is_active ? "text-earning" : "text-muted-foreground")}>
-                    {c.is_active ? "● Active" : "○ Inactive"}
+                    {c.is_active ? "● Activa" : "○ Inactiva"}
                   </span>
                   <ExternalLink className="h-3 w-3 text-muted-foreground/30 group-hover:text-primary ml-auto transition-colors" />
                 </div>
@@ -1233,10 +1233,10 @@ function AdminDashboardDesktop() {
             {greeting}
           </p>
           <h1 className="text-xl md:text-2xl font-bold font-heading tracking-tight text-foreground">
-            {fullName || "Dashboard"}
+            {fullName || "Centro de mando"}
           </h1>
           <p className="text-xs text-muted-foreground/70 mt-0.5 flex items-center gap-1.5">
-            <span>{selectedCompany?.name ?? "Select a company"}</span>
+            <span>{selectedCompany?.name ?? "Selecciona una empresa"}</span>
             {stats.activePeriod && (
               <>
                 <span className="text-border">·</span>
@@ -1255,7 +1255,7 @@ function AdminDashboardDesktop() {
           {stats.activePeriod && (
             <div className="hidden md:flex flex-col gap-2 min-w-[200px] p-3.5 rounded-xl border border-border/40 bg-card shadow-2xs">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">Period</span>
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">Periodo</span>
                 <span className={cn(
                   "text-[10px] px-2 py-0.5 rounded-full font-semibold inline-flex items-center gap-1",
                   statusColor === 'earning' && "bg-earning/10 text-earning",
@@ -1287,7 +1287,7 @@ function AdminDashboardDesktop() {
         <div>
           <div className="flex items-center gap-2 mb-3">
             <Crown className="h-4 w-4 text-warning" />
-            <h2 className="text-sm font-semibold font-heading text-foreground">Companies</h2>
+            <h2 className="text-sm font-semibold font-heading text-foreground">Empresas</h2>
             <Badge variant="outline" className="text-[10px] ml-1">{companies.length}</Badge>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -1318,12 +1318,12 @@ function AdminDashboardDesktop() {
                       </div>
                     </div>
                     {isSelected && (
-                      <span className="text-[9px] font-semibold uppercase tracking-wider text-primary bg-primary/10 px-2 py-0.5 rounded-full">Active</span>
+                      <span className="text-[9px] font-semibold uppercase tracking-wider text-primary bg-primary/10 px-2 py-0.5 rounded-full">Activa</span>
                     )}
                   </div>
                   <div className="flex items-center gap-3 mt-3 pt-3 border-t border-border/30">
                     <span className={cn("text-[10px] font-medium", c.is_active ? "text-earning" : "text-muted-foreground")}>
-                      {c.is_active ? "● Active" : "○ Inactive"}
+                      {c.is_active ? "● Activa" : "○ Inactiva"}
                     </span>
                     <ExternalLink className="h-3 w-3 text-muted-foreground/30 group-hover:text-primary ml-auto transition-colors" />
                   </div>
