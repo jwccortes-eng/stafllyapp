@@ -672,10 +672,11 @@ export default function PayrollReviewQueue() {
     acc[b.severity] = (acc[b.severity] ?? 0) + b.rows.length;
     return acc;
   }, {} as Record<Severity, number>);
-  const readyCount = buckets.find(b => b.id === "ready")?.rows.length ?? 0;
-  const adjPendingCount = buckets.find(b => b.id === "adj-pending")?.rows.length ?? 0;
-  const transportCount = buckets.find(b => b.id === "transport")?.rows.length ?? 0;
-  const docsCount = buckets.find(b => b.id === "missing-docs")?.rows.length ?? 0;
+  const pendienteCierreCount = buckets.find(b => b.id === "pendiente-cierre")?.rows.length ?? 0;
+  const enRevisionMariaCount = buckets.find(b => b.id === "en-revision-maria")?.rows.length ?? 0;
+  const pendingFinalCount = buckets.find(b => b.id === "pending-final")?.rows.length ?? 0;
+  const listoPagoCount = buckets.find(b => b.id === "listo-pago")?.rows.length ?? 0;
+  const alertasCount = (totalsBySeverity.warn ?? 0) + (totalsBySeverity.block ?? 0);
 
   return (
     <div className="space-y-5">
@@ -683,15 +684,15 @@ export default function PayrollReviewQueue() {
       <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <PageHeader
           variant="3"
-          title="Payroll Review Queue"
-          subtitle={`${selectedCompany?.name ?? "Company"} · triage surface for payroll review`}
+          title="Centro de Validación"
+          subtitle={`${selectedCompany?.name ?? "Empresa"} · revisa cierres, horas y aprobaciones antes del proceso de pago`}
         />
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="outline" className="gap-1.5 border-primary/30 text-primary">
-            <ShieldCheck className="h-3 w-3" /> Connecteam import remains payroll authority
+            <ShieldCheck className="h-3 w-3" /> Evidencia operativa
           </Badge>
           <Badge variant="outline" className="gap-1.5 border-muted-foreground/30 text-muted-foreground">
-            <Lock className="h-3 w-3" /> READ ONLY
+            <Lock className="h-3 w-3" /> Solo lectura
           </Badge>
         </div>
       </div>
@@ -699,13 +700,13 @@ export default function PayrollReviewQueue() {
       {/* Period selector */}
       <Card>
         <CardContent className="py-4 flex flex-col md:flex-row md:items-center gap-3">
-          <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Pay period</div>
+          <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Periodo</div>
           <Select
             value={effectivePeriodId ?? ""}
             onValueChange={(v) => setSelectedPeriodId(v)}
             disabled={periodsQ.isLoading || periods.length === 0}
           >
-            <SelectTrigger className="md:w-[460px]"><SelectValue placeholder="Select period…" /></SelectTrigger>
+            <SelectTrigger className="md:w-[460px]"><SelectValue placeholder="Selecciona un periodo…" /></SelectTrigger>
             <SelectContent>
               {periods.map(p => {
                 const future = isFuturePeriod(p);
@@ -716,8 +717,8 @@ export default function PayrollReviewQueue() {
                       <span className="font-mono text-xs text-muted-foreground">#{p.sequence_number ?? "—"}</span>
                       <span>{format(parseISO(p.start_date), "MMM d")} – {format(parseISO(p.end_date), "MMM d, yyyy")}</span>
                       <Badge variant="outline" className="text-[10px] py-0 px-1.5 capitalize">{p.status ?? "—"}</Badge>
-                      {future && <Badge variant="outline" className="text-[10px] py-0 px-1.5 border-warning/40 text-warning">future</Badge>}
-                      {pbp > 0 && <Badge variant="outline" className="text-[10px] py-0 px-1.5 border-earning/40 text-earning">{pbp} rows</Badge>}
+                      {future && <Badge variant="outline" className="text-[10px] py-0 px-1.5 border-warning/40 text-warning">futuro</Badge>}
+                      {pbp > 0 && <Badge variant="outline" className="text-[10px] py-0 px-1.5 border-earning/40 text-earning">{pbp} filas</Badge>}
                     </span>
                   </SelectItem>
                 );
@@ -726,29 +727,29 @@ export default function PayrollReviewQueue() {
           </Select>
           {selectedPeriod && isFuturePeriod(selectedPeriod) && (
             <Badge variant="outline" className="gap-1.5 border-warning/40 text-warning">
-              <CalendarX className="h-3 w-3" /> Future period — review data may be empty
+              <CalendarX className="h-3 w-3" /> Periodo futuro — puede no haber datos
             </Badge>
           )}
           <div className="ml-auto flex items-center gap-2">
             <Button asChild variant="outline" size="sm" className="h-8 text-xs gap-1.5">
-              <Link to="/app/payroll-reconciliation"><ExternalLink className="h-3.5 w-3.5" /> Reconciliation</Link>
+              <Link to="/app/payroll-reconciliation"><ExternalLink className="h-3.5 w-3.5" /> Reconciliación</Link>
             </Button>
             <Button asChild variant="outline" size="sm" className="h-8 text-xs gap-1.5">
-              <Link to="/app/periods"><ExternalLink className="h-3.5 w-3.5" /> Periods</Link>
+              <Link to="/app/periods"><ExternalLink className="h-3.5 w-3.5" /> Periodos</Link>
             </Button>
           </div>
         </CardContent>
       </Card>
 
-      {/* Summary cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        <SummaryCard icon={CheckCircle2} label="Ready to review"  value={readyCount}                     tone="earning" />
-        <SummaryCard icon={AlertTriangle} label="Needs attention"  value={totalsBySeverity.warn ?? 0}    tone="warning" />
-        <SummaryCard icon={AlertCircle}   label="Blocking issues"  value={totalsBySeverity.block ?? 0}   tone="destructive" />
-        <SummaryCard icon={Users}         label="Manual review"    value={adjPendingCount}                tone="warning" />
-        <SummaryCard icon={Car}           label="Transport pending" value={transportCount}                tone="warning" />
-        <SummaryCard icon={FileWarning}   label="Data quality"     value={docsCount}                      tone="muted" />
+      {/* Summary strip */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+        <SummaryCard icon={ClipboardList} label="Pendiente cierre"        value={pendienteCierreCount} tone="warning" />
+        <SummaryCard icon={ScanEye}        label="En revisión de María"    value={enRevisionMariaCount} tone="warning" />
+        <SummaryCard icon={ShieldCheck}    label="Pendiente aprob. final"  value={pendingFinalCount}    tone="warning" />
+        <SummaryCard icon={CheckCircle2}   label="Listos para proc. de pago" value={listoPagoCount}     tone="earning" />
+        <SummaryCard icon={AlertTriangle}  label="Con alertas"             value={alertasCount}         tone="destructive" />
       </div>
+
 
       {/* Empty / loading states */}
       {(periodsQ.isLoading || dataQ.isLoading) && (
