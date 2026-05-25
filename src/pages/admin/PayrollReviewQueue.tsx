@@ -576,6 +576,7 @@ export default function PayrollReviewQueue() {
       { id: "missing-docs",   title: "Missing docs / profile",           description: "Worker has payable row but profile is incomplete (governance warning).",     severity: "info",  affectsPay: false, rows: missingDocs },
       { id: "closeout",       title: "Closeout conflict",                description: "Daily Close evidence disagrees with payroll evidence.",                      severity: "warn",  affectsPay: false, rows: closeoutConflict },
       { id: "high-risk",      title: "High-risk / over threshold",       description: "Duration > 16h, pay > $3,000, or zero/negative pay.",                        severity: "block", affectsPay: true,  rows: highRisk },
+      { id: "pending-final",  title: "Pendiente aprobación final",       description: "Cierres aprobados por María, esperando aprobación final operativa (Keury). No representa pago.", severity: "info", affectsPay: false, rows: pendingFinalApproval },
     ];
   }, [dataQ.data]);
 
