@@ -732,11 +732,11 @@ function AlertDetailSheet({
 }) {
   const open = !!item;
   const labelMap: Record<AlertItem["type"], string> = {
-    stale_open: "Stale open clock",
-    long_open: "Long open clock",
-    very_long: "Very long entry",
-    needs_review: "Needs review",
-    no_shift: "Clock without scheduled shift",
+    stale_open: "Fichaje abierto vencido",
+    long_open: "Fichaje abierto largo",
+    very_long: "Fichaje muy largo",
+    needs_review: "Necesita revisión",
+    no_shift: "Fichaje sin turno programado",
   };
   const phoneRaw = (item?.employee.phone_number ?? "").replace(/[^+\d]/g, "");
   const waPhone = phoneRaw.replace(/^\+/, "");
