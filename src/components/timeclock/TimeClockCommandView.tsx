@@ -343,25 +343,25 @@ export default function TimeClockCommandView() {
     <div className="space-y-5">
       {/* ─── KPI Command Strip ─────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        <KpiCard icon={Activity} tone="primary" label="Clocked in now" value={kpis.clockedIn} />
-        <KpiCard icon={Clock} tone="muted" label="Open clocks" value={kpis.openClocks} />
+        <KpiCard icon={Activity} tone="primary" label="Fichados ahora" value={kpis.clockedIn} />
+        <KpiCard icon={Clock} tone="muted" label="Fichajes abiertos" value={kpis.openClocks} />
         <KpiCard
           icon={AlertTriangle}
           tone={kpis.missingClockOut > 0 ? "danger" : "muted"}
-          label="Missing clock-out"
+          label="Falta salida"
           value={kpis.missingClockOut}
         />
         <KpiCard
           icon={CalendarClock}
           tone={kpis.lateReview > 0 ? "warning" : "muted"}
-          label="Needs review"
+          label="Necesita revisión"
           value={kpis.lateReview}
         />
-        <KpiCard icon={Users} tone="muted" label="Today entries" value={kpis.todayEntries} />
+        <KpiCard icon={Users} tone="muted" label="Fichajes de hoy" value={kpis.todayEntries} />
         <KpiCard
           icon={ClipboardCheck}
           tone="muted"
-          label="Tracked today"
+          label="Horas registradas hoy"
           value={formatHoursShort(kpis.totalMinutesToday)}
         />
       </div>
@@ -381,13 +381,13 @@ export default function TimeClockCommandView() {
               <p className="text-xs text-muted-foreground">
                 {alerts.length > 0
                   ? `${alerts.length} item${alerts.length === 1 ? "" : "s"} para revisar`
-                  : "All clear · no open issues right now"}
+                  : "Todo en orden · no hay incidencias abiertas"}
               </p>
             </div>
           </div>
           <Button variant="ghost" size="sm" className="h-8 text-xs gap-1.5" onClick={load}>
             <RefreshCw className="h-3.5 w-3.5" />
-            Refresh
+            Actualizar
           </Button>
         </div>
         {alerts.length === 0 ? (
