@@ -504,11 +504,11 @@ function AlertDetailSheet({ item, onClose, onOpenWorker, onReviewInTime }: {
 }) {
   const open = !!item;
   const labelMap: Record<AlertType, string> = {
-    stale_open: "Stale open clock",
-    long_open: "Long open clock",
-    very_long: "Very long entry",
-    needs_review: "Needs review",
-    no_shift: "Clock without scheduled shift",
+    stale_open: "Fichaje abierto vencido",
+    long_open: "Fichaje abierto largo",
+    very_long: "Fichaje muy largo",
+    needs_review: "Necesita revisión",
+    no_shift: "Fichaje sin turno programado",
   };
   const phoneRaw = (item?.employee.phone_number ?? "").replace(/[^+\d]/g, "");
   const waPhone = phoneRaw.replace(/^\+/, "");
@@ -516,7 +516,7 @@ function AlertDetailSheet({ item, onClose, onOpenWorker, onReviewInTime }: {
     <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
       <SheetContent side="bottom" className="rounded-t-3xl p-0 max-h-[85vh] flex flex-col">
         <SheetHeader className="px-5 pt-5 pb-3 text-left">
-          <SheetTitle className="text-base font-bold">{item ? labelMap[item.type] : "Time alert"}</SheetTitle>
+          <SheetTitle className="text-base font-bold">{item ? labelMap[item.type] : "Alerta de tiempo"}</SheetTitle>
         </SheetHeader>
         {item && (
           <div className="px-5 pb-5 space-y-4 overflow-y-auto">
