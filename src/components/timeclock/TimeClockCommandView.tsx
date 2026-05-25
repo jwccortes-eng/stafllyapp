@@ -699,7 +699,7 @@ export default function TimeClockCommandView() {
       </Tabs>
 
       <p className="text-[11px] text-muted-foreground">
-        Read-only · Time clock can show scheduled shift as context but never as payment.
+        Solo lectura · El reloj puede mostrar el turno programado como contexto, pero nunca como pago.
       </p>
 
       <AlertDetailSheet
