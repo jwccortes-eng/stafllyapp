@@ -395,8 +395,8 @@ export default function TimeClockCommandView() {
             title="Todo está en calma"
             description="No hay entradas abiertas que requieran atención."
             actions={[
-              { label: "Open Kiosk", onClick: () => navigate("/app/kiosk"), icon: Monitor },
-              { label: "View today", onClick: () => setActiveTab("today"), icon: CalendarDays },
+              { label: "Abrir kiosk", onClick: () => navigate("/app/kiosk"), icon: Monitor },
+              { label: "Ver hoy", onClick: () => setActiveTab("today"), icon: CalendarDays },
             ]}
           />
         ) : (
