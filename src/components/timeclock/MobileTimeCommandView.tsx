@@ -355,7 +355,7 @@ function TodayView({ live, missing, closedToday }: {
                 <EmployeeAvatar avatarUrl={e.avatar_url} firstName={e.first_name} lastName={e.last_name} size="sm" />
                 <div className="min-w-0 flex-1">
                   <div className="text-sm font-semibold truncate">{e.first_name} {e.last_name}</div>
-                  <div className="text-[11px] text-muted-foreground">Scheduled today · not clocked in</div>
+                  <div className="text-[11px] text-muted-foreground">Programado hoy · sin fichaje</div>
                 </div>
                 <ContactButtons phone={e.phone_number} />
               </li>
