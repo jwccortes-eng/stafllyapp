@@ -1233,10 +1233,10 @@ function AdminDashboardDesktop() {
             {greeting}
           </p>
           <h1 className="text-xl md:text-2xl font-bold font-heading tracking-tight text-foreground">
-            {fullName || "Dashboard"}
+            {fullName || "Centro de mando"}
           </h1>
           <p className="text-xs text-muted-foreground/70 mt-0.5 flex items-center gap-1.5">
-            <span>{selectedCompany?.name ?? "Select a company"}</span>
+            <span>{selectedCompany?.name ?? "Selecciona una empresa"}</span>
             {stats.activePeriod && (
               <>
                 <span className="text-border">·</span>
