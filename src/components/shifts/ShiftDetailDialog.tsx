@@ -64,6 +64,7 @@ const ShiftAuditTrail = lazy(() =>
   import("./ShiftAuditTrail").then(m => ({ default: m.ShiftAuditTrail })),
 );
 import { ShiftRoleSlotsTeamPanel } from "./ShiftRoleSlotsTeamPanel";
+import { ShiftLifecycleTimeline } from "./ShiftLifecycleTimeline";
 import { GenerateBillingBlockButton } from "./GenerateBillingBlockButton";
 import {
   pickRoleSlotsForNewAssignments,
