@@ -1071,7 +1071,7 @@ function AdminDashboardDesktop() {
                           <h3 className="text-[13px] font-semibold text-foreground leading-snug">{a.title}</h3>
                         </div>
                         <p className="text-[10px] text-muted-foreground/60 mt-0.5">
-                          {formatDistanceToNow(parseISO(a.published_at), { addSuffix: true, locale: enUS })}
+                          {formatDistanceToNow(parseISO(a.published_at), { addSuffix: true, locale: es })}
                         </p>
                       </div>
                     </div>
