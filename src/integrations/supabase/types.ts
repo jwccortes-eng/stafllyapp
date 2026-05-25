@@ -13475,6 +13475,10 @@ export type Database = {
           client_feedback: string | null
           company_id: string
           created_at: string
+          final_approval_notes: string | null
+          final_approval_status: string | null
+          final_approved_at: string | null
+          final_approved_by: string | null
           id: string
           incident_count: number
           late_count: number
@@ -13499,6 +13503,10 @@ export type Database = {
           client_feedback?: string | null
           company_id: string
           created_at?: string
+          final_approval_notes?: string | null
+          final_approval_status?: string | null
+          final_approved_at?: string | null
+          final_approved_by?: string | null
           id?: string
           incident_count?: number
           late_count?: number
@@ -13523,6 +13531,10 @@ export type Database = {
           client_feedback?: string | null
           company_id?: string
           created_at?: string
+          final_approval_notes?: string | null
+          final_approval_status?: string | null
+          final_approved_at?: string | null
+          final_approved_by?: string | null
           id?: string
           incident_count?: number
           late_count?: number
@@ -16559,6 +16571,10 @@ export type Database = {
         }
       }
       shift_closeout_can_admin: { Args: { _company: string }; Returns: boolean }
+      shift_closeout_can_final_approve: {
+        Args: { _company: string }
+        Returns: boolean
+      }
       supersede_employee_invitations: {
         Args: {
           _company_id: string

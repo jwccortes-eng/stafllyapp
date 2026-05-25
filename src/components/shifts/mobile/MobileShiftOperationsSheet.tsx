@@ -917,6 +917,7 @@ export function MobileShiftOperationsSheet({
                         companyId={selectedCompanyId}
                         canSubmit={canValidate || shiftAdminId != null}
                         canReview={canValidate}
+                        canFinalApprove={canValidate}
                         role={canValidate ? "admin" : "shift_admin"}
                       />
                     ) : (

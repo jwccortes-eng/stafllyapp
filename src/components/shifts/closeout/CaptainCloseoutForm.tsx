@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Loader2, Send, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import {
   type ShiftCloseout,
   type CloseoutRole,
+  type EvidencePacket,
   upsertShiftCloseoutDraft,
 } from "@/lib/shifts/closeout";
 
@@ -19,6 +20,7 @@ interface Props {
   employeeId?: string | null;
   role: CloseoutRole;
   current: ShiftCloseout | null;
+  evidence?: EvidencePacket | null;
   onSaved: (next: ShiftCloseout) => void;
 }
 
@@ -35,6 +37,7 @@ export function CaptainCloseoutForm({
   employeeId,
   role,
   current,
+  evidence,
   onSaved,
 }: Props) {
   const [staffCount, setStaffCount] = useState<string>(
@@ -57,13 +60,27 @@ export function CaptainCloseoutForm({
   const [readyForReview, setReadyForReview] = useState<boolean>(
     current?.ready_for_admin_review ?? false,
   );
+  const [acknowledged, setAcknowledged] = useState<boolean>(false);
   const [busy, setBusy] = useState<"draft" | "submit" | null>(null);
 
   const locked =
     current?.status === "reviewed" || current?.status === "rejected";
 
+  // Show acknowledgement if evidence has unresolved issues OR captain
+  // self-reported faltas/incidencias/missing clock-out.
+  const hasUnresolved = useMemo(() => {
+    const missingClockOut = evidence?.missingClockOut ?? 0;
+    const noShow = num(noShows);
+    const inc = num(incidents);
+    return missingClockOut > 0 || noShow > 0 || inc > 0;
+  }, [evidence?.missingClockOut, noShows, incidents]);
+
   async function save(status: "draft" | "submitted") {
     if (locked) return;
+    if (status === "submitted" && hasUnresolved && !acknowledged) {
+      toast.error("Confirma el aviso de pendientes antes de enviar.");
+      return;
+    }
     setBusy(status === "draft" ? "draft" : "submit");
     try {
       const next = await upsertShiftCloseoutDraft({
@@ -83,15 +100,17 @@ export function CaptainCloseoutForm({
         ready_for_admin_review: status === "submitted" ? true : readyForReview,
       });
       toast.success(
-        status === "submitted" ? "Closeout submitted for review" : "Draft saved",
+        status === "submitted"
+          ? "Cierre enviado a revisión de María"
+          : "Borrador guardado",
       );
       onSaved(next);
     } catch (e: any) {
-      const msg = e?.message ?? "Failed to save closeout";
+      const msg = e?.message ?? "No se pudo guardar el cierre";
       if (msg.includes("closeout_review_admin_only")) {
-        toast.error("Only admins can write review fields.");
+        toast.error("Solo administradores pueden modificar la revisión.");
       } else if (msg.includes("closeout_locked_for_review")) {
-        toast.error("Closeout is locked after admin review.");
+        toast.error("El cierre está bloqueado tras la revisión.");
       } else {
         toast.error(msg);
       }
@@ -103,15 +122,14 @@ export function CaptainCloseoutForm({
   return (
     <div className="space-y-4 rounded-2xl border border-border/50 bg-card p-4">
       <div>
-        <p className="text-sm font-semibold">Captain closeout</p>
+        <p className="text-sm font-semibold">Cierre del turno</p>
         <p className="mt-0.5 text-[11px] text-muted-foreground leading-snug">
-          Operational evidence only. This does not approve payroll or create
-          time entries.
+          Evidencia operativa. No aprueba payroll ni crea fichajes.
         </p>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Staff present">
+        <Field label="Personal presente">
           <Input
             inputMode="numeric"
             value={staffCount}
@@ -119,7 +137,7 @@ export function CaptainCloseoutForm({
             disabled={locked}
           />
         </Field>
-        <Field label="No-shows">
+        <Field label="Faltas">
           <Input
             inputMode="numeric"
             value={noShows}
@@ -127,7 +145,7 @@ export function CaptainCloseoutForm({
             disabled={locked}
           />
         </Field>
-        <Field label="Late">
+        <Field label="Tarde">
           <Input
             inputMode="numeric"
             value={late}
@@ -135,7 +153,7 @@ export function CaptainCloseoutForm({
             disabled={locked}
           />
         </Field>
-        <Field label="Incidents">
+        <Field label="Incidencias">
           <Input
             inputMode="numeric"
             value={incidents}
@@ -151,26 +169,26 @@ export function CaptainCloseoutForm({
           onCheckedChange={(v) => setUniformOk(v === true)}
           disabled={locked}
         />
-        <span>Uniform OK</span>
+        <span>Uniforme OK</span>
       </label>
 
-      <Field label="Notes">
+      <Field label="Notas">
         <Textarea
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           rows={3}
           disabled={locked}
-          placeholder="Anything important about this shift…"
+          placeholder="Algo importante de este turno…"
         />
       </Field>
 
-      <Field label="Client feedback">
+      <Field label="Comentario del cliente">
         <Textarea
           value={feedback}
           onChange={(e) => setFeedback(e.target.value)}
           rows={2}
           disabled={locked}
-          placeholder="Quotes or comments from the client (optional)"
+          placeholder="Citas o comentarios del cliente (opcional)"
         />
       </Field>
 
@@ -180,8 +198,23 @@ export function CaptainCloseoutForm({
           onCheckedChange={(v) => setReadyForReview(v === true)}
           disabled={locked}
         />
-        <span>Ready for admin review</span>
+        <span>Listo para revisión de María</span>
       </label>
+
+      {hasUnresolved ? (
+        <label className="flex items-start gap-2 rounded-xl border border-amber-500/40 bg-amber-500/5 p-3 text-[12px]">
+          <Checkbox
+            checked={acknowledged}
+            onCheckedChange={(v) => setAcknowledged(v === true)}
+            disabled={locked}
+            className="mt-0.5"
+          />
+          <span className="text-amber-900 dark:text-amber-200 leading-snug">
+            Acepto que los pendientes mostrados quedan registrados (faltas,
+            incidencias y/o salidas sin fichar).
+          </span>
+        </label>
+      ) : null}
 
       <div className="flex flex-col gap-2 sm:flex-row">
         <Button
@@ -195,7 +228,7 @@ export function CaptainCloseoutForm({
           ) : (
             <Save className="h-4 w-4" />
           )}
-          Save draft
+          Guardar borrador
         </Button>
         <Button
           className="flex-1 h-11 rounded-xl gap-2"
@@ -207,7 +240,7 @@ export function CaptainCloseoutForm({
           ) : (
             <Send className="h-4 w-4" />
           )}
-          Submit for admin review
+          Enviar a revisión de María
         </Button>
       </div>
     </div>

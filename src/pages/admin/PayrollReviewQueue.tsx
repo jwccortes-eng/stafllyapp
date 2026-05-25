@@ -246,7 +246,7 @@ export default function PayrollReviewQueue() {
       const { data: closeouts } = shiftIds.length
         ? await supabase
             .from("shift_closeout_reports")
-            .select("id, shift_id, no_show_count, late_count, incident_count, status, review_status")
+            .select("id, shift_id, no_show_count, late_count, incident_count, status, review_status, final_approval_status, reviewed_at")
             .eq("company_id", cid)
             .in("shift_id", shiftIds)
         : { data: [] as any[] };
@@ -515,6 +515,24 @@ export default function PayrollReviewQueue() {
         })),
     ];
 
+    // 13. Pendiente aprobación final — closeouts approved by María but not
+    // final-approved yet. Operational queue only; no payroll writes.
+    const pendingFinalApproval: BucketRow[] = d.closeouts
+      .filter((c: any) =>
+        c.status === "reviewed"
+        && c.review_status === "approved"
+        && (c.final_approval_status == null || c.final_approval_status === "pending"),
+      )
+      .map((c: any) => {
+        const s = shiftMap.get(c.shift_id);
+        return {
+          key: `final-${c.id}`,
+          primary: s?.title ?? s?.shift_code ?? "Turno",
+          secondary: `${s?.date ?? ""} · aprobado por María, pendiente aprobación final`,
+          link: { to: `/app/shifts`, label: "Abrir turno" },
+        };
+      });
+
     // 12. High-risk / over-threshold
     const highRisk: BucketRow[] = [
       ...d.timeEntries
@@ -558,6 +576,7 @@ export default function PayrollReviewQueue() {
       { id: "missing-docs",   title: "Missing docs / profile",           description: "Worker has payable row but profile is incomplete (governance warning).",     severity: "info",  affectsPay: false, rows: missingDocs },
       { id: "closeout",       title: "Closeout conflict",                description: "Daily Close evidence disagrees with payroll evidence.",                      severity: "warn",  affectsPay: false, rows: closeoutConflict },
       { id: "high-risk",      title: "High-risk / over threshold",       description: "Duration > 16h, pay > $3,000, or zero/negative pay.",                        severity: "block", affectsPay: true,  rows: highRisk },
+      { id: "pending-final",  title: "Pendiente aprobación final",       description: "Cierres aprobados por María, esperando aprobación final operativa (Keury). No representa pago.", severity: "info", affectsPay: false, rows: pendingFinalApproval },
     ];
   }, [dataQ.data]);
 
