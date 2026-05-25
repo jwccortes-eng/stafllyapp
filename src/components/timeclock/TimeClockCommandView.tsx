@@ -1025,7 +1025,7 @@ function LiveRow({
         <div className="flex items-center gap-3 text-xs text-muted-foreground">
           <span className="inline-flex items-center gap-1">
             <Clock className="h-3 w-3" />
-            Since {format(new Date(row.entry.clock_in), "p", { locale: enUS })}
+            Desde {format(new Date(row.entry.clock_in), "p", { locale: enUS })}
           </span>
           {sched && (
             <span className="inline-flex items-center gap-1 truncate">
@@ -1037,7 +1037,7 @@ function LiveRow({
       </div>
       <div className="text-right">
         <div className="text-sm font-bold tabular-nums">{formatDuration(row.minutes)}</div>
-        <div className="text-[10px] uppercase tracking-wider text-muted-foreground">elapsed</div>
+        <div className="text-[10px] uppercase tracking-wider text-muted-foreground">transcurrido</div>
       </div>
       <ChevronRight className="h-4 w-4 text-muted-foreground" />
     </li>
