@@ -267,7 +267,7 @@ function WeeklyShiftPreview({ companyId, navigate }: { companyId: string; naviga
                 )}
                 {d.assigns.length > 4 && (
                   <p className="text-[10px] text-muted-foreground/50 text-center font-medium pt-0.5">
-                    +{d.assigns.length - 4} more
+                    +{d.assigns.length - 4} más
                   </p>
                 )}
               </div>
