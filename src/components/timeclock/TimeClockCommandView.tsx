@@ -648,12 +648,12 @@ export default function TimeClockCommandView() {
               </div>
             </div>
             <div className="rounded-xl bg-muted/40 p-4 mb-4">
-              <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Kiosk URL</div>
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">URL del kiosk</div>
               <code className="text-xs font-mono break-all">{`${APP_BASE_URL}/kiosk`}</code>
             </div>
             <div className="flex flex-wrap gap-2">
               <Button size="sm" className="h-9 text-xs gap-1.5" onClick={() => navigate("/app/kiosk")}>
-                <Monitor className="h-3.5 w-3.5" /> Open Kiosk
+                <Monitor className="h-3.5 w-3.5" /> Abrir kiosk
               </Button>
               <Button
                 variant="outline"
@@ -661,10 +661,10 @@ export default function TimeClockCommandView() {
                 className="h-9 text-xs gap-1.5"
                 onClick={() => {
                   navigator.clipboard.writeText(`${APP_BASE_URL}/kiosk`);
-                  toast.success("Kiosk URL copied");
+                  toast.success("URL del kiosk copiada");
                 }}
               >
-                <Copy className="h-3.5 w-3.5" /> Copy URL
+                <Copy className="h-3.5 w-3.5" /> Copiar URL
               </Button>
             </div>
           </Card>
