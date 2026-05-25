@@ -471,11 +471,11 @@ export default function TimeClockCommandView() {
             </div>
             {filteredLive.length === 0 ? (
               <CalmEmpty
-                title={liveRows.length === 0 ? "No hay trabajadores clocked in ahora mismo." : "No matches for your search."}
+                title={liveRows.length === 0 ? "Nadie está fichado ahora mismo." : "No hay coincidencias para tu búsqueda."}
                 description={liveRows.length === 0 ? "Cuando alguien fiche desde el kiosk o el portal, aparecerá aquí en tiempo real." : undefined}
                 actions={liveRows.length === 0 ? [
-                  { label: "Open Kiosk", onClick: () => navigate("/app/kiosk"), icon: Monitor },
-                  { label: "View today", onClick: () => setActiveTab("today"), icon: CalendarDays },
+                  { label: "Abrir kiosk", onClick: () => navigate("/app/kiosk"), icon: Monitor },
+                  { label: "Ver hoy", onClick: () => setActiveTab("today"), icon: CalendarDays },
                 ] : []}
               />
             ) : (
