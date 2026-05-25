@@ -745,7 +745,7 @@ function AlertDetailSheet({
       <SheetContent side="bottom" className="rounded-t-3xl p-0 max-h-[85vh] flex flex-col">
         <SheetHeader className="px-5 pt-5 pb-3 text-left">
           <SheetTitle className="text-base font-bold font-heading">
-            {item ? labelMap[item.type] : "Time alert"}
+            {item ? labelMap[item.type] : "Alerta de tiempo"}
           </SheetTitle>
         </SheetHeader>
         {item && (
