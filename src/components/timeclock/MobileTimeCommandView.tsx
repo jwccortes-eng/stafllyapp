@@ -157,11 +157,11 @@ export default function MobileTimeCommandView() {
     liveRows.forEach(r => {
       const hours = r.minutes / 60;
       if (hours >= OPEN_ENTRY_STALE_HOURS) {
-        issues.push({ ...r, type: "stale_open", reason: `Open clock for ${Math.round(hours)}h — likely missing clock-out` });
+        issues.push({ ...r, type: "stale_open", reason: `Fichaje abierto desde hace ${Math.round(hours)}h — posiblemente falta salida` });
       } else if (hours >= OPEN_ENTRY_WARN_HOURS) {
-        issues.push({ ...r, type: "long_open", reason: `Long open clock — ${Math.round(hours)}h` });
+        issues.push({ ...r, type: "long_open", reason: `Fichaje abierto largo — ${Math.round(hours)}h` });
       } else if (!r.entry.shift_id && !r.entry.scheduled_shifts) {
-        issues.push({ ...r, type: "no_shift", reason: "Open clock not linked to a scheduled shift" });
+        issues.push({ ...r, type: "no_shift", reason: "Fichaje sin turno programado vinculado" });
       }
     });
     closedTodayEntries.forEach(e => {
@@ -169,11 +169,11 @@ export default function MobileTimeCommandView() {
       if (!emp) return;
       const minutes = differenceInMinutes(new Date(e.clock_out!), new Date(e.clock_in));
       if (minutes / 60 >= VERY_LONG_ENTRY_HOURS) {
-        issues.push({ type: "very_long", entry: e, employee: emp, minutes, reason: `Very long entry — ${Math.round(minutes / 60)}h` });
+        issues.push({ type: "very_long", entry: e, employee: emp, minutes, reason: `Fichaje muy largo — ${Math.round(minutes / 60)}h` });
       }
       const status = (e.status ?? "").toLowerCase();
       if (status.includes("review") || status.includes("pending") || status.includes("late")) {
-        issues.push({ type: "needs_review", entry: e, employee: emp, minutes, reason: `Status: ${e.status}` });
+        issues.push({ type: "needs_review", entry: e, employee: emp, minutes, reason: `Estado: ${e.status}` });
       }
     });
     return issues;
