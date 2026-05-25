@@ -260,7 +260,7 @@ export default function MobileTimeCommandView() {
           <div className="px-3.5 py-2.5 flex items-center gap-2 border-b border-amber-500/20">
             <AlertTriangle className="h-4 w-4 text-amber-600" />
             <span className="text-sm font-semibold text-amber-700 dark:text-amber-400">
-              {alerts.length} alert{alerts.length === 1 ? "" : "s"}
+              {alerts.length} {alerts.length === 1 ? "alerta" : "alertas"}
             </span>
           </div>
           <ul className="divide-y divide-border/40">
