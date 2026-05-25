@@ -542,19 +542,19 @@ export default function TimeClockCommandView() {
                         {r.employee.first_name} {r.employee.last_name}
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        {r.firstIn ? `In ${format(r.firstIn, "p", { locale: enUS })}` : "—"}
+                        {r.firstIn ? `Entró ${format(r.firstIn, "p", { locale: enUS })}` : "—"}
                         {" · "}
-                        {r.lastOut ? `Out ${format(r.lastOut, "p", { locale: enUS })}` : r.hasOpen ? "Still open" : "—"}
+                        {r.lastOut ? `Salió ${format(r.lastOut, "p", { locale: enUS })}` : r.hasOpen ? "Sigue abierto" : "—"}
                         {" · "}
-                        {r.entries.length} entr{r.entries.length === 1 ? "y" : "ies"}
+                        {r.entries.length} {r.entries.length === 1 ? "fichaje" : "fichajes"}
                       </div>
                     </div>
                     <div className="text-right">
                       <div className="text-sm font-bold tabular-nums">{formatDuration(Math.max(0, r.trackedMin))}</div>
-                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">tracked</div>
+                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">registrado</div>
                     </div>
                     {r.hasOpen && (
-                      <Badge variant="outline" className="text-[10px] bg-primary/10 text-primary border-primary/30">Open</Badge>
+                      <Badge variant="outline" className="text-[10px] bg-primary/10 text-primary border-primary/30">Abierto</Badge>
                     )}
                     <ChevronRight className="h-4 w-4 text-muted-foreground" />
                   </li>
