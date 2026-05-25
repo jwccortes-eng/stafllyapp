@@ -849,7 +849,7 @@ function AlertDetailSheet({
               className="w-full h-11 rounded-xl text-sm font-semibold gap-2"
               onClick={onReviewInTime}
             >
-              <ClipboardCheck className="h-4 w-4" /> Review in Time
+              <ClipboardCheck className="h-4 w-4" /> Revisar en el reloj
             </Button>
 
             {/* Secondary: worker profile */}
@@ -858,7 +858,7 @@ function AlertDetailSheet({
               className="w-full h-10 rounded-xl text-xs text-muted-foreground gap-2"
               onClick={() => onOpenWorker(item.employee.id)}
             >
-              <Users className="h-3.5 w-3.5" /> View worker profile
+              <Users className="h-3.5 w-3.5" /> Ver perfil
             </Button>
           </div>
         )}
