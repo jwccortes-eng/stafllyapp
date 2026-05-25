@@ -221,7 +221,7 @@ export default function MobileTimeCommandView() {
   if (!selectedCompanyId) {
     return (
       <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-400">
-        Select a company to load attendance.
+        Selecciona una empresa para cargar la asistencia.
       </div>
     );
   }
