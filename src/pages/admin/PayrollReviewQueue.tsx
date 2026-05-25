@@ -38,7 +38,7 @@ import {
 import {
   Loader2, ShieldCheck, AlertTriangle, AlertCircle, CheckCircle2,
   Users, Clock, CalendarX, Car, FileWarning, ScanEye, Lock,
-  ExternalLink, Info,
+  ExternalLink, Info, ClipboardList,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -563,20 +563,90 @@ export default function PayrollReviewQueue() {
         })),
     ];
 
+    // ── Operational closeout buckets (read-only) ──────────────────────────
+    const today = new Date();
+    const todayIso = today.toISOString().slice(0, 10);
+    const pendienteCierre: BucketRow[] = d.shifts
+      .filter(s => s.date <= todayIso && !closeoutMap.has(s.id))
+      .map(s => ({
+        key: `pc-${s.id}`,
+        primary: s.title ?? s.shift_code ?? "Turno",
+        secondary: `${s.date} · sin cierre enviado por el capitán`,
+        link: { to: `/app/shifts`, label: "Abrir bloque" },
+      }));
+
+    const enRevisionMaria: BucketRow[] = d.closeouts
+      .filter((c: any) => c.status === "submitted")
+      .map((c: any) => {
+        const s = shiftMap.get(c.shift_id);
+        return {
+          key: `rm-${c.id}`,
+          primary: s?.title ?? s?.shift_code ?? "Turno",
+          secondary: `${s?.date ?? ""} · cierre enviado, esperando revisión de María`,
+          link: { to: `/app/shifts`, label: "Abrir bloque" },
+        };
+      });
+
+    const requiereCorreccion: BucketRow[] = d.closeouts
+      .filter((c: any) =>
+        c.status === "rejected"
+        || ["needs_followup", "rejected"].includes((c.review_status ?? "") as string)
+      )
+      .map((c: any) => {
+        const s = shiftMap.get(c.shift_id);
+        return {
+          key: `rc-${c.id}`,
+          primary: s?.title ?? s?.shift_code ?? "Turno",
+          secondary: `${s?.date ?? ""} · ${c.review_status === "needs_followup" ? "requiere seguimiento" : "rechazado · necesita corrección"}`,
+          link: { to: `/app/shifts`, label: "Abrir bloque" },
+        };
+      });
+
+    const listoParaPago: BucketRow[] = d.closeouts
+      .filter((c: any) => c.final_approval_status === "approved")
+      .map((c: any) => {
+        const s = shiftMap.get(c.shift_id);
+        return {
+          key: `lp-${c.id}`,
+          primary: s?.title ?? s?.shift_code ?? "Turno",
+          secondary: `${s?.date ?? ""} · aprobación final completada`,
+          link: { to: `/app/shifts`, label: "Ver bloque" },
+        };
+      });
+
+    const fichajesAbiertos: BucketRow[] = d.timeEntries
+      .filter(t => !!t.clock_in && !t.clock_out)
+      .map(t => {
+        const s = t.shift_id ? shiftMap.get(t.shift_id) : null;
+        return {
+          key: `fa-${t.id}`,
+          primary: empName(t.employee_id),
+          secondary: `${s ? `${s.title ?? s.shift_code ?? "Turno"} · ` : ""}entrada ${t.clock_in ? format(parseISO(t.clock_in), "MMM d HH:mm") : "—"} · falta salida`,
+          link: { to: `/app/timeclock`, label: "Abrir reloj" },
+        };
+      });
+
     return [
-      { id: "ready",          title: "Ready to review",                  description: "Matched rows, no conflicts, no anomalies.",                                  severity: "info",  affectsPay: true,  rows: ready },
-      { id: "needs-match",    title: "Needs employee match",             description: "Unmatched rows from historical_payroll_entries (Connecteam imports). May be empty if period was committed directly into period_base_pay (no unmatched import rows).",  severity: "block", affectsPay: true,  rows: needsMatch },
-      { id: "time-mismatch",  title: "Time mismatch",                    description: "Variance flagged by reconciliation engine or pbp anomaly.",                  severity: "warn",  affectsPay: true,  rows: timeMismatch },
-      { id: "assign-no-ev",   title: "Assignment without clock / pay",   description: "Worker accepted the shift but no clock and no pay row exist.",               severity: "warn",  affectsPay: true,  rows: assignNoEvidence },
-      { id: "ev-no-assign",   title: "Clock / pay without assignment",   description: "Time entry or pay row exists but worker was not assigned in this period.",   severity: "warn",  affectsPay: true,  rows: clockNoAssign },
-      { id: "day-pay",        title: "Day-pay needs validation",         description: "Day-pay shift with hourly entries or missing closeout.",                     severity: "warn",  affectsPay: true,  rows: dayPayValidation },
-      { id: "transport",      title: "Driver / transport payment",       description: "Ride logged but no movement linked.",                                        severity: "warn",  affectsPay: true,  rows: transport },
-      { id: "adj-pending",    title: "Manual adjustment pending",        description: "Movements awaiting approval.",                                               severity: "block", affectsPay: true,  rows: adjPending },
-      { id: "dispute",        title: "Worker dispute",                   description: "Reconciliation rows flagged as disputed.",                                   severity: "warn",  affectsPay: true,  rows: disputes },
-      { id: "missing-docs",   title: "Missing docs / profile",           description: "Worker has payable row but profile is incomplete (governance warning).",     severity: "info",  affectsPay: false, rows: missingDocs },
-      { id: "closeout",       title: "Closeout conflict",                description: "Daily Close evidence disagrees with payroll evidence.",                      severity: "warn",  affectsPay: false, rows: closeoutConflict },
-      { id: "high-risk",      title: "High-risk / over threshold",       description: "Duration > 16h, pay > $3,000, or zero/negative pay.",                        severity: "block", affectsPay: true,  rows: highRisk },
-      { id: "pending-final",  title: "Pendiente aprobación final",       description: "Cierres aprobados por María, esperando aprobación final operativa (Keury). No representa pago.", severity: "info", affectsPay: false, rows: pendingFinalApproval },
+      // ── Operational priority queue (Centro de Validación) ──
+      { id: "requiere-correccion", title: "Requiere corrección",        description: "Cierres rechazados o que requieren seguimiento del capitán o María.", severity: "block", affectsPay: false, rows: requiereCorreccion },
+      { id: "fichajes-abiertos",   title: "Con fichajes abiertos",      description: "Hay entradas sin salida registrada. Cerrar o validar antes del pago.", severity: "block", affectsPay: false, rows: fichajesAbiertos },
+      { id: "pendiente-cierre",    title: "Pendiente cierre del turno", description: "Turnos ya ocurridos sin cierre enviado por el capitán.",               severity: "warn",  affectsPay: false, rows: pendienteCierre },
+      { id: "en-revision-maria",   title: "En revisión de María",       description: "Cierres enviados, esperando revisión operativa de María.",            severity: "warn",  affectsPay: false, rows: enRevisionMaria },
+      { id: "pending-final",       title: "Pendiente aprobación final", description: "Cierres aprobados por María, esperando aprobación final (Keury). No representa pago.", severity: "info", affectsPay: false, rows: pendingFinalApproval },
+      { id: "listo-pago",          title: "Listo para proceso de pago", description: "Aprobación final completada. Pasa al flujo de payroll y reconciliación.", severity: "info", affectsPay: false, rows: listoParaPago },
+      // ── Payroll-evidence buckets (existing) ──
+      { id: "ready",          title: "Listas para revisar",              description: "Filas con empleado verificado, sin conflictos ni anomalías.",                severity: "info",  affectsPay: true,  rows: ready },
+      { id: "needs-match",    title: "Falta vincular empleado",          description: "Filas sin match desde imports históricos (Connecteam).",                     severity: "block", affectsPay: true,  rows: needsMatch },
+      { id: "time-mismatch",  title: "Diferencia de horas",              description: "Variación detectada por reconciliación o anomalía en la fila de pago.",      severity: "warn",  affectsPay: true,  rows: timeMismatch },
+      { id: "assign-no-ev",   title: "Asignación sin fichaje ni pago",   description: "Worker aceptó el turno pero no hay fichaje ni fila de pago.",                severity: "warn",  affectsPay: true,  rows: assignNoEvidence },
+      { id: "ev-no-assign",   title: "Fichaje o pago sin asignación",    description: "Hay fichaje o fila de pago pero el worker no estaba asignado en el periodo.",severity: "warn",  affectsPay: true,  rows: clockNoAssign },
+      { id: "day-pay",        title: "Pago por día — falta validación",  description: "Turno de pago por día con entradas por hora o sin cierre.",                  severity: "warn",  affectsPay: true,  rows: dayPayValidation },
+      { id: "transport",      title: "Transporte sin movimiento",        description: "Viaje registrado sin movimiento vinculado.",                                 severity: "warn",  affectsPay: true,  rows: transport },
+      { id: "adj-pending",    title: "Ajuste manual pendiente",          description: "Movimientos esperando aprobación.",                                          severity: "block", affectsPay: true,  rows: adjPending },
+      { id: "dispute",        title: "Disputa de worker",                description: "Filas marcadas como disputadas en reconciliación.",                          severity: "warn",  affectsPay: true,  rows: disputes },
+      { id: "missing-docs",   title: "Falta documentación / perfil",     description: "Worker con fila pagable pero perfil incompleto (advertencia de gobierno).", severity: "info",  affectsPay: false, rows: missingDocs },
+      { id: "closeout",       title: "Conflicto de cierre",              description: "La evidencia del cierre diario no coincide con la evidencia de payroll.",    severity: "warn",  affectsPay: false, rows: closeoutConflict },
+      { id: "high-risk",      title: "Alto riesgo / fuera de umbral",    description: "Duración > 16h, pago > $3,000, o pago en cero/negativo.",                    severity: "block", affectsPay: true,  rows: highRisk },
     ];
   }, [dataQ.data]);
 
@@ -587,8 +657,8 @@ export default function PayrollReviewQueue() {
   if (!selectedCompanyId) {
     return (
       <Card className="max-w-xl mx-auto mt-12">
-        <CardHeader><CardTitle>Select a company</CardTitle></CardHeader>
-        <CardContent className="text-sm text-muted-foreground">Pick a tenant from the company switcher to load its payroll review queue.</CardContent>
+        <CardHeader><CardTitle>Selecciona una empresa</CardTitle></CardHeader>
+        <CardContent className="text-sm text-muted-foreground">Elige un tenant en el selector de empresa para cargar el Centro de Validación.</CardContent>
       </Card>
     );
   }
@@ -602,10 +672,11 @@ export default function PayrollReviewQueue() {
     acc[b.severity] = (acc[b.severity] ?? 0) + b.rows.length;
     return acc;
   }, {} as Record<Severity, number>);
-  const readyCount = buckets.find(b => b.id === "ready")?.rows.length ?? 0;
-  const adjPendingCount = buckets.find(b => b.id === "adj-pending")?.rows.length ?? 0;
-  const transportCount = buckets.find(b => b.id === "transport")?.rows.length ?? 0;
-  const docsCount = buckets.find(b => b.id === "missing-docs")?.rows.length ?? 0;
+  const pendienteCierreCount = buckets.find(b => b.id === "pendiente-cierre")?.rows.length ?? 0;
+  const enRevisionMariaCount = buckets.find(b => b.id === "en-revision-maria")?.rows.length ?? 0;
+  const pendingFinalCount = buckets.find(b => b.id === "pending-final")?.rows.length ?? 0;
+  const listoPagoCount = buckets.find(b => b.id === "listo-pago")?.rows.length ?? 0;
+  const alertasCount = (totalsBySeverity.warn ?? 0) + (totalsBySeverity.block ?? 0);
 
   return (
     <div className="space-y-5">
@@ -613,15 +684,15 @@ export default function PayrollReviewQueue() {
       <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <PageHeader
           variant="3"
-          title="Payroll Review Queue"
-          subtitle={`${selectedCompany?.name ?? "Company"} · triage surface for payroll review`}
+          title="Centro de Validación"
+          subtitle={`${selectedCompany?.name ?? "Empresa"} · revisa cierres, horas y aprobaciones antes del proceso de pago`}
         />
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="outline" className="gap-1.5 border-primary/30 text-primary">
-            <ShieldCheck className="h-3 w-3" /> Connecteam import remains payroll authority
+            <ShieldCheck className="h-3 w-3" /> Evidencia operativa
           </Badge>
           <Badge variant="outline" className="gap-1.5 border-muted-foreground/30 text-muted-foreground">
-            <Lock className="h-3 w-3" /> READ ONLY
+            <Lock className="h-3 w-3" /> Solo lectura
           </Badge>
         </div>
       </div>
@@ -629,13 +700,13 @@ export default function PayrollReviewQueue() {
       {/* Period selector */}
       <Card>
         <CardContent className="py-4 flex flex-col md:flex-row md:items-center gap-3">
-          <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Pay period</div>
+          <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Periodo</div>
           <Select
             value={effectivePeriodId ?? ""}
             onValueChange={(v) => setSelectedPeriodId(v)}
             disabled={periodsQ.isLoading || periods.length === 0}
           >
-            <SelectTrigger className="md:w-[460px]"><SelectValue placeholder="Select period…" /></SelectTrigger>
+            <SelectTrigger className="md:w-[460px]"><SelectValue placeholder="Selecciona un periodo…" /></SelectTrigger>
             <SelectContent>
               {periods.map(p => {
                 const future = isFuturePeriod(p);
@@ -646,8 +717,8 @@ export default function PayrollReviewQueue() {
                       <span className="font-mono text-xs text-muted-foreground">#{p.sequence_number ?? "—"}</span>
                       <span>{format(parseISO(p.start_date), "MMM d")} – {format(parseISO(p.end_date), "MMM d, yyyy")}</span>
                       <Badge variant="outline" className="text-[10px] py-0 px-1.5 capitalize">{p.status ?? "—"}</Badge>
-                      {future && <Badge variant="outline" className="text-[10px] py-0 px-1.5 border-warning/40 text-warning">future</Badge>}
-                      {pbp > 0 && <Badge variant="outline" className="text-[10px] py-0 px-1.5 border-earning/40 text-earning">{pbp} rows</Badge>}
+                      {future && <Badge variant="outline" className="text-[10px] py-0 px-1.5 border-warning/40 text-warning">futuro</Badge>}
+                      {pbp > 0 && <Badge variant="outline" className="text-[10px] py-0 px-1.5 border-earning/40 text-earning">{pbp} filas</Badge>}
                     </span>
                   </SelectItem>
                 );
@@ -656,54 +727,58 @@ export default function PayrollReviewQueue() {
           </Select>
           {selectedPeriod && isFuturePeriod(selectedPeriod) && (
             <Badge variant="outline" className="gap-1.5 border-warning/40 text-warning">
-              <CalendarX className="h-3 w-3" /> Future period — review data may be empty
+              <CalendarX className="h-3 w-3" /> Periodo futuro — puede no haber datos
             </Badge>
           )}
           <div className="ml-auto flex items-center gap-2">
             <Button asChild variant="outline" size="sm" className="h-8 text-xs gap-1.5">
-              <Link to="/app/payroll-reconciliation"><ExternalLink className="h-3.5 w-3.5" /> Reconciliation</Link>
+              <Link to="/app/payroll-reconciliation"><ExternalLink className="h-3.5 w-3.5" /> Reconciliación</Link>
             </Button>
             <Button asChild variant="outline" size="sm" className="h-8 text-xs gap-1.5">
-              <Link to="/app/periods"><ExternalLink className="h-3.5 w-3.5" /> Periods</Link>
+              <Link to="/app/periods"><ExternalLink className="h-3.5 w-3.5" /> Periodos</Link>
             </Button>
           </div>
         </CardContent>
       </Card>
 
-      {/* Summary cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        <SummaryCard icon={CheckCircle2} label="Ready to review"  value={readyCount}                     tone="earning" />
-        <SummaryCard icon={AlertTriangle} label="Needs attention"  value={totalsBySeverity.warn ?? 0}    tone="warning" />
-        <SummaryCard icon={AlertCircle}   label="Blocking issues"  value={totalsBySeverity.block ?? 0}   tone="destructive" />
-        <SummaryCard icon={Users}         label="Manual review"    value={adjPendingCount}                tone="warning" />
-        <SummaryCard icon={Car}           label="Transport pending" value={transportCount}                tone="warning" />
-        <SummaryCard icon={FileWarning}   label="Data quality"     value={docsCount}                      tone="muted" />
+      {/* Summary strip */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+        <SummaryCard icon={ClipboardList} label="Pendiente cierre"        value={pendienteCierreCount} tone="warning" />
+        <SummaryCard icon={ScanEye}        label="En revisión de María"    value={enRevisionMariaCount} tone="warning" />
+        <SummaryCard icon={ShieldCheck}    label="Pendiente aprob. final"  value={pendingFinalCount}    tone="warning" />
+        <SummaryCard icon={CheckCircle2}   label="Listos para proc. de pago" value={listoPagoCount}     tone="earning" />
+        <SummaryCard icon={AlertTriangle}  label="Con alertas"             value={alertasCount}         tone="destructive" />
       </div>
+
 
       {/* Empty / loading states */}
       {(periodsQ.isLoading || dataQ.isLoading) && (
-        <div className="flex items-center justify-center py-16"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+        <div className="flex flex-col items-center justify-center gap-2 py-16">
+          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          <p className="text-xs text-muted-foreground">Cargando bloques de validación…</p>
+        </div>
       )}
       {!periodsQ.isLoading && periods.length === 0 && (
-        <EmptyState icon={CalendarX} title="No pay periods configured" description="This company has no pay_periods rows." />
+        <EmptyState icon={CalendarX} title="Sin periodos configurados" description="Esta empresa todavía no tiene periodos de pago." />
       )}
       {!dataQ.isLoading && dataQ.data && (
         <>
           {selectedPeriod && isFuturePeriod(selectedPeriod) && buckets.every(b => b.rows.length === 0) && (
             <EmptyState
               icon={CalendarX}
-              title="Future period selected — no review data yet"
-              description="Switch to a current or past period to see real data. The selector marks future periods clearly."
+              title="Periodo futuro — aún no hay datos"
+              description="Cambia a un periodo actual o pasado para ver bloques reales. El selector marca los periodos futuros."
             />
           )}
           {selectedPeriod && !isFuturePeriod(selectedPeriod) && (pbpCounts[selectedPeriod.id] ?? 0) === 0 &&
             (dataQ.data.hist.length === 0) && (dataQ.data.mvmts.length === 0) && (dataQ.data.adj.length === 0) && (
               <EmptyState
                 icon={Info}
-                title="No payroll data for this period"
-                description="No imported rows, no movements, no adjustments. The period exists but nothing has been imported yet."
+                title="Sin datos de payroll en este periodo"
+                description="No hay filas importadas, movimientos ni ajustes. El periodo existe pero todavía no se cargó nada."
               />
             )}
+
 
           {/* Bucket accordion */}
           {buckets.some(b => b.rows.length > 0) && (
@@ -721,7 +796,7 @@ export default function PayrollReviewQueue() {
                         )} />
                         <span className="text-sm font-semibold text-left">{b.title}</span>
                         <Badge variant="outline" className={cn("text-[10px] py-0 px-1.5", sev.chip)}>{sev.label}</Badge>
-                        {b.affectsPay && <Badge variant="outline" className="text-[10px] py-0 px-1.5">Affects pay</Badge>}
+                        {b.affectsPay && <Badge variant="outline" className="text-[10px] py-0 px-1.5">Afecta pago</Badge>}
                         <span className="ml-auto text-sm font-mono tabular-nums text-muted-foreground">{b.rows.length}</span>
                       </div>
                     </AccordionTrigger>
@@ -729,7 +804,7 @@ export default function PayrollReviewQueue() {
                       <p className="text-xs text-muted-foreground mb-3">{b.description}</p>
                       {b.rows.length === 0 ? (
                         <div className="text-xs text-muted-foreground py-2 flex items-center gap-1.5">
-                          <CheckCircle2 className="h-3.5 w-3.5 text-earning" /> No issues found
+                          <CheckCircle2 className="h-3.5 w-3.5 text-earning" /> No hay bloques pendientes en esta etapa.
                         </div>
                       ) : (
                         <div className="divide-y divide-border/50">
@@ -753,7 +828,7 @@ export default function PayrollReviewQueue() {
                           ))}
                           {b.rows.length > 100 && (
                             <div className="pt-2 text-xs text-muted-foreground">
-                              Showing first 100 of {b.rows.length} rows.
+                              Mostrando los primeros 100 de {b.rows.length} bloques.
                             </div>
                           )}
                         </div>
@@ -769,7 +844,7 @@ export default function PayrollReviewQueue() {
 
       {/* Footer safety copy */}
       <p className="text-[11px] text-muted-foreground text-center pt-2 border-t border-border/30">
-        This queue is read-only. It does not calculate, approve, post, or pay payroll. Connecteam imports remain the payroll authority.
+        Este centro valida evidencia operativa. El pago final se procesa desde payroll y reconciliación. Connecteam sigue siendo la autoridad de payroll.
       </p>
     </div>
   );

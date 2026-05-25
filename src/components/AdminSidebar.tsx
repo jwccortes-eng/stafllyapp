@@ -10,7 +10,7 @@ import {
   Inbox, Wrench, Lock, Sparkles, ClipboardList, Receipt, Brain,
   Map as MapIcon, ContactRound, Award, GitCompareArrows,
   FileText, Bell, UserPlus, Star, ArrowLeftRight, Globe, ShieldCheck,
-  Monitor, Radio, UserPlus2, Banknote, Scale, FileSearch,
+  Monitor, Radio, UserPlus2, Banknote, Scale, FileSearch, ScanEye,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
@@ -65,6 +65,7 @@ const COMPANY_LINKS: LinkDef[] = [
   { to: "/app/invoicing/service-blocks", icon: ClipboardList, label: "Bloques de servicio", module: "tenant_invoicing", section: "Clientes y lugares" },
 
   // D) PAYROLL Y FINANZAS
+  { to: "/app/payroll-review-queue", icon: ScanEye, label: "Centro de Validación", module: null, section: "Payroll y finanzas", roles: ["developer", "owner", "company_owner", "admin"] },
   { to: "/app/periods", icon: CalendarDays, label: "Periodos", module: "periods", section: "Payroll y finanzas" },
   { to: "/app/compensation-validation", icon: DollarSign, label: "Compensación", module: null, section: "Payroll y finanzas" },
   { to: "/app/movements", icon: DollarSign, label: "Ajustes", module: "movements", section: "Payroll y finanzas" },
