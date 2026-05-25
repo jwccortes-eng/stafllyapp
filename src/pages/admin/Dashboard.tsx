@@ -909,13 +909,13 @@ function AdminDashboardDesktop() {
       <div>
         <div className="flex items-center gap-2 mb-3">
           <Briefcase className="h-3.5 w-3.5 text-primary" />
-          <h2 className="text-sm font-semibold font-heading text-foreground">Commercial</h2>
+          <h2 className="text-sm font-semibold font-heading text-foreground">Comercial</h2>
         </div>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <KpiStatCard label="Active clients" value={commercialKpis.activeClients} subtitle="operating" icon={Building2} color="primary" onClick={() => navigate("/app/clients")} />
-          <KpiStatCard label="Open requests" value={commercialKpis.openRequests} subtitle="in pipeline" icon={ClipboardList} color="warning" onClick={() => navigate("/app/staffing-requests")} />
-          <KpiStatCard label="Receivable" value={`$${commercialKpis.unpaidTotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}`} subtitle={`${commercialKpis.unpaidInvoices} invoices`} icon={Receipt} color="earning" onClick={() => navigate("/app/invoices")} />
-          <KpiStatCard label="Overdue" value={`$${commercialKpis.overdueTotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}`} subtitle={`${commercialKpis.overdueInvoices} invoices`} icon={AlertTriangle} color="deduction" onClick={() => navigate("/app/invoices")} />
+          <KpiStatCard label="Clientes activos" value={commercialKpis.activeClients} subtitle="operando" icon={Building2} color="primary" onClick={() => navigate("/app/clients")} />
+          <KpiStatCard label="Solicitudes abiertas" value={commercialKpis.openRequests} subtitle="en pipeline" icon={ClipboardList} color="warning" onClick={() => navigate("/app/staffing-requests")} />
+          <KpiStatCard label="Por cobrar" value={`$${commercialKpis.unpaidTotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}`} subtitle={`${commercialKpis.unpaidInvoices} facturas`} icon={Receipt} color="earning" onClick={() => navigate("/app/invoices")} />
+          <KpiStatCard label="Vencidas" value={`$${commercialKpis.overdueTotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}`} subtitle={`${commercialKpis.overdueInvoices} facturas`} icon={AlertTriangle} color="deduction" onClick={() => navigate("/app/invoices")} />
         </div>
       </div>
     ),
