@@ -38,7 +38,7 @@ import {
 import {
   Loader2, ShieldCheck, AlertTriangle, AlertCircle, CheckCircle2,
   Users, Clock, CalendarX, Car, FileWarning, ScanEye, Lock,
-  ExternalLink, Info,
+  ExternalLink, Info, ClipboardList,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
