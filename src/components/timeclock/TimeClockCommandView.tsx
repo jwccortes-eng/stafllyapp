@@ -518,7 +518,7 @@ export default function TimeClockCommandView() {
             <div className="px-5 py-4 border-b border-border/50">
               <h3 className="font-heading text-base font-semibold tracking-tight">Hoy</h3>
               <p className="text-xs text-muted-foreground">
-                {todayRollup.length} worker{todayRollup.length === 1 ? "" : "s"} con actividad — first in / last out / total tracked.
+                {todayRollup.length} {todayRollup.length === 1 ? "persona" : "personas"} con actividad — primera entrada / última salida / total registrado.
               </p>
             </div>
             {todayRollup.length === 0 ? (
