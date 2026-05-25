@@ -440,7 +440,7 @@ export default function TimeClockCommandView() {
             <Monitor className="h-3.5 w-3.5" /> Kiosk
           </TabsTrigger>
           <TabsTrigger value="all" className="gap-1.5 text-xs">
-            <Users className="h-3.5 w-3.5" /> All workers
+            <Users className="h-3.5 w-3.5" /> Todo el equipo
           </TabsTrigger>
         </TabsList>
 
