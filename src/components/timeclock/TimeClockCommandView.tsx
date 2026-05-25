@@ -179,11 +179,11 @@ export default function TimeClockCommandView() {
     liveRows.forEach((r) => {
       const hours = r.minutes / 60;
       if (hours >= OPEN_ENTRY_STALE_HOURS) {
-        issues.push({ ...r, type: "stale_open", reason: `Open clock for ${Math.round(hours)}h — likely missing clock-out` });
+        issues.push({ ...r, type: "stale_open", reason: `Fichaje abierto desde hace ${Math.round(hours)}h — posiblemente falta salida` });
       } else if (hours >= OPEN_ENTRY_WARN_HOURS) {
-        issues.push({ ...r, type: "long_open", reason: `Long open clock — ${Math.round(hours)}h` });
+        issues.push({ ...r, type: "long_open", reason: `Fichaje abierto largo — ${Math.round(hours)}h` });
       } else if (!r.entry.shift_id && !r.entry.scheduled_shifts) {
-        issues.push({ ...r, type: "no_shift", reason: "Open clock not linked to a scheduled shift" });
+        issues.push({ ...r, type: "no_shift", reason: "Fichaje sin turno programado vinculado" });
       }
     });
     closedTodayEntries.forEach((e) => {
@@ -191,11 +191,11 @@ export default function TimeClockCommandView() {
       if (!emp) return;
       const minutes = differenceInMinutes(new Date(e.clock_out!), new Date(e.clock_in));
       if (minutes / 60 >= VERY_LONG_ENTRY_HOURS) {
-        issues.push({ type: "very_long", entry: e, employee: emp, minutes, reason: `Very long entry — ${Math.round(minutes / 60)}h` });
+        issues.push({ type: "very_long", entry: e, employee: emp, minutes, reason: `Fichaje muy largo — ${Math.round(minutes / 60)}h` });
       }
       const status = (e.status ?? "").toLowerCase();
       if (status.includes("review") || status.includes("pending") || status.includes("late")) {
-        issues.push({ type: "needs_review", entry: e, employee: emp, minutes, reason: `Status: ${e.status}` });
+        issues.push({ type: "needs_review", entry: e, employee: emp, minutes, reason: `Estado: ${e.status}` });
       }
     });
     return issues;
@@ -343,25 +343,25 @@ export default function TimeClockCommandView() {
     <div className="space-y-5">
       {/* ─── KPI Command Strip ─────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        <KpiCard icon={Activity} tone="primary" label="Clocked in now" value={kpis.clockedIn} />
-        <KpiCard icon={Clock} tone="muted" label="Open clocks" value={kpis.openClocks} />
+        <KpiCard icon={Activity} tone="primary" label="Fichados ahora" value={kpis.clockedIn} />
+        <KpiCard icon={Clock} tone="muted" label="Fichajes abiertos" value={kpis.openClocks} />
         <KpiCard
           icon={AlertTriangle}
           tone={kpis.missingClockOut > 0 ? "danger" : "muted"}
-          label="Missing clock-out"
+          label="Falta salida"
           value={kpis.missingClockOut}
         />
         <KpiCard
           icon={CalendarClock}
           tone={kpis.lateReview > 0 ? "warning" : "muted"}
-          label="Needs review"
+          label="Necesita revisión"
           value={kpis.lateReview}
         />
-        <KpiCard icon={Users} tone="muted" label="Today entries" value={kpis.todayEntries} />
+        <KpiCard icon={Users} tone="muted" label="Fichajes de hoy" value={kpis.todayEntries} />
         <KpiCard
           icon={ClipboardCheck}
           tone="muted"
-          label="Tracked today"
+          label="Horas registradas hoy"
           value={formatHoursShort(kpis.totalMinutesToday)}
         />
       </div>
@@ -381,13 +381,13 @@ export default function TimeClockCommandView() {
               <p className="text-xs text-muted-foreground">
                 {alerts.length > 0
                   ? `${alerts.length} item${alerts.length === 1 ? "" : "s"} para revisar`
-                  : "All clear · no open issues right now"}
+                  : "Todo en orden · no hay incidencias abiertas"}
               </p>
             </div>
           </div>
           <Button variant="ghost" size="sm" className="h-8 text-xs gap-1.5" onClick={load}>
             <RefreshCw className="h-3.5 w-3.5" />
-            Refresh
+            Actualizar
           </Button>
         </div>
         {alerts.length === 0 ? (
@@ -395,8 +395,8 @@ export default function TimeClockCommandView() {
             title="Todo está en calma"
             description="No hay entradas abiertas que requieran atención."
             actions={[
-              { label: "Open Kiosk", onClick: () => navigate("/app/kiosk"), icon: Monitor },
-              { label: "View today", onClick: () => setActiveTab("today"), icon: CalendarDays },
+              { label: "Abrir kiosk", onClick: () => navigate("/app/kiosk"), icon: Monitor },
+              { label: "Ver hoy", onClick: () => setActiveTab("today"), icon: CalendarDays },
             ]}
           />
         ) : (
@@ -440,7 +440,7 @@ export default function TimeClockCommandView() {
             <Monitor className="h-3.5 w-3.5" /> Kiosk
           </TabsTrigger>
           <TabsTrigger value="all" className="gap-1.5 text-xs">
-            <Users className="h-3.5 w-3.5" /> All workers
+            <Users className="h-3.5 w-3.5" /> Todo el equipo
           </TabsTrigger>
         </TabsList>
 
@@ -455,14 +455,14 @@ export default function TimeClockCommandView() {
                 <div>
                   <h3 className="font-heading text-base font-semibold tracking-tight">Ahora en vivo</h3>
                   <p className="text-xs text-muted-foreground">
-                    {liveRows.length} worker{liveRows.length === 1 ? "" : "s"} currently clocked in
+                    {liveRows.length} {liveRows.length === 1 ? "persona fichada" : "personas fichadas"} en este momento
                   </p>
                 </div>
               </div>
               <div className="relative w-full sm:w-64">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                 <Input
-                  placeholder="Search worker, role, ID…"
+                  placeholder="Buscar persona, rol o ID…"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className="pl-8 h-9 text-sm"
@@ -471,11 +471,11 @@ export default function TimeClockCommandView() {
             </div>
             {filteredLive.length === 0 ? (
               <CalmEmpty
-                title={liveRows.length === 0 ? "No hay trabajadores clocked in ahora mismo." : "No matches for your search."}
+                title={liveRows.length === 0 ? "Nadie está fichado ahora mismo." : "No hay coincidencias para tu búsqueda."}
                 description={liveRows.length === 0 ? "Cuando alguien fiche desde el kiosk o el portal, aparecerá aquí en tiempo real." : undefined}
                 actions={liveRows.length === 0 ? [
-                  { label: "Open Kiosk", onClick: () => navigate("/app/kiosk"), icon: Monitor },
-                  { label: "View today", onClick: () => setActiveTab("today"), icon: CalendarDays },
+                  { label: "Abrir kiosk", onClick: () => navigate("/app/kiosk"), icon: Monitor },
+                  { label: "Ver hoy", onClick: () => setActiveTab("today"), icon: CalendarDays },
                 ] : []}
               />
             ) : (
@@ -518,7 +518,7 @@ export default function TimeClockCommandView() {
             <div className="px-5 py-4 border-b border-border/50">
               <h3 className="font-heading text-base font-semibold tracking-tight">Hoy</h3>
               <p className="text-xs text-muted-foreground">
-                {todayRollup.length} worker{todayRollup.length === 1 ? "" : "s"} con actividad — first in / last out / total tracked.
+                {todayRollup.length} {todayRollup.length === 1 ? "persona" : "personas"} con actividad — primera entrada / última salida / total registrado.
               </p>
             </div>
             {todayRollup.length === 0 ? (
@@ -542,19 +542,19 @@ export default function TimeClockCommandView() {
                         {r.employee.first_name} {r.employee.last_name}
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        {r.firstIn ? `In ${format(r.firstIn, "p", { locale: enUS })}` : "—"}
+                        {r.firstIn ? `Entró ${format(r.firstIn, "p", { locale: enUS })}` : "—"}
                         {" · "}
-                        {r.lastOut ? `Out ${format(r.lastOut, "p", { locale: enUS })}` : r.hasOpen ? "Still open" : "—"}
+                        {r.lastOut ? `Salió ${format(r.lastOut, "p", { locale: enUS })}` : r.hasOpen ? "Sigue abierto" : "—"}
                         {" · "}
-                        {r.entries.length} entr{r.entries.length === 1 ? "y" : "ies"}
+                        {r.entries.length} {r.entries.length === 1 ? "fichaje" : "fichajes"}
                       </div>
                     </div>
                     <div className="text-right">
                       <div className="text-sm font-bold tabular-nums">{formatDuration(Math.max(0, r.trackedMin))}</div>
-                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">tracked</div>
+                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">registrado</div>
                     </div>
                     {r.hasOpen && (
-                      <Badge variant="outline" className="text-[10px] bg-primary/10 text-primary border-primary/30">Open</Badge>
+                      <Badge variant="outline" className="text-[10px] bg-primary/10 text-primary border-primary/30">Abierto</Badge>
                     )}
                     <ChevronRight className="h-4 w-4 text-muted-foreground" />
                   </li>
@@ -570,7 +570,7 @@ export default function TimeClockCommandView() {
             <div className="px-5 py-4 border-b border-border/50">
               <h3 className="font-heading text-base font-semibold tracking-tight">Esta semana</h3>
               <p className="text-xs text-muted-foreground">
-                Rollup semanal por trabajador — total tracked y open issues. Solo lectura.
+                Resumen semanal por persona — total registrado e incidencias abiertas. Solo lectura.
               </p>
             </div>
             {weekRollup.length === 0 ? (
@@ -594,15 +594,15 @@ export default function TimeClockCommandView() {
                         {r.employee.first_name} {r.employee.last_name}
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        {r.entries} entr{r.entries === 1 ? "y" : "ies"}
+                        {r.entries} {r.entries === 1 ? "fichaje" : "fichajes"}
                         {r.openCount > 0 && (
-                          <> · <span className="text-amber-700 font-semibold">{r.openCount} open</span></>
+                          <> · <span className="text-amber-700 font-semibold">{r.openCount} {r.openCount === 1 ? "abierto" : "abiertos"}</span></>
                         )}
                       </div>
                     </div>
                     <div className="text-right">
                       <div className="text-sm font-bold tabular-nums">{formatDuration(Math.max(0, r.trackedMin))}</div>
-                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">this week</div>
+                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">esta semana</div>
                     </div>
                     <ChevronRight className="h-4 w-4 text-muted-foreground" />
                   </li>
@@ -618,11 +618,11 @@ export default function TimeClockCommandView() {
             <div className="px-5 py-4 border-b border-border/50">
               <h3 className="font-heading text-base font-semibold tracking-tight">Listo para revisar</h3>
               <p className="text-xs text-muted-foreground">
-                Entradas marcadas para revisión, missing clock-out y muy largas. Solo lectura — abre el perfil para resolver.
+                Fichajes marcados para revisión, falta de salida y muy largos. Solo lectura — abre el perfil para resolver.
               </p>
             </div>
             {approvals.length === 0 ? (
-              <CalmEmpty title="Sin aprobaciones pendientes" description="No hay entradas que requieran revisión del admin." />
+              <CalmEmpty title="Sin aprobaciones pendientes" description="No hay fichajes que requieran revisión del admin." />
             ) : (
               <ul className="divide-y divide-border/40">
                 {approvals.map((item) => (
@@ -648,12 +648,12 @@ export default function TimeClockCommandView() {
               </div>
             </div>
             <div className="rounded-xl bg-muted/40 p-4 mb-4">
-              <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Kiosk URL</div>
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">URL del kiosk</div>
               <code className="text-xs font-mono break-all">{`${APP_BASE_URL}/kiosk`}</code>
             </div>
             <div className="flex flex-wrap gap-2">
               <Button size="sm" className="h-9 text-xs gap-1.5" onClick={() => navigate("/app/kiosk")}>
-                <Monitor className="h-3.5 w-3.5" /> Open Kiosk
+                <Monitor className="h-3.5 w-3.5" /> Abrir kiosk
               </Button>
               <Button
                 variant="outline"
@@ -661,10 +661,10 @@ export default function TimeClockCommandView() {
                 className="h-9 text-xs gap-1.5"
                 onClick={() => {
                   navigator.clipboard.writeText(`${APP_BASE_URL}/kiosk`);
-                  toast.success("Kiosk URL copied");
+                  toast.success("URL del kiosk copiada");
                 }}
               >
-                <Copy className="h-3.5 w-3.5" /> Copy URL
+                <Copy className="h-3.5 w-3.5" /> Copiar URL
               </Button>
             </div>
           </Card>
@@ -677,21 +677,21 @@ export default function TimeClockCommandView() {
               <Users className="h-5 w-5" />
             </div>
             <div className="space-y-1 max-w-md">
-              <h3 className="font-heading text-lg font-semibold tracking-tight">Worker directory</h3>
+              <h3 className="font-heading text-lg font-semibold tracking-tight">Directorio del equipo</h3>
               <p className="text-sm text-muted-foreground">
-                Time Clock se enfoca en asistencia en vivo y excepciones. Para navegar el roster completo con búsqueda,
-                filtros, perfiles y data quality, usa el módulo Workers.
+                El reloj se enfoca en asistencia en vivo y excepciones. Para navegar el equipo completo con búsqueda,
+                filtros, perfiles y calidad de datos, usa el módulo Equipo.
               </p>
             </div>
             <div className="flex flex-wrap items-center justify-center gap-2">
               <Button size="sm" className="h-9 text-xs gap-1.5" onClick={() => navigate("/app/employees")}>
-                Open Workers <ArrowRight className="h-3.5 w-3.5" />
+                Abrir equipo <ArrowRight className="h-3.5 w-3.5" />
               </Button>
               <Button variant="outline" size="sm" className="h-9 text-xs gap-1.5" onClick={() => setActiveTab("today")}>
-                <CalendarDays className="h-3.5 w-3.5" /> View Today
+                <CalendarDays className="h-3.5 w-3.5" /> Ver hoy
               </Button>
               <Button variant="outline" size="sm" className="h-9 text-xs gap-1.5" onClick={() => setActiveTab("live")}>
-                <Radio className="h-3.5 w-3.5" /> Back to Live
+                <Radio className="h-3.5 w-3.5" /> Volver a En vivo
               </Button>
             </div>
           </Card>
@@ -699,7 +699,7 @@ export default function TimeClockCommandView() {
       </Tabs>
 
       <p className="text-[11px] text-muted-foreground">
-        Read-only · Time clock can show scheduled shift as context but never as payment.
+        Solo lectura · El reloj puede mostrar el turno programado como contexto, pero nunca como pago.
       </p>
 
       <AlertDetailSheet
@@ -732,11 +732,11 @@ function AlertDetailSheet({
 }) {
   const open = !!item;
   const labelMap: Record<AlertItem["type"], string> = {
-    stale_open: "Stale open clock",
-    long_open: "Long open clock",
-    very_long: "Very long entry",
-    needs_review: "Needs review",
-    no_shift: "Clock without scheduled shift",
+    stale_open: "Fichaje abierto vencido",
+    long_open: "Fichaje abierto largo",
+    very_long: "Fichaje muy largo",
+    needs_review: "Necesita revisión",
+    no_shift: "Fichaje sin turno programado",
   };
   const phoneRaw = (item?.employee.phone_number ?? "").replace(/[^+\d]/g, "");
   const waPhone = phoneRaw.replace(/^\+/, "");
@@ -745,7 +745,7 @@ function AlertDetailSheet({
       <SheetContent side="bottom" className="rounded-t-3xl p-0 max-h-[85vh] flex flex-col">
         <SheetHeader className="px-5 pt-5 pb-3 text-left">
           <SheetTitle className="text-base font-bold font-heading">
-            {item ? labelMap[item.type] : "Time alert"}
+            {item ? labelMap[item.type] : "Alerta de tiempo"}
           </SheetTitle>
         </SheetHeader>
         {item && (
@@ -771,48 +771,48 @@ function AlertDetailSheet({
 
             <div className="rounded-2xl border border-border bg-card divide-y divide-border/50">
               <div className="flex items-center justify-between px-4 py-3 text-sm">
-                <span className="text-muted-foreground">Issue</span>
+                <span className="text-muted-foreground">Incidencia</span>
                 <span className="font-medium text-foreground">{item.reason}</span>
               </div>
               <div className="flex items-center justify-between px-4 py-3 text-sm">
-                <span className="text-muted-foreground">Clock-in</span>
+                <span className="text-muted-foreground">Entrada</span>
                 <span className="font-medium text-foreground tabular-nums">
                   {format(new Date(item.entry.clock_in), "PPp", { locale: enUS })}
                 </span>
               </div>
               <div className="flex items-center justify-between px-4 py-3 text-sm">
-                <span className="text-muted-foreground">Elapsed</span>
+                <span className="text-muted-foreground">Transcurrido</span>
                 <span className="font-medium text-foreground tabular-nums">
                   {formatDuration(item.minutes)}
                 </span>
               </div>
               {item.entry.scheduled_shifts && (
                 <div className="flex items-center justify-between px-4 py-3 text-sm">
-                  <span className="text-muted-foreground">Shift</span>
+                  <span className="text-muted-foreground">Turno</span>
                   <span className="font-medium text-foreground truncate ml-2">
                     {item.entry.scheduled_shifts.title}
                   </span>
                 </div>
               )}
               <div className="flex items-center justify-between px-4 py-3 text-sm">
-                <span className="text-muted-foreground">Status</span>
+                <span className="text-muted-foreground">Estado</span>
                 <span className="font-medium text-foreground">
-                  {item.entry.clock_out ? "Closed" : "Open"}
+                  {item.entry.clock_out ? "Cerrado" : "Abierto"}
                 </span>
               </div>
             </div>
 
             <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-800 dark:text-amber-300">
-              <strong className="block font-semibold mb-0.5">Suggested action</strong>
+              <strong className="block font-semibold mb-0.5">Acción sugerida</strong>
               {item.type === "stale_open"
-                ? "Reach out to confirm the worker is no longer on shift, then review the entry in Time."
+                ? "Contacta a la persona para confirmar si ya no está trabajando, luego revisa el fichaje en el reloj."
                 : item.type === "very_long"
-                ? "Review the entry for accuracy — duration exceeds 16h."
+                ? "Revisa el fichaje — la duración supera las 16h."
                 : item.type === "needs_review"
-                ? "Open Approvals in Time to validate the entry."
+                ? "Abre Aprobaciones para validar el fichaje."
                 : item.type === "no_shift"
-                ? "Link this clock to a scheduled shift if needed."
-                : "Reach out to the worker and confirm whether they are still working."}
+                ? "Vincula este fichaje a un turno programado si aplica."
+                : "Contacta a la persona y confirma si sigue trabajando."}
             </div>
 
             {/* Primary actions: contact + review in Time */}
@@ -822,11 +822,11 @@ function AlertDetailSheet({
                   href={`tel:${phoneRaw}`}
                   className="inline-flex items-center justify-center gap-1.5 h-11 rounded-xl bg-primary/10 text-primary text-sm font-medium active:scale-[0.98] transition"
                 >
-                  <Phone className="h-4 w-4" /> Call
+                  <Phone className="h-4 w-4" /> Llamar
                 </a>
               ) : (
                 <span className="inline-flex items-center justify-center gap-1.5 h-11 rounded-xl bg-muted text-muted-foreground text-sm font-medium opacity-60">
-                  <Phone className="h-4 w-4" /> No phone
+                  <Phone className="h-4 w-4" /> Sin teléfono
                 </span>
               )}
               {waPhone ? (
@@ -849,7 +849,7 @@ function AlertDetailSheet({
               className="w-full h-11 rounded-xl text-sm font-semibold gap-2"
               onClick={onReviewInTime}
             >
-              <ClipboardCheck className="h-4 w-4" /> Review in Time
+              <ClipboardCheck className="h-4 w-4" /> Revisar en el reloj
             </Button>
 
             {/* Secondary: worker profile */}
@@ -858,7 +858,7 @@ function AlertDetailSheet({
               className="w-full h-10 rounded-xl text-xs text-muted-foreground gap-2"
               onClick={() => onOpenWorker(item.employee.id)}
             >
-              <Users className="h-3.5 w-3.5" /> View worker profile
+              <Users className="h-3.5 w-3.5" /> Ver perfil
             </Button>
           </div>
         )}
@@ -956,10 +956,10 @@ function AlertRow({ item, onOpen }: { item: AlertItem; onOpen: () => void }) {
       ? "bg-violet-500/10 text-violet-700 border-violet-500/30"
       : "bg-sky-500/10 text-sky-700 border-sky-500/30";
   const label =
-    item.type === "stale_open" ? "Stale" :
-    item.type === "long_open" ? "Long" :
-    item.type === "very_long" ? "Very long" :
-    item.type === "needs_review" ? "Review" : "No shift";
+    item.type === "stale_open" ? "Vencido" :
+    item.type === "long_open" ? "Largo" :
+    item.type === "very_long" ? "Muy largo" :
+    item.type === "needs_review" ? "Revisar" : "Sin turno";
   return (
     <li
       className="flex items-center gap-3 px-5 py-3 hover:bg-accent/40 cursor-pointer transition"
@@ -1025,7 +1025,7 @@ function LiveRow({
         <div className="flex items-center gap-3 text-xs text-muted-foreground">
           <span className="inline-flex items-center gap-1">
             <Clock className="h-3 w-3" />
-            Since {format(new Date(row.entry.clock_in), "p", { locale: enUS })}
+            Desde {format(new Date(row.entry.clock_in), "p", { locale: enUS })}
           </span>
           {sched && (
             <span className="inline-flex items-center gap-1 truncate">
@@ -1037,7 +1037,7 @@ function LiveRow({
       </div>
       <div className="text-right">
         <div className="text-sm font-bold tabular-nums">{formatDuration(row.minutes)}</div>
-        <div className="text-[10px] uppercase tracking-wider text-muted-foreground">elapsed</div>
+        <div className="text-[10px] uppercase tracking-wider text-muted-foreground">transcurrido</div>
       </div>
       <ChevronRight className="h-4 w-4 text-muted-foreground" />
     </li>

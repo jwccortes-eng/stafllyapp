@@ -214,7 +214,7 @@ function WeeklyShiftPreview({ companyId, navigate }: { companyId: string; naviga
     <Card className="rounded-2xl shadow-sm border-border/40 overflow-hidden">
       <CardHeader className="pb-3 px-6 pt-5">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg font-bold font-heading">Weekly Shift</CardTitle>
+          <CardTitle className="text-lg font-bold font-heading">Turnos de la semana</CardTitle>
           <div className="flex items-center gap-2">
             <button className="h-8 w-8 flex items-center justify-center rounded-lg hover:bg-accent transition-colors text-muted-foreground">
               <Search className="h-4 w-4" />
@@ -731,22 +731,22 @@ function AdminDashboardDesktop() {
 
   const greeting = useMemo(() => {
     const h = new Date().getHours();
-    if (h < 12) return "Good morning";
-    if (h < 18) return "Good afternoon";
-    return "Good evening";
+    if (h < 12) return "Buenos días";
+    if (h < 18) return "Buenas tardes";
+    return "Buenas noches";
   }, []);
 
   const quickActions = [
-    { label: "Import Hours", icon: Upload, to: "/app/import", module: "import", description: "Upload time clock file", accent: "from-primary to-primary/70" },
-    { label: "Add Adjustment", icon: DollarSign, to: "/app/movements", module: "movements", description: "Extras, deductions and adjustments", accent: "from-warning to-warning/70" },
-    { label: "View Summary", icon: FileSpreadsheet, to: "/app/summary", module: "summary", description: "Current period summary", accent: "from-earning to-earning/70" },
-    { label: "Employees", icon: Users, to: "/app/employees", module: "employees", description: "Manage employees", accent: "from-primary to-primary/70" },
-    { label: "Concepts", icon: Tags, to: "/app/concepts", module: "concepts", description: "Configure pay concepts", accent: "from-deduction to-deduction/70" },
-    { label: "Reports", icon: BarChart3, to: "/app/reports", module: "reports", description: "Generate and save reports", accent: "from-primary to-primary/70" },
+    { label: "Importar horas", icon: Upload, to: "/app/import", module: "import", description: "Sube archivo de fichajes", accent: "from-primary to-primary/70" },
+    { label: "Agregar ajuste", icon: DollarSign, to: "/app/movements", module: "movements", description: "Extras, deducciones y ajustes", accent: "from-warning to-warning/70" },
+    { label: "Ver resumen", icon: FileSpreadsheet, to: "/app/summary", module: "summary", description: "Resumen del periodo actual", accent: "from-earning to-earning/70" },
+    { label: "Equipo", icon: Users, to: "/app/employees", module: "employees", description: "Gestionar trabajadores", accent: "from-primary to-primary/70" },
+    { label: "Conceptos", icon: Tags, to: "/app/concepts", module: "concepts", description: "Configurar conceptos de pago", accent: "from-deduction to-deduction/70" },
+    { label: "Reportes", icon: BarChart3, to: "/app/reports", module: "reports", description: "Generar y guardar reportes", accent: "from-primary to-primary/70" },
   ].filter(a => canAccess(a.module));
 
   const statusColor = stats.periodStatus === 'open' ? 'earning' : stats.periodStatus === 'closed' ? 'warning' : 'primary';
-  const statusLabel = stats.periodStatus === 'open' ? 'Open' : stats.periodStatus === 'closed' ? 'Closed' : 'Published';
+  const statusLabel = stats.periodStatus === 'open' ? 'Abierto' : stats.periodStatus === 'closed' ? 'Cerrado' : 'Publicado';
 
   /* ─── Widget renderers ─── */
   const isWidgetEnabled = (id: string) => enabledWidgets.some(w => w.id === id);
@@ -772,21 +772,21 @@ function AdminDashboardDesktop() {
         {/* Marketplace KPI row */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <HeroKpiCard
-            label="Total Profiles"
+            label="Perfiles totales"
             value={marketplaceKpis.totalProfiles}
             icon={Users}
             color="primary"
             onClick={() => navigate("/app/employees")}
           />
           <HeroKpiCard
-            label="With Photo"
+            label="Con foto"
             value={marketplaceKpis.withPhoto}
             icon={Camera}
             color="earning"
             onClick={() => navigate("/app/employees")}
           />
           <HeroKpiCard
-            label="Missing Photo"
+            label="Sin foto"
             value={marketplaceKpis.missingPhoto}
             icon={AlertCircle}
             color="warning"
@@ -795,9 +795,9 @@ function AdminDashboardDesktop() {
         </div>
         {/* Secondary marketplace KPIs */}
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 mt-4">
-          <KpiStatCard label="With Email" value={marketplaceKpis.withEmail} subtitle="contactable" icon={UserCheck} color="earning" onClick={() => navigate("/app/employees")} />
-          <KpiStatCard label="Missing Email" value={marketplaceKpis.missingEmail} subtitle="need outreach" icon={AlertTriangle} color="warning" onClick={() => navigate("/app/employees")} />
-          <KpiStatCard label="Activation Ready" value={marketplaceKpis.withPhoto > 0 ? `${Math.round((marketplaceKpis.withPhoto / Math.max(marketplaceKpis.totalProfiles, 1)) * 100)}%` : "0%"} subtitle="photo completion" icon={Shield} color="primary" />
+          <KpiStatCard label="Con email" value={marketplaceKpis.withEmail} subtitle="contactables" icon={UserCheck} color="earning" onClick={() => navigate("/app/employees")} />
+          <KpiStatCard label="Sin email" value={marketplaceKpis.missingEmail} subtitle="por contactar" icon={AlertTriangle} color="warning" onClick={() => navigate("/app/employees")} />
+          <KpiStatCard label="Listos para activar" value={marketplaceKpis.withPhoto > 0 ? `${Math.round((marketplaceKpis.withPhoto / Math.max(marketplaceKpis.totalProfiles, 1)) * 100)}%` : "0%"} subtitle="completitud de foto" icon={Shield} color="primary" />
         </div>
       </>
     ) : (
@@ -805,21 +805,21 @@ function AdminDashboardDesktop() {
         {/* Hero KPI row — 3 large cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <HeroKpiCard
-            label="Hours Worked"
+            label="Horas trabajadas"
             value={animHours}
             icon={Clock}
             color="primary"
             onClick={() => navigate("/app/timeclock")}
           />
           <HeroKpiCard
-            label="Active Employees"
+            label="Equipo activo"
             value={`${animEmployees}`}
             icon={Users}
             color="earning"
             onClick={() => navigate("/app/employees")}
           />
           <HeroKpiCard
-            label="Total Payroll"
+            label="Nómina total"
             value={`$${stats.periodTotal.toLocaleString("en-US", { minimumFractionDigits: 0 })}`}
             icon={DollarSign}
             color="warning"
@@ -835,7 +835,7 @@ function AdminDashboardDesktop() {
       <div>
         <div className="flex items-center gap-2 mb-3">
           <Zap className="h-3.5 w-3.5 text-warning" />
-          <h2 className="text-sm font-semibold font-heading text-foreground">Quick Actions</h2>
+          <h2 className="text-sm font-semibold font-heading text-foreground">Acciones rápidas</h2>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
           {quickActions.map((action) => (

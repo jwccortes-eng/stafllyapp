@@ -233,15 +233,19 @@ export default function ShiftRequests() {
       </Tabs>
 
       {loading ? (
-        <div className="flex items-center justify-center py-16">
-          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+        <div className="flex flex-col items-center justify-center py-16 gap-2 text-muted-foreground">
+          <Loader2 className="h-5 w-5 animate-spin" />
+          <p className="text-xs">Cargando solicitudes…</p>
         </div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-16 text-muted-foreground">
           <HandMetal className="h-8 w-8 mx-auto mb-3 opacity-30" />
           <p className="text-sm">
-            {tab === "pending" ? "No hay solicitudes pendientes" : `No hay solicitudes ${tab === "approved" ? "aprobadas" : "rechazadas"}`}
+            {tab === "pending" ? "No hay solicitudes pendientes." : `No hay solicitudes ${tab === "approved" ? "aprobadas" : "rechazadas"}.`}
           </p>
+          {tab === "pending" && (
+            <p className="text-[11px] mt-1 opacity-80">Cuando un empleado solicite un turno reclamable, aparecerá aquí.</p>
+          )}
         </div>
       ) : (
         <div className="space-y-2">

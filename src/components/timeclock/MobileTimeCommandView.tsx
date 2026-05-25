@@ -157,11 +157,11 @@ export default function MobileTimeCommandView() {
     liveRows.forEach(r => {
       const hours = r.minutes / 60;
       if (hours >= OPEN_ENTRY_STALE_HOURS) {
-        issues.push({ ...r, type: "stale_open", reason: `Open clock for ${Math.round(hours)}h — likely missing clock-out` });
+        issues.push({ ...r, type: "stale_open", reason: `Fichaje abierto desde hace ${Math.round(hours)}h — posiblemente falta salida` });
       } else if (hours >= OPEN_ENTRY_WARN_HOURS) {
-        issues.push({ ...r, type: "long_open", reason: `Long open clock — ${Math.round(hours)}h` });
+        issues.push({ ...r, type: "long_open", reason: `Fichaje abierto largo — ${Math.round(hours)}h` });
       } else if (!r.entry.shift_id && !r.entry.scheduled_shifts) {
-        issues.push({ ...r, type: "no_shift", reason: "Open clock not linked to a scheduled shift" });
+        issues.push({ ...r, type: "no_shift", reason: "Fichaje sin turno programado vinculado" });
       }
     });
     closedTodayEntries.forEach(e => {
@@ -169,11 +169,11 @@ export default function MobileTimeCommandView() {
       if (!emp) return;
       const minutes = differenceInMinutes(new Date(e.clock_out!), new Date(e.clock_in));
       if (minutes / 60 >= VERY_LONG_ENTRY_HOURS) {
-        issues.push({ type: "very_long", entry: e, employee: emp, minutes, reason: `Very long entry — ${Math.round(minutes / 60)}h` });
+        issues.push({ type: "very_long", entry: e, employee: emp, minutes, reason: `Fichaje muy largo — ${Math.round(minutes / 60)}h` });
       }
       const status = (e.status ?? "").toLowerCase();
       if (status.includes("review") || status.includes("pending") || status.includes("late")) {
-        issues.push({ type: "needs_review", entry: e, employee: emp, minutes, reason: `Status: ${e.status}` });
+        issues.push({ type: "needs_review", entry: e, employee: emp, minutes, reason: `Estado: ${e.status}` });
       }
     });
     return issues;
@@ -221,7 +221,7 @@ export default function MobileTimeCommandView() {
   if (!selectedCompanyId) {
     return (
       <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-400">
-        Select a company to load attendance.
+        Selecciona una empresa para cargar la asistencia.
       </div>
     );
   }
@@ -238,18 +238,18 @@ export default function MobileTimeCommandView() {
     <div className="space-y-4">
       {/* Compact KPI strip — single row, scrollable on narrow */}
       <div className="grid grid-cols-5 gap-1.5">
-        <Kpi label="Scheduled" value={kpis.scheduled} />
-        <Kpi label="Clocked in" value={kpis.clockedIn} tone="primary" />
-        <Kpi label="Missing" value={kpis.missing} tone={kpis.missing > 0 ? "danger" : "muted"} />
-        <Kpi label="Open" value={kpis.openClocks} />
-        <Kpi label="Review" value={kpis.needsReview} tone={kpis.needsReview > 0 ? "warn" : "muted"} />
+        <Kpi label="Programados" value={kpis.scheduled} />
+        <Kpi label="Fichados" value={kpis.clockedIn} tone="primary" />
+        <Kpi label="Faltan" value={kpis.missing} tone={kpis.missing > 0 ? "danger" : "muted"} />
+        <Kpi label="Abiertos" value={kpis.openClocks} />
+        <Kpi label="Revisar" value={kpis.needsReview} tone={kpis.needsReview > 0 ? "warn" : "muted"} />
       </div>
 
       {/* Mode pills */}
       <div className="flex gap-1.5">
-        <ModePill active={mode === "today"} onClick={() => setMode("today")} label="Today / Live" />
-        <ModePill active={mode === "week"} onClick={() => setMode("week")} label="Timesheet / Week" />
-        <Button variant="ghost" size="icon" className="h-9 w-9 ml-auto" onClick={load} aria-label="Refresh">
+        <ModePill active={mode === "today"} onClick={() => setMode("today")} label="Hoy / En vivo" />
+        <ModePill active={mode === "week"} onClick={() => setMode("week")} label="Semana" />
+        <Button variant="ghost" size="icon" className="h-9 w-9 ml-auto" onClick={load} aria-label="Actualizar">
           <RefreshCw className="h-4 w-4" />
         </Button>
       </div>
@@ -260,7 +260,7 @@ export default function MobileTimeCommandView() {
           <div className="px-3.5 py-2.5 flex items-center gap-2 border-b border-amber-500/20">
             <AlertTriangle className="h-4 w-4 text-amber-600" />
             <span className="text-sm font-semibold text-amber-700 dark:text-amber-400">
-              {alerts.length} alert{alerts.length === 1 ? "" : "s"}
+              {alerts.length} {alerts.length === 1 ? "alerta" : "alertas"}
             </span>
           </div>
           <ul className="divide-y divide-border/40">
@@ -282,7 +282,7 @@ export default function MobileTimeCommandView() {
       )}
 
       <p className="text-[10px] text-muted-foreground text-center">
-        Read-only · Scheduled hours are operational context only — payroll uses real clock entries.
+        Solo lectura · Las horas programadas son contexto operativo — la nómina se calcula con fichajes reales.
       </p>
 
       <AlertDetailSheet
@@ -311,9 +311,9 @@ function TodayView({ live, missing, closedToday }: {
 }) {
   return (
     <div className="space-y-3">
-      <Section title="Currently clocked in" count={live.length} icon={Activity} tone="primary">
+      <Section title="Fichados ahora" count={live.length} icon={Activity} tone="primary">
         {live.length === 0 ? (
-          <Empty text="No one is clocked in right now." />
+          <Empty text="Nadie está fichado en este momento." />
         ) : (
           <ul className="divide-y divide-border/40">
             {live.map(r => (
@@ -329,7 +329,7 @@ function TodayView({ live, missing, closedToday }: {
                     {r.employee.first_name} {r.employee.last_name}
                   </div>
                   <div className="text-[11px] text-muted-foreground truncate">
-                    Since {format(new Date(r.entry.clock_in), "p", { locale: enUS })}
+                    Desde {format(new Date(r.entry.clock_in), "p", { locale: enUS })}
                     {r.entry.scheduled_shifts && (
                       <> · <MapPin className="inline h-3 w-3" /> {r.entry.scheduled_shifts.title}</>
                     )}
@@ -345,9 +345,9 @@ function TodayView({ live, missing, closedToday }: {
         )}
       </Section>
 
-      <Section title="Scheduled but not arrived" count={missing.length} icon={AlertTriangle} tone={missing.length > 0 ? "danger" : "muted"}>
+      <Section title="Programados sin llegar" count={missing.length} icon={AlertTriangle} tone={missing.length > 0 ? "danger" : "muted"}>
         {missing.length === 0 ? (
-          <Empty text="Everyone scheduled has clocked in." />
+          <Empty text="Todo el equipo programado ya está fichado." />
         ) : (
           <ul className="divide-y divide-border/40">
             {missing.map(e => (
@@ -355,7 +355,7 @@ function TodayView({ live, missing, closedToday }: {
                 <EmployeeAvatar avatarUrl={e.avatar_url} firstName={e.first_name} lastName={e.last_name} size="sm" />
                 <div className="min-w-0 flex-1">
                   <div className="text-sm font-semibold truncate">{e.first_name} {e.last_name}</div>
-                  <div className="text-[11px] text-muted-foreground">Scheduled today · not clocked in</div>
+                  <div className="text-[11px] text-muted-foreground">Programado hoy · sin fichaje</div>
                 </div>
                 <ContactButtons phone={e.phone_number} />
               </li>
@@ -365,7 +365,7 @@ function TodayView({ live, missing, closedToday }: {
       </Section>
 
       <div className="text-xs text-muted-foreground text-center pt-1">
-        {closedToday} entr{closedToday === 1 ? "y" : "ies"} closed today
+        {closedToday} {closedToday === 1 ? "fichaje cerrado" : "fichajes cerrados"} hoy
       </div>
     </div>
   );
@@ -373,7 +373,7 @@ function TodayView({ live, missing, closedToday }: {
 
 function WeekView({ rollup }: { rollup: { employee: Employee; trackedMin: number; openCount: number; entries: number }[] }) {
   if (rollup.length === 0) {
-    return <Empty text="No activity this week yet." />;
+    return <Empty text="Aún no hay actividad esta semana." />;
   }
   return (
     <Card className="rounded-2xl border border-border/60 shadow-sm">
@@ -384,13 +384,13 @@ function WeekView({ rollup }: { rollup: { employee: Employee; trackedMin: number
             <div className="min-w-0 flex-1">
               <div className="text-sm font-semibold truncate">{r.employee.first_name} {r.employee.last_name}</div>
               <div className="text-[11px] text-muted-foreground">
-                {r.entries} entr{r.entries === 1 ? "y" : "ies"}
-                {r.openCount > 0 && <span className="text-amber-700 font-semibold"> · {r.openCount} open</span>}
+                {r.entries} {r.entries === 1 ? "fichaje" : "fichajes"}
+                {r.openCount > 0 && <span className="text-amber-700 font-semibold"> · {r.openCount} {r.openCount === 1 ? "abierto" : "abiertos"}</span>}
               </div>
             </div>
             <div className="text-right">
               <div className="text-sm font-bold tabular-nums">{formatDuration(Math.max(0, r.trackedMin))}</div>
-              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">this week</div>
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">esta semana</div>
             </div>
           </li>
         ))}
@@ -428,7 +428,7 @@ function ContactButtons({ phone }: { phone: string | null }) {
     <div className="flex items-center gap-1 shrink-0">
       <a href={`tel:${raw}`} onClick={(e) => e.stopPropagation()}
         className="h-9 w-9 inline-flex items-center justify-center rounded-lg bg-primary/10 text-primary active:scale-95"
-        aria-label="Call"><Phone className="h-4 w-4" /></a>
+        aria-label="Llamar"><Phone className="h-4 w-4" /></a>
       <a href={`https://wa.me/${wa}`} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}
         className="h-9 w-9 inline-flex items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 active:scale-95"
         aria-label="WhatsApp"><MessageCircle className="h-4 w-4" /></a>
@@ -479,10 +479,10 @@ function AlertRow({ item, onOpen }: { item: AlertItem; onOpen: () => void }) {
     : item.type === "needs_review" ? "bg-violet-500/10 text-violet-700 border-violet-500/30"
     : "bg-sky-500/10 text-sky-700 border-sky-500/30";
   const label =
-    item.type === "stale_open" ? "Stale" :
-    item.type === "long_open" ? "Long" :
-    item.type === "very_long" ? "Long" :
-    item.type === "needs_review" ? "Review" : "No shift";
+    item.type === "stale_open" ? "Vencido" :
+    item.type === "long_open" ? "Largo" :
+    item.type === "very_long" ? "Muy largo" :
+    item.type === "needs_review" ? "Revisar" : "Sin turno";
   return (
     <li className="flex items-center gap-3 px-3.5 py-2.5 active:bg-muted/40 cursor-pointer" onClick={onOpen}>
       <EmployeeAvatar avatarUrl={item.employee.avatar_url} firstName={item.employee.first_name} lastName={item.employee.last_name} size="sm" />
@@ -504,11 +504,11 @@ function AlertDetailSheet({ item, onClose, onOpenWorker, onReviewInTime }: {
 }) {
   const open = !!item;
   const labelMap: Record<AlertType, string> = {
-    stale_open: "Stale open clock",
-    long_open: "Long open clock",
-    very_long: "Very long entry",
-    needs_review: "Needs review",
-    no_shift: "Clock without scheduled shift",
+    stale_open: "Fichaje abierto vencido",
+    long_open: "Fichaje abierto largo",
+    very_long: "Fichaje muy largo",
+    needs_review: "Necesita revisión",
+    no_shift: "Fichaje sin turno programado",
   };
   const phoneRaw = (item?.employee.phone_number ?? "").replace(/[^+\d]/g, "");
   const waPhone = phoneRaw.replace(/^\+/, "");
@@ -516,7 +516,7 @@ function AlertDetailSheet({ item, onClose, onOpenWorker, onReviewInTime }: {
     <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
       <SheetContent side="bottom" className="rounded-t-3xl p-0 max-h-[85vh] flex flex-col">
         <SheetHeader className="px-5 pt-5 pb-3 text-left">
-          <SheetTitle className="text-base font-bold">{item ? labelMap[item.type] : "Time alert"}</SheetTitle>
+          <SheetTitle className="text-base font-bold">{item ? labelMap[item.type] : "Alerta de tiempo"}</SheetTitle>
         </SheetHeader>
         {item && (
           <div className="px-5 pb-5 space-y-4 overflow-y-auto">
@@ -531,36 +531,36 @@ function AlertDetailSheet({ item, onClose, onOpenWorker, onReviewInTime }: {
             </div>
 
             <div className="rounded-2xl border border-border bg-card divide-y divide-border/50">
-              <DetailRow label="Issue" value={item.reason} />
-              <DetailRow label="Clock-in" value={format(new Date(item.entry.clock_in), "PPp", { locale: enUS })} />
-              <DetailRow label="Elapsed" value={formatDuration(item.minutes)} />
+              <DetailRow label="Incidencia" value={item.reason} />
+              <DetailRow label="Entrada" value={format(new Date(item.entry.clock_in), "PPp", { locale: enUS })} />
+              <DetailRow label="Transcurrido" value={formatDuration(item.minutes)} />
               {item.entry.scheduled_shifts && (
-                <DetailRow label="Shift" value={item.entry.scheduled_shifts.title} />
+                <DetailRow label="Turno" value={item.entry.scheduled_shifts.title} />
               )}
-              <DetailRow label="Status" value={item.entry.clock_out ? "Closed" : "Open"} />
+              <DetailRow label="Estado" value={item.entry.clock_out ? "Cerrado" : "Abierto"} />
             </div>
 
             <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-800 dark:text-amber-300">
-              <strong className="block font-semibold mb-0.5">Suggested action</strong>
+              <strong className="block font-semibold mb-0.5">Acción sugerida</strong>
               {item.type === "stale_open"
-                ? "Reach out to confirm the worker is no longer on shift, then review the entry in Time."
+                ? "Contacta a la persona para confirmar si ya no está trabajando, luego revisa el fichaje en el reloj."
                 : item.type === "very_long"
-                ? "Review the entry for accuracy — duration exceeds 16h."
+                ? "Revisa el fichaje — la duración supera las 16h."
                 : item.type === "needs_review"
-                ? "Open Approvals in Time to validate the entry."
+                ? "Abre Aprobaciones para validar el fichaje."
                 : item.type === "no_shift"
-                ? "Link this clock to a scheduled shift if needed."
-                : "Reach out to the worker and confirm whether they are still working."}
+                ? "Vincula este fichaje a un turno programado si aplica."
+                : "Contacta a la persona y confirma si sigue trabajando."}
             </div>
 
             <div className="grid grid-cols-2 gap-2">
               {phoneRaw ? (
                 <a href={`tel:${phoneRaw}`} className="inline-flex items-center justify-center gap-1.5 h-11 rounded-xl bg-primary/10 text-primary text-sm font-medium active:scale-[0.98]">
-                  <Phone className="h-4 w-4" /> Call
+                  <Phone className="h-4 w-4" /> Llamar
                 </a>
               ) : (
                 <span className="inline-flex items-center justify-center gap-1.5 h-11 rounded-xl bg-muted text-muted-foreground text-sm font-medium opacity-60">
-                  <Phone className="h-4 w-4" /> No phone
+                  <Phone className="h-4 w-4" /> Sin teléfono
                 </span>
               )}
               {waPhone ? (
@@ -575,11 +575,11 @@ function AlertDetailSheet({ item, onClose, onOpenWorker, onReviewInTime }: {
             </div>
 
             <Button className="w-full h-11 rounded-xl text-sm font-semibold gap-2" onClick={onReviewInTime}>
-              <ClipboardCheck className="h-4 w-4" /> Review in Time
+              <ClipboardCheck className="h-4 w-4" /> Revisar en el reloj
             </Button>
 
             <Button variant="ghost" className="w-full h-10 rounded-xl text-xs text-muted-foreground gap-2" onClick={() => onOpenWorker(item.employee.id)}>
-              <Users className="h-3.5 w-3.5" /> View worker profile
+              <Users className="h-3.5 w-3.5" /> Ver perfil
             </Button>
           </div>
         )}
