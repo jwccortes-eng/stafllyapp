@@ -1032,10 +1032,10 @@ function AdminDashboardDesktop() {
              <div className="h-7 w-7 rounded-lg bg-primary/[0.08] flex items-center justify-center">
                <Megaphone className="h-3.5 w-3.5 text-primary" />
             </div>
-            <h2 className="text-sm font-semibold font-heading">Announcements</h2>
+            <h2 className="text-sm font-semibold font-heading">Anuncios</h2>
           </div>
           <Link to="/app/announcements" className="text-[11px] text-primary font-medium hover:underline flex items-center gap-0.5 group">
-            View all <ChevronRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
+            Ver todos <ChevronRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
           </Link>
         </div>
         {feedAnnouncements.length === 0 ? (
@@ -1044,8 +1044,8 @@ function AdminDashboardDesktop() {
               <div className="h-12 w-12 rounded-xl bg-muted/50 flex items-center justify-center mx-auto mb-3">
                 <Megaphone className="h-5 w-5 opacity-30" />
               </div>
-              <p className="text-xs font-medium">No announcements published</p>
-              <p className="text-[10px] text-muted-foreground/60 mt-0.5">Announcements will appear here</p>
+              <p className="text-xs font-medium">Sin anuncios publicados</p>
+              <p className="text-[10px] text-muted-foreground/60 mt-0.5">Los anuncios aparecerán aquí</p>
             </CardContent>
           </Card>
         ) : (
