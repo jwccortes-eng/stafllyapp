@@ -531,36 +531,36 @@ function AlertDetailSheet({ item, onClose, onOpenWorker, onReviewInTime }: {
             </div>
 
             <div className="rounded-2xl border border-border bg-card divide-y divide-border/50">
-              <DetailRow label="Issue" value={item.reason} />
-              <DetailRow label="Clock-in" value={format(new Date(item.entry.clock_in), "PPp", { locale: enUS })} />
-              <DetailRow label="Elapsed" value={formatDuration(item.minutes)} />
+              <DetailRow label="Incidencia" value={item.reason} />
+              <DetailRow label="Entrada" value={format(new Date(item.entry.clock_in), "PPp", { locale: enUS })} />
+              <DetailRow label="Transcurrido" value={formatDuration(item.minutes)} />
               {item.entry.scheduled_shifts && (
-                <DetailRow label="Shift" value={item.entry.scheduled_shifts.title} />
+                <DetailRow label="Turno" value={item.entry.scheduled_shifts.title} />
               )}
-              <DetailRow label="Status" value={item.entry.clock_out ? "Closed" : "Open"} />
+              <DetailRow label="Estado" value={item.entry.clock_out ? "Cerrado" : "Abierto"} />
             </div>
 
             <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-800 dark:text-amber-300">
-              <strong className="block font-semibold mb-0.5">Suggested action</strong>
+              <strong className="block font-semibold mb-0.5">Acción sugerida</strong>
               {item.type === "stale_open"
-                ? "Reach out to confirm the worker is no longer on shift, then review the entry in Time."
+                ? "Contacta a la persona para confirmar si ya no está trabajando, luego revisa el fichaje en el reloj."
                 : item.type === "very_long"
-                ? "Review the entry for accuracy — duration exceeds 16h."
+                ? "Revisa el fichaje — la duración supera las 16h."
                 : item.type === "needs_review"
-                ? "Open Approvals in Time to validate the entry."
+                ? "Abre Aprobaciones para validar el fichaje."
                 : item.type === "no_shift"
-                ? "Link this clock to a scheduled shift if needed."
-                : "Reach out to the worker and confirm whether they are still working."}
+                ? "Vincula este fichaje a un turno programado si aplica."
+                : "Contacta a la persona y confirma si sigue trabajando."}
             </div>
 
             <div className="grid grid-cols-2 gap-2">
               {phoneRaw ? (
                 <a href={`tel:${phoneRaw}`} className="inline-flex items-center justify-center gap-1.5 h-11 rounded-xl bg-primary/10 text-primary text-sm font-medium active:scale-[0.98]">
-                  <Phone className="h-4 w-4" /> Call
+                  <Phone className="h-4 w-4" /> Llamar
                 </a>
               ) : (
                 <span className="inline-flex items-center justify-center gap-1.5 h-11 rounded-xl bg-muted text-muted-foreground text-sm font-medium opacity-60">
-                  <Phone className="h-4 w-4" /> No phone
+                  <Phone className="h-4 w-4" /> Sin teléfono
                 </span>
               )}
               {waPhone ? (
@@ -575,11 +575,11 @@ function AlertDetailSheet({ item, onClose, onOpenWorker, onReviewInTime }: {
             </div>
 
             <Button className="w-full h-11 rounded-xl text-sm font-semibold gap-2" onClick={onReviewInTime}>
-              <ClipboardCheck className="h-4 w-4" /> Review in Time
+              <ClipboardCheck className="h-4 w-4" /> Revisar en el reloj
             </Button>
 
             <Button variant="ghost" className="w-full h-10 rounded-xl text-xs text-muted-foreground gap-2" onClick={() => onOpenWorker(item.employee.id)}>
-              <Users className="h-3.5 w-3.5" /> View worker profile
+              <Users className="h-3.5 w-3.5" /> Ver perfil
             </Button>
           </div>
         )}
