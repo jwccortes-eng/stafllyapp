@@ -642,6 +642,20 @@ export function ShiftDetailDialog({
           {/* ─── DETAILS TAB (read-only — full editing happens in ShiftEditDialog) ─── */}
           {tab === "details" ? (
             <div className="space-y-4">
+              {/* Ciclo del turno — operational lifecycle timeline */}
+              <ShiftLifecycleTimeline
+                shift={{
+                  id: shift.id,
+                  date: shift.date,
+                  start_time: shift.start_time,
+                  end_time: shift.end_time,
+                  slots: (shift as any).slots ?? slotsNum,
+                  status: shift.status ?? null,
+                  publication_status: (shift as any).publication_status ?? null,
+                }}
+                assignments={shiftAssignments.map(a => ({ shift_id: a.shift_id, status: a.status }))}
+              />
+
               <div className="space-y-3">
                 {/* Info cards */}
                 <div className="rounded-xl border border-border/30 bg-muted/20 divide-y divide-border/30">
