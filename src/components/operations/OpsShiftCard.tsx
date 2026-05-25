@@ -79,22 +79,22 @@ export function OpsShiftCard({ shift, onOperate }: Props) {
       />
 
       <div className="px-4 pb-3 pt-1 flex flex-wrap items-center gap-2">
-        <Chip icon={<Users className="h-3 w-3" />} label={`${ops.assigned_active}/${ops.required} assigned`} tone={ops.assigned_active < ops.required ? "warning" : "neutral"} />
-        <Chip icon={<Clock className="h-3 w-3" />} label={`${ops.clocked_in} clocked in`} tone={ops.clocked_in > 0 ? "info" : "neutral"} />
+        <Chip icon={<Users className="h-3 w-3" />} label={`${ops.assigned_active}/${ops.required} asignados`} tone={ops.assigned_active < ops.required ? "warning" : "neutral"} />
+        <Chip icon={<Clock className="h-3 w-3" />} label={`${ops.clocked_in} fichados`} tone={ops.clocked_in > 0 ? "info" : "neutral"} />
         {ops.open_clocks > 0 && (
-          <Chip icon={<Clock className="h-3 w-3" />} label={`${ops.open_clocks} open`} tone="warning" />
+          <Chip icon={<Clock className="h-3 w-3" />} label={`${ops.open_clocks} abiertos`} tone="warning" />
         )}
         {ops.missing_clock_outs > 0 && (
           <Chip
             icon={<AlertTriangle className="h-3 w-3" />}
-            label={`${ops.missing_clock_outs} missing clock-out`}
+            label={`${ops.missing_clock_outs} sin salida`}
             tone="danger"
           />
         )}
         {ops.not_started > 0 && ops.bucket !== "closed" && (
           <Chip
             icon={<AlertTriangle className="h-3 w-3" />}
-            label={`${ops.not_started} not started`}
+            label={`${ops.not_started} sin fichar`}
             tone={ops.alert_level === "urgent" ? "danger" : "warning"}
           />
         )}
@@ -117,10 +117,11 @@ export function OpsShiftCard({ shift, onOperate }: Props) {
           className="h-8 text-xs gap-1"
           onClick={() => onOperate?.(shift.id)}
         >
-          Operate shift
+          Operar turno
           <ChevronRight className="h-3.5 w-3.5" />
         </Button>
       </div>
+
     </div>
   );
 }

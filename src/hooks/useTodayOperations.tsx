@@ -92,27 +92,41 @@ export function useTodayOperations(
     setLoading(true);
     setError(null);
 
-    const [shiftsRes, assignRes, entriesRes, clientsRes, locsRes, empsRes, claimsRes] =
+    // 1) Load today's shifts first (small set) so we can scope subsequent
+    //    queries by shift_id. This avoids the Supabase 1000-row default cap
+    //    on company-wide assignment/time_entries queries (root cause of the
+    //    Daily Ops "0/1 assigned" mismatch vs Shift Detail truth).
+    const shiftsRes = await supabase
+      .from("scheduled_shifts")
+      .select(
+        "id, title, date, start_time, end_time, status, publication_status, slots, shift_code, client_id, location_id, meeting_point, meeting_time, shift_admin_id",
+      )
+      .eq("company_id", companyId)
+      .eq("date", dateStr)
+      .is("deleted_at", null)
+      .order("start_time");
+
+    if (shiftsRes.error) {
+      setError(shiftsRes.error.message);
+      setLoading(false);
+      return;
+    }
+    const todayShiftIds = (shiftsRes.data ?? []).map((s: any) => s.id);
+
+    const [assignRes, entriesRes, clientsRes, locsRes, empsRes, claimsRes] =
       await Promise.all([
-        supabase
-          .from("scheduled_shifts")
-          .select(
-            "id, title, date, start_time, end_time, status, publication_status, slots, shift_code, client_id, location_id, meeting_point, meeting_time, shift_admin_id",
-          )
-          .eq("company_id", companyId)
-          .eq("date", dateStr)
-          .is("deleted_at", null)
-          .order("start_time"),
-        supabase
-          .from("shift_assignments")
-          .select("id, shift_id, employee_id, status")
-          .eq("company_id", companyId),
-        supabase
-          .from("time_entries")
-          .select("id, employee_id, shift_id, clock_in, clock_out")
-          .eq("company_id", companyId)
-          .gte("clock_in", `${dateStr}T00:00:00`)
-          .lte("clock_in", `${dateStr}T23:59:59`),
+        todayShiftIds.length
+          ? supabase
+              .from("shift_assignments")
+              .select("id, shift_id, employee_id, status")
+              .in("shift_id", todayShiftIds)
+          : Promise.resolve({ data: [], error: null } as any),
+        todayShiftIds.length
+          ? supabase
+              .from("time_entries")
+              .select("id, employee_id, shift_id, clock_in, clock_out")
+              .in("shift_id", todayShiftIds)
+          : Promise.resolve({ data: [], error: null } as any),
         supabase.from("clients").select("id, name").eq("company_id", companyId),
         supabase
           .from("locations")
@@ -123,21 +137,23 @@ export function useTodayOperations(
           .select("id, first_name, last_name, avatar_url, phone_number")
           .eq("company_id", companyId)
           .eq("is_active", true),
-        supabase
-          .from("shift_requests")
-          .select("id, shift_id, status")
-          .eq("company_id", companyId)
-          .eq("status", "pending"),
+        todayShiftIds.length
+          ? supabase
+              .from("shift_requests")
+              .select("id, shift_id, status")
+              .in("shift_id", todayShiftIds)
+              .eq("status", "pending")
+          : Promise.resolve({ data: [], error: null } as any),
       ]);
 
     const firstErr =
-      shiftsRes.error ||
       assignRes.error ||
       entriesRes.error ||
       clientsRes.error ||
       locsRes.error ||
       empsRes.error ||
       claimsRes.error;
+
     if (firstErr) {
       setError(firstErr.message);
       setLoading(false);

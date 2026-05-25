@@ -156,25 +156,26 @@ export function deriveShiftOpsState(
 
   // Alert level
   let alert_level: AlertLevel = "info";
-  let reason = "Tracked";
+  let reason = "Operación normal";
   if (active.length === 0 && (shift.publication_status === "published")) {
     alert_level = "urgent";
-    reason = "Published with no workers assigned";
+    reason = "Publicado sin personal asignado";
   } else if (active.length < required) {
     alert_level = "warn";
-    reason = `Coverage ${active.length}/${required}`;
+    reason = `Cobertura ${active.length}/${required}`;
   }
   if (minutesPastStart > LATE_GRACE_MIN && clocked_in === 0 && active.length > 0) {
     alert_level = "urgent";
-    reason = "No worker clocked in past start";
+    reason = "Nadie ha fichado tras el inicio";
   } else if (minutesPastStart > LATE_GRACE_MIN && not_started > 0 && now <= end) {
     alert_level = alert_level === "urgent" ? "urgent" : "warn";
-    reason = `${not_started} not clocked in`;
+    reason = `${not_started} sin fichar`;
   }
   if (missing_clock_outs > 0) {
     alert_level = "urgent";
-    reason = `${missing_clock_outs} missing clock-out`;
+    reason = `${missing_clock_outs} sin salida`;
   }
+
 
   return {
     shift_id: shift.id,
@@ -193,12 +194,13 @@ export function deriveShiftOpsState(
 }
 
 export const BUCKET_LABEL: Record<ShiftBucket, string> = {
-  needs_staff: "Needs staff",
-  staffed_not_started: "Not started",
-  in_progress: "In progress",
-  needs_closeout: "Needs closeout",
-  closed: "Closed",
+  needs_staff: "Necesita personal",
+  staffed_not_started: "Sin iniciar",
+  in_progress: "En operación",
+  needs_closeout: "Pendiente cierre",
+  closed: "Cerrado",
 };
+
 
 export const BUCKET_TONE: Record<
   ShiftBucket,

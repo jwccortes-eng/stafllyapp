@@ -44,12 +44,13 @@ type FilterKey =
   | "urgent";
 
 const FILTERS: { key: FilterKey; label: string }[] = [
-  { key: "all", label: "All" },
-  { key: "needs_staff", label: "Needs staff" },
-  { key: "in_progress", label: "In progress" },
-  { key: "needs_closeout", label: "Needs closeout" },
-  { key: "urgent", label: "Urgent" },
+  { key: "all", label: "Todos" },
+  { key: "needs_staff", label: "Necesita personal" },
+  { key: "in_progress", label: "En operación" },
+  { key: "needs_closeout", label: "Pendiente cierre" },
+  { key: "urgent", label: "Urgentes" },
 ];
+
 
 export default function DailyOps() {
   const navigate = useNavigate();
@@ -84,8 +85,8 @@ export default function DailyOps() {
     <div className="space-y-5">
       <PageHeader
         variant="3"
-        title="Daily Operations"
-        subtitle="Today's shifts, coverage, and clock context — one screen."
+        title="Operación diaria"
+        subtitle="Turnos de hoy, cobertura y contexto de fichajes — una sola pantalla."
         rightSlot={
           <div className="flex items-center gap-2">
             <Button
@@ -94,7 +95,7 @@ export default function DailyOps() {
               className="h-9 text-xs gap-1.5"
               onClick={() => navigate("/app/shifts")}
             >
-              <CalendarDays className="h-3.5 w-3.5" /> Scheduling
+              <CalendarDays className="h-3.5 w-3.5" /> Programación
             </Button>
             <Button
               variant="outline"
@@ -102,17 +103,19 @@ export default function DailyOps() {
               className="h-9 text-xs gap-1.5"
               onClick={() => navigate("/app/timeclock")}
             >
-              <Clock className="h-3.5 w-3.5" /> Time Clock
+              <Clock className="h-3.5 w-3.5" /> Reloj de tiempo
             </Button>
+
             <Button
               variant="outline"
               size="icon"
               className="h-9 w-9"
               onClick={refresh}
-              title="Refresh"
+              title="Actualizar"
             >
               <RefreshCw className="h-4 w-4" />
             </Button>
+
           </div>
         }
       />
@@ -136,7 +139,7 @@ export default function DailyOps() {
               isToday ? "bg-card shadow-sm" : "text-muted-foreground",
             )}
           >
-            {isToday ? "Today" : format(date, "EEE d MMM")}
+            {isToday ? "Hoy" : format(date, "EEE d MMM")}
           </button>
           <Button
             variant="ghost"
@@ -151,7 +154,7 @@ export default function DailyOps() {
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
           <Input
-            placeholder="Search shift, client, site…"
+            placeholder="Buscar turno, cliente, sitio…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="h-9 pl-8 text-xs"
@@ -161,9 +164,9 @@ export default function DailyOps() {
 
       {/* Summary strip */}
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
-        <SummaryTile label="Shifts" value={totals.shifts} icon={<CalendarDays className="h-3.5 w-3.5" />} />
-        <SummaryTile label="Needs staff" value={totals.needs_staff} tone={totals.needs_staff > 0 ? "warning" : "neutral"} icon={<Users className="h-3.5 w-3.5" />} />
-        <SummaryTile label="In progress" value={totals.in_progress} tone="info" icon={<Radar className="h-3.5 w-3.5" />} />
+        <SummaryTile label="Turnos" value={totals.shifts} icon={<CalendarDays className="h-3.5 w-3.5" />} />
+        <SummaryTile label="Necesita personal" value={totals.needs_staff} tone={totals.needs_staff > 0 ? "warning" : "neutral"} icon={<Users className="h-3.5 w-3.5" />} />
+        <SummaryTile label="En operación" value={totals.in_progress} tone="info" icon={<Radar className="h-3.5 w-3.5" />} />
         <SummaryTile
           label="Solicitudes"
           value={totals.pending_claims}
@@ -171,10 +174,11 @@ export default function DailyOps() {
           icon={<Inbox className="h-3.5 w-3.5" />}
           onClick={() => navigate("/app/shift-requests")}
         />
-        <SummaryTile label="Open clocks" value={totals.open_clocks} tone={totals.open_clocks > 0 ? "warning" : "neutral"} icon={<Clock className="h-3.5 w-3.5" />} />
-        <SummaryTile label="Missing out" value={totals.missing_clock_outs} tone={totals.missing_clock_outs > 0 ? "danger" : "neutral"} icon={<AlertTriangle className="h-3.5 w-3.5" />} />
-        <SummaryTile label="Urgent" value={totals.urgent} tone={totals.urgent > 0 ? "danger" : "neutral"} icon={<AlertTriangle className="h-3.5 w-3.5" />} />
+        <SummaryTile label="Fichajes abiertos" value={totals.open_clocks} tone={totals.open_clocks > 0 ? "warning" : "neutral"} icon={<Clock className="h-3.5 w-3.5" />} />
+        <SummaryTile label="Falta salida" value={totals.missing_clock_outs} tone={totals.missing_clock_outs > 0 ? "danger" : "neutral"} icon={<AlertTriangle className="h-3.5 w-3.5" />} />
+        <SummaryTile label="Urgentes" value={totals.urgent} tone={totals.urgent > 0 ? "danger" : "neutral"} icon={<AlertTriangle className="h-3.5 w-3.5" />} />
       </div>
+
 
       {/* Filter chips */}
       <div className="flex items-center gap-1.5 flex-wrap">
@@ -202,20 +206,20 @@ export default function DailyOps() {
         </div>
       ) : error ? (
         <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-6 text-sm text-destructive">
-          Failed to load operations: {error}
+          No se pudo cargar la operación: {error}
         </div>
       ) : !selectedCompanyId ? (
         <EmptyState
-          title="No company selected"
-          body="Pick a company to see today's operations."
+          title="Sin compañía seleccionada"
+          body="Elige una compañía para ver la operación de hoy."
         />
       ) : filteredShifts.length === 0 ? (
         <EmptyState
-          title="No shifts match this view"
+          title="Ningún turno coincide con esta vista"
           body={
             shifts.length === 0
-              ? `Nothing is scheduled for ${format(date, "EEE d MMM")}.`
-              : "Try clearing the filter or search to see more."
+              ? `No hay nada programado para ${format(date, "EEE d MMM")}.`
+              : "Quita el filtro o limpia la búsqueda para ver más."
           }
         />
       ) : (
@@ -224,11 +228,12 @@ export default function DailyOps() {
             <OpsShiftCard
               key={s.id}
               shift={s}
-              onOperate={(id) => navigate(`/app/shift-operations?shift=${id}`)}
+              onOperate={(id) => navigate(`/app/shift-ops?id=${id}`)}
             />
           ))}
         </div>
       )}
+
     </div>
   );
 }
