@@ -238,18 +238,18 @@ export default function MobileTimeCommandView() {
     <div className="space-y-4">
       {/* Compact KPI strip — single row, scrollable on narrow */}
       <div className="grid grid-cols-5 gap-1.5">
-        <Kpi label="Scheduled" value={kpis.scheduled} />
-        <Kpi label="Clocked in" value={kpis.clockedIn} tone="primary" />
-        <Kpi label="Missing" value={kpis.missing} tone={kpis.missing > 0 ? "danger" : "muted"} />
-        <Kpi label="Open" value={kpis.openClocks} />
-        <Kpi label="Review" value={kpis.needsReview} tone={kpis.needsReview > 0 ? "warn" : "muted"} />
+        <Kpi label="Programados" value={kpis.scheduled} />
+        <Kpi label="Fichados" value={kpis.clockedIn} tone="primary" />
+        <Kpi label="Faltan" value={kpis.missing} tone={kpis.missing > 0 ? "danger" : "muted"} />
+        <Kpi label="Abiertos" value={kpis.openClocks} />
+        <Kpi label="Revisar" value={kpis.needsReview} tone={kpis.needsReview > 0 ? "warn" : "muted"} />
       </div>
 
       {/* Mode pills */}
       <div className="flex gap-1.5">
-        <ModePill active={mode === "today"} onClick={() => setMode("today")} label="Today / Live" />
-        <ModePill active={mode === "week"} onClick={() => setMode("week")} label="Timesheet / Week" />
-        <Button variant="ghost" size="icon" className="h-9 w-9 ml-auto" onClick={load} aria-label="Refresh">
+        <ModePill active={mode === "today"} onClick={() => setMode("today")} label="Hoy / En vivo" />
+        <ModePill active={mode === "week"} onClick={() => setMode("week")} label="Semana" />
+        <Button variant="ghost" size="icon" className="h-9 w-9 ml-auto" onClick={load} aria-label="Actualizar">
           <RefreshCw className="h-4 w-4" />
         </Button>
       </div>
