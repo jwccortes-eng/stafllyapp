@@ -1093,7 +1093,7 @@ function AdminDashboardDesktop() {
                     {a.reaction_count > 0 && (
                       <div className="flex items-center gap-1 text-[10px] text-muted-foreground/60 pt-0.5">
                         <ThumbsUp className="h-2.5 w-2.5" />
-                        {a.reaction_count} reactions
+                        {a.reaction_count} reacciones
                       </div>
                     )}
                   </CardContent>
