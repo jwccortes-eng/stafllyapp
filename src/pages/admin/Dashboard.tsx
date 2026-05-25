@@ -772,21 +772,21 @@ function AdminDashboardDesktop() {
         {/* Marketplace KPI row */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <HeroKpiCard
-            label="Total Profiles"
+            label="Perfiles totales"
             value={marketplaceKpis.totalProfiles}
             icon={Users}
             color="primary"
             onClick={() => navigate("/app/employees")}
           />
           <HeroKpiCard
-            label="With Photo"
+            label="Con foto"
             value={marketplaceKpis.withPhoto}
             icon={Camera}
             color="earning"
             onClick={() => navigate("/app/employees")}
           />
           <HeroKpiCard
-            label="Missing Photo"
+            label="Sin foto"
             value={marketplaceKpis.missingPhoto}
             icon={AlertCircle}
             color="warning"
@@ -795,9 +795,9 @@ function AdminDashboardDesktop() {
         </div>
         {/* Secondary marketplace KPIs */}
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 mt-4">
-          <KpiStatCard label="With Email" value={marketplaceKpis.withEmail} subtitle="contactable" icon={UserCheck} color="earning" onClick={() => navigate("/app/employees")} />
-          <KpiStatCard label="Missing Email" value={marketplaceKpis.missingEmail} subtitle="need outreach" icon={AlertTriangle} color="warning" onClick={() => navigate("/app/employees")} />
-          <KpiStatCard label="Activation Ready" value={marketplaceKpis.withPhoto > 0 ? `${Math.round((marketplaceKpis.withPhoto / Math.max(marketplaceKpis.totalProfiles, 1)) * 100)}%` : "0%"} subtitle="photo completion" icon={Shield} color="primary" />
+          <KpiStatCard label="Con email" value={marketplaceKpis.withEmail} subtitle="contactables" icon={UserCheck} color="earning" onClick={() => navigate("/app/employees")} />
+          <KpiStatCard label="Sin email" value={marketplaceKpis.missingEmail} subtitle="por contactar" icon={AlertTriangle} color="warning" onClick={() => navigate("/app/employees")} />
+          <KpiStatCard label="Listos para activar" value={marketplaceKpis.withPhoto > 0 ? `${Math.round((marketplaceKpis.withPhoto / Math.max(marketplaceKpis.totalProfiles, 1)) * 100)}%` : "0%"} subtitle="completitud de foto" icon={Shield} color="primary" />
         </div>
       </>
     ) : (
@@ -805,21 +805,21 @@ function AdminDashboardDesktop() {
         {/* Hero KPI row — 3 large cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <HeroKpiCard
-            label="Hours Worked"
+            label="Horas trabajadas"
             value={animHours}
             icon={Clock}
             color="primary"
             onClick={() => navigate("/app/timeclock")}
           />
           <HeroKpiCard
-            label="Active Employees"
+            label="Equipo activo"
             value={`${animEmployees}`}
             icon={Users}
             color="earning"
             onClick={() => navigate("/app/employees")}
           />
           <HeroKpiCard
-            label="Total Payroll"
+            label="Nómina total"
             value={`$${stats.periodTotal.toLocaleString("en-US", { minimumFractionDigits: 0 })}`}
             icon={DollarSign}
             color="warning"
@@ -835,7 +835,7 @@ function AdminDashboardDesktop() {
       <div>
         <div className="flex items-center gap-2 mb-3">
           <Zap className="h-3.5 w-3.5 text-warning" />
-          <h2 className="text-sm font-semibold font-heading text-foreground">Quick Actions</h2>
+          <h2 className="text-sm font-semibold font-heading text-foreground">Acciones rápidas</h2>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
           {quickActions.map((action) => (
