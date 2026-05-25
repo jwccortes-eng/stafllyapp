@@ -303,13 +303,13 @@ function QuickAction({ label, description, icon: Icon, to, accent, navigate }: {
 /* ─── Activity Item ─── */
 function ActivityRow({ item }: { item: any }) {
   const actionLabels: Record<string, string> = {
-    create: "created", update: "updated", delete: "deleted",
-    insert: "added", import: "imported", publish: "published",
+    create: "creó", update: "actualizó", delete: "eliminó",
+    insert: "agregó", import: "importó", publish: "publicó",
   };
   const entityLabels: Record<string, string> = {
-    employee: "employee", movement: "adjustment", period: "period",
-    concept: "concept", shift: "shift", announcement: "announcement",
-    import: "import", client: "client", location: "location",
+    employee: "empleado", movement: "ajuste", period: "periodo",
+    concept: "concepto", shift: "turno", announcement: "anuncio",
+    import: "importación", client: "cliente", location: "ubicación",
   };
   const iconMap: Record<string, any> = {
     employee: Users, movement: DollarSign, period: CalendarDays,
@@ -327,11 +327,11 @@ function ActivityRow({ item }: { item: any }) {
         <div className="min-w-0 flex-1">
           <p className="text-[11px] text-foreground leading-relaxed">
             <span className="font-semibold capitalize">{actionLabels[item.action] || item.action}</span>
-            {" "}a{" "}
+            {" "}
             <span className="font-medium">{entityLabels[item.entity_type] || item.entity_type}</span>
           </p>
           <p className="text-[10px] text-muted-foreground/50 mt-0.5">
-            {formatDistanceToNow(parseISO(item.created_at), { addSuffix: true, locale: enUS })}
+            {formatDistanceToNow(parseISO(item.created_at), { addSuffix: true, locale: es })}
           </p>
         </div>
       </div>
