@@ -1168,7 +1168,7 @@ function AdminDashboardDesktop() {
   }
 
   if (fetchError) {
-    return <ErrorBlock title="Error loading dashboard" message="Could not load data. Check your connection and try again." onRetry={() => window.location.reload()} />;
+    return <ErrorBlock title="Error al cargar el panel" message="No pudimos cargar los datos. Revisa tu conexión e intenta de nuevo." onRetry={() => window.location.reload()} />;
   }
 
   /* ── Global Mode: Platform Overview ── */
