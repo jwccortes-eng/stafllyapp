@@ -329,7 +329,7 @@ function TodayView({ live, missing, closedToday }: {
                     {r.employee.first_name} {r.employee.last_name}
                   </div>
                   <div className="text-[11px] text-muted-foreground truncate">
-                    Since {format(new Date(r.entry.clock_in), "p", { locale: enUS })}
+                    Desde {format(new Date(r.entry.clock_in), "p", { locale: enUS })}
                     {r.entry.scheduled_shifts && (
                       <> · <MapPin className="inline h-3 w-3" /> {r.entry.scheduled_shifts.title}</>
                     )}
