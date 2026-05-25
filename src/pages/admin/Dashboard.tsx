@@ -1144,17 +1144,17 @@ function AdminDashboardDesktop() {
             <div className="h-7 w-7 rounded-lg bg-earning/[0.08] flex items-center justify-center">
               <DollarSign className="h-3.5 w-3.5 text-earning" />
             </div>
-            <h2 className="text-sm font-semibold font-heading text-foreground">Compensation</h2>
+            <h2 className="text-sm font-semibold font-heading text-foreground">Compensación</h2>
           </div>
           <Link to="/app/payroll-settings" className="text-[11px] text-primary font-medium hover:underline flex items-center gap-0.5 group">
-            View all <ChevronRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
+            Ver todo <ChevronRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
           </Link>
         </div>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <KpiStatCard label="Rate changes" value={compKpis.rateChanges} subtitle="this month" icon={TrendingUp} color="warning" onClick={() => navigate("/app/payroll-settings")} />
-          <KpiStatCard label="Daily pay" value={compKpis.dailyPatterns} subtitle="employees detected" icon={CalendarDays} color="primary" onClick={() => navigate("/app/payroll-settings")} />
-          <KpiStatCard label="Ride payments" value={compKpis.ridePayments} subtitle="employees with ride" icon={MapPin} color="earning" onClick={() => navigate("/app/payroll-settings")} />
-          <KpiStatCard label="Alerts" value={compKpis.warnings} subtitle="need attention" icon={AlertTriangle} color="warning" onClick={() => navigate("/app/payroll-settings")} />
+          <KpiStatCard label="Cambios de tarifa" value={compKpis.rateChanges} subtitle="este mes" icon={TrendingUp} color="warning" onClick={() => navigate("/app/payroll-settings")} />
+          <KpiStatCard label="Pago diario" value={compKpis.dailyPatterns} subtitle="empleados detectados" icon={CalendarDays} color="primary" onClick={() => navigate("/app/payroll-settings")} />
+          <KpiStatCard label="Pago de transporte" value={compKpis.ridePayments} subtitle="empleados con ride" icon={MapPin} color="earning" onClick={() => navigate("/app/payroll-settings")} />
+          <KpiStatCard label="Alertas" value={compKpis.warnings} subtitle="requieren atención" icon={AlertTriangle} color="warning" onClick={() => navigate("/app/payroll-settings")} />
         </div>
       </div>
     ),
