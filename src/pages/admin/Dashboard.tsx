@@ -1255,7 +1255,7 @@ function AdminDashboardDesktop() {
           {stats.activePeriod && (
             <div className="hidden md:flex flex-col gap-2 min-w-[200px] p-3.5 rounded-xl border border-border/40 bg-card shadow-2xs">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">Period</span>
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">Periodo</span>
                 <span className={cn(
                   "text-[10px] px-2 py-0.5 rounded-full font-semibold inline-flex items-center gap-1",
                   statusColor === 'earning' && "bg-earning/10 text-earning",
