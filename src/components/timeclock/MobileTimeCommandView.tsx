@@ -282,7 +282,7 @@ export default function MobileTimeCommandView() {
       )}
 
       <p className="text-[10px] text-muted-foreground text-center">
-        Read-only · Scheduled hours are operational context only — payroll uses real clock entries.
+        Solo lectura · Las horas programadas son contexto operativo — la nómina se calcula con fichajes reales.
       </p>
 
       <AlertDetailSheet
