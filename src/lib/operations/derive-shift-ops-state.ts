@@ -193,12 +193,13 @@ export function deriveShiftOpsState(
 }
 
 export const BUCKET_LABEL: Record<ShiftBucket, string> = {
-  needs_staff: "Needs staff",
-  staffed_not_started: "Not started",
-  in_progress: "In progress",
-  needs_closeout: "Needs closeout",
-  closed: "Closed",
+  needs_staff: "Necesita personal",
+  staffed_not_started: "Sin iniciar",
+  in_progress: "En operación",
+  needs_closeout: "Pendiente cierre",
+  closed: "Cerrado",
 };
+
 
 export const BUCKET_TONE: Record<
   ShiftBucket,
