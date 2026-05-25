@@ -32,6 +32,8 @@ import { MobileShiftTeamHub } from "@/components/shifts/mobile/MobileShiftTeamHu
 import { ShiftShareMenu } from "@/components/shifts/ShiftShareMenu";
 import { ShiftCloseoutSection } from "@/components/shifts/closeout/ShiftCloseoutSection";
 import { ShiftLifecycleTimeline } from "@/components/shifts/ShiftLifecycleTimeline";
+import { LiveShiftBoard } from "@/components/shifts/LiveShiftBoard";
+
 import {
   TraceabilitySnapshot,
   type TraceRisk,
@@ -890,6 +892,21 @@ export function MobileShiftOperationsSheet({
                   </div>
                 </div>
 
+                {/* Turno en vivo — live operational board (read-only) */}
+                {shift && selectedCompanyId ? (
+                  <LiveShiftBoard
+                    shiftId={shift.id}
+                    companyId={selectedCompanyId}
+                    shiftDate={shift.date}
+                    startTime={shift.start_time}
+                    endTime={shift.end_time}
+                    slots={(shift as any).slots ?? slots}
+                    assignments={assignments}
+                    employees={employees}
+                    shiftAdminId={shiftAdminId}
+                  />
+                ) : null}
+
                 {/* Ciclo del turno — operational lifecycle timeline */}
                 {shift ? (
                   <ShiftLifecycleTimeline
@@ -905,6 +922,7 @@ export function MobileShiftOperationsSheet({
                     assignments={assignments.filter(a => a.shift_id === shift.id).map(a => ({ shift_id: a.shift_id, status: a.status }))}
                   />
                 ) : null}
+
 
                 {/* Cierre diario (movido aquí) */}
                 {shift && selectedCompanyId ? (

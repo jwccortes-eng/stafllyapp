@@ -65,6 +65,8 @@ const ShiftAuditTrail = lazy(() =>
 );
 import { ShiftRoleSlotsTeamPanel } from "./ShiftRoleSlotsTeamPanel";
 import { ShiftLifecycleTimeline } from "./ShiftLifecycleTimeline";
+import { LiveShiftBoard } from "./LiveShiftBoard";
+
 import { GenerateBillingBlockButton } from "./GenerateBillingBlockButton";
 import {
   pickRoleSlotsForNewAssignments,
@@ -642,6 +644,21 @@ export function ShiftDetailDialog({
           {/* ─── DETAILS TAB (read-only — full editing happens in ShiftEditDialog) ─── */}
           {tab === "details" ? (
             <div className="space-y-4">
+              {/* Turno en vivo — live operational board (read-only) */}
+              {selectedCompanyId && (
+                <LiveShiftBoard
+                  shiftId={shift.id}
+                  companyId={selectedCompanyId}
+                  shiftDate={shift.date}
+                  startTime={shift.start_time}
+                  endTime={shift.end_time}
+                  slots={(shift as any).slots ?? slotsNum}
+                  assignments={assignments}
+                  employees={employees}
+                  shiftAdminId={(shift as any)?.shift_admin_id ?? null}
+                />
+              )}
+
               {/* Ciclo del turno — operational lifecycle timeline */}
               <ShiftLifecycleTimeline
                 shift={{
@@ -655,6 +672,7 @@ export function ShiftDetailDialog({
                 }}
                 assignments={shiftAssignments.map(a => ({ shift_id: a.shift_id, status: a.status }))}
               />
+
 
               <div className="space-y-3">
                 {/* Info cards */}
