@@ -822,11 +822,11 @@ function AlertDetailSheet({
                   href={`tel:${phoneRaw}`}
                   className="inline-flex items-center justify-center gap-1.5 h-11 rounded-xl bg-primary/10 text-primary text-sm font-medium active:scale-[0.98] transition"
                 >
-                  <Phone className="h-4 w-4" /> Call
+                  <Phone className="h-4 w-4" /> Llamar
                 </a>
               ) : (
                 <span className="inline-flex items-center justify-center gap-1.5 h-11 rounded-xl bg-muted text-muted-foreground text-sm font-medium opacity-60">
-                  <Phone className="h-4 w-4" /> No phone
+                  <Phone className="h-4 w-4" /> Sin teléfono
                 </span>
               )}
               {waPhone ? (
