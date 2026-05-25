@@ -365,7 +365,7 @@ function TodayView({ live, missing, closedToday }: {
       </Section>
 
       <div className="text-xs text-muted-foreground text-center pt-1">
-        {closedToday} entr{closedToday === 1 ? "y" : "ies"} closed today
+        {closedToday} {closedToday === 1 ? "fichaje cerrado" : "fichajes cerrados"} hoy
       </div>
     </div>
   );
