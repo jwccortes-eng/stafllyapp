@@ -796,7 +796,7 @@ export default function PayrollReviewQueue() {
                         )} />
                         <span className="text-sm font-semibold text-left">{b.title}</span>
                         <Badge variant="outline" className={cn("text-[10px] py-0 px-1.5", sev.chip)}>{sev.label}</Badge>
-                        {b.affectsPay && <Badge variant="outline" className="text-[10px] py-0 px-1.5">Affects pay</Badge>}
+                        {b.affectsPay && <Badge variant="outline" className="text-[10px] py-0 px-1.5">Afecta pago</Badge>}
                         <span className="ml-auto text-sm font-mono tabular-nums text-muted-foreground">{b.rows.length}</span>
                       </div>
                     </AccordionTrigger>
@@ -804,7 +804,7 @@ export default function PayrollReviewQueue() {
                       <p className="text-xs text-muted-foreground mb-3">{b.description}</p>
                       {b.rows.length === 0 ? (
                         <div className="text-xs text-muted-foreground py-2 flex items-center gap-1.5">
-                          <CheckCircle2 className="h-3.5 w-3.5 text-earning" /> No issues found
+                          <CheckCircle2 className="h-3.5 w-3.5 text-earning" /> No hay bloques pendientes en esta etapa.
                         </div>
                       ) : (
                         <div className="divide-y divide-border/50">
