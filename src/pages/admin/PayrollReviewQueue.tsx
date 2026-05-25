@@ -828,7 +828,7 @@ export default function PayrollReviewQueue() {
                           ))}
                           {b.rows.length > 100 && (
                             <div className="pt-2 text-xs text-muted-foreground">
-                              Showing first 100 of {b.rows.length} rows.
+                              Mostrando los primeros 100 de {b.rows.length} bloques.
                             </div>
                           )}
                         </div>
@@ -844,7 +844,7 @@ export default function PayrollReviewQueue() {
 
       {/* Footer safety copy */}
       <p className="text-[11px] text-muted-foreground text-center pt-2 border-t border-border/30">
-        This queue is read-only. It does not calculate, approve, post, or pay payroll. Connecteam imports remain the payroll authority.
+        Este centro valida evidencia operativa. El pago final se procesa desde payroll y reconciliación. Connecteam sigue siendo la autoridad de payroll.
       </p>
     </div>
   );
