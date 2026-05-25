@@ -311,9 +311,9 @@ function TodayView({ live, missing, closedToday }: {
 }) {
   return (
     <div className="space-y-3">
-      <Section title="Currently clocked in" count={live.length} icon={Activity} tone="primary">
+      <Section title="Fichados ahora" count={live.length} icon={Activity} tone="primary">
         {live.length === 0 ? (
-          <Empty text="No one is clocked in right now." />
+          <Empty text="Nadie está fichado en este momento." />
         ) : (
           <ul className="divide-y divide-border/40">
             {live.map(r => (
