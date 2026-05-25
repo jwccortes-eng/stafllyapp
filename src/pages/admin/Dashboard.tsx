@@ -214,7 +214,7 @@ function WeeklyShiftPreview({ companyId, navigate }: { companyId: string; naviga
     <Card className="rounded-2xl shadow-sm border-border/40 overflow-hidden">
       <CardHeader className="pb-3 px-6 pt-5">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg font-bold font-heading">Weekly Shift</CardTitle>
+          <CardTitle className="text-lg font-bold font-heading">Turnos de la semana</CardTitle>
           <div className="flex items-center gap-2">
             <button className="h-8 w-8 flex items-center justify-center rounded-lg hover:bg-accent transition-colors text-muted-foreground">
               <Search className="h-4 w-4" />
