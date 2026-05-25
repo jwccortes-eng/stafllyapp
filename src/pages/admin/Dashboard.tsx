@@ -1318,12 +1318,12 @@ function AdminDashboardDesktop() {
                       </div>
                     </div>
                     {isSelected && (
-                      <span className="text-[9px] font-semibold uppercase tracking-wider text-primary bg-primary/10 px-2 py-0.5 rounded-full">Active</span>
+                      <span className="text-[9px] font-semibold uppercase tracking-wider text-primary bg-primary/10 px-2 py-0.5 rounded-full">Activa</span>
                     )}
                   </div>
                   <div className="flex items-center gap-3 mt-3 pt-3 border-t border-border/30">
                     <span className={cn("text-[10px] font-medium", c.is_active ? "text-earning" : "text-muted-foreground")}>
-                      {c.is_active ? "● Active" : "○ Inactive"}
+                      {c.is_active ? "● Activa" : "○ Inactiva"}
                     </span>
                     <ExternalLink className="h-3 w-3 text-muted-foreground/30 group-hover:text-primary ml-auto transition-colors" />
                   </div>
