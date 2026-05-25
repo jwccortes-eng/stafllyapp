@@ -657,8 +657,8 @@ export default function PayrollReviewQueue() {
   if (!selectedCompanyId) {
     return (
       <Card className="max-w-xl mx-auto mt-12">
-        <CardHeader><CardTitle>Select a company</CardTitle></CardHeader>
-        <CardContent className="text-sm text-muted-foreground">Pick a tenant from the company switcher to load its payroll review queue.</CardContent>
+        <CardHeader><CardTitle>Selecciona una empresa</CardTitle></CardHeader>
+        <CardContent className="text-sm text-muted-foreground">Elige un tenant en el selector de empresa para cargar el Centro de Validación.</CardContent>
       </Card>
     );
   }
