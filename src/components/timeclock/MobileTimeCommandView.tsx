@@ -345,9 +345,9 @@ function TodayView({ live, missing, closedToday }: {
         )}
       </Section>
 
-      <Section title="Scheduled but not arrived" count={missing.length} icon={AlertTriangle} tone={missing.length > 0 ? "danger" : "muted"}>
+      <Section title="Programados sin llegar" count={missing.length} icon={AlertTriangle} tone={missing.length > 0 ? "danger" : "muted"}>
         {missing.length === 0 ? (
-          <Empty text="Everyone scheduled has clocked in." />
+          <Empty text="Todo el equipo programado ya está fichado." />
         ) : (
           <ul className="divide-y divide-border/40">
             {missing.map(e => (
