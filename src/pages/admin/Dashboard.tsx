@@ -920,7 +920,7 @@ function AdminDashboardDesktop() {
       </div>
     ),
     today_summary: () => {
-      const todayStr = new Date().toLocaleDateString("en-US", { weekday: "long", day: "numeric", month: "long" });
+      const todayStr = new Date().toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" });
       return (
         <Card className="rounded-2xl shadow-sm border-border/40 overflow-hidden">
           <CardHeader className="pb-3 px-5 pt-5">
@@ -930,12 +930,12 @@ function AdminDashboardDesktop() {
                    <Calendar className="h-3.5 w-3.5 text-primary" />
                 </div>
                 <div>
-                  <CardTitle className="text-sm font-semibold font-heading">Today</CardTitle>
+                  <CardTitle className="text-sm font-semibold font-heading">Operación de hoy</CardTitle>
                   <p className="text-[10px] text-muted-foreground/60 capitalize">{todayStr}</p>
                 </div>
               </div>
               <Link to="/app/today" className="text-[11px] text-primary font-medium hover:underline flex items-center gap-0.5 group">
-                View detail <ChevronRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
+                Ver detalle <ChevronRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
               </Link>
             </div>
           </CardHeader>
@@ -944,17 +944,17 @@ function AdminDashboardDesktop() {
               <div className="flex flex-col items-center p-3 rounded-xl bg-primary/[0.04] border border-border/30">
                 <Clock className="h-4 w-4 text-primary mb-1.5" />
                 <p className="text-xl font-bold text-primary tabular-nums">{todaySummary.shiftsToday}</p>
-                <p className="text-[10px] text-muted-foreground/70 mt-0.5">Shifts</p>
+                <p className="text-[10px] text-muted-foreground/70 mt-0.5">Turnos</p>
               </div>
               <div className="flex flex-col items-center p-3 rounded-xl bg-earning/[0.04] border border-border/30">
                 <UserCheck className="h-4 w-4 text-earning mb-1.5" />
                 <p className="text-xl font-bold text-earning tabular-nums">{todaySummary.assignedToday}</p>
-                <p className="text-[10px] text-muted-foreground/70 mt-0.5">Assigned</p>
+                <p className="text-[10px] text-muted-foreground/70 mt-0.5">Asignados</p>
               </div>
               <div className="flex flex-col items-center p-3 rounded-xl bg-warning/[0.04] border border-border/30">
                 <Timer className="h-4 w-4 text-warning mb-1.5" />
                 <p className="text-xl font-bold text-warning tabular-nums">{todaySummary.openEntries}</p>
-                <p className="text-[10px] text-muted-foreground/70 mt-0.5">Clocked In</p>
+                <p className="text-[10px] text-muted-foreground/70 mt-0.5">Fichados ahora</p>
               </div>
             </div>
           </CardContent>
