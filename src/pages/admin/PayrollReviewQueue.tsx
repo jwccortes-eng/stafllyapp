@@ -246,7 +246,7 @@ export default function PayrollReviewQueue() {
       const { data: closeouts } = shiftIds.length
         ? await supabase
             .from("shift_closeout_reports")
-            .select("id, shift_id, no_show_count, late_count, incident_count, status, review_status")
+            .select("id, shift_id, no_show_count, late_count, incident_count, status, review_status, final_approval_status, reviewed_at")
             .eq("company_id", cid)
             .in("shift_id", shiftIds)
         : { data: [] as any[] };
