@@ -515,6 +515,24 @@ export default function PayrollReviewQueue() {
         })),
     ];
 
+    // 13. Pendiente aprobación final — closeouts approved by María but not
+    // final-approved yet. Operational queue only; no payroll writes.
+    const pendingFinalApproval: BucketRow[] = d.closeouts
+      .filter((c: any) =>
+        c.status === "reviewed"
+        && c.review_status === "approved"
+        && (c.final_approval_status == null || c.final_approval_status === "pending"),
+      )
+      .map((c: any) => {
+        const s = shiftMap.get(c.shift_id);
+        return {
+          key: `final-${c.id}`,
+          primary: s?.title ?? s?.shift_code ?? "Turno",
+          secondary: `${s?.date ?? ""} · aprobado por María, pendiente aprobación final`,
+          link: { to: `/app/shifts`, label: "Abrir turno" },
+        };
+      });
+
     // 12. High-risk / over-threshold
     const highRisk: BucketRow[] = [
       ...d.timeEntries
