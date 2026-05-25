@@ -731,22 +731,22 @@ function AdminDashboardDesktop() {
 
   const greeting = useMemo(() => {
     const h = new Date().getHours();
-    if (h < 12) return "Good morning";
-    if (h < 18) return "Good afternoon";
-    return "Good evening";
+    if (h < 12) return "Buenos días";
+    if (h < 18) return "Buenas tardes";
+    return "Buenas noches";
   }, []);
 
   const quickActions = [
-    { label: "Import Hours", icon: Upload, to: "/app/import", module: "import", description: "Upload time clock file", accent: "from-primary to-primary/70" },
-    { label: "Add Adjustment", icon: DollarSign, to: "/app/movements", module: "movements", description: "Extras, deductions and adjustments", accent: "from-warning to-warning/70" },
-    { label: "View Summary", icon: FileSpreadsheet, to: "/app/summary", module: "summary", description: "Current period summary", accent: "from-earning to-earning/70" },
-    { label: "Employees", icon: Users, to: "/app/employees", module: "employees", description: "Manage employees", accent: "from-primary to-primary/70" },
-    { label: "Concepts", icon: Tags, to: "/app/concepts", module: "concepts", description: "Configure pay concepts", accent: "from-deduction to-deduction/70" },
-    { label: "Reports", icon: BarChart3, to: "/app/reports", module: "reports", description: "Generate and save reports", accent: "from-primary to-primary/70" },
+    { label: "Importar horas", icon: Upload, to: "/app/import", module: "import", description: "Sube archivo de fichajes", accent: "from-primary to-primary/70" },
+    { label: "Agregar ajuste", icon: DollarSign, to: "/app/movements", module: "movements", description: "Extras, deducciones y ajustes", accent: "from-warning to-warning/70" },
+    { label: "Ver resumen", icon: FileSpreadsheet, to: "/app/summary", module: "summary", description: "Resumen del periodo actual", accent: "from-earning to-earning/70" },
+    { label: "Equipo", icon: Users, to: "/app/employees", module: "employees", description: "Gestionar trabajadores", accent: "from-primary to-primary/70" },
+    { label: "Conceptos", icon: Tags, to: "/app/concepts", module: "concepts", description: "Configurar conceptos de pago", accent: "from-deduction to-deduction/70" },
+    { label: "Reportes", icon: BarChart3, to: "/app/reports", module: "reports", description: "Generar y guardar reportes", accent: "from-primary to-primary/70" },
   ].filter(a => canAccess(a.module));
 
   const statusColor = stats.periodStatus === 'open' ? 'earning' : stats.periodStatus === 'closed' ? 'warning' : 'primary';
-  const statusLabel = stats.periodStatus === 'open' ? 'Open' : stats.periodStatus === 'closed' ? 'Closed' : 'Published';
+  const statusLabel = stats.periodStatus === 'open' ? 'Abierto' : stats.periodStatus === 'closed' ? 'Cerrado' : 'Publicado';
 
   /* ─── Widget renderers ─── */
   const isWidgetEnabled = (id: string) => enabledWidgets.some(w => w.id === id);
