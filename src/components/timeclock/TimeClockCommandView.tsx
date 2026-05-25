@@ -677,21 +677,21 @@ export default function TimeClockCommandView() {
               <Users className="h-5 w-5" />
             </div>
             <div className="space-y-1 max-w-md">
-              <h3 className="font-heading text-lg font-semibold tracking-tight">Worker directory</h3>
+              <h3 className="font-heading text-lg font-semibold tracking-tight">Directorio del equipo</h3>
               <p className="text-sm text-muted-foreground">
-                Time Clock se enfoca en asistencia en vivo y excepciones. Para navegar el roster completo con búsqueda,
-                filtros, perfiles y data quality, usa el módulo Workers.
+                El reloj se enfoca en asistencia en vivo y excepciones. Para navegar el equipo completo con búsqueda,
+                filtros, perfiles y calidad de datos, usa el módulo Equipo.
               </p>
             </div>
             <div className="flex flex-wrap items-center justify-center gap-2">
               <Button size="sm" className="h-9 text-xs gap-1.5" onClick={() => navigate("/app/employees")}>
-                Open Workers <ArrowRight className="h-3.5 w-3.5" />
+                Abrir equipo <ArrowRight className="h-3.5 w-3.5" />
               </Button>
               <Button variant="outline" size="sm" className="h-9 text-xs gap-1.5" onClick={() => setActiveTab("today")}>
-                <CalendarDays className="h-3.5 w-3.5" /> View Today
+                <CalendarDays className="h-3.5 w-3.5" /> Ver hoy
               </Button>
               <Button variant="outline" size="sm" className="h-9 text-xs gap-1.5" onClick={() => setActiveTab("live")}>
-                <Radio className="h-3.5 w-3.5" /> Back to Live
+                <Radio className="h-3.5 w-3.5" /> Volver a En vivo
               </Button>
             </div>
           </Card>
