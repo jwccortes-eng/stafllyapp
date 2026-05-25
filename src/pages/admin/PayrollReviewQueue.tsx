@@ -563,20 +563,90 @@ export default function PayrollReviewQueue() {
         })),
     ];
 
+    // ── Operational closeout buckets (read-only) ──────────────────────────
+    const today = new Date();
+    const todayIso = today.toISOString().slice(0, 10);
+    const pendienteCierre: BucketRow[] = d.shifts
+      .filter(s => s.date <= todayIso && !closeoutMap.has(s.id))
+      .map(s => ({
+        key: `pc-${s.id}`,
+        primary: s.title ?? s.shift_code ?? "Turno",
+        secondary: `${s.date} · sin cierre enviado por el capitán`,
+        link: { to: `/app/shifts`, label: "Abrir bloque" },
+      }));
+
+    const enRevisionMaria: BucketRow[] = d.closeouts
+      .filter((c: any) => c.status === "submitted")
+      .map((c: any) => {
+        const s = shiftMap.get(c.shift_id);
+        return {
+          key: `rm-${c.id}`,
+          primary: s?.title ?? s?.shift_code ?? "Turno",
+          secondary: `${s?.date ?? ""} · cierre enviado, esperando revisión de María`,
+          link: { to: `/app/shifts`, label: "Abrir bloque" },
+        };
+      });
+
+    const requiereCorreccion: BucketRow[] = d.closeouts
+      .filter((c: any) =>
+        c.status === "rejected"
+        || ["needs_followup", "rejected"].includes((c.review_status ?? "") as string)
+      )
+      .map((c: any) => {
+        const s = shiftMap.get(c.shift_id);
+        return {
+          key: `rc-${c.id}`,
+          primary: s?.title ?? s?.shift_code ?? "Turno",
+          secondary: `${s?.date ?? ""} · ${c.review_status === "needs_followup" ? "requiere seguimiento" : "rechazado · necesita corrección"}`,
+          link: { to: `/app/shifts`, label: "Abrir bloque" },
+        };
+      });
+
+    const listoParaPago: BucketRow[] = d.closeouts
+      .filter((c: any) => c.final_approval_status === "approved")
+      .map((c: any) => {
+        const s = shiftMap.get(c.shift_id);
+        return {
+          key: `lp-${c.id}`,
+          primary: s?.title ?? s?.shift_code ?? "Turno",
+          secondary: `${s?.date ?? ""} · aprobación final completada`,
+          link: { to: `/app/shifts`, label: "Ver bloque" },
+        };
+      });
+
+    const fichajesAbiertos: BucketRow[] = d.timeEntries
+      .filter(t => !!t.clock_in && !t.clock_out)
+      .map(t => {
+        const s = t.shift_id ? shiftMap.get(t.shift_id) : null;
+        return {
+          key: `fa-${t.id}`,
+          primary: empName(t.employee_id),
+          secondary: `${s ? `${s.title ?? s.shift_code ?? "Turno"} · ` : ""}entrada ${t.clock_in ? format(parseISO(t.clock_in), "MMM d HH:mm") : "—"} · falta salida`,
+          link: { to: `/app/timeclock`, label: "Abrir reloj" },
+        };
+      });
+
     return [
-      { id: "ready",          title: "Ready to review",                  description: "Matched rows, no conflicts, no anomalies.",                                  severity: "info",  affectsPay: true,  rows: ready },
-      { id: "needs-match",    title: "Needs employee match",             description: "Unmatched rows from historical_payroll_entries (Connecteam imports). May be empty if period was committed directly into period_base_pay (no unmatched import rows).",  severity: "block", affectsPay: true,  rows: needsMatch },
-      { id: "time-mismatch",  title: "Time mismatch",                    description: "Variance flagged by reconciliation engine or pbp anomaly.",                  severity: "warn",  affectsPay: true,  rows: timeMismatch },
-      { id: "assign-no-ev",   title: "Assignment without clock / pay",   description: "Worker accepted the shift but no clock and no pay row exist.",               severity: "warn",  affectsPay: true,  rows: assignNoEvidence },
-      { id: "ev-no-assign",   title: "Clock / pay without assignment",   description: "Time entry or pay row exists but worker was not assigned in this period.",   severity: "warn",  affectsPay: true,  rows: clockNoAssign },
-      { id: "day-pay",        title: "Day-pay needs validation",         description: "Day-pay shift with hourly entries or missing closeout.",                     severity: "warn",  affectsPay: true,  rows: dayPayValidation },
-      { id: "transport",      title: "Driver / transport payment",       description: "Ride logged but no movement linked.",                                        severity: "warn",  affectsPay: true,  rows: transport },
-      { id: "adj-pending",    title: "Manual adjustment pending",        description: "Movements awaiting approval.",                                               severity: "block", affectsPay: true,  rows: adjPending },
-      { id: "dispute",        title: "Worker dispute",                   description: "Reconciliation rows flagged as disputed.",                                   severity: "warn",  affectsPay: true,  rows: disputes },
-      { id: "missing-docs",   title: "Missing docs / profile",           description: "Worker has payable row but profile is incomplete (governance warning).",     severity: "info",  affectsPay: false, rows: missingDocs },
-      { id: "closeout",       title: "Closeout conflict",                description: "Daily Close evidence disagrees with payroll evidence.",                      severity: "warn",  affectsPay: false, rows: closeoutConflict },
-      { id: "high-risk",      title: "High-risk / over threshold",       description: "Duration > 16h, pay > $3,000, or zero/negative pay.",                        severity: "block", affectsPay: true,  rows: highRisk },
-      { id: "pending-final",  title: "Pendiente aprobación final",       description: "Cierres aprobados por María, esperando aprobación final operativa (Keury). No representa pago.", severity: "info", affectsPay: false, rows: pendingFinalApproval },
+      // ── Operational priority queue (Centro de Validación) ──
+      { id: "requiere-correccion", title: "Requiere corrección",        description: "Cierres rechazados o que requieren seguimiento del capitán o María.", severity: "block", affectsPay: false, rows: requiereCorreccion },
+      { id: "fichajes-abiertos",   title: "Con fichajes abiertos",      description: "Hay entradas sin salida registrada. Cerrar o validar antes del pago.", severity: "block", affectsPay: false, rows: fichajesAbiertos },
+      { id: "pendiente-cierre",    title: "Pendiente cierre del turno", description: "Turnos ya ocurridos sin cierre enviado por el capitán.",               severity: "warn",  affectsPay: false, rows: pendienteCierre },
+      { id: "en-revision-maria",   title: "En revisión de María",       description: "Cierres enviados, esperando revisión operativa de María.",            severity: "warn",  affectsPay: false, rows: enRevisionMaria },
+      { id: "pending-final",       title: "Pendiente aprobación final", description: "Cierres aprobados por María, esperando aprobación final (Keury). No representa pago.", severity: "info", affectsPay: false, rows: pendingFinalApproval },
+      { id: "listo-pago",          title: "Listo para proceso de pago", description: "Aprobación final completada. Pasa al flujo de payroll y reconciliación.", severity: "info", affectsPay: false, rows: listoParaPago },
+      // ── Payroll-evidence buckets (existing) ──
+      { id: "ready",          title: "Listas para revisar",              description: "Filas con empleado verificado, sin conflictos ni anomalías.",                severity: "info",  affectsPay: true,  rows: ready },
+      { id: "needs-match",    title: "Falta vincular empleado",          description: "Filas sin match desde imports históricos (Connecteam).",                     severity: "block", affectsPay: true,  rows: needsMatch },
+      { id: "time-mismatch",  title: "Diferencia de horas",              description: "Variación detectada por reconciliación o anomalía en la fila de pago.",      severity: "warn",  affectsPay: true,  rows: timeMismatch },
+      { id: "assign-no-ev",   title: "Asignación sin fichaje ni pago",   description: "Worker aceptó el turno pero no hay fichaje ni fila de pago.",                severity: "warn",  affectsPay: true,  rows: assignNoEvidence },
+      { id: "ev-no-assign",   title: "Fichaje o pago sin asignación",    description: "Hay fichaje o fila de pago pero el worker no estaba asignado en el periodo.",severity: "warn",  affectsPay: true,  rows: clockNoAssign },
+      { id: "day-pay",        title: "Pago por día — falta validación",  description: "Turno de pago por día con entradas por hora o sin cierre.",                  severity: "warn",  affectsPay: true,  rows: dayPayValidation },
+      { id: "transport",      title: "Transporte sin movimiento",        description: "Viaje registrado sin movimiento vinculado.",                                 severity: "warn",  affectsPay: true,  rows: transport },
+      { id: "adj-pending",    title: "Ajuste manual pendiente",          description: "Movimientos esperando aprobación.",                                          severity: "block", affectsPay: true,  rows: adjPending },
+      { id: "dispute",        title: "Disputa de worker",                description: "Filas marcadas como disputadas en reconciliación.",                          severity: "warn",  affectsPay: true,  rows: disputes },
+      { id: "missing-docs",   title: "Falta documentación / perfil",     description: "Worker con fila pagable pero perfil incompleto (advertencia de gobierno).", severity: "info",  affectsPay: false, rows: missingDocs },
+      { id: "closeout",       title: "Conflicto de cierre",              description: "La evidencia del cierre diario no coincide con la evidencia de payroll.",    severity: "warn",  affectsPay: false, rows: closeoutConflict },
+      { id: "high-risk",      title: "Alto riesgo / fuera de umbral",    description: "Duración > 16h, pago > $3,000, o pago en cero/negativo.",                    severity: "block", affectsPay: true,  rows: highRisk },
     ];
   }, [dataQ.data]);
 
