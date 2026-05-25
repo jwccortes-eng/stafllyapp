@@ -455,14 +455,14 @@ export default function TimeClockCommandView() {
                 <div>
                   <h3 className="font-heading text-base font-semibold tracking-tight">Ahora en vivo</h3>
                   <p className="text-xs text-muted-foreground">
-                    {liveRows.length} worker{liveRows.length === 1 ? "" : "s"} currently clocked in
+                    {liveRows.length} {liveRows.length === 1 ? "persona fichada" : "personas fichadas"} en este momento
                   </p>
                 </div>
               </div>
               <div className="relative w-full sm:w-64">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                 <Input
-                  placeholder="Search worker, role, ID…"
+                  placeholder="Buscar persona, rol o ID…"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className="pl-8 h-9 text-sm"
