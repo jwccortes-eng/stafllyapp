@@ -31,6 +31,7 @@ import { ShiftAttendancePanel } from "@/components/shifts/ShiftAttendancePanel";
 import { MobileShiftTeamHub } from "@/components/shifts/mobile/MobileShiftTeamHub";
 import { ShiftShareMenu } from "@/components/shifts/ShiftShareMenu";
 import { ShiftCloseoutSection } from "@/components/shifts/closeout/ShiftCloseoutSection";
+import { ShiftLifecycleTimeline } from "@/components/shifts/ShiftLifecycleTimeline";
 import {
   TraceabilitySnapshot,
   type TraceRisk,
@@ -888,6 +889,22 @@ export function MobileShiftOperationsSheet({
                     </Button>
                   </div>
                 </div>
+
+                {/* Ciclo del turno — operational lifecycle timeline */}
+                {shift ? (
+                  <ShiftLifecycleTimeline
+                    shift={{
+                      id: shift.id,
+                      date: shift.date,
+                      start_time: shift.start_time,
+                      end_time: shift.end_time,
+                      slots: (shift as any).slots ?? null,
+                      status: shift.status ?? null,
+                      publication_status: (shift as any).publication_status ?? null,
+                    }}
+                    assignments={assignments.filter(a => a.shift_id === shift.id).map(a => ({ shift_id: a.shift_id, status: a.status }))}
+                  />
+                ) : null}
 
                 {/* Cierre diario (movido aquí) */}
                 {shift && selectedCompanyId ? (
