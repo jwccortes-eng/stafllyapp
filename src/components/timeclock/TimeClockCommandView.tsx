@@ -618,11 +618,11 @@ export default function TimeClockCommandView() {
             <div className="px-5 py-4 border-b border-border/50">
               <h3 className="font-heading text-base font-semibold tracking-tight">Listo para revisar</h3>
               <p className="text-xs text-muted-foreground">
-                Entradas marcadas para revisión, missing clock-out y muy largas. Solo lectura — abre el perfil para resolver.
+                Fichajes marcados para revisión, falta de salida y muy largos. Solo lectura — abre el perfil para resolver.
               </p>
             </div>
             {approvals.length === 0 ? (
-              <CalmEmpty title="Sin aprobaciones pendientes" description="No hay entradas que requieran revisión del admin." />
+              <CalmEmpty title="Sin aprobaciones pendientes" description="No hay fichajes que requieran revisión del admin." />
             ) : (
               <ul className="divide-y divide-border/40">
                 {approvals.map((item) => (
