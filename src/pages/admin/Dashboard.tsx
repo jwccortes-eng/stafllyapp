@@ -847,11 +847,11 @@ function AdminDashboardDesktop() {
     pending_requests: () => {
       const totalPending = pendingCounts.shiftRequests + pendingCounts.pendingMovements + pendingCounts.openTickets + pendingCounts.pendingAttendance + missingPhotoCount;
       const items = [
-        { label: "Shift requests", count: pendingCounts.shiftRequests, icon: ClipboardList, color: "text-primary", bg: "bg-primary/[0.08]", to: "/app/shift-requests" },
-        { label: "Pending adjustments", count: pendingCounts.pendingMovements, icon: DollarSign, color: "text-warning", bg: "bg-warning/[0.08]", to: "/app/movements" },
-        { label: "Open tickets", count: pendingCounts.openTickets, icon: AlertCircle, color: "text-warning", bg: "bg-warning/[0.08]", to: "/app/requests" },
-        { label: "Unconfirmed attendance", count: pendingCounts.pendingAttendance, icon: UserCheck, color: "text-earning", bg: "bg-earning/[0.08]", to: "/app/shifts" },
-        { label: "Missing profile photo", count: missingPhotoCount, icon: Camera, color: "text-muted-foreground", bg: "bg-muted/50", to: "/app/employees" },
+        { label: "Solicitudes de turno", count: pendingCounts.shiftRequests, icon: ClipboardList, color: "text-primary", bg: "bg-primary/[0.08]", to: "/app/shift-requests" },
+        { label: "Ajustes pendientes", count: pendingCounts.pendingMovements, icon: DollarSign, color: "text-warning", bg: "bg-warning/[0.08]", to: "/app/movements" },
+        { label: "Tickets abiertos", count: pendingCounts.openTickets, icon: AlertCircle, color: "text-warning", bg: "bg-warning/[0.08]", to: "/app/requests" },
+        { label: "Asistencia sin confirmar", count: pendingCounts.pendingAttendance, icon: UserCheck, color: "text-earning", bg: "bg-earning/[0.08]", to: "/app/shifts" },
+        { label: "Foto de perfil faltante", count: missingPhotoCount, icon: Camera, color: "text-muted-foreground", bg: "bg-muted/50", to: "/app/employees" },
       ];
       return (
         <Card className="rounded-2xl shadow-sm border-border/40 overflow-hidden">
@@ -861,7 +861,7 @@ function AdminDashboardDesktop() {
                 <div className="h-7 w-7 rounded-lg bg-warning/[0.08] flex items-center justify-center">
                   <Inbox className="h-3.5 w-3.5 text-warning" />
                 </div>
-                <CardTitle className="text-sm font-semibold font-heading">Pending</CardTitle>
+                <CardTitle className="text-sm font-semibold font-heading">Qué necesita atención</CardTitle>
                 {totalPending > 0 && (
                   <Badge variant="warning" className="text-[10px] h-5 px-1.5 rounded-full">
                     {totalPending}
@@ -876,8 +876,8 @@ function AdminDashboardDesktop() {
                 <div className="h-10 w-10 rounded-xl bg-earning/[0.08] flex items-center justify-center mx-auto mb-2">
                   <CheckCircle2 className="h-4 w-4 text-earning" />
                 </div>
-                <p className="text-xs font-medium text-earning">All caught up!</p>
-                <p className="text-[10px] text-muted-foreground/60 mt-0.5">No pending requests</p>
+                <p className="text-xs font-medium text-earning">Todo al día</p>
+                <p className="text-[10px] text-muted-foreground/60 mt-0.5">Sin pendientes por revisar</p>
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-2">
