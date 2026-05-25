@@ -45,13 +45,15 @@ export function AdminCloseoutReview({ closeout, onReviewed }: Props) {
         review_notes: notes.trim() || null,
       });
       toast.success(
-        action === "review" ? "Marked as reviewed" : "Closeout rejected",
+        action === "review"
+          ? "Marcado como aprobado por María"
+          : "Cierre rechazado",
       );
       onReviewed(next);
     } catch (e: any) {
-      const msg = e?.message ?? "Failed to review closeout";
+      const msg = e?.message ?? "No se pudo revisar el cierre";
       if (msg.includes("closeout_review_admin_only")) {
-        toast.error("Only admins can review closeouts.");
+        toast.error("Solo administradores pueden revisar cierres.");
       } else {
         toast.error(msg);
       }
@@ -63,15 +65,15 @@ export function AdminCloseoutReview({ closeout, onReviewed }: Props) {
   return (
     <div className="space-y-4 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-4">
       <div>
-        <p className="text-sm font-semibold">Admin review</p>
+        <p className="text-sm font-semibold">Revisión de María</p>
         <p className="mt-0.5 text-[11px] text-muted-foreground leading-snug">
-          Reviewing this closeout does not approve payroll.
+          Aprobar este cierre no aprueba payroll ni confirma el pago.
         </p>
       </div>
 
       <div className="space-y-1.5">
         <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">
-          Review status
+          Estado de revisión
         </Label>
         <Select
           value={reviewStatus}
@@ -82,24 +84,24 @@ export function AdminCloseoutReview({ closeout, onReviewed }: Props) {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="approved">Approved</SelectItem>
-            <SelectItem value="needs_followup">Needs follow-up</SelectItem>
-            <SelectItem value="escalated">Escalated</SelectItem>
-            <SelectItem value="rejected">Rejected</SelectItem>
+            <SelectItem value="approved">Aprobado</SelectItem>
+            <SelectItem value="needs_followup">Requiere seguimiento</SelectItem>
+            <SelectItem value="escalated">Escalado</SelectItem>
+            <SelectItem value="rejected">Rechazado</SelectItem>
           </SelectContent>
         </Select>
       </div>
 
       <div className="space-y-1.5">
         <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">
-          Review notes
+          Notas de revisión
         </Label>
         <Textarea
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           rows={3}
           disabled={alreadyReviewed}
-          placeholder="Optional context for the team."
+          placeholder="Contexto opcional para el equipo."
         />
       </div>
 
@@ -115,7 +117,7 @@ export function AdminCloseoutReview({ closeout, onReviewed }: Props) {
           ) : (
             <XCircle className="h-4 w-4" />
           )}
-          Reject
+          Rechazar
         </Button>
         <Button
           className="flex-1 h-11 rounded-xl gap-2"
@@ -127,7 +129,7 @@ export function AdminCloseoutReview({ closeout, onReviewed }: Props) {
           ) : (
             <ShieldCheck className="h-4 w-4" />
           )}
-          Mark reviewed
+          Aprobar por María
         </Button>
       </div>
     </div>
