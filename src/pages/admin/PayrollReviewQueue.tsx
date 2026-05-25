@@ -753,28 +753,32 @@ export default function PayrollReviewQueue() {
 
       {/* Empty / loading states */}
       {(periodsQ.isLoading || dataQ.isLoading) && (
-        <div className="flex items-center justify-center py-16"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+        <div className="flex flex-col items-center justify-center gap-2 py-16">
+          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          <p className="text-xs text-muted-foreground">Cargando bloques de validación…</p>
+        </div>
       )}
       {!periodsQ.isLoading && periods.length === 0 && (
-        <EmptyState icon={CalendarX} title="No pay periods configured" description="This company has no pay_periods rows." />
+        <EmptyState icon={CalendarX} title="Sin periodos configurados" description="Esta empresa todavía no tiene periodos de pago." />
       )}
       {!dataQ.isLoading && dataQ.data && (
         <>
           {selectedPeriod && isFuturePeriod(selectedPeriod) && buckets.every(b => b.rows.length === 0) && (
             <EmptyState
               icon={CalendarX}
-              title="Future period selected — no review data yet"
-              description="Switch to a current or past period to see real data. The selector marks future periods clearly."
+              title="Periodo futuro — aún no hay datos"
+              description="Cambia a un periodo actual o pasado para ver bloques reales. El selector marca los periodos futuros."
             />
           )}
           {selectedPeriod && !isFuturePeriod(selectedPeriod) && (pbpCounts[selectedPeriod.id] ?? 0) === 0 &&
             (dataQ.data.hist.length === 0) && (dataQ.data.mvmts.length === 0) && (dataQ.data.adj.length === 0) && (
               <EmptyState
                 icon={Info}
-                title="No payroll data for this period"
-                description="No imported rows, no movements, no adjustments. The period exists but nothing has been imported yet."
+                title="Sin datos de payroll en este periodo"
+                description="No hay filas importadas, movimientos ni ajustes. El periodo existe pero todavía no se cargó nada."
               />
             )}
+
 
           {/* Bucket accordion */}
           {buckets.some(b => b.rows.length > 0) && (
