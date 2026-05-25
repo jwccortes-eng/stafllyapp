@@ -1060,7 +1060,7 @@ function AdminDashboardDesktop() {
                 {a.priority === "urgent" && (
                   <div className="bg-warning/[0.06] px-4 py-1.5 flex items-center gap-1.5 border-b border-warning/10">
                     <AlertTriangle className="h-3 w-3 text-warning" />
-                    <span className="text-[10px] font-bold text-warning uppercase tracking-wider">Urgent</span>
+                    <span className="text-[10px] font-bold text-warning uppercase tracking-wider">Urgente</span>
                     </div>
                   )}
                   <CardContent className="p-4 space-y-2">
