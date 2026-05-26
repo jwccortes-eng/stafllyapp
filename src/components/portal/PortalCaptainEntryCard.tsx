@@ -115,7 +115,7 @@ export function PortalCaptainEntryCard({
         <Button
           size="sm"
           className="mt-3 w-full h-10 text-[13px] font-semibold"
-          onClick={() => navigate(`/app/shift-ops?id=${shiftId}`)}
+          onClick={() => navigate(`/portal/shift-captain/${shiftId}`)}
         >
           Abrir modo encargado
           <ChevronRight className="h-4 w-4 ml-1" />
