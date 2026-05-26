@@ -88,8 +88,8 @@ export function PortalCaptainEntryCard({
   if (closeoutStatus === "submitted" || closeoutStatus === "reviewed") {
     body =
       closeoutStatus === "reviewed"
-        ? "Tu cierre ya fue revisado por María."
-        : "Tu cierre fue enviado. María revisará las horas.";
+        ? "Las horas de tu cierre ya fueron aprobadas."
+        : "Tu cierre fue enviado. Revisión de horas pendiente.";
   } else if (workerCompleted) {
     body =
       "Tu registro quedó guardado. Como encargado, ahora revisa y envía el cierre del turno.";
