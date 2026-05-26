@@ -46,7 +46,7 @@ export function AdminCloseoutReview({ closeout, onReviewed }: Props) {
       });
       toast.success(
         action === "review"
-          ? "Marcado como aprobado por María"
+          ? "Horas aprobadas"
           : "Cierre rechazado",
       );
       onReviewed(next);
