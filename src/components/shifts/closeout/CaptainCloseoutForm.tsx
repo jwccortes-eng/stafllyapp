@@ -1,10 +1,18 @@
-import { useMemo, useState } from "react";
-import { Loader2, Send, Save } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Loader2, Send, Save, Mic, MicOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 import {
   type ShiftCloseout,
@@ -28,6 +36,15 @@ function num(v: unknown): number {
   const n = typeof v === "number" ? v : Number(v ?? 0);
   if (!Number.isFinite(n) || n < 0) return 0;
   return Math.floor(n);
+}
+
+// ── Optional browser-native dictation. No storage, no upload. ─────────────
+function getSpeechRecognitionCtor():
+  | (new () => any)
+  | null {
+  if (typeof window === "undefined") return null;
+  const w = window as any;
+  return (w.SpeechRecognition || w.webkitSpeechRecognition) ?? null;
 }
 
 export function CaptainCloseoutForm({
@@ -63,11 +80,21 @@ export function CaptainCloseoutForm({
   const [acknowledged, setAcknowledged] = useState<boolean>(false);
   const [busy, setBusy] = useState<"draft" | "submit" | null>(null);
 
+  // Confirmation modal state
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmChecks, setConfirmChecks] = useState({
+    entries: false,
+    exits: false,
+    extras: false,
+    incidents: false,
+    notes: false,
+    understand: false,
+    final: false,
+  });
+
   const locked =
     current?.status === "reviewed" || current?.status === "rejected";
 
-  // Show acknowledgement if evidence has unresolved issues OR captain
-  // self-reported faltas/incidencias/missing clock-out.
   const hasUnresolved = useMemo(() => {
     const missingClockOut = evidence?.missingClockOut ?? 0;
     const noShow = num(noShows);
@@ -75,7 +102,65 @@ export function CaptainCloseoutForm({
     return missingClockOut > 0 || noShow > 0 || inc > 0;
   }, [evidence?.missingClockOut, noShows, incidents]);
 
-  async function save(status: "draft" | "submitted") {
+  // Dictation (Web Speech API only — optional, no storage)
+  const SpeechRecognitionCtor = useMemo(() => getSpeechRecognitionCtor(), []);
+  const recognitionRef = useRef<any>(null);
+  const [listening, setListening] = useState(false);
+  const notesBaseRef = useRef<string>("");
+
+  useEffect(() => {
+    return () => {
+      try {
+        recognitionRef.current?.stop?.();
+      } catch {
+        /* noop */
+      }
+    };
+  }, []);
+
+  function toggleDictation() {
+    if (!SpeechRecognitionCtor) return;
+    if (listening) {
+      try {
+        recognitionRef.current?.stop?.();
+      } catch {
+        /* noop */
+      }
+      setListening(false);
+      return;
+    }
+    try {
+      const rec = new SpeechRecognitionCtor();
+      rec.lang = "es-ES";
+      rec.continuous = true;
+      rec.interimResults = true;
+      notesBaseRef.current = notes ? notes.replace(/\s+$/, "") + " " : "";
+      rec.onresult = (e: any) => {
+        let finalText = "";
+        let interim = "";
+        for (let i = e.resultIndex; i < e.results.length; i++) {
+          const r = e.results[i];
+          if (r.isFinal) finalText += r[0].transcript;
+          else interim += r[0].transcript;
+        }
+        setNotes(
+          (notesBaseRef.current + finalText + interim).replace(/\s+/g, " "),
+        );
+        if (finalText) notesBaseRef.current += finalText;
+      };
+      rec.onerror = () => setListening(false);
+      rec.onend = () => setListening(false);
+      recognitionRef.current = rec;
+      rec.start();
+      setListening(true);
+      toast.info("Dictando… toca el micrófono para detener.");
+    } catch {
+      toast.error("Dictado no disponible en este navegador.");
+      setListening(false);
+    }
+  }
+
+  async function persist(status: "draft" | "submitted") {
     if (locked) return;
     if (status === "submitted" && hasUnresolved && !acknowledged) {
       toast.error("Confirma el aviso de pendientes antes de enviar.");
@@ -101,9 +186,10 @@ export function CaptainCloseoutForm({
       });
       toast.success(
         status === "submitted"
-          ? "Cierre enviado a revisión de María"
+          ? "Cierre enviado a revisión de horas"
           : "Borrador guardado",
       );
+      setConfirmOpen(false);
       onSaved(next);
     } catch (e: any) {
       const msg = e?.message ?? "No se pudo guardar el cierre";
@@ -118,6 +204,25 @@ export function CaptainCloseoutForm({
       setBusy(null);
     }
   }
+
+  function openConfirm() {
+    if (hasUnresolved && !acknowledged) {
+      toast.error("Confirma el aviso de pendientes antes de enviar.");
+      return;
+    }
+    setConfirmChecks({
+      entries: false,
+      exits: false,
+      extras: false,
+      incidents: false,
+      notes: false,
+      understand: false,
+      final: false,
+    });
+    setConfirmOpen(true);
+  }
+
+  const confirmReady = confirmChecks.final;
 
   return (
     <div className="space-y-4 rounded-2xl border border-border/50 bg-card p-4">
@@ -172,15 +277,47 @@ export function CaptainCloseoutForm({
         <span>Uniforme OK</span>
       </label>
 
-      <Field label="Notas">
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between gap-2">
+          <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">
+            Notas finales del encargado
+          </Label>
+          {SpeechRecognitionCtor ? (
+            <Button
+              type="button"
+              size="sm"
+              variant={listening ? "default" : "outline"}
+              className="h-7 px-2 text-[11px] gap-1"
+              onClick={toggleDictation}
+              disabled={locked}
+              aria-pressed={listening}
+            >
+              {listening ? (
+                <>
+                  <MicOff className="h-3 w-3" />
+                  Detener
+                </>
+              ) : (
+                <>
+                  <Mic className="h-3 w-3" />
+                  Dictar nota
+                </>
+              )}
+            </Button>
+          ) : null}
+        </div>
         <Textarea
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           rows={3}
           disabled={locked}
-          placeholder="Algo importante de este turno…"
+          placeholder="Agrega cualquier novedad importante para quien revisa las horas."
         />
-      </Field>
+        <p className="text-[10.5px] text-muted-foreground leading-snug">
+          Recomendado cuando hay faltas, incidencias, salidas sin fichar o
+          ajustes manuales.
+        </p>
+      </div>
 
       <Field label="Comentario del cliente">
         <Textarea
@@ -198,7 +335,7 @@ export function CaptainCloseoutForm({
           onCheckedChange={(v) => setReadyForReview(v === true)}
           disabled={locked}
         />
-        <span>Listo para revisión de María</span>
+        <span>Listo para revisión de horas</span>
       </label>
 
       {hasUnresolved ? (
@@ -220,7 +357,7 @@ export function CaptainCloseoutForm({
         <Button
           variant="outline"
           className="flex-1 h-11 rounded-xl gap-2"
-          onClick={() => save("draft")}
+          onClick={() => persist("draft")}
           disabled={busy !== null || locked}
         >
           {busy === "draft" ? (
@@ -232,17 +369,89 @@ export function CaptainCloseoutForm({
         </Button>
         <Button
           className="flex-1 h-11 rounded-xl gap-2"
-          onClick={() => save("submitted")}
+          onClick={openConfirm}
           disabled={busy !== null || locked}
         >
-          {busy === "submit" ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Send className="h-4 w-4" />
-          )}
-          Enviar a revisión de María
+          <Send className="h-4 w-4" />
+          Enviar a revisión
         </Button>
       </div>
+
+      {/* Pre-submit confirmation */}
+      <Dialog open={confirmOpen} onOpenChange={(v) => !busy && setConfirmOpen(v)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Enviar cierre del turno</DialogTitle>
+            <DialogDescription className="text-[12.5px] leading-snug">
+              Revisa que entradas, salidas, novedades y notas estén correctas.
+              Después de enviar, el cierre pasará a revisión de horas.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-2.5 py-1">
+            {(
+              [
+                ["entries", "Entradas revisadas"],
+                ["exits", "Salidas revisadas"],
+                ["extras", "Personas extras / no-shows revisados"],
+                ["incidents", "Incidencias registradas"],
+                ["notes", "Notas del turno agregadas"],
+                ["understand", "Entiendo que este cierre pasará a revisión"],
+              ] as const
+            ).map(([key, label]) => (
+              <label
+                key={key}
+                className="flex items-start gap-2 text-[12.5px] leading-snug"
+              >
+                <Checkbox
+                  checked={confirmChecks[key]}
+                  onCheckedChange={(v) =>
+                    setConfirmChecks((c) => ({ ...c, [key]: v === true }))
+                  }
+                  className="mt-0.5"
+                />
+                <span>{label}</span>
+              </label>
+            ))}
+
+            <label className="mt-2 flex items-start gap-2 rounded-xl border border-primary/30 bg-primary/5 p-3 text-[12.5px] leading-snug">
+              <Checkbox
+                checked={confirmChecks.final}
+                onCheckedChange={(v) =>
+                  setConfirmChecks((c) => ({ ...c, final: v === true }))
+                }
+                className="mt-0.5"
+              />
+              <span className="font-medium">
+                Confirmo que revisé el cierre y deseo enviarlo.
+              </span>
+            </label>
+          </div>
+
+          <DialogFooter className="flex-col-reverse gap-2 sm:flex-row">
+            <Button
+              variant="outline"
+              className="sm:flex-1 h-11"
+              onClick={() => setConfirmOpen(false)}
+              disabled={busy !== null}
+            >
+              Seguir revisando
+            </Button>
+            <Button
+              className="sm:flex-1 h-11 gap-2"
+              onClick={() => persist("submitted")}
+              disabled={!confirmReady || busy !== null}
+            >
+              {busy === "submit" ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+              Enviar a revisión
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
