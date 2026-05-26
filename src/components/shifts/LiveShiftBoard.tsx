@@ -25,6 +25,7 @@ import {
   UserX,
   Car,
   Sparkles,
+  Wrench,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -33,6 +34,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { isEmployeeDriver } from "./types";
 import type { Assignment, Employee } from "./types";
+import { CorrectionRequestDialog } from "./corrections/CorrectionRequestDialog";
+import type { CorrectionType } from "@/lib/shifts/time-corrections";
 
 interface Props {
   shiftId: string;
@@ -44,6 +47,8 @@ interface Props {
   assignments: Assignment[];  // pre-loaded by parent
   employees: Employee[];      // pre-loaded by parent
   shiftAdminId?: string | null;
+  /** When true, render "Corregir fichaje" actions on each worker card. */
+  canManage?: boolean;
   className?: string;
 }
 
@@ -83,7 +88,7 @@ function fmtTime(iso: string | null): string {
 
 export function LiveShiftBoard({
   shiftId, companyId, shiftDate, startTime, endTime, slots,
-  assignments, employees, shiftAdminId, className,
+  assignments, employees, shiftAdminId, canManage = false, className,
 }: Props) {
   const [entries, setEntries] = useState<TE[]>([]);
   const [loading, setLoading] = useState(true);
@@ -99,7 +104,7 @@ export function LiveShiftBoard({
         .from("time_entries")
         .select("id, employee_id, shift_id, clock_in, clock_out")
         .eq("shift_id", shiftId)
-        .neq("status", "rejected");
+        .in("status", ["pending", "approved"]);
       if (cancelled) return;
       setEntries((data ?? []) as TE[]);
       setLoading(false);
@@ -143,7 +148,7 @@ export function LiveShiftBoard({
         .from("time_entries")
         .select("id, employee_id, shift_id, clock_in, clock_out")
         .eq("shift_id", shiftId)
-        .neq("status", "rejected");
+        .in("status", ["pending", "approved"]);
       if (cancelled) return;
       setEntries((data ?? []) as TE[]);
     })();
