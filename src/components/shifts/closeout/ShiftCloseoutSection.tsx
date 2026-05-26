@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ClipboardCheck, Loader2 } from "lucide-react";
+import { ClipboardCheck, Loader2, ShieldCheck } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import {
   type ShiftCloseout,
@@ -58,14 +58,18 @@ export function ShiftCloseoutSection({
     };
   }, [shiftId]);
 
-  const reviewed =
-    closeout?.status === "reviewed" || closeout?.status === "rejected";
+  const status = closeout?.status ?? null;
+  const reviewed = status === "reviewed" || status === "rejected";
+  const submitted = status === "submitted";
 
-  const showForm = canSubmit && !reviewed;
-  const showReview = canReview && closeout?.status === "submitted";
+  // Captain edit form is only shown before submission. After submission the
+  // captain sees a read-only "Cierre enviado" panel + summary. Reviewer flow
+  // handles any correction requests via the existing AdminCloseoutReview UI.
+  const showForm = canSubmit && !reviewed && !submitted;
+  const showReview = canReview && submitted;
   const showFinal =
     canFinalApprove &&
-    closeout?.status === "reviewed" &&
+    status === "reviewed" &&
     closeout?.review_status === "approved";
 
   return (
@@ -85,6 +89,26 @@ export function ShiftCloseoutSection({
             packet={evidence}
             incidents={closeout?.incident_count ?? 0}
           />
+
+          {/* Captain "submitted" panel — read-only handoff signal. */}
+          {submitted && canSubmit ? (
+            <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-4 space-y-2">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="h-4 w-4 text-emerald-600" />
+                <p className="text-sm font-semibold text-emerald-900 dark:text-emerald-200">
+                  Cierre enviado
+                </p>
+              </div>
+              <p className="text-[12.5px] text-emerald-900/80 dark:text-emerald-200/80 leading-snug">
+                Tu responsabilidad como encargado quedó completa. El cierre
+                pasará a revisión de horas.
+              </p>
+              <p className="text-[11px] text-muted-foreground leading-snug">
+                Si necesitas corregir algo, pide al revisor de horas que
+                solicite la corrección desde su panel.
+              </p>
+            </div>
+          ) : null}
 
           <CloseoutSummaryCard closeout={closeout} />
 
