@@ -42,9 +42,9 @@ type CloseoutStatusLite = "draft" | "submitted" | "reviewed" | "rejected" | null
 
 function statusChip(closeout: CloseoutStatusLite, reviewStatus: string | null) {
   if (closeout === "reviewed" && reviewStatus === "approved")
-    return { label: "Aprobado por María", tone: "success" as const };
+    return { label: "Horas aprobadas", tone: "success" as const };
   if (closeout === "submitted")
-    return { label: "En revisión de María", tone: "info" as const };
+    return { label: "Revisión de horas pendiente", tone: "info" as const };
   if (closeout === "draft")
     return { label: "Cierre en borrador", tone: "warning" as const };
   return { label: "En operación", tone: "live" as const };
@@ -280,8 +280,9 @@ export default function ShiftCaptainRoom() {
         </div>
 
         <p className="text-[10.5px] text-muted-foreground/80 leading-snug text-center px-4 pt-1">
-          Tu responsabilidad como encargado termina al enviar el cierre. María y
-          Keury continúan con la validación de horas. No genera pagos.
+          Tu responsabilidad como encargado termina al enviar el cierre. La
+          revisión de horas y la aprobación final continúan después. No genera
+          pagos.
         </p>
       </main>
     </div>

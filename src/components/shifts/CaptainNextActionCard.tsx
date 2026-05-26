@@ -117,7 +117,7 @@ function computeView(
   }
   if (closeoutStatus === "reviewed" && reviewStatus === "approved") {
     return {
-      title: "Aprobado por María",
+      title: "Horas aprobadas",
       message: "Pendiente aprobación final.",
       icon: Stamp,
       tone: "success",
@@ -126,9 +126,9 @@ function computeView(
   }
   if (closeoutStatus === "submitted") {
     return {
-      title: "Tu parte está enviada",
+      title: "Cierre enviado",
       message:
-        "María revisará las horas. Tu responsabilidad como encargado quedó completa.",
+        "Revisión de horas pendiente. Tu responsabilidad como encargado quedó completa.",
       icon: ShieldCheck,
       tone: "complete",
       showResponsibilityBadge: true,
@@ -409,8 +409,8 @@ export function CaptainNextActionCard({
       </ul>
 
       <p className="text-[10px] text-muted-foreground/80 leading-snug pt-1 border-t border-border/30">
-        Tu responsabilidad como encargado termina al enviar el cierre. María y
-        Keury continúan con la validación de horas.
+        Tu responsabilidad como encargado termina al enviar el cierre. El
+        revisor de horas y el aprobador final continúan con la validación.
       </p>
     </section>
   );
