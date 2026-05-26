@@ -117,7 +117,7 @@ function computeView(
   }
   if (closeoutStatus === "reviewed" && reviewStatus === "approved") {
     return {
-      title: "Aprobado por María",
+      title: "Horas aprobadas",
       message: "Pendiente aprobación final.",
       icon: Stamp,
       tone: "success",
@@ -126,9 +126,9 @@ function computeView(
   }
   if (closeoutStatus === "submitted") {
     return {
-      title: "Tu parte está enviada",
+      title: "Cierre enviado",
       message:
-        "María revisará las horas. Tu responsabilidad como encargado quedó completa.",
+        "Revisión de horas pendiente. Tu responsabilidad como encargado quedó completa.",
       icon: ShieldCheck,
       tone: "complete",
       showResponsibilityBadge: true,
