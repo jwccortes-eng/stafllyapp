@@ -32,6 +32,7 @@ import { MobileShiftTeamHub } from "@/components/shifts/mobile/MobileShiftTeamHu
 import { ShiftShareMenu } from "@/components/shifts/ShiftShareMenu";
 import { ShiftCloseoutSection } from "@/components/shifts/closeout/ShiftCloseoutSection";
 import { ShiftLifecycleTimeline } from "@/components/shifts/ShiftLifecycleTimeline";
+import { CaptainNextActionCard } from "@/components/shifts/CaptainNextActionCard";
 import { LiveShiftBoard } from "@/components/shifts/LiveShiftBoard";
 
 import {
@@ -891,6 +892,19 @@ export function MobileShiftOperationsSheet({
                     </Button>
                   </div>
                 </div>
+
+                {/* Acción del encargado — captain/admin next action (read-only) */}
+                {shift ? (
+                  <CaptainNextActionCard
+                    shift={{
+                      id: shift.id,
+                      date: shift.date,
+                      start_time: shift.start_time,
+                      end_time: shift.end_time,
+                    }}
+                    onOpenCloseout={() => setCloseoutOpen(true)}
+                  />
+                ) : null}
 
                 {/* Turno en vivo — live operational board (read-only) */}
                 {shift && selectedCompanyId ? (
