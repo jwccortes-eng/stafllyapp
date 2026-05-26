@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { capturePosition, getDeviceId, distanceMeters } from "@/lib/geo-helpers";
 import { ClockPhotoCapture } from "@/components/portal/ClockPhotoCapture";
+import { PortalCaptainEntryCard } from "@/components/portal/PortalCaptainEntryCard";
 import { QRScannerDialog } from "@/components/portal/QRScannerDialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -810,6 +811,19 @@ export default function PortalClock() {
           </>
         )}
       </section>
+
+      {/* Captain bridge — only renders for authorized admins / shift leads */}
+      {focusShift && (
+        <PortalCaptainEntryCard
+          shiftId={focusShift.id}
+          companyId={companyId}
+          employeeId={employeeId}
+          isClockedIn={isClockedIn}
+          workerCompleted={!!focusShiftCompletedEntry}
+        />
+      )}
+
+
 
 
       {/* ════════════════════════════════════════════════
