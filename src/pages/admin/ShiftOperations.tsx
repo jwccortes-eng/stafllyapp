@@ -258,9 +258,39 @@ export default function ShiftOperations() {
   const confirmed = assignments.filter(a => a.status === "confirmed").length;
   const pending = assignments.filter(a => a.status === "pending").length;
   const rejected = assignments.filter(a => a.status === "rejected").length;
-  const drivers = assignments.filter(a => a.assignment_role === "driver").length;
+  const driverIds = useMemo(() => {
+    const s = new Set<string>();
+    if (shift?.driver_employee_id) s.add(shift.driver_employee_id);
+    assignments.forEach(a => {
+      if (a.assignment_role === "driver" && a.employee_id) s.add(a.employee_id);
+    });
+    return s;
+  }, [shift?.driver_employee_id, assignments]);
+  const drivers = driverIds.size;
   const admins = assignments.filter(a => ["shift_admin", "shift_lead", "backup_admin", "check_in_admin"].includes(a.assignment_role)).length;
-  const carsNeeded = shift ? Math.ceil(totalAssigned / (shift.car_capacity || 5)) : 0;
+  const carsNeeded = shift?.transportation_required ? Math.ceil(totalAssigned / (shift.car_capacity || 5)) : 0;
+
+  const handleDisableTransport = async () => {
+    if (!shift) return;
+    if (!window.confirm("Este turno dejará de pedir conductor. ¿Continuar?")) return;
+    const { error } = await supabase
+      .from("scheduled_shifts")
+      .update({ transportation_required: false } as any)
+      .eq("id", shift.id);
+    if (error) { toast.error(error.message); return; }
+    if (selectedCompanyId && user) {
+      await supabase.from("shift_timeline").insert({
+        shift_id: shift.id,
+        company_id: selectedCompanyId,
+        event_type: "shift_edited",
+        description: "Requerimiento de transporte apagado",
+        actor_id: user.id,
+        metadata: { fields: ["transportation_required"], value: false },
+      } as any);
+    }
+    toast.success("Requerimiento de transporte apagado");
+    loadAll();
+  };
 
   // Group by area
   const byArea = useMemo(() => {
