@@ -590,6 +590,19 @@ export default function ShiftOperations() {
               {shift.transportation_notes && (
                 <p className="text-[11px] text-muted-foreground">📝 {shift.transportation_notes}</p>
               )}
+              <div className="pt-2 border-t border-warning/15 space-y-1.5">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full h-8 text-[11px]"
+                  onClick={handleDisableTransport}
+                >
+                  Apagar requerimiento de transporte
+                </Button>
+                <p className="text-[10px] text-muted-foreground leading-snug">
+                  Usa esto si este turno no necesita vehículos coordinados.
+                </p>
+              </div>
             </div>
           )}
 
