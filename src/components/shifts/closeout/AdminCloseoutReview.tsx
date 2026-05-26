@@ -65,7 +65,7 @@ export function AdminCloseoutReview({ closeout, onReviewed }: Props) {
   return (
     <div className="space-y-4 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-4">
       <div>
-        <p className="text-sm font-semibold">Revisión de María</p>
+        <p className="text-sm font-semibold">Revisión de horas</p>
         <p className="mt-0.5 text-[11px] text-muted-foreground leading-snug">
           Aprobar este cierre no aprueba payroll ni confirma el pago.
         </p>
