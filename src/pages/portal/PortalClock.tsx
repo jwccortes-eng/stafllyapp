@@ -798,7 +798,7 @@ export default function PortalClock() {
             })}
 
             {/* Closed entries — minimal rows */}
-            {closedEntries.map(entry => (
+            {zone2ClosedEntries.map(entry => (
               <div
                 key={entry.id}
                 className="flex items-center gap-3 px-4 py-3"
