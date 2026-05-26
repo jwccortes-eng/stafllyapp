@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ClipboardCheck, Loader2, ShieldCheck } from "lucide-react";
+import { AlertTriangle, ClipboardCheck, Loader2, ShieldCheck } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import {
   type ShiftCloseout,
@@ -13,6 +13,8 @@ import { CaptainCloseoutForm } from "./CaptainCloseoutForm";
 import { AdminCloseoutReview } from "./AdminCloseoutReview";
 import { EvidencePacketCard } from "./EvidencePacketCard";
 import { FinalApprovalCard } from "./FinalApprovalCard";
+
+const PRIVILEGED_REVIEW_ROLES = new Set(["developer", "owner", "founder"]);
 
 interface Props {
   shiftId: string;
