@@ -501,10 +501,25 @@ export default function PortalClock() {
   const focusShift: TodayShift | null =
     activeShift ?? selectedShift ?? (todayShifts.length === 1 ? todayShifts[0] : null);
 
+  // ── Post-clockout state — the focused shift has a *completed* entry today.
+  // After Marcar salida, the worker must see "Turno completado" instead of a
+  // misleading "Marcar entrada" CTA. Re-clocking the same shift requires an
+  // explicit secondary action (not implemented here — keep the screen calm).
+  const focusShiftCompletedEntry: TimeEntry | null =
+    !isClockedIn && focusShift
+      ? todayEntries.find(e => e.shift_id === focusShift.id && !!e.clock_out) ?? null
+      : null;
+
   // Other shifts of the day (excluding the focused one and already-clocked entries) — feed Zone 2.
   const otherShifts = todayShifts.filter(s => s.id !== focusShift?.id);
   const closedEntries = todayEntries.filter(e => e.clock_out);
-  const hasZone2Content = otherShifts.length > 0 || closedEntries.length > 0;
+  // Avoid duplicating the focused shift's closed entry in Zone 2 — it already
+  // appears as the primary "Turno completado" card in Zone 1.
+  const zone2ClosedEntries = focusShiftCompletedEntry
+    ? closedEntries.filter(e => e.id !== focusShiftCompletedEntry.id)
+    : closedEntries;
+  const hasZone2Content = otherShifts.length > 0 || zone2ClosedEntries.length > 0;
+
 
   return (
     <div className="animate-fade-in pb-24">
