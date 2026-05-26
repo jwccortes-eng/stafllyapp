@@ -88,7 +88,7 @@ function fmtTime(iso: string | null): string {
 
 export function LiveShiftBoard({
   shiftId, companyId, shiftDate, startTime, endTime, slots,
-  assignments, employees, shiftAdminId, className,
+  assignments, employees, shiftAdminId, canManage = false, className,
 }: Props) {
   const [entries, setEntries] = useState<TE[]>([]);
   const [loading, setLoading] = useState(true);
