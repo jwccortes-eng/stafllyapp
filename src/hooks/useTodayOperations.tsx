@@ -351,19 +351,37 @@ export function useTodayOperations(
   );
 
   const totals = useMemo(() => {
+    const locationKeys = new Set<string>();
+    for (const s of shifts) {
+      locationKeys.add(
+        s.location_id ??
+          s.meeting_point_location_id ??
+          s.client_id ??
+          (s.meeting_point ? `mp:${s.meeting_point.trim().toLowerCase()}` : "sin"),
+      );
+    }
     return {
       shifts: shifts.length,
+      locations: locationKeys.size,
       needs_staff: shifts.filter((s) => s.ops.bucket === "needs_staff").length,
       in_progress: shifts.filter((s) => s.ops.bucket === "in_progress").length,
       needs_closeout: shifts.filter((s) => s.ops.bucket === "needs_closeout").length,
       closed: shifts.filter((s) => s.ops.bucket === "closed").length,
+      required: shifts.reduce((n, s) => n + (s.slots ?? 0), 0),
+      assigned: shifts.reduce((n, s) => n + s.ops.assigned_active, 0),
+      confirmed: shifts.reduce((n, s) => n + s.ops.confirmed, 0),
+      clocked_in_now: shifts.reduce((n, s) => n + s.ops.open_clocks, 0),
       open_clocks: shifts.reduce((n, s) => n + s.ops.open_clocks, 0),
       missing_clock_outs: shifts.reduce((n, s) => n + s.ops.missing_clock_outs, 0),
       not_clocked_in: shifts.reduce((n, s) => n + s.ops.not_started, 0),
       urgent: shifts.filter((s) => s.ops.alert_level === "urgent").length,
       pending_claims: shifts.reduce((n, s) => n + (s.pending_claims ?? 0), 0),
+      transport_missing_driver: shifts.filter((s) => s.transport.missing_driver).length,
+      transport_capacity_short: shifts.filter((s) => s.transport.capacity_short && !s.transport.missing_driver).length,
+      transport_required_shifts: shifts.filter((s) => s.transport.required).length,
     };
   }, [shifts]);
+
 
   return {
     loading,
