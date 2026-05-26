@@ -811,6 +811,19 @@ export default function PortalClock() {
         )}
       </section>
 
+      {/* Captain bridge — only renders for authorized admins / shift leads */}
+      {focusShift && (
+        <PortalCaptainEntryCard
+          shiftId={focusShift.id}
+          companyId={companyId}
+          employeeId={employeeId}
+          isClockedIn={isClockedIn}
+          workerCompleted={!!focusShiftCompletedEntry}
+        />
+      )}
+
+
+
 
       {/* ════════════════════════════════════════════════
            ZONE 2 — Today
