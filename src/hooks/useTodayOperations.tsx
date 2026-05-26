@@ -72,16 +72,25 @@ export interface TodayOpsResult {
   employeesById: Map<string, TodayOpsEmployee>;
   totals: {
     shifts: number;
+    locations: number;
     needs_staff: number;
     in_progress: number;
     needs_closeout: number;
     closed: number;
+    required: number;
+    assigned: number;
+    confirmed: number;
+    clocked_in_now: number;
     open_clocks: number;
     missing_clock_outs: number;
     not_clocked_in: number;
     urgent: number;
     pending_claims: number;
+    transport_missing_driver: number;
+    transport_capacity_short: number;
+    transport_required_shifts: number;
   };
+
   refresh: () => void;
 }
 
