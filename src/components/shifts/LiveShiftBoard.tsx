@@ -522,6 +522,19 @@ function WorkerCard({ row }: { row: WorkerRow }) {
           <span className={cn(!clockOut && clockIn && "text-amber-600 dark:text-amber-400 font-semibold")}>
             {clockOut ? fmtTime(clockOut) : clockIn ? "Falta salida" : "—"}
           </span>
+          {clockIn && clockOut && (() => {
+            try {
+              const mins = differenceInMinutes(parseISO(clockOut), parseISO(clockIn));
+              if (mins <= 0) return null;
+              const h = Math.floor(mins / 60);
+              const m = mins % 60;
+              return (
+                <span className="ml-1 px-1 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-semibold">
+                  {h > 0 ? `${h}h ${m}m` : `${m}m`}
+                </span>
+              );
+            } catch { return null; }
+          })()}
         </div>
         {warning && (
           <p className="text-[10px] text-amber-700 dark:text-amber-300 mt-0.5 flex items-center gap-1">
