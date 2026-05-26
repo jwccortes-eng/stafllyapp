@@ -240,18 +240,30 @@ export default function ShiftCaptainRoom() {
           }
         />
 
-        {/* Live shift board (summary strip + grouped workers) */}
-        <LiveShiftBoard
-          shiftId={shift.id}
-          companyId={shift.company_id}
-          shiftDate={shift.date}
-          startTime={shift.start_time}
-          endTime={shift.end_time}
-          slots={shift.slots ?? 0}
-          assignments={assignments}
-          employees={employees}
-          shiftAdminId={shift.shift_admin_id}
-        />
+        {/* Estado real del turno — real attendance is the primary content.
+            Scheduled time stays in the header as small context only. */}
+        <section aria-label="Estado real del turno" className="space-y-2">
+          <div className="flex items-center gap-2 px-0.5">
+            <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+            <p className="text-[10.5px] font-bold uppercase tracking-widest text-muted-foreground">
+              Estado real del turno
+            </p>
+            <span className="text-[10px] text-muted-foreground/70">
+              · fichajes reales, no programados
+            </span>
+          </div>
+          <LiveShiftBoard
+            shiftId={shift.id}
+            companyId={shift.company_id}
+            shiftDate={shift.date}
+            startTime={shift.start_time}
+            endTime={shift.end_time}
+            slots={shift.slots ?? 0}
+            assignments={assignments}
+            employees={employees}
+            shiftAdminId={shift.shift_admin_id}
+          />
+        </section>
 
         {/* Closeout — single source of truth, no duplicate form */}
         <div ref={closeoutRef} className="scroll-mt-20">
