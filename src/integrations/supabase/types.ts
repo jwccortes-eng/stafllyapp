@@ -16155,6 +16155,10 @@ export type Database = {
         Args: { _company_id: string }
         Returns: boolean
       }
+      can_request_shift_correction: {
+        Args: { _company_id: string; _shift_id: string }
+        Returns: boolean
+      }
       cleanup_expired_rate_limits: { Args: never; Returns: undefined }
       company_user_can_access_employee_doc_path: {
         Args: { _path: string }
@@ -16372,6 +16376,29 @@ export type Database = {
       }
       is_founder: { Args: { _user_id: string }; Returns: boolean }
       is_global_owner: { Args: { _user_id: string }; Returns: boolean }
+      is_privileged_reviewer: { Args: { _user_id: string }; Returns: boolean }
+      list_shift_corrections: {
+        Args: { p_shift_id: string }
+        Returns: {
+          approved_by: string
+          company_id: string
+          correction_type: string
+          employee_id: string
+          note: string
+          original_clock_in: string
+          original_clock_out: string
+          pending_time_entry_id: string
+          proposed_clock_in: string
+          proposed_clock_out: string
+          reason: string
+          requested_at: string
+          requested_by: string
+          reviewed_at: string
+          shift_id: string
+          status: string
+          target_time_entry_id: string
+        }[]
+      }
       list_unassigned_profiles: {
         Args: never
         Returns: {
@@ -16464,6 +16491,20 @@ export type Database = {
         }
         Returns: string
       }
+      request_time_entry_correction: {
+        Args: {
+          p_company_id: string
+          p_corrected_clock_in: string
+          p_corrected_clock_out: string
+          p_correction_type: string
+          p_employee_id: string
+          p_note?: string
+          p_reason: string
+          p_shift_id: string
+          p_time_entry_id: string
+        }
+        Returns: string
+      }
       reset_employee_access_pin: {
         Args: { _employee_id: string }
         Returns: string
@@ -16494,6 +16535,14 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      review_time_entry_correction: {
+        Args: {
+          p_decision: string
+          p_pending_time_entry_id: string
+          p_review_note?: string
+        }
+        Returns: undefined
       }
       set_employee_access_pin: {
         Args: { _employee_id: string; _pin: string }
