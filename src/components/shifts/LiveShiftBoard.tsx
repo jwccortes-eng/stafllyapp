@@ -25,6 +25,7 @@ import {
   UserX,
   Car,
   Sparkles,
+  Wrench,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -33,6 +34,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { isEmployeeDriver } from "./types";
 import type { Assignment, Employee } from "./types";
+import { CorrectionRequestDialog } from "./corrections/CorrectionRequestDialog";
+import type { CorrectionType } from "@/lib/shifts/time-corrections";
 
 interface Props {
   shiftId: string;
@@ -44,6 +47,8 @@ interface Props {
   assignments: Assignment[];  // pre-loaded by parent
   employees: Employee[];      // pre-loaded by parent
   shiftAdminId?: string | null;
+  /** When true, render "Corregir fichaje" actions on each worker card. */
+  canManage?: boolean;
   className?: string;
 }
 
