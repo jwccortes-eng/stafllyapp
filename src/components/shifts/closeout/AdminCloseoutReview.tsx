@@ -129,7 +129,7 @@ export function AdminCloseoutReview({ closeout, onReviewed }: Props) {
           ) : (
             <ShieldCheck className="h-4 w-4" />
           )}
-          Aprobar por María
+          Aprobar horas
         </Button>
       </div>
     </div>
