@@ -207,9 +207,10 @@ export default function ShiftCaptainRoom() {
                 <CalendarDays className="h-3 w-3" />
                 {dateLabel}
               </span>
-              <span className="inline-flex items-center gap-1">
+              <span className="inline-flex items-center gap-1 opacity-80">
                 <Clock className="h-3 w-3" />
-                {shift.start_time.slice(0, 5)}–{shift.end_time.slice(0, 5)}
+                <span className="uppercase tracking-wide text-[9.5px] font-semibold opacity-70">Programado</span>
+                <span className="tabular-nums">{shift.start_time.slice(0, 5)}–{shift.end_time.slice(0, 5)}</span>
               </span>
             </div>
           </div>
