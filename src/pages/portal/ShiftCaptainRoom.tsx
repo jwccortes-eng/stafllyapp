@@ -42,9 +42,9 @@ type CloseoutStatusLite = "draft" | "submitted" | "reviewed" | "rejected" | null
 
 function statusChip(closeout: CloseoutStatusLite, reviewStatus: string | null) {
   if (closeout === "reviewed" && reviewStatus === "approved")
-    return { label: "Aprobado por María", tone: "success" as const };
+    return { label: "Horas aprobadas", tone: "success" as const };
   if (closeout === "submitted")
-    return { label: "En revisión de María", tone: "info" as const };
+    return { label: "Revisión de horas pendiente", tone: "info" as const };
   if (closeout === "draft")
     return { label: "Cierre en borrador", tone: "warning" as const };
   return { label: "En operación", tone: "live" as const };
