@@ -265,10 +265,9 @@ export function useTodayOperations(
         pending_claims: claimsByShift.get(s.id) ?? 0,
         transport,
         ops,
-
-        ops,
       };
     });
+
 
     setShifts(rows);
     setEmployees((empsRes.data ?? []) as TodayOpsEmployee[]);
