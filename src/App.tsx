@@ -173,6 +173,7 @@ const MyW9 = lazy(() => import("./pages/portal/MyW9"));
 const MyDocuments = lazy(() => import("./pages/portal/MyDocuments"));
 const MyAvailability = lazy(() => import("./pages/portal/MyAvailability"));
 const UpdateCenter = lazy(() => import("./pages/portal/UpdateCenter"));
+const ShiftCaptainRoom = lazy(() => import("./pages/portal/ShiftCaptainRoom"));
 
 // Parceros community — own layout
 const ParcerosLayout = lazy(() => import("./layouts/ParcerosLayout"));
