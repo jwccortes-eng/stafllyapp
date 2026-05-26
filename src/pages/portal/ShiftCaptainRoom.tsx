@@ -280,8 +280,9 @@ export default function ShiftCaptainRoom() {
         </div>
 
         <p className="text-[10.5px] text-muted-foreground/80 leading-snug text-center px-4 pt-1">
-          Tu responsabilidad como encargado termina al enviar el cierre. María y
-          Keury continúan con la validación de horas. No genera pagos.
+          Tu responsabilidad como encargado termina al enviar el cierre. La
+          revisión de horas y la aprobación final continúan después. No genera
+          pagos.
         </p>
       </main>
     </div>
