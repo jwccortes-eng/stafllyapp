@@ -501,10 +501,25 @@ export default function PortalClock() {
   const focusShift: TodayShift | null =
     activeShift ?? selectedShift ?? (todayShifts.length === 1 ? todayShifts[0] : null);
 
+  // ── Post-clockout state — the focused shift has a *completed* entry today.
+  // After Marcar salida, the worker must see "Turno completado" instead of a
+  // misleading "Marcar entrada" CTA. Re-clocking the same shift requires an
+  // explicit secondary action (not implemented here — keep the screen calm).
+  const focusShiftCompletedEntry: TimeEntry | null =
+    !isClockedIn && focusShift
+      ? todayEntries.find(e => e.shift_id === focusShift.id && !!e.clock_out) ?? null
+      : null;
+
   // Other shifts of the day (excluding the focused one and already-clocked entries) — feed Zone 2.
   const otherShifts = todayShifts.filter(s => s.id !== focusShift?.id);
   const closedEntries = todayEntries.filter(e => e.clock_out);
-  const hasZone2Content = otherShifts.length > 0 || closedEntries.length > 0;
+  // Avoid duplicating the focused shift's closed entry in Zone 2 — it already
+  // appears as the primary "Turno completado" card in Zone 1.
+  const zone2ClosedEntries = focusShiftCompletedEntry
+    ? closedEntries.filter(e => e.id !== focusShiftCompletedEntry.id)
+    : closedEntries;
+  const hasZone2Content = otherShifts.length > 0 || zone2ClosedEntries.length > 0;
+
 
   return (
     <div className="animate-fade-in pb-24">
@@ -594,138 +609,208 @@ export default function PortalClock() {
           "rounded-2xl border overflow-hidden",
           isClockedIn
             ? "bg-card border-earning/30 shadow-[0_4px_20px_-8px_hsl(var(--earning)/0.18)]"
+            : focusShiftCompletedEntry
+            ? "bg-card border-earning/30"
             : focusShift
             ? "bg-card border-primary/25"
             : "bg-card border-border/40",
         )}
       >
-        {/* ── State header — single source of operational status ── */}
-        {isClockedIn ? (
-          <div className="px-4 pt-3.5 pb-2 flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-earning opacity-60" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-earning" />
-              </span>
-              <span className="text-[10.5px] font-bold uppercase tracking-widest text-earning">En turno</span>
+        {focusShiftCompletedEntry && focusShift ? (
+          <>
+            {/* ── Post-clockout state — shift completed today ── */}
+            <div className="px-4 pt-3.5 pb-2 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-2 w-2">
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-earning" />
+                </span>
+                <span className="text-[10.5px] font-bold uppercase tracking-widest text-earning">
+                  Turno completado
+                </span>
+              </div>
+              <p className="text-[10.5px] text-muted-foreground/70 tabular-nums">
+                {format(now, "HH:mm:ss")}
+              </p>
             </div>
-            <p className="text-[10.5px] text-muted-foreground/70 tabular-nums">
-              Iniciado {format(new Date(activeEntry!.clock_in), "HH:mm")}
-            </p>
-          </div>
-        ) : (
-          <div className="px-4 pt-3.5 pb-1 flex items-center justify-between gap-2">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/55">
-              {focusShift ? "Listo para marcar entrada" : "Sin turno seleccionado"}
-            </p>
-            <p className="text-[10.5px] text-muted-foreground/70 tabular-nums">
-              {format(now, "HH:mm:ss")}
-            </p>
-          </div>
-        )}
 
-        {/* ── Hero center — timer (if clocked in) or shift identity ── */}
-        <div className="px-4 pt-1 pb-3 text-center">
-          {isClockedIn ? (
-            <>
-              <p className="text-[44px] leading-none font-bold font-mono tabular-nums text-foreground">
-                {getElapsed()}
-              </p>
-              <p className="text-[10px] uppercase tracking-widest text-muted-foreground/55 mt-2 font-semibold">
-                Transcurrido
-              </p>
-            </>
-          ) : focusShift ? (
-            <>
+            <div className="px-4 pt-1 pb-3 text-center">
               <p className="text-[16px] font-bold text-foreground leading-tight line-clamp-2">
                 {focusShift.title}
               </p>
               <div className="mt-3 flex items-center justify-center gap-5">
                 <div className="text-center">
                   <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-muted-foreground/65 leading-none mb-1">
-                    Entrada esperada
+                    Entrada
                   </p>
                   <p className="text-[22px] font-bold font-mono tabular-nums text-foreground leading-none">
-                    {focusShift.start_time.slice(0, 5)}
+                    {format(new Date(focusShiftCompletedEntry.clock_in), "HH:mm")}
                   </p>
                 </div>
-                <div className="text-center opacity-70">
-                  <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-muted-foreground/55 leading-none mb-1">
-                    Salida estimada
+                <div className="text-center">
+                  <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-muted-foreground/65 leading-none mb-1">
+                    Salida
                   </p>
-                  <p className="text-[16px] font-semibold font-mono tabular-nums text-muted-foreground leading-none">
-                    {focusShift.end_time.slice(0, 5)}
+                  <p className="text-[22px] font-bold font-mono tabular-nums text-foreground leading-none">
+                    {format(new Date(focusShiftCompletedEntry.clock_out!), "HH:mm")}
                   </p>
                 </div>
               </div>
+              <p className="mt-3 text-[11px] text-muted-foreground/80 tabular-nums">
+                Duración: <span className="font-semibold text-foreground">{getDuration(focusShiftCompletedEntry)}</span>
+              </p>
               {focusShift.location_name && (
-                <p className="mt-2 text-[11px] text-muted-foreground/70 truncate">
+                <p className="mt-1 text-[11px] text-muted-foreground/70 truncate">
                   {focusShift.location_name}
                 </p>
               )}
-            </>
-          ) : (
-            <>
-              <p className="text-[42px] leading-none font-semibold font-mono tabular-nums text-foreground">
-                {format(now, "HH:mm")}
-              </p>
-              <p className="text-[11px] text-muted-foreground/65 first-letter:uppercase mt-2">
-                {format(now, "EEEE d 'de' MMMM", { locale: es })}
-              </p>
-            </>
-          )}
-        </div>
-
-        {/* ── Inline blocker — only when relevant ── */}
-        {!isClockedIn && clockInBlocked && focusShift && (
-          <div className="mx-4 mb-3 rounded-lg bg-warning/[0.06] border border-warning/15 px-3 py-2 flex items-start gap-2">
-            <Clock className="h-3.5 w-3.5 text-warning shrink-0 mt-0.5" />
-            <p className="text-[11px] text-foreground/85 font-medium leading-relaxed">{clockInBlocked}</p>
-          </div>
-        )}
-
-        {/* ── Primary CTA — single dominant action ── */}
-        <div className="px-4 pb-4">
-          {isClockedIn ? (
-            <Button
-              onClick={initiateClockOut}
-              disabled={acting}
-              className="w-full h-14 rounded-xl text-[15px] font-bold gap-2.5 transition-all active:scale-[0.98] bg-destructive hover:bg-destructive/90 text-destructive-foreground shadow-md shadow-destructive/15"
-            >
-              {acting ? (
-                <div className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <><LogOut className="h-4 w-4" /> Marcar salida</>
-              )}
-            </Button>
-          ) : focusShift ? (
-            <Button
-              onClick={initiateClockIn}
-              disabled={acting || !companyId || !!clockInBlocked || !hasProfilePhoto}
-              className="w-full h-14 rounded-xl text-[15px] font-bold gap-2.5 transition-all active:scale-[0.98] bg-primary hover:bg-primary/90 text-primary-foreground shadow-md shadow-primary/15 disabled:opacity-40 disabled:shadow-none"
-            >
-              {acting ? (
-                <div className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <><LogIn className="h-4 w-4" /> Marcar entrada</>
-              )}
-            </Button>
-          ) : (
-            // Empty-state CTA: no shift, sober informational block (no fake CTA).
-            <div className="rounded-xl bg-muted/30 border border-border/30 px-4 py-3.5 flex flex-col items-center text-center gap-1">
-              <CalendarDays className="h-5 w-5 text-muted-foreground/45" />
-              <p className="text-[12.5px] font-semibold text-foreground">
-                {hasDailyOnlyShifts ? "Turnos de pago diario hoy" : "Sin turnos para marcar"}
-              </p>
-              <p className="text-[10.5px] text-muted-foreground/65 max-w-[260px] leading-relaxed">
-                {hasDailyOnlyShifts
-                  ? "Los turnos de hoy no requieren marcar entrada. El pago se calcula automáticamente."
-                  : "Contacta a tu supervisor si falta algún turno."}
-              </p>
             </div>
-          )}
-        </div>
+
+            <div className="px-4 pb-4">
+              <div className="rounded-xl bg-earning/[0.06] border border-earning/20 px-3 py-3 flex items-start gap-2.5">
+                <CheckCircle2 className="h-4 w-4 text-earning shrink-0 mt-0.5" />
+                <div className="min-w-0">
+                  <p className="text-[12.5px] font-semibold text-foreground leading-tight">
+                    Tu registro quedó guardado
+                  </p>
+                  <p className="text-[11px] text-muted-foreground/85 mt-0.5 leading-snug">
+                    Tu encargado revisará el cierre del turno. No necesitas marcar nada más.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            {/* ── State header — single source of operational status ── */}
+            {isClockedIn ? (
+              <div className="px-4 pt-3.5 pb-2 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-earning opacity-60" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-earning" />
+                  </span>
+                  <span className="text-[10.5px] font-bold uppercase tracking-widest text-earning">En turno</span>
+                </div>
+                <p className="text-[10.5px] text-muted-foreground/70 tabular-nums">
+                  Iniciado {format(new Date(activeEntry!.clock_in), "HH:mm")}
+                </p>
+              </div>
+            ) : (
+              <div className="px-4 pt-3.5 pb-1 flex items-center justify-between gap-2">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/55">
+                  {focusShift ? "Listo para marcar entrada" : "Sin turno seleccionado"}
+                </p>
+                <p className="text-[10.5px] text-muted-foreground/70 tabular-nums">
+                  {format(now, "HH:mm:ss")}
+                </p>
+              </div>
+            )}
+
+            {/* ── Hero center — timer (if clocked in) or shift identity ── */}
+            <div className="px-4 pt-1 pb-3 text-center">
+              {isClockedIn ? (
+                <>
+                  <p className="text-[44px] leading-none font-bold font-mono tabular-nums text-foreground">
+                    {getElapsed()}
+                  </p>
+                  <p className="text-[10px] uppercase tracking-widest text-muted-foreground/55 mt-2 font-semibold">
+                    Transcurrido
+                  </p>
+                </>
+              ) : focusShift ? (
+                <>
+                  <p className="text-[16px] font-bold text-foreground leading-tight line-clamp-2">
+                    {focusShift.title}
+                  </p>
+                  <div className="mt-3 flex items-center justify-center gap-5">
+                    <div className="text-center">
+                      <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-muted-foreground/65 leading-none mb-1">
+                        Entrada esperada
+                      </p>
+                      <p className="text-[22px] font-bold font-mono tabular-nums text-foreground leading-none">
+                        {focusShift.start_time.slice(0, 5)}
+                      </p>
+                    </div>
+                    <div className="text-center opacity-70">
+                      <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-muted-foreground/55 leading-none mb-1">
+                        Salida estimada
+                      </p>
+                      <p className="text-[16px] font-semibold font-mono tabular-nums text-muted-foreground leading-none">
+                        {focusShift.end_time.slice(0, 5)}
+                      </p>
+                    </div>
+                  </div>
+                  {focusShift.location_name && (
+                    <p className="mt-2 text-[11px] text-muted-foreground/70 truncate">
+                      {focusShift.location_name}
+                    </p>
+                  )}
+                </>
+              ) : (
+                <>
+                  <p className="text-[42px] leading-none font-semibold font-mono tabular-nums text-foreground">
+                    {format(now, "HH:mm")}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground/65 first-letter:uppercase mt-2">
+                    {format(now, "EEEE d 'de' MMMM", { locale: es })}
+                  </p>
+                </>
+              )}
+            </div>
+
+            {/* ── Inline blocker — only when relevant ── */}
+            {!isClockedIn && clockInBlocked && focusShift && (
+              <div className="mx-4 mb-3 rounded-lg bg-warning/[0.06] border border-warning/15 px-3 py-2 flex items-start gap-2">
+                <Clock className="h-3.5 w-3.5 text-warning shrink-0 mt-0.5" />
+                <p className="text-[11px] text-foreground/85 font-medium leading-relaxed">{clockInBlocked}</p>
+              </div>
+            )}
+
+            {/* ── Primary CTA — single dominant action ── */}
+            <div className="px-4 pb-4">
+              {isClockedIn ? (
+                <Button
+                  onClick={initiateClockOut}
+                  disabled={acting}
+                  className="w-full h-14 rounded-xl text-[15px] font-bold gap-2.5 transition-all active:scale-[0.98] bg-destructive hover:bg-destructive/90 text-destructive-foreground shadow-md shadow-destructive/15"
+                >
+                  {acting ? (
+                    <div className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <><LogOut className="h-4 w-4" /> Marcar salida</>
+                  )}
+                </Button>
+              ) : focusShift ? (
+                <Button
+                  onClick={initiateClockIn}
+                  disabled={acting || !companyId || !!clockInBlocked || !hasProfilePhoto}
+                  className="w-full h-14 rounded-xl text-[15px] font-bold gap-2.5 transition-all active:scale-[0.98] bg-primary hover:bg-primary/90 text-primary-foreground shadow-md shadow-primary/15 disabled:opacity-40 disabled:shadow-none"
+                >
+                  {acting ? (
+                    <div className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <><LogIn className="h-4 w-4" /> Marcar entrada</>
+                  )}
+                </Button>
+              ) : (
+                // Empty-state CTA: no shift, sober informational block (no fake CTA).
+                <div className="rounded-xl bg-muted/30 border border-border/30 px-4 py-3.5 flex flex-col items-center text-center gap-1">
+                  <CalendarDays className="h-5 w-5 text-muted-foreground/45" />
+                  <p className="text-[12.5px] font-semibold text-foreground">
+                    {hasDailyOnlyShifts ? "Turnos de pago diario hoy" : "Sin turnos para marcar"}
+                  </p>
+                  <p className="text-[10.5px] text-muted-foreground/65 max-w-[260px] leading-relaxed">
+                    {hasDailyOnlyShifts
+                      ? "Los turnos de hoy no requieren marcar entrada. El pago se calcula automáticamente."
+                      : "Contacta a tu supervisor si falta algún turno."}
+                  </p>
+                </div>
+              )}
+            </div>
+          </>
+        )}
       </section>
+
 
       {/* ════════════════════════════════════════════════
            ZONE 2 — Today
@@ -783,7 +868,7 @@ export default function PortalClock() {
             })}
 
             {/* Closed entries — minimal rows */}
-            {closedEntries.map(entry => (
+            {zone2ClosedEntries.map(entry => (
               <div
                 key={entry.id}
                 className="flex items-center gap-3 px-4 py-3"

@@ -310,11 +310,15 @@ export function LiveShiftBoard({
       };
     }
     if (counts.asignados > 0 && counts.fichados + counts.salidas === counts.asignados) {
-      if (pastEnd && counts.salidas === counts.asignados) {
+      // All assigned workers have either clocked out or are still active.
+      // If everyone is already out, the shift is ready to be closed — do NOT
+      // require pastEnd, the captain may legitimately close earlier than the
+      // scheduled end_time (worker finished early, event ended early, etc.).
+      if (counts.salidas === counts.asignados) {
         return {
           tone: "success" as const,
           icon: ShieldCheck,
-          text: "Turno listo para cierre",
+          text: "Todas las salidas registradas · envía el cierre",
         };
       }
       return {
@@ -323,6 +327,7 @@ export function LiveShiftBoard({
         text: "Todo el equipo está fichado",
       };
     }
+
     return {
       tone: "neutral" as const,
       icon: Clock,
