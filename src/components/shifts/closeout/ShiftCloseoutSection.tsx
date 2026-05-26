@@ -38,7 +38,7 @@ export function ShiftCloseoutSection({
   canFinalApprove = false,
   role,
 }: Props) {
-  const { user } = useAuth();
+  const { user, allRoles } = useAuth();
   const [closeout, setCloseout] = useState<ShiftCloseout | null>(null);
   const [evidence, setEvidence] = useState<EvidencePacket | null>(null);
   const [loading, setLoading] = useState(true);
@@ -64,11 +64,22 @@ export function ShiftCloseoutSection({
   const reviewed = status === "reviewed" || status === "rejected";
   const submitted = status === "submitted";
 
+  // Role separation / self-review guard.
+  // The captain who submitted the closeout must not review their own hours
+  // unless they are a privileged platform role (developer/owner/founder).
+  const isSelfSubmitter =
+    !!user?.id && !!closeout?.submitted_by && closeout.submitted_by === user.id;
+  const isPrivilegedReviewer = [...allRoles].some((r) =>
+    PRIVILEGED_REVIEW_ROLES.has(r),
+  );
+  const selfReviewBlocked = isSelfSubmitter && !isPrivilegedReviewer;
+  const selfReviewWarn = isSelfSubmitter && isPrivilegedReviewer;
+
   // Captain edit form is only shown before submission. After submission the
   // captain sees a read-only "Cierre enviado" panel + summary. Reviewer flow
   // handles any correction requests via the existing AdminCloseoutReview UI.
   const showForm = canSubmit && !reviewed && !submitted;
-  const showReview = canReview && submitted;
+  const showReview = canReview && submitted && !selfReviewBlocked;
   const showFinal =
     canFinalApprove &&
     status === "reviewed" &&
