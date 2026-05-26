@@ -8,6 +8,13 @@
  *    (admin-only, scoped to company_id) and idempotent — calling it twice for
  *    the same shift updates the existing pending block instead of duplicating.
  *
+ * UI-only lifecycle gating (no edge fn / DB changes):
+ *  - No closeout or draft closeout → disabled (after closeout)
+ *  - Open clock-out → disabled (need exits registered or justified)
+ *  - closeout.status === "submitted" → disabled (wait for María)
+ *  - reviewed + approved OR final_approval_status === "approved" → enabled
+ *    Always produces a `pending` block (never an invoice, never payroll).
+ *
  * Constraints respected:
  *  - Only renders when there is a billing-resolvable client.
  *  - Calls the edge fn with the exact shift date as a 1-day window, plus the
@@ -15,13 +22,17 @@
  *  - Surfaces skip reasons inline so the admin can fix mapping (missing rate,
  *    location, etc.) without leaving the sheet.
  */
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
-import { Receipt, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Receipt, Loader2, AlertCircle, CheckCircle2, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import {
+  getShiftCloseout,
+  getShiftEvidencePacket,
+} from "@/lib/shifts/closeout";
 
 interface Props {
   shiftId: string;
@@ -29,6 +40,11 @@ interface Props {
   clientId: string | null;
   className?: string;
 }
+
+type GateState =
+  | { kind: "loading" }
+  | { kind: "ready"; isDraft: boolean }
+  | { kind: "blocked"; reason: string };
 
 export function GenerateBillingBlockButton({ shiftId, shiftDate, clientId, className }: Props) {
   const { selectedCompanyId } = useCompany();
@@ -38,6 +54,63 @@ export function GenerateBillingBlockButton({ shiftId, shiftDate, clientId, class
     | { kind: "skip"; reason: string }
     | null
   >(null);
+  const [gate, setGate] = useState<GateState>({ kind: "loading" });
+
+  // Lifecycle gating — read-only.
+  useEffect(() => {
+    let cancelled = false;
+    setGate({ kind: "loading" });
+    Promise.all([
+      getShiftCloseout(shiftId),
+      getShiftEvidencePacket(shiftId),
+    ])
+      .then(([closeout, evidence]) => {
+        if (cancelled) return;
+        const status = closeout?.status ?? null;
+        const reviewStatus = closeout?.review_status ?? null;
+        const finalStatus = closeout?.final_approval_status ?? null;
+        const missingClockOut = evidence?.missingClockOut ?? 0;
+
+        if (finalStatus === "approved") {
+          setGate({ kind: "ready", isDraft: false });
+          return;
+        }
+        if (status === "reviewed" && reviewStatus === "approved") {
+          setGate({ kind: "ready", isDraft: true });
+          return;
+        }
+        if (status === "submitted") {
+          setGate({
+            kind: "blocked",
+            reason: "Disponible cuando María apruebe.",
+          });
+          return;
+        }
+        if (missingClockOut > 0) {
+          setGate({
+            kind: "blocked",
+            reason:
+              "Disponible cuando todas las salidas estén registradas o justificadas.",
+          });
+          return;
+        }
+        // No closeout or draft
+        setGate({
+          kind: "blocked",
+          reason: "Disponible después del cierre del turno.",
+        });
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setGate({
+          kind: "blocked",
+          reason: "Disponible después del cierre del turno.",
+        });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [shiftId]);
 
   if (!clientId || !selectedCompanyId) return null;
 
@@ -61,7 +134,6 @@ export function GenerateBillingBlockButton({ shiftId, shiftDate, clientId, class
       const generated = data?.generated ?? 0;
       const updated = data?.updated ?? 0;
       const skipped = data?.skipped ?? [];
-      // Find a skip that matches THIS shift, if any
       const mySkip = Array.isArray(skipped)
         ? skipped.find((s: any) => s.shift_id === shiftId)
         : null;
@@ -69,8 +141,8 @@ export function GenerateBillingBlockButton({ shiftId, shiftDate, clientId, class
       if (generated > 0 || updated > 0) {
         toast.success(
           generated > 0
-            ? "Bloque facturable generado"
-            : "Bloque facturable actualizado",
+            ? "Borrador facturable generado"
+            : "Borrador facturable actualizado",
         );
         setLastResult({ kind: "ok", generated, updated });
       } else if (mySkip) {
@@ -84,11 +156,13 @@ export function GenerateBillingBlockButton({ shiftId, shiftDate, clientId, class
         setLastResult({ kind: "skip", reason: "missing_attendance_or_invoiced" });
       }
     } catch (e: any) {
-      toast.error(e?.message ?? "No se pudo generar el bloque facturable");
+      toast.error(e?.message ?? "No se pudo generar el borrador facturable");
     } finally {
       setRunning(false);
     }
   };
+
+  const disabled = running || gate.kind !== "ready";
 
   return (
     <div className={cn("space-y-1.5", className)}>
@@ -97,11 +171,15 @@ export function GenerateBillingBlockButton({ shiftId, shiftDate, clientId, class
         variant="outline"
         size="sm"
         onClick={run}
-        disabled={running}
+        disabled={disabled}
         className="w-full justify-start gap-2 h-9"
       >
         {running ? (
           <Loader2 className="h-3.5 w-3.5 animate-spin" />
+        ) : gate.kind === "loading" ? (
+          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+        ) : gate.kind === "blocked" ? (
+          <Lock className="h-3.5 w-3.5 text-muted-foreground" />
         ) : lastResult?.kind === "ok" ? (
           <CheckCircle2 className="h-3.5 w-3.5 text-earning" />
         ) : (
@@ -109,14 +187,23 @@ export function GenerateBillingBlockButton({ shiftId, shiftDate, clientId, class
         )}
         <span className="text-xs">
           {running
-            ? "Generando bloque facturable…"
+            ? "Generando borrador facturable…"
             : lastResult?.kind === "ok"
               ? lastResult.generated > 0
-                ? "Bloque facturable creado"
-                : "Bloque facturable actualizado"
-              : "Generar bloque facturable"}
+                ? "Borrador facturable creado"
+                : "Borrador facturable actualizado"
+              : "Generar borrador facturable"}
         </span>
       </Button>
+      <p className="text-[10px] text-muted-foreground px-1 leading-snug">
+        Borrador. No es factura ni payroll.
+      </p>
+      {gate.kind === "blocked" && (
+        <div className="flex items-start gap-1.5 text-[10px] text-muted-foreground px-1">
+          <Lock className="h-3 w-3 mt-px shrink-0 text-muted-foreground/70" />
+          <span>{gate.reason}</span>
+        </div>
+      )}
       {lastResult?.kind === "skip" && (
         <div className="flex items-start gap-1.5 text-[10px] text-muted-foreground px-1">
           <AlertCircle className="h-3 w-3 mt-px shrink-0 text-warning" />
