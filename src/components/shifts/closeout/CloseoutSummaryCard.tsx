@@ -168,7 +168,7 @@ export function CloseoutSummaryCard({ closeout, className }: Props) {
         </div>
         {closeout.review_status ? (
           <div className="col-span-2">
-            Revisión de María:{" "}
+            Revisión de horas:{" "}
             <span className="font-medium text-foreground/80">
               {reviewStatusLabel(closeout.review_status)}
             </span>
