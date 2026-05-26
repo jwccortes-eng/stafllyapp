@@ -21,6 +21,17 @@ import {
   deriveShiftOpsState,
 } from "@/lib/operations/derive-shift-ops-state";
 
+export interface ShiftTransportInfo {
+  required: boolean;
+  car_capacity: number;
+  primary_driver_id: string | null;
+  rides_count: number;
+  drivers_assigned: number;          // unique drivers across rides + primary driver
+  capacity_total: number;            // car_capacity * rides_count (or car_capacity if no rides but primary)
+  missing_driver: boolean;           // required && drivers_assigned === 0
+  capacity_short: boolean;           // required && slots > capacity_total
+}
+
 export interface TodayOpsShift {
   id: string;
   title: string;
@@ -36,11 +47,15 @@ export interface TodayOpsShift {
   location_id: string | null;
   job_site_name: string | null;
   meeting_point: string | null;
+  meeting_point_location_id: string | null;
+  meeting_point_location_name: string | null;
   meeting_time: string | null;
   shift_admin_id: string | null;
   pending_claims: number;
+  transport: ShiftTransportInfo;
   ops: ShiftOpsState;
 }
+
 
 export interface TodayOpsEmployee {
   id: string;
@@ -57,16 +72,25 @@ export interface TodayOpsResult {
   employeesById: Map<string, TodayOpsEmployee>;
   totals: {
     shifts: number;
+    locations: number;
     needs_staff: number;
     in_progress: number;
     needs_closeout: number;
     closed: number;
+    required: number;
+    assigned: number;
+    confirmed: number;
+    clocked_in_now: number;
     open_clocks: number;
     missing_clock_outs: number;
     not_clocked_in: number;
     urgent: number;
     pending_claims: number;
+    transport_missing_driver: number;
+    transport_capacity_short: number;
+    transport_required_shifts: number;
   };
+
   refresh: () => void;
 }
 
@@ -99,7 +123,7 @@ export function useTodayOperations(
     const shiftsRes = await supabase
       .from("scheduled_shifts")
       .select(
-        "id, title, date, start_time, end_time, status, publication_status, slots, shift_code, client_id, location_id, meeting_point, meeting_time, shift_admin_id",
+        "id, title, date, start_time, end_time, status, publication_status, slots, shift_code, client_id, location_id, meeting_point, meeting_point_location_id, meeting_time, shift_admin_id, transportation_required, car_capacity, driver_employee_id",
       )
       .eq("company_id", companyId)
       .eq("date", dateStr)
@@ -113,7 +137,7 @@ export function useTodayOperations(
     }
     const todayShiftIds = (shiftsRes.data ?? []).map((s: any) => s.id);
 
-    const [assignRes, entriesRes, clientsRes, locsRes, empsRes, claimsRes] =
+    const [assignRes, entriesRes, clientsRes, locsRes, locsV2Res, empsRes, claimsRes, ridesRes] =
       await Promise.all([
         todayShiftIds.length
           ? supabase
@@ -133,6 +157,10 @@ export function useTodayOperations(
           .select("id, name")
           .eq("company_id", companyId),
         supabase
+          .from("locations_v2")
+          .select("id, name")
+          .eq("company_id", companyId),
+        supabase
           .from("employees")
           .select("id, first_name, last_name, avatar_url, phone_number")
           .eq("company_id", companyId)
@@ -144,6 +172,12 @@ export function useTodayOperations(
               .in("shift_id", todayShiftIds)
               .eq("status", "pending")
           : Promise.resolve({ data: [], error: null } as any),
+        todayShiftIds.length
+          ? supabase
+              .from("shift_rides")
+              .select("id, shift_id, driver_id, passenger_count")
+              .in("shift_id", todayShiftIds)
+          : Promise.resolve({ data: [], error: null } as any),
       ]);
 
     const firstErr =
@@ -151,8 +185,10 @@ export function useTodayOperations(
       entriesRes.error ||
       clientsRes.error ||
       locsRes.error ||
+      locsV2Res.error ||
       empsRes.error ||
-      claimsRes.error;
+      claimsRes.error ||
+      ridesRes.error;
 
     if (firstErr) {
       setError(firstErr.message);
@@ -166,11 +202,20 @@ export function useTodayOperations(
     const locMap = new Map(
       (locsRes.data ?? []).map((l: any) => [l.id, l.name]),
     );
+    const locV2Map = new Map(
+      (locsV2Res.data ?? []).map((l: any) => [l.id, l.name]),
+    );
     const allAssignments = (assignRes.data ?? []) as AssignmentLite[];
     const allEntries = (entriesRes.data ?? []) as EntryLite[];
     const claimsByShift = new Map<string, number>();
     for (const c of (claimsRes.data ?? []) as Array<{ shift_id: string }>) {
       claimsByShift.set(c.shift_id, (claimsByShift.get(c.shift_id) ?? 0) + 1);
+    }
+    const ridesByShift = new Map<string, Array<{ driver_id: string; passenger_count: number }>>();
+    for (const r of (ridesRes.data ?? []) as Array<{ shift_id: string; driver_id: string; passenger_count: number }>) {
+      const arr = ridesByShift.get(r.shift_id) ?? [];
+      arr.push({ driver_id: r.driver_id, passenger_count: r.passenger_count ?? 0 });
+      ridesByShift.set(r.shift_id, arr);
     }
     const now = new Date();
 
@@ -185,6 +230,26 @@ export function useTodayOperations(
         status: s.status,
       };
       const ops = deriveShiftOpsState(shiftLite, allAssignments, allEntries, now);
+
+      const rides = ridesByShift.get(s.id) ?? [];
+      const driverIds = new Set<string>(rides.map((r) => r.driver_id));
+      if (s.driver_employee_id) driverIds.add(s.driver_employee_id);
+      const required = !!s.transportation_required;
+      const capacity = Number(s.car_capacity ?? 4);
+      const rideCount = rides.length;
+      const capacity_total = rideCount > 0 ? capacity * rideCount : (s.driver_employee_id ? capacity : 0);
+      const slots = s.slots ?? 1;
+      const transport: ShiftTransportInfo = {
+        required,
+        car_capacity: capacity,
+        primary_driver_id: s.driver_employee_id ?? null,
+        rides_count: rideCount,
+        drivers_assigned: driverIds.size,
+        capacity_total,
+        missing_driver: required && driverIds.size === 0,
+        capacity_short: required && slots > capacity_total,
+      };
+
       return {
         id: s.id,
         title: s.title,
@@ -193,19 +258,25 @@ export function useTodayOperations(
         end_time: s.end_time,
         status: s.status,
         publication_status: s.publication_status ?? null,
-        slots: s.slots ?? 1,
+        slots,
         shift_code: s.shift_code ?? null,
         client_id: s.client_id ?? null,
         client_name: s.client_id ? (clientMap.get(s.client_id) ?? null) : null,
         location_id: s.location_id ?? null,
         job_site_name: s.location_id ? (locMap.get(s.location_id) ?? null) : null,
         meeting_point: s.meeting_point ?? null,
+        meeting_point_location_id: s.meeting_point_location_id ?? null,
+        meeting_point_location_name: s.meeting_point_location_id
+          ? (locV2Map.get(s.meeting_point_location_id) ?? null)
+          : null,
         meeting_time: s.meeting_time ?? null,
         shift_admin_id: s.shift_admin_id ?? null,
         pending_claims: claimsByShift.get(s.id) ?? 0,
+        transport,
         ops,
       };
     });
+
 
     setShifts(rows);
     setEmployees((empsRes.data ?? []) as TodayOpsEmployee[]);
@@ -289,19 +360,37 @@ export function useTodayOperations(
   );
 
   const totals = useMemo(() => {
+    const locationKeys = new Set<string>();
+    for (const s of shifts) {
+      locationKeys.add(
+        s.location_id ??
+          s.meeting_point_location_id ??
+          s.client_id ??
+          (s.meeting_point ? `mp:${s.meeting_point.trim().toLowerCase()}` : "sin"),
+      );
+    }
     return {
       shifts: shifts.length,
+      locations: locationKeys.size,
       needs_staff: shifts.filter((s) => s.ops.bucket === "needs_staff").length,
       in_progress: shifts.filter((s) => s.ops.bucket === "in_progress").length,
       needs_closeout: shifts.filter((s) => s.ops.bucket === "needs_closeout").length,
       closed: shifts.filter((s) => s.ops.bucket === "closed").length,
+      required: shifts.reduce((n, s) => n + (s.slots ?? 0), 0),
+      assigned: shifts.reduce((n, s) => n + s.ops.assigned_active, 0),
+      confirmed: shifts.reduce((n, s) => n + s.ops.confirmed, 0),
+      clocked_in_now: shifts.reduce((n, s) => n + s.ops.open_clocks, 0),
       open_clocks: shifts.reduce((n, s) => n + s.ops.open_clocks, 0),
       missing_clock_outs: shifts.reduce((n, s) => n + s.ops.missing_clock_outs, 0),
       not_clocked_in: shifts.reduce((n, s) => n + s.ops.not_started, 0),
       urgent: shifts.filter((s) => s.ops.alert_level === "urgent").length,
       pending_claims: shifts.reduce((n, s) => n + (s.pending_claims ?? 0), 0),
+      transport_missing_driver: shifts.filter((s) => s.transport.missing_driver).length,
+      transport_capacity_short: shifts.filter((s) => s.transport.capacity_short && !s.transport.missing_driver).length,
+      transport_required_shifts: shifts.filter((s) => s.transport.required).length,
     };
   }, [shifts]);
+
 
   return {
     loading,
