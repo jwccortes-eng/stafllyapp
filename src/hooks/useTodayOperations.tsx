@@ -114,7 +114,7 @@ export function useTodayOperations(
     const shiftsRes = await supabase
       .from("scheduled_shifts")
       .select(
-        "id, title, date, start_time, end_time, status, publication_status, slots, shift_code, client_id, location_id, meeting_point, meeting_time, shift_admin_id",
+        "id, title, date, start_time, end_time, status, publication_status, slots, shift_code, client_id, location_id, meeting_point, meeting_point_location_id, meeting_time, shift_admin_id, transportation_required, car_capacity, driver_employee_id",
       )
       .eq("company_id", companyId)
       .eq("date", dateStr)
@@ -128,7 +128,7 @@ export function useTodayOperations(
     }
     const todayShiftIds = (shiftsRes.data ?? []).map((s: any) => s.id);
 
-    const [assignRes, entriesRes, clientsRes, locsRes, empsRes, claimsRes] =
+    const [assignRes, entriesRes, clientsRes, locsRes, locsV2Res, empsRes, claimsRes, ridesRes] =
       await Promise.all([
         todayShiftIds.length
           ? supabase
@@ -148,6 +148,10 @@ export function useTodayOperations(
           .select("id, name")
           .eq("company_id", companyId),
         supabase
+          .from("locations_v2")
+          .select("id, name")
+          .eq("company_id", companyId),
+        supabase
           .from("employees")
           .select("id, first_name, last_name, avatar_url, phone_number")
           .eq("company_id", companyId)
@@ -159,6 +163,12 @@ export function useTodayOperations(
               .in("shift_id", todayShiftIds)
               .eq("status", "pending")
           : Promise.resolve({ data: [], error: null } as any),
+        todayShiftIds.length
+          ? supabase
+              .from("shift_rides")
+              .select("id, shift_id, driver_id, passenger_count")
+              .in("shift_id", todayShiftIds)
+          : Promise.resolve({ data: [], error: null } as any),
       ]);
 
     const firstErr =
@@ -166,8 +176,10 @@ export function useTodayOperations(
       entriesRes.error ||
       clientsRes.error ||
       locsRes.error ||
+      locsV2Res.error ||
       empsRes.error ||
-      claimsRes.error;
+      claimsRes.error ||
+      ridesRes.error;
 
     if (firstErr) {
       setError(firstErr.message);
@@ -181,11 +193,20 @@ export function useTodayOperations(
     const locMap = new Map(
       (locsRes.data ?? []).map((l: any) => [l.id, l.name]),
     );
+    const locV2Map = new Map(
+      (locsV2Res.data ?? []).map((l: any) => [l.id, l.name]),
+    );
     const allAssignments = (assignRes.data ?? []) as AssignmentLite[];
     const allEntries = (entriesRes.data ?? []) as EntryLite[];
     const claimsByShift = new Map<string, number>();
     for (const c of (claimsRes.data ?? []) as Array<{ shift_id: string }>) {
       claimsByShift.set(c.shift_id, (claimsByShift.get(c.shift_id) ?? 0) + 1);
+    }
+    const ridesByShift = new Map<string, Array<{ driver_id: string; passenger_count: number }>>();
+    for (const r of (ridesRes.data ?? []) as Array<{ shift_id: string; driver_id: string; passenger_count: number }>) {
+      const arr = ridesByShift.get(r.shift_id) ?? [];
+      arr.push({ driver_id: r.driver_id, passenger_count: r.passenger_count ?? 0 });
+      ridesByShift.set(r.shift_id, arr);
     }
     const now = new Date();
 
@@ -200,6 +221,26 @@ export function useTodayOperations(
         status: s.status,
       };
       const ops = deriveShiftOpsState(shiftLite, allAssignments, allEntries, now);
+
+      const rides = ridesByShift.get(s.id) ?? [];
+      const driverIds = new Set<string>(rides.map((r) => r.driver_id));
+      if (s.driver_employee_id) driverIds.add(s.driver_employee_id);
+      const required = !!s.transportation_required;
+      const capacity = Number(s.car_capacity ?? 4);
+      const rideCount = rides.length;
+      const capacity_total = rideCount > 0 ? capacity * rideCount : (s.driver_employee_id ? capacity : 0);
+      const slots = s.slots ?? 1;
+      const transport: ShiftTransportInfo = {
+        required,
+        car_capacity: capacity,
+        primary_driver_id: s.driver_employee_id ?? null,
+        rides_count: rideCount,
+        drivers_assigned: driverIds.size,
+        capacity_total,
+        missing_driver: required && driverIds.size === 0,
+        capacity_short: required && slots > capacity_total,
+      };
+
       return {
         id: s.id,
         title: s.title,
@@ -208,16 +249,23 @@ export function useTodayOperations(
         end_time: s.end_time,
         status: s.status,
         publication_status: s.publication_status ?? null,
-        slots: s.slots ?? 1,
+        slots,
         shift_code: s.shift_code ?? null,
         client_id: s.client_id ?? null,
         client_name: s.client_id ? (clientMap.get(s.client_id) ?? null) : null,
         location_id: s.location_id ?? null,
         job_site_name: s.location_id ? (locMap.get(s.location_id) ?? null) : null,
         meeting_point: s.meeting_point ?? null,
+        meeting_point_location_id: s.meeting_point_location_id ?? null,
+        meeting_point_location_name: s.meeting_point_location_id
+          ? (locV2Map.get(s.meeting_point_location_id) ?? null)
+          : null,
         meeting_time: s.meeting_time ?? null,
         shift_admin_id: s.shift_admin_id ?? null,
         pending_claims: claimsByShift.get(s.id) ?? 0,
+        transport,
+        ops,
+
         ops,
       };
     });
