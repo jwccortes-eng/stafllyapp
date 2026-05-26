@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ClipboardCheck, Loader2, ShieldCheck } from "lucide-react";
+import { AlertTriangle, ClipboardCheck, Loader2, ShieldCheck } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import {
   type ShiftCloseout,
@@ -13,6 +13,8 @@ import { CaptainCloseoutForm } from "./CaptainCloseoutForm";
 import { AdminCloseoutReview } from "./AdminCloseoutReview";
 import { EvidencePacketCard } from "./EvidencePacketCard";
 import { FinalApprovalCard } from "./FinalApprovalCard";
+
+const PRIVILEGED_REVIEW_ROLES = new Set(["developer", "owner", "founder"]);
 
 interface Props {
   shiftId: string;
@@ -36,7 +38,7 @@ export function ShiftCloseoutSection({
   canFinalApprove = false,
   role,
 }: Props) {
-  const { user } = useAuth();
+  const { user, allRoles } = useAuth();
   const [closeout, setCloseout] = useState<ShiftCloseout | null>(null);
   const [evidence, setEvidence] = useState<EvidencePacket | null>(null);
   const [loading, setLoading] = useState(true);
@@ -62,11 +64,22 @@ export function ShiftCloseoutSection({
   const reviewed = status === "reviewed" || status === "rejected";
   const submitted = status === "submitted";
 
+  // Role separation / self-review guard.
+  // The captain who submitted the closeout must not review their own hours
+  // unless they are a privileged platform role (developer/owner/founder).
+  const isSelfSubmitter =
+    !!user?.id && !!closeout?.submitted_by && closeout.submitted_by === user.id;
+  const isPrivilegedReviewer = [...allRoles].some((r) =>
+    PRIVILEGED_REVIEW_ROLES.has(r),
+  );
+  const selfReviewBlocked = isSelfSubmitter && !isPrivilegedReviewer;
+  const selfReviewWarn = isSelfSubmitter && isPrivilegedReviewer;
+
   // Captain edit form is only shown before submission. After submission the
   // captain sees a read-only "Cierre enviado" panel + summary. Reviewer flow
   // handles any correction requests via the existing AdminCloseoutReview UI.
   const showForm = canSubmit && !reviewed && !submitted;
-  const showReview = canReview && submitted;
+  const showReview = canReview && submitted && !selfReviewBlocked;
   const showFinal =
     canFinalApprove &&
     status === "reviewed" &&
@@ -111,6 +124,33 @@ export function ShiftCloseoutSection({
           ) : null}
 
           <CloseoutSummaryCard closeout={closeout} />
+
+          {canReview && submitted && selfReviewBlocked ? (
+            <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 space-y-1.5">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-amber-600" />
+                <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
+                  Revisión de horas pendiente
+                </p>
+              </div>
+              <p className="text-[12.5px] text-amber-900/80 dark:text-amber-200/80 leading-snug">
+                La revisión de horas la debe completar otro administrador.
+                No puedes revisar un cierre que tú mismo enviaste.
+              </p>
+            </div>
+          ) : null}
+
+          {showReview && selfReviewWarn ? (
+            <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-3">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5" />
+                <p className="text-[12.5px] text-amber-900 dark:text-amber-200 leading-snug">
+                  Estás revisando un cierre que tú mismo enviaste. Procede solo
+                  si no hay otro revisor disponible.
+                </p>
+              </div>
+            </div>
+          ) : null}
 
           {showReview && closeout ? (
             <AdminCloseoutReview
