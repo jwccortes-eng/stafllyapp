@@ -13,6 +13,7 @@ import { CaptainCloseoutForm } from "./CaptainCloseoutForm";
 import { AdminCloseoutReview } from "./AdminCloseoutReview";
 import { EvidencePacketCard } from "./EvidencePacketCard";
 import { FinalApprovalCard } from "./FinalApprovalCard";
+import { CorrectionsReviewPanel } from "../corrections/CorrectionsReviewPanel";
 
 const PRIVILEGED_REVIEW_ROLES = new Set(["developer", "owner", "founder"]);
 
@@ -150,6 +151,10 @@ export function ShiftCloseoutSection({
                 </p>
               </div>
             </div>
+          ) : null}
+
+          {canReview ? (
+            <CorrectionsReviewPanel shiftId={shiftId} />
           ) : null}
 
           {showReview && closeout ? (
