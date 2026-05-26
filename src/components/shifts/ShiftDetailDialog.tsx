@@ -645,6 +645,16 @@ export function ShiftDetailDialog({
           {/* ─── DETAILS TAB (read-only — full editing happens in ShiftEditDialog) ─── */}
           {tab === "details" ? (
             <div className="space-y-4">
+              {/* Acción del encargado — captain/admin next action (read-only) */}
+              <CaptainNextActionCard
+                shift={{
+                  id: shift.id,
+                  date: shift.date,
+                  start_time: shift.start_time,
+                  end_time: shift.end_time,
+                }}
+              />
+
               {/* Turno en vivo — live operational board (read-only) */}
               {selectedCompanyId && (
                 <LiveShiftBoard
@@ -701,12 +711,14 @@ export function ShiftDetailDialog({
                   </div>
                 )}
 
-                {/* FASE 4 — Manual bridge to invoicing. Only renders when the
-                    shift has a client; idempotent, never touches payroll. */}
+                {/* FASE 4 — Manual bridge to invoicing. UI-only lifecycle
+                    gating; only produces a `pending` billable block, never an
+                    invoice and never payroll. Placed after operational context
+                    so it isn't read as a primary in-shift action. */}
                 {canEdit && shift.client_id && (
-                  <div className="rounded-xl border border-border/30 bg-muted/15 px-3 py-2.5 space-y-1.5">
+                  <div className="rounded-xl border border-border/30 bg-muted/15 px-3 py-2.5 space-y-1.5 mt-2">
                     <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                      Facturación
+                      Facturación · después del cierre
                     </p>
                     <GenerateBillingBlockButton
                       shiftId={shift.id}
