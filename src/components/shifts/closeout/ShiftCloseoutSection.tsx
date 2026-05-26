@@ -125,6 +125,33 @@ export function ShiftCloseoutSection({
 
           <CloseoutSummaryCard closeout={closeout} />
 
+          {canReview && submitted && selfReviewBlocked ? (
+            <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 space-y-1.5">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-amber-600" />
+                <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
+                  Revisión de horas pendiente
+                </p>
+              </div>
+              <p className="text-[12.5px] text-amber-900/80 dark:text-amber-200/80 leading-snug">
+                La revisión de horas la debe completar otro administrador.
+                No puedes revisar un cierre que tú mismo enviaste.
+              </p>
+            </div>
+          ) : null}
+
+          {showReview && selfReviewWarn ? (
+            <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-3">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5" />
+                <p className="text-[12.5px] text-amber-900 dark:text-amber-200 leading-snug">
+                  Estás revisando un cierre que tú mismo enviaste. Procede solo
+                  si no hay otro revisor disponible.
+                </p>
+              </div>
+            </div>
+          ) : null}
+
           {showReview && closeout ? (
             <AdminCloseoutReview
               closeout={closeout}
