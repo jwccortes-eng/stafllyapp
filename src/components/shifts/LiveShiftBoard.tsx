@@ -104,7 +104,7 @@ export function LiveShiftBoard({
         .from("time_entries")
         .select("id, employee_id, shift_id, clock_in, clock_out")
         .eq("shift_id", shiftId)
-        .neq("status", "rejected");
+        .in("status", ["pending", "approved"]);
       if (cancelled) return;
       setEntries((data ?? []) as TE[]);
       setLoading(false);
@@ -148,7 +148,7 @@ export function LiveShiftBoard({
         .from("time_entries")
         .select("id, employee_id, shift_id, clock_in, clock_out")
         .eq("shift_id", shiftId)
-        .neq("status", "rejected");
+        .in("status", ["pending", "approved"]);
       if (cancelled) return;
       setEntries((data ?? []) as TE[]);
     })();
