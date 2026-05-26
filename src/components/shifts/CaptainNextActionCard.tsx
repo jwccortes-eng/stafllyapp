@@ -409,8 +409,8 @@ export function CaptainNextActionCard({
       </ul>
 
       <p className="text-[10px] text-muted-foreground/80 leading-snug pt-1 border-t border-border/30">
-        Tu responsabilidad como encargado termina al enviar el cierre. María y
-        Keury continúan con la validación de horas.
+        Tu responsabilidad como encargado termina al enviar el cierre. El
+        revisor de horas y el aprobador final continúan con la validación.
       </p>
     </section>
   );
