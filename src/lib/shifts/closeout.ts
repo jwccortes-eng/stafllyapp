@@ -204,9 +204,9 @@ export function closeoutStatusLabel(s: CloseoutStatus): string {
     case "draft":
       return "Borrador";
     case "submitted":
-      return "En revisión de María";
+      return "Revisión de horas pendiente";
     case "reviewed":
-      return "Aprobado por María";
+      return "Horas aprobadas";
     case "rejected":
       return "Requiere corrección";
   }
