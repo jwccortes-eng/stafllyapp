@@ -21,6 +21,17 @@ import {
   deriveShiftOpsState,
 } from "@/lib/operations/derive-shift-ops-state";
 
+export interface ShiftTransportInfo {
+  required: boolean;
+  car_capacity: number;
+  primary_driver_id: string | null;
+  rides_count: number;
+  drivers_assigned: number;          // unique drivers across rides + primary driver
+  capacity_total: number;            // car_capacity * rides_count (or car_capacity if no rides but primary)
+  missing_driver: boolean;           // required && drivers_assigned === 0
+  capacity_short: boolean;           // required && slots > capacity_total
+}
+
 export interface TodayOpsShift {
   id: string;
   title: string;
@@ -36,11 +47,15 @@ export interface TodayOpsShift {
   location_id: string | null;
   job_site_name: string | null;
   meeting_point: string | null;
+  meeting_point_location_id: string | null;
+  meeting_point_location_name: string | null;
   meeting_time: string | null;
   shift_admin_id: string | null;
   pending_claims: number;
+  transport: ShiftTransportInfo;
   ops: ShiftOpsState;
 }
+
 
 export interface TodayOpsEmployee {
   id: string;
