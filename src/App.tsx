@@ -411,6 +411,7 @@ function App() {
                 <Route path="w9" element={<PortalModuleGuard moduleKey="my_w9"><MyW9 /></PortalModuleGuard>} />
                 <Route path="documents" element={<PortalModuleGuard moduleKey="my_documents"><MyDocuments /></PortalModuleGuard>} />
                 <Route path="update-center" element={<UpdateCenter />} />
+                <Route path="shift-captain/:shiftId" element={<ShiftCaptainRoom />} />
               </Route>
 
               <Route path="*" element={<NotFound />} />
