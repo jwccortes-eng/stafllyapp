@@ -3,8 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
+import { STAFLY_WHATSAPP } from "@/lib/contact";
 
-const SALES_WHATSAPP = "https://wa.me/18493330000?text=Hola%2C%20quiero%20información%20sobre%20los%20planes%20de%20Stafly%20Core";
 const SALES_EMAIL = "sales@staflyapps.com";
 
 /**
@@ -15,13 +15,13 @@ export function useContactSales() {
 
   const contactSales = (channel: "whatsapp" | "email" = "whatsapp") => {
     if (channel === "whatsapp") {
-      window.open(SALES_WHATSAPP, "_blank");
+      window.open(STAFLY_WHATSAPP.billingInquiry, "_blank");
     } else {
       window.location.href = `mailto:${SALES_EMAIL}?subject=Solicitud de plan - ${selectedCompanyId || "nueva empresa"}`;
     }
   };
 
-  return { contactSales, salesWhatsApp: SALES_WHATSAPP, salesEmail: SALES_EMAIL };
+  return { contactSales, salesWhatsApp: STAFLY_WHATSAPP.billingInquiry, salesEmail: SALES_EMAIL };
 }
 
 /**

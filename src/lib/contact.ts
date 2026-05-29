@@ -18,4 +18,7 @@ export const STAFLY_WHATSAPP = {
   contactSales: wa(
     "Hi, I'm interested in Stafly Core for a larger team or multi-company operation. Can someone contact me?"
   ),
+  billingInquiry: wa(
+    "Hola, quiero información sobre los planes de Stafly Core."
+  ),
 };
