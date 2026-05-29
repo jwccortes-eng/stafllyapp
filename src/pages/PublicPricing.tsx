@@ -295,6 +295,9 @@ export default function PublicPricing() {
         </div>
       </section>
 
+      <PublicContactStrip />
+
+
       {/* ── MODULES ── */}
       <section className="py-16 sm:py-20">
         <div className="max-w-5xl mx-auto px-4 sm:px-6">
