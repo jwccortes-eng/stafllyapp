@@ -1,4 +1,13 @@
-import { STAFLY_WHATSAPP, STAFLY_PHONE_DISPLAY_INTL, STAFLY_EMAIL, STAFLY_MAILTO } from "@/lib/contact";
+import {
+  STAFLY_WHATSAPP,
+  STAFLY_PHONE_DISPLAY_INTL,
+  STAFLY_EMAIL,
+  STAFLY_MAILTO,
+  guidedSetupPaymentOrWhatsApp,
+  starterPaymentOrWhatsApp,
+  operationsPaymentOrWhatsApp,
+  contactSales,
+} from "@/lib/contact";
 import { Link } from "react-router-dom";
 import {
   Check, ArrowRight, ChevronDown, Globe, Menu, X,
