@@ -3,8 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
+import { STAFLY_WHATSAPP, STAFLY_PHONE_DISPLAY_INTL } from "@/lib/contact";
 
-const SALES_WHATSAPP = "https://wa.me/18493330000?text=Hola%2C%20quiero%20información%20sobre%20los%20planes%20de%20Stafly%20Core";
 const SALES_EMAIL = "sales@staflyapps.com";
 
 /**
