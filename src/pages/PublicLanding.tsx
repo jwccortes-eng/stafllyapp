@@ -11,6 +11,7 @@ import {
   guidedSetupPaymentOrWhatsApp,
   bookDemo,
 } from "@/lib/contact";
+import { PublicContactStrip } from "@/components/public/PublicContactStrip";
 
 import {
   CalendarClock,
