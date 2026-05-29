@@ -8,6 +8,7 @@ import {
   operationsPaymentOrWhatsApp,
   contactSales,
 } from "@/lib/contact";
+import { PublicContactStrip } from "@/components/public/PublicContactStrip";
 import { Link } from "react-router-dom";
 import {
   Check, ArrowRight, ChevronDown, Globe, Menu, X,
