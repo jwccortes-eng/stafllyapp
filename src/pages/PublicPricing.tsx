@@ -419,7 +419,11 @@ export default function PublicPricing() {
             <Link to="/pricing" className="hover:text-[hsl(220,20%,14%)] transition-colors">Pricing</Link>
             <Link to="/privacy" className="hover:text-[hsl(220,20%,14%)] transition-colors">Privacy</Link>
             <Link to="/terms" className="hover:text-[hsl(220,20%,14%)] transition-colors">Terms</Link>
+            <a href={STAFLY_WHATSAPP.bookDemo} target="_blank" rel="noopener noreferrer" className="hover:text-[hsl(220,20%,14%)] transition-colors">
+              WhatsApp {STAFLY_PHONE_DISPLAY_INTL}
+            </a>
           </div>
+
           <p className="text-xs" style={{ color: "hsl(220,10%,58%)" }}>© {new Date().getFullYear()} Stafly Core</p>
         </div>
       </footer>
