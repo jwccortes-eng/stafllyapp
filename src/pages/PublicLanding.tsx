@@ -3,6 +3,8 @@ import { useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { StaflyLogo, StaflyMark } from "@/components/brand/StaflyBrand";
+import { STAFLY_WHATSAPP, STAFLY_PHONE_DISPLAY_INTL } from "@/lib/contact";
+
 import {
   CalendarClock,
   Smartphone,
@@ -118,7 +120,7 @@ export default function PublicLanding() {
                   <Link to="/auth">Login</Link>
                 </Button>
                 <Button asChild size="sm" className="rounded-xl shadow-sm">
-                  <a href="mailto:hello@staflyapps.com?subject=Book%20a%20demo%20%E2%80%94%20Stafly%20Core">
+                  <a href={STAFLY_WHATSAPP.bookDemo} target="_blank" rel="noopener noreferrer">
                     Book a demo
                   </a>
                 </Button>
@@ -151,7 +153,7 @@ export default function PublicLanding() {
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <Button asChild size="lg" className="rounded-xl h-12 px-7 shadow-sm w-full sm:w-auto">
-              <a href="mailto:hello@staflyapps.com?subject=Book%20a%20demo%20%E2%80%94%20Stafly%20Core">
+              <a href={STAFLY_WHATSAPP.bookDemo} target="_blank" rel="noopener noreferrer">
                 Book a demo <ArrowRight className="ml-2 h-4 w-4" />
               </a>
             </Button>
@@ -256,7 +258,7 @@ export default function PublicLanding() {
           </p>
           <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
             <Button asChild size="lg" className="rounded-xl h-12 px-7 shadow-sm w-full sm:w-auto">
-              <a href="mailto:hello@staflyapps.com?subject=Book%20a%20demo%20%E2%80%94%20Stafly%20Core">
+              <a href={STAFLY_WHATSAPP.bookDemo} target="_blank" rel="noopener noreferrer">
                 Book a demo <ArrowRight className="ml-2 h-4 w-4" />
               </a>
             </Button>
@@ -280,7 +282,7 @@ export default function PublicLanding() {
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <Button asChild size="lg" className="rounded-xl h-12 px-7 shadow-sm w-full sm:w-auto">
-              <a href="mailto:hello@staflyapps.com?subject=Book%20a%20demo%20%E2%80%94%20Stafly%20Core">
+              <a href={STAFLY_WHATSAPP.bookDemo} target="_blank" rel="noopener noreferrer">
                 Book a demo <ArrowRight className="ml-2 h-4 w-4" />
               </a>
             </Button>
@@ -296,8 +298,6 @@ export default function PublicLanding() {
           </div>
         </div>
       </section>
-
-      {/* Footer */}
       <footer className="border-t border-border/40 bg-muted/10">
         <div className="max-w-6xl mx-auto px-5 sm:px-8 py-10 flex flex-col sm:flex-row items-center justify-between gap-4">
           <StaflyLogo size={24} muted />
@@ -306,12 +306,21 @@ export default function PublicLanding() {
             <Link to="/terms" className="hover:text-foreground transition-colors">Terms</Link>
             <Link to="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
             <Link to="/cookies" className="hover:text-foreground transition-colors">Cookies</Link>
+            <a
+              href={STAFLY_WHATSAPP.bookDemo}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-foreground transition-colors"
+            >
+              WhatsApp {STAFLY_PHONE_DISPLAY_INTL}
+            </a>
           </div>
           <p className="text-[11px] text-muted-foreground/60">
             © {new Date().getFullYear()} StaflyApps · staflyapps.com
           </p>
         </div>
       </footer>
+
     </div>
   );
 }
