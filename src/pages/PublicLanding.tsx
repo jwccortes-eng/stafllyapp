@@ -386,11 +386,19 @@ export default function PublicLanding() {
               WhatsApp {STAFLY_PHONE_DISPLAY_INTL}
             </a>
             <a
-              href={STAFLY_MAILTO}
+              href="sms:+17187515197"
               className="hover:text-foreground transition-colors"
             >
-              {STAFLY_EMAIL}
+              Text {STAFLY_PHONE_DISPLAY_INTL}
             </a>
+            {STAFLY_EMAIL && (
+              <a
+                href={STAFLY_MAILTO}
+                className="hover:text-foreground transition-colors"
+              >
+                {STAFLY_EMAIL}
+              </a>
+            )}
           </div>
           <p className="text-[11px] text-muted-foreground/60">
             © {new Date().getFullYear()} StaflyApps · staflyapps.com
