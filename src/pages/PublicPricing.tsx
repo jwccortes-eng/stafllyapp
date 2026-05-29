@@ -268,8 +268,13 @@ export default function PublicPricing() {
               </div>
             ))}
           </div>
+
+          <p className="mt-10 max-w-2xl mx-auto text-center text-xs sm:text-sm leading-relaxed" style={{ color: "hsl(220,10%,45%)" }}>
+            All new companies are activated through guided onboarding. We do not automatically activate public signups without review.
+          </p>
         </div>
       </section>
+
 
       {/* ── IMPLEMENTATION NOTE ── */}
       <section className="py-10 sm:py-14" style={{ background: "hsl(220,30%,98%)" }}>
