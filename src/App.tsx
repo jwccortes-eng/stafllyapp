@@ -224,7 +224,8 @@ function App() {
           <BrowserRouter>
             <Suspense fallback={<PageFallback />}>
             <Routes>
-              <Route path="/" element={<Index />} />
+              <Route path="/" element={<PublicLanding />} />
+              <Route path="/home" element={<Index />} />
               <Route path="/install" element={<Install />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/login" element={<Auth />} />
