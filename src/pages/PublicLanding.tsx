@@ -3,7 +3,14 @@ import { useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { StaflyLogo, StaflyMark } from "@/components/brand/StaflyBrand";
-import { STAFLY_WHATSAPP, STAFLY_PHONE_DISPLAY_INTL, STAFLY_EMAIL, STAFLY_MAILTO } from "@/lib/contact";
+import {
+  STAFLY_WHATSAPP,
+  STAFLY_PHONE_DISPLAY_INTL,
+  STAFLY_EMAIL,
+  STAFLY_MAILTO,
+  guidedSetupPaymentOrWhatsApp,
+  bookDemo,
+} from "@/lib/contact";
 
 import {
   CalendarClock,
@@ -172,6 +179,66 @@ export default function PublicLanding() {
           </p>
         </div>
       </section>
+
+      {/* Guided Setup */}
+      <section className="border-t border-border/40 bg-muted/20">
+        <div className="max-w-5xl mx-auto px-5 sm:px-8 py-20 sm:py-24">
+          <div className="text-center mb-10">
+            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary mb-2.5">
+              Guided setup
+            </p>
+            <h2 className="text-3xl sm:text-4xl font-bold font-heading tracking-tight leading-tight">
+              Start with guided setup
+            </h2>
+            <p className="text-sm sm:text-base text-muted-foreground mt-3 max-w-2xl mx-auto">
+              We help configure your company, workers, first schedule, attendance flow, and payroll-ready hour reports before you go live.
+            </p>
+          </div>
+
+          <div className="max-w-2xl mx-auto rounded-2xl border border-primary/30 bg-card p-7 sm:p-9 shadow-md">
+            <div className="flex items-baseline gap-2 mb-1">
+              <span className="text-4xl font-bold font-heading text-foreground">$299</span>
+              <span className="text-sm text-muted-foreground">starting price</span>
+            </div>
+            <p className="text-sm font-semibold text-foreground mb-5">Guided setup starts at $299</p>
+
+            <ul className="space-y-2.5 mb-7">
+              {[
+                "Company workspace setup",
+                "Initial admin/user setup",
+                "Up to 25 workers loaded",
+                "First real schedule configured",
+                "Attendance walkthrough",
+                "Payroll-ready hours orientation",
+                "Manual activation after review",
+              ].map((item) => (
+                <li key={item} className="flex items-center gap-2.5 text-sm text-foreground">
+                  <Check className="h-4 w-4 text-primary shrink-0" /> {item}
+                </li>
+              ))}
+            </ul>
+
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Button asChild size="lg" className="rounded-xl h-12 px-6 shadow-sm flex-1">
+                <a href={guidedSetupPaymentOrWhatsApp()} target="_blank" rel="noopener noreferrer">
+                  Start guided setup <ArrowRight className="ml-2 h-4 w-4" />
+                </a>
+              </Button>
+              <Button asChild variant="outline" size="lg" className="rounded-xl h-12 px-6 flex-1">
+                <a href={bookDemo()} target="_blank" rel="noopener noreferrer">
+                  Book a demo
+                </a>
+              </Button>
+            </div>
+
+            <p className="mt-6 text-[11px] text-muted-foreground/80 leading-relaxed flex items-start gap-1.5">
+              <ShieldCheck className="h-3 w-3 mt-0.5 shrink-0" />
+              All new companies are activated through guided onboarding. We do not automatically activate public signups without review.
+            </p>
+          </div>
+        </div>
+      </section>
+
 
       {/* Features */}
       <section id="features" className="border-t border-border/40 bg-muted/20">

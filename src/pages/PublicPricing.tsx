@@ -1,4 +1,13 @@
-import { STAFLY_WHATSAPP, STAFLY_PHONE_DISPLAY_INTL, STAFLY_EMAIL, STAFLY_MAILTO } from "@/lib/contact";
+import {
+  STAFLY_WHATSAPP,
+  STAFLY_PHONE_DISPLAY_INTL,
+  STAFLY_EMAIL,
+  STAFLY_MAILTO,
+  guidedSetupPaymentOrWhatsApp,
+  starterPaymentOrWhatsApp,
+  operationsPaymentOrWhatsApp,
+  contactSales,
+} from "@/lib/contact";
 import { Link } from "react-router-dom";
 import {
   Check, ArrowRight, ChevronDown, Globe, Menu, X,
@@ -60,6 +69,7 @@ function DemoForm() {
 }
 
 /* ── Plans ── */
+/* ── Plans ── */
 const plans = [
   {
     name: "Starter",
@@ -68,56 +78,49 @@ const plans = [
     subtitle: "For small teams getting organized.",
     limit: "Up to 25 active workers",
     features: [
-      "Shift scheduling",
-      "Worker portal",
-      "Shift confirmations",
-      "Clock in / clock out",
-      "Basic attendance",
-      "Basic reports",
-      "Employee profiles",
-      "1 company",
+      "Worker directory",
+      "Basic shift scheduling",
+      "Attendance visibility",
+      "Document readiness basics",
     ],
-    cta: "Book setup call",
+    cta: "Talk to us",
+    getHref: () => starterPaymentOrWhatsApp(),
     highlighted: false,
   },
   {
     name: "Operations",
     price: "$299",
     period: "/ month",
-    subtitle: "For teams running weekly operations and payroll review.",
+    subtitle: "For staffing/service companies running weekly operations.",
     limit: "Up to 75 active workers",
     features: [
-      "Everything in Starter",
-      "Daily operations dashboard",
-      "Shift closeout",
-      "Payroll-ready review",
-      "Document tracking",
-      "Admin roles and permissions",
-      "Multi-location operations",
-      "Payroll export / review reports",
-      "Priority support",
+      "Workers and roles",
+      "Shift planning and publishing",
+      "Attendance tracking",
+      "Documents",
+      "Payroll-ready hour reports",
+      "Admin operations dashboard",
+      "Guided onboarding support",
     ],
-    cta: "Book a demo",
+    cta: "Start guided setup",
+    getHref: () => guidedSetupPaymentOrWhatsApp(),
     highlighted: true,
   },
   {
     name: "Scale",
     price: "$599+",
     period: " or Custom",
-    subtitle: "For staffing companies and multi-company operations.",
+    subtitle: "For multi-location or high-volume operations.",
     limit: "150+ active workers",
     features: [
-      "150+ active workers",
-      "Multi-company operations",
-      "Advanced permissions",
-      "Custom workflows",
+      "Multi-team operations",
+      "Advanced admin workflows",
+      "Priority setup",
       "Migration support",
-      "Audit trail",
-      "Custom reports",
-      "Priority onboarding",
-      "Integrations",
+      "Custom operational review",
     ],
     cta: "Contact sales",
+    getHref: () => contactSales(),
     highlighted: false,
   },
 ];
@@ -248,29 +251,30 @@ export default function PublicPricing() {
                   ))}
                 </ul>
 
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <button
-                      className={`w-full rounded-xl h-11 font-semibold text-sm transition-all active:scale-[0.97] ${
-                        plan.highlighted
-                          ? "text-white bg-[hsl(222,100%,59%)] hover:bg-[hsl(222,100%,52%)] shadow-[0_4px_14px_-3px_hsl(222,100%,59%/0.3)]"
-                          : "border border-[hsl(220,13%,86%)] hover:bg-[hsl(220,20%,97%)]"
-                      }`}
-                      style={!plan.highlighted ? { color: "hsl(220,15%,25%)" } : undefined}
-                    >
-                      {plan.cta}
-                    </button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-md rounded-2xl">
-                    <DialogHeader><DialogTitle>{plan.name === "Scale" ? "Contact sales" : plan.cta}</DialogTitle></DialogHeader>
-                    <DemoForm />
-                  </DialogContent>
-                </Dialog>
+                <a
+                  href={plan.getHref()}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`w-full inline-flex items-center justify-center rounded-xl h-11 font-semibold text-sm transition-all active:scale-[0.97] ${
+                    plan.highlighted
+                      ? "text-white bg-[hsl(222,100%,59%)] hover:bg-[hsl(222,100%,52%)] shadow-[0_4px_14px_-3px_hsl(222,100%,59%/0.3)]"
+                      : "border border-[hsl(220,13%,86%)] hover:bg-[hsl(220,20%,97%)]"
+                  }`}
+                  style={!plan.highlighted ? { color: "hsl(220,15%,25%)" } : undefined}
+                >
+                  {plan.cta}
+                </a>
+
               </div>
             ))}
           </div>
+
+          <p className="mt-10 max-w-2xl mx-auto text-center text-xs sm:text-sm leading-relaxed" style={{ color: "hsl(220,10%,45%)" }}>
+            All new companies are activated through guided onboarding. We do not automatically activate public signups without review.
+          </p>
         </div>
       </section>
+
 
       {/* ── IMPLEMENTATION NOTE ── */}
       <section className="py-10 sm:py-14" style={{ background: "hsl(220,30%,98%)" }}>
