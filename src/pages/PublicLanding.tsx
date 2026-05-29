@@ -189,10 +189,10 @@ export default function PublicLanding() {
               Guided setup
             </p>
             <h2 className="text-3xl sm:text-4xl font-bold font-heading tracking-tight leading-tight">
-              Start with guided setup
+              Guided setup, not self-service chaos
             </h2>
             <p className="text-sm sm:text-base text-muted-foreground mt-3 max-w-2xl mx-auto">
-              We help configure your company, workers, first schedule, attendance flow, and payroll-ready hour reports before you go live.
+              StaflyApps is built for service companies that need more than another tool. We help you configure your workspace, workers, first schedule, attendance flow, documents, and payroll-ready hour review before going live.
             </p>
           </div>
 
@@ -201,7 +201,10 @@ export default function PublicLanding() {
               <span className="text-4xl font-bold font-heading text-foreground">$299</span>
               <span className="text-sm text-muted-foreground">starting price</span>
             </div>
-            <p className="text-sm font-semibold text-foreground mb-5">Guided setup starts at $299</p>
+            <p className="text-sm font-semibold text-foreground mb-1">Guided setup starts at $299</p>
+            <p className="text-sm text-muted-foreground mb-5">
+              Start with guided setup. We'll help you organize your operation step by step.
+            </p>
 
             <ul className="space-y-2.5 mb-7">
               {[
