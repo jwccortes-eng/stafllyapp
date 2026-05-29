@@ -251,24 +251,20 @@ export default function PublicPricing() {
                   ))}
                 </ul>
 
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <button
-                      className={`w-full rounded-xl h-11 font-semibold text-sm transition-all active:scale-[0.97] ${
-                        plan.highlighted
-                          ? "text-white bg-[hsl(222,100%,59%)] hover:bg-[hsl(222,100%,52%)] shadow-[0_4px_14px_-3px_hsl(222,100%,59%/0.3)]"
-                          : "border border-[hsl(220,13%,86%)] hover:bg-[hsl(220,20%,97%)]"
-                      }`}
-                      style={!plan.highlighted ? { color: "hsl(220,15%,25%)" } : undefined}
-                    >
-                      {plan.cta}
-                    </button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-md rounded-2xl">
-                    <DialogHeader><DialogTitle>{plan.name === "Scale" ? "Contact sales" : plan.cta}</DialogTitle></DialogHeader>
-                    <DemoForm />
-                  </DialogContent>
-                </Dialog>
+                <a
+                  href={plan.getHref()}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`w-full inline-flex items-center justify-center rounded-xl h-11 font-semibold text-sm transition-all active:scale-[0.97] ${
+                    plan.highlighted
+                      ? "text-white bg-[hsl(222,100%,59%)] hover:bg-[hsl(222,100%,52%)] shadow-[0_4px_14px_-3px_hsl(222,100%,59%/0.3)]"
+                      : "border border-[hsl(220,13%,86%)] hover:bg-[hsl(220,20%,97%)]"
+                  }`}
+                  style={!plan.highlighted ? { color: "hsl(220,15%,25%)" } : undefined}
+                >
+                  {plan.cta}
+                </a>
+
               </div>
             ))}
           </div>
