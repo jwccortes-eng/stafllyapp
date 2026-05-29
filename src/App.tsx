@@ -228,7 +228,7 @@ function App() {
               <Route path="/home" element={<Index />} />
               <Route path="/install" element={<Install />} />
               <Route path="/auth" element={<Auth />} />
-              <Route path="/login" element={<Auth />} />
+              <Route path="/login" element={<Navigate to="/auth" replace />} />
               <Route path="/auth/callback" element={<AuthCallback />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/terms" element={<TermsOfService />} />
