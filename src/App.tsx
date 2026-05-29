@@ -26,6 +26,7 @@ import PayrollReconciliation from "./pages/admin/PayrollReconciliation";
 
 // Lazy: all pages
 const Index = lazy(() => import("./pages/Index"));
+const PublicLanding = lazy(() => import("./pages/PublicLanding"));
 const Auth = lazy(() => import("./pages/Auth"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const NotFound = lazy(() => import("./pages/NotFound"));
