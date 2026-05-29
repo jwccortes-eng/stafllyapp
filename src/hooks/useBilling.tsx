@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
-import { STAFLY_WHATSAPP, STAFLY_PHONE_DISPLAY_INTL } from "@/lib/contact";
+import { STAFLY_WHATSAPP } from "@/lib/contact";
 
 const SALES_EMAIL = "sales@staflyapps.com";
 
