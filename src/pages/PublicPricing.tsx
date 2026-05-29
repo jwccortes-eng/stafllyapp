@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { StaflyLogo } from "@/components/brand/StaflyBrand";
-import { STAFLY_WHATSAPP, STAFLY_PHONE_DISPLAY_INTL } from "@/lib/contact";
+import { useState } from "react";
 
 
 /* ── Demo Form ── */
