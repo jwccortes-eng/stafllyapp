@@ -320,10 +320,16 @@ export default function PublicLanding() {
             >
               {STAFLY_EMAIL}
             </a>
+          </div>
           <p className="text-[11px] text-muted-foreground/60">
             © {new Date().getFullYear()} StaflyApps · staflyapps.com
           </p>
         </div>
+      </footer>
+
+    </div>
+  );
+}
       </footer>
 
     </div>

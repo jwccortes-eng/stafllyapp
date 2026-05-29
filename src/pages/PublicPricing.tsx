@@ -425,10 +425,12 @@ export default function PublicPricing() {
             <a href={STAFLY_MAILTO} className="hover:text-[hsl(220,20%,14%)] transition-colors">
               {STAFLY_EMAIL}
             </a>
-
+          </div>
           <p className="text-xs" style={{ color: "hsl(220,10%,58%)" }}>© {new Date().getFullYear()} Stafly Core</p>
         </div>
       </footer>
     </div>
+  );
+}
   );
 }
