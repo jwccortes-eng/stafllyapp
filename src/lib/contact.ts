@@ -21,7 +21,9 @@ export const STAFLY_COMMERCIAL = {
   bookDemoLabel: "Book a demo",
   bookSetupCallLabel: "Book setup call",
   contactSalesLabel: "Contact sales",
-  setupPaymentUrl: (import.meta.env.VITE_STAFLY_SETUP_PAYMENT_URL as string) || "",
+  setupPaymentUrl:
+    (import.meta.env.VITE_STAFLY_SETUP_PAYMENT_URL as string) ||
+    "https://buy.stripe.com/dRm14hd879A9d69c8pcs800",
   starterPaymentUrl: (import.meta.env.VITE_STAFLY_STARTER_PAYMENT_URL as string) || "",
   operationsPaymentUrl: (import.meta.env.VITE_STAFLY_OPERATIONS_PAYMENT_URL as string) || "",
   scaleContactUrl: "",
