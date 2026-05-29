@@ -8,6 +8,7 @@ import {
   operationsPaymentOrWhatsApp,
   contactSales,
 } from "@/lib/contact";
+import { PublicContactStrip } from "@/components/public/PublicContactStrip";
 import { Link } from "react-router-dom";
 import {
   Check, ArrowRight, ChevronDown, Globe, Menu, X,
@@ -294,6 +295,9 @@ export default function PublicPricing() {
         </div>
       </section>
 
+      <PublicContactStrip />
+
+
       {/* ── MODULES ── */}
       <section className="py-16 sm:py-20">
         <div className="max-w-5xl mx-auto px-4 sm:px-6">
@@ -426,9 +430,14 @@ export default function PublicPricing() {
             <a href={STAFLY_WHATSAPP.bookDemo} target="_blank" rel="noopener noreferrer" className="hover:text-[hsl(220,20%,14%)] transition-colors">
               WhatsApp {STAFLY_PHONE_DISPLAY_INTL}
             </a>
-            <a href={STAFLY_MAILTO} className="hover:text-[hsl(220,20%,14%)] transition-colors">
-              {STAFLY_EMAIL}
+            <a href="sms:+17187515197" className="hover:text-[hsl(220,20%,14%)] transition-colors">
+              Text {STAFLY_PHONE_DISPLAY_INTL}
             </a>
+            {STAFLY_EMAIL && (
+              <a href={STAFLY_MAILTO} className="hover:text-[hsl(220,20%,14%)] transition-colors">
+                {STAFLY_EMAIL}
+              </a>
+            )}
           </div>
           <p className="text-xs" style={{ color: "hsl(220,10%,58%)" }}>© {new Date().getFullYear()} Stafly Core</p>
         </div>

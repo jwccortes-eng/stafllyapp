@@ -4,13 +4,38 @@ export const STAFLY_PHONE_E164 = "+17187515197";
 export const STAFLY_PHONE_DISPLAY = "(718) 751-5197";
 export const STAFLY_PHONE_DISPLAY_INTL = "+1 718 751 5197";
 export const STAFLY_WHATSAPP_BASE = "https://wa.me/17187515197";
+export const STAFLY_SMS_URL = "sms:+17187515197";
 
-// Official public/support/commercial email (provisional).
-export const STAFLY_EMAIL = "help@parceros.app";
-export const STAFLY_MAILTO = "mailto:help@parceros.app";
+// Official StaflyApps email — only set via env. Do NOT default to a Parceros address.
+export const STAFLY_EMAIL =
+  (import.meta.env.VITE_STAFLY_CONTACT_EMAIL as string) || "";
+export const STAFLY_MAILTO = STAFLY_EMAIL ? `mailto:${STAFLY_EMAIL}` : "";
 
 export function buildStaflyWhatsAppUrl(message: string) {
   return `${STAFLY_WHATSAPP_BASE}?text=${encodeURIComponent(message)}`;
+}
+
+export function buildStaflySmsUrl(message: string) {
+  return `${STAFLY_SMS_URL}?body=${encodeURIComponent(message)}`;
+}
+
+export function buildStaflyMailto(subject: string, body: string) {
+  if (!STAFLY_EMAIL) return "";
+  return `mailto:${STAFLY_EMAIL}?subject=${encodeURIComponent(
+    subject
+  )}&body=${encodeURIComponent(body)}`;
+}
+
+export function contactWhatsApp() {
+  return buildStaflyWhatsAppUrl(
+    "Hi, I'd like to learn more about StaflyApps for my company."
+  );
+}
+
+export function contactSms() {
+  return buildStaflySmsUrl(
+    "Hi, I'd like to learn more about StaflyApps for my company."
+  );
 }
 
 export const STAFLY_COMMERCIAL = {

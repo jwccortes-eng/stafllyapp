@@ -11,6 +11,7 @@ import {
   guidedSetupPaymentOrWhatsApp,
   bookDemo,
 } from "@/lib/contact";
+import { PublicContactStrip } from "@/components/public/PublicContactStrip";
 
 import {
   CalendarClock,
@@ -336,6 +337,9 @@ export default function PublicLanding() {
         </div>
       </section>
 
+      <PublicContactStrip />
+
+
       {/* CTA */}
       <section className="border-t border-border/40">
         <div className="max-w-4xl mx-auto px-5 sm:px-8 py-20 sm:py-24 text-center">
@@ -382,11 +386,19 @@ export default function PublicLanding() {
               WhatsApp {STAFLY_PHONE_DISPLAY_INTL}
             </a>
             <a
-              href={STAFLY_MAILTO}
+              href="sms:+17187515197"
               className="hover:text-foreground transition-colors"
             >
-              {STAFLY_EMAIL}
+              Text {STAFLY_PHONE_DISPLAY_INTL}
             </a>
+            {STAFLY_EMAIL && (
+              <a
+                href={STAFLY_MAILTO}
+                className="hover:text-foreground transition-colors"
+              >
+                {STAFLY_EMAIL}
+              </a>
+            )}
           </div>
           <p className="text-[11px] text-muted-foreground/60">
             © {new Date().getFullYear()} StaflyApps · staflyapps.com
