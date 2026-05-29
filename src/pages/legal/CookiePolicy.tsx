@@ -58,7 +58,7 @@ export default function CookiePolicy() {
 
           <section>
             <h2 className="text-lg font-semibold text-foreground">5. Contacto</h2>
-            <p>Para consultas sobre cookies: <span className="text-primary font-medium">privacy@staflyapps.com</span></p>
+            <p>Para consultas sobre cookies: <span className="text-primary font-medium">help@parceros.app</span></p>
           </section>
         </div>
 

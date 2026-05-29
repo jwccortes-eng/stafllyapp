@@ -14,8 +14,8 @@ const links = [
 
 export function HelpFooter({ lang }: Props) {
   const t = lang === "es"
-    ? { linksTitle: "Links útiles", contactTitle: "¿No encontraste lo que buscas?", contactDesc: "Si tu empresa tiene soporte habilitado, contacta a tu Manager/Admin.", email: "soporte@staflyapps.com", manual: "Manual de Usuario" }
-    : { linksTitle: "Useful links", contactTitle: "Didn't find what you need?", contactDesc: "If support is enabled, contact your Manager/Admin.", email: "support@staflyapps.com", manual: "User Manual" };
+    ? { linksTitle: "Links útiles", contactTitle: "¿No encontraste lo que buscas?", contactDesc: "Si tu empresa tiene soporte habilitado, contacta a tu Manager/Admin.", email: "help@parceros.app", manual: "Manual de Usuario" }
+    : { linksTitle: "Useful links", contactTitle: "Didn't find what you need?", contactDesc: "If support is enabled, contact your Manager/Admin.", email: "help@parceros.app", manual: "User Manual" };
 
   return (
     <div className="space-y-6">
