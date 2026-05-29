@@ -4,7 +4,6 @@ export const STAFLY_PHONE_E164 = "+17187515197";
 export const STAFLY_PHONE_DISPLAY = "718-751-5197";
 export const STAFLY_PHONE_DISPLAY_INTL = "+1 718 751 5197";
 export const STAFLY_WHATSAPP_BASE = "https://wa.me/17187515197";
-export const STAFLY_WHATSAPP_BASE = "https://wa.me/17187515197";
 
 // Official public/support/commercial email (provisional).
 export const STAFLY_EMAIL = "help@parceros.app";
