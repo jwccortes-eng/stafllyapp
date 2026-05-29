@@ -101,7 +101,7 @@ export default function PrivacyPolicy() {
 
           <section>
             <h2 className="text-lg font-semibold text-foreground">9. Contacto</h2>
-            <p>Para ejercer sus derechos o consultas de privacidad: <span className="text-primary font-medium">privacy@staflyapps.com</span></p>
+            <p>Para ejercer sus derechos o consultas de privacidad: <span className="text-primary font-medium">help@parceros.app</span></p>
           </section>
         </div>
 

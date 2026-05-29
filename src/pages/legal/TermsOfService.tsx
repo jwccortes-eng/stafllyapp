@@ -89,7 +89,7 @@ export default function TermsOfService() {
 
           <section>
             <h2 className="text-lg font-semibold text-foreground">11. Contacto</h2>
-            <p>Para consultas sobre estos términos, contáctenos en <span className="text-primary font-medium">legal@staflyapps.com</span>.</p>
+            <p>Para consultas sobre estos términos, contáctenos en <span className="text-primary font-medium">help@parceros.app</span>.</p>
           </section>
         </div>
 
