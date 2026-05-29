@@ -3,7 +3,14 @@ import { useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { StaflyLogo, StaflyMark } from "@/components/brand/StaflyBrand";
-import { STAFLY_WHATSAPP, STAFLY_PHONE_DISPLAY_INTL, STAFLY_EMAIL, STAFLY_MAILTO } from "@/lib/contact";
+import {
+  STAFLY_WHATSAPP,
+  STAFLY_PHONE_DISPLAY_INTL,
+  STAFLY_EMAIL,
+  STAFLY_MAILTO,
+  guidedSetupPaymentOrWhatsApp,
+  bookDemo,
+} from "@/lib/contact";
 
 import {
   CalendarClock,
