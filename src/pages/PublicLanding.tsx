@@ -314,7 +314,12 @@ export default function PublicLanding() {
             >
               WhatsApp {STAFLY_PHONE_DISPLAY_INTL}
             </a>
-          </div>
+            <a
+              href={STAFLY_MAILTO}
+              className="hover:text-foreground transition-colors"
+            >
+              {STAFLY_EMAIL}
+            </a>
           <p className="text-[11px] text-muted-foreground/60">
             © {new Date().getFullYear()} StaflyApps · staflyapps.com
           </p>
