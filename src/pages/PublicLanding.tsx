@@ -120,7 +120,7 @@ export default function PublicLanding() {
                   <Link to="/auth">Login</Link>
                 </Button>
                 <Button asChild size="sm" className="rounded-xl shadow-sm">
-                  <a href="mailto:hello@staflyapps.com?subject=Book%20a%20demo%20%E2%80%94%20Stafly%20Core">
+                  <a href={STAFLY_WHATSAPP.bookDemo} target="_blank" rel="noopener noreferrer">
                     Book a demo
                   </a>
                 </Button>
@@ -153,7 +153,7 @@ export default function PublicLanding() {
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <Button asChild size="lg" className="rounded-xl h-12 px-7 shadow-sm w-full sm:w-auto">
-              <a href="mailto:hello@staflyapps.com?subject=Book%20a%20demo%20%E2%80%94%20Stafly%20Core">
+              <a href={STAFLY_WHATSAPP.bookDemo} target="_blank" rel="noopener noreferrer">
                 Book a demo <ArrowRight className="ml-2 h-4 w-4" />
               </a>
             </Button>
@@ -258,7 +258,7 @@ export default function PublicLanding() {
           </p>
           <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
             <Button asChild size="lg" className="rounded-xl h-12 px-7 shadow-sm w-full sm:w-auto">
-              <a href="mailto:hello@staflyapps.com?subject=Book%20a%20demo%20%E2%80%94%20Stafly%20Core">
+              <a href={STAFLY_WHATSAPP.bookDemo} target="_blank" rel="noopener noreferrer">
                 Book a demo <ArrowRight className="ml-2 h-4 w-4" />
               </a>
             </Button>
@@ -282,7 +282,7 @@ export default function PublicLanding() {
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <Button asChild size="lg" className="rounded-xl h-12 px-7 shadow-sm w-full sm:w-auto">
-              <a href="mailto:hello@staflyapps.com?subject=Book%20a%20demo%20%E2%80%94%20Stafly%20Core">
+              <a href={STAFLY_WHATSAPP.bookDemo} target="_blank" rel="noopener noreferrer">
                 Book a demo <ArrowRight className="ml-2 h-4 w-4" />
               </a>
             </Button>
