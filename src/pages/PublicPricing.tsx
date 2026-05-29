@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { STAFLY_WHATSAPP, STAFLY_PHONE_DISPLAY_INTL, STAFLY_EMAIL, STAFLY_MAILTO } from "@/lib/contact";
 import { Link } from "react-router-dom";
 import {
   Check, ArrowRight, ChevronDown, Globe, Menu, X,
@@ -173,7 +173,7 @@ export default function PublicPricing() {
               Home
             </Link>
             <Link to="/auth" className="text-[13px] font-medium px-3 py-1.5 rounded-lg hover:bg-[hsl(220,20%,96%)] transition-colors" style={{ color: "hsl(220,10%,50%)" }}>
-              Sign in
+              Login
             </Link>
             <Dialog>
               <DialogTrigger asChild>
@@ -194,7 +194,7 @@ export default function PublicPricing() {
         {mobileMenu && (
           <div className="sm:hidden bg-white border-t border-[hsl(220,13%,93%)] px-4 py-3 space-y-1">
             <Link to="/" onClick={() => setMobileMenu(false)} className="block text-sm font-medium py-2.5 px-3 rounded-lg hover:bg-[hsl(220,20%,96%)]" style={{ color: "hsl(222,100%,59%)" }}>Home</Link>
-            <Link to="/auth" onClick={() => setMobileMenu(false)} className="block text-sm font-medium py-2.5 px-3 rounded-lg hover:bg-[hsl(220,20%,96%)]" style={{ color: "hsl(222,100%,59%)" }}>Sign in</Link>
+            <Link to="/auth" onClick={() => setMobileMenu(false)} className="block text-sm font-medium py-2.5 px-3 rounded-lg hover:bg-[hsl(220,20%,96%)]" style={{ color: "hsl(222,100%,59%)" }}>Login</Link>
           </div>
         )}
       </header>
