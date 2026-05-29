@@ -298,8 +298,6 @@ export default function PublicLanding() {
           </div>
         </div>
       </section>
-
-      {/* Footer */}
       <footer className="border-t border-border/40 bg-muted/10">
         <div className="max-w-6xl mx-auto px-5 sm:px-8 py-10 flex flex-col sm:flex-row items-center justify-between gap-4">
           <StaflyLogo size={24} muted />
@@ -308,11 +306,21 @@ export default function PublicLanding() {
             <Link to="/terms" className="hover:text-foreground transition-colors">Terms</Link>
             <Link to="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
             <Link to="/cookies" className="hover:text-foreground transition-colors">Cookies</Link>
+            <a
+              href={STAFLY_WHATSAPP.bookDemo}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-foreground transition-colors"
+            >
+              WhatsApp {STAFLY_PHONE_DISPLAY_INTL}
+            </a>
           </div>
           <p className="text-[11px] text-muted-foreground/60">
             © {new Date().getFullYear()} StaflyApps · staflyapps.com
           </p>
         </div>
+      </footer>
+
       </footer>
     </div>
   );
