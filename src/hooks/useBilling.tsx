@@ -15,13 +15,13 @@ export function useContactSales() {
 
   const contactSales = (channel: "whatsapp" | "email" = "whatsapp") => {
     if (channel === "whatsapp") {
-      window.open(SALES_WHATSAPP, "_blank");
+      window.open(STAFLY_WHATSAPP.billingInquiry, "_blank");
     } else {
       window.location.href = `mailto:${SALES_EMAIL}?subject=Solicitud de plan - ${selectedCompanyId || "nueva empresa"}`;
     }
   };
 
-  return { contactSales, salesWhatsApp: SALES_WHATSAPP, salesEmail: SALES_EMAIL };
+  return { contactSales, salesWhatsApp: STAFLY_WHATSAPP.billingInquiry, salesEmail: SALES_EMAIL };
 }
 
 /**
