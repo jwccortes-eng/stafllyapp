@@ -41,6 +41,20 @@ function DemoForm() {
       <button type="submit" disabled={loading} className="w-full rounded-xl h-12 text-base font-semibold text-white bg-[hsl(222,100%,59%)] hover:bg-[hsl(222,100%,52%)] shadow-[0_4px_14px_-3px_hsl(222,100%,59%/0.3)] transition-all disabled:opacity-50">
         {loading ? "..." : "Submit"}
       </button>
+      <div className="relative my-1 flex items-center gap-3">
+        <div className="flex-1 h-px bg-[hsl(220,13%,91%)]" />
+        <span className="text-[11px] uppercase tracking-wider" style={{ color: "hsl(220,10%,55%)" }}>or</span>
+        <div className="flex-1 h-px bg-[hsl(220,13%,91%)]" />
+      </div>
+      <a
+        href={STAFLY_WHATSAPP.bookDemo}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="w-full inline-flex items-center justify-center rounded-xl h-12 text-sm font-semibold border border-[hsl(220,13%,86%)] hover:bg-[hsl(220,20%,97%)] transition-all"
+        style={{ color: "hsl(220,15%,25%)" }}
+      >
+        WhatsApp us · {STAFLY_PHONE_DISPLAY_INTL}
+      </a>
     </form>
   );
 }
