@@ -337,6 +337,9 @@ export default function PublicLanding() {
         </div>
       </section>
 
+      <PublicContactStrip />
+
+
       {/* CTA */}
       <section className="border-t border-border/40">
         <div className="max-w-4xl mx-auto px-5 sm:px-8 py-20 sm:py-24 text-center">
