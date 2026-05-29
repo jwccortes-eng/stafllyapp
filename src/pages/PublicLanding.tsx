@@ -201,7 +201,10 @@ export default function PublicLanding() {
               <span className="text-4xl font-bold font-heading text-foreground">$299</span>
               <span className="text-sm text-muted-foreground">starting price</span>
             </div>
-            <p className="text-sm font-semibold text-foreground mb-5">Guided setup starts at $299</p>
+            <p className="text-sm font-semibold text-foreground mb-1">Guided setup starts at $299</p>
+            <p className="text-sm text-muted-foreground mb-5">
+              Start with guided setup. We'll help you organize your operation step by step.
+            </p>
 
             <ul className="space-y-2.5 mb-7">
               {[
