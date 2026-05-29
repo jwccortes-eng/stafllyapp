@@ -284,10 +284,10 @@ export default function PublicPricing() {
             <Settings className="h-5 w-5" style={{ color: "hsl(222,100%,59%)" }} />
           </div>
           <h2 className="text-xl sm:text-2xl font-bold tracking-tight mb-2" style={{ color: "hsl(220,25%,10%)" }}>
-            Implementation included
+            Guided setup, not just software
           </h2>
           <p className="text-sm sm:text-base leading-relaxed" style={{ color: "hsl(220,10%,45%)" }}>
-            Implementation starts at <strong style={{ color: "hsl(220,25%,10%)" }}>$299</strong>. We configure your company, roles, workers and first locations so you can publish real shifts on day one.
+            We don't just give you an app. We help you set up your operation. Implementation starts at <strong style={{ color: "hsl(220,25%,10%)" }}>$299</strong>. We configure your workspace, workers, first schedule, attendance flow, documents, and payroll-ready hour review before going live.
           </p>
           <p className="text-xs sm:text-sm mt-2" style={{ color: "hsl(220,10%,50%)" }}>
             Founder launch offer: setup may be waived for selected early customers.
@@ -385,10 +385,10 @@ export default function PublicPricing() {
         <div className="max-w-5xl mx-auto px-4 sm:px-6">
           <div className="rounded-3xl px-6 py-14 sm:px-14 sm:py-20 text-center" style={{ background: "linear-gradient(135deg, hsl(222,100%,59%), hsl(226,76%,49%))" }}>
             <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white tracking-tight">
-              Ready to run your workforce on Stafly Core?
+              Start with guided setup
             </h2>
             <p className="mt-4 text-white/70 text-[15px] max-w-lg mx-auto">
-              Book a 30-minute walkthrough. We'll show you scheduling, attendance and payroll-ready closeouts on real operator screens.
+              We'll help you organize your operation step by step. Book a 30-minute walkthrough and we'll show you how we configure your workspace, workers, and first schedule.
             </p>
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
               <Dialog>
