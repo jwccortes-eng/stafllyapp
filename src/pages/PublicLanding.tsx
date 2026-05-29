@@ -321,7 +321,6 @@ export default function PublicLanding() {
         </div>
       </footer>
 
-      </footer>
     </div>
   );
 }
