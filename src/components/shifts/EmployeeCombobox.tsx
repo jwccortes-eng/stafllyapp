@@ -81,6 +81,23 @@ type GroupKey = "ready" | "warning" | "blocked" | "inactive";
 import { isEmployeeDriver } from "./types";
 const isDriver = (e: Employee) => isEmployeeDriver(e);
 
+/**
+ * Placeholder / system / external / agency / payroll-unsafe detection.
+ * Mirrors the classification used by DevCommandCenter and the
+ * `placeholder/system-detection` core memory rule. These workers are NOT
+ * real employees and must be excluded from the picker by default.
+ *
+ * Conservative: unknown `person_type_guess` + null `payroll_safe` ⇒ treated
+ * as a real employee (do not hide). Only explicit signals trigger hiding.
+ */
+const PLACEHOLDER_TYPES = new Set(["placeholder", "system", "external", "external_labor", "agency", "temp"]);
+function isPlaceholderLike(e: Employee): boolean {
+  if (e.payroll_safe === false) return true;
+  const t = (e.person_type_guess ?? "").toLowerCase().trim();
+  if (t && PLACEHOLDER_TYPES.has(t)) return true;
+  return false;
+}
+
 /** Profile readiness derived from `employees.profile_status` (best-effort, UI hint only). */
 function isProfileIncomplete(e: Employee): boolean {
   const ps = e.profile_status;
@@ -101,6 +118,8 @@ export function EmployeeCombobox({
   const [quickFilter, setQuickFilter] = useState<QuickFilter>("all");
   // S1: inactivos/históricos ocultos por defecto. Toggle explícito para mostrarlos.
   const [showInactive, setShowInactive] = useState(false);
+  // S2: placeholders / system / external ocultos por defecto.
+  const [showPlaceholders, setShowPlaceholders] = useState(false);
 
   const conflictMap = useMemo(() => {
     const map = new Map<string, ConflictInfo[]>();
