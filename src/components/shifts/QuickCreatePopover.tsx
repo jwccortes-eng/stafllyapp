@@ -11,6 +11,13 @@ import { cn } from "@/lib/utils";
 import { formatDisplayText } from "@/lib/format-helpers";
 import type { SelectOption } from "./types";
 
+const QUICK_SUGGESTIONS: ReadonlyArray<{ label: string; slots: number }> = [
+  { label: "Meseros", slots: 4 },
+  { label: "Kitchen", slots: 2 },
+  { label: "Limpieza", slots: 2 },
+  { label: "Setup", slots: 3 },
+];
+
 interface LocationOption extends SelectOption {
   client_id?: string | null;
 }
