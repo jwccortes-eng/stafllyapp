@@ -149,6 +149,22 @@ export function QuickCreatePopover({
               className="h-8 text-[11px] mt-0.5"
               autoFocus
             />
+            {/* Sugerencias rápidas — UI-only, fill title + slots if still default */}
+            <div className="mt-1.5 flex flex-wrap gap-1">
+              {QUICK_SUGGESTIONS.map(s => (
+                <button
+                  key={s.label}
+                  type="button"
+                  onClick={() => {
+                    setTitle(s.label);
+                    if (slots === "1") setSlots(String(s.slots));
+                  }}
+                  className="px-2 py-0.5 rounded-full border border-border/40 bg-muted/30 hover:bg-muted/60 text-[10px] font-medium transition-colors"
+                >
+                  + {s.label}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Times */}
