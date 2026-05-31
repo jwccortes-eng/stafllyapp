@@ -193,8 +193,13 @@ export function EmployeeCombobox({
     if (!showInactive) {
       list = list.filter(e => e.is_active !== false || selected.includes(e.id));
     }
+    // S2: por defecto ocultar placeholders/system/external/payroll-unsafe,
+    // salvo que ya estén asignados (histórico) o el toggle esté activo.
+    if (!showPlaceholders) {
+      list = list.filter(e => !isPlaceholderLike(e) || selected.includes(e.id));
+    }
     return list;
-  }, [employees, deferredSearch, matchScoreById, quickFilter, unavailableMap, conflictMap, showInactive, selected]);
+  }, [employees, deferredSearch, matchScoreById, quickFilter, unavailableMap, conflictMap, showInactive, showPlaceholders, selected]);
 
   // Smart sort: when searching, relevance score dominates so the most precise
   // match (exact ID/phone, then last name, then first name, then phonetic) leads.
@@ -239,6 +244,9 @@ export function EmployeeCombobox({
     // Inactive workers cannot be (re)assigned from the selector.
     const target = employees.find(e => e.id === id);
     if (target?.is_active === false && !selected.includes(id)) return;
+    // S2: placeholders/system/external/payroll-unsafe cannot be newly assigned
+    // unless the operator has explicitly revealed them via the toggle.
+    if (target && isPlaceholderLike(target) && !selected.includes(id) && !showPlaceholders) return;
     if (availabilityBlockMode === "hard" && unavailableMap.has(id) && !selected.includes(id)) return;
     onToggle(id);
   };
@@ -252,6 +260,10 @@ export function EmployeeCombobox({
   );
   const inactiveHiddenCount = useMemo(
     () => employees.filter(e => e.is_active === false && !selected.includes(e.id)).length,
+    [employees, selected],
+  );
+  const placeholderHiddenCount = useMemo(
+    () => employees.filter(e => isPlaceholderLike(e) && !selected.includes(e.id)).length,
     [employees, selected],
   );
 
