@@ -81,6 +81,23 @@ type GroupKey = "ready" | "warning" | "blocked" | "inactive";
 import { isEmployeeDriver } from "./types";
 const isDriver = (e: Employee) => isEmployeeDriver(e);
 
+/**
+ * Placeholder / system / external / agency / payroll-unsafe detection.
+ * Mirrors the classification used by DevCommandCenter and the
+ * `placeholder/system-detection` core memory rule. These workers are NOT
+ * real employees and must be excluded from the picker by default.
+ *
+ * Conservative: unknown `person_type_guess` + null `payroll_safe` ⇒ treated
+ * as a real employee (do not hide). Only explicit signals trigger hiding.
+ */
+const PLACEHOLDER_TYPES = new Set(["placeholder", "system", "external", "external_labor", "agency", "temp"]);
+function isPlaceholderLike(e: Employee): boolean {
+  if (e.payroll_safe === false) return true;
+  const t = (e.person_type_guess ?? "").toLowerCase().trim();
+  if (t && PLACEHOLDER_TYPES.has(t)) return true;
+  return false;
+}
+
 /** Profile readiness derived from `employees.profile_status` (best-effort, UI hint only). */
 function isProfileIncomplete(e: Employee): boolean {
   const ps = e.profile_status;
@@ -101,6 +118,8 @@ export function EmployeeCombobox({
   const [quickFilter, setQuickFilter] = useState<QuickFilter>("all");
   // S1: inactivos/históricos ocultos por defecto. Toggle explícito para mostrarlos.
   const [showInactive, setShowInactive] = useState(false);
+  // S2: placeholders / system / external ocultos por defecto.
+  const [showPlaceholders, setShowPlaceholders] = useState(false);
 
   const conflictMap = useMemo(() => {
     const map = new Map<string, ConflictInfo[]>();
@@ -174,8 +193,13 @@ export function EmployeeCombobox({
     if (!showInactive) {
       list = list.filter(e => e.is_active !== false || selected.includes(e.id));
     }
+    // S2: por defecto ocultar placeholders/system/external/payroll-unsafe,
+    // salvo que ya estén asignados (histórico) o el toggle esté activo.
+    if (!showPlaceholders) {
+      list = list.filter(e => !isPlaceholderLike(e) || selected.includes(e.id));
+    }
     return list;
-  }, [employees, deferredSearch, matchScoreById, quickFilter, unavailableMap, conflictMap, showInactive, selected]);
+  }, [employees, deferredSearch, matchScoreById, quickFilter, unavailableMap, conflictMap, showInactive, showPlaceholders, selected]);
 
   // Smart sort: when searching, relevance score dominates so the most precise
   // match (exact ID/phone, then last name, then first name, then phonetic) leads.
@@ -220,6 +244,9 @@ export function EmployeeCombobox({
     // Inactive workers cannot be (re)assigned from the selector.
     const target = employees.find(e => e.id === id);
     if (target?.is_active === false && !selected.includes(id)) return;
+    // S2: placeholders/system/external/payroll-unsafe cannot be newly assigned
+    // unless the operator has explicitly revealed them via the toggle.
+    if (target && isPlaceholderLike(target) && !selected.includes(id) && !showPlaceholders) return;
     if (availabilityBlockMode === "hard" && unavailableMap.has(id) && !selected.includes(id)) return;
     onToggle(id);
   };
@@ -233,6 +260,10 @@ export function EmployeeCombobox({
   );
   const inactiveHiddenCount = useMemo(
     () => employees.filter(e => e.is_active === false && !selected.includes(e.id)).length,
+    [employees, selected],
+  );
+  const placeholderHiddenCount = useMemo(
+    () => employees.filter(e => isPlaceholderLike(e) && !selected.includes(e.id)).length,
     [employees, selected],
   );
 
@@ -395,6 +426,39 @@ export function EmployeeCombobox({
         </div>
       )}
 
+      {/* S2: Placeholder / system / external visibility toggle + count */}
+      {(placeholderHiddenCount > 0 || showPlaceholders) && (
+        <div className="flex items-center justify-between gap-2 px-0.5 py-1 rounded-md bg-muted/30 border border-border/30">
+          <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+            <ShieldAlert className="h-3 w-3" />
+            {showPlaceholders ? (
+              <span>
+                Mostrando placeholders / externos.{" "}
+                <span className="text-warning font-semibold">No son trabajadores reales — no usar en payroll.</span>
+              </span>
+            ) : (
+              <span>
+                Placeholders / externos ocultos:{" "}
+                <span className="font-semibold text-foreground">{placeholderHiddenCount}</span>
+              </span>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowPlaceholders(v => !v)}
+            className={cn(
+              "text-[9px] font-bold px-2 py-0.5 rounded-full transition-all shrink-0",
+              showPlaceholders
+                ? "bg-warning/15 text-warning hover:bg-warning/25"
+                : "bg-muted text-muted-foreground hover:bg-muted/80",
+            )}
+          >
+            {showPlaceholders ? "Ocultar placeholders" : "Mostrar placeholders / externos"}
+          </button>
+        </div>
+      )}
+
+
 
       {debugMode && debugContext && (
         <details className="rounded-lg bg-muted/40 border border-border/40 text-[10px] font-mono text-muted-foreground">
@@ -468,6 +532,9 @@ export function EmployeeCombobox({
           {filtered.length} {filtered.length === 1 ? "trabajador" : "trabajadores"}
           {!showInactive && inactiveHiddenCount > 0 && (
             <span className="opacity-70"> · {inactiveHiddenCount} inactivos ocultos</span>
+          )}
+          {!showPlaceholders && placeholderHiddenCount > 0 && (
+            <span className="opacity-70"> · {placeholderHiddenCount} placeholders ocultos</span>
           )}
         </span>
         {selected.length > 0 && (

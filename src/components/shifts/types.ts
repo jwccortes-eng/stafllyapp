@@ -76,6 +76,10 @@ export interface Employee {
   profile_status?: "incomplete" | "pending_documents" | "ready" | "active" | null;
   /** Onboarding lifecycle (text in DB). */
   onboarding_status?: string | null;
+  /** Classification used to keep placeholders/system/external out of payroll/portal/picker. */
+  person_type_guess?: string | null;
+  /** Explicit boolean flag: false ⇒ unsafe for payroll/scheduling (placeholder-like). */
+  payroll_safe?: boolean | null;
 }
 
 /**
