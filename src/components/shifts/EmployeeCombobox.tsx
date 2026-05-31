@@ -426,6 +426,39 @@ export function EmployeeCombobox({
         </div>
       )}
 
+      {/* S2: Placeholder / system / external visibility toggle + count */}
+      {(placeholderHiddenCount > 0 || showPlaceholders) && (
+        <div className="flex items-center justify-between gap-2 px-0.5 py-1 rounded-md bg-muted/30 border border-border/30">
+          <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+            <ShieldAlert className="h-3 w-3" />
+            {showPlaceholders ? (
+              <span>
+                Mostrando placeholders / externos.{" "}
+                <span className="text-warning font-semibold">No son trabajadores reales — no usar en payroll.</span>
+              </span>
+            ) : (
+              <span>
+                Placeholders / externos ocultos:{" "}
+                <span className="font-semibold text-foreground">{placeholderHiddenCount}</span>
+              </span>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowPlaceholders(v => !v)}
+            className={cn(
+              "text-[9px] font-bold px-2 py-0.5 rounded-full transition-all shrink-0",
+              showPlaceholders
+                ? "bg-warning/15 text-warning hover:bg-warning/25"
+                : "bg-muted text-muted-foreground hover:bg-muted/80",
+            )}
+          >
+            {showPlaceholders ? "Ocultar placeholders" : "Mostrar placeholders / externos"}
+          </button>
+        </div>
+      )}
+
+
 
       {debugMode && debugContext && (
         <details className="rounded-lg bg-muted/40 border border-border/40 text-[10px] font-mono text-muted-foreground">
@@ -499,6 +532,9 @@ export function EmployeeCombobox({
           {filtered.length} {filtered.length === 1 ? "trabajador" : "trabajadores"}
           {!showInactive && inactiveHiddenCount > 0 && (
             <span className="opacity-70"> · {inactiveHiddenCount} inactivos ocultos</span>
+          )}
+          {!showPlaceholders && placeholderHiddenCount > 0 && (
+            <span className="opacity-70"> · {placeholderHiddenCount} placeholders ocultos</span>
           )}
         </span>
         {selected.length > 0 && (
