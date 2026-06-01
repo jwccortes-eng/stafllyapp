@@ -1096,6 +1096,37 @@ export default function PortalClock() {
 
       {/* QR Scanner dialog */}
       <QRScannerDialog open={qrScannerOpen} onClose={() => setQrScannerOpen(false)} onScanned={handleQrScanned} />
+
+      {/* QA-mode real-tenant confirmation dialog (only shown when both apply) */}
+      <Dialog open={tenantConfirmOpen} onOpenChange={setTenantConfirmOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Real tenant — confirm clock-in</DialogTitle>
+            <DialogDescription>
+              This is a real tenant
+              {companyFlags?.name ? ` (${companyFlags.name})` : ""}. Clock entries
+              may affect operational review. Continue?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setTenantConfirmOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                setTenantConfirmOpen(false);
+                proceedWithClockIn();
+              }}
+            >
+              Continue on real tenant
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
