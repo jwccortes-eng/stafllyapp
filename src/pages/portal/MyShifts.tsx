@@ -808,7 +808,7 @@ export default function MyShifts() {
             <Button variant="ghost" size="sm" className="rounded-xl" onClick={() => { setRejectDialogId(null); setRejectReason(""); }}>Cancelar</Button>
             <Button variant="destructive" size="sm" className="rounded-xl" onClick={rejectAssignment} disabled={responding === rejectDialogId}>
               {responding === rejectDialogId ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
-              Rechazar
+              Decline
             </Button>
           </DialogFooter>
         </DialogContent>

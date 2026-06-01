@@ -209,11 +209,11 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, responseStatu
             </p>
           </div>
 
-          {/* Tu ruta de trabajo — Entrada protagonista, salida estimada secundaria */}
+          {/* Work route — Clock In protagonist, estimated end secondary */}
           <div className="flex items-end gap-4 pt-1">
             <div className="min-w-0">
               <p className="text-[9.5px] font-bold uppercase tracking-[0.16em] text-muted-foreground/65 leading-none mb-1">
-                Entrada
+                Clock In
               </p>
               <p className="text-[34px] leading-none font-bold font-mono tabular-nums text-foreground">
                 {shift.start_time?.slice(0, 5)}
@@ -461,7 +461,7 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, responseStatu
                 onClick={onReject}
                 disabled={!!responding}
               >
-                <X className="h-4 w-4" /> Rechazar
+                <X className="h-4 w-4" /> Decline
               </Button>
             )}
             {showResponseActions && onAccept && (
@@ -472,7 +472,7 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, responseStatu
                 disabled={!!responding}
               >
                 {responding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                Confirmar
+                Accept
               </Button>
             )}
             {!showResponseActions && showClockInAction && (

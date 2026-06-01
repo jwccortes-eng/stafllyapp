@@ -148,7 +148,7 @@ export function PortalShiftCard({
             onClick={onReject}
             disabled={responding}
           >
-            Rechazar
+            Decline
           </Button>
         )}
         {isConfirmed && isTodayShift && onClockIn && (
@@ -253,7 +253,7 @@ export function PortalShiftCard({
             </span>
             <div className="mt-2">
               <p className="text-[9.5px] font-bold uppercase tracking-[0.16em] text-muted-foreground/65 leading-none mb-1">
-                Entrada
+                Clock In
               </p>
               <p className="text-[26px] leading-none font-bold font-mono tabular-nums text-foreground">
                 {shift.start_time?.slice(0, 5)}
@@ -344,7 +344,7 @@ export function PortalShiftCard({
               onClick={onReject}
               disabled={responding}
             >
-              Rechazar
+              Decline
             </Button>
           </div>
         )}

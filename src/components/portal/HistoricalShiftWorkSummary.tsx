@@ -135,7 +135,7 @@ export function HistoricalShiftWorkSummary({
             Programado
           </p>
           <p className="text-[12.5px] text-muted-foreground/85 mt-0.5 tabular-nums">
-            Entrada {start ?? "—"}
+            Clock In {start ?? "—"}
             {end ? ` · Ends approx. ${end}` : ""}
           </p>
           <p className="text-[10.5px] text-muted-foreground/55 mt-0.5 italic">

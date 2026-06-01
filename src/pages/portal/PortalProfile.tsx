@@ -402,7 +402,7 @@ function ChangePinSection() {
           />
         </div>
         <div className="space-y-1.5">
-          <Label className="text-xs">Confirmar nuevo PIN *</Label>
+          <Label className="text-xs">Confirm new PIN *</Label>
           <Input
             type="password"
             inputMode="numeric"

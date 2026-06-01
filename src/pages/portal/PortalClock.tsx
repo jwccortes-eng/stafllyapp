@@ -641,7 +641,7 @@ export default function PortalClock() {
               <div className="mt-3 flex items-center justify-center gap-5">
                 <div className="text-center">
                   <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-muted-foreground/65 leading-none mb-1">
-                    Entrada
+                    Clock In
                   </p>
                   <p className="text-[22px] font-bold font-mono tabular-nums text-foreground leading-none">
                     {format(new Date(focusShiftCompletedEntry.clock_in), "HH:mm")}
@@ -649,7 +649,7 @@ export default function PortalClock() {
                 </div>
                 <div className="text-center">
                   <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-muted-foreground/65 leading-none mb-1">
-                    Salida
+                    Clock Out
                   </p>
                   <p className="text-[22px] font-bold font-mono tabular-nums text-foreground leading-none">
                     {format(new Date(focusShiftCompletedEntry.clock_out!), "HH:mm")}
