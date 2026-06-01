@@ -37,10 +37,19 @@ import {
   RotateCcw,
   CheckCircle2,
   CircleDashed,
+  MapPin,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import ClockEventEvidence from "@/components/timeclock/ClockEventEvidence";
 import type { Assignment, Employee } from "./types";
 import { canManageShifts } from "@/lib/shifts/shift-permissions";
 import {
@@ -141,6 +150,7 @@ export function ShiftAttendancePanel({
   const [busyId, setBusyId] = useState<string | null>(null);
   const [bulkBusy, setBulkBusy] = useState<string | null>(null);
   const [confirmAbsentOpen, setConfirmAbsentOpen] = useState(false);
+  const [evidenceOpen, setEvidenceOpen] = useState<{ employeeId: string; name: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [reloadKey, setReloadKey] = useState(0);
 
@@ -503,6 +513,21 @@ export function ShiftAttendancePanel({
                 </div>
               ))}
 
+              {/* Evidence drawer trigger (read-only) */}
+              <button
+                type="button"
+                onClick={() =>
+                  setEvidenceOpen({
+                    employeeId: a.employee_id,
+                    name: `${emp.first_name} ${emp.last_name}`,
+                  })
+                }
+                className="mt-2 inline-flex items-center gap-1.5 text-[11px] font-medium text-primary hover:underline"
+              >
+                <MapPin className="h-3 w-3" /> View clock evidence
+              </button>
+
+
               {/* Action buttons */}
               {canValidate && (
                 <div className="mt-3 grid grid-cols-4 gap-1.5">
@@ -584,6 +609,28 @@ export function ShiftAttendancePanel({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Sheet
+        open={evidenceOpen !== null}
+        onOpenChange={(open) => !open && setEvidenceOpen(null)}
+      >
+        <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto">
+          <SheetHeader className="mb-4">
+            <SheetTitle>Clock evidence</SheetTitle>
+            <SheetDescription>
+              {evidenceOpen?.name ?? "Worker"} · read-only audit view
+            </SheetDescription>
+          </SheetHeader>
+          {evidenceOpen && (
+            <ClockEventEvidence
+              shiftId={shiftId}
+              employeeId={evidenceOpen.employeeId}
+              companyId={companyId}
+              employeeName={evidenceOpen.name}
+            />
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
