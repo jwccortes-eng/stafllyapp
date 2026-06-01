@@ -642,8 +642,20 @@ export default function PortalClock() {
   const hasZone2Content = otherShifts.length > 0 || zone2ClosedEntries.length > 0;
 
 
+  const safetyFlags = tenantSafetyFlags(companyFlags);
+
   return (
     <div className="animate-fade-in pb-24">
+      {/* ─── Tenant safety badge (always visible) + QA-mode banner ─── */}
+      <div className="mb-3">
+        <TenantSafetyBadge
+          flags={safetyFlags}
+          companyName={companyFlags?.name}
+          qaMode={qaMode}
+        />
+      </div>
+      {qaMode ? <QaModeBanner isReal={safetyFlags.isReal} /> : null}
+
       {/* ─── Stage 1 advisory — Connecteam remains payroll source ─── */}
       <div className="mb-3 rounded-xl border border-warning/25 bg-warning/[0.06] p-3 flex items-start gap-2.5">
         <Clock className="h-4 w-4 text-warning mt-0.5 shrink-0" />
