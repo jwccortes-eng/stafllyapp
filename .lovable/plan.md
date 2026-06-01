@@ -1,167 +1,68 @@
-# Document Intake Center v1 — Bulk Scan & Human Indexing
+# Plan: Stafly Demo Environment (seguro, aislado, vendible)
 
-Operational backbone for the existing backlog of scanned documents: bulk upload → AI suggests (worker / type / side / expiration) → operator confirms → row is written to `employee_documents`. **AI is never truth. Nothing is indexed without a human click.**
+## Objetivo
+Tener un tenant demo (`Stafly Demo Company`) totalmente aislado para vender el flujo completo: shifts → worker portal → accept/reject → clock-in/out → closeout → review, sin tocar nada real.
 
----
+## Decisiones de seguridad (no negociables)
+- Tenant demo identificado con `is_demo = true` + `status = 'active'` + `source = 'demo'` (los flags ya existen, la sidebar ya los muestra como grupo "Test / Demo" y `shouldShowOnboarding` los oculta del checklist).
+- Cero escritura sobre tenants reales (Quality Staff, MyStaff, Parceros, JKitchen, etc.). Todo el seed se filtra por `company_id = <demo>`.
+- Admin demo y workers demo viven SOLO dentro del tenant demo vía `company_users` / `employees.company_id`. RLS existente ya scopea por `company_id`; no se modifica RLS.
+- Ningún envío real: no se llama a `send-invite-email`, `bulk-portal-invite`, `shift-reminders`, ni Twilio/WhatsApp. Workers demo se crean con `portal_invited_at = now()` manualmente y un PIN conocido — sin email/SMS dispatch.
+- Cero cambios en payroll: NO se tocan `pay_periods`, `period_base_pay`, `reconciliation_*`, `payroll_adjustments`, `historical_payroll_entries`. Los `time_entries` demo viven solo dentro del tenant demo y nunca entran a reconciliación real (la reconciliación se filtra por tenant también).
+- Cero cambios en RLS, auth, bookings, payments, chat, documents, campañas, edge functions críticas.
 
-## 1. Audit findings (existing infra we reuse)
+## Entregables
 
-| Piece | Status | Reuse plan |
-|---|---|---|
-| `employee_documents` (employee_id, company_id, name, file_url, file_type, category, expires_at, review_status pending/approved/rejected) | ✅ canonical | Indexing target. **No schema change.** |
-| Private bucket `employee-documents` | ✅ `public=false`, signed URLs only | Reuse. New path prefix: `<company_id>/intake/<batch_id>/<filename>`. |
-| `document-extract` edge function | ✅ admin-only, suggestion-only, masks numbers, blocks `w9`/`tax_form`, PDF not supported v1 | Reuse engine. Add a sibling `document-intake-extract` that accepts `intake_item_id` instead of `employee_document_id` (same model call, same masking, same blocked categories). |
-| `DocumentsCenter` admin page, `DocumentPreview`, `AssistedExtractionPanel`, `resolveEmployeeDocumentUrl`, `document-policy.ts` | ✅ working | Reuse preview + policy. Add Bandeja tab. |
-| Audit / activity log | existing pattern via insert into log tables when present; otherwise rely on `reviewed_by` + `reviewed_at` on intake items | Reuse. |
+### 1. Tenant demo
+Reusar si ya existe una company con `is_demo = true` y nombre tipo "Demo". Si no, crear vía migración mínima de datos (insert):
+- `companies`: `name = 'Stafly Demo Company'`, `slug = 'stafly-demo'`, `is_demo = true`, `source = 'demo'`, `status = 'active'`, `is_active = true` (sync trigger lo confirma), `brand_color` neutral.
+- Sin `company_modules` extra → hereda defaults (`isModuleActive` devuelve true cuando set vacío, pero crearemos los esenciales: `shifts`, `time_clock`, `portal`, `workers`).
 
-**Where bulk intake plugs in:** new admin-only surface that owns *staging* (`document_intake_*`), and only writes to `employee_documents` via the existing approved insert path on confirm.
+### 2. Usuarios demo
+- **Admin demo**: nuevo `auth.users` `demo-admin@staflyapps.com` (password fija conocida) → `company_users(company_id=demo, role='admin')`. NO se le da rol global; solo admin del tenant demo (cumple `canAccessAdminForCompany`).
+- **3 Workers demo**: 3 filas en `employees` con `company_id = demo`, nombres demo claros ("Demo Worker 1/2/3"), `phone_number` 555-prefijo no real, `access_pin` conocido, `is_active = true`, `payroll_safe = true`, `person_type_guess = 'worker'`. Sin `user_id` (acceso por PIN/phone vía portal estándar).
 
----
+### 3. Datos operativos
+- **2-3 `scheduled_shifts`** en el tenant demo:
+  1. Hoy 14:00–22:00 con `shift_assignments` para Worker 1 (`status = 'accepted'`) y Worker 2 (`status = 'pending'`).
+  2. Mañana 09:00–17:00 con Worker 3 (`status = 'pending'`).
+  3. (Opcional) Pasado mañana con un `no_show` demo para mostrar reemplazo.
+- **`time_entries` demo**: 1 cerrado de ayer (Worker 1, con clock_in/clock_out coherente) para alimentar el closeout/review demo. Marcado en `notes` como `[DEMO]`.
 
-## 2. Proposed schema (minimal, additive, RLS-strict)
+### 4. UI / verificación (sin código nuevo de feature)
+La UI existente ya cubre todo el flujo. Solo verificamos:
+- CompanySwitcher muestra "Stafly Demo Company" bajo grupo **Test / Demo** con badge Demo.
+- `/app` dashboard demo: KPIs cuentan los shifts/asignaciones demo creados.
+- `/app/shifts`: aparecen los 2-3 shifts; chips "Necesita personal" / "Borradores" se comportan.
+- `/app/timeclock` y `/app/payroll-reconciliation`: muestran el time_entry demo en su buckets respectivos.
+- `/portal` con login del Worker 1 (PIN): ve sus shifts, puede accept/reject, puede clock-in/out.
 
-Two new tables. No changes to `employee_documents`, no changes to storage policies, no new buckets.
+### 5. Marcador visible "DEMO"
+Añadir un badge sutil "DEMO" en `TopBar` cuando `selectedCompany?.is_demo === true` (1 línea condicional, UI-only, sin cambios de lógica). Esto evita confusión durante demos en vivo.
 
-```text
-document_intake_batches
-  id uuid pk
-  company_id uuid not null              -- tenant scope
-  uploaded_by uuid not null              -- auth.users.id
-  status text not null                   -- uploading|processing|ready_for_review|completed|failed
-  total_files int not null default 0
-  created_at timestamptz default now()
+## Tablas tocadas (solo INSERT, scoped a demo company)
+- `companies` (1 row si no existe)
+- `auth.users` (1 admin via Supabase admin API — vía edge function temporal o seed manual)
+- `company_users` (1 row admin)
+- `employees` (3 rows workers)
+- `company_modules` (4 rows: shifts/time_clock/portal/workers)
+- `scheduled_shifts` (2–3 rows)
+- `shift_assignments` (3–4 rows)
+- `time_entries` (1 row)
 
-document_intake_items
-  id uuid pk
-  batch_id uuid not null fk
-  company_id uuid not null               -- denormalized for RLS speed
-  storage_path text not null             -- intake path in employee-documents bucket
-  original_filename text
-  mime_type text
-  status text not null                   -- pending_extraction|extracted|needs_review|indexed|rejected|failed
-  extracted_json jsonb                   -- masked extraction output only
-  suggested_employee_id uuid
-  suggested_document_category text
-  suggested_document_side text           -- front|back|full|unknown
-  suggested_expires_at date
-  suggested_document_number_masked text  -- last4 + dots, NEVER raw
-  confidence_score numeric(3,2)          -- 0.00–1.00
-  confidence_reason text
-  reviewed_by uuid
-  reviewed_at timestamptz
-  indexed_employee_document_id uuid      -- nullable; set on confirm
-  created_at timestamptz default now()
-```
+## Lo que NO se toca
+auth schema, RLS policies, payroll math, `pay_periods`, `reconciliation_*`, `historical_payroll_entries`, `payroll_adjustments`, bookings, payments, chat, documents, campañas, edge functions de notificación, tenants reales, workers reales.
 
-**RLS (both tables):**
-- SELECT/INSERT/UPDATE/DELETE: only `has_role(auth.uid(), 'company_owner', company_id)` OR `has_role(... 'admin', company_id)` via existing `canAccessAdminForCompany`-equivalent tenant-scoped helper.
-- No worker access. No anon. No public grants.
-- Column-level grants follow Phase 1.5 model (no extra column on `employees`, so nothing to whitelist there).
+## Riesgos / preguntas para ti
+1. **Admin demo user**: ¿creo `demo-admin@staflyapps.com` con password fija (te la entrego) o prefieres reusar tu user developer y solo `switchCompany` al tenant demo? Crear un user dedicado es más seguro para enseñárselo a un prospecto sin exponer tu acceso global.
+2. **Worker demo login**: el portal de Stafly usa phone + PIN. ¿OK que los workers demo tengan `phone_number = 555-010-0001/0002/0003` con `access_pin = 123456`? (Números 555-01XX son reservados ficticios, no enrutan SMS reales.)
+3. **Notificaciones**: confirmo que NO disparo ninguna invitación/SMS/email/WhatsApp. Los workers quedan listos para login con PIN pero sin notificación de bienvenida real.
+4. **Tenant ya existente**: ¿hay alguna company actual que quieras reutilizar como demo (ej. "MyStaff" o un sandbox previo) o sí creo "Stafly Demo Company" nueva?
 
-**Constraints:** CHECK on `status` values; FK `batch_id → document_intake_batches(id) ON DELETE CASCADE`. No FK to `auth.users` per cloud rules; `uploaded_by`/`reviewed_by` stored as uuid only.
-
----
-
-## 3. Storage strategy
-
-- **Bucket:** reuse private `employee-documents` (no policy widening).
-- **Intake path:** `<company_id>/intake/<batch_id>/<uuid>_<safe_filename>`.
-- **On confirm-and-index:** copy the object to canonical onboarding path `<company_id>/<employee_id>/onboarding/<category>/<timestamp>_<filename>` (matches existing portal-documents-unified-path rule). Intake copy kept until batch `completed` then can be left in place — no auto-delete in v1.
-- **No public URLs anywhere.** All reads via short-lived signed URL (existing `resolveEmployeeDocumentUrl`).
-
----
-
-## 4. Extraction pipeline (admin-only edge function)
-
-New function `document-intake-extract`:
-- Input `{ intake_item_id }`. Auth required, admin/owner of `company_id` enforced via service-role lookup (same shape as `document-extract`).
-- **PDF unsupported v1** → mark item `needs_review` with `confidence_reason='pdf_not_supported_v1'`.
-- **Sensitive guard:** if `original_filename` matches `/w-?9|tax/i` OR caller pre-tags `suggested_document_category in {w9, tax_form}`, AI call is skipped, item flagged `needs_review`, reason `sensitive_manual_only`. Mirrors existing `BLOCKED_CATEGORIES`.
-- Calls Lovable AI Gateway (Gemini flash, same as today) with image bytes + tightly scoped JSON schema returning: `full_name, document_type, document_number_masked, issue_date, expiration_date, state_or_jurisdiction, possible_side, confidence_score, confidence_reason`.
-- Numbers always masked server-side (reuse `mask()` helper). Raw never persisted.
-- Writes back ONLY to `document_intake_items` (`extracted_json`, suggestions, status=`extracted` or `needs_review`). Never touches `employee_documents`.
-
----
-
-## 5. Worker matching (suggestion-only)
-
-In the same edge function after extraction (or via small RPC `suggest_intake_match(intake_item_id)`):
-
-| Signal detected | Confidence |
-|---|---|
-| Stafly ID / `employer_identification` in extracted text | **high** |
-| Exact phone or email match (normalized 10-digit phone) | **high** |
-| Exact normalized full_name + matching city/state | **medium** |
-| Normalized full_name only | **medium** |
-| Fuzzy name (Levenshtein/trigram) | **low** |
-| No signal | **none** → operator picks |
-
-Sets `suggested_employee_id`, `confidence_score`, `confidence_reason`. **Never sets `employee_id` on `employee_documents`.**
-
----
-
-## 6. Admin UI
-
-Route: `/app/document-intake` (admin/owner only, mounted under existing AdminLayout guard). Also linked from `/app/documents` as new tab “Bandeja de entrada”.
-
-Layout (desktop + 390 mobile):
-
-```text
-[ Bandeja de documentos ]   [ Subir documentos ]
-Sugerencias del sistema. No se guarda nada sin revisión humana.
-
-Lote #12  ·  Subido por Keury  ·  18/20 indexados  ·  ready_for_review
-─────────────────────────────────────────
-[preview thumb] · IMG_2391.jpg · Pendiente de clasificar
-  Sugerencia del sistema (Confianza alta)
-    Trabajador:  Jorge Cortes (#1042)         [Cambiar]
-    Tipo:        ID frontal                    [Cambiar]
-    Vence:       12/03/2027                    [Corregir]
-    Lado:        Frente                        [Cambiar]
-  [Confirmar e indexar]  [Dejar pendiente]  [Rechazar]
-```
-
-Actions:
-- **Confirmar e indexar** → RPC `intake_confirm_and_index(intake_item_id, overrides)` (single transaction): copies file to canonical path, inserts `employee_documents` (`review_status='pending'` by default to keep existing review flow; operator may also pick *Confirmar y aprobar* which sets `approved` only if current pattern already allows admin one-shot approval), sets `indexed_employee_document_id`, item status → `indexed`.
-- **Rechazar** → status=`rejected`, no doc row.
-- **Dejar pendiente** → status=`needs_review`.
-- All actions write `reviewed_by`/`reviewed_at`.
-
-All copy Spanish-first per spec.
-
----
-
-## 7. Sensitive & W-9 handling
-
-- W-9 / tax forms detected by filename OR explicit category → AI **skipped**, item shown with banner “Documento sensible: revisar manualmente. La extracción automática está desactivada.” Operator can still confirm/index manually (which routes the user to the existing `MyW9`/admin W-9 flow rather than creating an arbitrary employee_documents row). No raw TIN ever touched.
-
----
-
-## 8. What this sprint will NOT touch
-
-Payroll math · `time_entries` · `scheduled_shifts` · `shift_assignments` · employer_identification generation · SSN/EIN columns/exposure · portal permissions · notifications/SMS/email · photo review · auto-blocking · bucket public flag · existing `document-extract` function behavior · existing `employee_documents` schema · existing review flow rules.
-
----
-
-## 9. Delivery order (gated)
-
-1. **STOP HERE for approval of schema + bucket-path strategy.** No migration runs until you say go.
-2. Migration: 2 tables + RLS + indexes (`batch_id`, `company_id`, `status`, `suggested_employee_id`).
-3. Edge function `document-intake-extract` (admin guard, masking, sensitive block, PDF v1 fallback).
-4. RPC `intake_confirm_and_index` (security definer, tenant-checked, single transaction).
-5. Hooks: `useIntakeBatches`, `useIntakeItems`, `useIntakeActions`.
-6. UI: `/app/document-intake` page + “Bandeja de entrada” tab in `DocumentsCenter`.
-7. AdminSidebar link under existing “Documents” group.
-8. Live QA: 2 image fixtures (1 high-confidence ID, 1 low-confidence), 1 W-9-named file (AI must skip), 1 PDF (v1 fallback). Confirm cross-tenant isolation, signed URLs only, no SSN/EIN leak, mobile 390 clean.
-
----
-
-## Technical section
-
-- Files to add: `supabase/migrations/<ts>_document_intake_v1.sql`, `supabase/functions/document-intake-extract/index.ts`, `src/pages/admin/DocumentIntakeCenter.tsx`, `src/hooks/useDocumentIntake.tsx`, `src/components/documents/intake/{IntakeUploader,IntakeItemCard,IntakeWorkerPicker,IntakeConfirmDialog}.tsx`, `src/lib/documents/intake-policy.ts`.
-- Files to edit: `src/App.tsx` (route), `src/components/AdminSidebar.tsx` (link), `src/pages/admin/DocumentsCenter.tsx` (tab).
-- No edits to: `employee_documents` schema, `document-extract`, `MyW9`, `MyDocuments`, storage policies, payroll/shifts/time_entries code, types.ts (auto-regen after migration).
-- Auth: admin/owner only via tenant-scoped `has_role`. Worker portal sees nothing new.
-- Performance: items list paginated 50/page; preview signed URLs on-demand.
-
-**Awaiting approval before applying migration or writing code.**
+## Ejecución (tras tu aprobación)
+1. Confirmar/crear tenant demo (migración data si nuevo).
+2. Crear admin user demo (edge function admin temporal o `auth.admin.createUser` desde una función one-shot).
+3. Insertar workers, shifts, assignments, time_entry demo.
+4. Añadir badge "DEMO" en TopBar (UI-only).
+5. QA manual: switch a tenant demo, abrir `/app`, `/app/shifts`, `/app/timeclock`, `/portal` (con PIN worker).
+6. Reporte final con IDs creados, tablas tocadas, confirmación de no-impacto en producción.
