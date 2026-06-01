@@ -325,6 +325,14 @@ export default function PortalClock() {
       let pos: { latitude: number; longitude: number; accuracy: number } | null = null;
       try { pos = await capturePosition(); } catch { /* GPS unavailable */ }
       const device = getDeviceId();
+
+      // Geofence evaluation — captured once so we can both enforce policy AND
+      // persist the result onto time_entries (Fase A safe-write).
+      //   • null  → no expected location OR GPS unavailable (never "fraud")
+      //   • true  → GPS valid AND inside radius
+      //   • false → GPS valid AND outside radius
+      let withinGeofence: boolean | null = null;
+
       if (selectedShift.id) {
         const { data: shiftData } = await supabase.from("scheduled_shifts")
           .select("location_id, locations(latitude, longitude, geofence_radius)").eq("id", selectedShift.id).maybeSingle();
@@ -336,15 +344,26 @@ export default function PortalClock() {
           const clockCfg = (clockCfgRow?.value && typeof clockCfgRow.value === "object") ? clockCfgRow.value as Record<string, unknown> : {};
           const gpsEnforcement = (clockCfg.gps_enforcement as string) ?? "none";
           const configRadius = typeof clockCfg.gps_radius_meters === "number" ? clockCfg.gps_radius_meters : 200;
+          const radius = loc.geofence_radius ?? configRadius;
           if (!pos) {
+            // GPS unavailable / denied / timed out — never treated as fraud.
+            // within_geofence stays null. We still log a distinct low-severity
+            // alert so admins can see the pattern without payroll being touched.
             if (gpsEnforcement === "block") {
               toast({ title: "Enable your location", description: "Your company requires GPS location for clocking in. Enable it in settings and try again.", variant: "destructive" });
               setActing(false); return;
             }
+            try {
+              await supabase.from("clock_alerts").insert({
+                employee_id: employeeId, company_id: companyId, shift_id: selectedShift.id,
+                type: "GPS_UNAVAILABLE", severity: "low",
+                description: "Clock-in without GPS (permission denied, timeout or unsupported).",
+              } as any);
+            } catch { /* alert is non-critical */ }
           } else {
             const dist = distanceMeters(pos.latitude, pos.longitude, loc.latitude, loc.longitude);
-            const radius = loc.geofence_radius ?? configRadius;
-            if (dist > radius) {
+            withinGeofence = dist <= radius;
+            if (!withinGeofence) {
               if (gpsEnforcement === "block") {
                 toast({ title: "Outside work area", description: `Move closer to the shift location (${Math.round(dist)}m away).`, variant: "destructive" });
                 await supabase.from("clock_alerts").insert({ employee_id: employeeId, company_id: companyId, shift_id: selectedShift.id, type: "OUTSIDE_GEOFENCE", severity: "high", description: `Clock-in blocked at ${Math.round(dist)}m` } as any);
@@ -380,9 +399,14 @@ export default function PortalClock() {
         } as any);
         if (error) throw error;
       } else {
+        // Fase A safe-write: persist GPS evidence onto the new time_entry.
+        // Payroll math is unchanged — these columns are informational only.
         const { data: insertedEntry, error } = await supabase.from("time_entries").insert({
           employee_id: employeeId, company_id: companyId, clock_in: new Date().toISOString(), status: "pending", shift_id: selectedShift.id,
-        }).select("id").single();
+          clock_in_lat: pos?.latitude ?? null,
+          clock_in_lng: pos?.longitude ?? null,
+          clock_in_within_geofence: withinGeofence,
+        } as any).select("id").single();
         if (error) throw error;
         if (insertedEntry) {
           await supabase.from("clock_events").insert({
