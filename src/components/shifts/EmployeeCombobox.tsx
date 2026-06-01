@@ -622,10 +622,21 @@ function VirtualEmployeeList(props: VirtualEmployeeListProps) {
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-    setViewportH(el.clientHeight);
-    const ro = new ResizeObserver(() => setViewportH(el.clientHeight));
+    let frame = 0;
+    const syncHeight = () => {
+      const next = el.clientHeight;
+      setViewportH((prev) => (prev === next ? prev : next));
+    };
+    syncHeight();
+    const ro = new ResizeObserver(() => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(syncHeight);
+    });
     ro.observe(el);
-    return () => ro.disconnect();
+    return () => {
+      cancelAnimationFrame(frame);
+      ro.disconnect();
+    };
   }, []);
 
   // Reset scroll when the underlying ordering changes drastically (e.g. new search).
