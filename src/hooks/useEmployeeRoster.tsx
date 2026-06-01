@@ -31,7 +31,7 @@ export type EmployeeRosterScope = "shifts";
 
 const SCOPE_COLUMNS: Record<EmployeeRosterScope, string> = {
   shifts:
-    "id, first_name, last_name, phone_number, email, avatar_url, gender, employee_role, groups, user_id, has_car, can_drive, is_active, employer_identification, profile_status, onboarding_status, person_type_guess, payroll_safe",
+    "id, first_name, last_name, phone_number, email, avatar_url, gender, employee_role, groups, user_id, has_car, can_drive, is_active, employer_identification, profile_status, onboarding_status",
 };
 
 export function employeeRosterQueryKey(
