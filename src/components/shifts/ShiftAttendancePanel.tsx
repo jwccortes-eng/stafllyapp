@@ -513,6 +513,21 @@ export function ShiftAttendancePanel({
                 </div>
               ))}
 
+              {/* Evidence drawer trigger (read-only) */}
+              <button
+                type="button"
+                onClick={() =>
+                  setEvidenceOpen({
+                    employeeId: a.employee_id,
+                    name: `${emp.first_name} ${emp.last_name}`,
+                  })
+                }
+                className="mt-2 inline-flex items-center gap-1.5 text-[11px] font-medium text-primary hover:underline"
+              >
+                <MapPin className="h-3 w-3" /> View clock evidence
+              </button>
+
+
               {/* Action buttons */}
               {canValidate && (
                 <div className="mt-3 grid grid-cols-4 gap-1.5">
