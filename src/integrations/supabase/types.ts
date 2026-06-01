@@ -6036,7 +6036,9 @@ export type Database = {
           can_drive: boolean | null
           can_travel: boolean | null
           city: string | null
-          company_id: string
+          company_id: string | null
+          consent_at: string | null
+          consent_text_version: string | null
           created_at: string
           document_url: string | null
           draft_data: Json | null
@@ -6049,19 +6051,26 @@ export type Database = {
           formatted_address: string | null
           has_car: boolean | null
           id: string
+          intake_kind: string
           languages: string[] | null
           last_name: string
           linked_user_id: string | null
           notes: string | null
+          opportunity_id: string | null
           phone: string
+          preferred_contact_method: string | null
           reference_code: string
+          referral_source: string | null
           rejection_reason: string | null
           reviewed_at: string | null
           reviewed_by: string | null
           role_suggestion: string | null
+          routed_company_id: string | null
           source: string | null
+          source_partner_company_id: string | null
           ssn_last4: string | null
           status: string
+          submitted_by_user_id: string | null
           updated_at: string
           worker_type: string
         }
@@ -6078,7 +6087,9 @@ export type Database = {
           can_drive?: boolean | null
           can_travel?: boolean | null
           city?: string | null
-          company_id: string
+          company_id?: string | null
+          consent_at?: string | null
+          consent_text_version?: string | null
           created_at?: string
           document_url?: string | null
           draft_data?: Json | null
@@ -6091,19 +6102,26 @@ export type Database = {
           formatted_address?: string | null
           has_car?: boolean | null
           id?: string
+          intake_kind?: string
           languages?: string[] | null
           last_name: string
           linked_user_id?: string | null
           notes?: string | null
+          opportunity_id?: string | null
           phone: string
+          preferred_contact_method?: string | null
           reference_code?: string
+          referral_source?: string | null
           rejection_reason?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           role_suggestion?: string | null
+          routed_company_id?: string | null
           source?: string | null
+          source_partner_company_id?: string | null
           ssn_last4?: string | null
           status?: string
+          submitted_by_user_id?: string | null
           updated_at?: string
           worker_type?: string
         }
@@ -6120,7 +6138,9 @@ export type Database = {
           can_drive?: boolean | null
           can_travel?: boolean | null
           city?: string | null
-          company_id?: string
+          company_id?: string | null
+          consent_at?: string | null
+          consent_text_version?: string | null
           created_at?: string
           document_url?: string | null
           draft_data?: Json | null
@@ -6133,19 +6153,26 @@ export type Database = {
           formatted_address?: string | null
           has_car?: boolean | null
           id?: string
+          intake_kind?: string
           languages?: string[] | null
           last_name?: string
           linked_user_id?: string | null
           notes?: string | null
+          opportunity_id?: string | null
           phone?: string
+          preferred_contact_method?: string | null
           reference_code?: string
+          referral_source?: string | null
           rejection_reason?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           role_suggestion?: string | null
+          routed_company_id?: string | null
           source?: string | null
+          source_partner_company_id?: string | null
           ssn_last4?: string | null
           status?: string
+          submitted_by_user_id?: string | null
           updated_at?: string
           worker_type?: string
         }
@@ -6183,6 +6210,34 @@ export type Database = {
             columns: ["duplicate_of_application_id"]
             isOneToOne: false
             referencedRelation: "job_applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_applications_routed_company_id_fkey"
+            columns: ["routed_company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_applications_routed_company_id_fkey"
+            columns: ["routed_company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_applications_source_partner_company_id_fkey"
+            columns: ["source_partner_company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_applications_source_partner_company_id_fkey"
+            columns: ["source_partner_company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_public"
             referencedColumns: ["id"]
           },
         ]
