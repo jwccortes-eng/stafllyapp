@@ -1019,7 +1019,10 @@ function DesktopShifts() {
 
   // Quick create: minimal shift from popover
   const handleQuickCreate = async (data: { title: string; date: string; start_time: string; end_time: string; client_id: string; location_id: string; slots: number }) => {
-    if (!selectedCompanyId) return;
+    if (!selectedCompanyId) {
+      toast.error("Selecciona una empresa antes de crear un turno");
+      return;
+    }
     const { data: shift, error } = await supabase.from("scheduled_shifts").insert({
       company_id: selectedCompanyId,
       title: data.title,
@@ -1029,11 +1032,18 @@ function DesktopShifts() {
       slots: data.slots,
       client_id: data.client_id || null,
       location_id: data.location_id || null,
+      // Borrador real: status + publication_status alineados para que el turno
+      // NO aparezca al worker hasta que el admin lo publique desde el editor.
       status: "draft",
+      publication_status: "draft",
       created_by: user?.id,
     } as any).select("id, shift_code").single();
 
-    if (error) { toast.error(error.message); return; }
+    if (error) {
+      console.error("[QuickCreate] insert failed:", error);
+      toast.error(error.message || "No se pudo crear el turno");
+      return;
+    }
     // Title stays clean — `shift_code` is the single source of truth.
     if (shift) await logShiftActivity("crear_turno", shift.id, null, { title: data.title, date: data.date, quick: true });
     toast.success("Turno borrador creado");
