@@ -94,6 +94,7 @@ function isClockOutWithinSchedule(shift: TodayShift | null): { withinSchedule: b
 
 export default function PortalClock() {
   const { effectiveEmployeeId: employeeId } = useEffectiveEmployee();
+  const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -103,6 +104,13 @@ export default function PortalClock() {
   const [activeEntry, setActiveEntry] = useState<TimeEntry | null>(null);
   const [todayEntries, setTodayEntries] = useState<TimeEntry[]>([]);
   const [companyId, setCompanyId] = useState<string | null>(null);
+  const [companyFlags, setCompanyFlags] = useState<{
+    name: string | null;
+    is_demo: boolean;
+    is_test: boolean;
+  } | null>(null);
+  const [qaMode, setQaMode] = useState<boolean>(false);
+  const [tenantConfirmOpen, setTenantConfirmOpen] = useState(false);
   const [now, setNow] = useState(new Date());
   const [todayShifts, setTodayShifts] = useState<TodayShift[]>([]);
   const [selectedShift, setSelectedShift] = useState<TodayShift | null>(null);
