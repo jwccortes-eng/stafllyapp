@@ -1015,12 +1015,12 @@ export default function Employees() {
       {!isMobile && (<>
       {/* ─── Premium Header + KPI strip ─── */}
       <PremiumPageHeader
-        title="Equipo"
+        title="Team"
         icon={Users}
         subtitle={
           <span className="inline-flex flex-col gap-1">
             <span className="inline-flex items-center gap-2 flex-wrap">
-              <span>Identidad, disponibilidad y preparación operativa de tus trabajadores.</span>
+              <span>Worker identity, availability, and operational readiness.</span>
               {selectedCompany && (
                 <span className="inline-flex items-center gap-1.5 rounded-md border border-border/50 bg-muted/40 px-2 py-0.5 text-[9px] font-mono text-muted-foreground">
                   <Building2 className="h-3 w-3" />
@@ -1029,7 +1029,7 @@ export default function Employees() {
               )}
             </span>
             <span className="text-[10px] text-muted-foreground/80">
-              ID Stafly conecta perfil, turnos y payroll.
+              Stafly ID connects profile, shifts, and payroll.
             </span>
           </span>
         }
