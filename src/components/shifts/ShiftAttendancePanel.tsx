@@ -150,6 +150,7 @@ export function ShiftAttendancePanel({
   const [busyId, setBusyId] = useState<string | null>(null);
   const [bulkBusy, setBulkBusy] = useState<string | null>(null);
   const [confirmAbsentOpen, setConfirmAbsentOpen] = useState(false);
+  const [evidenceFor, setEvidenceFor] = useState<{ employeeId: string; name: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [reloadKey, setReloadKey] = useState(0);
 
