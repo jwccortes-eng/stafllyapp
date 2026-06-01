@@ -134,6 +134,12 @@ export default function PortalClock() {
     return () => clearInterval(interval);
   }, []);
 
+  // QA mode: sync from URL once, then resolve flag + demo-worker auto-detect.
+  useEffect(() => {
+    syncQaModeFromUrl(window.location.search);
+    setQaMode(readQaModeFlag() || isDemoWorkerEmail(user?.email));
+  }, [user?.email]);
+
   useEffect(() => {
     if (!selectedShift) { setClockInBlocked(null); return; }
     const check = isClockInAllowed(selectedShift);
@@ -143,12 +149,21 @@ export default function PortalClock() {
   const loadData = useCallback(async () => {
     if (!employeeId) { setLoading(false); return; }
     const [empRes] = await Promise.all([
-      supabase.from("employees").select("company_id, avatar_url").eq("id", employeeId).maybeSingle(),
+      supabase
+        .from("employees")
+        .select("company_id, avatar_url, companies(name, is_demo, is_test)")
+        .eq("id", employeeId)
+        .maybeSingle(),
     ]);
-    const emp = empRes.data;
+    const emp = empRes.data as any;
     if (emp) {
       setCompanyId(emp.company_id);
       setHasProfilePhoto(!!emp.avatar_url);
+      setCompanyFlags({
+        name: emp.companies?.name ?? null,
+        is_demo: emp.companies?.is_demo === true,
+        is_test: emp.companies?.is_test === true,
+      });
       // Read clock_config (consolidated namespace)
       const { data: clockCfgRow } = await supabase
         .from("company_settings").select("value").eq("company_id", emp.company_id).eq("key", "clock_config").maybeSingle();
