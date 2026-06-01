@@ -1,0 +1,306 @@
+import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
+import { Inbox, Loader2, AlertTriangle, Phone, Mail, MapPin } from "lucide-react";
+import { format } from "date-fns";
+
+const STATUSES = [
+  "pending_review",
+  "possible_duplicate",
+  "matched_existing_person",
+  "needs_contact",
+  "approved_to_invite",
+  "invited",
+  "rejected",
+  "archived",
+] as const;
+
+const STATUS_LABEL: Record<string, string> = {
+  pending_review: "Pending review",
+  possible_duplicate: "Possible duplicate",
+  matched_existing_person: "Matched",
+  needs_contact: "Needs contact",
+  approved_to_invite: "Approved to invite",
+  invited: "Invited",
+  rejected: "Rejected",
+  archived: "Archived",
+};
+
+const STATUS_TONE: Record<string, string> = {
+  pending_review: "bg-amber-500/10 text-amber-700 border-amber-500/30",
+  possible_duplicate: "bg-orange-500/10 text-orange-700 border-orange-500/30",
+  matched_existing_person: "bg-blue-500/10 text-blue-700 border-blue-500/30",
+  needs_contact: "bg-purple-500/10 text-purple-700 border-purple-500/30",
+  approved_to_invite: "bg-emerald-500/10 text-emerald-700 border-emerald-500/30",
+  invited: "bg-emerald-600/10 text-emerald-800 border-emerald-600/30",
+  rejected: "bg-rose-500/10 text-rose-700 border-rose-500/30",
+  archived: "bg-muted text-muted-foreground border-border",
+};
+
+export default function Referrals() {
+  const { role } = useAuth();
+  const qc = useQueryClient();
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState<any | null>(null);
+  const [adminNotes, setAdminNotes] = useState("");
+  const [companyToRoute, setCompanyToRoute] = useState<string>("");
+
+  const isGlobalOwner = role === "developer" || role === "owner";
+
+  const { data: referrals = [], isLoading } = useQuery({
+    queryKey: ["admin-referrals", statusFilter],
+    enabled: isGlobalOwner,
+    queryFn: async () => {
+      let q = supabase
+        .from("job_applications")
+        .select("*")
+        .is("company_id", null)
+        .order("created_at", { ascending: false })
+        .limit(200);
+      if (statusFilter !== "all") q = q.eq("status", statusFilter);
+      const { data, error } = await q;
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const { data: companies = [] } = useQuery({
+    queryKey: ["all-companies-for-routing"],
+    enabled: isGlobalOwner,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("companies")
+        .select("id, name")
+        .eq("is_active", true)
+        .order("name");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const counts = STATUSES.reduce<Record<string, number>>((acc, s) => {
+    acc[s] = referrals.filter((r: any) => r.status === s).length;
+    return acc;
+  }, { all: referrals.length } as any);
+
+  const filtered = referrals.filter((r: any) => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return (
+      `${r.first_name} ${r.last_name}`.toLowerCase().includes(q) ||
+      (r.phone || "").includes(q) ||
+      (r.email || "").toLowerCase().includes(q) ||
+      (r.reference_code || "").toLowerCase().includes(q)
+    );
+  });
+
+  const openDetail = (r: any) => {
+    setSelected(r);
+    setAdminNotes(r.admin_notes || "");
+    setCompanyToRoute("");
+  };
+
+  const updateStatus = async (newStatus: string, extra: Record<string, any> = {}) => {
+    if (!selected) return;
+    const { error } = await supabase
+      .from("job_applications")
+      .update({ status: newStatus, admin_notes: adminNotes || null, reviewed_at: new Date().toISOString(), ...extra })
+      .eq("id", selected.id);
+    if (error) { toast.error(error.message); return; }
+    toast.success(`Status: ${STATUS_LABEL[newStatus]}`);
+    qc.invalidateQueries({ queryKey: ["admin-referrals"] });
+    setSelected(null);
+  };
+
+  const routeToCompany = async () => {
+    if (!selected || !companyToRoute) { toast.error("Pick a company"); return; }
+    const { error } = await supabase
+      .from("job_applications")
+      .update({
+        company_id: companyToRoute,
+        routed_company_id: companyToRoute,
+        status: "approved_to_invite",
+        admin_notes: adminNotes || null,
+        reviewed_at: new Date().toISOString(),
+      })
+      .eq("id", selected.id);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Referral routed to company");
+    qc.invalidateQueries({ queryKey: ["admin-referrals"] });
+    setSelected(null);
+  };
+
+  if (!isGlobalOwner) {
+    return (
+      <div className="p-8">
+        <Card className="p-6 max-w-md">
+          <h2 className="font-semibold">Restricted</h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            Only platform owners can view the global referral pool.
+          </p>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-6 space-y-6 max-w-[1400px] mx-auto">
+      <header className="space-y-1">
+        <div className="flex items-center gap-2">
+          <Inbox className="h-5 w-5 text-primary" />
+          <h1 className="text-2xl font-semibold tracking-tight">Referrals · Global pool</h1>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          External candidates submitted by partners or B2B clients. Nothing is activated until you route and invite.
+        </p>
+      </header>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <Button variant={statusFilter === "all" ? "default" : "outline"} size="sm" onClick={() => setStatusFilter("all")}>
+          All <span className="ml-1 opacity-70">{counts.all}</span>
+        </Button>
+        {STATUSES.map((s) => (
+          <Button key={s} variant={statusFilter === s ? "default" : "outline"} size="sm" onClick={() => setStatusFilter(s)}>
+            {STATUS_LABEL[s]} <span className="ml-1 opacity-70">{counts[s] ?? 0}</span>
+          </Button>
+        ))}
+        <div className="flex-1 min-w-[180px] max-w-xs ml-auto">
+          <Input placeholder="Search name / phone / email / ref" value={search} onChange={(e) => setSearch(e.target.value)} />
+        </div>
+      </div>
+
+      {isLoading ? (
+        <div className="flex items-center gap-2 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Loading…</div>
+      ) : filtered.length === 0 ? (
+        <Card className="p-12 text-center text-muted-foreground">No referrals yet.</Card>
+      ) : (
+        <div className="grid gap-2">
+          {filtered.map((r: any) => (
+            <Card key={r.id} className="p-4 cursor-pointer hover:bg-muted/40 transition-colors" onClick={() => openDetail(r)}>
+              <div className="flex items-start gap-4">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-medium">{r.first_name} {r.last_name}</span>
+                    <span className="text-xs font-mono text-muted-foreground">{r.reference_code}</span>
+                    {r.duplicate_of_application_id || r.duplicate_of_user_id ? (
+                      <Badge variant="outline" className="bg-orange-500/10 text-orange-700 border-orange-500/30">
+                        <AlertTriangle className="h-3 w-3 mr-1" />Possible duplicate
+                      </Badge>
+                    ) : null}
+                  </div>
+                  <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
+                    {r.phone && <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{r.phone}</span>}
+                    {r.email && <span className="flex items-center gap-1"><Mail className="h-3 w-3" />{r.email}</span>}
+                    {r.city && <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{r.city}</span>}
+                    <span>·</span>
+                    <span>{r.intake_kind}</span>
+                    {r.referral_source && <span>· {r.referral_source}</span>}
+                  </div>
+                </div>
+                <div className="text-right space-y-1">
+                  <Badge variant="outline" className={STATUS_TONE[r.status] ?? ""}>{STATUS_LABEL[r.status] ?? r.status}</Badge>
+                  <div className="text-xs text-muted-foreground">{format(new Date(r.created_at), "MMM d, HH:mm")}</div>
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      <Sheet open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
+        <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
+          {selected && (
+            <>
+              <SheetHeader>
+                <SheetTitle>{selected.first_name} {selected.last_name}</SheetTitle>
+                <SheetDescription className="font-mono text-xs">{selected.reference_code}</SheetDescription>
+              </SheetHeader>
+
+              <div className="space-y-5 mt-6">
+                <Card className="p-3 space-y-1 text-sm">
+                  <div><span className="text-muted-foreground">Phone:</span> {selected.phone}</div>
+                  {selected.email && <div><span className="text-muted-foreground">Email:</span> {selected.email}</div>}
+                  {selected.city && <div><span className="text-muted-foreground">City:</span> {selected.city}</div>}
+                  {selected.preferred_contact_method && (
+                    <div><span className="text-muted-foreground">Preferred contact:</span> {selected.preferred_contact_method}</div>
+                  )}
+                  <div><span className="text-muted-foreground">Intake:</span> {selected.intake_kind}</div>
+                  {selected.referral_source && (
+                    <div><span className="text-muted-foreground">Source:</span> {selected.referral_source}</div>
+                  )}
+                  <div><span className="text-muted-foreground">Consent:</span> {selected.consent_at ? format(new Date(selected.consent_at), "PPp") : "—"}</div>
+                </Card>
+
+                {(selected.duplicate_of_application_id || selected.duplicate_of_user_id) && (
+                  <Card className="p-3 bg-orange-500/5 border-orange-500/30">
+                    <div className="flex items-center gap-2 text-sm">
+                      <AlertTriangle className="h-4 w-4 text-orange-600" />
+                      <span className="font-medium">Possible duplicate detected</span>
+                    </div>
+                    {selected.duplicate_of_application_id && (
+                      <div className="text-xs text-muted-foreground mt-1">Application: <span className="font-mono">{selected.duplicate_of_application_id}</span></div>
+                    )}
+                    {selected.duplicate_of_user_id && (
+                      <div className="text-xs text-muted-foreground mt-1">User: <span className="font-mono">{selected.duplicate_of_user_id}</span></div>
+                    )}
+                  </Card>
+                )}
+
+                {selected.notes && (
+                  <div>
+                    <Label>Submitter notes</Label>
+                    <Card className="p-3 text-sm whitespace-pre-wrap">{selected.notes}</Card>
+                  </div>
+                )}
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="an">Admin notes</Label>
+                  <Textarea id="an" value={adminNotes} onChange={(e) => setAdminNotes(e.target.value)} rows={3} />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Route to company</Label>
+                  <div className="flex gap-2">
+                    <Select value={companyToRoute} onValueChange={setCompanyToRoute}>
+                      <SelectTrigger><SelectValue placeholder="Pick a company…" /></SelectTrigger>
+                      <SelectContent>
+                        {companies.map((c: any) => (
+                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button onClick={routeToCompany} disabled={!companyToRoute}>Route & approve</Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Routing assigns the referral to a tenant and marks it as Approved. The candidate is NOT activated as a worker — admin must invite separately.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 pt-2">
+                  <Button variant="outline" onClick={() => updateStatus("needs_contact")}>Mark needs contact</Button>
+                  <Button variant="outline" onClick={() => updateStatus("matched_existing_person")}>Mark matched</Button>
+                  <Button variant="outline" onClick={() => updateStatus("archived")}>Archive</Button>
+                  <Button variant="destructive" onClick={() => updateStatus("rejected", { rejection_reason: adminNotes || "Not a fit" })}>Reject</Button>
+                </div>
+              </div>
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
+    </div>
+  );
+}
+
+function Label({ children, htmlFor }: { children: React.ReactNode; htmlFor?: string }) {
+  return <label htmlFor={htmlFor} className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{children}</label>;
+}
