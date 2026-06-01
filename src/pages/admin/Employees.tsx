@@ -1801,7 +1801,7 @@ export default function Employees() {
                   {/* Last activity (desktop only) */}
                   {lastSeen && (
                     <div className="hidden xl:flex flex-col items-end text-right shrink-0 w-[110px]">
-                      <span className="text-[9px] uppercase tracking-wide text-muted-foreground/70">Últ. actividad</span>
+                      <span className="text-[9px] uppercase tracking-wide text-muted-foreground/70">Last Activity</span>
                       <span className="text-[10.5px] text-muted-foreground">
                         {formatDistanceToNow(lastSeen, { addSuffix: true, locale: enUS })}
                       </span>
