@@ -25,6 +25,17 @@ import {
 } from "@/components/ui/collapsible";
 import { StaflyMark } from "@/components/brand/StaflyBrand";
 import CompanySwitcher from "@/components/CompanySwitcher";
+import { useT } from "@/i18n";
+
+const SECTION_I18N_KEY: Record<string, string> = {
+  "Daily Operations": "sidebar.section.daily_operations",
+  "Team": "sidebar.section.team",
+  "Clients & Locations": "sidebar.section.clients_locations",
+  "Payroll & Finance": "sidebar.section.payroll_finance",
+  "Reports": "sidebar.section.reports",
+  "Communication": "sidebar.section.communication",
+  "Settings": "sidebar.section.configuration",
+};
 
 interface LinkDef {
   to: string;
@@ -322,7 +333,7 @@ export default function AdminSidebar() {
       <Collapsible key={section.label} open={isOpen} onOpenChange={() => toggleSection(section.label)}>
         <CollapsibleTrigger className="flex items-center justify-between w-full px-3 pt-4 pb-1.5 group/section cursor-pointer first:pt-2">
           <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-sidebar-foreground/40 group-hover/section:text-sidebar-foreground/65 transition-colors select-none">
-            {section.label}
+            {(() => { const k = SECTION_I18N_KEY[section.label]; return k ? tI18n(k) : section.label; })()}
           </span>
           <div className="flex items-center gap-1.5">
             {!isOpen && sectionBadge > 0 && (
