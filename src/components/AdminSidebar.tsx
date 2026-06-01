@@ -37,75 +37,76 @@ interface LinkDef {
   roles?: string[];
 }
 
-/* ── Company-scoped links — StaflyCore IA v1.1 (7 grupos, operator-first) ── */
+/* ── Company-scoped links — English Demo Pass (visible labels EN; internal keys preserved) ── */
 const COMPANY_LINKS: LinkDef[] = [
-  // A) OPERACIÓN DIARIA
-  { to: "/app", icon: LayoutDashboard, label: "Centro de mando", module: null, end: true, section: "Operación diaria" },
-  { to: "/app/ops-center", icon: Radio, label: "Operaciones del día", module: null, section: "Operación diaria" },
-  { to: "/app/shifts", icon: CalendarDays, label: "Turnos", module: "shifts", section: "Operación diaria" },
-  { to: "/app/attendance", icon: ShieldCheck, label: "Asistencia", module: null, section: "Operación diaria" },
-  { to: "/app/timeclock", icon: Clock, label: "Reloj", module: "shifts", section: "Operación diaria" },
-  { to: "/app/live-map", icon: MapIcon, label: "Mapa en vivo", module: null, section: "Operación diaria" },
-  { to: "/app/front-desk", icon: ContactRound, label: "Front Desk", module: null, section: "Operación diaria" },
+  // A) DAILY OPERATIONS
+  { to: "/app", icon: LayoutDashboard, label: "Command Center", module: null, end: true, section: "Daily Operations" },
+  { to: "/app/ops-center", icon: Radio, label: "Today's Operations", module: null, section: "Daily Operations" },
+  { to: "/app/shifts", icon: CalendarDays, label: "Shifts", module: "shifts", section: "Daily Operations" },
+  { to: "/app/attendance", icon: ShieldCheck, label: "Attendance", module: null, section: "Daily Operations" },
+  { to: "/app/timeclock", icon: Clock, label: "Time Clock", module: "shifts", section: "Daily Operations" },
+  { to: "/app/live-map", icon: MapIcon, label: "Live Map", module: null, section: "Daily Operations" },
+  { to: "/app/front-desk", icon: ContactRound, label: "Front Desk", module: null, section: "Daily Operations" },
 
-  // B) EQUIPO
-  { to: "/app/employees", icon: Users, label: "Equipo", module: "employees", section: "Equipo" },
-  { to: "/app/documents", icon: FileText, label: "Documentos", module: null, section: "Equipo", badge: "documents_review" },
-  { to: "/app/document-intake", icon: Inbox, label: "Bandeja de documentos", module: null, section: "Equipo" },
-  { to: "/app/compliance-center", icon: ShieldCheck, label: "Cumplimiento", module: null, section: "Equipo" },
-  { to: "/app/applications", icon: UserPlus2, label: "Aplicaciones", module: null, section: "Equipo" },
-  { to: "/app/invite", icon: UserPlus, label: "Invitaciones", module: null, section: "Equipo" },
-  { to: "/app/requests", icon: Inbox, label: "Solicitudes", module: null, section: "Equipo", badge: "tickets" },
+  // B) TEAM
+  { to: "/app/employees", icon: Users, label: "Team", module: "employees", section: "Team" },
+  { to: "/app/documents", icon: FileText, label: "Documents", module: null, section: "Team", badge: "documents_review" },
+  { to: "/app/document-intake", icon: Inbox, label: "Document Inbox", module: null, section: "Team" },
+  { to: "/app/compliance-center", icon: ShieldCheck, label: "Compliance", module: null, section: "Team" },
+  { to: "/app/applications", icon: UserPlus2, label: "Applications", module: null, section: "Team" },
+  { to: "/app/invite", icon: UserPlus, label: "Invitations", module: null, section: "Team" },
+  { to: "/app/requests", icon: Inbox, label: "Requests", module: null, section: "Team", badge: "tickets" },
 
-  // C) CLIENTES Y LUGARES
-  { to: "/app/clients", icon: Building2, label: "Clientes", module: "clients", section: "Clientes y lugares" },
-  { to: "/app/locations", icon: MapPin, label: "Ubicaciones", module: "locations", section: "Clientes y lugares" },
-  { to: "/app/service-requests", icon: ClipboardList, label: "Solicitudes de servicio", module: null, section: "Clientes y lugares" },
-  { to: "/app/invoicing/clients", icon: Receipt, label: "Clientes de facturación", module: "tenant_invoicing", section: "Clientes y lugares" },
-  { to: "/app/invoicing/service-blocks", icon: ClipboardList, label: "Bloques de servicio", module: "tenant_invoicing", section: "Clientes y lugares" },
+  // C) CLIENTS & LOCATIONS
+  { to: "/app/clients", icon: Building2, label: "Clients", module: "clients", section: "Clients & Locations" },
+  { to: "/app/locations", icon: MapPin, label: "Locations", module: "locations", section: "Clients & Locations" },
+  { to: "/app/service-requests", icon: ClipboardList, label: "Service Requests", module: null, section: "Clients & Locations" },
+  { to: "/app/invoicing/clients", icon: Receipt, label: "Billing Clients", module: "tenant_invoicing", section: "Clients & Locations" },
+  { to: "/app/invoicing/service-blocks", icon: ClipboardList, label: "Service Blocks", module: "tenant_invoicing", section: "Clients & Locations" },
 
-  // D) PAYROLL Y FINANZAS
-  { to: "/app/payroll-review-queue", icon: ScanEye, label: "Centro de Validación", module: null, section: "Payroll y finanzas", roles: ["developer", "owner", "company_owner", "admin"] },
-  { to: "/app/periods", icon: CalendarDays, label: "Periodos", module: "periods", section: "Payroll y finanzas" },
-  { to: "/app/compensation-validation", icon: DollarSign, label: "Compensación", module: null, section: "Payroll y finanzas" },
-  { to: "/app/movements", icon: DollarSign, label: "Ajustes", module: "movements", section: "Payroll y finanzas" },
-  { to: "/app/advances-loans", icon: Banknote, label: "Avances", module: null, section: "Payroll y finanzas" },
-  { to: "/app/concepts", icon: Tags, label: "Conceptos", module: "concepts", section: "Payroll y finanzas" },
-  { to: "/app/payroll-reconciliation", icon: GitCompareArrows, label: "Reconciliación", module: null, section: "Payroll y finanzas" },
-  { to: "/app/weekly-payroll-reconciliation", icon: Scale, label: "Recon. semanal", module: null, section: "Payroll y finanzas" },
-  { to: "/app/invoicing/invoices", icon: FileText, label: "Facturas", module: "tenant_invoicing", section: "Payroll y finanzas" },
+  // D) PAYROLL & FINANCE
+  { to: "/app/payroll-review-queue", icon: ScanEye, label: "Validation Center", module: null, section: "Payroll & Finance", roles: ["developer", "owner", "company_owner", "admin"] },
+  { to: "/app/periods", icon: CalendarDays, label: "Periods", module: "periods", section: "Payroll & Finance" },
+  { to: "/app/compensation-validation", icon: DollarSign, label: "Compensation", module: null, section: "Payroll & Finance" },
+  { to: "/app/movements", icon: DollarSign, label: "Adjustments", module: "movements", section: "Payroll & Finance" },
+  { to: "/app/advances-loans", icon: Banknote, label: "Advances", module: null, section: "Payroll & Finance" },
+  { to: "/app/concepts", icon: Tags, label: "Concepts", module: "concepts", section: "Payroll & Finance" },
+  { to: "/app/payroll-reconciliation", icon: GitCompareArrows, label: "Reconciliation", module: null, section: "Payroll & Finance" },
+  { to: "/app/weekly-payroll-reconciliation", icon: Scale, label: "Weekly Recon.", module: null, section: "Payroll & Finance" },
+  { to: "/app/invoicing/invoices", icon: FileText, label: "Invoices", module: "tenant_invoicing", section: "Payroll & Finance" },
 
-  // E) REPORTES
-  { to: "/app/summary", icon: FileSpreadsheet, label: "Reportes de payroll", module: "summary", section: "Reportes" },
-  { to: "/app/import-review", icon: FileSearch, label: "Historial de importación", module: null, section: "Reportes", roles: ["developer", "owner", "company_owner", "admin"] },
+  // E) REPORTS
+  { to: "/app/summary", icon: FileSpreadsheet, label: "Payroll Reports", module: "summary", section: "Reports" },
+  { to: "/app/import-review", icon: FileSearch, label: "Import History", module: null, section: "Reports", roles: ["developer", "owner", "company_owner", "admin"] },
 
-  // F) COMUNICACIÓN
-  { to: "/app/announcements", icon: Megaphone, label: "Anuncios", module: "announcements", section: "Comunicación" },
-  { to: "/app/chat", icon: MessageCircle, label: "Mensajes", module: null, section: "Comunicación" },
-  { to: "/app/notifications", icon: Bell, label: "Notificaciones", module: null, section: "Comunicación" },
-  { to: "/app/quality", icon: Star, label: "Reseñas", module: null, section: "Comunicación" },
+  // F) COMMUNICATION
+  { to: "/app/announcements", icon: Megaphone, label: "Announcements", module: "announcements", section: "Communication" },
+  { to: "/app/chat", icon: MessageCircle, label: "Messages", module: null, section: "Communication" },
+  { to: "/app/notifications", icon: Bell, label: "Notifications", module: null, section: "Communication" },
+  { to: "/app/quality", icon: Star, label: "Reviews", module: null, section: "Communication" },
 
-  // G) CONFIGURACIÓN
-  { to: "/app/payroll-settings", icon: Settings2, label: "Ajustes de payroll", module: null, section: "Configuración" },
-  { to: "/app/kiosk", icon: Monitor, label: "Kiosk", module: null, section: "Configuración" },
-  { to: "/app/admin", icon: Wrench, label: "Administración", module: null, section: "Configuración", roles: ["developer", "owner", "company_owner"] },
-  { to: "/app/migration", icon: ArrowLeftRight, label: "Migración (interno)", module: null, section: "Configuración", roles: ["developer", "owner"] },
+  // G) SETTINGS
+  { to: "/app/payroll-settings", icon: Settings2, label: "Payroll Settings", module: null, section: "Settings" },
+  { to: "/app/kiosk", icon: Monitor, label: "Kiosk", module: null, section: "Settings" },
+  { to: "/app/admin", icon: Wrench, label: "Administration", module: null, section: "Settings", roles: ["developer", "owner", "company_owner"] },
+  { to: "/app/migration", icon: ArrowLeftRight, label: "Migration (internal)", module: null, section: "Settings", roles: ["developer", "owner"] },
 ];
 
 /* ── Global/Platform-level links (developer/owner only) ── */
 const GLOBAL_LINKS: LinkDef[] = [
-  { to: "/app", icon: LayoutDashboard, label: "Panel global", module: null, end: true, section: "Plataforma" },
-  { to: "/app/companies", icon: Building2, label: "Empresas", module: null, section: "Plataforma" },
-  { to: "/app/directory", icon: Users, label: "Directorio", module: null, section: "Plataforma" },
-  { to: "/app/activity", icon: FileText, label: "Actividad", module: null, section: "Plataforma" },
-  { to: "/app/notifications", icon: Bell, label: "Notificaciones", module: null, section: "Plataforma" },
-  { to: "/app/admin", icon: Wrench, label: "Administración", module: null, section: "Configuración" },
-  { to: "/app/billing", icon: Receipt, label: "Facturación", module: null, section: "Configuración" },
-  { to: "/app/system-health", icon: BarChart3, label: "Estado del sistema", module: null, section: "Configuración" },
+  { to: "/app", icon: LayoutDashboard, label: "Global Panel", module: null, end: true, section: "Platform" },
+  { to: "/app/companies", icon: Building2, label: "Companies", module: null, section: "Platform" },
+  { to: "/app/directory", icon: Users, label: "Directory", module: null, section: "Platform" },
+  { to: "/app/activity", icon: FileText, label: "Activity", module: null, section: "Platform" },
+  { to: "/app/notifications", icon: Bell, label: "Notifications", module: null, section: "Platform" },
+  { to: "/app/admin", icon: Wrench, label: "Administration", module: null, section: "Settings" },
+  { to: "/app/billing", icon: Receipt, label: "Billing", module: null, section: "Settings" },
+  { to: "/app/system-health", icon: BarChart3, label: "System Health", module: null, section: "Settings" },
 ];
 
-const COMPANY_SECTION_ORDER = ["Operación diaria", "Equipo", "Clientes y lugares", "Payroll y finanzas", "Reportes", "Comunicación", "Configuración"];
-const GLOBAL_SECTION_ORDER = ["Plataforma", "Configuración"];
+const COMPANY_SECTION_ORDER = ["Daily Operations", "Team", "Clients & Locations", "Payroll & Finance", "Reports", "Communication", "Settings"];
+const GLOBAL_SECTION_ORDER = ["Platform", "Settings"];
+
 
 export default function AdminSidebar() {
   const { signOut, role: globalRole, hasModuleAccess, user, fullName, getRoleForCompany, canAccessAdminForCompany } = useAuth();
