@@ -1288,31 +1288,31 @@ export default function Employees() {
           tenants keep a calm UI and stressed tenants get a glanceable alert. */}
       <div className="flex items-center gap-0.5 border-b border-border/40 overflow-x-auto">
         {([
-          { key: "active" as const, label: "Activos", count: statusCounts.active },
-          { key: "pending" as const, label: "Pendientes de activar app", count: statusCounts.pending },
-          { key: "invited" as const, label: "Invitados", count: statusCounts.invited },
-          // Surface the failure backlog right next to "Invitados" so it's actionable.
+          { key: "active" as const, label: "Active", count: statusCounts.active },
+          { key: "pending" as const, label: "Pending App Activation", count: statusCounts.pending },
+          { key: "invited" as const, label: "Invited", count: statusCounts.invited },
+          // Surface the failure backlog right next to "Invited" so it's actionable.
           // Hidden when zero to avoid noise in healthy tenants.
           ...(statusCounts.failed > 0
-            ? [{ key: "failed" as const, label: "Invitación fallida", count: statusCounts.failed, tone: "destructive" as const }]
+            ? [{ key: "failed" as const, label: "Invite Failed", count: statusCounts.failed, tone: "destructive" as const }]
             : []),
           {
             key: "missing-docs" as const,
-            label: "Documentos faltantes",
+            label: "Missing Documents",
             count: statusCounts["missing-docs"],
             tone: statusCounts["missing-docs"] > 0 ? ("warning" as const) : undefined,
           },
           {
             key: "no-photo" as const,
-            label: "Foto requerida",
+            label: "Photo Required",
             count: statusCounts["no-photo"],
             tone: statusCounts["no-photo"] > 0 ? ("warning" as const) : undefined,
           },
-          { key: "new" as const, label: "Nuevos", count: statusCounts.new },
-          { key: "drivers" as const, label: "Conductores", count: statusCounts.drivers },
-          { key: "no-activity" as const, label: "Sin actividad reciente", count: statusCounts["no-activity"] },
-          { key: "inactive" as const, label: "Históricos / Inactivos", count: statusCounts.inactive },
-          { key: "all" as const, label: "Todos", count: statusCounts.all },
+          { key: "new" as const, label: "New", count: statusCounts.new },
+          { key: "drivers" as const, label: "Drivers", count: statusCounts.drivers },
+          { key: "no-activity" as const, label: "No Recent Activity", count: statusCounts["no-activity"] },
+          { key: "inactive" as const, label: "Historical / Inactive", count: statusCounts.inactive },
+          { key: "all" as const, label: "All", count: statusCounts.all },
         ]).map(tab => {
           const isActive = statusTab === tab.key;
           const tone = (tab as any).tone as "destructive" | "warning" | undefined;
