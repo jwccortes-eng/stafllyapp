@@ -1243,24 +1243,24 @@ export default function Employees() {
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold text-foreground">Calidad de datos</span>
+                <span className="text-sm font-semibold text-foreground">Data Quality</span>
                 {strongDuplicateCount > 0 ? (
                   <Badge
                     variant="outline"
                     className="h-5 px-1.5 bg-warning/10 text-warning border-warning/30 text-[10px] font-semibold"
                   >
-                    {strongDuplicateCount} {strongDuplicateCount === 1 ? "grupo" : "grupos"}
+                    {strongDuplicateCount} {strongDuplicateCount === 1 ? "group" : "groups"}
                   </Badge>
                 ) : (
                   <Badge variant="outline" className="h-5 px-1.5 text-[10px] text-muted-foreground border-border">
-                    limpio
+                    clean
                   </Badge>
                 )}
               </div>
               <p className="text-xs text-muted-foreground mt-0.5 truncate">
                 {strongDuplicateCount > 0
-                  ? "Posibles trabajadores duplicados detectados. Revisa antes de que contaminen turnos o payroll."
-                  : "Sin señales fuertes de duplicados en la vista actual. Lanza un escaneo profundo cuando quieras."}
+                  ? "Possible duplicate workers detected. Review before they affect shifts or payroll."
+                  : "No strong duplicate signals in the current view. Run a deep scan anytime."}
               </p>
             </div>
             <Button
@@ -1273,7 +1273,7 @@ export default function Employees() {
               }}
             >
               <UserSearch className="h-3.5 w-3.5 mr-1.5" />
-              Detectar duplicados
+              Detect Duplicates
             </Button>
           </CardContent>
         </Card>
