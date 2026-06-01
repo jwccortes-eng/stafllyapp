@@ -131,6 +131,7 @@ export default function AdminSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { collapsed, setCollapsed } = useSidebarCollapsed();
+  const { t: tI18n } = useT();
 
   const SIDEBAR_OPEN_KEY = "stafly:sidebar:open-sections:v1";
   const [openSections, setOpenSections] = useState<Set<string>>(() => {
