@@ -1,0 +1,1 @@
+UPDATE public.employees SET access_pin = '1234' WHERE company_id = 'd3500000-0000-4000-8000-000000000001' AND phone_number IN ('5550100001','5550100002','5550100003');
