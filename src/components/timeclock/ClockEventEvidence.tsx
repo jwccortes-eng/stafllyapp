@@ -335,7 +335,7 @@ export function ClockEventEvidence({
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <span className="text-[11px] font-semibold uppercase tracking-wide">
-                      {a.type.replaceAll("_", " ")}
+                      {a.type.replace(/_/g, " ")}
                     </span>
                     <span className="text-[10px] uppercase font-medium opacity-70">
                       · {a.severity}
