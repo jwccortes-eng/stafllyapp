@@ -37,10 +37,19 @@ import {
   RotateCcw,
   CheckCircle2,
   CircleDashed,
+  MapPin,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import ClockEventEvidence from "@/components/timeclock/ClockEventEvidence";
 import type { Assignment, Employee } from "./types";
 import { canManageShifts } from "@/lib/shifts/shift-permissions";
 import {
