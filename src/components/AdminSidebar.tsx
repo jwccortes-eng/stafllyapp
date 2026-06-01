@@ -26,6 +26,7 @@ import {
 import { StaflyMark } from "@/components/brand/StaflyBrand";
 import CompanySwitcher from "@/components/CompanySwitcher";
 import { useT } from "@/i18n";
+import { LanguageSwitcher } from "@/components/i18n/LanguageSwitcher";
 
 const SECTION_I18N_KEY: Record<string, string> = {
   "Daily Operations": "sidebar.section.daily_operations",
@@ -411,6 +412,13 @@ export default function AdminSidebar() {
           >
             View plans →
           </button>
+        </div>
+      )}
+
+      {/* ── Language switcher (inline) ── */}
+      {!collapsed && (
+        <div className="px-3 pt-2 pb-1 shrink-0">
+          <LanguageSwitcher variant="inline" className="w-full justify-center" />
         </div>
       )}
 
