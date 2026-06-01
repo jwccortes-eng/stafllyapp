@@ -139,6 +139,8 @@ const PayrollMappings = lazy(() => import("./pages/admin/PayrollMappings"));
 const CompensationAdoption = lazy(() => import("./pages/admin/CompensationAdoption"));
 const Applications = lazy(() => import("./pages/admin/Applications"));
 const ApplicationSettings = lazy(() => import("./pages/admin/ApplicationSettings"));
+const Referrals = lazy(() => import("./pages/admin/Referrals"));
+const Refer = lazy(() => import("./pages/Refer"));
 const UpgradeRequests = lazy(() => import("./pages/admin/UpgradeRequests"));
 const InvoicingClients = lazy(() => import("./pages/admin/InvoicingClients"));
 const InvoicingClientsImport = lazy(() => import("./pages/admin/InvoicingClientsImport"));
