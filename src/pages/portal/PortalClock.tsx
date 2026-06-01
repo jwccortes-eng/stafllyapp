@@ -726,7 +726,7 @@ export default function PortalClock() {
                   <div className="mt-3 flex items-center justify-center gap-5">
                     <div className="text-center">
                       <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-muted-foreground/65 leading-none mb-1">
-                        Entrada esperada
+                        Expected Clock In
                       </p>
                       <p className="text-[22px] font-bold font-mono tabular-nums text-foreground leading-none">
                         {focusShift.start_time.slice(0, 5)}
@@ -734,7 +734,7 @@ export default function PortalClock() {
                     </div>
                     <div className="text-center opacity-70">
                       <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-muted-foreground/55 leading-none mb-1">
-                        Salida estimada
+                        Estimated Clock Out
                       </p>
                       <p className="text-[16px] font-semibold font-mono tabular-nums text-muted-foreground leading-none">
                         {focusShift.end_time.slice(0, 5)}
@@ -863,9 +863,9 @@ export default function PortalClock() {
                   <div className="min-w-0 flex-1">
                     <p className="text-[13px] font-semibold text-foreground truncate">{s.title}</p>
                     <p className="text-[11px] text-muted-foreground/70 mt-0.5">
-                      <span className="font-semibold text-foreground">Entrada <span className="tabular-nums font-mono">{s.start_time.slice(0, 5)}</span></span>
+                      <span className="font-semibold text-foreground">Clock In <span className="tabular-nums font-mono">{s.start_time.slice(0, 5)}</span></span>
                       {s.end_time && (
-                        <span className="text-muted-foreground/60"> · Termina aprox. <span className="tabular-nums font-mono">{s.end_time.slice(0, 5)}</span></span>
+                        <span className="text-muted-foreground/60"> · Ends approx. <span className="tabular-nums font-mono">{s.end_time.slice(0, 5)}</span></span>
                       )}
                       {s.location_name && <> · <span className="text-muted-foreground/55">{s.location_name}</span></>}
                     </p>

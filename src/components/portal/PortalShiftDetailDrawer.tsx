@@ -83,7 +83,7 @@ function getStatusMeta(status?: string): { tone: OpsStatusTone; label: string } 
     case "accepted":
       return { tone: "success", label: "Confirmado" };
     case "needs_reacceptance":
-      return { tone: "warning", label: "Re-confirmar" };
+      return { tone: "warning", label: "Re-accept" };
     case "rejected":
       return { tone: "critical", label: "Rechazado" };
     case "pending":
@@ -157,9 +157,9 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, responseStatu
   const showHistoryBlock = isPastShift || !!historyInfo;
 
   const dayLabel = isTodayShift
-    ? "Hoy"
+    ? "Today"
     : isTomorrowShift
-    ? "Mañana"
+    ? "Tomorrow"
     : format(parseISO(shift.date), "EEE d MMM", { locale: es });
 
   const copyAddress = (text: string, label = "Dirección") => {
@@ -219,7 +219,7 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, responseStatu
                 {shift.start_time?.slice(0, 5)}
               </p>
               <p className="text-[10.5px] text-muted-foreground/65 mt-1.5 tabular-nums">
-                Termina aprox. {shift.end_time?.slice(0, 5)} · {hoursLabel} estimadas
+                Ends approx. {shift.end_time?.slice(0, 5)} · {hoursLabel} estimadas
               </p>
             </div>
           </div>
@@ -354,7 +354,7 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, responseStatu
                     <ClockMethodIcon className="h-3.5 w-3.5 text-muted-foreground/80" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-[10px] uppercase tracking-widest text-muted-foreground/55 font-bold">Entrada</p>
+                    <p className="text-[10px] uppercase tracking-widest text-muted-foreground/55 font-bold">Clock In</p>
                     <p className="text-[13px] font-semibold text-foreground mt-0.5">{clockLabel}</p>
                   </div>
                 </div>

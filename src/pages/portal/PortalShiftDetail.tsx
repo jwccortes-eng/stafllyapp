@@ -199,9 +199,9 @@ export default function PortalShiftDetail() {
   }
 
   const dateLabel = isToday(parseISO(shift.date))
-    ? "Hoy"
+    ? "Today"
     : isTomorrow(parseISO(shift.date))
-    ? "Mañana"
+    ? "Tomorrow"
     : format(parseISO(shift.date), "EEEE d MMM", { locale: es });
 
   const slotsLeft = shift.slots ? Math.max(0, shift.slots - shift.assignedCount) : null;
@@ -242,7 +242,7 @@ export default function PortalShiftDetail() {
               {shift.start_time?.slice(0, 5)}
             </p>
             <p className="text-[10.5px] text-muted-foreground/65 mt-1.5 tabular-nums">
-              Termina aprox. {shift.end_time?.slice(0, 5)} · salida estimada
+              Ends approx. {shift.end_time?.slice(0, 5)} · salida estimada
             </p>
           </div>
 
@@ -390,7 +390,7 @@ function StateBanner({ state }: { state: AvailabilityState }) {
     assigned: {
       icon: <CheckCircle2 className="h-4 w-4" />,
       label: "Ya estás asignado",
-      sub: "Búscalo en Mis turnos.",
+      sub: "Búscalo en My Shifts.",
       tone: "bg-emerald-500/[0.08] border-emerald-500/20 text-emerald-700 dark:text-emerald-400",
     },
     full: {

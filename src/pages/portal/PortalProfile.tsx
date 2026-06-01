@@ -149,7 +149,7 @@ export default function PortalProfile() {
   const menuItems = [
     { to: "/portal/pay-reports", icon: Wallet, label: "Mis pagos", description: "Resumen semanal de nómina" },
     { to: "/portal/accumulated", icon: BarChart3, label: "Acumulado", description: "Historial total" },
-    { to: "/portal/shifts", icon: CalendarDays, label: "Mis turnos", description: "Asignaciones y solicitudes" },
+    { to: "/portal/shifts", icon: CalendarDays, label: "My Shifts", description: "Asignaciones y solicitudes" },
   ];
 
   return (

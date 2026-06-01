@@ -54,7 +54,7 @@ function getStatusMeta(status: string): { tone: OpsStatusTone; label: string; ra
     case "accepted":
       return { tone: "success", label: "Confirmado", rail: "bg-earning/70" };
     case "needs_reacceptance":
-      return { tone: "warning", label: "Re-confirmar", rail: "bg-warning" };
+      return { tone: "warning", label: "Re-accept", rail: "bg-warning" };
     case "rejected":
       return { tone: "critical", label: "Rechazado", rail: "bg-destructive" };
     case "pending":
@@ -89,8 +89,8 @@ function getCountdown(dateStr: string, startTime: string): string | null {
 /** Day label used in compact + full views. */
 function dayLabel(dateStr: string): string {
   const d = parseISO(dateStr);
-  if (isToday(d)) return "Hoy";
-  if (isTomorrow(d)) return "Mañana";
+  if (isToday(d)) return "Today";
+  if (isTomorrow(d)) return "Tomorrow";
   return format(d, "EEE d MMM", { locale: es });
 }
 
@@ -138,7 +138,7 @@ export function PortalShiftCard({
             disabled={responding}
           >
             <CheckCircle2 className="h-4 w-4" />
-            {shift.status === "needs_reacceptance" ? "Re-confirmar" : "Confirmar"}
+            {shift.status === "needs_reacceptance" ? "Re-accept" : "Accept"}
           </Button>
         )}
         {isPending && onReject && (
@@ -259,7 +259,7 @@ export function PortalShiftCard({
                 {shift.start_time?.slice(0, 5)}
               </p>
               <p className="text-[10.5px] text-muted-foreground/65 mt-1.5 tabular-nums">
-                Termina aprox. {shift.end_time?.slice(0, 5)} · {duration} estimadas
+                Ends approx. {shift.end_time?.slice(0, 5)} · {duration} estimadas
               </p>
             </div>
           </div>
@@ -335,7 +335,7 @@ export function PortalShiftCard({
               disabled={responding}
             >
               <CheckCircle2 className="h-3.5 w-3.5" />
-              {shift.status === "needs_reacceptance" ? "Re-confirmar" : "Confirmar"}
+              {shift.status === "needs_reacceptance" ? "Re-accept" : "Accept"}
             </Button>
             <Button
               variant="ghost"
