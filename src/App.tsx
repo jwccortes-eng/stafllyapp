@@ -139,6 +139,8 @@ const PayrollMappings = lazy(() => import("./pages/admin/PayrollMappings"));
 const CompensationAdoption = lazy(() => import("./pages/admin/CompensationAdoption"));
 const Applications = lazy(() => import("./pages/admin/Applications"));
 const ApplicationSettings = lazy(() => import("./pages/admin/ApplicationSettings"));
+const Referrals = lazy(() => import("./pages/admin/Referrals"));
+const Refer = lazy(() => import("./pages/Refer"));
 const UpgradeRequests = lazy(() => import("./pages/admin/UpgradeRequests"));
 const InvoicingClients = lazy(() => import("./pages/admin/InvoicingClients"));
 const InvoicingClientsImport = lazy(() => import("./pages/admin/InvoicingClientsImport"));
@@ -241,6 +243,7 @@ function App() {
               <Route path="/kiosk" element={<KioskClock />} />
               <Route path="/front-desk" element={<FrontDesk />} />
               <Route path="/apply/:slug" element={<Apply />} />
+              <Route path="/refer" element={<Refer />} />
               <Route path="/join/:inviteCode" element={<JoinCompany />} />
               <Route path="/invite" element={<AcceptInvite />} />
               <Route path="/activate/:token" element={<ActivateAccount />} />
@@ -372,6 +375,7 @@ function App() {
                 <Route path="weekly-payroll-reconciliation" element={<CompanyRequiredGuard><WeeklyPayrollReconciliation /></CompanyRequiredGuard>} />
                 <Route path="compensation-adoption" element={<CompanyRequiredGuard><CompensationAdoption /></CompanyRequiredGuard>} />
                 <Route path="applications" element={<CompanyRequiredGuard><Applications /></CompanyRequiredGuard>} />
+                <Route path="referrals" element={<Referrals />} />
                 <Route path="application-settings" element={<CompanyRequiredGuard><ApplicationSettings /></CompanyRequiredGuard>} />
                 <Route path="upgrade-requests" element={<UpgradeRequests />} />
                 <Route path="invoicing/clients" element={<CompanyRequiredGuard><ModuleGate moduleKey="tenant_invoicing"><InvoicingClients /></ModuleGate></CompanyRequiredGuard>} />

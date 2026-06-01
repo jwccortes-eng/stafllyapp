@@ -54,6 +54,7 @@ const COMPANY_LINKS: LinkDef[] = [
   { to: "/app/document-intake", icon: Inbox, label: "Document Inbox", module: null, section: "Team" },
   { to: "/app/compliance-center", icon: ShieldCheck, label: "Compliance", module: null, section: "Team" },
   { to: "/app/applications", icon: UserPlus2, label: "Applications", module: null, section: "Team" },
+  { to: "/app/referrals", icon: UserPlus2, label: "Referrals", module: null, section: "Team" },
   { to: "/app/invite", icon: UserPlus, label: "Invitations", module: null, section: "Team" },
   { to: "/app/requests", icon: Inbox, label: "Requests", module: null, section: "Team", badge: "tickets" },
 
