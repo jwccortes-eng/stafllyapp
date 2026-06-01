@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffectiveEmployee } from "@/hooks/useEffectiveEmployee";
+import { useAuth } from "@/hooks/useAuth";
 import { format, startOfDay, endOfDay } from "date-fns";
 import { enUS, es } from "date-fns/locale";
 import {
@@ -15,7 +16,14 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { OpsStatusChip } from "@/components/operations/OpsStatusChip";
 import {
@@ -23,6 +31,16 @@ import {
   actionLabelsForMode,
   type ShiftAttendanceMode,
 } from "@/lib/shift-attendance-mode";
+import {
+  TenantSafetyBadge,
+  QaModeBanner,
+} from "@/components/portal/TenantSafetyBadge";
+import {
+  isDemoWorkerEmail,
+  readQaModeFlag,
+  syncQaModeFromUrl,
+  tenantSafetyFlags,
+} from "@/lib/qa-mode";
 
 interface TimeEntry {
   id: string;
@@ -76,6 +94,7 @@ function isClockOutWithinSchedule(shift: TodayShift | null): { withinSchedule: b
 
 export default function PortalClock() {
   const { effectiveEmployeeId: employeeId } = useEffectiveEmployee();
+  const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -85,6 +104,13 @@ export default function PortalClock() {
   const [activeEntry, setActiveEntry] = useState<TimeEntry | null>(null);
   const [todayEntries, setTodayEntries] = useState<TimeEntry[]>([]);
   const [companyId, setCompanyId] = useState<string | null>(null);
+  const [companyFlags, setCompanyFlags] = useState<{
+    name: string | null;
+    is_demo: boolean;
+    is_test: boolean;
+  } | null>(null);
+  const [qaMode, setQaMode] = useState<boolean>(false);
+  const [tenantConfirmOpen, setTenantConfirmOpen] = useState(false);
   const [now, setNow] = useState(new Date());
   const [todayShifts, setTodayShifts] = useState<TodayShift[]>([]);
   const [selectedShift, setSelectedShift] = useState<TodayShift | null>(null);
@@ -108,6 +134,12 @@ export default function PortalClock() {
     return () => clearInterval(interval);
   }, []);
 
+  // QA mode: sync from URL once, then resolve flag + demo-worker auto-detect.
+  useEffect(() => {
+    syncQaModeFromUrl(window.location.search);
+    setQaMode(readQaModeFlag() || isDemoWorkerEmail(user?.email));
+  }, [user?.email]);
+
   useEffect(() => {
     if (!selectedShift) { setClockInBlocked(null); return; }
     const check = isClockInAllowed(selectedShift);
@@ -117,12 +149,21 @@ export default function PortalClock() {
   const loadData = useCallback(async () => {
     if (!employeeId) { setLoading(false); return; }
     const [empRes] = await Promise.all([
-      supabase.from("employees").select("company_id, avatar_url").eq("id", employeeId).maybeSingle(),
+      supabase
+        .from("employees")
+        .select("company_id, avatar_url, companies(name, is_demo, is_test)")
+        .eq("id", employeeId)
+        .maybeSingle(),
     ]);
-    const emp = empRes.data;
+    const emp = empRes.data as any;
     if (emp) {
       setCompanyId(emp.company_id);
       setHasProfilePhoto(!!emp.avatar_url);
+      setCompanyFlags({
+        name: emp.companies?.name ?? null,
+        is_demo: emp.companies?.is_demo === true,
+        is_test: emp.companies?.is_test === true,
+      });
       // Read clock_config (consolidated namespace)
       const { data: clockCfgRow } = await supabase
         .from("company_settings").select("value").eq("company_id", emp.company_id).eq("key", "clock_config").maybeSingle();
@@ -244,6 +285,11 @@ export default function PortalClock() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
+  const proceedWithClockIn = () => {
+    if (clockPhotoRequired) { setPendingClockAction("in"); setPhotoDialogOpen(true); }
+    else handleClockIn(null);
+  };
+
   const initiateClockIn = () => {
     if (!employeeId || !companyId || !selectedShift) return;
     if (!hasProfilePhoto) {
@@ -252,8 +298,14 @@ export default function PortalClock() {
     }
     const check = isClockInAllowed(selectedShift);
     if (!check.allowed) { toast({ title: "Not available yet", description: check.message, variant: "destructive" }); return; }
-    if (clockPhotoRequired) { setPendingClockAction("in"); setPhotoDialogOpen(true); }
-    else handleClockIn(null);
+    // QA-mode safety: only intercept QA sessions hitting a real tenant.
+    // Real workers (no QA flag, non-demo email) are NOT interrupted.
+    const flags = tenantSafetyFlags(companyFlags);
+    if (qaMode && flags.isReal) {
+      setTenantConfirmOpen(true);
+      return;
+    }
+    proceedWithClockIn();
   };
 
   const initiateClockOut = () => {
@@ -590,8 +642,20 @@ export default function PortalClock() {
   const hasZone2Content = otherShifts.length > 0 || zone2ClosedEntries.length > 0;
 
 
+  const safetyFlags = tenantSafetyFlags(companyFlags);
+
   return (
     <div className="animate-fade-in pb-24">
+      {/* ─── Tenant safety badge (always visible) + QA-mode banner ─── */}
+      <div className="mb-3">
+        <TenantSafetyBadge
+          flags={safetyFlags}
+          companyName={companyFlags?.name}
+          qaMode={qaMode}
+        />
+      </div>
+      {qaMode ? <QaModeBanner isReal={safetyFlags.isReal} /> : null}
+
       {/* ─── Stage 1 advisory — Connecteam remains payroll source ─── */}
       <div className="mb-3 rounded-xl border border-warning/25 bg-warning/[0.06] p-3 flex items-start gap-2.5">
         <Clock className="h-4 w-4 text-warning mt-0.5 shrink-0" />
@@ -1032,6 +1096,37 @@ export default function PortalClock() {
 
       {/* QR Scanner dialog */}
       <QRScannerDialog open={qrScannerOpen} onClose={() => setQrScannerOpen(false)} onScanned={handleQrScanned} />
+
+      {/* QA-mode real-tenant confirmation dialog (only shown when both apply) */}
+      <Dialog open={tenantConfirmOpen} onOpenChange={setTenantConfirmOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Real tenant — confirm clock-in</DialogTitle>
+            <DialogDescription>
+              This is a real tenant
+              {companyFlags?.name ? ` (${companyFlags.name})` : ""}. Clock entries
+              may affect operational review. Continue?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setTenantConfirmOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                setTenantConfirmOpen(false);
+                proceedWithClockIn();
+              }}
+            >
+              Continue on real tenant
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
