@@ -609,6 +609,28 @@ export function ShiftAttendancePanel({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Sheet
+        open={evidenceOpen !== null}
+        onOpenChange={(open) => !open && setEvidenceOpen(null)}
+      >
+        <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto">
+          <SheetHeader className="mb-4">
+            <SheetTitle>Clock evidence</SheetTitle>
+            <SheetDescription>
+              {evidenceOpen?.name ?? "Worker"} · read-only audit view
+            </SheetDescription>
+          </SheetHeader>
+          {evidenceOpen && (
+            <ClockEventEvidence
+              shiftId={shiftId}
+              employeeId={evidenceOpen.employeeId}
+              companyId={companyId}
+              employeeName={evidenceOpen.name}
+            />
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
