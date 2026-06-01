@@ -130,7 +130,7 @@ export default function AdminSidebar() {
       }
     } catch { /* noop */ }
     // Default: only the first (daily ops) group open; others collapsed for less clutter.
-    return new Set(["Operación diaria", "Plataforma"]);
+    return new Set(["Daily Operations", "Platform"]);
   });
   const [badgeCounts, setBadgeCounts] = useState<Record<string, number>>({});
 
