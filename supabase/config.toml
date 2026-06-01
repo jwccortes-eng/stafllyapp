@@ -69,3 +69,4 @@ project_id = "jplhtputzixwqarqlrth"
     verify_jwt = true
   [functions.document-intake-extract]
     verify_jwt = true
+
