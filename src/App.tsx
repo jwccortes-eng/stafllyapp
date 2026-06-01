@@ -11,6 +11,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { SoundProvider } from "@/hooks/useSound";
+import { LanguageProvider } from "@/i18n";
 import { Loader2 } from "lucide-react";
 
 // Eager: shell components needed immediately
@@ -213,6 +214,7 @@ function WorkerProfileRedirect() {
 function App() {
   return (
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
+    <LanguageProvider>
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <AuthProvider>
@@ -430,6 +432,7 @@ function App() {
         </AuthProvider>
       </TooltipProvider>
     </QueryClientProvider>
+    </LanguageProvider>
     </ThemeProvider>
   );
 }
