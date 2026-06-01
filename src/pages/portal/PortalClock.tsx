@@ -285,6 +285,11 @@ export default function PortalClock() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
+  const proceedWithClockIn = () => {
+    if (clockPhotoRequired) { setPendingClockAction("in"); setPhotoDialogOpen(true); }
+    else handleClockIn(null);
+  };
+
   const initiateClockIn = () => {
     if (!employeeId || !companyId || !selectedShift) return;
     if (!hasProfilePhoto) {
@@ -293,8 +298,14 @@ export default function PortalClock() {
     }
     const check = isClockInAllowed(selectedShift);
     if (!check.allowed) { toast({ title: "Not available yet", description: check.message, variant: "destructive" }); return; }
-    if (clockPhotoRequired) { setPendingClockAction("in"); setPhotoDialogOpen(true); }
-    else handleClockIn(null);
+    // QA-mode safety: only intercept QA sessions hitting a real tenant.
+    // Real workers (no QA flag, non-demo email) are NOT interrupted.
+    const flags = tenantSafetyFlags(companyFlags);
+    if (qaMode && flags.isReal) {
+      setTenantConfirmOpen(true);
+      return;
+    }
+    proceedWithClockIn();
   };
 
   const initiateClockOut = () => {
