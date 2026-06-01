@@ -70,5 +70,3 @@ project_id = "jplhtputzixwqarqlrth"
   [functions.document-intake-extract]
     verify_jwt = true
 
-  [functions.qa-demo-setup]
-    verify_jwt = false
