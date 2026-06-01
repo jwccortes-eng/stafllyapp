@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffectiveEmployee } from "@/hooks/useEffectiveEmployee";
+import { useAuth } from "@/hooks/useAuth";
 import { format, startOfDay, endOfDay } from "date-fns";
 import { enUS, es } from "date-fns/locale";
 import {
@@ -15,7 +16,14 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { OpsStatusChip } from "@/components/operations/OpsStatusChip";
 import {
@@ -23,6 +31,16 @@ import {
   actionLabelsForMode,
   type ShiftAttendanceMode,
 } from "@/lib/shift-attendance-mode";
+import {
+  TenantSafetyBadge,
+  QaModeBanner,
+} from "@/components/portal/TenantSafetyBadge";
+import {
+  isDemoWorkerEmail,
+  readQaModeFlag,
+  syncQaModeFromUrl,
+  tenantSafetyFlags,
+} from "@/lib/qa-mode";
 
 interface TimeEntry {
   id: string;
