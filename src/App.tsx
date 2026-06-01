@@ -243,6 +243,7 @@ function App() {
               <Route path="/kiosk" element={<KioskClock />} />
               <Route path="/front-desk" element={<FrontDesk />} />
               <Route path="/apply/:slug" element={<Apply />} />
+              <Route path="/refer" element={<Refer />} />
               <Route path="/join/:inviteCode" element={<JoinCompany />} />
               <Route path="/invite" element={<AcceptInvite />} />
               <Route path="/activate/:token" element={<ActivateAccount />} />
