@@ -332,7 +332,7 @@ export default function EmployeeDashboard() {
                   )}>
                     <div className="text-center shrink-0 w-10">
                       {sIsToday ? (
-                        <span className="text-[8.5px] px-1.5 py-0.5 rounded-full font-bold bg-primary/12 text-primary tracking-wide">Hoy</span>
+                        <span className="text-[8.5px] px-1.5 py-0.5 rounded-full font-bold bg-primary/12 text-primary tracking-wide">Today</span>
                       ) : sIsTomorrow ? (
                         <span className="text-[8.5px] px-1.5 py-0.5 rounded-full font-bold bg-accent/40 text-accent-foreground tracking-wide">Mañ</span>
                       ) : (
@@ -352,9 +352,9 @@ export default function EmployeeDashboard() {
                       </p>
                       <div className="flex items-center gap-1.5 text-[10.5px] text-muted-foreground/70 mt-0.5 min-w-0">
                         <Clock className="h-2.5 w-2.5 shrink-0" />
-                        <span className="font-semibold text-foreground">Entrada <span className="tabular-nums font-mono">{s.start_time?.slice(0, 5)}</span></span>
+                        <span className="font-semibold text-foreground">Clock In <span className="tabular-nums font-mono">{s.start_time?.slice(0, 5)}</span></span>
                         {s.end_time && (
-                          <span className="text-muted-foreground/65 truncate">· Termina aprox. <span className="tabular-nums font-mono">{s.end_time?.slice(0, 5)}</span></span>
+                          <span className="text-muted-foreground/65 truncate">· Ends approx. <span className="tabular-nums font-mono">{s.end_time?.slice(0, 5)}</span></span>
                         )}
                         {s.location_name && <span className="truncate">· {formatDisplayName(s.location_name)}</span>}
                       </div>

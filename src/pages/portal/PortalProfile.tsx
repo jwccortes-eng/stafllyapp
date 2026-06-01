@@ -149,7 +149,7 @@ export default function PortalProfile() {
   const menuItems = [
     { to: "/portal/pay-reports", icon: Wallet, label: "Mis pagos", description: "Resumen semanal de nómina" },
     { to: "/portal/accumulated", icon: BarChart3, label: "Acumulado", description: "Historial total" },
-    { to: "/portal/shifts", icon: CalendarDays, label: "Mis turnos", description: "Asignaciones y solicitudes" },
+    { to: "/portal/shifts", icon: CalendarDays, label: "My Shifts", description: "Asignaciones y solicitudes" },
   ];
 
   return (
@@ -402,7 +402,7 @@ function ChangePinSection() {
           />
         </div>
         <div className="space-y-1.5">
-          <Label className="text-xs">Confirmar nuevo PIN *</Label>
+          <Label className="text-xs">Confirm new PIN *</Label>
           <Input
             type="password"
             inputMode="numeric"

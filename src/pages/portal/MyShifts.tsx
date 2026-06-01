@@ -362,7 +362,7 @@ export default function MyShifts() {
   // and creates noise (e.g. "99+"). Today/Upcoming/Available keep their counts.
   const tabs: { key: TabFilter; label: string; count: number; showCount: boolean }[] = [
     ...(claimable.length > 0 ? [{ key: "available" as TabFilter, label: "Disponibles", count: claimable.length, showCount: true }] : []),
-    { key: "today", label: "Hoy", count: todayCount, showCount: true },
+    { key: "today", label: "Today", count: todayCount, showCount: true },
     { key: "upcoming", label: "Próximos", count: upcomingCount, showCount: true },
     { key: "history", label: "Historial", count: pastCount, showCount: false },
   ];
@@ -493,7 +493,7 @@ export default function MyShifts() {
       {/* Minimal header — title only, subtitle merged into active tab context */}
       <div className="pt-1 pb-3">
         <h1 className="text-[22px] font-bold font-heading tracking-tight text-foreground leading-none">
-          Mis turnos
+          My Shifts
         </h1>
       </div>
 
@@ -551,12 +551,12 @@ export default function MyShifts() {
                 isClockable
                   ? { label: "Marcar entrada", onClick: () => navigate(`/portal/clock?shiftId=${a.shift.id}`), variant: "primary", icon: LogIn }
                   : owed
-                  ? { label: "Confirmar", onClick: () => acceptAssignment(a.id), variant: "primary", icon: Check, loading: responding === a.id }
+                  ? { label: "Accept", onClick: () => acceptAssignment(a.id), variant: "primary", icon: Check, loading: responding === a.id }
                   : undefined
               }
               secondaryAction={
                 owed
-                  ? { label: "Rechazar", onClick: () => { setRejectDialogId(a.id); setRejectReason(""); }, variant: "ghost", icon: X }
+                  ? { label: "Decline", onClick: () => { setRejectDialogId(a.id); setRejectReason(""); }, variant: "ghost", icon: X }
                   : undefined
               }
             />
@@ -576,7 +576,7 @@ export default function MyShifts() {
               index={idx}
               density={density}
               onClick={() => setSelectedShift(a)}
-              inlineActionLabel={owed ? "Confirmar" : undefined}
+              inlineActionLabel={owed ? "Accept" : undefined}
               onInlineAction={owed ? () => acceptAssignment(a.id) : undefined}
             />
           );
@@ -595,7 +595,7 @@ export default function MyShifts() {
 
           type Bucket = { key: string; label: string; items: ShiftAssignment[] };
           const buckets: Bucket[] = [
-            { key: "this-week", label: "Esta semana", items: [] },
+            { key: "this-week", label: "This Week", items: [] },
             { key: "last-week", label: "Semana pasada", items: [] },
             { key: "earlier", label: "Anteriores", items: [] },
           ];
@@ -682,7 +682,7 @@ export default function MyShifts() {
         return (
           <section className="space-y-2">
             <AgendaSectionHeader
-              title={activeTab === "today" ? "Hoy" : "Esta semana"}
+              title={activeTab === "today" ? "Today" : "This Week"}
               caption={list.length === 1 ? "1 turno" : `${list.length} turnos`}
             />
             <OperationalTimeline>
@@ -716,11 +716,11 @@ export default function MyShifts() {
                   </div>
                   <p className="text-[14px] font-bold text-foreground truncate">{formatDisplayName(s.title)}</p>
                   <p className="text-[12px] text-muted-foreground/80 mt-0.5">
-                    {isToday(parseISO(s.date)) ? "Hoy" : isTomorrow(parseISO(s.date)) ? "Mañana" : format(parseISO(s.date), "EEE d MMM", { locale: enUS })}
+                    {isToday(parseISO(s.date)) ? "Today" : isTomorrow(parseISO(s.date)) ? "Tomorrow" : format(parseISO(s.date), "EEE d MMM", { locale: enUS })}
                     {" · "}
-                    <span className="font-semibold text-foreground">Entrada <span className="tabular-nums font-mono">{s.start_time?.slice(0, 5)}</span></span>
+                    <span className="font-semibold text-foreground">Clock In <span className="tabular-nums font-mono">{s.start_time?.slice(0, 5)}</span></span>
                     {s.end_time && (
-                      <span className="text-muted-foreground/70"> · Termina aprox. <span className="tabular-nums font-mono">{s.end_time?.slice(0, 5)}</span></span>
+                      <span className="text-muted-foreground/70"> · Ends approx. <span className="tabular-nums font-mono">{s.end_time?.slice(0, 5)}</span></span>
                     )}
                   </p>
                   {s.location && (
@@ -798,7 +798,7 @@ export default function MyShifts() {
       <Dialog open={!!rejectDialogId} onOpenChange={o => { if (!o) { setRejectDialogId(null); setRejectReason(""); } }}>
         <DialogContent className="max-w-sm rounded-2xl">
           <DialogHeader>
-            <DialogTitle className="text-base font-bold">Rechazar turno</DialogTitle>
+            <DialogTitle className="text-base font-bold">Decline Shift</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <p className="text-xs text-muted-foreground">Puedes indicar un motivo (opcional).</p>
@@ -808,7 +808,7 @@ export default function MyShifts() {
             <Button variant="ghost" size="sm" className="rounded-xl" onClick={() => { setRejectDialogId(null); setRejectReason(""); }}>Cancelar</Button>
             <Button variant="destructive" size="sm" className="rounded-xl" onClick={rejectAssignment} disabled={responding === rejectDialogId}>
               {responding === rejectDialogId ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
-              Rechazar
+              Decline
             </Button>
           </DialogFooter>
         </DialogContent>

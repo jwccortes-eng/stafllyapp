@@ -83,7 +83,7 @@ function getStatusMeta(status?: string): { tone: OpsStatusTone; label: string } 
     case "accepted":
       return { tone: "success", label: "Confirmado" };
     case "needs_reacceptance":
-      return { tone: "warning", label: "Re-confirmar" };
+      return { tone: "warning", label: "Re-accept" };
     case "rejected":
       return { tone: "critical", label: "Rechazado" };
     case "pending":
@@ -157,9 +157,9 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, responseStatu
   const showHistoryBlock = isPastShift || !!historyInfo;
 
   const dayLabel = isTodayShift
-    ? "Hoy"
+    ? "Today"
     : isTomorrowShift
-    ? "Mañana"
+    ? "Tomorrow"
     : format(parseISO(shift.date), "EEE d MMM", { locale: es });
 
   const copyAddress = (text: string, label = "Dirección") => {
@@ -209,17 +209,17 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, responseStatu
             </p>
           </div>
 
-          {/* Tu ruta de trabajo — Entrada protagonista, salida estimada secundaria */}
+          {/* Work route — Clock In protagonist, estimated end secondary */}
           <div className="flex items-end gap-4 pt-1">
             <div className="min-w-0">
               <p className="text-[9.5px] font-bold uppercase tracking-[0.16em] text-muted-foreground/65 leading-none mb-1">
-                Entrada
+                Clock In
               </p>
               <p className="text-[34px] leading-none font-bold font-mono tabular-nums text-foreground">
                 {shift.start_time?.slice(0, 5)}
               </p>
               <p className="text-[10.5px] text-muted-foreground/65 mt-1.5 tabular-nums">
-                Termina aprox. {shift.end_time?.slice(0, 5)} · {hoursLabel} estimadas
+                Ends approx. {shift.end_time?.slice(0, 5)} · {hoursLabel} estimadas
               </p>
             </div>
           </div>
@@ -354,7 +354,7 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, responseStatu
                     <ClockMethodIcon className="h-3.5 w-3.5 text-muted-foreground/80" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-[10px] uppercase tracking-widest text-muted-foreground/55 font-bold">Entrada</p>
+                    <p className="text-[10px] uppercase tracking-widest text-muted-foreground/55 font-bold">Clock In</p>
                     <p className="text-[13px] font-semibold text-foreground mt-0.5">{clockLabel}</p>
                   </div>
                 </div>
@@ -461,7 +461,7 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, responseStatu
                 onClick={onReject}
                 disabled={!!responding}
               >
-                <X className="h-4 w-4" /> Rechazar
+                <X className="h-4 w-4" /> Decline
               </Button>
             )}
             {showResponseActions && onAccept && (
@@ -472,7 +472,7 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, responseStatu
                 disabled={!!responding}
               >
                 {responding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                Confirmar
+                Accept
               </Button>
             )}
             {!showResponseActions && showClockInAction && (

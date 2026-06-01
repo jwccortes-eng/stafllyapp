@@ -931,10 +931,10 @@ export default function Employees() {
   // KPI strip for the premium header.
   const kpis: PremiumPageHeaderKpi[] = [
     { label: "Total", value: statusCounts.all, onClick: () => setStatusTab("all"), active: statusTab === "all" },
-    { label: "Activos", value: statusCounts.active, accent: "success", onClick: () => setStatusTab("active"), active: statusTab === "active" },
-    { label: "Pendientes de activar app", value: statusCounts.pending, accent: statusCounts.pending > 0 ? "warning" : "default", onClick: () => setStatusTab("pending"), active: statusTab === "pending" },
-    { label: "Documentos faltantes", value: statusCounts["missing-docs"], accent: statusCounts["missing-docs"] > 0 ? "destructive" : "default", onClick: () => setStatusTab("missing-docs"), active: statusTab === "missing-docs" },
-    { label: "Conductores", value: statusCounts.drivers, accent: "primary", onClick: () => setStatusTab("drivers"), active: statusTab === "drivers" },
+    { label: "Active", value: statusCounts.active, accent: "success", onClick: () => setStatusTab("active"), active: statusTab === "active" },
+    { label: "Pending App Activation", value: statusCounts.pending, accent: statusCounts.pending > 0 ? "warning" : "default", onClick: () => setStatusTab("pending"), active: statusTab === "pending" },
+    { label: "Missing Documents", value: statusCounts["missing-docs"], accent: statusCounts["missing-docs"] > 0 ? "destructive" : "default", onClick: () => setStatusTab("missing-docs"), active: statusTab === "missing-docs" },
+    { label: "Drivers", value: statusCounts.drivers, accent: "primary", onClick: () => setStatusTab("drivers"), active: statusTab === "drivers" },
   ];
 
   // ── Strong duplicate signal count (lightweight, mirrors WorkerDuplicates filters) ──
@@ -1015,12 +1015,12 @@ export default function Employees() {
       {!isMobile && (<>
       {/* ─── Premium Header + KPI strip ─── */}
       <PremiumPageHeader
-        title="Equipo"
+        title="Team"
         icon={Users}
         subtitle={
           <span className="inline-flex flex-col gap-1">
             <span className="inline-flex items-center gap-2 flex-wrap">
-              <span>Identidad, disponibilidad y preparación operativa de tus trabajadores.</span>
+              <span>Worker identity, availability, and operational readiness.</span>
               {selectedCompany && (
                 <span className="inline-flex items-center gap-1.5 rounded-md border border-border/50 bg-muted/40 px-2 py-0.5 text-[9px] font-mono text-muted-foreground">
                   <Building2 className="h-3 w-3" />
@@ -1029,7 +1029,7 @@ export default function Employees() {
               )}
             </span>
             <span className="text-[10px] text-muted-foreground/80">
-              ID Stafly conecta perfil, turnos y payroll.
+              Stafly ID connects profile, shifts, and payroll.
             </span>
           </span>
         }
@@ -1041,7 +1041,7 @@ export default function Employees() {
             {isPrivileged && (
               <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => setCampaignOpen(true)}>
                 <Rocket className="h-3.5 w-3.5 mr-1.5" />
-                Campaña de activación
+                Activation Campaign
               </Button>
             )}
             {isPrivileged && (
@@ -1050,10 +1050,10 @@ export default function Employees() {
                 size="sm"
                 className="h-8 text-xs relative"
                 onClick={() => navigate("/app/workers/duplicates")}
-                title="Detectar posibles trabajadores duplicados"
+                title="Detect possible duplicate workers"
               >
                 <UserSearch className="h-3.5 w-3.5 mr-1.5" />
-                Detectar duplicados
+                Detect Duplicates
                 {strongDuplicateCount > 0 && (
                   <Badge
                     variant="outline"
@@ -1066,12 +1066,12 @@ export default function Employees() {
             )}
             <BulkRateAssignment />
             <Button variant="outline" size="sm" className="h-8 text-xs" onClick={handleExport} disabled={filtered.length === 0}>
-              <Download className="h-3.5 w-3.5 mr-1.5" />Exportar
+              <Download className="h-3.5 w-3.5 mr-1.5" />Export
             </Button>
             {/* Update Dialog */}
             <Dialog open={updateOpen} onOpenChange={(v) => { setUpdateOpen(v); if (!v) resetUpdate(); }}>
               <DialogTrigger asChild>
-                <Button variant="outline" size="sm" className="h-8 text-xs"><ArrowUpDown className="h-3.5 w-3.5 mr-1.5" />Actualizar</Button>
+                <Button variant="outline" size="sm" className="h-8 text-xs"><ArrowUpDown className="h-3.5 w-3.5 mr-1.5" />Refresh</Button>
               </DialogTrigger>
               <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
                 <DialogHeader>
@@ -1243,24 +1243,24 @@ export default function Employees() {
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold text-foreground">Calidad de datos</span>
+                <span className="text-sm font-semibold text-foreground">Data Quality</span>
                 {strongDuplicateCount > 0 ? (
                   <Badge
                     variant="outline"
                     className="h-5 px-1.5 bg-warning/10 text-warning border-warning/30 text-[10px] font-semibold"
                   >
-                    {strongDuplicateCount} {strongDuplicateCount === 1 ? "grupo" : "grupos"}
+                    {strongDuplicateCount} {strongDuplicateCount === 1 ? "group" : "groups"}
                   </Badge>
                 ) : (
                   <Badge variant="outline" className="h-5 px-1.5 text-[10px] text-muted-foreground border-border">
-                    limpio
+                    clean
                   </Badge>
                 )}
               </div>
               <p className="text-xs text-muted-foreground mt-0.5 truncate">
                 {strongDuplicateCount > 0
-                  ? "Posibles trabajadores duplicados detectados. Revisa antes de que contaminen turnos o payroll."
-                  : "Sin señales fuertes de duplicados en la vista actual. Lanza un escaneo profundo cuando quieras."}
+                  ? "Possible duplicate workers detected. Review before they affect shifts or payroll."
+                  : "No strong duplicate signals in the current view. Run a deep scan anytime."}
               </p>
             </div>
             <Button
@@ -1273,7 +1273,7 @@ export default function Employees() {
               }}
             >
               <UserSearch className="h-3.5 w-3.5 mr-1.5" />
-              Detectar duplicados
+              Detect Duplicates
             </Button>
           </CardContent>
         </Card>
@@ -1288,31 +1288,31 @@ export default function Employees() {
           tenants keep a calm UI and stressed tenants get a glanceable alert. */}
       <div className="flex items-center gap-0.5 border-b border-border/40 overflow-x-auto">
         {([
-          { key: "active" as const, label: "Activos", count: statusCounts.active },
-          { key: "pending" as const, label: "Pendientes de activar app", count: statusCounts.pending },
-          { key: "invited" as const, label: "Invitados", count: statusCounts.invited },
-          // Surface the failure backlog right next to "Invitados" so it's actionable.
+          { key: "active" as const, label: "Active", count: statusCounts.active },
+          { key: "pending" as const, label: "Pending App Activation", count: statusCounts.pending },
+          { key: "invited" as const, label: "Invited", count: statusCounts.invited },
+          // Surface the failure backlog right next to "Invited" so it's actionable.
           // Hidden when zero to avoid noise in healthy tenants.
           ...(statusCounts.failed > 0
-            ? [{ key: "failed" as const, label: "Invitación fallida", count: statusCounts.failed, tone: "destructive" as const }]
+            ? [{ key: "failed" as const, label: "Invite Failed", count: statusCounts.failed, tone: "destructive" as const }]
             : []),
           {
             key: "missing-docs" as const,
-            label: "Documentos faltantes",
+            label: "Missing Documents",
             count: statusCounts["missing-docs"],
             tone: statusCounts["missing-docs"] > 0 ? ("warning" as const) : undefined,
           },
           {
             key: "no-photo" as const,
-            label: "Foto requerida",
+            label: "Photo Required",
             count: statusCounts["no-photo"],
             tone: statusCounts["no-photo"] > 0 ? ("warning" as const) : undefined,
           },
-          { key: "new" as const, label: "Nuevos", count: statusCounts.new },
-          { key: "drivers" as const, label: "Conductores", count: statusCounts.drivers },
-          { key: "no-activity" as const, label: "Sin actividad reciente", count: statusCounts["no-activity"] },
-          { key: "inactive" as const, label: "Históricos / Inactivos", count: statusCounts.inactive },
-          { key: "all" as const, label: "Todos", count: statusCounts.all },
+          { key: "new" as const, label: "New", count: statusCounts.new },
+          { key: "drivers" as const, label: "Drivers", count: statusCounts.drivers },
+          { key: "no-activity" as const, label: "No Recent Activity", count: statusCounts["no-activity"] },
+          { key: "inactive" as const, label: "Historical / Inactive", count: statusCounts.inactive },
+          { key: "all" as const, label: "All", count: statusCounts.all },
         ]).map(tab => {
           const isActive = statusTab === tab.key;
           const tone = (tab as any).tone as "destructive" | "warning" | undefined;
@@ -1385,7 +1385,7 @@ export default function Employees() {
       <PremiumFilterBar
         search={search}
         onSearchChange={setSearch}
-        searchPlaceholder="Buscar por nombre, teléfono, email o ID Stafly…"
+        searchPlaceholder="Search by name, phone, email, or Stafly ID…"
         quickFilters={
           <>
             {uniqueRoles.length > 0 && (
@@ -1801,7 +1801,7 @@ export default function Employees() {
                   {/* Last activity (desktop only) */}
                   {lastSeen && (
                     <div className="hidden xl:flex flex-col items-end text-right shrink-0 w-[110px]">
-                      <span className="text-[9px] uppercase tracking-wide text-muted-foreground/70">Últ. actividad</span>
+                      <span className="text-[9px] uppercase tracking-wide text-muted-foreground/70">Last Activity</span>
                       <span className="text-[10.5px] text-muted-foreground">
                         {formatDistanceToNow(lastSeen, { addSuffix: true, locale: enUS })}
                       </span>

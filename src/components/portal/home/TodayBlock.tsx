@@ -3,7 +3,7 @@
  * the NBA is *not* already covering the today shift.
  *
  * DS3a pilot: now uses ShiftRouteHeader (compact / worker variant).
- * Visual contract preserved: day chip, Entrada protagonist, Termina aprox.,
+ * Visual contract preserved: day chip, Entrada protagonist, Ends approx.,
  * title, client/location row, meeting point row, chevron affordance.
  */
 import type { NbaShift } from "@/lib/portal/next-best-action";

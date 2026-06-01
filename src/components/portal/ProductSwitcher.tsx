@@ -100,7 +100,7 @@ export function ProductSwitcher({ compact = false }: ProductSwitcherProps) {
               </span>
             </div>
             <p className="text-[11px] text-muted-foreground leading-tight mt-0.5">
-              Mis turnos, fichaje y pagos
+              My Shifts, fichaje y pagos
             </p>
           </div>
         </DropdownMenuItem>
