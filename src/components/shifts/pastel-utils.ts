@@ -35,37 +35,37 @@ export function buildPastelMap(ids: string[]): Map<string, PastelPillClass> {
 
 /** Shift status → pastel badge config */
 export const SHIFT_STATUS_CONFIG: Record<string, { label: string; className: string }> = {
-  draft:       { label: "Borrador",      className: "status-badge bg-[hsl(var(--pastel-yellow))] text-[hsl(var(--pastel-yellow-text))]" },
-  open:        { label: "Abierto",       className: "status-badge bg-[hsl(var(--pastel-sky))] text-[hsl(var(--pastel-sky-text))]" },
-  published:   { label: "Publicado",     className: "status-badge bg-[hsl(var(--pastel-green))] text-[hsl(var(--pastel-green-text))]" },
-  assigned:    { label: "Asignado",      className: "status-badge bg-[hsl(var(--pastel-teal))] text-[hsl(var(--pastel-teal-text))]" },
-  confirmed:   { label: "Confirmado",    className: "status-badge bg-[hsl(var(--pastel-green))] text-[hsl(var(--pastel-green-text))]" },
-  in_progress: { label: "En progreso",   className: "status-badge bg-[hsl(var(--pastel-sky))] text-[hsl(var(--pastel-sky-text))]" },
-  completed:   { label: "Completado",    className: "status-badge bg-[hsl(var(--pastel-indigo))] text-[hsl(var(--pastel-indigo-text))]" },
-  issue:       { label: "Incidencia",    className: "status-badge bg-[hsl(var(--pastel-rose))] text-[hsl(var(--pastel-rose-text))]" },
-  canceled:    { label: "Cancelado",     className: "status-badge bg-[hsl(var(--pastel-orange))] text-[hsl(var(--pastel-orange-text))]" },
-  cancelled:   { label: "Cancelado",     className: "status-badge bg-[hsl(var(--pastel-orange))] text-[hsl(var(--pastel-orange-text))]" },
-  locked:      { label: "Bloqueado",     className: "status-badge bg-[hsl(var(--pastel-violet))] text-[hsl(var(--pastel-violet-text))]" },
+  draft:       { label: "Draft",         className: "status-badge bg-[hsl(var(--pastel-yellow))] text-[hsl(var(--pastel-yellow-text))]" },
+  open:        { label: "Open",          className: "status-badge bg-[hsl(var(--pastel-sky))] text-[hsl(var(--pastel-sky-text))]" },
+  published:   { label: "Published",     className: "status-badge bg-[hsl(var(--pastel-green))] text-[hsl(var(--pastel-green-text))]" },
+  assigned:    { label: "Assigned",      className: "status-badge bg-[hsl(var(--pastel-teal))] text-[hsl(var(--pastel-teal-text))]" },
+  confirmed:   { label: "Confirmed",     className: "status-badge bg-[hsl(var(--pastel-green))] text-[hsl(var(--pastel-green-text))]" },
+  in_progress: { label: "In Progress",   className: "status-badge bg-[hsl(var(--pastel-sky))] text-[hsl(var(--pastel-sky-text))]" },
+  completed:   { label: "Completed",     className: "status-badge bg-[hsl(var(--pastel-indigo))] text-[hsl(var(--pastel-indigo-text))]" },
+  issue:       { label: "Issue",         className: "status-badge bg-[hsl(var(--pastel-rose))] text-[hsl(var(--pastel-rose-text))]" },
+  canceled:    { label: "Cancelled",     className: "status-badge bg-[hsl(var(--pastel-orange))] text-[hsl(var(--pastel-orange-text))]" },
+  cancelled:   { label: "Cancelled",     className: "status-badge bg-[hsl(var(--pastel-orange))] text-[hsl(var(--pastel-orange-text))]" },
+  locked:      { label: "Locked",        className: "status-badge bg-[hsl(var(--pastel-violet))] text-[hsl(var(--pastel-violet-text))]" },
 };
 
 /** Attendance/clock status → pastel badge config */
 export const CLOCK_STATUS_CONFIG: Record<string, { label: string; className: string }> = {
-  on_time:          { label: "A tiempo",          className: "status-badge bg-[hsl(var(--pastel-green))] text-[hsl(var(--pastel-green-text))]" },
-  late:             { label: "Tardanza",          className: "status-badge bg-[hsl(var(--pastel-yellow))] text-[hsl(var(--pastel-yellow-text))]" },
-  missing_clock_in: { label: "Sin entrada",       className: "status-badge bg-[hsl(var(--pastel-rose))] text-[hsl(var(--pastel-rose-text))]" },
-  missing_clock_out:{ label: "Sin salida",        className: "status-badge bg-[hsl(var(--pastel-orange))] text-[hsl(var(--pastel-orange-text))]" },
-  corrected:        { label: "Corregido",         className: "status-badge bg-[hsl(var(--pastel-violet))] text-[hsl(var(--pastel-violet-text))]" },
-  approved:         { label: "Aprobado",          className: "status-badge bg-[hsl(var(--pastel-green))] text-[hsl(var(--pastel-green-text))]" },
-  pending:          { label: "Pendiente",         className: "status-badge bg-[hsl(var(--pastel-yellow))] text-[hsl(var(--pastel-yellow-text))]" },
-  flagged:          { label: "Marcado",           className: "status-badge bg-[hsl(var(--pastel-rose))] text-[hsl(var(--pastel-rose-text))]" },
-  rejected:         { label: "Rechazado",         className: "status-badge bg-[hsl(var(--pastel-rose))] text-[hsl(var(--pastel-rose-text))]" },
-  imported:         { label: "Importado",         className: "status-badge bg-[hsl(var(--pastel-sky))] text-[hsl(var(--pastel-sky-text))]" },
-  reviewed:         { label: "Revisado",          className: "status-badge bg-[hsl(var(--pastel-teal))] text-[hsl(var(--pastel-teal-text))]" },
+  on_time:          { label: "On Time",            className: "status-badge bg-[hsl(var(--pastel-green))] text-[hsl(var(--pastel-green-text))]" },
+  late:             { label: "Late",               className: "status-badge bg-[hsl(var(--pastel-yellow))] text-[hsl(var(--pastel-yellow-text))]" },
+  missing_clock_in: { label: "Missing Clock In",   className: "status-badge bg-[hsl(var(--pastel-rose))] text-[hsl(var(--pastel-rose-text))]" },
+  missing_clock_out:{ label: "Missing Clock Out",  className: "status-badge bg-[hsl(var(--pastel-orange))] text-[hsl(var(--pastel-orange-text))]" },
+  corrected:        { label: "Corrected",          className: "status-badge bg-[hsl(var(--pastel-violet))] text-[hsl(var(--pastel-violet-text))]" },
+  approved:         { label: "Approved",           className: "status-badge bg-[hsl(var(--pastel-green))] text-[hsl(var(--pastel-green-text))]" },
+  pending:          { label: "Pending",            className: "status-badge bg-[hsl(var(--pastel-yellow))] text-[hsl(var(--pastel-yellow-text))]" },
+  flagged:          { label: "Flagged",            className: "status-badge bg-[hsl(var(--pastel-rose))] text-[hsl(var(--pastel-rose-text))]" },
+  rejected:         { label: "Rejected",           className: "status-badge bg-[hsl(var(--pastel-rose))] text-[hsl(var(--pastel-rose-text))]" },
+  imported:         { label: "Imported",           className: "status-badge bg-[hsl(var(--pastel-sky))] text-[hsl(var(--pastel-sky-text))]" },
+  reviewed:         { label: "Reviewed",           className: "status-badge bg-[hsl(var(--pastel-teal))] text-[hsl(var(--pastel-teal-text))]" },
 };
 
 /** Assignment status config */
 export const ASSIGNMENT_STATUS_CONFIG: Record<string, { label: string; dotClass: string }> = {
-  confirmed: { label: "Confirmado", dotClass: "bg-emerald-500" },
-  pending:   { label: "Pendiente",  dotClass: "bg-amber-400" },
-  rejected:  { label: "Rechazado", dotClass: "bg-rose-500" },
+  confirmed: { label: "Accepted",  dotClass: "bg-emerald-500" },
+  pending:   { label: "Pending",   dotClass: "bg-amber-400" },
+  rejected:  { label: "Rejected",  dotClass: "bg-rose-500" },
 };
