@@ -1,12 +1,13 @@
 import { NavLink, useLocation } from "react-router-dom";
 import { Home, CalendarDays, Clock, MoreHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useT } from "@/i18n";
 
 interface TabItem {
   id: string;
   to?: string;
   icon: React.ElementType;
-  label: string;
+  labelKey: string;
   end?: boolean;
 }
 
@@ -16,10 +17,10 @@ interface TabItem {
  * Profile / Payments / Availability / Announcements live in the More sheet.
  */
 const TABS: TabItem[] = [
-  { id: "home", to: "/portal", icon: Home, label: "Home", end: true },
-  { id: "shifts", to: "/portal/shifts", icon: CalendarDays, label: "Shifts" },
-  { id: "clock", to: "/portal/clock", icon: Clock, label: "Clock" },
-  { id: "more", icon: MoreHorizontal, label: "More" },
+  { id: "home", to: "/portal", icon: Home, labelKey: "portal.nav.home", end: true },
+  { id: "shifts", to: "/portal/shifts", icon: CalendarDays, labelKey: "portal.nav.shifts" },
+  { id: "clock", to: "/portal/clock", icon: Clock, labelKey: "portal.nav.clock" },
+  { id: "more", icon: MoreHorizontal, labelKey: "portal.nav.more" },
 ];
 
 const MORE_PATHS = [
@@ -39,6 +40,7 @@ interface PortalBottomNavProps {
 
 export function PortalBottomNav({ onOpenMore, moreOpen = false }: PortalBottomNavProps) {
   const location = useLocation();
+  const { t } = useT();
 
   const isActive = (item: TabItem) => {
     if (item.id === "more") {
@@ -71,7 +73,7 @@ export function PortalBottomNav({ onOpenMore, moreOpen = false }: PortalBottomNa
                     active ? "text-primary font-semibold" : "text-muted-foreground/55 font-medium"
                   )}
                 >
-                  {item.label}
+                  {t(item.labelKey)}
                 </span>
               </>
             );
@@ -89,7 +91,7 @@ export function PortalBottomNav({ onOpenMore, moreOpen = false }: PortalBottomNa
                   type="button"
                   onClick={onOpenMore}
                   className={baseClass}
-                  aria-label="More options"
+                  aria-label={t("portal.nav.more_aria")}
                   aria-expanded={moreOpen}
                 >
                   {indicator}
