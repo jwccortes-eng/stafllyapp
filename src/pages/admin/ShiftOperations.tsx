@@ -787,6 +787,7 @@ export default function ShiftOperations() {
             </div>
           </div>
         </div>
+        </div>
         </CollapsibleContent>
       </Collapsible>
 
