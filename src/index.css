@@ -628,3 +628,24 @@
   thead { display: table-header-group; }
   tr { page-break-inside: avoid; }
 }
+
+/* ── RTL hardening (P0) ──────────────────────────────────────────────
+   Global utilities so individual components don't each need RTL CSS.
+   Apply `.flip-rtl` to **directional** icons only (ChevronRight, ArrowRight,
+   "next/back" arrows). Do NOT apply to neutral icons (search, settings, etc).
+   ----------------------------------------------------------------- */
+[dir="rtl"] .flip-rtl {
+  transform: scaleX(-1);
+}
+
+/* Sonner positions absolutely with inset properties; mirror them in RTL
+   so toasts stay on the leading edge instead of jumping across the screen. */
+[dir="rtl"] [data-sonner-toaster][data-x-position="right"] {
+  right: auto;
+  left: 0;
+}
+[dir="rtl"] [data-sonner-toaster][data-x-position="left"] {
+  left: auto;
+  right: 0;
+}
+
