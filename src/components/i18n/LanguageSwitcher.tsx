@@ -14,12 +14,13 @@ interface Option {
 }
 
 /**
- * Tri-language selector aligned with Parceros: Español · English · עברית.
+ * Production language selector: Español · English.
  *
  * - Each option sets `language` only. `contentMode` is independent and not
  *   touched here (Libro/guide mode is a separate axis, hidden from this UI).
- * - Hebrew triggers RTL layout via LanguageContext (sets <html dir="rtl">).
- * - Inline variant uses short codes (ES · EN · עב) to fit narrow chrome.
+ * - Hebrew is intentionally hidden in production until full RTL QA exists.
+ *   See LanguageContext: RTL is disabled and any legacy "he" preference is
+ *   coerced to English on load so the dashboard never boots in RTL.
  */
 export function LanguageSwitcher({ className, variant = "card" }: LanguageSwitcherProps) {
   const { language, setLanguage, t } = useT();
@@ -27,7 +28,6 @@ export function LanguageSwitcher({ className, variant = "card" }: LanguageSwitch
   const options: Option[] = [
     { value: "es", label: "Español", shortLabel: "ES" },
     { value: "en", label: "English", shortLabel: "EN" },
-    { value: "he", label: "עברית", shortLabel: "עב" },
   ];
 
   const Pills = ({ size }: { size: "sm" | "md" }) => (

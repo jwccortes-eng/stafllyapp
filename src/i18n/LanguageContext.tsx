@@ -17,22 +17,35 @@ const MODE_STORAGE_KEY = "stafly.contentMode.v1";
 type Dict = Record<string, string>;
 
 // dictionary lookup table; "marketing" reserved but not populated in v1.
+// NOTE: Hebrew ("he") dictionaries are kept loaded so existing keys do not break,
+// but the language is NOT exposed in any production selector and is coerced to
+// English everywhere. RTL is fully disabled in production — see detectInitialLanguage
+// + the lang effect below. Re-enabling Hebrew requires dedicated RTL QA.
 const DICTIONARIES: Record<Language, Record<ContentMode, Dict>> = {
   en: { app: en_app, guide: en_guide, marketing: {} },
   es: { app: es_app, guide: es_guide, marketing: {} },
   he: { app: he_app, guide: he_guide, marketing: {} },
 };
 
-const RTL_LANGUAGES: ReadonlySet<Language> = new Set(["he"]);
+// Production: NO RTL languages are active. Hebrew is hidden from the UI and any
+// stored "he" preference is coerced to English on load. Do not add languages here
+// without a full RTL QA pass on admin + worker portal.
+const RTL_LANGUAGES: ReadonlySet<Language> = new Set();
 
 function detectInitialLanguage(): Language {
   if (typeof window === "undefined") return "en";
   const stored = window.localStorage.getItem(LANG_STORAGE_KEY);
-  if (stored === "en" || stored === "es" || stored === "he") return stored;
+  // Only ES/EN are supported in production. Any legacy "he" preference is
+  // coerced to English so the dashboard never boots in RTL.
+  if (stored === "es") return "es";
+  if (stored === "en") return "en";
+  if (stored === "he") {
+    try { window.localStorage.setItem(LANG_STORAGE_KEY, "en"); } catch { /* noop */ }
+    return "en";
+  }
   // Fallback to browser preference; default to English.
   const nav = window.navigator?.language?.toLowerCase() ?? "";
   if (nav.startsWith("es")) return "es";
-  if (nav.startsWith("he") || nav.startsWith("iw")) return "he";
   return "en";
 }
 
