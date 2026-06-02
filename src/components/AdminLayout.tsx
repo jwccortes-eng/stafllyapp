@@ -302,7 +302,7 @@ export default function AdminLayout() {
         <CommandPalette />
         <main className={cn(
           "transition-all duration-300 ease-in-out min-h-[calc(100vh-3.5rem)]",
-          collapsed ? "ml-[68px]" : "ml-[256px]",
+          collapsed ? "ms-[68px]" : "ms-[256px]",
           "p-4 sm:p-5 lg:p-6 pt-4"
         )}>
           <div className="animate-fade-in max-w-[1600px] mx-auto">

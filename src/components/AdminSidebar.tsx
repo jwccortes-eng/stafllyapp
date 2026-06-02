@@ -265,7 +265,7 @@ export default function AdminSidebar() {
           )}
         >
           {active && !locked && (
-            <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-sidebar-primary transition-all" />
+            <span className="absolute start-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-e-full bg-sidebar-primary transition-all" />
           )}
           <div className="relative flex items-center justify-center">
             {locked ? (
@@ -277,19 +277,19 @@ export default function AdminSidebar() {
               )} />
             )}
             {collapsed && badge > 0 && !locked && (
-              <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-rose-400/80 ring-2 ring-sidebar/80" />
+              <span className="absolute -top-1 -end-1 h-2 w-2 rounded-full bg-rose-400/80 ring-2 ring-sidebar/80" />
             )}
           </div>
           {!collapsed && (
             <>
               <span className={cn("flex-1 truncate leading-tight", locked && "line-through decoration-sidebar-foreground/20")}>{link.label}</span>
               {locked && requiredPlan && (
-                <span className="ml-auto shrink-0 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-sidebar-primary/15 text-sidebar-primary">
+                <span className="ms-auto shrink-0 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-sidebar-primary/15 text-sidebar-primary">
                   {requiredPlan}
                 </span>
               )}
               {!locked && badge > 0 && (
-                <span className="ml-auto shrink-0 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-rose-50 text-rose-600 border border-rose-100 text-[10px] font-semibold tabular-nums px-1.5 dark:bg-rose-500/15 dark:text-rose-300 dark:border-rose-500/20">
+                <span className="ms-auto shrink-0 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-rose-50 text-rose-600 border border-rose-100 text-[10px] font-semibold tabular-nums px-1.5 dark:bg-rose-500/15 dark:text-rose-300 dark:border-rose-500/20">
                   {badge > 9 ? "9+" : badge}
                 </span>
               )}
