@@ -170,12 +170,14 @@ export function ShiftDetailDialog({
   availabilityConfigs = [], availabilityOverrides = [], onAddNewEmployee, allowClaims = true,
   initialTab,
 }: ShiftDetailDialogProps) {
-  const { user } = useAuth();
+  const { user, canAccessAdminForCompany } = useAuth();
   const navigate = useNavigate();
   const { selectedCompanyId, selectedCompany } = useCompany();
   const [showAddPanel, setShowAddPanel] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
   const [tab, setTab] = useState(initialTab || "details");
+  const [connecteamExportOpen, setConnecteamExportOpen] = useState(false);
+  const isAdminForTenant = canAccessAdminForCompany(selectedCompanyId);
 
   // Editing is now delegated to the canonical ShiftEditDialog (ShiftFormFields).
   // No local form state — this sheet is read-only and triggers `onEdit(shift)`.
