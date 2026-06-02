@@ -22,7 +22,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction, AlertDialogCancel } from "@/components/ui/alert-dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Calendar as CalendarWidget } from "@/components/ui/calendar";
 import { Plus, Loader2, ChevronLeft, ChevronRight, CalendarDays, LayoutGrid, Users, Building2, Calendar, CalendarIcon, AlertTriangle, CheckCircle2, Clock, Lock, Unlock, Send, Upload, MoreHorizontal, ScanEye, MessageSquare, Hash, CreditCard, FileText, Car, UserX, Map, MapPin, Copy, Settings2, CalendarRange } from "lucide-react";
 import { formatDisplayText } from "@/lib/format-helpers";
@@ -1861,123 +1861,230 @@ function DesktopShifts() {
         </div>
       )}
 
-      {/* ── OPS TOOLBAR: view switcher · date nav · today ── */}
-      <OpsToolbar
-        sticky={false}
-        left={
-          <div className="flex items-center gap-0.5 bg-secondary rounded-xl p-1">
-            {([
-              { key: "day" as ViewMode, icon: Calendar, label: "Día" },
-              { key: "week" as ViewMode, icon: LayoutGrid, label: "Semana" },
-              { key: "month" as ViewMode, icon: CalendarDays, label: "Mes" },
-              { key: "employee" as ViewMode, icon: Users, label: "Equipo" },
-              { key: "client" as ViewMode, icon: Building2, label: "Clientes" },
-            ]).map(({ key, icon: Icon, label }) => (
+      {/* ── OPS TOOLBAR: time range · date nav · group by ──
+          Time (Día/Semana/Mes) and Group-by (Grid/Cliente/Equipo) are now
+          separated controls. Group-by is a mode over the same data — never a
+          silo. Day/Month implicitly use grid; switching group-by from those
+          ranges bumps the view to Week so the grouping has a surface to render. */}
+      {(() => {
+        const timeRange: "day" | "week" | "month" =
+          viewMode === "day" ? "day" : viewMode === "month" ? "month" : "week";
+        const groupBy: "grid" | "client" | "team" =
+          viewMode === "client"
+            ? "client"
+            : viewMode === "employee"
+            ? "team"
+            : viewMode === "week"
+            ? weekViewMode === "job"
+              ? "client"
+              : weekViewMode === "employee"
+              ? "team"
+              : "grid"
+            : "grid";
+
+        const setTimeRange = (t: "day" | "week" | "month") => {
+          if (t === "day" || t === "month") {
+            setViewMode(t);
+          } else {
+            // Going to week → preserve grouping
+            setViewMode("week");
+            if (groupBy === "client") setWeekViewMode("job");
+            else if (groupBy === "team") setWeekViewMode("employee");
+            else setWeekViewMode("grid");
+          }
+        };
+
+        const setGroupBy = (g: "grid" | "client" | "team") => {
+          if (g === "grid") {
+            if (viewMode === "employee" || viewMode === "client") setViewMode("week");
+            if (viewMode === "week") setWeekViewMode("grid");
+          } else if (g === "client") {
+            if (viewMode === "day" || viewMode === "month") {
+              // bump to week so grouping has a surface
+              setViewMode("week");
+              setWeekViewMode("job");
+            } else if (viewMode === "week") {
+              setWeekViewMode("job");
+            } else {
+              setViewMode("client");
+            }
+          } else {
+            // team
+            if (viewMode === "day" || viewMode === "month") {
+              setViewMode("week");
+              setWeekViewMode("employee");
+            } else if (viewMode === "week") {
+              setWeekViewMode("employee");
+            } else {
+              setViewMode("employee");
+            }
+          }
+        };
+
+        const timeOpts = [
+          { key: "day" as const, icon: Calendar, label: "Día" },
+          { key: "week" as const, icon: LayoutGrid, label: "Semana" },
+          { key: "month" as const, icon: CalendarDays, label: "Mes" },
+        ];
+        const groupOpts = [
+          { key: "grid" as const, icon: LayoutGrid, label: "Grid" },
+          { key: "client" as const, icon: Building2, label: "Cliente" },
+          { key: "team" as const, icon: Users, label: "Equipo" },
+        ];
+
+        return (
+          <OpsToolbar
+            sticky={false}
+            left={
+              <div className="flex items-center gap-2 flex-wrap">
+                {/* Time range */}
+                <div className="flex items-center gap-0.5 bg-secondary rounded-xl p-1" role="tablist" aria-label="Rango de tiempo">
+                  {timeOpts.map(({ key, icon: Icon, label }) => (
+                    <button
+                      key={key}
+                      role="tab"
+                      aria-selected={timeRange === key}
+                      onClick={() => setTimeRange(key)}
+                      className={cn(
+                        "flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-lg transition-all duration-150",
+                        timeRange === key
+                          ? "bg-card shadow-sm text-foreground"
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      <Icon className="h-3.5 w-3.5" /> <span className="hidden md:inline">{label}</span>
+                    </button>
+                  ))}
+                </div>
+
+                <span className="text-[10px] uppercase tracking-wider text-muted-foreground/70 hidden lg:inline">
+                  Agrupar por
+                </span>
+                {/* Group by */}
+                <div className="flex items-center gap-0.5 bg-secondary/60 rounded-xl p-1" role="tablist" aria-label="Agrupar por">
+                  {groupOpts.map(({ key, icon: Icon, label }) => (
+                    <button
+                      key={key}
+                      role="tab"
+                      aria-selected={groupBy === key}
+                      onClick={() => setGroupBy(key)}
+                      className={cn(
+                        "flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-lg transition-all duration-150",
+                        groupBy === key
+                          ? "bg-card shadow-sm text-foreground"
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      <Icon className="h-3.5 w-3.5" /> <span className="hidden md:inline">{label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            }
+            center={
+              <div className="flex items-center gap-1">
+                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl" onClick={navigateBack}>
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <button
+                  onClick={navigateToday}
+                  className="text-[13px] font-semibold capitalize min-w-[160px] text-center px-3 py-1 rounded-xl hover:bg-accent/50 transition-colors"
+                >
+                  {navLabel}
+                </button>
+                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl" onClick={navigateForward}>
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            }
+            right={
               <button
-                key={key}
-                onClick={() => setViewMode(key)}
-                className={cn(
-                  "flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-lg transition-all duration-150",
-                  viewMode === key
-                    ? "bg-card shadow-sm text-foreground"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
+                onClick={navigateToday}
+                className="text-[11px] font-semibold text-primary bg-primary/10 hover:bg-primary/15 px-3 py-1.5 rounded-xl transition-colors"
               >
-                <Icon className="h-3.5 w-3.5" /> <span className="hidden md:inline">{label}</span>
+                Hoy
               </button>
-            ))}
-          </div>
-        }
-        center={
-          <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl" onClick={navigateBack}>
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <button
-              onClick={navigateToday}
-              className="text-[13px] font-semibold capitalize min-w-[160px] text-center px-3 py-1 rounded-xl hover:bg-accent/50 transition-colors"
-            >
-              {navLabel}
-            </button>
-            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl" onClick={navigateForward}>
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-        }
-        right={
-          <button
-            onClick={navigateToday}
-            className="text-[11px] font-semibold text-primary bg-primary/10 hover:bg-primary/15 px-3 py-1.5 rounded-xl transition-colors"
-          >
-            Hoy
-          </button>
-        }
-      />
+            }
+          />
+        );
+      })()}
 
 
-      {/* ── FILTERS + BULK ACTIONS ── */}
-      <div className="flex flex-col sm:flex-row gap-2">
-        <div className="flex-1">
+      {/* ── FILTERS + CONTEXTUAL ACTIONS ── */}
+      <div className="flex flex-col sm:flex-row gap-2 sm:items-start">
+        <div className="flex-1 min-w-0">
           <ShiftFilters filters={filters} onChange={setFilters} clients={clients} locations={locations} allowClaims={shiftsConfig.allow_claims} />
         </div>
         {canEdit && (
           <div className="flex items-center gap-1.5 shrink-0">
-            {viewMode === "week" && (
-              <div className="flex items-center bg-secondary rounded-xl p-0.5 mr-1">
-                {([
-                  { key: "grid" as const, icon: LayoutGrid, label: "Grid" },
-                  { key: "job" as const, icon: Building2, label: "Clientes" },
-                  { key: "employee" as const, icon: Users, label: "Empleados" },
-                ]).map(({ key, icon: Icon, label }) => (
+            {/* Primary action — scope-explicit */}
+            <Button
+              variant="default"
+              size="sm"
+              className="h-8 text-[11px] px-3 gap-1.5 rounded-xl"
+              onClick={handlePublishAll}
+              disabled={bulkPublishing}
+              title="Publica los borradores listos dentro del rango de fechas y filtros actuales"
+            >
+              {bulkPublishing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+              Publicar listos
+            </Button>
+
+            {/* Secondary / destructive bulk actions live inside Más acciones,
+                each label naming the scope so it never feels global. */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-8 text-[11px] px-3 gap-1.5 rounded-xl">
+                  <MoreHorizontal className="h-3.5 w-3.5" /> Más acciones
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-[260px]">
+                <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                  Acciones sobre el rango visible
+                </DropdownMenuLabel>
+                {viewMode === "week" && (
                   <button
-                    key={key}
-                    onClick={() => setWeekViewMode(key)}
-                    className={cn(
-                      "flex items-center gap-1 text-[10px] font-medium px-2.5 py-1.5 rounded-lg transition-all",
-                      weekViewMode === key
-                        ? "bg-card shadow-sm text-foreground"
-                        : "text-muted-foreground hover:text-foreground"
-                    )}
+                    type="button"
+                    onClick={handleCopyWeek}
+                    disabled={copyingWeek}
+                    className="w-full text-left flex items-center gap-2 px-2 py-1.5 text-xs hover:bg-accent rounded disabled:opacity-50"
                   >
-                    <Icon className="h-3 w-3" /> {label}
+                    {copyingWeek ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Copy className="h-3.5 w-3.5" />}
+                    Copiar semana
+                    <span
+                      className={cn(
+                        "ml-auto text-[9px] font-medium px-1.5 py-0.5 rounded",
+                        shiftsConfig.copy_week_assignments ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground",
+                      )}
+                    >
+                      {shiftsConfig.copy_week_assignments ? "+ asignaciones" : "solo turnos"}
+                    </span>
                   </button>
-                ))}
-              </div>
-            )}
-            {viewMode === "week" && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 text-[11px] px-3 gap-1.5 rounded-xl"
-                onClick={handleCopyWeek}
-                disabled={copyingWeek}
-                title={
-                  shiftsConfig.copy_week_assignments
-                    ? "Copy week → also copies assignments as pending (workers must accept). Toggle in Shifts settings."
-                    : "Copy week → copies shifts only (no assignments). Toggle in Shifts settings."
-                }
-              >
-                {copyingWeek ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Copy className="h-3.5 w-3.5" />} Copy week
-                <span
-                  className={`ml-1 text-[9px] font-medium px-1.5 py-0.5 rounded ${
-                    shiftsConfig.copy_week_assignments
-                      ? "bg-primary/10 text-primary"
-                      : "bg-muted text-muted-foreground"
-                  }`}
+                )}
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                  Cierre operativo
+                </DropdownMenuLabel>
+                <button
+                  type="button"
+                  onClick={handleLockAll}
+                  disabled={bulkLocking}
+                  className="w-full text-left flex items-center gap-2 px-2 py-1.5 text-xs hover:bg-accent rounded text-warning disabled:opacity-50"
                 >
-                  {shiftsConfig.copy_week_assignments ? "+ asignaciones" : "solo turnos"}
-                </span>
-              </Button>
-            )}
-            <Button variant="outline" size="sm" className="h-8 text-[11px] px-3 gap-1.5 rounded-xl" onClick={handlePublishAll} disabled={bulkPublishing}>
-              {bulkPublishing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />} Publicar
-            </Button>
-            <Button variant="outline" size="sm" className="h-8 text-[11px] px-3 gap-1.5 rounded-xl text-warning border-warning/30 hover:bg-warning/5" onClick={handleLockAll} disabled={bulkLocking}>
-              {bulkLocking ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Lock className="h-3.5 w-3.5" />} Bloquear
-            </Button>
-            <Button variant="outline" size="sm" className="h-8 text-[11px] px-3 gap-1.5 rounded-xl text-earning border-earning/30 hover:bg-earning/5" onClick={handleUnlockAll} disabled={bulkUnlocking}>
-              {bulkUnlocking ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Unlock className="h-3.5 w-3.5" />} Desbloquear
-            </Button>
+                  {bulkLocking ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Lock className="h-3.5 w-3.5" />}
+                  Bloquear turnos filtrados
+                </button>
+                <button
+                  type="button"
+                  onClick={handleUnlockAll}
+                  disabled={bulkUnlocking}
+                  className="w-full text-left flex items-center gap-2 px-2 py-1.5 text-xs hover:bg-accent rounded text-earning disabled:opacity-50"
+                >
+                  {bulkUnlocking ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Unlock className="h-3.5 w-3.5" />}
+                  Desbloquear turnos filtrados
+                </button>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         )}
       </div>
