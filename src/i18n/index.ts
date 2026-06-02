@@ -1,2 +1,2 @@
-export { LanguageProvider, useT } from "./LanguageContext";
-export type { Language, ContentMode } from "./LanguageContext";
+export { LanguageProvider, useT, useDir } from "./LanguageContext";
+export type { Language, ContentMode, Direction } from "./LanguageContext";

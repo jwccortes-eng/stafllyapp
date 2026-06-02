@@ -42,9 +42,13 @@ function detectInitialMode(): ContentMode {
   return "app";
 }
 
+export type Direction = "ltr" | "rtl";
+
 interface LanguageContextValue {
   language: Language;
   contentMode: ContentMode;
+  /** Layout direction derived from `language`. RTL only for Hebrew today. */
+  dir: Direction;
   setLanguage: (lang: Language) => void;
   setContentMode: (mode: ContentMode) => void;
   /** Translate a key. Falls back: <lang,mode> → <lang,app> → <en,app> → key. Never throws. */
@@ -101,15 +105,23 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     [language, contentMode]
   );
 
+  const dir: Direction = RTL_LANGUAGES.has(language) ? "rtl" : "ltr";
+
   const value = useMemo<LanguageContextValue>(
-    () => ({ language, contentMode, setLanguage, setContentMode, t }),
-    [language, contentMode, setLanguage, setContentMode, t]
+    () => ({ language, contentMode, dir, setLanguage, setContentMode, t }),
+    [language, contentMode, dir, setLanguage, setContentMode, t]
   );
 
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
 }
 
-/** Hook returning `{ t, language, contentMode, setLanguage, setContentMode }`.
+/** Convenience hook returning the current layout direction ("ltr" | "rtl"). */
+export function useDir(): Direction {
+  const ctx = useContext(LanguageContext);
+  return ctx?.dir ?? "ltr";
+}
+
+/** Hook returning `{ t, language, contentMode, dir, setLanguage, setContentMode }`.
  *  Safe to call outside the provider: falls back to English/app and a no-op setter. */
 export function useT(): LanguageContextValue {
   const ctx = useContext(LanguageContext);
@@ -118,6 +130,7 @@ export function useT(): LanguageContextValue {
   return {
     language: "en",
     contentMode: "app",
+    dir: "ltr",
     setLanguage: () => {},
     setContentMode: () => {},
     t: (key, vars) => {
