@@ -29,6 +29,7 @@ import {
   SmartSummaryCard, MissingItemsCard, RisksCard, NextActionsCard,
   AssignedTeamCard, CandidatesCard, WorkerPreviewCard, buildCandidatePool,
 } from "@/components/shifts/ops/ShiftOpsBlocks";
+import { AttendanceEvidenceCard } from "@/components/shifts/ops/AttendanceEvidenceCard";
 import {
   getShiftOperationalStatus, getShiftMissingItems, getShiftRisks,
   getRecommendedNextActions,
