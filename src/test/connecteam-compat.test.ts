@@ -44,11 +44,12 @@ function ctxFor(opts: {
 }
 
 describe("connecteam-compat: BETA_COMPAT_RULES integrity", () => {
-  it("has the 5 approved rules in the required order", () => {
+  it("has the 6 approved rules in the required order", () => {
     expect(BETA_COMPAT_RULES.map(r => r.id)).toEqual([
       "eminence.headwaiter",
       "eminence.outside",
       "eminence.regular_waiter",
+      "eminence.default_regular_waiter",
       "production.weekend",
       "production.regular",
     ]);
