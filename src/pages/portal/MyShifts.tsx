@@ -543,26 +543,46 @@ export default function MyShifts() {
         const a = nextHeroAssignment;
         const owed = responseOwedFor(a);
         const accepted = a.response_status === "accepted";
-        const isClockable = accepted && isToday(parseISO(a.shift.date));
+        const today_ = isToday(parseISO(a.shift.date));
+        const isClockable = accepted && today_;
+
+        // Try the SmartWorkCard (worker · standard). If it returns null
+        // (missing critical data, build error) we fall back to the
+        // existing OperationalAgendaHero — strict no-regression policy.
+        const smart = (
+          <SmartWorkCardHero
+            assignment={a}
+            isToday={today_}
+            busy={responding === a.id}
+            onAccept={() => acceptAssignment(a.id)}
+            onClockIn={() => navigate(`/portal/clock?shiftId=${a.shift.id}`)}
+            onViewDetails={() => setSelectedShift(a)}
+            showDecline={owed}
+            onDecline={() => { setRejectDialogId(a.id); setRejectReason(""); }}
+          />
+        );
+
         return (
           <div className="mb-4">
-            <OperationalAgendaHero
-              eyebrow={t("portal.shifts.hero_eyebrow")}
-              item={mapToAgendaItem(a)}
-              onClick={() => setSelectedShift(a)}
-              primaryAction={
-                isClockable
-                  ? { label: t("portal.shifts.action.mark_in"), onClick: () => navigate(`/portal/clock?shiftId=${a.shift.id}`), variant: "primary", icon: LogIn }
-                  : owed
-                  ? { label: t("portal.shifts.action.accept"), onClick: () => acceptAssignment(a.id), variant: "primary", icon: Check, loading: responding === a.id }
-                  : undefined
-              }
-              secondaryAction={
-                owed
-                  ? { label: t("portal.shifts.action.decline"), onClick: () => { setRejectDialogId(a.id); setRejectReason(""); }, variant: "ghost", icon: X }
-                  : undefined
-              }
-            />
+            {smart ?? (
+              <OperationalAgendaHero
+                eyebrow={t("portal.shifts.hero_eyebrow")}
+                item={mapToAgendaItem(a)}
+                onClick={() => setSelectedShift(a)}
+                primaryAction={
+                  isClockable
+                    ? { label: t("portal.shifts.action.mark_in"), onClick: () => navigate(`/portal/clock?shiftId=${a.shift.id}`), variant: "primary", icon: LogIn }
+                    : owed
+                    ? { label: t("portal.shifts.action.accept"), onClick: () => acceptAssignment(a.id), variant: "primary", icon: Check, loading: responding === a.id }
+                    : undefined
+                }
+                secondaryAction={
+                  owed
+                    ? { label: t("portal.shifts.action.decline"), onClick: () => { setRejectDialogId(a.id); setRejectReason(""); }, variant: "ghost", icon: X }
+                    : undefined
+                }
+              />
+            )}
           </div>
         );
       })()}
