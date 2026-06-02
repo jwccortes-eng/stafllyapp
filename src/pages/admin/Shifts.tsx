@@ -58,6 +58,7 @@ import { useShiftDraftAutosave, type DraftStatus } from "@/hooks/useShiftDraftAu
 import { ShiftSummaryPanel } from "@/components/shifts/form/ShiftSummaryPanel";
 import { WorkspaceSummary } from "@/components/shifts/workspace/WorkspaceSummary";
 import { buildPrePublishReview } from "@/lib/shifts/build-pre-publish-review";
+import { getShiftLocationStatus } from "@/lib/shifts/location-status";
 import { PrePublishDialog } from "@/components/shifts/workspace/PrePublishDialog";
 import type { Shift, Assignment, SelectOption, Employee, ViewMode } from "@/components/shifts/types";
 import { formatShiftCode } from "@/components/shifts/types";
