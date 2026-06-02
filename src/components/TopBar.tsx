@@ -53,13 +53,13 @@ export default function TopBar({ collapsed }: { collapsed: boolean }) {
     <header
       className={cn(
         "sticky top-0 z-20 h-16 flex items-center justify-between gap-4 px-7 lg:px-10 border-b border-border/50 bg-background/85 backdrop-blur-xl transition-all duration-300",
-        collapsed ? "ml-[68px]" : "ml-[256px]"
+        collapsed ? "ms-[68px]" : "ms-[256px]"
       )}
     >
       {/* Left: Context badge + Search */}
       <div className="flex items-center gap-3 flex-1 max-w-lg">
         {isGlobalMode ? (
-          <div className="flex items-center gap-2.5 shrink-0 pr-3 border-r border-border/30">
+          <div className="flex items-center gap-2.5 shrink-0 pe-3 border-e border-border/30">
             <div className="h-8 w-8 rounded-lg bg-accent flex items-center justify-center shrink-0">
               <Globe className="h-4 w-4 text-accent-foreground" />
             </div>
@@ -69,7 +69,7 @@ export default function TopBar({ collapsed }: { collapsed: boolean }) {
             </div>
           </div>
         ) : selectedCompany ? (
-          <div className="flex items-center gap-2.5 shrink-0 pr-3 border-r border-border/30">
+          <div className="flex items-center gap-2.5 shrink-0 pe-3 border-e border-border/30">
             <CompanyLogo
               name={selectedCompany.name}
               logoUrl={selectedCompany.logo_url}
@@ -138,7 +138,7 @@ export default function TopBar({ collapsed }: { collapsed: boolean }) {
                   {initials}
                 </AvatarFallback>
               </Avatar>
-              <div className="hidden md:block text-left min-w-0">
+              <div className="hidden md:block text-start min-w-0">
                 <p className="text-[12px] font-semibold text-foreground truncate leading-tight max-w-[120px]">{fullName || "User"}</p>
                 <p className="text-[10px] text-muted-foreground/60 leading-tight">{roleLabel}</p>
               </div>
