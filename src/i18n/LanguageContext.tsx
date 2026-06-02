@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { DirectionProvider } from "@radix-ui/react-direction";
 
 import en_app from "./dictionaries/en/app";
 import en_guide from "./dictionaries/en/guide";
@@ -112,7 +113,11 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     [language, contentMode, dir, setLanguage, setContentMode, t]
   );
 
-  return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
+  return (
+    <LanguageContext.Provider value={value}>
+      <DirectionProvider dir={dir}>{children}</DirectionProvider>
+    </LanguageContext.Provider>
+  );
 }
 
 /** Convenience hook returning the current layout direction ("ltr" | "rtl"). */
