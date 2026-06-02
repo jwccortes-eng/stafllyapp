@@ -46,6 +46,7 @@ const en_app = {
   "settings.language.description": "Choose the language for the app interface. Operator data is not translated.",
   "settings.language.english": "English",
   "settings.language.spanish": "Spanish",
+  "settings.language.hebrew": "Hebrew",
   "settings.language.guide": "Libro",
   "settings.language.guide_description": "Guided mode with more human, editorial copy.",
 };
