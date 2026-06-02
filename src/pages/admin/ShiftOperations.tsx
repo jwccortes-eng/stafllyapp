@@ -32,7 +32,7 @@ import {
 import { AttendanceEvidenceCard } from "@/components/shifts/ops/AttendanceEvidenceCard";
 import {
   getShiftOperationalStatus, getShiftMissingItems, getShiftRisks,
-  getRecommendedNextActions,
+  getRecommendedNextActions, normalizeArea,
 } from "@/lib/shifts/shift-operations-intelligence";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronDown } from "lucide-react";
