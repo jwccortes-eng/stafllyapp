@@ -687,57 +687,56 @@ export default function ShiftOperations() {
             </div>
           )}
 
-          {/* F) Admin Notes */}
-          <div className="rounded-2xl border border-border/40 bg-card p-4 space-y-3">
-            <h2 className="text-sm font-bold flex items-center gap-2"><MessageSquare className="h-4 w-4 text-primary" /> Notas & Comunicación</h2>
-            {/* Add note form */}
-            <div className="space-y-2 bg-muted/20 rounded-xl p-3">
-              <div className="flex gap-2">
-                <Select value={newNoteType} onValueChange={setNewNoteType}>
-                  <SelectTrigger className="h-8 text-[10px] w-[140px]"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {NOTE_TYPES.map(nt => (
-                      <SelectItem key={nt.value} value={nt.value} className="text-xs">{nt.icon} {nt.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+          {/* F) Admin Notes — auto-hidden when no notes */}
+          {notes.length > 0 && (
+            <div className="rounded-2xl border border-border/40 bg-card p-4 space-y-3">
+              <h2 className="text-sm font-bold flex items-center gap-2"><MessageSquare className="h-4 w-4 text-primary" /> Notas & Comunicación</h2>
+              {/* Add note form */}
+              <div className="space-y-2 bg-muted/20 rounded-xl p-3">
+                <div className="flex gap-2">
+                  <Select value={newNoteType} onValueChange={setNewNoteType}>
+                    <SelectTrigger className="h-8 text-[10px] w-[140px]"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {NOTE_TYPES.map(nt => (
+                        <SelectItem key={nt.value} value={nt.value} className="text-xs">{nt.icon} {nt.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Textarea
+                  value={newNoteContent}
+                  onChange={e => setNewNoteContent(e.target.value)}
+                  placeholder="Escribe una nota..."
+                  rows={2}
+                  className="text-xs resize-none"
+                />
+                <Button
+                  size="sm"
+                  onClick={handleAddNote}
+                  disabled={savingNote || !newNoteContent.trim()}
+                  className="w-full h-7 text-xs"
+                >
+                  {savingNote ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Plus className="h-3 w-3 mr-1" />}
+                  Agregar nota
+                </Button>
               </div>
-              <Textarea
-                value={newNoteContent}
-                onChange={e => setNewNoteContent(e.target.value)}
-                placeholder="Escribe una nota..."
-                rows={2}
-                className="text-xs resize-none"
-              />
-              <Button
-                size="sm"
-                onClick={handleAddNote}
-                disabled={savingNote || !newNoteContent.trim()}
-                className="w-full h-7 text-xs"
-              >
-                {savingNote ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Plus className="h-3 w-3 mr-1" />}
-                Agregar nota
-              </Button>
-            </div>
-            {/* Notes list */}
-            <div className="space-y-2 max-h-[350px] overflow-y-auto scrollbar-thin">
-              {notes.map(n => {
-                const ntInfo = NOTE_TYPES.find(nt => nt.value === n.note_type);
-                return (
-                  <div key={n.id} className="rounded-lg bg-muted/20 p-2.5 space-y-1">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-semibold">{ntInfo?.icon} {ntInfo?.label ?? n.note_type}</span>
-                      <span className="text-[9px] text-muted-foreground/50">{format(new Date(n.created_at), "d MMM HH:mm", { locale: es })}</span>
+              {/* Notes list */}
+              <div className="space-y-2 max-h-[350px] overflow-y-auto scrollbar-thin">
+                {notes.map(n => {
+                  const ntInfo = NOTE_TYPES.find(nt => nt.value === n.note_type);
+                  return (
+                    <div key={n.id} className="rounded-lg bg-muted/20 p-2.5 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-semibold">{ntInfo?.icon} {ntInfo?.label ?? n.note_type}</span>
+                        <span className="text-[9px] text-muted-foreground/50">{format(new Date(n.created_at), "d MMM HH:mm", { locale: es })}</span>
+                      </div>
+                      <p className="text-[11px] text-foreground whitespace-pre-wrap">{n.content}</p>
                     </div>
-                    <p className="text-[11px] text-foreground whitespace-pre-wrap">{n.content}</p>
-                  </div>
-                );
-              })}
-              {notes.length === 0 && (
-                <p className="text-xs text-muted-foreground text-center py-3">Sin notas</p>
-              )}
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          )}
         </div>
         </div>
         </CollapsibleContent>
