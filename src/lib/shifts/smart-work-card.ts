@@ -98,9 +98,22 @@ export interface SmartWorkCardInput {
 
 export interface WorkIdentity {
   title: string;            // título humano (cliente · categoría / título manual limpio)
+  /** Línea secundaria `{Cliente} · {Categoría}`. `null` si coincidiría con el título. */
+  subtitleLine: string | null;
   refLabel: string | null;  // "Ref #0250" — SECUNDARIO
   clientName: string | null;
   category: string | null;
+}
+
+export interface WorkCoverage {
+  required: number;
+  confirmed: number;
+  pending: number;
+  /** "1 / 3 confirmados". Vacío si no aplica. */
+  label: string;
+  /** Chip corto para densidades compactas. */
+  shortLabel: string;       // "1/3"
+  complete: boolean;
 }
 
 export interface WorkTiming {
