@@ -20,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { isDraftShift, isPublishedShift } from "@/lib/shifts/shift-guards";
+import { hasAnyOperationalLocation } from "@/lib/shifts/location-status";
 import { formatShiftCode, type Shift, type Assignment, type Employee } from "@/components/shifts/types";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
