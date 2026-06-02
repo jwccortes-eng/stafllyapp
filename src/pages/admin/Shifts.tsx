@@ -1928,7 +1928,7 @@ function DesktopShifts() {
           { key: "month" as const, icon: CalendarDays, label: "Mes" },
         ];
         const groupOpts = [
-          { key: "grid" as const, icon: LayoutGrid, label: "Grid" },
+          { key: "grid" as const, icon: LayoutGrid, label: "Cuadrícula" },
           { key: "client" as const, icon: Building2, label: "Cliente" },
           { key: "team" as const, icon: Users, label: "Equipo" },
         ];
