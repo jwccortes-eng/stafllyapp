@@ -1602,6 +1602,21 @@ export function ShiftDetailDialog({
         />
       </Suspense>
     )}
+
+    {/* Export Connecteam v1 — admin-only preview + CSV download.
+        Pure frontend: no payroll / time_entries / RLS / schema writes. */}
+    <ExportConnecteamPreviewDialog
+      open={connecteamExportOpen}
+      onOpenChange={setConnecteamExportOpen}
+      shift={shift}
+      assignments={assignments}
+      employees={employees}
+      clients={clients}
+      locations={locations}
+      isAdmin={isAdminForTenant}
+      selectedCompanyId={selectedCompanyId ?? null}
+      shiftCompanyId={(shift as any)?.company_id ?? selectedCompanyId ?? null}
+    />
     </>
   );
 }
