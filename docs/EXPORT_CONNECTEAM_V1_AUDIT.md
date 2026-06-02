@@ -142,7 +142,7 @@ Patrón de descarga: reutilizar `downloadCsv()` de `src/lib/import-review/csv-ex
 ## 9. Checklist QA desktop
 
 - [ ] Sección "Integraciones / Exportaciones" colapsable, cerrada por defecto.
-- [ ] Preview de 15 columnas CT legible (scroll horizontal si necesario).
+- [ ] Preview de 16 columnas CT legible (scroll horizontal si necesario).
 - [ ] Badge de estado Ready/Needs review/Blocked siempre visible.
 - [ ] Warnings con icono y copy ES-first (Admin Desk Spanish-first, regla Core).
 - [ ] Export bloqueado si Blocked (botón disabled + tooltip con razón).
