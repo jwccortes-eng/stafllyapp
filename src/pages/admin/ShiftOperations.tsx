@@ -667,12 +667,10 @@ export default function ShiftOperations() {
             </div>
           )}
 
-          {/* E) Timeline */}
-          <div className="rounded-2xl border border-border/40 bg-card p-4 space-y-3">
-            <h2 className="text-sm font-bold flex items-center gap-2"><Clock className="h-4 w-4 text-primary" /> Cronología</h2>
-            {timeline.length === 0 ? (
-              <p className="text-xs text-muted-foreground text-center py-4">Sin eventos aún</p>
-            ) : (
+          {/* E) Timeline — auto-hidden when no events */}
+          {timeline.length > 0 && (
+            <div className="rounded-2xl border border-border/40 bg-card p-4 space-y-3">
+              <h2 className="text-sm font-bold flex items-center gap-2"><Clock className="h-4 w-4 text-primary" /> Cronología</h2>
               <div className="space-y-2 max-h-[400px] overflow-y-auto scrollbar-thin">
                 {timeline.map(evt => (
                   <div key={evt.id} className="flex gap-2.5">
@@ -686,8 +684,8 @@ export default function ShiftOperations() {
                   </div>
                 ))}
               </div>
-            )}
-          </div>
+            </div>
+          )}
 
           {/* F) Admin Notes */}
           <div className="rounded-2xl border border-border/40 bg-card p-4 space-y-3">
