@@ -129,6 +129,16 @@ export const BETA_COMPAT_RULES: readonly CompatRule[] = Object.freeze([
     job: "Eminence",
     subItem: "Regular Waiters",
   },
+  // Venue-only default for Eminence: when no role/text signal matched the
+  // more specific rules above, the safest Connecteam bucket is "Regular
+  // Waiters". Without this rule we fall through to the raw location.name
+  // ("Eminence Ballroom") which Connecteam shows as "Select".
+  {
+    id: "eminence.default_regular_waiter",
+    when: { venueMatches: /eminence/i },
+    job: "Eminence",
+    subItem: "Regular Waiters",
+  },
 
   // ── Production ───────────────────────────────────────────────────────────
   {
