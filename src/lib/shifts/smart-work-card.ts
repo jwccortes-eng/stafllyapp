@@ -24,7 +24,7 @@ import {
   stripLeadingShiftCode,
 } from "./card-display";
 import {
-  classifyShiftLocation,
+  getShiftLocationStatus,
   type ShiftLocationInput,
   type ShiftLocationStatus,
 } from "./location-status";
