@@ -16,7 +16,7 @@
  *    oculta para no contaminar la card (regla de "mostrar solo lo necesario").
  */
 
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import { SmartWorkCard } from "@/components/shifts/smart/SmartWorkCard";
 import {
   buildSmartWorkCardViewModel,
