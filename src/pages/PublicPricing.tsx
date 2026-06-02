@@ -276,6 +276,13 @@ export default function PublicPricing() {
           <p className="mt-10 max-w-2xl mx-auto text-center text-xs sm:text-sm leading-relaxed" style={{ color: "hsl(220,10%,45%)" }}>
             All new companies are activated through guided onboarding. We do not automatically activate public signups without review.
           </p>
+
+          <div className="mt-8 max-w-2xl mx-auto rounded-xl border border-[hsl(220,13%,91%)] bg-white p-5 sm:p-6 text-center shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
+            <h4 className="text-sm font-semibold" style={{ color: "hsl(220,25%,10%)" }}>Need a custom workflow?</h4>
+            <p className="text-xs sm:text-sm mt-1.5 leading-relaxed" style={{ color: "hsl(220,10%,45%)" }}>
+              Stafly adapts to your operation. Additional features, integrations, migrations, advanced reports or custom workflows can be scoped and managed separately.
+            </p>
+          </div>
         </div>
       </section>
 
@@ -294,6 +301,9 @@ export default function PublicPricing() {
                 </p>
                 <p className="text-xs sm:text-sm mt-2 font-medium" style={{ color: "hsl(220,10%,50%)" }}>
                   This is a one-time onboarding fee. It is separate from your monthly plan.
+                </p>
+                <p className="text-xs mt-3 leading-relaxed" style={{ color: "hsl(220,10%,55%)" }}>
+                  Guided setup covers your initial configuration. Additional custom features, integrations or special workflows can be scoped separately.
                 </p>
               </div>
               <div className="sm:text-right shrink-0">
