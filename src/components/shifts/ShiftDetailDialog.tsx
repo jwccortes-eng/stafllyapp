@@ -69,6 +69,7 @@ import { CaptainNextActionCard } from "./CaptainNextActionCard";
 import { LiveShiftBoard } from "./LiveShiftBoard";
 
 import { GenerateBillingBlockButton } from "./GenerateBillingBlockButton";
+import { ExportConnecteamPreviewDialog } from "./integrations/ExportConnecteamPreviewDialog";
 import {
   pickRoleSlotsForNewAssignments,
   type ShiftRoleSlot,
