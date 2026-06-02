@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import { useSearchParams, useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
@@ -118,6 +118,7 @@ const ROLE_LABELS: Record<string, { label: string; color: string }> = {
 export default function ShiftOperations() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, role } = useAuth();
   const { selectedCompanyId } = useCompany();
   const shiftId = searchParams.get("id");
@@ -164,7 +165,10 @@ export default function ShiftOperations() {
     if (shiftId && selectedCompanyId) {
       loadAll();
     }
-  }, [shiftId, selectedCompanyId]);
+    // location.key changes on every navigate(), so volver al mismo turno fuerza refetch
+    // y evita el estado stale que requería recargar la página.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shiftId, selectedCompanyId, location.key]);
 
   // Refetch when the tab regains focus so admins coming back from another tab
   // (or after publishing/editing from a sibling view) never see stale state
