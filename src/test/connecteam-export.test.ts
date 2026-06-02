@@ -30,7 +30,7 @@ const mkShift = (overrides: Partial<Shift> = {}): Shift => ({
 });
 
 const CLIENTS: SelectOption[] = [{ id: "client-1", name: "Acme Catering" }];
-const LOCATIONS: SelectOption[] = [{ id: "loc-1", name: "Eminence Ballroom" }];
+const LOCATIONS: SelectOption[] = [{ id: "loc-1", name: "Acme Hall" }];
 const CATEGORIES: SelectOption[] = [{ id: "cat-1", name: "Waiter" }];
 
 const EMPLOYEES: Employee[] = [
