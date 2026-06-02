@@ -329,7 +329,7 @@ export default function AdminSidebar() {
           </div>
           {!collapsed && (
             <>
-              <span className={cn("flex-1 truncate leading-tight", locked && "line-through decoration-sidebar-foreground/20")}>{link.label}</span>
+              <span className={cn("flex-1 truncate leading-tight", locked && "line-through decoration-sidebar-foreground/20")}>{translateLinkLabel(link.label, tI18n)}</span>
               {locked && requiredPlan && (
                 <span className="ms-auto shrink-0 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-sidebar-primary/15 text-sidebar-primary">
                   {requiredPlan}
