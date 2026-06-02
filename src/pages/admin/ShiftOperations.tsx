@@ -25,6 +25,16 @@ import { ShiftEditDialog } from "@/components/shifts/ShiftEditDialog";
 import type { LocationOption } from "@/components/shifts/ShiftFormFields";
 import { ShiftActionBar } from "@/components/shifts/ShiftActionBar";
 import { StaffingRequiredBanner } from "@/components/shifts/StaffingRequiredBanner";
+import {
+  SmartSummaryCard, MissingItemsCard, RisksCard, NextActionsCard,
+  AssignedTeamCard, CandidatesCard, WorkerPreviewCard, buildCandidatePool,
+} from "@/components/shifts/ops/ShiftOpsBlocks";
+import {
+  getShiftOperationalStatus, getShiftMissingItems, getShiftRisks,
+  getRecommendedNextActions,
+} from "@/lib/shifts/shift-operations-intelligence";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ChevronDown } from "lucide-react";
 
 interface ShiftDetail {
   id: string;
