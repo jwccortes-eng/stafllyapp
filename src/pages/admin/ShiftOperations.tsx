@@ -29,6 +29,7 @@ import {
   SmartSummaryCard, MissingItemsCard, RisksCard, NextActionsCard,
   AssignedTeamCard, CandidatesCard, WorkerPreviewCard, buildCandidatePool,
 } from "@/components/shifts/ops/ShiftOpsBlocks";
+import { AttendanceEvidenceCard } from "@/components/shifts/ops/AttendanceEvidenceCard";
 import {
   getShiftOperationalStatus, getShiftMissingItems, getShiftRisks,
   getRecommendedNextActions,
@@ -429,6 +430,14 @@ export default function ShiftOperations() {
                 }}
               />
               <AssignedTeamCard assignments={assignments as any} />
+              {selectedCompanyId && (
+                <AttendanceEvidenceCard
+                  shift={{ id: shift.id, date: shift.date, start_time: shift.start_time, end_time: shift.end_time, status: shift.status }}
+                  assignments={assignments as any}
+                  companyId={selectedCompanyId}
+                  userId={user?.id ?? null}
+                />
+              )}
               <div ref={staffingRef} className="scroll-mt-24">
                 <CandidatesCard
                   recommended={recommended}
