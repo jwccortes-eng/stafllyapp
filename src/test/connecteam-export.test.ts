@@ -295,9 +295,9 @@ describe("connecteam-export: validateShiftForExport", () => {
     expect(r.meta.jobIsFallback).toBe(true);
   });
 
-  it("Needs review with users_not_exported_v1_1 in default capacity-only mode", () => {
+  it("Needs review with users_not_exported_v1_2 in default capacity-only mode", () => {
     const r = validateShiftForExport(mkShift(), buildCtx, adminCtx);
-    expect(r.warnings.some(w => w.code === "users_not_exported_v1_1")).toBe(true);
+    expect(r.warnings.some(w => w.code === "users_not_exported_v1_2")).toBe(true);
     expect(r.meta.usersExported).toBe(false);
   });
 });
