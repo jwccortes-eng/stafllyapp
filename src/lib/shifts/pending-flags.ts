@@ -18,6 +18,7 @@ export interface PendingFlag {
     | "time_missing"
     | "client_missing"
     | "jobsite_missing"
+    | "jobsite_unsaved"
     | "meeting_missing"
     | "team_missing"
     | "ready_to_publish"
