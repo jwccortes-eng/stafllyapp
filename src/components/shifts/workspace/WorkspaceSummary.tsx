@@ -77,6 +77,7 @@ function WorkspaceSummaryImpl(p: Props) {
     clientId: p.clientId,
     locationId: p.locationId,
     jobSiteLocationId: p.jobSiteLocationId,
+    jobSiteAddress: p.jobSiteAddress,
     meetingPoint: p.meetingPoint,
     meetingPointLocationId: p.meetingPointLocationId,
     transportRequired: p.transportRequired,
