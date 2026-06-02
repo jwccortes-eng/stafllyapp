@@ -85,9 +85,9 @@ describe("connecteam-export: buildConnecteamRow mapping", () => {
     expect(row["Number of users"]).toBe("3");
   });
 
-  it("Job = location.name when no Connecteam-job hint configured (v1.1 venue-first)", () => {
+  it("Job = location.name when no Connecteam-job hint configured (venue-first)", () => {
     const row = buildConnecteamRow(mkShift({ category_id: "cat-1" } as any), buildCtx);
-    expect(row.Job).toBe("Eminence Ballroom");
+    expect(row.Job).toBe("Acme Hall");
     expect(row["Sub item"]).toBe("Waiter");
   });
 
@@ -99,6 +99,7 @@ describe("connecteam-export: buildConnecteamRow mapping", () => {
     expect(row.Job).toBe("Acme Catering");
     expect(row["Sub item"]).toBe("Waiter");
   });
+
 
 
   it("falls back to category as Job when no client", () => {
