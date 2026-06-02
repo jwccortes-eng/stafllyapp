@@ -27,6 +27,7 @@ import {
   Clock,
   Shirt,
   AlertTriangle,
+  Users,
   Copy as CopyIcon,
   Navigation,
   ChevronRight,
@@ -75,8 +76,11 @@ const LOCATION_BADGE: Record<
 
 function IdentityBlock({
   identity,
+  coverageShort,
 }: {
   identity: SmartWorkCardViewModel["identity"];
+  /** Mini-chip "1/3" para densidades compactas admin. */
+  coverageShort?: string | null;
 }) {
   return (
     <div className="flex items-start justify-between gap-3">
@@ -84,22 +88,31 @@ function IdentityBlock({
         <h3 className="truncate text-base font-semibold leading-tight text-foreground">
           {identity.title}
         </h3>
-        {(identity.clientName || identity.category) && (
+        {identity.subtitleLine && (
           <p className="mt-0.5 truncate text-[12px] text-muted-foreground">
-            {[identity.clientName, identity.category]
-              .filter(Boolean)
-              .join(" · ")}
+            {identity.subtitleLine}
           </p>
         )}
       </div>
-      {identity.refLabel && (
-        <span
-          className="shrink-0 rounded-full border border-border/60 bg-muted/40 px-2 py-0.5 text-[10px] font-medium text-muted-foreground"
-          title="Referencia operativa"
-        >
-          Trabajo {identity.refLabel.replace(/^Ref\s*/i, "")}
-        </span>
-      )}
+      <div className="flex shrink-0 flex-col items-end gap-1">
+        {coverageShort && (
+          <span
+            className="rounded-full bg-warning/15 px-2 py-0.5 text-[10px] font-semibold leading-none text-warning"
+            title="Workers confirmados / requeridos"
+            data-testid="coverage-chip"
+          >
+            {coverageShort}
+          </span>
+        )}
+        {identity.refLabel && (
+          <span
+            className="rounded-full border border-border/60 bg-muted/40 px-2 py-0.5 text-[10px] font-medium text-muted-foreground"
+            title="Referencia operativa"
+          >
+            Trabajo {identity.refLabel.replace(/^Ref\s*/i, "")}
+          </span>
+        )}
+      </div>
     </div>
   );
 }
@@ -111,7 +124,9 @@ function TimingBlock({
   timing: SmartWorkCardViewModel["timing"];
   density: SmartWorkCardViewModel["density"];
 }) {
-  const big = density === "full" ? "text-4xl" : density === "standard" ? "text-3xl" : "text-2xl";
+  const big =
+    density === "full" ? "text-4xl" : density === "standard" ? "text-3xl" : "text-2xl";
+  const showDuration = density !== "compact";
   return (
     <div className="flex items-end justify-between gap-3">
       <div>
@@ -133,10 +148,38 @@ function TimingBlock({
           </p>
         )}
       </div>
-      <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
-        <Clock className="h-3.5 w-3.5" />
-        {timing.durationLabel}
-      </div>
+      {showDuration && (
+        <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+          <Clock className="h-3.5 w-3.5" />
+          {timing.durationLabel}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CoverageLine({
+  coverage,
+}: {
+  coverage: NonNullable<SmartWorkCardViewModel["coverage"]>;
+}) {
+  return (
+    <div
+      className={cn(
+        "flex items-center gap-2 rounded-lg border border-border/60 bg-card/40 px-3 py-2",
+        !coverage.complete && "border-warning/30 bg-warning/5",
+      )}
+      data-testid="coverage-line"
+    >
+      <Users className="h-3.5 w-3.5 text-muted-foreground" />
+      <span className="text-[12px] font-medium text-foreground">
+        {coverage.label}
+      </span>
+      {coverage.pending > 0 && (
+        <span className="text-[11px] text-muted-foreground">
+          · Pendientes {coverage.pending}
+        </span>
+      )}
     </div>
   );
 }
@@ -267,18 +310,21 @@ function UniformBlock({
 
 function PayBlock({ pay }: { pay: SmartWorkCardViewModel["pay"] }) {
   // Pago SIEMPRE estimado. Ámbar. Nunca verde.
+  // Una sola línea: "Estimado · $176.00". Disclaimer debajo.
   return (
-    <div className="rounded-xl border border-warning/30 bg-warning/5 p-3">
-      <div className="flex items-baseline justify-between gap-2">
-        <span className="text-[11px] font-semibold uppercase tracking-wide text-warning">
-          {pay.label}
-        </span>
-        {pay.amountLabel && (
-          <span className="text-[13px] font-semibold text-foreground">
-            {pay.amountLabel}
-          </span>
-        )}
-      </div>
+    <div
+      className="rounded-xl border border-warning/30 bg-warning/5 p-3"
+      data-testid="pay-block"
+    >
+      <p className="text-[13px] font-semibold text-foreground">
+        <span className="text-warning">{pay.label}</span>
+        {pay.amountLabel ? (
+          <>
+            <span className="mx-1.5 text-muted-foreground">·</span>
+            <span>{pay.amountLabel}</span>
+          </>
+        ) : null}
+      </p>
       <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
         {pay.disclaimer}
       </p>
@@ -353,18 +399,40 @@ export function SmartWorkCard({
   const show = (k: SmartWorkCardViewModel["visibleBlocks"][number]) =>
     vm.visibleBlocks.includes(k);
 
+  const isAdmin = vm.audience === "admin";
+  const isCompact = vm.density === "compact";
+
+  // F. Borde ámbar sutil para Pending Accept.
+  const pendingAccept =
+    vm.status.tone === "warn" && vm.nextAction.kind === "accept";
+
+  // D. Coverage rendering:
+  //  - admin compact → mini-chip junto al título.
+  //  - admin standard/full → línea con icono y conteo.
+  const coverageShort =
+    isAdmin && isCompact && vm.coverage && !vm.coverage.complete
+      ? vm.coverage.shortLabel
+      : null;
+  const showCoverageLine =
+    isAdmin && !isCompact && vm.coverage !== null;
+
   return (
     <article
       className={cn(
         "rounded-2xl border border-border/70 bg-card p-4 shadow-sm",
         "flex flex-col gap-3",
+        pendingAccept && "border-warning/40 bg-warning/[0.03]",
         className,
       )}
       data-audience={vm.audience}
       data-density={vm.density}
+      data-pending-accept={pendingAccept || undefined}
     >
-      {show("identity") && <IdentityBlock identity={vm.identity} />}
+      {show("identity") && (
+        <IdentityBlock identity={vm.identity} coverageShort={coverageShort} />
+      )}
       {show("timing") && <TimingBlock timing={vm.timing} density={vm.density} />}
+      {showCoverageLine && <CoverageLine coverage={vm.coverage!} />}
       {show("location") && (
         <LocationBlock
           location={vm.location}
