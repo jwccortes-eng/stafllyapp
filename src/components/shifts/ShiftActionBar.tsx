@@ -94,9 +94,18 @@ export function ShiftActionBar({
     if (shift.status === "locked") return "El turno está bloqueado por payroll.";
     if (shift.status === "archived") return "El turno está archivado.";
     if (shift.status === "cancelled") return "El turno está cancelado.";
-    if (hasTimeEntries) return "El turno tiene fichajes registrados. Edición restringida.";
     return null;
-  }, [shift.status, hasTimeEntries]);
+  }, [shift.status]);
+
+  // Soft restriction: hay fichajes pero el turno sigue siendo operable
+  // (asistencia, evidencia, notas, auditoría). NO bloqueamos Editar.
+  const editRestrictedReason = useMemo(() => {
+    if (editBlockedReason) return null;
+    if (hasTimeEntries) {
+      return "Edición de datos base restringida porque ya hay fichajes. Puedes revisar asistencia, validar presencia, agregar notas y preparar auditoría.";
+    }
+    return null;
+  }, [editBlockedReason, hasTimeEntries]);
 
   const openDuplicate = (withWorkers: boolean) => {
     console.info("[ShiftActionBar] duplicate_open", {
