@@ -599,7 +599,7 @@ export function ShiftAttendancePanel({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               onClick={async () => { setConfirmAbsentOpen(false); await bulkAbsentRemainingPending(); }}
               className="bg-rose-600 hover:bg-rose-600/90 text-white"

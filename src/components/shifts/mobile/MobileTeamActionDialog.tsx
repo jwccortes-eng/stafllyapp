@@ -163,7 +163,7 @@ export function MobileTeamActionDialog({
         </div>
 
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={submitting}>Cancel</AlertDialogCancel>
+          <AlertDialogCancel disabled={submitting}>Cancelar</AlertDialogCancel>
           <AlertDialogAction
             onClick={(e) => { e.preventDefault(); handleConfirm(); }}
             disabled={submitting || !mode}

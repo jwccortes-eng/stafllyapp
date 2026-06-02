@@ -71,9 +71,9 @@ function formatTimeShort(t?: string | null): string {
 function dateLabel(iso: string): string {
   try {
     const d = parseISO(iso);
-    if (isToday(d)) return "Today";
-    if (isTomorrow(d)) return "Tomorrow";
-    return format(d, "EEE, MMM d", { locale: enUS });
+    if (isToday(d)) return "Hoy";
+    if (isTomorrow(d)) return "Mañana";
+    return format(d, "EEE d MMM", { locale: enUS });
   } catch { return iso; }
 }
 
