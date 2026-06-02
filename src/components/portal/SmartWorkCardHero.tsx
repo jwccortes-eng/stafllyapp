@@ -127,6 +127,7 @@ export function SmartWorkCardHero({
   onViewDetails,
   showDecline,
   onDecline,
+  fallback = null,
   className,
 }: SmartWorkCardHeroProps) {
   const vm = useMemo<SmartWorkCardViewModel | null>(() => {
