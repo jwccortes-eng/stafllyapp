@@ -4,9 +4,10 @@ import {
   X, Clock, MapPin, Building2, Users, Phone, FileEdit, AlertTriangle,
   CheckCircle2, CalendarDays, Sparkles, UserPlus, Share2, ClipboardList,
   ExternalLink, Copy, StickyNote, Hash, Tag, Workflow, ChevronDown,
-  ShieldCheck, MessageCircle, MessageSquare, Crown, Loader2, Bell,
+  ShieldCheck, MessageCircle, MessageSquare, Crown, Loader2, Bell, Download,
 } from "lucide-react";
 import { SendNotificationDialog } from "@/components/shifts/SendNotificationDialog";
+import { ExportConnecteamPreviewDialog } from "@/components/shifts/integrations/ExportConnecteamPreviewDialog";
 import { buildWhatsAppTargets, normalizePhone } from "@/lib/phone";
 import { format, parseISO, isToday, isTomorrow, isPast, isThisWeek } from "date-fns";
 import { es } from "date-fns/locale";
@@ -155,6 +156,7 @@ export function MobileShiftOperationsSheet({
   const navigate = useNavigate();
   const [traceOpen, setTraceOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
+  const [connecteamExportOpen, setConnecteamExportOpen] = useState(false);
   const [closeoutOpen, setCloseoutOpen] = useState(false);
   const [hubOpen, setHubOpen] = useState(false);
   const [notifyOpen, setNotifyOpen] = useState(false);
@@ -851,6 +853,18 @@ export function MobileShiftOperationsSheet({
                       Notificar equipo
                     </Button>
                   )}
+                  {canValidate && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full h-10 rounded-lg gap-1.5 text-xs font-medium"
+                      onClick={() => setConnecteamExportOpen(true)}
+                      aria-label="Exportar este turno a Connecteam"
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                      Exportar a Connecteam
+                    </Button>
+                  )}
                   <div className="flex items-center gap-2">
                     {draft ? (
                       <Button
@@ -1203,6 +1217,20 @@ export function MobileShiftOperationsSheet({
       jobSiteName={locationName}
       meetingPoint={shiftMeeting.point ?? meetingPoint ?? null}
       notes={shift.notes ?? null}
+    />
+    {/* Export Connecteam v1 — admin-only preview + CSV download.
+        Pure frontend: no payroll / time_entries / RLS / schema writes. */}
+    <ExportConnecteamPreviewDialog
+      open={connecteamExportOpen}
+      onOpenChange={setConnecteamExportOpen}
+      shift={shift}
+      assignments={assignments}
+      employees={employees}
+      clients={shift?.client_id ? [{ id: shift.client_id, name: clientName && clientName !== "—" ? clientName : "" }] : []}
+      locations={shift?.location_id ? [{ id: shift.location_id, name: locationName || "" }] : []}
+      isAdmin={canValidate}
+      selectedCompanyId={selectedCompanyId ?? null}
+      shiftCompanyId={(shift as any)?.company_id ?? selectedCompanyId ?? null}
     />
     </>
   );

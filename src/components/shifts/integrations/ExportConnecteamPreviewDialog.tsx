@@ -1,0 +1,204 @@
+import { useMemo } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Download, AlertTriangle, CheckCircle2, Info, ShieldX } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import {
+  CONNECTEAM_HEADERS,
+  buildConnecteamRow,
+  serializeConnecteamCsv,
+  validateShiftForExport,
+  exportFilename,
+  type ConnecteamRow,
+  type ValidationResult,
+} from "@/lib/integrations/connecteam-export";
+import { downloadCsv } from "@/lib/import-review/csv-export";
+import type { Shift, Assignment, Employee, SelectOption } from "@/components/shifts/types";
+
+interface Props {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  shift: Shift | null;
+  assignments: Assignment[];
+  employees: Employee[];
+  clients: SelectOption[];
+  locations: SelectOption[];
+  categories?: SelectOption[];
+  isAdmin: boolean;
+  selectedCompanyId: string | null;
+  shiftCompanyId?: string | null;
+  defaultTimezone?: string;
+}
+
+const STATUS_META: Record<ValidationResult["status"], { label: string; tone: string; Icon: any }> = {
+  ready:        { label: "Listo para exportar",      tone: "bg-earning/10 text-earning border-earning/30",       Icon: CheckCircle2 },
+  needs_review: { label: "Revisar antes de exportar", tone: "bg-warning/10 text-warning border-warning/30",       Icon: AlertTriangle },
+  blocked:      { label: "Bloqueado",                 tone: "bg-destructive/10 text-destructive border-destructive/30", Icon: ShieldX },
+};
+
+export function ExportConnecteamPreviewDialog({
+  open, onOpenChange, shift, assignments, employees, clients, locations, categories,
+  isAdmin, selectedCompanyId, shiftCompanyId, defaultTimezone,
+}: Props) {
+  const buildCtx = useMemo(() => ({
+    clients, locations, employees, assignments, categories, defaultTimezone,
+  }), [clients, locations, employees, assignments, categories, defaultTimezone]);
+
+  const validation: ValidationResult | null = useMemo(() => {
+    if (!shift) return null;
+    return validateShiftForExport(shift, buildCtx, { isAdmin, selectedCompanyId, shiftCompanyId });
+  }, [shift, buildCtx, isAdmin, selectedCompanyId, shiftCompanyId]);
+
+  const row: ConnecteamRow | null = useMemo(() => {
+    if (!shift) return null;
+    return buildConnecteamRow(shift, buildCtx);
+  }, [shift, buildCtx]);
+
+  const canDownload = validation?.status !== "blocked";
+
+  const handleDownload = () => {
+    if (!shift || !row || !canDownload) return;
+    const csv = serializeConnecteamCsv([row]);
+    downloadCsv(exportFilename(shift), csv);
+    toast.success("CSV de Connecteam descargado.");
+    onOpenChange(false);
+  };
+
+  if (!shift) return null;
+
+  const meta = validation ? STATUS_META[validation.status] : null;
+  const Icon = meta?.Icon;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col p-0 gap-0">
+        <DialogHeader className="p-5 pb-3 border-b border-border/30">
+          <DialogTitle className="text-base flex items-center gap-2">
+            <Download className="h-4 w-4" />
+            Exportar a Connecteam
+          </DialogTitle>
+          <DialogDescription className="text-xs">
+            Exporta este turno como CSV compatible con el template de importación de Connecteam.
+            Connecteam sigue operativo temporalmente — esto es solo un puente, no una sincronización.
+          </DialogDescription>
+        </DialogHeader>
+
+        <ScrollArea className="flex-1 min-h-0">
+          <div className="p-5 space-y-4">
+            {/* Status banner */}
+            {meta && Icon && (
+              <div className={cn("rounded-xl border px-3.5 py-2.5 flex items-start gap-2.5", meta.tone)}>
+                <Icon className="h-4 w-4 mt-0.5 shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold">{meta.label}</p>
+                  {validation && validation.warnings.length === 0 && (
+                    <p className="text-xs opacity-80 mt-0.5">Sin advertencias.</p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Warnings */}
+            {validation && validation.warnings.length > 0 && (
+              <div className="space-y-1.5">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Advertencias
+                </p>
+                <ul className="space-y-1.5">
+                  {validation.warnings.map((w, i) => {
+                    const I = w.severity === "block" ? ShieldX : w.severity === "warn" ? AlertTriangle : Info;
+                    const tone = w.severity === "block"
+                      ? "text-destructive"
+                      : w.severity === "warn"
+                      ? "text-warning"
+                      : "text-muted-foreground";
+                    return (
+                      <li key={`${w.code}-${i}`} className="flex items-start gap-2 text-xs">
+                        <I className={cn("h-3.5 w-3.5 mt-0.5 shrink-0", tone)} />
+                        <span className="text-foreground/85">{w.message}</span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            )}
+
+            {/* Preview — desktop: scrollable horizontal table; mobile-friendly: key/value list under sm: */}
+            {row && (
+              <div className="space-y-1.5">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Preview · columnas Connecteam
+                </p>
+
+                {/* Mobile/vertical list */}
+                <div className="sm:hidden rounded-xl border border-border/30 divide-y divide-border/30 bg-card">
+                  {CONNECTEAM_HEADERS.map(h => (
+                    <div key={h} className="px-3 py-2 flex items-start justify-between gap-3">
+                      <span className="text-[11px] font-medium text-muted-foreground shrink-0">{h}</span>
+                      <span className="text-[12px] text-foreground text-right break-words min-w-0">
+                        {row[h] || <span className="text-muted-foreground/50 italic">vacío</span>}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Desktop table */}
+                <div className="hidden sm:block rounded-xl border border-border/30 overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead className="bg-muted/30">
+                        <tr>
+                          {CONNECTEAM_HEADERS.map(h => (
+                            <th key={h} className="px-2.5 py-1.5 text-left font-semibold text-muted-foreground whitespace-nowrap">
+                              {h}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr className="border-t border-border/30">
+                          {CONNECTEAM_HEADERS.map(h => (
+                            <td key={h} className="px-2.5 py-1.5 align-top max-w-[180px]">
+                              {row[h]
+                                ? <span className="break-words">{row[h]}</span>
+                                : <span className="text-muted-foreground/50 italic">vacío</span>}
+                            </td>
+                          ))}
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <p className="text-[10px] text-muted-foreground">
+                  El número de turno legacy (<code>shift_code</code>) viaja únicamente en la columna Note como referencia.
+                  Stafly nunca lo usa como título ni como ID operativo. Las horas programadas no se usan para nómina —
+                  payroll sigue dependiendo exclusivamente de registros de reloj reales.
+                </p>
+              </div>
+            )}
+          </div>
+        </ScrollArea>
+
+        <DialogFooter className="p-4 border-t border-border/30 flex-row justify-end gap-2 sm:gap-2">
+          <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
+            Cerrar
+          </Button>
+          <Button
+            size="sm"
+            onClick={handleDownload}
+            disabled={!canDownload}
+            className="gap-1.5"
+            title={!canDownload ? "Resuelve los bloqueos antes de descargar" : undefined}
+          >
+            <Download className="h-3.5 w-3.5" />
+            Descargar CSV
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}

@@ -69,6 +69,7 @@ import { CaptainNextActionCard } from "./CaptainNextActionCard";
 import { LiveShiftBoard } from "./LiveShiftBoard";
 
 import { GenerateBillingBlockButton } from "./GenerateBillingBlockButton";
+import { ExportConnecteamPreviewDialog } from "./integrations/ExportConnecteamPreviewDialog";
 import {
   pickRoleSlotsForNewAssignments,
   type ShiftRoleSlot,
@@ -169,12 +170,14 @@ export function ShiftDetailDialog({
   availabilityConfigs = [], availabilityOverrides = [], onAddNewEmployee, allowClaims = true,
   initialTab,
 }: ShiftDetailDialogProps) {
-  const { user } = useAuth();
+  const { user, canAccessAdminForCompany } = useAuth();
   const navigate = useNavigate();
   const { selectedCompanyId, selectedCompany } = useCompany();
   const [showAddPanel, setShowAddPanel] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
   const [tab, setTab] = useState(initialTab || "details");
+  const [connecteamExportOpen, setConnecteamExportOpen] = useState(false);
+  const isAdminForTenant = canAccessAdminForCompany(selectedCompanyId);
 
   // Editing is now delegated to the canonical ShiftEditDialog (ShiftFormFields).
   // No local form state — this sheet is read-only and triggers `onEdit(shift)`.
@@ -726,6 +729,36 @@ export function ShiftDetailDialog({
                       clientId={shift.client_id}
                     />
                   </div>
+                )}
+
+                {/* Integraciones / Exportaciones — colapsable, cerrado por defecto.
+                    Solo visible para admins del tenant actual. Frontend-only:
+                    no toca payroll, time_entries, attendance, schema, RLS ni edge functions. */}
+                {isAdminForTenant && (
+                  <details className="rounded-xl border border-border/30 bg-muted/15 group">
+                    <summary className="cursor-pointer list-none flex items-center justify-between gap-2 px-3 py-2.5">
+                      <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                        Integraciones · exportaciones
+                      </span>
+                      <span className="text-[10px] text-muted-foreground/70 group-open:hidden">Mostrar</span>
+                      <span className="text-[10px] text-muted-foreground/70 hidden group-open:inline">Ocultar</span>
+                    </summary>
+                    <div className="px-3 pb-3 pt-1 space-y-2">
+                      <p className="text-[11px] text-muted-foreground leading-snug">
+                        Exporta este turno como CSV para Connecteam mientras siga activo como sistema puente.
+                        No es sincronización: payroll, asistencia y cierre operativo siguen viviendo en Stafly.
+                      </p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 text-xs gap-1.5 rounded-full"
+                        onClick={() => setConnecteamExportOpen(true)}
+                      >
+                        <FileText className="h-3.5 w-3.5" />
+                        Exportar a Connecteam
+                      </Button>
+                    </div>
+                  </details>
                 )}
               </div>
             </div>
@@ -1569,6 +1602,21 @@ export function ShiftDetailDialog({
         />
       </Suspense>
     )}
+
+    {/* Export Connecteam v1 — admin-only preview + CSV download.
+        Pure frontend: no payroll / time_entries / RLS / schema writes. */}
+    <ExportConnecteamPreviewDialog
+      open={connecteamExportOpen}
+      onOpenChange={setConnecteamExportOpen}
+      shift={shift}
+      assignments={assignments}
+      employees={employees}
+      clients={clients}
+      locations={locations}
+      isAdmin={isAdminForTenant}
+      selectedCompanyId={selectedCompanyId ?? null}
+      shiftCompanyId={(shift as any)?.company_id ?? selectedCompanyId ?? null}
+    />
     </>
   );
 }
