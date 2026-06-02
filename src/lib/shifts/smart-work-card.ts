@@ -198,6 +198,8 @@ export interface SmartWorkCardViewModel {
   uniform: WorkUniform;
   pay: PayEstimate;
   status: WorkStatus;
+  /** Solo presente cuando hay datos de cobertura (admin con `coverage` en el input). */
+  coverage: WorkCoverage | null;
   nextAction: NextAction;
   /** Qué bloques mostrar en esta densidad. La UI los respeta literalmente. */
   visibleBlocks: Array<
