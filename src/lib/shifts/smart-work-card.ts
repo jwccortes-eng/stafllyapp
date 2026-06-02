@@ -582,4 +582,3 @@ export function buildSmartWorkCardViewModel(
     visibleBlocks: blocksForDensity(density, opts.audience),
   };
 }
-}
