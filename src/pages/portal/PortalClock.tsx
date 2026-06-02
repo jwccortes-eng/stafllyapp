@@ -41,6 +41,7 @@ import {
   syncQaModeFromUrl,
   tenantSafetyFlags,
 } from "@/lib/qa-mode";
+import { useT } from "@/i18n/LanguageContext";
 
 interface TimeEntry {
   id: string;
@@ -97,6 +98,7 @@ export default function PortalClock() {
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { t } = useT();
   const [searchParams] = useSearchParams();
   const urlShiftId = searchParams.get("shiftId");
   const [loading, setLoading] = useState(true);
@@ -293,11 +295,11 @@ export default function PortalClock() {
   const initiateClockIn = () => {
     if (!employeeId || !companyId || !selectedShift) return;
     if (!hasProfilePhoto) {
-      toast({ title: "Profile photo required", description: "Upload a photo before clocking in.", variant: "destructive" });
+      toast({ title: t("portal.clock.photo_required"), description: t("portal.clock.upload_photo"), variant: "destructive" });
       return;
     }
     const check = isClockInAllowed(selectedShift);
-    if (!check.allowed) { toast({ title: "Not available yet", description: check.message, variant: "destructive" }); return; }
+    if (!check.allowed) { toast({ title: t("portal.clock.not_available_yet"), description: check.message, variant: "destructive" }); return; }
     // QA-mode safety: only intercept QA sessions hitting a real tenant.
     // Real workers (no QA flag, non-demo email) are NOT interrupted.
     const flags = tenantSafetyFlags(companyFlags);
@@ -402,7 +404,7 @@ export default function PortalClock() {
             // within_geofence stays null. We still log a distinct low-severity
             // alert so admins can see the pattern without payroll being touched.
             if (gpsEnforcement === "block") {
-              toast({ title: "Enable your location", description: "Your company requires GPS location for clocking in. Enable it in settings and try again.", variant: "destructive" });
+              toast({ title: t("portal.clock.enable_location"), description: t("portal.clock.gps_required"), variant: "destructive" });
               setActing(false); return;
             }
             try {
@@ -417,7 +419,7 @@ export default function PortalClock() {
             withinGeofence = dist <= radius;
             if (!withinGeofence) {
               if (gpsEnforcement === "block") {
-                toast({ title: "Outside work area", description: `Move closer to the shift location (${Math.round(dist)}m away).`, variant: "destructive" });
+                toast({ title: t("portal.clock.outside_work_area"), description: t("portal.clock.outside_work_area_desc", { meters: Math.round(dist) }), variant: "destructive" });
                 await supabase.from("clock_alerts").insert({ employee_id: employeeId, company_id: companyId, shift_id: selectedShift.id, type: "OUTSIDE_GEOFENCE", severity: "high", description: `Clock-in blocked at ${Math.round(dist)}m` } as any);
                 setActing(false); return;
               } else {
@@ -474,7 +476,7 @@ export default function PortalClock() {
       setSelectedShift(null);
       await loadData();
     } catch (err: any) {
-      toast({ title: "Could not register", description: err.message ?? "Try again.", variant: "destructive" });
+      toast({ title: t("portal.clock.could_not_register"), description: err.message ?? t("portal.clock.try_again"), variant: "destructive" });
     } finally { setActing(false); }
   };
 
@@ -555,7 +557,7 @@ export default function PortalClock() {
       setTimeout(() => setSuccessState(null), 4000);
       await loadData();
     } catch (err: any) {
-      toast({ title: "Could not register", description: err.message ?? "Try again.", variant: "destructive" });
+      toast({ title: t("portal.clock.could_not_register"), description: err.message ?? t("portal.clock.try_again"), variant: "destructive" });
     } finally { setActing(false); }
   };
 
@@ -568,10 +570,10 @@ export default function PortalClock() {
         type: "manual_time_request", title: "Uncaptured time request",
         body: requestMessage.trim(), metadata: { employee_id: employeeId, request_date: format(new Date(), "yyyy-MM-dd") },
       } as any);
-      toast({ title: "Request sent", description: "Your supervisor will review it soon." });
+      toast({ title: t("portal.clock.request_sent"), description: t("portal.clock.request_sent_desc") });
       setRequestOpen(false); setRequestMessage("");
     } catch (err: any) {
-      toast({ title: "Error sending", description: err.message, variant: "destructive" });
+      toast({ title: t("portal.clock.error_sending"), description: err.message, variant: "destructive" });
     } finally { setSendingRequest(false); }
   };
 
@@ -661,12 +663,10 @@ export default function PortalClock() {
         <Clock className="h-4 w-4 text-warning mt-0.5 shrink-0" />
         <div className="min-w-0">
           <p className="text-[12px] font-semibold text-foreground leading-tight">
-            Etapa 1: sigue marcando entrada/salida en Connecteam
+            {t("portal.clock.stage1.title")}
           </p>
           <p className="text-[11px] text-muted-foreground/85 mt-0.5 leading-snug">
-            Stafly TimeClock todavía no es la fuente oficial de payroll. Usa
-            Connecteam como siempre hasta que te avisemos que Stafly toma el
-            control.
+            {t("portal.clock.stage1.body")}
           </p>
         </div>
       </div>
@@ -682,10 +682,10 @@ export default function PortalClock() {
             <Camera className="h-4 w-4 text-destructive" />
           </div>
           <div className="text-left flex-1 min-w-0">
-            <p className="text-[12.5px] font-semibold text-foreground">Profile photo required</p>
-            <p className="text-[11px] text-muted-foreground mt-0.5">Tap to upload before clocking in</p>
+            <p className="text-[12.5px] font-semibold text-foreground">{t("portal.clock.photo_required")}</p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">{t("portal.clock.photo_required_subtitle")}</p>
           </div>
-          <ChevronRight className="h-4 w-4 text-muted-foreground/40" />
+          <ChevronRight className="h-4 w-4 text-muted-foreground/40 flip-rtl" />
         </button>
       )}
 
@@ -704,7 +704,7 @@ export default function PortalClock() {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-[13px] font-semibold text-foreground">
-              {successState.type === "in" ? "Clock-in recorded" : "Clock-out recorded"}
+              {successState.type === "in" ? t("portal.clock.clock_in_recorded") : t("portal.clock.clock_out_recorded")}
             </p>
             <p className="text-[11px] text-muted-foreground truncate mt-0.5">
               {successState.shift} · <span className="tabular-nums font-medium">{successState.time}</span>
@@ -721,13 +721,12 @@ export default function PortalClock() {
             <Timer className="h-4 w-4 text-warning" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-[12.5px] font-semibold text-foreground">Turno sin cerrar</p>
+            <p className="text-[12.5px] font-semibold text-foreground">{t("portal.clock.stale_title")}</p>
             <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">
-              {staleOpenEntry.shift?.title ?? "Un turno"} quedó abierto desde{" "}
-              <span className="tabular-nums font-medium">
-                {format(new Date(staleOpenEntry.entry.clock_in), "d MMM, HH:mm")}
-              </span>
-              . Toca Marcar salida abajo para cerrarlo.
+              {t("portal.clock.stale_body", {
+                shift: staleOpenEntry.shift?.title ?? t("portal.clock.stale_shift_default"),
+                time: format(new Date(staleOpenEntry.entry.clock_in), "d MMM, HH:mm"),
+              })}
             </p>
           </div>
         </div>
@@ -758,7 +757,7 @@ export default function PortalClock() {
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-earning" />
                 </span>
                 <span className="text-[10.5px] font-bold uppercase tracking-widest text-earning">
-                  Turno completado
+                  {t("portal.clock.completed_label")}
                 </span>
               </div>
               <p className="text-[10.5px] text-muted-foreground/70 tabular-nums">
@@ -773,7 +772,7 @@ export default function PortalClock() {
               <div className="mt-3 flex items-center justify-center gap-5">
                 <div className="text-center">
                   <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-muted-foreground/65 leading-none mb-1">
-                    Clock In
+                    {t("portal.clock.clock_in_label")}
                   </p>
                   <p className="text-[22px] font-bold font-mono tabular-nums text-foreground leading-none">
                     {format(new Date(focusShiftCompletedEntry.clock_in), "HH:mm")}
@@ -781,7 +780,7 @@ export default function PortalClock() {
                 </div>
                 <div className="text-center">
                   <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-muted-foreground/65 leading-none mb-1">
-                    Clock Out
+                    {t("portal.clock.clock_out_label")}
                   </p>
                   <p className="text-[22px] font-bold font-mono tabular-nums text-foreground leading-none">
                     {format(new Date(focusShiftCompletedEntry.clock_out!), "HH:mm")}
@@ -789,7 +788,7 @@ export default function PortalClock() {
                 </div>
               </div>
               <p className="mt-3 text-[11px] text-muted-foreground/80 tabular-nums">
-                Duración: <span className="font-semibold text-foreground">{getDuration(focusShiftCompletedEntry)}</span>
+                {t("portal.clock.duration")}: <span className="font-semibold text-foreground">{getDuration(focusShiftCompletedEntry)}</span>
               </p>
               {focusShift.location_name && (
                 <p className="mt-1 text-[11px] text-muted-foreground/70 truncate">
@@ -803,10 +802,10 @@ export default function PortalClock() {
                 <CheckCircle2 className="h-4 w-4 text-earning shrink-0 mt-0.5" />
                 <div className="min-w-0">
                   <p className="text-[12.5px] font-semibold text-foreground leading-tight">
-                    Tu registro quedó guardado
+                    {t("portal.clock.saved_title")}
                   </p>
                   <p className="text-[11px] text-muted-foreground/85 mt-0.5 leading-snug">
-                    Tu encargado revisará el cierre del turno. No necesitas marcar nada más.
+                    {t("portal.clock.saved_body")}
                   </p>
                 </div>
               </div>
@@ -822,16 +821,16 @@ export default function PortalClock() {
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-earning opacity-60" />
                     <span className="relative inline-flex rounded-full h-2 w-2 bg-earning" />
                   </span>
-                  <span className="text-[10.5px] font-bold uppercase tracking-widest text-earning">En turno</span>
+                  <span className="text-[10.5px] font-bold uppercase tracking-widest text-earning">{t("portal.clock.on_shift")}</span>
                 </div>
                 <p className="text-[10.5px] text-muted-foreground/70 tabular-nums">
-                  Iniciado {format(new Date(activeEntry!.clock_in), "HH:mm")}
+                  {t("portal.clock.started_at", { time: format(new Date(activeEntry!.clock_in), "HH:mm") })}
                 </p>
               </div>
             ) : (
               <div className="px-4 pt-3.5 pb-1 flex items-center justify-between gap-2">
                 <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/55">
-                  {focusShift ? "Listo para marcar entrada" : "Sin turno seleccionado"}
+                  {focusShift ? t("portal.clock.ready_to_clock_in") : t("portal.clock.no_shift_selected")}
                 </p>
                 <p className="text-[10.5px] text-muted-foreground/70 tabular-nums">
                   {format(now, "HH:mm:ss")}
@@ -847,7 +846,7 @@ export default function PortalClock() {
                     {getElapsed()}
                   </p>
                   <p className="text-[10px] uppercase tracking-widest text-muted-foreground/55 mt-2 font-semibold">
-                    Transcurrido
+                    {t("portal.clock.elapsed")}
                   </p>
                 </>
               ) : focusShift ? (
@@ -858,7 +857,7 @@ export default function PortalClock() {
                   <div className="mt-3 flex items-center justify-center gap-5">
                     <div className="text-center">
                       <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-muted-foreground/65 leading-none mb-1">
-                        Expected Clock In
+                        {t("portal.clock.expected_clock_in")}
                       </p>
                       <p className="text-[22px] font-bold font-mono tabular-nums text-foreground leading-none">
                         {focusShift.start_time.slice(0, 5)}
@@ -866,7 +865,7 @@ export default function PortalClock() {
                     </div>
                     <div className="text-center opacity-70">
                       <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-muted-foreground/55 leading-none mb-1">
-                        Estimated Clock Out
+                        {t("portal.clock.estimated_clock_out")}
                       </p>
                       <p className="text-[16px] font-semibold font-mono tabular-nums text-muted-foreground leading-none">
                         {focusShift.end_time.slice(0, 5)}
@@ -910,7 +909,7 @@ export default function PortalClock() {
                   {acting ? (
                     <div className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
                   ) : (
-                    <><LogOut className="h-4 w-4" /> Marcar salida</>
+                    <><LogOut className="h-4 w-4" /> {t("portal.clock.mark_out")}</>
                   )}
                 </Button>
               ) : focusShift ? (
@@ -922,7 +921,7 @@ export default function PortalClock() {
                   {acting ? (
                     <div className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
                   ) : (
-                    <><LogIn className="h-4 w-4" /> Marcar entrada</>
+                    <><LogIn className="h-4 w-4" /> {t("portal.clock.mark_in")}</>
                   )}
                 </Button>
               ) : (
@@ -930,12 +929,12 @@ export default function PortalClock() {
                 <div className="rounded-xl bg-muted/30 border border-border/30 px-4 py-3.5 flex flex-col items-center text-center gap-1">
                   <CalendarDays className="h-5 w-5 text-muted-foreground/45" />
                   <p className="text-[12.5px] font-semibold text-foreground">
-                    {hasDailyOnlyShifts ? "Turnos de pago diario hoy" : "Sin turnos para marcar"}
+                    {hasDailyOnlyShifts ? t("portal.clock.daily_only_today") : t("portal.clock.no_shifts_today")}
                   </p>
                   <p className="text-[10.5px] text-muted-foreground/65 max-w-[260px] leading-relaxed">
                     {hasDailyOnlyShifts
-                      ? "Los turnos de hoy no requieren marcar entrada. El pago se calcula automáticamente."
-                      : "Contacta a tu supervisor si falta algún turno."}
+                      ? t("portal.clock.daily_only_subtitle")
+                      : t("portal.clock.no_shifts_today_subtitle")}
                   </p>
                 </div>
               )}
@@ -966,10 +965,10 @@ export default function PortalClock() {
         <section className="mt-5">
           <div className="flex items-center justify-between mb-2 px-1">
             <h2 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/55">
-              Today
+              {t("portal.clock.today_section")}
             </h2>
             <p className="text-[10.5px] text-muted-foreground/50 tabular-nums">
-              {totalHoursToday()} · {todayEntries.length} entr{todayEntries.length === 1 ? "y" : "ies"}
+              {totalHoursToday()} · {todayEntries.length} {todayEntries.length === 1 ? t("portal.clock.entries_one") : t("portal.clock.entries_many")}
             </p>
           </div>
 
@@ -995,19 +994,19 @@ export default function PortalClock() {
                   <div className="min-w-0 flex-1">
                     <p className="text-[13px] font-semibold text-foreground truncate">{s.title}</p>
                     <p className="text-[11px] text-muted-foreground/70 mt-0.5">
-                      <span className="font-semibold text-foreground">Clock In <span className="tabular-nums font-mono">{s.start_time.slice(0, 5)}</span></span>
+                      <span className="font-semibold text-foreground">{t("portal.clock.clock_in_label")} <span className="tabular-nums font-mono">{s.start_time.slice(0, 5)}</span></span>
                       {s.end_time && (
-                        <span className="text-muted-foreground/60"> · Ends approx. <span className="tabular-nums font-mono">{s.end_time.slice(0, 5)}</span></span>
+                        <span className="text-muted-foreground/60"> · {t("portal.clock.ends_approx")} <span className="tabular-nums font-mono">{s.end_time.slice(0, 5)}</span></span>
                       )}
                       {s.location_name && <> · <span className="text-muted-foreground/55">{s.location_name}</span></>}
                     </p>
                   </div>
                   {alreadyClocked ? (
-                    <OpsStatusChip label="Done" tone="success" size="sm" />
+                    <OpsStatusChip label={t("portal.clock.done")} tone="success" size="sm" />
                   ) : !timeCheck.allowed ? (
-                    <OpsStatusChip label="Not yet" tone="warning" size="sm" />
+                    <OpsStatusChip label={t("portal.clock.not_yet")} tone="warning" size="sm" />
                   ) : (
-                    <ChevronRight className="h-4 w-4 text-muted-foreground/30" />
+                    <ChevronRight className="h-4 w-4 text-muted-foreground/30 flip-rtl" />
                   )}
                 </button>
               );
@@ -1048,7 +1047,7 @@ export default function PortalClock() {
               className="flex-1 h-10 rounded-xl text-[12px] font-medium text-muted-foreground gap-1.5 hover:bg-muted/40 hover:text-foreground"
             >
               <ScanLine className="h-3.5 w-3.5" />
-              Escanear QR
+              {t("portal.clock.scan_qr")}
             </Button>
           )}
           {!isClockedIn && allowManual && (
@@ -1061,7 +1060,7 @@ export default function PortalClock() {
               )}
             >
               <FileText className="h-3.5 w-3.5" />
-              Reportar tiempo
+              {t("portal.clock.report_time")}
             </Button>
           )}
         </div>
@@ -1073,16 +1072,16 @@ export default function PortalClock() {
           <DialogHeader>
             <DialogTitle className="text-base flex items-center gap-2">
               <FileText className="h-4 w-4 text-primary" />
-              Reportar tiempo no registrado
+              {t("portal.clock.report_time_dialog_title")}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
-            <p className="text-xs text-muted-foreground">Describe las horas que trabajaste y por qué no pudiste marcar entrada.</p>
+            <p className="text-xs text-muted-foreground">{t("portal.clock.report_time_dialog_desc")}</p>
             <Textarea value={requestMessage} onChange={e => setRequestMessage(e.target.value)}
-              placeholder="Ej: Trabajé de 8:00 a 17:00 pero no pude marcar entrada porque..." rows={4} className="text-sm resize-none rounded-xl" />
+              placeholder={t("portal.clock.report_time_placeholder")} rows={4} className="text-sm resize-none rounded-xl" />
             <Button onClick={handleSendTimeRequest} disabled={sendingRequest || !requestMessage.trim()} className="w-full h-11 text-sm font-bold rounded-xl">
               {sendingRequest ? <div className="h-3.5 w-3.5 border-2 border-current border-t-transparent rounded-full animate-spin mr-1.5" /> : null}
-              Enviar solicitud
+              {t("portal.clock.send_request")}
             </Button>
           </div>
         </DialogContent>
