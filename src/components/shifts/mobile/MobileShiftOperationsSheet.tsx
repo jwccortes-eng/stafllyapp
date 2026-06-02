@@ -257,7 +257,19 @@ export function MobileShiftOperationsSheet({
     const draft = isDraftShift(shift);
     const published = isPublishedShift(shift);
     const noClient = !shift.client_id;
-    const noLocation = !shift.location_id;
+    const s = shift as Shift & {
+      job_site_location_id?: string | null;
+      job_site_address?: string | null;
+      meeting_point?: string | null;
+      meeting_point_location_id?: string | null;
+    };
+    const noLocation = !hasAnyOperationalLocation({
+      location_id: s.location_id,
+      job_site_location_id: s.job_site_location_id,
+      job_site_address: s.job_site_address,
+      meeting_point: s.meeting_point,
+      meeting_point_location_id: s.meeting_point_location_id,
+    });
     const hours = calcHours(shift.start_time, shift.end_time);
 
     let dateBucket: "today" | "tomorrow" | "past" | "future" = "future";
