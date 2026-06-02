@@ -378,7 +378,8 @@ export function getPayEstimate(input: SmartWorkCardInput): PayEstimate {
     return {
       label: "Estimado",
       amount: amt,
-      amountLabel: `$${amt.toFixed(2)} estimado`,
+      // amountLabel sin sufijos: el componente renderiza "Estimado · $176.00"
+      amountLabel: `$${amt.toFixed(2)}`,
       basis: "hourly",
       disclaimer,
       isFinal: false,
@@ -388,7 +389,7 @@ export function getPayEstimate(input: SmartWorkCardInput): PayEstimate {
     return {
       label: "Aprox.",
       amount: c.daily_rate,
-      amountLabel: `$${c.daily_rate.toFixed(2)} por día`,
+      amountLabel: `$${c.daily_rate.toFixed(2)} / día`,
       basis: "daily",
       disclaimer,
       isFinal: false,
@@ -398,7 +399,7 @@ export function getPayEstimate(input: SmartWorkCardInput): PayEstimate {
     return {
       label: "Aprox.",
       amount: c.flat_amount,
-      amountLabel: `$${c.flat_amount.toFixed(2)} por trabajo`,
+      amountLabel: `$${c.flat_amount.toFixed(2)} / trabajo`,
       basis: "flat",
       disclaimer,
       isFinal: false,
