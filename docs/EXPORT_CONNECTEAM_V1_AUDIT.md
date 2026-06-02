@@ -112,7 +112,7 @@ Componentes/hooks tocados como referencia (sin modificar):
 **Desktop** — `src/components/shifts/ShiftDetailDialog.tsx`:
 - Nueva sección colapsable **"Integraciones / Exportaciones"** al final del drawer (debajo de `LiveShiftBoard` y `ShiftQRSection`).
 - Botón secundario `Exportar a Connecteam` (icon `Download`) que abre un modal `ExportConnecteamPreviewDialog` con:
-  - Preview de las 15 columnas CT en tabla simple (sin charts).
+  - Preview de las 16 columnas CT en tabla simple (sin charts).
   - Banner de estado: Ready / Needs review / Blocked.
   - Warnings listados (workers sin CT ID, timezone faltante, etc.).
   - CTAs: `Cancelar` · `Descargar CSV` (sólo si no Blocked).
@@ -142,7 +142,7 @@ Patrón de descarga: reutilizar `downloadCsv()` de `src/lib/import-review/csv-ex
 ## 9. Checklist QA desktop
 
 - [ ] Sección "Integraciones / Exportaciones" colapsable, cerrada por defecto.
-- [ ] Preview de 15 columnas CT legible (scroll horizontal si necesario).
+- [ ] Preview de 16 columnas CT legible (scroll horizontal si necesario).
 - [ ] Badge de estado Ready/Needs review/Blocked siempre visible.
 - [ ] Warnings con icono y copy ES-first (Admin Desk Spanish-first, regla Core).
 - [ ] Export bloqueado si Blocked (botón disabled + tooltip con razón).
@@ -168,8 +168,8 @@ Patrón de descarga: reutilizar `downloadCsv()` de `src/lib/import-review/csv-ex
 **GO** para implementar **Export Connecteam v1** en sprint corto, con alcance estrictamente unidireccional (Stafly → CSV → operador descarga e importa manual en CT).
 
 Razones:
-1. 11 de 15 columnas CT mapean directo desde Stafly sin cambios de schema.
-2. Los 4 gaps (unpaid break, paid break, shift tags, tasks, require approval) son aceptables como vacíos en v1 y no bloquean la operación de CT.
+1. 11 de 16 columnas CT mapean directo desde Stafly sin cambios de schema.
+2. Los 5 gaps (unpaid break, paid break, shift tags, tasks, require approval) son aceptables como vacíos en v1 y no bloquean la operación de CT.
 3. Patrón de CSV ya existe y está probado (`csv-export.ts`).
 4. Stafly se posiciona como fuente de creación/organización; CT queda como puente temporal de pago/clock — respeta `mem://backlog/phase-19-timeclock-reality-audit-closed` que dice "CT remains payroll authority".
 5. Cero riesgo de regresión: no toca writes, no toca payroll, no toca portal.

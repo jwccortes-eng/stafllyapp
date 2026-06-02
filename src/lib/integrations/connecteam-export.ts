@@ -1,14 +1,27 @@
 /**
  * Export Connecteam v1 — Stafly → Connecteam shift import template.
  *
- * Pure, frontend-only helpers. NO writes to payroll, time_entries, attendance,
- * scheduled_shifts, shift_assignments, RLS, schema, or edge functions.
+ * SCOPE (HARD BOUNDARY):
+ *   Pure, frontend-only helpers that read scheduled shift data and produce a
+ *   CSV row matching Connecteam's 16-column import template.
+ *   NO writes — ever — to payroll, time_entries, attendance, clock_events,
+ *   scheduled_shifts, shift_assignments, employees, RLS, schema, or edge
+ *   functions. NO bidirectional sync. NO automated import. NO scheduled job.
  *
- * Implements the audit at docs/EXPORT_CONNECTEAM_V1_AUDIT.md.
+ * GATING:
+ *   Callers MUST gate the entry point with admin-equivalent permission for the
+ *   current tenant (`canAccessAdminForCompany(selectedCompanyId)`, or
+ *   `canManageShifts({...})` which resolves to the same set: developer / owner
+ *   / founder / per-company admin·manager·supervisor). Workers must never see
+ *   the export action.
  *
- * Legacy shift number policy (mem://business-logic/legacy-shift-number-policy):
+ * LEGACY SHIFT NUMBER (mem://business-logic/legacy-shift-number-policy):
  *   `shift_code` may ONLY travel in the Note column as `Ref: <code>`.
- *   Never as Shift title, never as primary key, never as Stafly's operational id.
+ *   Never as Shift title, never as primary key, never as Stafly's operational
+ *   id. Enforced by `buildConnecteamRow` and covered by
+ *   `src/test/connecteam-export.test.ts`.
+ *
+ * Audit: docs/EXPORT_CONNECTEAM_V1_AUDIT.md.
  */
 import type { Shift, Assignment, Employee, SelectOption } from "@/components/shifts/types";
 
