@@ -4,8 +4,10 @@ import en_app from "./dictionaries/en/app";
 import en_guide from "./dictionaries/en/guide";
 import es_app from "./dictionaries/es/app";
 import es_guide from "./dictionaries/es/guide";
+import he_app from "./dictionaries/he/app";
+import he_guide from "./dictionaries/he/guide";
 
-export type Language = "en" | "es";
+export type Language = "en" | "es" | "he";
 export type ContentMode = "app" | "guide" | "marketing";
 
 const LANG_STORAGE_KEY = "stafly.lang.v1";
@@ -17,15 +19,20 @@ type Dict = Record<string, string>;
 const DICTIONARIES: Record<Language, Record<ContentMode, Dict>> = {
   en: { app: en_app, guide: en_guide, marketing: {} },
   es: { app: es_app, guide: es_guide, marketing: {} },
+  he: { app: he_app, guide: he_guide, marketing: {} },
 };
+
+const RTL_LANGUAGES: ReadonlySet<Language> = new Set(["he"]);
 
 function detectInitialLanguage(): Language {
   if (typeof window === "undefined") return "en";
   const stored = window.localStorage.getItem(LANG_STORAGE_KEY);
-  if (stored === "en" || stored === "es") return stored;
+  if (stored === "en" || stored === "es" || stored === "he") return stored;
   // Fallback to browser preference; default to English.
   const nav = window.navigator?.language?.toLowerCase() ?? "";
-  return nav.startsWith("es") ? "es" : "en";
+  if (nav.startsWith("es")) return "es";
+  if (nav.startsWith("he") || nav.startsWith("iw")) return "he";
+  return "en";
 }
 
 function detectInitialMode(): ContentMode {
@@ -58,6 +65,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (typeof document !== "undefined") {
       document.documentElement.lang = language;
+      document.documentElement.dir = RTL_LANGUAGES.has(language) ? "rtl" : "ltr";
     }
   }, [language]);
 
