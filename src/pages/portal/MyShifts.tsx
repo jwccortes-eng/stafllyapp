@@ -34,6 +34,7 @@ import { HistoryShiftRow } from "@/components/mobile-agenda/HistoryShiftRow";
 import { useWorkedShiftHistory } from "@/hooks/useWorkedShiftHistory";
 import { WeekHistorySummary } from "@/components/portal/WeekHistorySummary";
 import { useT } from "@/i18n/LanguageContext";
+import { SmartWorkCardHero } from "@/components/portal/SmartWorkCardHero";
 
 interface ShiftAssignment {
   id: string;
