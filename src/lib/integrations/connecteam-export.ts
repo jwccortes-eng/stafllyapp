@@ -298,10 +298,11 @@ export function buildConnecteamRow(
     "Unpaid break": "",
     "Paid break": "",
     "Shift title": (s.title ?? "").trim(),
-    "Job": job.value,
-    "Sub item": job.subItem,
+    "Job": compat.job,
+    "Sub item": compat.subItem,
     "Address": addr.value,
     "Users": usersValue,
+
     "Shift tags": "",
     "Note": note,
     "Number of users": numberOfUsers,
