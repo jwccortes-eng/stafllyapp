@@ -2322,7 +2322,29 @@ function DesktopShifts() {
                   <p><span className="font-medium">Fecha:</span> {date ? format(parse(date, "yyyy-MM-dd", new Date()), "EEEE d 'de' MMMM yyyy", { locale: es }) : "—"}</p>
                   <p><span className="font-medium">Horario:</span> {startTime} – {endTime}</p>
                   <p><span className="font-medium">Cliente:</span> {clients.find(c => c.id === clientId)?.name || "Sin asignar"}</p>
-                  <p><span className="font-medium">Ubicación:</span> {locations.find(l => l.id === locationId)?.name || "Sin asignar"}</p>
+                  {(() => {
+                    const locStatus = getShiftLocationStatus({
+                      location_id: locationId,
+                      job_site_location_id: jobSiteLocationId,
+                      job_site_address: jobSiteAddress,
+                      meeting_point: meetingPoint,
+                      meeting_point_location_id: meetingPointLocationId,
+                    });
+                    const savedLoc = locations.find(l => l.id === locationId)?.name;
+                    const display =
+                      savedLoc ||
+                      (jobSiteAddress?.trim()) ||
+                      (meetingPoint?.trim() ? `Punto de encuentro: ${meetingPoint.trim()}` : null) ||
+                      "Sin asignar";
+                    return (
+                      <p>
+                        <span className="font-medium">Ubicación:</span> {display}
+                        {locStatus.status === "manual_address" && (
+                          <span className="ml-2 text-[10px] text-[hsl(var(--status-pending))]">· dirección manual (sin Job Site)</span>
+                        )}
+                      </p>
+                    );
+                  })()}
                   <p><span className="font-medium">Plazas:</span> {slots}</p>
                   <p><span className="font-medium">Empleados:</span> {selectedEmployees.length > 0 ? `${selectedEmployees.length} seleccionados` : "Ninguno"}</p>
                   {transportRequired && <p><span className="font-medium">Transporte:</span> Requerido • {Math.ceil((parseInt(slots) || 1) / (parseInt(carCapacity) || 5))} vehículo(s) • Conductor: {driverEmployeeId ? employees.find(e => e.id === driverEmployeeId)?.first_name || "Asignado" : "⚠️ Sin asignar"}</p>}
@@ -2331,16 +2353,31 @@ function DesktopShifts() {
                   {notes && <p><span className="font-medium">Notas:</span> {notes}</p>}
                 </div>
                 {(() => {
-                  const warnings: string[] = [];
-                  if (startTime >= endTime) warnings.push("La hora de entrada es igual o posterior a la de salida.");
-                  if (selectedEmployees.length === 0) warnings.push("No se asignaron empleados.");
-                  if (!clientId) warnings.push("No se asignó un cliente.");
-                  if (!locationId) warnings.push("No se asignó una ubicación.");
-                  if (transportRequired && !driverEmployeeId) warnings.push("🚗 Transporte requerido pero no se asignó un conductor.");
-                  if (!shiftAdminId) warnings.push("🛡️ No se asignó un admin/líder del turno.");
+                  const locStatus = getShiftLocationStatus({
+                    location_id: locationId,
+                    job_site_location_id: jobSiteLocationId,
+                    job_site_address: jobSiteAddress,
+                    meeting_point: meetingPoint,
+                    meeting_point_location_id: meetingPointLocationId,
+                  });
+                  const errors: string[] = [];
+                  const infos: string[] = [];
+                  if (startTime >= endTime) errors.push("La hora de entrada es igual o posterior a la de salida.");
+                  if (selectedEmployees.length === 0) errors.push("No se asignaron empleados.");
+                  if (!clientId) errors.push("No se asignó un cliente.");
+                  // Location: error only when truly nothing operational exists.
+                  if (locStatus.status === "missing") {
+                    errors.push("Sin ubicación asignada · agrega una dirección o selecciona un Job Site.");
+                  } else if (locStatus.status === "manual_address") {
+                    infos.push("Dirección manual agregada · falta guardar como Job Site para mapa/geofence.");
+                  } else if (locStatus.status === "meeting_only") {
+                    infos.push("Solo hay punto de encuentro · agrega la dirección del trabajo cuando puedas.");
+                  }
+                  if (transportRequired && !driverEmployeeId) errors.push("🚗 Transporte requerido pero no se asignó un conductor.");
+                  if (!shiftAdminId) errors.push("🛡️ No se asignó un admin/líder del turno.");
                   const slotsNum = parseInt(slots) || 1;
-                  if (selectedEmployees.length > slotsNum) warnings.push(`Se asignaron ${selectedEmployees.length} empleados pero solo hay ${slotsNum} plaza(s).`);
-                  if (date && new Date(date + "T00:00:00") < new Date(new Date().toDateString())) warnings.push("La fecha es anterior a hoy.");
+                  if (selectedEmployees.length > slotsNum) errors.push(`Se asignaron ${selectedEmployees.length} empleados pero solo hay ${slotsNum} plaza(s).`);
+                  if (date && new Date(date + "T00:00:00") < new Date(new Date().toDateString())) errors.push("La fecha es anterior a hoy.");
                   selectedEmployees.forEach(eid => {
                     const empAssigns = assignments.filter(a => a.employee_id === eid);
                     const empShiftIds = new Set(empAssigns.map(a => a.shift_id));
@@ -2351,21 +2388,37 @@ function DesktopShifts() {
                     });
                     if (conflicting.length > 0) {
                       const emp = employees.find(e => e.id === eid);
-                      warnings.push(`${emp?.first_name} ${emp?.last_name} tiene conflicto con "${conflicting[0].title}" (${conflicting[0].start_time.slice(0, 5)}–${conflicting[0].end_time.slice(0, 5)}).`);
+                      errors.push(`${emp?.first_name} ${emp?.last_name} tiene conflicto con "${conflicting[0].title}" (${conflicting[0].start_time.slice(0, 5)}–${conflicting[0].end_time.slice(0, 5)}).`);
                     }
                   });
-                  return warnings.length > 0 ? (
-                    <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 space-y-1">
-                      {warnings.map((w, i) => (
-                        <p key={i} className="flex items-start gap-1.5 text-xs text-destructive">
-                          <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" /> {w}
-                        </p>
-                      ))}
+                  if (errors.length === 0 && infos.length === 0) {
+                    return (
+                      <p className="text-xs text-earning flex items-center gap-1.5">
+                        <CheckCircle2 className="h-3.5 w-3.5" /> Sin advertencias detectadas.
+                      </p>
+                    );
+                  }
+                  return (
+                    <div className="space-y-2">
+                      {errors.length > 0 && (
+                        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 space-y-1">
+                          {errors.map((w, i) => (
+                            <p key={`e-${i}`} className="flex items-start gap-1.5 text-xs text-destructive">
+                              <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" /> {w}
+                            </p>
+                          ))}
+                        </div>
+                      )}
+                      {infos.length > 0 && (
+                        <div className="rounded-lg border border-[hsl(var(--status-pending)/0.3)] bg-[hsl(var(--status-pending)/0.06)] p-3 space-y-1">
+                          {infos.map((w, i) => (
+                            <p key={`i-${i}`} className="flex items-start gap-1.5 text-xs text-[hsl(var(--status-pending))]">
+                              <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" /> {w}
+                            </p>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  ) : (
-                    <p className="text-xs text-earning flex items-center gap-1.5">
-                      <CheckCircle2 className="h-3.5 w-3.5" /> Sin advertencias detectadas.
-                    </p>
                   );
                 })()}
               </div>
