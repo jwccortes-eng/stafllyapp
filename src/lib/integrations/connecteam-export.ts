@@ -318,11 +318,20 @@ export function buildConnecteamRow(
 export interface ValidationResult {
   status: ExportStatus;
   warnings: ExportWarning[];
-  /** v1.1 diagnostic metadata — surface in preview UI. */
+  /** v1.2 diagnostic metadata — surface in preview UI. */
   meta: {
     addressSource: AddressSource;
+    /** Legacy: kept for backwards compat. Use jobConfidence/jobRuleId instead. */
     jobSource: JobSource;
     jobIsFallback: boolean;
+    /** v1.2: confidence of the Job/Sub item mapping. */
+    jobConfidence: "exact" | "inferred" | "fallback" | "missing";
+    /** v1.2: beta rule id when confidence === "inferred". */
+    jobRuleId?: string;
+    /** v1.2: resolved Connecteam Job string (post-compat). */
+    job: string;
+    /** v1.2: resolved Connecteam Sub item string (post-compat). */
+    subItem: string;
     usersExported: boolean;
     assignedCount: number;
     capacity: number;
@@ -339,17 +348,23 @@ export function validateShiftForExport(
   const warnings: ExportWarning[] = [];
 
   const addr = resolveAddress(shift, buildCtx);
-  const job = resolveJob(shift, buildCtx);
+  const legacyJob = resolveJob(shift, buildCtx);
+  const compat = resolveConnecteamJobAndSubItem(shift, buildCtx);
   const eff = effectiveAssignmentsForExport(shift.id, buildCtx.assignments);
   const capacity = Number(shift.slots ?? 0);
   const meta = {
     addressSource: addr.source,
-    jobSource: job.source,
-    jobIsFallback: job.isFallback,
+    jobSource: legacyJob.source,
+    jobIsFallback: legacyJob.isFallback,
+    jobConfidence: compat.confidence,
+    jobRuleId: compat.source.ruleId,
+    job: compat.job,
+    subItem: compat.subItem,
     usersExported: opts.includeUsers,
     assignedCount: eff.length,
     capacity,
   };
+
 
   // BLOCK — permissions / tenant scope.
   if (!validateCtx.isAdmin) {
