@@ -787,7 +787,8 @@ export default function ShiftOperations() {
             </div>
           </div>
         </div>
-      </div>
+        </CollapsibleContent>
+      </Collapsible>
 
       <ShiftEditDialog
         shift={shift as unknown as Shift}
