@@ -63,6 +63,8 @@ export interface SmartWorkCardHeroProps {
   /** Acción secundaria de Rechazar cuando aún debe responder. */
   showDecline?: boolean;
   onDecline?: () => void;
+  /** Render returned cuando el VM no se puede construir (datos críticos faltantes). */
+  fallback?: React.ReactNode;
   className?: string;
 }
 
