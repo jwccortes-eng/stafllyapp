@@ -399,6 +399,21 @@ export default function ShiftOperations() {
         />
       )}
 
+      {/* Soft restriction banner — fichajes presentes pero operación sigue activa */}
+      {hasTimeEntries && !["locked", "archived", "cancelled"].includes(shift.status) && (
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 px-4 py-3 flex items-start gap-3">
+          <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+          <div className="flex-1 text-xs leading-relaxed">
+            <p className="font-semibold text-amber-700 dark:text-amber-300 mb-0.5">
+              Edición de datos base restringida porque ya hay fichajes.
+            </p>
+            <p className="text-muted-foreground">
+              Puedes revisar asistencia, validar presencia, agregar notas y preparar auditoría.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Phase 1 QW#3 — Staffing Required banner */}
       <StaffingRequiredBanner
         slots={shift.slots ?? 0}
