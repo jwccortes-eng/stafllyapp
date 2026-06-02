@@ -137,7 +137,38 @@ export default function ShiftOperations() {
   const scrollToStaffing = () => staffingRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
 
   useEffect(() => {
-    if (shiftId && selectedCompanyId) loadAll();
+    // Reset stale state immediately when the shift or company changes, so the
+    // page never renders a previous shift while the new one is loading. This
+    // also forces a clean re-render of ShiftActionBar / StaffingRequiredBanner
+    // so they don't carry over a "locked / blocked" badge from another shift.
+    setShift(null);
+    setAssignments([]);
+    setTimeline([]);
+    setNotes([]);
+    setClientName("");
+    setLocationName("");
+    setLocationAddress("");
+    setHasTimeEntries(false);
+    setLoading(true);
+    if (shiftId && selectedCompanyId) {
+      loadAll();
+    }
+  }, [shiftId, selectedCompanyId]);
+
+  // Refetch when the tab regains focus so admins coming back from another tab
+  // (or after publishing/editing from a sibling view) never see stale state
+  // that would otherwise require a manual refresh.
+  useEffect(() => {
+    const onFocus = () => {
+      if (shiftId && selectedCompanyId && !document.hidden) loadAll();
+    };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shiftId, selectedCompanyId]);
 
   const loadAll = async () => {
