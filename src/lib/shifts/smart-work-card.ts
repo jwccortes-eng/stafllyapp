@@ -98,9 +98,22 @@ export interface SmartWorkCardInput {
 
 export interface WorkIdentity {
   title: string;            // título humano (cliente · categoría / título manual limpio)
+  /** Línea secundaria `{Cliente} · {Categoría}`. `null` si coincidiría con el título. */
+  subtitleLine: string | null;
   refLabel: string | null;  // "Ref #0250" — SECUNDARIO
   clientName: string | null;
   category: string | null;
+}
+
+export interface WorkCoverage {
+  required: number;
+  confirmed: number;
+  pending: number;
+  /** "1 / 3 confirmados". Vacío si no aplica. */
+  label: string;
+  /** Chip corto para densidades compactas. */
+  shortLabel: string;       // "1/3"
+  complete: boolean;
 }
 
 export interface WorkTiming {
@@ -185,6 +198,8 @@ export interface SmartWorkCardViewModel {
   uniform: WorkUniform;
   pay: PayEstimate;
   status: WorkStatus;
+  /** Solo presente cuando hay datos de cobertura (admin con `coverage` en el input). */
+  coverage: WorkCoverage | null;
   nextAction: NextAction;
   /** Qué bloques mostrar en esta densidad. La UI los respeta literalmente. */
   visibleBlocks: Array<
@@ -226,20 +241,43 @@ export function getWorkIdentity(input: SmartWorkCardInput): WorkIdentity {
     locationName: input.location?.name,
     category: input.shift.category ?? input.shift.role ?? null,
   });
+  const cleanTitle = stripLeadingShiftCode(title) || "Trabajo";
+  const clientName = input.client?.name ?? null;
+  const category = input.shift.category ?? input.shift.role ?? null;
+  const subtitleCandidate =
+    clientName && category
+      ? `${clientName} · ${category}`
+      : clientName || category || null;
+  // Evitar duplicado: si el subtítulo es exactamente igual al título, ocultar.
+  const subtitleLine =
+    subtitleCandidate && subtitleCandidate.trim().toLowerCase() !== cleanTitle.trim().toLowerCase()
+      ? subtitleCandidate
+      : null;
   return {
-    title: stripLeadingShiftCode(title) || "Trabajo",
+    title: cleanTitle,
+    subtitleLine,
     refLabel: formatShiftRef(input.shift.shift_code) || null,
-    clientName: input.client?.name ?? null,
-    category: input.shift.category ?? input.shift.role ?? null,
+    clientName,
+    category,
   };
 }
 
 export function getWorkTiming(input: SmartWorkCardInput): WorkTiming {
   const startLabel = formatTime12h(input.shift.start_time);
   const endLabel = formatTime12h(input.shift.end_time);
-  const meetingLabel = input.shift.meeting_time
+  // Fusión meeting_time + meeting_point cuando ambos existen.
+  const meetingTimePart = input.shift.meeting_time
     ? `Encuentro ${formatTime12h(input.shift.meeting_time)}`
     : null;
+  const meetingPointPart = input.shift.meeting_point?.trim() || null;
+  let meetingLabel: string | null = null;
+  if (meetingTimePart && meetingPointPart) {
+    meetingLabel = `${meetingTimePart} · ${meetingPointPart}`;
+  } else if (meetingTimePart) {
+    meetingLabel = meetingTimePart;
+  } else if (meetingPointPart) {
+    meetingLabel = `Encuentro: ${meetingPointPart}`;
+  }
   const hrs = diffHours(input.shift.start_time, input.shift.end_time);
   return {
     startLabel,
@@ -340,7 +378,8 @@ export function getPayEstimate(input: SmartWorkCardInput): PayEstimate {
     return {
       label: "Estimado",
       amount: amt,
-      amountLabel: `$${amt.toFixed(2)} estimado`,
+      // amountLabel sin sufijos: el componente renderiza "Estimado · $176.00"
+      amountLabel: `$${amt.toFixed(2)}`,
       basis: "hourly",
       disclaimer,
       isFinal: false,
@@ -350,7 +389,7 @@ export function getPayEstimate(input: SmartWorkCardInput): PayEstimate {
     return {
       label: "Aprox.",
       amount: c.daily_rate,
-      amountLabel: `$${c.daily_rate.toFixed(2)} por día`,
+      amountLabel: `$${c.daily_rate.toFixed(2)} / día`,
       basis: "daily",
       disclaimer,
       isFinal: false,
@@ -360,7 +399,7 @@ export function getPayEstimate(input: SmartWorkCardInput): PayEstimate {
     return {
       label: "Aprox.",
       amount: c.flat_amount,
-      amountLabel: `$${c.flat_amount.toFixed(2)} por trabajo`,
+      amountLabel: `$${c.flat_amount.toFixed(2)} / trabajo`,
       basis: "flat",
       disclaimer,
       isFinal: false,
@@ -484,6 +523,24 @@ function blocksForDensity(
     : ["identity", "timing", "location", "uniform", "status", "pay", "action"];
 }
 
+// ── Coverage ────────────────────────────────────────────────────────────
+
+export function getWorkCoverage(input: SmartWorkCardInput): WorkCoverage | null {
+  const c = input.coverage;
+  if (!c) return null;
+  const required = Math.max(0, c.required ?? 0);
+  const confirmed = Math.max(0, c.confirmed ?? 0);
+  const pending = Math.max(0, c.pending ?? 0);
+  return {
+    required,
+    confirmed,
+    pending,
+    label: `${confirmed} / ${required} confirmados`,
+    shortLabel: `${confirmed}/${required}`,
+    complete: required > 0 && confirmed >= required,
+  };
+}
+
 // ── Top-level builder ───────────────────────────────────────────────────
 
 export function buildSmartWorkCardViewModel(
@@ -493,11 +550,24 @@ export function buildSmartWorkCardViewModel(
   const density = opts.density ?? "standard";
   const identity = getWorkIdentity(input);
   const timing = getWorkTiming(input);
-  const location = getWorkLocation(input);
+  let location = getWorkLocation(input);
   const uniform = getWorkUniform(input);
   const pay = getPayEstimate(input);
   const status = getWorkStatus(input, opts.audience);
   const nextAction = getNextAction(input, opts.audience, status);
+  // Coverage solo tiene sentido para admin.
+  const coverage = opts.audience === "admin" ? getWorkCoverage(input) : null;
+
+  // Si el bloque de tiempo ya fusionó el meeting_point, evitar duplicarlo
+  // dentro del bloque de ubicación.
+  if (
+    location.meetingPoint &&
+    timing.meetingLabel &&
+    timing.meetingLabel.toLowerCase().includes(location.meetingPoint.toLowerCase())
+  ) {
+    location = { ...location, meetingPoint: null };
+  }
+
   return {
     audience: opts.audience,
     density,
@@ -507,6 +577,7 @@ export function buildSmartWorkCardViewModel(
     uniform,
     pay,
     status,
+    coverage,
     nextAction,
     visibleBlocks: blocksForDensity(density, opts.audience),
   };
