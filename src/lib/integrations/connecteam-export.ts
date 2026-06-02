@@ -28,6 +28,8 @@
  * Audit: docs/EXPORT_CONNECTEAM_V1_AUDIT.md.
  */
 import type { Shift, Assignment, Employee, SelectOption } from "@/components/shifts/types";
+import { resolveConnecteamJobAndSubItem } from "./connecteam-compat";
+
 
 /** Connecteam import template — column order is canonical and MUST NOT change. */
 export const CONNECTEAM_HEADERS = [
@@ -266,8 +268,9 @@ export function buildConnecteamRow(
     })
     .filter((n): n is string => !!n);
 
-  const job = resolveJob(shift, ctx);
+  const compat = resolveConnecteamJobAndSubItem(shift, ctx);
   const addr = resolveAddress(shift, ctx);
+
 
   // Number of users: prefer declared slots/capacity; fall back to assigned count.
   const numberOfUsers = String(s.slots ?? userNames.length ?? 0);
@@ -295,10 +298,11 @@ export function buildConnecteamRow(
     "Unpaid break": "",
     "Paid break": "",
     "Shift title": (s.title ?? "").trim(),
-    "Job": job.value,
-    "Sub item": job.subItem,
+    "Job": compat.job,
+    "Sub item": compat.subItem,
     "Address": addr.value,
     "Users": usersValue,
+
     "Shift tags": "",
     "Note": note,
     "Number of users": numberOfUsers,
@@ -314,11 +318,20 @@ export function buildConnecteamRow(
 export interface ValidationResult {
   status: ExportStatus;
   warnings: ExportWarning[];
-  /** v1.1 diagnostic metadata — surface in preview UI. */
+  /** v1.2 diagnostic metadata — surface in preview UI. */
   meta: {
     addressSource: AddressSource;
+    /** Legacy: kept for backwards compat. Use jobConfidence/jobRuleId instead. */
     jobSource: JobSource;
     jobIsFallback: boolean;
+    /** v1.2: confidence of the Job/Sub item mapping. */
+    jobConfidence: "exact" | "inferred" | "fallback" | "missing";
+    /** v1.2: beta rule id when confidence === "inferred". */
+    jobRuleId?: string;
+    /** v1.2: resolved Connecteam Job string (post-compat). */
+    job: string;
+    /** v1.2: resolved Connecteam Sub item string (post-compat). */
+    subItem: string;
     usersExported: boolean;
     assignedCount: number;
     capacity: number;
@@ -335,17 +348,23 @@ export function validateShiftForExport(
   const warnings: ExportWarning[] = [];
 
   const addr = resolveAddress(shift, buildCtx);
-  const job = resolveJob(shift, buildCtx);
+  const legacyJob = resolveJob(shift, buildCtx);
+  const compat = resolveConnecteamJobAndSubItem(shift, buildCtx);
   const eff = effectiveAssignmentsForExport(shift.id, buildCtx.assignments);
   const capacity = Number(shift.slots ?? 0);
   const meta = {
     addressSource: addr.source,
-    jobSource: job.source,
-    jobIsFallback: job.isFallback,
+    jobSource: legacyJob.source,
+    jobIsFallback: legacyJob.isFallback,
+    jobConfidence: compat.confidence,
+    jobRuleId: compat.source.ruleId,
+    job: compat.job,
+    subItem: compat.subItem,
     usersExported: opts.includeUsers,
     assignedCount: eff.length,
     capacity,
   };
+
 
   // BLOCK — permissions / tenant scope.
   if (!validateCtx.isAdmin) {
@@ -401,12 +420,9 @@ export function validateShiftForExport(
   if (!tz) {
     warnings.push({ code: "missing_timezone", severity: "block", message: "Falta timezone." });
   }
-  if (job.source === "none") {
-    warnings.push({
-      code: "missing_job_context",
-      severity: "block",
-      message: "Sin Job posible — agrega cliente, ubicación o categoría.",
-    });
+  // Merge BLOCK-level warnings from the compat helper (missing_job_context).
+  for (const w of compat.warnings) {
+    if (w.severity === "block") warnings.push(w);
   }
 
   // v1.1: NO bloquear por 0 accepted assignments si el export es capacity-only
@@ -431,25 +447,22 @@ export function validateShiftForExport(
     return { status: "blocked", meta, warnings };
   }
 
-  // NEEDS REVIEW — v1.1 diagnostics.
+  // NEEDS REVIEW — v1.2 diagnostics.
 
   // Users not exported in safe mode.
   if (!opts.includeUsers) {
     warnings.push({
-      code: "users_not_exported_v1_1",
+      code: "users_not_exported_v1_2",
       severity: "warn",
-      message: "Users no se exportan en v1.1 — asigna workers dentro de Connecteam. Number of users mantiene la capacidad.",
+      message: "Users no exportados en v1.2 — asigna workers en Connecteam o configura identificadores. Number of users mantiene la capacidad.",
     });
   }
 
-  // Job fallback — likely to show as "Select" inside Connecteam.
-  if (job.isFallback) {
-    warnings.push({
-      code: "job_fallback",
-      severity: "warn",
-      message: `Connecteam Job puede necesitar match exacto en Connecteam (fuente: ${job.source}).`,
-    });
+  // Merge info/warn from compat helper (compat_rule_applied / job_fallback).
+  for (const w of compat.warnings) {
+    if (w.severity !== "block") warnings.push(w);
   }
+
 
   // Address came from venue name only — not a physical address.
   if (addr.source === "location.name") {

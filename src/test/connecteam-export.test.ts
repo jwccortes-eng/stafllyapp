@@ -30,7 +30,7 @@ const mkShift = (overrides: Partial<Shift> = {}): Shift => ({
 });
 
 const CLIENTS: SelectOption[] = [{ id: "client-1", name: "Acme Catering" }];
-const LOCATIONS: SelectOption[] = [{ id: "loc-1", name: "Eminence Ballroom" }];
+const LOCATIONS: SelectOption[] = [{ id: "loc-1", name: "Acme Hall" }];
 const CATEGORIES: SelectOption[] = [{ id: "cat-1", name: "Waiter" }];
 
 const EMPLOYEES: Employee[] = [
@@ -85,9 +85,9 @@ describe("connecteam-export: buildConnecteamRow mapping", () => {
     expect(row["Number of users"]).toBe("3");
   });
 
-  it("Job = location.name when no Connecteam-job hint configured (v1.1 venue-first)", () => {
+  it("Job = location.name when no Connecteam-job hint configured (venue-first)", () => {
     const row = buildConnecteamRow(mkShift({ category_id: "cat-1" } as any), buildCtx);
-    expect(row.Job).toBe("Eminence Ballroom");
+    expect(row.Job).toBe("Acme Hall");
     expect(row["Sub item"]).toBe("Waiter");
   });
 
@@ -101,13 +101,14 @@ describe("connecteam-export: buildConnecteamRow mapping", () => {
   });
 
 
+
   it("falls back to category as Job when no client", () => {
     const row = buildConnecteamRow(
       mkShift({ client_id: null, category_id: "cat-1" } as any),
       buildCtx,
     );
     // v1.1: with a location, location.name is preferred over category as a Job hint.
-    expect(row.Job).toBe("Eminence Ballroom");
+    expect(row.Job).toBe("Acme Hall");
   });
 
   it("v1.1: Users is EMPTY by default (capacity-only mode)", () => {
@@ -148,7 +149,7 @@ describe("connecteam-export: buildConnecteamRow mapping", () => {
 
 describe("connecteam-export: Address priority (v1.1)", () => {
   it("prefers location.full_address over location.name", () => {
-    const locs = [{ id: "loc-1", name: "Eminence Ballroom", full_address: "260 University Ave, Bronx NY 10468" } as any];
+    const locs = [{ id: "loc-1", name: "Acme Hall", full_address: "260 University Ave, Bronx NY 10468" } as any];
     const r = resolveAddress(mkShift(), { ...buildCtx, locations: locs });
     expect(r.value).toBe("260 University Ave, Bronx NY 10468");
     expect(r.source).toBe("location.full_address");
@@ -172,7 +173,7 @@ describe("connecteam-export: Address priority (v1.1)", () => {
 
   it("uses location.name ONLY as last fallback", () => {
     const r = resolveAddress(mkShift(), buildCtx);
-    expect(r.value).toBe("Eminence Ballroom");
+    expect(r.value).toBe("Acme Hall");
     expect(r.source).toBe("location.name");
   });
 
@@ -186,10 +187,10 @@ describe("connecteam-export: Address priority (v1.1)", () => {
   });
 
   it("buildConnecteamRow surfaces physical address in Address column, not venue name", () => {
-    const locs = [{ id: "loc-1", name: "Eminence Ballroom", full_address: "260 University Ave, Bronx NY" } as any];
+    const locs = [{ id: "loc-1", name: "Acme Hall", full_address: "260 University Ave, Bronx NY" } as any];
     const row = buildConnecteamRow(mkShift(), { ...buildCtx, locations: locs });
     expect(row.Address).toBe("260 University Ave, Bronx NY");
-    expect(row.Address).not.toBe("Eminence Ballroom");
+    expect(row.Address).not.toBe("Acme Hall");
   });
 });
 
@@ -210,7 +211,7 @@ describe("connecteam-export: Job priority (v1.1)", () => {
 
 describe("connecteam-export: validateShiftForExport", () => {
   it("Ready when all fields complete and warnings only include v1.1 informational", () => {
-    const locs = [{ id: "loc-1", name: "Eminence", full_address: "260 University Ave" } as any];
+    const locs = [{ id: "loc-1", name: "Acme", full_address: "260 University Ave" } as any];
     const r = validateShiftForExport(
       mkShift({ connecteam_job_name: "Catering East" } as any),
       { ...buildCtx, locations: locs },
@@ -294,9 +295,9 @@ describe("connecteam-export: validateShiftForExport", () => {
     expect(r.meta.jobIsFallback).toBe(true);
   });
 
-  it("Needs review with users_not_exported_v1_1 in default capacity-only mode", () => {
+  it("Needs review with users_not_exported_v1_2 in default capacity-only mode", () => {
     const r = validateShiftForExport(mkShift(), buildCtx, adminCtx);
-    expect(r.warnings.some(w => w.code === "users_not_exported_v1_1")).toBe(true);
+    expect(r.warnings.some(w => w.code === "users_not_exported_v1_2")).toBe(true);
     expect(r.meta.usersExported).toBe(false);
   });
 });
