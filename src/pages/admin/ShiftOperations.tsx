@@ -430,7 +430,14 @@ export default function ShiftOperations() {
                 }}
               />
               <AssignedTeamCard assignments={assignments as any} />
-              <div ref={staffingRef} className="scroll-mt-24">
+              {selectedCompanyId && (
+                <AttendanceEvidenceCard
+                  shift={{ id: shift.id, date: shift.date, start_time: shift.start_time, end_time: shift.end_time, status: shift.status }}
+                  assignments={assignments as any}
+                  companyId={selectedCompanyId}
+                  userId={user?.id ?? null}
+                />
+              )}
                 <CandidatesCard
                   recommended={recommended}
                   pool={pool}
