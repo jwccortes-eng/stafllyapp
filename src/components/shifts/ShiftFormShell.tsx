@@ -177,7 +177,7 @@ export function ShiftFormShell({
                 <h2 className="text-base font-bold font-heading leading-tight">{headerTitle}</h2>
                 {mode === "create" && (
                   <span className="inline-flex items-center rounded-full bg-primary/10 text-primary text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 border border-primary/20">
-                    Quick Create v3
+                    Creación rápida
                   </span>
                 )}
               </div>
