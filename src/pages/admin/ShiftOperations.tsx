@@ -438,6 +438,7 @@ export default function ShiftOperations() {
                   userId={user?.id ?? null}
                 />
               )}
+              <div ref={staffingRef} className="scroll-mt-24">
                 <CandidatesCard
                   recommended={recommended}
                   pool={pool}
