@@ -334,11 +334,11 @@ export default function ShiftOperations() {
     loadAll();
   };
 
-  // Group by area
+  // Group assignments by normalized area (Queens/QUEENS/Queens, NY → "Queens")
   const byArea = useMemo(() => {
     const map = new Map<string, AssignmentDetail[]>();
     assignments.forEach(a => {
-      const area = a.employee?.county || "Sin área";
+      const area = normalizeArea(a.employee?.county ?? "") || "Sin zona";
       if (!map.has(area)) map.set(area, []);
       map.get(area)!.push(a);
     });
