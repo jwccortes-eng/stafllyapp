@@ -258,6 +258,11 @@ export function ShiftActionBar({
           <Lock className="h-3 w-3" /> {editBlockedReason}
         </span>
       )}
+      {!editBlockedReason && editRestrictedReason && (
+        <span className="ml-auto text-[10px] text-amber-700 dark:text-amber-400 flex items-center gap-1 max-w-[420px] truncate" title={editRestrictedReason}>
+          <AlertTriangle className="h-3 w-3" /> Restricción parcial — sigue operable
+        </span>
+      )}
 
       <DuplicateShiftDialog
         key={`${shift.id}-${dupSessionKey}-${dupWithWorkers ? "with-workers" : "without-workers"}`}
