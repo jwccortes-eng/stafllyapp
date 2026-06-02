@@ -108,7 +108,7 @@ describe("connecteam-export: buildConnecteamRow mapping", () => {
       buildCtx,
     );
     // v1.1: with a location, location.name is preferred over category as a Job hint.
-    expect(row.Job).toBe("Eminence Ballroom");
+    expect(row.Job).toBe("Acme Hall");
   });
 
   it("v1.1: Users is EMPTY by default (capacity-only mode)", () => {
@@ -149,7 +149,7 @@ describe("connecteam-export: buildConnecteamRow mapping", () => {
 
 describe("connecteam-export: Address priority (v1.1)", () => {
   it("prefers location.full_address over location.name", () => {
-    const locs = [{ id: "loc-1", name: "Eminence Ballroom", full_address: "260 University Ave, Bronx NY 10468" } as any];
+    const locs = [{ id: "loc-1", name: "Acme Hall", full_address: "260 University Ave, Bronx NY 10468" } as any];
     const r = resolveAddress(mkShift(), { ...buildCtx, locations: locs });
     expect(r.value).toBe("260 University Ave, Bronx NY 10468");
     expect(r.source).toBe("location.full_address");
@@ -173,7 +173,7 @@ describe("connecteam-export: Address priority (v1.1)", () => {
 
   it("uses location.name ONLY as last fallback", () => {
     const r = resolveAddress(mkShift(), buildCtx);
-    expect(r.value).toBe("Eminence Ballroom");
+    expect(r.value).toBe("Acme Hall");
     expect(r.source).toBe("location.name");
   });
 
@@ -187,10 +187,10 @@ describe("connecteam-export: Address priority (v1.1)", () => {
   });
 
   it("buildConnecteamRow surfaces physical address in Address column, not venue name", () => {
-    const locs = [{ id: "loc-1", name: "Eminence Ballroom", full_address: "260 University Ave, Bronx NY" } as any];
+    const locs = [{ id: "loc-1", name: "Acme Hall", full_address: "260 University Ave, Bronx NY" } as any];
     const row = buildConnecteamRow(mkShift(), { ...buildCtx, locations: locs });
     expect(row.Address).toBe("260 University Ave, Bronx NY");
-    expect(row.Address).not.toBe("Eminence Ballroom");
+    expect(row.Address).not.toBe("Acme Hall");
   });
 });
 
@@ -211,7 +211,7 @@ describe("connecteam-export: Job priority (v1.1)", () => {
 
 describe("connecteam-export: validateShiftForExport", () => {
   it("Ready when all fields complete and warnings only include v1.1 informational", () => {
-    const locs = [{ id: "loc-1", name: "Eminence", full_address: "260 University Ave" } as any];
+    const locs = [{ id: "loc-1", name: "Acme", full_address: "260 University Ave" } as any];
     const r = validateShiftForExport(
       mkShift({ connecteam_job_name: "Catering East" } as any),
       { ...buildCtx, locations: locs },
