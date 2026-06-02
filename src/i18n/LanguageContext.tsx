@@ -65,6 +65,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (typeof document !== "undefined") {
       document.documentElement.lang = language;
+      document.documentElement.dir = RTL_LANGUAGES.has(language) ? "rtl" : "ltr";
     }
   }, [language]);
 
