@@ -17,6 +17,8 @@ export interface BuildPrePublishInput {
   clientId: string;
   locationId: string;
   jobSiteLocationId: string | null;
+  /** Free-text manual address typed by the operator (one-off Job Site). */
+  jobSiteAddress?: string;
   meetingPoint: string;
   meetingPointLocationId: string | null;
   transportRequired: boolean;
