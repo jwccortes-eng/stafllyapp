@@ -33,6 +33,7 @@ import {
 import { HistoryShiftRow } from "@/components/mobile-agenda/HistoryShiftRow";
 import { useWorkedShiftHistory } from "@/hooks/useWorkedShiftHistory";
 import { WeekHistorySummary } from "@/components/portal/WeekHistorySummary";
+import { useT } from "@/i18n/LanguageContext";
 
 interface ShiftAssignment {
   id: string;
@@ -77,6 +78,7 @@ type TabFilter = "available" | "today" | "upcoming" | "history";
 export default function MyShifts() {
   const { effectiveEmployeeId: employeeId } = useEffectiveEmployee();
   const navigate = useNavigate();
+  const { t } = useT();
   const [searchParams, setSearchParams] = useSearchParams();
   const [assignments, setAssignments] = useState<ShiftAssignment[]>([]);
   const [claimable, setClaimable] = useState<ClaimableShift[]>([]);
@@ -226,12 +228,12 @@ export default function MyShifts() {
       } catch {}
       if (navigator.vibrate) navigator.vibrate(100);
 
-      toast.success("✅ ¡Solicitud enviada!", { description: claimedShift ? `Turno "${claimedShift.title}" solicitado.` : "Tu solicitud fue enviada." });
+      toast.success(t("portal.shifts.request_sent_title"), { description: claimedShift ? t("portal.shifts.request_sent_with_title", { title: claimedShift.title }) : t("portal.shifts.request_sent_desc") });
       await load();
     } catch (err: any) {
       // Rollback optimistic update
       if (claimedShift) setClaimable(prev => [...prev, claimedShift].sort((a, b) => a.date.localeCompare(b.date)));
-      toast.error("Error", { description: err.message ?? "No pudimos solicitar el turno." });
+      toast.error(t("common.error"), { description: err.message ?? t("portal.shifts.could_not_request") });
     } finally {
       setClaiming(null);
     }
@@ -296,8 +298,8 @@ export default function MyShifts() {
       } as any).eq("id", assignmentId);
       error = fallback.error;
     }
-    if (error) toast.error("Error", { description: error.message });
-    else { toast.success("¡Turno confirmado!"); notifyAdminOfResponse(assignmentId, "confirmed"); await load(); }
+    if (error) toast.error(t("common.error"), { description: error.message });
+    else { toast.success(t("portal.shifts.action.accept") + " ✓"); notifyAdminOfResponse(assignmentId, "confirmed"); await load(); }
     setResponding(null);
   };
 
@@ -318,8 +320,8 @@ export default function MyShifts() {
       } as any).eq("id", rejectDialogId);
       error = fallback.error;
     }
-    if (error) toast.error("Error", { description: error.message });
-    else { toast.success("Turno rechazado"); notifyAdminOfResponse(rejectDialogId, "rejected"); await load(); }
+    if (error) toast.error(t("common.error"), { description: error.message });
+    else { toast.success(t("portal.shifts.rejected_toast")); notifyAdminOfResponse(rejectDialogId, "rejected"); await load(); }
     setResponding(null); setRejectDialogId(null); setRejectReason("");
   };
 
@@ -361,25 +363,25 @@ export default function MyShifts() {
   // History count is intentionally not shown as a badge — it grows unbounded
   // and creates noise (e.g. "99+"). Today/Upcoming/Available keep their counts.
   const tabs: { key: TabFilter; label: string; count: number; showCount: boolean }[] = [
-    ...(claimable.length > 0 ? [{ key: "available" as TabFilter, label: "Disponibles", count: claimable.length, showCount: true }] : []),
-    { key: "today", label: "Today", count: todayCount, showCount: true },
-    { key: "upcoming", label: "Próximos", count: upcomingCount, showCount: true },
-    { key: "history", label: "Historial", count: pastCount, showCount: false },
+    ...(claimable.length > 0 ? [{ key: "available" as TabFilter, label: t("portal.shifts.tab.available"), count: claimable.length, showCount: true }] : []),
+    { key: "today", label: t("portal.shifts.tab.today"), count: todayCount, showCount: true },
+    { key: "upcoming", label: t("portal.shifts.tab.upcoming"), count: upcomingCount, showCount: true },
+    { key: "history", label: t("portal.shifts.tab.history"), count: pastCount, showCount: false },
   ];
 
   // Sync tab to URL for deep-link / back navigation
-  const changeTab = (t: TabFilter) => {
-    setActiveTab(t);
+  const changeTab = (next: TabFilter) => {
+    setActiveTab(next);
     setHistoryVisible(HISTORY_PAGE); // reset pagination on tab switch
-    const next = new URLSearchParams(searchParams);
-    if (t === "today") next.delete("tab"); else next.set("tab", t);
-    setSearchParams(next, { replace: true });
+    const sp = new URLSearchParams(searchParams);
+    if (next === "today") sp.delete("tab"); else sp.set("tab", next);
+    setSearchParams(sp, { replace: true });
   };
 
   const subtitle = (() => {
-    if (todayCount > 0) return `${todayCount} turno${todayCount > 1 ? "s" : ""} hoy`;
-    if (upcomingCount > 0) return `${upcomingCount} próximo${upcomingCount > 1 ? "s" : ""}`;
-    return "Sin turnos programados";
+    if (todayCount > 0) return todayCount === 1 ? t("portal.shifts.subtitle.today_one") : t("portal.shifts.subtitle.today_many", { count: todayCount });
+    if (upcomingCount > 0) return upcomingCount === 1 ? t("portal.shifts.subtitle.upcoming_one") : t("portal.shifts.subtitle.upcoming_many", { count: upcomingCount });
+    return t("portal.shifts.subtitle.none");
   })();
 
   if (loading) {
@@ -406,7 +408,7 @@ export default function MyShifts() {
     return (
       <div className="pt-4">
         <ErrorBlock
-          title="No pudimos cargar tus turnos"
+          title={t("portal.shifts.could_not_load")}
           message={loadError}
           onRetry={load}
         />
@@ -544,19 +546,19 @@ export default function MyShifts() {
         return (
           <div className="mb-4">
             <OperationalAgendaHero
-              eyebrow="Tu próxima jornada"
+              eyebrow={t("portal.shifts.hero_eyebrow")}
               item={mapToAgendaItem(a)}
               onClick={() => setSelectedShift(a)}
               primaryAction={
                 isClockable
-                  ? { label: "Marcar entrada", onClick: () => navigate(`/portal/clock?shiftId=${a.shift.id}`), variant: "primary", icon: LogIn }
+                  ? { label: t("portal.shifts.action.mark_in"), onClick: () => navigate(`/portal/clock?shiftId=${a.shift.id}`), variant: "primary", icon: LogIn }
                   : owed
-                  ? { label: "Accept", onClick: () => acceptAssignment(a.id), variant: "primary", icon: Check, loading: responding === a.id }
+                  ? { label: t("portal.shifts.action.accept"), onClick: () => acceptAssignment(a.id), variant: "primary", icon: Check, loading: responding === a.id }
                   : undefined
               }
               secondaryAction={
                 owed
-                  ? { label: "Decline", onClick: () => { setRejectDialogId(a.id); setRejectReason(""); }, variant: "ghost", icon: X }
+                  ? { label: t("portal.shifts.action.decline"), onClick: () => { setRejectDialogId(a.id); setRejectReason(""); }, variant: "ghost", icon: X }
                   : undefined
               }
             />
@@ -576,7 +578,7 @@ export default function MyShifts() {
               index={idx}
               density={density}
               onClick={() => setSelectedShift(a)}
-              inlineActionLabel={owed ? "Accept" : undefined}
+              inlineActionLabel={owed ? t("portal.shifts.action.accept") : undefined}
               onInlineAction={owed ? () => acceptAssignment(a.id) : undefined}
             />
           );
@@ -595,9 +597,9 @@ export default function MyShifts() {
 
           type Bucket = { key: string; label: string; items: ShiftAssignment[] };
           const buckets: Bucket[] = [
-            { key: "this-week", label: "This Week", items: [] },
-            { key: "last-week", label: "Semana pasada", items: [] },
-            { key: "earlier", label: "Anteriores", items: [] },
+            { key: "this-week", label: t("portal.shifts.history.this_week"), items: [] },
+            { key: "last-week", label: t("portal.shifts.history.last_week"), items: [] },
+            { key: "earlier", label: t("portal.shifts.history.earlier"), items: [] },
           ];
 
           for (const a of visible) {
@@ -611,7 +613,7 @@ export default function MyShifts() {
           return (
             <div className="space-y-4">
               <p className="text-[11px] text-muted-foreground/60 px-1 -mt-1">
-                {filtered.length} turno{filtered.length === 1 ? "" : "s"} en total
+                {filtered.length === 1 ? t("portal.shifts.history.total_one") : t("portal.shifts.history.total_many", { count: filtered.length })}
               </p>
 
               {buckets.filter((b) => b.items.length > 0).map((b) => {
@@ -668,7 +670,7 @@ export default function MyShifts() {
                     onClick={() => setHistoryVisible((v) => v + HISTORY_PAGE)}
                     className="w-full h-10 text-[12px] font-semibold rounded-xl text-muted-foreground hover:text-foreground"
                   >
-                    Cargar {Math.min(remaining, HISTORY_PAGE)} más · {remaining} restantes
+                    {t("portal.shifts.history.load_more", { next: Math.min(remaining, HISTORY_PAGE), remaining })}
                   </Button>
                 </div>
               )}
@@ -682,8 +684,8 @@ export default function MyShifts() {
         return (
           <section className="space-y-2">
             <AgendaSectionHeader
-              title={activeTab === "today" ? "Today" : "This Week"}
-              caption={list.length === 1 ? "1 turno" : `${list.length} turnos`}
+              title={activeTab === "today" ? t("portal.shifts.section.today") : t("portal.shifts.section.this_week")}
+              caption={list.length === 1 ? t("portal.shifts.section.count_one") : t("portal.shifts.section.count_many", { count: list.length })}
             />
             <OperationalTimeline>
               {list.map((a, i) => renderRow(a, i, "comfortable"))}
@@ -706,21 +708,21 @@ export default function MyShifts() {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-widest bg-emerald-500/15 text-emerald-700 dark:text-emerald-400">
-                      Disponible
+                      {t("portal.shifts.available.chip")}
                     </span>
                     {s.slots && (
                       <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">
-                        {s.slots - s.assignedCount} {(s.slots - s.assignedCount) === 1 ? "lugar" : "lugares"}
+                        {s.slots - s.assignedCount} {(s.slots - s.assignedCount) === 1 ? t("portal.shifts.available.slot_one") : t("portal.shifts.available.slot_many")}
                       </span>
                     )}
                   </div>
                   <p className="text-[14px] font-bold text-foreground truncate">{formatDisplayName(s.title)}</p>
                   <p className="text-[12px] text-muted-foreground/80 mt-0.5">
-                    {isToday(parseISO(s.date)) ? "Today" : isTomorrow(parseISO(s.date)) ? "Tomorrow" : format(parseISO(s.date), "EEE d MMM", { locale: enUS })}
+                    {isToday(parseISO(s.date)) ? t("portal.shifts.today_label") : isTomorrow(parseISO(s.date)) ? t("portal.shifts.tomorrow_label") : format(parseISO(s.date), "EEE d MMM", { locale: enUS })}
                     {" · "}
-                    <span className="font-semibold text-foreground">Clock In <span className="tabular-nums font-mono">{s.start_time?.slice(0, 5)}</span></span>
+                    <span className="font-semibold text-foreground">{t("portal.clock.clock_in_label")} <span className="tabular-nums font-mono">{s.start_time?.slice(0, 5)}</span></span>
                     {s.end_time && (
-                      <span className="text-muted-foreground/70"> · Ends approx. <span className="tabular-nums font-mono">{s.end_time?.slice(0, 5)}</span></span>
+                      <span className="text-muted-foreground/70"> · {t("portal.shifts.ends_approx")} <span className="tabular-nums font-mono">{s.end_time?.slice(0, 5)}</span></span>
                     )}
                   </p>
                   {s.location && (
@@ -736,7 +738,7 @@ export default function MyShifts() {
                 onClick={(e) => { e.stopPropagation(); claimShift(s.id); }}
                 disabled={claiming === s.id}
               >
-                {claiming === s.id ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />Solicitando...</> : <><HandMetal className="h-3.5 w-3.5" />Solicitar turno</>}
+                {claiming === s.id ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />{t("portal.shifts.available.requesting")}</> : <><HandMetal className="h-3.5 w-3.5" />{t("portal.shifts.available.request")}</>}
               </Button>
             </div>
           ))}
@@ -751,16 +753,16 @@ export default function MyShifts() {
           </div>
           <div className="space-y-1">
             <p className="text-sm font-bold text-foreground">
-              {activeTab === "today" && "Sin turnos hoy"}
-              {activeTab === "upcoming" && "Sin próximos turnos"}
-              {activeTab === "history" && "Sin historial"}
+              {activeTab === "today" && t("portal.shifts.empty.today_title")}
+              {activeTab === "upcoming" && t("portal.shifts.empty.upcoming_title")}
+              {activeTab === "history" && t("portal.shifts.empty.history_title")}
             </p>
             <p className="text-xs text-muted-foreground/70 max-w-[240px] mx-auto">
               {activeTab === "today"
-                ? "No tienes turnos programados para hoy."
+                ? t("portal.shifts.empty.today_body")
                 : activeTab === "history"
-                ? "Aún no tienes turnos completados."
-                : "Tus turnos asignados aparecerán aquí."
+                ? t("portal.shifts.empty.history_body")
+                : t("portal.shifts.empty.default_body")
               }
             </p>
           </div>
