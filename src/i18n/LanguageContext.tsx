@@ -4,8 +4,10 @@ import en_app from "./dictionaries/en/app";
 import en_guide from "./dictionaries/en/guide";
 import es_app from "./dictionaries/es/app";
 import es_guide from "./dictionaries/es/guide";
+import he_app from "./dictionaries/he/app";
+import he_guide from "./dictionaries/he/guide";
 
-export type Language = "en" | "es";
+export type Language = "en" | "es" | "he";
 export type ContentMode = "app" | "guide" | "marketing";
 
 const LANG_STORAGE_KEY = "stafly.lang.v1";
@@ -17,7 +19,10 @@ type Dict = Record<string, string>;
 const DICTIONARIES: Record<Language, Record<ContentMode, Dict>> = {
   en: { app: en_app, guide: en_guide, marketing: {} },
   es: { app: es_app, guide: es_guide, marketing: {} },
+  he: { app: he_app, guide: he_guide, marketing: {} },
 };
+
+const RTL_LANGUAGES: ReadonlySet<Language> = new Set(["he"]);
 
 function detectInitialLanguage(): Language {
   if (typeof window === "undefined") return "en";
