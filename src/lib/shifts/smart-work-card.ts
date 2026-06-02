@@ -523,6 +523,24 @@ function blocksForDensity(
     : ["identity", "timing", "location", "uniform", "status", "pay", "action"];
 }
 
+// ── Coverage ────────────────────────────────────────────────────────────
+
+export function getWorkCoverage(input: SmartWorkCardInput): WorkCoverage | null {
+  const c = input.coverage;
+  if (!c) return null;
+  const required = Math.max(0, c.required ?? 0);
+  const confirmed = Math.max(0, c.confirmed ?? 0);
+  const pending = Math.max(0, c.pending ?? 0);
+  return {
+    required,
+    confirmed,
+    pending,
+    label: `${confirmed} / ${required} confirmados`,
+    shortLabel: `${confirmed}/${required}`,
+    complete: required > 0 && confirmed >= required,
+  };
+}
+
 // ── Top-level builder ───────────────────────────────────────────────────
 
 export function buildSmartWorkCardViewModel(
@@ -532,11 +550,24 @@ export function buildSmartWorkCardViewModel(
   const density = opts.density ?? "standard";
   const identity = getWorkIdentity(input);
   const timing = getWorkTiming(input);
-  const location = getWorkLocation(input);
+  let location = getWorkLocation(input);
   const uniform = getWorkUniform(input);
   const pay = getPayEstimate(input);
   const status = getWorkStatus(input, opts.audience);
   const nextAction = getNextAction(input, opts.audience, status);
+  // Coverage solo tiene sentido para admin.
+  const coverage = opts.audience === "admin" ? getWorkCoverage(input) : null;
+
+  // Si el bloque de tiempo ya fusionó el meeting_point, evitar duplicarlo
+  // dentro del bloque de ubicación.
+  if (
+    location.meetingPoint &&
+    timing.meetingLabel &&
+    timing.meetingLabel.toLowerCase().includes(location.meetingPoint.toLowerCase())
+  ) {
+    location = { ...location, meetingPoint: null };
+  }
+
   return {
     audience: opts.audience,
     density,
@@ -546,7 +577,9 @@ export function buildSmartWorkCardViewModel(
     uniform,
     pay,
     status,
+    coverage,
     nextAction,
     visibleBlocks: blocksForDensity(density, opts.audience),
   };
+}
 }
