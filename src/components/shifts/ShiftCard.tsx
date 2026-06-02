@@ -233,6 +233,14 @@ export function ShiftCard({
             {isLocked && (
               <Lock className="h-3 w-3 text-muted-foreground/55" aria-label="Locked" />
             )}
+            {shift.shift_code && (
+              <span
+                className="font-mono tabular-nums text-[9px] text-muted-foreground/45 ml-0.5"
+                title={formatShiftRef(shift.shift_code) ?? undefined}
+              >
+                {formatShiftRef(shift.shift_code)}
+              </span>
+            )}
           </div>
         </div>
 
