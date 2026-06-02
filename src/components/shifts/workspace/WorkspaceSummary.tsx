@@ -32,6 +32,7 @@ interface Props {
   clientId: string;
   locationId: string;
   jobSiteLocationId: string | null;
+  jobSiteAddress?: string;
   meetingPoint: string;
   meetingPointLocationId: string | null;
   transportRequired: boolean;
@@ -76,6 +77,7 @@ function WorkspaceSummaryImpl(p: Props) {
     clientId: p.clientId,
     locationId: p.locationId,
     jobSiteLocationId: p.jobSiteLocationId,
+    jobSiteAddress: p.jobSiteAddress,
     meetingPoint: p.meetingPoint,
     meetingPointLocationId: p.meetingPointLocationId,
     transportRequired: p.transportRequired,
@@ -89,7 +91,8 @@ function WorkspaceSummaryImpl(p: Props) {
     isReady: pending.isReady,
   });
 
-  const jobsiteMissing = !p.locationId && !p.jobSiteLocationId;
+  const hasManualAddress = !!(p.jobSiteAddress && p.jobSiteAddress.trim());
+  const jobsiteMissing = !p.locationId && !p.jobSiteLocationId && !hasManualAddress;
   const meetingMissing =
     p.transportRequired && !p.meetingPoint.trim() && !p.meetingPointLocationId;
   const clientMissing = !p.clientId;

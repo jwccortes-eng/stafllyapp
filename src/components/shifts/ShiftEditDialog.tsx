@@ -173,6 +173,7 @@ export function ShiftEditDialog({
       clientId={form.clientId}
       locationId={form.locationId}
       jobSiteLocationId={form.jobSiteLocationId}
+      jobSiteAddress={form.jobSiteAddress}
       meetingPoint={form.meetingPoint}
       meetingPointLocationId={form.meetingPointLocationId}
       transportRequired={form.transportRequired}

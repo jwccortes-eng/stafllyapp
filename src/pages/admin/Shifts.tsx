@@ -159,6 +159,7 @@ function CreateShiftDialogInline(props: {
       clientId={v.clientId}
       locationId={v.locationId}
       jobSiteLocationId={v.jobSiteLocationId}
+      jobSiteAddress={v.jobSiteAddress}
       meetingPoint={v.meetingPoint}
       meetingPointLocationId={v.meetingPointLocationId}
       transportRequired={v.transportRequired}
@@ -195,6 +196,7 @@ function CreateShiftDialogInline(props: {
     clientId: v.clientId,
     locationId: v.locationId,
     jobSiteLocationId: v.jobSiteLocationId,
+    jobSiteAddress: v.jobSiteAddress,
     meetingPoint: v.meetingPoint,
     meetingPointLocationId: v.meetingPointLocationId,
     transportRequired: v.transportRequired,
@@ -2388,6 +2390,7 @@ function DesktopShifts() {
           clientId: s.client_id ?? "",
           locationId: s.location_id ?? "",
           jobSiteLocationId: s.job_site_location_id ?? null,
+          jobSiteAddress: s.job_site_address ?? "",
           meetingPoint: s.meeting_point ?? "",
           meetingPointLocationId: s.meeting_point_location_id ?? null,
           transportRequired: !!s.transportation_required,

@@ -18,6 +18,7 @@ export interface PendingFlag {
     | "time_missing"
     | "client_missing"
     | "jobsite_missing"
+    | "jobsite_unsaved"
     | "meeting_missing"
     | "team_missing"
     | "ready_to_publish"
@@ -33,6 +34,8 @@ export interface PendingInput {
   clientId: string;
   locationId: string;
   jobSiteLocationId: string | null;
+  /** Free-text manual address typed by the operator (one-off Job Site). */
+  jobSiteAddress?: string;
   meetingPoint: string;
   meetingPointLocationId: string | null;
   transportRequired: boolean;
@@ -53,7 +56,10 @@ export function computeShiftPendingFlags(v: PendingInput): PendingResult {
   const dateMissing = !v.date;
   const timeMissing = !v.startTime || !v.endTime;
   const clientMissing = !v.clientId;
-  const jobsiteMissing = !v.locationId && !v.jobSiteLocationId;
+  const hasManualAddress = !!(v.jobSiteAddress && v.jobSiteAddress.trim());
+  const hasStructuredJobsite = !!v.locationId || !!v.jobSiteLocationId;
+  const jobsiteMissing = !hasStructuredJobsite && !hasManualAddress;
+  const jobsiteUnsaved = !hasStructuredJobsite && hasManualAddress;
   const meetingMissing =
     v.transportRequired && !v.meetingPoint.trim() && !v.meetingPointLocationId;
   const teamMissing = !v.claimable && v.assignedCount === 0;
@@ -72,6 +78,12 @@ export function computeShiftPendingFlags(v: PendingInput): PendingResult {
       key: "jobsite_missing",
       label: "Pendiente: ubicación del trabajo",
       tone: "warn",
+    });
+  } else if (jobsiteUnsaved) {
+    flags.push({
+      key: "jobsite_unsaved",
+      label: "Dirección agregada; sin Job Site guardado · mapa/geofence no disponible",
+      tone: "info",
     });
   }
   if (meetingMissing) {
