@@ -1,5 +1,5 @@
 /**
- * Export Connecteam v1 — Stafly → Connecteam shift import template.
+ * Export Connecteam v1.1 — Stafly → Connecteam shift import template.
  *
  * SCOPE (HARD BOUNDARY):
  *   Pure, frontend-only helpers that read scheduled shift data and produce a
@@ -11,15 +11,19 @@
  * GATING:
  *   Callers MUST gate the entry point with admin-equivalent permission for the
  *   current tenant (`canAccessAdminForCompany(selectedCompanyId)`, or
- *   `canManageShifts({...})` which resolves to the same set: developer / owner
- *   / founder / per-company admin·manager·supervisor). Workers must never see
- *   the export action.
+ *   `canManageShifts({...})`). Workers must never see the export action.
  *
  * LEGACY SHIFT NUMBER (mem://business-logic/legacy-shift-number-policy):
  *   `shift_code` may ONLY travel in the Note column as `Ref: <code>`.
- *   Never as Shift title, never as primary key, never as Stafly's operational
- *   id. Enforced by `buildConnecteamRow` and covered by
- *   `src/test/connecteam-export.test.ts`.
+ *
+ * v1.1 CHANGES (after first real Connecteam import):
+ *   - Address priority now PHYSICAL ADDRESS first; `location.name` is only the
+ *     last fallback (Connecteam was importing "Eminence Ballroom" as Address).
+ *   - Users default to EMPTY in capacity-only mode — Connecteam needs exact
+ *     user identifiers; matching by display name fails silently. Workers are
+ *     assigned inside Connecteam. `Number of users` keeps slots/capacity.
+ *   - Job tries best-known Connecteam-job hint fields first; warns when the
+ *     value is a fallback that may not match an existing Connecteam Job.
  *
  * Audit: docs/EXPORT_CONNECTEAM_V1_AUDIT.md.
  */
@@ -57,11 +61,8 @@ export interface ExportWarning {
 }
 
 export interface ValidateContext {
-  /** Whether the calling user is admin for the shift's tenant. */
   isAdmin: boolean;
-  /** Tenant the shift belongs to — used for scope safety check. */
   selectedCompanyId: string | null;
-  /** Company id stored on the shift (if known) — must match selectedCompanyId. */
   shiftCompanyId?: string | null;
 }
 
@@ -70,18 +71,32 @@ export interface BuildContext {
   locations: SelectOption[];
   employees: Employee[];
   assignments: Assignment[];
-  /** Optional category lookup (id → name). */
   categories?: SelectOption[];
-  /** Tenant-level timezone fallback. Defaults to America/New_York. */
   defaultTimezone?: string;
 }
+
+/**
+ * v1.1 export options. Defaults are SAFE-by-default to avoid silent matching
+ * failures in Connecteam.
+ */
+export interface ExportOptions {
+  /**
+   * If false (default in v1.1), `Users` column is exported EMPTY. Connecteam
+   * requires exact user identifiers and falls back to "Select Users" when it
+   * cannot match a display name. Workers are assigned inside Connecteam.
+   */
+  includeUsers?: boolean;
+}
+
+const DEFAULT_OPTIONS: Required<ExportOptions> = {
+  includeUsers: false,
+};
 
 const DEFAULT_TZ = "America/New_York";
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 function fmtDate(iso: string): string {
-  // ISO yyyy-mm-dd → MM/DD/YYYY (Connecteam format).
   if (!iso) return "";
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
   if (!m) return iso;
@@ -90,7 +105,6 @@ function fmtDate(iso: string): string {
 
 function fmtTime(t: string | null | undefined): string {
   if (!t) return "";
-  // Strip seconds if present: "08:00:00" → "08:00".
   return t.slice(0, 5);
 }
 
@@ -104,6 +118,12 @@ function csvEscape(v: unknown): string {
   return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
+function nonEmpty(v: unknown): string | null {
+  if (v == null) return null;
+  const s = String(v).trim();
+  return s.length > 0 ? s : null;
+}
+
 /** Effective assignments for export — accepted/confirmed only. */
 export function effectiveAssignmentsForExport(shiftId: string, assignments: Assignment[]): Assignment[] {
   return assignments.filter(a =>
@@ -112,20 +132,129 @@ export function effectiveAssignmentsForExport(shiftId: string, assignments: Assi
   );
 }
 
+// ── Address & Job resolution (v1.1) ────────────────────────────────────────
+
+export type AddressSource =
+  | "location.full_address"
+  | "location.formatted_address"
+  | "location.address"
+  | "shift.job_site_address"
+  | "shift.manual_address"
+  | "shift.address"
+  | "location.name"
+  | "none";
+
+export interface AddressResolution {
+  value: string;
+  source: AddressSource;
+}
+
+/**
+ * Address priority (v1.1) — physical address ALWAYS wins over venue name.
+ * Connecteam was importing "Eminence Ballroom" (venue label) as Address;
+ * that's why this order is strict.
+ */
+export function resolveAddress(shift: Shift, ctx: BuildContext): AddressResolution {
+  const s = shift as Shift & {
+    job_site_address?: string | null;
+    manual_address?: string | null;
+    address?: string | null;
+  };
+  const loc = ctx.locations.find(l => l.id === shift.location_id) as
+    | (SelectOption & {
+        full_address?: string | null;
+        formatted_address?: string | null;
+        address?: string | null;
+      })
+    | undefined;
+
+  const tryList: Array<[string | null | undefined, AddressSource]> = [
+    [loc?.full_address, "location.full_address"],
+    [loc?.formatted_address, "location.formatted_address"],
+    [loc?.address, "location.address"],
+    [s.job_site_address, "shift.job_site_address"],
+    [s.manual_address, "shift.manual_address"],
+    [s.address, "shift.address"],
+    [loc?.name, "location.name"], // last-resort fallback (venue label, NOT address)
+  ];
+
+  for (const [val, source] of tryList) {
+    const v = nonEmpty(val);
+    if (v) return { value: v, source };
+  }
+  return { value: "", source: "none" };
+}
+
+export type JobSource =
+  | "shift.connecteam_job_name"
+  | "location.connecteam_job_name"
+  | "client.connecteam_job_name"
+  | "location.name"
+  | "client.name"
+  | "category.name"
+  | "none";
+
+export interface JobResolution {
+  value: string;
+  source: JobSource;
+  /** Sub item value (category) when it's distinct from Job. */
+  subItem: string;
+  /** True when the source is NOT a confirmed Connecteam-job hint. */
+  isFallback: boolean;
+}
+
+/**
+ * Job priority (v1.1) — prefer explicit Connecteam-job hint fields when they
+ * exist (no schema change here; we read them opportunistically via optional
+ * shape). Fall back to location.name (many tenants use venue as Connecteam Job),
+ * then client.name, then category. UI surfaces a warning on fallback so the
+ * operator knows Connecteam may show "Select" instead of auto-matching.
+ */
+export function resolveJob(shift: Shift, ctx: BuildContext): JobResolution {
+  const s = shift as Shift & {
+    connecteam_job_name?: string | null;
+    category_id?: string | null;
+  };
+  const client = ctx.clients.find(c => c.id === s.client_id) as
+    | (SelectOption & { connecteam_job_name?: string | null })
+    | undefined;
+  const location = ctx.locations.find(l => l.id === s.location_id) as
+    | (SelectOption & { connecteam_job_name?: string | null })
+    | undefined;
+  const category = ctx.categories?.find(c => c.id === s.category_id);
+
+  const hintList: Array<[string | null | undefined, JobSource, boolean]> = [
+    [s.connecteam_job_name, "shift.connecteam_job_name", false],
+    [location?.connecteam_job_name, "location.connecteam_job_name", false],
+    [client?.connecteam_job_name, "client.connecteam_job_name", false],
+    [location?.name, "location.name", true],
+    [client?.name, "client.name", true],
+    [category?.name, "category.name", true],
+  ];
+
+  for (const [val, source, isFallback] of hintList) {
+    const v = nonEmpty(val);
+    if (v) {
+      const catName = nonEmpty(category?.name);
+      const subItem = catName && catName !== v ? catName : "";
+      return { value: v, source, subItem, isFallback };
+    }
+  }
+  return { value: "", source: "none", subItem: "", isFallback: true };
+}
+
 // ── Row builder ────────────────────────────────────────────────────────────
 
-export function buildConnecteamRow(shift: Shift, ctx: BuildContext): ConnecteamRow {
+export function buildConnecteamRow(
+  shift: Shift,
+  ctx: BuildContext,
+  options: ExportOptions = {},
+): ConnecteamRow {
+  const opts = { ...DEFAULT_OPTIONS, ...options };
   const s = shift as Shift & {
     timezone?: string | null;
-    job_site_address?: string | null;
-    category_id?: string | null;
     special_instructions?: string | null;
-    meeting_point?: string | null;
   };
-
-  const client = ctx.clients.find(c => c.id === s.client_id) ?? null;
-  const category = ctx.categories?.find(c => c.id === s.category_id) ?? null;
-  const location = ctx.locations.find(l => l.id === s.location_id) ?? null;
 
   const eff = effectiveAssignmentsForExport(s.id, ctx.assignments);
   const userNames = eff
@@ -137,13 +266,14 @@ export function buildConnecteamRow(shift: Shift, ctx: BuildContext): ConnecteamR
     })
     .filter((n): n is string => !!n);
 
-  // Job: prefer client name, fall back to category name.
-  const job = client?.name ?? category?.name ?? "";
-  // Sub item: category name only if it's not already the Job.
-  const subItem = client?.name && category?.name ? category.name : "";
+  const job = resolveJob(shift, ctx);
+  const addr = resolveAddress(shift, ctx);
 
-  // Address: prefer structured location name; fall back to free-text job site.
-  const address = location?.name ?? s.job_site_address ?? "";
+  // Number of users: prefer declared slots/capacity; fall back to assigned count.
+  const numberOfUsers = String(s.slots ?? userNames.length ?? 0);
+
+  // Users: empty by default in v1.1 (Connecteam needs exact identifiers).
+  const usersValue = opts.includeUsers ? userNames.join("; ") : "";
 
   // Note: notes + special_instructions + `Ref: <shift_code>` + Stafly id.
   const noteParts: string[] = [];
@@ -165,13 +295,13 @@ export function buildConnecteamRow(shift: Shift, ctx: BuildContext): ConnecteamR
     "Unpaid break": "",
     "Paid break": "",
     "Shift title": (s.title ?? "").trim(),
-    "Job": job,
-    "Sub item": subItem,
-    "Address": address,
-    "Users": userNames.join("; "),
+    "Job": job.value,
+    "Sub item": job.subItem,
+    "Address": addr.value,
+    "Users": usersValue,
     "Shift tags": "",
     "Note": note,
-    "Number of users": String(s.slots ?? userNames.length ?? 0),
+    "Number of users": numberOfUsers,
     "Require Approval": "",
     "Tasks": "",
   };
@@ -184,31 +314,58 @@ export function buildConnecteamRow(shift: Shift, ctx: BuildContext): ConnecteamR
 export interface ValidationResult {
   status: ExportStatus;
   warnings: ExportWarning[];
+  /** v1.1 diagnostic metadata — surface in preview UI. */
+  meta: {
+    addressSource: AddressSource;
+    jobSource: JobSource;
+    jobIsFallback: boolean;
+    usersExported: boolean;
+    assignedCount: number;
+    capacity: number;
+  };
 }
 
 export function validateShiftForExport(
   shift: Shift,
   buildCtx: BuildContext,
   validateCtx: ValidateContext,
+  options: ExportOptions = {},
 ): ValidationResult {
+  const opts = { ...DEFAULT_OPTIONS, ...options };
   const warnings: ExportWarning[] = [];
+
+  const addr = resolveAddress(shift, buildCtx);
+  const job = resolveJob(shift, buildCtx);
+  const eff = effectiveAssignmentsForExport(shift.id, buildCtx.assignments);
+  const capacity = Number(shift.slots ?? 0);
+  const meta = {
+    addressSource: addr.source,
+    jobSource: job.source,
+    jobIsFallback: job.isFallback,
+    usersExported: opts.includeUsers,
+    assignedCount: eff.length,
+    capacity,
+  };
 
   // BLOCK — permissions / tenant scope.
   if (!validateCtx.isAdmin) {
     return {
       status: "blocked",
+      meta,
       warnings: [{ code: "no_admin", severity: "block", message: "Solo administradores pueden exportar." }],
     };
   }
   if (!validateCtx.selectedCompanyId) {
     return {
       status: "blocked",
+      meta,
       warnings: [{ code: "no_tenant", severity: "block", message: "Sin compañía seleccionada." }],
     };
   }
   if (validateCtx.shiftCompanyId && validateCtx.shiftCompanyId !== validateCtx.selectedCompanyId) {
     return {
       status: "blocked",
+      meta,
       warnings: [{ code: "tenant_mismatch", severity: "block", message: "El turno pertenece a otra compañía." }],
     };
   }
@@ -218,6 +375,7 @@ export function validateShiftForExport(
   if (pub && pub !== "published") {
     return {
       status: "blocked",
+      meta,
       warnings: [{
         code: "not_published",
         severity: "block",
@@ -236,51 +394,76 @@ export function validateShiftForExport(
   if (!shift.end_time) {
     warnings.push({ code: "missing_end", severity: "block", message: "Falta la hora de fin." });
   }
-
+  if (!nonEmpty(shift.title)) {
+    warnings.push({ code: "missing_title", severity: "block", message: "Falta el título del turno." });
+  }
   const tz = resolveTimezone(shift, buildCtx);
   if (!tz) {
     warnings.push({ code: "missing_timezone", severity: "block", message: "Falta timezone." });
   }
-
-  const s = shift as Shift & { category_id?: string | null };
-  const hasClient = !!s.client_id;
-  const hasCategory = !!s.category_id;
-  if (!hasClient && !hasCategory) {
+  if (job.source === "none") {
     warnings.push({
       code: "missing_job_context",
       severity: "block",
-      message: "Sin cliente y sin categoría — Connecteam necesita un Job.",
+      message: "Sin Job posible — agrega cliente, ubicación o categoría.",
     });
   }
 
-  const eff = effectiveAssignmentsForExport(shift.id, buildCtx.assignments);
-  if (eff.length === 0) {
+  // v1.1: NO bloquear por 0 accepted assignments si el export es capacity-only
+  // y hay capacidad declarada. Connecteam recibirá Number of users con slots.
+  if (eff.length === 0 && !opts.includeUsers) {
+    if (capacity <= 0) {
+      warnings.push({
+        code: "no_capacity_no_users",
+        severity: "block",
+        message: "Sin capacidad (slots) y sin workers aceptados — nada que importar.",
+      });
+    }
+  } else if (eff.length === 0 && opts.includeUsers) {
     warnings.push({
       code: "no_accepted_assignments",
       severity: "block",
-      message: "Ningún worker aceptó este turno todavía.",
+      message: "Modo Users activo pero ningún worker aceptó el turno todavía.",
     });
   }
 
   if (warnings.some(w => w.severity === "block")) {
-    return { status: "blocked", warnings };
+    return { status: "blocked", meta, warnings };
   }
 
-  // NEEDS REVIEW — non-critical gaps.
-  if (!hasClient && hasCategory) {
+  // NEEDS REVIEW — v1.1 diagnostics.
+
+  // Users not exported in safe mode.
+  if (!opts.includeUsers) {
     warnings.push({
-      code: "no_client",
+      code: "users_not_exported_v1_1",
       severity: "warn",
-      message: "Sin cliente — se exportará la categoría como Job.",
+      message: "Users no se exportan en v1.1 — asigna workers dentro de Connecteam. Number of users mantiene la capacidad.",
     });
   }
-  const s2 = shift as Shift & { job_site_address?: string | null };
-  const location = buildCtx.locations.find(l => l.id === shift.location_id);
-  if (!location && !s2.job_site_address) {
+
+  // Job fallback — likely to show as "Select" inside Connecteam.
+  if (job.isFallback) {
     warnings.push({
-      code: "address_incomplete",
+      code: "job_fallback",
       severity: "warn",
-      message: "Dirección incompleta o no estructurada.",
+      message: `Connecteam Job puede necesitar match exacto en Connecteam (fuente: ${job.source}).`,
+    });
+  }
+
+  // Address came from venue name only — not a physical address.
+  if (addr.source === "location.name") {
+    warnings.push({
+      code: "address_from_venue_name",
+      severity: "warn",
+      message: "Address proviene del nombre del venue, no de una dirección física. Agrega una dirección al lugar o al turno.",
+    });
+  }
+  if (addr.source === "none") {
+    warnings.push({
+      code: "address_missing",
+      severity: "warn",
+      message: "Sin dirección — Connecteam no podrá geolocalizar el turno.",
     });
   }
 
@@ -288,7 +471,6 @@ export function validateShiftForExport(
     warnings.push({ code: "empty_notes", severity: "info", message: "Notas vacías (opcional)." });
   }
 
-  // Always-informational: breaks/tags/tasks/require-approval are blank in v1.
   warnings.push({
     code: "v1_blank_columns",
     severity: "info",
@@ -296,7 +478,7 @@ export function validateShiftForExport(
   });
 
   const hasWarn = warnings.some(w => w.severity === "warn");
-  return { status: hasWarn ? "needs_review" : "ready", warnings };
+  return { status: hasWarn ? "needs_review" : "ready", meta, warnings };
 }
 
 // ── CSV serialization ──────────────────────────────────────────────────────

@@ -5,6 +5,8 @@ import {
   serializeConnecteamCsv,
   validateShiftForExport,
   effectiveAssignmentsForExport,
+  resolveAddress,
+  resolveJob,
 } from "@/lib/integrations/connecteam-export";
 import type { Shift, Assignment, Employee, SelectOption } from "@/components/shifts/types";
 
@@ -28,7 +30,7 @@ const mkShift = (overrides: Partial<Shift> = {}): Shift => ({
 });
 
 const CLIENTS: SelectOption[] = [{ id: "client-1", name: "Acme Catering" }];
-const LOCATIONS: SelectOption[] = [{ id: "loc-1", name: "260 University Ave, Bronx NY" }];
+const LOCATIONS: SelectOption[] = [{ id: "loc-1", name: "Eminence Ballroom" }];
 const CATEGORIES: SelectOption[] = [{ id: "cat-1", name: "Waiter" }];
 
 const EMPLOYEES: Employee[] = [
@@ -40,8 +42,8 @@ const EMPLOYEES: Employee[] = [
 const ASGN_OK: Assignment[] = [
   { id: "a1", shift_id: "shift-abc12345", employee_id: "e1", status: "accepted" },
   { id: "a2", shift_id: "shift-abc12345", employee_id: "e2", status: "confirmed" },
-  { id: "a3", shift_id: "shift-abc12345", employee_id: "e3", status: "pending" }, // excluded
-  { id: "a4", shift_id: "other", employee_id: "e1", status: "accepted" }, // other shift
+  { id: "a3", shift_id: "shift-abc12345", employee_id: "e3", status: "pending" },
+  { id: "a4", shift_id: "other", employee_id: "e1", status: "accepted" },
 ];
 
 const buildCtx = {
@@ -83,23 +85,39 @@ describe("connecteam-export: buildConnecteamRow mapping", () => {
     expect(row["Number of users"]).toBe("3");
   });
 
-  it("Job = client name; Sub item = category when client present", () => {
+  it("Job = location.name when no Connecteam-job hint configured (v1.1 venue-first)", () => {
     const row = buildConnecteamRow(mkShift({ category_id: "cat-1" } as any), buildCtx);
+    expect(row.Job).toBe("Eminence Ballroom");
+    expect(row["Sub item"]).toBe("Waiter");
+  });
+
+  it("Job = client.name when there's no location", () => {
+    const row = buildConnecteamRow(
+      mkShift({ location_id: null, category_id: "cat-1" } as any),
+      buildCtx,
+    );
     expect(row.Job).toBe("Acme Catering");
     expect(row["Sub item"]).toBe("Waiter");
   });
+
 
   it("falls back to category as Job when no client", () => {
     const row = buildConnecteamRow(
       mkShift({ client_id: null, category_id: "cat-1" } as any),
       buildCtx,
     );
-    expect(row.Job).toBe("Waiter");
-    expect(row["Sub item"]).toBe("");
+    // v1.1: with a location, location.name is preferred over category as a Job hint.
+    expect(row.Job).toBe("Eminence Ballroom");
   });
 
-  it("Users only includes accepted/confirmed assignments", () => {
+  it("v1.1: Users is EMPTY by default (capacity-only mode)", () => {
     const row = buildConnecteamRow(mkShift(), buildCtx);
+    expect(row.Users).toBe("");
+    expect(row["Number of users"]).toBe("3");
+  });
+
+  it("v1.1: Users populated only when includeUsers=true is opted in", () => {
+    const row = buildConnecteamRow(mkShift(), buildCtx, { includeUsers: true });
     expect(row.Users).toBe("Ana Perez; Luis Gomez");
     expect(row.Users).not.toContain("Maria");
   });
@@ -126,19 +144,79 @@ describe("connecteam-export: buildConnecteamRow mapping", () => {
     expect(row.Note).not.toMatch(/Ref:/);
     expect(row.Note).toContain("Stafly shift id:");
   });
+});
 
-  it("uses job_site_address fallback when no structured location", () => {
-    const row = buildConnecteamRow(
-      mkShift({ location_id: null, job_site_address: "Free-text 123" } as any),
+describe("connecteam-export: Address priority (v1.1)", () => {
+  it("prefers location.full_address over location.name", () => {
+    const locs = [{ id: "loc-1", name: "Eminence Ballroom", full_address: "260 University Ave, Bronx NY 10468" } as any];
+    const r = resolveAddress(mkShift(), { ...buildCtx, locations: locs });
+    expect(r.value).toBe("260 University Ave, Bronx NY 10468");
+    expect(r.source).toBe("location.full_address");
+  });
+
+  it("falls through full_address → formatted_address → address", () => {
+    const locs = [{ id: "loc-1", name: "Venue", formatted_address: "FA 1" } as any];
+    expect(resolveAddress(mkShift(), { ...buildCtx, locations: locs }).source).toBe("location.formatted_address");
+    const locs2 = [{ id: "loc-1", name: "Venue", address: "A 1" } as any];
+    expect(resolveAddress(mkShift(), { ...buildCtx, locations: locs2 }).source).toBe("location.address");
+  });
+
+  it("uses shift.job_site_address when location has no physical address", () => {
+    const r = resolveAddress(
+      mkShift({ job_site_address: "Free-text 123" } as any),
       buildCtx,
     );
-    expect(row.Address).toBe("Free-text 123");
+    expect(r.value).toBe("Free-text 123");
+    expect(r.source).toBe("shift.job_site_address");
+  });
+
+  it("uses location.name ONLY as last fallback", () => {
+    const r = resolveAddress(mkShift(), buildCtx);
+    expect(r.value).toBe("Eminence Ballroom");
+    expect(r.source).toBe("location.name");
+  });
+
+  it("returns 'none' when nothing is available", () => {
+    const r = resolveAddress(
+      mkShift({ location_id: null } as any),
+      { ...buildCtx, locations: [] },
+    );
+    expect(r.source).toBe("none");
+    expect(r.value).toBe("");
+  });
+
+  it("buildConnecteamRow surfaces physical address in Address column, not venue name", () => {
+    const locs = [{ id: "loc-1", name: "Eminence Ballroom", full_address: "260 University Ave, Bronx NY" } as any];
+    const row = buildConnecteamRow(mkShift(), { ...buildCtx, locations: locs });
+    expect(row.Address).toBe("260 University Ave, Bronx NY");
+    expect(row.Address).not.toBe("Eminence Ballroom");
+  });
+});
+
+describe("connecteam-export: Job priority (v1.1)", () => {
+  it("prefers shift.connecteam_job_name when present", () => {
+    const r = resolveJob(mkShift({ connecteam_job_name: "Catering East" } as any), buildCtx);
+    expect(r.value).toBe("Catering East");
+    expect(r.source).toBe("shift.connecteam_job_name");
+    expect(r.isFallback).toBe(false);
+  });
+
+  it("falls back to location.name then client.name with isFallback=true", () => {
+    const r = resolveJob(mkShift(), buildCtx);
+    expect(r.source).toBe("location.name");
+    expect(r.isFallback).toBe(true);
   });
 });
 
 describe("connecteam-export: validateShiftForExport", () => {
-  it("Ready when published, has client, has accepted users, fields complete", () => {
-    const r = validateShiftForExport(mkShift(), buildCtx, adminCtx);
+  it("Ready when all fields complete and warnings only include v1.1 informational", () => {
+    const locs = [{ id: "loc-1", name: "Eminence", full_address: "260 University Ave" } as any];
+    const r = validateShiftForExport(
+      mkShift({ connecteam_job_name: "Catering East" } as any),
+      { ...buildCtx, locations: locs },
+      adminCtx,
+      { includeUsers: true },
+    );
     expect(r.status).toBe("ready");
   });
 
@@ -158,21 +236,39 @@ describe("connecteam-export: validateShiftForExport", () => {
     expect(r.warnings.some(w => w.code === "not_published")).toBe(true);
   });
 
-  it("Blocked when both client and category are missing", () => {
+  it("Blocked when no Job context (no client, no location, no category)", () => {
     const r = validateShiftForExport(
-      mkShift({ client_id: null } as any),
-      buildCtx,
+      mkShift({ client_id: null, location_id: null } as any),
+      { ...buildCtx, categories: [] },
       adminCtx,
     );
     expect(r.status).toBe("blocked");
     expect(r.warnings.some(w => w.code === "missing_job_context")).toBe(true);
   });
 
-  it("Blocked when no accepted/confirmed assignments", () => {
-    const r = validateShiftForExport(mkShift(), {
+  it("v1.1: 0 accepted assignments does NOT block when capacity-only mode has slots", () => {
+    const r = validateShiftForExport(mkShift({ slots: 3 }), {
       ...buildCtx,
       assignments: [{ id: "x", shift_id: "shift-abc12345", employee_id: "e1", status: "pending" }],
     }, adminCtx);
+    expect(r.status).toBe("needs_review");
+    expect(r.warnings.some(w => w.code === "no_capacity_no_users")).toBe(false);
+  });
+
+  it("v1.1: 0 accepted blocks only when capacity is also 0", () => {
+    const r = validateShiftForExport(mkShift({ slots: 0 }), {
+      ...buildCtx,
+      assignments: [],
+    }, adminCtx);
+    expect(r.status).toBe("blocked");
+    expect(r.warnings.some(w => w.code === "no_capacity_no_users")).toBe(true);
+  });
+
+  it("v1.1: includeUsers=true blocks when no accepted assignments", () => {
+    const r = validateShiftForExport(mkShift({ slots: 3 }), {
+      ...buildCtx,
+      assignments: [],
+    }, adminCtx, { includeUsers: true });
     expect(r.status).toBe("blocked");
     expect(r.warnings.some(w => w.code === "no_accepted_assignments")).toBe(true);
   });
@@ -185,24 +281,23 @@ describe("connecteam-export: validateShiftForExport", () => {
     expect(r.warnings.some(w => w.code === "tenant_mismatch")).toBe(true);
   });
 
-  it("Needs review when address is unstructured", () => {
-    const r = validateShiftForExport(
-      mkShift({ location_id: null } as any),
-      buildCtx,
-      adminCtx,
-    );
+  it("Needs review when Address falls back to location.name (venue label)", () => {
+    const r = validateShiftForExport(mkShift(), buildCtx, adminCtx);
     expect(r.status).toBe("needs_review");
-    expect(r.warnings.some(w => w.code === "address_incomplete")).toBe(true);
+    expect(r.warnings.some(w => w.code === "address_from_venue_name")).toBe(true);
+    expect(r.meta.addressSource).toBe("location.name");
   });
 
-  it("Needs review when only category (no client)", () => {
-    const r = validateShiftForExport(
-      mkShift({ client_id: null, category_id: "cat-1" } as any),
-      buildCtx,
-      adminCtx,
-    );
-    expect(r.status).toBe("needs_review");
-    expect(r.warnings.some(w => w.code === "no_client")).toBe(true);
+  it("Needs review when Job is a fallback (no Connecteam hint configured)", () => {
+    const r = validateShiftForExport(mkShift(), buildCtx, adminCtx);
+    expect(r.warnings.some(w => w.code === "job_fallback")).toBe(true);
+    expect(r.meta.jobIsFallback).toBe(true);
+  });
+
+  it("Needs review with users_not_exported_v1_1 in default capacity-only mode", () => {
+    const r = validateShiftForExport(mkShift(), buildCtx, adminCtx);
+    expect(r.warnings.some(w => w.code === "users_not_exported_v1_1")).toBe(true);
+    expect(r.meta.usersExported).toBe(false);
   });
 });
 
@@ -217,11 +312,8 @@ describe("connecteam-export: CSV serialization safety", () => {
     );
     const csv = serializeConnecteamCsv([row]);
     const lines = csv.split("\n");
-    // The first line is headers; row spans multiple lines because of embedded newline (quoted).
     expect(lines[0]).toContain("Date,Start,End,Timezone");
-    // Quoted title with escaped quote.
     expect(csv).toContain('"Turno ""Especial"", VIP"');
-    // Multiline note is wrapped in quotes.
     expect(csv).toMatch(/"[^"]*Linea 1\nLinea 2/);
   });
 
@@ -232,7 +324,6 @@ describe("connecteam-export: CSV serialization safety", () => {
       buildCtx,
     );
     const csv = serializeConnecteamCsv([rowA, rowB]);
-    // 1 header + 2 rows, no embedded newlines in these → 3 lines.
     expect(csv.split("\n")).toHaveLength(3);
   });
 });
@@ -244,25 +335,20 @@ describe("connecteam-export: effectiveAssignmentsForExport", () => {
   });
 });
 
-// ── PAYROLL / TIME_ENTRIES SAFETY (static guard) ────────────────────────────
-// This export module is pure and must never reference payroll or time tables.
 describe("connecteam-export: safety boundary", () => {
-  it("module source does not reference payroll / time_entries / RLS APIs", async () => {
-    // Read the module file at runtime to enforce the boundary.
-    // (vitest runs in jsdom; use a relative fetch via fs through import.meta.url
-    // is not available — so we assert via the public API surface instead.)
+  it("module public surface remains pure frontend (no supabase/edge exports)", async () => {
     const mod = await import("@/lib/integrations/connecteam-export");
     const exported = Object.keys(mod).sort();
-    // Public surface is intentionally small and frontend-only.
     expect(exported).toEqual([
       "CONNECTEAM_HEADERS",
       "buildConnecteamRow",
       "effectiveAssignmentsForExport",
       "exportFilename",
+      "resolveAddress",
+      "resolveJob",
       "serializeConnecteamCsv",
       "validateShiftForExport",
     ]);
-    // No supabase client, no edge function caller exported.
     expect(exported).not.toContain("supabase");
     expect(exported).not.toContain("createClient");
   });

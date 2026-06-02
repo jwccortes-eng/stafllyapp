@@ -173,11 +173,13 @@ export function ExportConnecteamPreviewDialog({
                   </div>
                 </div>
 
-                <p className="text-[10px] text-muted-foreground">
-                  El número de turno legacy (<code>shift_code</code>) viaja únicamente en la columna Note como referencia.
-                  Stafly nunca lo usa como título ni como ID operativo. Las horas programadas no se usan para nómina —
-                  payroll sigue dependiendo exclusivamente de registros de reloj reales.
-                </p>
+                <ul className="text-[10px] text-muted-foreground space-y-1 list-disc pl-4">
+                  <li><strong>Users</strong>: no se exportan en v1.1 — asigna los workers dentro de Connecteam. <strong>Number of users</strong> mantiene la capacidad/slots del turno.</li>
+                  <li><strong>Job</strong>: si Connecteam lo muestra como "Select", crea un Job con el mismo nombre exacto o configura un <em>connecteam_job_name</em> en el venue/cliente.</li>
+                  <li><strong>Address</strong>: se prioriza la dirección física; el nombre del venue solo se usa como último recurso.</li>
+                  <li>El número de turno legacy (<code>shift_code</code>) viaja únicamente en la columna Note como referencia. Las horas programadas no se usan para nómina — payroll depende solo de registros de reloj reales.</li>
+                </ul>
+
               </div>
             )}
           </div>
