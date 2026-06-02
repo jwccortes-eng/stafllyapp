@@ -241,20 +241,43 @@ export function getWorkIdentity(input: SmartWorkCardInput): WorkIdentity {
     locationName: input.location?.name,
     category: input.shift.category ?? input.shift.role ?? null,
   });
+  const cleanTitle = stripLeadingShiftCode(title) || "Trabajo";
+  const clientName = input.client?.name ?? null;
+  const category = input.shift.category ?? input.shift.role ?? null;
+  const subtitleCandidate =
+    clientName && category
+      ? `${clientName} · ${category}`
+      : clientName || category || null;
+  // Evitar duplicado: si el subtítulo es exactamente igual al título, ocultar.
+  const subtitleLine =
+    subtitleCandidate && subtitleCandidate.trim().toLowerCase() !== cleanTitle.trim().toLowerCase()
+      ? subtitleCandidate
+      : null;
   return {
-    title: stripLeadingShiftCode(title) || "Trabajo",
+    title: cleanTitle,
+    subtitleLine,
     refLabel: formatShiftRef(input.shift.shift_code) || null,
-    clientName: input.client?.name ?? null,
-    category: input.shift.category ?? input.shift.role ?? null,
+    clientName,
+    category,
   };
 }
 
 export function getWorkTiming(input: SmartWorkCardInput): WorkTiming {
   const startLabel = formatTime12h(input.shift.start_time);
   const endLabel = formatTime12h(input.shift.end_time);
-  const meetingLabel = input.shift.meeting_time
+  // Fusión meeting_time + meeting_point cuando ambos existen.
+  const meetingTimePart = input.shift.meeting_time
     ? `Encuentro ${formatTime12h(input.shift.meeting_time)}`
     : null;
+  const meetingPointPart = input.shift.meeting_point?.trim() || null;
+  let meetingLabel: string | null = null;
+  if (meetingTimePart && meetingPointPart) {
+    meetingLabel = `${meetingTimePart} · ${meetingPointPart}`;
+  } else if (meetingTimePart) {
+    meetingLabel = meetingTimePart;
+  } else if (meetingPointPart) {
+    meetingLabel = `Encuentro: ${meetingPointPart}`;
+  }
   const hrs = diffHours(input.shift.start_time, input.shift.end_time);
   return {
     startLabel,
