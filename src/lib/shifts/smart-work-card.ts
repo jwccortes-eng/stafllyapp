@@ -52,7 +52,7 @@ export interface SmartWorkCardInput {
     notes?: string | null;
     status?: string | null;
     publication_status?: string | null;
-    // location bits — passed straight to classifyShiftLocation
+    // location bits — passed straight to getShiftLocationStatus
     location_id?: string | null;
     job_site_location_id?: string | null;
     job_site_address?: string | null;
@@ -258,7 +258,7 @@ export function getWorkLocation(input: SmartWorkCardInput): WorkLocation {
     meeting_point: input.shift.meeting_point,
     meeting_point_location_id: input.shift.meeting_point_location_id,
   };
-  const cls = classifyShiftLocation(locInput);
+  const cls = getShiftLocationStatus(locInput);
 
   const primaryParts = [input.location?.name, input.location?.city]
     .filter(Boolean)
