@@ -90,6 +90,7 @@ const Implementations = lazy(() => import("./pages/admin/Implementations"));
 const CommandCenter = lazy(() => import("./pages/admin/CommandCenter"));
 const StaffingCenter = lazy(() => import("./pages/admin/StaffingCenter"));
 const DevCommandCenter = lazy(() => import("./pages/admin/DevCommandCenter"));
+const SmartWorkCardSandbox = lazy(() => import("./pages/admin/SmartWorkCardSandbox"));
 const DocumentsCenter = lazy(() => import("./pages/admin/DocumentsCenter"));
 const DocumentIntakeCenter = lazy(() => import("./pages/admin/DocumentIntakeCenter"));
 const ComplianceCenter = lazy(() => import("./pages/admin/ComplianceCenter"));
