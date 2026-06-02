@@ -420,12 +420,9 @@ export function validateShiftForExport(
   if (!tz) {
     warnings.push({ code: "missing_timezone", severity: "block", message: "Falta timezone." });
   }
-  if (job.source === "none") {
-    warnings.push({
-      code: "missing_job_context",
-      severity: "block",
-      message: "Sin Job posible — agrega cliente, ubicación o categoría.",
-    });
+  // Merge BLOCK-level warnings from the compat helper (missing_job_context).
+  for (const w of compat.warnings) {
+    if (w.severity === "block") warnings.push(w);
   }
 
   // v1.1: NO bloquear por 0 accepted assignments si el export es capacity-only
@@ -450,25 +447,22 @@ export function validateShiftForExport(
     return { status: "blocked", meta, warnings };
   }
 
-  // NEEDS REVIEW — v1.1 diagnostics.
+  // NEEDS REVIEW — v1.2 diagnostics.
 
   // Users not exported in safe mode.
   if (!opts.includeUsers) {
     warnings.push({
-      code: "users_not_exported_v1_1",
+      code: "users_not_exported_v1_2",
       severity: "warn",
-      message: "Users no se exportan en v1.1 — asigna workers dentro de Connecteam. Number of users mantiene la capacidad.",
+      message: "Users no exportados en v1.2 — asigna workers en Connecteam o configura identificadores. Number of users mantiene la capacidad.",
     });
   }
 
-  // Job fallback — likely to show as "Select" inside Connecteam.
-  if (job.isFallback) {
-    warnings.push({
-      code: "job_fallback",
-      severity: "warn",
-      message: `Connecteam Job puede necesitar match exacto en Connecteam (fuente: ${job.source}).`,
-    });
+  // Merge info/warn from compat helper (compat_rule_applied / job_fallback).
+  for (const w of compat.warnings) {
+    if (w.severity !== "block") warnings.push(w);
   }
+
 
   // Address came from venue name only — not a physical address.
   if (addr.source === "location.name") {
