@@ -38,6 +38,7 @@ export function buildPrePublishReview(v: BuildPrePublishInput): PrePublishReview
     clientId: v.clientId,
     locationId: v.locationId,
     jobSiteLocationId: v.jobSiteLocationId,
+    jobSiteAddress: v.jobSiteAddress,
     meetingPoint: v.meetingPoint,
     meetingPointLocationId: v.meetingPointLocationId,
     transportRequired: v.transportRequired,
@@ -51,9 +52,12 @@ export function buildPrePublishReview(v: BuildPrePublishInput): PrePublishReview
     startTime: v.startTime,
   });
 
+  const hasManualAddress = !!(v.jobSiteAddress && v.jobSiteAddress.trim());
   const clientMissing = !v.clientId;
   const timeMissing = !v.startTime || !v.endTime;
-  const jobsiteMissing = !v.locationId && !v.jobSiteLocationId;
+  // For the worker preview: only treat job site as missing when there is
+  // neither a structured location nor a manual address to show.
+  const jobsiteMissing = !v.locationId && !v.jobSiteLocationId && !hasManualAddress;
   const meetingMissing =
     v.transportRequired && !v.meetingPoint.trim() && !v.meetingPointLocationId;
 
