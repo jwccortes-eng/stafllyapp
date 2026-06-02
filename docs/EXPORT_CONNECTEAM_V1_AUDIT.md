@@ -186,3 +186,26 @@ Razones:
 2. Crear `ExportConnecteamPreviewDialog` y wirearlo en `ShiftDetailDialog` + `MobileShiftOperationsSheet`.
 3. QA mobile + desktop en Stafly Demo (regla `mem://features/stafly-demo-environment`), nunca en Quality Staff / production.
 4. Memoria: cerrar feature como `mem://features/export-connecteam-v1` con archivos tocados + boundaries respetadas.
+
+---
+
+## v1.2 — compatibility rules (beta)
+
+Capa temporal `src/lib/integrations/connecteam-compat.ts` que infiere Job/Sub item de Connecteam desde señales Stafly. **No es modelo de datos permanente** — se reemplaza por configuración por tenant cuando llegue el schema.
+
+### Orden de resolución
+1. **exact** — hint explícito `connecteam_job_name` en shift/location/client.
+2. **inferred** — `BETA_COMPAT_RULES` matched (warning info con `ruleId`).
+3. **fallback** — location/client/category directo (warning amber `job_fallback`).
+4. **missing** — sin contexto (bloquea export).
+
+### Reglas activas
+| ruleId | Job | Sub item | Condición |
+|---|---|---|---|
+| `eminence.headwaiter` | Eminence | Headwaiters | venue=/eminence/i + role=/headwaiter\|captain/i |
+| `eminence.outside` | Eminence | Outside Job | venue=/eminence/i + text=/outside\|fuera\|exterior/i |
+| `eminence.regular_waiter` | Eminence | Regular Waiters | venue=/eminence/i + role=/waiter\|mesero\|server/i |
+| `production.weekend` | Production | Weekend Job | venue=/production/i + (pay_type=daily OR Fri/Sat/Sun OR text=/weekend.../i) |
+| `production.regular` | Production | Regular Job | venue=/production/i |
+
+Primera regla que matchea gana. Address sigue priorizando dirección física; Users vacío por default; warnings `compat_rule_applied`, `job_fallback`, `users_not_exported_v1_2` visibles en preview.
