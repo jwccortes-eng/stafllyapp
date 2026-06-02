@@ -28,6 +28,8 @@
  * Audit: docs/EXPORT_CONNECTEAM_V1_AUDIT.md.
  */
 import type { Shift, Assignment, Employee, SelectOption } from "@/components/shifts/types";
+import { resolveConnecteamJobAndSubItem } from "./connecteam-compat";
+
 
 /** Connecteam import template — column order is canonical and MUST NOT change. */
 export const CONNECTEAM_HEADERS = [
