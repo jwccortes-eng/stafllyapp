@@ -41,6 +41,7 @@ import {
   syncQaModeFromUrl,
   tenantSafetyFlags,
 } from "@/lib/qa-mode";
+import { useT } from "@/i18n/LanguageContext";
 
 interface TimeEntry {
   id: string;
@@ -97,6 +98,7 @@ export default function PortalClock() {
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { t } = useT();
   const [searchParams] = useSearchParams();
   const urlShiftId = searchParams.get("shiftId");
   const [loading, setLoading] = useState(true);
@@ -293,11 +295,11 @@ export default function PortalClock() {
   const initiateClockIn = () => {
     if (!employeeId || !companyId || !selectedShift) return;
     if (!hasProfilePhoto) {
-      toast({ title: "Profile photo required", description: "Upload a photo before clocking in.", variant: "destructive" });
+      toast({ title: t("portal.clock.photo_required"), description: t("portal.clock.upload_photo"), variant: "destructive" });
       return;
     }
     const check = isClockInAllowed(selectedShift);
-    if (!check.allowed) { toast({ title: "Not available yet", description: check.message, variant: "destructive" }); return; }
+    if (!check.allowed) { toast({ title: t("portal.clock.not_available_yet"), description: check.message, variant: "destructive" }); return; }
     // QA-mode safety: only intercept QA sessions hitting a real tenant.
     // Real workers (no QA flag, non-demo email) are NOT interrupted.
     const flags = tenantSafetyFlags(companyFlags);
