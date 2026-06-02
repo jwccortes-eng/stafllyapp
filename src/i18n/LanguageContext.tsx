@@ -27,10 +27,12 @@ const RTL_LANGUAGES: ReadonlySet<Language> = new Set(["he"]);
 function detectInitialLanguage(): Language {
   if (typeof window === "undefined") return "en";
   const stored = window.localStorage.getItem(LANG_STORAGE_KEY);
-  if (stored === "en" || stored === "es") return stored;
+  if (stored === "en" || stored === "es" || stored === "he") return stored;
   // Fallback to browser preference; default to English.
   const nav = window.navigator?.language?.toLowerCase() ?? "";
-  return nav.startsWith("es") ? "es" : "en";
+  if (nav.startsWith("es")) return "es";
+  if (nav.startsWith("he") || nav.startsWith("iw")) return "he";
+  return "en";
 }
 
 function detectInitialMode(): ContentMode {
