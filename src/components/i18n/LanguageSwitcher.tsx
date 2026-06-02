@@ -1,4 +1,4 @@
-import { useT, type Language, type ContentMode } from "@/i18n";
+import { useT, type Language } from "@/i18n";
 import { Globe } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -7,58 +7,43 @@ interface LanguageSwitcherProps {
   variant?: "card" | "inline";
 }
 
-type OptionKind =
-  | { kind: "lang"; value: Language; label: string }
-  | { kind: "mode"; value: Extract<ContentMode, "guide">; label: string };
+interface Option {
+  value: Language;
+  label: string;
+  shortLabel: string;
+}
 
 /**
- * Tri-state selector aligned with Parceros: ES · EN · Libro.
+ * Tri-language selector aligned with Parceros: Español · English · עברית.
  *
- * - ES / EN switch `language` and force `contentMode='app'`.
- * - Libro keeps current `language` and switches `contentMode='guide'`
- *   (falls back to `app` keys when a guide string is missing — handled
- *   by the t() resolver in LanguageContext).
- *
- * Internal model stays untouched: language ∈ {en,es}, contentMode ∈ {app,guide,marketing}.
+ * - Each option sets `language` only. `contentMode` is independent and not
+ *   touched here (Libro/guide mode is a separate axis, hidden from this UI).
+ * - Hebrew triggers RTL layout via LanguageContext (sets <html dir="rtl">).
+ * - Inline variant uses short codes (ES · EN · עב) to fit narrow chrome.
  */
 export function LanguageSwitcher({ className, variant = "card" }: LanguageSwitcherProps) {
-  const { language, contentMode, setLanguage, setContentMode, t } = useT();
+  const { language, setLanguage, t } = useT();
 
-  const options: OptionKind[] = [
-    { kind: "lang", value: "es", label: "ES" },
-    { kind: "lang", value: "en", label: "EN" },
-    { kind: "mode", value: "guide", label: t("settings.language.guide") || "Libro" },
+  const options: Option[] = [
+    { value: "es", label: "Español", shortLabel: "ES" },
+    { value: "en", label: "English", shortLabel: "EN" },
+    { value: "he", label: "עברית", shortLabel: "עב" },
   ];
-
-  const isActive = (opt: OptionKind): boolean => {
-    if (opt.kind === "mode") return contentMode === "guide";
-    return contentMode !== "guide" && language === opt.value;
-  };
-
-  const onPick = (opt: OptionKind) => {
-    if (opt.kind === "mode") {
-      setContentMode("guide");
-      return;
-    }
-    setLanguage(opt.value);
-    if (contentMode === "guide") setContentMode("app");
-  };
 
   const Pills = ({ size }: { size: "sm" | "md" }) => (
     <div
-      className={cn(
-        "inline-flex items-center gap-1 rounded-lg border border-border bg-background p-0.5",
-      )}
+      className="inline-flex items-center gap-1 rounded-lg border border-border bg-background p-0.5"
       role="group"
       aria-label={t("settings.language.title")}
+      dir="ltr"
     >
       {options.map((opt) => {
-        const active = isActive(opt);
+        const active = language === opt.value;
         return (
           <button
-            key={`${opt.kind}:${opt.value}`}
+            key={opt.value}
             type="button"
-            onClick={() => onPick(opt)}
+            onClick={() => setLanguage(opt.value)}
             className={cn(
               "rounded-md font-medium transition-colors whitespace-nowrap",
               size === "sm" ? "px-2 py-1 text-[11px]" : "px-3 py-1.5 text-xs",
@@ -67,13 +52,10 @@ export function LanguageSwitcher({ className, variant = "card" }: LanguageSwitch
                 : "text-muted-foreground hover:text-foreground",
             )}
             aria-pressed={active}
-            title={
-              opt.kind === "mode"
-                ? t("settings.language.guide_description")
-                : undefined
-            }
+            title={opt.label}
+            lang={opt.value}
           >
-            {opt.label}
+            {size === "sm" ? opt.shortLabel : opt.label}
           </button>
         );
       })}
@@ -100,9 +82,7 @@ export function LanguageSwitcher({ className, variant = "card" }: LanguageSwitch
               {t("settings.language.title")}
             </h3>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {contentMode === "guide"
-                ? t("settings.language.guide_description")
-                : t("settings.language.description")}
+              {t("settings.language.description")}
             </p>
           </div>
           <Pills size="md" />
