@@ -39,6 +39,7 @@ const es_app = {
   "settings.language.description": "Elige el idioma de la interfaz. Los datos operativos no se traducen.",
   "settings.language.english": "Inglés",
   "settings.language.spanish": "Español",
+  "settings.language.hebrew": "Hebreo",
   "settings.language.guide": "Libro",
   "settings.language.guide_description": "Modo guía con explicaciones más humanas.",
 };
