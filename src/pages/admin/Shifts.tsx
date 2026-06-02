@@ -195,6 +195,7 @@ function CreateShiftDialogInline(props: {
     clientId: v.clientId,
     locationId: v.locationId,
     jobSiteLocationId: v.jobSiteLocationId,
+    jobSiteAddress: v.jobSiteAddress,
     meetingPoint: v.meetingPoint,
     meetingPointLocationId: v.meetingPointLocationId,
     transportRequired: v.transportRequired,
