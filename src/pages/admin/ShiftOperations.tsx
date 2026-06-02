@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import { useSearchParams, useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
@@ -118,6 +118,7 @@ const ROLE_LABELS: Record<string, { label: string; color: string }> = {
 export default function ShiftOperations() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, role } = useAuth();
   const { selectedCompanyId } = useCompany();
   const shiftId = searchParams.get("id");
@@ -164,7 +165,10 @@ export default function ShiftOperations() {
     if (shiftId && selectedCompanyId) {
       loadAll();
     }
-  }, [shiftId, selectedCompanyId]);
+    // location.key changes on every navigate(), so volver al mismo turno fuerza refetch
+    // y evita el estado stale que requería recargar la página.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shiftId, selectedCompanyId, location.key]);
 
   // Refetch when the tab regains focus so admins coming back from another tab
   // (or after publishing/editing from a sibling view) never see stale state
@@ -393,6 +397,21 @@ export default function ShiftOperations() {
           onEdit={() => setEditOpen(true)}
           onScrollToStaffing={scrollToStaffing}
         />
+      )}
+
+      {/* Soft restriction banner — fichajes presentes pero operación sigue activa */}
+      {hasTimeEntries && !["locked", "archived", "cancelled"].includes(shift.status) && (
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 px-4 py-3 flex items-start gap-3">
+          <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+          <div className="flex-1 text-xs leading-relaxed">
+            <p className="font-semibold text-amber-700 dark:text-amber-300 mb-0.5">
+              Edición de datos base restringida porque ya hay fichajes.
+            </p>
+            <p className="text-muted-foreground">
+              Puedes revisar asistencia, validar presencia, agregar notas y preparar auditoría.
+            </p>
+          </div>
+        </div>
       )}
 
       {/* Phase 1 QW#3 — Staffing Required banner */}

@@ -5,7 +5,8 @@ import { es } from "date-fns/locale";
 import { EmployeeAvatarGroup } from "@/components/ui/employee-avatar-group";
 import { OpsStatusChip, type OpsStatusTone } from "@/components/operations/OpsStatusChip";
 import type { Shift } from "./types";
-import { getClientColor, formatShiftCode, isDraftShift } from "./types";
+import { getClientColor, isDraftShift } from "./types";
+import { buildShiftCardTitle, formatShiftRef } from "@/lib/shifts/card-display";
 import { UnstaffedAlert } from "./UnstaffedAlert";
 
 export interface AssignedEmployee {
@@ -155,7 +156,7 @@ export function ShiftCard({
       />
 
       <div className={cn("pl-3 pr-3 py-2.5", compact && "pl-2.5 pr-2.5 py-2")}>
-        {/* Row 1 — title (with code prefix) + status */}
+        {/* Row 1 — human title (cleaned, with fallbacks) + status */}
         <div className="flex items-center gap-2 min-w-0">
           {draggable && (
             <GripVertical className="h-3.5 w-3.5 text-muted-foreground/25 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity -ml-0.5" />
@@ -165,13 +166,14 @@ export function ShiftCard({
               "font-semibold text-foreground truncate flex-1 leading-tight",
               compact ? "text-[12px]" : "text-[13px]",
             )}
+            title={shift.shift_code ? `${shift.title ?? ""} · Ref #${String(shift.shift_code).padStart(4, "0")}` : shift.title ?? undefined}
           >
-            {shift.shift_code && (
-              <span className="font-mono tabular-nums text-muted-foreground/55 mr-1.5">
-                #{formatShiftCode(shift.shift_code)}
-              </span>
-            )}
-            {shift.title}
+            {buildShiftCardTitle({
+              title: shift.title,
+              shift_code: shift.shift_code,
+              clientName,
+              locationName,
+            })}
           </p>
           <OpsStatusChip label={primary.label} tone={primary.tone} size="sm" />
         </div>
@@ -230,6 +232,14 @@ export function ShiftCard({
             )}
             {isLocked && (
               <Lock className="h-3 w-3 text-muted-foreground/55" aria-label="Locked" />
+            )}
+            {shift.shift_code && (
+              <span
+                className="font-mono tabular-nums text-[9px] text-muted-foreground/45 ml-0.5"
+                title={formatShiftRef(shift.shift_code) ?? undefined}
+              >
+                {formatShiftRef(shift.shift_code)}
+              </span>
             )}
           </div>
         </div>

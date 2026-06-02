@@ -94,9 +94,18 @@ export function ShiftActionBar({
     if (shift.status === "locked") return "El turno está bloqueado por payroll.";
     if (shift.status === "archived") return "El turno está archivado.";
     if (shift.status === "cancelled") return "El turno está cancelado.";
-    if (hasTimeEntries) return "El turno tiene fichajes registrados. Edición restringida.";
     return null;
-  }, [shift.status, hasTimeEntries]);
+  }, [shift.status]);
+
+  // Soft restriction: hay fichajes pero el turno sigue siendo operable
+  // (asistencia, evidencia, notas, auditoría). NO bloqueamos Editar.
+  const editRestrictedReason = useMemo(() => {
+    if (editBlockedReason) return null;
+    if (hasTimeEntries) {
+      return "Edición de datos base restringida porque ya hay fichajes. Puedes revisar asistencia, validar presencia, agregar notas y preparar auditoría.";
+    }
+    return null;
+  }, [editBlockedReason, hasTimeEntries]);
 
   const openDuplicate = (withWorkers: boolean) => {
     console.info("[ShiftActionBar] duplicate_open", {
@@ -149,10 +158,10 @@ export function ShiftActionBar({
         className="h-8 gap-1.5"
         onClick={onEdit}
         disabled={!!editBlockedReason}
-        title={editBlockedReason ?? "Editar turno"}
+        title={editBlockedReason ?? editRestrictedReason ?? "Editar turno"}
       >
         {editBlockedReason ? <Lock className="h-3.5 w-3.5" /> : <Pencil className="h-3.5 w-3.5" />}
-        Editar
+        {editRestrictedReason ? "Editar (restringido)" : "Editar"}
       </Button>
 
       {isDraft && (
@@ -247,6 +256,11 @@ export function ShiftActionBar({
       {editBlockedReason && (
         <span className="ml-auto text-[10px] text-muted-foreground flex items-center gap-1">
           <Lock className="h-3 w-3" /> {editBlockedReason}
+        </span>
+      )}
+      {!editBlockedReason && editRestrictedReason && (
+        <span className="ml-auto text-[10px] text-amber-700 dark:text-amber-400 flex items-center gap-1 max-w-[420px] truncate" title={editRestrictedReason}>
+          <AlertTriangle className="h-3 w-3" /> Restricción parcial — sigue operable
         </span>
       )}
 
