@@ -168,8 +168,8 @@ Patrón de descarga: reutilizar `downloadCsv()` de `src/lib/import-review/csv-ex
 **GO** para implementar **Export Connecteam v1** en sprint corto, con alcance estrictamente unidireccional (Stafly → CSV → operador descarga e importa manual en CT).
 
 Razones:
-1. 11 de 15 columnas CT mapean directo desde Stafly sin cambios de schema.
-2. Los 4 gaps (unpaid break, paid break, shift tags, tasks, require approval) son aceptables como vacíos en v1 y no bloquean la operación de CT.
+1. 11 de 16 columnas CT mapean directo desde Stafly sin cambios de schema.
+2. Los 5 gaps (unpaid break, paid break, shift tags, tasks, require approval) son aceptables como vacíos en v1 y no bloquean la operación de CT.
 3. Patrón de CSV ya existe y está probado (`csv-export.ts`).
 4. Stafly se posiciona como fuente de creación/organización; CT queda como puente temporal de pago/clock — respeta `mem://backlog/phase-19-timeclock-reality-audit-closed` que dice "CT remains payroll authority".
 5. Cero riesgo de regresión: no toca writes, no toca payroll, no toca portal.
