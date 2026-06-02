@@ -853,6 +853,18 @@ export function MobileShiftOperationsSheet({
                       Notificar equipo
                     </Button>
                   )}
+                  {canValidate && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full h-10 rounded-lg gap-1.5 text-xs font-medium"
+                      onClick={() => setConnecteamExportOpen(true)}
+                      aria-label="Exportar este turno a Connecteam"
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                      Exportar a Connecteam
+                    </Button>
+                  )}
                   <div className="flex items-center gap-2">
                     {draft ? (
                       <Button
