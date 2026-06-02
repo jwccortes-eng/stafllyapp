@@ -183,7 +183,7 @@ function MonthViewImpl({
           <Input
             value={empSearch}
             onChange={e => setEmpSearch(e.target.value)}
-            placeholder="Search employee..."
+            placeholder="Buscar worker..."
             className="pl-7 h-7 text-xs"
           />
         </div>
