@@ -302,6 +302,9 @@ export default function PublicPricing() {
                 <p className="text-xs sm:text-sm mt-2 font-medium" style={{ color: "hsl(220,10%,50%)" }}>
                   This is a one-time onboarding fee. It is separate from your monthly plan.
                 </p>
+                <p className="text-xs mt-3 leading-relaxed" style={{ color: "hsl(220,10%,55%)" }}>
+                  Guided setup covers your initial configuration. Additional custom features, integrations or special workflows can be scoped separately.
+                </p>
               </div>
               <div className="sm:text-right shrink-0">
                 <div className="flex items-baseline gap-1">
