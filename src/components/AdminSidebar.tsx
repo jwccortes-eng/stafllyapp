@@ -38,6 +38,53 @@ const SECTION_I18N_KEY: Record<string, string> = {
   "Settings": "sidebar.section.configuration",
 };
 
+// Per-link i18n keys. Internal `label` stays English (used as identifier + EN value).
+// ES strings live in src/i18n/dictionaries/es/app.ts under `sidebar.link.*`.
+// Adding a link without a key here just falls back to its English label (safe).
+const LINK_I18N_KEY: Record<string, string> = {
+  "Command Center": "sidebar.link.command_center",
+  "Today's Operations": "sidebar.link.todays_operations",
+  "Shifts": "sidebar.link.shifts",
+  "Attendance": "sidebar.link.attendance",
+  "Time Clock": "sidebar.link.time_clock",
+  "Live Map": "sidebar.link.live_map",
+  "Front Desk": "sidebar.link.front_desk",
+  "Team": "sidebar.link.team",
+  "Documents": "sidebar.link.documents",
+  "Document Inbox": "sidebar.link.document_inbox",
+  "Compliance": "sidebar.link.compliance",
+  "Applications": "sidebar.link.applications",
+  "Referrals": "sidebar.link.referrals",
+  "Invitations": "sidebar.link.invitations",
+  "Requests": "sidebar.link.requests",
+  "Clients": "sidebar.link.clients",
+  "Locations": "sidebar.link.locations",
+  "Validation Center": "sidebar.link.validation_center",
+  "Periods": "sidebar.link.periods",
+  "Compensation": "sidebar.link.compensation",
+  "Adjustments": "sidebar.link.adjustments",
+  "Advances": "sidebar.link.advances",
+  "Concepts": "sidebar.link.concepts",
+  "Reconciliation": "sidebar.link.reconciliation",
+  "Payroll Reports": "sidebar.link.payroll_reports",
+  "Import History": "sidebar.link.import_history",
+  "Announcements": "sidebar.link.announcements",
+  "Messages": "sidebar.link.messages",
+  "Notifications": "sidebar.link.notifications",
+  "Reviews": "sidebar.link.reviews",
+  "Payroll Settings": "sidebar.link.payroll_settings",
+  "Kiosk": "sidebar.link.kiosk",
+  "Administration": "sidebar.link.administration",
+};
+
+function translateLinkLabel(label: string, t: (k: string) => string): string {
+  const key = LINK_I18N_KEY[label];
+  if (!key) return label;
+  const v = t(key);
+  // useT.t returns the key itself when missing — fall back to English label.
+  return v === key ? label : v;
+}
+
 interface LinkDef {
   to: string;
   icon: any;
