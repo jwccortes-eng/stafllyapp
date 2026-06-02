@@ -32,6 +32,7 @@ interface Props {
   clientId: string;
   locationId: string;
   jobSiteLocationId: string | null;
+  jobSiteAddress?: string;
   meetingPoint: string;
   meetingPointLocationId: string | null;
   transportRequired: boolean;
