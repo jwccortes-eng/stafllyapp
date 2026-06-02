@@ -7,13 +7,14 @@ import { useTheme } from "next-themes";
 import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import { BuildVersionBadge } from "@/components/BuildVersionBadge";
+import { useT } from "@/i18n/LanguageContext";
 
 interface MoreItem {
   id: string;
   to: string;
   icon: React.ElementType;
-  label: string;
-  description?: string;
+  labelKey: string;
+  descriptionKey: string;
 }
 
 interface PortalMoreSheetProps {
@@ -28,12 +29,12 @@ interface PortalMoreSheetProps {
 }
 
 const ALL_MORE_ITEMS: (MoreItem & { moduleKey?: string })[] = [
-  { id: "pay-reports", to: "/portal/pay-reports", icon: Wallet, label: "Mis pagos", description: "Resumen semanal de nómina", moduleKey: "my_payments" },
-  { id: "availability", to: "/portal/availability", icon: CalendarCheck, label: "Disponibilidad", description: "Gestiona tu horario", moduleKey: "my_availability" },
-  { id: "announcements", to: "/portal/announcements", icon: Megaphone, label: "Anuncios", description: "Noticias de la empresa", moduleKey: "my_announcements" },
-  { id: "documents", to: "/portal/documents", icon: FolderOpen, label: "Mis documentos", description: "Documentos requeridos" },
-  { id: "w9", to: "/portal/w9", icon: FileText, label: "Formulario W-9", description: "Información fiscal", moduleKey: "my_w9" },
-  { id: "resources", to: "/portal/resources", icon: BookOpen, label: "Recursos", description: "Material de apoyo", moduleKey: "my_resources" },
+  { id: "pay-reports", to: "/portal/pay-reports", icon: Wallet, labelKey: "portal.more.item.pay_reports", descriptionKey: "portal.more.item.pay_reports_desc", moduleKey: "my_payments" },
+  { id: "availability", to: "/portal/availability", icon: CalendarCheck, labelKey: "portal.more.item.availability", descriptionKey: "portal.more.item.availability_desc", moduleKey: "my_availability" },
+  { id: "announcements", to: "/portal/announcements", icon: Megaphone, labelKey: "portal.more.item.announcements", descriptionKey: "portal.more.item.announcements_desc", moduleKey: "my_announcements" },
+  { id: "documents", to: "/portal/documents", icon: FolderOpen, labelKey: "portal.more.item.documents", descriptionKey: "portal.more.item.documents_desc" },
+  { id: "w9", to: "/portal/w9", icon: FileText, labelKey: "portal.more.item.w9", descriptionKey: "portal.more.item.w9_desc", moduleKey: "my_w9" },
+  { id: "resources", to: "/portal/resources", icon: BookOpen, labelKey: "portal.more.item.resources", descriptionKey: "portal.more.item.resources_desc", moduleKey: "my_resources" },
 ];
 
 export function PortalMoreSheet({
@@ -47,6 +48,7 @@ export function PortalMoreSheet({
 }: PortalMoreSheetProps) {
   const location = useLocation();
   const { theme, setTheme } = useTheme();
+  const { t } = useT();
 
   if (!open) return null;
 
@@ -80,8 +82,8 @@ export function PortalMoreSheet({
             className="ring-2 ring-primary/10"
           />
           <div className="flex-1 min-w-0">
-            <p className="text-base font-bold font-heading text-foreground truncate">{employeeName || "Mi Cuenta"}</p>
-            <p className="text-xs text-muted-foreground">Portal de empleado</p>
+            <p className="text-base font-bold font-heading text-foreground truncate">{employeeName || t("portal.more.account")}</p>
+            <p className="text-xs text-muted-foreground">{t("portal.more.employee_portal")}</p>
           </div>
           <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl shrink-0" onClick={onClose}>
             <X className="h-4 w-4" />
@@ -92,7 +94,7 @@ export function PortalMoreSheet({
 
         {/* Menu items (scrollable) */}
         <div className="flex-1 min-h-0 overflow-y-auto px-4 py-3">
-          <p className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-widest px-4 pb-2">Más opciones</p>
+          <p className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-widest px-4 pb-2">{t("portal.more.section.more")}</p>
           <div className="space-y-0.5">
             {visibleItems.map((item) => {
               const isActive =
@@ -121,13 +123,11 @@ export function PortalMoreSheet({
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className={cn("text-[13px] font-medium", isActive && "font-semibold")}>
-                      {item.label}
+                      {t(item.labelKey)}
                     </p>
-                    {item.description && (
-                      <p className="text-[11px] text-muted-foreground/70">{item.description}</p>
-                    )}
+                    <p className="text-[11px] text-muted-foreground/70">{t(item.descriptionKey)}</p>
                   </div>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground/20 shrink-0" />
+                  <ChevronRight className="h-4 w-4 text-muted-foreground/20 shrink-0 flip-rtl" />
                 </NavLink>
               );
             })}
@@ -137,7 +137,7 @@ export function PortalMoreSheet({
           {canAccessAdmin && (
             <>
               <Separator className="my-3 opacity-30" />
-              <p className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-widest px-4 pb-2">Administración</p>
+              <p className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-widest px-4 pb-2">{t("portal.more.section.admin")}</p>
               <NavLink
                 to="/app"
                 onClick={onClose}
@@ -147,10 +147,10 @@ export function PortalMoreSheet({
                   <Shield className="h-[18px] w-[18px] text-muted-foreground" strokeWidth={1.8} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[13px] font-medium">Panel Admin</p>
-                  <p className="text-[11px] text-muted-foreground/70">Acceder al panel de administración</p>
+                  <p className="text-[13px] font-medium">{t("portal.more.admin_panel")}</p>
+                  <p className="text-[11px] text-muted-foreground/70">{t("portal.more.admin_panel_subtitle")}</p>
                 </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground/20 shrink-0" />
+                <ChevronRight className="h-4 w-4 text-muted-foreground/20 shrink-0 flip-rtl" />
               </NavLink>
             </>
           )}
@@ -163,12 +163,12 @@ export function PortalMoreSheet({
             className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors px-3 py-2 rounded-xl hover:bg-muted/30"
           >
             {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-            {theme === "dark" ? "Modo claro" : "Modo oscuro"}
+            {theme === "dark" ? t("portal.more.light_mode") : t("portal.more.dark_mode")}
           </button>
           <LogoutConfirmDialog onConfirm={() => { onSignOut(); onClose(); }}>
             <button className="flex items-center gap-2 text-xs text-destructive/70 hover:text-destructive transition-colors px-3 py-2 rounded-xl hover:bg-destructive/[0.06]">
               <LogOut className="h-4 w-4" />
-              Cerrar sesión
+              {t("portal.more.sign_out")}
             </button>
           </LogoutConfirmDialog>
         </div>
