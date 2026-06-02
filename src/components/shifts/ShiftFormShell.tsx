@@ -97,7 +97,7 @@ export function ShiftFormShell({
     ? "Empieza con lo esencial o usa una plantilla."
     : "Configura los detalles del turno.";
   const defaultSaveLabel = mode === "create"
-    ? (onSaveDraft ? "Publish" : "Crear turno")
+    ? (onSaveDraft ? "Publicar" : "Crear turno")
     : "Guardar cambios";
   const [confirmCloseOpen, setConfirmCloseOpen] = useState(false);
   const [publishReviewOpen, setPublishReviewOpen] = useState(false);
