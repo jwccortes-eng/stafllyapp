@@ -64,7 +64,7 @@ export interface SmartWorkCardHeroProps {
   showDecline?: boolean;
   onDecline?: () => void;
   /** Render returned cuando el VM no se puede construir (datos críticos faltantes). */
-  fallback?: React.ReactNode;
+  fallback?: ReactNode;
   className?: string;
 }
 
