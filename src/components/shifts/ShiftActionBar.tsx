@@ -158,10 +158,10 @@ export function ShiftActionBar({
         className="h-8 gap-1.5"
         onClick={onEdit}
         disabled={!!editBlockedReason}
-        title={editBlockedReason ?? "Editar turno"}
+        title={editBlockedReason ?? editRestrictedReason ?? "Editar turno"}
       >
         {editBlockedReason ? <Lock className="h-3.5 w-3.5" /> : <Pencil className="h-3.5 w-3.5" />}
-        Editar
+        {editRestrictedReason ? "Editar (restringido)" : "Editar"}
       </Button>
 
       {isDraft && (
