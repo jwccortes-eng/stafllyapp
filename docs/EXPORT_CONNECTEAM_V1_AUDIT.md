@@ -112,7 +112,7 @@ Componentes/hooks tocados como referencia (sin modificar):
 **Desktop** — `src/components/shifts/ShiftDetailDialog.tsx`:
 - Nueva sección colapsable **"Integraciones / Exportaciones"** al final del drawer (debajo de `LiveShiftBoard` y `ShiftQRSection`).
 - Botón secundario `Exportar a Connecteam` (icon `Download`) que abre un modal `ExportConnecteamPreviewDialog` con:
-  - Preview de las 15 columnas CT en tabla simple (sin charts).
+  - Preview de las 16 columnas CT en tabla simple (sin charts).
   - Banner de estado: Ready / Needs review / Blocked.
   - Warnings listados (workers sin CT ID, timezone faltante, etc.).
   - CTAs: `Cancelar` · `Descargar CSV` (sólo si no Blocked).
