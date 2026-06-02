@@ -185,7 +185,7 @@ export function SmartWorkCardHero({
     }
   }, [assignment, isToday, hasClockedIn, hasClockedOut, busy]);
 
-  if (!vm) return null;
+  if (!vm) return <>{fallback}</>;
 
   const handleAction = (kind: NextActionKind) => {
     if (busy) return;
