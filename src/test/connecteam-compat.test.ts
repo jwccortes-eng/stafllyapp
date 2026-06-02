@@ -44,11 +44,12 @@ function ctxFor(opts: {
 }
 
 describe("connecteam-compat: BETA_COMPAT_RULES integrity", () => {
-  it("has the 5 approved rules in the required order", () => {
+  it("has the 6 approved rules in the required order", () => {
     expect(BETA_COMPAT_RULES.map(r => r.id)).toEqual([
       "eminence.headwaiter",
       "eminence.outside",
       "eminence.regular_waiter",
+      "eminence.default_regular_waiter",
       "production.weekend",
       "production.regular",
     ]);
@@ -107,6 +108,42 @@ describe("connecteam-compat: Eminence rules", () => {
       ctxFor({ client: "Eminence", location: "Eminence", categoryName: "Captain" }),
     );
     expect(r.subItem).toBe("Headwaiters");
+  });
+
+  it("Eminence sin categoría → default Regular Waiters (no fallback location.name)", () => {
+    const r = resolveConnecteamJobAndSubItem(
+      mk({}),
+      ctxFor({ client: "Eminence", location: "Eminence Ballroom" }),
+    );
+    expect(r.job).toBe("Eminence");
+    expect(r.subItem).toBe("Regular Waiters");
+    expect(r.confidence).toBe("inferred");
+    expect(r.source.ruleId).toBe("eminence.default_regular_waiter");
+  });
+
+  it("Eminence + categoría no-waiter (e.g. Coordinator) → default Regular Waiters", () => {
+    const r = resolveConnecteamJobAndSubItem(
+      mk({ category_id: "cat-1" }),
+      ctxFor({ client: "Eminence", location: "Eminence Ballroom", categoryName: "Coordinator" }),
+    );
+    expect(r.subItem).toBe("Regular Waiters");
+    expect(r.source.ruleId).toBe("eminence.default_regular_waiter");
+  });
+
+  it("Eminence + Outside sigue ganando sobre default", () => {
+    const r = resolveConnecteamJobAndSubItem(
+      mk({ notes: "outside" }),
+      ctxFor({ client: "Eminence", location: "Eminence Ballroom" }),
+    );
+    expect(r.source.ruleId).toBe("eminence.outside");
+  });
+
+  it("Eminence + Headwaiter sigue ganando sobre default", () => {
+    const r = resolveConnecteamJobAndSubItem(
+      mk({ category_id: "cat-1" }),
+      ctxFor({ client: "Eminence", location: "Eminence Ballroom", categoryName: "Headwaiter" }),
+    );
+    expect(r.source.ruleId).toBe("eminence.headwaiter");
   });
 });
 
