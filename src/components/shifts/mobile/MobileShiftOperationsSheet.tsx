@@ -853,6 +853,11 @@ export function MobileShiftOperationsSheet({
                       Notificar equipo
                     </Button>
                   )}
+                  {/* Export Connecteam — admin-equivalent gate.
+                      `canValidate` resolves via canManageShifts(): developer /
+                      owner / founder OR canAccessAdminForCompany(selectedCompanyId).
+                      Workers can never see this action. See module comment in
+                      src/lib/integrations/connecteam-export.ts. */}
                   {canValidate && (
                     <Button
                       variant="outline"
