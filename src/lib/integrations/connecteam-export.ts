@@ -266,8 +266,9 @@ export function buildConnecteamRow(
     })
     .filter((n): n is string => !!n);
 
-  const job = resolveJob(shift, ctx);
+  const compat = resolveConnecteamJobAndSubItem(shift, ctx);
   const addr = resolveAddress(shift, ctx);
+
 
   // Number of users: prefer declared slots/capacity; fall back to assigned count.
   const numberOfUsers = String(s.slots ?? userNames.length ?? 0);
