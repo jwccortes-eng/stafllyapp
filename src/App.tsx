@@ -90,6 +90,7 @@ const Implementations = lazy(() => import("./pages/admin/Implementations"));
 const CommandCenter = lazy(() => import("./pages/admin/CommandCenter"));
 const StaffingCenter = lazy(() => import("./pages/admin/StaffingCenter"));
 const DevCommandCenter = lazy(() => import("./pages/admin/DevCommandCenter"));
+const SmartWorkCardSandbox = lazy(() => import("./pages/admin/SmartWorkCardSandbox"));
 const DocumentsCenter = lazy(() => import("./pages/admin/DocumentsCenter"));
 const DocumentIntakeCenter = lazy(() => import("./pages/admin/DocumentIntakeCenter"));
 const ComplianceCenter = lazy(() => import("./pages/admin/ComplianceCenter"));
@@ -276,6 +277,7 @@ function App() {
                 <Route path="staffing-center" element={<StaffingCenter />} />
                 <Route path="dev-command-center" element={<DevCommandCenter />} />
                 <Route path="owner-command-center" element={<DevCommandCenter />} />
+                <Route path="smart-work-card-sandbox" element={<SmartWorkCardSandbox />} />
                 <Route path="employees" element={<CompanyRequiredGuard><Employees /></CompanyRequiredGuard>} />
                 <Route path="workers" element={<CompanyRequiredGuard><Navigate to="/app/employees" replace /></CompanyRequiredGuard>} />
                 <Route path="documents" element={<CompanyRequiredGuard><DocumentsCenter /></CompanyRequiredGuard>} />
