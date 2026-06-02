@@ -25,6 +25,16 @@ import { ShiftEditDialog } from "@/components/shifts/ShiftEditDialog";
 import type { LocationOption } from "@/components/shifts/ShiftFormFields";
 import { ShiftActionBar } from "@/components/shifts/ShiftActionBar";
 import { StaffingRequiredBanner } from "@/components/shifts/StaffingRequiredBanner";
+import {
+  SmartSummaryCard, MissingItemsCard, RisksCard, NextActionsCard,
+  AssignedTeamCard, CandidatesCard, WorkerPreviewCard, buildCandidatePool,
+} from "@/components/shifts/ops/ShiftOpsBlocks";
+import {
+  getShiftOperationalStatus, getShiftMissingItems, getShiftRisks,
+  getRecommendedNextActions,
+} from "@/lib/shifts/shift-operations-intelligence";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ChevronDown } from "lucide-react";
 
 interface ShiftDetail {
   id: string;
@@ -395,7 +405,73 @@ export default function ShiftOperations() {
         onScrollToStaffing={scrollToStaffing}
       />
 
-      {/* A) Shift Summary */}
+      {/* Operational copilot blocks (read-only heuristics) */}
+      {(() => {
+        const hasLocation = !!(shift.location_id || (shift as any).job_site_location_id || (shift as any).job_site_address);
+        const hasLocationAddress = !!locationAddress || !!(shift as any).job_site_address || !!(shift as any).manual_address;
+        const hasMeetingPoint = !!shift.meeting_point || !!(shift as any).meeting_point_location_id;
+        const status = getShiftOperationalStatus(shift as any, assignments as any, { hasLocation, hasMeetingPoint });
+        const missing = getShiftMissingItems(shift as any, assignments as any, { hasLocation, hasMeetingPoint, hasLocationAddress });
+        const risks = getShiftRisks(shift as any, assignments as any);
+        const actions = getRecommendedNextActions(shift as any, assignments as any, missing, risks);
+        const { recommended, pool } = buildCandidatePool(employees as any, assignments as any, locationName || null);
+        return (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div className="lg:col-span-2 space-y-4">
+              <SmartSummaryCard status={status} />
+              <NextActionsCard
+                actions={actions}
+                handlers={{
+                  onEditShift: () => setEditOpen(true),
+                  onAssignWorker: scrollToStaffing,
+                  onMessagePending: () => toast.info("Mensajería masiva próximamente"),
+                  onPublish: () => setEditOpen(true),
+                }}
+              />
+              <AssignedTeamCard assignments={assignments as any} />
+              <div ref={staffingRef} className="scroll-mt-24">
+                <CandidatesCard
+                  recommended={recommended}
+                  pool={pool}
+                  shiftAreaHint={locationName || null}
+                  onAssign={async (employeeId) => {
+                    if (!shiftId || !selectedCompanyId) return;
+                    const { error } = await supabase.from("shift_assignments").insert({
+                      company_id: selectedCompanyId,
+                      shift_id: shiftId,
+                      employee_id: employeeId,
+                      status: "pending",
+                    } as any);
+                    if (error) toast.error(error.message);
+                    else { toast.success("Worker asignado"); loadAll(); }
+                  }}
+                />
+              </div>
+            </div>
+            <div className="space-y-4">
+              <MissingItemsCard items={missing} onEdit={() => setEditOpen(true)} />
+              <RisksCard risks={risks} />
+              <WorkerPreviewCard
+                shift={shift as any}
+                clientName={clientName}
+                locationName={locationName}
+                locationAddress={locationAddress}
+              />
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Detalle avanzado (legacy panels) — collapsed by default, hidden when empty */}
+      <Collapsible>
+        <CollapsibleTrigger asChild>
+          <Button variant="ghost" size="sm" className="text-xs text-muted-foreground gap-1.5">
+            <ChevronDown className="h-3.5 w-3.5" /> Más detalles · resumen, staff por área, transporte, cronología y notas
+          </Button>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+
+      {/* A) Shift Summary (legacy) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2 space-y-4">
           {/* Summary card */}
@@ -711,7 +787,9 @@ export default function ShiftOperations() {
             </div>
           </div>
         </div>
-      </div>
+        </div>
+        </CollapsibleContent>
+      </Collapsible>
 
       <ShiftEditDialog
         shift={shift as unknown as Shift}
