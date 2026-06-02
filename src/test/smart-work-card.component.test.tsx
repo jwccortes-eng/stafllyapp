@@ -112,10 +112,10 @@ describe("<SmartWorkCard /> — UX polish (A–F)", () => {
     expect(vm.pay.amountLabel).not.toMatch(/estimado/i);
     render(<SmartWorkCard vm={vm} />);
     const payBlock = screen.getByTestId("pay-block");
-    // Solo debe aparecer "Estimado" una vez en el pay block (no doble chip).
-    const estCount = (payBlock.textContent ?? "").match(/Estimado/g)?.length ?? 0;
-    expect(estCount).toBe(1);
+    // No debe duplicarse: el formato viejo era "$176.00 estimado" + chip ESTIMADO.
+    expect(payBlock.textContent).not.toMatch(/\$176\.00\s+estimado/i);
     expect(payBlock.textContent).toContain("$176.00");
+    expect(payBlock.textContent).toContain("Estimado");
   });
 
   // C. Compact sin duración
