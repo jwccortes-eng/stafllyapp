@@ -964,6 +964,17 @@ function DesktopShifts() {
   const handleSaveDraft = async () => {
     if (!selectedCompanyId) { toast.error("Selecciona una compañía"); return; }
     if (!date) { toast.error("Una fecha es obligatoria incluso para borradores"); return; }
+    // Hardening: evitar drafts huérfanos/genéricos ("Turno" vacío).
+    const hasMinimumContext =
+      !!title.trim() ||
+      !!clientId ||
+      !!jobSiteLocationId ||
+      !!locationId ||
+      selectedEmployees.length > 0;
+    if (!hasMinimumContext) {
+      toast.error("Agrega al menos un cliente, ubicación, título o trabajador para guardar este borrador.");
+      return;
+    }
     setDraftSaving(true);
     try {
       const baseShift = await createSingleShift(date, /* skipNotifications */ true, /* forceDraft */ true, /* publishNow */ false);
