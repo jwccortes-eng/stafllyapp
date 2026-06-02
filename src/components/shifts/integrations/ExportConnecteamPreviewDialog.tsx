@@ -101,6 +101,36 @@ export function ExportConnecteamPreviewDialog({
               </div>
             )}
 
+            {/* v1.2: Job/Sub item resolution badge */}
+            {validation?.meta && (
+              <div className="rounded-xl border border-border/30 bg-muted/20 px-3.5 py-2.5 text-xs space-y-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-semibold">Job:</span>
+                  <span>{validation.meta.job || <span className="italic text-muted-foreground">vacío</span>}</span>
+                  <span className="text-muted-foreground">·</span>
+                  <span className="font-semibold">Sub item:</span>
+                  <span>{validation.meta.subItem || <span className="italic text-muted-foreground">vacío</span>}</span>
+                </div>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {validation.meta.jobConfidence === "inferred" && (
+                    <>
+                      <Badge variant="outline" className="text-[10px] border-warning/40 text-warning">Regla beta</Badge>
+                      {validation.meta.jobRuleId && (
+                        <code className="text-[10px] text-muted-foreground">{validation.meta.jobRuleId}</code>
+                      )}
+                    </>
+                  )}
+                  {validation.meta.jobConfidence === "fallback" && (
+                    <Badge variant="outline" className="text-[10px] border-warning/40 text-warning">Fallback — puede mostrar "Select" en Connecteam</Badge>
+                  )}
+                  {validation.meta.jobConfidence === "exact" && (
+                    <Badge variant="outline" className="text-[10px] border-earning/40 text-earning">Hint explícito</Badge>
+                  )}
+                </div>
+              </div>
+            )}
+
+
             {/* Warnings */}
             {validation && validation.warnings.length > 0 && (
               <div className="space-y-1.5">
