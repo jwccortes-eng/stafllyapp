@@ -1218,6 +1218,20 @@ export function MobileShiftOperationsSheet({
       meetingPoint={shiftMeeting.point ?? meetingPoint ?? null}
       notes={shift.notes ?? null}
     />
+    {/* Export Connecteam v1 — admin-only preview + CSV download.
+        Pure frontend: no payroll / time_entries / RLS / schema writes. */}
+    <ExportConnecteamPreviewDialog
+      open={connecteamExportOpen}
+      onOpenChange={setConnecteamExportOpen}
+      shift={shift}
+      assignments={assignments}
+      employees={employees}
+      clients={shift?.client_id ? [{ id: shift.client_id, name: clientName && clientName !== "—" ? clientName : "" }] : []}
+      locations={shift?.location_id ? [{ id: shift.location_id, name: locationName || "" }] : []}
+      isAdmin={canValidate}
+      selectedCompanyId={selectedCompanyId ?? null}
+      shiftCompanyId={(shift as any)?.company_id ?? selectedCompanyId ?? null}
+    />
     </>
   );
 }
