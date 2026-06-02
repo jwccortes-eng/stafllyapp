@@ -32,7 +32,7 @@ import {
 import { AttendanceEvidenceCard } from "@/components/shifts/ops/AttendanceEvidenceCard";
 import {
   getShiftOperationalStatus, getShiftMissingItems, getShiftRisks,
-  getRecommendedNextActions,
+  getRecommendedNextActions, normalizeArea,
 } from "@/lib/shifts/shift-operations-intelligence";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronDown } from "lucide-react";
@@ -334,11 +334,11 @@ export default function ShiftOperations() {
     loadAll();
   };
 
-  // Group by area
+  // Group assignments by normalized area (Queens/QUEENS/Queens, NY → "Queens")
   const byArea = useMemo(() => {
     const map = new Map<string, AssignmentDetail[]>();
     assignments.forEach(a => {
-      const area = a.employee?.county || "Sin área";
+      const area = normalizeArea(a.employee?.county ?? "") || "Sin zona";
       if (!map.has(area)) map.set(area, []);
       map.get(area)!.push(a);
     });
@@ -618,64 +618,9 @@ export default function ShiftOperations() {
               </div>
             )}
 
-            {/* Unassigned employee pool by area */}
-            {(() => {
-              const assignedIds = new Set(assignments.map(a => a.employee_id));
-              const unassigned = employees.filter(e => !assignedIds.has(e.id));
-              if (unassigned.length === 0) return null;
-
-              const unassignedByArea = new Map<string, typeof unassigned>();
-              unassigned.forEach(e => {
-                const area = e.county || "Sin área";
-                if (!unassignedByArea.has(area)) unassignedByArea.set(area, []);
-                unassignedByArea.get(area)!.push(e);
-              });
-              const sortedAreas = Array.from(unassignedByArea.entries()).sort((a, b) => a[0].localeCompare(b[0]));
-
-              return (
-                <div className="space-y-2 mt-2">
-                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Disponibles para asignar</p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {sortedAreas.map(([area, areaEmps]) => (
-                      <div key={area} className="rounded-xl border border-dashed border-border/40 p-3">
-                        <div className="flex items-center justify-between mb-2">
-                          <p className="text-xs font-bold text-muted-foreground">{area}</p>
-                          <Badge variant="outline" className="text-[9px]">{areaEmps.length}</Badge>
-                        </div>
-                        <div className="space-y-1">
-                          {areaEmps.slice(0, 8).map(e => (
-                            <div key={e.id} className="flex items-center gap-2 text-[11px] group">
-                              <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/30 shrink-0" />
-                              <span className="truncate text-muted-foreground">{e.first_name} {e.last_name}</span>
-                              {isEmployeeDriver(e) && <Car className="h-2.5 w-2.5 text-warning shrink-0" />}
-                              <button
-                                className="ml-auto text-[9px] font-semibold text-primary opacity-0 group-hover:opacity-100 transition-opacity"
-                                onClick={async () => {
-                                  if (!shiftId || !selectedCompanyId) return;
-                                  const { error } = await supabase.from("shift_assignments").insert({
-                                    company_id: selectedCompanyId,
-                                    shift_id: shiftId,
-                                    employee_id: e.id,
-                                    status: "pending",
-                                  } as any);
-                                  if (error) toast.error(error.message);
-                                  else { toast.success(`${e.first_name} asignado`); loadAll(); }
-                                }}
-                              >
-                                + Asignar
-                              </button>
-                            </div>
-                          ))}
-                          {areaEmps.length > 8 && (
-                            <p className="text-[9px] text-muted-foreground/50 text-center">+{areaEmps.length - 8} más</p>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })()}
+            {/* Legacy "Disponibles para asignar" pool removed —
+                "Candidatos recomendados" / "Pool de workers" arriba ya lo cubre
+                con normalización de áreas y ranking. */}
           </div>
         </div>
 
@@ -722,12 +667,10 @@ export default function ShiftOperations() {
             </div>
           )}
 
-          {/* E) Timeline */}
-          <div className="rounded-2xl border border-border/40 bg-card p-4 space-y-3">
-            <h2 className="text-sm font-bold flex items-center gap-2"><Clock className="h-4 w-4 text-primary" /> Cronología</h2>
-            {timeline.length === 0 ? (
-              <p className="text-xs text-muted-foreground text-center py-4">Sin eventos aún</p>
-            ) : (
+          {/* E) Timeline — auto-hidden when no events */}
+          {timeline.length > 0 && (
+            <div className="rounded-2xl border border-border/40 bg-card p-4 space-y-3">
+              <h2 className="text-sm font-bold flex items-center gap-2"><Clock className="h-4 w-4 text-primary" /> Cronología</h2>
               <div className="space-y-2 max-h-[400px] overflow-y-auto scrollbar-thin">
                 {timeline.map(evt => (
                   <div key={evt.id} className="flex gap-2.5">
@@ -741,60 +684,59 @@ export default function ShiftOperations() {
                   </div>
                 ))}
               </div>
-            )}
-          </div>
+            </div>
+          )}
 
-          {/* F) Admin Notes */}
-          <div className="rounded-2xl border border-border/40 bg-card p-4 space-y-3">
-            <h2 className="text-sm font-bold flex items-center gap-2"><MessageSquare className="h-4 w-4 text-primary" /> Notas & Comunicación</h2>
-            {/* Add note form */}
-            <div className="space-y-2 bg-muted/20 rounded-xl p-3">
-              <div className="flex gap-2">
-                <Select value={newNoteType} onValueChange={setNewNoteType}>
-                  <SelectTrigger className="h-8 text-[10px] w-[140px]"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {NOTE_TYPES.map(nt => (
-                      <SelectItem key={nt.value} value={nt.value} className="text-xs">{nt.icon} {nt.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+          {/* F) Admin Notes — auto-hidden when no notes */}
+          {notes.length > 0 && (
+            <div className="rounded-2xl border border-border/40 bg-card p-4 space-y-3">
+              <h2 className="text-sm font-bold flex items-center gap-2"><MessageSquare className="h-4 w-4 text-primary" /> Notas & Comunicación</h2>
+              {/* Add note form */}
+              <div className="space-y-2 bg-muted/20 rounded-xl p-3">
+                <div className="flex gap-2">
+                  <Select value={newNoteType} onValueChange={setNewNoteType}>
+                    <SelectTrigger className="h-8 text-[10px] w-[140px]"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {NOTE_TYPES.map(nt => (
+                        <SelectItem key={nt.value} value={nt.value} className="text-xs">{nt.icon} {nt.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Textarea
+                  value={newNoteContent}
+                  onChange={e => setNewNoteContent(e.target.value)}
+                  placeholder="Escribe una nota..."
+                  rows={2}
+                  className="text-xs resize-none"
+                />
+                <Button
+                  size="sm"
+                  onClick={handleAddNote}
+                  disabled={savingNote || !newNoteContent.trim()}
+                  className="w-full h-7 text-xs"
+                >
+                  {savingNote ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Plus className="h-3 w-3 mr-1" />}
+                  Agregar nota
+                </Button>
               </div>
-              <Textarea
-                value={newNoteContent}
-                onChange={e => setNewNoteContent(e.target.value)}
-                placeholder="Escribe una nota..."
-                rows={2}
-                className="text-xs resize-none"
-              />
-              <Button
-                size="sm"
-                onClick={handleAddNote}
-                disabled={savingNote || !newNoteContent.trim()}
-                className="w-full h-7 text-xs"
-              >
-                {savingNote ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Plus className="h-3 w-3 mr-1" />}
-                Agregar nota
-              </Button>
-            </div>
-            {/* Notes list */}
-            <div className="space-y-2 max-h-[350px] overflow-y-auto scrollbar-thin">
-              {notes.map(n => {
-                const ntInfo = NOTE_TYPES.find(nt => nt.value === n.note_type);
-                return (
-                  <div key={n.id} className="rounded-lg bg-muted/20 p-2.5 space-y-1">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-semibold">{ntInfo?.icon} {ntInfo?.label ?? n.note_type}</span>
-                      <span className="text-[9px] text-muted-foreground/50">{format(new Date(n.created_at), "d MMM HH:mm", { locale: es })}</span>
+              {/* Notes list */}
+              <div className="space-y-2 max-h-[350px] overflow-y-auto scrollbar-thin">
+                {notes.map(n => {
+                  const ntInfo = NOTE_TYPES.find(nt => nt.value === n.note_type);
+                  return (
+                    <div key={n.id} className="rounded-lg bg-muted/20 p-2.5 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-semibold">{ntInfo?.icon} {ntInfo?.label ?? n.note_type}</span>
+                        <span className="text-[9px] text-muted-foreground/50">{format(new Date(n.created_at), "d MMM HH:mm", { locale: es })}</span>
+                      </div>
+                      <p className="text-[11px] text-foreground whitespace-pre-wrap">{n.content}</p>
                     </div>
-                    <p className="text-[11px] text-foreground whitespace-pre-wrap">{n.content}</p>
-                  </div>
-                );
-              })}
-              {notes.length === 0 && (
-                <p className="text-xs text-muted-foreground text-center py-3">Sin notas</p>
-              )}
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          )}
         </div>
         </div>
         </CollapsibleContent>
