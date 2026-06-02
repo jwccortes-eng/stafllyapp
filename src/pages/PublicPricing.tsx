@@ -103,8 +103,8 @@ const plans = [
       "Admin operations dashboard",
       "Guided onboarding support",
     ],
-    cta: "Start guided setup",
-    getHref: () => guidedSetupPaymentOrWhatsApp(),
+    cta: "Talk to us",
+    getHref: () => operationsPaymentOrWhatsApp(),
     highlighted: true,
   },
   {
@@ -157,7 +157,7 @@ const faqs = [
   { q: "Can I export payroll?", a: "Yes. All plans include report exports. Operations and Scale plans include advanced payroll-ready review with detailed breakdowns and audit trails." },
   { q: "Does it track GPS?", a: "GPS attendance tracking is available on Operations and Scale plans. It verifies employee location when they clock in and out." },
   { q: "Can I manage multiple companies?", a: "Yes. Scale plans support multi-company management from a single dashboard with isolated data per company." },
-  { q: "Is there a setup fee?", a: "Implementation starts at $299. For selected early customers, setup may be waived as part of our founder launch offer." },
+  { q: "Is there a setup fee?", a: "Guided setup is a one-time onboarding fee starting at $299. It is separate from your monthly plan. For selected early customers, setup may be waived as part of our founder launch offer." },
   { q: "Can I start on my own?", a: "Stafly Core is currently invite-only with guided onboarding. We configure your company, roles and workers before your first shift." },
 ];
 
@@ -213,6 +213,9 @@ export default function PublicPricing() {
         </h1>
         <p className="mt-4 text-[15px] sm:text-lg max-w-xl mx-auto" style={{ color: "hsl(220,10%,45%)" }}>
           Stafly Core is built for real staffing operations. Every plan includes scheduling, attendance and a worker portal.
+        </p>
+        <p className="mt-3 text-sm font-medium max-w-xl mx-auto" style={{ color: "hsl(220,10%,40%)" }}>
+          Monthly plans start at $149/month. Guided setup starts at $299 one-time.
         </p>
       </section>
 
@@ -277,21 +280,38 @@ export default function PublicPricing() {
       </section>
 
 
-      {/* ── IMPLEMENTATION NOTE ── */}
+      {/* ── GUIDED SETUP ── */}
       <section className="py-10 sm:py-14" style={{ background: "hsl(220,30%,98%)" }}>
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 text-center">
-          <div className="inline-flex items-center justify-center h-10 w-10 rounded-xl bg-[hsl(222,100%,59%)]/10 mb-4">
-            <Settings className="h-5 w-5" style={{ color: "hsl(222,100%,59%)" }} />
+        <div className="max-w-3xl mx-auto px-4 sm:px-6">
+          <div className="bg-white rounded-2xl border border-[hsl(220,13%,91%)] p-7 sm:p-10 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+            <div className="flex flex-col sm:flex-row sm:items-start gap-6">
+              <div className="flex-1">
+                <h2 className="text-xl sm:text-2xl font-bold tracking-tight mb-2" style={{ color: "hsl(220,25%,10%)" }}>
+                  Guided setup
+                </h2>
+                <p className="text-sm sm:text-base leading-relaxed" style={{ color: "hsl(220,10%,45%)" }}>
+                  We configure your workspace, workers, first schedule, attendance flow, documents, and payroll-ready hour review before going live.
+                </p>
+                <p className="text-xs sm:text-sm mt-2 font-medium" style={{ color: "hsl(220,10%,50%)" }}>
+                  This is a one-time onboarding fee. It is separate from your monthly plan.
+                </p>
+              </div>
+              <div className="sm:text-right shrink-0">
+                <div className="flex items-baseline gap-1">
+                  <span className="text-3xl font-extrabold" style={{ color: "hsl(220,25%,10%)" }}>$299</span>
+                  <span className="text-sm font-medium" style={{ color: "hsl(220,10%,50%)" }}>one-time</span>
+                </div>
+                <a
+                  href={guidedSetupPaymentOrWhatsApp()}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-3 inline-flex items-center justify-center rounded-xl h-11 px-6 font-semibold text-sm text-white bg-[hsl(222,100%,59%)] hover:bg-[hsl(222,100%,52%)] shadow-[0_4px_14px_-3px_hsl(222,100%,59%/0.3)] transition-all active:scale-[0.97]"
+                >
+                  Start guided setup
+                </a>
+              </div>
+            </div>
           </div>
-          <h2 className="text-xl sm:text-2xl font-bold tracking-tight mb-2" style={{ color: "hsl(220,25%,10%)" }}>
-            Guided setup, not just software
-          </h2>
-          <p className="text-sm sm:text-base leading-relaxed" style={{ color: "hsl(220,10%,45%)" }}>
-            We don't just give you an app. We help you set up your operation. Implementation starts at <strong style={{ color: "hsl(220,25%,10%)" }}>$299</strong>. We configure your workspace, workers, first schedule, attendance flow, documents, and payroll-ready hour review before going live.
-          </p>
-          <p className="text-xs sm:text-sm mt-2" style={{ color: "hsl(220,10%,50%)" }}>
-            Founder launch offer: setup may be waived for selected early customers.
-          </p>
         </div>
       </section>
 
