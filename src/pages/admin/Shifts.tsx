@@ -309,31 +309,31 @@ function DesktopShifts() {
 
   const shiftSettingsSections: SettingsSection[] = [
     {
-      title: "Defaults",
-      description: "Pre-fill values when creating new shifts",
+      title: "Valores por defecto",
+      description: "Se prellenan al crear nuevos turnos",
       fields: [
-        { key: "default_start_time", label: "Default start time", type: "time" },
-        { key: "default_end_time", label: "Default end time", type: "time" },
-        { key: "default_slots", label: "Default slots", type: "number", min: 1, max: 50 },
+        { key: "default_start_time", label: "Hora de inicio por defecto", type: "time" },
+        { key: "default_end_time", label: "Hora de fin por defecto", type: "time" },
+        { key: "default_slots", label: "Cupos por defecto", type: "number", min: 1, max: 50 },
       ],
     },
     {
-      title: "Validation Rules",
-      description: "Requirements before a shift can be created or published",
+      title: "Reglas de validación",
+      description: "Requisitos antes de crear o publicar un turno",
       fields: [
-        { key: "require_client", label: "Require client", type: "toggle", description: "Block shift creation without a client assigned" },
-        { key: "require_location", label: "Require location", type: "toggle", description: "Block shift creation without a location assigned" },
-        { key: "max_shift_hours", label: "Max shift duration", type: "number", min: 1, max: 24, suffix: "hours" },
-        { key: "require_shift_admin", label: "Require shift lead", type: "toggle", description: "Must assign a shift admin before publishing" },
+        { key: "require_client", label: "Cliente obligatorio", type: "toggle", description: "Bloquea la creación de turnos sin cliente asignado" },
+        { key: "require_location", label: "Ubicación obligatoria", type: "toggle", description: "Bloquea la creación de turnos sin ubicación asignada" },
+        { key: "max_shift_hours", label: "Duración máxima del turno", type: "number", min: 1, max: 24, suffix: "horas" },
+        { key: "require_shift_admin", label: "Líder de turno obligatorio", type: "toggle", description: "Exige asignar un admin de turno antes de publicar" },
       ],
     },
     {
-      title: "Behavior",
-      description: "How shifts behave during creation and scheduling",
+      title: "Comportamiento",
+      description: "Cómo se comportan los turnos al crearlos y programarlos",
       fields: [
-        { key: "auto_publish", label: "Auto-publish on create", type: "toggle", description: "Skip draft status — publish immediately" },
-        { key: "allow_claims", label: "Allow employee claims", type: "toggle", description: "Enable claimable shifts for workers" },
-        { key: "copy_week_assignments", label: "Copy assignments on week copy", type: "toggle", description: "Include worker assignments when copying a week" },
+        { key: "auto_publish", label: "Publicar automáticamente al crear", type: "toggle", description: "Salta el estado borrador — publica al instante" },
+        { key: "allow_claims", label: "Permitir reclamos de workers", type: "toggle", description: "Habilita turnos reclamables por los workers" },
+        { key: "copy_week_assignments", label: "Copiar asignaciones al copiar semana", type: "toggle", description: "Incluye asignaciones de workers al copiar una semana" },
       ],
     },
   ];
@@ -1928,7 +1928,7 @@ function DesktopShifts() {
           { key: "month" as const, icon: CalendarDays, label: "Mes" },
         ];
         const groupOpts = [
-          { key: "grid" as const, icon: LayoutGrid, label: "Grid" },
+          { key: "grid" as const, icon: LayoutGrid, label: "Cuadrícula" },
           { key: "client" as const, icon: Building2, label: "Cliente" },
           { key: "team" as const, icon: Users, label: "Equipo" },
         ];
@@ -2095,7 +2095,7 @@ function DesktopShifts() {
         <div className="flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/[0.04] px-3 py-2 text-[11px] text-muted-foreground">
           <Plus className="h-3.5 w-3.5 text-primary shrink-0" />
           <span>
-            <span className="font-semibold text-foreground">Tip:</span>{" "}
+            <span className="font-semibold text-foreground">Consejo:</span>{" "}
             haz click en <span className="font-mono bg-muted/60 px-1 rounded">+</span> sobre una fecha del calendario
             para crear un turno rápido con plantilla.
           </span>
