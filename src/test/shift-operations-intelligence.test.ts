@@ -56,7 +56,7 @@ describe("getShiftOperationalStatus", () => {
   });
 
   it("draft missing info when no location", () => {
-    const r = getShiftOperationalStatus(draft, [], { ...ctxFull, hasLocation: false, hasLocationAddress: false });
+    const r = getShiftOperationalStatus(draft, [], { hasLocation: false, hasMeetingPoint: false });
     expect(r.code).toBe("draft_missing_info");
   });
 
