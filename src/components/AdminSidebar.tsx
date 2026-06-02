@@ -351,7 +351,7 @@ export default function AdminSidebar() {
         <Tooltip key={link.to} delayDuration={0}>
           <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
           <TooltipContent side="right" className="text-xs font-medium flex items-center gap-2">
-            {link.label}
+            {translateLinkLabel(link.label, tI18n)}
             {locked && requiredPlan && <span className="text-[9px] font-bold text-primary">🔒 {requiredPlan}</span>}
             {!locked && badge > 0 && (
               <span className="min-w-[16px] h-[16px] flex items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[9px] font-bold px-1">
