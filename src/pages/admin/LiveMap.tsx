@@ -694,6 +694,10 @@ export default function LiveMap() {
           endingSoon={endingSoonWorkers}
           alerts={alerts}
           bucket={bucket}
+          onSelectWorker={openWorkerFromActive}
+          onSelectAssignment={openWorkerFromAssignment}
+          onSelectNoGps={openWorkerFromNoGps}
+          onSelectLocation={openLocation}
         />
       ) : (
         <DesktopMapView
@@ -715,11 +719,30 @@ export default function LiveMap() {
           selectedWorkerId={selectedWorkerId}
           setSelectedWorkerId={setSelectedWorkerId}
           bucket={bucket}
+          onSelectWorker={openWorkerFromActive}
+          onSelectAssignment={openWorkerFromAssignment}
+          onSelectNoGps={openWorkerFromNoGps}
+          onSelectLocation={openLocation}
         />
       )}
+
+      {/* Fase 2A: drawers solo lectura */}
+      <WorkerDrawer
+        open={!!workerDrawerCtx}
+        onOpenChange={(v) => !v && setWorkerDrawerCtx(null)}
+        ctx={workerDrawerCtx}
+        isMobile={isMobile}
+      />
+      <LocationDrawer
+        open={!!locationDrawerCtx}
+        onOpenChange={(v) => !v && setLocationDrawerCtx(null)}
+        ctx={locationDrawerCtx}
+        isMobile={isMobile}
+      />
     </div>
   );
 }
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Chip filter bar
