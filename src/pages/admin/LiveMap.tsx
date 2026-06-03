@@ -1070,9 +1070,12 @@ function MobileIssueFirstView(props: MobileProps) {
             showLayer={showLayer}
             setShowLayer={setShowLayer}
             compact
+            onWorkerClick={onSelectWorker}
+            onLocationClick={onSelectLocation}
           />
         </div>
       )}
+
 
       {/* Hero issue card */}
       {issuesTotal === 0 ? (
