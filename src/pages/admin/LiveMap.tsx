@@ -287,17 +287,21 @@ export default function LiveMap() {
       .not("latitude", "is", null)
       .not("longitude", "is", null);
 
-    const libraryLocations: LiveMapLocation[] = (locationsData ?? []).map((l: any) => ({
-      id: l.id,
-      name: l.name,
-      latitude: l.latitude,
-      longitude: l.longitude,
-      geofence_radius: l.geofence_radius ?? 200,
-      city: l.city,
-    }));
+    const libraryLocations: LiveMapLocation[] = (locationsData ?? []).map((l: any) => {
+      addrMap.set(l.id, [l.city].filter(Boolean).join(", ") || null);
+      return {
+        id: l.id,
+        name: l.name,
+        latitude: l.latitude,
+        longitude: l.longitude,
+        geofence_radius: l.geofence_radius ?? 200,
+        city: l.city,
+      };
+    });
     const merged: LiveMapLocation[] = [...shiftV2Locations];
     for (const l of libraryLocations) if (!merged.find((m) => m.id === l.id)) merged.push(l);
     setLocations(merged);
+    setLocationAddressById(addrMap);
 
     // 8) Alertas
     const { data: alertsData } = await supabase
