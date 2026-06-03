@@ -213,6 +213,7 @@ export default function LiveMap() {
       if (sa.meeting_point_location_id) v2Ids.add(sa.meeting_point_location_id);
     }
     let shiftV2Locations: LiveMapLocation[] = [];
+    const addrMap = new Map<string, string | null>();
     if (v2Ids.size > 0) {
       const { data: v2 } = await supabase
         .from("locations_v2")
@@ -220,15 +221,19 @@ export default function LiveMap() {
         .in("id", Array.from(v2Ids))
         .not("latitude", "is", null)
         .not("longitude", "is", null);
-      shiftV2Locations = ((v2 ?? []) as any[]).map((l) => ({
-        id: l.id,
-        name: l.name ?? l.formatted_address ?? "Ubicación de turno",
-        latitude: l.latitude,
-        longitude: l.longitude,
-        geofence_radius: l.geofence_radius_meters ?? 200,
-        city: null,
-      }));
+      shiftV2Locations = ((v2 ?? []) as any[]).map((l) => {
+        addrMap.set(l.id, l.formatted_address ?? null);
+        return {
+          id: l.id,
+          name: l.name ?? l.formatted_address ?? "Ubicación de turno",
+          latitude: l.latitude,
+          longitude: l.longitude,
+          geofence_radius: l.geofence_radius_meters ?? 200,
+          city: null,
+        };
+      });
     }
+    setV2LocationIds(new Set(shiftV2Locations.map((l) => l.id)));
 
     // 6) Construir workers con/sin GPS
     const workersList: LiveMapWorker[] = [];
