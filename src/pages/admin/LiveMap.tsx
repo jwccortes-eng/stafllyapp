@@ -813,6 +813,10 @@ interface DesktopProps {
   selectedWorkerId: string | null;
   setSelectedWorkerId: (id: string | null) => void;
   bucket: Bucket;
+  onSelectWorker: (w: LiveMapWorker & { distToSite?: number; locationName?: string; elapsed?: number }) => void;
+  onSelectAssignment: (a: ScheduledAssignment) => void;
+  onSelectNoGps: (w: ClockedInNoGps) => void;
+  onSelectLocation: (loc: LiveMapLocation) => void;
 }
 
 function DesktopMapView(props: DesktopProps) {
@@ -820,7 +824,8 @@ function DesktopMapView(props: DesktopProps) {
     loading, workers, locations, showLayer, setShowLayer,
     searchQuery, setSearchQuery, filteredWorkers,
     noGps, late, noShow, outside, missing, endingSoon, alerts,
-    selectedWorkerId, setSelectedWorkerId, bucket,
+    bucket,
+    onSelectWorker, onSelectAssignment, onSelectNoGps, onSelectLocation,
   } = props;
 
   return (
