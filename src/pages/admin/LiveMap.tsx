@@ -1138,7 +1138,7 @@ function MobileIssueFirstView(props: MobileProps) {
 // Bloque de mapa reusable
 // ─────────────────────────────────────────────────────────────────────────────
 function MapBlock({
-  loading, workers, locations, showLayer, setShowLayer, compact,
+  loading, workers, locations, showLayer, setShowLayer, compact, onWorkerClick, onLocationClick,
 }: {
   loading: boolean;
   workers: LiveMapWorker[];
@@ -1146,6 +1146,8 @@ function MapBlock({
   showLayer: LiveMapLayer;
   setShowLayer: (l: LiveMapLayer) => void;
   compact?: boolean;
+  onWorkerClick?: (w: LiveMapWorker) => void;
+  onLocationClick?: (loc: LiveMapLocation) => void;
 }) {
   if (loading && workers.length === 0 && locations.length === 0) {
     return (
@@ -1168,7 +1170,14 @@ function MapBlock({
   }
   return (
     <>
-      <LiveOperationsMap workers={workers} locations={locations} showLayer={showLayer} />
+      <LiveOperationsMap
+        workers={workers}
+        locations={locations}
+        showLayer={showLayer}
+        onWorkerClick={onWorkerClick}
+        onLocationClick={onLocationClick}
+      />
+
       {!compact && (
         <div className="absolute top-3 left-3 flex items-center gap-1.5">
           <div className="inline-flex rounded-full border bg-background/90 backdrop-blur p-0.5 text-[11px]">
