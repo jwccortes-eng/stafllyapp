@@ -856,7 +856,7 @@ function DesktopMapView(props: DesktopProps) {
               emptyLabel="Sin no-shows"
             >
               {noShow.map((a) => (
-                <AssignmentRow key={`ns-${a.employee_id}-${a.start_time}`} a={a} tone="red" />
+                <AssignmentRow key={`ns-${a.employee_id}-${a.start_time}`} a={a} tone="red" onClick={() => onSelectAssignment(a)} />
               ))}
             </IssueSection>
 
@@ -870,7 +870,7 @@ function DesktopMapView(props: DesktopProps) {
               emptyLabel="Nadie llega tarde"
             >
               {late.map((a) => (
-                <AssignmentRow key={`la-${a.employee_id}-${a.start_time}`} a={a} tone="amber" />
+                <AssignmentRow key={`la-${a.employee_id}-${a.start_time}`} a={a} tone="amber" onClick={() => onSelectAssignment(a)} />
               ))}
             </IssueSection>
 
@@ -884,13 +884,7 @@ function DesktopMapView(props: DesktopProps) {
               emptyLabel="Todos dentro de zona"
             >
               {outside.map((w) => (
-                <WorkerRow
-                  key={`os-${w.employee_id}`}
-                  w={w}
-                  tone="red"
-                  open={selectedWorkerId === w.employee_id}
-                  onToggle={() => setSelectedWorkerId(selectedWorkerId === w.employee_id ? null : w.employee_id)}
-                />
+                <WorkerRow key={`os-${w.employee_id}`} w={w} tone="red" onClick={() => onSelectWorker(w)} />
               ))}
             </IssueSection>
 
@@ -904,7 +898,7 @@ function DesktopMapView(props: DesktopProps) {
               emptyLabel="Todos los asignados ya ficharon"
             >
               {missing.slice(0, 20).map((a) => (
-                <AssignmentRow key={`mi-${a.employee_id}-${a.start_time}`} a={a} tone="muted" />
+                <AssignmentRow key={`mi-${a.employee_id}-${a.start_time}`} a={a} tone="muted" onClick={() => onSelectAssignment(a)} />
               ))}
               {missing.length > 20 && (
                 <p className="text-[10px] text-muted-foreground px-2">+{missing.length - 20} más</p>
@@ -921,13 +915,7 @@ function DesktopMapView(props: DesktopProps) {
               emptyLabel="Sin cierres inminentes"
             >
               {endingSoon.map((w) => (
-                <WorkerRow
-                  key={`es-${w.employee_id}`}
-                  w={w}
-                  tone="amber"
-                  open={selectedWorkerId === w.employee_id}
-                  onToggle={() => setSelectedWorkerId(selectedWorkerId === w.employee_id ? null : w.employee_id)}
-                />
+                <WorkerRow key={`es-${w.employee_id}`} w={w} tone="amber" onClick={() => onSelectWorker(w)} />
               ))}
             </IssueSection>
 
@@ -941,13 +929,7 @@ function DesktopMapView(props: DesktopProps) {
               emptyLabel="No hay trabajadores fichados con GPS"
             >
               {filteredWorkers.map((w) => (
-                <WorkerRow
-                  key={`cl-${w.employee_id}`}
-                  w={w}
-                  tone="emerald"
-                  open={selectedWorkerId === w.employee_id}
-                  onToggle={() => setSelectedWorkerId(selectedWorkerId === w.employee_id ? null : w.employee_id)}
-                />
+                <WorkerRow key={`cl-${w.employee_id}`} w={w} tone="emerald" onClick={() => onSelectWorker(w)} />
               ))}
             </IssueSection>
 
@@ -961,9 +943,28 @@ function DesktopMapView(props: DesktopProps) {
               emptyLabel="Todos los fichados comparten GPS"
             >
               {noGps.map((w) => (
-                <NoGpsRow key={`ng-${w.employee_id}`} w={w} />
+                <NoGpsRow key={`ng-${w.employee_id}`} w={w} onClick={() => onSelectNoGps(w)} />
               ))}
             </IssueSection>
+
+            {/* Ubicaciones (Fase 2A: deep-link a perfil) */}
+            {bucket === "all" && locations.length > 0 && (
+              <IssueSection
+                title="Ubicaciones"
+                icon={<MapPin className="h-3 w-3" />}
+                tone="muted"
+                count={locations.length}
+                show
+                emptyLabel=""
+              >
+                {locations.slice(0, 10).map((loc) => (
+                  <LocationRow key={`loc-${loc.id}`} loc={loc} onClick={() => onSelectLocation(loc)} />
+                ))}
+                {locations.length > 10 && (
+                  <p className="text-[10px] text-muted-foreground px-2">+{locations.length - 10} más</p>
+                )}
+              </IssueSection>
+            )}
 
             {/* Alertas */}
             {alerts.length > 0 && (bucket === "all") && (
