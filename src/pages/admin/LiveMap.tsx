@@ -999,8 +999,11 @@ function DesktopMapView(props: DesktopProps) {
           locations={locations}
           showLayer={showLayer}
           setShowLayer={setShowLayer}
+          onWorkerClick={onSelectWorker}
+          onLocationClick={onSelectLocation}
         />
       </div>
+
     </div>
   );
 }
