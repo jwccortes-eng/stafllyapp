@@ -1024,12 +1024,17 @@ interface MobileProps {
   endingSoon: (LiveMapWorker & { distToSite?: number; locationName?: string; elapsed: number })[];
   alerts: ClockAlert[];
   bucket: Bucket;
+  onSelectWorker: (w: LiveMapWorker & { distToSite?: number; locationName?: string; elapsed?: number }) => void;
+  onSelectAssignment: (a: ScheduledAssignment) => void;
+  onSelectNoGps: (w: ClockedInNoGps) => void;
+  onSelectLocation: (loc: LiveMapLocation) => void;
 }
 
 function MobileIssueFirstView(props: MobileProps) {
   const {
     loading, mapOpen, setMapOpen, workers, locations, showLayer, setShowLayer,
     noGps, late, noShow, outside, missing, endingSoon, alerts, bucket,
+    onSelectWorker, onSelectAssignment, onSelectNoGps, onSelectLocation,
   } = props;
 
   const issuesTotal = noShow.length + late.length + outside.length + endingSoon.length;
