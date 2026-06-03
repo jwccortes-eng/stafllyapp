@@ -138,6 +138,12 @@ export default function LiveMap() {
   const [bucket, setBucket] = useState<Bucket>("all");
   const [dateScope, setDateScope] = useState<DateScope>("today");
   const [mobileMapOpen, setMobileMapOpen] = useState(false);
+  const [v2LocationIds, setV2LocationIds] = useState<Set<string>>(new Set());
+  const [locationAddressById, setLocationAddressById] = useState<Map<string, string | null>>(new Map());
+
+  // Fase 2A: drawers solo lectura
+  const [workerDrawerCtx, setWorkerDrawerCtx] = useState<WorkerDrawerContext | null>(null);
+  const [locationDrawerCtx, setLocationDrawerCtx] = useState<LocationDrawerContext | null>(null);
 
   const hasAccess = ["developer", "owner", "admin", "manager"].includes(role ?? "");
 
