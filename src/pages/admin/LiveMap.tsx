@@ -48,6 +48,13 @@ import {
 } from "@/components/maps/LiveOperationsMap";
 import { distanceMeters } from "@/lib/geo-helpers";
 import { differenceInMinutes, format, addDays } from "date-fns";
+import {
+  WorkerDrawer,
+  LocationDrawer,
+  type WorkerDrawerContext,
+  type LocationDrawerContext,
+  type WorkerStatus,
+} from "@/components/livemap/LiveMapDrawers";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Tipos locales
