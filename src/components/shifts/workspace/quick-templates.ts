@@ -1,22 +1,31 @@
 /**
- * Quick-create shift templates — frontend-only presets (v1).
+ * Quick-create shift templates — frontend-only presets (v2).
  *
- * No DB, no RLS, no notifications. Selecting a template patches the
- * existing ShiftFormState via the standard onPatch handler.
+ * v2 adds staffing-operation templates with smart time/transport defaults
+ * tuned for real catering/event operations (Quality Staff baseline).
  *
- * Safety rules:
- *  - Only safe, editable fields are touched (see SAFE_KEYS).
- *  - Never touch client, locations, meeting point, assigned workers,
+ * Safety rules (unchanged from v1):
+ *  - Only fields in SAFE_KEYS may be patched.
+ *  - "Fill empty only" — never overwrites operator input.
+ *  - Never touches client, locations, meeting point, assigned workers,
  *    publication status, payroll truth, traceability, or pay overrides.
- *  - "Fill empty only" semantics: a template never overwrites a value the
- *    operator has already typed. Calendar-selected date/time are preserved.
+ *  - `recommendation` is a soft hint surfaced in the UI, NEVER auto-written
+ *    into any field.
  */
 import type { ShiftFormState } from "../ShiftFormFields";
 
 export type QuickTemplateId =
+  // v2 operation templates
+  | "event_regular"
+  | "weekend_job"
+  | "event_by_hour"
+  | "event_by_day"
+  | "setup"
+  | "kitchen_floor_mixed"
+  // legacy role-only templates (kept for back-compat in any caller)
   | "meseros"
   | "cocina"
-  | "setup"
+  | "setup_legacy"
   | "bartender"
   | "driver"
   | "capitan"
@@ -28,6 +37,8 @@ export interface QuickTemplate {
   label: string;
   emoji: string;
   hint: string;
+  /** Optional soft hint shown under the template in the form. Not auto-written. */
+  recommendation?: string;
   /** Partial patch — only fields listed in SAFE_KEYS are accepted. */
   patch: SafePatch;
 }
@@ -38,7 +49,13 @@ type SafeKey =
   | "slots"
   | "notes"
   | "specialInstructions"
-  | "transportNotes";
+  | "transportNotes"
+  | "startTime"
+  | "endTime"
+  | "meetingTime"
+  | "transportRequired"
+  | "payType"
+  | "dayType";
 
 type SafePatch = Partial<Pick<ShiftFormState, SafeKey>>;
 
@@ -48,9 +65,154 @@ const SAFE_KEYS: readonly SafeKey[] = [
   "notes",
   "specialInstructions",
   "transportNotes",
+  "startTime",
+  "endTime",
+  "meetingTime",
+  "transportRequired",
+  "payType",
+  "dayType",
 ] as const;
 
-export const QUICK_TEMPLATES: readonly QuickTemplate[] = [
+/** Default value markers — a field is considered "empty" if it still holds
+ *  the form's default. Templates may override defaults without surprising
+ *  the operator. */
+const DEFAULT_MARKERS: Partial<Record<SafeKey, string>> = {
+  slots: "1",
+  startTime: "08:00",
+  endTime: "17:00",
+  // meetingTime default is "" so the generic empty-check covers it.
+};
+
+// ---------------------------------------------------------------------------
+// v2 — Staffing operation templates (primary)
+// ---------------------------------------------------------------------------
+
+export const OPERATION_TEMPLATES: readonly QuickTemplate[] = [
+  {
+    id: "event_regular",
+    label: "Evento regular",
+    emoji: "🎉",
+    hint: "Evento estándar de tarde-noche",
+    recommendation: "Convocatoria 10 minutos antes de la entrada.",
+    patch: {
+      title: "Evento",
+      slots: "4",
+      startTime: "17:00",
+      endTime: "23:30",
+      meetingTime: "16:50",
+      payType: "hourly",
+      notes:
+        "Evento regular. Llegar con uniforme completo. Confirmar punto de encuentro con el capitán.",
+      specialInstructions:
+        "Uniforme: camisa blanca, pantalón negro, zapatos negros cerrados, delantal. Cabello recogido.",
+    },
+  },
+  {
+    id: "weekend_job",
+    label: "Weekend Job",
+    emoji: "📅",
+    hint: "Trabajo de día completo (viernes/sábado/domingo)",
+    recommendation:
+      "Hora de salida puede quedar pendiente. Transporte sugerido activado.",
+    patch: {
+      title: "Weekend Job",
+      slots: "6",
+      startTime: "09:00",
+      meetingTime: "07:00",
+      // intentionally no endTime → operator decides / leaves pending
+      payType: "daily",
+      dayType: "full_day",
+      transportRequired: true,
+      transportNotes:
+        "Confirmar punto de salida con admin. Capacidad y vehículos por confirmar.",
+      notes:
+        "Weekend job. Día completo. Hora de salida puede ajustarse en sitio.",
+      specialInstructions:
+        "Ropa de trabajo cómoda. Llevar agua y snack. Uniforme según indicación del capitán.",
+    },
+  },
+  {
+    id: "event_by_hour",
+    label: "Evento por hora",
+    emoji: "⏱️",
+    hint: "Pago por hora trabajada",
+    recommendation: "Confirma hora de entrada y salida antes de publicar.",
+    patch: {
+      title: "Evento por hora",
+      slots: "3",
+      startTime: "17:00",
+      endTime: "22:00",
+      meetingTime: "16:50",
+      payType: "hourly",
+      notes:
+        "Evento con pago por hora. Confirmar entrada/salida exactas con el capitán.",
+    },
+  },
+  {
+    id: "event_by_day",
+    label: "Evento por día",
+    emoji: "🗓️",
+    hint: "Pago por día (day rate)",
+    recommendation:
+      "Day rate: la hora de salida es referencia, no afecta el pago.",
+    patch: {
+      title: "Evento por día",
+      slots: "4",
+      startTime: "09:00",
+      meetingTime: "08:30",
+      payType: "daily",
+      dayType: "full_day",
+      notes:
+        "Evento con pago por día. La hora de salida es referencia operativa.",
+    },
+  },
+  {
+    id: "setup",
+    label: "Setup / Montaje",
+    emoji: "🛠️",
+    hint: "Montaje previo al evento",
+    recommendation: "Coordinar acceso al sitio con el cliente.",
+    patch: {
+      title: "Setup / Montaje",
+      slots: "3",
+      startTime: "10:00",
+      endTime: "15:00",
+      meetingTime: "09:50",
+      payType: "hourly",
+      notes:
+        "Montaje del evento: mesas, sillas, decoración y logística previa al servicio.",
+      specialInstructions:
+        "Ropa de trabajo cómoda, zapatos cerrados. Se permite playera del staff.",
+    },
+  },
+  {
+    id: "kitchen_floor_mixed",
+    label: "Kitchen + Floor mixto",
+    emoji: "🍽️",
+    hint: "Evento con cocina y servicio combinados",
+    recommendation:
+      "Asigna capitán por área (cocina y piso) cuando sea posible.",
+    patch: {
+      title: "Cocina + Servicio",
+      slots: "6",
+      startTime: "16:00",
+      endTime: "23:30",
+      meetingTime: "15:50",
+      payType: "hourly",
+      notes:
+        "Evento mixto. Equipo dividido entre cocina y servicio de piso. Coordinar con capitán por área.",
+      specialInstructions:
+        "Cocina: filipina y antideslizantes. Piso: camisa blanca, pantalón negro, delantal.",
+    },
+  },
+];
+
+// ---------------------------------------------------------------------------
+// Legacy role-only templates — kept so any v1 caller keeps working.
+// New UI should prefer OPERATION_TEMPLATES.
+// ---------------------------------------------------------------------------
+
+export const ROLE_TEMPLATES: readonly QuickTemplate[] = [
   {
     id: "meseros",
     label: "Meseros",
@@ -80,10 +242,10 @@ export const QUICK_TEMPLATES: readonly QuickTemplate[] = [
     },
   },
   {
-    id: "setup",
-    label: "Setup / Montaje",
+    id: "setup_legacy",
+    label: "Setup / Montaje (rol)",
     emoji: "🛠️",
-    hint: "Montaje y desmontaje del evento",
+    hint: "Solo personal de montaje",
     patch: {
       title: "Setup / Montaje",
       slots: "3",
@@ -115,6 +277,7 @@ export const QUICK_TEMPLATES: readonly QuickTemplate[] = [
     patch: {
       title: "Driver",
       slots: "1",
+      transportRequired: true,
       notes:
         "Transporte de personal o equipo al sitio del evento.",
       specialInstructions:
@@ -167,9 +330,16 @@ export const QUICK_TEMPLATES: readonly QuickTemplate[] = [
   },
 ];
 
+/** Combined list — operation templates come first so they take visual priority. */
+export const QUICK_TEMPLATES: readonly QuickTemplate[] = [
+  ...OPERATION_TEMPLATES,
+  ...ROLE_TEMPLATES,
+];
+
 /**
  * Build a "fill empty only" patch from a template against the current form state.
- * Fields the operator already filled are never overwritten.
+ * Fields the operator already filled are never overwritten. Default values
+ * (see DEFAULT_MARKERS) are considered empty so templates can set them.
  */
 export function buildTemplatePatch(
   current: ShiftFormState,
@@ -181,13 +351,12 @@ export function buildTemplatePatch(
     if (proposed === undefined) continue;
 
     const existing = current[key];
+    const marker = DEFAULT_MARKERS[key];
     const existingEmpty =
       existing === undefined ||
       existing === null ||
       (typeof existing === "string" && existing.trim() === "") ||
-      // "slots" default is "1" — treat the default as empty so templates can
-      // bump headcount; any other typed value is respected.
-      (key === "slots" && existing === "1");
+      (marker !== undefined && existing === marker);
 
     if (existingEmpty) {
       (out as any)[key] = proposed;
