@@ -1263,23 +1263,19 @@ function MobileIssueChip({ label, count, tone }: { label: string; count: number;
 }
 
 function WorkerRow({
-  w, tone, open, onToggle,
+  w, tone, onClick,
 }: {
   w: LiveMapWorker & { distToSite?: number; locationName?: string; elapsed: number };
   tone: Tone;
-  open: boolean;
-  onToggle: () => void;
+  onClick: () => void;
 }) {
   const t = toneClasses[tone];
   const initials = (w.employee_name || "?").split(" ").map(n => n[0]).filter(Boolean).slice(0, 2).join("").toUpperCase();
   const onSite = w.distToSite != null && w.distToSite <= OFFSITE_THRESHOLD_M;
   return (
     <button
-      onClick={onToggle}
-      className={cn(
-        "w-full text-left px-2.5 py-2 rounded-lg transition-colors",
-        open ? "bg-muted/40" : "hover:bg-muted/20",
-      )}
+      onClick={onClick}
+      className="w-full text-left px-2.5 py-2 rounded-lg transition-colors hover:bg-muted/30 focus:outline-none focus:ring-2 focus:ring-ring"
     >
       <div className="flex items-center gap-2.5">
         <div className="relative shrink-0">
@@ -1305,40 +1301,19 @@ function WorkerRow({
           )}
         </div>
       </div>
-
-      {open && (
-        <div className="mt-2 pt-2 border-t border-border/30 grid grid-cols-1 gap-1">
-          {w.locationName && (
-            <span className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-              <MapPin className="h-3 w-3" /> {w.locationName}
-            </span>
-          )}
-          <span className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-            <Clock className="h-3 w-3" /> Entrada: {format(new Date(w.clock_in), "hh:mm a")}
-          </span>
-          <span className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-            <Wifi className="h-3 w-3" /> GPS: ±{Math.round(w.accuracy)}m
-          </span>
-          {w.phone && (
-            <a
-              href={`tel:${w.phone}`}
-              onClick={(e) => e.stopPropagation()}
-              className="flex items-center gap-1.5 text-[10px] text-primary hover:underline"
-            >
-              <Phone className="h-3 w-3" /> {w.phone}
-            </a>
-          )}
-        </div>
-      )}
     </button>
   );
 }
 
-function AssignmentRow({ a, tone }: { a: ScheduledAssignment; tone: Tone }) {
+function AssignmentRow({ a, tone, onClick }: { a: ScheduledAssignment; tone: Tone; onClick?: () => void }) {
   const t = toneClasses[tone];
   const initials = (a.employee_name || "?").split(" ").map(n => n[0]).filter(Boolean).slice(0, 2).join("").toUpperCase();
   return (
-    <div className="flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg hover:bg-muted/20">
+    <button
+      type="button"
+      onClick={onClick}
+      className="w-full text-left flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg hover:bg-muted/30 focus:outline-none focus:ring-2 focus:ring-ring"
+    >
       <div className={cn("h-7 w-7 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0", t.chip)}>
         {initials}
       </div>
@@ -1357,15 +1332,19 @@ function AssignmentRow({ a, tone }: { a: ScheduledAssignment; tone: Tone }) {
           <Phone className="h-3 w-3" />
         </a>
       )}
-    </div>
+    </button>
   );
 }
 
-function NoGpsRow({ w }: { w: ClockedInNoGps }) {
+function NoGpsRow({ w, onClick }: { w: ClockedInNoGps; onClick?: () => void }) {
   const t = toneClasses.amber;
   const initials = (w.employee_name || "?").split(" ").map(n => n[0]).filter(Boolean).slice(0, 2).join("").toUpperCase();
   return (
-    <div className="flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg hover:bg-muted/20">
+    <button
+      type="button"
+      onClick={onClick}
+      className="w-full text-left flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg hover:bg-muted/30 focus:outline-none focus:ring-2 focus:ring-ring"
+    >
       <div className={cn("h-7 w-7 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0", t.chip)}>
         {initials}
       </div>
@@ -1376,13 +1355,34 @@ function NoGpsRow({ w }: { w: ClockedInNoGps }) {
         </p>
       </div>
       {w.phone && (
-        <a href={`tel:${w.phone}`} className="text-primary hover:underline shrink-0">
+        <a href={`tel:${w.phone}`} className="text-primary hover:underline shrink-0" onClick={(e) => e.stopPropagation()}>
           <Phone className="h-3 w-3" />
         </a>
       )}
-    </div>
+    </button>
   );
 }
+
+function LocationRow({ loc, onClick }: { loc: LiveMapLocation; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="w-full text-left flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg hover:bg-muted/30 focus:outline-none focus:ring-2 focus:ring-ring"
+    >
+      <div className="h-7 w-7 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
+        <MapPin className="h-3.5 w-3.5" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-[11px] font-semibold truncate">{loc.name}</p>
+        <p className="text-[10px] text-muted-foreground truncate">
+          {loc.city || `${loc.latitude.toFixed(3)}, ${loc.longitude.toFixed(3)}`}
+        </p>
+      </div>
+    </button>
+  );
+}
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // KPI tarjetas
