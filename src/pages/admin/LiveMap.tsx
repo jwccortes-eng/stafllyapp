@@ -48,6 +48,13 @@ import {
 } from "@/components/maps/LiveOperationsMap";
 import { distanceMeters } from "@/lib/geo-helpers";
 import { differenceInMinutes, format, addDays } from "date-fns";
+import {
+  WorkerDrawer,
+  LocationDrawer,
+  type WorkerDrawerContext,
+  type LocationDrawerContext,
+  type WorkerStatus,
+} from "@/components/livemap/LiveMapDrawers";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Tipos locales
@@ -131,6 +138,12 @@ export default function LiveMap() {
   const [bucket, setBucket] = useState<Bucket>("all");
   const [dateScope, setDateScope] = useState<DateScope>("today");
   const [mobileMapOpen, setMobileMapOpen] = useState(false);
+  const [v2LocationIds, setV2LocationIds] = useState<Set<string>>(new Set());
+  const [locationAddressById, setLocationAddressById] = useState<Map<string, string | null>>(new Map());
+
+  // Fase 2A: drawers solo lectura
+  const [workerDrawerCtx, setWorkerDrawerCtx] = useState<WorkerDrawerContext | null>(null);
+  const [locationDrawerCtx, setLocationDrawerCtx] = useState<LocationDrawerContext | null>(null);
 
   const hasAccess = ["developer", "owner", "admin", "manager"].includes(role ?? "");
 
@@ -200,6 +213,7 @@ export default function LiveMap() {
       if (sa.meeting_point_location_id) v2Ids.add(sa.meeting_point_location_id);
     }
     let shiftV2Locations: LiveMapLocation[] = [];
+    const addrMap = new Map<string, string | null>();
     if (v2Ids.size > 0) {
       const { data: v2 } = await supabase
         .from("locations_v2")
@@ -207,15 +221,19 @@ export default function LiveMap() {
         .in("id", Array.from(v2Ids))
         .not("latitude", "is", null)
         .not("longitude", "is", null);
-      shiftV2Locations = ((v2 ?? []) as any[]).map((l) => ({
-        id: l.id,
-        name: l.name ?? l.formatted_address ?? "Ubicación de turno",
-        latitude: l.latitude,
-        longitude: l.longitude,
-        geofence_radius: l.geofence_radius_meters ?? 200,
-        city: null,
-      }));
+      shiftV2Locations = ((v2 ?? []) as any[]).map((l) => {
+        addrMap.set(l.id, l.formatted_address ?? null);
+        return {
+          id: l.id,
+          name: l.name ?? l.formatted_address ?? "Ubicación de turno",
+          latitude: l.latitude,
+          longitude: l.longitude,
+          geofence_radius: l.geofence_radius_meters ?? 200,
+          city: null,
+        };
+      });
     }
+    setV2LocationIds(new Set(shiftV2Locations.map((l) => l.id)));
 
     // 6) Construir workers con/sin GPS
     const workersList: LiveMapWorker[] = [];
@@ -269,17 +287,21 @@ export default function LiveMap() {
       .not("latitude", "is", null)
       .not("longitude", "is", null);
 
-    const libraryLocations: LiveMapLocation[] = (locationsData ?? []).map((l: any) => ({
-      id: l.id,
-      name: l.name,
-      latitude: l.latitude,
-      longitude: l.longitude,
-      geofence_radius: l.geofence_radius ?? 200,
-      city: l.city,
-    }));
+    const libraryLocations: LiveMapLocation[] = (locationsData ?? []).map((l: any) => {
+      addrMap.set(l.id, [l.city].filter(Boolean).join(", ") || null);
+      return {
+        id: l.id,
+        name: l.name,
+        latitude: l.latitude,
+        longitude: l.longitude,
+        geofence_radius: l.geofence_radius ?? 200,
+        city: l.city,
+      };
+    });
     const merged: LiveMapLocation[] = [...shiftV2Locations];
     for (const l of libraryLocations) if (!merged.find((m) => m.id === l.id)) merged.push(l);
     setLocations(merged);
+    setLocationAddressById(addrMap);
 
     // 8) Alertas
     const { data: alertsData } = await supabase
@@ -442,6 +464,117 @@ export default function LiveMap() {
 
   const totalClockedIn = workers.length + clockedNoGps.length;
 
+  // ─── Fase 2A: helpers para drawers (puros, sin escribir nada) ──────────────
+  const noShowIds = useMemo(() => new Set(noShowAssignments.map((a) => a.employee_id)), [noShowAssignments]);
+  const lateIds = useMemo(() => new Set(lateAssignments.map((a) => a.employee_id)), [lateAssignments]);
+  const missingIds = useMemo(() => new Set(missingAssignments.map((a) => a.employee_id)), [missingAssignments]);
+  const outsideIds = useMemo(() => new Set(outsideGeofenceWorkers.map((w) => w.employee_id)), [outsideGeofenceWorkers]);
+  const endingSoonIds = useMemo(() => new Set(endingSoonWorkers.map((w) => w.employee_id)), [endingSoonWorkers]);
+  const noGpsIds = useMemo(() => new Set(clockedNoGps.map((w) => w.employee_id)), [clockedNoGps]);
+
+  const getStatus = (employee_id: string): WorkerStatus => {
+    if (noShowIds.has(employee_id)) return "no_show";
+    if (lateIds.has(employee_id)) return "late";
+    if (outsideIds.has(employee_id)) return "outside";
+    if (endingSoonIds.has(employee_id)) return "ending_soon";
+    if (noGpsIds.has(employee_id)) return "no_gps";
+    if (activeEmployeeIds.has(employee_id)) return "clocked_in";
+    if (missingIds.has(employee_id)) return "missing";
+    return "unknown";
+  };
+
+  const openWorkerFromActive = (
+    w: LiveMapWorker & { distToSite?: number; locationName?: string; elapsed?: number },
+  ) => {
+    const openAlerts = alerts.filter((a) => a.employee_id === w.employee_id).length;
+    setWorkerDrawerCtx({
+      employee_id: w.employee_id,
+      employee_name: w.employee_name,
+      phone: w.phone ?? null,
+      status: getStatus(w.employee_id),
+      shift_title: w.shift_title || null,
+      client_name: w.client_name || null,
+      location_name: w.locationName ?? null,
+      scheduled_end: activeShiftEndByEmp.get(w.employee_id) ?? null,
+      clock_in: w.clock_in,
+      latitude: w.latitude,
+      longitude: w.longitude,
+      accuracy: w.accuracy ?? null,
+      dist_to_site_m: w.distToSite ?? null,
+      open_alerts: openAlerts,
+    });
+  };
+
+  const openWorkerFromAssignment = (a: ScheduledAssignment) => {
+    const openAlerts = alerts.filter((al) => al.employee_id === a.employee_id).length;
+    setWorkerDrawerCtx({
+      employee_id: a.employee_id,
+      employee_name: a.employee_name,
+      phone: a.phone,
+      status: getStatus(a.employee_id),
+      shift_title: a.shift_title,
+      client_name: null,
+      location_name: a.location_name,
+      scheduled_start: a.start_time || null,
+      scheduled_end: a.end_time,
+      date: a.date,
+      clock_in: null,
+      open_alerts: openAlerts,
+    });
+  };
+
+  const openWorkerFromNoGps = (w: ClockedInNoGps) => {
+    const openAlerts = alerts.filter((al) => al.employee_id === w.employee_id).length;
+    setWorkerDrawerCtx({
+      employee_id: w.employee_id,
+      employee_name: w.employee_name,
+      phone: w.phone,
+      status: "no_gps",
+      shift_title: w.shift_title,
+      client_name: w.client_name,
+      scheduled_end: w.scheduled_end ?? null,
+      clock_in: w.clock_in,
+      open_alerts: openAlerts,
+    });
+  };
+
+  const openLocation = (loc: LiveMapLocation) => {
+    const source: "v2" | "legacy" = v2LocationIds.has(loc.id) ? "v2" : "legacy";
+    // Asignados a este sitio (por nombre, único campo disponible en assignments)
+    const matchByName = (name?: string | null) => !!name && name.trim().toLowerCase() === loc.name.trim().toLowerCase();
+    const assigned = scheduledAssignments.filter((a) => matchByName(a.location_name));
+    const lateAtLoc = lateAssignments.filter((a) => matchByName(a.location_name)).length;
+    const noShowAtLoc = noShowAssignments.filter((a) => matchByName(a.location_name)).length;
+    const missingAtLoc = missingAssignments.filter((a) => matchByName(a.location_name)).length;
+    const clockedHere = workersWithDistance.filter(
+      (w) => w.distToSite != null && w.locationName === loc.name && w.distToSite <= OFFSITE_THRESHOLD_M,
+    ).length;
+    const outsideAtLoc = workersWithDistance.filter(
+      (w) => w.locationName === loc.name && w.distToSite != null && w.distToSite > OFFSITE_THRESHOLD_M,
+    ).length;
+
+    setLocationDrawerCtx({
+      id: loc.id,
+      name: loc.name,
+      address: locationAddressById.get(loc.id) ?? null,
+      city: loc.city ?? null,
+      geofence_radius_m: loc.geofence_radius ?? null,
+      latitude: loc.latitude,
+      longitude: loc.longitude,
+      source,
+      assigned_today: assigned.length,
+      clocked_here: clockedHere,
+      missing_here: missingAtLoc,
+      issues: {
+        late: lateAtLoc,
+        no_show: noShowAtLoc,
+        missing: missingAtLoc,
+        outside: outsideAtLoc,
+      },
+    });
+  };
+
+
   // ─── Búsqueda y filtro por bucket ───────────────────────────────────────────
   const q = searchQuery.trim().toLowerCase();
   const matchQ = (s: string) => !q || s.toLowerCase().includes(q);
@@ -561,6 +694,10 @@ export default function LiveMap() {
           endingSoon={endingSoonWorkers}
           alerts={alerts}
           bucket={bucket}
+          onSelectWorker={openWorkerFromActive}
+          onSelectAssignment={openWorkerFromAssignment}
+          onSelectNoGps={openWorkerFromNoGps}
+          onSelectLocation={openLocation}
         />
       ) : (
         <DesktopMapView
@@ -582,11 +719,30 @@ export default function LiveMap() {
           selectedWorkerId={selectedWorkerId}
           setSelectedWorkerId={setSelectedWorkerId}
           bucket={bucket}
+          onSelectWorker={openWorkerFromActive}
+          onSelectAssignment={openWorkerFromAssignment}
+          onSelectNoGps={openWorkerFromNoGps}
+          onSelectLocation={openLocation}
         />
       )}
+
+      {/* Fase 2A: drawers solo lectura */}
+      <WorkerDrawer
+        open={!!workerDrawerCtx}
+        onOpenChange={(v) => !v && setWorkerDrawerCtx(null)}
+        ctx={workerDrawerCtx}
+        isMobile={isMobile}
+      />
+      <LocationDrawer
+        open={!!locationDrawerCtx}
+        onOpenChange={(v) => !v && setLocationDrawerCtx(null)}
+        ctx={locationDrawerCtx}
+        isMobile={isMobile}
+      />
     </div>
   );
 }
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Chip filter bar
@@ -657,6 +813,10 @@ interface DesktopProps {
   selectedWorkerId: string | null;
   setSelectedWorkerId: (id: string | null) => void;
   bucket: Bucket;
+  onSelectWorker: (w: LiveMapWorker & { distToSite?: number; locationName?: string; elapsed?: number }) => void;
+  onSelectAssignment: (a: ScheduledAssignment) => void;
+  onSelectNoGps: (w: ClockedInNoGps) => void;
+  onSelectLocation: (loc: LiveMapLocation) => void;
 }
 
 function DesktopMapView(props: DesktopProps) {
@@ -664,7 +824,8 @@ function DesktopMapView(props: DesktopProps) {
     loading, workers, locations, showLayer, setShowLayer,
     searchQuery, setSearchQuery, filteredWorkers,
     noGps, late, noShow, outside, missing, endingSoon, alerts,
-    selectedWorkerId, setSelectedWorkerId, bucket,
+    bucket,
+    onSelectWorker, onSelectAssignment, onSelectNoGps, onSelectLocation,
   } = props;
 
   return (
@@ -695,7 +856,7 @@ function DesktopMapView(props: DesktopProps) {
               emptyLabel="Sin no-shows"
             >
               {noShow.map((a) => (
-                <AssignmentRow key={`ns-${a.employee_id}-${a.start_time}`} a={a} tone="red" />
+                <AssignmentRow key={`ns-${a.employee_id}-${a.start_time}`} a={a} tone="red" onClick={() => onSelectAssignment(a)} />
               ))}
             </IssueSection>
 
@@ -709,7 +870,7 @@ function DesktopMapView(props: DesktopProps) {
               emptyLabel="Nadie llega tarde"
             >
               {late.map((a) => (
-                <AssignmentRow key={`la-${a.employee_id}-${a.start_time}`} a={a} tone="amber" />
+                <AssignmentRow key={`la-${a.employee_id}-${a.start_time}`} a={a} tone="amber" onClick={() => onSelectAssignment(a)} />
               ))}
             </IssueSection>
 
@@ -723,13 +884,7 @@ function DesktopMapView(props: DesktopProps) {
               emptyLabel="Todos dentro de zona"
             >
               {outside.map((w) => (
-                <WorkerRow
-                  key={`os-${w.employee_id}`}
-                  w={w}
-                  tone="red"
-                  open={selectedWorkerId === w.employee_id}
-                  onToggle={() => setSelectedWorkerId(selectedWorkerId === w.employee_id ? null : w.employee_id)}
-                />
+                <WorkerRow key={`os-${w.employee_id}`} w={w} tone="red" onClick={() => onSelectWorker(w)} />
               ))}
             </IssueSection>
 
@@ -743,7 +898,7 @@ function DesktopMapView(props: DesktopProps) {
               emptyLabel="Todos los asignados ya ficharon"
             >
               {missing.slice(0, 20).map((a) => (
-                <AssignmentRow key={`mi-${a.employee_id}-${a.start_time}`} a={a} tone="muted" />
+                <AssignmentRow key={`mi-${a.employee_id}-${a.start_time}`} a={a} tone="muted" onClick={() => onSelectAssignment(a)} />
               ))}
               {missing.length > 20 && (
                 <p className="text-[10px] text-muted-foreground px-2">+{missing.length - 20} más</p>
@@ -760,13 +915,7 @@ function DesktopMapView(props: DesktopProps) {
               emptyLabel="Sin cierres inminentes"
             >
               {endingSoon.map((w) => (
-                <WorkerRow
-                  key={`es-${w.employee_id}`}
-                  w={w}
-                  tone="amber"
-                  open={selectedWorkerId === w.employee_id}
-                  onToggle={() => setSelectedWorkerId(selectedWorkerId === w.employee_id ? null : w.employee_id)}
-                />
+                <WorkerRow key={`es-${w.employee_id}`} w={w} tone="amber" onClick={() => onSelectWorker(w)} />
               ))}
             </IssueSection>
 
@@ -780,13 +929,7 @@ function DesktopMapView(props: DesktopProps) {
               emptyLabel="No hay trabajadores fichados con GPS"
             >
               {filteredWorkers.map((w) => (
-                <WorkerRow
-                  key={`cl-${w.employee_id}`}
-                  w={w}
-                  tone="emerald"
-                  open={selectedWorkerId === w.employee_id}
-                  onToggle={() => setSelectedWorkerId(selectedWorkerId === w.employee_id ? null : w.employee_id)}
-                />
+                <WorkerRow key={`cl-${w.employee_id}`} w={w} tone="emerald" onClick={() => onSelectWorker(w)} />
               ))}
             </IssueSection>
 
@@ -800,9 +943,28 @@ function DesktopMapView(props: DesktopProps) {
               emptyLabel="Todos los fichados comparten GPS"
             >
               {noGps.map((w) => (
-                <NoGpsRow key={`ng-${w.employee_id}`} w={w} />
+                <NoGpsRow key={`ng-${w.employee_id}`} w={w} onClick={() => onSelectNoGps(w)} />
               ))}
             </IssueSection>
+
+            {/* Ubicaciones (Fase 2A: deep-link a perfil) */}
+            {bucket === "all" && locations.length > 0 && (
+              <IssueSection
+                title="Ubicaciones"
+                icon={<MapPin className="h-3 w-3" />}
+                tone="muted"
+                count={locations.length}
+                show
+                emptyLabel=""
+              >
+                {locations.slice(0, 10).map((loc) => (
+                  <LocationRow key={`loc-${loc.id}`} loc={loc} onClick={() => onSelectLocation(loc)} />
+                ))}
+                {locations.length > 10 && (
+                  <p className="text-[10px] text-muted-foreground px-2">+{locations.length - 10} más</p>
+                )}
+              </IssueSection>
+            )}
 
             {/* Alertas */}
             {alerts.length > 0 && (bucket === "all") && (
@@ -862,12 +1024,17 @@ interface MobileProps {
   endingSoon: (LiveMapWorker & { distToSite?: number; locationName?: string; elapsed: number })[];
   alerts: ClockAlert[];
   bucket: Bucket;
+  onSelectWorker: (w: LiveMapWorker & { distToSite?: number; locationName?: string; elapsed?: number }) => void;
+  onSelectAssignment: (a: ScheduledAssignment) => void;
+  onSelectNoGps: (w: ClockedInNoGps) => void;
+  onSelectLocation: (loc: LiveMapLocation) => void;
 }
 
 function MobileIssueFirstView(props: MobileProps) {
   const {
     loading, mapOpen, setMapOpen, workers, locations, showLayer, setShowLayer,
     noGps, late, noShow, outside, missing, endingSoon, alerts, bucket,
+    onSelectWorker, onSelectAssignment, onSelectNoGps, onSelectLocation,
   } = props;
 
   const issuesTotal = noShow.length + late.length + outside.length + endingSoon.length;
@@ -923,27 +1090,32 @@ function MobileIssueFirstView(props: MobileProps) {
 
       {/* Listas priorizadas */}
       <MobileSection title="No-show" tone="red" count={noShow.length} show={bucket === "all" || bucket === "no_show"} emptyLabel="Sin no-shows">
-        {noShow.map((a) => <AssignmentRow key={`mns-${a.employee_id}-${a.start_time}`} a={a} tone="red" />)}
+        {noShow.map((a) => <AssignmentRow key={`mns-${a.employee_id}-${a.start_time}`} a={a} tone="red" onClick={() => onSelectAssignment(a)} />)}
       </MobileSection>
       <MobileSection title="Tarde" tone="amber" count={late.length} show={bucket === "all" || bucket === "late"} emptyLabel="Nadie llega tarde">
-        {late.map((a) => <AssignmentRow key={`mla-${a.employee_id}-${a.start_time}`} a={a} tone="amber" />)}
+        {late.map((a) => <AssignmentRow key={`mla-${a.employee_id}-${a.start_time}`} a={a} tone="amber" onClick={() => onSelectAssignment(a)} />)}
       </MobileSection>
       <MobileSection title="Fuera de zona" tone="red" count={outside.length} show={bucket === "all" || bucket === "outside"} emptyLabel="Todos dentro de zona">
-        {outside.map((w) => <WorkerRow key={`mos-${w.employee_id}`} w={w} tone="red" open={false} onToggle={() => {}} />)}
+        {outside.map((w) => <WorkerRow key={`mos-${w.employee_id}`} w={w} tone="red" onClick={() => onSelectWorker(w)} />)}
       </MobileSection>
       <MobileSection title="Termina pronto" tone="amber" count={endingSoon.length} show={bucket === "all" || bucket === "ending_soon"} emptyLabel="Sin cierres inminentes">
-        {endingSoon.map((w) => <WorkerRow key={`mes-${w.employee_id}`} w={w} tone="amber" open={false} onToggle={() => {}} />)}
+        {endingSoon.map((w) => <WorkerRow key={`mes-${w.employee_id}`} w={w} tone="amber" onClick={() => onSelectWorker(w)} />)}
       </MobileSection>
       <MobileSection title="Sin fichaje" tone="muted" count={missing.length} show={bucket === "all" || bucket === "missing"} emptyLabel="Todos los asignados ya ficharon">
-        {missing.slice(0, 20).map((a) => <AssignmentRow key={`mmi-${a.employee_id}-${a.start_time}`} a={a} tone="muted" />)}
+        {missing.slice(0, 20).map((a) => <AssignmentRow key={`mmi-${a.employee_id}-${a.start_time}`} a={a} tone="muted" onClick={() => onSelectAssignment(a)} />)}
         {missing.length > 20 && <p className="text-[10px] text-muted-foreground px-2">+{missing.length - 20} más</p>}
       </MobileSection>
       <MobileSection title="Fichados" tone="emerald" count={workers.length} show={bucket === "all" || bucket === "clocked_in"} emptyLabel="No hay trabajadores fichados con GPS">
-        {workers.map((w) => <WorkerRow key={`mcl-${w.employee_id}`} w={w} tone="emerald" open={false} onToggle={() => {}} />)}
+        {workers.map((w) => <WorkerRow key={`mcl-${w.employee_id}`} w={w} tone="emerald" onClick={() => onSelectWorker(w)} />)}
       </MobileSection>
       <MobileSection title="Sin GPS" tone="amber" count={noGps.length} show={bucket === "all" || bucket === "no_gps"} emptyLabel="Todos comparten GPS">
-        {noGps.map((w) => <NoGpsRow key={`mng-${w.employee_id}`} w={w} />)}
+        {noGps.map((w) => <NoGpsRow key={`mng-${w.employee_id}`} w={w} onClick={() => onSelectNoGps(w)} />)}
       </MobileSection>
+      {bucket === "all" && locations.length > 0 && (
+        <MobileSection title="Ubicaciones" tone="muted" count={locations.length} show emptyLabel="">
+          {locations.slice(0, 10).map((loc) => <LocationRow key={`mloc-${loc.id}`} loc={loc} onClick={() => onSelectLocation(loc)} />)}
+        </MobileSection>
+      )}
 
       {alerts.length > 0 && bucket === "all" && (
         <MobileSection title="Alertas recientes" tone="red" count={alerts.length} show emptyLabel="">
@@ -1102,23 +1274,19 @@ function MobileIssueChip({ label, count, tone }: { label: string; count: number;
 }
 
 function WorkerRow({
-  w, tone, open, onToggle,
+  w, tone, onClick,
 }: {
   w: LiveMapWorker & { distToSite?: number; locationName?: string; elapsed: number };
   tone: Tone;
-  open: boolean;
-  onToggle: () => void;
+  onClick: () => void;
 }) {
   const t = toneClasses[tone];
   const initials = (w.employee_name || "?").split(" ").map(n => n[0]).filter(Boolean).slice(0, 2).join("").toUpperCase();
   const onSite = w.distToSite != null && w.distToSite <= OFFSITE_THRESHOLD_M;
   return (
     <button
-      onClick={onToggle}
-      className={cn(
-        "w-full text-left px-2.5 py-2 rounded-lg transition-colors",
-        open ? "bg-muted/40" : "hover:bg-muted/20",
-      )}
+      onClick={onClick}
+      className="w-full text-left px-2.5 py-2 rounded-lg transition-colors hover:bg-muted/30 focus:outline-none focus:ring-2 focus:ring-ring"
     >
       <div className="flex items-center gap-2.5">
         <div className="relative shrink-0">
@@ -1144,40 +1312,19 @@ function WorkerRow({
           )}
         </div>
       </div>
-
-      {open && (
-        <div className="mt-2 pt-2 border-t border-border/30 grid grid-cols-1 gap-1">
-          {w.locationName && (
-            <span className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-              <MapPin className="h-3 w-3" /> {w.locationName}
-            </span>
-          )}
-          <span className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-            <Clock className="h-3 w-3" /> Entrada: {format(new Date(w.clock_in), "hh:mm a")}
-          </span>
-          <span className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-            <Wifi className="h-3 w-3" /> GPS: ±{Math.round(w.accuracy)}m
-          </span>
-          {w.phone && (
-            <a
-              href={`tel:${w.phone}`}
-              onClick={(e) => e.stopPropagation()}
-              className="flex items-center gap-1.5 text-[10px] text-primary hover:underline"
-            >
-              <Phone className="h-3 w-3" /> {w.phone}
-            </a>
-          )}
-        </div>
-      )}
     </button>
   );
 }
 
-function AssignmentRow({ a, tone }: { a: ScheduledAssignment; tone: Tone }) {
+function AssignmentRow({ a, tone, onClick }: { a: ScheduledAssignment; tone: Tone; onClick?: () => void }) {
   const t = toneClasses[tone];
   const initials = (a.employee_name || "?").split(" ").map(n => n[0]).filter(Boolean).slice(0, 2).join("").toUpperCase();
   return (
-    <div className="flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg hover:bg-muted/20">
+    <button
+      type="button"
+      onClick={onClick}
+      className="w-full text-left flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg hover:bg-muted/30 focus:outline-none focus:ring-2 focus:ring-ring"
+    >
       <div className={cn("h-7 w-7 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0", t.chip)}>
         {initials}
       </div>
@@ -1196,15 +1343,19 @@ function AssignmentRow({ a, tone }: { a: ScheduledAssignment; tone: Tone }) {
           <Phone className="h-3 w-3" />
         </a>
       )}
-    </div>
+    </button>
   );
 }
 
-function NoGpsRow({ w }: { w: ClockedInNoGps }) {
+function NoGpsRow({ w, onClick }: { w: ClockedInNoGps; onClick?: () => void }) {
   const t = toneClasses.amber;
   const initials = (w.employee_name || "?").split(" ").map(n => n[0]).filter(Boolean).slice(0, 2).join("").toUpperCase();
   return (
-    <div className="flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg hover:bg-muted/20">
+    <button
+      type="button"
+      onClick={onClick}
+      className="w-full text-left flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg hover:bg-muted/30 focus:outline-none focus:ring-2 focus:ring-ring"
+    >
       <div className={cn("h-7 w-7 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0", t.chip)}>
         {initials}
       </div>
@@ -1215,13 +1366,34 @@ function NoGpsRow({ w }: { w: ClockedInNoGps }) {
         </p>
       </div>
       {w.phone && (
-        <a href={`tel:${w.phone}`} className="text-primary hover:underline shrink-0">
+        <a href={`tel:${w.phone}`} className="text-primary hover:underline shrink-0" onClick={(e) => e.stopPropagation()}>
           <Phone className="h-3 w-3" />
         </a>
       )}
-    </div>
+    </button>
   );
 }
+
+function LocationRow({ loc, onClick }: { loc: LiveMapLocation; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="w-full text-left flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg hover:bg-muted/30 focus:outline-none focus:ring-2 focus:ring-ring"
+    >
+      <div className="h-7 w-7 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
+        <MapPin className="h-3.5 w-3.5" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-[11px] font-semibold truncate">{loc.name}</p>
+        <p className="text-[10px] text-muted-foreground truncate">
+          {loc.city || `${loc.latitude.toFixed(3)}, ${loc.longitude.toFixed(3)}`}
+        </p>
+      </div>
+    </button>
+  );
+}
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // KPI tarjetas
