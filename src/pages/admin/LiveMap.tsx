@@ -464,6 +464,117 @@ export default function LiveMap() {
 
   const totalClockedIn = workers.length + clockedNoGps.length;
 
+  // ─── Fase 2A: helpers para drawers (puros, sin escribir nada) ──────────────
+  const noShowIds = useMemo(() => new Set(noShowAssignments.map((a) => a.employee_id)), [noShowAssignments]);
+  const lateIds = useMemo(() => new Set(lateAssignments.map((a) => a.employee_id)), [lateAssignments]);
+  const missingIds = useMemo(() => new Set(missingAssignments.map((a) => a.employee_id)), [missingAssignments]);
+  const outsideIds = useMemo(() => new Set(outsideGeofenceWorkers.map((w) => w.employee_id)), [outsideGeofenceWorkers]);
+  const endingSoonIds = useMemo(() => new Set(endingSoonWorkers.map((w) => w.employee_id)), [endingSoonWorkers]);
+  const noGpsIds = useMemo(() => new Set(clockedNoGps.map((w) => w.employee_id)), [clockedNoGps]);
+
+  const getStatus = (employee_id: string): WorkerStatus => {
+    if (noShowIds.has(employee_id)) return "no_show";
+    if (lateIds.has(employee_id)) return "late";
+    if (outsideIds.has(employee_id)) return "outside";
+    if (endingSoonIds.has(employee_id)) return "ending_soon";
+    if (noGpsIds.has(employee_id)) return "no_gps";
+    if (activeEmployeeIds.has(employee_id)) return "clocked_in";
+    if (missingIds.has(employee_id)) return "missing";
+    return "unknown";
+  };
+
+  const openWorkerFromActive = (
+    w: LiveMapWorker & { distToSite?: number; locationName?: string; elapsed?: number },
+  ) => {
+    const openAlerts = alerts.filter((a) => a.employee_id === w.employee_id).length;
+    setWorkerDrawerCtx({
+      employee_id: w.employee_id,
+      employee_name: w.employee_name,
+      phone: w.phone ?? null,
+      status: getStatus(w.employee_id),
+      shift_title: w.shift_title || null,
+      client_name: w.client_name || null,
+      location_name: w.locationName ?? null,
+      scheduled_end: activeShiftEndByEmp.get(w.employee_id) ?? null,
+      clock_in: w.clock_in,
+      latitude: w.latitude,
+      longitude: w.longitude,
+      accuracy: w.accuracy ?? null,
+      dist_to_site_m: w.distToSite ?? null,
+      open_alerts: openAlerts,
+    });
+  };
+
+  const openWorkerFromAssignment = (a: ScheduledAssignment) => {
+    const openAlerts = alerts.filter((al) => al.employee_id === a.employee_id).length;
+    setWorkerDrawerCtx({
+      employee_id: a.employee_id,
+      employee_name: a.employee_name,
+      phone: a.phone,
+      status: getStatus(a.employee_id),
+      shift_title: a.shift_title,
+      client_name: null,
+      location_name: a.location_name,
+      scheduled_start: a.start_time || null,
+      scheduled_end: a.end_time,
+      date: a.date,
+      clock_in: null,
+      open_alerts: openAlerts,
+    });
+  };
+
+  const openWorkerFromNoGps = (w: ClockedInNoGps) => {
+    const openAlerts = alerts.filter((al) => al.employee_id === w.employee_id).length;
+    setWorkerDrawerCtx({
+      employee_id: w.employee_id,
+      employee_name: w.employee_name,
+      phone: w.phone,
+      status: "no_gps",
+      shift_title: w.shift_title,
+      client_name: w.client_name,
+      scheduled_end: w.scheduled_end ?? null,
+      clock_in: w.clock_in,
+      open_alerts: openAlerts,
+    });
+  };
+
+  const openLocation = (loc: LiveMapLocation) => {
+    const source: "v2" | "legacy" = v2LocationIds.has(loc.id) ? "v2" : "legacy";
+    // Asignados a este sitio (por nombre, único campo disponible en assignments)
+    const matchByName = (name?: string | null) => !!name && name.trim().toLowerCase() === loc.name.trim().toLowerCase();
+    const assigned = scheduledAssignments.filter((a) => matchByName(a.location_name));
+    const lateAtLoc = lateAssignments.filter((a) => matchByName(a.location_name)).length;
+    const noShowAtLoc = noShowAssignments.filter((a) => matchByName(a.location_name)).length;
+    const missingAtLoc = missingAssignments.filter((a) => matchByName(a.location_name)).length;
+    const clockedHere = workersWithDistance.filter(
+      (w) => w.distToSite != null && w.locationName === loc.name && w.distToSite <= OFFSITE_THRESHOLD_M,
+    ).length;
+    const outsideAtLoc = workersWithDistance.filter(
+      (w) => w.locationName === loc.name && w.distToSite != null && w.distToSite > OFFSITE_THRESHOLD_M,
+    ).length;
+
+    setLocationDrawerCtx({
+      id: loc.id,
+      name: loc.name,
+      address: locationAddressById.get(loc.id) ?? null,
+      city: loc.city ?? null,
+      geofence_radius_m: loc.geofence_radius ?? null,
+      latitude: loc.latitude,
+      longitude: loc.longitude,
+      source,
+      assigned_today: assigned.length,
+      clocked_here: clockedHere,
+      missing_here: missingAtLoc,
+      issues: {
+        late: lateAtLoc,
+        no_show: noShowAtLoc,
+        missing: missingAtLoc,
+        outside: outsideAtLoc,
+      },
+    });
+  };
+
+
   // ─── Búsqueda y filtro por bucket ───────────────────────────────────────────
   const q = searchQuery.trim().toLowerCase();
   const matchQ = (s: string) => !q || s.toLowerCase().includes(q);
