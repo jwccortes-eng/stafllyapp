@@ -30,6 +30,10 @@ interface LiveOperationsMapProps {
   workers: LiveMapWorker[];
   locations: LiveMapLocation[];
   showLayer: LiveMapLayer;
+  /** Optional: invoked when a worker marker is clicked. Backwards-compatible. */
+  onWorkerClick?: (worker: LiveMapWorker) => void;
+  /** Optional: invoked when a location marker is clicked. Backwards-compatible. */
+  onLocationClick?: (location: LiveMapLocation) => void;
 }
 
 // No hardcoded fallback — map will center dynamically on data
