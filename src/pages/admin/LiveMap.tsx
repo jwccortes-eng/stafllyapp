@@ -1090,27 +1090,32 @@ function MobileIssueFirstView(props: MobileProps) {
 
       {/* Listas priorizadas */}
       <MobileSection title="No-show" tone="red" count={noShow.length} show={bucket === "all" || bucket === "no_show"} emptyLabel="Sin no-shows">
-        {noShow.map((a) => <AssignmentRow key={`mns-${a.employee_id}-${a.start_time}`} a={a} tone="red" />)}
+        {noShow.map((a) => <AssignmentRow key={`mns-${a.employee_id}-${a.start_time}`} a={a} tone="red" onClick={() => onSelectAssignment(a)} />)}
       </MobileSection>
       <MobileSection title="Tarde" tone="amber" count={late.length} show={bucket === "all" || bucket === "late"} emptyLabel="Nadie llega tarde">
-        {late.map((a) => <AssignmentRow key={`mla-${a.employee_id}-${a.start_time}`} a={a} tone="amber" />)}
+        {late.map((a) => <AssignmentRow key={`mla-${a.employee_id}-${a.start_time}`} a={a} tone="amber" onClick={() => onSelectAssignment(a)} />)}
       </MobileSection>
       <MobileSection title="Fuera de zona" tone="red" count={outside.length} show={bucket === "all" || bucket === "outside"} emptyLabel="Todos dentro de zona">
-        {outside.map((w) => <WorkerRow key={`mos-${w.employee_id}`} w={w} tone="red" open={false} onToggle={() => {}} />)}
+        {outside.map((w) => <WorkerRow key={`mos-${w.employee_id}`} w={w} tone="red" onClick={() => onSelectWorker(w)} />)}
       </MobileSection>
       <MobileSection title="Termina pronto" tone="amber" count={endingSoon.length} show={bucket === "all" || bucket === "ending_soon"} emptyLabel="Sin cierres inminentes">
-        {endingSoon.map((w) => <WorkerRow key={`mes-${w.employee_id}`} w={w} tone="amber" open={false} onToggle={() => {}} />)}
+        {endingSoon.map((w) => <WorkerRow key={`mes-${w.employee_id}`} w={w} tone="amber" onClick={() => onSelectWorker(w)} />)}
       </MobileSection>
       <MobileSection title="Sin fichaje" tone="muted" count={missing.length} show={bucket === "all" || bucket === "missing"} emptyLabel="Todos los asignados ya ficharon">
-        {missing.slice(0, 20).map((a) => <AssignmentRow key={`mmi-${a.employee_id}-${a.start_time}`} a={a} tone="muted" />)}
+        {missing.slice(0, 20).map((a) => <AssignmentRow key={`mmi-${a.employee_id}-${a.start_time}`} a={a} tone="muted" onClick={() => onSelectAssignment(a)} />)}
         {missing.length > 20 && <p className="text-[10px] text-muted-foreground px-2">+{missing.length - 20} más</p>}
       </MobileSection>
       <MobileSection title="Fichados" tone="emerald" count={workers.length} show={bucket === "all" || bucket === "clocked_in"} emptyLabel="No hay trabajadores fichados con GPS">
-        {workers.map((w) => <WorkerRow key={`mcl-${w.employee_id}`} w={w} tone="emerald" open={false} onToggle={() => {}} />)}
+        {workers.map((w) => <WorkerRow key={`mcl-${w.employee_id}`} w={w} tone="emerald" onClick={() => onSelectWorker(w)} />)}
       </MobileSection>
       <MobileSection title="Sin GPS" tone="amber" count={noGps.length} show={bucket === "all" || bucket === "no_gps"} emptyLabel="Todos comparten GPS">
-        {noGps.map((w) => <NoGpsRow key={`mng-${w.employee_id}`} w={w} />)}
+        {noGps.map((w) => <NoGpsRow key={`mng-${w.employee_id}`} w={w} onClick={() => onSelectNoGps(w)} />)}
       </MobileSection>
+      {bucket === "all" && locations.length > 0 && (
+        <MobileSection title="Ubicaciones" tone="muted" count={locations.length} show emptyLabel="">
+          {locations.slice(0, 10).map((loc) => <LocationRow key={`mloc-${loc.id}`} loc={loc} onClick={() => onSelectLocation(loc)} />)}
+        </MobileSection>
+      )}
 
       {alerts.length > 0 && bucket === "all" && (
         <MobileSection title="Alertas recientes" tone="red" count={alerts.length} show emptyLabel="">
