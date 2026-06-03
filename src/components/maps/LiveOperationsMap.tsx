@@ -91,10 +91,15 @@ function buildWorkerPopup(worker: LiveMapWorker): string {
   </div>`;
 }
 
-export function LiveOperationsMap({ workers, locations, showLayer }: LiveOperationsMapProps) {
+export function LiveOperationsMap({ workers, locations, showLayer, onWorkerClick, onLocationClick }: LiveOperationsMapProps) {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
   const layerGroupRef = useRef<L.LayerGroup | null>(null);
+  const onWorkerClickRef = useRef(onWorkerClick);
+  const onLocationClickRef = useRef(onLocationClick);
+
+  useEffect(() => { onWorkerClickRef.current = onWorkerClick; }, [onWorkerClick]);
+  useEffect(() => { onLocationClickRef.current = onLocationClick; }, [onLocationClick]);
 
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
@@ -127,7 +132,8 @@ export function LiveOperationsMap({ workers, locations, showLayer }: LiveOperati
         const point: L.LatLngTuple = [location.latitude, location.longitude];
         bounds.push(point);
         L.circle(point, { radius: location.geofence_radius, color: "#3b82f6", fillColor: "#3b82f6", fillOpacity: 0.1, weight: 1 }).addTo(layerGroup);
-        L.marker(point, { icon: locationIcon }).bindPopup(buildLocationPopup(location)).addTo(layerGroup);
+        const marker = L.marker(point, { icon: locationIcon }).bindPopup(buildLocationPopup(location)).addTo(layerGroup);
+        marker.on("click", () => { onLocationClickRef.current?.(location); });
       });
     }
 
@@ -135,7 +141,8 @@ export function LiveOperationsMap({ workers, locations, showLayer }: LiveOperati
       workers.forEach(worker => {
         const point: L.LatLngTuple = [worker.latitude, worker.longitude];
         bounds.push(point);
-        L.marker(point, { icon: workerIcon }).bindPopup(buildWorkerPopup(worker)).addTo(layerGroup);
+        const marker = L.marker(point, { icon: workerIcon }).bindPopup(buildWorkerPopup(worker)).addTo(layerGroup);
+        marker.on("click", () => { onWorkerClickRef.current?.(worker); });
       });
     }
 
