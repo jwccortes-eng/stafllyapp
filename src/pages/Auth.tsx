@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect, useRef, useMemo } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { APP_BASE_URL } from "@/lib/app-url";
 import { useAuth } from "@/hooks/useAuth";
@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyError } from "@/lib/error-helpers";
-import { Mail, Lock, Eye, EyeOff, Loader2, ShieldCheck, Phone } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, Loader2, ShieldCheck, Phone, Radio, Hash, Briefcase, Zap } from "lucide-react";
 import { StaflyLogo } from "@/components/brand/StaflyBrand";
 import { EmployeeAuthFlow } from "@/components/auth/EmployeeAuthFlow";
 
@@ -38,6 +38,14 @@ export default function Auth() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
+  // Parceros launch readiness — pure UI/copy variant. Detects `?from=parceros`
+  // to swap branding/copy and prefer /parceros as the post-login destination.
+  // Does NOT touch auth backend, signup, or RLS.
+  const fromParceros = useMemo(
+    () => searchParams.get("from") === "parceros",
+    [searchParams]
+  );
 
   useEffect(() => {
     const redirectTarget = phoneRedirectPendingRef.current
@@ -116,7 +124,14 @@ export default function Auth() {
       // unauthorized tenants like the "Llc" incident (see activity_log
       // action='unauthorized_self_signup_suspended').
 
-      if (canAccessAdmin && canAccessPortal) {
+      // Parceros context: any authenticated user can access /parceros (layout
+      // only requires a session). When the user came from /parceros, prefer it
+      // as the destination regardless of admin/portal access. We only redirect
+      // when at least one access path exists, so workers without any role still
+      // see the "no access" state instead of bouncing into Parceros silently.
+      if (fromParceros && (canAccessAdmin || canAccessPortal)) {
+        navigate("/parceros");
+      } else if (canAccessAdmin && canAccessPortal) {
         navigate(activeMode === 'employee' ? "/portal" : "/app");
       } else if (canAccessAdmin) {
         navigate("/app");
@@ -125,7 +140,7 @@ export default function Auth() {
       }
     };
     autoSetup();
-  }, [user, role, authLoading, navigate, canAccessAdmin, canAccessPortal, activeMode]);
+  }, [user, role, authLoading, navigate, canAccessAdmin, canAccessPortal, activeMode, fromParceros]);
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -163,24 +178,56 @@ export default function Auth() {
         </div>
 
         <div className="relative z-10 flex flex-col items-center text-center px-16 max-w-md">
-          <div className="h-24 w-24 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center mb-10 select-none">
-            <ShieldCheck className="h-12 w-12 text-primary/60" />
-          </div>
-          <h2 className="text-2xl font-bold font-heading text-foreground mb-3 leading-tight tracking-tight">
-            One account, full control.
-          </h2>
-          <p className="text-muted-foreground text-sm leading-relaxed max-w-sm">
-            Manage your team, review shifts, clock in/out, and check payroll — all from a single account.
-          </p>
-
-          <div className="flex items-center gap-6 mt-8">
-            {["Shifts", "Payroll", "Time Clock", "Multi-company"].map((feature) => (
-              <div key={feature} className="flex items-center gap-1.5">
-                <ShieldCheck className="h-3.5 w-3.5 text-primary/60" />
-                <span className="text-xs text-muted-foreground/70 font-medium">{feature}</span>
+          {fromParceros ? (
+            <>
+              <div
+                className="h-24 w-24 rounded-2xl flex items-center justify-center mb-10 select-none shadow-lg"
+                style={{ background: "var(--gradient-parceros, linear-gradient(135deg, hsl(var(--parceros-coral, 11 100% 67%)), hsl(var(--parceros-amber, 30 100% 60%))))" }}
+              >
+                <Radio className="h-12 w-12 text-white" />
               </div>
-            ))}
-          </div>
+              <h2 className="text-2xl font-bold font-heading text-foreground mb-3 leading-tight tracking-tight">
+                Bienvenido a Parceros.
+              </h2>
+              <p className="text-muted-foreground text-sm leading-relaxed max-w-sm">
+                Tu comunidad de trabajo: canales por zona, oportunidades y flash jobs cerca de ti.
+              </p>
+              <div className="flex items-center gap-6 mt-8">
+                {[
+                  { label: "Comunidad", Icon: Hash },
+                  { label: "Flash Jobs", Icon: Zap },
+                  { label: "Oportunidades", Icon: Briefcase },
+                  { label: "Reputación", Icon: ShieldCheck },
+                ].map(({ label, Icon }) => (
+                  <div key={label} className="flex items-center gap-1.5">
+                    <Icon className="h-3.5 w-3.5 text-primary/60" />
+                    <span className="text-xs text-muted-foreground/70 font-medium">{label}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="h-24 w-24 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center mb-10 select-none">
+                <ShieldCheck className="h-12 w-12 text-primary/60" />
+              </div>
+              <h2 className="text-2xl font-bold font-heading text-foreground mb-3 leading-tight tracking-tight">
+                One account, full control.
+              </h2>
+              <p className="text-muted-foreground text-sm leading-relaxed max-w-sm">
+                Manage your team, review shifts, clock in/out, and check payroll — all from a single account.
+              </p>
+
+              <div className="flex items-center gap-6 mt-8">
+                {["Shifts", "Payroll", "Time Clock", "Multi-company"].map((feature) => (
+                  <div key={feature} className="flex items-center gap-1.5">
+                    <ShieldCheck className="h-3.5 w-3.5 text-primary/60" />
+                    <span className="text-xs text-muted-foreground/70 font-medium">{feature}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -225,20 +272,23 @@ export default function Auth() {
             <div className="flex flex-col items-center mb-8 text-center">
               <StaflyLogo size={44} />
               <p className="text-[11px] text-muted-foreground mt-2 max-w-[280px]">
-                The operating system for your service workforce.
+                {fromParceros
+                  ? "Tu comunidad de trabajo en el ecosistema Stafly."
+                  : "The operating system for your service workforce."}
               </p>
             </div>
 
             <div className="bg-card rounded-2xl shadow-sm border border-border/40 px-8 py-9 space-y-6">
               <div className="text-center space-y-1">
                 <h1 className="text-lg font-semibold font-heading text-foreground tracking-tight">
-                  Welcome back
+                  {fromParceros ? "Bienvenido a Parceros" : "Welcome back"}
                 </h1>
                 <p className="text-sm text-muted-foreground">
-                  Sign in with your email
+                  {fromParceros ? "Ingresa con tu email" : "Sign in with your email"}
                 </p>
                 <p className="text-[10px] text-muted-foreground/60 flex items-center justify-center gap-1">
-                  <ShieldCheck className="h-3 w-3" /> One account · Multiple roles
+                  <ShieldCheck className="h-3 w-3" />
+                  {fromParceros ? "Una cuenta · Stafly + Parceros" : "One account · Multiple roles"}
                 </p>
               </div>
 
@@ -291,8 +341,17 @@ export default function Auth() {
 
               <div className="border-t border-border/40 pt-4 text-center">
                 <p className="text-[11px] text-muted-foreground leading-relaxed">
-                  Stafly is currently <span className="font-semibold text-foreground/80">invite-only</span>.
-                  <br />Please contact your administrator to get access.
+                  {fromParceros ? (
+                    <>
+                      Parceros es <span className="font-semibold text-foreground/80">invite-only</span>.
+                      <br />¿Tienes un código de invitación? Ingresa con tu email o teléfono.
+                    </>
+                  ) : (
+                    <>
+                      Stafly is currently <span className="font-semibold text-foreground/80">invite-only</span>.
+                      <br />Please contact your administrator to get access.
+                    </>
+                  )}
                 </p>
               </div>
             </div>

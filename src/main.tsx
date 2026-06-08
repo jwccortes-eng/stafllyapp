@@ -1,4 +1,5 @@
 import { createRoot } from "react-dom/client";
+import { HelmetProvider } from "react-helmet-async";
 import App from "./App.tsx";
 import "./index.css";
 import { registerPwa, APP_VERSION, APP_BUILD_TIME } from "./lib/pwa-runtime";
@@ -112,7 +113,11 @@ if (typeof window !== "undefined") {
   };
 }
 
-createRoot(document.getElementById("root")!).render(<App />);
+createRoot(document.getElementById("root")!).render(
+  <HelmetProvider>
+    <App />
+  </HelmetProvider>
+);
 
 // Production-only: register the service worker AFTER mount so the initial
 // render is never blocked, and the user gets a "new version available" toast
