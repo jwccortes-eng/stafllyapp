@@ -14,7 +14,7 @@ export default function PrivacyPolicy() {
         </div>
       </header>
 
-      <main className="container max-w-3xl py-12 space-y-8 animate-fade-in">
+      <main className="container max-w-3xl px-4 sm:px-6 py-12 space-y-8 animate-fade-in overflow-x-hidden">
         <div>
           <h1 className="text-3xl font-heading font-bold text-foreground">Política de Privacidad</h1>
           <p className="text-sm text-muted-foreground mt-2">Última actualización: 1 de marzo de 2026</p>
