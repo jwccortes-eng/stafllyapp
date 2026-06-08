@@ -23,12 +23,12 @@ export default function TermsOfService() {
         <div className="prose prose-sm dark:prose-invert max-w-none space-y-6 text-muted-foreground leading-relaxed">
           <section>
             <h2 className="text-lg font-semibold text-foreground">1. Aceptación de los términos</h2>
-            <p>Al acceder y utilizar Stafly Core ("la Plataforma"), usted acepta estar sujeto a estos Términos de Servicio. Si no está de acuerdo con alguna parte de estos términos, no podrá acceder al servicio.</p>
+            <p>Al acceder y utilizar cualquiera de los productos del ecosistema Stafly — <strong>Stafly Core</strong> y/o <strong>Parceros</strong> (en conjunto, "la Plataforma") — usted acepta estar sujeto a estos Términos de Servicio. Si no está de acuerdo con alguna parte de estos términos, no podrá acceder al servicio.</p>
           </section>
 
           <section>
             <h2 className="text-lg font-semibold text-foreground">2. Descripción del servicio</h2>
-            <p>Stafly Core es una plataforma SaaS de gestión de personal que ofrece:</p>
+            <p><strong>Stafly Core</strong> es una plataforma SaaS de gestión de personal que ofrece:</p>
             <ul className="list-disc pl-5 space-y-1">
               <li>Programación y gestión de turnos</li>
               <li>Control de asistencia con verificación GPS</li>
@@ -37,6 +37,27 @@ export default function TermsOfService() {
               <li>Portal de empleados</li>
               <li>Gestión de clientes y ubicaciones</li>
               <li>Sistema de comunicación interna</li>
+            </ul>
+            <p className="mt-3"><strong>Parceros</strong> es una comunidad de trabajo independiente para trabajadores que ofrece:</p>
+            <ul className="list-disc pl-5 space-y-1">
+              <li>Canales de mensajería organizados por zona y categoría</li>
+              <li>Oportunidades laborales y flash jobs publicados por empleadores</li>
+              <li>Reputación profesional verificable derivada de trabajos completados</li>
+              <li>Conexión con empleadores del ecosistema Stafly y otros publicantes</li>
+            </ul>
+            <p className="mt-3">Stafly Core y Parceros son productos separados con bases de usuarios distintas. Compartir una cuenta entre ambos productos es opcional y bajo control del usuario.</p>
+          </section>
+
+          <section>
+            <h2 className="text-lg font-semibold text-foreground">2.1 Normas de comunidad (Parceros)</h2>
+            <p>Al participar en canales, flash jobs u otras superficies sociales de Parceros, usted acepta:</p>
+            <ul className="list-disc pl-5 space-y-1">
+              <li>No publicar spam, contenido fraudulento, scams ni esquemas piramidales.</li>
+              <li>No discriminar por raza, género, religión, orientación sexual, nacionalidad ni estatus migratorio.</li>
+              <li>No reclutar trabajadores fuera del sistema oficial de la oportunidad publicada.</li>
+              <li>No suplantar identidad ni falsificar reputación, reseñas o credenciales.</li>
+              <li>No compartir información personal de terceros sin su consentimiento.</li>
+              <li>Aceptar moderación humana o automatizada; las violaciones pueden resultar en suspensión o cierre de cuenta sin reembolso.</li>
             </ul>
           </section>
 
@@ -89,7 +110,7 @@ export default function TermsOfService() {
 
           <section>
             <h2 className="text-lg font-semibold text-foreground">11. Contacto</h2>
-            <p>Para consultas sobre estos términos, contáctenos en <span className="text-primary font-medium">help@parceros.app</span>.</p>
+            <p>Para consultas sobre estos términos, contáctenos en <span className="text-primary font-medium">info@staflyapps.com</span>.</p>
           </section>
         </div>
 

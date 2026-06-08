@@ -22,14 +22,32 @@ export default function PrivacyPolicy() {
 
         <div className="prose prose-sm dark:prose-invert max-w-none space-y-6 text-muted-foreground leading-relaxed">
           <section>
+            <h2 className="text-lg font-semibold text-foreground">0. Servicios cubiertos</h2>
+            <p>Esta política aplica a los dos productos del ecosistema Stafly:</p>
+            <ul className="list-disc pl-5 space-y-1">
+              <li><strong>Stafly Core</strong> — plataforma operativa para empresas: turnos, asistencia, nómina, documentos del empleador y portal del trabajador.</li>
+              <li><strong>Parceros</strong> — comunidad de trabajo para trabajadores: canales por zona, oportunidades, flash jobs y reputación profesional.</li>
+            </ul>
+            <p>Cuando una sección aplique solo a uno de los dos productos, se indica explícitamente.</p>
+          </section>
+
+          <section>
             <h2 className="text-lg font-semibold text-foreground">1. Información que recopilamos</h2>
-            <p>Recopilamos la siguiente información:</p>
+            <p><strong>Stafly Core:</strong></p>
             <ul className="list-disc pl-5 space-y-1">
               <li><strong>Datos de cuenta:</strong> nombre, email, teléfono, nombre de empresa</li>
               <li><strong>Datos de empleados:</strong> nombre, teléfono, email, rol, fecha de inicio, foto de perfil</li>
-              <li><strong>Datos operativos:</strong> turnos, fichajes, ubicaciones GPS, horas trabajadas</li>
+              <li><strong>Datos operativos:</strong> turnos, fichajes, ubicaciones GPS de fichaje, horas trabajadas</li>
               <li><strong>Datos financieros:</strong> tasas de pago, deducciones, bonos, historial de nómina</li>
               <li><strong>Datos de uso:</strong> páginas visitadas, acciones realizadas, dispositivo y navegador</li>
+            </ul>
+            <p className="mt-3"><strong>Parceros:</strong></p>
+            <ul className="list-disc pl-5 space-y-1">
+              <li><strong>Perfil público:</strong> nombre o handle, foto, zona aproximada, categorías de trabajo</li>
+              <li><strong>Mensajes en canales:</strong> contenido de mensajes que usted publica en canales públicos de la comunidad</li>
+              <li><strong>Aplicaciones a flash jobs:</strong> respuestas, mensajes al empleador, historial de aceptación</li>
+              <li><strong>Reputación:</strong> calificaciones, reseñas y métricas derivadas de trabajos completados</li>
+              <li><strong>Ubicación de zona:</strong> ciudad o zona declarada por usted (no se realiza seguimiento GPS continuo)</li>
             </ul>
           </section>
 
@@ -58,6 +76,7 @@ export default function PrivacyPolicy() {
               <li><strong>Procesadores de pago:</strong> Stripe para facturación de suscripciones</li>
               <li><strong>Autoridades legales:</strong> cuando sea requerido por ley</li>
             </ul>
+            <p className="mt-3"><strong>Parceros — compartición con empleadores:</strong> cuando usted aplica a un flash job u oportunidad, el empleador que publica esa oportunidad puede ver únicamente: su nombre o handle, foto pública, zona, categorías de trabajo, reputación pública y el mensaje que usted envíe al aplicar. Datos sensibles (teléfono completo, email, dirección) solo se comparten si usted los acepta explícitamente al aceptar una oferta.</p>
           </section>
 
           <section>
@@ -101,7 +120,7 @@ export default function PrivacyPolicy() {
 
           <section>
             <h2 className="text-lg font-semibold text-foreground">9. Contacto</h2>
-            <p>Para ejercer sus derechos o consultas de privacidad: <span className="text-primary font-medium">help@parceros.app</span></p>
+            <p>Para ejercer sus derechos o consultas de privacidad: <span className="text-primary font-medium">info@staflyapps.com</span></p>
           </section>
         </div>
 

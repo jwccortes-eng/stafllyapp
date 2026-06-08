@@ -1,5 +1,6 @@
 import { Outlet, useLocation, NavLink, Navigate } from "react-router-dom";
 import { useEffect } from "react";
+import { Helmet } from "react-helmet-async";
 import { Zap, Hash, Briefcase, Radio } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
@@ -49,10 +50,26 @@ export default function ParcerosLayout() {
     );
   }
 
-  if (!user) return <Navigate to="/auth" replace />;
+  if (!user) return <Navigate to="/auth?from=parceros" replace />;
 
   return (
     <div className="parceros-brand min-h-[100dvh] bg-background flex flex-col">
+      {/* Per-route head — only applies under /parceros/*. Stafly Core routes are
+          unaffected because they don't mount this layout. */}
+      <Helmet>
+        <title>Parceros · Tu comunidad de trabajo</title>
+        <meta
+          name="description"
+          content="Comunidad de trabajo Parceros: canales por zona, flash jobs y oportunidades. Conecta con empleadores verificados."
+        />
+        <meta name="theme-color" content="#FF6B5A" />
+        <meta property="og:title" content="Parceros · Tu comunidad de trabajo" />
+        <meta
+          property="og:description"
+          content="Canales por zona, flash jobs y oportunidades para trabajadores."
+        />
+        <meta property="og:type" content="website" />
+      </Helmet>
       <main className="flex-1 flex flex-col overflow-hidden">
         <Outlet />
       </main>

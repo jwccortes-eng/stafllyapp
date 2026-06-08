@@ -48,17 +48,22 @@ export default function CookiePolicy() {
 
           <section>
             <h2 className="text-lg font-semibold text-foreground">3. Cookies de terceros</h2>
-            <p>Stafly Core no utiliza cookies de seguimiento de terceros, publicidad ni analytics de terceros. Solo utilizamos cookies estrictamente necesarias para el funcionamiento del servicio.</p>
+            <p>Ni Stafly Core ni Parceros utilizan cookies de seguimiento de terceros, publicidad ni analytics de terceros. Solo utilizamos cookies estrictamente necesarias para el funcionamiento del servicio.</p>
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-foreground">4. Gestión de cookies</h2>
+            <h2 className="text-lg font-semibold text-foreground">4. Aplicabilidad a Parceros</h2>
+            <p>Esta política aplica por igual al ecosistema Stafly Core y a la app Parceros. Ambos productos comparten infraestructura de autenticación y usan el mismo conjunto de cookies esenciales descritas arriba.</p>
+          </section>
+
+          <section>
+            <h2 className="text-lg font-semibold text-foreground">5. Gestión de cookies</h2>
             <p>Puede gestionar las cookies desde la configuración de su navegador. Tenga en cuenta que deshabilitar las cookies esenciales impedirá el uso de la plataforma, ya que son necesarias para la autenticación.</p>
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-foreground">5. Contacto</h2>
-            <p>Para consultas sobre cookies: <span className="text-primary font-medium">help@parceros.app</span></p>
+            <h2 className="text-lg font-semibold text-foreground">6. Contacto</h2>
+            <p>Para consultas sobre cookies: <span className="text-primary font-medium">info@staflyapps.com</span></p>
           </section>
         </div>
 
