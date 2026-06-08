@@ -272,20 +272,23 @@ export default function Auth() {
             <div className="flex flex-col items-center mb-8 text-center">
               <StaflyLogo size={44} />
               <p className="text-[11px] text-muted-foreground mt-2 max-w-[280px]">
-                The operating system for your service workforce.
+                {fromParceros
+                  ? "Tu comunidad de trabajo en el ecosistema Stafly."
+                  : "The operating system for your service workforce."}
               </p>
             </div>
 
             <div className="bg-card rounded-2xl shadow-sm border border-border/40 px-8 py-9 space-y-6">
               <div className="text-center space-y-1">
                 <h1 className="text-lg font-semibold font-heading text-foreground tracking-tight">
-                  Welcome back
+                  {fromParceros ? "Bienvenido a Parceros" : "Welcome back"}
                 </h1>
                 <p className="text-sm text-muted-foreground">
-                  Sign in with your email
+                  {fromParceros ? "Ingresa con tu email" : "Sign in with your email"}
                 </p>
                 <p className="text-[10px] text-muted-foreground/60 flex items-center justify-center gap-1">
-                  <ShieldCheck className="h-3 w-3" /> One account · Multiple roles
+                  <ShieldCheck className="h-3 w-3" />
+                  {fromParceros ? "Una cuenta · Stafly + Parceros" : "One account · Multiple roles"}
                 </p>
               </div>
 
@@ -338,8 +341,17 @@ export default function Auth() {
 
               <div className="border-t border-border/40 pt-4 text-center">
                 <p className="text-[11px] text-muted-foreground leading-relaxed">
-                  Stafly is currently <span className="font-semibold text-foreground/80">invite-only</span>.
-                  <br />Please contact your administrator to get access.
+                  {fromParceros ? (
+                    <>
+                      Parceros es <span className="font-semibold text-foreground/80">invite-only</span>.
+                      <br />¿Tienes un código de invitación? Ingresa con tu email o teléfono.
+                    </>
+                  ) : (
+                    <>
+                      Stafly is currently <span className="font-semibold text-foreground/80">invite-only</span>.
+                      <br />Please contact your administrator to get access.
+                    </>
+                  )}
                 </p>
               </div>
             </div>
