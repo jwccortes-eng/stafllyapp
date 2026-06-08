@@ -178,24 +178,56 @@ export default function Auth() {
         </div>
 
         <div className="relative z-10 flex flex-col items-center text-center px-16 max-w-md">
-          <div className="h-24 w-24 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center mb-10 select-none">
-            <ShieldCheck className="h-12 w-12 text-primary/60" />
-          </div>
-          <h2 className="text-2xl font-bold font-heading text-foreground mb-3 leading-tight tracking-tight">
-            One account, full control.
-          </h2>
-          <p className="text-muted-foreground text-sm leading-relaxed max-w-sm">
-            Manage your team, review shifts, clock in/out, and check payroll — all from a single account.
-          </p>
-
-          <div className="flex items-center gap-6 mt-8">
-            {["Shifts", "Payroll", "Time Clock", "Multi-company"].map((feature) => (
-              <div key={feature} className="flex items-center gap-1.5">
-                <ShieldCheck className="h-3.5 w-3.5 text-primary/60" />
-                <span className="text-xs text-muted-foreground/70 font-medium">{feature}</span>
+          {fromParceros ? (
+            <>
+              <div
+                className="h-24 w-24 rounded-2xl flex items-center justify-center mb-10 select-none shadow-lg"
+                style={{ background: "var(--gradient-parceros, linear-gradient(135deg, hsl(var(--parceros-coral, 11 100% 67%)), hsl(var(--parceros-amber, 30 100% 60%))))" }}
+              >
+                <Radio className="h-12 w-12 text-white" />
               </div>
-            ))}
-          </div>
+              <h2 className="text-2xl font-bold font-heading text-foreground mb-3 leading-tight tracking-tight">
+                Bienvenido a Parceros.
+              </h2>
+              <p className="text-muted-foreground text-sm leading-relaxed max-w-sm">
+                Tu comunidad de trabajo: canales por zona, oportunidades y flash jobs cerca de ti.
+              </p>
+              <div className="flex items-center gap-6 mt-8">
+                {[
+                  { label: "Comunidad", Icon: Hash },
+                  { label: "Flash Jobs", Icon: Zap },
+                  { label: "Oportunidades", Icon: Briefcase },
+                  { label: "Reputación", Icon: ShieldCheck },
+                ].map(({ label, Icon }) => (
+                  <div key={label} className="flex items-center gap-1.5">
+                    <Icon className="h-3.5 w-3.5 text-primary/60" />
+                    <span className="text-xs text-muted-foreground/70 font-medium">{label}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="h-24 w-24 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center mb-10 select-none">
+                <ShieldCheck className="h-12 w-12 text-primary/60" />
+              </div>
+              <h2 className="text-2xl font-bold font-heading text-foreground mb-3 leading-tight tracking-tight">
+                One account, full control.
+              </h2>
+              <p className="text-muted-foreground text-sm leading-relaxed max-w-sm">
+                Manage your team, review shifts, clock in/out, and check payroll — all from a single account.
+              </p>
+
+              <div className="flex items-center gap-6 mt-8">
+                {["Shifts", "Payroll", "Time Clock", "Multi-company"].map((feature) => (
+                  <div key={feature} className="flex items-center gap-1.5">
+                    <ShieldCheck className="h-3.5 w-3.5 text-primary/60" />
+                    <span className="text-xs text-muted-foreground/70 font-medium">{feature}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
         </div>
       </div>
 
