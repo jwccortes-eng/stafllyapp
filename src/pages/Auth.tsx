@@ -38,6 +38,14 @@ export default function Auth() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
+  // Parceros launch readiness — pure UI/copy variant. Detects `?from=parceros`
+  // to swap branding/copy and prefer /parceros as the post-login destination.
+  // Does NOT touch auth backend, signup, or RLS.
+  const fromParceros = useMemo(
+    () => searchParams.get("from") === "parceros",
+    [searchParams]
+  );
 
   useEffect(() => {
     const redirectTarget = phoneRedirectPendingRef.current
@@ -116,7 +124,14 @@ export default function Auth() {
       // unauthorized tenants like the "Llc" incident (see activity_log
       // action='unauthorized_self_signup_suspended').
 
-      if (canAccessAdmin && canAccessPortal) {
+      // Parceros context: any authenticated user can access /parceros (layout
+      // only requires a session). When the user came from /parceros, prefer it
+      // as the destination regardless of admin/portal access. We only redirect
+      // when at least one access path exists, so workers without any role still
+      // see the "no access" state instead of bouncing into Parceros silently.
+      if (fromParceros && (canAccessAdmin || canAccessPortal)) {
+        navigate("/parceros");
+      } else if (canAccessAdmin && canAccessPortal) {
         navigate(activeMode === 'employee' ? "/portal" : "/app");
       } else if (canAccessAdmin) {
         navigate("/app");
@@ -125,7 +140,7 @@ export default function Auth() {
       }
     };
     autoSetup();
-  }, [user, role, authLoading, navigate, canAccessAdmin, canAccessPortal, activeMode]);
+  }, [user, role, authLoading, navigate, canAccessAdmin, canAccessPortal, activeMode, fromParceros]);
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
