@@ -132,7 +132,11 @@ export default function Auth() {
       // as the destination regardless of admin/portal access. We only redirect
       // when at least one access path exists, so workers without any role still
       // see the "no access" state instead of bouncing into Parceros silently.
-      if (fromParceros && (canAccessAdmin || canAccessPortal)) {
+      // Parceros context: any authenticated user can access /parceros (layout
+      // only requires a session). When the user came from /parceros OR the
+      // build is the Parceros flavor, prefer /parceros as the destination
+      // regardless of admin/portal access.
+      if (fromParceros) {
         navigate("/parceros");
       } else if (canAccessAdmin && canAccessPortal) {
         navigate(activeMode === 'employee' ? "/portal" : "/app");
