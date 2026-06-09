@@ -12,6 +12,7 @@ import { getUserFriendlyError } from "@/lib/error-helpers";
 import { Mail, Lock, Eye, EyeOff, Loader2, ShieldCheck, Phone, Radio, Hash, Briefcase, Zap } from "lucide-react";
 import { StaflyLogo } from "@/components/brand/StaflyBrand";
 import { EmployeeAuthFlow } from "@/components/auth/EmployeeAuthFlow";
+import { IS_PARCEROS_FLAVOR } from "@/lib/app-flavor";
 
 type LoginMethod = "email" | "phone";
 
@@ -42,8 +43,10 @@ export default function Auth() {
   // Parceros launch readiness — pure UI/copy variant. Detects `?from=parceros`
   // to swap branding/copy and prefer /parceros as the post-login destination.
   // Does NOT touch auth backend, signup, or RLS.
+  // `fromParceros` also turns ON when the build flavor is Parceros, so the
+  // native Parceros app behaves like a permanent `?from=parceros` session.
   const fromParceros = useMemo(
-    () => searchParams.get("from") === "parceros",
+    () => IS_PARCEROS_FLAVOR || searchParams.get("from") === "parceros",
     [searchParams]
   );
 
@@ -129,7 +132,11 @@ export default function Auth() {
       // as the destination regardless of admin/portal access. We only redirect
       // when at least one access path exists, so workers without any role still
       // see the "no access" state instead of bouncing into Parceros silently.
-      if (fromParceros && (canAccessAdmin || canAccessPortal)) {
+      // Parceros context: any authenticated user can access /parceros (layout
+      // only requires a session). When the user came from /parceros OR the
+      // build is the Parceros flavor, prefer /parceros as the destination
+      // regardless of admin/portal access.
+      if (fromParceros) {
         navigate("/parceros");
       } else if (canAccessAdmin && canAccessPortal) {
         navigate(activeMode === 'employee' ? "/portal" : "/app");

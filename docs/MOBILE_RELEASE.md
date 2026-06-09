@@ -38,32 +38,45 @@ These steps are run **locally on your machine**, not inside Lovable. You will
 need Node, the Capacitor CLI, Xcode (for iOS), and Android Studio (for
 Android).
 
+> **Critical:** the web bundle is shared by both apps, so the build flavor
+> (`VITE_APP_FLAVOR`) decides which experience the native shell boots into.
+> Without this env var, the Parceros native app would boot into the Stafly
+> landing because `/` defaults to PublicLanding.
+
 ```bash
 # 0. Pull latest code
 git pull
-
-# 1. Pick the app you are building
-cp capacitor.parceros.release.ts capacitor.config.ts
-# — or —
-cp capacitor.stafly.release.ts capacitor.config.ts
-
-# 2. Install deps and build the web bundle
 npm install
-npm run build
 
-# 3. Sync the web bundle into the native projects
+# ──────────────────────────────────────────────────────────────────────────
+# PARCEROS native build
+# ──────────────────────────────────────────────────────────────────────────
+cp capacitor.parceros.release.ts capacitor.config.ts
+VITE_APP_FLAVOR=parceros npm run build     # `/` → /parceros, post-login → /parceros
 npx cap sync
+npx cap open ios       # Xcode → Archive → Upload to App Store Connect
+# or
+npx cap open android   # Android Studio → Generate Signed Bundle (.aab)
 
-# 4. Open the native project
-npx cap open ios       # opens Xcode → Archive → Upload to App Store Connect
-npx cap open android   # opens Android Studio → Generate Signed Bundle (.aab)
+# ──────────────────────────────────────────────────────────────────────────
+# STAFLY CORE native build
+# ──────────────────────────────────────────────────────────────────────────
+cp capacitor.stafly.release.ts capacitor.config.ts
+VITE_APP_FLAVOR=stafly npm run build       # `/` → PublicLanding, post-login → /app or /portal
+npx cap sync
+npx cap open ios
+# or
+npx cap open android
 
-# 5. Restore the dev config when done so Lovable preview keeps working
+# Restore dev config when done so Lovable preview keeps working
 git checkout -- capacitor.config.ts
 ```
 
 > **Do not** commit the copied release config over `capacitor.config.ts`.
 > The dev config must stay in source control or Lovable preview breaks.
+> The `VITE_APP_FLAVOR` env var is read at build time only — never bake it
+> into a committed `.env`. The default (no flavor) = Stafly.
+
 
 ---
 

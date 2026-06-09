@@ -193,6 +193,7 @@ const FounderFinanceImports = lazy(() => import("./pages/founder-finance/Imports
 const FounderFinanceStub = lazy(() => import("./pages/founder-finance/StubPage"));
 
 import { queryClient } from "@/lib/query-client";
+import { IS_PARCEROS_FLAVOR } from "@/lib/app-flavor";
 
 function NetworkListener() {
   useNetworkStatus();
@@ -212,6 +213,21 @@ function WorkerProfileRedirect() {
   return <Navigate to={id ? `/app/people/${id}` : "/app/employees"} replace />;
 }
 
+/**
+ * Root route — depends on build flavor.
+ *
+ * - Parceros native build (VITE_APP_FLAVOR=parceros): `/` redirects to
+ *   `/parceros`. ParcerosLayout itself redirects unauthenticated visitors to
+ *   `/auth?from=parceros`, so no extra auth wiring is needed here.
+ * - Stafly Core / web (default): `/` keeps the existing PublicLanding behavior.
+ */
+function RootRoute() {
+  if (IS_PARCEROS_FLAVOR) {
+    return <Navigate to="/parceros" replace />;
+  }
+  return <PublicLanding />;
+}
+
 function App() {
   return (
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
@@ -229,11 +245,12 @@ function App() {
           <BrowserRouter>
             <Suspense fallback={<PageFallback />}>
             <Routes>
-              <Route path="/" element={<PublicLanding />} />
+              <Route path="/" element={<RootRoute />} />
               <Route path="/home" element={<Index />} />
               <Route path="/install" element={<Install />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/login" element={<Navigate to="/auth" replace />} />
+
               <Route path="/auth/callback" element={<AuthCallback />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/terms" element={<TermsOfService />} />
