@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   CalendarDays, SlidersHorizontal, ChevronRight,
-  Users, AlertTriangle, Building2, Eye,
+  Users, AlertTriangle, Building2, Eye, Plus,
 } from "lucide-react";
 import { ShiftRouteHeader, type ShiftRouteHeaderTone } from "@/components/stafly-ui";
 import { format, parseISO, isToday, isTomorrow, addDays } from "date-fns";
@@ -10,11 +10,13 @@ import { enUS } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
+import { useShiftsConfig } from "@/hooks/useShiftsConfig";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { ShiftFilters, EMPTY_FILTERS, type ShiftFilterState } from "@/components/shifts/ShiftFilters";
 import { MobileShiftOperationsSheet } from "@/components/shifts/mobile/MobileShiftOperationsSheet";
+import { MobileQuickCreateShiftSheet } from "@/components/shifts/mobile/MobileQuickCreateShiftSheet";
 import { isDraftShift, isPublishedShift } from "@/lib/shifts/shift-guards";
 import type { Shift, Assignment, Employee, SelectOption } from "@/components/shifts/types";
 import { cn } from "@/lib/utils";
@@ -80,9 +82,12 @@ export default function MobileShiftsView() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { role, hasModuleAccess } = useAuth();
   const { selectedCompanyId, selectedCompany } = useCompany();
+  const { config: shiftsConfig } = useShiftsConfig();
 
   // Permissions — same rule as desktop Shifts
   const canEdit = role === "owner" || role === "admin" || hasModuleAccess("shifts", "edit");
+  const [reloadKey, setReloadKey] = useState(0);
+  const [createOpen, setCreateOpen] = useState(false);
 
   // Tab from URL (?tab=today) so back/forward works; fallback to "today"
   const initialTab = (searchParams.get("tab") as TabKey) || "today";
@@ -205,7 +210,18 @@ export default function MobileShiftsView() {
 
     load();
     return () => { alive = false; };
-  }, [selectedCompanyId, dateRange.start, dateRange.end]);
+  }, [selectedCompanyId, dateRange.start, dateRange.end, reloadKey]);
+
+  // Honor ?create=1 (TopBar quick action, deep links, etc.) on mobile too.
+  useEffect(() => {
+    if (searchParams.get("create") === "1") {
+      setCreateOpen(true);
+      const next = new URLSearchParams(searchParams);
+      next.delete("create");
+      setSearchParams(next, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   // Persist tab in URL
   useEffect(() => {
@@ -388,14 +404,16 @@ export default function MobileShiftsView() {
   const handleOpenRequests = () => navigate("/app/shift-requests");
 
   return (
-    <div className="min-h-full pb-[calc(env(safe-area-inset-bottom,0px)+72px)] bg-background">
-      {/* Header */}
-      <div className="px-4 pt-4 pb-3 sticky top-0 z-20 bg-background/95 backdrop-blur-sm border-b border-border/40">
+    <div className="min-h-full bg-background">
+      {/* Header (non-sticky on purpose — AdminLayout already provides a sticky
+          status-bar-safe header on mobile; double-stickies caused overlap and
+          status-bar collisions on iOS). */}
+      <div className="px-4 pt-3 pb-3 bg-background border-b border-border/40">
         <div className="flex items-center justify-between gap-2 mb-3">
           <div className="min-w-0">
-            <h1 className="text-2xl font-semibold tracking-tight leading-tight">Shifts</h1>
+            <h1 className="text-2xl font-semibold tracking-tight leading-tight">Turnos</h1>
             <p className="text-xs text-muted-foreground truncate mt-0.5">
-              {selectedCompany?.name ?? "All companies"} · {format(new Date(), "EEE MMM d", { locale: enUS })}
+              {selectedCompany?.name ?? "Todas las empresas"} · {format(new Date(), "EEE MMM d", { locale: enUS })}
             </p>
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
@@ -404,7 +422,7 @@ export default function MobileShiftsView() {
               size="icon"
               className="h-9 w-9 rounded-xl relative"
               onClick={() => setFiltersOpen(true)}
-              aria-label="Filters"
+              aria-label="Filtros"
             >
               <SlidersHorizontal className="h-4 w-4" />
               {activeFiltersCount > 0 && (
@@ -413,9 +431,20 @@ export default function MobileShiftsView() {
                 </span>
               )}
             </Button>
-            {/* Create from mobile is intentionally hidden (Phase 1) — desktop recommended */}
+            {canEdit && (
+              <Button
+                size="sm"
+                className="h-9 px-3 rounded-xl gap-1.5 font-semibold"
+                onClick={() => setCreateOpen(true)}
+                aria-label="Crear turno"
+              >
+                <Plus className="h-4 w-4" />
+                Crear
+              </Button>
+            )}
           </div>
         </div>
+
 
         {/* Tabs (pills) */}
         <div className="flex items-center gap-1.5 overflow-x-auto -mx-4 px-4 scrollbar-none">
@@ -581,6 +610,24 @@ export default function MobileShiftsView() {
         clientName={detailShift?.client_id ? clientById.get(detailShift.client_id) ?? "—" : "—"}
         locationName={detailShift?.location_id ? locationById.get(detailShift.location_id) ?? "" : ""}
         initialOpenTeamHub={detailManageTeam}
+      />
+
+      {/* Mobile Quick Create — writes to scheduled_shifts via same RLS as desktop */}
+      <MobileQuickCreateShiftSheet
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        companyId={selectedCompanyId}
+        clients={clients}
+        locations={locations}
+        requireClient={Boolean(shiftsConfig?.require_client)}
+        requireLocation={Boolean(shiftsConfig?.require_location)}
+        defaultStartTime={shiftsConfig?.default_start_time ?? "09:00"}
+        defaultEndTime={shiftsConfig?.default_end_time ?? "17:00"}
+        defaultSlots={shiftsConfig?.default_slots ?? 1}
+        onCreated={() => {
+          setReloadKey(k => k + 1);
+          setTab("today");
+        }}
       />
     </div>
   );
@@ -810,10 +857,10 @@ function RequestRow({ req, onOpen }: { req: PendingRequest; onOpen: () => void }
 
 function EmptyState({ tab }: { tab: TabKey }) {
   const messages: Record<TabKey, { title: string; hint: string }> = {
-    today: { title: "No shifts today", hint: "Take a breath. Tomorrow's roster is just a tap away." },
-    upcoming: { title: "Nothing scheduled ahead", hint: "Use the desktop scheduler to plan upcoming shifts." },
-    needs: { title: "All shifts are staffed", hint: "Coverage looks good across the board." },
-    requests: { title: "No pending shift requests", hint: "Worker claims and shift requests will appear here when submitted." },
+    today: { title: "Sin turnos hoy", hint: "Toca Crear arriba para abrir uno rápido en menos de un minuto." },
+    upcoming: { title: "Nada programado adelante", hint: "Toca Crear arriba para abrir un turno desde el teléfono." },
+    needs: { title: "Todos los turnos cubiertos", hint: "La cobertura se ve sólida en todos los turnos." },
+    requests: { title: "Sin solicitudes pendientes", hint: "Las solicitudes de turno aparecen aquí cuando un worker pide entrar." },
   };
   const m = messages[tab];
   return (
