@@ -611,6 +611,24 @@ export default function MobileShiftsView() {
         locationName={detailShift?.location_id ? locationById.get(detailShift.location_id) ?? "" : ""}
         initialOpenTeamHub={detailManageTeam}
       />
+
+      {/* Mobile Quick Create — writes to scheduled_shifts via same RLS as desktop */}
+      <MobileQuickCreateShiftSheet
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        companyId={selectedCompanyId}
+        clients={clients}
+        locations={locations}
+        requireClient={Boolean(shiftsConfig?.require_client)}
+        requireLocation={Boolean(shiftsConfig?.require_location)}
+        defaultStartTime={shiftsConfig?.default_start_time ?? "09:00"}
+        defaultEndTime={shiftsConfig?.default_end_time ?? "17:00"}
+        defaultSlots={shiftsConfig?.default_slots ?? 1}
+        onCreated={() => {
+          setReloadKey(k => k + 1);
+          setTab("today");
+        }}
+      />
     </div>
   );
 }
