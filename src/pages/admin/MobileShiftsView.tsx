@@ -210,7 +210,18 @@ export default function MobileShiftsView() {
 
     load();
     return () => { alive = false; };
-  }, [selectedCompanyId, dateRange.start, dateRange.end]);
+  }, [selectedCompanyId, dateRange.start, dateRange.end, reloadKey]);
+
+  // Honor ?create=1 (TopBar quick action, deep links, etc.) on mobile too.
+  useEffect(() => {
+    if (searchParams.get("create") === "1") {
+      setCreateOpen(true);
+      const next = new URLSearchParams(searchParams);
+      next.delete("create");
+      setSearchParams(next, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   // Persist tab in URL
   useEffect(() => {
