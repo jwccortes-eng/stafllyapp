@@ -82,9 +82,12 @@ export default function MobileShiftsView() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { role, hasModuleAccess } = useAuth();
   const { selectedCompanyId, selectedCompany } = useCompany();
+  const { config: shiftsConfig } = useShiftsConfig();
 
   // Permissions — same rule as desktop Shifts
   const canEdit = role === "owner" || role === "admin" || hasModuleAccess("shifts", "edit");
+  const [reloadKey, setReloadKey] = useState(0);
+  const [createOpen, setCreateOpen] = useState(false);
 
   // Tab from URL (?tab=today) so back/forward works; fallback to "today"
   const initialTab = (searchParams.get("tab") as TabKey) || "today";
