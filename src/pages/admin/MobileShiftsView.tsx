@@ -857,10 +857,10 @@ function RequestRow({ req, onOpen }: { req: PendingRequest; onOpen: () => void }
 
 function EmptyState({ tab }: { tab: TabKey }) {
   const messages: Record<TabKey, { title: string; hint: string }> = {
-    today: { title: "No shifts today", hint: "Take a breath. Tomorrow's roster is just a tap away." },
-    upcoming: { title: "Nothing scheduled ahead", hint: "Use the desktop scheduler to plan upcoming shifts." },
-    needs: { title: "All shifts are staffed", hint: "Coverage looks good across the board." },
-    requests: { title: "No pending shift requests", hint: "Worker claims and shift requests will appear here when submitted." },
+    today: { title: "Sin turnos hoy", hint: "Toca Crear arriba para abrir uno rápido en menos de un minuto." },
+    upcoming: { title: "Nada programado adelante", hint: "Toca Crear arriba para abrir un turno desde el teléfono." },
+    needs: { title: "Todos los turnos cubiertos", hint: "La cobertura se ve sólida en todos los turnos." },
+    requests: { title: "Sin solicitudes pendientes", hint: "Las solicitudes de turno aparecen aquí cuando un worker pide entrar." },
   };
   const m = messages[tab];
   return (
