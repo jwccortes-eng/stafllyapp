@@ -227,17 +227,20 @@ export default function AdminLayout() {
       && new URLSearchParams(window.location.search).get("nav") === "legacy";
 
     return (
-      <div className="min-h-screen bg-background pb-24">
-        <header className="sticky top-0 z-30 bg-card/85 backdrop-blur-xl border-b border-border/40">
-          <div className="flex items-center justify-between px-3 h-13">
+      <div className="min-h-screen bg-background pb-[calc(env(safe-area-inset-bottom,0px)+96px)]">
+        <header
+          className="sticky top-0 z-30 bg-card/85 backdrop-blur-xl border-b border-border/40"
+          style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}
+        >
+          <div className="flex items-center justify-between px-3 h-12">
             <div className="flex items-center gap-2 min-w-0">
               <StaflyLogo size={22} markOnly />
               <MobilePageTitle items={visibleItems} />
             </div>
+            {/* Mobile header — keep at most 2 primary affordances visible.
+                Mode/Sound/Product live in the MoreSheet to avoid clutter and
+                badges colliding with the iOS status bar. */}
             <div className="flex items-center gap-0.5 shrink-0">
-              <AdminProductSwitcher compact />
-              <ModeSwitcher compact />
-              <SoundStatusControl compact />
               <NotificationBell />
               {companies.length > 1 && (
                 <div className="ml-0.5">
