@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { format, addDays } from "date-fns";
-import { Loader2 } from "lucide-react";
+import { Loader2, Check, AlertTriangle, Circle } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -16,23 +17,23 @@ import { toast } from "sonner";
 /**
  * MobileQuickCreateShiftSheet — operator-grade mobile-first quick create.
  *
+ * Phase 2 additions (this pass):
+ *  - Draft / Publish now segmented control (uses existing
+ *    `shift_publication_status` enum: 'draft' | 'published').
+ *  - Compact "Readiness" checklist (client, location, time, slots, meeting
+ *    point, notes) — purely presentational, reuses the same field state.
+ *  - Publish guard: hard-blocks on REQUIRED fields (per shifts_config); shows
+ *    a soft warning + secondary confirm for recommended-but-missing fields.
+ *
  * Reuses the EXACT same target table (`scheduled_shifts`) and column shape
- * the desktop dialog uses, behind the SAME RLS policies. We deliberately
- * expose the minimum field set an urgent on-phone admin needs:
- *  - title, date, start/end, slots, client, location, meeting point, notes.
+ * the desktop dialog uses, behind the SAME RLS policies.
  *
- * Out of scope (kept defaulted): pay_type, transportation, claimable,
- * shift_admin assignment, worker selection. Admin can edit on desktop or
- * via the shift detail later.
- *
- * Hard rules:
+ * Hard rules (unchanged):
  *  - tenant (selectedCompanyId) is required and stamped on insert.
- *  - end > start; if end < start we treat as overnight (matches desktop calc).
+ *  - end !== start.
  *  - slots must be ≥ 1.
- *  - publication_status = 'published' so the shift shows up immediately in
- *    Today/Upcoming/Needs Staff buckets (desktop default behavior parity).
- *  - NO writes to time_entries, payroll, shift_assignments (none selected here),
- *    or any payroll table.
+ *  - NO writes to time_entries, payroll, shift_assignments, or any payroll
+ *    / auth / payments / chat / documents table.
  */
 interface SelectOption { id: string; name: string; }
 
@@ -49,6 +50,8 @@ interface Props {
   defaultSlots?: number;
   onCreated: (shiftId: string) => void;
 }
+
+type PublishMode = "draft" | "published";
 
 function toMinutes(t: string) {
   if (!t) return 0;
@@ -70,6 +73,7 @@ export function MobileQuickCreateShiftSheet({
   const todayStr = useMemo(() => format(new Date(), "yyyy-MM-dd"), []);
   const tomorrowStr = useMemo(() => format(addDays(new Date(), 1), "yyyy-MM-dd"), []);
 
+  const [mode, setMode] = useState<PublishMode>("published");
   const [title, setTitle] = useState("");
   const [date, setDate] = useState(todayStr);
   const [startTime, setStartTime] = useState(defaultStartTime);
@@ -80,9 +84,11 @@ export function MobileQuickCreateShiftSheet({
   const [meetingPoint, setMeetingPoint] = useState("");
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
+  const [warningAck, setWarningAck] = useState(false);
 
   useEffect(() => {
     if (open) {
+      setMode("published");
       setTitle("");
       setDate(todayStr);
       setStartTime(defaultStartTime);
@@ -93,30 +99,62 @@ export function MobileQuickCreateShiftSheet({
       setMeetingPoint("");
       setNotes("");
       setSaving(false);
+      setWarningAck(false);
     }
   }, [open, todayStr, defaultStartTime, defaultEndTime, defaultSlots]);
+
+  // Reset the recommended-fields ack whenever something the user can change
+  // moves — otherwise they could "ack" then edit back to a broken state.
+  useEffect(() => { setWarningAck(false); }, [meetingPoint, notes, clientId, locationId, mode]);
 
   const slotsNum = Math.max(0, parseInt(slots) || 0);
   const startMin = toMinutes(startTime);
   const endMin = toMinutes(endTime);
-  // Treat end <= start as overnight; only flag if literally equal.
   const timesInvalid = !startTime || !endTime || startMin === endMin;
 
-  const errors: string[] = [];
-  if (!companyId) errors.push("Selecciona una empresa antes de crear un turno.");
-  if (!date) errors.push("Fecha requerida.");
-  if (timesInvalid) errors.push("Hora de inicio y fin no pueden ser iguales.");
-  if (slotsNum < 1) errors.push("Debe haber al menos 1 trabajador.");
-  if (requireClient && !clientId) errors.push("Cliente requerido por la configuración.");
-  if (requireLocation && !locationId) errors.push("Ubicación requerida por la configuración.");
-  if (!canCreate) errors.push("No tienes permiso para crear turnos en esta empresa.");
+  // HARD errors — block both Draft and Publish (data integrity).
+  const hardErrors: string[] = [];
+  if (!companyId) hardErrors.push("Selecciona una empresa antes de crear un turno.");
+  if (!date) hardErrors.push("Fecha requerida.");
+  if (timesInvalid) hardErrors.push("Hora de inicio y fin no pueden ser iguales.");
+  if (slotsNum < 1) hardErrors.push("Debe haber al menos 1 trabajador.");
+  if (!canCreate) hardErrors.push("No tienes permiso para crear turnos en esta empresa.");
 
-  const valid = errors.length === 0;
+  // PUBLISH-only required (per company shifts_config).
+  const publishBlockers: string[] = [];
+  if (mode === "published" && requireClient && !clientId) publishBlockers.push("Cliente requerido por la configuración.");
+  if (mode === "published" && requireLocation && !locationId) publishBlockers.push("Ubicación requerida por la configuración.");
+
+  // SOFT warnings — recommended but not required.
+  const softWarnings: string[] = [];
+  if (mode === "published") {
+    if (!clientId && !requireClient) softWarnings.push("Sin cliente asignado.");
+    if (!locationId && !requireLocation) softWarnings.push("Sin ubicación asignada.");
+    if (!meetingPoint.trim()) softWarnings.push("Sin punto de encuentro.");
+    if (!notes.trim()) softWarnings.push("Sin notas o instrucciones para el equipo.");
+  }
+
+  const needsWarningAck = mode === "published" && softWarnings.length > 0;
+  const valid =
+    hardErrors.length === 0 &&
+    publishBlockers.length === 0 &&
+    (!needsWarningAck || warningAck);
+
+  // Readiness checklist items (presentational).
+  const checklist: { label: string; ok: boolean; required: boolean }[] = [
+    { label: "Fecha y horario válidos", ok: !!date && !timesInvalid, required: true },
+    { label: "Trabajadores requeridos", ok: slotsNum >= 1, required: true },
+    { label: "Cliente seleccionado", ok: !!clientId, required: requireClient },
+    { label: "Ubicación seleccionada", ok: !!locationId, required: requireLocation },
+    { label: "Punto de encuentro", ok: !!meetingPoint.trim(), required: false },
+    { label: "Notas o instrucciones", ok: !!notes.trim(), required: false },
+  ];
 
   const handleCreate = async () => {
     if (!valid || !companyId) return;
     setSaving(true);
     try {
+      const isPublish = mode === "published";
       const insertData: any = {
         company_id: companyId,
         title: title.trim() || "Turno",
@@ -129,10 +167,10 @@ export function MobileQuickCreateShiftSheet({
         meeting_point: meetingPoint.trim() || null,
         notes: notes.trim() || null,
         created_by: user?.id ?? null,
-        status: "published",
-        publication_status: "published",
-        published_at: new Date().toISOString(),
-        published_by: user?.id ?? null,
+        status: isPublish ? "published" : "draft",
+        publication_status: isPublish ? "published" : "draft",
+        published_at: isPublish ? new Date().toISOString() : null,
+        published_by: isPublish ? (user?.id ?? null) : null,
         claimable: false,
       };
 
@@ -147,11 +185,11 @@ export function MobileQuickCreateShiftSheet({
       // Best-effort audit; do not block UX on failure.
       try {
         await supabase.rpc("log_activity_detailed", {
-          _action: "crear_turno",
+          _action: isPublish ? "publicar_turno" : "guardar_turno_borrador",
           _entity_type: "scheduled_shift",
           _entity_id: data!.id,
           _company_id: companyId,
-          _details: { source: "mobile_quick_create" },
+          _details: { source: "mobile_quick_create", mode },
           _old_data: null,
           _new_data: {
             title: title.trim(),
@@ -159,11 +197,12 @@ export function MobileQuickCreateShiftSheet({
             start_time: startTime,
             end_time: endTime,
             slots: slotsNum,
+            publication_status: insertData.publication_status,
           },
         } as any);
       } catch { /* non-blocking */ }
 
-      toast.success("Turno creado", {
+      toast.success(isPublish ? "Turno publicado" : "Turno guardado como borrador", {
         description: `${title.trim() || "Turno"} · ${date} ${startTime}–${endTime}`,
       });
       onCreated(data!.id);
@@ -176,6 +215,12 @@ export function MobileQuickCreateShiftSheet({
     }
   };
 
+  const ctaLabel = saving
+    ? null
+    : mode === "published"
+      ? (needsWarningAck && !warningAck ? "Revisar antes de publicar" : "Publicar turno")
+      : "Guardar borrador";
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
@@ -185,11 +230,35 @@ export function MobileQuickCreateShiftSheet({
         <SheetHeader className="px-5 pt-5 pb-3 text-left border-b border-border/40">
           <SheetTitle className="text-lg">Crear turno rápido</SheetTitle>
           <p className="text-xs text-muted-foreground mt-1">
-            Mínimo necesario para abrir el turno. Puedes refinar pagos, asignaciones y transporte después.
+            Guarda como borrador para completar después, o publica ahora si todo lo crítico está listo.
           </p>
         </SheetHeader>
 
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+          {/* Mode toggle */}
+          <div className="grid grid-cols-2 gap-2 rounded-xl bg-muted/50 p-1">
+            <button
+              type="button"
+              onClick={() => setMode("draft")}
+              className={cn(
+                "h-10 rounded-lg text-sm font-medium transition-colors",
+                mode === "draft" ? "bg-background shadow-sm" : "text-muted-foreground",
+              )}
+            >
+              Borrador
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode("published")}
+              className={cn(
+                "h-10 rounded-lg text-sm font-medium transition-colors",
+                mode === "published" ? "bg-background shadow-sm" : "text-muted-foreground",
+              )}
+            >
+              Publicar ahora
+            </button>
+          </div>
+
           <div className="space-y-1.5">
             <Label htmlFor="qcs-title">Título</Label>
             <Input
@@ -328,9 +397,54 @@ export function MobileQuickCreateShiftSheet({
             />
           </div>
 
-          {errors.length > 0 && (
-            <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 px-3 py-2.5 text-xs text-amber-700 dark:text-amber-300 space-y-1">
-              {errors.map((e, i) => <div key={i}>• {e}</div>)}
+          {/* Readiness checklist */}
+          <div className="rounded-xl border border-border/60 bg-card/50 px-3 py-3 space-y-2">
+            <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+              Preparación del turno
+            </div>
+            <ul className="space-y-1.5">
+              {checklist.map((item, i) => (
+                <li key={i} className="flex items-center gap-2 text-xs">
+                  {item.ok ? (
+                    <Check className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  ) : item.required ? (
+                    <AlertTriangle className="h-3.5 w-3.5 text-destructive shrink-0" />
+                  ) : (
+                    <Circle className="h-3.5 w-3.5 text-muted-foreground/60 shrink-0" />
+                  )}
+                  <span className={cn(
+                    item.ok ? "text-foreground" : item.required ? "text-destructive" : "text-muted-foreground",
+                  )}>
+                    {item.label}
+                    {item.required && !item.ok && <span className="ml-1">· requerido</span>}
+                    {!item.required && !item.ok && <span className="ml-1 opacity-70">· recomendado</span>}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Hard errors + publish blockers */}
+          {(hardErrors.length > 0 || publishBlockers.length > 0) && (
+            <div className="rounded-xl border border-destructive/30 bg-destructive/5 px-3 py-2.5 text-xs text-destructive space-y-1">
+              {[...hardErrors, ...publishBlockers].map((e, i) => <div key={i}>• {e}</div>)}
+            </div>
+          )}
+
+          {/* Soft warnings (Publish only) */}
+          {needsWarningAck && hardErrors.length === 0 && publishBlockers.length === 0 && (
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 px-3 py-2.5 text-xs text-amber-700 dark:text-amber-300 space-y-2">
+              <div className="font-medium">Faltan datos recomendados antes de publicar:</div>
+              {softWarnings.map((w, i) => <div key={i}>• {w}</div>)}
+              <label className="flex items-start gap-2 pt-1 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={warningAck}
+                  onChange={(e) => setWarningAck(e.target.checked)}
+                  className="mt-0.5"
+                />
+                <span>Entiendo y quiero publicar igual. El equipo verá el turno con la información actual.</span>
+              </label>
             </div>
           )}
         </div>
@@ -349,10 +463,11 @@ export function MobileQuickCreateShiftSheet({
           </Button>
           <Button
             className="flex-[1.4] h-11"
+            variant={mode === "draft" ? "outline" : "default"}
             disabled={!valid || saving}
             onClick={handleCreate}
           >
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Publicar turno"}
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : ctaLabel}
           </Button>
         </div>
       </SheetContent>
