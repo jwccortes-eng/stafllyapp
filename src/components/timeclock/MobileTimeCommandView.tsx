@@ -516,50 +516,107 @@ function AlertDetailSheet({ item, onClose, onOpenWorker, onReviewInTime }: {
   };
   const phoneRaw = (item?.employee.phone_number ?? "").replace(/[^+\d]/g, "");
   const waPhone = phoneRaw.replace(/^\+/, "");
+  const isCritical = item?.type === "stale_open" || item?.type === "very_long";
+  const severityLabel = isCritical ? "Crítico" : "Revisión requerida";
+  const severityCls = isCritical
+    ? "bg-destructive/15 text-destructive border-destructive/30"
+    : "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30";
   return (
     <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
-      <SheetContent side="bottom" className="rounded-t-3xl p-0 max-h-[85vh] flex flex-col">
-        <SheetHeader className="px-5 pt-5 pb-3 text-left">
-          <SheetTitle className="text-base font-bold">{item ? labelMap[item.type] : "Alerta de tiempo"}</SheetTitle>
+      <SheetContent side="bottom" className="rounded-t-3xl p-0 max-h-[92vh] flex flex-col">
+        <SheetHeader className="px-5 pt-5 pb-3 text-left border-b border-border/50">
+          <div className="flex items-center gap-2 mb-1.5">
+            <Badge variant="outline" className={cn("text-[10px] font-bold uppercase tracking-wider px-2 py-0.5", severityCls)}>
+              <AlertTriangle className="h-3 w-3 mr-1" /> {severityLabel}
+            </Badge>
+            {item && !item.entry.clock_out && (
+              <span className="inline-flex items-center gap-1 text-[10px] font-medium text-muted-foreground">
+                <span className="h-1.5 w-1.5 rounded-full bg-destructive animate-pulse" />
+                En vivo
+              </span>
+            )}
+          </div>
+          <SheetTitle className="text-lg font-bold font-heading leading-tight">
+            {item ? labelMap[item.type] : "Alerta de tiempo"}
+          </SheetTitle>
         </SheetHeader>
         {item && (
-          <div className="px-5 pb-5 space-y-4 overflow-y-auto">
-            <div className="flex items-center gap-3">
+          <div className="px-5 py-4 space-y-4 overflow-y-auto">
+            <div className="flex items-center gap-3 rounded-2xl bg-muted/40 p-3">
               <EmployeeAvatar avatarUrl={item.employee.avatar_url} firstName={item.employee.first_name} lastName={item.employee.last_name} size="md" />
               <div className="min-w-0 flex-1">
                 <div className="text-sm font-semibold truncate">{item.employee.first_name} {item.employee.last_name}</div>
-                {item.employee.employer_identification != null && (
-                  <div className="text-[11px] font-mono text-muted-foreground">#{item.employee.employer_identification}</div>
-                )}
+                <div className="flex items-center gap-2 mt-0.5">
+                  {item.employee.employer_identification != null && (
+                    <span className="text-[11px] font-mono text-muted-foreground">#{item.employee.employer_identification}</span>
+                  )}
+                  <span className="text-[11px] text-muted-foreground truncate">{item.reason}</span>
+                </div>
               </div>
             </div>
 
-            <div className="rounded-2xl border border-border bg-card divide-y divide-border/50">
-              <DetailRow label="Incidencia" value={item.reason} />
-              <DetailRow label="Entrada" value={format(new Date(item.entry.clock_in), "PPp", { locale: enUS })} />
-              <DetailRow label="Transcurrido" value={formatDuration(item.minutes)} />
-              {item.entry.scheduled_shifts && (
-                <DetailRow label="Turno" value={item.entry.scheduled_shifts.title} />
-              )}
-              <DetailRow label="Estado" value={item.entry.clock_out ? "Cerrado" : "Abierto"} />
-            </div>
-
-            <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-800 dark:text-amber-300">
-              <strong className="block font-semibold mb-0.5">Acción sugerida</strong>
-              {item.type === "stale_open"
-                ? "Contacta a la persona para confirmar si ya no está trabajando, luego revisa el fichaje en el reloj."
-                : item.type === "very_long"
-                ? "Revisa el fichaje — la duración supera las 16h."
-                : item.type === "needs_review"
-                ? "Abre Aprobaciones para validar el fichaje."
-                : item.type === "no_shift"
-                ? "Vincula este fichaje a un turno programado si aplica."
-                : "Contacta a la persona y confirma si sigue trabajando."}
+            <div className={cn(
+              "rounded-2xl border p-4 text-center",
+              isCritical ? "border-destructive/30 bg-destructive/5" : "border-amber-500/30 bg-amber-500/5"
+            )}>
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold flex items-center justify-center gap-1">
+                <Clock className="h-3 w-3" /> Tiempo transcurrido
+              </div>
+              <div className={cn(
+                "text-3xl font-bold tabular-nums mt-1",
+                isCritical ? "text-destructive" : "text-amber-700 dark:text-amber-300"
+              )}>
+                {formatDuration(item.minutes)}
+              </div>
+              <div className="text-[11px] text-muted-foreground mt-1">
+                desde {format(new Date(item.entry.clock_in), "PPp", { locale: enUS })}
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-2">
+              <div className="rounded-xl border border-border bg-card px-3 py-2">
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Estado</div>
+                <div className="text-sm font-semibold">{item.entry.clock_out ? "Cerrado" : "Abierto"}</div>
+              </div>
+              <div className="rounded-xl border border-border bg-card px-3 py-2 min-w-0">
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Turno</div>
+                <div className="text-sm font-semibold truncate">{item.entry.scheduled_shifts?.title ?? "Sin turno"}</div>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-border bg-card p-3 text-xs">
+              <div className="flex items-center gap-1.5 text-foreground font-semibold mb-1">
+                <ClipboardCheck className="h-3.5 w-3.5 text-primary" /> Acción recomendada
+              </div>
+              <p className="text-muted-foreground leading-relaxed">
+                {item.type === "stale_open"
+                  ? "Contacta a la persona para confirmar si ya no está trabajando, luego revisa el fichaje en el reloj."
+                  : item.type === "very_long"
+                  ? "Revisa el fichaje — la duración supera las 16h."
+                  : item.type === "needs_review"
+                  ? "Abre Aprobaciones para validar el fichaje."
+                  : item.type === "no_shift"
+                  ? "Vincula este fichaje a un turno programado si aplica."
+                  : "Contacta a la persona y confirma si sigue trabajando."}
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-destructive/20 bg-destructive/5 p-3 text-xs">
+              <div className="flex items-center gap-1.5 text-destructive font-semibold mb-1">
+                <AlertTriangle className="h-3.5 w-3.5" /> Seguridad de payroll
+              </div>
+              <ul className="text-foreground/80 leading-relaxed space-y-0.5 list-disc list-inside marker:text-destructive/60">
+                <li>No enviar a payroll hasta revisar/cerrar este fichaje.</li>
+                <li>Confirma con la persona antes de ajustar la salida.</li>
+              </ul>
+            </div>
+          </div>
+        )}
+        {item && (
+          <div className="border-t border-border/50 bg-background/95 backdrop-blur-md px-5 py-3 space-y-2 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+            <div className="grid grid-cols-2 gap-2">
               {phoneRaw ? (
-                <a href={`tel:${phoneRaw}`} onClick={() => setTimeout(onClose, 50)} className="inline-flex items-center justify-center gap-1.5 h-11 rounded-xl bg-primary/10 text-primary text-sm font-medium active:scale-[0.98]">
+                <a href={`tel:${phoneRaw}`} onClick={() => setTimeout(onClose, 50)} className="inline-flex items-center justify-center gap-1.5 h-11 rounded-xl bg-primary/10 text-primary text-sm font-semibold active:scale-[0.98]">
                   <Phone className="h-4 w-4" /> Llamar
                 </a>
               ) : (
@@ -568,7 +625,7 @@ function AlertDetailSheet({ item, onClose, onOpenWorker, onReviewInTime }: {
                 </span>
               )}
               {waPhone ? (
-                <a href={`https://wa.me/${waPhone}`} target="_blank" rel="noopener noreferrer" onClick={() => setTimeout(onClose, 50)} className="inline-flex items-center justify-center gap-1.5 h-11 rounded-xl bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-sm font-medium active:scale-[0.98]">
+                <a href={`https://wa.me/${waPhone}`} target="_blank" rel="noopener noreferrer" onClick={() => setTimeout(onClose, 50)} className="inline-flex items-center justify-center gap-1.5 h-11 rounded-xl bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-sm font-semibold active:scale-[0.98]">
                   <MessageCircle className="h-4 w-4" /> WhatsApp
                 </a>
               ) : (
@@ -577,14 +634,16 @@ function AlertDetailSheet({ item, onClose, onOpenWorker, onReviewInTime }: {
                 </span>
               )}
             </div>
-
             <Button className="w-full h-11 rounded-xl text-sm font-semibold gap-2" onClick={onReviewInTime}>
               <ClipboardCheck className="h-4 w-4" /> Revisar en el reloj
             </Button>
-
-            <Button variant="ghost" className="w-full h-10 rounded-xl text-xs text-muted-foreground gap-2" onClick={() => onOpenWorker(item.employee.id)}>
-              <Users className="h-3.5 w-3.5" /> Ver perfil
-            </Button>
+            <button
+              type="button"
+              onClick={() => onOpenWorker(item.employee.id)}
+              className="w-full h-9 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-muted/50 inline-flex items-center justify-center gap-1.5 transition"
+            >
+              <Users className="h-3.5 w-3.5" /> Ver perfil del worker
+            </button>
           </div>
         )}
       </SheetContent>
