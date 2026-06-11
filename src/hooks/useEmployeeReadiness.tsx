@@ -40,45 +40,44 @@ export function useEmployeeReadiness(employeeId: string | null | undefined): Rea
   const load = useCallback(async () => {
     if (!employeeId) { setLoading(false); return; }
     setLoading(true);
+    try {
+      const { data: emp } = await supabase
+        .from("employees")
+        .select(
+          "id, company_id, profile_status, first_name, last_name, phone_number, date_of_birth, ssn_last4, address_line, address_city, address_state, address_zip, employee_role, has_car",
+        )
+        .eq("id", employeeId)
+        .maybeSingle();
 
-    const { data: emp } = await supabase
-      .from("employees")
-      .select(
-        "id, company_id, profile_status, first_name, last_name, phone_number, date_of_birth, ssn_last4, address_line, address_city, address_state, address_zip, employee_role, has_car",
-      )
-      .eq("id", employeeId)
-      .maybeSingle();
+      if (!emp) { setLoading(false); return; }
 
-    if (!emp) { setLoading(false); return; }
+      setStatus((emp.profile_status as ProfileStatus) ?? "incomplete");
+      const personal = missingPersonalFields(emp as PersonalInfoSnapshot);
+      setMissingPersonal(personal);
 
-    setStatus((emp.profile_status as ProfileStatus) ?? "incomplete");
-    const personal = missingPersonalFields(emp as PersonalInfoSnapshot);
-    setMissingPersonal(personal);
+      const canDrive = !!emp.has_car;
+      const required = await getRequiredDocumentsForCompany(emp.company_id, { canDrive });
 
-    const canDrive = !!emp.has_car;
-    const required = await getRequiredDocumentsForCompany(emp.company_id, { canDrive });
+      const { data: docs } = await supabase
+        .from("employee_documents" as any)
+        .select("category, review_status")
+        .eq("employee_id", employeeId)
+        .eq("review_status", "approved");
 
-    // Only APPROVED documents satisfy a requirement.
-    // Pending/Rejected uploads keep the worker in `pending_documents`.
-    const { data: docs } = await supabase
-      .from("employee_documents" as any)
-      .select("category, review_status")
-      .eq("employee_id", employeeId)
-      .eq("review_status", "approved");
+      const owned = new Set((docs ?? []).map((d: any) => d.category as DocumentCategory));
+      const missing = required
+        .filter((c) => !owned.has(c))
+        .map((c) => ({ category: c, label: DOCUMENT_CATEGORIES[c].label }));
+      setMissingDocs(missing);
 
-    const owned = new Set((docs ?? []).map((d: any) => d.category as DocumentCategory));
-    const missing = required
-      .filter((c) => !owned.has(c))
-      .map((c) => ({ category: c, label: DOCUMENT_CATEGORIES[c].label }));
-    setMissingDocs(missing);
-
-    const personalReq = 10; // mirror of missingPersonalFields keys count
-    const docsReq = required.length;
-    const total = personalReq + docsReq;
-    const done = total - personal.length - missing.length;
-    setTotals({ total, done });
-
-    setLoading(false);
+      const personalReq = 10;
+      const docsReq = required.length;
+      const total = personalReq + docsReq;
+      const done = total - personal.length - missing.length;
+      setTotals({ total, done });
+    } finally {
+      setLoading(false);
+    }
   }, [employeeId]);
 
   useEffect(() => { load(); }, [load]);
