@@ -15,6 +15,8 @@ import { useEffect, useMemo, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
 
+const lastResolvedEmployeeByScope = new Map<string, string>();
+
 export function useEffectiveEmployee() {
   const { employeeId, resolveEmployeeForCompany } = useAuth();
   const { selectedCompanyId } = useCompany();
@@ -24,18 +26,20 @@ export function useEffectiveEmployee() {
   const effectiveEmployeeId = selectedCompanyId
     ? resolveEmployeeForCompany(selectedCompanyId)
     : employeeId;
+  const scopeKey = selectedCompanyId ?? "__default__";
 
   const lastKnownEmployeeIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (effectiveEmployeeId) {
       lastKnownEmployeeIdRef.current = effectiveEmployeeId;
+      lastResolvedEmployeeByScope.set(scopeKey, effectiveEmployeeId);
     }
-  }, [effectiveEmployeeId]);
+  }, [effectiveEmployeeId, scopeKey]);
 
   const stableEmployeeId = useMemo(() => {
-    return effectiveEmployeeId ?? lastKnownEmployeeIdRef.current;
-  }, [effectiveEmployeeId]);
+    return effectiveEmployeeId ?? lastKnownEmployeeIdRef.current ?? lastResolvedEmployeeByScope.get(scopeKey) ?? null;
+  }, [effectiveEmployeeId, scopeKey]);
 
   return {
     effectiveEmployeeId,
