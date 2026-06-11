@@ -102,35 +102,54 @@ export default function PortalClock() {
   const { t } = useT();
   const [searchParams] = useSearchParams();
   const urlShiftId = searchParams.get("shiftId");
-  const [loading, setLoading] = useState(true);
+
+  // Cross-mount snapshot so bottom-nav return doesn't strip clock UI.
+  // Only display/operational state is cached — never payroll math.
+  interface ClockSnapshot {
+    activeEntry: TimeEntry | null;
+    todayEntries: TimeEntry[];
+    companyId: string | null;
+    companyFlags: { name: string | null; is_demo: boolean; is_test: boolean } | null;
+    todayShifts: TodayShift[];
+    hasProfilePhoto: boolean;
+    clockPhotoRequired: boolean;
+    shiftQrModes: Record<string, string>;
+    allowedMethods: string[];
+    hasDailyOnlyShifts: boolean;
+    staleOpenEntry: { entry: TimeEntry; shift: TodayShift | null } | null;
+  }
+  const PAGE_KEY = "portal:clock";
+  const cached = getPageCache<ClockSnapshot>(PAGE_KEY, employeeId);
+
+  const [loading, setLoading] = useState(!cached);
   const [acting, setActing] = useState(false);
-  const [activeEntry, setActiveEntry] = useState<TimeEntry | null>(null);
-  const [todayEntries, setTodayEntries] = useState<TimeEntry[]>([]);
-  const [companyId, setCompanyId] = useState<string | null>(null);
+  const [activeEntry, setActiveEntry] = useState<TimeEntry | null>(cached?.activeEntry ?? null);
+  const [todayEntries, setTodayEntries] = useState<TimeEntry[]>(cached?.todayEntries ?? []);
+  const [companyId, setCompanyId] = useState<string | null>(cached?.companyId ?? null);
   const [companyFlags, setCompanyFlags] = useState<{
     name: string | null;
     is_demo: boolean;
     is_test: boolean;
-  } | null>(null);
+  } | null>(cached?.companyFlags ?? null);
   const [qaMode, setQaMode] = useState<boolean>(false);
   const [tenantConfirmOpen, setTenantConfirmOpen] = useState(false);
   const [now, setNow] = useState(new Date());
-  const [todayShifts, setTodayShifts] = useState<TodayShift[]>([]);
+  const [todayShifts, setTodayShifts] = useState<TodayShift[]>(cached?.todayShifts ?? []);
   const [selectedShift, setSelectedShift] = useState<TodayShift | null>(null);
   const [requestOpen, setRequestOpen] = useState(false);
   const [requestMessage, setRequestMessage] = useState("");
   const [sendingRequest, setSendingRequest] = useState(false);
   const [clockInBlocked, setClockInBlocked] = useState<string | null>(null);
-  const [hasProfilePhoto, setHasProfilePhoto] = useState(true);
+  const [hasProfilePhoto, setHasProfilePhoto] = useState(cached?.hasProfilePhoto ?? true);
   const [photoDialogOpen, setPhotoDialogOpen] = useState(false);
   const [pendingClockAction, setPendingClockAction] = useState<"in" | "out" | null>(null);
-  const [clockPhotoRequired, setClockPhotoRequired] = useState(false);
+  const [clockPhotoRequired, setClockPhotoRequired] = useState(cached?.clockPhotoRequired ?? false);
   const [qrScannerOpen, setQrScannerOpen] = useState(false);
-  const [shiftQrModes, setShiftQrModes] = useState<Record<string, string>>({});
-  const [allowedMethods, setAllowedMethods] = useState<string[]>(["manual", "gps", "qr", "kiosk"]);
+  const [shiftQrModes, setShiftQrModes] = useState<Record<string, string>>(cached?.shiftQrModes ?? {});
+  const [allowedMethods, setAllowedMethods] = useState<string[]>(cached?.allowedMethods ?? ["manual", "gps", "qr", "kiosk"]);
   const [successState, setSuccessState] = useState<{ type: "in" | "out"; time: string; shift: string } | null>(null);
-  const [hasDailyOnlyShifts, setHasDailyOnlyShifts] = useState(false);
-  const [staleOpenEntry, setStaleOpenEntry] = useState<{ entry: TimeEntry; shift: TodayShift | null } | null>(null);
+  const [hasDailyOnlyShifts, setHasDailyOnlyShifts] = useState(cached?.hasDailyOnlyShifts ?? false);
+  const [staleOpenEntry, setStaleOpenEntry] = useState<{ entry: TimeEntry; shift: TodayShift | null } | null>(cached?.staleOpenEntry ?? null);
 
   useEffect(() => {
     const interval = setInterval(() => setNow(new Date()), 1000);
