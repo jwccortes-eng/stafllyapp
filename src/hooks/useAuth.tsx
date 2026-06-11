@@ -1,4 +1,4 @@
-import { useState, useEffect, createContext, useContext, ReactNode, useCallback } from "react";
+import { useState, useEffect, createContext, useContext, ReactNode, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
 import { safeLocalStorage } from "@/lib/safe-storage";
@@ -108,6 +108,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [permissions, setPermissions] = useState<ModulePermission[]>([]);
   const [actionPermissions, setActionPermissions] = useState<ActionPermission[]>([]);
   const [fullName, setFullName] = useState<string | null>(null);
+  const hydratedUserIdRef = useRef<string | null>(null);
 
   const setActiveMode = useCallback((mode: ActiveMode) => {
     setActiveModeState(mode);
@@ -275,8 +276,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (nextSession?.user) {
         await fetchUserData(nextSession.user.id);
+        hydratedUserIdRef.current = nextSession.user.id;
       } else {
         resetAuthState();
+        hydratedUserIdRef.current = null;
       }
 
       if (mounted) {
@@ -312,6 +315,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (event === "INITIAL_SESSION" || event === "TOKEN_REFRESHED") {
           if (event === "INITIAL_SESSION" && !nextSession) {
             resetAuthState();
+            hydratedUserIdRef.current = null;
+            setLoading(false);
+          } else if (
+            nextSession?.user?.id &&
+            hydratedUserIdRef.current === nextSession.user.id
+          ) {
             setLoading(false);
           }
           return;
@@ -321,11 +330,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setLoading(true);
           setTimeout(() => {
             void fetchUserData(nextSession.user.id).finally(() => {
+              hydratedUserIdRef.current = nextSession.user.id;
               if (mounted) setLoading(false);
             });
           }, 0);
         } else {
           resetAuthState();
+          hydratedUserIdRef.current = null;
           setLoading(false);
         }
       }
