@@ -11,6 +11,7 @@
  * - If no company selected (pure employee, no admin) → return their
  *   single employee record directly.
  */
+import { useEffect, useMemo, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
 
@@ -24,5 +25,23 @@ export function useEffectiveEmployee() {
     ? resolveEmployeeForCompany(selectedCompanyId)
     : employeeId;
 
-  return { effectiveEmployeeId, selectedCompanyId };
+  const lastKnownEmployeeIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (effectiveEmployeeId) {
+      lastKnownEmployeeIdRef.current = effectiveEmployeeId;
+    }
+  }, [effectiveEmployeeId]);
+
+  const stableEmployeeId = useMemo(() => {
+    return effectiveEmployeeId ?? lastKnownEmployeeIdRef.current;
+  }, [effectiveEmployeeId]);
+
+  return {
+    effectiveEmployeeId,
+    stableEmployeeId,
+    lastKnownEmployeeId: lastKnownEmployeeIdRef.current,
+    selectedCompanyId,
+    isResolvingEmployee: !effectiveEmployeeId && !!lastKnownEmployeeIdRef.current,
+  };
 }
