@@ -85,6 +85,10 @@ export default function MobileTimeCommandView() {
     return () => clearInterval(t);
   }, []);
 
+  // Clear selected alert when tenant or tab changes so a stale worker/incidence
+  // never lingers on screen after context switch.
+  useEffect(() => { setAlertDetail(null); }, [selectedCompanyId, mode]);
+
   const todayKey = format(now, "yyyy-MM-dd");
 
   const load = async () => {
