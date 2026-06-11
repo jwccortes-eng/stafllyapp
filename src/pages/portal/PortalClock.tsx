@@ -305,8 +305,27 @@ export default function PortalClock() {
       if (preselect) setSelectedShift(preselect);
       else if (actionableShifts.length === 1) setSelectedShift(actionableShifts[0]);
     }
+    // Snapshot operational/display state so a bottom-nav return doesn't
+    // strip the clock UI back to skeletons. Never persists payroll math.
+    setPageCache<ClockSnapshot>(PAGE_KEY, employeeId, {
+      activeEntry: todayOpen ?? anyOpen,
+      todayEntries: list,
+      companyId: emp?.company_id ?? null,
+      companyFlags: emp ? {
+        name: emp.companies?.name ?? null,
+        is_demo: emp.companies?.is_demo === true,
+        is_test: emp.companies?.is_test === true,
+      } : null,
+      todayShifts: actionableShifts,
+      hasProfilePhoto: !!emp?.avatar_url,
+      clockPhotoRequired,
+      shiftQrModes: qrModes,
+      allowedMethods,
+      hasDailyOnlyShifts: actionableShifts.length === 0 && mappedShifts.length > 0 && !stale,
+      staleOpenEntry: stale,
+    });
     setLoading(false);
-  }, [employeeId, urlShiftId]);
+  }, [employeeId, urlShiftId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { loadData(); }, [loadData]);
 
