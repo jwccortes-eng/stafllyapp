@@ -181,6 +181,9 @@ export default function PortalClock() {
         .maybeSingle(),
     ]);
     const emp = empRes.data as any;
+    // Local copies for snapshot (state setters are async).
+    let nextClockPhotoRequired = clockPhotoRequired;
+    let nextAllowedMethods = allowedMethods;
     if (emp) {
       setCompanyId(emp.company_id);
       setHasProfilePhoto(!!emp.avatar_url);
@@ -193,9 +196,11 @@ export default function PortalClock() {
       const { data: clockCfgRow } = await supabase
         .from("company_settings").select("value").eq("company_id", emp.company_id).eq("key", "clock_config").maybeSingle();
       const clockCfg = (clockCfgRow?.value && typeof clockCfgRow.value === "object") ? clockCfgRow.value as Record<string, unknown> : {};
-      setClockPhotoRequired(clockCfg.require_photo === true);
+      nextClockPhotoRequired = clockCfg.require_photo === true;
+      setClockPhotoRequired(nextClockPhotoRequired);
       if (Array.isArray(clockCfg.allowed_methods) && clockCfg.allowed_methods.length > 0) {
-        setAllowedMethods(clockCfg.allowed_methods as string[]);
+        nextAllowedMethods = clockCfg.allowed_methods as string[];
+        setAllowedMethods(nextAllowedMethods);
       }
     }
 
