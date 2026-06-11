@@ -42,6 +42,7 @@ import {
   tenantSafetyFlags,
 } from "@/lib/qa-mode";
 import { useT } from "@/i18n/LanguageContext";
+import { getPageCache, setPageCache, hasPageCache } from "@/lib/portal/page-cache";
 
 interface TimeEntry {
   id: string;
