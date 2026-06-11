@@ -24,10 +24,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useEffectiveEmployee } from "@/hooks/useEffectiveEmployee";
 
 export default function EmployeeLayout() {
   const { user, role, employeeActive, employeeId, allEmployeeIds, resolveEmployeeForCompany, loading, signOut, fullName, canAccessAdmin, canAccessAdminForCompany } = useAuth();
   const { companies, selectedCompanyId, selectedCompany, switchCompany } = useCompany();
+  const { stableEmployeeId, isResolvingEmployee } = useEffectiveEmployee();
   const isMobile = useIsMobile();
   const { isModuleEnabled, enabledModules, loading: modulesLoading } = usePortalModules();
   const [moreOpen, setMoreOpen] = useState(false);
@@ -43,6 +45,7 @@ export default function EmployeeLayout() {
   const currentEmployeeId = selectedCompanyId
     ? resolveEmployeeForCompany(selectedCompanyId)
     : employeeId;
+  const renderEmployeeId = currentEmployeeId || stableEmployeeId || employeeId;
 
   // Filter companies to only those where the user has an employee record
   const employeeCompanyIds = new Set(allEmployeeIds.map(e => e.companyId));
@@ -50,19 +53,19 @@ export default function EmployeeLayout() {
   const hasMultipleCompanies = employeeCompanies.length > 1;
 
   useEffect(() => {
-    if (!currentEmployeeId) return;
+    if (!renderEmployeeId) return;
     supabase
       .from("employees")
       .select("avatar_url, first_name, last_name")
-      .eq("id", currentEmployeeId)
+      .eq("id", renderEmployeeId)
       .single()
       .then(({ data }) => {
         setAvatarUrl(data?.avatar_url ?? null);
         if (data) setEmpName(formatPersonName(`${data.first_name} ${data.last_name}`));
       });
-  }, [currentEmployeeId]);
+  }, [renderEmployeeId]);
 
-  if (loading) {
+  if (loading && !renderEmployeeId) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" />
@@ -71,9 +74,9 @@ export default function EmployeeLayout() {
   }
 
   if (!user) return <Navigate to="/auth" replace />;
-  if (!currentEmployeeId && !employeeId) return <Navigate to={canAccessAdmin ? "/app" : "/auth"} replace />;
+  if (!renderEmployeeId) return <Navigate to={canAccessAdmin ? "/app" : "/auth"} replace />;
 
-  const effectiveEmployeeId = currentEmployeeId || employeeId;
+  const effectiveEmployeeId = renderEmployeeId;
 
   if (!employeeActive) {
     return (
@@ -94,7 +97,7 @@ export default function EmployeeLayout() {
     );
   }
 
-  if (avatarUrl === undefined) {
+  if (avatarUrl === undefined && !isResolvingEmployee) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" />

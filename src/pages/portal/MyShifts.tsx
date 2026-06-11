@@ -81,7 +81,7 @@ type ShiftsSnapshot = { assignments: ShiftAssignment[]; claimable: ClaimableShif
 const PAGE_KEY = "portal:my-shifts";
 
 export default function MyShifts() {
-  const { effectiveEmployeeId: employeeId } = useEffectiveEmployee();
+  const { stableEmployeeId: employeeId, isResolvingEmployee } = useEffectiveEmployee();
   const navigate = useNavigate();
   const { t } = useT();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -103,14 +103,25 @@ export default function MyShifts() {
   const [historyVisible, setHistoryVisible] = useState(HISTORY_PAGE);
 
   const load = async () => {
-    if (!employeeId) { setAssignments([]); setClaimable([]); setLoading(false); return; }
+    if (!employeeId) {
+      if (!isResolvingEmployee) {
+        setAssignments([]);
+        setClaimable([]);
+      }
+      setLoading(false);
+      return;
+    }
     // Background refetch keeps existing data on screen; only first load shows skeleton.
     if (!hasPageCache(PAGE_KEY, employeeId)) setLoading(true);
     setLoadError(null);
     try {
 
     const { data: emp } = await supabase.from("employees").select("company_id").eq("id", employeeId).maybeSingle();
-    if (!emp) { setLoading(false); return; }
+    if (!emp) {
+      setLoadError("No encontramos tu perfil de empleado para esta compañía.");
+      setLoading(false);
+      return;
+    }
 
     // CRITICAL: filter scheduled_shifts.deleted_at to hide soft-deleted shifts.
     // ALSO exclude removed/rejected assignments (set by trigger on soft-delete or by employee).
@@ -190,7 +201,7 @@ export default function MyShifts() {
     }
   };
 
-  useEffect(() => { load(); }, [employeeId]);
+  useEffect(() => { load(); }, [employeeId, isResolvingEmployee]);
 
   const claimShift = async (shiftId: string) => {
     if (!employeeId) return;

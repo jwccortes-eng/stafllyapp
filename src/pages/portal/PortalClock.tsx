@@ -43,6 +43,7 @@ import {
 } from "@/lib/qa-mode";
 import { useT } from "@/i18n/LanguageContext";
 import { getPageCache, setPageCache, hasPageCache } from "@/lib/portal/page-cache";
+import { ErrorBlock } from "@/components/ui/error-block";
 
 interface TimeEntry {
   id: string;
@@ -95,7 +96,8 @@ function isClockOutWithinSchedule(shift: TodayShift | null): { withinSchedule: b
 }
 
 export default function PortalClock() {
-  const { effectiveEmployeeId: employeeId } = useEffectiveEmployee();
+  const { effectiveEmployeeId, stableEmployeeId, isResolvingEmployee } = useEffectiveEmployee();
+  const employeeId = stableEmployeeId;
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -150,6 +152,8 @@ export default function PortalClock() {
   const [successState, setSuccessState] = useState<{ type: "in" | "out"; time: string; shift: string } | null>(null);
   const [hasDailyOnlyShifts, setHasDailyOnlyShifts] = useState(cached?.hasDailyOnlyShifts ?? false);
   const [staleOpenEntry, setStaleOpenEntry] = useState<{ entry: TimeEntry; shift: TodayShift | null } | null>(cached?.staleOpenEntry ?? null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [missingEmployeeProfile, setMissingEmployeeProfile] = useState(false);
 
   useEffect(() => {
     const interval = setInterval(() => setNow(new Date()), 1000);
@@ -169,22 +173,33 @@ export default function PortalClock() {
   }, [selectedShift, now]);
 
   const loadData = useCallback(async () => {
-    if (!employeeId) { setLoading(false); return; }
+    if (!employeeId) {
+      setMissingEmployeeProfile(!isResolvingEmployee);
+      setLoading(false);
+      return;
+    }
     // First load only — subsequent visits keep current UI on screen
     // while the refetch runs silently in background.
     if (!hasPageCache(PAGE_KEY, employeeId)) setLoading(true);
-    const [empRes] = await Promise.all([
-      supabase
-        .from("employees")
-        .select("company_id, avatar_url, companies(name, is_demo, is_test)")
-        .eq("id", employeeId)
-        .maybeSingle(),
-    ]);
-    const emp = empRes.data as any;
+    setLoadError(null);
+    setMissingEmployeeProfile(false);
+    try {
+      const [empRes] = await Promise.all([
+        supabase
+          .from("employees")
+          .select("company_id, avatar_url, companies(name, is_demo, is_test)")
+          .eq("id", employeeId)
+          .maybeSingle(),
+      ]);
+      const emp = empRes.data as any;
+      if (!emp) {
+        setMissingEmployeeProfile(true);
+        setLoading(false);
+        return;
+      }
     // Local copies for snapshot (state setters are async).
     let nextClockPhotoRequired = clockPhotoRequired;
     let nextAllowedMethods = allowedMethods;
-    if (emp) {
       setCompanyId(emp.company_id);
       setHasProfilePhoto(!!emp.avatar_url);
       setCompanyFlags({
@@ -202,14 +217,13 @@ export default function PortalClock() {
         nextAllowedMethods = clockCfg.allowed_methods as string[];
         setAllowedMethods(nextAllowedMethods);
       }
-    }
 
-    const today = new Date();
-    const dayStart = startOfDay(today).toISOString();
-    const dayEnd = endOfDay(today).toISOString();
-    const todayStr = format(today, "yyyy-MM-dd");
+      const today = new Date();
+      const dayStart = startOfDay(today).toISOString();
+      const dayEnd = endOfDay(today).toISOString();
+      const todayStr = format(today, "yyyy-MM-dd");
 
-    const [entriesRes, openEntriesRes, shiftsRes] = await Promise.all([
+      const [entriesRes, openEntriesRes, shiftsRes] = await Promise.all([
       supabase.from("time_entries")
         .select("id, clock_in, clock_out, status, notes, break_minutes, shift_id")
         .eq("employee_id", employeeId).gte("clock_in", dayStart).lte("clock_in", dayEnd)
@@ -234,15 +248,15 @@ export default function PortalClock() {
         .in("status", ["confirmed", "pending"]),
     ]);
 
-    const list = (entriesRes.data ?? []) as TimeEntry[];
-    setTodayEntries(list);
+      const list = (entriesRes.data ?? []) as TimeEntry[];
+      setTodayEntries(list);
     // Prefer today's open entry; fall back to any open entry from previous days.
-    const todayOpen = list.find((e) => !e.clock_out) ?? null;
-    const anyOpen = (openEntriesRes.data?.[0] ?? null) as TimeEntry | null;
-    setActiveEntry(todayOpen ?? anyOpen);
+      const todayOpen = list.find((e) => !e.clock_out) ?? null;
+      const anyOpen = (openEntriesRes.data?.[0] ?? null) as TimeEntry | null;
+      setActiveEntry(todayOpen ?? anyOpen);
 
-    const qrModes: Record<string, string> = {};
-    const mappedShifts: TodayShift[] = (shiftsRes.data ?? []).map((sa: any) => {
+      const qrModes: Record<string, string> = {};
+      const mappedShifts: TodayShift[] = (shiftsRes.data ?? []).map((sa: any) => {
       const ss = sa.scheduled_shifts;
       qrModes[ss.id] = ss.qr_attendance_mode || "disabled";
       return {
@@ -257,11 +271,11 @@ export default function PortalClock() {
           defaultAttendanceModeForPayType(ss.pay_type),
       };
     });
-    setShiftQrModes(qrModes);
+      setShiftQrModes(qrModes);
     // Keep on the screen any shift the worker can act on:
     //  - clock or hybrid → traditional clock in/out (creates time_entries)
     //  - arrival → presence reporting (clock_events only, no payroll hours)
-    const actionableShifts = mappedShifts.filter(
+      const actionableShifts = mappedShifts.filter(
       s => s.attendance_mode !== "clock" || s.pay_type !== "daily",
     );
 
@@ -269,8 +283,8 @@ export default function PortalClock() {
     // If the active open entry is from a previous day, fetch its shift metadata
     // so the focus card + Clock out button render correctly. Without this the
     // worker would see "On shift" on /portal but no Clock out CTA here.
-    let stale: { entry: TimeEntry; shift: TodayShift | null } | null = null;
-    if (anyOpen && !todayOpen) {
+      let stale: { entry: TimeEntry; shift: TodayShift | null } | null = null;
+      if (anyOpen && !todayOpen) {
       let staleShift: TodayShift | null = null;
       if (anyOpen.shift_id) {
         const { data: ssRow } = await supabase
@@ -299,20 +313,20 @@ export default function PortalClock() {
       }
       stale = { entry: anyOpen, shift: staleShift };
     }
-    setStaleOpenEntry(stale);
+      setStaleOpenEntry(stale);
 
     // Daily-only-with-no-arrival edge case (shouldn't happen w/ defaults, but guard):
-    setHasDailyOnlyShifts(actionableShifts.length === 0 && mappedShifts.length > 0 && !stale);
-    setTodayShifts(actionableShifts);
-    const activeOpen = todayOpen ?? anyOpen;
-    if (!activeOpen) {
-      const preselect = urlShiftId ? actionableShifts.find(s => s.id === urlShiftId) : null;
-      if (preselect) setSelectedShift(preselect);
-      else if (actionableShifts.length === 1) setSelectedShift(actionableShifts[0]);
-    }
+      setHasDailyOnlyShifts(actionableShifts.length === 0 && mappedShifts.length > 0 && !stale);
+      setTodayShifts(actionableShifts);
+      const activeOpen = todayOpen ?? anyOpen;
+      if (!activeOpen) {
+        const preselect = urlShiftId ? actionableShifts.find(s => s.id === urlShiftId) : null;
+        if (preselect) setSelectedShift(preselect);
+        else if (actionableShifts.length === 1) setSelectedShift(actionableShifts[0]);
+      }
     // Snapshot operational/display state so a bottom-nav return doesn't
     // strip the clock UI back to skeletons. Never persists payroll math.
-    setPageCache<ClockSnapshot>(PAGE_KEY, employeeId, {
+      setPageCache<ClockSnapshot>(PAGE_KEY, employeeId, {
       activeEntry: todayOpen ?? anyOpen,
       todayEntries: list,
       companyId: emp?.company_id ?? null,
@@ -328,9 +342,14 @@ export default function PortalClock() {
       allowedMethods: nextAllowedMethods,
       hasDailyOnlyShifts: actionableShifts.length === 0 && mappedShifts.length > 0 && !stale,
       staleOpenEntry: stale,
-    });
-    setLoading(false);
-  }, [employeeId, urlShiftId]); // eslint-disable-line react-hooks/exhaustive-deps
+      });
+    } catch (err: any) {
+      console.error("[PortalClock] load failed", err);
+      setLoadError(err?.message ?? "No pudimos actualizar el reloj.");
+    } finally {
+      setLoading(false);
+    }
+  }, [employeeId, urlShiftId, clockPhotoRequired, allowedMethods, isResolvingEmployee]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -661,6 +680,17 @@ export default function PortalClock() {
     );
   }
 
+  if (!employeeId && missingEmployeeProfile) {
+    return (
+      <div className="pt-4">
+        <ErrorBlock
+          title="No encontramos tu perfil"
+          message="No encontramos tu perfil de empleado para esta compañía."
+        />
+      </div>
+    );
+  }
+
   const isClockedIn = !!activeEntry;
   const hasQrShifts = allowedMethods.includes("qr") && Object.values(shiftQrModes).some(m => m !== "disabled" && m !== "");
   const allowManual = allowedMethods.includes("manual");
@@ -695,6 +725,16 @@ export default function PortalClock() {
 
   return (
     <div className="animate-fade-in pb-24">
+      {isResolvingEmployee && (
+        <div className="mb-3 rounded-xl border border-border/50 bg-card/70 px-3 py-2 text-[11px] text-muted-foreground">
+          Actualizando…
+        </div>
+      )}
+      {loadError && (
+        <div className="mb-3 rounded-xl border border-warning/30 bg-warning/[0.06] px-3 py-2 text-[11px] text-muted-foreground">
+          {loadError}
+        </div>
+      )}
       {/* ─── Tenant safety badge (always visible) + QA-mode banner ─── */}
       <div className="mb-3">
         <TenantSafetyBadge

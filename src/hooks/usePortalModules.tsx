@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import { useEffectiveEmployee } from "@/hooks/useEffectiveEmployee";
 
 /**
  * Portal module keys that can be toggled by admins.
@@ -38,7 +38,7 @@ interface UsePortalModulesReturn {
 }
 
 export function usePortalModules(): UsePortalModulesReturn {
-  const { employeeId } = useAuth();
+  const { stableEmployeeId: employeeId } = useEffectiveEmployee();
   const [enabledModules, setEnabledModules] = useState<Set<string>>(new Set());
   const [hasConfig, setHasConfig] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -48,6 +48,8 @@ export function usePortalModules(): UsePortalModulesReturn {
       setLoading(false);
       return;
     }
+
+    setLoading((prev) => prev && enabledModules.size === 0 && !hasConfig);
 
     const { data } = await supabase
       .from("employee_portal_modules")
@@ -66,7 +68,7 @@ export function usePortalModules(): UsePortalModulesReturn {
     }
 
     setLoading(false);
-  }, [employeeId]);
+  }, [employeeId, enabledModules.size, hasConfig]);
 
   useEffect(() => {
     fetchModules();
