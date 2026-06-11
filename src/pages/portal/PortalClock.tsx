@@ -323,9 +323,9 @@ export default function PortalClock() {
       } : null,
       todayShifts: actionableShifts,
       hasProfilePhoto: !!emp?.avatar_url,
-      clockPhotoRequired,
+      clockPhotoRequired: nextClockPhotoRequired,
       shiftQrModes: qrModes,
-      allowedMethods,
+      allowedMethods: nextAllowedMethods,
       hasDailyOnlyShifts: actionableShifts.length === 0 && mappedShifts.length > 0 && !stale,
       staleOpenEntry: stale,
     });
