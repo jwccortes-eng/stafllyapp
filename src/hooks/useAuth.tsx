@@ -109,6 +109,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [actionPermissions, setActionPermissions] = useState<ActionPermission[]>([]);
   const [fullName, setFullName] = useState<string | null>(null);
   const hydratedUserIdRef = useRef<string | null>(null);
+  const activeModeRef = useRef<ActiveMode>(activeMode);
+
+  useEffect(() => {
+    activeModeRef.current = activeMode;
+  }, [activeMode]);
 
   const setActiveMode = useCallback((mode: ActiveMode) => {
     setActiveModeState(mode);
@@ -265,7 +270,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           companies: [],
           companyRoles: {},
           allEmployeeIds: [],
-          activeMode,
+          activeMode: activeModeRef.current,
           canAccessAdminForSelected: null,
           canAccessPortalForSelected: null,
           redirectTarget: null,
@@ -302,7 +307,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           companies: [],
           companyRoles: {},
           allEmployeeIds: [],
-          activeMode,
+          activeMode: activeModeRef.current,
           canAccessAdminForSelected: null,
           canAccessPortalForSelected: null,
           redirectTarget: null,
@@ -356,7 +361,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, [activeMode, fetchUserData, resetAuthState]);
+  }, [fetchUserData, resetAuthState]);
 
   const signOut = async () => {
     try {
