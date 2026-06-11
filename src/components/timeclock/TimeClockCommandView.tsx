@@ -824,6 +824,7 @@ function AlertDetailSheet({
               {phoneRaw ? (
                 <a
                   href={`tel:${phoneRaw}`}
+                  onClick={() => setTimeout(onClose, 50)}
                   className="inline-flex items-center justify-center gap-1.5 h-11 rounded-xl bg-primary/10 text-primary text-sm font-medium active:scale-[0.98] transition"
                 >
                   <Phone className="h-4 w-4" /> Llamar
@@ -838,6 +839,7 @@ function AlertDetailSheet({
                   href={`https://wa.me/${waPhone}`}
                   target="_blank"
                   rel="noopener noreferrer"
+                  onClick={() => setTimeout(onClose, 50)}
                   className="inline-flex items-center justify-center gap-1.5 h-11 rounded-xl bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-sm font-medium active:scale-[0.98] transition"
                 >
                   <MessageCircle className="h-4 w-4" /> WhatsApp
