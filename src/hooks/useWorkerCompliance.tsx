@@ -36,36 +36,38 @@ export function useWorkerCompliance(
       return;
     }
     setLoading(true);
+    try {
+      const { data: emp } = await supabase
+        .from("employees")
+        .select(
+          "first_name,last_name,phone_number,email,date_of_birth,ssn_last4," +
+            "address_line,address_city,address_state,address_zip," +
+            "emergency_contact_name,emergency_contact_phone,avatar_url,has_car,can_drive",
+        )
+        .eq("id", employeeId)
+        .maybeSingle();
 
-    const { data: emp } = await supabase
-      .from("employees")
-      .select(
-        "first_name,last_name,phone_number,email,date_of_birth,ssn_last4," +
-          "address_line,address_city,address_state,address_zip," +
-          "emergency_contact_name,emergency_contact_phone,avatar_url,has_car,can_drive",
-      )
-      .eq("id", employeeId)
-      .maybeSingle();
+      const { data: docs } = await supabase
+        .from("employee_documents" as any)
+        .select("category, review_status")
+        .eq("employee_id", employeeId)
+        .eq("review_status", "approved");
 
-    const { data: docs } = await supabase
-      .from("employee_documents" as any)
-      .select("category, review_status")
-      .eq("employee_id", employeeId)
-      .eq("review_status", "approved");
+      const approved = new Set<string>(
+        ((docs ?? []) as any[]).map((d) => String(d.category)),
+      );
 
-    const approved = new Set<string>(
-      ((docs ?? []) as any[]).map((d) => String(d.category)),
-    );
+      const snap: EmployeeComplianceSnapshot = {
+        ...((emp ?? {}) as Record<string, unknown>),
+        approvedDocumentCategories: approved,
+      } as EmployeeComplianceSnapshot;
 
-    const snap: EmployeeComplianceSnapshot = {
-      ...((emp ?? {}) as Record<string, unknown>),
-      approvedDocumentCategories: approved,
-    } as EmployeeComplianceSnapshot;
-
-    const computed = computeRequirements(snap);
-    setItems(computed);
-    setSummary(summarizeCompletion(computed));
-    setLoading(false);
+      const computed = computeRequirements(snap);
+      setItems(computed);
+      setSummary(summarizeCompletion(computed));
+    } finally {
+      setLoading(false);
+    }
   }, [employeeId]);
 
   useEffect(() => {
