@@ -20,6 +20,7 @@ import { WorkerHero, type WorkerHeroStatus } from "@/components/portal/home/Work
 import { QuickActions, type QuickAction } from "@/components/portal/home/QuickActions";
 import { selectNextBestAction, type NbaShift } from "@/lib/portal/next-best-action";
 import { PortalUpdateBanner } from "@/components/portal/PortalUpdateBanner";
+import { getPageCache, setPageCache, hasPageCache } from "@/lib/portal/page-cache";
 
 interface NextShift {
   id: string;
