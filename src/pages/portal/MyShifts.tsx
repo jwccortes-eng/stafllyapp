@@ -181,6 +181,7 @@ export default function MyShifts() {
         location: s.locations, client: s.clients, assignedCount: activeCount(s),
       }));
       setClaimable(claimableFiltered);
+      setPageCache<ShiftsSnapshot>(PAGE_KEY, employeeId, { assignments: mapped, claimable: claimableFiltered });
     } catch (err: any) {
       console.error("[MyShifts] load failed", err);
       setLoadError(err?.message ?? "Could not load your shifts.");
