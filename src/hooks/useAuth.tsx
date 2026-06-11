@@ -216,36 +216,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setEmployeeActive(true);
       }
 
-      // Auto-set active mode based on what access user has
-      const hasAdminRole = [...availableRoles].some(r => ADMIN_ROLES.has(r));
+      // Auto-set active mode. Admin access takes priority — workers with both
+      // employee profile AND per-company admin/manager role default to admin
+      // so they can actually do their job (Create Shift, etc.). Workers who
+      // only have an employee profile go to the portal. ModeSwitcher still
+      // allows in-session toggling; savedMode is only honored when admin
+      // access exists (so it persists explicit "I want portal today" within
+      // the session, but a fresh SIGNED_IN clears it — see listener below).
+      const hasAdminRole =
+        [...availableRoles].some(r => ADMIN_ROLES.has(r)) ||
+        Object.values(cRoles).some(r => ADMIN_ROLES.has(r));
       const hasEmployeeProfile = activeEmps.length > 0;
       const savedMode = safeLocalStorage.getItem("stafly-active-mode") as ActiveMode | null;
 
-      if (savedMode === 'employee' && hasEmployeeProfile) {
+      if (hasAdminRole && savedMode === 'employee' && hasEmployeeProfile) {
+        // honor explicit in-session toggle
         setActiveModeState('employee');
-      } else if (savedMode === 'admin' && hasAdminRole) {
-        setActiveModeState('admin');
       } else if (hasAdminRole) {
         setActiveModeState('admin');
       } else if (hasEmployeeProfile) {
         setActiveModeState('employee');
       }
 
-      console.info("[post-login-debug]", {
+      console.info("[auth-role-debug]", {
         step: "use-auth-hydrated",
-        userId,
-        sessionExists: true,
-        authLoading: false,
-        companyLoading: null,
-        selectedCompanyId: null,
-        selectedCompanyName: null,
-        companies: [],
+        authUserId: userId,
+        email: null, // populated by caller via session.user.email if needed
+        phone: null,
+        globalRoles: [...availableRoles],
         companyRoles: cRoles,
-        allEmployeeIds: activeEmps,
-        activeMode: savedMode,
-        canAccessAdminForSelected: null,
-        canAccessPortalForSelected: null,
-        redirectTarget: hasAdminRole || Object.values(cRoles).some((r) => ADMIN_ROLES.has(r)) ? "/app" : activeEmps.length > 0 ? "/portal" : "/auth",
+        employeeIds: activeEmps,
+        resolvedRole,
+        hasAdminRole,
+        hasEmployeeProfile,
+        savedMode,
+        portalMode: hasAdminRole && !(savedMode === 'employee' && hasEmployeeProfile) ? 'admin' : (hasEmployeeProfile ? 'employee' : 'admin'),
+        canCreateShift: hasAdminRole,
       });
     } catch (err) {
       if (import.meta.env.DEV) console.error('Error fetching user data:', err);
