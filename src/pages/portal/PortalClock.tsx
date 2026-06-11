@@ -42,6 +42,7 @@ import {
   tenantSafetyFlags,
 } from "@/lib/qa-mode";
 import { useT } from "@/i18n/LanguageContext";
+import { getPageCache, setPageCache, hasPageCache } from "@/lib/portal/page-cache";
 
 interface TimeEntry {
   id: string;
@@ -101,35 +102,54 @@ export default function PortalClock() {
   const { t } = useT();
   const [searchParams] = useSearchParams();
   const urlShiftId = searchParams.get("shiftId");
-  const [loading, setLoading] = useState(true);
+
+  // Cross-mount snapshot so bottom-nav return doesn't strip clock UI.
+  // Only display/operational state is cached — never payroll math.
+  interface ClockSnapshot {
+    activeEntry: TimeEntry | null;
+    todayEntries: TimeEntry[];
+    companyId: string | null;
+    companyFlags: { name: string | null; is_demo: boolean; is_test: boolean } | null;
+    todayShifts: TodayShift[];
+    hasProfilePhoto: boolean;
+    clockPhotoRequired: boolean;
+    shiftQrModes: Record<string, string>;
+    allowedMethods: string[];
+    hasDailyOnlyShifts: boolean;
+    staleOpenEntry: { entry: TimeEntry; shift: TodayShift | null } | null;
+  }
+  const PAGE_KEY = "portal:clock";
+  const cached = getPageCache<ClockSnapshot>(PAGE_KEY, employeeId);
+
+  const [loading, setLoading] = useState(!cached);
   const [acting, setActing] = useState(false);
-  const [activeEntry, setActiveEntry] = useState<TimeEntry | null>(null);
-  const [todayEntries, setTodayEntries] = useState<TimeEntry[]>([]);
-  const [companyId, setCompanyId] = useState<string | null>(null);
+  const [activeEntry, setActiveEntry] = useState<TimeEntry | null>(cached?.activeEntry ?? null);
+  const [todayEntries, setTodayEntries] = useState<TimeEntry[]>(cached?.todayEntries ?? []);
+  const [companyId, setCompanyId] = useState<string | null>(cached?.companyId ?? null);
   const [companyFlags, setCompanyFlags] = useState<{
     name: string | null;
     is_demo: boolean;
     is_test: boolean;
-  } | null>(null);
+  } | null>(cached?.companyFlags ?? null);
   const [qaMode, setQaMode] = useState<boolean>(false);
   const [tenantConfirmOpen, setTenantConfirmOpen] = useState(false);
   const [now, setNow] = useState(new Date());
-  const [todayShifts, setTodayShifts] = useState<TodayShift[]>([]);
+  const [todayShifts, setTodayShifts] = useState<TodayShift[]>(cached?.todayShifts ?? []);
   const [selectedShift, setSelectedShift] = useState<TodayShift | null>(null);
   const [requestOpen, setRequestOpen] = useState(false);
   const [requestMessage, setRequestMessage] = useState("");
   const [sendingRequest, setSendingRequest] = useState(false);
   const [clockInBlocked, setClockInBlocked] = useState<string | null>(null);
-  const [hasProfilePhoto, setHasProfilePhoto] = useState(true);
+  const [hasProfilePhoto, setHasProfilePhoto] = useState(cached?.hasProfilePhoto ?? true);
   const [photoDialogOpen, setPhotoDialogOpen] = useState(false);
   const [pendingClockAction, setPendingClockAction] = useState<"in" | "out" | null>(null);
-  const [clockPhotoRequired, setClockPhotoRequired] = useState(false);
+  const [clockPhotoRequired, setClockPhotoRequired] = useState(cached?.clockPhotoRequired ?? false);
   const [qrScannerOpen, setQrScannerOpen] = useState(false);
-  const [shiftQrModes, setShiftQrModes] = useState<Record<string, string>>({});
-  const [allowedMethods, setAllowedMethods] = useState<string[]>(["manual", "gps", "qr", "kiosk"]);
+  const [shiftQrModes, setShiftQrModes] = useState<Record<string, string>>(cached?.shiftQrModes ?? {});
+  const [allowedMethods, setAllowedMethods] = useState<string[]>(cached?.allowedMethods ?? ["manual", "gps", "qr", "kiosk"]);
   const [successState, setSuccessState] = useState<{ type: "in" | "out"; time: string; shift: string } | null>(null);
-  const [hasDailyOnlyShifts, setHasDailyOnlyShifts] = useState(false);
-  const [staleOpenEntry, setStaleOpenEntry] = useState<{ entry: TimeEntry; shift: TodayShift | null } | null>(null);
+  const [hasDailyOnlyShifts, setHasDailyOnlyShifts] = useState(cached?.hasDailyOnlyShifts ?? false);
+  const [staleOpenEntry, setStaleOpenEntry] = useState<{ entry: TimeEntry; shift: TodayShift | null } | null>(cached?.staleOpenEntry ?? null);
 
   useEffect(() => {
     const interval = setInterval(() => setNow(new Date()), 1000);
@@ -150,6 +170,9 @@ export default function PortalClock() {
 
   const loadData = useCallback(async () => {
     if (!employeeId) { setLoading(false); return; }
+    // First load only — subsequent visits keep current UI on screen
+    // while the refetch runs silently in background.
+    if (!hasPageCache(PAGE_KEY, employeeId)) setLoading(true);
     const [empRes] = await Promise.all([
       supabase
         .from("employees")
@@ -158,6 +181,9 @@ export default function PortalClock() {
         .maybeSingle(),
     ]);
     const emp = empRes.data as any;
+    // Local copies for snapshot (state setters are async).
+    let nextClockPhotoRequired = clockPhotoRequired;
+    let nextAllowedMethods = allowedMethods;
     if (emp) {
       setCompanyId(emp.company_id);
       setHasProfilePhoto(!!emp.avatar_url);
@@ -170,9 +196,11 @@ export default function PortalClock() {
       const { data: clockCfgRow } = await supabase
         .from("company_settings").select("value").eq("company_id", emp.company_id).eq("key", "clock_config").maybeSingle();
       const clockCfg = (clockCfgRow?.value && typeof clockCfgRow.value === "object") ? clockCfgRow.value as Record<string, unknown> : {};
-      setClockPhotoRequired(clockCfg.require_photo === true);
+      nextClockPhotoRequired = clockCfg.require_photo === true;
+      setClockPhotoRequired(nextClockPhotoRequired);
       if (Array.isArray(clockCfg.allowed_methods) && clockCfg.allowed_methods.length > 0) {
-        setAllowedMethods(clockCfg.allowed_methods as string[]);
+        nextAllowedMethods = clockCfg.allowed_methods as string[];
+        setAllowedMethods(nextAllowedMethods);
       }
     }
 
@@ -282,8 +310,27 @@ export default function PortalClock() {
       if (preselect) setSelectedShift(preselect);
       else if (actionableShifts.length === 1) setSelectedShift(actionableShifts[0]);
     }
+    // Snapshot operational/display state so a bottom-nav return doesn't
+    // strip the clock UI back to skeletons. Never persists payroll math.
+    setPageCache<ClockSnapshot>(PAGE_KEY, employeeId, {
+      activeEntry: todayOpen ?? anyOpen,
+      todayEntries: list,
+      companyId: emp?.company_id ?? null,
+      companyFlags: emp ? {
+        name: emp.companies?.name ?? null,
+        is_demo: emp.companies?.is_demo === true,
+        is_test: emp.companies?.is_test === true,
+      } : null,
+      todayShifts: actionableShifts,
+      hasProfilePhoto: !!emp?.avatar_url,
+      clockPhotoRequired: nextClockPhotoRequired,
+      shiftQrModes: qrModes,
+      allowedMethods: nextAllowedMethods,
+      hasDailyOnlyShifts: actionableShifts.length === 0 && mappedShifts.length > 0 && !stale,
+      staleOpenEntry: stale,
+    });
     setLoading(false);
-  }, [employeeId, urlShiftId]);
+  }, [employeeId, urlShiftId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { loadData(); }, [loadData]);
 

@@ -35,6 +35,7 @@ import { useWorkedShiftHistory } from "@/hooks/useWorkedShiftHistory";
 import { WeekHistorySummary } from "@/components/portal/WeekHistorySummary";
 import { useT } from "@/i18n/LanguageContext";
 import { SmartWorkCardHero } from "@/components/portal/SmartWorkCardHero";
+import { getPageCache, setPageCache, hasPageCache } from "@/lib/portal/page-cache";
 
 interface ShiftAssignment {
   id: string;
@@ -76,14 +77,19 @@ interface ClaimableShift {
 
 type TabFilter = "available" | "today" | "upcoming" | "history";
 
+type ShiftsSnapshot = { assignments: ShiftAssignment[]; claimable: ClaimableShift[] };
+const PAGE_KEY = "portal:my-shifts";
+
 export default function MyShifts() {
   const { effectiveEmployeeId: employeeId } = useEffectiveEmployee();
   const navigate = useNavigate();
   const { t } = useT();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [assignments, setAssignments] = useState<ShiftAssignment[]>([]);
-  const [claimable, setClaimable] = useState<ClaimableShift[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Hydrate from cache so a bottom-nav return doesn't flash skeletons.
+  const cached = getPageCache<ShiftsSnapshot>(PAGE_KEY, employeeId);
+  const [assignments, setAssignments] = useState<ShiftAssignment[]>(cached?.assignments ?? []);
+  const [claimable, setClaimable] = useState<ClaimableShift[]>(cached?.claimable ?? []);
+  const [loading, setLoading] = useState(!cached);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [claiming, setClaiming] = useState<string | null>(null);
   const [responding, setResponding] = useState<string | null>(null);
@@ -98,7 +104,8 @@ export default function MyShifts() {
 
   const load = async () => {
     if (!employeeId) { setAssignments([]); setClaimable([]); setLoading(false); return; }
-    setLoading(true);
+    // Background refetch keeps existing data on screen; only first load shows skeleton.
+    if (!hasPageCache(PAGE_KEY, employeeId)) setLoading(true);
     setLoadError(null);
     try {
 
@@ -174,6 +181,7 @@ export default function MyShifts() {
         location: s.locations, client: s.clients, assignedCount: activeCount(s),
       }));
       setClaimable(claimableFiltered);
+      setPageCache<ShiftsSnapshot>(PAGE_KEY, employeeId, { assignments: mapped, claimable: claimableFiltered });
     } catch (err: any) {
       console.error("[MyShifts] load failed", err);
       setLoadError(err?.message ?? "Could not load your shifts.");
