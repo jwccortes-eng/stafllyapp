@@ -35,6 +35,7 @@ import { useWorkedShiftHistory } from "@/hooks/useWorkedShiftHistory";
 import { WeekHistorySummary } from "@/components/portal/WeekHistorySummary";
 import { useT } from "@/i18n/LanguageContext";
 import { SmartWorkCardHero } from "@/components/portal/SmartWorkCardHero";
+import { getPageCache, setPageCache, hasPageCache } from "@/lib/portal/page-cache";
 
 interface ShiftAssignment {
   id: string;
