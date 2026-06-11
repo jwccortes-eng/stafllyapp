@@ -104,7 +104,8 @@ export default function MyShifts() {
 
   const load = async () => {
     if (!employeeId) { setAssignments([]); setClaimable([]); setLoading(false); return; }
-    setLoading(true);
+    // Background refetch keeps existing data on screen; only first load shows skeleton.
+    if (!hasPageCache(PAGE_KEY, employeeId)) setLoading(true);
     setLoadError(null);
     try {
 
