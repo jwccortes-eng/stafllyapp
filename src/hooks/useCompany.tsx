@@ -1,4 +1,4 @@
-import { useState, useEffect, createContext, useContext, ReactNode, useCallback } from "react";
+import { useState, useEffect, createContext, useContext, ReactNode, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { queryClient } from "@/lib/query-client";
@@ -69,6 +69,13 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
   const [activeModules, setActiveModules] = useState<Set<string>>(new Set());
   /** Tracks whether the user has manually switched company in this session */
   const [manuallySelected, setManuallySelected] = useState(false);
+  const companyAccessKey = useMemo(() => JSON.stringify({
+    userId: user?.id ?? null,
+    role,
+    activeMode,
+    companyRoles,
+    allEmployeeIds,
+  }), [user?.id, role, activeMode, companyRoles, allEmployeeIds]);
 
   const canUseGlobalMode = !!role && GLOBAL_MODE_ROLES.has(role);
   const isGlobalMode = canUseGlobalMode && selectedCompanyId === null;
@@ -205,7 +212,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
 
     setLoading(false);
       logPostLoginDebug("company-provider-resolved", list, resolvedSelection, false);
-  }, [authLoading, user, role, canUseGlobalMode, manuallySelected, selectedCompanyId, logPostLoginDebug]);
+  }, [authLoading, user, role, canUseGlobalMode, manuallySelected, selectedCompanyId, logPostLoginDebug, companyAccessKey]);
 
   /** Switch company: update state + invalidate all cached queries */
   const switchCompany = useCallback((id: string | null) => {
