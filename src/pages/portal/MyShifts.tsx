@@ -77,14 +77,19 @@ interface ClaimableShift {
 
 type TabFilter = "available" | "today" | "upcoming" | "history";
 
+type ShiftsSnapshot = { assignments: ShiftAssignment[]; claimable: ClaimableShift[] };
+const PAGE_KEY = "portal:my-shifts";
+
 export default function MyShifts() {
   const { effectiveEmployeeId: employeeId } = useEffectiveEmployee();
   const navigate = useNavigate();
   const { t } = useT();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [assignments, setAssignments] = useState<ShiftAssignment[]>([]);
-  const [claimable, setClaimable] = useState<ClaimableShift[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Hydrate from cache so a bottom-nav return doesn't flash skeletons.
+  const cached = getPageCache<ShiftsSnapshot>(PAGE_KEY, employeeId);
+  const [assignments, setAssignments] = useState<ShiftAssignment[]>(cached?.assignments ?? []);
+  const [claimable, setClaimable] = useState<ClaimableShift[]>(cached?.claimable ?? []);
+  const [loading, setLoading] = useState(!cached);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [claiming, setClaiming] = useState<string | null>(null);
   const [responding, setResponding] = useState<string | null>(null);
