@@ -83,7 +83,10 @@ export default function EmployeeDashboard() {
 
   const loadData = useCallback(async () => {
     if (!employeeId) { setLoading(false); return; }
-    setLoading(true);
+    // Only show full skeleton on first-ever load for this employee.
+    // Subsequent refetches happen silently in the background; existing
+    // content stays on screen so the page never flashes empty.
+    if (!hasPageCache(PAGE_KEY, employeeId)) setLoading(true);
 
     const { data: emp } = await supabase
       .from("employees")
@@ -92,8 +95,10 @@ export default function EmployeeDashboard() {
       .maybeSingle();
     if (!emp) { setLoading(false); return; }
 
-    setEmpName(formatPersonName(`${emp.first_name} ${emp.last_name}`));
-    setEmpAvatar(emp.avatar_url);
+    const nextEmpName = formatPersonName(`${emp.first_name} ${emp.last_name}`);
+    const nextEmpAvatar = emp.avatar_url;
+    setEmpName(nextEmpName);
+    setEmpAvatar(nextEmpAvatar);
 
     const today = new Date().toISOString().split("T")[0];
     const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 }).toISOString();
@@ -122,15 +127,14 @@ export default function EmployeeDashboard() {
     const notifRes = await (supabase.from("notifications").select("id")
       .eq("recipient_id", employeeId!) as any).eq("is_read", false);
 
-    setCompanyName(companyRes.data?.name ?? "");
+    const nextCompanyName = companyRes.data?.name ?? "";
+    setCompanyName(nextCompanyName);
 
     const activeClocks = (clockRes.data ?? []) as any[];
-    if (activeClocks.length > 0) {
-      const ac = activeClocks[0];
-      setClockStatus({ isClockedIn: true, clockInTime: ac.clock_in, shiftTitle: ac.scheduled_shifts?.title ?? null });
-    } else {
-      setClockStatus({ isClockedIn: false, clockInTime: null, shiftTitle: null });
-    }
+    const nextClockStatus = activeClocks.length > 0
+      ? { isClockedIn: true, clockInTime: activeClocks[0].clock_in, shiftTitle: activeClocks[0].scheduled_shifts?.title ?? null }
+      : { isClockedIn: false, clockInTime: null, shiftTitle: null };
+    setClockStatus(nextClockStatus);
 
     let totalSec = 0;
     for (const e of (weekRes.data ?? []) as any[]) {
@@ -139,7 +143,8 @@ export default function EmployeeDashboard() {
     }
     const wh = Math.floor(totalSec / 3600);
     const wm = Math.floor((totalSec % 3600) / 60);
-    setWeeklyHours(wm > 0 ? `${wh}h ${wm}m` : `${wh}h`);
+    const nextWeeklyHours = wm > 0 ? `${wh}h ${wm}m` : `${wh}h`;
+    setWeeklyHours(nextWeeklyHours);
 
     const shifts = (assignRes.data ?? []) as any[];
     let pCount = 0;
@@ -155,9 +160,11 @@ export default function EmployeeDashboard() {
         status: a.status,
       };
     });
+    const nextNextShift = mapped[0] ?? null;
+    const nextUpcoming = mapped.slice(1, 4);
     setPendingCount(pCount);
-    setNextShift(mapped[0] ?? null);
-    setUpcomingShifts(mapped.slice(1, 4));
+    setNextShift(nextNextShift);
+    setUpcomingShifts(nextUpcoming);
 
     // Count claimable shifts (open/published, future, not full, not already mine)
     const myShiftIds = new Set(mapped.map(s => s.id));
@@ -184,6 +191,7 @@ export default function EmployeeDashboard() {
     }).length;
     setClaimableCount(cCount);
 
+    let nextEstimatedPay: number | null = estimatedPay;
     if (periodRes.data) {
       const p = periodRes.data;
       const [bpRes, movRes] = await Promise.all([
@@ -196,12 +204,31 @@ export default function EmployeeDashboard() {
         if (m.concepts?.category === "extra") extras += Number(m.total_value) || 0;
         else deductions += Number(m.total_value) || 0;
       });
-      setEstimatedPay(base + extras - deductions);
+      nextEstimatedPay = base + extras - deductions;
+      setEstimatedPay(nextEstimatedPay);
     }
 
-    setUnreadAlerts((notifRes?.data ?? []).length);
+    const nextUnreadAlerts = (notifRes?.data ?? []).length;
+    setUnreadAlerts(nextUnreadAlerts);
+
+    // Snapshot for cross-mount hydration. No payroll math is persisted —
+    // only display values that the UI already shows.
+    setPageCache<DashSnapshot>(PAGE_KEY, employeeId, {
+      empName: nextEmpName,
+      empAvatar: nextEmpAvatar,
+      companyName: nextCompanyName,
+      nextShift: nextNextShift,
+      upcomingShifts: nextUpcoming,
+      estimatedPay: nextEstimatedPay,
+      clockStatus: nextClockStatus,
+      weeklyHours: nextWeeklyHours,
+      pendingCount: pCount,
+      unreadAlerts: nextUnreadAlerts,
+      claimableCount: cCount,
+    });
+
     setLoading(false);
-  }, [employeeId]);
+  }, [employeeId, estimatedPay]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
