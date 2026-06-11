@@ -21,6 +21,7 @@ import { QuickActions, type QuickAction } from "@/components/portal/home/QuickAc
 import { selectNextBestAction, type NbaShift } from "@/lib/portal/next-best-action";
 import { PortalUpdateBanner } from "@/components/portal/PortalUpdateBanner";
 import { getPageCache, setPageCache, hasPageCache } from "@/lib/portal/page-cache";
+import { ErrorBlock } from "@/components/ui/error-block";
 
 interface NextShift {
   id: string;
@@ -51,7 +52,8 @@ interface DashSnapshot {
 const PAGE_KEY = "portal:dashboard";
 
 export default function EmployeeDashboard() {
-  const { effectiveEmployeeId: employeeId } = useEffectiveEmployee();
+  const { effectiveEmployeeId, stableEmployeeId, isResolvingEmployee } = useEffectiveEmployee();
+  const employeeId = stableEmployeeId;
   const { isModuleEnabled } = usePortalModules();
   const readiness = useEmployeeReadiness(employeeId);
   // Hydrate from cache so a tab-switch back to /portal renders content
@@ -75,6 +77,8 @@ export default function EmployeeDashboard() {
   const [unreadAlerts, setUnreadAlerts] = useState(cached?.unreadAlerts ?? 0);
   const [claimableCount, setClaimableCount] = useState(cached?.claimableCount ?? 0);
   const [now, setNow] = useState(new Date());
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [missingEmployeeProfile, setMissingEmployeeProfile] = useState(false);
 
   useEffect(() => {
     const interval = setInterval(() => setNow(new Date()), 60000);
@@ -82,29 +86,40 @@ export default function EmployeeDashboard() {
   }, []);
 
   const loadData = useCallback(async () => {
-    if (!employeeId) { setLoading(false); return; }
+    if (!employeeId) {
+      setMissingEmployeeProfile(!isResolvingEmployee);
+      setLoading(false);
+      return;
+    }
     // Only show full skeleton on first-ever load for this employee.
     // Subsequent refetches happen silently in the background; existing
     // content stays on screen so the page never flashes empty.
     if (!hasPageCache(PAGE_KEY, employeeId)) setLoading(true);
+    setLoadError(null);
+    setMissingEmployeeProfile(false);
 
-    const { data: emp } = await supabase
-      .from("employees")
-      .select("first_name, last_name, company_id, avatar_url")
-      .eq("id", employeeId)
-      .maybeSingle();
-    if (!emp) { setLoading(false); return; }
+    try {
+      const { data: emp } = await supabase
+        .from("employees")
+        .select("first_name, last_name, company_id, avatar_url")
+        .eq("id", employeeId)
+        .maybeSingle();
+      if (!emp) {
+        setMissingEmployeeProfile(true);
+        setLoading(false);
+        return;
+      }
 
-    const nextEmpName = formatPersonName(`${emp.first_name} ${emp.last_name}`);
-    const nextEmpAvatar = emp.avatar_url;
-    setEmpName(nextEmpName);
-    setEmpAvatar(nextEmpAvatar);
+      const nextEmpName = formatPersonName(`${emp.first_name} ${emp.last_name}`);
+      const nextEmpAvatar = emp.avatar_url;
+      setEmpName(nextEmpName);
+      setEmpAvatar(nextEmpAvatar);
 
     const today = new Date().toISOString().split("T")[0];
     const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 }).toISOString();
     const weekEnd = endOfWeek(new Date(), { weekStartsOn: 1 }).toISOString();
 
-    const [companyRes, periodRes, assignRes, clockRes, weekRes] = await Promise.all([
+      const [companyRes, periodRes, assignRes, clockRes, weekRes] = await Promise.all([
       supabase.from("companies").select("name").eq("id", emp.company_id).maybeSingle(),
       supabase.from("pay_periods").select("id, start_date, end_date, status, published_at")
         .eq("company_id", emp.company_id).order("start_date", { ascending: false }).limit(1).maybeSingle(),
@@ -124,58 +139,58 @@ export default function EmployeeDashboard() {
         .eq("employee_id", employeeId).gte("clock_in", weekStart).lte("clock_in", weekEnd),
     ]);
 
-    const notifRes = await (supabase.from("notifications").select("id")
-      .eq("recipient_id", employeeId!) as any).eq("is_read", false);
+      const notifRes = await (supabase.from("notifications").select("id")
+        .eq("recipient_id", employeeId!) as any).eq("is_read", false);
 
-    const nextCompanyName = companyRes.data?.name ?? "";
-    setCompanyName(nextCompanyName);
+      const nextCompanyName = companyRes.data?.name ?? "";
+      setCompanyName(nextCompanyName);
 
-    const activeClocks = (clockRes.data ?? []) as any[];
-    const nextClockStatus = activeClocks.length > 0
-      ? { isClockedIn: true, clockInTime: activeClocks[0].clock_in, shiftTitle: activeClocks[0].scheduled_shifts?.title ?? null }
-      : { isClockedIn: false, clockInTime: null, shiftTitle: null };
-    setClockStatus(nextClockStatus);
+      const activeClocks = (clockRes.data ?? []) as any[];
+      const nextClockStatus = activeClocks.length > 0
+        ? { isClockedIn: true, clockInTime: activeClocks[0].clock_in, shiftTitle: activeClocks[0].scheduled_shifts?.title ?? null }
+        : { isClockedIn: false, clockInTime: null, shiftTitle: null };
+      setClockStatus(nextClockStatus);
 
-    let totalSec = 0;
-    for (const e of (weekRes.data ?? []) as any[]) {
-      const end = e.clock_out ? new Date(e.clock_out) : new Date();
-      totalSec += (end.getTime() - new Date(e.clock_in).getTime()) / 1000;
-    }
-    const wh = Math.floor(totalSec / 3600);
-    const wm = Math.floor((totalSec % 3600) / 60);
-    const nextWeeklyHours = wm > 0 ? `${wh}h ${wm}m` : `${wh}h`;
-    setWeeklyHours(nextWeeklyHours);
+      let totalSec = 0;
+      for (const e of (weekRes.data ?? []) as any[]) {
+        const end = e.clock_out ? new Date(e.clock_out) : new Date();
+        totalSec += (end.getTime() - new Date(e.clock_in).getTime()) / 1000;
+      }
+      const wh = Math.floor(totalSec / 3600);
+      const wm = Math.floor((totalSec % 3600) / 60);
+      const nextWeeklyHours = wm > 0 ? `${wh}h ${wm}m` : `${wh}h`;
+      setWeeklyHours(nextWeeklyHours);
 
-    const shifts = (assignRes.data ?? []) as any[];
-    let pCount = 0;
-    const mapped: NextShift[] = shifts.map((a: any) => {
-      const s = a.scheduled_shifts;
-      if (a.status === "pending") pCount++;
-      return {
-        id: s.id, title: s.title, date: s.date,
-        start_time: s.start_time, end_time: s.end_time,
-        location_name: s.locations?.name ?? null,
-        client_name: s.clients?.name ?? null,
-        meeting_point: s.meeting_point ?? null,
-        status: a.status,
-      };
-    });
-    const nextNextShift = mapped[0] ?? null;
-    const nextUpcoming = mapped.slice(1, 4);
-    setPendingCount(pCount);
-    setNextShift(nextNextShift);
-    setUpcomingShifts(nextUpcoming);
+      const shifts = (assignRes.data ?? []) as any[];
+      let pCount = 0;
+      const mapped: NextShift[] = shifts.map((a: any) => {
+        const s = a.scheduled_shifts;
+        if (a.status === "pending") pCount++;
+        return {
+          id: s.id, title: s.title, date: s.date,
+          start_time: s.start_time, end_time: s.end_time,
+          location_name: s.locations?.name ?? null,
+          client_name: s.clients?.name ?? null,
+          meeting_point: s.meeting_point ?? null,
+          status: a.status,
+        };
+      });
+      const nextNextShift = mapped[0] ?? null;
+      const nextUpcoming = mapped.slice(1, 4);
+      setPendingCount(pCount);
+      setNextShift(nextNextShift);
+      setUpcomingShifts(nextUpcoming);
 
     // Count claimable shifts (open/published, future, not full, not already mine)
-    const myShiftIds = new Set(mapped.map(s => s.id));
+      const myShiftIds = new Set(mapped.map(s => s.id));
     // Align with PortalShiftDetail / MyShifts: pending requests hide the shift
-    const { data: myPendingReqs } = await supabase
+      const { data: myPendingReqs } = await supabase
       .from("shift_requests")
       .select("shift_id")
       .eq("employee_id", employeeId!)
       .eq("status", "pending");
-    const pendingRequestShiftIds = new Set((myPendingReqs ?? []).map((r: any) => r.shift_id as string));
-    const { data: claimRows } = await supabase
+      const pendingRequestShiftIds = new Set((myPendingReqs ?? []).map((r: any) => r.shift_id as string));
+      const { data: claimRows } = await supabase
       .from("scheduled_shifts")
       .select("id, slots, shift_assignments(id, status)")
       .eq("company_id", emp.company_id)
@@ -183,37 +198,37 @@ export default function EmployeeDashboard() {
       .in("status", ["open", "published"])
       .is("deleted_at", null)
       .gte("date", today);
-    const cCount = (claimRows ?? []).filter((s: any) => {
+      const cCount = (claimRows ?? []).filter((s: any) => {
       if (myShiftIds.has(s.id)) return false;
       if (pendingRequestShiftIds.has(s.id)) return false;
       const active = (s.shift_assignments ?? []).filter((a: any) => a.status !== "removed" && a.status !== "rejected").length;
       return !s.slots || active < s.slots;
-    }).length;
-    setClaimableCount(cCount);
+      }).length;
+      setClaimableCount(cCount);
 
-    let nextEstimatedPay: number | null = estimatedPay;
-    if (periodRes.data) {
-      const p = periodRes.data;
-      const [bpRes, movRes] = await Promise.all([
-        supabase.from("period_base_pay").select("base_total_pay").eq("employee_id", employeeId!).eq("period_id", p.id).maybeSingle(),
-        supabase.from("movements").select("total_value, concepts(category)").eq("employee_id", employeeId!).eq("period_id", p.id),
-      ]);
-      const base = Number(bpRes.data?.base_total_pay) || 0;
-      let extras = 0, deductions = 0;
-      (movRes.data ?? []).forEach((m: any) => {
-        if (m.concepts?.category === "extra") extras += Number(m.total_value) || 0;
-        else deductions += Number(m.total_value) || 0;
-      });
-      nextEstimatedPay = base + extras - deductions;
-      setEstimatedPay(nextEstimatedPay);
-    }
+      let nextEstimatedPay: number | null = estimatedPay;
+      if (periodRes.data) {
+        const p = periodRes.data;
+        const [bpRes, movRes] = await Promise.all([
+          supabase.from("period_base_pay").select("base_total_pay").eq("employee_id", employeeId!).eq("period_id", p.id).maybeSingle(),
+          supabase.from("movements").select("total_value, concepts(category)").eq("employee_id", employeeId!).eq("period_id", p.id),
+        ]);
+        const base = Number(bpRes.data?.base_total_pay) || 0;
+        let extras = 0, deductions = 0;
+        (movRes.data ?? []).forEach((m: any) => {
+          if (m.concepts?.category === "extra") extras += Number(m.total_value) || 0;
+          else deductions += Number(m.total_value) || 0;
+        });
+        nextEstimatedPay = base + extras - deductions;
+        setEstimatedPay(nextEstimatedPay);
+      }
 
-    const nextUnreadAlerts = (notifRes?.data ?? []).length;
-    setUnreadAlerts(nextUnreadAlerts);
+      const nextUnreadAlerts = (notifRes?.data ?? []).length;
+      setUnreadAlerts(nextUnreadAlerts);
 
     // Snapshot for cross-mount hydration. No payroll math is persisted —
     // only display values that the UI already shows.
-    setPageCache<DashSnapshot>(PAGE_KEY, employeeId, {
+      setPageCache<DashSnapshot>(PAGE_KEY, employeeId, {
       empName: nextEmpName,
       empAvatar: nextEmpAvatar,
       companyName: nextCompanyName,
@@ -225,10 +240,14 @@ export default function EmployeeDashboard() {
       pendingCount: pCount,
       unreadAlerts: nextUnreadAlerts,
       claimableCount: cCount,
-    });
-
-    setLoading(false);
-  }, [employeeId]); // eslint-disable-line react-hooks/exhaustive-deps -- estimatedPay only used as fallback inside; not a real dep
+      });
+    } catch (err: any) {
+      console.error("[EmployeeDashboard] load failed", err);
+      setLoadError(err?.message ?? "No pudimos actualizar tu inicio.");
+    } finally {
+      setLoading(false);
+    }
+  }, [employeeId, estimatedPay, isResolvingEmployee]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -294,6 +313,17 @@ export default function EmployeeDashboard() {
     );
   }
 
+  if (!employeeId && missingEmployeeProfile) {
+    return (
+      <div className="pt-4">
+        <ErrorBlock
+          title="No encontramos tu perfil"
+          message="No encontramos tu perfil de empleado para esta compañía."
+        />
+      </div>
+    );
+  }
+
   const nbaCoversToday = (
     nba.kind === "clocked_in" ||
     nba.kind === "clock_in_now" ||
@@ -333,6 +363,16 @@ export default function EmployeeDashboard() {
 
   return (
     <div className="space-y-3 animate-fade-in pb-28">
+      {isResolvingEmployee && (
+        <div className="rounded-xl border border-border/50 bg-card/70 px-3 py-2 text-[11px] text-muted-foreground">
+          Actualizando…
+        </div>
+      )}
+      {loadError && (
+        <div className="rounded-xl border border-warning/30 bg-warning/[0.06] px-3 py-2 text-[11px] text-muted-foreground">
+          {loadError}
+        </div>
+      )}
       {/* ── Worker Hero — saludo compacto ── */}
       <WorkerHero
         firstName={firstName}
