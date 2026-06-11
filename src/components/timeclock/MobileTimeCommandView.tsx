@@ -85,6 +85,10 @@ export default function MobileTimeCommandView() {
     return () => clearInterval(t);
   }, []);
 
+  // Clear selected alert when tenant or tab changes so a stale worker/incidence
+  // never lingers on screen after context switch.
+  useEffect(() => { setAlertDetail(null); }, [selectedCompanyId, mode]);
+
   const todayKey = format(now, "yyyy-MM-dd");
 
   const load = async () => {
@@ -555,7 +559,7 @@ function AlertDetailSheet({ item, onClose, onOpenWorker, onReviewInTime }: {
 
             <div className="grid grid-cols-2 gap-2">
               {phoneRaw ? (
-                <a href={`tel:${phoneRaw}`} className="inline-flex items-center justify-center gap-1.5 h-11 rounded-xl bg-primary/10 text-primary text-sm font-medium active:scale-[0.98]">
+                <a href={`tel:${phoneRaw}`} onClick={() => setTimeout(onClose, 50)} className="inline-flex items-center justify-center gap-1.5 h-11 rounded-xl bg-primary/10 text-primary text-sm font-medium active:scale-[0.98]">
                   <Phone className="h-4 w-4" /> Llamar
                 </a>
               ) : (
@@ -564,7 +568,7 @@ function AlertDetailSheet({ item, onClose, onOpenWorker, onReviewInTime }: {
                 </span>
               )}
               {waPhone ? (
-                <a href={`https://wa.me/${waPhone}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-1.5 h-11 rounded-xl bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-sm font-medium active:scale-[0.98]">
+                <a href={`https://wa.me/${waPhone}`} target="_blank" rel="noopener noreferrer" onClick={() => setTimeout(onClose, 50)} className="inline-flex items-center justify-center gap-1.5 h-11 rounded-xl bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-sm font-medium active:scale-[0.98]">
                   <MessageCircle className="h-4 w-4" /> WhatsApp
                 </a>
               ) : (
