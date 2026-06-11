@@ -139,8 +139,8 @@ export default function EmployeeDashboard() {
         .eq("employee_id", employeeId).gte("clock_in", weekStart).lte("clock_in", weekEnd),
     ]);
 
-      const notifRes = await (supabase.from("notifications").select("id")
-        .eq("recipient_id", employeeId!) as any).eq("is_read", false);
+      const notifRes = await (supabase.from("notifications").select("id, read_at")
+        .eq("recipient_id", employeeId!) as any);
 
       const nextCompanyName = companyRes.data?.name ?? "";
       setCompanyName(nextCompanyName);
@@ -223,7 +223,7 @@ export default function EmployeeDashboard() {
         setEstimatedPay(nextEstimatedPay);
       }
 
-      const nextUnreadAlerts = (notifRes?.data ?? []).length;
+      const nextUnreadAlerts = (notifRes?.data ?? []).filter((n: any) => !n.read_at).length;
       setUnreadAlerts(nextUnreadAlerts);
 
     // Snapshot for cross-mount hydration. No payroll math is persisted —
