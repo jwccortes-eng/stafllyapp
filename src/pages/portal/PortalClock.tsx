@@ -170,6 +170,9 @@ export default function PortalClock() {
 
   const loadData = useCallback(async () => {
     if (!employeeId) { setLoading(false); return; }
+    // First load only — subsequent visits keep current UI on screen
+    // while the refetch runs silently in background.
+    if (!hasPageCache(PAGE_KEY, employeeId)) setLoading(true);
     const [empRes] = await Promise.all([
       supabase
         .from("employees")
