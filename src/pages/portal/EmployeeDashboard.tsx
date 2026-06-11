@@ -34,26 +34,46 @@ interface NextShift {
   status: string;
 }
 
+interface DashSnapshot {
+  empName: string;
+  empAvatar: string | null;
+  companyName: string;
+  nextShift: NextShift | null;
+  upcomingShifts: NextShift[];
+  estimatedPay: number | null;
+  clockStatus: { isClockedIn: boolean; clockInTime: string | null; shiftTitle: string | null };
+  weeklyHours: string;
+  pendingCount: number;
+  unreadAlerts: number;
+  claimableCount: number;
+}
+
+const PAGE_KEY = "portal:dashboard";
+
 export default function EmployeeDashboard() {
   const { effectiveEmployeeId: employeeId } = useEffectiveEmployee();
   const { isModuleEnabled } = usePortalModules();
   const readiness = useEmployeeReadiness(employeeId);
-  const [empName, setEmpName] = useState("");
-  const [empAvatar, setEmpAvatar] = useState<string | null>(null);
-  const [companyName, setCompanyName] = useState("");
-  const [nextShift, setNextShift] = useState<NextShift | null>(null);
-  const [upcomingShifts, setUpcomingShifts] = useState<NextShift[]>([]);
-  const [estimatedPay, setEstimatedPay] = useState<number | null>(null);
-  const [loading, setLoading] = useState(true);
+  // Hydrate from cache so a tab-switch back to /portal renders content
+  // instantly instead of the skeleton flashing on every remount.
+  const cached = getPageCache<DashSnapshot>(PAGE_KEY, employeeId);
+  const [empName, setEmpName] = useState(cached?.empName ?? "");
+  const [empAvatar, setEmpAvatar] = useState<string | null>(cached?.empAvatar ?? null);
+  const [companyName, setCompanyName] = useState(cached?.companyName ?? "");
+  const [nextShift, setNextShift] = useState<NextShift | null>(cached?.nextShift ?? null);
+  const [upcomingShifts, setUpcomingShifts] = useState<NextShift[]>(cached?.upcomingShifts ?? []);
+  const [estimatedPay, setEstimatedPay] = useState<number | null>(cached?.estimatedPay ?? null);
+  // Only show skeleton on a true first-load for this employee.
+  const [loading, setLoading] = useState(!cached);
   const [clockStatus, setClockStatus] = useState<{
     isClockedIn: boolean;
     clockInTime: string | null;
     shiftTitle: string | null;
-  }>({ isClockedIn: false, clockInTime: null, shiftTitle: null });
-  const [weeklyHours, setWeeklyHours] = useState("0h");
-  const [pendingCount, setPendingCount] = useState(0);
-  const [unreadAlerts, setUnreadAlerts] = useState(0);
-  const [claimableCount, setClaimableCount] = useState(0);
+  }>(cached?.clockStatus ?? { isClockedIn: false, clockInTime: null, shiftTitle: null });
+  const [weeklyHours, setWeeklyHours] = useState(cached?.weeklyHours ?? "0h");
+  const [pendingCount, setPendingCount] = useState(cached?.pendingCount ?? 0);
+  const [unreadAlerts, setUnreadAlerts] = useState(cached?.unreadAlerts ?? 0);
+  const [claimableCount, setClaimableCount] = useState(cached?.claimableCount ?? 0);
   const [now, setNow] = useState(new Date());
 
   useEffect(() => {
