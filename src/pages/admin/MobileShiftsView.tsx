@@ -143,8 +143,8 @@ export default function MobileShiftsView() {
             .lte("date", dateRange.end)
             .order("date", { ascending: true })
             .order("start_time", { ascending: true }),
-          supabase.from("clients").select("id,name").eq("company_id", selectedCompanyId!).order("name"),
-          supabase.from("locations").select("id,name").eq("company_id", selectedCompanyId!).order("name"),
+          supabase.from("clients").select("id,name").eq("company_id", selectedCompanyId!).is("deleted_at", null).order("name"),
+          supabase.from("locations").select("id,name").eq("company_id", selectedCompanyId!).is("deleted_at", null).order("name"),
           supabase.from("employees")
             .select("id,first_name,last_name,avatar_url,phone_number,email,employer_identification,is_active,user_id,profile_status,onboarding_status")
             .eq("company_id", selectedCompanyId!)
