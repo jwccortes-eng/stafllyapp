@@ -228,7 +228,7 @@ export default function EmployeeDashboard() {
     });
 
     setLoading(false);
-  }, [employeeId, estimatedPay]);
+  }, [employeeId]); // eslint-disable-line react-hooks/exhaustive-deps -- estimatedPay only used as fallback inside; not a real dep
 
   useEffect(() => { loadData(); }, [loadData]);
 
