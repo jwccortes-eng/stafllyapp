@@ -49,6 +49,8 @@ export function usePortalModules(): UsePortalModulesReturn {
       return;
     }
 
+    setLoading((prev) => prev && enabledModules.size === 0 && !hasConfig);
+
     const { data } = await supabase
       .from("employee_portal_modules")
       .select("module, enabled")
@@ -66,7 +68,7 @@ export function usePortalModules(): UsePortalModulesReturn {
     }
 
     setLoading(false);
-  }, [employeeId]);
+  }, [employeeId, enabledModules.size, hasConfig]);
 
   useEffect(() => {
     fetchModules();
