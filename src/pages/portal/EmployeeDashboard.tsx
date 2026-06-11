@@ -247,7 +247,11 @@ export default function EmployeeDashboard() {
     } finally {
       setLoading(false);
     }
-  }, [employeeId, estimatedPay, isResolvingEmployee]);
+    // NOTE: estimatedPay is intentionally NOT in deps — loadData writes it via
+    // setEstimatedPay, so including it created a self-triggering refetch loop
+    // that made the dashboard feel "stuck refreshing to the same point".
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [employeeId, isResolvingEmployee]);
 
   useEffect(() => { loadData(); }, [loadData]);
 

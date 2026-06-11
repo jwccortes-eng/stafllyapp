@@ -349,7 +349,11 @@ export default function PortalClock() {
     } finally {
       setLoading(false);
     }
-  }, [employeeId, urlShiftId, clockPhotoRequired, allowedMethods, isResolvingEmployee]);
+    // NOTE: clockPhotoRequired / allowedMethods are intentionally NOT in deps —
+    // loadData writes them, so including them creates a self-triggering refetch loop
+    // that made the portal feel "stuck refreshing to the same point".
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [employeeId, urlShiftId, isResolvingEmployee]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
