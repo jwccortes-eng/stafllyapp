@@ -338,6 +338,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         if (nextSession?.user) {
+          // Fresh login → drop any leftover "employee" mode from a previous
+          // session so admins/managers default back to admin. In-session
+          // ModeSwitcher writes still persist for the current session.
+          if (event === "SIGNED_IN") {
+            safeLocalStorage.removeItem("stafly-active-mode");
+          }
           setLoading(true);
           setTimeout(() => {
             void fetchUserData(nextSession.user.id).finally(() => {
