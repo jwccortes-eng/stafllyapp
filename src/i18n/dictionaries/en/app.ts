@@ -109,8 +109,8 @@ const en_app = {
   "settings.language.guide_description": "Guided mode with more human, editorial copy.",
 
   // ── Portal · Clock ───────────────────────────────────────────────
-  "portal.clock.stage1.title": "Stage 1: keep clocking in/out in Connecteam",
-  "portal.clock.stage1.body": "Stafly TimeClock is not the official payroll source yet. Keep using Connecteam until we tell you Stafly takes over.",
+  "portal.clock.stage1.title": "Clock in with Connecteam for now",
+  "portal.clock.stage1.body": "Stafly Time Clock is still in testing. Use Connecteam as the official record until further notice.",
   "portal.clock.photo_required": "Profile photo required",
   "portal.clock.photo_required_subtitle": "Tap to upload before clocking in",
   "portal.clock.clock_in_recorded": "Clock-in recorded",
@@ -215,8 +215,8 @@ const en_app = {
   "portal.more.employee_portal": "Employee portal",
   "portal.more.section.more": "More options",
   "portal.more.section.admin": "Administration",
-  "portal.more.admin_panel": "Admin Panel",
-  "portal.more.admin_panel_subtitle": "Open the admin dashboard",
+  "portal.more.admin_panel": "Switch to Admin Panel",
+  "portal.more.admin_panel_subtitle": "Go back to the admin dashboard",
   "portal.more.light_mode": "Light mode",
   "portal.more.dark_mode": "Dark mode",
   "portal.more.sign_out": "Sign out",
@@ -230,8 +230,8 @@ const en_app = {
   "portal.more.item.documents_desc": "Required documents",
   "portal.more.item.w9": "W-9 form",
   "portal.more.item.w9_desc": "Tax information",
-  "portal.more.item.resources": "Resources",
-  "portal.more.item.resources_desc": "Support material",
+  "portal.more.item.resources": "Work resources",
+  "portal.more.item.resources_desc": "Tools and support material",
   "launcher.more_desktop_tools.title": "More desktop tools",
   "launcher.more_desktop_tools.subtitle": "Use the desktop version for payroll, reports, settings, and audit.",
 

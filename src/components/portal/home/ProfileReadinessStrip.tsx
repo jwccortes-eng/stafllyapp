@@ -35,10 +35,10 @@ export function ProfileReadinessStrip({ nbaKind }: Props) {
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-[12px] font-semibold text-foreground leading-tight">
-            Perfil listo
+            Tu perfil está listo para recibir turnos
           </p>
           <p className="text-[10.5px] text-muted-foreground/70 leading-tight mt-0.5">
-            {r.progressPct}% completo · listo para turnos
+            {r.progressPct}% completo
           </p>
         </div>
       </div>

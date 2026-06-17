@@ -31,8 +31,8 @@ export default function PortalResources() {
       <PageHeader
         variant="4"
         eyebrow="SOPORTE"
-        title="Recursos"
-        subtitle="Herramientas y opciones disponibles"
+        title="Recursos de trabajo"
+        subtitle="Herramientas y material de apoyo para tu día"
       />
 
       {/* Resource grid */}

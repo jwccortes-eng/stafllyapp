@@ -102,8 +102,8 @@ const es_app = {
   "settings.language.guide_description": "Modo guía con explicaciones más humanas.",
 
   // ── Portal · Reloj ───────────────────────────────────────────────
-  "portal.clock.stage1.title": "Etapa 1: sigue marcando entrada/salida en Connecteam",
-  "portal.clock.stage1.body": "Stafly TimeClock todavía no es la fuente oficial de payroll. Usa Connecteam como siempre hasta que te avisemos que Stafly toma el control.",
+  "portal.clock.stage1.title": "Marca tu entrada en Connecteam por ahora",
+  "portal.clock.stage1.body": "Stafly todavía está en prueba para el reloj. Usa Connecteam como registro oficial hasta nuevo aviso.",
   "portal.clock.photo_required": "Foto de perfil requerida",
   "portal.clock.photo_required_subtitle": "Tócalo para subirla antes de marcar entrada",
   "portal.clock.clock_in_recorded": "Entrada registrada",
@@ -208,8 +208,8 @@ const es_app = {
   "portal.more.employee_portal": "Portal de empleado",
   "portal.more.section.more": "Más opciones",
   "portal.more.section.admin": "Administración",
-  "portal.more.admin_panel": "Panel Admin",
-  "portal.more.admin_panel_subtitle": "Acceder al panel de administración",
+  "portal.more.admin_panel": "Cambiar a Panel Admin",
+  "portal.more.admin_panel_subtitle": "Vuelve al panel de administración",
   "portal.more.light_mode": "Modo claro",
   "portal.more.dark_mode": "Modo oscuro",
   "portal.more.sign_out": "Cerrar sesión",
@@ -223,8 +223,8 @@ const es_app = {
   "portal.more.item.documents_desc": "Documentos requeridos",
   "portal.more.item.w9": "Formulario W-9",
   "portal.more.item.w9_desc": "Información fiscal",
-  "portal.more.item.resources": "Recursos",
-  "portal.more.item.resources_desc": "Material de apoyo",
+  "portal.more.item.resources": "Recursos de trabajo",
+  "portal.more.item.resources_desc": "Herramientas y material de apoyo",
   "launcher.more_desktop_tools.title": "Más herramientas de escritorio",
   "launcher.more_desktop_tools.subtitle": "Usa la versión desktop para nómina, reportes, configuración y auditoría.",
 

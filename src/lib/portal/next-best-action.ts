@@ -248,8 +248,8 @@ export function selectNextBestAction(ctx: NbaContext): NbaResult {
   return {
     kind: "all_set",
     tone: "success",
-    title: "Todo listo",
-    subtitle: "Sin turnos por ahora. Te avisaremos cuando algo se abra.",
+    title: "Todo listo por aquí",
+    subtitle: "Aún no tienes turnos asignados. Te avisaremos aquí cuando tengas uno nuevo.",
     ctaLabel: null,
     ctaHref: null,
   };
