@@ -51,7 +51,6 @@ export function useEmployeeReadiness(employeeId: string | null | undefined): Rea
 
       if (!emp) { setLoading(false); return; }
 
-      setStatus((emp.profile_status as ProfileStatus) ?? "incomplete");
       const personal = missingPersonalFields(emp as PersonalInfoSnapshot);
       setMissingPersonal(personal);
 
@@ -69,6 +68,22 @@ export function useEmployeeReadiness(employeeId: string | null | undefined): Rea
         .filter((c) => !owned.has(c))
         .map((c) => ({ category: c, label: DOCUMENT_CATEGORIES[c].label }));
       setMissingDocs(missing);
+
+      // Frontend guard for stale DB profile_status values. Carlos Ortiz exposed
+      // a row where profile_status stayed "incomplete" even though personal
+      // fields were complete; that incorrectly pushed him toward profile flows
+      // instead of the correct documents path. Derive the routing status from
+      // the same visible requirements we just computed, while preserving
+      // terminal ready/active states when nothing is missing.
+      const dbStatus = (emp.profile_status as ProfileStatus) ?? "incomplete";
+      const effectiveStatus: ProfileStatus = personal.length > 0
+        ? "incomplete"
+        : missing.length > 0
+          ? "pending_documents"
+          : dbStatus === "active"
+            ? "active"
+            : "ready";
+      setStatus(effectiveStatus);
 
       const personalReq = 10;
       const docsReq = required.length;
