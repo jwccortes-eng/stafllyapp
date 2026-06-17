@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
 import { cn } from "@/lib/utils";
 import NotificationBell from "@/components/NotificationBell";
+import { useT } from "@/i18n";
 
 import { CommandPaletteTrigger } from "@/components/CommandPalette";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -17,12 +18,19 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 
-const CREATE_OPTIONS = [
-  { label: "New Shift", icon: CalendarDays, route: "/app/shifts?create=1" },
-  { label: "New Worker", icon: Users, route: "/app/employees?create=1" },
-  { label: "New Client", icon: Building2, route: "/app/clients?create=1" },
-  { label: "New Location", icon: MapPin, route: "/app/locations?create=1" },
-];
+export default function TopBar({ collapsed }: { collapsed: boolean }) {
+  const { user, fullName, signOut, getRoleForCompany } = useAuth();
+  const { selectedCompany, selectedCompanyId, companies, isGlobalMode } = useCompany();
+  const navigate = useNavigate();
+  const { theme, setTheme } = useTheme();
+  const { t } = useT();
+
+  const CREATE_OPTIONS = [
+    { label: t("topbar.create.shift"), icon: CalendarDays, route: "/app/shifts?create=1" },
+    { label: t("topbar.create.worker"), icon: Users, route: "/app/employees?create=1" },
+    { label: t("topbar.create.client"), icon: Building2, route: "/app/clients?create=1" },
+    { label: t("topbar.create.location"), icon: MapPin, route: "/app/locations?create=1" },
+  ];
 
 export default function TopBar({ collapsed }: { collapsed: boolean }) {
   const { user, fullName, signOut, getRoleForCompany } = useAuth();
