@@ -13,7 +13,7 @@ import { FloatingDock } from "@/components/navigation/FloatingDock";
 import { AppLauncher } from "@/components/navigation/AppLauncher";
 import { AdminBottomNav } from "@/components/navigation/AdminBottomNav";
 import { MoreSheet } from "@/components/navigation/MoreSheet";
-import { ADMIN_NAV_ITEMS, ADMIN_DEFAULT_PINS } from "@/components/navigation/nav-items";
+import { ADMIN_NAV_ITEMS, ADMIN_DEFAULT_PINS, ADMIN_DEFAULT_PINS_MOBILE } from "@/components/navigation/nav-items";
 import { useNavPreferences } from "@/hooks/useNavPreferences";
 import { supabase } from "@/integrations/supabase/client";
 import { NavItem } from "@/components/navigation/nav-items";
