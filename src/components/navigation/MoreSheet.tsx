@@ -83,6 +83,7 @@ export function MoreSheet({
 }: MoreSheetProps) {
   const location = useLocation();
   const { theme, setTheme } = useTheme();
+  const { t } = useT();
 
   const isActive = (item: NavItem) => {
     if (item.end) return location.pathname === item.to;
