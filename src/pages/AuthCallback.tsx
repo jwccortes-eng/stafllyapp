@@ -116,16 +116,22 @@ export default function AuthCallback() {
       return;
     }
 
-    // Check if employee
+    // Check if employee (linked by auth user_id, active)
     const { data: empData } = await supabase
       .from("employees")
-      .select("id, company_id, is_active, onboarding_status")
+      .select("id, company_id, is_active, onboarding_status, portal_access_enabled")
       .eq("user_id", userId)
       .eq("is_active", true)
       .limit(1);
 
     const emp = empData?.[0];
-    log(`Employee: ${emp ? `${emp.id} (onboarding: ${emp.onboarding_status})` : "none"}`);
+    log(
+      `Employee: ${
+        emp
+          ? `${emp.id} (onboarding: ${emp.onboarding_status}, portal_access: ${emp.portal_access_enabled})`
+          : "none"
+      }`,
+    );
 
     // Check if admin
     const { data: roleData } = await supabase
@@ -137,38 +143,47 @@ export default function AuthCallback() {
     const hasAdmin = roleData?.some(r => adminRoles.has(r.role));
     log(`Admin: ${hasAdmin}`);
 
-    // Check for pending invitation
-    const { data: inviteData } = await supabase
-      .from("employee_invitations")
-      .select("id, invite_token, employee_id")
-      .eq("employee_id", emp?.id ?? "00000000-0000-0000-0000-000000000000")
-      .in("status", ["created", "sent", "opened"])
-      .order("created_at", { ascending: false })
-      .limit(1);
+    // Only these invitation statuses are actionable. "accepted", "expired",
+    // "revoked", "cancelled", "failed", "superseded", "resent" (the latter
+    // is bumped to a fresh row before being actionable) are terminal/stale
+    // and MUST NOT trigger a redirect to /activate — that caused the
+    // infinite loop reported for already-activated workers (e.g. Carlos
+    // Ortiz across TestFlight/Safari/Chrome).
+    const ACTIONABLE_INVITE_STATUSES = ["created", "sent", "opened"] as const;
 
-    if (inviteData?.[0]?.invite_token) {
-      log(`Active invitation found, redirecting to activate/${inviteData[0].invite_token}`);
-      navigate(`/activate/${inviteData[0].invite_token}`, { replace: true });
-      return;
-    }
+    // A worker who is already linked + active + has portal access is, by
+    // definition, past activation. Skip the invitation lookup entirely and
+    // go straight to /portal — even if onboarding_status is stale ("pending").
+    const isPortalReady =
+      !!emp && emp.is_active === true && emp.portal_access_enabled === true;
 
-    // Check onboarding — accept both legacy "complete" and "completed"
-    if (emp && !isOnboardingComplete(emp.onboarding_status)) {
-      log("Onboarding incomplete, checking for invitation...");
-      // Try to find any invitation token for this employee
-      const { data: anyInvite } = await supabase
+    if (!isPortalReady && emp) {
+      // Only look for actionable invitations.
+      const { data: inviteData } = await supabase
         .from("employee_invitations")
-        .select("invite_token")
+        .select("id, invite_token, status")
         .eq("employee_id", emp.id)
+        .in("status", ACTIONABLE_INVITE_STATUSES as unknown as string[])
         .order("created_at", { ascending: false })
         .limit(1);
 
-      if (anyInvite?.[0]?.invite_token) {
-        log(`Redirecting to activation: /activate/${anyInvite[0].invite_token}`);
-        navigate(`/activate/${anyInvite[0].invite_token}`, { replace: true });
+      if (inviteData?.[0]?.invite_token) {
+        log(
+          `Actionable invitation (${inviteData[0].status}) found, redirecting to /activate/${inviteData[0].invite_token}`,
+        );
+        navigate(`/activate/${inviteData[0].invite_token}`, { replace: true });
         return;
       }
+
+      if (!isOnboardingComplete(emp.onboarding_status)) {
+        log(
+          "Onboarding incomplete and no actionable invitation; falling through to /portal so the worker can complete profile in-app instead of looping to /activate.",
+        );
+      }
+    } else if (isPortalReady) {
+      log("Worker is portal-ready (linked + active + portal_access_enabled); skipping invitation lookup.");
     }
+
 
     // Default redirect
     if (hasAdmin) {
