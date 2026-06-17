@@ -119,6 +119,15 @@ export function WorkerSelfServiceSections({ employeeId, onUpdated }: Props) {
         onUploaded={(url) => handlePatched({ avatar_url: url, photo_review_status: "pending", photo_rejection_reason: null })}
       />
 
+      <PreferredNameSection
+        employeeId={employee.id}
+        value={employee.preferred_name}
+        legalFirst={employee.first_name}
+        legalLast={employee.last_name}
+        onSaved={(v) => handlePatched({ preferred_name: v })}
+        toast={toast}
+      />
+
       <PhoneCard
         employeeId={employee.id}
         value={employee.phone_number}
