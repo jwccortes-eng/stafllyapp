@@ -51,6 +51,7 @@ export interface NbaShift {
 
 export interface NbaContext {
   clockStatus: { isClockedIn: boolean; shiftTitle: string | null };
+  clockStatusAgeHours?: number | null;
   nextShift: NbaShift | null;
   pendingCount: number;
   claimableCount: number;
@@ -76,6 +77,8 @@ export interface NbaResult {
   /** Optional metadata for the renderer (e.g., shift id). */
   meta?: Record<string, string | number | null>;
 }
+
+const STALE_CLOCK_THRESHOLD_HOURS = 24;
 
 function isConfirmed(status: string): boolean {
   return status === "confirmed" || status === "accepted";
@@ -106,6 +109,17 @@ export function selectNextBestAction(ctx: NbaContext): NbaResult {
 
   // 1. clocked_in
   if (ctx.clockStatus.isClockedIn) {
+    if (ctx.clockStatusAgeHours != null && ctx.clockStatusAgeHours > STALE_CLOCK_THRESHOLD_HOURS) {
+      return {
+        kind: "clocked_in",
+        tone: "warning",
+        title: "Turno sin cerrar",
+        subtitle: "Hay un registro antiguo que necesita revisión. Puedes cerrarlo desde el reloj.",
+        ctaLabel: "Revisar reloj",
+        ctaHref: "/portal/clock",
+      };
+    }
+
     return {
       kind: "clocked_in",
       tone: "live",
