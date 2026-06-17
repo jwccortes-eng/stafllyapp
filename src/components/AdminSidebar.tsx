@@ -481,11 +481,11 @@ export default function AdminSidebar() {
               )}
             >
               {collapsed ? <PanelLeft className="h-[15px] w-[15px]" /> : <PanelLeftClose className="h-[15px] w-[15px]" />}
-              {!collapsed && <span className="text-[12px]">Collapse</span>}
+              {!collapsed && <span className="text-[12px]">{tI18n("sidebar.collapse")}</span>}
             </button>
           </TooltipTrigger>
           {collapsed && (
-            <TooltipContent side="right" className="text-xs">Expand</TooltipContent>
+            <TooltipContent side="right" className="text-xs">{tI18n("sidebar.expand")}</TooltipContent>
           )}
         </Tooltip>
       </div>
