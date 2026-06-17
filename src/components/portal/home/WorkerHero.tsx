@@ -23,10 +23,10 @@ interface Props {
   status: WorkerHeroStatus;
 }
 
-const STATUS_COPY: Record<WorkerHeroStatus, { label: string }> = {
-  on_shift: { label: "En turno" },
-  ready: { label: "Listo" },
-  incomplete: { label: "Perfil incompleto" },
+const STATUS_COPY: Record<WorkerHeroStatus, { label: string; trust: string | null }> = {
+  on_shift: { label: "En turno", trust: "Fichado · turno en curso" },
+  ready: { label: "Listo para trabajar", trust: "Perfil completo · Portal activo" },
+  incomplete: { label: "Perfil incompleto", trust: null },
 };
 
 const STATUS_PILL: Record<WorkerHeroStatus, string> = {
@@ -54,15 +54,20 @@ export function WorkerHero({ firstName, lastName, greeting, companyName, avatarU
   return (
     <section
       aria-label="Worker hero"
-      className="relative overflow-hidden rounded-2xl border border-border/50 bg-card shadow-sm"
+      className="relative overflow-hidden rounded-3xl border border-border/50 bg-card shadow-[0_8px_28px_-18px_hsl(var(--primary)/0.35)]"
     >
-      <div className="relative px-4 py-3 flex items-center gap-3">
-        {/* Avatar compacto */}
+      {/* Soft Stafly blue wash — premium "passport" feel without being loud */}
+      <div
+        aria-hidden
+        className="absolute inset-0 bg-gradient-to-br from-primary/[0.08] via-primary/[0.02] to-transparent pointer-events-none"
+      />
+      <div className="relative px-4 py-4 flex items-center gap-3.5">
+        {/* Avatar — larger for passport hierarchy */}
         <div className="relative shrink-0">
           <div
             className={cn(
-              "h-12 w-12 rounded-full overflow-hidden ring-2 ring-background",
-              "border border-border/50",
+              "h-14 w-14 rounded-2xl overflow-hidden ring-2 ring-background",
+              "border border-border/50 shadow-sm",
             )}
           >
             {avatarUrl ? (
@@ -73,8 +78,8 @@ export function WorkerHero({ firstName, lastName, greeting, companyName, avatarU
                 draggable={false}
               />
             ) : (
-              <div className="h-full w-full flex items-center justify-center bg-gradient-to-br from-primary/20 to-primary/5">
-                <span className="text-sm font-bold font-heading text-primary tracking-tight">
+              <div className="h-full w-full flex items-center justify-center bg-gradient-to-br from-primary/25 to-primary/5">
+                <span className="text-base font-bold font-heading text-primary tracking-tight">
                   {initialsFor(firstName, lastName)}
                 </span>
               </div>
@@ -89,10 +94,10 @@ export function WorkerHero({ firstName, lastName, greeting, companyName, avatarU
         </div>
 
         <div className="min-w-0 flex-1">
-          <p className="text-[11.5px] font-medium text-muted-foreground/80 leading-tight">
+          <p className="text-[11px] font-medium text-muted-foreground/75 leading-tight">
             {greeting},
           </p>
-          <h1 className="text-[17px] font-bold font-heading tracking-tight leading-tight text-foreground truncate">
+          <h1 className="text-[18px] font-bold font-heading tracking-tight leading-tight text-foreground truncate">
             {firstName || "Hola"}
           </h1>
           {companyName && (
@@ -100,17 +105,21 @@ export function WorkerHero({ firstName, lastName, greeting, companyName, avatarU
               {formatDisplayName(companyName)}
             </p>
           )}
-        </div>
-
-        <span
-          className={cn(
-            "inline-flex items-center gap-1 rounded-full border px-2 py-1 text-[10.5px] font-semibold shrink-0",
-            STATUS_PILL[status],
+          <span
+            className={cn(
+              "mt-1.5 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold",
+              STATUS_PILL[status],
+            )}
+          >
+            <StatusIcon className="h-2.5 w-2.5" />
+            {copy.label}
+          </span>
+          {copy.trust && (
+            <p className="text-[10px] text-muted-foreground/60 mt-1 truncate">
+              {copy.trust}
+            </p>
           )}
-        >
-          <StatusIcon className="h-3 w-3" />
-          {copy.label}
-        </span>
+        </div>
       </div>
     </section>
   );

@@ -468,17 +468,41 @@ export default function EmployeeDashboard() {
         </section>
       )}
 
-      {/* ── Empty state — solo si no hay nada ── */}
+      {/* ── Empty state — premium "Próximo turno" placeholder ── */}
       {!nextShift && upcomingShifts.length === 0 && (
-        <div className="rounded-2xl border border-dashed border-border/50 bg-card/50 px-4 py-6 text-center">
-          <div className="h-10 w-10 mx-auto rounded-xl bg-muted/60 flex items-center justify-center mb-2">
-            <CalendarDays className="h-5 w-5 text-muted-foreground/60" />
+        <section
+          aria-label="Próximo turno"
+          className="rounded-3xl border border-border/50 bg-card shadow-[0_6px_24px_-18px_hsl(var(--foreground)/0.25)] px-4 py-5"
+        >
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground/60">
+              Próximo turno
+            </h2>
+            <span className="text-[10px] font-semibold text-muted-foreground/55">
+              Sin asignar
+            </span>
           </div>
-          <p className="text-[13px] font-semibold text-foreground">Aún no tienes turnos asignados</p>
-          <p className="text-[11.5px] text-muted-foreground/75 mt-1 leading-relaxed max-w-[260px] mx-auto">
-            Te avisaremos aquí cuando tengas un nuevo turno.
-          </p>
-        </div>
+          <div className="flex items-start gap-3">
+            <div className="h-10 w-10 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
+              <CalendarDays className="h-5 w-5 text-primary/70" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[13.5px] font-semibold text-foreground leading-tight">
+                Aún no tienes turnos asignados
+              </p>
+              <p className="text-[11.5px] text-muted-foreground/75 mt-1 leading-relaxed">
+                Cuando tengas uno nuevo, aparecerá aquí con hora, lugar y punto de encuentro.
+              </p>
+            </div>
+          </div>
+          <Link
+            to="/portal/shifts"
+            className="mt-3 h-10 w-full rounded-xl flex items-center justify-center gap-1.5 text-[12.5px] font-semibold border border-border/60 bg-card hover:bg-muted/40 active:scale-[0.98] transition-all text-foreground"
+          >
+            Ver mis turnos
+            <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
+        </section>
       )}
 
       {/* ── Más (Perfil / Documentos / Pagos) ── */}
