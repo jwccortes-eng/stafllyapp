@@ -43,6 +43,7 @@ interface DashSnapshot {
   upcomingShifts: NextShift[];
   estimatedPay: number | null;
   clockStatus: { isClockedIn: boolean; clockInTime: string | null; shiftTitle: string | null };
+  clockStatusAgeHours: number | null;
   weeklyHours: string;
   pendingCount: number;
   unreadAlerts: number;
@@ -72,6 +73,7 @@ export default function EmployeeDashboard() {
     clockInTime: string | null;
     shiftTitle: string | null;
   }>(cached?.clockStatus ?? { isClockedIn: false, clockInTime: null, shiftTitle: null });
+  const [clockStatusAgeHours, setClockStatusAgeHours] = useState<number | null>(cached?.clockStatusAgeHours ?? null);
   const [weeklyHours, setWeeklyHours] = useState(cached?.weeklyHours ?? "0h");
   const [pendingCount, setPendingCount] = useState(cached?.pendingCount ?? 0);
   const [unreadAlerts, setUnreadAlerts] = useState(cached?.unreadAlerts ?? 0);
@@ -149,7 +151,11 @@ export default function EmployeeDashboard() {
       const nextClockStatus = activeClocks.length > 0
         ? { isClockedIn: true, clockInTime: activeClocks[0].clock_in, shiftTitle: activeClocks[0].scheduled_shifts?.title ?? null }
         : { isClockedIn: false, clockInTime: null, shiftTitle: null };
+      const nextClockStatusAgeHours = nextClockStatus.clockInTime
+        ? Math.max(0, (Date.now() - new Date(nextClockStatus.clockInTime).getTime()) / 36e5)
+        : null;
       setClockStatus(nextClockStatus);
+      setClockStatusAgeHours(nextClockStatusAgeHours);
 
       let totalSec = 0;
       for (const e of (weekRes.data ?? []) as any[]) {
@@ -236,6 +242,7 @@ export default function EmployeeDashboard() {
       upcomingShifts: nextUpcoming,
       estimatedPay: nextEstimatedPay,
       clockStatus: nextClockStatus,
+      clockStatusAgeHours: nextClockStatusAgeHours,
       weeklyHours: nextWeeklyHours,
       pendingCount: pCount,
       unreadAlerts: nextUnreadAlerts,
@@ -286,6 +293,7 @@ export default function EmployeeDashboard() {
 
   const nba = useMemo(() => selectNextBestAction({
     clockStatus: { isClockedIn: clockStatus.isClockedIn, shiftTitle: clockStatus.shiftTitle },
+    clockStatusAgeHours,
     nextShift: nbaShift,
     pendingCount,
     claimableCount,
@@ -294,7 +302,7 @@ export default function EmployeeDashboard() {
     readinessMissingDocs: readiness.missingDocuments.length,
     now,
   }), [
-    clockStatus.isClockedIn, clockStatus.shiftTitle, nbaShift, pendingCount,
+    clockStatus.isClockedIn, clockStatus.shiftTitle, clockStatusAgeHours, nbaShift, pendingCount,
     claimableCount, readiness.status, readiness.missingPersonal.length,
     readiness.missingDocuments.length, now,
   ]);
