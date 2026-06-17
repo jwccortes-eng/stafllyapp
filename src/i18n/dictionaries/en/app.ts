@@ -109,8 +109,8 @@ const en_app = {
   "settings.language.guide_description": "Guided mode with more human, editorial copy.",
 
   // ── Portal · Clock ───────────────────────────────────────────────
-  "portal.clock.stage1.title": "Stage 1: keep clocking in/out in Connecteam",
-  "portal.clock.stage1.body": "Stafly TimeClock is not the official payroll source yet. Keep using Connecteam until we tell you Stafly takes over.",
+  "portal.clock.stage1.title": "Clock in with Connecteam for now",
+  "portal.clock.stage1.body": "Stafly Time Clock is still in testing. Use Connecteam as the official record until further notice.",
   "portal.clock.photo_required": "Profile photo required",
   "portal.clock.photo_required_subtitle": "Tap to upload before clocking in",
   "portal.clock.clock_in_recorded": "Clock-in recorded",
