@@ -113,6 +113,16 @@ Deno.serve(async (req) => {
       if (payload) payloads.push(payload);
     }
 
+    // ── Consent evaluation (log_only by default; never blocks in this phase) ──
+    // Mode: env PARCEROS_CONSENT_MODE = "log_only" (default) | "enforce" | "off"
+    // Phase 1 contract: log_only ONLY. enforce branch reserved for Phase 3 after UI adoption.
+    const consentMode = (Deno.env.get("PARCEROS_CONSENT_MODE") ?? "log_only").toLowerCase();
+    if (consentMode !== "off") {
+      for (const wpId of workerProfileIds) {
+        await evaluateConsentLogOnly(supabase, wpId, consentMode, pushToParceros);
+      }
+    }
+
     // ── Log access ──
     for (const wpId of workerProfileIds) {
       await supabase.from("profile_access_log").insert({
@@ -121,6 +131,7 @@ Deno.serve(async (req) => {
         ip_address: req.headers.get("x-forwarded-for")?.split(",")[0] ?? null,
       });
     }
+
 
     // ── PUSH to Parceros if requested ──
     const pushResults: Array<{
