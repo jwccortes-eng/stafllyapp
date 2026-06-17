@@ -523,7 +523,7 @@ Deno.serve(async (req) => {
 
     // ============= LIST PAYMENTS =============
     if (action === "list_payments") {
-      const { phone, employee_id, device_id } = body;
+      const { phone, employee_id, device_id, pin } = body;
       let empId: string | null = employee_id ?? null;
       let empCompanyId: string | null = null;
 
@@ -545,6 +545,19 @@ Deno.serve(async (req) => {
         empCompanyId = emp?.company_id ?? null;
       }
       if (!empId) return jsonResp({ payments: [] });
+
+      // === AUTHZ === payroll data is sensitive: must be self / admin / valid
+      // PIN / trusted kiosk. Same gate as update_self/capture_kiosk_photo.
+      const authz = await authorizeEmployeeAction(adminClient, req, {
+        employee_id: empId,
+        pin,
+        device_id,
+      });
+      if (!authz.ok) {
+        console.warn("[front-desk] list_payments denied", { employee_id: empId, reason: authz.reason });
+        return jsonResp({ error: "No autorizado" }, 403);
+      }
+
 
       // Monitor-mode device trust audit (non-blocking).
       void auditDeviceTrust(adminClient, {
