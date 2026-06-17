@@ -12,6 +12,7 @@ import {
   missingPersonalFields,
   type PersonalInfoSnapshot,
 } from "@/lib/onboarding/profile-status";
+import { isEmployeeDriver } from "@/components/shifts/types";
 import {
   getRequiredDocumentsForCompany,
   DOCUMENT_CATEGORIES,
@@ -44,7 +45,7 @@ export function useEmployeeReadiness(employeeId: string | null | undefined): Rea
       const { data: emp } = await supabase
         .from("employees")
         .select(
-          "id, company_id, profile_status, first_name, last_name, phone_number, date_of_birth, ssn_last4, address_line, address_city, address_state, address_zip, employee_role, has_car",
+          "id, company_id, profile_status, first_name, last_name, phone_number, date_of_birth, ssn_last4, address_line, address_city, address_state, address_zip, employee_role, has_car, can_drive",
         )
         .eq("id", employeeId)
         .maybeSingle();
@@ -54,7 +55,7 @@ export function useEmployeeReadiness(employeeId: string | null | undefined): Rea
       const personal = missingPersonalFields(emp as PersonalInfoSnapshot);
       setMissingPersonal(personal);
 
-      const canDrive = !!emp.has_car;
+      const canDrive = isEmployeeDriver(emp as any);
       const required = await getRequiredDocumentsForCompany(emp.company_id, { canDrive });
 
       const { data: docs } = await supabase
