@@ -322,9 +322,10 @@ IMPORTANTE: Usa la herramienta suggest_assignments para devolver las sugerencias
     });
   } catch (err) {
     console.error("ai-workforce error:", err);
-    return new Response(JSON.stringify({ error: err instanceof Error ? err.message : "Error interno" }), {
+    return new Response(JSON.stringify({ error: "Error interno" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });
+
