@@ -240,6 +240,51 @@ const NotificationBell = forwardRef<HTMLDivElement>(function NotificationBell(_p
           </div>
         </div>
 
+        {/* Sound-blocked notice (discreet, dismissible 24h) */}
+        {showSoundNotice && (
+          <div className="px-3 pt-3">
+            <div className="rounded-xl border border-amber-500/25 bg-amber-500/[0.06] p-3">
+              <div className="flex items-start gap-2.5">
+                <div className="h-7 w-7 rounded-lg bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                  <Volume2 className="h-3.5 w-3.5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[12.5px] font-bold text-foreground leading-tight">
+                    Sonido desactivado
+                  </p>
+                  <p className="mt-1 text-[11px] text-muted-foreground/85 leading-snug">
+                    Tu navegador está bloqueando las alertas sonoras. Seguirás recibiendo
+                    notificaciones visuales, pero no escucharás sonidos de turnos ni mensajes importantes.
+                  </p>
+                  <div className="mt-2 flex items-center gap-2">
+                    <button
+                      onClick={() => void handleEnableSound()}
+                      disabled={soundBusy}
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-foreground px-2.5 py-1 text-[11px] font-semibold text-background hover:bg-foreground/90 transition-colors disabled:opacity-60"
+                    >
+                      <Volume2 className="h-3 w-3" />
+                      Activar sonido
+                    </button>
+                    <button
+                      onClick={handleDismissSound}
+                      className="text-[11px] font-medium text-muted-foreground/75 hover:text-foreground transition-colors"
+                    >
+                      Más tarde
+                    </button>
+                  </div>
+                </div>
+                <button
+                  onClick={handleDismissSound}
+                  aria-label="Descartar aviso"
+                  className="text-muted-foreground/40 hover:text-foreground transition-colors shrink-0"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Filter tabs */}
         <div className="flex items-center gap-1 px-3 py-2 border-b border-border/20 overflow-x-auto">
           {(Object.keys(FILTER_LABELS) as FilterTab[]).map((tab) => (
