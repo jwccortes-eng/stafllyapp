@@ -614,6 +614,14 @@ export default function UnifiedPersonProfile() {
                   </h1>
                   <ReadinessBadge band={band} loading={readiness.loading} />
                 </div>
+                {employee.preferred_name && String(employee.preferred_name).trim() !== "" && (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    También conocido/a como{" "}
+                    <span className="font-medium text-foreground/80">
+                      {String(employee.preferred_name).trim()}
+                    </span>
+                  </p>
+                )}
                 <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
                   {employee.employee_role && (
                     <Badge variant="secondary" className="text-[10px]">

@@ -22,4 +22,5 @@ export const EMPLOYEE_COLUMNS_NO_FISCAL =
   "emergency_contact_name, emergency_contact_phone, can_drive, " +
   "has_vehicle, onboarding_status, onboarding_completed_at, " +
   "address_line, address_city, address_state, address_zip, languages, " +
-  "profile_status, deleted_at, merged_into_employee_id, address_structured";
+  "profile_status, deleted_at, merged_into_employee_id, address_structured, " +
+  "preferred_name";
