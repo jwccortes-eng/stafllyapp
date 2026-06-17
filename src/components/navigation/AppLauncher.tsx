@@ -24,6 +24,7 @@ export function AppLauncher({
 }: AppLauncherProps) {
   const location = useLocation();
   const { theme, setTheme } = useTheme();
+  const { t } = useT();
 
   if (!open) return null;
 
