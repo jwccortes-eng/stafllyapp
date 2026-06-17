@@ -166,6 +166,21 @@ export function MoreSheet({
               badgeCounts={badgeCounts}
             />
           ))}
+
+          {/* Non-interactive info card — points operators to desktop for back-office tools. */}
+          <div className="rounded-2xl border border-border/40 bg-muted/30 p-4 flex items-start gap-3">
+            <div className="h-9 w-9 rounded-xl bg-background/80 flex items-center justify-center shrink-0">
+              <Monitor className="h-4 w-4 text-muted-foreground" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[13px] font-semibold text-foreground leading-tight">
+                {t("launcher.more_desktop_tools.title")}
+              </p>
+              <p className="text-[11px] text-muted-foreground mt-1 leading-snug">
+                {t("launcher.more_desktop_tools.subtitle")}
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Footer actions */}
