@@ -33,11 +33,22 @@ export function AppLauncher({
     return location.pathname === item.to || location.pathname.startsWith(item.to + "/");
   };
 
-  // Group by section
+  // Group by mobileSection when set (admin mobile launcher), else fall back to section.
+  const isMobileAdmin = variant === "admin" && items.some(i => !!i.mobileSection);
   const sections = new Map<string, NavItem[]>();
   items.forEach(item => {
-    if (!sections.has(item.section)) sections.set(item.section, []);
-    sections.get(item.section)!.push(item);
+    const key = (isMobileAdmin && item.mobileSection) || item.section;
+    if (!sections.has(key)) sections.set(key, []);
+    sections.get(key)!.push(item);
+  });
+  const MOBILE_ORDER = ["Inicio", "Operación", "Personas", "Comunicación"];
+  const orderedSections = Array.from(sections.entries()).sort(([a], [b]) => {
+    const ai = MOBILE_ORDER.indexOf(a);
+    const bi = MOBILE_ORDER.indexOf(b);
+    if (ai === -1 && bi === -1) return 0;
+    if (ai === -1) return 1;
+    if (bi === -1) return -1;
+    return ai - bi;
   });
 
   return (
