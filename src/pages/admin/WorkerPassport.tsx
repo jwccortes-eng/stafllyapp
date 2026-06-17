@@ -17,7 +17,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   Star, Shield, TrendingUp, Target, MapPin, Briefcase,
-  Clock, Building2, Globe, Lock, Award, Languages, Car, RefreshCw,
+  Clock, Building2, Globe, Lock, Award, Languages, Car, RefreshCw, ExternalLink,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LegacyDeprecationBanner } from "@/components/transition/LegacyDeprecationBanner";
