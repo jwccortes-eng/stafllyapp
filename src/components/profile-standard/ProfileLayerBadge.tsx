@@ -2,7 +2,7 @@
  * ProfileLayerBadge — presentational chip indicating which profile layer
  * (L1–L4) the current surface is rendering.
  *
- * @status wired in ProfileSummaryGrid (E2)
+ * @status foundation-only — do not wire until E2 approved
  *
  * Pure render. No data fetching, no hooks beyond React primitives.
  * See: docs/ECOSYSTEM_PROFILE_STANDARD.md
