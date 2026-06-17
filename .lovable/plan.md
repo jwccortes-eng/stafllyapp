@@ -1,143 +1,127 @@
-# Ecosystem Profile Standard v1
+# Fase E2 — Aplicar estándar a una primera surface admin (propuesta)
 
-Propuesta de **estándar unificado de perfil de trabajador** para el ecosistema Stafly (Core + Parceros + Passport público), consolidando lo aprendido de:
+Propuesta detallada. **No implementar hasta aprobación explícita.**
 
-- `PublicPassport.tsx` — vista pública gateada por RPC `get_public_passport`
-- `ConsentCenterCard` + `useWorkerConsent` — consentimientos versionados
-- `WorkerPassport.tsx` (legacy admin) — score dual y badges
-- `PortalProfile.tsx` — self-service worker
-- `CompleteProfile` / `EmployeeOnboarding` — captura inicial
-- `ProfileSummaryGrid` + `UnifiedPersonProfile` — vista one-screen admin
-- `worker_profiles` / `passport_profiles` / `rep_scores` / `shift_reviews`
+## 1. Objetivo exacto
 
-**No se implementa nada en esta fase. Solo se entrega el estándar y el plan.**
+Aplicar por primera vez los componentes foundation-only de E1 (`ProfileLayerBadge`, `SourceProvenanceBadge`) a **una sola superficie admin read-only**, sin lógica nueva, sin consent, sin edición, sin red. Validar en producción real que:
 
----
+- Los badges renderizan correctamente en mobile y desktop.
+- El estándar de capas (L1–L4) es legible para el operador.
+- No introducen regresiones visuales ni de performance.
 
-## 1. Principios del estándar
+E2 NO incluye: `ConsentGate`, self-service, mutaciones, wiring cross-tenant, ni etiquetado masivo.
 
-1. **Una sola fuente de verdad por capa**, con jerarquía explícita:
-   - **Identidad operativa** → `employees` (tenant-scoped, payroll/shifts/clock)
-   - **Identidad de ecosistema** → `worker_profiles` (cross-tenant, portable, ligada a `user_id`)
-   - **Vitrina pública** → `passport_profiles` + `passport_publications` (gated, RPC-only)
-2. **Capa visible ≠ capa almacenada.** Nunca exponer SSN/EIN/PIN/phone/email/address fuera de admin tenant-scoped.
-3. **Source labeling obligatorio** cuando coexistan sistemas legacy + nuevos (regla heredada de Fase 1B.2/1B.3).
-4. **Consentimiento granular y versionado** antes de publicar cualquier dato cross-tenant (Parceros, Passport público, referrals).
-5. **Edición progresiva**: el worker completa en su tiempo; admin solo desbloquea lo operativo crítico.
-6. **Spanish-first operator copy** (Admin Desk) + ES/EN/HE worker portal (i18n v2).
-7. **Cero regresión** a payroll/time_entries/RLS/auth (política estricta vigente).
+## 2. Surface candidata: `ProfileSummaryGrid`
 
----
+Archivo: `src/components/employee/ProfileSummaryGrid.tsx`
 
-## 2. Modelo de capas
+Es la grid de 6 tarjetas read-only ("Datos principales / Cumplimiento / Acceso / Operación / Actividad reciente / Avanzado e importado") que se renderiza dentro de `UnifiedPersonProfile` en `/app/employees/:id`.
 
-```text
-┌──────────────────────────────────────────────────────────┐
-│ L4 · Passport público (passport_profiles + RPC)          │  ← cualquiera con slug
-│    display_name, primary_role, skills, reputation, KPIs  │
-├──────────────────────────────────────────────────────────┤
-│ L3 · Ecosystem profile (worker_profiles)                 │  ← Parceros + cross-tenant
-│    bio, skills, languages, experience, visibility        │
-├──────────────────────────────────────────────────────────┤
-│ L2 · Tenant employee (employees)                         │  ← admin del tenant
-│    phone, email, address, comp, docs, photo, ssn_last4   │
-├──────────────────────────────────────────────────────────┤
-│ L1 · Identidad fiscal/sensible (contractor_w9, secretos) │  ← admin + worker dueño
-│    tin_last4, signed PDF, EIN/SSN nunca en claro         │
-└──────────────────────────────────────────────────────────┘
-```
+Alternativa descartada: `UnifiedPersonProfile` directamente (demasiada superficie, mezcla tabs editables + readiness + W-9 trigger).
 
-Regla: **datos suben de capa solo con consentimiento explícito y verificación**. Datos bajan de capa (público → privado) automáticamente al revocar consentimiento.
+## 3. Por qué es la más segura
 
----
+- Componente puramente **presentacional**: recibe props ya cargadas por el padre, no hace fetch, no escribe.
+- **Read-only**: no toca formularios, no toca SSN/EIN, no toca W-9, no toca foto.
+- Ya pasó QA Premium ([Employee Profile One-Screen v1] + [IA Cleanup v3]).
+- Vive **solo en admin** (`/app/employees/:id`), nunca en `/portal/*`, nunca en `/apply`, nunca en `PublicPassport`.
+- Cambio aislable: 1 archivo, badges decorativos.
+- Reversible con `git revert` de un solo commit.
 
-## 3. Estándar de campos
+## 4. Archivos que tocaría
 
-| Campo | L1 | L2 | L3 | L4 | Editable por |
-|---|---|---|---|---|---|
-| legal_name | ✓ | ✓ | — | — | admin tenant |
-| display_name | — | ✓ | ✓ | ✓ | worker |
-| photo (reviewed) | — | ✓ | ✓ | ✓ | worker → admin aprueba |
-| phone / email | — | ✓ | — | — | worker self-service |
-| address | — | ✓ | — | — | worker |
-| emergency_contact | — | ✓ | — | — | worker |
-| ssn_last4 / tin_last4 | ✓ | — | — | — | worker (W-9 flow) |
-| primary_role | — | ✓ | ✓ | ✓ | admin + worker |
-| skills / languages | — | — | ✓ | ✓ | worker |
-| experience | — | — | ✓ | ✓ (gated) | worker |
-| reputation_score | — | — | ✓ | ✓ (gated) | sistema |
-| consent_records | — | — | ✓ | — | worker |
+**Modificados (1):**
+- `src/components/employee/ProfileSummaryGrid.tsx` — añadir import de los 2 badges E1 y renderizarlos junto a labels específicas.
 
----
+**Nuevos (0).**
 
-## 4. Componentes UI estándar (a construir)
+## 5. Componentes E1 que usaría
 
-Reutilizables, presentational, sin lógica de negocio acoplada:
+- `ProfileLayerBadge` — junto al título de cada una de las 6 tarjetas, indicando la capa dominante (ej. "Datos principales" → L2, "Avanzado e importado" → L2 con fuente legacy/import).
+- `SourceProvenanceBadge` — solo en la tarjeta "Avanzado e importado" cuando el origen sea legacy/import (Connecteam, CSV).
 
-1. `<ProfileLayerBadge layer="L2|L3|L4" />` — chip que indica qué capa estoy viendo.
-2. `<SourceProvenanceBadge source="legacy|db|mixed|none" />` — extensión del patrón de Fase 1B.2.
-3. `<ConsentGate type="parceros|passport|referrals">` — bloquea render hasta `hasConsent`.
-4. `<PhotoReviewStatusChip />` — ya existe, se canoniza.
-5. `<ProfileFieldRow editable={layer === currentLayer} />` — unifica FieldRow + SmartPhoneInput + GenderSelect + SmartDateInput.
-6. `<ProfileReadinessCard scope="L2|L3" />` — extiende la actual a multi-capa.
-7. `<ProfileSwitcher />` — para workers con múltiples tenants, muestra qué capa están editando.
+**NO se usa** `ConsentGate` en E2.
 
----
+## 6. Campos/datos etiquetados
 
-## 5. Plan de implementación por fases
+Etiquetado **a nivel tarjeta**, no a nivel campo individual (para evitar ruido visual):
 
-Cada fase es independiente, frontend-first, sin tocar payroll/RLS/schema salvo donde se indica explícitamente.
+| Tarjeta | Layer badge | Source badge |
+|---|---|---|
+| Datos principales | L2 employees | — |
+| Cumplimiento | L2 employees | — |
+| Acceso | L2 employees | — |
+| Operación | L2 employees | — |
+| Actividad reciente | L2 employees | — |
+| Avanzado e importado | L2 employees | legacy/import si aplica |
 
-### Fase E1 · Foundations (UI only, sin DB)
-- E1.1 — Crear `src/lib/profile-layers.ts` con tipos `ProfileLayer`, helpers `getLayerForField`, `canEditField`.
-- E1.2 — Componentes `ProfileLayerBadge`, `SourceProvenanceBadge`, `ConsentGate`.
-- E1.3 — Documentar en `docs/ECOSYSTEM_PROFILE_STANDARD.md`.
+Sin tocar valores, sin tocar formato de números, sin tocar fechas.
 
-### Fase E2 · Auditoría y etiquetado de surfaces existentes
-- E2.1 — Etiquetar capa visible en `UnifiedPersonProfile`, `PortalProfile`, `WorkerPassport`, `PublicPassport`.
-- E2.2 — Aplicar `SourceProvenanceBadge` a todos los puntos donde score/categorías/badges mezclan fuentes.
-- E2.3 — QA mobile/desktop sin cambios funcionales.
+## 7. Qué NO tocaría
 
-### Fase E3 · Consent Center unificado
-- E3.1 — Promover `ConsentCenterCard` a página dedicada `/portal/consent` con histórico.
-- E3.2 — Wrap de surfaces L3/L4 con `<ConsentGate>` (Parceros, Passport público, Referrals).
-- E3.3 — Admin tenant-scoped: read-only view de consentimientos del worker.
+- `PublicPassport.tsx`, `ConsentCenterCard.tsx`, `WorkerPassport.tsx` (legacy).
+- `PortalProfile`, `UpdateCenter`, `CompleteProfile`, `EmployeeOnboarding`.
+- Cualquier flujo de onboarding, SSN/EIN, W-9, foto, documentos.
+- Cualquier mutación, hook nuevo, fetch nuevo.
+- Rutas, navegación, sidebar.
+- Supabase: DB, RLS, migrations, edge functions, storage, RPCs.
+- Auth, tenants, payroll, time_entries, scheduled_shifts, pay_periods.
+- `worker_consent_records`, `passport_publications`, `worker_profiles`, `review_scores`.
+- Bookings, payments, chat, campaigns, notifications.
+- Mobile portal (`/portal/*`) y kiosk.
 
-### Fase E4 · Self-service edición progresiva
-- E4.1 — Unificar PortalProfile + UpdateCenter en single page `/portal/profile` con secciones colapsables por capa.
-- E4.2 — Banderas visuales de "campo bloqueado por admin" vs "tu puedes editar".
-- E4.3 — Photo flow ya consolidado en Fase 1B.1; reusar.
+## 8. Riesgos
 
-### Fase E5 · Reputación unificada (requiere decisión de producto)
-- E5.1 — Decisión: deprecar `useEmployeeReputation` o conservar como fallback histórico.
-- E5.2 — Migrar categorías/barras a `rep_scores` o etiquetar permanentemente como legacy.
-- E5.3 — Backend: ningún cambio sin diseño formal (fuera del alcance de este standard).
+| Riesgo | Mitigación |
+|---|---|
+| Ruido visual en cards densos | Badges `text-[10px]`, color muted, máximo 1–2 por card |
+| Regresión QA Premium previo | Badges colocados al lado del título existente, sin reordenar contenido |
+| Layer mal asignado | Empezar todo en L2 (employees); fuentes legacy solo en "Avanzado e importado" |
+| Confusión operador | Tooltip usa `PROFILE_LAYER_DESCRIPTIONS` ya definido en E1 |
+| Bundle size | <1 KB gz adicional (badges ya existían como código muerto en E1) |
 
-### Fase E6 · Passport público hardening
-- E6.1 — Auditar `get_public_passport` RPC: confirmar que ningún campo L1/L2 puede escaparse.
-- E6.2 — Versionar `passport_publications.version` para invalidación.
-- E6.3 — Añadir `<ProfileLayerBadge layer="L4" />` visible en `PublicPassport`.
+## 9. QA mobile (390×844)
 
-### Fase E7 · Worker Passport legacy → redirect total
-- E7.1 — Cuando E2+E3+E6 estén cerrados, marcar `WorkerPassport.tsx` como **read-only archive**.
-- E7.2 — Redirect duro desde rutas legacy al nuevo flujo (mantener URL por 90 días con banner).
+- `/app/employees/:id` con cuenta admin + worker real de tenant de prueba (no Quality Staff real).
+- Verificar: badges no rompen wrap de títulos, no aumentan altura de cards >4px, no producen overflow horizontal.
+- Verificar tap target del tooltip si se agrega (si no se agrega, solo visual).
+- Screenshot antes/después.
 
----
+## 10. QA desktop (1280+)
 
-## 6. Reglas de no-regresión (heredadas y reforzadas)
+- `/app/employees/:id` en Stafly Demo + MyStaff (tenants seguros).
+- Verificar grid de 2 columnas mantiene altura simétrica.
+- Verificar `UnifiedPersonProfile` que embebe el grid no rompe el resto del layout (Readiness card, tabs).
+- Sin regressions en tabs "Más detalles".
 
-- No tocar: `payroll_*`, `time_entries`, `pay_periods`, `period_base_pay`, `shift_assignments`, `clock_events`, RLS de `employees`, auth, `auth_rate_limits`, edge functions de payroll/clock.
-- No exponer: SSN/EIN completo, PIN, raw phone/email cross-tenant, address cross-tenant.
-- No re-introducir: doble upload de foto (Fase 1B.1), SSN completo en activation (Fase 1A.1), score sin source label (Fase 1B.2/1B.3).
-- Cada fase entrega su propio QA mobile/desktop y queda registrada en memory.
+## 11. Build / vitest esperado
+
+- `bun run build` → PASS.
+- `bunx vitest run` → 196 PASS / 4 pre-existing FAIL (`next-best-action.test.ts`, no relacionado).
+- Sin warnings nuevos de TS, sin warnings nuevos de Vite.
+
+## 12. Rollback
+
+`git revert <commit-de-e2>` — revierte solo `ProfileSummaryGrid.tsx`. Cero colateral. Los componentes E1 siguen existiendo como foundation-only.
+
+## 13. Criterios de aceptación
+
+1. Solo `ProfileSummaryGrid.tsx` modificado (`git diff --stat` = 1 archivo).
+2. 0 archivos nuevos.
+3. Badges visibles en las 6 tarjetas en `/app/employees/:id`.
+4. JSDoc en `ProfileLayerBadge` / `SourceProvenanceBadge` actualizado: `@status wired in ProfileSummaryGrid (E2)`.
+5. Build + vitest pasan.
+6. QA mobile + desktop sin regresiones visuales.
+7. `rg "ProfileLayerBadge|SourceProvenanceBadge"` muestra import solo en `ProfileSummaryGrid.tsx` + los archivos E1 (+ tsbuildinfo).
+8. Cero cambios en `.sql`, `supabase/`, `src/integrations/`, hooks, rutas.
+
+## 14. Confirmación de no impacto
+
+E2 **NO toca**: payroll, time_entries, tenants, auth, RLS, migrations, edge functions, storage, RPCs, production data, `PublicPassport`, `ConsentCenterCard`, `worker_consent_records`, `passport_publications`, `worker_profiles`, `review_scores`, onboarding, SSN/EIN, W-9, documentos privados, chat, payments, bookings, campaigns, notificaciones, kiosk, portal worker.
+
+E2 es **UI-only, 1 archivo, presentacional, reversible con un revert**.
 
 ---
 
-## 7. Entregables de esta propuesta
-
-1. Este plan (estándar + fases E1–E7).
-2. Tabla de capas y campos (sección 3).
-3. Catálogo de componentes a construir (sección 4).
-4. Reglas de no-regresión (sección 6).
-
-**Próximo paso sugerido:** aprobar el estándar y comenzar por **Fase E1.3** (documento en `docs/`) + **Fase E1.1** (tipos y helpers), que son zero-risk y desbloquean E2.
+**Pendiente: aprobación explícita para ejecutar E2 con este alcance exacto.**
