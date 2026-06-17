@@ -32,7 +32,13 @@ import {
 } from "./__fixtures__/passport-payloads.ts";
 
 const publicVis = { profile_visibility: "public" };
-const hiddenVis = { profile_visibility: "hidden" };
+const hiddenVis = { profile_visibility: "hidden" }; // legacy literal
+const privateVis = { profile_visibility: "private" };
+const limitedVis = { profile_visibility: "limited" };
+const nullVis = { profile_visibility: null };
+const undefinedVis = {}; // profile_visibility omitted
+const unknownVis = { profile_visibility: "weird" };
+
 
 // ── Q1 ────────────────────────────────────────────────────────────────────
 Deno.test("Q1 log_only + consent missing → allow (no block, current behavior preserved)", () => {
@@ -177,4 +183,75 @@ Deno.test("normalizeMode coerces unknown/empty to log_only", () => {
   assertEquals(normalizeMode("ENFORCE"), "enforce");
   assertEquals(normalizeMode(" off "), "off");
   assertEquals(normalizeMode("garbage"), "log_only");
+});
+
+// ──────────────────────────────────────────────────────────────────────────
+// E5.7B — Real-enum visibility coverage (R1–R7)
+// Aligns decider with the Postgres enum (private | limited | public) and the
+// fail-closed rule: only "public" publishes; everything else blocks under
+// enforce. log_only behavior must be unchanged.
+// ──────────────────────────────────────────────────────────────────────────
+
+// ── R1 ────────────────────────────────────────────────────────────────────
+Deno.test("R1 enforce + granted + visibility public → allow", () => {
+  const d = decideEnforcement("granted", publicVis, "enforce");
+  assertEquals(d.allow, true);
+  assertEquals(d.blocked_reason, null);
+  assertEquals(d.would_block_in_enforce, false);
+});
+
+// ── R2 ────────────────────────────────────────────────────────────────────
+Deno.test("R2 enforce + granted + visibility private → block(visibility_private)", () => {
+  const d = decideEnforcement("granted", privateVis, "enforce");
+  assertEquals(d.allow, false);
+  assertEquals(d.blocked_reason, "visibility_private");
+  assertEquals(d.would_block_in_enforce, true);
+});
+
+// ── R3 ────────────────────────────────────────────────────────────────────
+Deno.test("R3 enforce + granted + visibility limited → block(visibility_limited)", () => {
+  const d = decideEnforcement("granted", limitedVis, "enforce");
+  assertEquals(d.allow, false);
+  assertEquals(d.blocked_reason, "visibility_limited");
+  assertEquals(d.would_block_in_enforce, true);
+});
+
+// ── R4 ────────────────────────────────────────────────────────────────────
+Deno.test("R4 enforce + granted + visibility hidden (legacy literal) → block(visibility_hidden)", () => {
+  const d = decideEnforcement("granted", hiddenVis, "enforce");
+  assertEquals(d.allow, false);
+  assertEquals(d.blocked_reason, "visibility_hidden");
+});
+
+// ── R5 ────────────────────────────────────────────────────────────────────
+Deno.test("R5 enforce + granted + visibility null/undefined → block(visibility_unknown)", () => {
+  const dNull = decideEnforcement("granted", nullVis, "enforce");
+  assertEquals(dNull.allow, false);
+  assertEquals(dNull.blocked_reason, "visibility_unknown");
+
+  const dUndef = decideEnforcement("granted", undefinedVis, "enforce");
+  assertEquals(dUndef.allow, false);
+  assertEquals(dUndef.blocked_reason, "visibility_unknown");
+
+  const dRowNull = decideEnforcement("granted", null, "enforce");
+  assertEquals(dRowNull.allow, false);
+  assertEquals(dRowNull.blocked_reason, "visibility_unknown");
+});
+
+// ── R6 ────────────────────────────────────────────────────────────────────
+Deno.test("R6 enforce + granted + visibility unknown string → block(visibility_unknown)", () => {
+  const d = decideEnforcement("granted", unknownVis, "enforce");
+  assertEquals(d.allow, false);
+  assertEquals(d.blocked_reason, "visibility_unknown");
+});
+
+// ── R7 ────────────────────────────────────────────────────────────────────
+Deno.test("R7 log_only + private/limited/unknown → never blocks (runtime preserved)", () => {
+  for (const vis of [privateVis, limitedVis, nullVis, undefinedVis, unknownVis]) {
+    const d = decideEnforcement("granted", vis, "log_only");
+    assertEquals(d.allow, true);
+    assertEquals(d.blocked_reason, null);
+    // Telemetry still reflects what enforce would have done.
+    assertEquals(d.would_block_in_enforce, true);
+  }
 });
