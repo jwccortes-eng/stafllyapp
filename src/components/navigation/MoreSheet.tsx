@@ -66,13 +66,17 @@ const ITEM_GROUP_OVERRIDES: Record<string, string> = {
 };
 
 function groupForItem(item: NavItem): string {
+  // Mobile-first: if the nav item declares a mobileSection, honor it. This is
+  // the canonical grouping for the TestFlight admin shell.
+  if (item.mobileSection) return item.mobileSection;
   const override = ITEM_GROUP_OVERRIDES[item.id];
   if (override) return override;
   const section = item.section || FALLBACK_GROUP;
   for (const g of SECTION_GROUPS) if (g.matches.includes(section)) return g.label;
   return FALLBACK_GROUP;
 }
-const SECTION_ORDER = [...SECTION_GROUPS.map(g => g.label), FALLBACK_GROUP];
+const MOBILE_SECTION_ORDER = ["Inicio", "Operación", "Personas", "Comunicación"];
+const SECTION_ORDER = [...MOBILE_SECTION_ORDER, ...SECTION_GROUPS.map(g => g.label), FALLBACK_GROUP];
 
 export function MoreSheet({
   open, onClose, items, pinnedIds, onTogglePin, maxPins, onSignOut, badgeCounts = {},
