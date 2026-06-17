@@ -72,7 +72,7 @@ export function WorkerSelfServiceSections({ employeeId, onUpdated }: Props) {
     const { data } = await supabase
       .from("employees")
       .select(
-        "id, first_name, last_name, phone_number, avatar_url, photo_review_status, photo_rejection_reason, emergency_contact_name, emergency_contact_phone, address, address_line, address_city, address_state, address_zip, address_structured, county, approx_latitude, approx_longitude",
+        "id, first_name, last_name, preferred_name, phone_number, avatar_url, photo_review_status, photo_rejection_reason, emergency_contact_name, emergency_contact_phone, address, address_line, address_city, address_state, address_zip, address_structured, county, approx_latitude, approx_longitude",
       )
       .eq("id", employeeId)
       .maybeSingle();
