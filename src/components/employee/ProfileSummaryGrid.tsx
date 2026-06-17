@@ -277,6 +277,13 @@ export function ProfileSummaryGrid({
               <Row icon={Phone} label="Contacto" value="Restringido" />
             )
           )}
+          {employee.preferred_name && String(employee.preferred_name).trim() !== "" && (
+            <Row
+              icon={ContactRound}
+              label="Alias"
+              value={String(employee.preferred_name).trim()}
+            />
+          )}
           {employee.employee_role && (
             <Row
               icon={Briefcase}

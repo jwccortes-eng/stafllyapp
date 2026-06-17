@@ -1,127 +1,98 @@
-# Fase E2 — Aplicar estándar a una primera surface admin (propuesta)
+E4.1 — Read-only display of `preferred_name` in the admin worker profile
 
-Propuesta detallada. **No implementar hasta aprobación explícita.**
+1. Objective
 
-## 1. Objetivo exacto
+Surface the worker-editable `preferred_name` alias inside the admin worker profile (`/app/employees/:id`) as read-only metadata. The legal name (`first_name` / `last_name`) remains the primary identity everywhere. This is purely informational for operators and admins.
 
-Aplicar por primera vez los componentes foundation-only de E1 (`ProfileLayerBadge`, `SourceProvenanceBadge`) a **una sola superficie admin read-only**, sin lógica nueva, sin consent, sin edición, sin red. Validar en producción real que:
+Scope: read-only UI only. No new tables, no migrations, no RLS, no policies, no data writes, no payroll/time_entries/tenants/auth changes. The column already exists from E4.
 
-- Los badges renderizan correctamente en mobile y desktop.
-- El estándar de capas (L1–L4) es legible para el operador.
-- No introducen regresiones visuales ni de performance.
+2. Surface proposed
 
-E2 NO incluye: `ConsentGate`, self-service, mutaciones, wiring cross-tenant, ni etiquetado masivo.
+Two read-only locations inside the existing admin profile page:
 
-## 2. Surface candidata: `ProfileSummaryGrid`
+A. Hero header (`UnifiedPersonProfile.tsx`)
+   - Keep the current large legal name as the main title.
+   - If `employee.preferred_name` is non-null and non-empty, render a muted secondary line immediately below or beside the legal name, e.g.:
+     "También conocido/a como: <preferred_name>"
+   - The alias is never the headline, never used in page title, and never replaces the avatar initials (which stay based on legal name).
 
-Archivo: `src/components/employee/ProfileSummaryGrid.tsx`
+B. "Datos principales" card (`ProfileSummaryGrid.tsx`)
+   - Add a new `Row` in the first card, shown only when `employee.preferred_name` exists:
+     - Icon: `ContactRound` (or a lightweight alias icon if available)
+     - Label: "Alias"
+     - Value: `employee.preferred_name`
+   - If `preferred_name` is null/empty, the row is simply omitted. No "Sin alias" placeholder.
 
-Es la grid de 6 tarjetas read-only ("Datos principales / Cumplimiento / Acceso / Operación / Actividad reciente / Avanzado e importado") que se renderiza dentro de `UnifiedPersonProfile` en `/app/employees/:id`.
+3. Files to touch
 
-Alternativa descartada: `UnifiedPersonProfile` directamente (demasiada superficie, mezcla tabs editables + readiness + W-9 trigger).
+- `src/lib/employee-columns.ts`
+  - Add `preferred_name` to the `EMPLOYEE_COLUMNS_NO_FISCAL` select list so the admin profile fetch already returns it.
 
-## 3. Por qué es la más segura
+- `src/pages/admin/UnifiedPersonProfile.tsx`
+  - Add display of `preferred_name` in the hero header (read-only, no edit control).
 
-- Componente puramente **presentacional**: recibe props ya cargadas por el padre, no hace fetch, no escribe.
-- **Read-only**: no toca formularios, no toca SSN/EIN, no toca W-9, no toca foto.
-- Ya pasó QA Premium ([Employee Profile One-Screen v1] + [IA Cleanup v3]).
-- Vive **solo en admin** (`/app/employees/:id`), nunca en `/portal/*`, nunca en `/apply`, nunca en `PublicPassport`.
-- Cambio aislable: 1 archivo, badges decorativos.
-- Reversible con `git revert` de un solo commit.
+- `src/components/employee/ProfileSummaryGrid.tsx`
+  - Add a conditional `Row` in the "Datos principales" card.
 
-## 4. Archivos que tocaría
+- `src/integrations/supabase/types.ts`
+  - Likely already updated by E4 final; verify it is present, no manual change required unless the type is stale.
 
-**Modificados (1):**
-- `src/components/employee/ProfileSummaryGrid.tsx` — añadir import de los 2 badges E1 y renderizarlos junto a labels específicas.
+Files NOT touched:
+- `src/pages/portal/UpdateCenter.tsx`
+- `src/components/portal/WorkerSelfServiceSections.tsx`
+- `worker_consent_records`, `ConsentCenterCard`, `useWorkerConsent`, `parceros-sync`, `PARCEROS_CONSENT_MODE`, `PublicPassport`, `worker_profiles`, `profiles`, `passport_profiles`, `contractor_w9`, `employee_documents`, `review_scores`, payroll, time_entries, companies/tenants, auth, RLS, edge functions, storage.
 
-**Nuevos (0).**
+4. Display behavior
 
-## 5. Componentes E1 que usaría
+- Legal name is always the primary displayed name in every surface.
+- Preferred name is rendered as a subordinate, muted badge/line, never as a replacement.
+- If `preferred_name` is null or empty string, no alias UI is shown. No empty states, no "Sin alias" labels.
+- If the worker changes `preferred_name` in the portal, admins will see the updated value on the next profile load (existing fetch already happens on mount and snapshot refresh does not touch the core record, but navigating back re-fetches).
 
-- `ProfileLayerBadge` — junto al título de cada una de las 6 tarjetas, indicando la capa dominante (ej. "Datos principales" → L2, "Avanzado e importado" → L2 con fuente legacy/import).
-- `SourceProvenanceBadge` — solo en la tarjeta "Avanzado e importado" cuando el origen sea legacy/import (Connecteam, CSV).
+5. No-impact confirmation
 
-**NO se usa** `ConsentGate` en E2.
+- Payroll: `preferred_name` is never used in payroll math, pay periods, `period_base_pay`, or `time_entries`.
+- W-9 / 1099 / SSN: legal name remains `first_name` / `last_name`; no changes to `contractor_w9`, `tax_forms_1099`, `verification_ssn_ein`, or `ssn_last4`.
+- Documents: no change to document generation, review, or storage; `preferred_name` is not used in documents.
+- PublicPassport: not consumed by `PublicPassport` or `passport_profiles`.
+- Parceros: not consumed by `parceros-sync`, `PARCEROS_CONSENT_MODE`, or marketplace surfaces.
+- Auth / tenants / RLS / schema: no changes. The column already exists from E4; we only read it and display it.
+- Data writes: zero. The change is read-only from the admin side.
 
-## 6. Campos/datos etiquetados
+6. QA mobile / desktop
 
-Etiquetado **a nivel tarjeta**, no a nivel campo individual (para evitar ruido visual):
+Desktop (1280+ CSS px):
+- Navigate to `/app/employees/:id` for a worker with `preferred_name` set.
+- Confirm hero shows legal name first, then the alias as muted secondary text.
+- Confirm "Datos principales" card includes the alias row.
+- Confirm the alias is not shown when the value is null/empty.
+- Confirm no layout breaks, overflow, or truncation issues with 60-character aliases.
+- Confirm the existing "Editar" button and all other hero actions still work.
 
-| Tarjeta | Layer badge | Source badge |
-|---|---|---|
-| Datos principales | L2 employees | — |
-| Cumplimiento | L2 employees | — |
-| Acceso | L2 employees | — |
-| Operación | L2 employees | — |
-| Actividad reciente | L2 employees | — |
-| Avanzado e importado | L2 employees | legacy/import si aplica |
+Mobile (390x844 CSS px):
+- Open the same profile on mobile viewport.
+- Confirm hero alias line wraps correctly and does not push action buttons off-screen.
+- Confirm "Datos principales" card still stacks in one column and the alias row fits.
+- Confirm no horizontal scroll is introduced.
 
-Sin tocar valores, sin tocar formato de números, sin tocar fechas.
+7. Rollback
 
-## 7. Qué NO tocaría
+If the display needs to be removed:
+- Remove the `preferred_name` line from the hero in `UnifiedPersonProfile.tsx`.
+- Remove the conditional `Row` in `ProfileSummaryGrid.tsx`.
+- Optionally remove `preferred_name` from `EMPLOYEE_COLUMNS_NO_FISCAL` (safe, but leaving it has no functional impact).
+- No database rollback required because no schema or data was changed.
+- No RLS/policy rollback required.
 
-- `PublicPassport.tsx`, `ConsentCenterCard.tsx`, `WorkerPassport.tsx` (legacy).
-- `PortalProfile`, `UpdateCenter`, `CompleteProfile`, `EmployeeOnboarding`.
-- Cualquier flujo de onboarding, SSN/EIN, W-9, foto, documentos.
-- Cualquier mutación, hook nuevo, fetch nuevo.
-- Rutas, navegación, sidebar.
-- Supabase: DB, RLS, migrations, edge functions, storage, RPCs.
-- Auth, tenants, payroll, time_entries, scheduled_shifts, pay_periods.
-- `worker_consent_records`, `passport_publications`, `worker_profiles`, `review_scores`.
-- Bookings, payments, chat, campaigns, notifications.
-- Mobile portal (`/portal/*`) y kiosk.
+8. Acceptance criteria
 
-## 8. Riesgos
+- [ ] `preferred_name` is added to `EMPLOYEE_COLUMNS_NO_FISCAL` so it is fetched on the admin profile page.
+- [ ] Admin profile hero shows the legal name first and the alias only as secondary, muted text.
+- [ ] "Datos principales" card shows the alias row only when `preferred_name` is non-null/non-empty.
+- [ ] No alias UI is shown when `preferred_name` is null/empty.
+- [ ] No admin edit control for `preferred_name` is introduced; it remains editable only by the worker in `/portal/update-center`.
+- [ ] No changes to payroll, W-9, documents, PublicPassport, Parceros, time_entries, tenants, auth, RLS, or schema.
+- [ ] Mobile and desktop visual QA passes without overflow or layout regressions.
+- [ ] Rollback steps are documented and reversible without data loss.
 
-| Riesgo | Mitigación |
-|---|---|
-| Ruido visual en cards densos | Badges `text-[10px]`, color muted, máximo 1–2 por card |
-| Regresión QA Premium previo | Badges colocados al lado del título existente, sin reordenar contenido |
-| Layer mal asignado | Empezar todo en L2 (employees); fuentes legacy solo en "Avanzado e importado" |
-| Confusión operador | Tooltip usa `PROFILE_LAYER_DESCRIPTIONS` ya definido en E1 |
-| Bundle size | <1 KB gz adicional (badges ya existían como código muerto en E1) |
-
-## 9. QA mobile (390×844)
-
-- `/app/employees/:id` con cuenta admin + worker real de tenant de prueba (no Quality Staff real).
-- Verificar: badges no rompen wrap de títulos, no aumentan altura de cards >4px, no producen overflow horizontal.
-- Verificar tap target del tooltip si se agrega (si no se agrega, solo visual).
-- Screenshot antes/después.
-
-## 10. QA desktop (1280+)
-
-- `/app/employees/:id` en Stafly Demo + MyStaff (tenants seguros).
-- Verificar grid de 2 columnas mantiene altura simétrica.
-- Verificar `UnifiedPersonProfile` que embebe el grid no rompe el resto del layout (Readiness card, tabs).
-- Sin regressions en tabs "Más detalles".
-
-## 11. Build / vitest esperado
-
-- `bun run build` → PASS.
-- `bunx vitest run` → 196 PASS / 4 pre-existing FAIL (`next-best-action.test.ts`, no relacionado).
-- Sin warnings nuevos de TS, sin warnings nuevos de Vite.
-
-## 12. Rollback
-
-`git revert <commit-de-e2>` — revierte solo `ProfileSummaryGrid.tsx`. Cero colateral. Los componentes E1 siguen existiendo como foundation-only.
-
-## 13. Criterios de aceptación
-
-1. Solo `ProfileSummaryGrid.tsx` modificado (`git diff --stat` = 1 archivo).
-2. 0 archivos nuevos.
-3. Badges visibles en las 6 tarjetas en `/app/employees/:id`.
-4. JSDoc en `ProfileLayerBadge` / `SourceProvenanceBadge` actualizado: `@status wired in ProfileSummaryGrid (E2)`.
-5. Build + vitest pasan.
-6. QA mobile + desktop sin regresiones visuales.
-7. `rg "ProfileLayerBadge|SourceProvenanceBadge"` muestra import solo en `ProfileSummaryGrid.tsx` + los archivos E1 (+ tsbuildinfo).
-8. Cero cambios en `.sql`, `supabase/`, `src/integrations/`, hooks, rutas.
-
-## 14. Confirmación de no impacto
-
-E2 **NO toca**: payroll, time_entries, tenants, auth, RLS, migrations, edge functions, storage, RPCs, production data, `PublicPassport`, `ConsentCenterCard`, `worker_consent_records`, `passport_publications`, `worker_profiles`, `review_scores`, onboarding, SSN/EIN, W-9, documentos privados, chat, payments, bookings, campaigns, notificaciones, kiosk, portal worker.
-
-E2 es **UI-only, 1 archivo, presentacional, reversible con un revert**.
-
----
-
-**Pendiente: aprobación explícita para ejecutar E2 con este alcance exacto.**
+Deuda técnica a mantener: la policy `Employees can update own profile` sigue siendo amplia. E4 documentó esto como deuda técnica futura. E4.1 no la amplía ni la modifica.
