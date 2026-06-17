@@ -49,6 +49,33 @@ serve(async (req) => {
       });
     }
 
+    // ===== Tenant authorization =====
+    // Caller must be a global owner OR a member of company_id via company_users.
+    const { data: globalOwnerCheck } = await supabase.rpc("is_global_owner", {
+      _user_id: caller.id,
+    });
+    let authorized = globalOwnerCheck === true;
+    if (!authorized) {
+      const { data: membership } = await supabase
+        .from("company_users")
+        .select("role")
+        .eq("user_id", caller.id)
+        .eq("company_id", company_id)
+        .maybeSingle();
+      authorized = !!membership;
+    }
+    if (!authorized) {
+      console.warn("[ai-workforce] cross-tenant access denied", {
+        caller_id: caller.id,
+        company_id,
+      });
+      return new Response(JSON.stringify({ error: "No autorizado para esta empresa" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+
     // Fetch company employees (active)
     const { data: employees } = await supabase
       .from("employees")
