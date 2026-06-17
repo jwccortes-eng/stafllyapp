@@ -1,6 +1,7 @@
 import { forwardRef, useState } from "react";
-import { Bell, CheckCheck, ExternalLink, Briefcase, Megaphone, CreditCard, Clock, UserPlus, Star } from "lucide-react";
+import { Bell, CheckCheck, ExternalLink, Briefcase, Megaphone, CreditCard, Clock, UserPlus, Star, Volume2, X } from "lucide-react";
 import { useNotifications } from "@/hooks/useNotifications";
+import { useSoundContext } from "@/hooks/useSound";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import {
@@ -9,6 +10,8 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { formatDistanceToNow, format } from "date-fns";
 import { enUS } from "date-fns/locale";
+
+const SOUND_DISMISS_KEY = "stafly.sound.dismiss-notice-until";
 
 const TYPE_ROUTES: Record<string, string> = {
   shift_request_new: "/app/requests",
@@ -141,9 +144,39 @@ const TYPE_LABELS: Record<string, string> = {
 
 const NotificationBell = forwardRef<HTMLDivElement>(function NotificationBell(_props, _ref) {
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
+  const { status: soundStatus, unlockAudio, setEnabled: setSoundEnabled } = useSoundContext();
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState<FilterTab>("all");
+  const [soundBusy, setSoundBusy] = useState(false);
+  const [soundDismissed, setSoundDismissed] = useState(() => {
+    try {
+      const until = Number(localStorage.getItem(SOUND_DISMISS_KEY) || "0");
+      return until > Date.now();
+    } catch {
+      return false;
+    }
+  });
   const navigate = useNavigate();
+
+  const showSoundNotice = soundStatus === "blocked" && !soundDismissed;
+
+  const handleEnableSound = async () => {
+    setSoundBusy(true);
+    try {
+      await setSoundEnabled(true);
+      await unlockAudio({ source: "notification-bell" });
+    } finally {
+      setSoundBusy(false);
+    }
+  };
+
+  const handleDismissSound = () => {
+    try {
+      // Hide for 24h, non-blocking
+      localStorage.setItem(SOUND_DISMISS_KEY, String(Date.now() + 24 * 60 * 60 * 1000));
+    } catch { /* ignore */ }
+    setSoundDismissed(true);
+  };
 
   const handleClick = (n: typeof notifications[0]) => {
     if (!n.read_at) markAsRead(n.id);
@@ -176,6 +209,12 @@ const NotificationBell = forwardRef<HTMLDivElement>(function NotificationBell(_p
               {unreadCount > 9 ? "9+" : unreadCount}
             </span>
           )}
+          {soundStatus === "blocked" && unreadCount === 0 && (
+            <span
+              aria-label="Sonido desactivado"
+              className="absolute top-1 right-1 h-2 w-2 rounded-full bg-amber-500 ring-2 ring-card"
+            />
+          )}
         </button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-[380px] p-0 rounded-2xl shadow-xl border-border/50" sideOffset={8}>
@@ -200,6 +239,51 @@ const NotificationBell = forwardRef<HTMLDivElement>(function NotificationBell(_p
             </button>
           </div>
         </div>
+
+        {/* Sound-blocked notice (discreet, dismissible 24h) */}
+        {showSoundNotice && (
+          <div className="px-3 pt-3">
+            <div className="rounded-xl border border-amber-500/25 bg-amber-500/[0.06] p-3">
+              <div className="flex items-start gap-2.5">
+                <div className="h-7 w-7 rounded-lg bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                  <Volume2 className="h-3.5 w-3.5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[12.5px] font-bold text-foreground leading-tight">
+                    Sonido desactivado
+                  </p>
+                  <p className="mt-1 text-[11px] text-muted-foreground/85 leading-snug">
+                    Tu navegador está bloqueando las alertas sonoras. Seguirás recibiendo
+                    notificaciones visuales, pero no escucharás sonidos de turnos ni mensajes importantes.
+                  </p>
+                  <div className="mt-2 flex items-center gap-2">
+                    <button
+                      onClick={() => void handleEnableSound()}
+                      disabled={soundBusy}
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-foreground px-2.5 py-1 text-[11px] font-semibold text-background hover:bg-foreground/90 transition-colors disabled:opacity-60"
+                    >
+                      <Volume2 className="h-3 w-3" />
+                      Activar sonido
+                    </button>
+                    <button
+                      onClick={handleDismissSound}
+                      className="text-[11px] font-medium text-muted-foreground/75 hover:text-foreground transition-colors"
+                    >
+                      Más tarde
+                    </button>
+                  </div>
+                </div>
+                <button
+                  onClick={handleDismissSound}
+                  aria-label="Descartar aviso"
+                  className="text-muted-foreground/40 hover:text-foreground transition-colors shrink-0"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Filter tabs */}
         <div className="flex items-center gap-1 px-3 py-2 border-b border-border/20 overflow-x-auto">
