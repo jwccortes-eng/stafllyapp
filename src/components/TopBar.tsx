@@ -44,14 +44,14 @@ export default function TopBar({ collapsed }: { collapsed: boolean }) {
     ? fullName.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)
     : user?.email ? user.email[0].toUpperCase() : "?";
   const roleLabel =
-    effectiveRole === "developer" ? "Dev"
-    : effectiveRole === "owner" ? "Owner"
-    : effectiveRole === "company_owner" ? "Owner"
-    : effectiveRole === "admin" ? "Admin"
-    : effectiveRole === "manager" ? "Manager"
-    : effectiveRole === "supervisor" ? "Supervisor"
-    : effectiveRole === "employee" ? "Employee"
-    : "User";
+    effectiveRole === "developer" ? t("topbar.role.dev")
+    : effectiveRole === "owner" ? t("topbar.role.owner")
+    : effectiveRole === "company_owner" ? t("topbar.role.owner")
+    : effectiveRole === "admin" ? t("topbar.role.admin")
+    : effectiveRole === "manager" ? t("topbar.role.manager")
+    : effectiveRole === "supervisor" ? t("topbar.role.supervisor")
+    : effectiveRole === "employee" ? t("topbar.role.employee")
+    : t("topbar.role.user");
 
   return (
     <header
@@ -68,8 +68,8 @@ export default function TopBar({ collapsed }: { collapsed: boolean }) {
               <Globe className="h-4 w-4 text-accent-foreground" />
             </div>
             <div className="hidden sm:flex flex-col min-w-0">
-              <span className="text-[13px] font-semibold text-foreground leading-tight">Global View</span>
-              <span className="text-[10px] text-muted-foreground/60 leading-tight">{companies.length} companies</span>
+              <span className="text-[13px] font-semibold text-foreground leading-tight">{t("topbar.global_view")}</span>
+              <span className="text-[10px] text-muted-foreground/60 leading-tight">{t("topbar.companies_count", { n: companies.length })}</span>
             </div>
           </div>
         ) : selectedCompany ? (
@@ -90,7 +90,7 @@ export default function TopBar({ collapsed }: { collapsed: boolean }) {
             </span>
             {selectedCompany.is_demo ? (
               <span className="hidden sm:inline-flex items-center rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-300 px-1.5 py-0.5 text-[10px] font-bold tracking-wide uppercase">
-                Demo
+                {t("topbar.demo")}
               </span>
             ) : null}
           </div>
@@ -107,7 +107,7 @@ export default function TopBar({ collapsed }: { collapsed: boolean }) {
             <DropdownMenuTrigger asChild>
               <Button size="sm" className="h-8 gap-1.5 rounded-lg text-xs font-semibold">
                 <Plus className="h-3.5 w-3.5" />
-                Create
+                {t("topbar.create")}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
@@ -142,24 +142,24 @@ export default function TopBar({ collapsed }: { collapsed: boolean }) {
                 </AvatarFallback>
               </Avatar>
               <div className="hidden md:block text-start min-w-0">
-                <p className="text-[12px] font-semibold text-foreground truncate leading-tight max-w-[120px]">{fullName || "User"}</p>
+                <p className="text-[12px] font-semibold text-foreground truncate leading-tight max-w-[120px]">{fullName || t("topbar.user_fallback")}</p>
                 <p className="text-[10px] text-muted-foreground/60 leading-tight">{roleLabel}</p>
               </div>
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
             <DropdownMenuItem onClick={() => navigate("/app/settings")} className="text-[13px]">
-              Account
+              {t("topbar.account")}
             </DropdownMenuItem>
             {isOwner && (
               <DropdownMenuItem onClick={() => navigate("/app/admin")} className="text-[13px]">
-                Administration
+                {t("topbar.administration")}
               </DropdownMenuItem>
             )}
             <DropdownMenuSeparator />
             <LogoutConfirmDialog onConfirm={signOut}>
               <DropdownMenuItem onSelect={e => e.preventDefault()} className="text-destructive text-[13px]">
-                Sign out
+                {t("topbar.sign_out")}
               </DropdownMenuItem>
             </LogoutConfirmDialog>
           </DropdownMenuContent>
