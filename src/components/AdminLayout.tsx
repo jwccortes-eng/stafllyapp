@@ -58,7 +58,7 @@ export default function AdminLayout() {
   const isMobile = useIsMobile();
   const location = useLocation();
   const [launcherOpen, setLauncherOpen] = useState(false);
-  const { pinnedIds, togglePin, maxPins } = useNavPreferences(ADMIN_DEFAULT_PINS);
+  const { pinnedIds, togglePin, maxPins } = useNavPreferences(isMobile ? ADMIN_DEFAULT_PINS_MOBILE : ADMIN_DEFAULT_PINS);
 
   // Effective role + admin gate for the CURRENT tenant (or global mode for
   // platform staff). Prevents company_owner from JKitchen entering Quality
