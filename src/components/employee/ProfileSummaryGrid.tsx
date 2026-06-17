@@ -254,6 +254,7 @@ export function ProfileSummaryGrid({
       <SectionCard
         title="Datos principales"
         icon={ContactRound}
+        badge={<ProfileLayerBadge layer="L2" />}
         action={
           <Button size="sm" variant="ghost" className="h-7 text-[11px] gap-1" onClick={onEdit}>
             <Pencil className="h-3 w-3" /> Editar
@@ -302,6 +303,7 @@ export function ProfileSummaryGrid({
         title="Cumplimiento"
         icon={FileCheck2}
         tone={compTone}
+        badge={<ProfileLayerBadge layer="L2" />}
         action={
           <Button
             size="sm"
@@ -421,6 +423,7 @@ export function ProfileSummaryGrid({
         title="Acceso"
         icon={portalActive ? ShieldCheck : ShieldOff}
         tone={portalActive ? "default" : "warning"}
+        badge={<ProfileLayerBadge layer="L2" />}
         action={
           <Button
             size="sm"
@@ -498,6 +501,7 @@ export function ProfileSummaryGrid({
       <SectionCard
         title="Operación"
         icon={Briefcase}
+        badge={<ProfileLayerBadge layer="L2" />}
         action={
           <Button
             size="sm"
@@ -549,6 +553,7 @@ export function ProfileSummaryGrid({
       <SectionCard
         title="Actividad reciente"
         icon={ActivityIcon}
+        badge={<ProfileLayerBadge layer="L2" />}
         action={
           frontDeskVisits.length > 0 ? (
             <Button
