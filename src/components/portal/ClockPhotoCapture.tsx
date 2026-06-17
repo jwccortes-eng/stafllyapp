@@ -52,6 +52,9 @@ export function ClockPhotoCapture({
         video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } },
       });
       streamRef.current = stream;
+      if (!videoRef.current) {
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+      }
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         await videoRef.current.play();
