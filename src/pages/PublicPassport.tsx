@@ -1,7 +1,7 @@
 import { useParams } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, CheckCircle2, MapPin, Clock, Building2, Star, Award, Briefcase, Globe, Shield, Download } from "lucide-react";
+import { Loader2, CheckCircle2, MapPin, Clock, Star, Award, Briefcase, Globe, Shield, Download } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { QRCodeSVG } from "qrcode.react";
@@ -9,77 +9,73 @@ import { cn } from "@/lib/utils";
 import { StaflyLogo } from "@/components/brand/StaflyBrand";
 import { downloadPassportPDF } from "@/lib/passport-pdf";
 
-interface PassportData {
-  passport: any;
-  workHistory: any[];
-  metrics: any[];
-  publications: any;
-  workerProfile: any;
+/**
+ * Payload shape returned by `public.get_public_passport(p_slug)`.
+ * Server-side gates (passport_publications + worker_visibility_settings) are
+ * already applied — gated-off fields arrive as null/[]. The frontend only renders.
+ *
+ * The RPC NEVER returns: phone, email, address, employee_id, company_id,
+ * user_id, payroll, time_entries, shifts, documents, SSN/EIN, PIN, internal IDs.
+ */
+interface PassportPayload {
+  slug: string;
+  display_name: string | null;
+  primary_role: string | null;
+  summary_text: string | null;
+  passport_visibility: "public" | "limited";
+  generated_at: string | null;
+  english_level: string | null;
+  avatar_url: string | null;
+  city: string | null;
+  overall_reputation_score: number | null;
+  total_verified_jobs: number | null;
+  total_verified_hours: number | null;
+  total_companies_worked: number | null;
+  skills: string[];
+  languages: string[];
+  metrics: Array<{
+    metric_code: string;
+    metric_label: string;
+    metric_value: string | number;
+    metric_display_order: number | null;
+  }>;
+  work_history: Array<{
+    id: string;
+    company_name: string | null;
+    role_name: string | null;
+    date_start: string | null;
+    date_end: string | null;
+    total_hours: number | null;
+    is_verified: boolean;
+  }>;
 }
 
 export default function PublicPassport() {
   const { slug } = useParams<{ slug: string }>();
-  const [data, setData] = useState<PassportData | null>(null);
+  const [data, setData] = useState<PassportPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
-    if (!slug) return;
+    if (!slug) {
+      setNotFound(true);
+      setLoading(false);
+      return;
+    }
 
     const fetchPublicPassport = async () => {
       setLoading(true);
-
-      // Fetch passport profile by slug
-      const { data: passport, error } = await supabase
-        .from("passport_profiles")
-        .select("*")
-        .eq("passport_slug", slug)
-        .maybeSingle();
-
-      if (error || !passport) {
-        setNotFound(true);
-        setLoading(false);
-        return;
-      }
-
-      // Check visibility
-      if (passport.passport_visibility === "private") {
-        setNotFound(true);
-        setLoading(false);
-        return;
-      }
-
-      // Fetch related data in parallel
-      const [historyRes, metricsRes, pubsRes, wpRes] = await Promise.all([
-        supabase
-          .from("passport_work_history")
-          .select("*")
-          .eq("passport_id", passport.id)
-          .order("date_start", { ascending: false }),
-        supabase
-          .from("passport_metrics")
-          .select("*")
-          .eq("passport_id", passport.id)
-          .order("metric_display_order", { ascending: true }),
-        supabase
-          .from("passport_publications")
-          .select("*")
-          .eq("passport_id", passport.id)
-          .maybeSingle(),
-        supabase
-          .from("worker_profiles")
-          .select("city, skills, languages, avatar_url")
-          .eq("id", passport.worker_profile_id)
-          .maybeSingle(),
-      ]);
-
-      setData({
-        passport,
-        workHistory: historyRes.data ?? [],
-        metrics: metricsRes.data ?? [],
-        publications: pubsRes.data,
-        workerProfile: wpRes.data,
+      const { data: payload, error } = await supabase.rpc("get_public_passport", {
+        p_slug: slug,
       });
+
+      if (error || !payload) {
+        setNotFound(true);
+        setLoading(false);
+        return;
+      }
+
+      setData(payload as unknown as PassportPayload);
       setLoading(false);
     };
 
@@ -111,13 +107,14 @@ export default function PublicPassport() {
     );
   }
 
-  const { passport, workHistory, metrics, publications, workerProfile } = data;
-  const pub = publications ?? {};
-  const pageUrl = window.location.href;
+  const pageUrl = typeof window !== "undefined" ? window.location.href : "";
+  const displayName = data.display_name ?? "Stafly Worker";
 
-  // Reputation tier
-  const repScore = passport.overall_reputation_score ?? 50;
-  const tier = repScore >= 90 ? { label: "Elite", color: "text-amber-500", bg: "bg-amber-500/10" }
+  // Reputation tier (only when score is exposed by the RPC).
+  const repScore = data.overall_reputation_score;
+  const tier = repScore == null
+    ? null
+    : repScore >= 90 ? { label: "Elite", color: "text-amber-500", bg: "bg-amber-500/10" }
     : repScore >= 75 ? { label: "Gold", color: "text-yellow-600", bg: "bg-yellow-500/10" }
     : repScore >= 60 ? { label: "Silver", color: "text-slate-500", bg: "bg-slate-500/10" }
     : { label: "Bronze", color: "text-orange-700", bg: "bg-orange-500/10" };
@@ -141,31 +138,30 @@ export default function PublicPassport() {
         {/* Profile card */}
         <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
           <div className="flex items-start gap-4">
-            {/* Avatar */}
-            {pub.publish_photo !== false && workerProfile?.avatar_url ? (
+            {data.avatar_url ? (
               <img
-                src={workerProfile.avatar_url}
-                alt={passport.display_name}
+                src={data.avatar_url}
+                alt={displayName}
                 className="h-16 w-16 rounded-2xl object-cover border-2 border-primary/10"
               />
             ) : (
               <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center text-2xl font-bold text-primary">
-                {passport.display_name?.[0]?.toUpperCase() ?? "?"}
+                {displayName[0]?.toUpperCase() ?? "?"}
               </div>
             )}
 
             <div className="flex-1 min-w-0">
-              <h1 className="text-xl font-bold text-foreground truncate">{passport.display_name}</h1>
-              {passport.primary_role && (
-                <p className="text-sm text-muted-foreground mt-0.5">{passport.primary_role}</p>
+              <h1 className="text-xl font-bold text-foreground truncate">{displayName}</h1>
+              {data.primary_role && (
+                <p className="text-sm text-muted-foreground mt-0.5">{data.primary_role}</p>
               )}
               <div className="flex items-center gap-2 mt-2 flex-wrap">
-                {pub.publish_city !== false && workerProfile?.city && (
+                {data.city && (
                   <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                    <MapPin className="h-3 w-3" /> {workerProfile.city}
+                    <MapPin className="h-3 w-3" /> {data.city}
                   </span>
                 )}
-                {pub.publish_reputation !== false && (
+                {tier && repScore != null && (
                   <Badge className={cn("text-[10px] font-semibold gap-1", tier.bg, tier.color, "border-0")}>
                     <Award className="h-3 w-3" /> {tier.label} · {repScore}
                   </Badge>
@@ -174,38 +170,31 @@ export default function PublicPassport() {
             </div>
           </div>
 
-          {passport.summary_text && (
-            <p className="text-sm text-muted-foreground mt-4 leading-relaxed">{passport.summary_text}</p>
+          {data.summary_text && (
+            <p className="text-sm text-muted-foreground mt-4 leading-relaxed">{data.summary_text}</p>
           )}
         </div>
 
-        {/* KPI metrics */}
-        {metrics.length > 0 && (
+        {/* KPI metrics (server already filtered by gates) */}
+        {data.metrics.length > 0 && (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {metrics
-              .filter(m => {
-                if (m.metric_code === "total_hours" && pub.publish_hours === false) return false;
-                if (m.metric_code === "total_companies" && pub.publish_companies_count === false) return false;
-                if (m.metric_code === "rep_score" && pub.publish_reputation === false) return false;
-                return true;
-              })
-              .map(m => (
-                <div key={m.id} className="rounded-xl border border-border bg-card p-3.5 text-center">
-                  <p className="text-2xl font-bold text-foreground">{m.metric_value}</p>
-                  <p className="text-[10px] text-muted-foreground font-medium mt-0.5">{m.metric_label}</p>
-                </div>
-              ))}
+            {data.metrics.map((m, i) => (
+              <div key={`${m.metric_code}-${i}`} className="rounded-xl border border-border bg-card p-3.5 text-center">
+                <p className="text-2xl font-bold text-foreground">{m.metric_value}</p>
+                <p className="text-[10px] text-muted-foreground font-medium mt-0.5">{m.metric_label}</p>
+              </div>
+            ))}
           </div>
         )}
 
         {/* Skills */}
-        {pub.publish_skills !== false && workerProfile?.skills?.length > 0 && (
+        {data.skills.length > 0 && (
           <div className="rounded-2xl border border-border bg-card p-5">
             <h2 className="text-sm font-semibold text-foreground flex items-center gap-2 mb-3">
               <Star className="h-4 w-4 text-primary" /> Habilidades
             </h2>
             <div className="flex flex-wrap gap-1.5">
-              {workerProfile.skills.map((skill: string, i: number) => (
+              {data.skills.map((skill, i) => (
                 <Badge key={i} variant="secondary" className="text-xs">
                   {skill}
                 </Badge>
@@ -215,13 +204,13 @@ export default function PublicPassport() {
         )}
 
         {/* Languages */}
-        {pub.publish_languages !== false && workerProfile?.languages?.length > 0 && (
+        {data.languages.length > 0 && (
           <div className="rounded-2xl border border-border bg-card p-5">
             <h2 className="text-sm font-semibold text-foreground flex items-center gap-2 mb-3">
               <Globe className="h-4 w-4 text-primary" /> Idiomas
             </h2>
             <div className="flex flex-wrap gap-1.5">
-              {workerProfile.languages.map((lang: string, i: number) => (
+              {data.languages.map((lang, i) => (
                 <Badge key={i} variant="outline" className="text-xs">
                   {lang}
                 </Badge>
@@ -230,14 +219,14 @@ export default function PublicPassport() {
           </div>
         )}
 
-        {/* Work History */}
-        {pub.publish_work_history !== false && workHistory.length > 0 && (
+        {/* Work History (server already gated) */}
+        {data.work_history.length > 0 && (
           <div className="rounded-2xl border border-border bg-card p-5">
             <h2 className="text-sm font-semibold text-foreground flex items-center gap-2 mb-4">
               <Briefcase className="h-4 w-4 text-primary" /> Historial Laboral
             </h2>
             <div className="space-y-4">
-              {workHistory.map((wh, i) => (
+              {data.work_history.map((wh, i) => (
                 <div key={wh.id}>
                   <div className="flex items-start justify-between gap-2">
                     <div>
@@ -250,7 +239,7 @@ export default function PublicPassport() {
                       </p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      {pub.publish_hours !== false && wh.total_hours != null && (
+                      {wh.total_hours != null && (
                         <span className="text-xs text-muted-foreground flex items-center gap-1">
                           <Clock className="h-3 w-3" /> {Math.round(wh.total_hours)}h
                         </span>
@@ -260,7 +249,7 @@ export default function PublicPassport() {
                       )}
                     </div>
                   </div>
-                  {i < workHistory.length - 1 && <Separator className="mt-4" />}
+                  {i < data.work_history.length - 1 && <Separator className="mt-4" />}
                 </div>
               ))}
             </div>
@@ -290,37 +279,26 @@ export default function PublicPassport() {
             </button>
             <button
               onClick={() => {
-                const visibleMetrics = metrics
-                  .filter(m => {
-                    if (m.metric_code === "total_hours" && pub.publish_hours === false) return false;
-                    if (m.metric_code === "total_companies" && pub.publish_companies_count === false) return false;
-                    if (m.metric_code === "rep_score" && pub.publish_reputation === false) return false;
-                    return true;
-                  })
-                  .map(m => ({ label: m.metric_label, value: m.metric_value }));
-
                 downloadPassportPDF({
-                  displayName: passport.display_name,
-                  primaryRole: passport.primary_role,
-                  summaryText: passport.summary_text,
-                  city: pub.publish_city !== false ? workerProfile?.city : null,
-                  repScore: pub.publish_reputation !== false ? repScore : null,
-                  tier: tier.label,
-                  metrics: visibleMetrics,
-                  skills: pub.publish_skills !== false ? (workerProfile?.skills ?? []) : [],
-                  languages: pub.publish_languages !== false ? (workerProfile?.languages ?? []) : [],
-                  workHistory: pub.publish_work_history !== false
-                    ? workHistory.map(wh => ({
-                        companyName: wh.company_name,
-                        roleName: wh.role_name,
-                        dateStart: wh.date_start,
-                        dateEnd: wh.date_end,
-                        totalHours: pub.publish_hours !== false ? wh.total_hours : null,
-                        isVerified: wh.is_verified,
-                      }))
-                    : [],
+                  displayName,
+                  primaryRole: data.primary_role,
+                  summaryText: data.summary_text,
+                  city: data.city,
+                  repScore: data.overall_reputation_score,
+                  tier: tier?.label ?? null,
+                  metrics: data.metrics.map(m => ({ label: m.metric_label, value: String(m.metric_value) })),
+                  skills: data.skills,
+                  languages: data.languages,
+                  workHistory: data.work_history.map(wh => ({
+                    companyName: wh.company_name,
+                    roleName: wh.role_name,
+                    dateStart: wh.date_start,
+                    dateEnd: wh.date_end,
+                    totalHours: wh.total_hours,
+                    isVerified: wh.is_verified,
+                  })),
                   pageUrl,
-                  generatedAt: passport.generated_at,
+                  generatedAt: data.generated_at,
                 });
               }}
               className="inline-flex items-center gap-1 text-xs text-primary hover:underline font-medium"
@@ -333,7 +311,7 @@ export default function PublicPassport() {
         {/* Footer */}
         <div className="text-center pt-4 pb-8">
           <p className="text-[10px] text-muted-foreground">
-            Perfil verificado por <a href="/" className="text-primary hover:underline font-medium">Stafly Core</a> · Generado {passport.generated_at ? new Date(passport.generated_at).toLocaleDateString("es") : "—"}
+            Perfil verificado por <a href="/" className="text-primary hover:underline font-medium">Stafly Core</a> · Generado {data.generated_at ? new Date(data.generated_at).toLocaleDateString("es") : "—"}
           </p>
         </div>
       </main>
