@@ -398,6 +398,17 @@ export default function WorkerPassport() {
           </div>
 
 
+          {categories.length > 0 && (
+            <div className="mb-2 flex items-center justify-end">
+              <Badge
+                variant="outline"
+                title="Categorías calculadas únicamente desde reseñas legacy (shift_reviews)"
+                className="text-[10px] font-medium text-muted-foreground border-border/60"
+              >
+                Categories source: Legacy reviews
+              </Badge>
+            </div>
+          )}
           <div className="space-y-4">
             {categories.map((cat, i) => (
               <ReputationBar key={i} label={cat.label} value={Math.round(cat.avg * 10) / 10} />
