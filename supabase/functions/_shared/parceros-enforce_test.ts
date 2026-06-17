@@ -32,7 +32,13 @@ import {
 } from "./__fixtures__/passport-payloads.ts";
 
 const publicVis = { profile_visibility: "public" };
-const hiddenVis = { profile_visibility: "hidden" };
+const hiddenVis = { profile_visibility: "hidden" }; // legacy literal
+const privateVis = { profile_visibility: "private" };
+const limitedVis = { profile_visibility: "limited" };
+const nullVis = { profile_visibility: null };
+const undefinedVis = {}; // profile_visibility omitted
+const unknownVis = { profile_visibility: "weird" };
+
 
 // ── Q1 ────────────────────────────────────────────────────────────────────
 Deno.test("Q1 log_only + consent missing → allow (no block, current behavior preserved)", () => {
