@@ -1,9 +1,11 @@
+import type { ChangeEvent } from "react";
+
 export const CAMERA_PHOTO_PERMISSION_MESSAGE =
   "Please allow camera/photo access in Settings to upload documents.";
 
 type ToastFn = (input: { title: string; description?: string; variant?: "default" | "destructive" }) => void;
 
-export function selectedFileFromInput(event: React.ChangeEvent<HTMLInputElement>): File | null {
+export function selectedFileFromInput(event: ChangeEvent<HTMLInputElement>): File | null {
   try {
     return event.currentTarget.files?.[0] ?? null;
   } catch {
@@ -11,7 +13,7 @@ export function selectedFileFromInput(event: React.ChangeEvent<HTMLInputElement>
   }
 }
 
-export function clearFileInput(event: React.ChangeEvent<HTMLInputElement>) {
+export function clearFileInput(event: ChangeEvent<HTMLInputElement>) {
   try {
     event.currentTarget.value = "";
   } catch {
