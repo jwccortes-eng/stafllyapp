@@ -328,9 +328,20 @@ Deno.serve(async (req) => {
 
     // ============= UPDATE SELF (employee edits allowed fields directly) =============
     if (action === "update_self") {
-      const { employee_id, updates, language, device_id, visit_id } = body;
+      const { employee_id, updates, language, device_id, visit_id, pin } = body;
       if (!employee_id || !updates) {
         return jsonResp({ error: "employee_id y updates requeridos" }, 400);
+      }
+
+      // === AUTHZ === must be self / admin / valid PIN / trusted kiosk
+      const authz = await authorizeEmployeeAction(adminClient, req, {
+        employee_id,
+        pin,
+        device_id,
+      });
+      if (!authz.ok) {
+        console.warn("[front-desk] update_self denied", { employee_id, reason: authz.reason });
+        return jsonResp({ error: "No autorizado" }, 403);
       }
 
       // Validate + whitelist fields.
@@ -343,6 +354,7 @@ Deno.serve(async (req) => {
         .eq("id", employee_id)
         .maybeSingle();
       if (!current) return jsonResp({ error: "Empleado no encontrado" }, 404);
+
 
       // Monitor-mode device trust audit (non-blocking).
       void auditDeviceTrust(adminClient, {
