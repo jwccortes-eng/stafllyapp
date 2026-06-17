@@ -858,7 +858,11 @@ Deno.serve(async (req) => {
         .eq("id", employee_id)
         .select(EMPLOYEE_SELECT)
         .single();
-      if (empErr) console.error("[front-desk] empErr:", empErr); return jsonResp({ error: "Internal error" }, 500);
+      if (empErr) {
+        console.error("[front-desk] capture_kiosk_photo empErr:", empErr);
+        return jsonResp({ error: "Internal error" }, 500);
+      }
+
 
       const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       if (visit_id && UUID_RE.test(visit_id)) {
