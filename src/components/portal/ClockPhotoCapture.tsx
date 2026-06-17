@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { CAMERA_PHOTO_PERMISSION_MESSAGE } from "@/lib/mobile-file-picker";
+import { useToast } from "@/hooks/use-toast";
 
 interface ClockPhotoCaptureProps {
   open: boolean;
@@ -22,6 +24,7 @@ export function ClockPhotoCapture({
   companyId,
   clockType,
 }: ClockPhotoCaptureProps) {
+  const { toast } = useToast();
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -29,6 +32,7 @@ export function ClockPhotoCapture({
   const [captured, setCaptured] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [cameraRequested, setCameraRequested] = useState(false);
 
   const stopCamera = useCallback(() => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
@@ -39,7 +43,11 @@ export function ClockPhotoCapture({
   const startCamera = useCallback(async () => {
     setError(null);
     setCaptured(null);
+    setCameraRequested(true);
     try {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        throw new DOMException("Camera not available", "NotFoundError");
+      }
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } },
       });
@@ -49,21 +57,24 @@ export function ClockPhotoCapture({
         await videoRef.current.play();
         setCameraReady(true);
       }
-    } catch {
-      setError("No se pudo acceder a la cámara. Verifica los permisos.");
+    } catch (err: any) {
+      const message = err?.name === "NotAllowedError"
+        ? CAMERA_PHOTO_PERMISSION_MESSAGE
+        : "No se pudo acceder a la cámara. Verifica los permisos e inténtalo de nuevo.";
+      setError(message);
+      toast({ title: "Camera/photo access needed", description: message, variant: "destructive" });
     }
-  }, []);
+  }, [toast]);
 
   useEffect(() => {
-    if (open) {
-      startCamera();
-    } else {
+    if (!open) {
       stopCamera();
       setCaptured(null);
       setError(null);
+      setCameraRequested(false);
     }
     return () => stopCamera();
-  }, [open]);
+  }, [open, stopCamera]);
 
   const takePhoto = useCallback(() => {
     if (!videoRef.current || !canvasRef.current) return;
