@@ -113,6 +113,16 @@ Deno.serve(async (req) => {
       if (payload) payloads.push(payload);
     }
 
+    // ── Consent evaluation (log_only by default; never blocks in this phase) ──
+    // Mode: env PARCEROS_CONSENT_MODE = "log_only" (default) | "enforce" | "off"
+    // Phase 1 contract: log_only ONLY. enforce branch reserved for Phase 3 after UI adoption.
+    const consentMode = (Deno.env.get("PARCEROS_CONSENT_MODE") ?? "log_only").toLowerCase();
+    if (consentMode !== "off") {
+      for (const wpId of workerProfileIds) {
+        await evaluateConsentLogOnly(supabase, wpId, consentMode, pushToParceros);
+      }
+    }
+
     // ── Log access ──
     for (const wpId of workerProfileIds) {
       await supabase.from("profile_access_log").insert({
@@ -121,6 +131,7 @@ Deno.serve(async (req) => {
         ip_address: req.headers.get("x-forwarded-for")?.split(",")[0] ?? null,
       });
     }
+
 
     // ── PUSH to Parceros if requested ──
     const pushResults: Array<{
@@ -254,7 +265,75 @@ async function pushWorkerPassportToParceros(
   }
 }
 
+// ── Consent evaluator (log-only, no PII) ─────────────────────────
+//
+// Reads worker_consent_records for consent_type='data_sharing'.
+// Emits a structured console log per worker. NEVER blocks in Phase 1.
+// Status taxonomy:
+//   - granted:  most recent row has granted=true AND revoked_at IS NULL
+//   - revoked:  most recent row has revoked_at IS NOT NULL
+//   - denied:   most recent row has granted=false (and not revoked)
+//   - missing:  no row exists for this worker_profile_id + data_sharing
+//   - error:    query failed (treated as would_block in enforce-future)
+// Log payload is intentionally free of PII (no name/phone/email/address/IP).
+
+async function evaluateConsentLogOnly(
+  supabase: any,
+  workerProfileId: string,
+  mode: string,
+  pushRequested: boolean
+): Promise<void> {
+  let status: "granted" | "revoked" | "denied" | "missing" | "error" = "missing";
+  let grantedAtIso: string | null = null;
+  let revokedAtIso: string | null = null;
+
+  try {
+    const { data, error } = await supabase
+      .from("worker_consent_records")
+      .select("granted, granted_at, revoked_at")
+      .eq("worker_profile_id", workerProfileId)
+      .eq("consent_type", "data_sharing")
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      status = "error";
+    } else if (!data) {
+      status = "missing";
+    } else {
+      grantedAtIso = data.granted_at ?? null;
+      revokedAtIso = data.revoked_at ?? null;
+      if (data.revoked_at) status = "revoked";
+      else if (data.granted === true) status = "granted";
+      else status = "denied";
+    }
+  } catch {
+    status = "error";
+  }
+
+  const wouldBlock = status !== "granted";
+  // Phase 1 contract: log_only NEVER blocks. enforce branch reserved for Phase 3.
+  // No PII. worker_profile_id is an internal UUID, not personal data on its own.
+  console.log(
+    JSON.stringify({
+      event: "parceros_consent_check",
+      mode,                 // "log_only" | "enforce" | "off"
+      enforced: false,      // Phase 1: always false
+      worker_profile_id: workerProfileId,
+      consent_status: status,
+      would_block_in_enforce: wouldBlock,
+      push_requested: pushRequested,
+      granted_at: grantedAtIso,
+      revoked_at: revokedAtIso,
+      ts: new Date().toISOString(),
+    })
+  );
+}
+
 // ── Payload builder (unchanged logic, builds internal rich payload) ──
+
+
 
 async function buildWorkerPayload(
   supabase: any,
