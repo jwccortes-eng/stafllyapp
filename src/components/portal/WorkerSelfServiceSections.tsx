@@ -268,7 +268,135 @@ function PhotoCard({
   );
 }
 
+/* ─────────────────── Preferred name card ─────────────────── */
+
+const PREFERRED_NAME_MAX = 60;
+
+function sanitizePreferredName(raw: string): string {
+  // Strip control chars (incl. zero-width), collapse whitespace, trim, cap length.
+  // eslint-disable-next-line no-control-regex
+  const noControl = raw.replace(/[\u0000-\u001F\u007F\u200B-\u200F\u2028\u2029\uFEFF]/g, "");
+  const collapsed = noControl.replace(/\s+/g, " ").trim();
+  return collapsed.slice(0, PREFERRED_NAME_MAX);
+}
+
+function PreferredNameSection({
+  employeeId,
+  value,
+  legalFirst,
+  legalLast,
+  onSaved,
+  toast,
+}: {
+  employeeId: string;
+  value: string | null;
+  legalFirst: string | null;
+  legalLast: string | null;
+  onSaved: (v: string | null) => void;
+  toast: ReturnType<typeof useToast>["toast"];
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value ?? "");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => setDraft(value ?? ""), [value]);
+
+  const sanitized = sanitizePreferredName(draft);
+  const nextValue: string | null = sanitized.length === 0 ? null : sanitized;
+  const dirty = (nextValue ?? "") !== (value ?? "");
+
+  const save = async () => {
+    setSaving(true);
+    const previous = value;
+    // Optimistic UI: reflect immediately, rollback on error.
+    onSaved(nextValue);
+    const { error } = await supabase
+      .from("employees")
+      .update({ preferred_name: nextValue })
+      .eq("id", employeeId);
+    setSaving(false);
+    if (error) {
+      onSaved(previous ?? null); // visual rollback
+      toast({
+        title: "No se pudo guardar tu alias",
+        description: error.message,
+        variant: "destructive",
+      });
+      return;
+    }
+    setEditing(false);
+    toast({ title: nextValue ? "Alias actualizado ✅" : "Alias eliminado" });
+  };
+
+  const legalFull = [legalFirst, legalLast].filter(Boolean).join(" ").trim();
+
+  return (
+    <SectionShell
+      icon={<IdCard className="h-3.5 w-3.5" />}
+      title="Alias preferido"
+      complete={!!value}
+      action={
+        !editing ? (
+          <EditButton onClick={() => setEditing(true)} />
+        ) : (
+          <CancelButton
+            onClick={() => {
+              setDraft(value ?? "");
+              setEditing(false);
+            }}
+          />
+        )
+      }
+    >
+      {!editing ? (
+        <div className="space-y-1">
+          <p className="text-[13px] font-medium text-foreground">
+            {value ?? (
+              <span className="text-muted-foreground/60">Sin alias registrado</span>
+            )}
+          </p>
+          <p className="text-[10.5px] text-muted-foreground/70 leading-snug">
+            Este alias es solo cómo prefieres que te llamemos en el día a día.
+            {legalFull ? ` Tu nombre legal sigue siendo ${legalFull}.` : " No cambia tu nombre legal."}
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <Label className="text-[11px]">¿Cómo prefieres que te llamemos?</Label>
+          <Input
+            value={draft}
+            onChange={(e) => setDraft(e.target.value.slice(0, PREFERRED_NAME_MAX))}
+            placeholder="Ej. Mari, Pepe, Alex"
+            className="h-10"
+            maxLength={PREFERRED_NAME_MAX}
+          />
+          <p className="text-[10.5px] text-muted-foreground/70 leading-snug">
+            No cambia tu nombre legal ni aparece en payroll, W-9, 1099 ni documentos
+            oficiales. Máximo {PREFERRED_NAME_MAX} caracteres. Déjalo vacío para
+            eliminar tu alias.
+          </p>
+          <Button
+            size="sm"
+            className="w-full h-10"
+            onClick={save}
+            disabled={!dirty || saving}
+          >
+            {saving ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : nextValue ? (
+              "Guardar alias"
+            ) : (
+              "Eliminar alias"
+            )}
+          </Button>
+        </div>
+      )}
+    </SectionShell>
+  );
+}
+
 /* ─────────────────── Phone card ─────────────────── */
+
 
 function PhoneCard({
   employeeId,
