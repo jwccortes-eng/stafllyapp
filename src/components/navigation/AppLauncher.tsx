@@ -80,7 +80,7 @@ export function AppLauncher({
 
         {/* Grid */}
         <div className="px-5 pb-5 overflow-y-auto max-h-[60vh] space-y-5">
-          {Array.from(sections.entries()).map(([label, sectionItems]) => (
+          {orderedSections.map(([label, sectionItems]) => (
             <div key={label}>
               <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/40 mb-2">
                 {label}
