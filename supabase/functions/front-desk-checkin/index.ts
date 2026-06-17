@@ -843,7 +843,11 @@ Deno.serve(async (req) => {
       const { error: upErr } = await adminClient.storage
         .from("employee-avatars")
         .upload(path, bytes, { contentType: mime, upsert: true });
-      if (upErr) console.error("[front-desk] upErr:", upErr); return jsonResp({ error: "Internal error" }, 500);
+      if (upErr) {
+        console.error("[front-desk] capture_kiosk_photo upErr:", upErr);
+        return jsonResp({ error: "Internal error" }, 500);
+      }
+
 
       const { data: pub } = adminClient.storage.from("employee-avatars").getPublicUrl(path);
       const photoUrl = pub.publicUrl;
