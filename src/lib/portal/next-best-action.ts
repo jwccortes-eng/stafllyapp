@@ -15,7 +15,7 @@
  *
  * Pure functions only — no React, no Supabase, no side effects.
  */
-import { isToday, parseISO } from "date-fns";
+import { isSameDay, parseISO } from "date-fns";
 import type { ProfileStatus } from "@/lib/onboarding/profile-status";
 
 export type NbaKind =
@@ -103,7 +103,7 @@ export function selectNextBestAction(ctx: NbaContext): NbaResult {
   const now = ctx.now ?? new Date();
   const window = ctx.clockInWindowMinutes ?? 30;
   const ns = ctx.nextShift;
-  const nsToday = ns ? isToday(parseISO(ns.date)) : false;
+  const nsToday = ns ? isSameDay(parseISO(ns.date), now) : false;
   const nsConfirmed = ns ? isConfirmed(ns.status) : false;
   const minsToStart = ns ? minutesUntilStart(ns, now) : Number.POSITIVE_INFINITY;
 
