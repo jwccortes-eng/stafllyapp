@@ -45,6 +45,16 @@ describe("selectNextBestAction", () => {
     expect(r.ctaHref).toBe("/portal/clock");
   });
 
+  it("surfaces stale open clocks as review instead of a live shift", () => {
+    const r = selectNextBestAction(ctx({
+      clockStatus: { isClockedIn: true, shiftTitle: "March shift" },
+      clockStatusAgeHours: 72,
+    }));
+    expect(r.kind).toBe("clocked_in");
+    expect(r.tone).toBe("warning");
+    expect(r.title).toBe("Turno sin cerrar");
+  });
+
   it("returns clock_in_now when confirmed shift today within window", () => {
     const r = selectNextBestAction(ctx({
       nextShift: buildShift({ start_time: "10:25:00" }), // 25 min away

@@ -15,7 +15,7 @@
  *
  * Pure functions only — no React, no Supabase, no side effects.
  */
-import { isToday, parseISO } from "date-fns";
+import { isSameDay, parseISO } from "date-fns";
 import type { ProfileStatus } from "@/lib/onboarding/profile-status";
 
 export type NbaKind =
@@ -51,6 +51,7 @@ export interface NbaShift {
 
 export interface NbaContext {
   clockStatus: { isClockedIn: boolean; shiftTitle: string | null };
+  clockStatusAgeHours?: number | null;
   nextShift: NbaShift | null;
   pendingCount: number;
   claimableCount: number;
@@ -77,6 +78,8 @@ export interface NbaResult {
   meta?: Record<string, string | number | null>;
 }
 
+const STALE_CLOCK_THRESHOLD_HOURS = 24;
+
 function isConfirmed(status: string): boolean {
   return status === "confirmed" || status === "accepted";
 }
@@ -100,12 +103,23 @@ export function selectNextBestAction(ctx: NbaContext): NbaResult {
   const now = ctx.now ?? new Date();
   const window = ctx.clockInWindowMinutes ?? 30;
   const ns = ctx.nextShift;
-  const nsToday = ns ? isToday(parseISO(ns.date)) : false;
+  const nsToday = ns ? isSameDay(parseISO(ns.date), now) : false;
   const nsConfirmed = ns ? isConfirmed(ns.status) : false;
   const minsToStart = ns ? minutesUntilStart(ns, now) : Number.POSITIVE_INFINITY;
 
   // 1. clocked_in
   if (ctx.clockStatus.isClockedIn) {
+    if (ctx.clockStatusAgeHours != null && ctx.clockStatusAgeHours > STALE_CLOCK_THRESHOLD_HOURS) {
+      return {
+        kind: "clocked_in",
+        tone: "warning",
+        title: "Turno sin cerrar",
+        subtitle: "Hay un registro antiguo que necesita revisión. Puedes cerrarlo desde el reloj.",
+        ctaLabel: "Revisar reloj",
+        ctaHref: "/portal/clock",
+      };
+    }
+
     return {
       kind: "clocked_in",
       tone: "live",

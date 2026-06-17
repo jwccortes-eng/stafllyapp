@@ -45,6 +45,8 @@ import { useT } from "@/i18n/LanguageContext";
 import { getPageCache, setPageCache, hasPageCache } from "@/lib/portal/page-cache";
 import { ErrorBlock } from "@/components/ui/error-block";
 
+const STALE_OPEN_ENTRY_HOURS = 24;
+
 interface TimeEntry {
   id: string;
   clock_in: string;
@@ -93,6 +95,11 @@ function isClockOutWithinSchedule(shift: TodayShift | null): { withinSchedule: b
     return { withinSchedule: false, message: `Estás fuera de la ventana estimada (entrada ${shift.start_time.slice(0, 5)} · salida estimada ${shift.end_time.slice(0, 5)}).` };
   }
   return { withinSchedule: true, message: "" };
+}
+
+function getEntryAgeHours(entry: TimeEntry | null, now: Date): number | null {
+  if (!entry?.clock_in) return null;
+  return Math.max(0, (now.getTime() - new Date(entry.clock_in).getTime()) / 36e5);
 }
 
 export default function PortalClock() {
@@ -696,6 +703,8 @@ export default function PortalClock() {
   }
 
   const isClockedIn = !!activeEntry;
+  const activeEntryAgeHours = getEntryAgeHours(activeEntry, now);
+  const isStaleActiveEntry = activeEntryAgeHours != null && activeEntryAgeHours > STALE_OPEN_ENTRY_HOURS;
   const hasQrShifts = allowedMethods.includes("qr") && Object.values(shiftQrModes).some(m => m !== "disabled" && m !== "");
   const allowManual = allowedMethods.includes("manual");
   const allowGps = allowedMethods.includes("gps");
@@ -819,6 +828,9 @@ export default function PortalClock() {
                 time: format(new Date(staleOpenEntry.entry.clock_in), "d MMM, HH:mm"),
               })}
             </p>
+            <p className="text-[10.5px] text-muted-foreground/70 mt-1 leading-relaxed">
+              {t("portal.clock.stale_review_body")}
+            </p>
           </div>
         </div>
       )}
@@ -909,10 +921,10 @@ export default function PortalClock() {
               <div className="px-4 pt-3.5 pb-2 flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-earning opacity-60" />
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-earning" />
+                    {!isStaleActiveEntry && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-earning opacity-60" />}
+                    <span className={cn("relative inline-flex rounded-full h-2 w-2", isStaleActiveEntry ? "bg-warning" : "bg-earning")} />
                   </span>
-                  <span className="text-[10.5px] font-bold uppercase tracking-widest text-earning">{t("portal.clock.on_shift")}</span>
+                  <span className={cn("text-[10.5px] font-bold uppercase tracking-widest", isStaleActiveEntry ? "text-warning" : "text-earning")}>{isStaleActiveEntry ? t("portal.clock.needs_review_label") : t("portal.clock.on_shift")}</span>
                 </div>
                 <p className="text-[10.5px] text-muted-foreground/70 tabular-nums">
                   {t("portal.clock.started_at", { time: format(new Date(activeEntry!.clock_in), "HH:mm") })}
