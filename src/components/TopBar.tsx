@@ -32,11 +32,7 @@ export default function TopBar({ collapsed }: { collapsed: boolean }) {
     { label: t("topbar.create.location"), icon: MapPin, route: "/app/locations?create=1" },
   ];
 
-export default function TopBar({ collapsed }: { collapsed: boolean }) {
-  const { user, fullName, signOut, getRoleForCompany } = useAuth();
-  const { selectedCompany, selectedCompanyId, companies, isGlobalMode } = useCompany();
-  const navigate = useNavigate();
-  const { theme, setTheme } = useTheme();
+
 
   // Effective role within the CURRENT company context (or global mode for
   // platform staff). The badge must NEVER show a role the user doesn't truly
