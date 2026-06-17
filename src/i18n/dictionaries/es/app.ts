@@ -102,8 +102,8 @@ const es_app = {
   "settings.language.guide_description": "Modo guía con explicaciones más humanas.",
 
   // ── Portal · Reloj ───────────────────────────────────────────────
-  "portal.clock.stage1.title": "Etapa 1: sigue marcando entrada/salida en Connecteam",
-  "portal.clock.stage1.body": "Stafly TimeClock todavía no es la fuente oficial de payroll. Usa Connecteam como siempre hasta que te avisemos que Stafly toma el control.",
+  "portal.clock.stage1.title": "Marca tu entrada en Connecteam por ahora",
+  "portal.clock.stage1.body": "Stafly todavía está en prueba para el reloj. Usa Connecteam como registro oficial hasta nuevo aviso.",
   "portal.clock.photo_required": "Foto de perfil requerida",
   "portal.clock.photo_required_subtitle": "Tócalo para subirla antes de marcar entrada",
   "portal.clock.clock_in_recorded": "Entrada registrada",
