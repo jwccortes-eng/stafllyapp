@@ -1,6 +1,7 @@
 import { forwardRef, useState } from "react";
-import { Bell, CheckCheck, ExternalLink, Briefcase, Megaphone, CreditCard, Clock, UserPlus, Star } from "lucide-react";
+import { Bell, CheckCheck, ExternalLink, Briefcase, Megaphone, CreditCard, Clock, UserPlus, Star, Volume2, X } from "lucide-react";
 import { useNotifications } from "@/hooks/useNotifications";
+import { useSoundContext } from "@/hooks/useSound";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import {
@@ -9,6 +10,8 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { formatDistanceToNow, format } from "date-fns";
 import { enUS } from "date-fns/locale";
+
+const SOUND_DISMISS_KEY = "stafly.sound.dismiss-notice-until";
 
 const TYPE_ROUTES: Record<string, string> = {
   shift_request_new: "/app/requests",
@@ -141,9 +144,39 @@ const TYPE_LABELS: Record<string, string> = {
 
 const NotificationBell = forwardRef<HTMLDivElement>(function NotificationBell(_props, _ref) {
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
+  const { status: soundStatus, unlockAudio, setEnabled: setSoundEnabled } = useSoundContext();
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState<FilterTab>("all");
+  const [soundBusy, setSoundBusy] = useState(false);
+  const [soundDismissed, setSoundDismissed] = useState(() => {
+    try {
+      const until = Number(localStorage.getItem(SOUND_DISMISS_KEY) || "0");
+      return until > Date.now();
+    } catch {
+      return false;
+    }
+  });
   const navigate = useNavigate();
+
+  const showSoundNotice = soundStatus === "blocked" && !soundDismissed;
+
+  const handleEnableSound = async () => {
+    setSoundBusy(true);
+    try {
+      await setSoundEnabled(true);
+      await unlockAudio({ source: "notification-bell" });
+    } finally {
+      setSoundBusy(false);
+    }
+  };
+
+  const handleDismissSound = () => {
+    try {
+      // Hide for 24h, non-blocking
+      localStorage.setItem(SOUND_DISMISS_KEY, String(Date.now() + 24 * 60 * 60 * 1000));
+    } catch { /* ignore */ }
+    setSoundDismissed(true);
+  };
 
   const handleClick = (n: typeof notifications[0]) => {
     if (!n.read_at) markAsRead(n.id);
