@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { clearFileInput, createPreviewUrl, openFilePicker, selectedFileFromInput } from "@/lib/mobile-file-picker";
 
 interface ProfilePhotoUploadProps {
   employeeId: string;
@@ -33,22 +34,33 @@ export function ProfilePhotoUpload({
   const cameraRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0];
-    if (!f) return;
+    const f = selectedFileFromInput(e);
+    if (!f) {
+      clearFileInput(e);
+      return;
+    }
 
     if (!f.type.startsWith("image/")) {
       toast({ title: "Error", description: "Solo se permiten imágenes (JPG, PNG).", variant: "destructive" });
+      clearFileInput(e);
       return;
     }
     if (f.size > 5 * 1024 * 1024) {
       toast({ title: "Error", description: "La imagen no puede exceder 5 MB.", variant: "destructive" });
+      clearFileInput(e);
       return;
     }
 
     // Validate minimum resolution
+    const objectUrl = createPreviewUrl(f, toast);
+    if (!objectUrl) {
+      clearFileInput(e);
+      return;
+    }
     const img = new Image();
     img.onload = () => {
       if (img.width < 300 || img.height < 300) {
+        URL.revokeObjectURL(objectUrl);
         toast({
           title: "Resolución insuficiente",
           description: "La foto debe ser al menos 300×300 píxeles. Intenta con otra imagen.",
@@ -56,10 +68,15 @@ export function ProfilePhotoUpload({
         });
         return;
       }
-      setPreview(URL.createObjectURL(f));
+      setPreview(objectUrl);
       setFile(f);
     };
-    img.src = URL.createObjectURL(f);
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      toast({ title: "No se pudo abrir la foto", description: "Intenta con otra imagen.", variant: "destructive" });
+    };
+    img.src = objectUrl;
+    clearFileInput(e);
   }, [toast]);
 
   const handleUpload = async () => {
@@ -237,11 +254,11 @@ export function ProfilePhotoUpload({
               </div>
             ) : (
               <div className="flex gap-2">
-                <Button variant="outline" className="flex-1 gap-1.5" onClick={() => cameraRef.current?.click()}>
+                <Button variant="outline" className="flex-1 gap-1.5" onClick={() => openFilePicker(cameraRef.current, toast)}>
                   <Camera className="h-3.5 w-3.5" />
                   Cámara
                 </Button>
-                <Button variant="outline" className="flex-1 gap-1.5" onClick={() => fileRef.current?.click()}>
+                <Button variant="outline" className="flex-1 gap-1.5" onClick={() => openFilePicker(fileRef.current, toast)}>
                   <Upload className="h-3.5 w-3.5" />
                   Galería
                 </Button>
