@@ -16375,6 +16375,7 @@ export type Database = {
           slug: string
         }[]
       }
+      get_public_passport: { Args: { p_slug: string }; Returns: Json }
       get_required_documents_for_company: {
         Args: { _company_id: string }
         Returns: string[]
