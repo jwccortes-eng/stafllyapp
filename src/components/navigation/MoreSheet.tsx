@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { X, LogOut, Moon, Sun, Pin } from "lucide-react";
+import { X, LogOut, Moon, Sun, Pin, Monitor } from "lucide-react";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog";
 import { NavItem } from "./nav-items";
+import { useT } from "@/i18n";
 
 /**
  * MoreSheet — Premium grouped bottom sheet for the admin mobile shell.
