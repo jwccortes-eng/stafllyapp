@@ -13,7 +13,7 @@ import { FloatingDock } from "@/components/navigation/FloatingDock";
 import { AppLauncher } from "@/components/navigation/AppLauncher";
 import { AdminBottomNav } from "@/components/navigation/AdminBottomNav";
 import { MoreSheet } from "@/components/navigation/MoreSheet";
-import { ADMIN_NAV_ITEMS, ADMIN_DEFAULT_PINS } from "@/components/navigation/nav-items";
+import { ADMIN_NAV_ITEMS, ADMIN_DEFAULT_PINS, ADMIN_DEFAULT_PINS_MOBILE } from "@/components/navigation/nav-items";
 import { useNavPreferences } from "@/hooks/useNavPreferences";
 import { supabase } from "@/integrations/supabase/client";
 import { NavItem } from "@/components/navigation/nav-items";
@@ -58,7 +58,7 @@ export default function AdminLayout() {
   const isMobile = useIsMobile();
   const location = useLocation();
   const [launcherOpen, setLauncherOpen] = useState(false);
-  const { pinnedIds, togglePin, maxPins } = useNavPreferences(ADMIN_DEFAULT_PINS);
+  const { pinnedIds, togglePin, maxPins } = useNavPreferences(isMobile ? ADMIN_DEFAULT_PINS_MOBILE : ADMIN_DEFAULT_PINS);
 
   // Effective role + admin gate for the CURRENT tenant (or global mode for
   // platform staff). Prevents company_owner from JKitchen entering Quality
@@ -220,6 +220,10 @@ export default function AdminLayout() {
     return true;
   });
 
+  // Mobile-only: drop items explicitly flagged mobile === "hidden".
+  // Desktop continues to use the full visibleItems list.
+  const mobileVisibleItems = visibleItems.filter(item => item.mobile !== "hidden");
+
   if (isMobile) {
     // Phase A: Premium 5-tab AdminBottomNav + grouped MoreSheet.
     // Fallback to legacy FloatingDock + AppLauncher with ?nav=legacy.
@@ -235,7 +239,7 @@ export default function AdminLayout() {
           <div className="flex items-center justify-between px-3 h-12">
             <div className="flex items-center gap-2 min-w-0">
               <StaflyLogo size={22} markOnly />
-              <MobilePageTitle items={visibleItems} />
+              <MobilePageTitle items={mobileVisibleItems} />
             </div>
             {/* Mobile header — keep at most 2 primary affordances visible.
                 Mode/Sound/Product live in the MoreSheet to avoid clutter and
@@ -258,7 +262,7 @@ export default function AdminLayout() {
         {useLegacyNav ? (
           <>
             <FloatingDock
-              items={visibleItems}
+              items={mobileVisibleItems}
               pinnedIds={pinnedIds}
               onOpenLauncher={() => setLauncherOpen(true)}
               variant="admin"
@@ -266,7 +270,7 @@ export default function AdminLayout() {
             <AppLauncher
               open={launcherOpen}
               onClose={() => setLauncherOpen(false)}
-              items={visibleItems}
+              items={mobileVisibleItems}
               pinnedIds={pinnedIds}
               onTogglePin={togglePin}
               maxPins={maxPins}
@@ -283,7 +287,7 @@ export default function AdminLayout() {
             <MoreSheet
               open={launcherOpen}
               onClose={() => setLauncherOpen(false)}
-              items={visibleItems}
+              items={mobileVisibleItems}
               pinnedIds={pinnedIds}
               onTogglePin={togglePin}
               maxPins={maxPins}

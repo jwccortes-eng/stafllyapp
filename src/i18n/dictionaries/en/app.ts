@@ -232,6 +232,8 @@ const en_app = {
   "portal.more.item.w9_desc": "Tax information",
   "portal.more.item.resources": "Resources",
   "portal.more.item.resources_desc": "Support material",
+  "launcher.more_desktop_tools.title": "More desktop tools",
+  "launcher.more_desktop_tools.subtitle": "Use the desktop version for payroll, reports, settings, and audit.",
 };
 
 export default en_app;

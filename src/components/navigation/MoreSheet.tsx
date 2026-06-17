@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { X, LogOut, Moon, Sun, Pin } from "lucide-react";
+import { X, LogOut, Moon, Sun, Pin, Monitor } from "lucide-react";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog";
 import { NavItem } from "./nav-items";
+import { useT } from "@/i18n";
 
 /**
  * MoreSheet — Premium grouped bottom sheet for the admin mobile shell.
@@ -65,19 +66,24 @@ const ITEM_GROUP_OVERRIDES: Record<string, string> = {
 };
 
 function groupForItem(item: NavItem): string {
+  // Mobile-first: if the nav item declares a mobileSection, honor it. This is
+  // the canonical grouping for the TestFlight admin shell.
+  if (item.mobileSection) return item.mobileSection;
   const override = ITEM_GROUP_OVERRIDES[item.id];
   if (override) return override;
   const section = item.section || FALLBACK_GROUP;
   for (const g of SECTION_GROUPS) if (g.matches.includes(section)) return g.label;
   return FALLBACK_GROUP;
 }
-const SECTION_ORDER = [...SECTION_GROUPS.map(g => g.label), FALLBACK_GROUP];
+const MOBILE_SECTION_ORDER = ["Inicio", "Operación", "Personas", "Comunicación"];
+const SECTION_ORDER = [...MOBILE_SECTION_ORDER, ...SECTION_GROUPS.map(g => g.label), FALLBACK_GROUP];
 
 export function MoreSheet({
   open, onClose, items, pinnedIds, onTogglePin, maxPins, onSignOut, badgeCounts = {},
 }: MoreSheetProps) {
   const location = useLocation();
   const { theme, setTheme } = useTheme();
+  const { t } = useT();
 
   const isActive = (item: NavItem) => {
     if (item.end) return location.pathname === item.to;
@@ -160,6 +166,21 @@ export function MoreSheet({
               badgeCounts={badgeCounts}
             />
           ))}
+
+          {/* Non-interactive info card — points operators to desktop for back-office tools. */}
+          <div className="rounded-2xl border border-border/40 bg-muted/30 p-4 flex items-start gap-3">
+            <div className="h-9 w-9 rounded-xl bg-background/80 flex items-center justify-center shrink-0">
+              <Monitor className="h-4 w-4 text-muted-foreground" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[13px] font-semibold text-foreground leading-tight">
+                {t("launcher.more_desktop_tools.title")}
+              </p>
+              <p className="text-[11px] text-muted-foreground mt-1 leading-snug">
+                {t("launcher.more_desktop_tools.subtitle")}
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Footer actions */}

@@ -225,6 +225,8 @@ const es_app = {
   "portal.more.item.w9_desc": "Información fiscal",
   "portal.more.item.resources": "Recursos",
   "portal.more.item.resources_desc": "Material de apoyo",
+  "launcher.more_desktop_tools.title": "Más herramientas de escritorio",
+  "launcher.more_desktop_tools.subtitle": "Usa la versión desktop para nómina, reportes, configuración y auditoría.",
 };
 
 export default es_app;

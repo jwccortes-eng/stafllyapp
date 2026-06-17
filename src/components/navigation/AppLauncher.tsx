@@ -1,5 +1,6 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { Pin, PinOff, X, Settings2, LogOut, Moon, Sun } from "lucide-react";
+import { Pin, PinOff, X, Settings2, LogOut, Moon, Sun, Monitor } from "lucide-react";
+import { useT } from "@/i18n";
 import { cn } from "@/lib/utils";
 import { NavItem } from "./nav-items";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,7 @@ export function AppLauncher({
 }: AppLauncherProps) {
   const location = useLocation();
   const { theme, setTheme } = useTheme();
+  const { t } = useT();
 
   if (!open) return null;
 
@@ -31,11 +33,22 @@ export function AppLauncher({
     return location.pathname === item.to || location.pathname.startsWith(item.to + "/");
   };
 
-  // Group by section
+  // Group by mobileSection when set (admin mobile launcher), else fall back to section.
+  const isMobileAdmin = variant === "admin" && items.some(i => !!i.mobileSection);
   const sections = new Map<string, NavItem[]>();
   items.forEach(item => {
-    if (!sections.has(item.section)) sections.set(item.section, []);
-    sections.get(item.section)!.push(item);
+    const key = (isMobileAdmin && item.mobileSection) || item.section;
+    if (!sections.has(key)) sections.set(key, []);
+    sections.get(key)!.push(item);
+  });
+  const MOBILE_ORDER = ["Inicio", "Operación", "Personas", "Comunicación"];
+  const orderedSections = Array.from(sections.entries()).sort(([a], [b]) => {
+    const ai = MOBILE_ORDER.indexOf(a);
+    const bi = MOBILE_ORDER.indexOf(b);
+    if (ai === -1 && bi === -1) return 0;
+    if (ai === -1) return 1;
+    if (bi === -1) return -1;
+    return ai - bi;
   });
 
   return (
@@ -67,7 +80,7 @@ export function AppLauncher({
 
         {/* Grid */}
         <div className="px-5 pb-5 overflow-y-auto max-h-[60vh] space-y-5">
-          {Array.from(sections.entries()).map(([label, sectionItems]) => (
+          {orderedSections.map(([label, sectionItems]) => (
             <div key={label}>
               <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/40 mb-2">
                 {label}
@@ -125,6 +138,22 @@ export function AppLauncher({
               </div>
             </div>
           ))}
+
+          {isMobileAdmin && (
+            <div className="rounded-2xl border border-border/40 bg-muted/30 p-4 flex items-start gap-3">
+              <div className="h-9 w-9 rounded-xl bg-background/80 flex items-center justify-center shrink-0">
+                <Monitor className="h-4 w-4 text-muted-foreground" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[13px] font-semibold text-foreground leading-tight">
+                  {t("launcher.more_desktop_tools.title")}
+                </p>
+                <p className="text-[11px] text-muted-foreground mt-1 leading-snug">
+                  {t("launcher.more_desktop_tools.subtitle")}
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Footer actions */}
