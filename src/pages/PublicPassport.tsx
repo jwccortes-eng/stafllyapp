@@ -286,7 +286,7 @@ export default function PublicPassport() {
                   city: data.city,
                   repScore: data.overall_reputation_score,
                   tier: tier?.label ?? null,
-                  metrics: data.metrics.map(m => ({ label: m.metric_label, value: m.metric_value })),
+                  metrics: data.metrics.map(m => ({ label: m.metric_label, value: String(m.metric_value) })),
                   skills: data.skills,
                   languages: data.languages,
                   workHistory: data.work_history.map(wh => ({
