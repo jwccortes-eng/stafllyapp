@@ -230,9 +230,25 @@ export default function WorkerPassport() {
 
   // Merge DB reputation if available
   const dbScore = reputation.score;
-  const displayScore = dbScore?.overall_score != null
-    ? Math.round((dbScore.overall_score / 10) * 10) / 10
+  const hasDbScore = dbScore?.overall_score != null;
+  const hasLegacyScore = rep.reputationScore > 0;
+  const displayScore = hasDbScore
+    ? Math.round((dbScore!.overall_score / 10) * 10) / 10
     : reputationScore10;
+  const scoreSource: "db" | "legacy" | "mixed" | "none" = hasDbScore && hasLegacyScore
+    ? "mixed"
+    : hasDbScore
+    ? "db"
+    : hasLegacyScore
+    ? "legacy"
+    : "none";
+  const scoreSourceLabel = {
+    db: { label: "Reputation DB", title: "Score nuevo (rep_scores)" },
+    legacy: { label: "Legacy reviews", title: "Score legacy (shift_reviews)" },
+    mixed: { label: "Mixed source", title: "Score DB con datos legacy aún presentes" },
+    none: { label: "Sin datos", title: "Aún no hay reseñas registradas" },
+  }[scoreSource];
+
 
   return (
     <div className="p-4 sm:p-6 max-w-4xl mx-auto space-y-6">
@@ -370,6 +386,17 @@ export default function WorkerPassport() {
               <span className="text-sm text-muted-foreground">/10</span>
             </div>
           </div>
+
+          <div className="-mt-3 mb-4 flex items-center justify-end">
+            <Badge
+              variant="outline"
+              title={scoreSourceLabel.title}
+              className="text-[10px] font-medium text-muted-foreground border-border/60"
+            >
+              Score source: {scoreSourceLabel.label}
+            </Badge>
+          </div>
+
 
           <div className="space-y-4">
             {categories.map((cat, i) => (
