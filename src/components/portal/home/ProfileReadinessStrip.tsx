@@ -25,6 +25,11 @@ export function ProfileReadinessStrip({ nbaKind }: Props) {
 
   const isReady = r.status === "ready" || r.status === "active";
 
+  // When the worker is ready AND NBA is the calm "all_set" fallback,
+  // the WorkerHero status pill + trust line already communicate readiness.
+  // Hide this strip to avoid the triple-readiness echo.
+  if (isReady && nbaKind === "all_set") return null;
+
   if (isReady) {
     return (
       <div className="rounded-2xl border border-earning/20 bg-earning/[0.05] px-3.5 py-2 flex items-center gap-3">
