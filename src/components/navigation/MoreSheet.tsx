@@ -40,15 +40,23 @@ const PRIMARY_TAB_ROUTES = new Set([
  * customer-friendly groups. Internal section names not listed fall back to "More".
  * Order of keys here defines vertical order in the sheet.
  */
-const SECTION_GROUPS: { label: string; matches: string[] }[] = [
-  { label: "Operations", matches: ["Home", "Operations", "Intake"] },
-  { label: "People", matches: ["Management"] },
-  { label: "Time & Attendance", matches: [] }, // populated via item-id override
-  { label: "Payroll & Billing", matches: ["Payroll", "Tax", "Commercial"] },
-  { label: "System", matches: ["Administration"] },
-  { label: "Support", matches: ["Help", "Support"] },
+const SECTION_GROUPS: { label: string; i18nKey: string; matches: string[] }[] = [
+  { label: "Operations",        i18nKey: "launcher.section.operations",       matches: ["Home", "Operations", "Intake"] },
+  { label: "People",            i18nKey: "launcher.section.people",           matches: ["Management"] },
+  { label: "Time & Attendance", i18nKey: "launcher.section.time_attendance",  matches: [] },
+  { label: "Payroll & Billing", i18nKey: "launcher.section.payroll_billing",  matches: ["Payroll", "Tax", "Commercial"] },
+  { label: "System",            i18nKey: "launcher.section.system",           matches: ["Administration"] },
+  { label: "Support",           i18nKey: "launcher.section.support",          matches: ["Help", "Support"] },
 ];
 const FALLBACK_GROUP = "More";
+
+/** i18n keys for the mobileSection labels declared in nav-items.ts (Spanish-first). */
+const MOBILE_SECTION_I18N: Record<string, string> = {
+  "Inicio":        "launcher.section.operations",
+  "Operación":     "launcher.section.operations",
+  "Personas":      "launcher.section.people",
+  "Comunicación":  "launcher.section.communication",
+};
 
 /**
  * Per-item overrides — promote specific items into customer-facing groups
