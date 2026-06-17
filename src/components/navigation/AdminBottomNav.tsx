@@ -1,6 +1,7 @@
 import { NavLink, useLocation } from "react-router-dom";
 import { LayoutDashboard, CalendarDays, Clock, Users, MoreHorizontal, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useT } from "@/i18n";
 
 /**
  * Admin Bottom Nav — Premium 5-tab pattern (Phase A).
@@ -14,18 +15,18 @@ interface BottomTab {
   id: string;
   to?: string;
   icon: LucideIcon;
-  label: string;
+  labelKey: string;
   end?: boolean;
   /** Sub-paths considered "active" for this tab */
   matches?: string[];
 }
 
 const TABS: BottomTab[] = [
-  { id: "ops",     to: "/app",            icon: LayoutDashboard, label: "Ops",     end: true },
-  { id: "shifts",  to: "/app/shifts",     icon: CalendarDays,    label: "Shifts" },
-  { id: "time",    to: "/app/timeclock",  icon: Clock,           label: "Time" },
-  { id: "workers", to: "/app/employees",  icon: Users,           label: "Workers", matches: ["/app/employees", "/app/workers", "/app/directory"] },
-  { id: "more",                            icon: MoreHorizontal,  label: "More" },
+  { id: "ops",     to: "/app",            icon: LayoutDashboard, labelKey: "admin.nav.ops",     end: true },
+  { id: "shifts",  to: "/app/shifts",     icon: CalendarDays,    labelKey: "admin.nav.shifts" },
+  { id: "time",    to: "/app/timeclock",  icon: Clock,           labelKey: "admin.nav.time" },
+  { id: "workers", to: "/app/employees",  icon: Users,           labelKey: "admin.nav.workers", matches: ["/app/employees", "/app/workers", "/app/directory"] },
+  { id: "more",                            icon: MoreHorizontal,  labelKey: "admin.nav.more" },
 ];
 
 interface AdminBottomNavProps {
@@ -42,6 +43,7 @@ const PRIMARY_PATHS = [
 
 export function AdminBottomNav({ onOpenMore, moreOpen = false }: AdminBottomNavProps) {
   const location = useLocation();
+  const { t } = useT();
   const path = location.pathname;
 
   const isTabActive = (tab: BottomTab) => {
@@ -79,7 +81,7 @@ export function AdminBottomNav({ onOpenMore, moreOpen = false }: AdminBottomNavP
                   "text-[9.5px] leading-none transition-colors mt-1",
                   active ? "text-primary font-bold" : "text-muted-foreground/60 font-semibold"
                 )}>
-                  {tab.label}
+                  {t(tab.labelKey)}
                 </span>
               </>
             );
@@ -99,7 +101,7 @@ export function AdminBottomNav({ onOpenMore, moreOpen = false }: AdminBottomNavP
                     onOpenMore();
                   }}
                   className={baseClass}
-                  aria-label="More options"
+                  aria-label={t("admin.nav.more_aria")}
                   aria-expanded={moreOpen}
                 >
                   {indicator}
