@@ -23,7 +23,8 @@ export function clearFileInput(event: ChangeEvent<HTMLInputElement>) {
 
 export function openFilePicker(input: HTMLInputElement | null | undefined, toast?: ToastFn) {
   try {
-    input?.click();
+    if (!input) throw new Error("File input is not available");
+    input.click();
   } catch {
     toast?.({
       title: "Camera/photo access needed",
