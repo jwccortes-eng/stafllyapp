@@ -407,7 +407,11 @@ Deno.serve(async (req) => {
         .select(EMPLOYEE_SELECT)
         .single();
 
-      if (updErr) console.error("[front-desk] updErr:", updErr); return jsonResp({ error: "Internal error" }, 500);
+      if (updErr) {
+        console.error("[front-desk] update_self updErr:", updErr);
+        return jsonResp({ error: "Internal error" }, 500);
+      }
+
 
       // device_id column is UUID — only forward valid UUIDs.
       const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
