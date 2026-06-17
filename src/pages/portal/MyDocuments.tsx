@@ -56,6 +56,7 @@ import { resolveEmployeeDocumentUrl } from "@/lib/employee-documents";
 import { formatDateUS } from "@/lib/date-format";
 import DocumentPreviewDialog from "@/components/documents/DocumentPreviewDialog";
 import { W9EntryCard } from "@/components/portal/W9EntryCard";
+import { isEmployeeDriver } from "@/components/shifts/types";
 
 type ReviewStatus = "pending" | "approved" | "rejected";
 
@@ -107,15 +108,18 @@ export default function MyDocuments() {
 
     const { data: emp } = await supabase
       .from("employees")
-      .select("company_id, has_car")
+      .select("company_id, has_car, can_drive")
       .eq("id", employeeId)
       .maybeSingle();
 
     if (!emp) { setLoading(false); return; }
     setCompanyId(emp.company_id);
-    setCanDrive(!!emp.has_car);
+    // Use the shared driver helper so Driver's License is not required for
+    // non-drivers whose has_car is a text answer like "No, I don't have a car".
+    const driver = isEmployeeDriver(emp as any);
+    setCanDrive(driver);
 
-    const req = await getRequiredDocumentsForCompany(emp.company_id, { canDrive: !!emp.has_car });
+    const req = await getRequiredDocumentsForCompany(emp.company_id, { canDrive: driver });
     setRequired(req);
 
     const { data: rows } = await supabase
