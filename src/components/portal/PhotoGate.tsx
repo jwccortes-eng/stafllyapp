@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { StaflyLogo } from "@/components/brand/StaflyBrand";
+import { clearFileInput, createPreviewUrl, openFilePicker, selectedFileFromInput } from "@/lib/mobile-file-picker";
 
 interface PhotoGateProps {
   employeeId: string;
@@ -18,18 +19,29 @@ export function PhotoGate({ employeeId, onPhotoUploaded, onSignOut }: PhotoGateP
   const [uploading, setUploading] = useState(false);
 
   const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0];
-    if (!f) return;
+    const f = selectedFileFromInput(e);
+    if (!f) {
+      clearFileInput(e);
+      return;
+    }
     if (!f.type.startsWith("image/")) {
       toast({ title: "Error", description: "Solo se permiten imágenes (JPG, PNG).", variant: "destructive" });
+      clearFileInput(e);
       return;
     }
     if (f.size > 5 * 1024 * 1024) {
       toast({ title: "Error", description: "La imagen no puede exceder 5 MB.", variant: "destructive" });
+      clearFileInput(e);
+      return;
+    }
+    const previewUrl = createPreviewUrl(f, toast);
+    if (!previewUrl) {
+      clearFileInput(e);
       return;
     }
     setPhotoFile(f);
-    setPhotoPreview(URL.createObjectURL(f));
+    setPhotoPreview(previewUrl);
+    clearFileInput(e);
   };
 
   const handlePhotoUpload = async () => {
@@ -108,11 +120,11 @@ export function PhotoGate({ employeeId, onPhotoUploaded, onSignOut }: PhotoGateP
               <input type="file" accept="image/*" capture="user" onChange={handlePhotoSelect} className="hidden" id="photo-gate-camera" />
               <input type="file" accept="image/*" onChange={handlePhotoSelect} className="hidden" id="photo-gate-gallery" />
               <div className="flex gap-2">
-                <Button variant="outline" className="flex-1 gap-1.5" onClick={() => document.getElementById("photo-gate-camera")?.click()}>
+                <Button variant="outline" className="flex-1 gap-1.5" onClick={() => openFilePicker(document.getElementById("photo-gate-camera") as HTMLInputElement | null, toast)}>
                   <Camera className="h-3.5 w-3.5" />
                   Cámara
                 </Button>
-                <Button variant="outline" className="flex-1 gap-1.5" onClick={() => document.getElementById("photo-gate-gallery")?.click()}>
+                <Button variant="outline" className="flex-1 gap-1.5" onClick={() => openFilePicker(document.getElementById("photo-gate-gallery") as HTMLInputElement | null, toast)}>
                   <Upload className="h-3.5 w-3.5" />
                   Galería
                 </Button>
