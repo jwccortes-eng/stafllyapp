@@ -12,6 +12,7 @@ import {
   missingPersonalFields,
   type PersonalInfoSnapshot,
 } from "@/lib/onboarding/profile-status";
+import { isEmployeeDriver } from "@/components/shifts/types";
 import {
   getRequiredDocumentsForCompany,
   DOCUMENT_CATEGORIES,
