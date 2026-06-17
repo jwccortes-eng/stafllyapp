@@ -4182,6 +4182,7 @@ export type Database = {
           photo_reviewed_at: string | null
           photo_reviewed_by: string | null
           portal_access_enabled: boolean
+          preferred_name: string | null
           professional_summary: string | null
           profile_status: Database["public"]["Enums"]["employee_profile_status"]
           qualify: string | null
@@ -4252,6 +4253,7 @@ export type Database = {
           photo_reviewed_at?: string | null
           photo_reviewed_by?: string | null
           portal_access_enabled?: boolean
+          preferred_name?: string | null
           professional_summary?: string | null
           profile_status?: Database["public"]["Enums"]["employee_profile_status"]
           qualify?: string | null
@@ -4322,6 +4324,7 @@ export type Database = {
           photo_reviewed_at?: string | null
           photo_reviewed_by?: string | null
           portal_access_enabled?: boolean
+          preferred_name?: string | null
           professional_summary?: string | null
           profile_status?: Database["public"]["Enums"]["employee_profile_status"]
           qualify?: string | null
