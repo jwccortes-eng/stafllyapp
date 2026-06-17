@@ -72,52 +72,9 @@ export default function PortalProfile() {
     // Re-run when status changes (saved profile) or when navigating back to this route.
   }, [employeeId, readiness.status, location.key]);
 
-  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !employeeId) return;
+  // Phase 1B.1 2026-06-17: inline handleAvatarUpload removed. Single source of
+  // truth for photo upload is <ProfilePhotoUpload/> (Worker Photo Update v2).
 
-    if (!file.type.startsWith("image/")) {
-      toast({ title: "Error", description: "Solo se permiten imágenes.", variant: "destructive" });
-      return;
-    }
-
-    if (file.size > 5 * 1024 * 1024) {
-      toast({ title: "Error", description: "La imagen no puede superar 5MB.", variant: "destructive" });
-      return;
-    }
-
-    setUploading(true);
-    try {
-      const ext = file.name.split(".").pop();
-      const path = `${employeeId}.${ext}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from("employee-avatars")
-        .upload(path, file, { upsert: true });
-
-      if (uploadError) throw uploadError;
-
-      const { data: urlData } = supabase.storage
-        .from("employee-avatars")
-        .getPublicUrl(path);
-
-      const avatarUrl = `${urlData.publicUrl}?t=${Date.now()}`;
-
-      const { error: updateError } = await supabase
-        .from("employees")
-        .update({ avatar_url: avatarUrl })
-        .eq("id", employeeId);
-
-      if (updateError) throw updateError;
-
-      setProfile(prev => prev ? { ...prev, avatar_url: avatarUrl } : prev);
-      toast({ title: "Foto actualizada" });
-    } catch (err: any) {
-      toast({ title: "Error al subir foto", description: err.message, variant: "destructive" });
-    } finally {
-      setUploading(false);
-    }
-  };
 
   if (loading) {
     return (
@@ -164,50 +121,30 @@ export default function PortalProfile() {
       {/* Readiness banner — surfaces missing data with editable CTA */}
       <ReadinessCard />
 
-      {/* Profile photo required warning */}
-      {!profile.avatar_url && (
-        <ProfilePhotoUpload
-          employeeId={employeeId!}
-          currentAvatarUrl={profile.avatar_url}
-          firstName={profile.first_name}
-          lastName={profile.last_name}
-          onUploaded={(url) => setProfile(prev => prev ? { ...prev, avatar_url: url } : prev)}
-          required
-        />
-      )}
+      {/* Profile photo manager — single source of truth for upload (Phase 1B.1).
+          Renders "required" warning when no avatar, or compact "Cambiar foto"
+          when one exists. Carries Aceptado/No aceptado guide (Worker Photo v2). */}
+      <ProfilePhotoUpload
+        employeeId={employeeId!}
+        currentAvatarUrl={profile.avatar_url}
+        firstName={profile.first_name}
+        lastName={profile.last_name}
+        onUploaded={(url) => setProfile(prev => prev ? { ...prev, avatar_url: url } : prev)}
+        required={!profile.avatar_url}
+      />
 
-      {/* Profile header */}
+      {/* Profile header — avatar is display-only here; upload lives in <ProfilePhotoUpload/> above. */}
       <div className="rounded-2xl gradient-primary p-5 text-primary-foreground relative overflow-hidden shadow-lg">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,hsl(200_85%_65%/0.4),transparent_60%)]" />
         <div className="relative flex items-center gap-4">
-          {/* Avatar with upload */}
-          <div className="relative group">
-            <EmployeeAvatar
-              firstName={profile.first_name}
-              lastName={profile.last_name}
-              avatarUrl={profile.avatar_url}
-              size="xl"
-              className="border-2 border-white/30 shadow-lg"
-            />
-            <button
-              onClick={() => fileRef.current?.click()}
-              disabled={uploading}
-              className="absolute inset-0 rounded-full bg-black/0 group-hover:bg-black/40 flex items-center justify-center transition-all opacity-0 group-hover:opacity-100"
-            >
-              {uploading ? (
-                <Loader2 className="h-5 w-5 text-white animate-spin" />
-              ) : (
-                <Camera className="h-5 w-5 text-white" />
-              )}
-            </button>
-            <input
-              ref={fileRef}
-              type="file"
-              accept="image/*"
-              onChange={handleAvatarUpload}
-              className="hidden"
-            />
-          </div>
+          <EmployeeAvatar
+            firstName={profile.first_name}
+            lastName={profile.last_name}
+            avatarUrl={profile.avatar_url}
+            size="xl"
+            className="border-2 border-white/30 shadow-lg"
+          />
+
           <div className="min-w-0">
             <h2 className="text-lg font-bold font-heading tracking-tight leading-tight">
               {profile.first_name} {profile.last_name}
