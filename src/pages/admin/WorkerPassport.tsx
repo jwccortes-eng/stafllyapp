@@ -387,6 +387,17 @@ export default function WorkerPassport() {
             </div>
           </div>
 
+          <div className="-mt-3 mb-4 flex items-center justify-end">
+            <Badge
+              variant="outline"
+              title={scoreSourceLabel.title}
+              className="text-[10px] font-medium text-muted-foreground border-border/60"
+            >
+              Score source: {scoreSourceLabel.label}
+            </Badge>
+          </div>
+
+
           <div className="space-y-4">
             {categories.map((cat, i) => (
               <ReputationBar key={i} label={cat.label} value={Math.round(cat.avg * 10) / 10} />
