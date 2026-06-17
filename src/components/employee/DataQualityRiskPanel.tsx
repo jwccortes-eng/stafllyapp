@@ -81,9 +81,19 @@ interface Props {
   documentSignals?: Map<string, import("@/lib/documents-signals").WorkerDocumentSignals>;
   /** Compact mode: curated subset of risk cards + toggle to reveal the full grid. */
   compact?: boolean;
+  /** Mobile-only actionable view: hides readiness chips, export and back-office
+   * risks. Shows only worker-cleanup risks an operator can act on from a phone. */
+  actionableOnly?: boolean;
 }
 
-export default function DataQualityRiskPanel({ employees, documentSignals, riskFilter, onRiskFilterChange, compact = false }: Props) {
+const ACTIONABLE_RISK_KEYS: RiskKey[] = [
+  "missing_required_document",
+  "expired_document",
+  "rejected_document",
+  "duplicate_review",
+];
+
+export default function DataQualityRiskPanel({ employees, documentSignals, riskFilter, onRiskFilterChange, compact = false, actionableOnly = false }: Props) {
   const [expanded, setExpanded] = useState(!compact);
   const { byId, counts } = useMemo(
     () => analyzeEmployeeRisks(employees, documentSignals),
@@ -143,36 +153,40 @@ export default function DataQualityRiskPanel({ employees, documentSignals, riskF
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
-            <ReadinessChip
-              icon={ShieldCheck}
-              label={READINESS_LABEL.ready}
-              value={readinessTotals.ready}
-              tone="success"
-            />
-            <ReadinessChip
-              icon={Sparkles}
-              label={READINESS_LABEL.needs_review}
-              value={readinessTotals.needs_review}
-              tone="warning"
-            />
-            <ReadinessChip
-              icon={ShieldAlert}
-              label={READINESS_LABEL.blocked_visual}
-              value={readinessTotals.blocked_visual}
-              tone="destructive"
-            />
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-7 text-[11px]"
-              onClick={handleExport}
-              disabled={totalAtRisk === 0}
-              title={totalAtRisk === 0 ? "Sin riesgos para exportar" : "Descargar riesgos visibles como CSV"}
-            >
-              <Download className="h-3 w-3 mr-1" />
-              Exportar riesgos
-            </Button>
-            {compact && (
+            {!actionableOnly && (
+              <>
+                <ReadinessChip
+                  icon={ShieldCheck}
+                  label={READINESS_LABEL.ready}
+                  value={readinessTotals.ready}
+                  tone="success"
+                />
+                <ReadinessChip
+                  icon={Sparkles}
+                  label={READINESS_LABEL.needs_review}
+                  value={readinessTotals.needs_review}
+                  tone="warning"
+                />
+                <ReadinessChip
+                  icon={ShieldAlert}
+                  label={READINESS_LABEL.blocked_visual}
+                  value={readinessTotals.blocked_visual}
+                  tone="destructive"
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-[11px]"
+                  onClick={handleExport}
+                  disabled={totalAtRisk === 0}
+                  title={totalAtRisk === 0 ? "Sin riesgos para exportar" : "Descargar riesgos visibles como CSV"}
+                >
+                  <Download className="h-3 w-3 mr-1" />
+                  Exportar riesgos
+                </Button>
+              </>
+            )}
+            {compact && !actionableOnly && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -187,15 +201,20 @@ export default function DataQualityRiskPanel({ employees, documentSignals, riskF
 
         {/* Risk cards */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
-          <RiskCard
-            label="Todos los trabajadores"
-            value={employees.length}
-            active={riskFilter === "all"}
-            onClick={() => onRiskFilterChange("all")}
-            tone="muted"
-            icon={Users2}
-          />
-          {(compact && !expanded ? PRIMARY_RISK_KEYS : RISK_ORDER).map((key) => {
+          {!actionableOnly && (
+            <RiskCard
+              label="Todos los trabajadores"
+              value={employees.length}
+              active={riskFilter === "all"}
+              onClick={() => onRiskFilterChange("all")}
+              tone="muted"
+              icon={Users2}
+            />
+          )}
+          {(actionableOnly
+            ? ACTIONABLE_RISK_KEYS
+            : compact && !expanded ? PRIMARY_RISK_KEYS : RISK_ORDER
+          ).map((key) => {
             const meta = getRiskMeta(key);
             const Icon = RISK_ICON[key];
             return (
