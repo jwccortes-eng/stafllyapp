@@ -153,17 +153,25 @@ export function ClockPhotoCapture({
           <div className="relative aspect-square w-full max-w-[320px] mx-auto rounded-2xl overflow-hidden bg-black/90 border border-border/30">
             {!captured ? (
               <>
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  className={cn(
-                    "w-full h-full object-cover transition-opacity duration-300",
-                    cameraReady ? "opacity-100" : "opacity-0"
-                  )}
-                />
-                {!cameraReady && !error && (
+                {cameraRequested && (
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className={cn(
+                      "w-full h-full object-cover transition-opacity duration-300",
+                      cameraReady ? "opacity-100" : "opacity-0"
+                    )}
+                  />
+                )}
+                {!cameraRequested && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-6 text-center">
+                    <Camera className="h-8 w-8 text-primary" />
+                    <p className="text-xs font-medium text-white/85">Toca para abrir la cámara</p>
+                  </div>
+                )}
+                {cameraRequested && !cameraReady && !error && (
                   <div className="absolute inset-0 flex items-center justify-center">
                     <Loader2 className="h-8 w-8 text-primary animate-spin" />
                   </div>
@@ -193,12 +201,12 @@ export function ClockPhotoCapture({
           <div className="flex gap-2">
             {!captured ? (
               <Button
-                onClick={takePhoto}
-                disabled={!cameraReady || !!error}
+                onClick={cameraReady ? takePhoto : startCamera}
+                disabled={cameraRequested && !cameraReady && !error}
                 className="w-full h-12 rounded-xl text-sm font-semibold gap-2"
               >
                 <Camera className="h-4 w-4" />
-                Tomar foto
+                {cameraReady ? "Tomar foto" : "Abrir cámara"}
               </Button>
             ) : (
               <>
