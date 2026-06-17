@@ -234,6 +234,39 @@ const en_app = {
   "portal.more.item.resources_desc": "Support material",
   "launcher.more_desktop_tools.title": "More desktop tools",
   "launcher.more_desktop_tools.subtitle": "Use the desktop version for payroll, reports, settings, and audit.",
+
+  // ── Admin mobile bottom nav ──────────────────────────────────────
+  "admin.nav.ops": "Ops",
+  "admin.nav.shifts": "Shifts",
+  "admin.nav.time": "Time",
+  "admin.nav.workers": "Workers",
+  "admin.nav.more": "More",
+  "admin.nav.more_aria": "More options",
+
+  // ── Admin mobile launcher (More sheet) ───────────────────────────
+  "launcher.title": "All Apps",
+  "launcher.pin_hint": "Tap 📌 to pin",
+  "launcher.section.pinned": "Pinned",
+  "launcher.section.operations": "Operations",
+  "launcher.section.people": "People",
+  "launcher.section.time_attendance": "Time & Attendance",
+  "launcher.section.payroll_billing": "Payroll & Billing",
+  "launcher.section.system": "System",
+  "launcher.section.support": "Support",
+  "launcher.section.communication": "Communication",
+  "launcher.section.more": "More",
+  "launcher.theme.dark": "Dark",
+  "launcher.theme.light": "Light",
+  "launcher.sign_out": "Sign out",
+
+  // ── Workers · Data quality (mobile compact) ──────────────────────
+  "workers.data_quality.label": "Data quality",
+  "workers.data_quality.alerts_one": "{n} alert",
+  "workers.data_quality.alerts_many": "{n} alerts",
+  "workers.data_quality.all_clear": "All clear",
+  "workers.data_quality.view": "View",
+  "workers.data_quality.sheet_title": "Data quality risks",
+  "workers.data_quality.sheet_subtitle": "Tap a risk to filter the list.",
 };
 
 export default en_app;

@@ -227,6 +227,39 @@ const es_app = {
   "portal.more.item.resources_desc": "Material de apoyo",
   "launcher.more_desktop_tools.title": "Más herramientas de escritorio",
   "launcher.more_desktop_tools.subtitle": "Usa la versión desktop para nómina, reportes, configuración y auditoría.",
+
+  // ── Admin mobile bottom nav ──────────────────────────────────────
+  "admin.nav.ops": "Hoy",
+  "admin.nav.shifts": "Turnos",
+  "admin.nav.time": "Reloj",
+  "admin.nav.workers": "Equipo",
+  "admin.nav.more": "Más",
+  "admin.nav.more_aria": "Más opciones",
+
+  // ── Admin mobile launcher (More sheet) ───────────────────────────
+  "launcher.title": "Herramientas",
+  "launcher.pin_hint": "Toca 📌 para fijar",
+  "launcher.section.pinned": "Fijadas",
+  "launcher.section.operations": "Operación",
+  "launcher.section.people": "Personas",
+  "launcher.section.time_attendance": "Tiempo y asistencia",
+  "launcher.section.payroll_billing": "Nómina y facturación",
+  "launcher.section.system": "Sistema",
+  "launcher.section.support": "Soporte",
+  "launcher.section.communication": "Comunicación",
+  "launcher.section.more": "Más",
+  "launcher.theme.dark": "Oscuro",
+  "launcher.theme.light": "Claro",
+  "launcher.sign_out": "Cerrar sesión",
+
+  // ── Workers · Data quality (mobile compact) ──────────────────────
+  "workers.data_quality.label": "Calidad de datos",
+  "workers.data_quality.alerts_one": "{n} alerta",
+  "workers.data_quality.alerts_many": "{n} alertas",
+  "workers.data_quality.all_clear": "Sin alertas",
+  "workers.data_quality.view": "Ver",
+  "workers.data_quality.sheet_title": "Riesgos de calidad de datos",
+  "workers.data_quality.sheet_subtitle": "Toca un riesgo para filtrar la lista.",
 };
 
 export default es_app;
