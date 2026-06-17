@@ -925,16 +925,18 @@ export default function ActivateAccount() {
                       <Input type="date" value={profileForm.date_of_birth} onChange={e => updateForm("date_of_birth", e.target.value)} className="h-9 text-sm" />
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-xs">SSN (last 4 digits minimum) <span className="text-destructive">*</span></Label>
+                      <Label className="text-xs">Last 4 of SSN <span className="text-destructive">*</span></Label>
                       <Input
                         type="password"
+                        inputMode="numeric"
+                        autoComplete="off"
                         value={profileForm.ssn}
-                        onChange={e => updateForm("ssn", e.target.value.replace(/[^0-9-]/g, ""))}
-                        placeholder="XXX-XX-XXXX or last 4 digits"
-                        maxLength={11}
-                        className="h-9 text-sm font-mono"
+                        onChange={e => updateForm("ssn", e.target.value.replace(/\D/g, "").slice(0, 4))}
+                        placeholder="••••"
+                        maxLength={4}
+                        className="h-9 text-sm font-mono tracking-[0.5em] text-center"
                       />
-                      <p className="text-[9px] text-muted-foreground/60">Only the last 4 digits are stored. Your information is protected.</p>
+                      <p className="text-[9px] text-muted-foreground/60">Solo se guardan los últimos 4 dígitos. Nunca pedimos ni almacenamos el SSN completo.</p>
                     </div>
                   </div>
                 </div>
