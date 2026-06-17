@@ -220,6 +220,10 @@ export default function AdminLayout() {
     return true;
   });
 
+  // Mobile-only: drop items explicitly flagged mobile === "hidden".
+  // Desktop continues to use the full visibleItems list.
+  const mobileVisibleItems = visibleItems.filter(item => item.mobile !== "hidden");
+
   if (isMobile) {
     // Phase A: Premium 5-tab AdminBottomNav + grouped MoreSheet.
     // Fallback to legacy FloatingDock + AppLauncher with ?nav=legacy.
