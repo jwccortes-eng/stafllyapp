@@ -11,6 +11,8 @@ import { Switch } from "@/components/ui/switch";
 import { Upload, FileText, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { acquireDocDialogLock } from "@/lib/document-dialog-suspend";
+import { clearFileInput, openFilePicker, selectedFileFromInput } from "@/lib/mobile-file-picker";
+import { useToast } from "@/hooks/use-toast";
 
 const CATEGORY_OPTIONS = [
   { value: "id", label: "ID document" },
@@ -32,6 +34,7 @@ interface Props {
 
 /** Premium admin-upload dialog with category + "approve on upload" choice. */
 export function DocumentUploadDialog({ open, onOpenChange, onConfirm }: Props) {
+  const { toast } = useToast();
   const [file, setFile] = useState<File | null>(null);
   const [category, setCategory] = useState<string>("other");
   const [approveOnUpload, setApproveOnUpload] = useState(false);
@@ -94,7 +97,7 @@ export function DocumentUploadDialog({ open, onOpenChange, onConfirm }: Props) {
             <Label className="text-xs font-medium">File</Label>
             <button
               type="button"
-              onClick={() => fileRef.current?.click()}
+              onClick={() => openFilePicker(fileRef.current, toast)}
               className={cn(
                 "w-full flex items-center gap-3 rounded-xl border border-dashed border-border/60 px-4 py-3 text-left transition hover:border-primary/40 hover:bg-primary/[0.03]",
                 file && "border-primary/40 bg-primary/[0.03]",
@@ -124,7 +127,10 @@ export function DocumentUploadDialog({ open, onOpenChange, onConfirm }: Props) {
               type="file"
               accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
               className="hidden"
-              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+              onChange={(e) => {
+                setFile(selectedFileFromInput(e));
+                clearFileInput(e);
+              }}
             />
           </div>
 
