@@ -16,6 +16,7 @@
  *   - No auth/SMS pipeline touched.
  */
 import { useMemo } from "react";
+import { ProfileLayerBadge } from "@/components/profile-standard/ProfileLayerBadge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
