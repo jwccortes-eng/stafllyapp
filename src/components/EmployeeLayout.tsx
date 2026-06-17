@@ -8,7 +8,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { usePortalModules } from "@/hooks/usePortalModules";
 import EmployeeChatWidget from "@/components/EmployeeChatWidget";
 import NotificationBell from "@/components/NotificationBell";
-import { SoundStatusControl } from "@/components/SoundStatusControl";
+
 import { StaflyLogo } from "@/components/brand/StaflyBrand";
 import { PortalBottomNav } from "@/components/portal/PortalBottomNav";
 import { PortalMoreSheet } from "@/components/portal/PortalMoreSheet";
@@ -212,7 +212,6 @@ export default function EmployeeLayout() {
           <div className="flex items-center gap-2">
             <ProductSwitcher />
             <ModeSwitcher />
-            <SoundStatusControl />
             <NotificationBell />
           </div>
         </div>

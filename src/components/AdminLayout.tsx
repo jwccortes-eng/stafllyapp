@@ -20,7 +20,7 @@ import { NavItem } from "@/components/navigation/nav-items";
 import CompanySwitcher from "@/components/CompanySwitcher";
 import { ModeSwitcher } from "@/components/ModeSwitcher";
 import { AdminProductSwitcher } from "@/components/admin/AdminProductSwitcher";
-import { SoundStatusControl } from "@/components/SoundStatusControl";
+
 import { safeLocalStorage } from "@/lib/safe-storage";
 
 function MobilePageTitle({ items }: { items: NavItem[] }) {
