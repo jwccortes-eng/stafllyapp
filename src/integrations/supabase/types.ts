@@ -16116,6 +16116,43 @@ export type Database = {
           },
         ]
       }
+      v_parceros_consent_adoption: {
+        Row: {
+          adoption_pct: number | null
+          block_pct: number | null
+          company_id: string | null
+          company_name: string | null
+          consent_denied: number | null
+          consent_error: number | null
+          consent_granted: number | null
+          consent_missing: number | null
+          consent_revoked: number | null
+          eligible_workers: number | null
+          is_demo: boolean | null
+          is_test: boolean | null
+          snapshot_at: string | null
+          visibility_hidden: number | null
+          visibility_public: number | null
+          would_block_in_enforce: number | null
+          would_publish_if_enforce: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employees_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employees_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       _get_cron_secret: { Args: never; Returns: string }
