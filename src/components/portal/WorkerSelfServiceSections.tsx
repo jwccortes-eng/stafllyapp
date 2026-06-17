@@ -16,7 +16,7 @@
  *   - TODO(audit): once an `identity_change_log` table exists, wire writes here.
  */
 import { useEffect, useState } from "react";
-import { Phone, HeartPulse, Home, Camera, Loader2, CheckCircle2, Pencil, X } from "lucide-react";
+import { Phone, HeartPulse, Home, Camera, Loader2, CheckCircle2, Pencil, X, IdCard } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
