@@ -379,8 +379,9 @@ export default function CompleteProfile() {
               <div className="relative">
                 <Hash className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  type="text"
+                  type="password"
                   inputMode="numeric"
+                  autoComplete="off"
                   maxLength={4}
                   value={form.ssn_last4}
                   onChange={(e) =>

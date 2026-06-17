@@ -257,9 +257,21 @@ export function ProfileSummaryGrid({
         }
       >
         <div className="space-y-1.5">
-          {phone && <Row icon={Phone} label="Teléfono" value={phone} />}
-          {employee.email && <Row icon={Mail} label="Email" value={employee.email} />}
-          {employee.address && <Row icon={MapPin} label="Dirección" value={employee.address} />}
+          {/* Phase 1A privilege guard 2026-06-17: contact PII (phone, email,
+              address, emergency contact) hidden from non-privileged viewers.
+              isPrivileged already governs admin/owner/dev surfaces upstream
+              (UnifiedPersonProfile). No RLS or query changes. */}
+          {isPrivileged ? (
+            <>
+              {phone && <Row icon={Phone} label="Teléfono" value={phone} />}
+              {employee.email && <Row icon={Mail} label="Email" value={employee.email} />}
+              {employee.address && <Row icon={MapPin} label="Dirección" value={employee.address} />}
+            </>
+          ) : (
+            (phone || employee.email || employee.address) && (
+              <Row icon={Phone} label="Contacto" value="Restringido" />
+            )
+          )}
           {employee.employee_role && (
             <Row
               icon={Briefcase}
@@ -270,10 +282,10 @@ export function ProfileSummaryGrid({
           {startDate && <Row icon={CalendarDays} label="Inicio" value={startDate} />}
           {gender && <Row label="Género" value={gender} />}
           {birthday && <Row icon={Cake} label="Cumpleaños" value={birthday} />}
-          {emergencyContact && (
+          {isPrivileged && emergencyContact && (
             <Row icon={AlertTriangle} label="Emergencia" value={emergencyContact} />
           )}
-          {!phone && !employee.email && !employee.address && (
+          {isPrivileged && !phone && !employee.email && !employee.address && (
             <p className="text-[11px] text-muted-foreground italic">
               Sin datos de contacto · usa "Editar" para completar.
             </p>
