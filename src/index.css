@@ -597,7 +597,14 @@
   }
 }
 
-/* ── Mobile safe area for notched devices ── */
+/* ── Mobile safe area for notched devices (iOS / Capacitor WebView) ── */
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+.safe-area-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
 .safe-area-bottom {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
