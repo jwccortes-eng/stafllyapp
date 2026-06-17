@@ -135,12 +135,12 @@ export function MoreSheet({
 
         <SheetHeader className="px-5 pt-2 pb-3 flex-row items-center justify-between space-y-0 shrink-0">
           <div className="text-left">
-            <SheetTitle className="text-base font-bold font-heading text-foreground">All Apps</SheetTitle>
+            <SheetTitle className="text-base font-bold font-heading text-foreground">{t("launcher.title")}</SheetTitle>
             <p className="text-[11px] text-muted-foreground mt-0.5">
-              Tap <Pin className="inline h-3 w-3 -mt-0.5" /> to pin ({pinnedIds.length}/{maxPins})
+              {t("launcher.pin_hint")} ({pinnedIds.length}/{maxPins})
             </p>
           </div>
-          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl" onClick={onClose} aria-label="Close">
+          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl" onClick={onClose} aria-label={t("common.close")}>
             <X className="h-4 w-4" />
           </Button>
         </SheetHeader>
@@ -149,7 +149,7 @@ export function MoreSheet({
           {/* Pinned shortcuts */}
           {pinnedItems.length > 0 && (
             <SectionGrid
-              label="Pinned"
+              label={t("launcher.section.pinned")}
               items={pinnedItems}
               isActive={isActive}
               pinnedIds={pinnedIds}
@@ -161,19 +161,27 @@ export function MoreSheet({
           )}
 
           {/* Grouped sections */}
-          {orderedSections.map(([label, sectionItems]) => (
-            <SectionGrid
-              key={label}
-              label={label}
-              items={sectionItems}
-              isActive={isActive}
-              pinnedIds={pinnedIds}
-              onTogglePin={onTogglePin}
-              maxPins={maxPins}
-              onClose={onClose}
-              badgeCounts={badgeCounts}
-            />
-          ))}
+          {orderedSections.map(([label, sectionItems]) => {
+            // Translate section label: mobileSection (Spanish-first) or SECTION_GROUPS English label.
+            const i18nKey =
+              MOBILE_SECTION_I18N[label] ||
+              SECTION_GROUPS.find(g => g.label === label)?.i18nKey ||
+              "launcher.section.more";
+            const translated = t(i18nKey);
+            return (
+              <SectionGrid
+                key={label}
+                label={translated}
+                items={sectionItems}
+                isActive={isActive}
+                pinnedIds={pinnedIds}
+                onTogglePin={onTogglePin}
+                maxPins={maxPins}
+                onClose={onClose}
+                badgeCounts={badgeCounts}
+              />
+            );
+          })}
 
           {/* Non-interactive info card — points operators to desktop for back-office tools. */}
           <div className="rounded-2xl border border-border/40 bg-muted/30 p-4 flex items-start gap-3">
@@ -198,12 +206,12 @@ export function MoreSheet({
             className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-1.5 rounded-lg hover:bg-muted/30"
           >
             {theme === "dark" ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
-            {theme === "dark" ? "Light" : "Dark"}
+            {theme === "dark" ? t("launcher.theme.light") : t("launcher.theme.dark")}
           </button>
           <LogoutConfirmDialog onConfirm={() => { onSignOut(); onClose(); }}>
             <button className="flex items-center gap-2 text-xs text-destructive/70 hover:text-destructive transition-colors px-2 py-1.5 rounded-lg hover:bg-destructive/[0.08]">
               <LogOut className="h-3.5 w-3.5" />
-              Sign out
+              {t("launcher.sign_out")}
             </button>
           </LogoutConfirmDialog>
         </div>
