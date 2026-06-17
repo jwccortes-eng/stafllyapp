@@ -56,6 +56,7 @@ import { resolveEmployeeDocumentUrl } from "@/lib/employee-documents";
 import { formatDateUS } from "@/lib/date-format";
 import DocumentPreviewDialog from "@/components/documents/DocumentPreviewDialog";
 import { W9EntryCard } from "@/components/portal/W9EntryCard";
+import { isEmployeeDriver } from "@/components/shifts/types";
 
 type ReviewStatus = "pending" | "approved" | "rejected";
 
