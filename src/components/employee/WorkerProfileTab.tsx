@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useWorkerProfile } from "@/hooks/useWorkerProfile";
 import { useWorkerAvailability } from "@/hooks/useWorkerAvailability";
 import { useWorkerConsent } from "@/hooks/useWorkerConsent";
+import { ConsentGovernancePanel } from "@/components/profile-standard/ConsentGovernancePanel";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
@@ -575,6 +576,8 @@ export function WorkerProfileTab({ employeeId, readOnly = false }: Props) {
             })}
           </CardContent>
         </Card>
+
+        <ConsentGovernancePanel />
       </div>
     </div>
   );
