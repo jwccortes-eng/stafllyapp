@@ -116,6 +116,9 @@ export default function UpdateCenter() {
       {/* ── W-9 guided form entry ── */}
       <W9EntryCard />
 
+      {/* ── Consent Center (Phase 2 — Parceros data sharing) ── */}
+      <ConsentCenterCard />
+
       {/* ── Loading ── */}
       {loading && (
         <div className="rounded-2xl border border-border/50 bg-card/60 p-6 text-center text-[12px] text-muted-foreground">
