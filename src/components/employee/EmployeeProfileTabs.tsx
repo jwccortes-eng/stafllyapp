@@ -768,13 +768,10 @@ export function EmployeeProfileTabs({
 
       <TabsContent value="info" className="mt-0"><InfoTab employee={employee} companyId={companyId} isEditing={isEditing} form={form} setForm={setForm} isPrivileged={isPrivileged} onEmployeeUpdate={onEmployeeUpdate} onJumpToDocuments={onTabChange ? () => onTabChange("docs") : undefined} /></TabsContent>
       <TabsContent value="profile" className="mt-0"><WorkerProfileTab employeeId={employee.id} readOnly={!isEditing} /></TabsContent>
-      <TabsContent value="reputation" className="mt-0">
-        <div className="space-y-3">
-          <ReputationProfile employeeId={employee.id} companyId={companyId} />
-          <Card className="rounded-lg border-border/30"><CardContent className="p-3"><h3 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50 mb-2">Reseñas</h3><EmployeePerformanceScore employeeId={employee.id} /></CardContent></Card>
-          {wpHook.profile && isPrivileged && <ReputationAdminPanel workerProfileId={wpHook.profile.id} employeeId={employee.id} employeeName={`${employee.first_name ?? ""} ${employee.last_name ?? ""}`} />}
-        </div>
-      </TabsContent>
+      {/* Phase 1A cleanup 2026-06-17: removed dead `reputation` TabsContent.
+          The trigger was never in TabsList (inaccessible), and the reputation
+          pipeline (useEmployeeReputation, useReputation, review_scores,
+          rep_scores) remains untouched. */}
       <TabsContent value="pay" className="mt-0"><PayTab employee={employee} companyId={companyId} /></TabsContent>
       <TabsContent value="compensation" className="mt-0">
         <Suspense fallback={<div className="py-6 text-center text-[11px] text-muted-foreground">Cargando...</div>}>

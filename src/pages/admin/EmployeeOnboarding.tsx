@@ -683,7 +683,9 @@ function IdStep({ form, setForm }: StepProps) {
     <>
       <Field label="Last 4 of SSN" required hint="Only the last 4 digits — full SSN is never stored">
         <PremiumInput
+          type="password"
           inputMode="numeric"
+          autoComplete="off"
           maxLength={4}
           value={form.ssn_last4}
           onChange={e => setForm(f => ({ ...f, ssn_last4: e.target.value.replace(/\D/g, "").slice(0, 4) }))}
