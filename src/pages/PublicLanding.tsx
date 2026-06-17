@@ -98,7 +98,10 @@ export default function PublicLanding() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Nav */}
-      <header className="sticky top-0 z-40 backdrop-blur-md bg-background/80 border-b border-border/40">
+      <header
+        className="sticky top-0 z-40 backdrop-blur-md bg-background/80 border-b border-border/40"
+        style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}
+      >
         <div className="max-w-6xl mx-auto px-5 sm:px-8 h-16 flex items-center justify-between">
           <Link to="/" aria-label="Stafly Core home">
             <StaflyLogo size={32} />

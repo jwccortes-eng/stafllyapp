@@ -172,7 +172,10 @@ export default function EmployeeLayout() {
   if (isMobile) {
     return (
       <div className="min-h-[100dvh] w-full max-w-full overflow-x-hidden bg-background flex flex-col">
-        <header className="sticky top-0 z-30 shrink-0 bg-background/80 backdrop-blur-2xl border-b border-border/20">
+        <header
+          className="sticky top-0 z-30 shrink-0 bg-background/80 backdrop-blur-2xl border-b border-border/20"
+          style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}
+        >
           <div className="flex items-center justify-between gap-2 px-4 h-12 max-w-full">
             <div className="flex items-center gap-2 min-w-0 flex-1">
               <StaflyLogo size={20} />
