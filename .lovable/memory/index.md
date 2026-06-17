@@ -1,0 +1,1 @@
+- [Parceros Consent Adoption E5.8](mem://features/portal/parceros-consent-adoption-e5-8) — CLOSED 2026-06-17 visual PASS. /portal/update-center Comunidad Parceros card con 4 estados (granted/missing/revoked/denied) reusando writer existente. Prod sigue log_only. No avanzar a banner Home ni enforce sin aprobación.
