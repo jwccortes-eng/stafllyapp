@@ -43,11 +43,9 @@ function detectInitialLanguage(): Language {
     try { window.localStorage.setItem(LANG_STORAGE_KEY, "en"); } catch { /* noop */ }
     return "en";
   }
-  // Fallback to browser preference; default to Spanish to match Admin Desk
-  // Spanish-first policy. Explicit user choice via LanguageSwitcher still wins
-  // because it writes to localStorage and is read above.
-  const nav = window.navigator?.language?.toLowerCase() ?? "";
-  if (nav.startsWith("en")) return "en";
+  // Unconditional Spanish default for Admin/Desktop when no stored preference
+  // exists. Explicit user choice via LanguageSwitcher still wins because it
+  // writes to localStorage and is read above.
   return "es";
 }
 
