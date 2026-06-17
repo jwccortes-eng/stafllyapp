@@ -23,10 +23,10 @@ interface Props {
   status: WorkerHeroStatus;
 }
 
-const STATUS_COPY: Record<WorkerHeroStatus, { label: string }> = {
-  on_shift: { label: "En turno" },
-  ready: { label: "Listo" },
-  incomplete: { label: "Perfil incompleto" },
+const STATUS_COPY: Record<WorkerHeroStatus, { label: string; trust: string | null }> = {
+  on_shift: { label: "En turno", trust: "Fichado · turno en curso" },
+  ready: { label: "Listo para trabajar", trust: "Perfil completo · Portal activo" },
+  incomplete: { label: "Perfil incompleto", trust: null },
 };
 
 const STATUS_PILL: Record<WorkerHeroStatus, string> = {
