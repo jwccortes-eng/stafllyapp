@@ -474,9 +474,9 @@ export default function EmployeeDashboard() {
           <div className="h-10 w-10 mx-auto rounded-xl bg-muted/60 flex items-center justify-center mb-2">
             <CalendarDays className="h-5 w-5 text-muted-foreground/60" />
           </div>
-          <p className="text-[13px] font-semibold text-foreground">Sin turnos por ahora</p>
+          <p className="text-[13px] font-semibold text-foreground">Aún no tienes turnos asignados</p>
           <p className="text-[11.5px] text-muted-foreground/75 mt-1 leading-relaxed max-w-[260px] mx-auto">
-            Te avisaremos cuando algo se asigne.
+            Te avisaremos aquí cuando tengas un nuevo turno.
           </p>
         </div>
       )}
