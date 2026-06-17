@@ -37,6 +37,26 @@ export const PARCEROS_ALLOWED_KEYS: ReadonlyArray<string> = [
   "stafly_worker_id",
 ] as const;
 
+/**
+ * Path-scoped allowlist: `{key}` is permitted ONLY when the JSON path
+ * matches one of these substrings. Used for legitimate contract fields
+ * whose key name collides with a generically-forbidden token.
+ *
+ * Example: `work_history[].company_name` is the past employer's public
+ * name (verified work history), NOT the Stafly tenant name.
+ */
+const PATH_SCOPED_ALLOWLIST: ReadonlyArray<{ key: string; pathContains: string }> = [
+  { key: "company_name", pathContains: ".work_history[" },
+];
+
+function isAllowedAtPath(key: string, path: string): boolean {
+  const k = key.toLowerCase();
+  for (const rule of PATH_SCOPED_ALLOWLIST) {
+    if (rule.key === k && path.includes(rule.pathContains)) return true;
+  }
+  return false;
+}
+
 export interface ForbiddenHit {
   key: string;
   path: string;
@@ -56,10 +76,11 @@ export function findForbiddenKeys(value: unknown, path = "$"): ForbiddenHit[] {
   }
 
   for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
-    if (FORBIDDEN_SET.has(k.toLowerCase())) {
-      hits.push({ key: k, path: `${path}.${k}` });
+    const childPath = `${path}.${k}`;
+    if (FORBIDDEN_SET.has(k.toLowerCase()) && !isAllowedAtPath(k, childPath)) {
+      hits.push({ key: k, path: childPath });
     }
-    hits.push(...findForbiddenKeys(v, `${path}.${k}`));
+    hits.push(...findForbiddenKeys(v, childPath));
   }
   return hits;
 }
