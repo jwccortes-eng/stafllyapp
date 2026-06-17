@@ -239,7 +239,7 @@ export default function AdminLayout() {
           <div className="flex items-center justify-between px-3 h-12">
             <div className="flex items-center gap-2 min-w-0">
               <StaflyLogo size={22} markOnly />
-              <MobilePageTitle items={visibleItems} />
+              <MobilePageTitle items={mobileVisibleItems} />
             </div>
             {/* Mobile header — keep at most 2 primary affordances visible.
                 Mode/Sound/Product live in the MoreSheet to avoid clutter and
@@ -262,7 +262,7 @@ export default function AdminLayout() {
         {useLegacyNav ? (
           <>
             <FloatingDock
-              items={visibleItems}
+              items={mobileVisibleItems}
               pinnedIds={pinnedIds}
               onOpenLauncher={() => setLauncherOpen(true)}
               variant="admin"
@@ -270,7 +270,7 @@ export default function AdminLayout() {
             <AppLauncher
               open={launcherOpen}
               onClose={() => setLauncherOpen(false)}
-              items={visibleItems}
+              items={mobileVisibleItems}
               pinnedIds={pinnedIds}
               onTogglePin={togglePin}
               maxPins={maxPins}
@@ -287,7 +287,7 @@ export default function AdminLayout() {
             <MoreSheet
               open={launcherOpen}
               onClose={() => setLauncherOpen(false)}
-              items={visibleItems}
+              items={mobileVisibleItems}
               pinnedIds={pinnedIds}
               onTogglePin={togglePin}
               maxPins={maxPins}
