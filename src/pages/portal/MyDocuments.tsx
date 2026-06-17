@@ -57,6 +57,7 @@ import { formatDateUS } from "@/lib/date-format";
 import DocumentPreviewDialog from "@/components/documents/DocumentPreviewDialog";
 import { W9EntryCard } from "@/components/portal/W9EntryCard";
 import { isEmployeeDriver } from "@/components/shifts/types";
+import { clearFileInput, openFilePicker, selectedFileFromInput } from "@/lib/mobile-file-picker";
 
 type ReviewStatus = "pending" | "approved" | "rejected";
 
@@ -511,9 +512,9 @@ export default function MyDocuments() {
                           accept="image/*,application/pdf"
                           className="hidden"
                           onChange={(e) => {
-                            const f = e.target.files?.[0];
+                            const f = selectedFileFromInput(e);
                             if (f) handleUpload(cat, f, expirationDates[cat] || null, "full");
-                            if (e.target) e.target.value = "";
+                            clearFileInput(e);
                           }}
                         />
                         <Button
@@ -522,7 +523,7 @@ export default function MyDocuments() {
                           size="sm"
                           className="w-full h-9 text-xs gap-1.5"
                           disabled={isUploading}
-                          onClick={() => inputsRef.current[cat]?.click()}
+                          onClick={() => openFilePicker(inputsRef.current[cat], toast)}
                         >
                           {isUploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
                           {ctaLabel}
@@ -562,9 +563,9 @@ export default function MyDocuments() {
                           accept="image/*,application/pdf"
                           className="hidden"
                           onChange={(e) => {
-                            const f = e.target.files?.[0];
+                            const f = selectedFileFromInput(e);
                             if (f) handleUpload(cat, f, expirationDates[cat] || null, side);
-                            if (e.target) e.target.value = "";
+                            clearFileInput(e);
                           }}
                         />
                         <Button
@@ -573,7 +574,7 @@ export default function MyDocuments() {
                           size="sm"
                           className="w-full h-8 text-[11px] gap-1.5"
                           disabled={isUploading}
-                          onClick={() => inputsRef.current[inputKey(side)]?.click()}
+                          onClick={() => openFilePicker(inputsRef.current[inputKey(side)], toast)}
                         >
                           {isUploading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
                           {present ? `Reemplazar ${sideLabel.toLowerCase()}` : `Sube el ${sideLabel.toLowerCase()}`}
@@ -650,9 +651,9 @@ export default function MyDocuments() {
               accept="image/*,application/pdf"
               className="hidden"
               onChange={(e) => {
-                const f = e.target.files?.[0];
+                const f = selectedFileFromInput(e);
                 if (f) handleUpload("other", f);
-                if (e.target) e.target.value = "";
+                clearFileInput(e);
               }}
             />
             <Button
@@ -661,7 +662,7 @@ export default function MyDocuments() {
               size="sm"
               className="w-full h-9 text-xs gap-1.5"
               disabled={uploadingCat === "other"}
-              onClick={() => inputsRef.current["other"]?.click()}
+              onClick={() => openFilePicker(inputsRef.current["other"], toast)}
             >
               {uploadingCat === "other" ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
