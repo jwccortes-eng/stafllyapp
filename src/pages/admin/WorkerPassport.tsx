@@ -17,7 +17,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   Star, Shield, TrendingUp, Target, MapPin, Briefcase,
-  Clock, Building2, Globe, Lock, Award, Languages, Car, RefreshCw,
+  Clock, Building2, Globe, Lock, Award, Languages, Car, RefreshCw, ExternalLink,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LegacyDeprecationBanner } from "@/components/transition/LegacyDeprecationBanner";
@@ -257,6 +257,40 @@ export default function WorkerPassport() {
         replacementLabel="Unified Person Profile"
         description="El nuevo perfil maestro consolida identidad, readiness, documentos, asistencia, payroll y actividad reciente."
       />
+      {(() => {
+        const passportSlug = (wp.profile as any)?.slug as string | undefined;
+        return (
+          <div className="flex items-center justify-between gap-3 rounded-md border border-border/40 bg-muted/30 px-3 py-2">
+            <div className="text-xs text-muted-foreground">
+              Ecosystem Passport · vista pública verificada del worker.
+            </div>
+            {passportSlug ? (
+              <Button
+                asChild
+                variant="outline"
+                size="sm"
+                className="gap-1.5 text-xs"
+              >
+                <a href={`/passport/${passportSlug}`} target="_blank" rel="noopener noreferrer">
+                  <ExternalLink className="h-3.5 w-3.5" />
+                  Ver Ecosystem Passport
+                </a>
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                disabled
+                className="gap-1.5 text-xs"
+                title="Este worker aún no tiene un Ecosystem Passport publicado."
+              >
+                <ExternalLink className="h-3.5 w-3.5" />
+                Passport aún no generado
+              </Button>
+            )}
+          </div>
+        );
+      })()}
       <div className="flex items-center justify-between">
         <PageHeader title="Worker Passport" subtitle="Professional verified profile" />
         <Button variant="outline" size="sm" onClick={handleConsolidate} disabled={consolidating || !wp.profile?.id} className="gap-1.5 text-xs">
