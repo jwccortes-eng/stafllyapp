@@ -135,6 +135,98 @@ async function auditDeviceTrust(
   }
 }
 
+/**
+ * Authorize a per-employee sensitive action.
+ * Returns true if any of these holds:
+ *   1. JWT caller's auth.uid() === employees.user_id (worker acting on self).
+ *   2. JWT caller is global owner OR has admin/company_owner/manager/owner/
+ *      developer/founder role in company_users for employees.company_id.
+ *   3. Body `pin` matches employees.access_pin (kiosk PIN flow).
+ *   4. Body `device_id` is a trusted, active kiosk device whose
+ *      company_id matches employees.company_id (trusted-kiosk flow).
+ * Returns false otherwise.
+ */
+async function authorizeEmployeeAction(
+  adminClient: ReturnType<typeof createClient>,
+  req: Request,
+  params: { employee_id: string; pin?: string | null; device_id?: string | null },
+): Promise<{ ok: boolean; via?: "self" | "admin" | "pin" | "kiosk"; reason?: string }> {
+  const { employee_id, pin, device_id } = params;
+  if (!employee_id) return { ok: false, reason: "no_employee_id" };
+
+  // Resolve target employee (user_id + company_id + access_pin).
+  const { data: emp } = await adminClient
+    .from("employees")
+    .select("id, user_id, company_id, access_pin, is_active")
+    .eq("id", employee_id)
+    .maybeSingle();
+  if (!emp) return { ok: false, reason: "employee_not_found" };
+
+  // (1) + (2): JWT-based paths.
+  const authHeader = req.headers.get("Authorization");
+  if (authHeader?.startsWith("Bearer ")) {
+    try {
+      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+      const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+      const callerClient = createClient(supabaseUrl, anonKey, {
+        global: { headers: { Authorization: authHeader } },
+      });
+      const { data: { user: caller } } = await callerClient.auth.getUser();
+      if (caller) {
+        // (1) self
+        if (emp.user_id && emp.user_id === caller.id) {
+          return { ok: true, via: "self" };
+        }
+        // (2) admin / company_owner / etc. for this tenant
+        const { data: globalOwner } = await adminClient.rpc("is_global_owner", {
+          _user_id: caller.id,
+        });
+        if (globalOwner === true) return { ok: true, via: "admin" };
+        const { data: membership } = await adminClient
+          .from("company_users")
+          .select("role")
+          .eq("user_id", caller.id)
+          .eq("company_id", emp.company_id)
+          .maybeSingle();
+        const adminRoles = new Set([
+          "admin",
+          "company_owner",
+          "owner",
+          "manager",
+          "developer",
+          "founder",
+          "operations_admin",
+        ]);
+        if (membership && adminRoles.has(membership.role)) {
+          return { ok: true, via: "admin" };
+        }
+      }
+    } catch (err) {
+      console.warn("[front-desk auth] JWT path failed", err);
+    }
+  }
+
+  // (3) PIN path — equality match against stored access_pin.
+  if (pin && typeof pin === "string" && emp.access_pin && pin === emp.access_pin) {
+    return { ok: true, via: "pin" };
+  }
+
+  // (4) Trusted-kiosk-device path.
+  if (device_id && typeof device_id === "string" && UUID_RE_GLOBAL.test(device_id)) {
+    const { data: dev } = await adminClient
+      .from("kiosk_devices")
+      .select("id, company_id, is_active, is_trusted")
+      .eq("id", device_id)
+      .maybeSingle();
+    if (dev && dev.is_active && dev.is_trusted && dev.company_id === emp.company_id) {
+      return { ok: true, via: "kiosk" };
+    }
+  }
+
+  return { ok: false, reason: "not_authorized" };
+}
+
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
