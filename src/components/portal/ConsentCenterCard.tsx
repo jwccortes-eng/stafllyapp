@@ -106,8 +106,8 @@ export function ConsentCenterCard() {
             Compartir mi perfil con Parceros
           </h2>
           <p className="mt-1 text-[11.5px] text-muted-foreground/80 leading-snug">
-            Activa esta opción para que tu perfil verificado pueda ofrecerse a empresas en la red
-            de Parceros. Puedes revocarlo cuando quieras.
+            Activa esta opción para que empresas aliadas de Parceros puedan ver tu perfil
+            profesional. Lo revocas cuando quieras.
           </p>
         </div>
         <div className="shrink-0 pt-0.5">
@@ -123,12 +123,24 @@ export function ConsentCenterCard() {
         </div>
       </div>
 
-      <div className="mt-3 rounded-xl bg-muted/40 px-3 py-2 flex items-start gap-2">
-        <Share2 className="h-3.5 w-3.5 text-muted-foreground/70 mt-0.5 shrink-0" />
-        <p className="text-[10.5px] text-muted-foreground/75 leading-snug">
-          Solo se comparte tu perfil profesional verificado (nombre, foto, experiencia, idiomas,
-          habilidades). Nunca compartimos teléfono, correo, dirección, documentos ni datos fiscales.
-        </p>
+      <div className="mt-3 rounded-xl bg-muted/40 px-3 py-2 flex flex-col gap-2">
+        <div className="flex items-start gap-2">
+          <Share2 className="h-3.5 w-3.5 text-muted-foreground/70 mt-0.5 shrink-0" />
+          <p className="text-[10.5px] text-muted-foreground/75 leading-snug">
+            <span className="font-semibold text-muted-foreground/90">Sí compartimos:</span>{" "}
+            nombre visible, foto si está autorizada, experiencia pública, habilidades, idiomas,
+            reputación autorizada y ciudad/zona general si aplica.
+          </p>
+        </div>
+        <div className="flex items-start gap-2">
+          <ShieldCheck className="h-3.5 w-3.5 text-muted-foreground/70 mt-0.5 shrink-0" />
+          <p className="text-[10.5px] text-muted-foreground/75 leading-snug">
+            <span className="font-semibold text-muted-foreground/90">Nunca compartimos:</span>{" "}
+            payroll, horas de pago, time_entries, SSN/EIN, dirección exacta, información
+            bancaria, documentos privados, notas internas, datos médicos, chat privado ni datos
+            privados de compañías/tenants.
+          </p>
+        </div>
       </div>
 
       {granted && activeRow?.granted_at && (
