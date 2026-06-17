@@ -12,6 +12,7 @@ import {
   Phone, Loader2, ShieldCheck, Lock, CheckCircle2, Camera, Mail, ArrowLeft, Sparkles, UserCheck
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { clearFileInput, createPreviewUrl, openFilePicker, selectedFileFromInput } from "@/lib/mobile-file-picker";
 
 type EmployeeStep = "phone" | "activate_pin" | "activate_profile" | "login_pin" | "force_change_pin";
 
@@ -187,14 +188,24 @@ export function EmployeeAuthFlow({ onSessionReady }: { onSessionReady: () => voi
   };
 
   const handleAvatarSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const file = selectedFileFromInput(e);
+    if (!file) {
+      clearFileInput(e);
+      return;
+    }
     if (file.size > 5 * 1024 * 1024) {
       toast({ title: "File too large", description: "Image must be under 5MB", variant: "destructive" });
+      clearFileInput(e);
+      return;
+    }
+    const previewUrl = createPreviewUrl(file, toast);
+    if (!previewUrl) {
+      clearFileInput(e);
       return;
     }
     setAvatarFile(file);
-    setAvatarPreview(URL.createObjectURL(file));
+    setAvatarPreview(previewUrl);
+    clearFileInput(e);
   };
 
   const handleActivate = async () => {
@@ -415,7 +426,7 @@ export function EmployeeAuthFlow({ onSessionReady }: { onSessionReady: () => voi
             />
             <button
               type="button"
-              onClick={() => fileInputRef.current?.click()}
+              onClick={() => openFilePicker(fileInputRef.current, toast)}
               className="group relative"
             >
               <Avatar className="h-20 w-20 border-2 border-dashed border-border group-hover:border-primary/50 transition-colors">

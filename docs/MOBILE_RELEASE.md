@@ -118,8 +118,12 @@ git checkout -- capacitor.config.ts
 
 - Generate icons and splash with `@capacitor/assets`
   (see `docs/PARCEROS_LAUNCH_ASSETS.md`).
-- Add `NSLocationWhenInUseUsageDescription`, `NSCameraUsageDescription`,
-  `NSPhotoLibraryUsageDescription` to `ios/App/App/Info.plist`.
+- The `capacitor:sync:after` hook adds these required iOS privacy keys to
+  `ios/App/App/Info.plist` when the native iOS project exists:
+  `NSCameraUsageDescription`, `NSPhotoLibraryUsageDescription`, and
+  `NSPhotoLibraryAddUsageDescription`. Confirm they are present before
+  archiving. `NSLocationWhenInUseUsageDescription` still needs native review
+  when location features are enabled in the store build.
 - Add `ACCESS_COARSE_LOCATION`, `POST_NOTIFICATIONS`,
   `usesCleartextTraffic="false"` to `android/app/src/main/AndroidManifest.xml`
   (and the Parceros copy).

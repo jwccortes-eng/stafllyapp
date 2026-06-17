@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { CAMERA_PHOTO_PERMISSION_MESSAGE } from "@/lib/mobile-file-picker";
+import { useToast } from "@/hooks/use-toast";
 
 interface ClockPhotoCaptureProps {
   open: boolean;
@@ -22,6 +24,7 @@ export function ClockPhotoCapture({
   companyId,
   clockType,
 }: ClockPhotoCaptureProps) {
+  const { toast } = useToast();
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -29,6 +32,7 @@ export function ClockPhotoCapture({
   const [captured, setCaptured] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [cameraRequested, setCameraRequested] = useState(false);
 
   const stopCamera = useCallback(() => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
@@ -39,31 +43,41 @@ export function ClockPhotoCapture({
   const startCamera = useCallback(async () => {
     setError(null);
     setCaptured(null);
+    setCameraRequested(true);
     try {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        throw new DOMException("Camera not available", "NotFoundError");
+      }
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } },
       });
       streamRef.current = stream;
+      if (!videoRef.current) {
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+      }
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         await videoRef.current.play();
         setCameraReady(true);
       }
-    } catch {
-      setError("No se pudo acceder a la cámara. Verifica los permisos.");
+    } catch (err: any) {
+      const message = err?.name === "NotAllowedError"
+        ? CAMERA_PHOTO_PERMISSION_MESSAGE
+        : "No se pudo acceder a la cámara. Verifica los permisos e inténtalo de nuevo.";
+      setError(message);
+      toast({ title: "Camera/photo access needed", description: message, variant: "destructive" });
     }
-  }, []);
+  }, [toast]);
 
   useEffect(() => {
-    if (open) {
-      startCamera();
-    } else {
+    if (!open) {
       stopCamera();
       setCaptured(null);
       setError(null);
+      setCameraRequested(false);
     }
     return () => stopCamera();
-  }, [open]);
+  }, [open, stopCamera]);
 
   const takePhoto = useCallback(() => {
     if (!videoRef.current || !canvasRef.current) return;
@@ -142,17 +156,25 @@ export function ClockPhotoCapture({
           <div className="relative aspect-square w-full max-w-[320px] mx-auto rounded-2xl overflow-hidden bg-black/90 border border-border/30">
             {!captured ? (
               <>
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  className={cn(
-                    "w-full h-full object-cover transition-opacity duration-300",
-                    cameraReady ? "opacity-100" : "opacity-0"
-                  )}
-                />
-                {!cameraReady && !error && (
+                {cameraRequested && (
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className={cn(
+                      "w-full h-full object-cover transition-opacity duration-300",
+                      cameraReady ? "opacity-100" : "opacity-0"
+                    )}
+                  />
+                )}
+                {!cameraRequested && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-6 text-center">
+                    <Camera className="h-8 w-8 text-primary" />
+                    <p className="text-xs font-medium text-white/85">Toca para abrir la cámara</p>
+                  </div>
+                )}
+                {cameraRequested && !cameraReady && !error && (
                   <div className="absolute inset-0 flex items-center justify-center">
                     <Loader2 className="h-8 w-8 text-primary animate-spin" />
                   </div>
@@ -182,12 +204,12 @@ export function ClockPhotoCapture({
           <div className="flex gap-2">
             {!captured ? (
               <Button
-                onClick={takePhoto}
-                disabled={!cameraReady || !!error}
+                onClick={cameraReady ? takePhoto : startCamera}
+                disabled={cameraRequested && !cameraReady && !error}
                 className="w-full h-12 rounded-xl text-sm font-semibold gap-2"
               >
                 <Camera className="h-4 w-4" />
-                Tomar foto
+                {cameraReady ? "Tomar foto" : "Abrir cámara"}
               </Button>
             ) : (
               <>

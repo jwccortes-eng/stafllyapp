@@ -25,6 +25,7 @@ import {
   type StructuredAddress,
 } from "@/lib/address";
 import { queryClient } from "@/lib/query-client";
+import { clearFileInput, createPreviewUrl, openFilePicker, selectedFileFromInput } from "@/lib/mobile-file-picker";
 
 type PageState = "loading" | "valid" | "expired" | "used" | "invalid" | "superseded";
 type WizardStep = "welcome" | "pin" | "personal" | "address" | "details" | "documents" | "photo" | "ready";
@@ -389,23 +390,28 @@ export default function ActivateAccount() {
 
   // ─── File handlers ───
   const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0];
-    if (!f) return;
-    if (!f.type.startsWith("image/")) return;
-    if (f.size > 5 * 1024 * 1024) { setError("Image too large. Max 5 MB."); return; }
+    const f = selectedFileFromInput(e);
+    if (!f) { clearFileInput(e); return; }
+    if (!f.type.startsWith("image/")) { clearFileInput(e); return; }
+    if (f.size > 5 * 1024 * 1024) { setError("Image too large. Max 5 MB."); clearFileInput(e); return; }
+    const previewUrl = createPreviewUrl(f, toast);
+    if (!previewUrl) { clearFileInput(e); return; }
     setAvatarFile(f);
-    setAvatarPreview(URL.createObjectURL(f));
+    setAvatarPreview(previewUrl);
     setError("");
+    clearFileInput(e);
   };
 
   const handleDocSelect = (e: React.ChangeEvent<HTMLInputElement>, type: "license" | "registration") => {
-    const f = e.target.files?.[0];
-    if (!f) return;
-    if (f.size > 10 * 1024 * 1024) { setError("File too large. Max 10 MB."); return; }
-    const preview = f.type.startsWith("image/") ? URL.createObjectURL(f) : f.name;
+    const f = selectedFileFromInput(e);
+    if (!f) { clearFileInput(e); return; }
+    if (f.size > 10 * 1024 * 1024) { setError("File too large. Max 10 MB."); clearFileInput(e); return; }
+    const preview = f.type.startsWith("image/") ? createPreviewUrl(f, toast) : f.name;
+    if (!preview) { clearFileInput(e); return; }
     if (type === "license") { setDriverLicenseFile(f); setDriverLicensePreview(preview); }
     else { setVehicleRegFile(f); setVehicleRegPreview(preview); }
     setError("");
+    clearFileInput(e);
   };
 
   // ─── Validation ───
@@ -1093,7 +1099,7 @@ export default function ActivateAccount() {
                       </Label>
                       <input ref={driverLicenseRef} type="file" accept="image/*,.pdf" onChange={e => handleDocSelect(e, "license")} className="hidden" />
                       <button
-                        onClick={() => driverLicenseRef.current?.click()}
+                        onClick={() => openFilePicker(driverLicenseRef.current, toast)}
                         className={cn(
                           "w-full rounded-xl border-2 border-dashed p-4 flex flex-col items-center gap-2 transition-colors",
                           driverLicenseFile ? "border-earning/30 bg-earning/5" : "border-border hover:border-primary/30"
@@ -1123,7 +1129,7 @@ export default function ActivateAccount() {
                       </Label>
                       <input ref={vehicleRegRef} type="file" accept="image/*,.pdf" onChange={e => handleDocSelect(e, "registration")} className="hidden" />
                       <button
-                        onClick={() => vehicleRegRef.current?.click()}
+                        onClick={() => openFilePicker(vehicleRegRef.current, toast)}
                         className={cn(
                           "w-full rounded-xl border-2 border-dashed p-4 flex flex-col items-center gap-2 transition-colors",
                           vehicleRegFile ? "border-earning/30 bg-earning/5" : "border-border hover:border-primary/30"
@@ -1161,7 +1167,7 @@ export default function ActivateAccount() {
 
                   <input ref={fileRef} type="file" accept="image/*" capture="user" onChange={handlePhotoSelect} className="hidden" />
 
-                  <button onClick={() => fileRef.current?.click()} className="group mx-auto block relative">
+                  <button onClick={() => openFilePicker(fileRef.current, toast)} className="group mx-auto block relative">
                     <Avatar className="h-28 w-28 border-2 border-dashed border-border group-hover:border-primary/50 transition-colors">
                       {avatarPreview ? (
                         <AvatarImage src={avatarPreview} />
