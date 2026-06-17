@@ -185,8 +185,8 @@ export const REQUIREMENT_CATALOG: RequirementDef[] = [
     description: "Necesario para procesar pagos como contratista 1099.",
     icon: "file-text",
     blocksScope: [],
-    resolveHref: "/portal/documents",
-    ctaLabel: "Subir documento",
+    resolveHref: "/portal/w9",
+    ctaLabel: "Firmar W-9",
   },
   {
     key: "documents.id",
