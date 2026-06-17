@@ -788,9 +788,20 @@ Deno.serve(async (req) => {
 
     // ============= CAPTURE KIOSK PHOTO =============
     if (action === "capture_kiosk_photo") {
-      const { employee_id, photo_base64, visit_id, device_id } = body;
+      const { employee_id, photo_base64, visit_id, device_id, pin } = body;
       if (!employee_id || !photo_base64) {
         return jsonResp({ error: "employee_id y photo_base64 requeridos" }, 400);
+      }
+
+      // === AUTHZ === must be self / admin / valid PIN / trusted kiosk
+      const authz = await authorizeEmployeeAction(adminClient, req, {
+        employee_id,
+        pin,
+        device_id,
+      });
+      if (!authz.ok) {
+        console.warn("[front-desk] capture_kiosk_photo denied", { employee_id, reason: authz.reason });
+        return jsonResp({ error: "No autorizado" }, 403);
       }
 
       // Monitor-mode device trust audit (non-blocking). Resolve company_id first.
@@ -805,6 +816,7 @@ Deno.serve(async (req) => {
         employee_id,
         company_id: empForAudit?.company_id ?? null,
       });
+
 
       const match = photo_base64.match(/^data:(image\/\w+);base64,(.*)$/);
       const mime = match?.[1] ?? "image/jpeg";
