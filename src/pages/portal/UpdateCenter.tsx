@@ -31,6 +31,7 @@ import {
 } from "@/lib/compliance/requirement-catalog";
 import { WorkerSelfServiceSections } from "@/components/portal/WorkerSelfServiceSections";
 import { W9EntryCard } from "@/components/portal/W9EntryCard";
+import { ConsentCenterCard } from "@/components/portal/ConsentCenterCard";
 import { cn } from "@/lib/utils";
 
 const ICONS: Record<RequirementDef["icon"], React.ComponentType<{ className?: string }>> = {
@@ -114,6 +115,9 @@ export default function UpdateCenter() {
 
       {/* ── W-9 guided form entry ── */}
       <W9EntryCard />
+
+      {/* ── Consent Center (Phase 2 — Parceros data sharing) ── */}
+      <ConsentCenterCard />
 
       {/* ── Loading ── */}
       {loading && (
