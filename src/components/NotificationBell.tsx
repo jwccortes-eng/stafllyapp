@@ -209,6 +209,12 @@ const NotificationBell = forwardRef<HTMLDivElement>(function NotificationBell(_p
               {unreadCount > 9 ? "9+" : unreadCount}
             </span>
           )}
+          {soundStatus === "blocked" && unreadCount === 0 && (
+            <span
+              aria-label="Sonido desactivado"
+              className="absolute top-1 right-1 h-2 w-2 rounded-full bg-amber-500 ring-2 ring-card"
+            />
+          )}
         </button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-[380px] p-0 rounded-2xl shadow-xl border-border/50" sideOffset={8}>
