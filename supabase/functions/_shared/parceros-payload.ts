@@ -7,6 +7,8 @@
  * ❌ NEVER export: payroll, client details, private addresses, documents, notes
  */
 
+import { assertNoForbiddenKeys } from "./parceros-forbidden-keys.ts";
+
 // ── Internal StaflyApps payload (rich, for buildWorkerPayload) ──
 
 export interface ParcerosSyncPayload {
@@ -189,7 +191,7 @@ export function toParcerosSyncBody(
   // Experience: null if hidden
   const yearsExp = vis.show_experience ? w.profile.years_of_experience : null;
 
-  return {
+  const result: ParcerosSyncWorkerPassportBody = {
     external_worker_id: w.stafly_worker_id,
     display_name: displayName,
     skills: vis.show_skills ? w.skills.map((s) => s.name).filter(Boolean) : [],
@@ -206,6 +208,12 @@ export function toParcerosSyncBody(
     source: "staflyapps",
     external_data: payload,
   };
+
+  // E5.3 guardrail — warn-only by default. Throws only if
+  // PARCEROS_GUARDRAIL_MODE="enforce" (NOT enabled in production).
+  assertNoForbiddenKeys(result, "toParcerosSyncBody");
+
+  return result;
 }
 
 // ── Data Exclusion List (documentation) ──
