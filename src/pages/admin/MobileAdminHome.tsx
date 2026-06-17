@@ -9,6 +9,7 @@ import { useCompany } from "@/hooks/useCompany";
 import { useAuth } from "@/hooks/useAuth";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { AdminProductSwitcher } from "@/components/admin/AdminProductSwitcher";
 
 /**
  * Mobile-first Admin Home — Command Center style.
@@ -108,17 +109,24 @@ export default function MobileAdminHome() {
     <div className="min-h-full pb-[calc(env(safe-area-inset-bottom,0px)+72px)]">
       {/* Hero */}
       <div className="px-5 pt-5 pb-4">
-        <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.14em] text-muted-foreground mb-1.5">
-          <Sparkles className="h-3 w-3" />
-          <span className="truncate">{companyLabel}</span>
+        <div className="flex items-start gap-3">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.14em] text-muted-foreground mb-1.5">
+              <Sparkles className="h-3 w-3" />
+              <span className="truncate">{companyLabel}</span>
+            </div>
+            <h1 className="text-2xl font-semibold tracking-tight leading-tight">
+              {greeting},<br />
+              <span className="text-primary">{firstName}.</span>
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1.5">
+              Your command center. Tap to jump in.
+            </p>
+          </div>
+          <div className="shrink-0 pt-0.5">
+            <AdminProductSwitcher compact />
+          </div>
         </div>
-        <h1 className="text-2xl font-semibold tracking-tight leading-tight">
-          {greeting},<br />
-          <span className="text-primary">{firstName}.</span>
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1.5">
-          Your command center. Tap to jump in.
-        </p>
       </div>
 
       {/* Search bar */}

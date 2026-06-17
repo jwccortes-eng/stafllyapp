@@ -1,6 +1,7 @@
 import { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { STAFLY_BOTTOM_NAV_CLEARANCE } from "@/components/stafly-ui/tokens";
+import { AdminProductSwitcher } from "@/components/admin/AdminProductSwitcher";
 
 interface MobileAdminModuleShellProps {
   /** MobileAdminHeader */
@@ -21,6 +22,8 @@ interface MobileAdminModuleShellProps {
  *  - safe-area bottom padding (AdminBottomNav clearance)
  *  - consistent vertical rhythm
  *  - same chrome ordering across modules: header → tabs → summary → toolbar → content
+ *  - always-visible product switcher (Admin ↔ Portal ↔ Parceros) since the
+ *    mobile admin shell does NOT mount the desktop TopBar / ModeSwitcher.
  *
  * Frontend-only. Renders nothing extra; just composition + spacing.
  */
@@ -33,7 +36,12 @@ export function MobileAdminModuleShell({
   className,
 }: MobileAdminModuleShellProps) {
   return (
-    <div className={cn("min-h-full flex flex-col", STAFLY_BOTTOM_NAV_CLEARANCE, className)}>
+    <div className={cn("relative min-h-full flex flex-col", STAFLY_BOTTOM_NAV_CLEARANCE, className)}>
+      {/* Always-on product switcher fallback for mobile admin views.
+          Absolute so it sits over the header without disrupting per-module layouts. */}
+      <div className="absolute top-3 right-3 z-20">
+        <AdminProductSwitcher compact />
+      </div>
       {header}
       {tabs}
       {summary && <div className="mb-3">{summary}</div>}
