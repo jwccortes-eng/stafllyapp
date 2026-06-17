@@ -1099,7 +1099,7 @@ export default function ActivateAccount() {
                       </Label>
                       <input ref={driverLicenseRef} type="file" accept="image/*,.pdf" onChange={e => handleDocSelect(e, "license")} className="hidden" />
                       <button
-                        onClick={() => driverLicenseRef.current?.click()}
+                        onClick={() => openFilePicker(driverLicenseRef.current, toast)}
                         className={cn(
                           "w-full rounded-xl border-2 border-dashed p-4 flex flex-col items-center gap-2 transition-colors",
                           driverLicenseFile ? "border-earning/30 bg-earning/5" : "border-border hover:border-primary/30"
@@ -1129,7 +1129,7 @@ export default function ActivateAccount() {
                       </Label>
                       <input ref={vehicleRegRef} type="file" accept="image/*,.pdf" onChange={e => handleDocSelect(e, "registration")} className="hidden" />
                       <button
-                        onClick={() => vehicleRegRef.current?.click()}
+                        onClick={() => openFilePicker(vehicleRegRef.current, toast)}
                         className={cn(
                           "w-full rounded-xl border-2 border-dashed p-4 flex flex-col items-center gap-2 transition-colors",
                           vehicleRegFile ? "border-earning/30 bg-earning/5" : "border-border hover:border-primary/30"
@@ -1167,7 +1167,7 @@ export default function ActivateAccount() {
 
                   <input ref={fileRef} type="file" accept="image/*" capture="user" onChange={handlePhotoSelect} className="hidden" />
 
-                  <button onClick={() => fileRef.current?.click()} className="group mx-auto block relative">
+                  <button onClick={() => openFilePicker(fileRef.current, toast)} className="group mx-auto block relative">
                     <Avatar className="h-28 w-28 border-2 border-dashed border-border group-hover:border-primary/50 transition-colors">
                       {avatarPreview ? (
                         <AvatarImage src={avatarPreview} />
