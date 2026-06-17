@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useEffectiveEmployee } from "@/hooks/useEffectiveEmployee";
@@ -7,7 +7,7 @@ import { Link, useLocation, useNavigate, useOutletContext } from "react-router-d
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import {
   User, Mail, Phone, MapPin, CalendarDays, Wallet,
-  ChevronRight, LogOut, Shield, BarChart3, Camera, ArrowLeft, Loader2, KeyRound, MoreHorizontal,
+  ChevronRight, LogOut, Shield, BarChart3, ArrowLeft, Loader2, KeyRound, MoreHorizontal,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -40,8 +40,9 @@ export default function PortalProfile() {
   const [profile, setProfile] = useState<EmployeeProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [companyName, setCompanyName] = useState("");
-  const [uploading, setUploading] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
+  // Phase 1B.1 2026-06-17: removed inline upload state (uploading, fileRef,
+  // handleAvatarUpload). Single source of truth is now <ProfilePhotoUpload/>
+  // which carries the Aceptado/No aceptado guide from Worker Photo Update v2.
 
   // Readiness drives the banner *and* acts as a freshness signal: when the
   // worker comes back from /portal/profile/complete, the status changes and we
