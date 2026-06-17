@@ -15,6 +15,12 @@ import type {
   ParcerosSyncWorkerPassportBody,
 } from "../_shared/parceros-payload.ts";
 import { toParcerosSyncBody } from "../_shared/parceros-payload.ts";
+import {
+  decideEnforcement,
+  normalizeMode,
+  type ConsentStatus,
+  type EnforcementMode,
+} from "../_shared/parceros-consent-decider.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -113,13 +119,35 @@ Deno.serve(async (req) => {
       if (payload) payloads.push(payload);
     }
 
-    // ── Consent evaluation (log_only by default; never blocks in this phase) ──
-    // Mode: env PARCEROS_CONSENT_MODE = "log_only" (default) | "enforce" | "off"
-    // Phase 1 contract: log_only ONLY. enforce branch reserved for Phase 3 after UI adoption.
-    const consentMode = (Deno.env.get("PARCEROS_CONSENT_MODE") ?? "log_only").toLowerCase();
+    // ── Consent + visibility evaluation (E5.6) ──
+    // Mode: env PARCEROS_CONSENT_MODE = "log_only" (default, production)
+    //                                  | "enforce" (E5.7 only; NOT set in prod at E5.6 close)
+    //                                  | "off"
+    // log_only NEVER blocks. enforce blocks push + queue when decider returns allow=false.
+    const consentMode: EnforcementMode = normalizeMode(Deno.env.get("PARCEROS_CONSENT_MODE"));
+    const decisionsByWp = new Map<string, ReturnType<typeof decideEnforcement>>();
     if (consentMode !== "off") {
       for (const wpId of workerProfileIds) {
-        await evaluateConsentLogOnly(supabase, wpId, consentMode, pushToParceros);
+        const status = await fetchConsentStatus(supabase, wpId);
+        const visibility = payloads.find((p) => p.worker.stafly_worker_id === wpId)?.worker.visibility
+          ?? { profile_visibility: null };
+        const decision = decideEnforcement(status, visibility, consentMode);
+        decisionsByWp.set(wpId, decision);
+        // Structured log; no PII (worker_profile_id is an internal UUID).
+        console.log(
+          JSON.stringify({
+            event: "parceros_consent_check",
+            mode: decision.mode,
+            enforced: decision.mode === "enforce",
+            worker_profile_id: wpId,
+            consent_status: decision.consent_status,
+            allow: decision.allow,
+            blocked_reason: decision.blocked_reason,
+            would_block_in_enforce: decision.would_block_in_enforce,
+            push_requested: pushToParceros,
+            ts: new Date().toISOString(),
+          })
+        );
       }
     }
 
@@ -139,6 +167,7 @@ Deno.serve(async (req) => {
       pushed: boolean;
       status?: number;
       error?: string;
+      blocked_reason?: string;
     }> = [];
 
     if (pushToParceros && payloads.length > 0) {
@@ -155,12 +184,23 @@ Deno.serve(async (req) => {
       }
 
       for (const payload of payloads) {
+        const wpId = payload.worker.stafly_worker_id;
+        const decision = decisionsByWp.get(wpId);
+        // Block in enforce mode. NEVER call push, NEVER queue. No retry accumulation.
+        if (decision && !decision.allow) {
+          pushResults.push({
+            worker_profile_id: wpId,
+            pushed: false,
+            blocked_reason: decision.blocked_reason ?? "blocked",
+          });
+          continue;
+        }
         const syncBody = toParcerosSyncBody(payload);
         const result = await pushWorkerPassportToParceros(
           supabase,
           parcerosBaseUrl,
           parcerosApiKey,
-          payload.worker.stafly_worker_id,
+          wpId,
           syncBody
         );
         pushResults.push(result);
