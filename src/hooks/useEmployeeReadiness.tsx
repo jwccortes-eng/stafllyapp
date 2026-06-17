@@ -55,7 +55,7 @@ export function useEmployeeReadiness(employeeId: string | null | undefined): Rea
       const personal = missingPersonalFields(emp as PersonalInfoSnapshot);
       setMissingPersonal(personal);
 
-      const canDrive = !!emp.has_car;
+      const canDrive = isEmployeeDriver(emp as any);
       const required = await getRequiredDocumentsForCompany(emp.company_id, { canDrive });
 
       const { data: docs } = await supabase
