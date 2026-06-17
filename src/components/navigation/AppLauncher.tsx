@@ -1,5 +1,6 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { Pin, PinOff, X, Settings2, LogOut, Moon, Sun } from "lucide-react";
+import { Pin, PinOff, X, Settings2, LogOut, Moon, Sun, Monitor } from "lucide-react";
+import { useT } from "@/i18n";
 import { cn } from "@/lib/utils";
 import { NavItem } from "./nav-items";
 import { Button } from "@/components/ui/button";
