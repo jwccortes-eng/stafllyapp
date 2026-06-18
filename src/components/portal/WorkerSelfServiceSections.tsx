@@ -34,6 +34,7 @@ import { WorkerPhotoStatusChip } from "@/components/employee/WorkerPhotoStatusCh
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import { formatPhoneUS, tenDigitUS } from "@/lib/phone-format";
 import { cn } from "@/lib/utils";
+import { StatusPill, type WorkerStatusTone } from "@/components/portal/StatusPill";
 
 interface Props {
   employeeId: string;
