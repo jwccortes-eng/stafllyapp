@@ -500,9 +500,17 @@ function IntakeItemRow({
                 <Select value={category} onValueChange={setCategory} disabled={locked}>
                   <SelectTrigger><SelectValue placeholder="Selecciona tipo" /></SelectTrigger>
                   <SelectContent>
-                    {CATEGORIES.map((c) => (<SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>))}
+                    {CATEGORIES.filter((c) => c.value !== "social_security_card").map((c) => (
+                      <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
+                {isSocialSecurity && (
+                  <div className="flex items-start gap-2 rounded-lg border border-rose-200 bg-rose-50/60 p-2 text-rose-800 text-xs">
+                    <ShieldAlert className="h-4 w-4 shrink-0 mt-0.5" />
+                    <span>Social Security documents require a restricted handling policy. Do not import here.</span>
+                  </div>
+                )}
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">Lado</Label>
