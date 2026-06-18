@@ -738,6 +738,11 @@ export default function CompaniesPage() {
         <DialogContent className="max-w-md">
           <DialogHeader><DialogTitle>Asignar plan</DialogTitle><DialogDescription>{planCompany?.name} — Asigna un plan sin pasar por Stripe</DialogDescription></DialogHeader>
           <div className="space-y-4">
+            {planCompany && LEGACY_PLAN_LABELS[planCompany.plan] && (
+              <div className="rounded-md border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
+                Plan actual: <strong>{LEGACY_PLAN_LABELS[planCompany.plan].label}</strong>. Los planes legacy se conservan pero ya no se ofrecen para nuevas asignaciones. Selecciona un plan del catálogo actual para continuar.
+              </div>
+            )}
             <div className="space-y-2">
               <Label>Plan</Label>
               <Select value={selectedPlan} onValueChange={setSelectedPlan}>
