@@ -67,13 +67,44 @@ interface CompanyRecord {
   employee_count: number;
 }
 
+/**
+ * Commercial plan catalog — aligned with /pricing public page.
+ * Single source of truth for new admin assignments.
+ *
+ * Legacy values (free, pro, enterprise) are intentionally NOT in this list.
+ * They still render via LEGACY_PLAN_LABELS when present on existing companies,
+ * but cannot be selected for new assignments.
+ */
 const PLAN_OPTIONS = [
-  { value: "free", label: "Starter", color: "bg-muted text-muted-foreground", price: 0 },
-  { value: "pro", label: "Pro", color: "bg-primary/10 text-primary", price: 49 },
-  { value: "enterprise", label: "Enterprise", color: "bg-chart-4/10 text-chart-4", price: 149 },
+  { value: "free", label: "Sin plan / cortesía", color: "bg-muted text-muted-foreground", price: 0 },
+  { value: "starter", label: "Starter", color: "bg-primary/10 text-primary", price: 149 },
+  { value: "operations", label: "Operations", color: "bg-primary/15 text-primary", price: 299 },
+  { value: "scale", label: "Scale", color: "bg-chart-4/10 text-chart-4", price: 599 },
 ] as const;
 
-const PLAN_PRICES: Record<string, number> = { free: 0, pro: 49, enterprise: 149 };
+/** Display-only labels for legacy plan values still present in DB. Not selectable. */
+const LEGACY_PLAN_LABELS: Record<string, { label: string; price: number }> = {
+  pro: { label: "Pro (Legacy)", price: 49 },
+  enterprise: { label: "Enterprise (Legacy)", price: 149 },
+};
+
+const PLAN_PRICES: Record<string, number> = {
+  free: 0,
+  starter: 149,
+  operations: 299,
+  scale: 599,
+  // Legacy — kept so MRR for existing companies stays consistent
+  pro: 49,
+  enterprise: 149,
+};
+
+function getPlanDisplay(plan: string): { label: string; isLegacy: boolean } {
+  const current = PLAN_OPTIONS.find(p => p.value === plan);
+  if (current) return { label: current.label, isLegacy: false };
+  const legacy = LEGACY_PLAN_LABELS[plan];
+  if (legacy) return { label: legacy.label, isLegacy: true };
+  return { label: plan || "—", isLegacy: false };
+}
 
 const ROLE_ICON: Record<string, React.ElementType> = {
   owner: Crown, admin: Shield, manager: UserCog, employee: User,
