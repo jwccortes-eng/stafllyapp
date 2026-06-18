@@ -101,10 +101,10 @@ export function WorkerSelfServiceSections({ employeeId, onUpdated }: Props) {
   return (
     <div className="space-y-3">
       <div className="px-1">
-        <h2 className="text-[10.5px] font-bold uppercase tracking-widest text-muted-foreground/55">
+        <h2 className="text-[12px] font-bold uppercase tracking-wider text-muted-foreground">
           Actualiza tu información
         </h2>
-        <p className="text-[11.5px] text-muted-foreground/75 mt-1 leading-snug">
+        <p className="text-[13px] text-muted-foreground mt-1 leading-snug">
           Mantén tu perfil listo para recibir turnos y cobrar sin problemas.
         </p>
       </div>
