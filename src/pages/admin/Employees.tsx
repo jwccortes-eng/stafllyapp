@@ -2247,42 +2247,42 @@ export default function Employees() {
       <Sheet open={!!viewEmployee} onOpenChange={(v) => { if (!v) { setViewEmployee(null); setIsEditing(false); setProfileActiveTab("info"); } }}>
         <SheetContent className="w-full max-w-full sm:max-w-[440px] md:max-w-[560px] p-0 flex flex-col">
           {/* Header */}
-          <div className="bg-gradient-to-br from-primary/[0.04] to-transparent border-b px-5 py-4">
-            <div className="flex items-start gap-3.5 pr-8">
-              <EmployeeAvatar firstName={viewEmployee?.first_name ?? ""} lastName={viewEmployee?.last_name ?? ""} avatarUrl={viewEmployee?.avatar_url} gender={viewEmployee?.gender} size="xl" className="ring-2 ring-background shadow-lg" />
+          <div className="bg-gradient-to-br from-primary/[0.04] to-transparent border-b px-3 sm:px-5 py-3 sm:py-4">
+            <div className="flex items-start gap-3 pr-8">
+              <EmployeeAvatar firstName={viewEmployee?.first_name ?? ""} lastName={viewEmployee?.last_name ?? ""} avatarUrl={viewEmployee?.avatar_url} gender={viewEmployee?.gender} size="xl" className="ring-2 ring-background shadow-lg shrink-0" />
               <div className="flex-1 min-w-0 pt-0.5">
-                <SheetTitle className="text-base font-bold leading-tight">{formatPersonName(`${viewEmployee?.first_name} ${viewEmployee?.last_name}`)}</SheetTitle>
+                <SheetTitle className="text-base font-bold leading-tight truncate">{formatPersonName(`${viewEmployee?.first_name} ${viewEmployee?.last_name}`)}</SheetTitle>
                 <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                   {viewEmployee?.employer_identification && (
                     <Badge variant="outline" className="text-[9px] py-0 font-mono">#{viewEmployee.employer_identification}</Badge>
                   )}
-                  {viewEmployee?.employee_role && <Badge variant="secondary" className="text-[10px] py-0">{formatDisplayText(viewEmployee.employee_role, "label")}</Badge>}
+                  {viewEmployee?.employee_role && <Badge variant="secondary" className="text-[10px] py-0 max-w-[140px] truncate">{formatDisplayText(viewEmployee.employee_role, "label")}</Badge>}
                   {viewEmployee && <EmpStatusBadge employee={viewEmployee} invitation={invitations[viewEmployee.id]} />}
                 </div>
-                <SheetDescription className="mt-1 text-[11px] text-muted-foreground/70 flex items-center gap-3 flex-wrap">
-                  {viewEmployee?.phone_number && <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{viewEmployee.phone_number}</span>}
-                  {viewEmployee?.email && <span className="flex items-center gap-1"><Mail className="h-3 w-3" />{viewEmployee.email}</span>}
+                <SheetDescription className="mt-1 text-[11px] text-muted-foreground/70 flex items-center gap-x-3 gap-y-0.5 flex-wrap">
+                  {viewEmployee?.phone_number && <span className="flex items-center gap-1 min-w-0 max-w-full"><Phone className="h-3 w-3 shrink-0" /><span className="truncate">{viewEmployee.phone_number}</span></span>}
+                  {viewEmployee?.email && <span className="flex items-center gap-1 min-w-0 max-w-full"><Mail className="h-3 w-3 shrink-0" /><span className="truncate">{viewEmployee.email}</span></span>}
                 </SheetDescription>
               </div>
             </div>
             {/* Actions bar */}
-            <div className="flex items-center gap-1.5 mt-3">
+            <div className="flex items-center gap-1.5 mt-3 flex-wrap">
               <Button
                 variant="default"
                 size="sm"
                 className="h-7 text-xs gap-1"
                 onClick={() => { if (viewEmployee) { const id = viewEmployee.id; setViewEmployee(null); navigate(`/app/employees/${id}`); } }}
               >
-                Open full profile →
+                Ver perfil completo →
               </Button>
               {!isEditing ? (
                 <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setIsEditing(true)} disabled={loading}>
-                  <Pencil className="h-3 w-3 mr-1" />Quick edit
+                  <Pencil className="h-3 w-3 mr-1" />Edición rápida
                 </Button>
               ) : (
                 <>
                   <Button variant="default" size="sm" className="h-7 text-xs" onClick={handleSaveFromSheet} disabled={loading}>
-                    {loading ? "Saving…" : "Save"}
+                    {loading ? "Guardando…" : "Guardar"}
                   </Button>
                   <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => {
                     // Reset form to original employee values on cancel
@@ -2293,15 +2293,15 @@ export default function Employees() {
                     }
                     setIsEditing(false);
                   }} disabled={loading}>
-                    Cancel
+                    Cancelar
                   </Button>
                   <Badge variant="outline" className="h-6 gap-1 border-warning/40 bg-warning/10 text-warning text-[9px] px-1.5">
-                    <Pencil className="h-2.5 w-2.5" /> Editing
+                    <Pencil className="h-2.5 w-2.5" /> Editando
                   </Badge>
                 </>
               )}
               {(() => {
-                const inviteDecision = viewEmployee ? canInviteWorker(viewEmployee, invitations[viewEmployee.id]) : { allowed: false, reason: "Select a worker first." };
+                const inviteDecision = viewEmployee ? canInviteWorker(viewEmployee, invitations[viewEmployee.id]) : { allowed: false, reason: "Selecciona un trabajador primero." };
                 return (
                   <Button
                     variant="outline"
@@ -2312,13 +2312,13 @@ export default function Employees() {
                     title={inviteDecision.reason}
                   >
                     <Send className="h-3 w-3 mr-1" />
-                    {viewEmployee?.is_active === false ? "Reactivate first" : "Invite"}
+                    {viewEmployee?.is_active === false ? "Reactivar primero" : "Invitar"}
                   </Button>
                 );
               })()}
-              <div className="ml-auto flex items-center gap-0.5">
+              <div className="ml-auto sm:ml-auto flex items-center gap-0.5">
                 <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => { if (viewEmployee) toggleActive(viewEmployee); }}>
-                  {viewEmployee?.is_active ? <><Archive className="h-3 w-3 mr-1" />Archive</> : <><UserCheck className="h-3 w-3 mr-1" />Activate</>}
+                  {viewEmployee?.is_active ? <><Archive className="h-3 w-3 mr-1" />Archivar</> : <><UserCheck className="h-3 w-3 mr-1" />Activar</>}
                 </Button>
                 <Button variant="ghost" size="sm" className="h-7 text-xs text-destructive hover:text-destructive" onClick={() => { if (viewEmployee) { setDeleteTarget(viewEmployee); setPasswordOpen(true); setViewEmployee(null); } }}>
                   <Trash2 className="h-3 w-3" />
@@ -2327,7 +2327,7 @@ export default function Employees() {
             </div>
           </div>
           <ScrollArea className="flex-1">
-            <div className="p-4 space-y-3">
+            <div className="p-3 sm:p-4 space-y-3 pb-28">
               {viewEmployee && (
                 <>
                   <WorkerDataQualityReview
