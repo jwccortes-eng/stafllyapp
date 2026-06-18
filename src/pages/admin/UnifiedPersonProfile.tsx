@@ -1305,6 +1305,7 @@ export default function UnifiedPersonProfile() {
                     ["english_level", employee.english_level],
                     ["qualify", employee.qualify],
                     ["country_code", employee.country_code],
+                    ["county", employee.county],
                     ["created_at", employee.created_at],
                     ["updated_at", employee.updated_at],
                   ].filter(([, v]) => v != null && v !== "").map(([k, v]) => (
