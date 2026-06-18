@@ -3,7 +3,7 @@ import { useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { StaflyMark } from "@/components/brand/StaflyBrand";
-import { ArrowRight, LogIn, ShieldCheck, Smartphone } from "lucide-react";
+import { ArrowRight, LogIn, ShieldCheck, ClipboardCheck } from "lucide-react";
 
 /**
  * MobileAppEntry — Spanish-first operational entry screen for the
