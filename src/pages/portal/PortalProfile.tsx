@@ -107,7 +107,7 @@ export default function PortalProfile() {
   const menuItems = [
     { to: "/portal/pay-reports", icon: Wallet, label: "Mis pagos", description: "Resumen semanal de nómina" },
     { to: "/portal/accumulated", icon: BarChart3, label: "Acumulado", description: "Historial total" },
-    { to: "/portal/shifts", icon: CalendarDays, label: "My Shifts", description: "Asignaciones y solicitudes" },
+    { to: "/portal/shifts", icon: CalendarDays, label: "Mis turnos", description: "Asignaciones y solicitudes" },
   ];
 
   return (
@@ -162,12 +162,12 @@ export default function PortalProfile() {
       {infoItems.length > 0 && (
         <div className="grid grid-cols-2 gap-2.5">
           {infoItems.map(item => (
-            <div key={item.label} className="rounded-2xl border border-border/30 bg-card p-3.5 shadow-sm">
-              <div className="flex items-center gap-2 text-muted-foreground mb-1">
+            <div key={item.label} className="rounded-2xl border border-border/30 bg-card p-4 shadow-sm">
+              <div className="flex items-center gap-2 text-muted-foreground mb-1.5">
                 <item.icon className="h-3.5 w-3.5" />
-                <span className="text-[10px] font-bold uppercase tracking-wider">{item.label}</span>
+                <span className="text-[11px] font-bold uppercase tracking-wider">{item.label}</span>
               </div>
-              <p className="text-sm font-medium text-foreground truncate">{item.value}</p>
+              <p className="text-[15px] font-medium text-foreground truncate">{item.value}</p>
             </div>
           ))}
         </div>
@@ -178,9 +178,9 @@ export default function PortalProfile() {
         <div className="space-y-2">
           {profile.groups && (
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Grupos:</span>
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Grupos:</span>
               {profile.groups.split(",").map(g => (
-                <span key={g.trim()} className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
+                <span key={g.trim()} className="text-[12px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
                   {g.trim()}
                 </span>
               ))}
@@ -188,9 +188,9 @@ export default function PortalProfile() {
           )}
           {profile.tags && (
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Etiquetas:</span>
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Etiquetas:</span>
               {profile.tags.split(",").map(t => (
-                <span key={t.trim()} className="text-[10px] px-2 py-0.5 rounded-full bg-accent text-accent-foreground font-medium">
+                <span key={t.trim()} className="text-[12px] px-2 py-0.5 rounded-full bg-accent text-accent-foreground font-medium">
                   {t.trim()}
                 </span>
               ))}
@@ -205,14 +205,14 @@ export default function PortalProfile() {
           <Link
             key={item.to}
             to={item.to}
-            className="flex items-center gap-3.5 rounded-2xl border border-border/40 bg-card p-4 hover:bg-accent/50 transition-all duration-200 active:scale-[0.98] shadow-xs"
+            className="flex items-center gap-3.5 rounded-2xl border border-border/40 bg-card p-4 hover:bg-accent/50 transition-all duration-200 active:scale-[0.98] shadow-xs min-h-[64px]"
           >
             <div className="h-10 w-10 rounded-xl bg-primary/8 flex items-center justify-center">
               <item.icon className="h-[18px] w-[18px] text-primary/70" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold">{item.label}</p>
-              <p className="text-[10px] text-muted-foreground">{item.description}</p>
+              <p className="text-[15px] font-semibold">{item.label}</p>
+              <p className="text-[12px] text-muted-foreground mt-0.5">{item.description}</p>
             </div>
             <ChevronRight className="h-4 w-4 text-muted-foreground/40" />
           </Link>
