@@ -338,6 +338,7 @@ function IntakeItemRow({
   const assignedEmp = empId ? empById.get(empId) : null;
   const isImg = (item.mime_type ?? "").startsWith("image/");
   const isW9 = category === "w9" || /w-?9|tax/i.test(item.original_filename ?? "");
+  const isSocialSecurity = category === "social_security_card";
   const isIndexed = item.status === "indexed";
   const isRejected = item.status === "rejected";
   const locked = isIndexed || isRejected;
@@ -351,6 +352,7 @@ function IntakeItemRow({
     if (!empId) { toast({ title: "Falta el trabajador", description: "Selecciona el trabajador antes de indexar.", variant: "destructive" }); return; }
     if (!category) { toast({ title: "Falta el tipo", description: "Selecciona el tipo de documento.", variant: "destructive" }); return; }
     if (isW9) { toast({ title: "Documento sensible", description: "Los W-9 deben procesarse desde el flujo de W-9 guiado.", variant: "destructive" }); return; }
+    if (isSocialSecurity) { toast({ title: "Documento restringido", description: "Social Security documents require a restricted handling policy. Do not import here.", variant: "destructive" }); return; }
     setBusy(true);
     try {
       const ts = Date.now();
