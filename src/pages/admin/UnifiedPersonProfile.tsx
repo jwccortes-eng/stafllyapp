@@ -798,7 +798,7 @@ export default function UnifiedPersonProfile() {
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="h-8 text-xs"
+                      className="hidden sm:inline-flex h-8 text-xs"
                       onClick={async () => {
                         try {
                           const { inviteUrl } = await import("@/lib/app-url");
@@ -815,7 +815,7 @@ export default function UnifiedPersonProfile() {
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="h-8 text-xs"
+                      className="hidden sm:inline-flex h-8 text-xs"
                       onClick={async () => {
                         try {
                           const { inviteUrl } = await import("@/lib/app-url");
