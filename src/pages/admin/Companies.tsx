@@ -67,13 +67,44 @@ interface CompanyRecord {
   employee_count: number;
 }
 
+/**
+ * Commercial plan catalog — aligned with /pricing public page.
+ * Single source of truth for new admin assignments.
+ *
+ * Legacy values (free, pro, enterprise) are intentionally NOT in this list.
+ * They still render via LEGACY_PLAN_LABELS when present on existing companies,
+ * but cannot be selected for new assignments.
+ */
 const PLAN_OPTIONS = [
-  { value: "free", label: "Starter", color: "bg-muted text-muted-foreground", price: 0 },
-  { value: "pro", label: "Pro", color: "bg-primary/10 text-primary", price: 49 },
-  { value: "enterprise", label: "Enterprise", color: "bg-chart-4/10 text-chart-4", price: 149 },
+  { value: "free", label: "Sin plan / cortesía", color: "bg-muted text-muted-foreground", price: 0 },
+  { value: "starter", label: "Starter", color: "bg-primary/10 text-primary", price: 149 },
+  { value: "operations", label: "Operations", color: "bg-primary/15 text-primary", price: 299 },
+  { value: "scale", label: "Scale", color: "bg-chart-4/10 text-chart-4", price: 599 },
 ] as const;
 
-const PLAN_PRICES: Record<string, number> = { free: 0, pro: 49, enterprise: 149 };
+/** Display-only labels for legacy plan values still present in DB. Not selectable. */
+const LEGACY_PLAN_LABELS: Record<string, { label: string; price: number }> = {
+  pro: { label: "Pro (Legacy)", price: 49 },
+  enterprise: { label: "Enterprise (Legacy)", price: 149 },
+};
+
+const PLAN_PRICES: Record<string, number> = {
+  free: 0,
+  starter: 149,
+  operations: 299,
+  scale: 599,
+  // Legacy — kept so MRR for existing companies stays consistent
+  pro: 49,
+  enterprise: 149,
+};
+
+function getPlanDisplay(plan: string): { label: string; isLegacy: boolean } {
+  const current = PLAN_OPTIONS.find(p => p.value === plan);
+  if (current) return { label: current.label, isLegacy: false };
+  const legacy = LEGACY_PLAN_LABELS[plan];
+  if (legacy) return { label: legacy.label, isLegacy: true };
+  return { label: plan || "—", isLegacy: false };
+}
 
 const ROLE_ICON: Record<string, React.ElementType> = {
   owner: Crown, admin: Shield, manager: UserCog, employee: User,
@@ -233,7 +264,13 @@ export default function CompaniesPage() {
 
   const openEdit = (c: CompanyRecord) => { setEditCompany(c); setFormName(c.name); setFormSlug(c.slug); };
 
-  const openAssignPlan = (c: CompanyRecord) => { setPlanCompany(c); setSelectedPlan(c.plan || "free"); };
+  const openAssignPlan = (c: CompanyRecord) => {
+    setPlanCompany(c);
+    // If current value is a legacy plan (pro/enterprise), don't preselect it —
+    // default to "starter" so admin consciously picks a current-catalog plan.
+    const isAssignable = PLAN_OPTIONS.some(p => p.value === c.plan);
+    setSelectedPlan(isAssignable ? (c.plan || "free") : "starter");
+  };
 
   const handleDuplicate = async (source: CompanyRecord) => {
     setDuplicating(true);
@@ -423,6 +460,7 @@ export default function CompaniesPage() {
               <TableRow><TableCell colSpan={12} className="text-center text-muted-foreground py-8">No hay empresas</TableCell></TableRow>
             ) : filtered.map(c => {
               const planOpt = PLAN_OPTIONS.find(p => p.value === c.plan) ?? PLAN_OPTIONS[0];
+              const planDisplay = getPlanDisplay(c.plan);
               const isExpanded = expandedId === c.id;
 
               return (
@@ -455,7 +493,7 @@ export default function CompaniesPage() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge className={`text-[10px] font-bold ${planOpt.color} border-0`}>{planOpt.label}</Badge>
+                    <Badge className={`text-[10px] font-bold ${planDisplay.isLegacy ? "bg-amber-500/10 text-amber-700 dark:text-amber-400" : planOpt.color} border-0`}>{planDisplay.label}</Badge>
                   </TableCell>
                   <TableCell>
                     <Badge variant="outline" className={`text-[10px] ${c.plan_status === "active" ? "border-chart-1/40 text-chart-1" : c.plan_status === "trialing" ? "border-chart-4/40 text-chart-4" : ""}`}>
@@ -597,7 +635,7 @@ export default function CompaniesPage() {
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-2">
                               <div className="space-y-1">
                                 <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Plan actual</p>
-                                <Badge className={`${planOpt.color} border-0 font-bold`}>{planOpt.label}</Badge>
+                                <Badge className={`${planDisplay.isLegacy ? "bg-amber-500/10 text-amber-700 dark:text-amber-400" : planOpt.color} border-0 font-bold`}>{planDisplay.label}</Badge>
                               </div>
                               <div className="space-y-1">
                                 <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Valor mensual</p>
@@ -700,6 +738,11 @@ export default function CompaniesPage() {
         <DialogContent className="max-w-md">
           <DialogHeader><DialogTitle>Asignar plan</DialogTitle><DialogDescription>{planCompany?.name} — Asigna un plan sin pasar por Stripe</DialogDescription></DialogHeader>
           <div className="space-y-4">
+            {planCompany && LEGACY_PLAN_LABELS[planCompany.plan] && (
+              <div className="rounded-md border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
+                Plan actual: <strong>{LEGACY_PLAN_LABELS[planCompany.plan].label}</strong>. Los planes legacy se conservan pero ya no se ofrecen para nuevas asignaciones. Selecciona un plan del catálogo actual para continuar.
+              </div>
+            )}
             <div className="space-y-2">
               <Label>Plan</Label>
               <Select value={selectedPlan} onValueChange={setSelectedPlan}>
@@ -708,9 +751,9 @@ export default function CompaniesPage() {
                   {PLAN_OPTIONS.map(p => (
                     <SelectItem key={p.value} value={p.value}>
                       <div className="flex items-center gap-2">
-                        <span className={`inline-block h-2 w-2 rounded-full ${p.value === "free" ? "bg-muted-foreground" : p.value === "pro" ? "bg-primary" : "bg-chart-4"}`} />
+                        <span className={`inline-block h-2 w-2 rounded-full ${p.value === "free" ? "bg-muted-foreground" : p.value === "scale" ? "bg-chart-4" : "bg-primary"}`} />
                         {p.label}
-                        {p.price > 0 && <span className="text-muted-foreground text-xs">— ${p.price}/mes</span>}
+                        {p.price > 0 && <span className="text-muted-foreground text-xs">— ${p.price}{p.value === "scale" ? "+" : ""}/mes</span>}
                       </div>
                     </SelectItem>
                   ))}
