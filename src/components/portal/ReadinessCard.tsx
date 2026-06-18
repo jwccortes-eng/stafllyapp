@@ -35,10 +35,10 @@ export function ReadinessCard() {
             : <CheckCircle2 className="h-4 w-4 text-earning" />}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-[12px] font-bold text-foreground leading-tight">
+          <p className="text-[13px] font-bold text-foreground leading-tight">
             Profile {PROFILE_STATUS_LABELS[r.status].toLowerCase()}
           </p>
-          <p className="text-[10px] text-muted-foreground/70">You can be assigned to shifts.</p>
+          <p className="text-[12px] text-muted-foreground">You can be assigned to shifts.</p>
         </div>
       </div>
     );
