@@ -1148,34 +1148,44 @@ export default function UnifiedPersonProfile() {
       })()}
 
 
-      {/* ─── DEEP TABS (existing logic, unchanged — secondary navigation) ─── */}
+      {/* ─── DEEP TABS (existing logic, unchanged — secondary navigation) ───
+          Phase 1B 2026-06-18: collapsed by default to reduce profile
+          saturation. All tabs/handlers preserved; no data hidden, just
+          tucked behind one click. */}
       {selectedCompanyId && (
-        <div className="space-y-2">
-          <div className="flex items-center gap-1.5 text-[10.5px] font-medium uppercase tracking-wider text-muted-foreground/70 px-1">
-            <ChevronDown className="h-3 w-3 -rotate-90" />
-            Más detalles
-          </div>
-          <Card className="border-border/50">
-            <CardContent className="p-4">
-            <EmployeeProfileTabs
-              employee={employee}
-              companyId={selectedCompanyId}
-              isEditing={isEditing}
-              form={form}
-              setForm={setForm}
-              isPrivileged={isPrivileged}
-              onEmployeeUpdate={(updates) =>
-                setEmployee((prev) => (prev ? { ...prev, ...updates } : prev))
-              }
-              companyName={selectedCompany?.name}
-              onInvite={() => setInviteOpen(true)}
-              invitation={invitation ?? null}
-              activeTab={activeTab}
-              onTabChange={setActiveTab}
-            />
-          </CardContent>
-        </Card>
-        </div>
+        <Collapsible defaultOpen={false}>
+          <CollapsibleTrigger className="group inline-flex w-full items-center justify-between gap-2 rounded-md px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/80 hover:text-foreground transition-colors">
+            <span className="inline-flex items-center gap-1.5">
+              <ChevronDown className="h-3 w-3 transition-transform group-data-[state=open]:rotate-180" />
+              Más detalles · navegación secundaria
+            </span>
+            <span className="text-[10px] text-muted-foreground/60 font-normal normal-case tracking-normal">
+              Pestañas de pago, documentos, acceso y más
+            </span>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <Card className="border-border/50 mt-2">
+              <CardContent className="p-4">
+                <EmployeeProfileTabs
+                  employee={employee}
+                  companyId={selectedCompanyId}
+                  isEditing={isEditing}
+                  form={form}
+                  setForm={setForm}
+                  isPrivileged={isPrivileged}
+                  onEmployeeUpdate={(updates) =>
+                    setEmployee((prev) => (prev ? { ...prev, ...updates } : prev))
+                  }
+                  companyName={selectedCompany?.name}
+                  onInvite={() => setInviteOpen(true)}
+                  invitation={invitation ?? null}
+                  activeTab={activeTab}
+                  onTabChange={setActiveTab}
+                />
+              </CardContent>
+            </Card>
+          </CollapsibleContent>
+        </Collapsible>
       )}
 
       {/* ─── RECENT SHIFTS ─── */}
