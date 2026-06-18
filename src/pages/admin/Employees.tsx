@@ -2247,7 +2247,10 @@ export default function Employees() {
       <Sheet open={!!viewEmployee} onOpenChange={(v) => { if (!v) { setViewEmployee(null); setIsEditing(false); setProfileActiveTab("info"); } }}>
         <SheetContent className="w-full max-w-full sm:max-w-[440px] md:max-w-[560px] p-0 flex flex-col">
           {/* Header */}
-          <div className="bg-gradient-to-br from-primary/[0.04] to-transparent border-b px-3 sm:px-5 py-3 sm:py-4">
+          <div
+            className="bg-gradient-to-br from-primary/[0.04] to-transparent border-b px-3 sm:px-5 py-3 sm:py-4"
+            style={{ paddingTop: "max(env(safe-area-inset-top, 0px) + 0.75rem, 0.75rem)" }}
+          >
             <div className="flex items-start gap-3 pr-8">
               <EmployeeAvatar firstName={viewEmployee?.first_name ?? ""} lastName={viewEmployee?.last_name ?? ""} avatarUrl={viewEmployee?.avatar_url} gender={viewEmployee?.gender} size="xl" className="ring-2 ring-background shadow-lg shrink-0" />
               <div className="flex-1 min-w-0 pt-0.5">
