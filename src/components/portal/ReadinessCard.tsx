@@ -28,17 +28,19 @@ export function ReadinessCard() {
 
   if (isReady) {
     return (
-      <div className="rounded-2xl border border-earning/20 bg-earning/[0.05] px-3.5 py-2.5 flex items-center gap-3">
-        <div className="h-8 w-8 rounded-xl bg-earning/12 flex items-center justify-center shrink-0">
+      <div className="rounded-2xl border border-earning/20 bg-earning/[0.05] px-4 py-3 flex items-center gap-3">
+        <div className="h-9 w-9 rounded-xl bg-earning/12 flex items-center justify-center shrink-0">
           {r.status === "active"
-            ? <Sparkles className="h-4 w-4 text-earning" />
-            : <CheckCircle2 className="h-4 w-4 text-earning" />}
+            ? <Sparkles className="h-[18px] w-[18px] text-earning" />
+            : <CheckCircle2 className="h-[18px] w-[18px] text-earning" />}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-[13px] font-bold text-foreground leading-tight">
-            Profile {PROFILE_STATUS_LABELS[r.status].toLowerCase()}
+          <p className="text-[15px] font-bold text-foreground leading-tight">
+            Tu perfil está listo
           </p>
-          <p className="text-[12px] text-muted-foreground">You can be assigned to shifts.</p>
+          <p className="text-[13px] text-muted-foreground mt-0.5">
+            Puedes recibir turnos.
+          </p>
         </div>
       </div>
     );
