@@ -739,9 +739,9 @@ export default function CompaniesPage() {
                   {PLAN_OPTIONS.map(p => (
                     <SelectItem key={p.value} value={p.value}>
                       <div className="flex items-center gap-2">
-                        <span className={`inline-block h-2 w-2 rounded-full ${p.value === "free" ? "bg-muted-foreground" : p.value === "pro" ? "bg-primary" : "bg-chart-4"}`} />
+                        <span className={`inline-block h-2 w-2 rounded-full ${p.value === "free" ? "bg-muted-foreground" : p.value === "scale" ? "bg-chart-4" : "bg-primary"}`} />
                         {p.label}
-                        {p.price > 0 && <span className="text-muted-foreground text-xs">— ${p.price}/mes</span>}
+                        {p.price > 0 && <span className="text-muted-foreground text-xs">— ${p.price}{p.value === "scale" ? "+" : ""}/mes</span>}
                       </div>
                     </SelectItem>
                   ))}
