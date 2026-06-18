@@ -669,8 +669,8 @@ export default function UnifiedPersonProfile() {
                   )}
                 </div>
 
-                {/* Contact row — only renders rows with real values */}
-                <div className="mt-3 flex items-center gap-x-4 gap-y-1 flex-wrap text-xs text-muted-foreground">
+                {/* Contact row — desktop only. On mobile these live in Datos principales. */}
+                <div className="mt-3 hidden sm:flex items-center gap-x-4 gap-y-1 flex-wrap text-xs text-muted-foreground">
                   {employee.phone_number && (
                     <a
                       href={`tel:${employee.phone_number}`}
