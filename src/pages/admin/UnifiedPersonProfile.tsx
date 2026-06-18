@@ -738,7 +738,7 @@ export default function UnifiedPersonProfile() {
                   <Button
                     size="sm"
                     variant="outline"
-                    className="h-8 text-xs"
+                    className="hidden sm:inline-flex h-8 text-xs"
                     onClick={() => setIsEditing(true)}
                   >
                     <Pencil className="h-3.5 w-3.5 mr-1.5" /> Edit
