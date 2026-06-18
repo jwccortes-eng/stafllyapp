@@ -331,7 +331,40 @@ export function ProfileSummaryGrid({
           </Button>
         }
       >
-        <div className="grid grid-cols-2 gap-2 text-[11px]">
+        {/* Mobile: compact one-line summary. Desktop: 4-box grid. Phase 1C 2026-06-18 */}
+        <div className="sm:hidden">
+          {missingRequired > 0 ? (
+            <div className="rounded-md border border-destructive/30 bg-destructive/[0.04] p-3">
+              <div className="text-sm font-semibold text-destructive">
+                {missingRequired} documento{missingRequired === 1 ? "" : "s"} faltante{missingRequired === 1 ? "" : "s"}
+              </div>
+              {readiness.missingDocuments.length > 0 && (
+                <div className="mt-1 text-[12px] text-foreground/80 truncate">
+                  {readiness.missingDocuments.slice(0, 3).map((d) => d.label).join(" · ")}
+                  {readiness.missingDocuments.length > 3 && ` · +${readiness.missingDocuments.length - 3} más`}
+                </div>
+              )}
+              <div className="mt-1 flex items-center gap-3 text-[11px] text-muted-foreground">
+                {pendingTotal > 0 && <span>En revisión: {pendingTotal}</span>}
+                {rejectedTotal > 0 && <span className="text-destructive">Rechazados: {rejectedTotal}</span>}
+                {expiredTotal > 0 && <span className="text-destructive">Expirados: {expiredTotal}</span>}
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-md border border-border/40 bg-muted/20 p-3">
+              <div className="text-sm font-medium text-foreground">
+                Documentación al día
+              </div>
+              <div className="mt-0.5 text-[11px] text-muted-foreground">
+                {pendingTotal > 0
+                  ? `${pendingTotal} en revisión · sin bloqueos`
+                  : "Sin bloqueos para payroll"}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="hidden sm:grid grid-cols-2 gap-2 text-[11px]">
           <div
             className={cn(
               "rounded-md border p-2",
