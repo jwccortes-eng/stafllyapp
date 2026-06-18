@@ -63,21 +63,21 @@ export function ReadinessCard() {
   return (
     <Link to={ctaHref} className="block">
       <div className={cn(
-        "rounded-2xl border-2 px-4 py-3 active:scale-[0.99] transition-all shadow-sm",
+        "rounded-2xl border-2 px-4 py-4 active:scale-[0.99] transition-all shadow-sm",
         tone,
       )}>
-        <div className="flex items-center gap-3 mb-2.5">
-          <div className={cn("h-9 w-9 rounded-xl flex items-center justify-center shrink-0", "bg-background/60")}>
+        <div className="flex items-center gap-3 mb-3">
+          <div className={cn("h-10 w-10 rounded-xl flex items-center justify-center shrink-0", "bg-background/60")}>
             {r.status === "pending_documents"
-              ? <FileWarning className={cn("h-4 w-4", accent)} />
-              : <AlertTriangle className={cn("h-4 w-4", accent)} />}
+              ? <FileWarning className={cn("h-[18px] w-[18px]", accent)} />
+              : <AlertTriangle className={cn("h-[18px] w-[18px]", accent)} />}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-[15px] font-bold text-foreground leading-tight">
-              {onlyDocsMissing ? "Upload your documents" : "Complete your profile"}
+            <p className="text-[16px] font-bold text-foreground leading-tight">
+              {onlyDocsMissing ? "Sube tus documentos" : "Completa tu perfil"}
             </p>
-            <p className="text-[12.5px] text-muted-foreground mt-0.5">
-              {PROFILE_STATUS_LABELS[r.status]} — needed to be assigned to shifts.
+            <p className="text-[13px] text-muted-foreground mt-0.5 leading-snug">
+              Necesario para que puedas recibir turnos.
             </p>
           </div>
           <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -94,19 +94,19 @@ export function ReadinessCard() {
           />
         </div>
 
-        <ul className="space-y-1.5">
+        <ul className="space-y-2">
           {visible.map((it, i) => (
-            <li key={i} className="flex items-center gap-2 text-[13px] text-foreground/90">
+            <li key={i} className="flex items-center gap-2 text-[14px] text-foreground/90">
               <span className={cn("h-1.5 w-1.5 rounded-full shrink-0", accent.replace("text-", "bg-"))} />
               <span className="truncate">{it.label}</span>
-              <span className="ml-auto text-[10.5px] uppercase tracking-wider text-muted-foreground font-bold">
+              <span className="ml-auto text-[11px] uppercase tracking-wider text-muted-foreground font-bold">
                 {it.kind === "doc" ? "Doc" : "Info"}
               </span>
             </li>
           ))}
           {more > 0 && (
-            <li className="text-[12px] text-muted-foreground pl-3.5">
-              +{more} more {more === 1 ? "item" : "items"}
+            <li className="text-[13px] text-muted-foreground pl-3.5">
+              +{more} {more === 1 ? "más" : "más"}
             </li>
           )}
         </ul>
