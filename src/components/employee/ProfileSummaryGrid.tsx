@@ -448,7 +448,7 @@ export function ProfileSummaryGrid({
         </div>
 
         {missingRequired > 0 && (
-          <div className="text-[10.5px] text-muted-foreground">
+          <div className="hidden sm:block text-[10.5px] text-muted-foreground">
             Documentos requeridos pendientes:{" "}
             <span className="text-foreground">
               {readiness.missingDocuments
@@ -461,7 +461,7 @@ export function ProfileSummaryGrid({
           </div>
         )}
         {missingRequired === 0 && rejectedTotal === 0 && expiredTotal === 0 && (
-          <p className="text-[10.5px] text-muted-foreground">
+          <p className="hidden sm:block text-[10.5px] text-muted-foreground">
             Documentación al día · sin bloqueos para payroll.
           </p>
         )}
