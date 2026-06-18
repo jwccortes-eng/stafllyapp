@@ -264,7 +264,13 @@ export default function CompaniesPage() {
 
   const openEdit = (c: CompanyRecord) => { setEditCompany(c); setFormName(c.name); setFormSlug(c.slug); };
 
-  const openAssignPlan = (c: CompanyRecord) => { setPlanCompany(c); setSelectedPlan(c.plan || "free"); };
+  const openAssignPlan = (c: CompanyRecord) => {
+    setPlanCompany(c);
+    // If current value is a legacy plan (pro/enterprise), don't preselect it —
+    // default to "starter" so admin consciously picks a current-catalog plan.
+    const isAssignable = PLAN_OPTIONS.some(p => p.value === c.plan);
+    setSelectedPlan(isAssignable ? (c.plan || "free") : "starter");
+  };
 
   const handleDuplicate = async (source: CompanyRecord) => {
     setDuplicating(true);
@@ -454,6 +460,7 @@ export default function CompaniesPage() {
               <TableRow><TableCell colSpan={12} className="text-center text-muted-foreground py-8">No hay empresas</TableCell></TableRow>
             ) : filtered.map(c => {
               const planOpt = PLAN_OPTIONS.find(p => p.value === c.plan) ?? PLAN_OPTIONS[0];
+              const planDisplay = getPlanDisplay(c.plan);
               const isExpanded = expandedId === c.id;
 
               return (
@@ -486,7 +493,7 @@ export default function CompaniesPage() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge className={`text-[10px] font-bold ${planOpt.color} border-0`}>{planOpt.label}</Badge>
+                    <Badge className={`text-[10px] font-bold ${planDisplay.isLegacy ? "bg-amber-500/10 text-amber-700 dark:text-amber-400" : planOpt.color} border-0`}>{planDisplay.label}</Badge>
                   </TableCell>
                   <TableCell>
                     <Badge variant="outline" className={`text-[10px] ${c.plan_status === "active" ? "border-chart-1/40 text-chart-1" : c.plan_status === "trialing" ? "border-chart-4/40 text-chart-4" : ""}`}>
@@ -628,7 +635,7 @@ export default function CompaniesPage() {
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-2">
                               <div className="space-y-1">
                                 <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Plan actual</p>
-                                <Badge className={`${planOpt.color} border-0 font-bold`}>{planOpt.label}</Badge>
+                                <Badge className={`${planDisplay.isLegacy ? "bg-amber-500/10 text-amber-700 dark:text-amber-400" : planOpt.color} border-0 font-bold`}>{planDisplay.label}</Badge>
                               </div>
                               <div className="space-y-1">
                                 <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Valor mensual</p>
