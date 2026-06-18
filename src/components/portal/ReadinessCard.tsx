@@ -35,10 +35,10 @@ export function ReadinessCard() {
             : <CheckCircle2 className="h-4 w-4 text-earning" />}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-[12px] font-bold text-foreground leading-tight">
+          <p className="text-[13px] font-bold text-foreground leading-tight">
             Profile {PROFILE_STATUS_LABELS[r.status].toLowerCase()}
           </p>
-          <p className="text-[10px] text-muted-foreground/70">You can be assigned to shifts.</p>
+          <p className="text-[12px] text-muted-foreground">You can be assigned to shifts.</p>
         </div>
       </div>
     );
@@ -71,18 +71,18 @@ export function ReadinessCard() {
               : <AlertTriangle className={cn("h-4 w-4", accent)} />}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-[13px] font-bold text-foreground leading-tight">
+            <p className="text-[15px] font-bold text-foreground leading-tight">
               {onlyDocsMissing ? "Upload your documents" : "Complete your profile"}
             </p>
-            <p className="text-[10.5px] text-muted-foreground/80 mt-0.5">
+            <p className="text-[12.5px] text-muted-foreground mt-0.5">
               {PROFILE_STATUS_LABELS[r.status]} — needed to be assigned to shifts.
             </p>
           </div>
-          <ArrowRight className="h-4 w-4 text-muted-foreground/40 shrink-0" />
+          <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
         </div>
 
         {/* Progress */}
-        <div className="h-1.5 w-full rounded-full bg-background/60 overflow-hidden mb-2.5">
+        <div className="h-2 w-full rounded-full bg-background/60 overflow-hidden mb-3">
           <div
             className={cn(
               "h-full rounded-full transition-all",
@@ -92,18 +92,18 @@ export function ReadinessCard() {
           />
         </div>
 
-        <ul className="space-y-1">
+        <ul className="space-y-1.5">
           {visible.map((it, i) => (
-            <li key={i} className="flex items-center gap-2 text-[11px] text-foreground/80">
+            <li key={i} className="flex items-center gap-2 text-[13px] text-foreground/90">
               <span className={cn("h-1.5 w-1.5 rounded-full shrink-0", accent.replace("text-", "bg-"))} />
               <span className="truncate">{it.label}</span>
-              <span className="ml-auto text-[9px] uppercase tracking-wider text-muted-foreground/50 font-bold">
+              <span className="ml-auto text-[10.5px] uppercase tracking-wider text-muted-foreground font-bold">
                 {it.kind === "doc" ? "Doc" : "Info"}
               </span>
             </li>
           ))}
           {more > 0 && (
-            <li className="text-[10.5px] text-muted-foreground/60 pl-3.5">
+            <li className="text-[12px] text-muted-foreground pl-3.5">
               +{more} more {more === 1 ? "item" : "items"}
             </li>
           )}

@@ -34,6 +34,7 @@ import { WorkerPhotoStatusChip } from "@/components/employee/WorkerPhotoStatusCh
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import { formatPhoneUS, tenDigitUS } from "@/lib/phone-format";
 import { cn } from "@/lib/utils";
+import { StatusPill, type WorkerStatusTone } from "@/components/portal/StatusPill";
 
 interface Props {
   employeeId: string;
@@ -101,10 +102,10 @@ export function WorkerSelfServiceSections({ employeeId, onUpdated }: Props) {
   return (
     <div className="space-y-3">
       <div className="px-1">
-        <h2 className="text-[10.5px] font-bold uppercase tracking-widest text-muted-foreground/55">
+        <h2 className="text-[12px] font-bold uppercase tracking-wider text-muted-foreground">
           Actualiza tu información
         </h2>
-        <p className="text-[11.5px] text-muted-foreground/75 mt-1 leading-snug">
+        <p className="text-[13px] text-muted-foreground mt-1 leading-snug">
           Mantén tu perfil listo para recibir turnos y cobrar sin problemas.
         </p>
       </div>
@@ -566,9 +567,12 @@ function AddressCard({
     >
       {!editing ? (
         value?.formatted_address ? (
-          <AddressPreviewCard address={value} />
+          <div className="space-y-2">
+            <AddressBadge address={value} />
+            <AddressPreviewCard address={value} />
+          </div>
         ) : (
-          <p className="text-[12px] text-muted-foreground/60">Sin dirección registrada</p>
+          <p className="text-[13px] text-muted-foreground">Sin dirección registrada</p>
         )
       ) : (
         <>
@@ -583,12 +587,48 @@ function AddressCard({
             country="US"
           />
           {saving && (
-            <p className="mt-2 text-[10.5px] text-muted-foreground/60">Guardando…</p>
+            <p className="mt-2 text-[12px] text-muted-foreground">Guardando…</p>
           )}
         </>
       )}
     </SectionShell>
   );
+}
+
+/**
+ * AddressBadge — worker-facing pill mapping address source + validation_status
+ * to one of: Verificada / Confirmada / Importada / Necesita confirmar.
+ * Presentation-only. Does not change persistence or geocoding.
+ */
+function AddressBadge({ address }: { address: StructuredAddress }) {
+  const { tone, label } = resolveAddressDisplay(address);
+  return <StatusPill tone={tone} label={label} />;
+}
+
+function resolveAddressDisplay(
+  a: StructuredAddress,
+): { tone: WorkerStatusTone; label: string } {
+  if (a.validation_status === "validated" && a.latitude != null && a.longitude != null) {
+    return { tone: "verified", label: "Verificada" };
+  }
+  if (
+    a.source === "imported" ||
+    a.source === "legacy" ||
+    a.validation_status === "imported" ||
+    a.validation_status === "legacy"
+  ) {
+    if (!a.city || !a.state || !a.postal_code) {
+      return { tone: "needs_confirmation", label: "Necesita confirmar" };
+    }
+    return { tone: "imported", label: "Importada" };
+  }
+  if (a.validation_status === "incomplete") {
+    return { tone: "needs_confirmation", label: "Necesita confirmar" };
+  }
+  if (a.validation_status === "manual" && a.city && a.state && a.postal_code) {
+    return { tone: "approved", label: "Confirmada" };
+  }
+  return { tone: "needs_confirmation", label: "Necesita confirmar" };
 }
 
 /* ─────────────────── Emergency contact card ─────────────────── */

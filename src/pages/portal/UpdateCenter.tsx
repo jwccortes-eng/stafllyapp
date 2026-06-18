@@ -59,44 +59,44 @@ export default function UpdateCenter() {
       <div className="px-1">
         <Link
           to="/portal"
-          className="inline-flex items-center gap-1 text-[11px] font-semibold text-muted-foreground/70 hover:text-foreground"
+          className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-muted-foreground hover:text-foreground"
         >
-          <ChevronLeft className="h-3 w-3" /> Inicio
+          <ChevronLeft className="h-3.5 w-3.5" /> Inicio
         </Link>
-        <h1 className="mt-2 text-[22px] font-bold tracking-tight text-foreground">
+        <h1 className="mt-2 text-[24px] font-bold tracking-tight text-foreground">
           Completa tu perfil
         </h1>
-        <p className="text-[12.5px] text-muted-foreground/80 mt-1 leading-snug">
-          Queremos mantener tu perfil listo para recibir trabajos y cobrar sin problemas.
+        <p className="text-[14px] text-muted-foreground mt-1 leading-snug">
+          Mantén tu perfil listo para recibir trabajos y cobrar sin problemas.
         </p>
       </div>
 
       {/* ── Progress card ── */}
       {summary && (
-        <div className="rounded-2xl border border-border/60 bg-card p-3 shadow-sm">
+        <div className="rounded-2xl border border-border/60 bg-card p-4 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-[10.5px] font-bold uppercase tracking-widest text-muted-foreground/55">
+              <p className="text-[11.5px] font-bold uppercase tracking-wider text-muted-foreground">
                 Tu progreso
               </p>
-              <p className="mt-1 text-[28px] leading-none font-bold tabular-nums text-foreground">
+              <p className="mt-1 text-[30px] leading-none font-bold tabular-nums text-foreground">
                 {summary.pct}
-                <span className="text-[14px] text-muted-foreground/60 font-semibold ml-0.5">%</span>
+                <span className="text-[15px] text-muted-foreground font-semibold ml-0.5">%</span>
               </p>
-              <p className="text-[11px] text-muted-foreground/70 mt-1">
+              <p className="text-[12.5px] text-muted-foreground mt-1">
                 {summary.completed} de {summary.totalApplicable} completos
               </p>
             </div>
             <div className="text-right">
-              <p className="text-[10.5px] font-bold uppercase tracking-widest text-muted-foreground/55">
+              <p className="text-[11.5px] font-bold uppercase tracking-wider text-muted-foreground">
                 Pendientes
               </p>
-              <p className="mt-1 text-[28px] leading-none font-bold tabular-nums text-foreground">
+              <p className="mt-1 text-[30px] leading-none font-bold tabular-nums text-foreground">
                 {summary.pending}
               </p>
             </div>
           </div>
-          <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-muted/60">
+          <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-muted/60">
             <div
               className="h-full bg-primary transition-all"
               style={{ width: `${summary.pct}%` }}
@@ -139,12 +139,17 @@ export default function UpdateCenter() {
         </div>
       )}
 
-      {/* ── Missing items grouped by category ── */}
+      {/* ── Missing items grouped by category ──
+          documents.w9 is owned by <W9EntryCard /> above — filter it out so the
+          same item never appears twice with a stale "Firmar W-9" label. */}
       {!loading && summary && summary.pending > 0 && (
         <div className="space-y-3">
-          {Object.entries(summary.missingByCategory).map(([cat, list]) => (
+          {Object.entries(summary.missingByCategory).map(([cat, rawList]) => {
+            const list = rawList.filter(({ def }) => def.key !== "documents.w9");
+            if (list.length === 0) return null;
+            return (
             <section key={cat} className="space-y-1.5">
-              <h2 className="px-1 text-[10.5px] font-bold uppercase tracking-widest text-muted-foreground/55">
+              <h2 className="px-1 text-[11.5px] font-bold uppercase tracking-wider text-muted-foreground">
                 {CATEGORY_LABELS[cat as keyof typeof CATEGORY_LABELS] ?? cat}
               </h2>
               <div className="rounded-2xl border border-border/60 bg-card overflow-hidden divide-y divide-border/50">
@@ -154,34 +159,35 @@ export default function UpdateCenter() {
                     <Link
                       key={def.key}
                       to={def.resolveHref}
-                      className="flex items-center gap-3 px-3 py-2.5 active:bg-muted/50 transition-colors"
+                      className="flex items-center gap-3 px-3.5 py-3.5 min-h-[60px] active:bg-muted/50 transition-colors"
                     >
                       <div
                         className={cn(
-                          "h-8 w-8 rounded-xl flex items-center justify-center shrink-0",
-                          "bg-primary/8 text-primary",
+                          "h-10 w-10 rounded-xl flex items-center justify-center shrink-0",
+                          "bg-primary/10 text-primary",
                         )}
                       >
-                        <Icon className="h-4 w-4" />
+                        <Icon className="h-4.5 w-4.5" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-[12.5px] font-semibold text-foreground leading-tight">
+                        <p className="text-[14px] font-semibold text-foreground leading-tight">
                           {def.label}
                         </p>
-                        <p className="text-[11px] text-muted-foreground/70 mt-0.5 truncate">
+                        <p className="text-[12.5px] text-muted-foreground mt-0.5 truncate">
                           {def.description}
                         </p>
                       </div>
-                      <div className="flex items-center gap-1 text-[11px] font-bold text-primary shrink-0">
+                      <div className="flex items-center gap-1 text-[13px] font-bold text-primary shrink-0">
                         {def.ctaLabel}
-                        <ArrowRight className="h-3 w-3" />
+                        <ArrowRight className="h-3.5 w-3.5" />
                       </div>
                     </Link>
                   );
                 })}
               </div>
             </section>
-          ))}
+            );
+          })}
         </div>
       )}
 
