@@ -178,11 +178,18 @@ interface LiveStats {
 }
 
 const REC_LABELS: Record<Recommendation, string> = {
-  replace_candidate: "Replace candidate",
-  merge_candidate: "Merge candidate",
-  skip_document_only: "Skip · document only",
-  blocked_needs_human_review: "Needs human review",
-  blocked_passover_split: "Blocked · PASSOVER split",
+  replace_candidate: "Candidato a reemplazar",
+  merge_candidate: "Candidato a unir",
+  skip_document_only: "Omitir · solo documento",
+  blocked_needs_human_review: "Requiere revisión",
+  blocked_passover_split: "Bloqueado · división PASSOVER",
+};
+
+const RISK_LABELS: Record<RiskLevel, string> = {
+  low: "Bajo",
+  medium: "Medio",
+  high: "Alto",
+  blocked: "Bloqueado",
 };
 
 const REC_BADGE: Record<Recommendation, string> = {
