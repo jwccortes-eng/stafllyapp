@@ -568,7 +568,7 @@ export default function UnifiedPersonProfile() {
   const invitation = invitations[employee.id];
 
   return (
-    <div className="space-y-4 pb-10">
+    <div className="space-y-4 pb-28 sm:pb-10">
       {/* ─── Breadcrumb / Back ─── */}
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
         <Button
