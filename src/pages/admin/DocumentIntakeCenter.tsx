@@ -244,6 +244,9 @@ export default function DocumentIntakeCenter() {
             </p>
           </div>
         </Card>
+      </div>
+
+
 
       {(() => {
         const all = itemsQ.data ?? [];
