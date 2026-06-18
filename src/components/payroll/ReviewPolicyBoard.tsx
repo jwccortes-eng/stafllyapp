@@ -409,15 +409,15 @@ export default function ReviewPolicyBoard({
     return (
       <Card className="mb-6 border-border/60 bg-card">
         <CardHeader>
-          <CardTitle>Review Policy Board</CardTitle>
+          <CardTitle>Tablero de políticas de revisión</CardTitle>
           <CardDescription>
-            No historical closeout dataset is configured for this company.
+            No hay dataset histórico de cierre configurado para esta empresa.
           </CardDescription>
         </CardHeader>
         <EmptyState
           icon={Scale}
-          title="No historical review dataset"
-          description="This company has no whitelisted Connecteam historical review board, so no global or fallback rows are rendered."
+          title="Sin dataset histórico de revisión"
+          description="Esta empresa no tiene un tablero histórico de Connecteam habilitado, así que no se renderizan filas globales ni de respaldo."
           compact
           className="pt-0"
         />
@@ -434,37 +434,61 @@ export default function ReviewPolicyBoard({
         <CollapsibleTrigger asChild>
           <button
             type="button"
-            className="w-full flex items-center justify-between gap-3 px-5 py-4 text-left"
+            className="w-full flex items-start sm:items-center justify-between gap-2 sm:gap-3 px-3 sm:px-5 py-3 sm:py-4 text-left"
           >
-            <div className="flex items-center gap-3">
-              <div className="h-9 w-9 rounded-lg bg-amber-500/15 grid place-items-center">
+            <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+              <div className="h-9 w-9 rounded-lg bg-amber-500/15 grid place-items-center shrink-0">
                 <Scale className="h-4 w-4 text-amber-700" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <div className="text-sm font-semibold tracking-tight">
-                  Review Policy Board
+                  Tablero de políticas de revisión
                 </div>
-                <div className="text-xs text-muted-foreground">
-                  Read-only · decide replace · merge · skip · document_only
+                <div className="text-[11px] sm:text-xs text-muted-foreground leading-tight">
+                  Solo lectura · decide reemplazar · unir · omitir · solo documento
+                </div>
+                <div className="flex flex-wrap items-center gap-1 mt-1.5 sm:hidden">
+                  <Badge variant="outline" className="text-[10px] py-0">
+                    {summary.total} periodos
+                  </Badge>
+                  <Badge
+                    variant="outline"
+                    className="text-[10px] py-0 bg-amber-500/10 text-amber-700 border-amber-500/30"
+                  >
+                    {summary.merge} a unir
+                  </Badge>
+                  <Badge
+                    variant="outline"
+                    className="text-[10px] py-0 bg-red-500/10 text-red-700 border-red-500/30"
+                  >
+                    {summary.blocked} bloqueado
+                  </Badge>
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="hidden sm:flex items-center gap-2 shrink-0">
               <Badge variant="outline" className="text-[11px]">
-                {summary.total} periods
+                {summary.total} periodos
               </Badge>
               <Badge
                 variant="outline"
                 className="text-[11px] bg-amber-500/10 text-amber-700 border-amber-500/30"
               >
-                {summary.merge} merge
+                {summary.merge} a unir
               </Badge>
               <Badge
                 variant="outline"
                 className="text-[11px] bg-red-500/10 text-red-700 border-red-500/30"
               >
-                {summary.blocked} blocked
+                {summary.blocked} bloqueado
               </Badge>
+              {open ? (
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              ) : (
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              )}
+            </div>
+            <div className="sm:hidden shrink-0 pt-1">
               {open ? (
                 <ChevronDown className="h-4 w-4 text-muted-foreground" />
               ) : (
