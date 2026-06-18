@@ -353,7 +353,7 @@ export default function PayPeriods() {
   if (fetchError) return <ErrorBlock title="Error al cargar periodos" onRetry={fetchPeriods} />;
 
   return (
-    <div>
+    <div className="pb-24 md:pb-0">
       <PageHeader
         variant="2"
         title="Periodos de pago"
