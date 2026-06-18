@@ -566,9 +566,12 @@ function AddressCard({
     >
       {!editing ? (
         value?.formatted_address ? (
-          <AddressPreviewCard address={value} />
+          <div className="space-y-2">
+            <AddressBadge address={value} />
+            <AddressPreviewCard address={value} />
+          </div>
         ) : (
-          <p className="text-[12px] text-muted-foreground/60">Sin dirección registrada</p>
+          <p className="text-[13px] text-muted-foreground">Sin dirección registrada</p>
         )
       ) : (
         <>
@@ -583,12 +586,41 @@ function AddressCard({
             country="US"
           />
           {saving && (
-            <p className="mt-2 text-[10.5px] text-muted-foreground/60">Guardando…</p>
+            <p className="mt-2 text-[12px] text-muted-foreground">Guardando…</p>
           )}
         </>
       )}
     </SectionShell>
   );
+}
+
+/**
+ * AddressBadge — worker-facing pill mapping address source + validation_status
+ * to one of: Verificada / Confirmada / Importada / Necesita confirmar.
+ * Presentation-only. Does not change persistence or geocoding.
+ */
+function AddressBadge({ address }: { address: StructuredAddress }) {
+  const tone = resolveAddressTone(address);
+  return <StatusPill tone={tone} />;
+}
+
+function resolveAddressTone(a: StructuredAddress): WorkerStatusTone {
+  // Verified: geocoded + has lat/lng + city/state/zip.
+  if (a.validation_status === "validated" && a.latitude != null && a.longitude != null) {
+    return "verified";
+  }
+  // Imported or legacy free-text needs worker confirmation.
+  if (a.source === "imported" || a.source === "legacy" || a.validation_status === "imported" || a.validation_status === "legacy") {
+    // If missing city/state/zip → needs confirmation; else just imported.
+    if (!a.city || !a.state || !a.postal_code) return "needs_confirmation";
+    return "imported";
+  }
+  if (a.validation_status === "incomplete") return "needs_confirmation";
+  // Manually typed and complete → confirmed by worker.
+  if (a.validation_status === "manual" && a.city && a.state && a.postal_code) {
+    return "approved"; // "Confirmada" — relabel below
+  }
+  return "needs_confirmation";
 }
 
 /* ─────────────────── Emergency contact card ─────────────────── */
