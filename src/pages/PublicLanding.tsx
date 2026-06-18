@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { StaflyLogo, StaflyMark } from "@/components/brand/StaflyBrand";
@@ -12,6 +12,8 @@ import {
   bookDemo,
 } from "@/lib/contact";
 import { PublicContactStrip } from "@/components/public/PublicContactStrip";
+import { isInstalledAppShell } from "@/lib/installed-app";
+import MobileAppEntry from "@/pages/MobileAppEntry";
 
 import {
   CalendarClock,
@@ -79,6 +81,10 @@ export default function PublicLanding() {
   const { user, canAccessAdmin, canAccessPortal } = useAuth();
   const navigate = useNavigate();
 
+  // Detect installed shell (Capacitor / installed PWA) once on mount —
+  // presentation-only branch; routes and auth flow are unchanged.
+  const [installedShell] = useState<boolean>(() => isInstalledAppShell());
+
   // Honor Supabase hash redirects even if landing is at /
   useEffect(() => {
     const hash = window.location.hash;
@@ -92,6 +98,10 @@ export default function PublicLanding() {
       navigate(`/auth/callback${hash}`, { replace: true });
     }
   }, [navigate]);
+
+  if (installedShell) {
+    return <MobileAppEntry />;
+  }
 
   const dashboardHref = canAccessAdmin ? "/app" : canAccessPortal ? "/portal" : "/app";
 
