@@ -39,7 +39,10 @@ export function MobileAdminModuleShell({
     <div className={cn("relative min-h-full flex flex-col", STAFLY_BOTTOM_NAV_CLEARANCE, className)}>
       {/* Always-on product switcher fallback for mobile admin views.
           Absolute so it sits over the header without disrupting per-module layouts. */}
-      <div className="absolute top-3 right-3 z-20">
+      <div
+        className="absolute right-3 z-20"
+        style={{ top: "max(env(safe-area-inset-top, 0px) + 0.25rem, 0.75rem)" }}
+      >
         <AdminProductSwitcher compact />
       </div>
       {header}
