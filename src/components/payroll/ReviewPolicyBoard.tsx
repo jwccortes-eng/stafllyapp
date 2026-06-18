@@ -499,19 +499,19 @@ export default function ReviewPolicyBoard({
         </CollapsibleTrigger>
 
         <CollapsibleContent>
-          <div className="px-5 pb-5 space-y-3">
-            <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/[0.04] px-4 py-2.5 text-xs text-emerald-900/80 flex items-start gap-2">
+          <div className="px-3 sm:px-5 pb-5 space-y-3">
+            <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/[0.04] px-3 sm:px-4 py-2.5 text-[11px] sm:text-xs text-emerald-900/80 flex items-start gap-2">
               <Sparkles className="h-3.5 w-3.5 mt-0.5 text-emerald-700 shrink-0" />
               <div>
-                Pilots <strong>#124</strong>, <strong>#128</strong>,{" "}
-                <strong>#129</strong> already committed and validated. They are
-                NOT shown here and will not be touched.
+                Pilotos <strong>#124</strong>, <strong>#128</strong>,{" "}
+                <strong>#129</strong> ya comprometidos y validados. No se
+                muestran aquí y no serán modificados.
               </div>
             </div>
 
             {loading ? (
               <div className="text-xs text-muted-foreground py-6 text-center">
-                Loading live snapshot…
+                Cargando snapshot en vivo…
               </div>
             ) : (
               <div className="space-y-2">
