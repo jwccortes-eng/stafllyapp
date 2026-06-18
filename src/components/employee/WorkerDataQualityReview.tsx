@@ -214,7 +214,7 @@ export default function WorkerDataQualityReview({
         ) : (
           <div className="rounded-md border border-emerald-200/60 bg-emerald-50/40 p-2 text-[11px] text-emerald-800 flex items-center gap-2">
             <ShieldCheck className="h-3.5 w-3.5" />
-            No risk tags detected on this worker.
+            No se detectaron etiquetas de riesgo en este trabajador.
           </div>
         )}
 
@@ -223,7 +223,7 @@ export default function WorkerDataQualityReview({
           <div className="rounded-md border border-border/60 bg-background/70 p-2.5 space-y-2">
             <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
               <Sparkles className="h-3 w-3" />
-              Quick actions
+              Acciones rápidas
             </div>
 
             {onJumpToTab && targetTabs.size > 0 && (
@@ -231,28 +231,28 @@ export default function WorkerDataQualityReview({
                 {targetTabs.has("info") && (
                   <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => onJumpToTab("info")}>
                     <User className="h-3 w-3 mr-1" />
-                    Edit info
+                    Editar datos
                     <ArrowRight className="h-3 w-3 ml-1 opacity-60" />
                   </Button>
                 )}
                 {targetTabs.has("profile") && (
                   <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => onJumpToTab("profile")}>
                     <User className="h-3 w-3 mr-1" />
-                    Add photo
+                    Agregar foto
                     <ArrowRight className="h-3 w-3 ml-1 opacity-60" />
                   </Button>
                 )}
                 {targetTabs.has("docs") && (
                   <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => onJumpToTab("docs")}>
                     <FileText className="h-3 w-3 mr-1" />
-                    Open documents
+                    Abrir documentos
                     <ArrowRight className="h-3 w-3 ml-1 opacity-60" />
                   </Button>
                 )}
                 {targetTabs.has("access") && (
                   <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => onJumpToTab("access")}>
                     <KeyRound className="h-3 w-3 mr-1" />
-                    Portal access
+                    Acceso al portal
                     <ArrowRight className="h-3 w-3 ml-1 opacity-60" />
                   </Button>
                 )}
@@ -260,26 +260,26 @@ export default function WorkerDataQualityReview({
             )}
 
             {waMessage && (
-              <div className="flex items-start gap-2">
+              <div className="flex flex-col sm:flex-row items-start gap-2">
                 {waUrl ? (
                   <Button
                     asChild
                     size="sm"
-                    className="h-7 text-[11px] bg-emerald-600 hover:bg-emerald-700 text-white"
+                    className="h-7 text-[11px] bg-emerald-600 hover:bg-emerald-700 text-white shrink-0"
                   >
                     <a href={waUrl} target="_blank" rel="noopener noreferrer">
                       <MessageCircle className="h-3 w-3 mr-1" />
-                      WhatsApp reminder
+                      Recordatorio WhatsApp
                     </a>
                   </Button>
                 ) : (
-                  <Button size="sm" variant="outline" className="h-7 text-[11px]" disabled title="Add a 10-digit phone number first">
+                  <Button size="sm" variant="outline" className="h-7 text-[11px] shrink-0" disabled title="Agrega un teléfono de 10 dígitos primero">
                     <MessageCircle className="h-3 w-3 mr-1" />
-                    WhatsApp (no phone)
+                    WhatsApp (sin teléfono)
                   </Button>
                 )}
-                <p className="text-[10px] text-muted-foreground leading-snug max-w-xs">
-                  Opens WhatsApp with a pre-filled message asking the worker to complete their profile. Sent manually by you.
+                <p className="text-[10px] text-muted-foreground leading-snug">
+                  Abre WhatsApp con un mensaje predefinido pidiendo al trabajador completar su perfil. Se envía manualmente.
                 </p>
               </div>
             )}
@@ -290,11 +290,11 @@ export default function WorkerDataQualityReview({
         <div className="rounded-md border border-border/60 bg-background/60 p-2.5">
           <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">
             <Info className="h-3 w-3" />
-            Recommendation
+            Recomendación
           </div>
           <p className="text-[11px] leading-snug text-foreground/85">{recommendation}</p>
           <p className="text-[10px] text-muted-foreground/80 mt-1.5 italic">
-            Edits open the matching tab in this profile — no auto-fixes are applied. Payroll, time entries and shifts are never modified from this panel.
+            Las ediciones abren la pestaña correspondiente en el perfil — no se aplican correcciones automáticas. Payroll, fichajes y turnos nunca se modifican desde este panel.
           </p>
         </div>
       </div>
