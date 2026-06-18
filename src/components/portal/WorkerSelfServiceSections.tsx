@@ -601,27 +601,34 @@ function AddressCard({
  * Presentation-only. Does not change persistence or geocoding.
  */
 function AddressBadge({ address }: { address: StructuredAddress }) {
-  const tone = resolveAddressTone(address);
-  return <StatusPill tone={tone} />;
+  const { tone, label } = resolveAddressDisplay(address);
+  return <StatusPill tone={tone} label={label} />;
 }
 
-function resolveAddressTone(a: StructuredAddress): WorkerStatusTone {
-  // Verified: geocoded + has lat/lng + city/state/zip.
+function resolveAddressDisplay(
+  a: StructuredAddress,
+): { tone: WorkerStatusTone; label: string } {
   if (a.validation_status === "validated" && a.latitude != null && a.longitude != null) {
-    return "verified";
+    return { tone: "verified", label: "Verificada" };
   }
-  // Imported or legacy free-text needs worker confirmation.
-  if (a.source === "imported" || a.source === "legacy" || a.validation_status === "imported" || a.validation_status === "legacy") {
-    // If missing city/state/zip → needs confirmation; else just imported.
-    if (!a.city || !a.state || !a.postal_code) return "needs_confirmation";
-    return "imported";
+  if (
+    a.source === "imported" ||
+    a.source === "legacy" ||
+    a.validation_status === "imported" ||
+    a.validation_status === "legacy"
+  ) {
+    if (!a.city || !a.state || !a.postal_code) {
+      return { tone: "needs_confirmation", label: "Necesita confirmar" };
+    }
+    return { tone: "imported", label: "Importada" };
   }
-  if (a.validation_status === "incomplete") return "needs_confirmation";
-  // Manually typed and complete → confirmed by worker.
+  if (a.validation_status === "incomplete") {
+    return { tone: "needs_confirmation", label: "Necesita confirmar" };
+  }
   if (a.validation_status === "manual" && a.city && a.state && a.postal_code) {
-    return "approved"; // "Confirmada" — relabel below
+    return { tone: "approved", label: "Confirmada" };
   }
-  return "needs_confirmation";
+  return { tone: "needs_confirmation", label: "Necesita confirmar" };
 }
 
 /* ─────────────────── Emergency contact card ─────────────────── */
