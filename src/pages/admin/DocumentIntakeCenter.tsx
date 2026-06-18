@@ -22,7 +22,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { SmartDateInput } from "@/components/ui/smart-date-input";
 import { formatDateUS, todayIso } from "@/lib/date-format";
 import { toast } from "@/hooks/use-toast";
-import { Loader2, Upload, FileText, CheckCircle2, XCircle, Clock, ShieldAlert, Sparkles, ExternalLink, User as UserIcon } from "lucide-react";
+import { Loader2, Upload, FileText, CheckCircle2, XCircle, Clock, ShieldAlert, Sparkles, ExternalLink, User as UserIcon, Monitor } from "lucide-react";
 import { resolveEmployeeDocumentUrl } from "@/lib/employee-documents";
 
 type Item = any;
