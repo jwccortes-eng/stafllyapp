@@ -650,7 +650,7 @@ export default function ReviewPolicyBoard({
                               onClick={() => viewDiff(t)}
                             >
                               <Eye className="h-3.5 w-3.5 mr-1.5" />
-                              View diff
+                              Ver diferencias
                             </Button>
                             <Button
                               size="sm"
@@ -658,7 +658,7 @@ export default function ReviewPolicyBoard({
                               onClick={() => copyDecision(t, live)}
                             >
                               <Copy className="h-3.5 w-3.5 mr-1.5" />
-                              Copy decision summary
+                              Copiar resumen
                             </Button>
                             <Button
                               size="sm"
@@ -666,7 +666,7 @@ export default function ReviewPolicyBoard({
                               onClick={() => printPeriod(t, live)}
                             >
                               <Printer className="h-3.5 w-3.5 mr-1.5" />
-                              Print period review
+                              Imprimir revisión
                             </Button>
                           </div>
                         </div>
@@ -680,10 +680,11 @@ export default function ReviewPolicyBoard({
             <div className="rounded-md border border-border/50 bg-muted/30 px-3 py-2 text-[11px] text-muted-foreground flex items-start gap-2">
               <FileText className="h-3 w-3 mt-0.5 shrink-0" />
               <span>
-                Connecteam reference frozen from Phase E diff dataset
+                Referencia Connecteam congelada desde el dataset diff de Fase E
                 (<code>connecteam_phase_b/connecteam-historical-payroll-dryrun-v1.xlsx</code>).
-                Stafly numbers refresh live from <code>period_base_pay</code> +{" "}
-                <code>imports</code>. Read-only — no writes, no commit, no delete.
+                Los números de Stafly se actualizan en vivo desde{" "}
+                <code>period_base_pay</code> + <code>imports</code>. Solo lectura — sin
+                escrituras, sin commits, sin borrado.
               </span>
             </div>
           </div>
