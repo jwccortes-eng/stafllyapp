@@ -212,7 +212,10 @@ export default function DocumentIntakeCenter() {
             Sugerencias del sistema. No se guarda nada sin revisión humana.
           </p>
         </div>
-        <div>
+        {/* Desktop-only: importación / subida masiva de documentos sensibles.
+            Oculto en mobile para proteger IDs, licencias, W-9, SSN y evitar
+            errores de asignación al empleado equivocado. */}
+        <div className="hidden md:block">
           <input
             ref={fileInputRef}
             type="file"
@@ -223,10 +226,24 @@ export default function DocumentIntakeCenter() {
           />
           <Button onClick={() => fileInputRef.current?.click()} disabled={uploading}>
             {uploading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Upload className="h-4 w-4 mr-2" />}
-            Subir documentos
+            Importar documentos
           </Button>
         </div>
       </div>
+
+      {/* Mobile-only aviso: importación legacy/sensible es desktop-only. */}
+      <div className="md:hidden">
+        <Card className="p-3 flex items-start gap-2.5 border-amber-200 bg-amber-50/60 text-amber-900">
+          <Monitor className="h-4 w-4 mt-0.5 shrink-0" />
+          <div className="text-xs leading-relaxed">
+            <p className="font-medium">Importación disponible solo en desktop</p>
+            <p className="text-amber-900/80">
+              La subida de documentos existentes (IDs, licencias, W-9, fotos, archivos sensibles)
+              se hace desde computadora para proteger información sensible y evitar asignaciones
+              incorrectas. Aquí puedes revisar y aprobar documentos ya subidos.
+            </p>
+          </div>
+        </Card>
 
       {(() => {
         const all = itemsQ.data ?? [];
