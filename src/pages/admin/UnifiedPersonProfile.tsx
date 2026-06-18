@@ -593,8 +593,9 @@ export default function UnifiedPersonProfile() {
       {/* ─── HERO ─── */}
       <Card className="overflow-hidden border-border/50">
         <div className="bg-gradient-to-br from-primary/[0.05] via-transparent to-transparent">
-          <CardContent className="p-5">
-            <div className="flex items-start gap-5 flex-wrap">
+          <CardContent className="p-3 sm:p-5">
+            <div className="flex items-start gap-3 sm:gap-5 flex-wrap">
+
               <PremiumAvatar
                 firstName={employee.first_name}
                 lastName={employee.last_name}
