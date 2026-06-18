@@ -278,23 +278,31 @@ export function ProfileSummaryGrid({
               <Row icon={Phone} label="Contacto" value="Restringido" />
             )
           )}
-          {employee.preferred_name && String(employee.preferred_name).trim() !== "" && (
+          {/* Phase 1A: hide-if-empty governed by worker-data-standard helpers.
+              Pure presentational gate; no behavior change for non-empty values. */}
+          {shouldShowInMain("preferred_name", employee.preferred_name) && (
             <Row
               icon={ContactRound}
               label="Alias"
               value={String(employee.preferred_name).trim()}
             />
           )}
-          {employee.employee_role && (
+          {shouldShowInMain("employee_role", employee.employee_role) && (
             <Row
               icon={Briefcase}
               label="Rol"
               value={formatDisplayText(employee.employee_role, "label")}
             />
           )}
-          {startDate && <Row icon={CalendarDays} label="Inicio" value={startDate} />}
-          {gender && <Row label="Género" value={gender} />}
-          {birthday && <Row icon={Cake} label="Cumpleaños" value={birthday} />}
+          {shouldShowInMain("start_date", employee.start_date) && startDate && (
+            <Row icon={CalendarDays} label="Inicio" value={startDate} />
+          )}
+          {shouldShowInMain("gender", employee.gender) && gender && (
+            <Row label="Género" value={gender} />
+          )}
+          {shouldShowInMain("birthday", employee.birthday) && birthday && (
+            <Row icon={Cake} label="Cumpleaños" value={birthday} />
+          )}
           {isPrivileged && emergencyContact && (
             <Row icon={AlertTriangle} label="Emergencia" value={emergencyContact} />
           )}
