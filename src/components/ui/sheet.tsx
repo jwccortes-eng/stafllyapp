@@ -152,6 +152,7 @@ const OpsSheetHeader = ({
       "sticky top-0 z-10 flex items-center gap-2.5 border-b border-border/60 bg-background/90 px-4 py-2.5 backdrop-blur-md",
       className,
     )}
+    style={{ paddingTop: "max(env(safe-area-inset-top, 0px) + 0.5rem, 0.625rem)" }}
     {...props}
   >
     {leading && <div className="shrink-0">{leading}</div>}
