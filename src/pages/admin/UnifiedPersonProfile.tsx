@@ -642,7 +642,9 @@ export default function UnifiedPersonProfile() {
                     <PremiumStatusBadge status="missing-docs" />
                   )}
                   {(employee.has_car === "Yes" || employee.has_car === true) && (
-                    <PremiumStatusBadge status="driver" />
+                    <span className="hidden sm:inline-flex">
+                      <PremiumStatusBadge status="driver" />
+                    </span>
                   )}
                   {selectedCompany && (
                     <Badge
@@ -654,18 +656,20 @@ export default function UnifiedPersonProfile() {
                     </Badge>
                   )}
                   {employee.is_active !== false && (
-                    <PhotoReviewActions
-                      employeeId={employee.id}
-                      avatarUrl={employee.avatar_url}
-                      reviewStatus={employee.photo_review_status ?? null}
-                      rejectionReason={employee.photo_rejection_reason ?? null}
-                      reviewedAt={employee.photo_reviewed_at ?? null}
-                      onChanged={({ status, reason }) =>
-                        setEmployee((prev: any) =>
-                          prev ? { ...prev, photo_review_status: status, photo_rejection_reason: reason } : prev
-                        )
-                      }
-                    />
+                    <span className="hidden sm:inline-flex">
+                      <PhotoReviewActions
+                        employeeId={employee.id}
+                        avatarUrl={employee.avatar_url}
+                        reviewStatus={employee.photo_review_status ?? null}
+                        rejectionReason={employee.photo_rejection_reason ?? null}
+                        reviewedAt={employee.photo_reviewed_at ?? null}
+                        onChanged={({ status, reason }) =>
+                          setEmployee((prev: any) =>
+                            prev ? { ...prev, photo_review_status: status, photo_rejection_reason: reason } : prev
+                          )
+                        }
+                      />
+                    </span>
                   )}
                 </div>
 
