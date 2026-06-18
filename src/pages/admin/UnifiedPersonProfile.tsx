@@ -908,30 +908,9 @@ export default function UnifiedPersonProfile() {
 
 
 
-      {/* ─── SNAPSHOT STRIP ─── */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
-        {snapshotMetrics.map((m) => {
-          const Icon = m.icon;
-          return (
-            <Card key={m.key} className="border-border/50">
-              <CardContent className="p-3">
-                <div className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                  <Icon className="h-3 w-3" />
-                  {m.label}
-                </div>
-                <div className={cn("mt-1 text-base font-bold tabular-nums leading-none", TONE_CLASS[m.tone ?? "default"])}>
-                  {m.value}
-                </div>
-                {m.hint && (
-                  <div className="mt-1 text-[10px] text-muted-foreground/80 truncate">{m.hint}</div>
-                )}
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
-
-      {/* ─── PRÓXIMA ACCIÓN RECOMENDADA (Phase 4.4b) ─── */}
+      {/* ─── PRÓXIMA ACCIÓN RECOMENDADA (Phase 1C 2026-06-18: moved above
+           snapshot on mobile so the next operational action is the first
+           thing operators see after the compact hero) ─── */}
       {(() => {
         const nextAction = selectWorkerNextAction(
           employee,
@@ -976,6 +955,34 @@ export default function UnifiedPersonProfile() {
 
         return <NextActionCard action={nextAction} onAction={handleAction} />;
       })()}
+
+      {/* ─── SNAPSHOT STRIP ───
+           Phase 1C 2026-06-18: on mobile, only the 3 most actionable KPIs
+           (portal, documents, readiness) render. Attendance/last clock-in/
+           last activity are visible from sm: upward. Desktop layout intact. */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+        {snapshotMetrics.map((m) => {
+          const Icon = m.icon;
+          const secondaryOnMobile = m.key === "attendance" || m.key === "last-clock-in" || m.key === "activity";
+          return (
+            <Card key={m.key} className={cn("border-border/50", secondaryOnMobile && "hidden sm:block")}>
+              <CardContent className="p-3">
+                <div className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                  <Icon className="h-3 w-3" />
+                  {m.label}
+                </div>
+                <div className={cn("mt-1 text-base font-bold tabular-nums leading-none", TONE_CLASS[m.tone ?? "default"])}>
+                  {m.value}
+                </div>
+                {m.hint && (
+                  <div className="mt-1 text-[10px] text-muted-foreground/80 truncate">{m.hint}</div>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+
 
       {/* ─── ONE-SCREEN PROFILE SUMMARY GRID (Phase: One-Screen Optimization v1) ───
           Presentational, read-only 2-column card grid: Datos principales,
