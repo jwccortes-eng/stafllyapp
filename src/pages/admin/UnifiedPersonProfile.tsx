@@ -568,7 +568,7 @@ export default function UnifiedPersonProfile() {
   const invitation = invitations[employee.id];
 
   return (
-    <div className="space-y-4 pb-10">
+    <div className="space-y-4 pb-28 sm:pb-10">
       {/* ─── Breadcrumb / Back ─── */}
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
         <Button
@@ -593,8 +593,9 @@ export default function UnifiedPersonProfile() {
       {/* ─── HERO ─── */}
       <Card className="overflow-hidden border-border/50">
         <div className="bg-gradient-to-br from-primary/[0.05] via-transparent to-transparent">
-          <CardContent className="p-5">
-            <div className="flex items-start gap-5 flex-wrap">
+          <CardContent className="p-3 sm:p-5">
+            <div className="flex items-start gap-3 sm:gap-5 flex-wrap">
+
               <PremiumAvatar
                 firstName={employee.first_name}
                 lastName={employee.last_name}
@@ -642,7 +643,9 @@ export default function UnifiedPersonProfile() {
                     <PremiumStatusBadge status="missing-docs" />
                   )}
                   {(employee.has_car === "Yes" || employee.has_car === true) && (
-                    <PremiumStatusBadge status="driver" />
+                    <span className="hidden sm:inline-flex">
+                      <PremiumStatusBadge status="driver" />
+                    </span>
                   )}
                   {selectedCompany && (
                     <Badge
@@ -654,23 +657,25 @@ export default function UnifiedPersonProfile() {
                     </Badge>
                   )}
                   {employee.is_active !== false && (
-                    <PhotoReviewActions
-                      employeeId={employee.id}
-                      avatarUrl={employee.avatar_url}
-                      reviewStatus={employee.photo_review_status ?? null}
-                      rejectionReason={employee.photo_rejection_reason ?? null}
-                      reviewedAt={employee.photo_reviewed_at ?? null}
-                      onChanged={({ status, reason }) =>
-                        setEmployee((prev: any) =>
-                          prev ? { ...prev, photo_review_status: status, photo_rejection_reason: reason } : prev
-                        )
-                      }
-                    />
+                    <span className="hidden sm:inline-flex">
+                      <PhotoReviewActions
+                        employeeId={employee.id}
+                        avatarUrl={employee.avatar_url}
+                        reviewStatus={employee.photo_review_status ?? null}
+                        rejectionReason={employee.photo_rejection_reason ?? null}
+                        reviewedAt={employee.photo_reviewed_at ?? null}
+                        onChanged={({ status, reason }) =>
+                          setEmployee((prev: any) =>
+                            prev ? { ...prev, photo_review_status: status, photo_rejection_reason: reason } : prev
+                          )
+                        }
+                      />
+                    </span>
                   )}
                 </div>
 
-                {/* Contact row — only renders rows with real values */}
-                <div className="mt-3 flex items-center gap-x-4 gap-y-1 flex-wrap text-xs text-muted-foreground">
+                {/* Contact row — desktop only. On mobile these live in Datos principales. */}
+                <div className="mt-3 hidden sm:flex items-center gap-x-4 gap-y-1 flex-wrap text-xs text-muted-foreground">
                   {employee.phone_number && (
                     <a
                       href={`tel:${employee.phone_number}`}
@@ -734,7 +739,7 @@ export default function UnifiedPersonProfile() {
                   <Button
                     size="sm"
                     variant="outline"
-                    className="h-8 text-xs"
+                    className="hidden sm:inline-flex h-8 text-xs"
                     onClick={() => setIsEditing(true)}
                   >
                     <Pencil className="h-3.5 w-3.5 mr-1.5" /> Edit
@@ -794,7 +799,7 @@ export default function UnifiedPersonProfile() {
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="h-8 text-xs"
+                      className="hidden sm:inline-flex h-8 text-xs"
                       onClick={async () => {
                         try {
                           const { inviteUrl } = await import("@/lib/app-url");
@@ -811,7 +816,7 @@ export default function UnifiedPersonProfile() {
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="h-8 text-xs"
+                      className="hidden sm:inline-flex h-8 text-xs"
                       onClick={async () => {
                         try {
                           const { inviteUrl } = await import("@/lib/app-url");
@@ -846,7 +851,7 @@ export default function UnifiedPersonProfile() {
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="h-8 text-xs"
+                      className="hidden sm:inline-flex h-8 text-xs"
                       onClick={() => {
                         if (isInactive) {
                           toggleActive();
@@ -904,30 +909,9 @@ export default function UnifiedPersonProfile() {
 
 
 
-      {/* ─── SNAPSHOT STRIP ─── */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
-        {snapshotMetrics.map((m) => {
-          const Icon = m.icon;
-          return (
-            <Card key={m.key} className="border-border/50">
-              <CardContent className="p-3">
-                <div className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                  <Icon className="h-3 w-3" />
-                  {m.label}
-                </div>
-                <div className={cn("mt-1 text-base font-bold tabular-nums leading-none", TONE_CLASS[m.tone ?? "default"])}>
-                  {m.value}
-                </div>
-                {m.hint && (
-                  <div className="mt-1 text-[10px] text-muted-foreground/80 truncate">{m.hint}</div>
-                )}
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
-
-      {/* ─── PRÓXIMA ACCIÓN RECOMENDADA (Phase 4.4b) ─── */}
+      {/* ─── PRÓXIMA ACCIÓN RECOMENDADA (Phase 1C 2026-06-18: moved above
+           snapshot on mobile so the next operational action is the first
+           thing operators see after the compact hero) ─── */}
       {(() => {
         const nextAction = selectWorkerNextAction(
           employee,
@@ -972,6 +956,34 @@ export default function UnifiedPersonProfile() {
 
         return <NextActionCard action={nextAction} onAction={handleAction} />;
       })()}
+
+      {/* ─── SNAPSHOT STRIP ───
+           Phase 1C 2026-06-18: on mobile, only the 3 most actionable KPIs
+           (portal, documents, readiness) render. Attendance/last clock-in/
+           last activity are visible from sm: upward. Desktop layout intact. */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+        {snapshotMetrics.map((m) => {
+          const Icon = m.icon;
+          const secondaryOnMobile = m.key === "attendance" || m.key === "last-clock-in" || m.key === "activity";
+          return (
+            <Card key={m.key} className={cn("border-border/50", secondaryOnMobile && "hidden sm:block")}>
+              <CardContent className="p-3">
+                <div className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                  <Icon className="h-3 w-3" />
+                  {m.label}
+                </div>
+                <div className={cn("mt-1 text-base font-bold tabular-nums leading-none", TONE_CLASS[m.tone ?? "default"])}>
+                  {m.value}
+                </div>
+                {m.hint && (
+                  <div className="mt-1 text-[10px] text-muted-foreground/80 truncate">{m.hint}</div>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+
 
       {/* ─── ONE-SCREEN PROFILE SUMMARY GRID (Phase: One-Screen Optimization v1) ───
           Presentational, read-only 2-column card grid: Datos principales,

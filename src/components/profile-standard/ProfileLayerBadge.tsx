@@ -21,10 +21,12 @@ interface ProfileLayerBadgeProps {
 }
 
 export function ProfileLayerBadge({ layer, className }: ProfileLayerBadgeProps) {
+  // Phase 1C 2026-06-18: hidden on mobile to reduce repeated visual noise.
+  // Layer/tenant context lives in the profile hero on mobile.
   return (
     <Badge
       variant="outline"
-      className={cn("text-[10px] font-medium", className)}
+      className={cn("hidden sm:inline-flex text-[10px] font-medium", className)}
       title={PROFILE_LAYER_DESCRIPTIONS[layer]}
     >
       Capa {layer} · {PROFILE_LAYER_LABELS[layer]}
