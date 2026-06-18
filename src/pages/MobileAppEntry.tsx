@@ -70,9 +70,9 @@ export default function MobileAppEntry() {
       </header>
 
       {/* Main */}
-      <main className="flex-1 flex flex-col justify-center px-6 py-8 max-w-md mx-auto w-full">
+      <main className="flex-1 flex flex-col justify-center px-6 py-5 max-w-md mx-auto w-full">
         <div className="h-14 w-14 rounded-2xl bg-primary/10 border border-primary/15 flex items-center justify-center mb-6">
-          <Smartphone className="h-7 w-7 text-primary" strokeWidth={2} />
+          <ClipboardCheck className="h-7 w-7 text-primary" strokeWidth={2} />
         </div>
 
         <h1 className="text-3xl font-bold font-heading tracking-tight leading-tight mb-3">
@@ -94,7 +94,7 @@ export default function MobileAppEntry() {
                 style={{ height: 52 }}
               >
                 <Link to={portalHref}>
-                  Entrar a mi portal <ArrowRight className="ml-2 h-4 w-4" />
+                  Entrar al portal <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
               {adminHref && portalHref !== adminHref && (
@@ -133,7 +133,7 @@ export default function MobileAppEntry() {
       <footer className="px-6 pb-6 pt-4">
         <p className="flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground/70">
           <ShieldCheck className="h-3 w-3" />
-          Portal seguro · Invite-only · Workforce operations
+          Portal seguro · Solo con invitación · Operación segura
         </p>
       </footer>
     </div>
