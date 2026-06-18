@@ -36,7 +36,10 @@ export function MobileOperationsSheet({
           className
         )}
       >
-        <div className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b border-border/60 px-5 py-4 rounded-t-3xl">
+        <div
+          className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b border-border/60 px-5 py-4 rounded-t-3xl"
+          style={{ paddingTop: "max(env(safe-area-inset-top, 0px) + 0.5rem, 1rem)" }}
+        >
           {header}
         </div>
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
