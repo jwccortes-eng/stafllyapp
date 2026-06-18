@@ -139,10 +139,10 @@ export default function WorkerDataQualityReview({
             </div>
             <div className="min-w-0">
               <h4 className="text-xs font-semibold uppercase tracking-wide text-foreground/80">
-                Data Quality Review
+                Calidad de datos
               </h4>
               <p className="text-[10.5px] text-muted-foreground mt-0.5 max-w-md leading-tight">
-                Readiness signal only. Payroll calculations are not changed.
+                Solo señal de preparación. Los cálculos de payroll no se modifican.
               </p>
             </div>
           </div>
@@ -162,15 +162,15 @@ export default function WorkerDataQualityReview({
         {/* Detected signals (always shown — operators can verify the source data) */}
         <div className="rounded-md border border-border/60 bg-card/60 p-2.5">
           <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
-            Detected on this worker
+            Detectado en este trabajador
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-1">
-            <DetectedRow icon={Phone} label="Phone"    value={detected.phone} hint={detected.phoneHint} />
+            <DetectedRow icon={Phone} label="Teléfono"    value={detected.phone} hint={detected.phoneHint} />
             <DetectedRow icon={Mail}  label="Email"    value={detected.email} hint={detected.emailHint} />
-            <DetectedRow icon={UserCog} label="Role"   value={detected.role} hint={detected.roleHint} />
-            <DetectedRow icon={MapPin} label="Location" value={detected.location} hint={detected.locationHint} />
-            <DetectedRow icon={KeyRound} label="Portal access" value={detected.portal} hint={detected.portalHint} />
-            <DetectedRow icon={Hash}  label="Status"   value={detected.status} hint={detected.statusHint} />
+            <DetectedRow icon={UserCog} label="Rol"   value={detected.role} hint={detected.roleHint} />
+            <DetectedRow icon={MapPin} label="Ubicación" value={detected.location} hint={detected.locationHint} />
+            <DetectedRow icon={KeyRound} label="Acceso al portal" value={detected.portal} hint={detected.portalHint} />
+            <DetectedRow icon={Hash}  label="Estado"   value={detected.status} hint={detected.statusHint} />
           </div>
         </div>
 
@@ -178,7 +178,7 @@ export default function WorkerDataQualityReview({
         {orderedRisks.length > 0 ? (
           <div className="space-y-1.5">
             <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Risk tags ({orderedRisks.length})
+              Etiquetas de riesgo ({orderedRisks.length})
             </div>
             <ul className="space-y-1.5">
               {orderedRisks.map((k) => {
