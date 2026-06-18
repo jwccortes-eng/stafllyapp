@@ -535,41 +535,49 @@ export default function ReviewPolicyBoard({
                             [t.sequence]: !isOpen,
                           }))
                         }
-                        className="w-full px-4 py-3 flex items-center gap-3 hover:bg-muted/40 transition-colors"
+                        className="w-full px-3 sm:px-4 py-3 flex flex-col md:flex-row md:items-center gap-2 md:gap-3 hover:bg-muted/40 transition-colors text-left"
                       >
-                        <div className="flex items-center gap-2 min-w-[120px]">
+                        <div className="flex items-center gap-2 md:min-w-[120px] w-full md:w-auto">
                           {isOpen ? (
-                            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                           ) : (
-                            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+                            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                           )}
                           <span className="font-mono text-sm font-semibold">
                             #{t.sequence}
                           </span>
-                          <span className="text-xs text-muted-foreground">
+                          <span className="text-xs text-muted-foreground truncate">
                             {format(new Date(t.start + "T00:00:00"), "MMM d")}–
                             {format(new Date(t.end + "T00:00:00"), "MMM d")}
                           </span>
+                          <div className="ml-auto md:hidden flex flex-wrap items-center gap-1 justify-end">
+                            <Badge
+                              variant="outline"
+                              className={cn("text-[10px] py-0", RISK_BADGE[t.risk])}
+                            >
+                              {RISK_LABELS[t.risk]}
+                            </Badge>
+                          </div>
                         </div>
-                        <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
-                          <div>
-                            <div className="text-muted-foreground">Stafly</div>
-                            <div className="font-mono tabular-nums">
+                        <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-x-3 gap-y-1.5 text-xs w-full">
+                          <div className="min-w-0">
+                            <div className="text-muted-foreground text-[10px] uppercase tracking-wide">Stafly</div>
+                            <div className="font-mono tabular-nums truncate">
                               {live?.staflyRows ?? 0} ·{" "}
                               {fmtMoney(live?.staflyTotal ?? 0)}
                             </div>
                           </div>
-                          <div>
-                            <div className="text-muted-foreground">Connecteam</div>
-                            <div className="font-mono tabular-nums">
+                          <div className="min-w-0">
+                            <div className="text-muted-foreground text-[10px] uppercase tracking-wide">Connecteam</div>
+                            <div className="font-mono tabular-nums truncate">
                               {t.ctRows ?? "—"} · {fmtMoney(t.ctTotal)}
                             </div>
                           </div>
-                          <div>
-                            <div className="text-muted-foreground">Δ</div>
+                          <div className="min-w-0">
+                            <div className="text-muted-foreground text-[10px] uppercase tracking-wide">Δ</div>
                             <div
                               className={cn(
-                                "font-mono tabular-nums",
+                                "font-mono tabular-nums truncate",
                                 delta != null && delta > 0
                                   ? "text-emerald-700"
                                   : delta != null && delta < 0
@@ -580,24 +588,24 @@ export default function ReviewPolicyBoard({
                               {delta != null ? fmtMoney(delta) : "—"}
                             </div>
                           </div>
-                          <div>
-                            <div className="text-muted-foreground">Imports</div>
-                            <div className="font-mono tabular-nums">
+                          <div className="min-w-0">
+                            <div className="text-muted-foreground text-[10px] uppercase tracking-wide">Importaciones</div>
+                            <div className="font-mono tabular-nums truncate">
                               {live?.importsCount ?? 0}
                             </div>
                           </div>
                         </div>
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex flex-wrap items-center gap-1.5 w-full md:w-auto md:justify-end">
                           <Badge
                             variant="outline"
-                            className={cn("text-[10px]", RISK_BADGE[t.risk])}
+                            className={cn("text-[10px] hidden md:inline-flex", RISK_BADGE[t.risk])}
                           >
-                            {t.risk}
+                            {RISK_LABELS[t.risk]}
                           </Badge>
                           <Badge
                             variant="outline"
                             className={cn(
-                              "text-[10px]",
+                              "text-[10px] max-w-full whitespace-normal text-left leading-tight",
                               REC_BADGE[t.recommendation],
                             )}
                           >
