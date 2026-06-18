@@ -132,10 +132,16 @@ export function PortalAccessCard({ employee, companyName, invitation, onInvite }
           </div>
         )}
 
-        {/* Details grid */}
+        {/* Details grid — access-credential-only.
+            Phase 1B 2026-06-18: phone/email here are labeled as login/invite
+            credentials, not general contact info. General contact lives in
+            Datos principales. No behavior change; relabel only. */}
+        <p className="text-[9.5px] uppercase tracking-wider text-muted-foreground/70 font-semibold">
+          Credenciales de acceso · usadas para invitación y login
+        </p>
         <div className="grid grid-cols-2 gap-2 text-[10px]">
           <div className="bg-muted/30 rounded-lg px-2.5 py-1.5">
-            <span className="text-muted-foreground">Teléfono</span>
+            <span className="text-muted-foreground">Teléfono (login)</span>
             <p className={cn("font-medium mt-0.5", hasPhone ? "text-foreground" : "text-warning")}>
               {employee.phone_number || "No registrado"}
             </p>
@@ -147,7 +153,7 @@ export function PortalAccessCard({ employee, companyName, invitation, onInvite }
             </p>
           </div>
           <div className="bg-muted/30 rounded-lg px-2.5 py-1.5">
-            <span className="text-muted-foreground">Email</span>
+            <span className="text-muted-foreground">Email (invitación)</span>
             <p className={cn("font-medium mt-0.5 truncate", hasEmail ? "text-foreground" : "text-muted-foreground/50")}>
               {employee.email || "Sin email"}
             </p>
