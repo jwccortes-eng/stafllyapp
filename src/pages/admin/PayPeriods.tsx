@@ -353,7 +353,7 @@ export default function PayPeriods() {
   if (fetchError) return <ErrorBlock title="Error al cargar periodos" onRetry={fetchPeriods} />;
 
   return (
-    <div>
+    <div className="pb-24 md:pb-0">
       <PageHeader
         variant="2"
         title="Periodos de pago"
@@ -535,7 +535,7 @@ export default function PayPeriods() {
       />
 
       <div className="flex items-center justify-between gap-2 mb-2">
-        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">All Periods</h2>
+        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Todos los periodos</h2>
         <Button
           variant="ghost"
           size="sm"
@@ -545,11 +545,113 @@ export default function PayPeriods() {
               ?.scrollIntoView({ behavior: "smooth", block: "start" })
           }
         >
-          ↑ Historical Board
+          ↑ Tablero histórico
         </Button>
       </div>
 
-      <div className="data-table-wrapper">
+      {/* Mobile cards (md hidden) */}
+      <div className="md:hidden space-y-2 mb-4">
+        {periods.length === 0 ? (
+          <div className="rounded-lg border border-border bg-card px-3 py-6 text-center text-xs text-muted-foreground">
+            No hay periodos
+          </div>
+        ) : (
+          periods.map((p) => {
+            const today = new Date().toISOString().slice(0, 10);
+            const isCurrentWeek = p.start_date <= today && p.end_date >= today;
+            const meta = periodMeta[p.id];
+            const steps = [
+              { label: "Abierto", done: true },
+              { label: "Importado", done: meta?.hasImports ?? false },
+              { label: "Consolidado", done: meta?.hasBasePay ?? false },
+              { label: "Cerrado", done: p.status === "closed" },
+              { label: "Publicado", done: !!p.published_at },
+            ];
+            let currentLabel = "Nuevo";
+            for (let i = steps.length - 1; i >= 0; i--) {
+              if (steps[i].done) { currentLabel = steps[i].label; break; }
+            }
+            const colorMap: Record<string, string> = {
+              "Nuevo": "bg-muted text-muted-foreground",
+              "Abierto": "bg-primary/10 text-primary",
+              "Importado": "bg-accent-warm/15 text-accent-warm",
+              "Consolidado": "bg-warning/15 text-warning",
+              "Cerrado": "bg-destructive/10 text-destructive",
+              "Publicado": "bg-earning/15 text-earning",
+            };
+            return (
+              <div
+                key={p.id}
+                className={cn(
+                  "rounded-lg border bg-card p-3 space-y-2",
+                  isCurrentWeek ? "border-primary/40 bg-primary/[0.04]" : "border-border"
+                )}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    {isCurrentWeek && <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary shrink-0" />}
+                    <span className="font-mono text-xs text-muted-foreground">
+                      {p.sequence_number ? formatSequence(p.sequence_number, seqConfig) : "—"}
+                    </span>
+                    <span className="text-sm font-medium truncate">
+                      {p.start_date} → {p.end_date}
+                    </span>
+                  </div>
+                  <span className={cn("inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold shrink-0", colorMap[currentLabel] || "bg-muted text-muted-foreground")}>
+                    {currentLabel}
+                  </span>
+                </div>
+                {p.closed_at && (
+                  <div className="text-[11px] text-muted-foreground">
+                    Cerrado {format(new Date(p.closed_at), "yyyy-MM-dd HH:mm")}
+                  </div>
+                )}
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-[11px]"
+                    onClick={() => navigate(`/app/weekly-payroll-reconciliation?periodId=${p.id}`)}
+                  >
+                    <Scale className="h-3 w-3 mr-1" />
+                    Reconciliación
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-[11px]"
+                    onClick={() => setSummaryPeriod(p)}
+                  >
+                    <FileSpreadsheet className="h-3 w-3 mr-1" />
+                    Resumen
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-[11px]"
+                    onClick={() => setTracePeriod(p)}
+                  >
+                    <Search className="h-3 w-3 mr-1" />
+                    Desglose
+                  </Button>
+                  {p.status !== "open" && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 text-[11px]"
+                      onClick={() => togglePublish(p)}
+                    >
+                      {p.published_at ? <><EyeOff className="h-3 w-3 mr-1" />Retirar</> : <><Send className="h-3 w-3 mr-1" />Publicar</>}
+                    </Button>
+                  )}
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      <div className="hidden md:block data-table-wrapper">
         <Table>
           <TableHeader>
             <TableRow>

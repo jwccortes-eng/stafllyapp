@@ -178,11 +178,18 @@ interface LiveStats {
 }
 
 const REC_LABELS: Record<Recommendation, string> = {
-  replace_candidate: "Replace candidate",
-  merge_candidate: "Merge candidate",
-  skip_document_only: "Skip · document only",
-  blocked_needs_human_review: "Needs human review",
-  blocked_passover_split: "Blocked · PASSOVER split",
+  replace_candidate: "Candidato a reemplazar",
+  merge_candidate: "Candidato a unir",
+  skip_document_only: "Omitir · solo documento",
+  blocked_needs_human_review: "Requiere revisión",
+  blocked_passover_split: "Bloqueado · división PASSOVER",
+};
+
+const RISK_LABELS: Record<RiskLevel, string> = {
+  low: "Bajo",
+  medium: "Medio",
+  high: "Alto",
+  blocked: "Bloqueado",
 };
 
 const REC_BADGE: Record<Recommendation, string> = {
@@ -402,15 +409,15 @@ export default function ReviewPolicyBoard({
     return (
       <Card className="mb-6 border-border/60 bg-card">
         <CardHeader>
-          <CardTitle>Review Policy Board</CardTitle>
+          <CardTitle>Tablero de políticas de revisión</CardTitle>
           <CardDescription>
-            No historical closeout dataset is configured for this company.
+            No hay dataset histórico de cierre configurado para esta empresa.
           </CardDescription>
         </CardHeader>
         <EmptyState
           icon={Scale}
-          title="No historical review dataset"
-          description="This company has no whitelisted Connecteam historical review board, so no global or fallback rows are rendered."
+          title="Sin dataset histórico de revisión"
+          description="Esta empresa no tiene un tablero histórico de Connecteam habilitado, así que no se renderizan filas globales ni de respaldo."
           compact
           className="pt-0"
         />
@@ -427,37 +434,61 @@ export default function ReviewPolicyBoard({
         <CollapsibleTrigger asChild>
           <button
             type="button"
-            className="w-full flex items-center justify-between gap-3 px-5 py-4 text-left"
+            className="w-full flex items-start sm:items-center justify-between gap-2 sm:gap-3 px-3 sm:px-5 py-3 sm:py-4 text-left"
           >
-            <div className="flex items-center gap-3">
-              <div className="h-9 w-9 rounded-lg bg-amber-500/15 grid place-items-center">
+            <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+              <div className="h-9 w-9 rounded-lg bg-amber-500/15 grid place-items-center shrink-0">
                 <Scale className="h-4 w-4 text-amber-700" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <div className="text-sm font-semibold tracking-tight">
-                  Review Policy Board
+                  Tablero de políticas de revisión
                 </div>
-                <div className="text-xs text-muted-foreground">
-                  Read-only · decide replace · merge · skip · document_only
+                <div className="text-[11px] sm:text-xs text-muted-foreground leading-tight">
+                  Solo lectura · decide reemplazar · unir · omitir · solo documento
+                </div>
+                <div className="flex flex-wrap items-center gap-1 mt-1.5 sm:hidden">
+                  <Badge variant="outline" className="text-[10px] py-0">
+                    {summary.total} periodos
+                  </Badge>
+                  <Badge
+                    variant="outline"
+                    className="text-[10px] py-0 bg-amber-500/10 text-amber-700 border-amber-500/30"
+                  >
+                    {summary.merge} a unir
+                  </Badge>
+                  <Badge
+                    variant="outline"
+                    className="text-[10px] py-0 bg-red-500/10 text-red-700 border-red-500/30"
+                  >
+                    {summary.blocked} bloqueado
+                  </Badge>
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="hidden sm:flex items-center gap-2 shrink-0">
               <Badge variant="outline" className="text-[11px]">
-                {summary.total} periods
+                {summary.total} periodos
               </Badge>
               <Badge
                 variant="outline"
                 className="text-[11px] bg-amber-500/10 text-amber-700 border-amber-500/30"
               >
-                {summary.merge} merge
+                {summary.merge} a unir
               </Badge>
               <Badge
                 variant="outline"
                 className="text-[11px] bg-red-500/10 text-red-700 border-red-500/30"
               >
-                {summary.blocked} blocked
+                {summary.blocked} bloqueado
               </Badge>
+              {open ? (
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              ) : (
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              )}
+            </div>
+            <div className="sm:hidden shrink-0 pt-1">
               {open ? (
                 <ChevronDown className="h-4 w-4 text-muted-foreground" />
               ) : (
@@ -468,19 +499,19 @@ export default function ReviewPolicyBoard({
         </CollapsibleTrigger>
 
         <CollapsibleContent>
-          <div className="px-5 pb-5 space-y-3">
-            <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/[0.04] px-4 py-2.5 text-xs text-emerald-900/80 flex items-start gap-2">
+          <div className="px-3 sm:px-5 pb-5 space-y-3">
+            <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/[0.04] px-3 sm:px-4 py-2.5 text-[11px] sm:text-xs text-emerald-900/80 flex items-start gap-2">
               <Sparkles className="h-3.5 w-3.5 mt-0.5 text-emerald-700 shrink-0" />
               <div>
-                Pilots <strong>#124</strong>, <strong>#128</strong>,{" "}
-                <strong>#129</strong> already committed and validated. They are
-                NOT shown here and will not be touched.
+                Pilotos <strong>#124</strong>, <strong>#128</strong>,{" "}
+                <strong>#129</strong> ya comprometidos y validados. No se
+                muestran aquí y no serán modificados.
               </div>
             </div>
 
             {loading ? (
               <div className="text-xs text-muted-foreground py-6 text-center">
-                Loading live snapshot…
+                Cargando snapshot en vivo…
               </div>
             ) : (
               <div className="space-y-2">
@@ -504,41 +535,49 @@ export default function ReviewPolicyBoard({
                             [t.sequence]: !isOpen,
                           }))
                         }
-                        className="w-full px-4 py-3 flex items-center gap-3 hover:bg-muted/40 transition-colors"
+                        className="w-full px-3 sm:px-4 py-3 flex flex-col md:flex-row md:items-center gap-2 md:gap-3 hover:bg-muted/40 transition-colors text-left"
                       >
-                        <div className="flex items-center gap-2 min-w-[120px]">
+                        <div className="flex items-center gap-2 md:min-w-[120px] w-full md:w-auto">
                           {isOpen ? (
-                            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                           ) : (
-                            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+                            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                           )}
                           <span className="font-mono text-sm font-semibold">
                             #{t.sequence}
                           </span>
-                          <span className="text-xs text-muted-foreground">
+                          <span className="text-xs text-muted-foreground truncate">
                             {format(new Date(t.start + "T00:00:00"), "MMM d")}–
                             {format(new Date(t.end + "T00:00:00"), "MMM d")}
                           </span>
+                          <div className="ml-auto md:hidden flex flex-wrap items-center gap-1 justify-end">
+                            <Badge
+                              variant="outline"
+                              className={cn("text-[10px] py-0", RISK_BADGE[t.risk])}
+                            >
+                              {RISK_LABELS[t.risk]}
+                            </Badge>
+                          </div>
                         </div>
-                        <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
-                          <div>
-                            <div className="text-muted-foreground">Stafly</div>
-                            <div className="font-mono tabular-nums">
+                        <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-x-3 gap-y-1.5 text-xs w-full">
+                          <div className="min-w-0">
+                            <div className="text-muted-foreground text-[10px] uppercase tracking-wide">Stafly</div>
+                            <div className="font-mono tabular-nums truncate">
                               {live?.staflyRows ?? 0} ·{" "}
                               {fmtMoney(live?.staflyTotal ?? 0)}
                             </div>
                           </div>
-                          <div>
-                            <div className="text-muted-foreground">Connecteam</div>
-                            <div className="font-mono tabular-nums">
+                          <div className="min-w-0">
+                            <div className="text-muted-foreground text-[10px] uppercase tracking-wide">Connecteam</div>
+                            <div className="font-mono tabular-nums truncate">
                               {t.ctRows ?? "—"} · {fmtMoney(t.ctTotal)}
                             </div>
                           </div>
-                          <div>
-                            <div className="text-muted-foreground">Δ</div>
+                          <div className="min-w-0">
+                            <div className="text-muted-foreground text-[10px] uppercase tracking-wide">Δ</div>
                             <div
                               className={cn(
-                                "font-mono tabular-nums",
+                                "font-mono tabular-nums truncate",
                                 delta != null && delta > 0
                                   ? "text-emerald-700"
                                   : delta != null && delta < 0
@@ -549,24 +588,24 @@ export default function ReviewPolicyBoard({
                               {delta != null ? fmtMoney(delta) : "—"}
                             </div>
                           </div>
-                          <div>
-                            <div className="text-muted-foreground">Imports</div>
-                            <div className="font-mono tabular-nums">
+                          <div className="min-w-0">
+                            <div className="text-muted-foreground text-[10px] uppercase tracking-wide">Importaciones</div>
+                            <div className="font-mono tabular-nums truncate">
                               {live?.importsCount ?? 0}
                             </div>
                           </div>
                         </div>
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex flex-wrap items-center gap-1.5 w-full md:w-auto md:justify-end">
                           <Badge
                             variant="outline"
-                            className={cn("text-[10px]", RISK_BADGE[t.risk])}
+                            className={cn("text-[10px] hidden md:inline-flex", RISK_BADGE[t.risk])}
                           >
-                            {t.risk}
+                            {RISK_LABELS[t.risk]}
                           </Badge>
                           <Badge
                             variant="outline"
                             className={cn(
-                              "text-[10px]",
+                              "text-[10px] max-w-full whitespace-normal text-left leading-tight",
                               REC_BADGE[t.recommendation],
                             )}
                           >
@@ -611,7 +650,7 @@ export default function ReviewPolicyBoard({
                               onClick={() => viewDiff(t)}
                             >
                               <Eye className="h-3.5 w-3.5 mr-1.5" />
-                              View diff
+                              Ver diferencias
                             </Button>
                             <Button
                               size="sm"
@@ -619,7 +658,7 @@ export default function ReviewPolicyBoard({
                               onClick={() => copyDecision(t, live)}
                             >
                               <Copy className="h-3.5 w-3.5 mr-1.5" />
-                              Copy decision summary
+                              Copiar resumen
                             </Button>
                             <Button
                               size="sm"
@@ -627,7 +666,7 @@ export default function ReviewPolicyBoard({
                               onClick={() => printPeriod(t, live)}
                             >
                               <Printer className="h-3.5 w-3.5 mr-1.5" />
-                              Print period review
+                              Imprimir revisión
                             </Button>
                           </div>
                         </div>
@@ -641,10 +680,11 @@ export default function ReviewPolicyBoard({
             <div className="rounded-md border border-border/50 bg-muted/30 px-3 py-2 text-[11px] text-muted-foreground flex items-start gap-2">
               <FileText className="h-3 w-3 mt-0.5 shrink-0" />
               <span>
-                Connecteam reference frozen from Phase E diff dataset
+                Referencia Connecteam congelada desde el dataset diff de Fase E
                 (<code>connecteam_phase_b/connecteam-historical-payroll-dryrun-v1.xlsx</code>).
-                Stafly numbers refresh live from <code>period_base_pay</code> +{" "}
-                <code>imports</code>. Read-only — no writes, no commit, no delete.
+                Los números de Stafly se actualizan en vivo desde{" "}
+                <code>period_base_pay</code> + <code>imports</code>. Solo lectura — sin
+                escrituras, sin commits, sin borrado.
               </span>
             </div>
           </div>
