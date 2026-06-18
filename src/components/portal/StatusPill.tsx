@@ -12,6 +12,8 @@ import {
   HelpCircle,
   Download,
   ShieldCheck,
+  ShieldAlert,
+  CalendarX,
   MinusCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -24,6 +26,8 @@ export type WorkerStatusTone =
   | "needs_confirmation"
   | "imported"
   | "verified"
+  | "unverified"
+  | "expired"
   | "not_applicable";
 
 const CONFIG: Record<
