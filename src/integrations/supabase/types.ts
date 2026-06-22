@@ -4128,6 +4128,7 @@ export type Database = {
       employees: {
         Row: {
           access_pin: string | null
+          access_pin_hash: string | null
           added_by: string | null
           added_via: string | null
           address: string | null
@@ -4181,6 +4182,9 @@ export type Database = {
           photo_review_status: string | null
           photo_reviewed_at: string | null
           photo_reviewed_by: string | null
+          pin_hash_version: string | null
+          pin_migrated_at: string | null
+          pin_set_at: string | null
           portal_access_enabled: boolean
           preferred_name: string | null
           professional_summary: string | null
@@ -4199,6 +4203,7 @@ export type Database = {
         }
         Insert: {
           access_pin?: string | null
+          access_pin_hash?: string | null
           added_by?: string | null
           added_via?: string | null
           address?: string | null
@@ -4252,6 +4257,9 @@ export type Database = {
           photo_review_status?: string | null
           photo_reviewed_at?: string | null
           photo_reviewed_by?: string | null
+          pin_hash_version?: string | null
+          pin_migrated_at?: string | null
+          pin_set_at?: string | null
           portal_access_enabled?: boolean
           preferred_name?: string | null
           professional_summary?: string | null
@@ -4270,6 +4278,7 @@ export type Database = {
         }
         Update: {
           access_pin?: string | null
+          access_pin_hash?: string | null
           added_by?: string | null
           added_via?: string | null
           address?: string | null
@@ -4323,6 +4332,9 @@ export type Database = {
           photo_review_status?: string | null
           photo_reviewed_at?: string | null
           photo_reviewed_by?: string | null
+          pin_hash_version?: string | null
+          pin_migrated_at?: string | null
+          pin_set_at?: string | null
           portal_access_enabled?: boolean
           preferred_name?: string | null
           professional_summary?: string | null
