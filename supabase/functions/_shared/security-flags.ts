@@ -60,3 +60,39 @@ export async function getPinAuthMode(
     return PIN_AUTH_MODE_DEFAULT;
   }
 }
+
+/**
+ * S7-B/D/E shared resolver — only Stafly Demo may resolve a non-legacy mode.
+ * Any other tenant, missing setting, or read error is force-pinned to "legacy".
+ * S7-E currently honors only "dual"; hash_reader / hash_only resolve to "legacy".
+ * Never logs PIN, hash, password, or token.
+ */
+export const STAFLY_DEMO_COMPANY_ID = "d3500000-0000-4000-8000-000000000001";
+
+export async function resolveDemoDualMode(
+  client: any,
+  companyId: string | null | undefined,
+  context: string,
+): Promise<PinAuthMode> {
+  if (!companyId) return PIN_AUTH_MODE_DEFAULT;
+  let raw: PinAuthMode = PIN_AUTH_MODE_DEFAULT;
+  try {
+    raw = await getPinAuthMode(client, companyId);
+  } catch {
+    raw = PIN_AUTH_MODE_DEFAULT;
+  }
+  let effective: PinAuthMode = PIN_AUTH_MODE_DEFAULT;
+  if (raw === "dual" && companyId === STAFLY_DEMO_COMPANY_ID) {
+    effective = "dual";
+  }
+  try {
+    console.info("[pin-auth-mode]", {
+      ctx: context,
+      company_id: companyId,
+      requested: raw,
+      effective,
+      demo: companyId === STAFLY_DEMO_COMPANY_ID,
+    });
+  } catch { /* logging must never throw */ }
+  return effective;
+}
