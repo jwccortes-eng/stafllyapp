@@ -212,7 +212,7 @@ async function authorizeEmployeeAction(
   // Resolver force-pins every non-demo tenant + any error to "legacy",
   // so the legacy strict-equality branch runs unchanged for real tenants.
   if (pin && typeof pin === "string") {
-    const _pinAuthMode_fd = await resolveDemoDualMode(adminClient, emp.company_id, "front-desk-checkin");
+    const _pinAuthMode_fd = await resolveDemoDualMode(adminClient, (emp as any).company_id, "front-desk-checkin");
     if (_pinAuthMode_fd === "dual") {
       let dualOk = false;
       let dualSource: string | null = null;
@@ -236,8 +236,8 @@ async function authorizeEmployeeAction(
         console.info("[pin-auth-validate]", {
           ctx: "front-desk-checkin",
           mode: "dual",
-          company_id: emp.company_id,
-          employee_id: emp.id,
+          company_id: (emp as any).company_id,
+          employee_id: (emp as any).id,
           has_hash: !!(emp as any).access_pin_hash,
           hash_version: (emp as any).pin_hash_version ?? null,
           validation_source: dualSource,
@@ -247,7 +247,7 @@ async function authorizeEmployeeAction(
         });
       } catch { /* logging must never throw */ }
       if (dualOk) return { ok: true, via: "pin" };
-    } else if (emp.access_pin && pin === emp.access_pin) {
+    } else if ((emp as any).access_pin && pin === (emp as any).access_pin) {
       // Legacy gate — unchanged bit-for-bit from pre-S7-E.
       return { ok: true, via: "pin" };
     }
