@@ -117,7 +117,7 @@ Deno.serve(async (req) => {
     // ---- Find employee ----
     const { data: employee, error: empErr } = await adminClient
       .from("employees")
-      .select("id, first_name, last_name, phone_number, access_pin, is_active, company_id, avatar_url")
+      .select("id, first_name, last_name, phone_number, access_pin, access_pin_hash, pin_hash_version, is_active, company_id, avatar_url")
       .eq("phone_number", cleanPhone)
       .maybeSingle();
 
@@ -128,12 +128,55 @@ Deno.serve(async (req) => {
       return jsonResp({ error: "Invalid credentials" }, 401);
     }
 
-    if (!employee.access_pin || employee.access_pin !== pin) {
+    // S7-E: demo-only dual hash-first PIN validation. Resolver force-pins
+    // every non-demo tenant + any error to "legacy", so real tenants and
+    // any failure mode use the byte-identical legacy gate below.
+    const _pinAuthMode_kiosk = await resolveDemoDualMode(adminClient, employee.company_id, "kiosk-clock");
+    let pinOk = false;
+    if (_pinAuthMode_kiosk === "dual") {
+      let dualSource: string | null = null;
+      let dualHashMismatch = false;
+      let dualHashError = false;
+      try {
+        const r = await validatePinDual({
+          inputPin: pin,
+          storedPlaintext: employee.access_pin ?? null,
+          storedHash: employee.access_pin_hash ?? null,
+          hashVersion: employee.pin_hash_version ?? null,
+        });
+        pinOk = r.ok;
+        dualSource = r.source;
+        dualHashMismatch = r.hashMismatch;
+        dualHashError = r.hashError;
+      } catch {
+        pinOk = false;
+      }
+      try {
+        console.info("[pin-auth-validate]", {
+          ctx: "kiosk-clock",
+          mode: "dual",
+          company_id: employee.company_id,
+          employee_id: employee.id,
+          has_hash: !!employee.access_pin_hash,
+          hash_version: employee.pin_hash_version ?? null,
+          validation_source: dualSource,
+          hash_mismatch: dualHashMismatch,
+          hash_error: dualHashError,
+          result: pinOk ? "ok" : "fail",
+        });
+      } catch { /* logging must never throw */ }
+    } else {
+      // Legacy gate — unchanged bit-for-bit from pre-S7-E.
+      pinOk = !!employee.access_pin && employee.access_pin === pin;
+    }
+
+    if (!pinOk) {
       await recordFailed(adminClient, cleanPhone);
       await recordFailedIp(adminClient, ipKey);
       console.warn(JSON.stringify({ event: "kiosk_auth_fail", reason: "bad_pin", ip, phone_hash: phoneHash }));
       return jsonResp({ error: "Invalid credentials" }, 401);
     }
+    void _pinAuthMode_kiosk;
 
     // PIN correct — only NOW reveal account-inactive (not enumeration risk)
     if (!employee.is_active) {
