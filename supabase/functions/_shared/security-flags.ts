@@ -12,19 +12,34 @@
  * Never logs PIN, password, hash, or company secrets.
  */
 
-export type PinAuthMode = "legacy" | "dual" | "hash_reader" | "hash_only";
+export type PinAuthMode =
+  | "legacy"
+  | "dual"
+  | "hash_reader"
+  | "hash_only_ready" // S7-K capability — recognized but only demo-eligible
+  | "hash_only";
 
 export const PIN_AUTH_MODE_DEFAULT: PinAuthMode = "legacy";
 export const SECURITY_PIN_AUTH_MODE_KEY = "security.pin_auth_mode";
 
+const ALL_MODES: ReadonlyArray<PinAuthMode> = [
+  "legacy",
+  "dual",
+  "hash_reader",
+  "hash_only_ready",
+  "hash_only",
+];
+
+function isMode(value: unknown): value is PinAuthMode {
+  return typeof value === "string" && (ALL_MODES as readonly string[]).includes(value);
+}
+
 function coerceMode(raw: unknown): PinAuthMode {
   if (raw && typeof raw === "object" && raw !== null && "mode" in (raw as any)) {
     const m = (raw as any).mode;
-    if (m === "legacy" || m === "dual" || m === "hash_reader" || m === "hash_only") return m;
+    if (isMode(m)) return m;
   }
-  if (raw === "legacy" || raw === "dual" || raw === "hash_reader" || raw === "hash_only") {
-    return raw;
-  }
+  if (isMode(raw)) return raw;
   return PIN_AUTH_MODE_DEFAULT;
 }
 
