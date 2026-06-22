@@ -16478,6 +16478,10 @@ export type Database = {
         Args: { _employee_id: string; _pin: string }
         Returns: undefined
       }
+      internal_verify_pin_hash: {
+        Args: { _employee_id: string; _pin: string }
+        Returns: boolean
+      }
       is_company_owner: {
         Args: { _company_id: string; _user_id: string }
         Returns: boolean
