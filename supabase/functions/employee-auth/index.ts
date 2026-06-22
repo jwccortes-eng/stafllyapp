@@ -1,7 +1,54 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getPinAuthMode, PIN_AUTH_MODE_DEFAULT, type PinAuthMode } from "../_shared/security-flags.ts";
 
 // Internal prefix to meet Supabase min-password-length (6 chars) while keeping 4-digit PINs
 const AUTH_PWD_PREFIX = "SF_";
+
+// Sprint S7-B: only Stafly Demo Company may resolve a non-legacy mode.
+// Any other tenant is force-pinned to "legacy" no matter what company_settings says.
+const STAFLY_DEMO_COMPANY_ID = "d3500000-0000-4000-8000-000000000001";
+
+/**
+ * S7-B safe mode resolver.
+ *   - Reads security.pin_auth_mode via getPinAuthMode (silent legacy on error).
+ *   - Force-downgrades to "legacy" for any tenant other than Stafly Demo.
+ *   - Also downgrades hash_reader / hash_only to "legacy" (S7-B only allows dual).
+ *   - Never logs PIN, password, or hash. Logs mode + tenant only.
+ *
+ * NOTE: This sprint is read-only with respect to auth behavior.
+ *   The branch is wired so S7-C can flip the dual code path without
+ *   re-plumbing call sites. Today legacy and dual are bit-for-bit
+ *   equivalent in this file — see STAFLY_AUTH_PASSWORD_REFACTOR_PLAN.md.
+ */
+async function resolvePinAuthModeSafe(
+  adminClient: any,
+  companyId: string | null | undefined,
+  context: string,
+): Promise<PinAuthMode> {
+  if (!companyId) return PIN_AUTH_MODE_DEFAULT;
+  let raw: PinAuthMode = PIN_AUTH_MODE_DEFAULT;
+  try {
+    raw = await getPinAuthMode(adminClient, companyId);
+  } catch {
+    raw = PIN_AUTH_MODE_DEFAULT;
+  }
+  // Allow-list: only "dual" is honored in S7-B, and only for the demo tenant.
+  let effective: PinAuthMode = PIN_AUTH_MODE_DEFAULT;
+  if (raw === "dual" && companyId === STAFLY_DEMO_COMPANY_ID) {
+    effective = "dual";
+  }
+  try {
+    console.info("[pin-auth-mode]", {
+      ctx: context,
+      company_id: companyId,
+      requested: raw,
+      effective,
+      demo: companyId === STAFLY_DEMO_COMPANY_ID,
+    });
+  } catch { /* logging must never throw */ }
+  return effective;
+}
+
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
