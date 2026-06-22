@@ -246,8 +246,9 @@ export function selectNextBestAction(ctx: NbaContext): NbaResult {
   return {
     kind: "all_set",
     tone: "success",
-    title: "Todo listo por aquí",
-    subtitle: "Aún no tienes turnos asignados. Te avisaremos aquí cuando tengas uno nuevo.",
+    title: "Tu perfil está listo para trabajar",
+    subtitle:
+      "Revisa tus próximos turnos y mantén tus documentos al día. Te avisaremos aquí cuando haya trabajo nuevo.",
     ctaLabel: null,
     ctaHref: null,
   };
