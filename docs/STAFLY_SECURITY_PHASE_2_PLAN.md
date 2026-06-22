@@ -413,3 +413,181 @@ password rederivation, S5 SECURITY DEFINER REVOKE pass.
 parallel with S4 only if engineering bandwidth allows; otherwise S5 follows
 S4-C. Per §3.3, bodies are not modified — only REVOKE PUBLIC + GRANT
 authenticated/service_role on the P1/P2 buckets.
+
+---
+
+## 10. Sprint S4 execution log — Additive Foundation (2026-06-22)
+
+S4-A executed. **No reader flip, no plaintext removed, no auth/edge/payroll change.**
+
+### Migration
+
+Single migration applied (additive-only):
+
+1. `CREATE EXTENSION IF NOT EXISTS pgcrypto` (already present, v1.3 — idempotent).
+2. `ALTER TABLE public.employees ADD COLUMN IF NOT EXISTS` for:
+   - `access_pin_hash text` (nullable, no constraint)
+   - `pin_hash_version text` (nullable)
+   - `pin_set_at timestamptz` (nullable)
+   - `pin_migrated_at timestamptz` (nullable)
+3. Per-column `GRANT SELECT (…) ON public.employees TO authenticated, anon`
+   on the 4 new columns. Required by Phase 1.5 column-whitelist model;
+   without it any client `SELECT` touching these columns would 403 the
+   whole row. Bcrypt output is safe to expose to authenticated tenant
+   members (RLS still scopes by company).
+4. `CREATE OR REPLACE` of `set_employee_access_pin` and
+   `reset_employee_access_pin` to **dual-write**: same signature, same
+   gates, same plaintext write, same `activity_log` entry — plus
+   `access_pin_hash = extensions.crypt(_pin, extensions.gen_salt('bf', 10))`,
+   `pin_hash_version='bcrypt'`, `pin_set_at=now()`,
+   `pin_migrated_at=COALESCE(pin_migrated_at, now())`.
+5. Scoped backfill for **Stafly Demo Company** only
+   (`d3500000-0000-4000-8000-000000000001`,
+   `name='Stafly Demo Company'`, `is_demo=true`, verified via SELECT
+   before migration). Other demo tenants (`Sandbox`, `QA Testing`) were
+   intentionally excluded from this sprint to keep blast radius minimal.
+
+### Algorithm
+
+- **bcrypt** via `pgcrypto.crypt() + gen_salt('bf', 10)`.
+- pgcrypto already installed (v1.3) — no new extension required.
+- Verification path for future readers: `crypt(submitted_pin,
+  access_pin_hash) = access_pin_hash` (constant-time inside Postgres,
+  plaintext never leaves the database).
+- `pin_hash_version='bcrypt'` tags every row so future algorithm
+  rotation can be staged.
+
+### Backfill result (post-migration, verified)
+
+| Bucket | Rows |
+|---|---|
+| Stafly Demo workers with plaintext PIN | 7 |
+| Stafly Demo workers with hash populated | **7** ✅ |
+| Non-demo workers with hash populated | **0** ✅ |
+| All workers with plaintext PIN (untouched) | 518 |
+
+Verification: `SELECT count(*) … WHERE crypt(access_pin, access_pin_hash) = access_pin_hash`
+returns **7/7** for Stafly Demo — every backfilled hash round-trips against its plaintext.
+
+### Dual-write status
+
+Implemented in both RPCs. Existing frontend helpers (`src/lib/access-pin.ts`)
+are untouched and continue to work — return shapes preserved:
+
+- `set_employee_access_pin(uuid, text) RETURNS boolean` — unchanged signature.
+- `reset_employee_access_pin(uuid) RETURNS text` — unchanged signature
+  (returns the new plaintext PIN exactly once for the admin UI).
+
+`employee-auth` activation path also writes `access_pin` directly via the
+service-role client (`employee-auth/index.ts:346, 765, 882`). **It is NOT
+modified in S4** — workers activating between now and S4-B will get
+plaintext-only PINs. Those rows hash-populate on first admin reset/set, or
+on the global S4-B backfill sprint. Acceptable: readers still use plaintext,
+no lockout risk.
+
+### Feature flag status
+
+`security.pin_hash_enabled` — **not introduced in this sprint**. Reader flip
+(S4-C) is the first phase that needs it. Adding a per-tenant boolean column
+or a `company_settings` row now would be code without behavior; deferred to
+S4-C migration so the flag and its first consumer ship together.
+
+### Files changed
+
+- **Migration only** (single SQL file authored via `supabase--migration`):
+  columns + grants + 2 RPC bodies + scoped backfill.
+- `docs/STAFLY_SECURITY_PHASE_2_PLAN.md` — this S4 execution-log addendum.
+
+No application code (`src/**`, `supabase/functions/**`) was modified in S4.
+
+### QA checklist (post-migration verification, all PASS)
+
+- [x] Columns exist in `information_schema.columns` for `employees`.
+- [x] `access_pin` plaintext intact: 518 non-null rows across all tenants
+      (matches pre-migration row count of workers with PINs — confirmed
+      via the same query before changes via S3 audit).
+- [x] Stafly Demo backfill: 7/7 rows hashed, all verify with `crypt()`.
+- [x] No real tenant has any `access_pin_hash` row.
+- [x] `set_employee_access_pin` / `reset_employee_access_pin` signatures
+      unchanged → frontend `src/lib/access-pin.ts` unaffected.
+- [x] `kiosk-clock`, `employee-auth`, `front-desk-checkin` edge functions
+      not modified → plaintext PIN validation unchanged.
+- [x] Linter findings post-migration are pre-existing PUBLIC
+      SECURITY DEFINER warnings (S5 scope), not introduced by S4.
+
+### What was NOT touched in S4
+
+- `auth`, RLS, `user_roles`, `has_role`, `has_company_role`,
+  `canAccessAdminForCompany`, `useEffectiveEmployee`.
+- Payroll: `pay_periods`, `period_base_pay`, `payroll_adjustments`,
+  `reconciliation_*`, `historical_payroll_entries`, Connecteam pipeline.
+- Operations: `time_entries`, `clock_events`, `scheduled_shifts`,
+  `shift_assignments`.
+- Edge functions: `kiosk-clock`, `employee-auth`, `front-desk-checkin`,
+  `setup-company`, `bulk-portal-invite`, `send-employee-credentials`,
+  `seed-test-users`, `approve-application`, `resolve-applicant-identity`.
+- Tenant governance, `companies.status`/`is_active` triggers.
+- Worker documents, real tenants, production data.
+- `access_pin` column on any row (never updated by S4 backfill or
+  migration — only new RPC dual-writes touch it, and only when an admin
+  was already going to overwrite it anyway).
+- `authPassword(access_pin)` Supabase auth password derivation — still
+  in place; will be replaced before S4-D plaintext-kill.
+
+### Risks discovered in S4
+
+1. **`employee-auth` activation still writes plaintext-only.** Workers
+   activating between S4 and S4-B end up with `access_pin_hash IS NULL`.
+   No runtime impact (readers still use plaintext). S4-B must include
+   that edge function in dual-write OR rely on the global backfill.
+2. **Other demo tenants (`Sandbox`, `QA Testing`) not backfilled.** Out
+   of scope this sprint; can be picked up in S4-B with an explicit
+   approval, or left as-is and backfilled on first admin reset.
+3. **`ProfileSummaryGrid.tsx:220` `!!employee.access_pin_hash`** now
+   returns a real value instead of `undefined`. If any upstream query
+   selects `access_pin_hash`, the boolean is now meaningful. Spot-check
+   showed no `select('*')` on `employees` in `src/`, so no behavior
+   change on real tenants (where `access_pin_hash` is still null
+   everywhere). Worth re-reading in S4-B if the readiness card starts
+   showing different signals on Stafly Demo.
+4. **Linter still flags PUBLIC EXECUTE on the 2 modified RPCs** — same
+   grant they had before the migration. S5 scope.
+
+### Rollback (S4)
+
+Reversible in a single migration:
+
+```sql
+ALTER TABLE public.employees
+  DROP COLUMN IF EXISTS access_pin_hash,
+  DROP COLUMN IF EXISTS pin_hash_version,
+  DROP COLUMN IF EXISTS pin_set_at,
+  DROP COLUMN IF EXISTS pin_migrated_at;
+-- restore prior bodies of set_employee_access_pin / reset_employee_access_pin
+-- (still in migration history, copy-paste back).
+```
+
+Dropping the columns is safe because no reader uses them. The dual-write
+in the RPCs becomes a no-op once the columns are gone (the RPC body
+references them; rollback must also restore the prior RPC bodies in the
+same migration to avoid `column does not exist` on next call).
+
+### Recommendation for S5
+
+Two independent tracks unblocked by S4:
+
+- **S5 (next)** — **SECURITY DEFINER PUBLIC-grant cleanup**, privilege-only,
+  per §3.3 of this plan. Bodies not modified. Do not include
+  `set_employee_access_pin`, `reset_employee_access_pin`,
+  `employee_has_access_pin` in S5 — they were just touched in S4 and
+  shipping them again in S5 would cause review collisions.
+- **S4-B (parallel-ok)** — extend dual-write to `employee-auth` activation
+  path so newly-activated workers get a hash too, then backfill the
+  remaining 2 demo tenants (`Sandbox`, `QA Testing`) under explicit
+  approval. Still no reader flip.
+
+**S4-C (reader flip) and S4-D (plaintext kill) remain blocked** on:
+
+- replacing `authPassword(access_pin)` Supabase auth password derivation,
+- per-tenant feature flag `security.pin_hash_enabled`,
+- full payroll-cycle observation window per §2.5.
