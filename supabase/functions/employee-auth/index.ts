@@ -819,6 +819,19 @@ Deno.serve(async (req) => {
         });
       }
 
+      // S7-B: read effective pin_auth_mode for this tenant (no behavior change).
+      const { data: provCompanyRow } = await adminClient
+        .from("employees")
+        .select("company_id")
+        .eq("id", employee_id)
+        .maybeSingle();
+      const _pinAuthMode_provision = await resolvePinAuthModeSafe(
+        adminClient,
+        provCompanyRow?.company_id ?? null,
+        "provision",
+      );
+      void _pinAuthMode_provision;
+
       // Generate 4-digit PIN for provision as well
       const newPin = String(Math.floor(Math.random() * 10000)).padStart(4, "0");
       const newPwd = authPassword(newPin);
