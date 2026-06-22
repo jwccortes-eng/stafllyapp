@@ -1176,3 +1176,100 @@ All 8 cases behaved exactly as `_shared/pin-validation.ts` specifies for `dual` 
 7. ⏳ On-call assigned — pending.
 
 **Recommended S7-K:** Implement `hash_only_ready` mode in `_shared/security-flags.ts` resolver + add `fallback_suppressed` + `suppressed_reason` to telemetry, **but keep Stafly Demo on `dual`**. Do not flip the demo flag to `hash_only_ready` in S7-K. The flip becomes its own sprint (`S7-L`) gated on the four `⏳` items above. Real tenants remain in `legacy`.
+
+---
+
+## Sprint S7-K — `hash_only_ready` Capability Implemented (NOT Activated) (2026-06-22)
+
+**Status:** Code capability landed across resolver + helper + 3 readers + telemetry + unit tests. **No tenant is activated.** Stafly Demo remains in `"dual"`. All real tenants remain in `legacy` (force-pinned by resolver).
+
+### Guardrails honored
+- No `company_settings` write. No tenant flipped. SQL verified: only `d3500000…0001` has `security.pin_auth_mode = "dual"`. Zero rows with `"hash_only_ready"`.
+- No edits to `authPassword`, `internal_verify_pin_hash` body/grants, RLS, table grants, payroll/time_entries/clock_events/scheduled_shifts/shift_assignments/Connecteam, tenant governance, `setup-company`, worker documents, plaintext `access_pin`, or activate/provision/change-pin behavior.
+- Same generic 401 user-facing error in every failure path of every mode. No new copy.
+- No PIN/hash/access_pin/password/token/email/phone in any log line.
+
+### Files changed
+- `supabase/functions/_shared/security-flags.ts` — extended `PinAuthMode` union with `"hash_only_ready"`, refactored validator/coercer; demo-only resolver now honors `{"dual","hash_only_ready"}` and force-pins everything else to `legacy`. `hash_reader` and `hash_only` still resolve to legacy (deferred).
+- `supabase/functions/_shared/pin-validation.ts` — added `mode?: "dual" | "hash_only_ready"` (default `"dual"`), extended `PinValidationResult` with `fallbackSuppressed: boolean` and `suppressedReason: "missing_hash" | "hash_mismatch" | "hash_error" | null`. `hash_only_ready` branch: hash-first only, fail-closed on missing/corrupt/error hash, `fallbackSuppressed=true` only when plaintext *would have* allowed login under `dual` (so the field measures real impact).
+- `supabase/functions/employee-auth/index.ts` — local `resolvePinAuthModeSafe` extended with same allow-list. Login branch accepts `"dual" | "hash_only_ready"`, passes mode through to helper, logs `fallback_suppressed` + `suppressed_reason`. Legacy gate untouched. Activate / provision / change-pin call sites are telemetry-only and were not modified.
+- `supabase/functions/kiosk-clock/index.ts` — branch now accepts `"dual" | "hash_only_ready"`, passes mode through, logs new fields. Legacy gate untouched.
+- `supabase/functions/front-desk-checkin/index.ts` — same as kiosk-clock. JWT / trusted-device / admin paths untouched.
+- `supabase/functions/_shared/pin-validation_test.ts` — **new**. 12 Deno unit tests using mocked `internal_verify_pin_hash` client, covering both modes.
+
+### Resolver behavior matrix (after S7-K)
+| Tenant | Setting | Effective mode | Notes |
+|---|---|---|---|
+| Stafly Demo | `"dual"` | `dual` | Current production behavior — unchanged |
+| Stafly Demo | `"hash_only_ready"` | `hash_only_ready` | **Honored but no row set to this value** |
+| Stafly Demo | `"hash_reader"` or `"hash_only"` | `legacy` | Deferred |
+| Stafly Demo | missing / read error / invalid | `legacy` | Fail-closed |
+| Any real tenant | any | `legacy` | Force-pin (unchanged) |
+
+### Helper semantics matrix
+| Mode | Hash state | RPC verify | Plaintext | Outcome | `fallback_suppressed` | `suppressed_reason` |
+|---|---|---|---|---|---|---|
+| dual | valid | true | – | ok, source=`hash` | false | null |
+| dual | missing | – | match | ok, `plaintext_fallback` | false | null |
+| dual | corrupt | false | match | ok, `plaintext_fallback`, hashMismatch | false | null |
+| dual | present | error/throw | match | ok, `plaintext_fallback`, hashError | false | null |
+| dual | any | – | mismatch | fail | false | null |
+| **hash_only_ready** | valid | true | – | ok, source=`hash` | false | null |
+| **hash_only_ready** | missing | – | match | **fail** | **true** | `missing_hash` |
+| **hash_only_ready** | missing | – | mismatch | fail | false | `missing_hash` |
+| **hash_only_ready** | corrupt | false | match | **fail** | **true** | `hash_mismatch` |
+| **hash_only_ready** | corrupt | false | mismatch | fail | false | `hash_mismatch` |
+| **hash_only_ready** | present | error/throw | match | **fail** | **true** | `hash_error` |
+| **hash_only_ready** | present | error/throw | mismatch | fail | false | `hash_error` |
+| **hash_only_ready** | present | – | – | (missing client/empId) → fail | – | `hash_error` |
+
+`fallback_suppressed=true` is the explicit measurement signal: "we would have accepted this login under `dual` via plaintext but we did not because the mode is `hash_only_ready`". This lets a future observability window count real-world impact before flipping any tenant.
+
+### Caller contract
+All three readers (`employee-auth` login, `kiosk-clock`, `front-desk-checkin`):
+- Run `validatePinDual(...)` only when resolver returns `dual` or `hash_only_ready`. Anything else → unchanged legacy strict-equality gate.
+- Return the same generic 401 user response on `ok=false` (matches wrong-PIN copy).
+- Emit one `[pin-auth-validate]` log line per attempt with fields: `ctx, mode, company_id, employee_id, has_hash, hash_version, validation_source, hash_mismatch, hash_error, fallback_suppressed, suppressed_reason, result`. Forbidden fields (PIN, hash, password, token, email, phone) audited — none present.
+
+### QA results (code-level, no DB writes)
+Deno unit tests, mocked RPC client, both modes:
+- `dual: valid hash + correct PIN → ok, source=hash` ✅
+- `dual: missing hash + correct PIN → ok, plaintext_fallback` ✅
+- `dual: corrupt hash (RPC false) + correct PIN → ok, plaintext_fallback + hashMismatch` ✅
+- `dual: RPC throws + correct PIN → ok, plaintext_fallback + hashError` ✅
+- `hash_only_ready: valid hash + correct PIN → ok, source=hash` ✅
+- `hash_only_ready: missing hash + correct PIN → fail, suppressed=missing_hash` ✅
+- `hash_only_ready: corrupt hash (RPC false) + correct PIN → fail, suppressed=hash_mismatch` ✅
+- `hash_only_ready: RPC throws + correct PIN → fail, suppressed=hash_error` ✅
+- `hash_only_ready: wrong PIN → fail, fallbackSuppressed=false` ✅
+- `hash_only_ready: missing client/employeeId → fail-closed as hash_error` ✅
+- `default mode is dual when omitted` ✅ (back-compat for any future caller)
+- `empty pin → fail in both modes, no fields leak` ✅
+
+**12 / 12 passing, 0 failing.** Type-check passes (Deno compile step in `supabase--test_edge_functions`).
+
+### Activation state
+- `company_settings` SELECT (live): `[{company_id: d3500000-…-0001, mode: "dual"}]`. Single row.
+- Zero tenants with `"hash_only_ready"`.
+- Zero real tenants with `"dual"`.
+- Demo workers: 7/7 valid hashes (post-S7-J restore).
+
+### Rollback
+- Rollback to S7-J state is a pure code revert of the 5 files above — no migration, no data change.
+- If any unforeseen runtime regression appears, the resolver allow-list can be narrowed back to `{"dual"}` by editing two lines (`DEMO_HONORED_MODES` / `DEMO_HONORED_MODES_LOCAL`); helper defaults to `"dual"` so older callers stay safe.
+- `hash_only_ready` will never affect any tenant until a `company_settings` row explicitly sets `value = "hash_only_ready"` on Stafly Demo — that flip is a separate sprint (S7-L) and is not performed here.
+
+### What was NOT touched (re-confirmed)
+- `company_settings` data, real tenants, plaintext `access_pin`, `authPassword`, payroll surface (`pay_periods`, `period_base_pay`, `reconciliation_*`, `historical_payroll_entries`, `time_entries`, `clock_events`, `scheduled_shifts`, `shift_assignments`, Connecteam pipeline), tenant governance, `setup-company`, worker documents, RLS policies, table/function grants, `internal_verify_pin_hash` body, `internal_dual_write_pin_hash`, activate / provision / change-pin behavior.
+- No HTTP QA executed against `/portal /kiosk /front-desk` to avoid leaving QA artifacts without QA-mode plumbing (per 2026-06-01 rule).
+
+### Risks found
+- **None new in this sprint.** The capability is dormant for all tenants until S7-L explicitly flips the setting on Stafly Demo.
+- Worth flagging for S7-L: when the demo flip happens, the plaintext fallback that has been masking `…0013`-style and `…0014`-style fixture conditions in QA will no longer fire. Operators relying on plaintext-only PINs in demo will be rejected with the standard "wrong PIN" copy. Pre-flip checklist must include "every demo worker has `extensions.crypt(access_pin, access_pin_hash) = access_pin_hash` = true" (already 7/7 today after S7-J restore).
+
+### Recommendation S7-L
+**Two-step:**
+1. **S7-L-a (observability soak):** Keep capability dormant. Run a ≥7-day observability window on Stafly Demo while still in `dual` to confirm `hash_error=0` AND `hash_mismatch=0` AND no missing-hash drift (Demo hash count stays 7/7). Owners/dev sign off in writing.
+2. **S7-L-b (single-row flip):** Update one row in `company_settings` for Stafly Demo only: `value` → `"hash_only_ready"`. No code change. Verify telemetry shows `fallback_suppressed=false` consistently. If any `fallback_suppressed=true` event appears, revert the row to `"dual"` immediately (single UPDATE). Real tenants and `authPassword` remain out of scope until the separate auth-decoupling workstream.
+
+Hash-only (no plaintext stored at all) and the full auth-decoupling/random-password path remain explicitly out of scope for both S7-L sub-steps.
