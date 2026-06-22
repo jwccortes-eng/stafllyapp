@@ -331,3 +331,81 @@ Single-row UPDATE on `company_settings` flipping `value` back to `"legacy"` (or 
 
 ### Recommendation S7-B
 Implement bridge action `employee-auth/login-bridge` that calls `getPinAuthMode()`. Branch only for `dual`/`hash_*`. Enable on Stafly Demo first via single `UPSERT` into `company_settings`. Keep `legacy` path bit-for-bit identical.
+
+---
+
+## Sprint S7-B — Employee Auth Dual-Mode Bridge (Demo Only)
+
+**Status:** Applied. Read-only branch wiring + Stafly Demo setting flipped to `"dual"`.
+**Critical guardrail:** legacy path is bit-for-bit equivalent. `dual` today executes the *same* code path as `legacy` in `employee-auth` — the branch exists so S7-C can flip the bridge without re-plumbing call sites.
+
+### employee-auth audit (5 actions)
+| Action | `company_id` known at | `authPassword` call | Touched in S7-B |
+|---|---|---|---|
+| `check` | — | none | No |
+| `activate` | only after employee row resolved / late | line ~263 | **No** (multi-branch flow, defer to S7-C) |
+| `login` | after `loginEmployees` select | line ~603 | **Yes** — mode read after `resetRateLimit` |
+| `provision` | adds extra `employees.company_id` select | line ~824 | **Yes** — mode read before password update |
+| `change-pin` | added `company_id` to `emp` select | line ~960 | **Yes** — mode read after `emp` resolved |
+| `sync-pins` | bulk, no single tenant | line ~890 | No |
+
+### Branch behavior
+`resolvePinAuthModeSafe(adminClient, companyId, ctx)`:
+- `companyId` null/missing → `legacy`
+- Any error / RLS issue → `legacy`
+- `getPinAuthMode` returns `dual` AND `companyId === STAFLY_DEMO_COMPANY_ID` → `dual`
+- Anything else (`hash_reader`, `hash_only`, `dual` on non-demo tenant) → force `legacy`
+- Logs only `{ ctx, company_id, requested, effective, demo }` — never PIN/password/hash.
+
+Today `dual` and `legacy` execute identical code. **Auth password generation, PIN validation, dual-write hash, kiosk-clock, front-desk-checkin: all unchanged.** This is the "mode read + no-op branch" option from S6 because flipping auth password generation now has no clean rollback for currently-active demo sessions.
+
+### Demo setting
+```sql
+INSERT INTO public.company_settings (company_id, key, value)
+VALUES ('d3500000-0000-4000-8000-000000000001', 'security.pin_auth_mode', '"dual"'::jsonb)
+ON CONFLICT (company_id, key) DO UPDATE SET value = EXCLUDED.value, updated_at = now();
+```
+Applied via data write (not a schema migration). Confirmed in `company_settings`.
+
+### Rollback (single statement)
+```sql
+UPDATE public.company_settings
+SET value = '"legacy"'::jsonb, updated_at = now()
+WHERE company_id = 'd3500000-0000-4000-8000-000000000001'
+  AND key = 'security.pin_auth_mode';
+```
+Or delete the row outright — fallback is `legacy`.
+
+### QA matrix (code-level)
+| Scenario | Effective mode | Behavior |
+|---|---|---|
+| Stafly Demo, setting `"dual"` | `dual` | Identical to legacy (no-op branch) |
+| Stafly Demo, setting missing | `legacy` | Unchanged |
+| Stafly Demo, setting `"hash_only"` | `legacy` (forced) | Unchanged |
+| Quality Staff / MyStaff / JKitchen / Sandbox / QA real tenants | `legacy` (force-downgrade) | Unchanged |
+| Any tenant, RLS error reading `company_settings` | `legacy` | Unchanged |
+| Any tenant, `company_id` null | `legacy` | Unchanged |
+| `activate` action (any tenant) | not read (S7-C) | Unchanged |
+| `sync-pins`, `check` | not read | Unchanged |
+
+### What was NOT touched
+- `authPassword(access_pin)` body — unchanged.
+- Supabase `auth.admin.updateUserById` / `createUser` calls — unchanged.
+- PIN validation (`employee.access_pin === pin`) — unchanged.
+- `kiosk-clock`, `front-desk-checkin` — not opened.
+- `pay_periods`, `period_base_pay`, `time_entries`, `clock_events`, `scheduled_shifts`, `shift_assignments`, `reconciliation_*`, `historical_payroll_entries`, Connecteam pipeline — untouched.
+- RLS / grants / new migrations — none.
+- `access_pin` plaintext — preserved, not nulled.
+- S4-B dual-write of `access_pin_hash` — unchanged.
+- Real-tenant `company_settings` rows for `security.pin_auth_mode` — none created.
+
+### Risks
+- `provision` action adds one extra `SELECT company_id` query per call (tiny). Same for `change-pin` (column added to existing select; no new round trip).
+- If a future developer changes `resolvePinAuthModeSafe` allow-list, real tenants could pick up `dual`. The `STAFLY_DEMO_COMPANY_ID` constant + force-downgrade is the single defense — keep it.
+- `activate` was deliberately not instrumented; S7-C must address it before any real bridge work.
+
+### Recommendation S7-C
+Now that the branch is wired and the demo tenant emits `[pin-auth-mode] effective=dual` logs without behavior change, S7-C should:
+1. Instrument `activate` with the same `resolvePinAuthModeSafe` call (requires resolving `company_id` earlier in the multi-branch employee lookup).
+2. Implement the actual bridge under `if (effective === "dual")`: generate a random 32-byte password server-side, call `auth.admin.updateUserById({ password })`, mint a session via `admin.generateLink({ type: 'magiclink' })`, return the link/session token. Keep PIN validation against `access_pin_hash` (S4-B) with plaintext fallback. Demo only.
+3. Add an end-to-end Playwright QA against `/portal` using a Stafly Demo worker before considering any non-demo enablement.
