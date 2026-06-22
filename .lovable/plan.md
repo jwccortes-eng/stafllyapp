@@ -1,98 +1,66 @@
-E4.1 — Read-only display of `preferred_name` in the admin worker profile
+# Stafly Operational Cleanup Sprint — Plan
 
-1. Objective
+Read-only audit complete. Findings below, scoped to **frontend-only, safe** changes. No RLS, schema, payroll, time_entries, tenant, or historical-data mutations.
 
-Surface the worker-editable `preferred_name` alias inside the admin worker profile (`/app/employees/:id`) as read-only metadata. The legal name (`first_name` / `last_name`) remains the primary identity everywhere. This is purely informational for operators and admins.
+## Audit summary
 
-Scope: read-only UI only. No new tables, no migrations, no RLS, no policies, no data writes, no payroll/time_entries/tenants/auth changes. The column already exists from E4.
+**Worker Portal — no real loop today**, but two real risks:
+- `EmployeeLayout` PhotoGate spins forever if the avatar query silently fails (no error/timeout escape).
+- PhotoGate hard-blocks the entire `/portal/*` outlet — workers cannot reach Documents or Shifts until a photo is uploaded.
+- Driver's License is already correctly gated (drivers only). No bug.
+- Copy is Spanish-first today. The English copy in your brief is **net-new** — confirm before swapping.
 
-2. Surface proposed
+**Admin nav — mostly fine, a few clear cleanups:**
+- `Notifications` and `Administration` appear in both Company + Global sections (duplicates).
+- "Today's Operations" + "Command Center" both sit at the top of Daily Operations — two dashboard-style entries.
+- "Reports" is a 2-link orphan section that fits naturally inside Payroll & Finance.
+- Reconciliation / Weekly Reconciliation are two entries that look like one feature.
 
-Two read-only locations inside the existing admin profile page:
+**Shift creation — already in good shape:**
+- Pay is correctly behind a collapsed accordion (not in step 1).
+- Field order in primary card: Client → Date → Start/End → Meeting time → Slots.
+- Draft autosave (S3) + unsaved-guard (S4) already implemented per memory.
+- No structural changes needed; only minor CTA clarity.
 
-A. Hero header (`UnifiedPersonProfile.tsx`)
-   - Keep the current large legal name as the main title.
-   - If `employee.preferred_name` is non-null and non-empty, render a muted secondary line immediately below or beside the legal name, e.g.:
-     "También conocido/a como: <preferred_name>"
-   - The alias is never the headline, never used in page title, and never replaces the avatar initials (which stay based on legal name).
+## Proposed changes (safe, frontend-only)
 
-B. "Datos principales" card (`ProfileSummaryGrid.tsx`)
-   - Add a new `Row` in the first card, shown only when `employee.preferred_name` exists:
-     - Icon: `ContactRound` (or a lightweight alias icon if available)
-     - Label: "Alias"
-     - Value: `employee.preferred_name`
-   - If `preferred_name` is null/empty, the row is simply omitted. No "Sin alias" placeholder.
+### 1. Worker Portal safety + clarity
+- **PhotoGate escape hatch** (`EmployeeLayout.tsx`): add a 6s timeout + visible error state on avatar query failure with "Reintentar" + "Continuar sin foto por ahora" → routes to `/portal/update-center`. Removes the silent-spinner trap.
+- **PhotoGate soft-gate option**: allow worker to tap "Ver mis documentos" / "Ver mis turnos" from the gate so a missing photo never blocks reviewing assigned work or uploading docs. Photo upload remains the primary CTA.
+- **Readiness copy review** (`next-best-action.ts`, `ProfileReadinessStrip.tsx`): the brief proposes English copy, but the portal is Spanish-first per project memory. **Question for you before I touch any string** — see below.
 
-3. Files to touch
+### 2. Admin navigation cleanup (`AdminSidebar.tsx`)
+- Remove duplicate `Notifications` and `Administration` entries from Global section (already reachable elsewhere) **or** keep one canonical home — confirm preference.
+- Collapse "Reports" section into "Payroll & Finance" (move the 2 links, delete the empty header).
+- Rename "Today's Operations" → keep one; suggest demoting `/app/ops-center` under Shifts since `/app` is already the Command Center.
+- No route deletions, no permission/role changes.
 
-- `src/lib/employee-columns.ts`
-  - Add `preferred_name` to the `EMPLOYEE_COLUMNS_NO_FISCAL` select list so the admin profile fetch already returns it.
+### 3. Shift creation polish (`ShiftFormShell.tsx`)
+- Verify primary CTA label clarity ("Crear turno" / "Publicar turno" / "Guardar borrador") — already in place; just audit the disabled states.
+- No structural changes (Pay stays accordion-collapsed; field order is already correct).
 
-- `src/pages/admin/UnifiedPersonProfile.tsx`
-  - Add display of `preferred_name` in the hero header (read-only, no edit control).
+### 4. Documents/readiness
+- Already correct: W-9 + Government ID required for all, Driver's License only for drivers. No code change needed. I will only verify the human-readable state labels are consistent.
 
-- `src/components/employee/ProfileSummaryGrid.tsx`
-  - Add a conditional `Row` in the "Datos principales" card.
+## Explicitly NOT touching
+- RLS, schema, edge functions, storage policies
+- Payroll calculation, time_entries, pay_periods, period_base_pay
+- Tenants, real employee records, real documents, real payments
+- iOS/TestFlight/Capacitor build logic
+- Auth flow, magic-link routes, `/activate`
+- Compliance catalog rules (already correct)
+- Pricing, billing, Stripe
 
-- `src/integrations/supabase/types.ts`
-  - Likely already updated by E4 final; verify it is present, no manual change required unless the type is stale.
+## Risks / follow-ups
+- **Copy language conflict**: brief is English, portal is Spanish-first (core memory rule). Need your call.
+- **PhotoGate softening** may slightly change worker behavior (some workers will skip photo longer). Mitigate by keeping PhotoGate as default landing but allowing soft escape.
+- **Sidebar dedup** — if any deep-link or doc references the duplicated Global entries, those still work because routes don't change.
 
-Files NOT touched:
-- `src/pages/portal/UpdateCenter.tsx`
-- `src/components/portal/WorkerSelfServiceSections.tsx`
-- `worker_consent_records`, `ConsentCenterCard`, `useWorkerConsent`, `parceros-sync`, `PARCEROS_CONSENT_MODE`, `PublicPassport`, `worker_profiles`, `profiles`, `passport_profiles`, `contractor_w9`, `employee_documents`, `review_scores`, payroll, time_entries, companies/tenants, auth, RLS, edge functions, storage.
+---
 
-4. Display behavior
+## Two questions before I implement
 
-- Legal name is always the primary displayed name in every surface.
-- Preferred name is rendered as a subordinate, muted badge/line, never as a replacement.
-- If `preferred_name` is null or empty string, no alias UI is shown. No empty states, no "Sin alias" labels.
-- If the worker changes `preferred_name` in the portal, admins will see the updated value on the next profile load (existing fetch already happens on mount and snapshot refresh does not touch the core record, but navigating back re-fetches).
+1. **Portal copy language** — the brief's strings are English, but project memory pins worker portal as Spanish-first. Should I (a) keep Spanish and tighten the existing strings to match the brief's intent, (b) ship both languages via the existing i18n v2 system, or (c) override the rule and switch to English?
+2. **Admin nav scope** — full restructure into your 5 groups (Command Center / Operations / People / Clients / System) is a bigger change touching ~33 links. Should I (a) do the **minimal cleanup** (dedup + collapse Reports), or (b) do the **full regrouping** in this sprint?
 
-5. No-impact confirmation
-
-- Payroll: `preferred_name` is never used in payroll math, pay periods, `period_base_pay`, or `time_entries`.
-- W-9 / 1099 / SSN: legal name remains `first_name` / `last_name`; no changes to `contractor_w9`, `tax_forms_1099`, `verification_ssn_ein`, or `ssn_last4`.
-- Documents: no change to document generation, review, or storage; `preferred_name` is not used in documents.
-- PublicPassport: not consumed by `PublicPassport` or `passport_profiles`.
-- Parceros: not consumed by `parceros-sync`, `PARCEROS_CONSENT_MODE`, or marketplace surfaces.
-- Auth / tenants / RLS / schema: no changes. The column already exists from E4; we only read it and display it.
-- Data writes: zero. The change is read-only from the admin side.
-
-6. QA mobile / desktop
-
-Desktop (1280+ CSS px):
-- Navigate to `/app/employees/:id` for a worker with `preferred_name` set.
-- Confirm hero shows legal name first, then the alias as muted secondary text.
-- Confirm "Datos principales" card includes the alias row.
-- Confirm the alias is not shown when the value is null/empty.
-- Confirm no layout breaks, overflow, or truncation issues with 60-character aliases.
-- Confirm the existing "Editar" button and all other hero actions still work.
-
-Mobile (390x844 CSS px):
-- Open the same profile on mobile viewport.
-- Confirm hero alias line wraps correctly and does not push action buttons off-screen.
-- Confirm "Datos principales" card still stacks in one column and the alias row fits.
-- Confirm no horizontal scroll is introduced.
-
-7. Rollback
-
-If the display needs to be removed:
-- Remove the `preferred_name` line from the hero in `UnifiedPersonProfile.tsx`.
-- Remove the conditional `Row` in `ProfileSummaryGrid.tsx`.
-- Optionally remove `preferred_name` from `EMPLOYEE_COLUMNS_NO_FISCAL` (safe, but leaving it has no functional impact).
-- No database rollback required because no schema or data was changed.
-- No RLS/policy rollback required.
-
-8. Acceptance criteria
-
-- [ ] `preferred_name` is added to `EMPLOYEE_COLUMNS_NO_FISCAL` so it is fetched on the admin profile page.
-- [ ] Admin profile hero shows the legal name first and the alias only as secondary, muted text.
-- [ ] "Datos principales" card shows the alias row only when `preferred_name` is non-null/non-empty.
-- [ ] No alias UI is shown when `preferred_name` is null/empty.
-- [ ] No admin edit control for `preferred_name` is introduced; it remains editable only by the worker in `/portal/update-center`.
-- [ ] No changes to payroll, W-9, documents, PublicPassport, Parceros, time_entries, tenants, auth, RLS, or schema.
-- [ ] Mobile and desktop visual QA passes without overflow or layout regressions.
-- [ ] Rollback steps are documented and reversible without data loss.
-
-Deuda técnica a mantener: la policy `Employees can update own profile` sigue siendo amplia. E4 documentó esto como deuda técnica futura. E4.1 no la amplía ni la modifica.
+Once you answer those two, I'll implement in one pass and report files changed.
