@@ -770,6 +770,13 @@ Deno.serve(async (req) => {
       const newPwd = authPassword(newPin);
       
       await adminClient.from("employees").update({ access_pin: newPin }).eq("id", employee_id);
+      // S4-B dual-write
+      try {
+        await adminClient.rpc("internal_dual_write_pin_hash", {
+          _employee_id: employee_id,
+          _pin: newPin,
+        });
+      } catch (_) { /* best-effort; no PIN/hash logged */ }
 
       const { data: emp } = await adminClient
         .from("employees")
