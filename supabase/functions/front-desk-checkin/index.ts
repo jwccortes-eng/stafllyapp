@@ -159,7 +159,7 @@ async function authorizeEmployeeAction(
   // Resolve target employee (user_id + company_id + access_pin).
   const { data: emp } = await adminClient
     .from("employees")
-    .select("id, user_id, company_id, access_pin, is_active")
+    .select("id, user_id, company_id, access_pin, access_pin_hash, pin_hash_version, is_active")
     .eq("id", employee_id)
     .maybeSingle();
   if (!emp) return { ok: false, reason: "employee_not_found" };
@@ -208,9 +208,49 @@ async function authorizeEmployeeAction(
     }
   }
 
-  // (3) PIN path — equality match against stored access_pin.
-  if (pin && typeof pin === "string" && emp.access_pin && pin === emp.access_pin) {
-    return { ok: true, via: "pin" };
+  // (3) PIN path — S7-E demo-only dual hash-first with plaintext fallback.
+  // Resolver force-pins every non-demo tenant + any error to "legacy",
+  // so the legacy strict-equality branch runs unchanged for real tenants.
+  if (pin && typeof pin === "string") {
+    const _pinAuthMode_fd = await resolveDemoDualMode(adminClient, emp.company_id, "front-desk-checkin");
+    if (_pinAuthMode_fd === "dual") {
+      let dualOk = false;
+      let dualSource: string | null = null;
+      let dualHashMismatch = false;
+      let dualHashError = false;
+      try {
+        const r = await validatePinDual({
+          inputPin: pin,
+          storedPlaintext: (emp as any).access_pin ?? null,
+          storedHash: (emp as any).access_pin_hash ?? null,
+          hashVersion: (emp as any).pin_hash_version ?? null,
+        });
+        dualOk = r.ok;
+        dualSource = r.source;
+        dualHashMismatch = r.hashMismatch;
+        dualHashError = r.hashError;
+      } catch {
+        dualOk = false;
+      }
+      try {
+        console.info("[pin-auth-validate]", {
+          ctx: "front-desk-checkin",
+          mode: "dual",
+          company_id: emp.company_id,
+          employee_id: emp.id,
+          has_hash: !!(emp as any).access_pin_hash,
+          hash_version: (emp as any).pin_hash_version ?? null,
+          validation_source: dualSource,
+          hash_mismatch: dualHashMismatch,
+          hash_error: dualHashError,
+          result: dualOk ? "ok" : "fail",
+        });
+      } catch { /* logging must never throw */ }
+      if (dualOk) return { ok: true, via: "pin" };
+    } else if (emp.access_pin && pin === emp.access_pin) {
+      // Legacy gate — unchanged bit-for-bit from pre-S7-E.
+      return { ok: true, via: "pin" };
+    }
   }
 
   // (4) Trusted-kiosk-device path.
