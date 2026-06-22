@@ -26,6 +26,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useEffectiveEmployee } from "@/hooks/useEffectiveEmployee";
 
+const PHOTO_GATE_BYPASS_KEY = "stafly:photo-gate:bypass:v1";
+
 export default function EmployeeLayout() {
   const { user, role, employeeActive, employeeId, allEmployeeIds, resolveEmployeeForCompany, loading, signOut, fullName, canAccessAdmin, canAccessAdminForCompany } = useAuth();
   const { companies, selectedCompanyId, selectedCompany, switchCompany } = useCompany();
@@ -33,37 +35,66 @@ export default function EmployeeLayout() {
   const isMobile = useIsMobile();
   const { isModuleEnabled, enabledModules, loading: modulesLoading } = usePortalModules();
   const [moreOpen, setMoreOpen] = useState(false);
-  // DS1D-a2: chrome mode opt-out. Default "legacy" preserves px-4 py-4 chrome
-  // for all current portal routes. Pages migrating to <StaflyPageShell> can
-  // call setChromeMode("shell") on mount (and "legacy" on unmount) to drop
-  // the layout-level padding and own their chrome via Stafly tokens.
   const [chromeMode, setChromeMode] = useState<"legacy" | "shell">("legacy");
   const [avatarUrl, setAvatarUrl] = useState<string | null | undefined>(undefined);
   const [empName, setEmpName] = useState<string>("");
+  const [avatarLoadFailed, setAvatarLoadFailed] = useState(false);
+  // Session-scoped soft-bypass: lets a worker reach Documents/Shifts without
+  // a photo. Cleared on sign-out or successful upload.
+  const [photoGateBypass, setPhotoGateBypass] = useState<boolean>(() => {
+    try { return typeof window !== "undefined" && window.sessionStorage.getItem(PHOTO_GATE_BYPASS_KEY) === "1"; }
+    catch { return false; }
+  });
 
-  // Resolve the correct employeeId for the selected company
   const currentEmployeeId = selectedCompanyId
     ? resolveEmployeeForCompany(selectedCompanyId)
     : employeeId;
   const renderEmployeeId = currentEmployeeId || stableEmployeeId || employeeId;
 
-  // Filter companies to only those where the user has an employee record
   const employeeCompanyIds = new Set(allEmployeeIds.map(e => e.companyId));
   const employeeCompanies = companies.filter(c => employeeCompanyIds.has(c.id));
   const hasMultipleCompanies = employeeCompanies.length > 1;
 
   useEffect(() => {
     if (!renderEmployeeId) return;
+    let cancelled = false;
+    setAvatarLoadFailed(false);
+    // Safety net: if the avatar query hangs or silently fails, never trap the
+    // worker on an infinite spinner. After 8s, surface PhotoGate with an
+    // explicit retry + soft-bypass so they can still reach docs/shifts.
+    const timeout = setTimeout(() => {
+      if (cancelled) return;
+      setAvatarUrl((prev) => (prev === undefined ? null : prev));
+      setAvatarLoadFailed(true);
+    }, 8000);
     supabase
       .from("employees")
       .select("avatar_url, first_name, last_name")
       .eq("id", renderEmployeeId)
       .single()
-      .then(({ data }) => {
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        clearTimeout(timeout);
+        if (error) {
+          setAvatarLoadFailed(true);
+          setAvatarUrl(null);
+          return;
+        }
         setAvatarUrl(data?.avatar_url ?? null);
         if (data) setEmpName(formatPersonName(`${data.first_name} ${data.last_name}`));
       });
+    return () => { cancelled = true; clearTimeout(timeout); };
   }, [renderEmployeeId]);
+
+  const enablePhotoGateBypass = () => {
+    try { window.sessionStorage.setItem(PHOTO_GATE_BYPASS_KEY, "1"); } catch { /* noop */ }
+    setPhotoGateBypass(true);
+  };
+
+  const handleSignOut = () => {
+    try { window.sessionStorage.removeItem(PHOTO_GATE_BYPASS_KEY); } catch { /* noop */ }
+    signOut();
+  };
 
   if (loading && !renderEmployeeId) {
     return (
