@@ -942,7 +942,7 @@ Deno.serve(async (req) => {
       // Find employee linked to this user
       const { data: emp } = await adminClient
         .from("employees")
-        .select("id, access_pin, user_id")
+        .select("id, access_pin, user_id, company_id")
         .eq("user_id", caller.id)
         .maybeSingle();
 
@@ -951,6 +951,14 @@ Deno.serve(async (req) => {
           status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
+
+      // S7-B: read effective pin_auth_mode for this tenant (no behavior change).
+      const _pinAuthMode_changepin = await resolvePinAuthModeSafe(
+        adminClient,
+        (emp as any).company_id ?? null,
+        "change-pin",
+      );
+      void _pinAuthMode_changepin;
 
       // Verify current PIN if provided
       if (current_pin && emp.access_pin && current_pin !== emp.access_pin) {
