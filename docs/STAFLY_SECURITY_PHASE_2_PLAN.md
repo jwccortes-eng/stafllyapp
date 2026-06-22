@@ -591,3 +591,57 @@ Two independent tracks unblocked by S4:
 - replacing `authPassword(access_pin)` Supabase auth password derivation,
 - per-tenant feature flag `security.pin_hash_enabled`,
 - full payroll-cycle observation window per §2.5.
+
+---
+
+## Sprint S4-B — Employee Auth Dual-Write + Demo/Sandbox Backfill (executed)
+
+Additive only. **No reader flip. No plaintext removal. No auth/login behavior change. No payroll touched.**
+
+### 1. `employee-auth` audit
+
+Plaintext `employees.access_pin` was written from 3 sites in `supabase/functions/employee-auth/index.ts`:
+
+| Action            | Line (pre-S4-B) | Caller                              | Notes                                  |
+| ----------------- | --------------- | ----------------------------------- | -------------------------------------- |
+| `activate`        | 346/354         | Worker first activation (admin svc) | Creates auth user + sets initial PIN   |
+| `provision-pin`   | 765             | Admin/owner button                  | Generates fresh 4-digit PIN            |
+| `change-pin`      | 882             | Worker self-service (authenticated) | Verifies current PIN, sets new         |
+
+`authPassword(access_pin)` Supabase password derivation is **unchanged**. Return shapes, status codes, logs, and validation flow are **unchanged**. `sync-pins` only reads — not modified.
+
+### 2. Dual-write implementation
+
+New SECURITY DEFINER helper `public.internal_dual_write_pin_hash(_employee_id uuid, _pin text)`:
+
+- Mirrors plaintext into `access_pin_hash` (bcrypt cost 10) + `pin_hash_version='bcrypt'` + `pin_set_at` + `pin_migrated_at`.
+- **Never touches `access_pin`.**
+- `EXECUTE` revoked from `PUBLIC`, `anon`, `authenticated`. Granted only to `service_role`.
+- No `auth.uid()` requirement (service-role-only by grant), no PIN/hash logged.
+
+Each of the 3 write sites in `employee-auth/index.ts` now calls the helper in a `try/catch` immediately after the plaintext update. Failure of the hash write **never** blocks activation/reset/change.
+
+### 3. Backfill counts
+
+Approved sandbox/demo tenants only:
+
+| Tenant                      | company_id                              | with_pin | hashed (after S4-B) | crypt verify_ok |
+| --------------------------- | --------------------------------------- | -------- | ------------------- | --------------- |
+| Stafly Demo Company (S4)    | d3500000-0000-4000-8000-000000000001    | 7        | 7                   | 7/7             |
+| Sandbox                     | 876d404e-535e-4518-9541-80bc02298f90    | 5        | 5                   | 5/5             |
+| QA Testing                  | 7c1458db-109a-4042-a2b0-78e04427ec2d    | 2        | 2                   | 2/2             |
+
+Real tenants with `access_pin_hash IS NOT NULL`: **0** (Quality Staff, MyStaff, JKitchen, Eminence, Milenium, Zemer, Hamaspik, etc. all untouched).
+
+### 4. What was NOT touched
+
+`authPassword`, `kiosk-clock`, `front-desk-checkin`, login validation, RLS, payroll, `pay_periods`, `period_base_pay`, `reconciliation_*`, `historical_payroll_entries`, `time_entries`, `clock_events`, `scheduled_shifts`, `shift_assignments`, Connecteam pipeline, tenant governance triggers, `setup-company`, real-tenant rows, NOT NULL constraints, SECURITY DEFINER grant cleanup.
+
+### 5. Remaining blockers for S4-C (reader flip)
+
+1. Refactor `authPassword(access_pin)` to a hash-derived secret (or rotate to a stored opaque token) so `access_pin` is no longer the source of the Supabase password.
+2. Per-tenant feature flag `security.pin_hash_enabled` to flip readers in `kiosk-clock`, `employee-auth` (login), and `front-desk-checkin`.
+3. Full payroll cycle observation window on Stafly Demo + Sandbox with hash-read enabled.
+4. Then S4-D: backfill remaining tenants (gradual) → S4-E: drop plaintext.
+
+**Recommendation:** Proceed to **Sprint S5 (SECURITY DEFINER PUBLIC grant cleanup — P2 bucket)** while S4-C design is socialized; S4-C itself stays gated on the `authPassword` refactor.

@@ -352,6 +352,13 @@ Deno.serve(async (req) => {
       }
 
       await adminClient.from("employees").update(updateData).eq("id", employee.id);
+      // S4-B dual-write: mirror plaintext PIN into bcrypt hash columns. Best-effort.
+      try {
+        await adminClient.rpc("internal_dual_write_pin_hash", {
+          _employee_id: employee.id,
+          _pin: pin,
+        });
+      } catch (_) { /* never block activation; no PIN/hash logged */ }
 
       const empEmail = `emp_${authIdentifier}@employee.internal`;
 
@@ -763,6 +770,13 @@ Deno.serve(async (req) => {
       const newPwd = authPassword(newPin);
       
       await adminClient.from("employees").update({ access_pin: newPin }).eq("id", employee_id);
+      // S4-B dual-write
+      try {
+        await adminClient.rpc("internal_dual_write_pin_hash", {
+          _employee_id: employee_id,
+          _pin: newPin,
+        });
+      } catch (_) { /* best-effort; no PIN/hash logged */ }
 
       const { data: emp } = await adminClient
         .from("employees")
@@ -880,6 +894,13 @@ Deno.serve(async (req) => {
 
       // Update PIN in employees table and clear must_change_pin flag
       await adminClient.from("employees").update({ access_pin: new_pin, must_change_pin: false }).eq("id", emp.id);
+      // S4-B dual-write
+      try {
+        await adminClient.rpc("internal_dual_write_pin_hash", {
+          _employee_id: emp.id,
+          _pin: new_pin,
+        });
+      } catch (_) { /* best-effort; no PIN/hash logged */ }
 
       // Sync auth password
       const newPwd = authPassword(new_pin);

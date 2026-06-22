@@ -16474,6 +16474,10 @@ export type Database = {
         }
         Returns: string
       }
+      internal_dual_write_pin_hash: {
+        Args: { _employee_id: string; _pin: string }
+        Returns: undefined
+      }
       is_company_owner: {
         Args: { _company_id: string; _user_id: string }
         Returns: boolean
