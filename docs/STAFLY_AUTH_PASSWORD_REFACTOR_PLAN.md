@@ -540,3 +540,83 @@ Decision: keep the existing `authPassword(pin)` + `updateUserById` + `signInWith
 1. Replicate the demo `dual` hash-first gate in `kiosk-clock` and `front-desk-checkin` PIN validation paths (read-only, no auth-password change yet). Telemetry-only first, then gated by the same `security.pin_auth_mode` setting.
 2. Once all three readers (`employee-auth`, `kiosk-clock`, `front-desk-checkin`) verify against the hash in demo, design the real Supabase-auth decoupling (`admin.createSession` Postgres function or magic-link interstitial) as S7-F.
 3. Do not enable any real tenant before S7-E + S7-F land and Playwright QA passes against `/portal`, `/kiosk`, `/front-desk` on the demo tenant.
+
+---
+
+## Sprint S7-E — Demo-only hash-first PIN validation: kiosk-clock + front-desk-checkin
+
+**Status:** applied 2026-06-22. Demo-only. Real tenants untouched.
+
+### Guardrails honored
+- Only `kiosk-clock` and `front-desk-checkin` PIN gates were touched.
+- `employee-auth` (activate/login/provision/change-pin) untouched in this sprint.
+- `authPassword`, payroll, `pay_periods`, `period_base_pay`, `reconciliation_*`, `historical_payroll_entries`, `time_entries` (beyond the unchanged kiosk clock-in/out side effects), `clock_events`, `scheduled_shifts`, `shift_assignments`, Connecteam pipeline, tenant governance, `setup-company`, RLS, grants, worker documents, real-tenant settings — none touched.
+- Return shapes preserved (`{ error: "Invalid credentials" }` for kiosk, `{ ok, via, reason }` for front-desk).
+- No SQL migrations. No new RPCs. No data writes.
+
+### Kiosk-clock audit
+- Input: `{ phone, pin, kiosk_device_id, photo_base64 }` (line 50).
+- Employee SELECT at line 116 by phone (single row). Now also selects `access_pin_hash, pin_hash_version`.
+- Legacy PIN compare was `employee.access_pin !== pin` (was line 129); replaced by mode-gated block. Legacy branch preserved bit-for-bit.
+- Rate limit (`recordFailed` + `recordFailedIp`) on bad PIN — unchanged.
+- Side effects after PIN ok (photo upload, clock-in/out, shift link, `time_entries` insert/update, `clock_events`) — **untouched**.
+
+### Front-desk-checkin audit
+- Helper `assertCanWrite(adminClient, req, { employee_id, pin, device_id })` is the single PIN gate (line ~152).
+- Auth precedence: (1) self-JWT, (2) admin-role JWT, (3) PIN, (4) trusted-kiosk device. Order unchanged.
+- Employee SELECT at line 158 now also includes `access_pin_hash, pin_hash_version`.
+- PIN branch (was line 209: `pin === emp.access_pin`) wrapped: demo+dual uses `validatePinDual`, all other tenants/modes use legacy strict equality.
+- Trusted-device branch (4) unchanged.
+- No new logs of PIN/hash. JWT-path failure log unchanged.
+
+### Files changed
+- `supabase/functions/_shared/security-flags.ts` — exported `STAFLY_DEMO_COMPANY_ID` + new `resolveDemoDualMode(client, companyId, ctx)` helper (consolidates the S7-B/D inline allow-list).
+- `supabase/functions/kiosk-clock/index.ts` — imports + SELECT extended + demo dual gate around the existing PIN check.
+- `supabase/functions/front-desk-checkin/index.ts` — imports + SELECT extended + demo dual gate around the existing PIN branch (path 3).
+- `docs/STAFLY_AUTH_PASSWORD_REFACTOR_PLAN.md` — this section.
+
+### Dual validation behavior (demo only)
+Identical contract to S7-D `validatePinDual`:
+- hash ok → accept, `validation_source="hash"`.
+- hash mismatch + plaintext ok → accept, `plaintext_fallback`, `hash_mismatch=true`.
+- hash module/format error + plaintext ok → accept, `plaintext_fallback`, `hash_error=true`.
+- hash present + plaintext wrong → reject (rate-limit increments on kiosk; front-desk returns `not_authorized`).
+- hash missing + plaintext ok → accept, `plaintext_fallback`.
+- plaintext wrong → reject.
+
+Telemetry line: `[pin-auth-validate]` with `ctx`, `mode`, `company_id`, `employee_id`, `has_hash`, `hash_version`, `validation_source`, `hash_mismatch`, `hash_error`, `result`. Never logs PIN, hash, password, phone, email, or token.
+
+### QA results (code-level)
+- Real tenant (Quality Staff / MyStaff / JKitchen), any value in `company_settings` → resolver returns `legacy` → legacy branch runs (bit-identical to pre-S7-E). PASS by file diff.
+- Demo + `legacy` setting → legacy branch. PASS.
+- Demo + `dual`, kiosk correct PIN, hash present → `source=hash`, clock side effects unchanged. PASS.
+- Demo + `dual`, kiosk wrong PIN, hash present → reject + `recordFailed*`. PASS.
+- Demo + `dual`, kiosk missing hash + correct PIN → `plaintext_fallback`. PASS.
+- Demo + `dual`, front-desk PIN path, correct PIN + hash → `via="pin"`. PASS.
+- Demo + `dual`, front-desk wrong PIN → `not_authorized`. PASS.
+- Demo + `dual`, front-desk JWT self/admin path → returns before PIN gate, untouched. PASS.
+- Demo + `dual`, front-desk trusted-kiosk path (no PIN supplied) → branch (4) reached unchanged. PASS.
+- No PIN/hash/password in new log lines. PASS by inspection.
+- Type-check: no NEW errors. Front-desk had 26 baseline `never`-type errors (Supabase v2 typing drift); my casts dropped that to 21. Runtime unaffected (Deno deploys as JS).
+
+### Rollback
+1. `UPDATE company_settings SET value='legacy' WHERE company_id='d3500000-0000-4000-8000-000000000001' AND key='security.pin_auth_mode'`. Instant — resolver returns legacy, both functions use byte-identical legacy gate.
+2. Hard rollback: revert this commit. Legacy gate is preserved verbatim inside the `else` branch of each function, so revert is safe mid-traffic.
+
+### Real tenant safety
+- `resolveDemoDualMode` checks `companyId === STAFLY_DEMO_COMPANY_ID` BEFORE honoring `dual`. Any other tenant ID — including stale `dual` rows from accidental writes — resolves to `legacy`.
+- No real tenant `company_settings` rows added or modified by this sprint.
+- Quality Staff, MyStaff, JKitchen confirmed `legacy` by allow-list construction.
+
+### Not touched
+`employee-auth` actions, `authPassword`, payroll, pay_periods, period_base_pay, reconciliation_*, historical_payroll_entries, time_entries semantics, clock_events, scheduled_shifts, shift_assignments, Connecteam, tenant governance, setup-company, RLS, grants, worker documents, real-tenant settings, return shapes.
+
+### Risks
+- Bcrypt cost 10 = ~50–80 ms per demo dual PIN check. Only paid on demo.
+- Front-desk path (3) is only reached when JWT auth fails AND a PIN was supplied; trusted-kiosk path is unaffected.
+- Plaintext fallback intentionally widens acceptance (matches S7-D contract); strictness lands in S7-F (`hash_only`).
+
+### Recommendation S7-F
+1. Add Playwright QA against Stafly Demo: `/portal` login (S7-D), `/kiosk` clock-in (S7-E), `/front-desk` PIN check-in (S7-E). One scenario each for `hash`, `plaintext_fallback`, and `hash_mismatch`.
+2. Once green, design the Supabase-auth-password decoupling: either a Postgres SECURITY DEFINER `admin.create_session` helper or a magic-link interstitial flow. This is the prerequisite for ever removing `access_pin` from `authPassword(pin)` and for moving to `hash_only`.
+3. Do not introduce `hash_only` or any real-tenant enablement until 1 + 2 land. `hash_only` must be gated by per-tenant opt-in and a documented backfill verification step (every active worker has `access_pin_hash NOT NULL`).
