@@ -99,8 +99,9 @@ interface LinkDef {
 /* ── Company-scoped links — English Demo Pass (visible labels EN; internal keys preserved) ── */
 const COMPANY_LINKS: LinkDef[] = [
   // A) DAILY OPERATIONS
-  { to: "/app", icon: LayoutDashboard, label: "Command Center", module: null, end: true, section: "Daily Operations" },
-  { to: "/app/ops-center", icon: Radio, label: "Today's Operations", module: null, section: "Daily Operations" },
+  { to: "/app", icon: LayoutDashboard, label: "Home", module: null, end: true, section: "Daily Operations" },
+  { to: "/app/command-center", icon: Radio, label: "Command Center", module: null, section: "Daily Operations" },
+  { to: "/app/ops-center", icon: Radio, label: "Today's Operations (legacy)", module: null, section: "Daily Operations" },
   { to: "/app/shifts", icon: CalendarDays, label: "Shifts", module: "shifts", section: "Daily Operations" },
   { to: "/app/attendance", icon: ShieldCheck, label: "Attendance", module: null, section: "Daily Operations" },
   { to: "/app/timeclock", icon: Clock, label: "Time Clock", module: "shifts", section: "Daily Operations" },

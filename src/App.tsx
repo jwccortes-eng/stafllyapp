@@ -88,6 +88,7 @@ const Billing = lazy(() => import("./pages/admin/Billing"));
 const SystemHealth = lazy(() => import("./pages/admin/SystemHealth"));
 const Implementations = lazy(() => import("./pages/admin/Implementations"));
 const CommandCenter = lazy(() => import("./pages/admin/CommandCenter"));
+const CommandCenterHub = lazy(() => import("./pages/admin/CommandCenterHub"));
 const StaffingCenter = lazy(() => import("./pages/admin/StaffingCenter"));
 const DevCommandCenter = lazy(() => import("./pages/admin/DevCommandCenter"));
 const SmartWorkCardSandbox = lazy(() => import("./pages/admin/SmartWorkCardSandbox"));
@@ -290,7 +291,8 @@ function App() {
                 <Route path="needs-attention" element={<NeedsAttention />} />
                 <Route path="daily-close" element={<CompanyRequiredGuard><DailyClose /></CompanyRequiredGuard>} />
                 <Route path="today" element={<Today />} />
-                <Route path="command-center" element={<CommandCenter />} />
+                <Route path="command-center" element={<CompanyRequiredGuard><CommandCenterHub /></CompanyRequiredGuard>} />
+                <Route path="command-center-classic" element={<CommandCenter />} />
                 <Route path="staffing-center" element={<StaffingCenter />} />
                 <Route path="dev-command-center" element={<DevCommandCenter />} />
                 <Route path="owner-command-center" element={<DevCommandCenter />} />
