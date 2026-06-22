@@ -409,3 +409,63 @@ Now that the branch is wired and the demo tenant emits `[pin-auth-mode] effectiv
 1. Instrument `activate` with the same `resolvePinAuthModeSafe` call (requires resolving `company_id` earlier in the multi-branch employee lookup).
 2. Implement the actual bridge under `if (effective === "dual")`: generate a random 32-byte password server-side, call `auth.admin.updateUserById({ password })`, mint a session via `admin.generateLink({ type: 'magiclink' })`, return the link/session token. Keep PIN validation against `access_pin_hash` (S4-B) with plaintext fallback. Demo only.
 3. Add an end-to-end Playwright QA against `/portal` using a Stafly Demo worker before considering any non-demo enablement.
+
+---
+
+## Sprint S7-C — Activate Instrumentation (No Behavior Change)
+
+### Guardrails
+No bridge implementation, no random password, no `admin.generateLink`, no session minting, no hash-first PIN validation, no reader flip, no `hash_only`, no plaintext deletion, no `authPassword` change, no login/kiosk/front-desk/payroll changes. `dual` remains a no-op.
+
+### Activate flow audit (supabase/functions/employee-auth/index.ts)
+- Action handler: L283 `if (action === "activate")`.
+- Employee resolution: phone (L315), employee_id (L328), invite_token (L337). Three independent SELECTs.
+- `company_id` was NOT in any of the three SELECT clauses → not available before auth side-effects. Previously only re-fetched post-signIn (L473) for audit/notifications.
+- `authPassword(pin)`: L310 (unchanged).
+- Auth user create/update: L413 createUser / L424 updateUserById / L438 updateUserById. Unchanged.
+- PIN write: L401 `update({ access_pin: pin })`. Unchanged.
+- S4-B dual-write hash: L404 `internal_dual_write_pin_hash`. Unchanged.
+- signInWithPassword: L454. Unchanged.
+
+### Branch point (chosen)
+Extend the three employee SELECTs to include `company_id` (zero new DB calls), then call `resolvePinAuthModeSafe` once after the `already_activated` guard and before any auth side-effects (between L388 and the `empPhone` computation). Telemetry only.
+
+### Changes applied
+- L321 / L331 / L358 SELECT clauses now include `company_id`.
+- L393 new `resolvePinAuthModeSafe(adminClient, employee.company_id, "activate")` call. Result stored in `_pinAuthMode_activate` and unused (no branching).
+
+### Branch behavior matrix
+| Tenant / setting | Resolved mode | Activate behavior |
+|---|---|---|
+| Stafly Demo (`d3500000…0001`) + `dual` | `dual` (telemetry) | identical to legacy |
+| Stafly Demo + missing/invalid/legacy | `legacy` | identical to legacy |
+| Real tenant (any setting incl. `dual`) | force `legacy` | identical to legacy |
+| `company_id` null (employee not yet resolved / orphan) | `legacy` (early return in resolver) | identical to legacy |
+| `company_settings` read error | `legacy` (silent fallback) | identical to legacy |
+
+### Proof of no behavior change
+- `authPassword`, `createUser`, `updateUserById`, `signInWithPassword`, `access_pin` write, `internal_dual_write_pin_hash` RPC, audit/notification block, return shape (`{success, activated, session, user}`) all byte-identical.
+- New code path adds: (a) one extra column per SELECT, (b) one extra `company_settings` SELECT via `getPinAuthMode`, (c) one `console.info` line. No mutations.
+
+### Telemetry
+Logs only: `ctx`, `company_id`, `requested`, `effective`, `demo`. Never logs PIN, password, hash, phone, email, or tokens.
+
+### QA results (code-level)
+- activate Stafly Demo → resolver returns `dual`, behavior unchanged. PASS.
+- activate real tenant → forced `legacy`, behavior unchanged. PASS.
+- activate orphan employee (company_id null) → `legacy` via early return. PASS.
+- activate with invalid/missing setting → `legacy` via `coerceMode` fallback. PASS.
+- login / provision / change-pin unchanged (no edits to those branches). PASS.
+- kiosk-clock / front-desk-checkin / payroll: untouched. PASS.
+- No PIN/password/hash in logs (grep confirms only metadata fields). PASS.
+
+### What was NOT touched
+kiosk-clock, front-desk-checkin, payroll, pay_periods, period_base_pay, reconciliation_*, historical_payroll_entries, time_entries, clock_events, scheduled_shifts, shift_assignments, Connecteam pipeline, tenant governance, setup-company, RLS policies, worker documents, real tenant settings, `authPassword` body, return shapes, error codes.
+
+### Risks
+- One extra column (`company_id`) returned from employees SELECT — already RLS-allowed via admin client; zero exposure to client.
+- One extra DB read per activate (`company_settings`) — negligible, swallowed on error.
+- `dual` is still a no-op, so a future bug in the bridge cannot regress today.
+
+### Recommendation S7-D
+With uniform control plane across `activate`, `login`, `provision`, `change-pin`, S7-D should implement the real bridge under `if (effective === "dual")` exclusively in the demo tenant: random server-side password + `admin.generateLink` for session minting, with hash-first PIN validation (S4-B columns) and plaintext fallback. Add Playwright QA against `/portal` on Stafly Demo, plus a per-action kill-switch flag before considering any non-demo enablement.
