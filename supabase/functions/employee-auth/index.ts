@@ -650,6 +650,13 @@ Deno.serve(async (req) => {
 
       await resetRateLimit(adminClient, cleanPhone);
 
+      // S7-B: read effective pin_auth_mode for this tenant. No behavior change yet:
+      // both "legacy" and (demo-only) "dual" execute the same Supabase auth password
+      // flow below. The branch exists so S7-C can flip dual to the random-password
+      // bridge without re-plumbing call sites. Real tenants always resolve "legacy".
+      const _pinAuthMode_login = await resolvePinAuthModeSafe(adminClient, employee.company_id, "login");
+      void _pinAuthMode_login;
+
       const empEmail = `emp_${cleanPhone}@employee.internal`;
       
       if (!employee.user_id) {
