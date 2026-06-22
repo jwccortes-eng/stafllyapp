@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Camera, Upload, RotateCcw, Check, Loader2 } from "lucide-react";
+
+import { Camera, Upload, RotateCcw, Check, Loader2, AlertTriangle, ArrowRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -10,9 +11,13 @@ interface PhotoGateProps {
   employeeId: string;
   onPhotoUploaded: (url: string) => void;
   onSignOut: () => void;
+  /** Soft-bypass: lets the worker reach Documents / Shifts without a photo. */
+  onContinueWithoutPhoto?: () => void;
+  /** True when the avatar query timed out or failed — show a retry hint. */
+  loadFailed?: boolean;
 }
 
-export function PhotoGate({ employeeId, onPhotoUploaded, onSignOut }: PhotoGateProps) {
+export function PhotoGate({ employeeId, onPhotoUploaded, onSignOut, onContinueWithoutPhoto, loadFailed }: PhotoGateProps) {
   const { toast } = useToast();
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
@@ -132,6 +137,31 @@ export function PhotoGate({ employeeId, onPhotoUploaded, onSignOut }: PhotoGateP
             </div>
           )}
         </div>
+
+        {loadFailed && (
+          <div className="flex items-start gap-2 rounded-xl border border-warning/30 bg-warning/10 px-3 py-2 text-[11px] text-foreground">
+            <AlertTriangle className="h-3.5 w-3.5 text-warning shrink-0 mt-0.5" />
+            <div>
+              <p className="font-semibold">No pudimos cargar tu foto actual.</p>
+              <p className="text-muted-foreground mt-0.5">Revisa tu conexión e intenta de nuevo, o continúa para ver tus documentos y turnos.</p>
+            </div>
+          </div>
+        )}
+
+        {onContinueWithoutPhoto && (
+          <div className="space-y-1.5">
+            <button
+              onClick={onContinueWithoutPhoto}
+              className="w-full flex items-center justify-center gap-1.5 text-sm font-medium text-primary hover:underline"
+            >
+              Continuar sin foto por ahora
+              <ArrowRight className="h-3.5 w-3.5" />
+            </button>
+            <p className="text-center text-[10.5px] text-muted-foreground/80">
+              Podrás ver tus documentos y turnos. Te pediremos la foto antes de poder ser asignado.
+            </p>
+          </div>
+        )}
 
         <button onClick={onSignOut} className="w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors">
           Cerrar sesión
