@@ -189,11 +189,10 @@ export function selectNextBestAction(ctx: NbaContext): NbaResult {
     return {
       kind: "missing_docs",
       tone: "warning",
-      title: "Sube tus documentos",
-      subtitle: `${ctx.readinessMissingDocs} documento${
-        ctx.readinessMissingDocs > 1 ? "s" : ""
-      } pendiente${ctx.readinessMissingDocs > 1 ? "s" : ""} para poder ser asignado.`,
-      ctaLabel: "Subir ahora",
+      title: "Te faltan algunos documentos",
+      subtitle:
+        "Completa los documentos pendientes para quedar totalmente listo para trabajar.",
+      ctaLabel: "Ver documentos",
       ctaHref: "/portal/documents",
     };
   }
@@ -209,9 +208,8 @@ export function selectNextBestAction(ctx: NbaContext): NbaResult {
       kind: "missing_profile",
       tone: "deduction",
       title: "Completa tu perfil",
-      subtitle: `Falta${ctx.readinessMissingPersonal > 1 ? "n" : ""} ${ctx.readinessMissingPersonal} dato${
-        ctx.readinessMissingPersonal > 1 ? "s" : ""
-      } para ser asignado a turnos.`,
+      subtitle:
+        "Necesitamos algunos datos básicos para terminar de activar tu perfil.",
       ctaLabel: "Continuar",
       ctaHref: "/portal/profile/complete",
     };
@@ -248,8 +246,9 @@ export function selectNextBestAction(ctx: NbaContext): NbaResult {
   return {
     kind: "all_set",
     tone: "success",
-    title: "Todo listo por aquí",
-    subtitle: "Aún no tienes turnos asignados. Te avisaremos aquí cuando tengas uno nuevo.",
+    title: "Tu perfil está listo para trabajar",
+    subtitle:
+      "Revisa tus próximos turnos y mantén tus documentos al día. Te avisaremos aquí cuando haya trabajo nuevo.",
     ctaLabel: null,
     ctaHref: null,
   };
