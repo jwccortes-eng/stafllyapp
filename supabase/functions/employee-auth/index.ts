@@ -625,7 +625,7 @@ Deno.serve(async (req) => {
       // Fetch all employees with this phone; pick the one with matching PIN
       const { data: loginEmployees } = await adminClient
         .from("employees")
-        .select("id, first_name, last_name, phone_number, access_pin, is_active, user_id, must_change_pin, company_id, portal_access_enabled")
+        .select("id, first_name, last_name, phone_number, access_pin, access_pin_hash, pin_hash_version, is_active, user_id, must_change_pin, company_id, portal_access_enabled")
         .in("phone_number", phoneVariants)
         .eq("is_active", true)
         .order("created_at", { ascending: true });
@@ -651,21 +651,71 @@ Deno.serve(async (req) => {
         );
       }
 
-      if (!employee.access_pin || employee.access_pin !== pin) {
-        const result = await recordFailedAttempt(adminClient, cleanPhone);
-        return new Response(
-          JSON.stringify({ error: result.message }),
-          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+      // S7-D: resolve effective mode BEFORE the PIN gate so the demo dual
+      // branch can run a hash-first validation. Real tenants and any
+      // resolver error force "legacy" (resolvePinAuthModeSafe contract).
+      const _pinAuthMode_login = await resolvePinAuthModeSafe(adminClient, employee.company_id, "login");
+
+      if (_pinAuthMode_login === "dual") {
+        // Demo-only dual branch. Hash-first with plaintext fallback.
+        // Acceptance gate widened only to "ok"; on any failure we drop to
+        // the legacy gate below so we cannot accidentally relax security.
+        let dualOk = false;
+        let dualSource: string | null = null;
+        let dualHashMismatch = false;
+        let dualHashError = false;
+        try {
+          const r = await validatePinDual({
+            inputPin: pin,
+            storedPlaintext: employee.access_pin ?? null,
+            storedHash: employee.access_pin_hash ?? null,
+            hashVersion: employee.pin_hash_version ?? null,
+          });
+          dualOk = r.ok;
+          dualSource = r.source;
+          dualHashMismatch = r.hashMismatch;
+          dualHashError = r.hashError;
+        } catch {
+          // Helper is no-throw, but be defensive — fall back to legacy gate.
+          dualOk = false;
+        }
+        try {
+          console.info("[pin-auth-validate]", {
+            ctx: "login",
+            mode: "dual",
+            company_id: employee.company_id,
+            employee_id: employee.id,
+            has_hash: !!employee.access_pin_hash,
+            hash_version: employee.pin_hash_version ?? null,
+            validation_source: dualSource,
+            hash_mismatch: dualHashMismatch,
+            hash_error: dualHashError,
+            result: dualOk ? "ok" : "fail",
+          });
+        } catch { /* logging must never throw */ }
+
+        if (!dualOk) {
+          const result = await recordFailedAttempt(adminClient, cleanPhone);
+          return new Response(
+            JSON.stringify({ error: result.message }),
+            { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        // Fall through to existing Supabase auth password flow below.
+        // Auth bridge (random server-side password + session minting) is
+        // documented as BLOCKED for S7-D — see STAFLY_AUTH_PASSWORD_REFACTOR_PLAN.md.
+      } else {
+        // Legacy gate — unchanged bit-for-bit from pre-S7-D.
+        if (!employee.access_pin || employee.access_pin !== pin) {
+          const result = await recordFailedAttempt(adminClient, cleanPhone);
+          return new Response(
+            JSON.stringify({ error: result.message }),
+            { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
       }
 
       await resetRateLimit(adminClient, cleanPhone);
-
-      // S7-B: read effective pin_auth_mode for this tenant. No behavior change yet:
-      // both "legacy" and (demo-only) "dual" execute the same Supabase auth password
-      // flow below. The branch exists so S7-C can flip dual to the random-password
-      // bridge without re-plumbing call sites. Real tenants always resolve "legacy".
-      const _pinAuthMode_login = await resolvePinAuthModeSafe(adminClient, employee.company_id, "login");
       void _pinAuthMode_login;
 
       const empEmail = `emp_${cleanPhone}@employee.internal`;
