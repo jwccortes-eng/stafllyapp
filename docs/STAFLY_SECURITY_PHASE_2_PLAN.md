@@ -645,3 +645,94 @@ Real tenants with `access_pin_hash IS NOT NULL`: **0** (Quality Staff, MyStaff, 
 4. Then S4-D: backfill remaining tenants (gradual) → S4-E: drop plaintext.
 
 **Recommendation:** Proceed to **Sprint S5 (SECURITY DEFINER PUBLIC grant cleanup — P2 bucket)** while S4-C design is socialized; S4-C itself stays gated on the `authPassword` refactor.
+
+---
+
+## Sprint S5 — SECURITY DEFINER PUBLIC Grant Cleanup (executed)
+
+Privileges only. **No function bodies changed. No RLS, auth, payroll, PIN, or edge-function logic touched. No data writes.**
+
+### Inventory
+
+| Metric                                                | Before S5 | After S5 |
+| ----------------------------------------------------- | --------- | -------- |
+| Total SECURITY DEFINER functions (public schema)      | 124       | 124      |
+| Callable (non-trigger) SECURITY DEFINER               | 83        | 83       |
+| Callable SECURITY DEFINER with PUBLIC execute         | 67        | 33       |
+| Lovable security-linter total findings                | 154       | 120      |
+
+The 33 callable functions still granting PUBLIC execute are the **explicitly excluded** P0 RLS helpers + P3 anon-public flows + PIN helpers (see below).
+
+### Bucket P2 — service_role only (7 functions)
+
+Revoke: PUBLIC, anon, authenticated. Grant: service_role.
+
+`_get_cron_secret()`, `cleanup_expired_rate_limits()`, `expire_old_invitations()`, `enqueue_email(text,jsonb)`, `delete_email(text,bigint)`, `read_email_batch(text,int,int)`, `move_to_dlq(text,text,bigint,jsonb)`.
+
+Caller audit: only cron jobs (`auto-close-periods`, `invite-reminders`, `employee-auth` adminClient) and pgmq workers (`send-invite-email`, `bulk-portal-invite`) — all use the service-role admin client.
+
+### Bucket P1 — authenticated + service_role (28 functions)
+
+Revoke: PUBLIC, anon. Grant: authenticated, service_role.
+
+- Shift state: `assign_worker_to_shift`, `publish_shift_draft`, `set_shift_assignment_state`, `worker_respond_to_shift_assignment`, `resolve_shift_request`
+- Time corrections: `request_time_entry_correction`, `list_shift_corrections`, `review_time_entry_correction`
+- Notifications + audit: `create_shift_worker_notification`, `log_activity`, `log_activity_detailed`, `log_sensitive_access`
+- Documents: `intake_confirm_and_index`
+- Fiscal: `admin_get_employees_with_fiscal`
+- Worker prefs: `archive_worker_client_preference`, `set_worker_client_preference`
+- Employee admin: `merge_employees`, `supersede_employee_invitations`, `apply_role_template`, `list_unassigned_profiles`, `get_eligible_users_for_company`, `find_employee_duplicate_groups`
+- Payroll / passport / review recompute: `consolidate_period_base_pay`, `consolidate_passport`, `consolidate_all_passports`, `recalculate_rep_score`, `recalculate_review_score`, `generate_shift_review_requests`, `pick_workers_to_rate`
+
+Caller audit (`rg`): every callsite is either an authenticated browser session (worker portal / admin app via the shared client) or a service-role admin edge function. No anon callers found.
+
+### Excluded (intentionally left with PUBLIC execute)
+
+**P0 — RLS gateways (33 functions; do-not-touch):** `has_role`, `has_company_role`, `has_exact_company_role`, `has_module_permission`, `has_action_permission`, `has_active_assignment_override`, `is_global_owner`, `is_company_owner`, `is_founder`, `is_conversation_member`, `user_company_ids`, `user_is_company_admin`, `user_is_assigned_to_shift`, `user_can_access_worker_docs`, `worker_can_access_employee_doc_path`, `worker_owns_employee_document_scope`, `company_user_can_access_employee_doc_path`, `anon_can_upload_onboarding_doc`, `can_manage_shift_company`, `compute_employee_profile_status`, `compute_profile_stage`, `get_profile_status`, `get_employee_shift_readiness`, `get_required_documents_for_company`, `employee_has_locked_payroll`, `shift_closeout_can_admin`, `shift_closeout_can_final_approve`, `try_path_uuid` — referenced by RLS policies; revoking PUBLIC could break anon-pathway RLS evaluation.
+
+**P3 — anon-intentional public flows:** `get_public_company_by_slug`, `find_public_company_fuzzy`, `application_exists`, `get_public_passport`, `get_company_by_invite_code`, `get_invitation_by_token`, `update_invitation_status_by_token`, `get_or_create_unsubscribe_token`, `register_onboarding_document`, `get_employee_for_activation` — `/apply/:slug`, `/s/:token` invite/activation, `/passport/:slug`, email unsubscribe.
+
+**PIN helpers (S4/S4-B stability lock):** `employee_has_access_pin`, `set_employee_access_pin`, `reset_employee_access_pin`, `internal_dual_write_pin_hash`, `has_switch_pin`, `set_switch_pin`, `verify_switch_pin` — frozen until S4-C reader-flip design.
+
+### QA results
+
+| Check                                            | Result |
+| ------------------------------------------------ | ------ |
+| `vitest` full suite (17 files / 201 tests)       | ✅ PASS |
+| Linter delta                                     | -34 findings (154 → 120) |
+| Remaining PUBLIC-execute callable SECURITY DEFINER | 33 (all in P0/P3/PIN excluded lists) |
+| No function bodies modified                       | ✅ (`pg_get_functiondef` unchanged) |
+| No RLS policies changed                           | ✅ |
+| No table data writes                              | ✅ |
+| Edge-function caller audit (`rg .rpc\(`)         | ✅ all callers either authenticated session or service-role admin client |
+
+### Rollback SQL
+
+If any production caller breaks, restore the legacy PUBLIC grant on the offending function only (do NOT mass-restore):
+
+```sql
+-- Example for one P1 function
+GRANT EXECUTE ON FUNCTION public.<name>(<args>) TO PUBLIC;
+GRANT EXECUTE ON FUNCTION public.<name>(<args>) TO anon;
+```
+
+Or full-bucket rollback:
+
+```sql
+DO $$ DECLARE sig text; funcs text[] := ARRAY[ /* paste bucket list */ ]; BEGIN
+  FOREACH sig IN ARRAY funcs LOOP
+    EXECUTE format('GRANT EXECUTE ON FUNCTION %s TO PUBLIC', sig);
+    EXECUTE format('GRANT EXECUTE ON FUNCTION %s TO anon', sig);
+  END LOOP; END $$;
+```
+
+### Risks
+
+- **Low**: All revokes target functions whose static callsites are authenticated/admin only. Any forgotten unauth path would surface as `42501 permission denied for function` — recoverable per-function via rollback above without data impact.
+- **Zero impact** on payroll, time_entries, scheduled_shifts, pay_periods, period_base_pay, reconciliation_*, historical_payroll_entries, clock_events, shift_assignments, RLS, auth, PIN logic, kiosk-clock, front-desk-checkin, employee-auth behavior, Connecteam pipeline, tenant governance, setup-company, companies.status triggers, worker documents.
+
+### Recommendation: Sprint S6
+
+1. **PIN hashing S4-C design** — refactor `authPassword(access_pin)` so reader flip becomes safe; introduce per-tenant feature flag `security.pin_hash_enabled`.
+2. **Storage bucket cleanup** — 4 "Public Bucket Allows Listing" linter warnings still open; audit each bucket's intended audience.
+3. **`SECURITY DEFINER` body audit** — second pass to confirm every function's internal queries respect tenant scoping (independent of the grant cleanup we just did).
