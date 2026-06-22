@@ -136,12 +136,18 @@ export default function EmployeeLayout() {
     );
   }
 
-  if (!avatarUrl) {
+  if (!avatarUrl && !photoGateBypass) {
     return (
       <PhotoGate
         employeeId={effectiveEmployeeId!}
-        onPhotoUploaded={(url) => setAvatarUrl(url)}
-        onSignOut={signOut}
+        onPhotoUploaded={(url) => {
+          try { window.sessionStorage.removeItem(PHOTO_GATE_BYPASS_KEY); } catch { /* noop */ }
+          setPhotoGateBypass(false);
+          setAvatarUrl(url);
+        }}
+        onSignOut={handleSignOut}
+        onContinueWithoutPhoto={enablePhotoGateBypass}
+        loadFailed={avatarLoadFailed}
       />
     );
   }
