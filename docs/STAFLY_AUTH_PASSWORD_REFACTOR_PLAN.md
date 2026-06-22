@@ -927,3 +927,168 @@ Design (do **not** implement) `hash_only_ready` for Stafly Demo only:
 2. Define helper semantics: when mode is `hash_only_ready`, missing-hash returns `ok=false` with a new telemetry flag `fallback_suppressed=true` (no plaintext compare).
 3. Document a 7-day observation gate: must observe `fallback_suppressed=0` events in demo before any further step.
 4. Hold on real-tenant migration design (`S7-J`) until S7-I observation closes clean.
+
+---
+
+## Sprint S7-I — `hash_only_ready` Design (Demo Only, Doc-Only) — 2026-06-22
+
+**Scope:** Design + documentation only. No code, no SQL, no RPC, no migrations, no RLS, no grants, no writes, no real-tenant changes, no fixture writes, no fallback suppression in production, no plaintext deletion, no authPassword changes.
+
+### Guardrails reviewed
+employee-auth / kiosk-clock / front-desk-checkin code, `authPassword`, `internal_verify_pin_hash` RPC, `company_settings`, `access_pin`/`access_pin_hash` data, payroll (`pay_periods`, `period_base_pay`, `reconciliation_*`, `historical_payroll_entries`, `time_entries`, `clock_events`, `scheduled_shifts`, `shift_assignments`), Connecteam pipeline, RLS/grants, tenant governance, real tenants — all untouched.
+
+### 1. Mode taxonomy (clarified)
+
+| Mode | Validation | Plaintext fallback | Plaintext data | Auth password | Tenants |
+|---|---|---|---|---|---|
+| `legacy` | plaintext compare | n/a | kept | PIN-derived | all real tenants today |
+| `dual` (S7-D…G) | hash-first, plaintext fallback on miss/error | YES | kept | PIN-derived | Stafly Demo only |
+| **`hash_only_ready`** (this design) | hash-only; missing/mismatch/error → reject + telemetry | **NO** | **kept (NOT deleted)** | PIN-derived (unchanged) | Stafly Demo only, gated |
+| `hash_only` (future, blocked) | hash-only, hardened | NO | candidate for removal in a later sprint | requires auth decoupling first | future, after S7-J+ |
+| plaintext kill | n/a | n/a | deleted | decoupled | far future, separate sprint |
+
+`hash_only_ready` is **a measurement mode**, not a production hardening step. Its only purpose is to observe what real demo traffic would experience if the fallback were removed, while keeping plaintext data and `authPassword(pin)` intact for instant rollback.
+
+### 2. Semantics of `hash_only_ready`
+
+PIN validation contract (proposed, not implemented):
+
+| Condition | Result | Telemetry |
+|---|---|---|
+| `access_pin_hash` exists AND `internal_verify_pin_hash(emp, pin) = true` | `ok` | `validation_source="hash"`, `fallback_suppressed=false`, `result="ok"` |
+| `access_pin_hash` is NULL/empty | `fail` | `validation_source=null`, `fallback_suppressed=true`, `suppressed_reason="missing_hash"`, `result="fail"` |
+| Hash exists but RPC returns `false` | `fail` | `validation_source=null`, `fallback_suppressed=true`, `suppressed_reason="hash_mismatch"`, `result="fail"` |
+| RPC throws / returns null / network error | `fail` (recommended) | `validation_source=null`, `fallback_suppressed=true`, `suppressed_reason="hash_error"`, `result="fail"` |
+
+**Recommendation on `hash_error`:** treat as `fail` (not silent legacy fallback). The whole point of `hash_only_ready` is to *measure* readiness; falling back to legacy on RPC error would hide the very signal we want. If `hash_error` rate is non-zero during the observation window, the gate to `hash_only` does NOT pass — we revert to `dual` and investigate.
+
+### 3. Telemetry contract (safe fields only)
+
+Logged at INFO under tag `[pin-auth-validate]` exactly like S7-D/E/G:
+
+Allowed:
+- `ctx` (`login` | `kiosk-clock` | `front-desk-checkin`)
+- `mode` (`"hash_only_ready"`)
+- `company_id`
+- `employee_id`
+- `has_hash` (bool)
+- `hash_version`
+- `validation_source` (`"hash"` | `null`)
+- `fallback_suppressed` (bool)
+- `suppressed_reason` (`"missing_hash"` | `"hash_mismatch"` | `"hash_error"` | `null`)
+- `result` (`"ok"` | `"fail"`)
+
+Forbidden (must never appear in any log, error message, or response): PIN, hash, `access_pin`, `access_pin_hash`, password, token, refresh_token, email, phone, normalized phone, phone hash with low entropy.
+
+### 4. UX / error response contract
+
+All four `fail` cases (wrong PIN, missing hash, hash mismatch, hash error) MUST return the **same generic response** the legacy flow returns today: same HTTP status (401 for login/kiosk, equivalent for front-desk), same Spanish copy ("PIN incorrecto. N intentos restantes."), same rate-limit increment.
+
+- No worker-facing surface may reveal `suppressed_reason`.
+- No worker-facing surface may reveal whether the worker has a hash, lacks a hash, or is on `dual` vs `hash_only_ready`.
+- No new HTTP status codes, no new error keys, no new toasts.
+
+### 5. Synthetic fixture plan (NOT executed this sprint)
+
+Future fixture sprint (call it S7-I-fix, separate approval) must, in Stafly Demo only:
+
+1. **Baseline snapshot** — for each of the 7 demo workers, record `(id, access_pin_hash, pin_hash_version)` to a doc-side rollback table (or a one-row JSON in `company_settings.security.pin_hash_fixture_backup` — to be decided in fixture sprint).
+2. **Fixture A — missing hash:** pick one demo worker (recommend `d3500000-...0013` Demo Cocina Tres, lowest blast radius), set `access_pin_hash = NULL`. QA: correct PIN → expect `fail` + `suppressed_reason="missing_hash"`.
+3. **Fixture B — corrupted hash:** pick one demo worker (recommend `d3500000-...0014` Demo Driver Uno), overwrite `access_pin_hash` with a syntactically valid bcrypt string that does NOT match the plaintext (e.g. `crypt('not-the-pin','$2a$...')`). QA: correct PIN → expect `fail` + `suppressed_reason="hash_mismatch"`.
+4. **Fixture C — valid baseline:** leave 5 other demo workers untouched. QA: correct PIN → `ok` + `validation_source="hash"`.
+5. **Rollback** — restore both fixtures from the baseline snapshot before closing the fixture sprint. Verify post-restore via `extensions.crypt(access_pin, access_pin_hash) = access_pin_hash` returning true for all 7.
+
+Hard rules for fixture sprint:
+- Stafly Demo only. Never Quality Staff / MyStaff / JKitchen / Parceros / any real tenant.
+- Never modify `access_pin` (plaintext). Only `access_pin_hash`.
+- Never log/export PIN values.
+- Rollback is mandatory before closing.
+
+### 6. Rollback (zero-data-loss)
+
+`hash_only_ready` rollback is purely a setting flip:
+
+```sql
+-- Roll back to dual (fallback re-enabled)
+UPDATE company_settings
+   SET value = '"dual"'
+ WHERE company_id = 'd3500000-0000-4000-8000-000000000001'
+   AND key = 'security.pin_auth_mode';
+
+-- Roll back fully to legacy
+UPDATE company_settings
+   SET value = '"legacy"'
+ WHERE company_id = 'd3500000-0000-4000-8000-000000000001'
+   AND key = 'security.pin_auth_mode';
+```
+
+No data rollback is ever required because:
+- `access_pin` plaintext is **never** touched.
+- `access_pin_hash` is **never** touched by mode flips (only by the optional fixture sprint, which has its own snapshot/restore).
+- `authPassword(pin)` is unchanged, so Supabase auth users continue to sign in identically.
+
+Worst case if `hash_only_ready` misbehaves in demo: every demo worker is rejected, demo workers cannot sign in for the seconds between the bad observation and the rollback flip. Real tenants are unaffected.
+
+### 7. Activation gate (must pass *all* before enabling)
+
+Prerequisites — every item must be checked off in writing on the closing report of the (future) activation sprint:
+
+1. ✅ 7/7 demo workers have valid hashes (`extensions.crypt(access_pin, access_pin_hash) = access_pin_hash`) — currently true per S7-H.
+2. ✅ S7-H telemetry clean (`hash_error = 0`, `validation_source="hash"` on every correct demo PIN) — currently true.
+3. Synthetic fixture sprint (S7-I-fix) executed and rolled back cleanly, with QA proof for missing/corrupt/valid fixtures.
+4. No `hash_error` in any `[pin-auth-validate]` log for 7 consecutive days in `dual` mode.
+5. Owner/developer written approval naming the demo tenant id and the activation window.
+6. Rollback flip tested end-to-end (dual → hash_only_ready → dual) in a staging window with at least one live `validation_source="hash"` event captured on the return trip.
+7. On-call/observer assigned for the activation window.
+
+If any prerequisite is missing or fails: **no-go**, remain on `dual`.
+
+### 8. No-go / hard-stop conditions
+
+Abort activation (or rollback immediately if already active) on any of:
+- Any `hash_error=true` event in the activation window.
+- Any `fallback_suppressed=true` with `suppressed_reason="missing_hash"` for a worker who, by SQL, *does* have a non-null `access_pin_hash` (indicates RPC / SELECT drift).
+- Any sign that a non-demo tenant resolved to `hash_only_ready` (a leak in `resolveDemoDualMode`).
+- Any worker-facing surface revealing `suppressed_reason` or hash state.
+- Any payroll or `time_entries` write/read anomaly correlated with the activation window (defensive — there is no expected coupling, but we monitor).
+
+### 9. Auth decoupling — explicitly *not* in scope
+
+`hash_only_ready` deliberately does **not** address:
+- `authPassword(pin)` — Supabase auth password is still PIN-derived.
+- Auth password entropy / "pwned" warnings surfaced by Supabase on the demo JWT.
+- Plaintext kill (`access_pin` removal).
+- Magic-link / random-server-password / Worker Auth v3 transition.
+
+Those remain a **separate workstream** (tentatively `S7-K…` after `S7-J`). `hash_only_ready` is a precondition observer, not a substitute.
+
+### 10. Payroll & operational safety
+
+Re-confirmed for the design: this sprint and any future `hash_only_ready` activation touch **none** of:
+- `pay_periods`, `period_base_pay`, `reconciliation_*`, `historical_payroll_entries`
+- `time_entries`, `clock_events`
+- `scheduled_shifts`, `shift_assignments`
+- Connecteam import/export pipeline
+- worker documents, RLS policies, grants
+- tenant governance, `setup-company`
+
+PIN validation is upstream of all payroll surfaces; a successful or failed PIN check in demo never alters any of those tables by design.
+
+### 11. Recommendation — Sprint S7-J
+
+**S7-J = Synthetic fixture sprint (`S7-I-fix`).** Tightly scoped, demo-only, owner-approved:
+1. Implement the baseline snapshot + restore mechanism for `access_pin_hash` (documented in §5).
+2. Apply Fixtures A and B in Stafly Demo only.
+3. Execute QA matrix against current `dual` mode (we expect plaintext fallback to save the day for missing-hash, expose mismatch on Fixture B as `hash_mismatch=true, result=fail` since the right plaintext PIN won't match a corrupted hash and the fallback will still match plaintext — confirming the current dual safety net).
+4. Restore fixtures, verify 7/7 hashes valid again.
+5. Produce the readiness report needed for prerequisite #3 in §7.
+
+**Do NOT in S7-J:** implement `hash_only_ready`, flip any mode, change real tenants, change auth, change payroll.
+
+### What was NOT touched (this sprint)
+- No code files.
+- No SQL, no migrations, no RPC.
+- No `company_settings` writes.
+- No `employees.access_pin` / `access_pin_hash` writes.
+- No real tenants. No payroll. No RLS. No grants. No auth.
+- Only doc append to this file.
