@@ -224,6 +224,8 @@ async function authorizeEmployeeAction(
           storedPlaintext: (emp as any).access_pin ?? null,
           storedHash: (emp as any).access_pin_hash ?? null,
           hashVersion: (emp as any).pin_hash_version ?? null,
+          employeeId: (emp as any).id,
+          client: adminClient,
         });
         dualOk = r.ok;
         dualSource = r.source;
