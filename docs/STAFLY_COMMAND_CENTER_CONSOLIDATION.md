@@ -89,3 +89,91 @@ The "Listo para pago" tab renders an `Alert` above `PayrollReviewQueue`:
 3. **Deep links from Shifts / Workers / Documents** into the correct tab (`/app/command-center?tab=attention`, etc.).
 4. After 2 weeks of usage, evaluate retiring `/app/ops-center` from sidebar (route still mounted) and renaming `/app/command-center-classic` to `/app/legacy/command-center`.
 5. **Do not** start a payroll-source switch sprint until Phase 20 Safety Rails (Needs-Attention queue, day-pay guard, open-clock alert, >16h alert, geofence monitor) are in place.
+
+---
+
+## Sprint S2 — Mobile Polish + Legacy Nav Cleanup (2026-06-22)
+
+Frontend-only follow-up to S1. No new queries, no RPC, no writes, no schema/RLS/auth/payroll changes.
+
+### Mobile polish (`CommandCenterHub.tsx`)
+
+- Tab strip now adapts per viewport via `useIsMobile()`:
+  - **Mobile**: pill-style horizontally-scrollable tabs with short labels (`Hoy`, `Atención`, `En vivo`, `Cierre`, `Pago`). Tabs bleed to the screen edges (`-mx-3`) so the scroll feels native.
+  - **Desktop**: standard `TabsList` with full Spanish labels (`Hoy / Mañana`, `Necesita atención`, `En vivo`, `Cierre`, `Listo para pago`).
+- URL-driven state (`?tab=…`) unchanged; deep links keep working from sidebar and external bookmarks.
+- Page padding tightened on mobile (`p-3`) to reduce nested-card double-gutter; desktop keeps `p-6`.
+- "En vivo" map link card collapses its descriptive subtitle on mobile to one-line height.
+- Legacy "Abrir vista completa →" link is now shorter on mobile and never wraps.
+
+### Sidebar cleanup (`AdminSidebar.tsx`)
+
+- Daily Operations group reordered so the legacy entry is visually secondary:
+  1. Home (`/app`)
+  2. **Command Center** (`/app/command-center`) — canonical
+  3. Shifts
+  4. Attendance
+  5. Time Clock
+  6. Live Map
+  7. Front Desk
+  8. Today's Operations (legacy) (`/app/ops-center`) — bottom of group
+- No links removed, no permissions changed, no routes deleted.
+
+### Deep links
+
+- No cross-page deep links were rewritten this sprint. Audited entry points in
+  Shifts / Workers / Documents still point at their canonical detail pages
+  (`/app/shifts`, `/app/employees`, `/app/documents`) which is correct — they
+  are not operational/legacy duplicates of Command Center tabs. Cross-linking
+  *into* `?tab=…` from those pages is deferred to S3 to avoid context loss.
+
+### Legacy routes — confirmed still mounted
+
+`/app/daily-ops`, `/app/needs-attention`, `/app/ops-center`, `/app/daily-close`,
+`/app/payroll-review-queue`, `/app/live-map`, `/app/command-center-classic`,
+`/app/shift-ops`. No App.tsx route changes this sprint.
+
+### What was NOT touched (S2)
+
+Same guardrails as S1, re-confirmed:
+- `auth`, `RLS`, `user_roles`, `has_role`, `has_company_role`,
+  `canAccessAdminForCompany`, `useEffectiveEmployee`.
+- Tenants / companies governance, `setup-company` edge function.
+- `pay_periods`, `period_base_pay`, `payroll_adjustments`, `reconciliation_*`,
+  `historical_payroll_entries`.
+- `time_entries`, `clock_events`, `scheduled_shifts`, `shift_assignments`.
+- `compensation_profiles`, `employee_financial_*`, `worker_consent_records`.
+- Connecteam import/export pipeline, `notify_review_on_clockout`.
+- Payroll calculations, payroll exports, worker documents data.
+- No SQL migrations, no new RPC, no writes, no new tables, no new edge functions.
+- No payroll source switch, no `scheduled_shifts` payroll usage.
+
+### Files changed (S2)
+
+- **EDIT** `src/pages/admin/CommandCenterHub.tsx` — mobile-aware tab strip, tighter padding, responsive copy.
+- **EDIT** `src/components/AdminSidebar.tsx` — moved `/app/ops-center` to bottom of Daily Operations so Command Center is visually primary.
+- **EDIT** `docs/STAFLY_COMMAND_CENTER_CONSOLIDATION.md` — this S2 addendum.
+
+### Risks
+
+- Embedded pages still own their internal padding; on mobile some panels inside
+  `DailyOps` / `PayrollReviewQueue` are dense. Acceptable per spec ("no
+  reescribir"); a true mobile redesign of those tables is S3 scope.
+- Pill tabs on mobile use `TabsList` with `bg-transparent` + per-trigger
+  rounded styling; visual matches `MobileAdminTabs` pattern without coupling
+  to that component (Tabs primitive controls URL state). If future design wants
+  parity with `MobileAdminTabs`, swap in S3.
+
+### Sprint S3 recommendation
+
+1. **KPI strip** at the top of the hub reusing counts already computed by the
+   embedded pages (lightweight context, no new queries).
+2. **Mobile detail polish** inside `PayrollReviewQueue` (collapse dense tables
+   into drawer-per-row at <md).
+3. **Deep links** from Shifts/Workers/Documents into the correct tab once we
+   confirm the user mental model with operations.
+4. After 2 weeks of usage, evaluate removing `/app/ops-center` from sidebar
+   (route still mounted) and renaming `/app/command-center-classic` →
+   `/app/legacy/command-center`.
+5. **Do not** start a payroll-source switch sprint until Phase 20 Safety Rails
+   are in place.
