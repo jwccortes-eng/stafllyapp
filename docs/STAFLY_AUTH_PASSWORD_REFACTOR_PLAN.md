@@ -268,3 +268,66 @@ Payroll remains **completely decoupled** from this refactor in every phase.
 **Start S7-A only**: create the `security.pin_auth_mode` flag infrastructure (table rows + read helpers), wire **no** call sites, default everyone to `legacy`. This is a one-row-per-tenant additive change with zero behavior impact, and it unblocks S7-B (bridge prototype on Stafly Demo) with a single edge deploy.
 
 Defer S7-B until S7-A ships and is observed clean for at least one full day in production (cache invalidation, hook integration).
+
+---
+
+## Appendix S7-A — Flag Scaffolding (shipped 2026-06-22)
+
+**Scope:** read-only scaffolding. Zero behavior change. Zero writes. No real tenant touched.
+
+### Where the flag lives
+- Table: `public.company_settings` (existing — RLS already enforced: admins manage own, owners global).
+- Row: `(company_id, key='security.pin_auth_mode', value=jsonb)`.
+- Accepted `value` shapes: `"legacy"` (string) OR `{ "mode": "legacy" }` (object).
+- **No rows written in S7-A.** Absence → `legacy` fallback.
+
+### Allowed values (documented; only `legacy` resolved today)
+| Value | Meaning | Active in S7-A? |
+|---|---|---|
+| `legacy` | Current PIN-derived Supabase password (`authPassword(pin)`) | ✅ effective for all tenants |
+| `dual` | Verify via `access_pin_hash`; fall back to plaintext + PIN-derived password; backfill hash on success | ❌ unwired |
+| `hash_reader` | Verify via hash; mint session via bridge; plaintext fallback disabled | ❌ unwired |
+| `hash_only` | Hash exclusive; plaintext ignored / nulled | ❌ unwired |
+
+### Files added (S7-A)
+- `src/hooks/useSecurityFlags.tsx` — `useSecurityFlags(companyId)` returns `{ pinAuthMode, loading }`. Silent fallback to `legacy`.
+- `supabase/functions/_shared/security-flags.ts` — `getPinAuthMode(client, companyId)` for edge use. No call site wired.
+
+### Fallback behavior (verified by code review)
+- `companyId` null/undefined → `legacy`.
+- Row missing → `legacy`.
+- RLS read denied → `legacy` (silent).
+- Invalid value (e.g. `"enabled"`, number, null) → `legacy`.
+- Network error → `legacy`.
+
+### Rollout (future, NOT in S7-A)
+1. S7-B: bridge edge fn reads `getPinAuthMode`; behavior only diverges when mode != `legacy`.
+2. Stafly Demo → set `value='dual'` manually via owner UI / SQL.
+3. Sandbox / QA Testing next.
+4. Real tenant pilot requires explicit owner approval.
+
+### Rollback
+Single-row UPDATE on `company_settings` flipping `value` back to `"legacy"` (or DELETE the row). Helpers self-heal next read.
+
+### What S7-A does NOT touch
+- `employee-auth`, `kiosk-clock`, `front-desk-checkin` — unchanged.
+- `authPassword(access_pin)` — unchanged.
+- PIN validation readers — unchanged.
+- RLS / grants / migrations — none.
+- Payroll, time_entries, scheduled_shifts, shift_assignments, Connecteam — untouched.
+- No edge function deploys with behavior changes (new shared helper is unused by deployed functions).
+
+### QA results (code-level)
+| Scenario | Result |
+|---|---|
+| `useSecurityFlags(null)` | `legacy`, no query |
+| `useSecurityFlags(<demo>)` row absent | `legacy` |
+| `useSecurityFlags(<real tenant>)` row absent | `legacy` |
+| Invalid `value` `{ "mode": "enabled" }` | `legacy` |
+| `getPinAuthMode(client, null)` | `legacy` |
+| `getPinAuthMode(client, <id>)` row absent | `legacy` |
+| Network/RLS error thrown | `legacy` (caught) |
+| Operational behavior (login/kiosk/front-desk/portal/payroll) | unchanged — helpers unused |
+
+### Recommendation S7-B
+Implement bridge action `employee-auth/login-bridge` that calls `getPinAuthMode()`. Branch only for `dual`/`hash_*`. Enable on Stafly Demo first via single `UPSERT` into `company_settings`. Keep `legacy` path bit-for-bit identical.
