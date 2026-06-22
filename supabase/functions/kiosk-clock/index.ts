@@ -128,15 +128,19 @@ Deno.serve(async (req) => {
       return jsonResp({ error: "Invalid credentials" }, 401);
     }
 
-    // S7-E: demo-only dual hash-first PIN validation. Resolver force-pins
-    // every non-demo tenant + any error to "legacy", so real tenants and
-    // any failure mode use the byte-identical legacy gate below.
+    // S7-E / S7-K: demo-only hash-first PIN validation. Resolver force-pins
+    // every non-demo tenant + any error to "legacy". Demo may resolve to
+    // "dual" (current) or "hash_only_ready" (S7-K capability — not yet
+    // activated on any tenant). Both honored values use validatePinDual.
     const _pinAuthMode_kiosk = await resolveDemoDualMode(adminClient, employee.company_id, "kiosk-clock");
     let pinOk = false;
-    if (_pinAuthMode_kiosk === "dual") {
+    if (_pinAuthMode_kiosk === "dual" || _pinAuthMode_kiosk === "hash_only_ready") {
+      const _validationMode = _pinAuthMode_kiosk;
       let dualSource: string | null = null;
       let dualHashMismatch = false;
       let dualHashError = false;
+      let dualFallbackSuppressed = false;
+      let dualSuppressedReason: string | null = null;
       try {
         const r = await validatePinDual({
           inputPin: pin,
@@ -145,18 +149,21 @@ Deno.serve(async (req) => {
           hashVersion: employee.pin_hash_version ?? null,
           employeeId: employee.id,
           client: adminClient,
+          mode: _validationMode,
         });
         pinOk = r.ok;
         dualSource = r.source;
         dualHashMismatch = r.hashMismatch;
         dualHashError = r.hashError;
+        dualFallbackSuppressed = r.fallbackSuppressed;
+        dualSuppressedReason = r.suppressedReason;
       } catch {
         pinOk = false;
       }
       try {
         console.info("[pin-auth-validate]", {
           ctx: "kiosk-clock",
-          mode: "dual",
+          mode: _validationMode,
           company_id: employee.company_id,
           employee_id: employee.id,
           has_hash: !!employee.access_pin_hash,
@@ -164,6 +171,8 @@ Deno.serve(async (req) => {
           validation_source: dualSource,
           hash_mismatch: dualHashMismatch,
           hash_error: dualHashError,
+          fallback_suppressed: dualFallbackSuppressed,
+          suppressed_reason: dualSuppressedReason,
           result: pinOk ? "ok" : "fail",
         });
       } catch { /* logging must never throw */ }
@@ -171,6 +180,7 @@ Deno.serve(async (req) => {
       // Legacy gate — unchanged bit-for-bit from pre-S7-E.
       pinOk = !!employee.access_pin && employee.access_pin === pin;
     }
+
 
     if (!pinOk) {
       await recordFailed(adminClient, cleanPhone);

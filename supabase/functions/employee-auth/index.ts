@@ -10,17 +10,23 @@ const AUTH_PWD_PREFIX = "SF_";
 const STAFLY_DEMO_COMPANY_ID = "d3500000-0000-4000-8000-000000000001";
 
 /**
- * S7-B safe mode resolver.
+ * S7-B/D/K safe mode resolver.
  *   - Reads security.pin_auth_mode via getPinAuthMode (silent legacy on error).
  *   - Force-downgrades to "legacy" for any tenant other than Stafly Demo.
- *   - Also downgrades hash_reader / hash_only to "legacy" (S7-B only allows dual).
+ *   - Demo-honored values: "dual" and "hash_only_ready" (S7-K capability).
+ *   - hash_reader / hash_only still resolve to "legacy".
  *   - Never logs PIN, password, or hash. Logs mode + tenant only.
  *
- * NOTE: This sprint is read-only with respect to auth behavior.
- *   The branch is wired so S7-C can flip the dual code path without
- *   re-plumbing call sites. Today legacy and dual are bit-for-bit
- *   equivalent in this file — see STAFLY_AUTH_PASSWORD_REFACTOR_PLAN.md.
+ * The login branch (below) switches on the effective mode to run either
+ * the dual hash-first+fallback path (S7-D/E/G) or the hash_only_ready
+ * hash-only path (S7-K). activate / provision / change-pin call this
+ * resolver for telemetry only and never branch on the value.
  */
+const DEMO_HONORED_MODES_LOCAL: ReadonlySet<PinAuthMode> = new Set<PinAuthMode>([
+  "dual",
+  "hash_only_ready",
+]);
+
 async function resolvePinAuthModeSafe(
   adminClient: any,
   companyId: string | null | undefined,
@@ -33,10 +39,9 @@ async function resolvePinAuthModeSafe(
   } catch {
     raw = PIN_AUTH_MODE_DEFAULT;
   }
-  // Allow-list: only "dual" is honored in S7-B, and only for the demo tenant.
   let effective: PinAuthMode = PIN_AUTH_MODE_DEFAULT;
-  if (raw === "dual" && companyId === STAFLY_DEMO_COMPANY_ID) {
-    effective = "dual";
+  if (companyId === STAFLY_DEMO_COMPANY_ID && DEMO_HONORED_MODES_LOCAL.has(raw)) {
+    effective = raw;
   }
   try {
     console.info("[pin-auth-mode]", {
@@ -49,6 +54,7 @@ async function resolvePinAuthModeSafe(
   } catch { /* logging must never throw */ }
   return effective;
 }
+
 
 
 const corsHeaders = {
@@ -651,19 +657,21 @@ Deno.serve(async (req) => {
         );
       }
 
-      // S7-D: resolve effective mode BEFORE the PIN gate so the demo dual
-      // branch can run a hash-first validation. Real tenants and any
-      // resolver error force "legacy" (resolvePinAuthModeSafe contract).
+      // S7-D / S7-K: resolve effective mode BEFORE the PIN gate. Real tenants
+      // and any resolver error force "legacy". Stafly Demo may resolve to
+      // "dual" (current) or "hash_only_ready" (S7-K capability — not yet
+      // activated on any tenant). Mode === "dual" or "hash_only_ready" both
+      // use the validatePinDual helper with mode passed through.
       const _pinAuthMode_login = await resolvePinAuthModeSafe(adminClient, employee.company_id, "login");
 
-      if (_pinAuthMode_login === "dual") {
-        // Demo-only dual branch. Hash-first with plaintext fallback.
-        // Acceptance gate widened only to "ok"; on any failure we drop to
-        // the legacy gate below so we cannot accidentally relax security.
+      if (_pinAuthMode_login === "dual" || _pinAuthMode_login === "hash_only_ready") {
+        const _validationMode = _pinAuthMode_login; // narrow for helper
         let dualOk = false;
         let dualSource: string | null = null;
         let dualHashMismatch = false;
         let dualHashError = false;
+        let dualFallbackSuppressed = false;
+        let dualSuppressedReason: string | null = null;
         try {
           const r = await validatePinDual({
             inputPin: pin,
@@ -672,19 +680,22 @@ Deno.serve(async (req) => {
             hashVersion: employee.pin_hash_version ?? null,
             employeeId: employee.id,
             client: adminClient,
+            mode: _validationMode,
           });
           dualOk = r.ok;
           dualSource = r.source;
           dualHashMismatch = r.hashMismatch;
           dualHashError = r.hashError;
+          dualFallbackSuppressed = r.fallbackSuppressed;
+          dualSuppressedReason = r.suppressedReason;
         } catch {
-          // Helper is no-throw, but be defensive — fall back to legacy gate.
+          // Helper is no-throw, but be defensive — fail closed.
           dualOk = false;
         }
         try {
           console.info("[pin-auth-validate]", {
             ctx: "login",
-            mode: "dual",
+            mode: _validationMode,
             company_id: employee.company_id,
             employee_id: employee.id,
             has_hash: !!employee.access_pin_hash,
@@ -692,11 +703,14 @@ Deno.serve(async (req) => {
             validation_source: dualSource,
             hash_mismatch: dualHashMismatch,
             hash_error: dualHashError,
+            fallback_suppressed: dualFallbackSuppressed,
+            suppressed_reason: dualSuppressedReason,
             result: dualOk ? "ok" : "fail",
           });
         } catch { /* logging must never throw */ }
 
         if (!dualOk) {
+          // Same generic user-facing 401 as a wrong PIN in any mode.
           const result = await recordFailedAttempt(adminClient, cleanPhone);
           return new Response(
             JSON.stringify({ error: result.message }),
@@ -716,6 +730,7 @@ Deno.serve(async (req) => {
           );
         }
       }
+
 
       await resetRateLimit(adminClient, cleanPhone);
       void _pinAuthMode_login;
