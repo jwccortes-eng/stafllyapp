@@ -352,6 +352,13 @@ Deno.serve(async (req) => {
       }
 
       await adminClient.from("employees").update(updateData).eq("id", employee.id);
+      // S4-B dual-write: mirror plaintext PIN into bcrypt hash columns. Best-effort.
+      try {
+        await adminClient.rpc("internal_dual_write_pin_hash", {
+          _employee_id: employee.id,
+          _pin: pin,
+        });
+      } catch (_) { /* never block activation; no PIN/hash logged */ }
 
       const empEmail = `emp_${authIdentifier}@employee.internal`;
 
