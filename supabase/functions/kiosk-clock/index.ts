@@ -1,4 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { resolveDemoDualMode } from "../_shared/security-flags.ts";
+import { validatePinDual } from "../_shared/pin-validation.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
