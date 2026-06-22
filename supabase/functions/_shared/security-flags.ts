@@ -77,12 +77,23 @@ export async function getPinAuthMode(
 }
 
 /**
- * S7-B/D/E shared resolver — only Stafly Demo may resolve a non-legacy mode.
+ * S7-B/D/E/K shared resolver — only Stafly Demo may resolve a non-legacy mode.
  * Any other tenant, missing setting, or read error is force-pinned to "legacy".
- * S7-E currently honors only "dual"; hash_reader / hash_only resolve to "legacy".
+ * Currently honored values:
+ *   - "dual"            → demo-only hash-first + plaintext fallback (S7-D/E/G)
+ *   - "hash_only_ready" → demo-only hash-first, plaintext fallback SUPPRESSED
+ *                         (S7-K capability; NOT activated on any tenant)
+ * "hash_reader" and "hash_only" still resolve to "legacy" (deferred).
  * Never logs PIN, hash, password, or token.
+ *
+ * Naming kept as `resolveDemoDualMode` for back-compat with existing callers.
  */
 export const STAFLY_DEMO_COMPANY_ID = "d3500000-0000-4000-8000-000000000001";
+
+const DEMO_HONORED_MODES: ReadonlySet<PinAuthMode> = new Set<PinAuthMode>([
+  "dual",
+  "hash_only_ready",
+]);
 
 export async function resolveDemoDualMode(
   client: any,
@@ -97,8 +108,11 @@ export async function resolveDemoDualMode(
     raw = PIN_AUTH_MODE_DEFAULT;
   }
   let effective: PinAuthMode = PIN_AUTH_MODE_DEFAULT;
-  if (raw === "dual" && companyId === STAFLY_DEMO_COMPANY_ID) {
-    effective = "dual";
+  if (
+    companyId === STAFLY_DEMO_COMPANY_ID &&
+    DEMO_HONORED_MODES.has(raw)
+  ) {
+    effective = raw;
   }
   try {
     console.info("[pin-auth-mode]", {
@@ -111,3 +125,4 @@ export async function resolveDemoDualMode(
   } catch { /* logging must never throw */ }
   return effective;
 }
+
