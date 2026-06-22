@@ -355,7 +355,7 @@ Deno.serve(async (req) => {
           }
           const { data: byInv } = await adminClient
             .from("employees")
-            .select("id, first_name, last_name, access_pin, is_active, user_id, phone_number")
+            .select("id, first_name, last_name, access_pin, is_active, user_id, phone_number, company_id")
             .eq("id", invRows.employee_id)
             .maybeSingle();
           employee = byInv ?? null;
