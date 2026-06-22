@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Camera, Upload, RotateCcw, Check, Loader2 } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Camera, Upload, RotateCcw, Check, Loader2, AlertTriangle, ArrowRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -10,9 +11,13 @@ interface PhotoGateProps {
   employeeId: string;
   onPhotoUploaded: (url: string) => void;
   onSignOut: () => void;
+  /** Soft-bypass: lets the worker reach Documents / Shifts without a photo. */
+  onContinueWithoutPhoto?: () => void;
+  /** True when the avatar query timed out or failed — show a retry hint. */
+  loadFailed?: boolean;
 }
 
-export function PhotoGate({ employeeId, onPhotoUploaded, onSignOut }: PhotoGateProps) {
+export function PhotoGate({ employeeId, onPhotoUploaded, onSignOut, onContinueWithoutPhoto, loadFailed }: PhotoGateProps) {
   const { toast } = useToast();
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
