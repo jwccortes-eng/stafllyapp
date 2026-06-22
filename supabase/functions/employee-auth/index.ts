@@ -894,6 +894,13 @@ Deno.serve(async (req) => {
 
       // Update PIN in employees table and clear must_change_pin flag
       await adminClient.from("employees").update({ access_pin: new_pin, must_change_pin: false }).eq("id", emp.id);
+      // S4-B dual-write
+      try {
+        await adminClient.rpc("internal_dual_write_pin_hash", {
+          _employee_id: emp.id,
+          _pin: new_pin,
+        });
+      } catch (_) { /* best-effort; no PIN/hash logged */ }
 
       // Sync auth password
       const newPwd = authPassword(new_pin);
