@@ -386,6 +386,16 @@ Deno.serve(async (req) => {
         );
       }
 
+      // S7-C: safe mode read. Telemetry only — no branching on mode in this sprint.
+      // Stafly Demo with security.pin_auth_mode="dual" will log effective=dual,
+      // every other tenant force-resolves to legacy. authPassword / auth user
+      // creation / PIN write / dual-write hash / signIn behavior unchanged.
+      const _pinAuthMode_activate = await resolvePinAuthModeSafe(
+        adminClient,
+        (employee as any)?.company_id ?? null,
+        "activate",
+      );
+
       // Resolver phone para crear cuenta auth: usar el del empleado si existe; si no, sintético
       const empPhone = (employee.phone_number || "").replace(/[^\d+]/g, "").slice(0, 20);
       const authIdentifier = empPhone || `noph_${employee.id.replace(/-/g, "").slice(0, 16)}`;
