@@ -135,9 +135,9 @@ const COMPANY_LINKS: LinkDef[] = [
   { to: "/app/weekly-payroll-reconciliation", icon: Scale, label: "Weekly Recon.", module: null, section: "Payroll & Finance" },
   { to: "/app/invoicing/invoices", icon: FileText, label: "Invoices", module: "tenant_invoicing", section: "Payroll & Finance" },
 
-  // E) REPORTS
-  { to: "/app/summary", icon: FileSpreadsheet, label: "Payroll Reports", module: "summary", section: "Reports" },
-  { to: "/app/import-review", icon: FileSearch, label: "Import History", module: null, section: "Reports", roles: ["developer", "owner", "company_owner", "admin"] },
+  // E) REPORTS — folded into Payroll & Finance to remove the orphan 2-link group.
+  { to: "/app/summary", icon: FileSpreadsheet, label: "Payroll Reports", module: "summary", section: "Payroll & Finance" },
+  { to: "/app/import-review", icon: FileSearch, label: "Import History", module: null, section: "Payroll & Finance", roles: ["developer", "owner", "company_owner", "admin"] },
 
   // F) COMMUNICATION
   { to: "/app/announcements", icon: Megaphone, label: "Announcements", module: "announcements", section: "Communication" },
@@ -152,19 +152,19 @@ const COMPANY_LINKS: LinkDef[] = [
   { to: "/app/migration", icon: ArrowLeftRight, label: "Migration (internal)", module: null, section: "Settings", roles: ["developer", "owner"] },
 ];
 
-/* ── Global/Platform-level links (developer/owner only) ── */
+/* ── Global/Platform-level links (developer/owner only).
+ * Notifications + Administration intentionally NOT duplicated here — they live
+ * in the Company sidebar (Communication / Settings) and reuse the same routes. */
 const GLOBAL_LINKS: LinkDef[] = [
   { to: "/app", icon: LayoutDashboard, label: "Global Panel", module: null, end: true, section: "Platform" },
   { to: "/app/companies", icon: Building2, label: "Companies", module: null, section: "Platform" },
   { to: "/app/directory", icon: Users, label: "Directory", module: null, section: "Platform" },
   { to: "/app/activity", icon: FileText, label: "Activity", module: null, section: "Platform" },
-  { to: "/app/notifications", icon: Bell, label: "Notifications", module: null, section: "Platform" },
-  { to: "/app/admin", icon: Wrench, label: "Administration", module: null, section: "Settings" },
   { to: "/app/billing", icon: Receipt, label: "Billing", module: null, section: "Settings" },
   { to: "/app/system-health", icon: BarChart3, label: "System Health", module: null, section: "Settings" },
 ];
 
-const COMPANY_SECTION_ORDER = ["Daily Operations", "Team", "Clients & Locations", "Payroll & Finance", "Reports", "Communication", "Settings"];
+const COMPANY_SECTION_ORDER = ["Daily Operations", "Team", "Clients & Locations", "Payroll & Finance", "Communication", "Settings"];
 const GLOBAL_SECTION_ORDER = ["Platform", "Settings"];
 
 
