@@ -10,17 +10,23 @@ const AUTH_PWD_PREFIX = "SF_";
 const STAFLY_DEMO_COMPANY_ID = "d3500000-0000-4000-8000-000000000001";
 
 /**
- * S7-B safe mode resolver.
+ * S7-B/D/K safe mode resolver.
  *   - Reads security.pin_auth_mode via getPinAuthMode (silent legacy on error).
  *   - Force-downgrades to "legacy" for any tenant other than Stafly Demo.
- *   - Also downgrades hash_reader / hash_only to "legacy" (S7-B only allows dual).
+ *   - Demo-honored values: "dual" and "hash_only_ready" (S7-K capability).
+ *   - hash_reader / hash_only still resolve to "legacy".
  *   - Never logs PIN, password, or hash. Logs mode + tenant only.
  *
- * NOTE: This sprint is read-only with respect to auth behavior.
- *   The branch is wired so S7-C can flip the dual code path without
- *   re-plumbing call sites. Today legacy and dual are bit-for-bit
- *   equivalent in this file — see STAFLY_AUTH_PASSWORD_REFACTOR_PLAN.md.
+ * The login branch (below) switches on the effective mode to run either
+ * the dual hash-first+fallback path (S7-D/E/G) or the hash_only_ready
+ * hash-only path (S7-K). activate / provision / change-pin call this
+ * resolver for telemetry only and never branch on the value.
  */
+const DEMO_HONORED_MODES_LOCAL: ReadonlySet<PinAuthMode> = new Set<PinAuthMode>([
+  "dual",
+  "hash_only_ready",
+]);
+
 async function resolvePinAuthModeSafe(
   adminClient: any,
   companyId: string | null | undefined,
@@ -33,10 +39,9 @@ async function resolvePinAuthModeSafe(
   } catch {
     raw = PIN_AUTH_MODE_DEFAULT;
   }
-  // Allow-list: only "dual" is honored in S7-B, and only for the demo tenant.
   let effective: PinAuthMode = PIN_AUTH_MODE_DEFAULT;
-  if (raw === "dual" && companyId === STAFLY_DEMO_COMPANY_ID) {
-    effective = "dual";
+  if (companyId === STAFLY_DEMO_COMPANY_ID && DEMO_HONORED_MODES_LOCAL.has(raw)) {
+    effective = raw;
   }
   try {
     console.info("[pin-auth-mode]", {
@@ -49,6 +54,7 @@ async function resolvePinAuthModeSafe(
   } catch { /* logging must never throw */ }
   return effective;
 }
+
 
 
 const corsHeaders = {
