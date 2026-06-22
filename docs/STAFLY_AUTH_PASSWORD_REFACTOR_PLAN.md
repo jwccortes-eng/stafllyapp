@@ -1,298 +1,270 @@
-# Stafly Auth Password Refactor — Design for PIN Hash Reader Flip
+# Stafly Auth Password Refactor Plan — PIN Hash Reader Flip
 
-> **Sprint S6 — design-only.** No code, no SQL, no RPC, no edge-function, no RLS, no auth, no payroll, no data changes in this sprint. Companion to `docs/STAFLY_SECURITY_PHASE_2_PLAN.md`.
+**Sprint:** S6 (design / audit / doc-only)
+**Status:** DRAFT — no implementation
+**Owner:** Stafly Security
+**Date:** 2026-06-22
+
+> Companion to `docs/STAFLY_SECURITY_PHASE_2_PLAN.md`. This sprint is **doc-only**.
+> No SQL, RPC, RLS, edge, auth, payroll, write, or backfill changes were made.
 
 ---
 
-## 1. Why this document exists
+## 0. Guardrails (S6)
 
-S4 added the hash columns (`access_pin_hash`, `pin_hash_version`, `pin_set_at`, `pin_migrated_at`). S4-B mirrored writes in `employee-auth`. S5 cleaned `SECURITY DEFINER` grants. **The reader is still plaintext** because `employee-auth` derives the Supabase auth password directly from the 4-digit PIN:
+- ✅ No migrations
+- ✅ No RPC body changes
+- ✅ No edge function changes
+- ✅ No RLS changes
+- ✅ No auth behavior changes
+- ✅ No writes / backfills / grants
+- ✅ No feature flags created
+- ✅ No reader flip
+- ✅ No plaintext deletion
+- ✅ No tenant touched (Quality Staff, MyStaff, JKitchen, Stafly Demo, Sandbox, QA — all untouched)
+- ✅ Zero impact to payroll / time_entries / scheduled_shifts / shift_assignments / Connecteam
 
+---
+
+## 1. Current `authPassword` flow map
+
+### Definition
+`supabase/functions/employee-auth/index.ts:136`
 ```ts
-// supabase/functions/employee-auth/index.ts:136
-const AUTH_PWD_PREFIX = "SF_";
 function authPassword(pin: string): string {
   return AUTH_PWD_PREFIX + pin;
 }
 ```
+`AUTH_PWD_PREFIX` is a constant env-side string. The Supabase auth password for every worker is **deterministically derived from the 4-digit PIN**. Two workers with the same PIN have the same Supabase password (scoped by different `email`).
 
-The same scheme is duplicated in `supabase/functions/bulk-portal-invite/index.ts:9`. As long as Supabase auth users have password = `"SF_" + access_pin`, we cannot:
+### Call sites
 
-- flip readers to `access_pin_hash`,
-- null / drop `access_pin`,
-- change PIN length or format,
-- rotate the PIN without simultaneously rotating the Supabase password.
+| Site | Line | Operation | Plaintext PIN required? |
+|------|------|-----------|--------------------------|
+| `activate` | 263 | `auth.admin.createUser({ password: authPassword(pin) })` | YES — new worker sets PIN |
+| `login` | 556 | `auth.signInWithPassword({ password: authPassword(pin) })` | YES — every login |
+| `provision-pin` (admin) | 770 | `auth.admin.updateUserById(..., { password: authPassword(newPin) })` + UPDATE `access_pin` | YES |
+| `bulk repair` | 836 | `updateUserById(..., { password: authPassword(e.access_pin) })` | reads plaintext from DB |
+| `change-pin` (worker) | 906 | `updateUserById(..., { password: authPassword(new_pin) })` + UPDATE `access_pin` | YES |
 
-**This sprint designs how to break that coupling safely.** No implementation.
+### Downstream consumers of the resulting Supabase session
 
----
+- `/portal/*` — worker portal (PortalSessionContext)
+- `kiosk-clock` — reads `access_pin` plaintext directly (does **not** use Supabase password)
+- `front-desk-checkin` — reads `access_pin` plaintext directly
+- `provision-pin` admin tooling
 
-## 2. Current flow map (audit)
+### Plaintext dependencies (what blocks the reader flip)
 
-### 2.1 Where the plaintext PIN is touched
+1. `login` compares `employee.access_pin === pin` (line 596) AND signs in with `authPassword(pin)`.
+2. `kiosk-clock` and `front-desk-checkin` query `access_pin` directly.
+3. Supabase auth password is a pure function of plaintext PIN; we cannot rotate workers' passwords without knowing the current PIN.
+4. `bulk repair` flow assumes plaintext is in DB.
 
-| Surface | File | Behavior |
-|---|---|---|
-| Activation | `employee-auth` action `activate` (L263–411) | Writes `access_pin = pin` + `authPassword(pin)` → `createUser` / `updateUserById`. Then `signInWithPassword({ email: emp_*@employee.internal, password: "SF_"+pin })`. |
-| Login | `employee-auth` action `login` (L556–700) | Equality check `employee.access_pin === pin`, then `signInWithPassword`. If the auth user is missing/desynced, it self-heals via `createUser` / `updateUserById({ password: pwd })`. |
-| Provision PIN | `employee-auth` action `provision-pin` (L770–793) | Admin generates new 4-digit PIN, writes `access_pin = newPin`, updates auth user password. |
-| Change PIN | `employee-auth` action `change-pin` (L878–911) | Worker self-service. Verifies `current_pin === emp.access_pin`, writes new PIN, updates auth password. |
-| Sync passwords | `employee-auth` action `sync-pins` (L829–846) | Bulk: for each employee with `access_pin` + `user_id`, calls `updateUserById({ password: "SF_"+access_pin })`. Read-only on `employees`. |
-| Bulk portal invite | `bulk-portal-invite/index.ts` (L196, L250) | Same `"SF_" + pin` derivation when seeding/activating portal users. |
-| Kiosk clock | `kiosk-clock/index.ts:129` | Pure equality: `employee.access_pin !== pin`. **No Supabase auth involved.** |
-| Front-desk check-in | `front-desk-checkin/index.ts:210` | Pure equality: `pin === emp.access_pin`. **No Supabase auth involved.** |
+### Risk points
 
-### 2.2 What depends on plaintext PIN
+- **PIN collisions**: two workers, same PIN → same Supabase password. Email uniqueness is the only thing isolating sessions.
+- **PIN rotation = password rotation**: every `change-pin` forces a Supabase admin call. If that call fails silently, password drifts from PIN.
+- **`AUTH_PWD_PREFIX` is a secret-of-form, not a secret-of-strength**. If leaked, every account's password = PREFIX + 4 digits (10,000 combos per known email).
+- **No lockout / no `pin_attempts`** at the auth layer; rate limiting lives in `auth_rate_limits` table only.
 
-| Dependency | Type | Blocker for reader flip? |
-|---|---|---|
-| Supabase auth password = `"SF_" + access_pin` | Derived | **Yes (primary)** |
-| `employee.access_pin === pin` equality in `login` | Validation | Yes — replaceable by `crypt(pin, access_pin_hash) = access_pin_hash` |
-| `employee.access_pin === pin` in `kiosk-clock` | Validation | Yes — same replacement |
-| `employee.access_pin === pin` in `front-desk-checkin` | Validation | Yes — same replacement |
-| `current_pin === emp.access_pin` in `change-pin` | Validation | Yes — same replacement |
-| Self-healing path in `login` (recreates auth user from PIN) | Recovery | Yes — needs an alternative secret to restore |
-| `sync-pins` admin tool | Operational | Yes — only meaningful if password ≠ PIN |
-| Portal banner "Tu PIN ya está configurado" (`send-employee-credentials`) | UX | No — just reads `employee_has_access_pin` |
+### What cannot change without migration
 
-### 2.3 What does **not** depend on plaintext PIN
-
-- All RLS policies (use `has_role`, `has_company_role`, `is_global_owner`, etc. — none reference `access_pin`).
-- Payroll: `pay_periods`, `period_base_pay`, `time_entries`, `clock_events`, `scheduled_shifts`, `shift_assignments`, `reconciliation_*`, `historical_payroll_entries`, Connecteam pipeline — **zero references** to `access_pin` / `access_pin_hash`.
-- Tenant governance (`companies.status`, `is_active` triggers).
-- Worker documents storage policies.
-- `setup-company`, billing, notifications.
-
-### 2.4 Risk surface today
-
-| Risk | Severity | Notes |
-|---|---|---|
-| 10⁴ password search space per worker | High | `"SF_"` prefix is a public constant in the repo; if `email = emp_*@employee.internal` is known, brute force = 10k attempts. Supabase auth applies rate limits but the password entropy itself is trivial. |
-| PIN plaintext stored in `employees.access_pin` | Medium | Mitigated by column grants + RLS; still readable by admins of the tenant and by anyone who can run a SELECT through a service-role edge function. |
-| PIN reuse across tenants (same worker, multiple companies) | Medium | Each `employees` row has its own PIN; not federated. Acceptable. |
-| Auth password = PIN means rotating PIN also rotates session secret | Operational | Today this is intentional; the refactor must preserve "change PIN ⇒ all old sessions still valid OR explicitly invalidated" semantics. |
+- The deterministic mapping `pin → auth password`. Any tenant whose workers were activated under the current scheme must continue to authenticate this way until their password is rotated to a non-PIN-derived secret.
+- Plaintext `access_pin` reads in `kiosk-clock` and `front-desk-checkin` are out of scope for this sprint and tracked separately.
 
 ---
 
-## 3. Refactor options
+## 2. Refactor options
 
-### Option A — Keep "password derived from PIN" during transition
+### Option A — Keep PIN-derived password during transition (status quo + hash mirror)
 
-Keep `authPassword(pin) = "SF_" + pin` and only flip the **validation reader** to bcrypt (`crypt(pin, access_pin_hash)`), leaving the Supabase auth password derivation unchanged.
+- **Mechanism:** Continue using `authPassword(pin)` for Supabase auth. Dual-write hash (already in place per S4/S4-B). Verify with bcrypt only in `kiosk-clock` / `front-desk-checkin` once they're ready.
+- **Pros:** Zero risk to login/activation. No worker-facing change. Already partially implemented.
+- **Cons:** Does **not** unblock plaintext kill. `access_pin` must stay in DB forever for Supabase password rebuild.
+- **When it helps:** Bridge phase only. Useful if we want hash-only `kiosk-clock` before touching the portal login.
 
-| Pros | Cons / Risks |
+### Option B — Server-generated random password, decoupled from PIN
+
+- **Mechanism:** On activation/provision/change-pin, generate a long random password (e.g. 32-byte base64). Store nowhere reusable; immediately call `updateUserById`. Worker authentication switches to a **bridge edge function** (`employee-auth/login`) that:
+  1. Verifies PIN against `access_pin_hash` (bcrypt).
+  2. On success, mints a short-lived Supabase session via `auth.admin.generateLink({ type: 'magiclink' })` or signs in server-side using stored random password.
+- **Storage:** Random password is **not** stored. We either (a) re-rotate on every login (heavy) or (b) store it encrypted in a new table `employee_auth_secrets` (KMS-wrapped) accessed only by service_role.
+- **Pros:** Plaintext PIN can be nulled. PIN collisions no longer collide auth passwords. Enables true hash-only reader flip.
+- **Cons:** Requires a new auth bridge. `signInWithPassword` from the browser no longer works directly — the edge function must return a session (token exchange). Slightly heavier login path.
+- **Impact:** Portal login must call edge fn instead of `supabase.auth.signInWithPassword`. Activation flow unchanged from worker POV.
+
+### Option C — Passwordless / OTP / session-token model
+
+- **Mechanism:** PIN entry verifies against `access_pin_hash` server-side; edge function mints a Supabase session via `admin.generateLink` (magic link consumed server-side) or a custom JWT signed with the project's JWT secret.
+- **Pros:** No Supabase password at all. Cleanest long-term model. Easy to layer MFA, device binding, lockouts.
+- **Cons:** Largest blast radius. Replaces the entire login surface. Requires careful session-refresh handling. Higher engineering cost.
+- **UX impact:** Worker still types 4-digit PIN; flow looks identical. Internally, no `signInWithPassword` call.
+
+### Option D — Hybrid bridge with feature flag (recommended path)
+
+- **Mechanism:** Combine A (during rollout) + B (target state) behind `security.pin_auth_mode` per-tenant flag:
+  - `legacy` — current behavior (PIN-derived password).
+  - `dual` — verify against hash; if hash missing or mismatch, fall back to plaintext compare + PIN-derived password; on success, backfill hash.
+  - `hash_only` — verify against hash exclusively; sessions minted via bridge edge fn; plaintext ignored.
+- **Pros:** Per-tenant rollout. Self-healing dual mode. Rollback = flip flag back.
+- **Cons:** More code paths to test. Flag governance matters.
+
+---
+
+## 3. Recommendation
+
+**Adopt Option D (hybrid bridge) with Option B as the terminal state.**
+
+### Target architecture
+
+| Concern | Target |
 |---|---|
-| Minimal change. Reader flip becomes a single function swap. | Plaintext PIN is still the de-facto secret because the Supabase password is derived from it. No real entropy gain. |
-| Easy rollback (single feature flag). | Cannot null `access_pin` — `sync-pins` and login self-heal both need it. |
-| Compatible with current `signInWithPassword` shape. | Brute-force surface against Supabase auth is unchanged. |
+| Worker authentication | 4-digit PIN entered in `/portal/login`, `/kiosk/*`, `/front-desk/*` |
+| PIN validation | `bcrypt.compare(pin, access_pin_hash)` server-side in edge fn |
+| Session minting | Edge fn returns Supabase session (admin-issued); browser stores via `supabase.auth.setSession()` |
+| `access_pin_hash` | Source of truth for PIN verification |
+| `access_pin` plaintext | Read-only fallback during `dual` mode; nulled after `hash_only` rollout per tenant |
+| Reader flip eligibility | Tenant on `dual` for ≥ 14 days with `pin_hash_coverage = 100%` |
+| Plaintext null eligibility | Tenant on `hash_only` for ≥ 30 days with zero fallback hits |
+| Lockout protection | `auth_rate_limits` extended with `pin_attempts` (future) |
+| Rollback | Flip `security.pin_auth_mode` to `legacy` — next login self-heals |
+| Per-tenant testing | Stafly Demo → Sandbox/QA → controlled pilot → real tenants |
 
-**Verdict:** insufficient on its own. Useful only as a **stepping stone** to validate the bcrypt-read path without touching auth.
+---
 
-### Option B — Random, server-managed Supabase password decoupled from PIN
+## 4. Phased plan
 
-Generate a high-entropy random password per worker (e.g. 32 bytes base64) the first time they activate. Store it server-side in a new column `auth_password_secret` (encrypted at rest via pgsodium or stored only as the Supabase-side password, never in our DB). PIN becomes a **gate** validated against `access_pin_hash`; on PIN success, edge function calls `signInWithPassword` using the worker's stored random password.
+### S7-A — Feature flag foundation (additive, no behavior change)
+- Add `company_settings` rows for namespace `security.pin_auth_mode` (default `legacy`).
+- Add `useSecurityFlags()` React hook + `getPinAuthMode(company_id)` edge helper.
+- **No call sites wired.** Pure infrastructure.
+- Tenants touched: none (default value).
 
-| Pros | Cons / Risks |
+### S7-B — Bridge edge function (demo only)
+- Build `employee-auth/login-bridge` action: verifies via hash, mints session via `admin.generateLink`.
+- Wire **only** when `security.pin_auth_mode = 'dual' OR 'hash_only'`.
+- Enable on **Stafly Demo** only.
+- Existing `login` path unchanged for `legacy`.
+
+### S7-C — Dual mode in Sandbox + QA
+- Set `pin_auth_mode = 'dual'` on Sandbox + QA Testing.
+- Monitor `auth_bridge_log` for fallback hits.
+- Real tenants still on `legacy`.
+
+### S7-D — Controlled pilot (one real tenant)
+- Choose smallest real tenant (TBD with owner approval).
+- 7-day soak. Rollback = flip flag.
+
+### S7-E — Hash-only + plaintext deprecation plan
+- After ≥ 30 days dual on a tenant with zero fallback hits, flip to `hash_only`.
+- Plaintext null **only after explicit user approval per tenant** — never automatic.
+
+### S7-F (deferred) — `kiosk-clock` + `front-desk-checkin` reader flip
+- Out of scope for portal-auth refactor. Tracked separately.
+
+---
+
+## 5. QA matrix
+
+| Scenario | legacy | dual (hash present) | dual (hash missing) | hash_only |
+|---|---|---|---|---|
+| Activate new worker | ✅ existing | ✅ writes hash + plaintext | n/a | ✅ writes hash only |
+| Provision PIN (admin) | ✅ | ✅ | ✅ backfills | ✅ |
+| Worker change-pin | ✅ | ✅ | ✅ backfills | ✅ |
+| Portal login | password | bcrypt → bridge | bcrypt fail → plaintext fallback → bridge | bcrypt → bridge or fail |
+| Reset PIN | ✅ | ✅ | ✅ | ✅ |
+| Worker with hash only | n/a | ✅ | n/a | ✅ |
+| Worker with plaintext only | ✅ | ✅ via fallback | ✅ via fallback | ❌ blocked — must reset |
+| Stafly Demo | smoke pre/post | full QA | inject by deleting hash row | full QA |
+| Sandbox / QA Testing | smoke | full QA | dual fallback test | not yet |
+| Real tenant | smoke read-only | n/a until S7-D | n/a | n/a |
+| `kiosk-clock` | unchanged | unchanged | unchanged | unchanged (S7-F) |
+| `front-desk-checkin` | unchanged | unchanged | unchanged | unchanged (S7-F) |
+
+---
+
+## 6. Multi-tenant safety
+
+- Flag is **per-tenant** (`company_settings`).
+- Default `legacy` — no tenant changes behavior on deploy.
+- Rollout order: Stafly Demo → Sandbox → QA Testing → one real pilot → broader.
+- Rollback per tenant = single UPDATE on `company_settings`.
+- Owner/developer global view (`selectedCompanyId = null`) reads flag = `legacy`.
+
+---
+
+## 7. Security considerations
+
+- **No PIN in logs.** Edge fn must redact `pin`, `new_pin`, `current_pin`, `password` from all log lines.
+- **No password in logs.** `authPassword()` output never logged.
+- **No hash in API responses.** `access_pin_hash` never returned to client (already enforced by per-column grants from S1.5).
+- **Rate limiting.** Extend `auth_rate_limits` to include `pin_attempts` with exponential backoff. Out of scope for S6.
+- **Bcrypt cost = 10** (matches S4 dual-write). Re-evaluate at S7-E.
+- **Stolen PIN risk** unchanged — still 4 digits, still bound to phone+company. Future: MFA / device binding.
+- **Random password storage (Option B/D terminal)**: never persist plaintext; if persisted at all, KMS-wrap via Supabase Vault.
+- **Session expiry**: keep Supabase default (1h access + 60d refresh). Bridge fn does not extend.
+- **Audit log**: new `auth_bridge_log` table proposed in S7-B (mode, success, fallback_used, latency). No PII, no PIN.
+
+---
+
+## 8. Payroll safety (explicit)
+
+This plan **does not touch**:
+- `time_entries` (zero schema or write changes)
+- `scheduled_shifts` (zero changes)
+- `shift_assignments` (zero changes)
+- `pay_periods` / `period_base_pay` / payroll reconciliation (zero changes)
+- Connecteam authority (Connecteam remains payroll source of truth per existing memory)
+- Any payroll math, rates, compensation profiles, or reconciliation logic
+
+Payroll remains **completely decoupled** from this refactor in every phase.
+
+---
+
+## 9. Rollback strategy
+
+| Phase | Rollback |
 |---|---|
-| Cuts entropy dependency on the 4-digit PIN. | Adds a new secret-management surface. If we store the random password in our DB, that table becomes the new crown jewel. |
-| `access_pin_hash` becomes the sole PIN-related secret; `access_pin` can eventually be nulled. | `sync-pins` must be rewritten (no longer derivable from PIN). |
-| Compatible with future PIN-attempt lockout (independent of Supabase rate limits). | Lost worker rows lose the auth password too — recovery path = admin reset that mints a new random password and (optionally) a new PIN. |
-| Same `signInWithPassword` shape; no client-app changes. | Requires careful storage choice: we strongly recommend **not** persisting the password in our DB. Instead generate-on-activate, push to Supabase auth, and never read it back; mint a fresh one on every PIN change. |
-
-**Variant B′ (recommended):** never store the password. On every PIN write (activate / provision / change / reset), generate a fresh random password, `updateUserById({ password: random })`, and immediately use it in `signInWithPassword` *inside the same edge-function invocation only*. Worker never sees it; admin never sees it; DB never stores it. This decouples Supabase auth entirely from `access_pin` while keeping the worker UX (enter phone + PIN → get session) identical.
-
-### Option C — Passwordless: server-issued session token after PIN validation
-
-Skip `signInWithPassword` entirely. After validating PIN against `access_pin_hash`, the edge function uses Supabase Admin SDK to **mint a session** for the worker directly (`auth.admin.generateLink` → magic link consumed server-side, or a custom JWT signed with the project's JWT secret) and returns `access_token` + `refresh_token` to the client.
-
-| Pros | Cons / Risks |
-|---|---|
-| Removes the concept of "worker password" entirely. | Highest implementation complexity. Custom JWT minting requires careful claims, expiry, and key rotation. |
-| Hash becomes the only PIN-related secret. | Magic-link path adds a synthetic email round-trip — adds latency and a new failure mode. |
-| Future-proof for SSO / OTP / WhatsApp-OTP migration. | Diverges from the rest of the Supabase auth surface (admin invites, password recovery emails, etc. still expect a password). |
-
-**Verdict:** strategically attractive long-term but **out of scope** for the PIN-hash reader flip. Defer to a separate "Worker Auth v3" track.
-
-### Option D — Hybrid dual-mode bridge with per-tenant feature flag
-
-Combine Option B′ with a per-tenant flag `security.pin_hash_enabled`:
-
-- **Off (default):** current behavior. Plaintext reader. `"SF_"+pin` password. Zero behavior change.
-- **On:** validation reads `access_pin_hash`. On every PIN write, mint a fresh random Supabase password (Option B′). `access_pin` continues to be written (dual-write) until tenant graduates.
-- **Locked:** flag becomes "enforced", `access_pin` writes are skipped, eventually nulled.
-
-This is the **recommended** umbrella: it lets Stafly Demo / Sandbox / QA run on the new path while every real tenant stays bit-for-bit identical to today.
+| S7-A | Drop flag rows; no behavior dependency. |
+| S7-B | Disable bridge code path (env flag `BRIDGE_ENABLED=false`); demo only. |
+| S7-C | `UPDATE company_settings SET value='legacy' WHERE key='security.pin_auth_mode' AND company_id IN (...)` |
+| S7-D | Same flag flip; worker re-login self-heals via `dual`'s plaintext fallback. |
+| S7-E | Flip back to `dual`. Plaintext null is **NOT** reversible — only run after explicit approval + backup. |
 
 ---
 
-## 4. Recommended architecture (final)
+## 10. Open questions
 
-**Adopt Option D = Option B′ behind a per-tenant feature flag `security.pin_hash_enabled`.**
-
-### 4.1 Worker authentication contract (target)
-
-1. Client posts `{ phone, pin }` to `employee-auth` action `login`.
-2. Edge function resolves `employees` row by phone (existing logic, unchanged).
-3. **Validation:** if `pin_hash_enabled(company_id) AND access_pin_hash IS NOT NULL` → `extensions.crypt(pin, access_pin_hash) = access_pin_hash`. Otherwise fall back to `access_pin === pin` (legacy).
-4. **Session minting:** generate `password = crypto.randomBytes(32).toString("base64url")`, call `updateUserById({ password })`, then `signInWithPassword({ email: emp_*@employee.internal, password })`. Discard `password` from memory. Never logged, never returned.
-5. Return session JSON to client (shape unchanged).
-
-### 4.2 Role of each PIN artifact (target)
-
-| Artifact | Role |
-|---|---|
-| `access_pin` (plaintext) | Legacy reader fallback; written during transition; nulled per-tenant only after S7-D approval. |
-| `access_pin_hash` (bcrypt) | New canonical PIN secret. Validated via `crypt()`. |
-| `pin_hash_version` | Algorithm pinning (`bcrypt`, future `argon2id`, etc.). |
-| `pin_set_at` | Used by future lockout / rotation policy. |
-| `pin_migrated_at` | Marker that the row was hash-backfilled (vs. organically dual-written). |
-| Supabase auth password | Ephemeral per-login random string. Never derived from PIN. Never stored in our DB. |
-
-### 4.3 PIN write path (target)
-
-Every write site (`activate`, `provision-pin`, `change-pin`, `set_employee_access_pin`, `reset_employee_access_pin`, `bulk-portal-invite` activation) calls a single helper:
-
-```text
-write_pin(employee_id, new_pin, mode):
-  if mode == 'dual':            # tenant flag off
-    employees.access_pin = new_pin
-    employees.access_pin_hash = bcrypt(new_pin)
-    auth.password = "SF_" + new_pin       # legacy
-  elif mode == 'hash':          # tenant flag on
-    employees.access_pin = new_pin        # still mirrored
-    employees.access_pin_hash = bcrypt(new_pin)
-    auth.password = random_32_bytes()     # new
-  elif mode == 'hash_only':     # tenant graduated (S7-D)
-    employees.access_pin = NULL
-    employees.access_pin_hash = bcrypt(new_pin)
-    auth.password = random_32_bytes()
-```
-
-### 4.4 Anti-lockout rules
-
-- **Never** flip a tenant into `hash` mode without verifying `COUNT(*) FILTER (access_pin IS NOT NULL AND access_pin_hash IS NULL) = 0` for that tenant.
-- **Never** flip a tenant into `hash_only` mode without (a) ≥ 1 full payroll cycle in `hash`, (b) explicit owner approval, (c) zero `employee-auth` 401s attributable to hash mismatch in the last 14 days.
-- Login fallback: if `crypt()` validation fails but `access_pin === pin` succeeds AND `mode != 'hash_only'`, emit `pin.hash_mismatch_fallback` metric, accept the login, and lazily re-hash. This guarantees we cannot lock out a worker whose hash was somehow corrupted.
-- Kiosk and front-desk read the same flag and use the same fallback ladder.
-
-### 4.5 Rollback strategy
-
-- **Per tenant:** flip `security.pin_hash_enabled = false`. Next login falls back to plaintext path; the random Supabase passwords minted under `hash` mode are immediately replaced by `"SF_" + access_pin` on the next login self-heal (or by an admin `sync-pins`).
-- **Per worker:** admin `reset_employee_access_pin` always works in either mode.
-- **Global:** revert the edge-function deployment. Schema columns are additive — no migration rollback needed.
+1. Does Supabase `admin.generateLink({ type: 'magiclink' })` produce a session token consumable from edge → browser without email round-trip? (Spike needed in S7-B.)
+2. Should we adopt custom JWTs signed with project JWT secret instead of magic links? Simpler but bypasses Supabase auth state machine.
+3. PIN length: keep 4 digits or upgrade to 6 at hash-only flip? Worker UX vs entropy tradeoff.
+4. Lockout policy: counter on `auth_rate_limits` or new `employees.pin_attempts` column?
+5. `kiosk-clock` / `front-desk-checkin` plaintext-reader flip — defer to S8?
 
 ---
 
-## 5. Phased plan
+## 11. Files audited (read-only)
 
-| Sprint | Scope | Tenants | Behavior |
-|---|---|---|---|
-| **S7-A** Feature-flag scaffolding | Add `company_settings` row `security.pin_hash_enabled = false` (default). Add `useSecurityFlags` hook + edge-function helper `isPinHashEnabled(company_id)`. No call-site uses it yet. | All (off everywhere) | Bit-for-bit identical to today. |
-| **S7-B** Dual-mode reader, demo only | Implement `crypt()` reader + random-password write path inside `employee-auth` only. Flip flag to `on` for Stafly Demo Company (`d3500000-…0001`). Validate full QA matrix. | Stafly Demo | Demo workers authenticate via hash; real tenants unchanged. |
-| **S7-C** Extend to Sandbox + QA, then `kiosk-clock` + `front-desk-checkin` | Flip flag for Sandbox + QA Testing. Once stable for 7 days, mirror the dual-mode reader into `kiosk-clock` and `front-desk-checkin`. | Sandbox, QA Testing | All worker auth surfaces use hash for these 3 tenants. |
-| **S7-D** Real-tenant pilot | Owner-approved pilot tenant. Monitor metrics for ≥ 1 full payroll cycle. | 1 pilot tenant (TBD) | Real workers authenticate via hash; payroll observably unchanged. |
-| **S7-E** Plaintext deprecation plan (design only) | Document criteria for `hash_only` mode and the `access_pin = NULL` migration. **Not executed.** | — | — |
-| **S7-F** (gated on explicit approval, not pre-scheduled) | Execute `hash_only` per tenant. | Per approval | Plaintext PIN nulled tenant-by-tenant. |
+- `supabase/functions/employee-auth/index.ts` (lines 136, 209, 263, 274, 311, 346, 556, 596, 770, 829, 836, 878, 889, 906)
+- `supabase/functions/kiosk-clock/index.ts` (PIN read, not touched)
+- `supabase/functions/front-desk-checkin/index.ts` (PIN read, not touched)
+- `docs/STAFLY_SECURITY_PHASE_2_PLAN.md` (S4 / S4-B / S5 history)
 
-Each phase has its own approval gate. **No phase deletes plaintext.**
+## 12. What was NOT touched
 
----
-
-## 6. QA matrix (to run during S7-B onward)
-
-Repeat for each tenant profile: **Stafly Demo**, **Sandbox**, **QA Testing**, **real-tenant smoke (read-only)**.
-
-| # | Flow | Worker state | Expected |
-|---|---|---|---|
-| 1 | Activation (`activate`) | New worker, no `user_id` | Auth user created, `access_pin` + `access_pin_hash` set, session returned. |
-| 2 | Activation re-run | `user_id` exists, `access_pin` set | `already_activated` 409. |
-| 3 | Login | Worker with hash + plaintext | Hash path succeeds; no fallback metric. |
-| 4 | Login | Worker with plaintext only (hash NULL) | Fallback path succeeds; lazy re-hash fires. |
-| 5 | Login | Worker with hash, wrong PIN | 401 with rate-limit increment. |
-| 6 | Change PIN | Auth worker | Hash updated; new random Supabase password minted; new session works on next login. |
-| 7 | Provision PIN (admin) | Worker without PIN | New PIN returned to admin once; hash written; old auth user (if any) password rotated. |
-| 8 | Reset PIN (admin RPC) | Worker with PIN | Same as #7. |
-| 9 | Kiosk clock | Worker with hash | Hash validation succeeds. |
-| 10 | Kiosk clock | Worker plaintext only | Fallback succeeds. |
-| 11 | Front-desk PIN | Same matrix | Same results. |
-| 12 | Portal session | After #6 | Existing session valid until natural expiry; new logins use new password. |
-| 13 | `sync-pins` admin tool | Mixed tenants | In `dual` mode: behaves as today. In `hash` mode: tool refuses (or no-ops) — documented. |
-| 14 | Real-tenant smoke | Untouched real tenant | All 13 flows behave exactly as before S7. |
-| 15 | Payroll smoke | Any tenant | Connecteam reconciliation period closes with no diff attributable to auth changes. (Should be trivially true — payroll has zero dependency on PIN.) |
+- Zero edge function code changes
+- Zero RPC body changes
+- Zero RLS / grant changes
+- Zero migrations
+- Zero writes / backfills
+- Zero tenant data touched
+- Zero payroll / time_entries / shifts touched
 
 ---
 
-## 7. Multi-tenant safety
+## 13. Recommendation for Sprint S7
 
-- **Per-tenant flag** stored in `company_settings (namespace='security', key='pin_hash_enabled', value::bool)`.
-- **Default off.** New tenants inherit the legacy path.
-- **Rollout order, non-negotiable:** Stafly Demo → Sandbox → QA Testing → 1 approved real pilot → expansion.
-- **Real tenants** require explicit owner approval per tenant + a 14-day observation window + zero hash-mismatch fallbacks in the last 7 days before they can move to `hash_only`.
-- **Rollback** = flip flag off. Tested in S7-A before any tenant goes live.
+**Start S7-A only**: create the `security.pin_auth_mode` flag infrastructure (table rows + read helpers), wire **no** call sites, default everyone to `legacy`. This is a one-row-per-tenant additive change with zero behavior impact, and it unblocks S7-B (bridge prototype on Stafly Demo) with a single edge deploy.
 
----
-
-## 8. Security considerations
-
-| Concern | Handling |
-|---|---|
-| Log hygiene | Never log `pin`, `access_pin`, `access_pin_hash`, generated password, or `pwd` variables. Strip from error messages. Existing `[phone-login]` log already omits PIN — keep it that way. |
-| Bcrypt cost | Stay at `bf, 10` (S4 default). Re-evaluate to 12 only after pilot if edge-function latency budget allows (<150 ms p95 per `crypt` call). |
-| Rate limit | Reuse existing `auth_rate_limits` for `phone + action='login'`. Add a separate counter `pin_attempts` per `employee_id` populated by the edge function on PIN-validation failures (already a planned column from S3). |
-| Lockout | Design only in S6. Implementation gated on S7-B observability. Soft-lock after 10 failed attempts in 15 min; auto-unlock after 15 min; admin `reset` clears counter. |
-| Audit log | Each PIN write emits an `activity_log` row with `action ∈ {activate_pin, set_access_pin, reset_access_pin, change_pin}`, `details = {via, hash:'dual'|'hash'|'hash_only'}`. No PIN/hash in payload. |
-| Session expiry | Unchanged — driven by Supabase auth project settings. The refactor does not extend or shorten sessions. |
-| Stolen PIN risk | Unchanged from today; mitigated by rate limit + lockout (S7-B). Random-password Supabase layer means a stolen PIN cannot be turned into a Supabase password guess. |
-| Storage of generated passwords | **None.** Generated in memory, pushed to `auth.admin.updateUserById`, consumed once by `signInWithPassword`, discarded. |
-| Key rotation | If we ever need to rotate `pin_hash_version`, lazy re-hash on next successful login (Option B′ already does this for fallback). |
-
----
-
-## 9. Payroll safety statement
-
-This refactor **does not** touch:
-
-- `pay_periods`, `period_base_pay`, `payroll_adjustments`, `payroll_*`,
-- `time_entries`, `clock_events`, `attendance_*`,
-- `scheduled_shifts`, `shift_assignments`, `shift_*`,
-- `reconciliation_*`, `historical_payroll_entries`,
-- Connecteam pipeline (`migration_*`, normalizers, import batches),
-- tenant governance (`companies.status`, `is_active`, triggers),
-- `setup-company`, billing, notifications, worker documents.
-
-There is **no code path** in the proposed design where PIN/auth state can influence payroll math. Payroll authority continues to be Connecteam truth files reconciled against native `time_entries`, per `mem://business-logic/connecteam-payroll-model` and `mem://features/reconciliation/payroll-audit-and-matching-engine`.
-
----
-
-## 10. Open questions (resolve in S7-A planning)
-
-1. **Where lives the flag?** `company_settings` (preferred) vs. a new column on `companies`. Recommendation: `company_settings` namespace `security`, value JSONB to allow future flags (`pin_hash_enabled`, `pin_lockout_enabled`, `kiosk_geofence_enforce`, etc.).
-2. **`sync-pins` semantics under `hash` mode.** Either (a) refuse with explanatory error, or (b) silently re-roll the random Supabase password for each linked auth user without touching `access_pin`. Recommendation: (b), audit-logged.
-3. **Bulk portal invite under `hash` mode.** Must use the same write helper; recommendation: extract `writePinDualOrHash()` into `_shared/` and import from both `employee-auth` and `bulk-portal-invite`.
-4. **Kiosk-clock + front-desk-checkin order.** Either flip them together with `employee-auth` per tenant (simpler) or stage them after. Recommendation: together — they share the same PIN, so split modes risk operator confusion.
-5. **Observability.** Decide metric sink (existing `activity_log` is OK; consider a tiny `auth_pin_events` table if we want time-series). Defer to S7-A.
-
----
-
-## 11. What was NOT touched in S6
-
-- No code changes.
-- No SQL / migrations / grants.
-- No RPC body changes.
-- No edge-function deploys.
-- No RLS changes.
-- No auth configuration changes.
-- No payroll, `time_entries`, `clock_events`, `scheduled_shifts`, `shift_assignments`, Connecteam, tenant governance, worker documents, `setup-company`, billing.
-- No feature flags created.
-- No backfills.
-- No reader flip.
-- No plaintext deletion.
-- No `authPassword` refactor.
-
----
-
-## 12. Recommendation for Sprint S7
-
-**Start S7-A:** create the `company_settings` flag namespace `security.pin_hash_enabled` (default `false` everywhere) plus the read-only helpers (`useSecurityFlags` on the frontend, `isPinHashEnabled()` on the edge side). **Do not wire any call site.** Ship the scaffolding alone so S7-B can flip the flag for Stafly Demo with one row update and a single edge-function deploy.
-
-Gate S7-B through S7-F behind explicit owner approval per memory `mem://constraints/strict-no-regression-policy`.
+Defer S7-B until S7-A ships and is observed clean for at least one full day in production (cache invalidation, hook integration).
