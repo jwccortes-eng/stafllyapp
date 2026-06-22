@@ -143,6 +143,8 @@ Deno.serve(async (req) => {
           storedPlaintext: employee.access_pin ?? null,
           storedHash: employee.access_pin_hash ?? null,
           hashVersion: employee.pin_hash_version ?? null,
+          employeeId: employee.id,
+          client: adminClient,
         });
         pinOk = r.ok;
         dualSource = r.source;
