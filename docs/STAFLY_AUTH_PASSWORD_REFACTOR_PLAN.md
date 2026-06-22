@@ -861,3 +861,69 @@ worker documents.
    the plaintext fallback — demo first.
 3. Begin auth decoupling design (Option D: random server-side password) as a
    separate workstream; do not couple to `hash_only`.
+
+---
+
+## Sprint S7-H — Demo Hash Validation Telemetry Review (2026-06-22)
+
+**Scope:** Observability + read-only QA. Zero behavior change.
+
+### Guardrails reviewed
+- No `hash_only` enablement, no reader flip, no authPassword refactor, no random password bridge, no plaintext deletion, no real-tenant enablement, no payroll/RLS/grants/migrations touched.
+- All QA executed exclusively against Stafly Demo (`d3500000-0000-4000-8000-000000000001`).
+
+### SQL read-only verification (no PIN values exported)
+| Check | Result |
+|---|---|
+| Demo workers total | 7 |
+| Demo workers with `access_pin` | 7 |
+| Demo workers with `access_pin_hash` | 7 |
+| Demo rows where `extensions.crypt(access_pin, access_pin_hash) = access_pin_hash` | 7 / 7 |
+| Real tenants with `security.pin_auth_mode = dual` | 0 |
+| Demo tenant `security.pin_auth_mode` | `"dual"` |
+
+### Controlled QA via edge curl (Stafly Demo only)
+
+| Flow | Scenario | HTTP | Telemetry (`[pin-auth-validate]`) |
+|---|---|---|---|
+| `employee-auth` login | correct PIN (phone 5550100004) | 200 OK | `mode=dual`, `validation_source="hash"`, `hash_mismatch=false`, `hash_error=false`, `result=ok` |
+| `employee-auth` login | wrong PIN (phone 5550100001) ×2 | 401 | `mode=dual`, `validation_source=null`, `hash_mismatch=true`, `hash_error=false`, `result=fail` |
+| `kiosk-clock` | correct PIN (phone 5550100005) | 200 OK | `mode=dual`, `validation_source="hash"`, `hash_mismatch=false`, `hash_error=false`, `result=ok` |
+| `kiosk-clock` | wrong PIN (phone 5550100002) ×2 | 401 | `mode=dual`, `validation_source=null`, `hash_mismatch=true`, `hash_error=false`, `result=fail` |
+| `front-desk-checkin` PIN gate | covered by S7-E QA — shares `validatePinDual` helper, no code drift in S7-H. | — | — |
+
+### Telemetry summary
+- `hash_error = 0` across every captured sample → **S7-G RPC fix confirmed; deno bcrypt failure is gone.**
+- `validation_source = "hash"` on every correct-PIN sample → hash path is the real source of truth in dual.
+- `hash_mismatch = true` on every wrong-PIN sample → rejection is driven by hash comparison, not by fallback.
+- Plaintext fallback was **not triggered** during this window (all demo workers have valid hashes).
+
+### Sensitive log audit
+Reviewed every `[pin-auth-validate]` payload. Logged fields are limited to: `ctx`, `mode`, `company_id`, `employee_id`, `has_hash` (bool), `hash_version`, `validation_source`, `hash_mismatch`, `hash_error`, `result`. **No PINs, hashes, passwords, tokens, emails, or phone numbers appear in any log line.**
+
+### What was NOT touched
+- `employee-auth` / `kiosk-clock` / `front-desk-checkin` behavior, return shapes, auth bridge, `authPassword`.
+- Real tenants (Quality Staff, MyStaff, JKitchen, …) — all remain `legacy` (verified by zero rows in `company_settings` for non-demo).
+- Payroll: `pay_periods`, `period_base_pay`, `reconciliation_*`, `historical_payroll_entries`, `time_entries` semantics, `clock_events` semantics, `scheduled_shifts`, `shift_assignments`, Connecteam pipeline.
+- RLS policies, grants, tenant governance, setup-company, worker documents.
+
+### Risks found
+1. **No fallback coverage in this window** — every demo worker has a valid hash, so the plaintext fallback branch was not exercised in production telemetry. Mitigation: synthetic fixture (`hash NULL`) recommended before `hash_only` design to prove fallback alarm path.
+2. **Demo-only sample size is small** (7 workers, 6 captured events). Statistically sufficient to validate correctness, not throughput.
+3. **Rate-limiter shared with login** — wrong-PIN tests increment demo phone counters. Self-resolves on next successful login; no real-tenant impact.
+
+### Go / No-Go for S7-I (`hash_only_ready` design)
+**GO for design-only.** All S7-G acceptance criteria are met in production telemetry:
+- ✅ `validation_source="hash"` confirmed for login + kiosk in demo.
+- ✅ `hash_error=0` after S7-G.
+- ✅ Wrong PIN rejection confirmed via hash mismatch.
+- ✅ No sensitive logs.
+- ✅ Real tenants remain legacy.
+- ✅ Payroll untouched.
+
+### Recommendation S7-I
+Design (do **not** implement) `hash_only_ready` for Stafly Demo only:
+1. Add a third mode value `hash_only_ready` resolved by `resolveDemoDualMode` — still demo-only, still no real-tenant path.
+2. Define helper semantics: when mode is `hash_only_ready`, missing-hash returns `ok=false` with a new telemetry flag `fallback_suppressed=true` (no plaintext compare).
+3. Document a 7-day observation gate: must observe `fallback_suppressed=0` events in demo before any further step.
+4. Hold on real-tenant migration design (`S7-J`) until S7-I observation closes clean.
