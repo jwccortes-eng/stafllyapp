@@ -208,9 +208,8 @@ export function selectNextBestAction(ctx: NbaContext): NbaResult {
       kind: "missing_profile",
       tone: "deduction",
       title: "Completa tu perfil",
-      subtitle: `Falta${ctx.readinessMissingPersonal > 1 ? "n" : ""} ${ctx.readinessMissingPersonal} dato${
-        ctx.readinessMissingPersonal > 1 ? "s" : ""
-      } para ser asignado a turnos.`,
+      subtitle:
+        "Necesitamos algunos datos básicos para terminar de activar tu perfil.",
       ctaLabel: "Continuar",
       ctaHref: "/portal/profile/complete",
     };
