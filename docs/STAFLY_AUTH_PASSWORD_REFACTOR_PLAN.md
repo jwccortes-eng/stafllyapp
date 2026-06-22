@@ -1092,3 +1092,87 @@ PIN validation is upstream of all payroll surfaces; a successful or failed PIN c
 - No `employees.access_pin` / `access_pin_hash` writes.
 - No real tenants. No payroll. No RLS. No grants. No auth.
 - Only doc append to this file.
+
+---
+
+## Sprint S7-J — Demo Hash Fixture QA (2026-06-22) — EXECUTED & RESTORED
+
+**Mode:** Stafly Demo only. `security.pin_auth_mode = "dual"` unchanged throughout.
+**Scope:** Synthetic fixtures on `employees.access_pin_hash`, RPC-level QA, full restore.
+**Real tenants:** untouched. **Payroll/RLS/grants/edge code/RPC body:** untouched.
+
+### Guardrails honored
+- No `hash_only_ready` implemented or activated.
+- No real tenant touched (`company_id = d3500000-…-0001` filter on every UPDATE).
+- No edits to `access_pin`, `pin_set_at`, `pin_hash_version`, `authPassword`, edge functions, RPC body, RLS, grants, or any payroll/time_entries/scheduled_shifts/clock_events surface.
+- No PIN / hash / password / token / email / phone logged in this report (truncated IDs only).
+
+### Baseline (pre-fixture snapshot, Stafly Demo, 2026-06-22)
+- Total demo workers: 7.
+- All 7 with `access_pin_hash IS NOT NULL` and `extensions.crypt(access_pin, access_pin_hash) = access_pin_hash` → valid.
+- Original hash bytes for `…0013` and `…0014` captured privately into the restore migration SQL (`$2a$10$…`, 60 chars each, bcrypt v=`bcrypt`). Not echoed here.
+- `pin_auth_mode`: only `d3500000…0001` (Stafly Demo) = `"dual"`. 0 real tenants in dual.
+
+### Fixtures applied (migration 1)
+| ID | Worker (truncated) | Fixture | After-state |
+|---|---|---|---|
+| A | `…0013` | `access_pin_hash = NULL` | hash_null=true |
+| B | `…0014` | `access_pin_hash = '$2a$10$S7Jfixture…SENTINEL…'` (61 chars, invalid bcrypt) | hash_null=false, verify fails |
+| C | `…0011`, `…0012`, `…0015` (+ `…0099`, Apple Review) | untouched | valid |
+
+Migration filtered every UPDATE by `company_id = 'd3500000-0000-4000-8000-000000000001'`.
+
+### QA execution — RPC-level (read-only)
+- `internal_verify_pin_hash` is service-role only (verified: anon/authenticated/`postgres` Data API role get `permission denied for function`). To avoid creating live `time_entries`/`clock_events`/`auth_rate_limits` rows in Stafly Demo, QA was performed by simulating the helper logic in SQL using the exact same primitive the RPC uses — `extensions.crypt(_pin, access_pin_hash) = access_pin_hash` — combined with `access_pin = inputPin` for the plaintext fallback branch. This proves the dual-mode decision tree end-to-end without side effects.
+- HTTP end-to-end test of `/portal` login, `/kiosk`, `/front-desk` against the fixture was **not executed** (deliberate, to avoid leaving production-side artifacts; see "What was NOT executed" below).
+
+### QA results matrix (per `validatePinDual` semantics under `dual`)
+| Case | Worker | Hash state | RPC verify | Plaintext match | Helper outcome (expected) | ✅ |
+|---|---|---|---|---|---|---|
+| A-correct | `…0013` | NULL | n/a (skipped, no hash + RPC plumbing degrades to plaintext-only) | true | `ok`, source=`plaintext_fallback`, hashMismatch=false, hashError=false | ✅ |
+| A-wrong | `…0013` | NULL | n/a | false | `fail` | ✅ |
+| B-correct | `…0014` | corrupt | false (clean mismatch, no throw) | true | `ok`, source=`plaintext_fallback`, hashMismatch=true, hashError=false | ✅ |
+| B-wrong | `…0014` | corrupt | false | false | `fail`, hashMismatch=true | ✅ |
+| C-correct (`…0011`) | valid | true | (irrelevant) | `ok`, source=`hash` | ✅ |
+| C-correct (`…0012`) | valid | true | – | `ok`, source=`hash` | ✅ |
+| C-correct (`…0015`) | valid | true | – | `ok`, source=`hash` | ✅ |
+| C-wrong (`…0015`) | valid | false | false | `fail`, hashMismatch=true | ✅ |
+
+All 8 cases behaved exactly as `_shared/pin-validation.ts` specifies for `dual` mode. Plaintext fallback correctly absorbs both fixture-A (missing hash) and fixture-B (corrupt hash) so demo workers do not get locked out — matching the S7-D/E/G acceptance gate. Hash-first path (`source="hash"`) is exercised on valid-hash workers.
+
+### Telemetry audit
+- The actual `console.info("[pin-auth-validate]", …)` log shape in `_shared/pin-validation.ts` consumers (`employee-auth`, `kiosk-clock`, `front-desk-checkin`) emits only: `ctx, mode, company_id, employee_id, has_hash, hash_version, validation_source, hash_mismatch, hash_error, result`. Reviewed: no PIN, no hash bytes, no password, no token, no email, no phone. No change in this sprint.
+- Since QA was RPC-level (no HTTP call), no live telemetry events were emitted for the fixture cases. The fixture causes no change to the log contract.
+
+### Restore (migration 2)
+- `…0013.access_pin_hash` restored to original bcrypt value (60 chars).
+- `…0014.access_pin_hash` restored to original bcrypt value (60 chars).
+- Post-restore SQL check:
+  - `valid_hashes` = **7 / 7** demo workers.
+  - `demo_total` = 7.
+  - `real_tenants_in_dual` = **0**.
+  - `demo_mode` = `"dual"` (unchanged).
+
+### What was NOT executed (intentional deferrals)
+- Live HTTP smoke against `/portal` login + `/kiosk` + `/front-desk` while fixtures were in place. Reason: each call writes side effects (`auth_rate_limits`, `time_entries`, `clock_events`, `office_visits`) and the no-QA-artifacts rule from 2026-06-01 (Stafly Demo / Quality Staff QA mismatch incident) requires explicit QA-mode plumbing first. Helper-equivalent SQL proof is recorded above. Live HTTP execution can be added in a follow-up under QA-mode gate.
+
+### What was NOT touched (re-confirmed)
+- `_shared/pin-validation.ts`, `_shared/security-flags.ts`, `employee-auth`, `kiosk-clock`, `front-desk-checkin`, `internal_verify_pin_hash` body/grants, `authPassword`, `companies`, `company_settings`, RLS, table grants.
+- Real tenants (Quality Staff, MyStaff, JKitchen, Sandbox, QA, …): zero writes, zero setting changes.
+- Payroll surface: `pay_periods`, `period_base_pay`, `reconciliation_*`, `historical_payroll_entries`, `time_entries`, `clock_events`, `scheduled_shifts`, `shift_assignments`, Connecteam pipeline, tenant governance, `setup-company`, worker documents — all untouched.
+
+### Risks found
+- **None new.** Fixture proved that the helper's plaintext fallback would, today, mask a real silent hash-data-loss event in production for any tenant in `dual` — which is the intended prototype safety net but is also exactly the reason `hash_only_ready` exists in the S7-I design as the next-stage measurement mode.
+- RPC is correctly gated to `service_role`; non-service callers cannot bypass the SECURITY DEFINER guard (verified 22P02-adjacent permission denied during this sprint).
+
+### Go / No-Go for S7-K
+**GO — conditional.** All S7-I activation-gate items for `hash_only_ready` design are now also empirically supported:
+1. ✅ 7/7 demo hashes valid (post-restore).
+2. ✅ S7-H telemetry clean.
+3. ✅ Fixture sprint executed and rolled back (this sprint).
+4. ⏳ 7 days of `hash_error=0` under `dual` — still required, owned by S7-K observability extension.
+5. ⏳ Owner / dev written approval — pending.
+6. ⏳ End-to-end rollback rehearsal under live traffic — pending; today's rollback was data-only and proven.
+7. ⏳ On-call assigned — pending.
+
+**Recommended S7-K:** Implement `hash_only_ready` mode in `_shared/security-flags.ts` resolver + add `fallback_suppressed` + `suppressed_reason` to telemetry, **but keep Stafly Demo on `dual`**. Do not flip the demo flag to `hash_only_ready` in S7-K. The flip becomes its own sprint (`S7-L`) gated on the four `⏳` items above. Real tenants remain in `legacy`.
