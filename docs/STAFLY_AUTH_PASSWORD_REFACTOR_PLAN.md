@@ -469,3 +469,74 @@ kiosk-clock, front-desk-checkin, payroll, pay_periods, period_base_pay, reconcil
 
 ### Recommendation S7-D
 With uniform control plane across `activate`, `login`, `provision`, `change-pin`, S7-D should implement the real bridge under `if (effective === "dual")` exclusively in the demo tenant: random server-side password + `admin.generateLink` for session minting, with hash-first PIN validation (S4-B columns) and plaintext fallback. Add Playwright QA against `/portal` on Stafly Demo, plus a per-action kill-switch flag before considering any non-demo enablement.
+
+---
+
+## Sprint S7-D — Demo-only dual bridge prototype (login)
+
+**Status:** applied 2026-06-22. Demo-only. No real tenant behavior change.
+
+### Guardrails honored
+- Only the `login` action of `employee-auth` touched. `activate`, `provision`, `change-pin` untouched beyond their S7-B/S7-C mode-read.
+- `kiosk-clock`, `front-desk-checkin`, payroll, `pay_periods`, `period_base_pay`, `reconciliation_*`, `historical_payroll_entries`, `time_entries`, `clock_events`, `scheduled_shifts`, `shift_assignments`, Connecteam pipeline, tenant governance, `setup-company`, RLS, worker documents, real-tenant settings — none touched.
+- No SQL migrations. No new RPCs. No new RLS. No schema changes. No grants. No data writes.
+- `access_pin` is not deleted, nulled, or stopped being read. Hash columns continue dual-write via existing S4 RPCs.
+
+### Files changed
+- `supabase/functions/_shared/pin-validation.ts` (new) — `validatePinDual(...)` helper. Pure Deno bcrypt verify, no DB calls, no logs of PIN/hash, never throws.
+- `supabase/functions/employee-auth/index.ts` — login action: SELECT now includes `access_pin_hash, pin_hash_version`; mode resolver moved before the PIN gate; demo `dual` branch uses `validatePinDual` with safe `[pin-auth-validate]` telemetry; legacy branch is the previous gate copied verbatim.
+- `docs/STAFLY_AUTH_PASSWORD_REFACTOR_PLAN.md` — this section.
+
+### Dual validation behavior (demo only, login only)
+| Stored hash | Stored plaintext | Input matches plaintext | Bcrypt verify | Result | `validation_source` |
+|---|---|---|---|---|---|
+| present | present | yes | ok | accept | `hash` |
+| present | present | yes | fail (mismatch) | accept | `plaintext_fallback` (hash_mismatch=true) |
+| present | present | yes | throws / bad format | accept | `plaintext_fallback` (hash_error=true) |
+| present | present | no  | ok | impossible (verify ok implies match) | — |
+| present | present | no  | fail | reject | `null` |
+| missing | present | yes | n/a | accept | `plaintext_fallback` |
+| missing | present | no  | n/a | reject | `null` |
+| any     | missing | n/a | n/a | reject | `null` |
+
+The acceptance set in `dual` is a strict superset of legacy only when a hash exists (it accepts hash-verified inputs that already pass the legacy plaintext check). Today every demo worker has both hash and plaintext (S4 backfill), so the surface is the same set.
+
+### Auth password bridge — BLOCKED for S7-D (documented)
+The sprint allowed shipping only the hash-first PIN validation if a safe session-minting path was not available. After review:
+- `admin.generateLink` returns a magic-link URL whose hashed token must be redeemed by a browser navigating to the project auth callback. Edge functions cannot redeem it on behalf of the worker to mint an in-band `session` object without running an HTTP redirect dance in the client.
+- `admin.createSession` is not exposed by `@supabase/supabase-js` v2 edge admin.
+- A random server-side password followed by `signInWithPassword` requires us to either (a) return the random password to the client (forbidden — leak), or (b) sign in server-side and ship the session. (b) is what `authPassword(pin)` already does — replacing the deterministic password with a random one yields the same shape but breaks any other code path (kiosk-clock, front-desk-checkin) that still derives auth from the PIN.
+
+Decision: keep the existing `authPassword(pin)` + `updateUserById` + `signInWithPassword` flow for S7-D demo dual. The PIN gate is now hash-first; the Supabase auth password remains PIN-derived. Removing PIN-as-password is deferred until kiosk-clock and front-desk-checkin can be migrated in lockstep (S7-E/S7-F scope).
+
+### Telemetry (safe)
+`[pin-auth-validate]` log line emits: `ctx`, `mode`, `company_id`, `employee_id`, `has_hash`, `hash_version`, `validation_source`, `hash_mismatch`, `hash_error`, `result`. **Never** logs PIN, hash, password, token, phone, or email.
+
+### QA results (code-level)
+- Real tenant, any mode → resolver pins `legacy` → legacy gate runs (identical bytes to pre-S7-D). PASS.
+- Real tenant with stale `dual` setting → resolver downgrades to `legacy`. PASS.
+- Stafly Demo, `legacy` setting → legacy gate runs. PASS.
+- Stafly Demo, `dual`, correct PIN, hash present & valid → `source=hash`, accept. PASS.
+- Stafly Demo, `dual`, wrong PIN, hash present → both hash and plaintext fail → reject + rate-limit. PASS.
+- Stafly Demo, `dual`, correct PIN, hash NULL (legacy seed) → `source=plaintext_fallback`, accept. PASS.
+- Stafly Demo, `dual`, correct PIN, hash present but corrupted/mismatched → `source=plaintext_fallback`, `hash_mismatch=true`. PASS.
+- `activate`, `provision`, `change-pin` actions: untouched code, mode-read no-op preserved. PASS.
+- No PIN/hash/password in any new log line. PASS by inspection.
+- Payroll / kiosk-clock / front-desk-checkin: no edits. PASS by file diff.
+
+### Rollback
+1. UPDATE `company_settings` SET `value='legacy'` WHERE `company_id='d3500000-0000-4000-8000-000000000001'` AND `key='security.pin_auth_mode'`. Effect: instant — next login resolver returns `legacy`, code reverts to the byte-identical legacy gate.
+2. Hard rollback: revert this commit. Removes the helper + the dual branch entirely. Legacy gate is preserved verbatim in the `else` branch, so revert is safe even mid-traffic.
+
+### Risks
+- `bcrypt.compare` cost: bcrypt cost 10 is ~50–80 ms in Deno. Only paid on demo `dual` logins.
+- Dependency on `deno.land/x/bcrypt@v0.4.1`. If the module is unreachable, helper returns `hash_error=true` → falls back to plaintext, so no lockout.
+- Plaintext fallback intentionally widens the acceptance set vs. a strict hash-only mode. This is the documented S7-D contract; tightening lands in S7-F (`hash_only`).
+
+### Not touched
+`activate`, `provision`, `change-pin`, `kiosk-clock`, `front-desk-checkin`, payroll, `pay_periods`, `period_base_pay`, `reconciliation_*`, `historical_payroll_entries`, `time_entries`, `clock_events`, `scheduled_shifts`, `shift_assignments`, Connecteam pipeline, tenant governance, `setup-company`, RLS, grants, worker documents, real-tenant `company_settings`, `authPassword` body, return shape of login.
+
+### Recommendation S7-E
+1. Replicate the demo `dual` hash-first gate in `kiosk-clock` and `front-desk-checkin` PIN validation paths (read-only, no auth-password change yet). Telemetry-only first, then gated by the same `security.pin_auth_mode` setting.
+2. Once all three readers (`employee-auth`, `kiosk-clock`, `front-desk-checkin`) verify against the hash in demo, design the real Supabase-auth decoupling (`admin.createSession` Postgres function or magic-link interstitial) as S7-F.
+3. Do not enable any real tenant before S7-E + S7-F land and Playwright QA passes against `/portal`, `/kiosk`, `/front-desk` on the demo tenant.
