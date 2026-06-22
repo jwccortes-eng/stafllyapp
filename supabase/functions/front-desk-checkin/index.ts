@@ -208,16 +208,21 @@ async function authorizeEmployeeAction(
     }
   }
 
-  // (3) PIN path — S7-E demo-only dual hash-first with plaintext fallback.
+  // (3) PIN path — S7-E / S7-K demo-only hash-first validation.
   // Resolver force-pins every non-demo tenant + any error to "legacy",
   // so the legacy strict-equality branch runs unchanged for real tenants.
+  // Demo may resolve to "dual" or "hash_only_ready" (S7-K capability — not
+  // yet activated on any tenant). Both modes use validatePinDual.
   if (pin && typeof pin === "string") {
     const _pinAuthMode_fd = await resolveDemoDualMode(adminClient, (emp as any).company_id, "front-desk-checkin");
-    if (_pinAuthMode_fd === "dual") {
+    if (_pinAuthMode_fd === "dual" || _pinAuthMode_fd === "hash_only_ready") {
+      const _validationMode = _pinAuthMode_fd;
       let dualOk = false;
       let dualSource: string | null = null;
       let dualHashMismatch = false;
       let dualHashError = false;
+      let dualFallbackSuppressed = false;
+      let dualSuppressedReason: string | null = null;
       try {
         const r = await validatePinDual({
           inputPin: pin,
@@ -226,18 +231,21 @@ async function authorizeEmployeeAction(
           hashVersion: (emp as any).pin_hash_version ?? null,
           employeeId: (emp as any).id,
           client: adminClient,
+          mode: _validationMode,
         });
         dualOk = r.ok;
         dualSource = r.source;
         dualHashMismatch = r.hashMismatch;
         dualHashError = r.hashError;
+        dualFallbackSuppressed = r.fallbackSuppressed;
+        dualSuppressedReason = r.suppressedReason;
       } catch {
         dualOk = false;
       }
       try {
         console.info("[pin-auth-validate]", {
           ctx: "front-desk-checkin",
-          mode: "dual",
+          mode: _validationMode,
           company_id: (emp as any).company_id,
           employee_id: (emp as any).id,
           has_hash: !!(emp as any).access_pin_hash,
@@ -245,6 +253,8 @@ async function authorizeEmployeeAction(
           validation_source: dualSource,
           hash_mismatch: dualHashMismatch,
           hash_error: dualHashError,
+          fallback_suppressed: dualFallbackSuppressed,
+          suppressed_reason: dualSuppressedReason,
           result: dualOk ? "ok" : "fail",
         });
       } catch { /* logging must never throw */ }
@@ -254,6 +264,7 @@ async function authorizeEmployeeAction(
       return { ok: true, via: "pin" };
     }
   }
+
 
   // (4) Trusted-kiosk-device path.
   if (device_id && typeof device_id === "string" && UUID_RE_GLOBAL.test(device_id)) {
