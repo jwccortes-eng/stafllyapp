@@ -759,3 +759,105 @@ Real tenants, payroll, pay_periods, period_base_pay, reconciliation_*, historica
 - Magic-link option (B) introduces extra browser navigation — acceptable for `/portal`, irrelevant for kiosk/front-desk.
 - Option A (custom JWT signing) is the most powerful but the most fragile across GoTrue upgrades — not recommended.
 - Plaintext fallback remains intentionally wide in `dual` — strictness lands only with `hash_only`.
+
+---
+
+## Sprint S7-G — DB-backed PIN hash verification (executed)
+
+### Guardrails reviewed
+No hash_only · no random password · no authPassword refactor · no reader flip ·
+no real tenant enablement · no plaintext deletion · no payroll · no RLS changes ·
+no return shape changes.
+
+### Migration
+Two-step (initial + hotfix). Final state:
+
+```sql
+CREATE OR REPLACE FUNCTION public.internal_verify_pin_hash(
+  _employee_id uuid, _pin text
+) RETURNS boolean
+LANGUAGE plpgsql STABLE SECURITY DEFINER
+SET search_path = public, extensions
+AS $$ ... crypt(_pin, v_hash) = v_hash ... EXCEPTION WHEN OTHERS THEN false $$;
+
+REVOKE EXECUTE ON FUNCTION public.internal_verify_pin_hash(uuid,text) FROM PUBLIC, anon, authenticated;
+GRANT  EXECUTE ON FUNCTION public.internal_verify_pin_hash(uuid,text) TO service_role;
+```
+
+Hotfix note: original `SET search_path = public` excluded `extensions.crypt`
+(pgcrypto lives in the `extensions` schema on this project); recreated with
+`public, extensions`.
+
+### Why JS bcrypt was removed
+`deno.land/x/bcrypt@v0.4.1 compare()` requires Web Workers, which the Deno Edge
+runtime does not expose → every demo dual call produced `hash_error=true` and
+silently fell back to plaintext (S7-F audit). Verification now runs in
+Postgres via the SECURITY DEFINER RPC.
+
+### Files changed
+- `supabase/functions/_shared/pin-validation.ts` — removed `bcrypt` import;
+  helper now accepts `employeeId` + service-role `client` and calls the RPC.
+- `supabase/functions/employee-auth/index.ts` — login dual branch passes
+  `employeeId` + `adminClient`.
+- `supabase/functions/kiosk-clock/index.ts` — kiosk dual branch idem.
+- `supabase/functions/front-desk-checkin/index.ts` — front-desk dual branch idem.
+- `docs/STAFLY_AUTH_PASSWORD_REFACTOR_PLAN.md` — this section.
+
+### Helper behavior matrix
+| storedHash | employeeId+client | RPC result | plaintext | → `ok` | `source` | `hashMismatch` | `hashError` |
+|---|---|---|---|---|---|---|---|
+| present | present | true | — | true | `hash` | false | false |
+| present | present | false | match | true | `plaintext_fallback` | true | false |
+| present | present | false | mismatch | false | null | true | false |
+| present | present | RPC error | match | true | `plaintext_fallback` | false | true |
+| present | present | RPC error | mismatch | false | null | false | true |
+| present | missing | — | match | true | `plaintext_fallback` | false | false |
+| absent | — | — | match | true | `plaintext_fallback` | false | false |
+| absent | — | — | mismatch | false | null | false | false |
+
+Return shape, ordering, fields — unchanged.
+
+### QA results (DB-level proof, demo tenant `d3500000-…-0001`)
+- Correct PIN per worker → RPC true (5/5 demo workers with hash).
+- Wrong PIN → false.
+- Missing employee uuid → false.
+- Null `_employee_id` → false.
+- Empty `_pin` → false.
+- Quality Staff / MyStaff / JKitchen: helper not consumed (legacy branch),
+  resolver pins them to `legacy` regardless of company_settings.
+
+### Telemetry proof
+`[pin-auth-validate]` log structure unchanged. With the RPC live, demo dual
+calls now emit `validation_source:"hash"` and `hash_error:false` on the
+happy path instead of the previous `hash_error:true / source:"plaintext_fallback"`.
+No PIN, hash, password, phone, or token in any log line.
+
+### What was NOT touched
+authPassword · Supabase auth create/update · random password bridge ·
+admin.generateLink / session minting · hash_only · plaintext deletion ·
+employee-auth activate / provision / change-pin behavior · kiosk / front-desk
+return shapes · real tenant settings · payroll · pay_periods ·
+period_base_pay · reconciliation_* · historical_payroll_entries ·
+time_entries · clock_events · scheduled_shifts · shift_assignments ·
+Connecteam pipeline · tenant governance · setup-company · RLS policies ·
+worker documents.
+
+### Risks found
+- Verifier is now correct, but plaintext fallback remains wide by contract.
+  Strictness only lands with `hash_only`.
+- RPC is single-row SELECT per login; no measurable latency vs. JS compare.
+- Linter shows pre-existing WARNs (Function Search Path Mutable / SECURITY
+  DEFINER executable, etc.) for unrelated objects; the new function has an
+  explicit `SET search_path` and is service-role-only.
+
+### Rollback
+- Soft: `update public.company_settings set value='"legacy"' where company_id='d3500000-…-0001' and key='security.pin_auth_mode';` — demo immediately back on plaintext.
+- Hard: `DROP FUNCTION public.internal_verify_pin_hash(uuid, text);` then redeploy the previous `pin-validation.ts` if needed. Because plaintext fallback is preserved, dropping the RPC degrades dual to plaintext-only without lockouts.
+
+### Recommendation S7-H
+1. Observe demo dual telemetry for ≥7 days: confirm `validation_source="hash"`
+   dominates and `hash_mismatch` is ~0.
+2. Design `hash_only` mode behind a new flag (`hash_only_ready`) that removes
+   the plaintext fallback — demo first.
+3. Begin auth decoupling design (Option D: random server-side password) as a
+   separate workstream; do not couple to `hash_only`.
