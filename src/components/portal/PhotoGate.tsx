@@ -138,6 +138,31 @@ export function PhotoGate({ employeeId, onPhotoUploaded, onSignOut, onContinueWi
           )}
         </div>
 
+        {loadFailed && (
+          <div className="flex items-start gap-2 rounded-xl border border-warning/30 bg-warning/10 px-3 py-2 text-[11px] text-foreground">
+            <AlertTriangle className="h-3.5 w-3.5 text-warning shrink-0 mt-0.5" />
+            <div>
+              <p className="font-semibold">No pudimos cargar tu foto actual.</p>
+              <p className="text-muted-foreground mt-0.5">Revisa tu conexión e intenta de nuevo, o continúa para ver tus documentos y turnos.</p>
+            </div>
+          </div>
+        )}
+
+        {onContinueWithoutPhoto && (
+          <div className="space-y-1.5">
+            <button
+              onClick={onContinueWithoutPhoto}
+              className="w-full flex items-center justify-center gap-1.5 text-sm font-medium text-primary hover:underline"
+            >
+              Continuar sin foto por ahora
+              <ArrowRight className="h-3.5 w-3.5" />
+            </button>
+            <p className="text-center text-[10.5px] text-muted-foreground/80">
+              Podrás ver tus documentos y turnos. Te pediremos la foto antes de poder ser asignado.
+            </p>
+          </div>
+        )}
+
         <button onClick={onSignOut} className="w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors">
           Cerrar sesión
         </button>
