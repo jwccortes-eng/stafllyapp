@@ -189,11 +189,10 @@ export function selectNextBestAction(ctx: NbaContext): NbaResult {
     return {
       kind: "missing_docs",
       tone: "warning",
-      title: "Sube tus documentos",
-      subtitle: `${ctx.readinessMissingDocs} documento${
-        ctx.readinessMissingDocs > 1 ? "s" : ""
-      } pendiente${ctx.readinessMissingDocs > 1 ? "s" : ""} para poder ser asignado.`,
-      ctaLabel: "Subir ahora",
+      title: "Te faltan algunos documentos",
+      subtitle:
+        "Completa los documentos pendientes para quedar totalmente listo para trabajar.",
+      ctaLabel: "Ver documentos",
       ctaHref: "/portal/documents",
     };
   }
