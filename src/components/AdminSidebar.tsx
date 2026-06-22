@@ -98,15 +98,17 @@ interface LinkDef {
 
 /* ── Company-scoped links — English Demo Pass (visible labels EN; internal keys preserved) ── */
 const COMPANY_LINKS: LinkDef[] = [
-  // A) DAILY OPERATIONS
+  // A) DAILY OPERATIONS — Command Center is canonical; /app/ops-center kept as
+  // visually-secondary legacy entry at the bottom of the group (route untouched,
+  // bookmarks still work).
   { to: "/app", icon: LayoutDashboard, label: "Home", module: null, end: true, section: "Daily Operations" },
   { to: "/app/command-center", icon: Radio, label: "Command Center", module: null, section: "Daily Operations" },
-  { to: "/app/ops-center", icon: Radio, label: "Today's Operations (legacy)", module: null, section: "Daily Operations" },
   { to: "/app/shifts", icon: CalendarDays, label: "Shifts", module: "shifts", section: "Daily Operations" },
   { to: "/app/attendance", icon: ShieldCheck, label: "Attendance", module: null, section: "Daily Operations" },
   { to: "/app/timeclock", icon: Clock, label: "Time Clock", module: "shifts", section: "Daily Operations" },
   { to: "/app/live-map", icon: MapIcon, label: "Live Map", module: null, section: "Daily Operations" },
   { to: "/app/front-desk", icon: ContactRound, label: "Front Desk", module: null, section: "Daily Operations" },
+  { to: "/app/ops-center", icon: Radio, label: "Today's Operations (legacy)", module: null, section: "Daily Operations" },
 
   // B) TEAM
   { to: "/app/employees", icon: Users, label: "Team", module: "employees", section: "Team" },
