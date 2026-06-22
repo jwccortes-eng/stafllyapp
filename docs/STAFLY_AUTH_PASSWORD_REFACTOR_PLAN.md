@@ -620,3 +620,142 @@ Telemetry line: `[pin-auth-validate]` with `ctx`, `mode`, `company_id`, `employe
 1. Add Playwright QA against Stafly Demo: `/portal` login (S7-D), `/kiosk` clock-in (S7-E), `/front-desk` PIN check-in (S7-E). One scenario each for `hash`, `plaintext_fallback`, and `hash_mismatch`.
 2. Once green, design the Supabase-auth-password decoupling: either a Postgres SECURITY DEFINER `admin.create_session` helper or a magic-link interstitial flow. This is the prerequisite for ever removing `access_pin` from `authPassword(pin)` and for moving to `hash_only`.
 3. Do not introduce `hash_only` or any real-tenant enablement until 1 + 2 land. `hash_only` must be gated by per-tenant opt-in and a documented backfill verification step (every active worker has `access_pin_hash NOT NULL`).
+
+---
+
+## Sprint S7-F — Demo QA + Auth Decoupling Design (doc + QA only)
+
+**Status:** executed 2026-06-22. No code/SQL/RPC/RLS/grant changes. Demo curl QA + design doc only.
+
+### Guardrails honored
+- No real-tenant settings touched. Only `d3500000-0000-4000-8000-000000000001` has `security.pin_auth_mode='dual'` (confirmed via `SELECT … FROM company_settings WHERE key='security.pin_auth_mode'` — 1 row, demo only).
+- No payroll, `pay_periods`, `period_base_pay`, `reconciliation_*`, `historical_payroll_entries`, `time_entries` semantics, `scheduled_shifts`, `shift_assignments`, Connecteam, tenant governance, `setup-company`, RLS, grants, worker documents touched.
+- No `authPassword` change, no `hash_only` enablement, no plaintext deletion, no `access_pin` nulling, no real-tenant enablement.
+
+### Demo backfill verification (SQL, non-mutating)
+```sql
+SELECT
+  count(*) FILTER (WHERE access_pin IS NOT NULL AND access_pin_hash IS NOT NULL) AS both_present,
+  count(*) FILTER (WHERE … AND extensions.crypt(access_pin, access_pin_hash) = access_pin_hash) AS hash_verifies,
+  count(*) FILTER (WHERE access_pin IS NOT NULL AND access_pin_hash IS NULL) AS plain_only,
+  count(*) FILTER (WHERE access_pin IS NULL AND access_pin_hash IS NOT NULL) AS hash_only
+FROM employees WHERE company_id='d3500000-…0001';
+```
+Result: `both_present=7, hash_verifies=7, plain_only=0, hash_only=0`. Hash column is bcrypt-format for all (`access_pin_hash LIKE '$2%'` → 100%).
+
+### QA matrix (curl-driven against deployed edge functions)
+
+PINs were never read or logged. Positive-path validation was performed at the DB level (`pgcrypto.crypt`) — wrong-PIN curls verified the live edge code path, return shapes, and telemetry.
+
+| Flow | Mode | Scenario | Expected | Result | Telemetry verified |
+|---|---|---|---|---|---|
+| `/employee-auth` login | dual (demo) | wrong PIN, hash present | 401 `"PIN incorrecto. N intentos restantes"` | ✅ PASS | `[pin-auth-validate] ctx=login mode=dual has_hash=true result=fail` |
+| `/employee-auth` login | dual (demo) | correct PIN (DB-verified) | accept | ✅ DB-PASS (`hash_verifies=7/7`) | (positive path validated via SQL; no PIN exposure) |
+| `/kiosk-clock` | dual (demo) | wrong PIN, hash present | 401 `"Invalid credentials"` | ✅ PASS | `[pin-auth-validate] ctx=kiosk-clock mode=dual has_hash=true result=fail` |
+| `/front-desk-checkin` `update_self` | dual (demo) | wrong PIN, hash present | 403 `"No autorizado"` | ✅ PASS | `[pin-auth-validate] ctx=front-desk-checkin mode=dual has_hash=true result=fail` |
+| All three | legacy (any non-demo company_id) | n/a | byte-identical legacy gate | ✅ Code-PASS by file diff (resolver allow-list) | `[pin-auth-mode] effective=legacy` |
+| Resolver | dual setting on a non-demo company_id | force-downgrade to legacy | ✅ Code-PASS by allow-list constant | n/a |
+| Rollback | `UPDATE company_settings SET value='legacy' WHERE company_id=demo` | next call uses legacy gate | ✅ Code-PASS (resolver returns legacy → `else` branch runs) | n/a |
+
+Hash mismatch / hash missing / hash-error scenarios cannot be reproduced live on demo today (all 7 workers have valid hashes), but the code paths are unit-coverable in S7-G; their telemetry shape is identical to the wrong-PIN line with `hash_mismatch=true` or `hash_error=true`.
+
+### 🚨 Critical QA finding — bcrypt library throws in edge runtime
+
+Every live `[pin-auth-validate]` line from the three flows reported **`hash_error: true`** even though `access_pin_hash` is valid bcrypt. Verified against `pgcrypto.crypt` (`hash_verifies=7/7`), so the hashes are correct — the failure is in `deno.land/x/bcrypt@v0.4.1`'s `compare()`, which uses a Web Worker internally that the Deno edge runtime does not support.
+
+Live impact today: **zero**. `validatePinDual` catches the throw, marks `hash_error=true`, and falls through to plaintext compare. Demo workers still authenticate because plaintext is present.
+
+S7-G must either (a) switch to `bcrypt.compareSync` (synchronous, no Worker), (b) move to a Worker-free library (e.g. `https://deno.land/x/scrypt`, `npm:bcryptjs`), or (c) push hash verification to a SECURITY DEFINER Postgres RPC using `extensions.crypt` (single round-trip, no JS bcrypt at all). Option (c) is the most defensible: it eliminates the JS dependency, keeps the algorithm choice in the DB, and naturally lives behind the `service_role`-only `internal_dual_write_pin_hash` REVOKE pattern.
+
+### Telemetry review — confirmed safe
+
+Captured log lines (full text) for the three QA runs:
+- `[pin-auth-mode]` — emits `ctx, company_id, requested, effective, demo`. **No PIN/hash/password/phone/email/token**.
+- `[pin-auth-validate]` — emits `ctx, mode, company_id, employee_id, has_hash, hash_version, validation_source, hash_mismatch, hash_error, result`. **No PIN/hash/password/phone/email/token**.
+
+Source-grep of all three edge functions for `pin`, `access_pin`, `hash` inside `console.*` confirms only the above structured fields are emitted.
+
+---
+
+## Auth decoupling design — comparison of options
+
+Goal: remove the deterministic `authPassword(pin) = "SF_" + pin` so that `access_pin` is no longer the Supabase auth password. This is the prerequisite for ever enabling `hash_only` and for letting workers rotate PINs without rotating their Supabase password.
+
+### Option A — Postgres SECURITY DEFINER session-creation RPC
+
+Sketch: add a SECURITY DEFINER function `public.issue_employee_session(_employee_id uuid, _pin text)` that (1) verifies the PIN against `access_pin_hash` via `extensions.crypt`, (2) loads the `auth.users` row, and (3) returns a short-lived JWT signed with the project's GoTrue JWT secret (stored in `vault` or read from `Deno.env` inside an edge wrapper). The edge function then returns `{ access_token, refresh_token }` shaped exactly like `signInWithPassword`.
+
+Pros: no PIN-as-password, no plaintext storage in flight, single round-trip, easy `REVOKE EXECUTE … FROM PUBLIC/anon/authenticated` + grant to `service_role` only (matches the S5 cleanup pattern). Algorithm choice (bcrypt today, argon2 tomorrow) stays in the DB.
+
+Cons: minting valid GoTrue JWTs from custom Postgres code is non-trivial — you must sign with the exact `JWT_SECRET`, include the right `aal`, `session_id`, `is_anonymous`, etc. claims, and create a matching `auth.sessions` row so refresh works. Supabase does not officially expose this API; we'd be reverse-engineering GoTrue. Refresh-token rotation, MFA, and revocation become our problem.
+
+Risk grade: **medium-high** (compatibility with future GoTrue changes).
+
+### Option B — Magic-link interstitial
+
+Sketch: after hash-first PIN validation succeeds, call `adminClient.auth.admin.generateLink({ type: 'magiclink', email: workerInternalEmail })`. Return the `properties.action_link` to the worker portal, which immediately navigates to the URL; Supabase redeems the token and seeds the session via the auth callback.
+
+Pros: 100% supported by Supabase, no custom JWT signing, sessions/refresh/MFA all "just work".
+
+Cons: a browser navigation in the middle of the login flow (small UX hit on `/portal`). Magic-link tokens are single-use and short-lived (5 min default). **Does not work for `/kiosk` or `/front-desk`** — kiosk-clock and front-desk-checkin don't mint user sessions (they verify PIN and write `time_entries` / `office_visits` server-side using `service_role`). So magic-link would replace `/portal` only and leave the other two on their current model (no session needed). That's actually a benefit, not a blocker.
+
+Risk grade: **low**. Standard Supabase API.
+
+### Option C — Passwordless / OTP / Worker Auth v3
+
+Sketch: full rebuild of worker authentication on Supabase phone OTP or WebAuthn passkeys. PIN becomes a UX shortcut after the first OTP, stored as a device-bound passkey hash rather than a Supabase password.
+
+Pros: best long-term security, decouples PIN from session permanently, MFA-ready.
+
+Cons: months of work; needs SMS budget; breaks every offline kiosk flow; requires new mobile UI in the Capacitor build. Out of scope for the S7 line.
+
+Risk grade: **high** (scope), **low** (security).
+
+### Option D — Random server-side Supabase password
+
+Sketch: when worker logs in successfully via hash-first PIN, generate `crypto.randomUUID() + crypto.randomUUID()`, `updateUserById({ password })`, immediately `signInWithPassword`, return the session. Never store or return the password. On every login, rotate.
+
+Pros: minimal code change vs. today's `authPassword(pin)` flow. Real Supabase session. No bespoke JWT signing.
+
+Cons: kiosk-clock and front-desk-checkin do not call `signInWithPassword`; they don't need a session, so this option also targets `/portal` only (same as Option B). Race condition risk: if the random `updateUserById` runs in parallel with the `signInWithPassword`, the password update may not have propagated. Mitigated by sequential `await`s (already the pattern). Also leaves the user with no recoverable password — but workers never use email/password reset today, so functionally OK.
+
+Risk grade: **low**. Closest to current implementation.
+
+### Recommendation for S7-G
+
+**Implement Option D for `/portal` login**, gated by `security.pin_auth_mode='hash_only_ready'` (new value, demo-only). Keep `dual` behavior unchanged. For kiosk-clock and front-desk-checkin, the auth-password problem doesn't exist (no session minted), so the hash-first gate alone is the full decoupling — once bcrypt is fixed per the QA finding above, those two are effectively hash-only-ready.
+
+Concretely, S7-G should:
+
+1. Fix the bcrypt JS issue: replace `bcrypt.compare` with `bcrypt.compareSync` OR move verification to a new SECURITY DEFINER RPC `internal_verify_pin_hash(_employee_id, _pin) RETURNS boolean`, granted only to `service_role`, search_path locked. Pick (b) for consistency with `internal_dual_write_pin_hash`.
+2. Re-run the S7-D/E QA — confirm `validation_source='hash'` on the positive path in all three flows.
+3. Add a new mode value `hash_only_ready` (demo only). In `/portal` login, when mode is `hash_only_ready`, after hash verify use Option D (random password + signIn). Keep `dual` and `legacy` paths intact.
+4. Playwright run against `/portal` on demo, asserting session creation, refresh, and `time_entries` writes still work.
+5. Document a 7-day observation window before considering `hash_only` (which would also stop reading `access_pin`).
+
+### Hash-only readiness checklist (per tenant)
+
+Before ever flipping a tenant to a future `hash_only` mode, all of the following must be green:
+
+- [ ] `SELECT count(*) FROM employees WHERE company_id=:tenant AND is_active AND (access_pin IS NULL OR access_pin_hash IS NULL)` = 0
+- [ ] `SELECT count(*) FROM employees WHERE company_id=:tenant AND access_pin_hash IS NOT NULL AND extensions.crypt(access_pin, access_pin_hash) <> access_pin_hash` = 0
+- [ ] Demo E2E pass on `/portal`, `/kiosk`, `/front-desk` with `validation_source='hash'` for ≥ 95% of attempts (no `hash_error`, no `hash_mismatch`)
+- [ ] No `[pin-auth-validate] hash_error=true` lines in the last 7 days of edge logs for the tenant
+- [ ] Auth-password decoupling shipped (`/portal` Option D landed and stable for 7 days)
+- [ ] `/kiosk` and `/front-desk` hash-first verified live (not just code-level)
+- [ ] Owner + ops sign-off on rollback runbook
+- [ ] Rollback script tested: `UPDATE company_settings SET value='legacy' WHERE company_id=:tenant AND key='security.pin_auth_mode'` reverts behavior in < 1 s
+- [ ] Observation window: 7 days at `hash_only_ready` before flipping to `hash_only`
+- [ ] `access_pin` retention policy documented (kept readable until 30 days after `hash_only`, then null'd in a separate sprint)
+
+### Payroll safety — confirmed
+No reads or writes to: `time_entries` (semantics), `pay_periods`, `period_base_pay`, `reconciliation_*` (any table), `historical_payroll_entries`, `payroll_*`, `scheduled_shifts`, `shift_assignments`, Connecteam pipeline. The three QA curls only hit `auth_rate_limits` (15-min auto-expire) and read `employees` + `company_settings`. Zero payroll surface.
+
+### Not touched
+Real tenants, payroll, pay_periods, period_base_pay, reconciliation_*, historical_payroll_entries, time_entries, scheduled_shifts, shift_assignments, Connecteam, tenant governance, setup-company, RLS, grants, worker documents, `authPassword` body, return shapes, `access_pin` column, plaintext deletion, hash_only mode, real-tenant `company_settings`. No code, no SQL, no migration changes in this sprint.
+
+### Risks
+- **Bcrypt JS Worker incompatibility** (live finding): hash compare always throws → falls back to plaintext. Today benign; blocks `hash_only`. S7-G must fix before any new mode.
+- Magic-link option (B) introduces extra browser navigation — acceptable for `/portal`, irrelevant for kiosk/front-desk.
+- Option A (custom JWT signing) is the most powerful but the most fragile across GoTrue upgrades — not recommended.
+- Plaintext fallback remains intentionally wide in `dual` — strictness lands only with `hash_only`.
