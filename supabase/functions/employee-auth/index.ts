@@ -318,7 +318,7 @@ Deno.serve(async (req) => {
         console.info("[phone-login]", { normalizedPhone: cleanPhone, step: "activate_lookup" });
         const { data: byPhone } = await adminClient
           .from("employees")
-          .select("id, first_name, last_name, access_pin, is_active, user_id, phone_number")
+          .select("id, first_name, last_name, access_pin, is_active, user_id, phone_number, company_id")
           .in("phone_number", phoneVariants)
           .eq("is_active", true)
           .order("created_at", { ascending: true });
