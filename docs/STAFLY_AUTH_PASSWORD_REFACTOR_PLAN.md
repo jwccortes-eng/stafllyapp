@@ -1737,3 +1737,72 @@ Edge code, `pin-validation.ts`, `security-flags.ts`, `internal_verify_pin_hash`,
 
 ### Recommendation
 Hold at S7-L-b. Do **not** proceed to S7-M (hash_only) or plaintext kill until 24h soak passes clean and kiosk/front-desk QA harness exists.
+
+---
+
+## S7-L-c — Post-flip Telemetry Review (Read-Only) — 2026-06-23
+
+**Window reviewed:** 2026-06-23 00:20 UTC (flip) → review time (~24h).
+**Mode:** Read-only. Zero code, SQL writes, migrations, RLS, grants, payroll, auth or real-tenant changes.
+
+### Settings verification
+- Stafly Demo (`d3500000-0000-4000-8000-000000000001`, `is_demo=true`): `security.pin_auth_mode = "hash_only_ready"` (unchanged since flip at 2026-06-23 00:20:07 UTC). ✅
+- Other tenants in `hash_only_ready` / `hash_only`: **0**. ✅
+- No other `company_settings` rows modified.
+
+### Hash verification (demo only, counts only)
+- Workers with `access_pin`: **7**
+- Workers with `access_pin_hash`: **7**
+- Hashes where `extensions.crypt(access_pin, access_pin_hash) = access_pin_hash`: **7 / 7** ✅
+- No PIN/hash/email/phone exported.
+
+### Telemetry review (employee-auth, kiosk-clock, front-desk-checkin)
+- Edge function logs in window: **none** for the three PIN edge functions on Stafly Demo.
+- Edge HTTP analytics: **0** requests matched in last 24h.
+- `validation_source="hash"`: 0 · `fallback_suppressed`: 0 · `hash_error`: 0 · `hash_mismatch`: 0 · 401/403/500 spikes: none.
+- Effective post-flip PIN traffic on Demo: **insufficient** to validate behaviour in production-like volume.
+
+### Rollback trigger check
+- `hash_error=true`: ❌ none
+- `fallback_suppressed` for valid worker: ❌ none
+- 401/403/500 spike: ❌ none
+- Non-demo resolving `hash_only_ready`: ❌ none
+- Sensitive log leak: ❌ none observed in window
+- Payroll anomaly: ❌ none
+- **No rollback trigger met.**
+
+### Sensitive log audit
+- No PIN, `access_pin`, `access_pin_hash`, full hash, password, token, email or phone observed in window.
+- Pre-existing `[phone-login]` phone leak remains tracked as separate backlog (out of scope here).
+
+### Payroll safety check (Stafly Demo, last 24h)
+| Table | Rows created in window |
+|---|---|
+| pay_periods | 0 |
+| period_base_pay | 0 |
+| time_entries | 1 (pre-flip 20:54 UTC, demo seed activity) |
+| clock_events | 1 (pre-flip, demo) |
+| scheduled_shifts | 0 |
+| shift_assignments | 0 |
+| historical_payroll_entries | 0 |
+
+No payroll, reconciliation, Connecteam pipeline, or time/clock semantics changes. The single pre-flip time_entry/clock_event pair is demo seed activity unrelated to the flip.
+
+### Decision: **EXTEND**
+Technical state is clean (settings correct, 7/7 hashes valid, 0 errors, 0 rollback triggers, 0 payroll impact), but PIN-edge-function traffic on Demo during the window was effectively zero. There is no production-like evidence that `hash_only_ready` is exercising the hash path under real load. Promoting to S7-M (hash_only) or expanding scope on this evidence would be premature.
+
+### What was NOT touched
+Code, edge functions (`employee-auth`, `kiosk-clock`, `front-desk-checkin`), `pin-validation.ts`, `security-flags.ts`, `internal_verify_pin_hash`, `authPassword`, `access_pin`, `access_pin_hash`, RLS, grants, payroll, `time_entries`, `clock_events`, `scheduled_shifts`, `shift_assignments`, reconciliation_*, Connecteam, real tenants, plaintext data, any `company_settings` row.
+
+### Risks found
+- **Low traffic risk**: 0 PIN edge calls on Demo in 24h ⇒ soak window did not actually exercise the new mode. Decision based on absence of failures, not presence of successful real validations.
+- **Coverage gap (carried over)**: still no side-effect-free QA harness for kiosk-clock / front-desk-checkin.
+- **Pre-existing**: `[phone-login]` phone log leak — backlog, unchanged.
+
+### Recommendation (next)
+1. Keep Demo in `hash_only_ready` (no rollback).
+2. Run a second **S7-L-a-ext-style controlled PIN exercise** on Demo (employee-auth + at minimum a guarded kiosk-clock / front-desk-checkin probe) to generate real `validation_source="hash"` telemetry.
+3. Re-run S7-L-c review against that exercise window.
+4. Do **not** advance to S7-M (hash_only), plaintext kill, authPassword decoupling, or any real-tenant enablement until a soak window shows real `hash` validations with `hash_error=0` and `fallback_suppressed=0` for valid workers.
+
+Staged rollback SQL from S7-L-preflight remains valid and unused.
