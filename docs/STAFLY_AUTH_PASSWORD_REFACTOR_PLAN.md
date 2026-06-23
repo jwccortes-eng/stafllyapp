@@ -1507,3 +1507,193 @@ WHERE company_id='d3500000-0000-4000-8000-000000000001' AND key='security.pin_au
 - **R1 (medium):** kiosk + front-desk hash path lacks safe QA harness → no synthetic coverage possible without writing `clock_events`/`time_entries`/`front_desk_visits`. Recommend a future QA-mode plumbing sprint (`S7-L-a-harness`) before any production-tenant rollout beyond demo.
 - **R2 (low — pre-existing):** Demo worker #6 cannot complete login (`authPassword(pin)` Supabase password mismatch). Hash gate works; downstream auth seed missing. Orthogonal to S7-L-b.
 - **R3 (low — known):** `[phone-login]` logs normalized phone. Pre-existing; separate scrub sprint.
+
+## Sprint S7-L-preflight — Owner Approval + hash_only_ready Flip Runbook
+
+**Type:** doc-only / approval-only. The flip itself is **NOT executed** here; this section stages the owner-runbook for Sprint S7-L-b.
+
+**Date:** 2026-06-23
+
+### Guardrails reviewed
+
+- No `company_settings` write executed.
+- No edge-function, RPC, helper, or caller code changes.
+- No migrations, RLS, grants, or schema changes.
+- No payroll, `time_entries`, `clock_events`, `scheduled_shifts`, or `shift_assignments` touched.
+- No real tenants, Sandbox, or QA tenants touched.
+- No plaintext deletion, no `hash_only` activation, no `authPassword` decoupling.
+
+### 1. Owner / operator approval checklist
+
+| # | Gate | Required | Evidence location |
+|---|------|----------|-------------------|
+| 1 | Stafly Demo currently on `"dual"` | ✅ | S7-L-a §1, S7-L-a-ext §1 |
+| 2 | All 7 demo `access_pin_hash` rows crypt-valid | ✅ | S7-L-a-ext §1 |
+| 3 | `hash_error=0` observed | ✅ | S7-L-a-ext §6 |
+| 4 | `validation_source="hash"` exercised end-to-end | ✅ | S7-L-a-ext: 6/6 successful logins |
+| 5 | No sensitive logs (PIN, hash, password, token, email, phone) | ✅ | S7-L-a-ext §7 |
+| 6 | Owner / developer written approval for demo flip | ⚠️ **Required before S7-L-b** | This runbook |
+| 7 | On-call engineer assigned for flip window | ⚠️ **Required before S7-L-b** | This runbook |
+| 8 | Rollback owner identified and reachable | ⚠️ **Required before S7-L-b** | This runbook |
+| 9 | 24 h observation window scheduled post-flip | ⚠️ **Required before S7-L-b** | This runbook |
+| 10 | Explicit acceptance of reduced kiosk/front-desk coverage | ⚠️ **Required before S7-L-b** | §2 below |
+
+**Do not run S7-L-b until every required gate is signed off.**
+
+### 2. Accepted risks
+
+These risks are explicitly accepted for the **Stafly Demo** flip only. They block any broader rollout.
+
+| Risk | Severity | Acceptance rationale |
+|------|----------|--------------------|
+| **Reduced coverage**: only 6/21 planned correct-PIN events collected. Kiosk and front-desk flows were blocked to avoid side-effect writes. | Medium | The shared `validatePinDual` + `internal_verify_pin_hash` path was exercised cleanly through `employee-auth`; the helper is identical for kiosk/front-desk. Risk is contained to Demo and mitigated by tight post-flip monitoring. |
+| **Kiosk / front-desk not exercised end-to-end**: no QA-mode "no-write" harness exists. | Medium | Hash verification logic is shared; side-effect blockers are documented. Post-flip telemetry will catch any flow-specific wiring issues in Demo only. |
+| **Demo worker #6 cannot complete full login**: hash gate passes, but downstream `authPassword(pin)` Supabase password mismatch fails. | Low | Pre-existing demo data issue; orthogonal to `hash_only_ready`. Under `hash_only_ready` the hash gate behaves identically and the same downstream failure would occur. |
+| **`[phone-login]` logs normalized 10-digit phone.** | Low | Pre-existing telemetry; separate scrub sprint. Out of scope for S7-L. |
+
+**Owner acknowledgement text (copy into approval):**
+
+> I acknowledge that S7-L-b will flip only Stafly Demo to `hash_only_ready` with reduced synthetic coverage (6/21 events), and that kiosk-clock and front-desk-checkin have not been exercised end-to-end in this sprint. I accept that post-flip monitoring is the primary mitigation and agree to immediate rollback on any `hash_error`, unexpected `fallback_suppressed`, or worker-facing 401/500 increase.
+
+### 3. Preconditions for S7-L-b
+
+- `security.pin_auth_mode` for `d3500000-0000-4000-8000-000000000001` = `"dual"`.
+- 7/7 demo `access_pin_hash` rows pass `crypt(access_pin, access_pin_hash) = access_pin_hash`.
+- Zero `hash_error=true` events in trailing telemetry window.
+- Zero sensitive-value leaks in sampled logs.
+- No active incidents in `employee-auth`, `kiosk-clock`, or `front-desk-checkin`.
+- Rollback SQL and rollback owner ready.
+- Real tenants, Sandbox, and QA tenants remain `legacy`.
+- No `hash_only_ready` rows exist for any other `company_id`.
+
+### 4. Exact flip SQL (S7-L-b — staged, NOT executed)
+
+Run **only** after all owner gates are signed off:
+
+```sql
+-- FLIP: Stafly Demo dual → hash_only_ready
+INSERT INTO public.company_settings (company_id, key, value)
+VALUES (
+  'd3500000-0000-4000-8000-000000000001',
+  'security.pin_auth_mode',
+  '"hash_only_ready"'::jsonb
+)
+ON CONFLICT (company_id, key) DO UPDATE
+  SET value = EXCLUDED.value, updated_at = now()
+WHERE public.company_settings.company_id = 'd3500000-0000-4000-8000-000000000001'
+  AND public.company_settings.key = 'security.pin_auth_mode';
+```
+
+This is a single-row `company_settings` mutation. No `employees` rows, no `access_pin`/`access_pin_hash`, no RLS, no grants, no payroll tables are modified.
+
+### 5. Exact rollback SQL (S7-L-b — staged, NOT executed)
+
+Keep these statements ready before executing the flip:
+
+```sql
+-- SOFT ROLLBACK: hash_only_ready → dual (restore plaintext fallback)
+UPDATE public.company_settings
+SET value = '"dual"'::jsonb, updated_at = now()
+WHERE company_id = 'd3500000-0000-4000-8000-000000000001'
+  AND key = 'security.pin_auth_mode';
+
+-- HARD ROLLBACK: hash_only_ready → legacy (PIN-derived Supabase password path)
+UPDATE public.company_settings
+SET value = '"legacy"'::jsonb, updated_at = now()
+WHERE company_id = 'd3500000-0000-4000-8000-000000000001'
+  AND key = 'security.pin_auth_mode';
+```
+
+Use **soft rollback** for any hash-specific issue where the plaintext fallback is still safe. Use **hard rollback** only if the dual path itself is judged unsafe.
+
+### 6. Post-flip monitoring plan (24 h observation window)
+
+**Frequency:** hourly sweep for first 4 h, then every 4 h for the remaining 20 h.
+
+**Flows to monitor:**
+- `employee-auth` portal login
+- `kiosk-clock` clock in/out
+- `front-desk-checkin` PIN-gated paths
+
+**Telemetry signals:**
+
+| Signal | Expected in Demo `hash_only_ready` | Action if unexpected |
+|--------|-----------------------------------|----------------------|
+| `validation_source="hash"` | >95% of successful PIN validations | Investigate any drop below 95% |
+| `validation_source="plaintext_fallback"` | 0 (fallback suppressed in `hash_only_ready`) | Any non-zero event triggers soft rollback |
+| `fallback_suppressed=true` | Only for missing/corrupt hash or wrong PIN | Non-zero for known-good worker → immediate soft rollback |
+| `suppressed_reason` | `missing_hash`, `hash_mismatch`, or `hash_error` only | Any other value → investigate |
+| `hash_error=true` | 0 | Immediate soft rollback |
+| `hash_mismatch=true` | Only on intentional wrong PIN | Spike correlated with support tickets → investigate |
+| HTTP 401/403/500 spikes | Within baseline | >20% increase → immediate hard rollback |
+| `[phone-login]` logs | Normalized phone still emitted | Track separately; not a flip blocker |
+
+**Operational checks:**
+- Demo portal login smoke test each hour using worker #1–#5 credentials.
+- Kiosk and front-desk demo pages probed at least once in the first hour (manual or scripted; prefer no-write probes).
+- No payroll or scheduling anomalies correlated with the flip window.
+
+### 7. Immediate rollback conditions
+
+Rollback the flip **without waiting for the end of the window** if any of the following occur:
+
+- Any `hash_error=true` event for a demo worker.
+- Any `fallback_suppressed=true` event for a **known-good** demo worker (valid hash + correct PIN).
+- Unexpected worker-facing increase in 401/403/500 responses in `employee-auth`, `kiosk-clock`, or `front-desk-checkin`.
+- Any non-demo tenant resolves to `hash_only_ready`.
+- Sensitive-value leak appears in logs (PIN, hash, password, token, email, phone).
+- Any payroll, `time_entries`, or `scheduled_shifts` anomaly during the window — even if unrelated — until root cause excludes the flip.
+- Kiosk or front-desk failure pattern not present pre-flip.
+- Owner or on-call decides the risk is no longer acceptable.
+
+**Rollback decision authority:** rollback owner identified in §1.
+
+### 8. What remains blocked after S7-L-b
+
+Even after a successful demo flip, the following remain **explicitly out of scope** until their own approved sprints:
+
+- Real tenants (`Quality Staff`, `Eminence`, `Milenium`, `Hamaspik`, `MyStaff`, `Zemer`, `JKitchen`, `Parceros`, etc.).
+- Sandbox / QA tenants flipping to `hash_only_ready`.
+- `hash_only` mode (plaintext ignored / deleted).
+- Deletion, nulling, or revoking of `access_pin` plaintext.
+- `authPassword` decoupling / random-password bridge.
+- Any rollout beyond Stafly Demo.
+- End-to-end kiosk / front-desk QA on non-demo tenants until a safe no-write harness is built.
+
+### 9. No-go conditions for S7-L-b
+
+S7-L-b is **NO-GO** if any of the following are true at execution time:
+
+- Owner written approval is missing.
+- On-call engineer is not assigned / reachable.
+- Demo is not currently `"dual"`.
+- Any demo hash fails `crypt()` verification.
+- Any `hash_error=true` appears in trailing telemetry.
+- Sensitive-value leak is observed in recent logs.
+- Any real tenant, Sandbox, or QA tenant is non-`legacy`.
+- Rollback SQL or rollback owner is not staged.
+
+### 10. Recommendation for S7-L-b
+
+**GO — with owner approval and explicit acceptance of reduced coverage.**
+
+The technical preconditions are satisfied:
+- Demo hash integrity is 7/7.
+- The hash path is exercised end-to-end via `employee-auth` (6/6 successful logins, 0 hash errors, 0 plaintext fallbacks).
+- No sensitive-value leaks were found in telemetry.
+- Rollback is a single-row setting flip with no data/schema impact.
+
+The remaining risk is **coverage breadth**, not correctness. The shared helper contract is validated; kiosk and front-desk share the same helper and will be monitored in real demo traffic post-flip. Broader rollout remains blocked until a no-write QA harness is built and the 24 h demo window is clean.
+
+**S7-L-b must be a separate, owner-approved execution sprint.** This preflight document provides the runbook; the flip itself must record the sign-off, execute the staged SQL, and run the 24 h monitoring plan.
+
+### What was NOT touched
+
+`company_settings` values, `employee-auth` / `kiosk-clock` / `front-desk-checkin` code, `_shared/pin-validation.ts`, `_shared/security-flags.ts`, `internal_verify_pin_hash`, `authPassword`, `access_pin`/`access_pin_hash` data, RLS, grants, payroll tables, `time_entries`, `clock_events`, `scheduled_shifts`, `shift_assignments`, `front_desk_visits`, Connecteam, real/Sandbox/QA tenants. Zero migrations, zero SQL writes, zero code changes.
+
+### Risks found
+
+- **R1 (accepted for Demo):** reduced synthetic coverage (6/21) and no end-to-end kiosk/front-desk exercise. Mitigated by shared-helper validation and tight post-flip monitoring; blocks all non-demo rollout.
+- **R2 (low — pre-existing):** Demo worker #6 downstream `authPassword(pin)` mismatch. Hash path works; not a flip blocker.
+- **R3 (low — pre-existing):** `[phone-login]` logs normalized phone digits. Separate scrub sprint; not a flip blocker.
+
