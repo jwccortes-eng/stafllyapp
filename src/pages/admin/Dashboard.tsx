@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { buildPastelMap, ASSIGNMENT_STATUS_CONFIG } from "@/components/shifts/pastel-utils";
 import {
@@ -406,307 +407,346 @@ function AdminDashboardDesktop() {
      setMarketplaceKpis({ totalProfiles: 0, withPhoto: 0, missingPhoto: 0, withEmail: 0, missingEmail: 0, workerProfiles: 0 });
    }, [selectedCompanyId]);
 
-   // ── Detect tenant type ──
+   // ─────────────────────────────────────────────────────────────
+   // S3.5B: TanStack React Query migration (tenant-scoped, 30s stale).
+   //
+   // Three queries with company_id-scoped keys to prevent cross-tenant
+   // cache reuse. Behavior is preserved 1:1 — the queryFn bodies are
+   // the original fetch functions; useEffects push results into the
+   // existing useState slots so downstream rendering is unchanged.
+   // ─────────────────────────────────────────────────────────────
+
+   const tenantTypeQuery = useQuery({
+     queryKey: ["dashboard", "tenantType", selectedCompanyId],
+     enabled: !!selectedCompanyId,
+     staleTime: 30_000,
+     queryFn: async () => {
+       const cid = selectedCompanyId!;
+       const { data } = await supabase
+         .from("company_settings")
+         .select("value")
+         .eq("company_id", cid)
+         .eq("key", "tenant_type")
+         .maybeSingle();
+       const val = data?.value;
+       return typeof val === "string" ? val : null;
+     },
+   });
+
    useEffect(() => {
-     if (!selectedCompanyId) return;
-     supabase.from("company_settings").select("value").eq("company_id", selectedCompanyId).eq("key", "tenant_type").maybeSingle()
-       .then(({ data }) => {
-         const val = data?.value;
-         setTenantType(typeof val === 'string' ? val : null);
-       });
-   }, [selectedCompanyId]);
+     if (tenantTypeQuery.data === undefined) return;
+     setTenantType(tenantTypeQuery.data ?? null);
+   }, [tenantTypeQuery.data]);
 
    // ── PHASE 1: Critical data (KPIs + today) ──
-  useEffect(() => {
-    if (!selectedCompanyId) return;
-    setLoading(true);
-    setFetchError(false);
+   const criticalQuery = useQuery({
+     queryKey: ["dashboard", "critical", selectedCompanyId],
+     enabled: !!selectedCompanyId,
+     staleTime: 30_000,
+     queryFn: async () => {
+       const cid = selectedCompanyId!;
+       const today = new Date().toISOString().split("T")[0];
 
-    const cid = selectedCompanyId;
-    const today = new Date().toISOString().split("T")[0];
+       const [empRes, periodRes, ticketsRes, todayShiftsRes, openEntriesRes] = await Promise.all([
+         supabase.from("employees").select("id", { count: "exact", head: true }).eq("is_active", true).eq("company_id", cid),
+         supabase.from("pay_periods").select("*").eq("company_id", cid).lte("start_date", today).order("start_date", { ascending: false }).limit(3),
+         supabase.from("employee_tickets").select("id", { count: "exact", head: true }).eq("company_id", cid).in("status", ["new", "in_progress"]),
+         supabase.from("scheduled_shifts").select("id").eq("company_id", cid).eq("date", today).is("deleted_at", null),
+         supabase.from("time_entries" as any).select("id", { count: "exact", head: true }).eq("company_id", cid).is("clock_out" as any, null),
+       ]);
 
-    async function fetchCritical() {
-      try {
-        const [empRes, periodRes, ticketsRes, todayShiftsRes, openEntriesRes] = await Promise.all([
-          supabase.from("employees").select("id", { count: "exact", head: true }).eq("is_active", true).eq("company_id", cid),
-          supabase.from("pay_periods").select("*").eq("company_id", cid).lte("start_date", today).order("start_date", { ascending: false }).limit(3),
-          supabase.from("employee_tickets").select("id", { count: "exact", head: true }).eq("company_id", cid).in("status", ["new", "in_progress"]),
-          supabase.from("scheduled_shifts").select("id").eq("company_id", cid).eq("date", today).is("deleted_at", null),
-          supabase.from("time_entries" as any).select("id", { count: "exact", head: true }).eq("company_id", cid).is("clock_out" as any, null),
-        ]);
+       let periodTotal = 0;
+       let hours = 0;
+       const recentPeriods = (periodRes as any).data ?? [];
 
-        let periodTotal = 0;
-        let hours = 0;
-        let heroLabel = "";
-        const recentPeriods = (periodRes as any).data ?? [];
-        
-        // Try periods in order — pick first one with actual payroll data
-        for (const period of recentPeriods) {
-          // Try period_base_pay
-          const { data: basePays } = await supabase.from("period_base_pay")
-            .select("base_total_pay, total_work_hours").eq("period_id", period.id).eq("company_id", cid);
-          const pTotal = (basePays ?? []).reduce((s: number, bp: any) => s + Number(bp.base_total_pay || 0), 0);
-          const pHours = (basePays ?? []).reduce((s: number, bp: any) => s + Number(bp.total_work_hours || 0), 0);
-          if (pTotal > 0) {
-            periodTotal = pTotal;
-            hours = pHours;
-            heroLabel = period.status === "open" ? "" : `(${format(parseISO(period.start_date), "dd MMM", { locale: enUS })})`;
-            break;
-          }
-        }
-        setTotalHoursWorked(Math.round(hours * 10) / 10);
+       for (const period of recentPeriods) {
+         const { data: basePays } = await supabase.from("period_base_pay")
+           .select("base_total_pay, total_work_hours").eq("period_id", period.id).eq("company_id", cid);
+         const pTotal = (basePays ?? []).reduce((s: number, bp: any) => s + Number(bp.base_total_pay || 0), 0);
+         const pHours = (basePays ?? []).reduce((s: number, bp: any) => s + Number(bp.total_work_hours || 0), 0);
+         if (pTotal > 0) {
+           periodTotal = pTotal;
+           hours = pHours;
+           break;
+         }
+       }
 
-        const todayShiftIds = (todayShiftsRes.data ?? []).map((s: any) => s.id);
-        let assignedCount = 0;
-        if (todayShiftIds.length > 0) {
-          const { count } = await supabase.from("shift_assignments").select("id", { count: "exact", head: true }).eq("company_id", cid).eq("status", "confirmed").in("shift_id", todayShiftIds);
-          assignedCount = count ?? 0;
-        }
-        setTodaySummary({ shiftsToday: todayShiftIds.length, assignedToday: assignedCount, clockedIn: 0, openEntries: openEntriesRes.count ?? 0 });
+       const todayShiftIds = (todayShiftsRes.data ?? []).map((s: any) => s.id);
+       let assignedCount = 0;
+       if (todayShiftIds.length > 0) {
+         const { count } = await supabase.from("shift_assignments").select("id", { count: "exact", head: true }).eq("company_id", cid).eq("status", "confirmed").in("shift_id", todayShiftIds);
+         assignedCount = count ?? 0;
+       }
 
-        const currentPeriod = recentPeriods[0] ?? null;
-        setStats({
-          totalEmployees: empRes.count ?? 0,
-          activePeriod: currentPeriod ? `${currentPeriod.start_date} → ${currentPeriod.end_date}` : null,
-          periodStatus: currentPeriod?.status ?? null,
-          totalImports: 0,
-          totalMovements: 0,
-          periodTotal: Math.round(periodTotal * 100) / 100,
-          periodStartDate: currentPeriod?.start_date ?? null,
-          periodEndDate: currentPeriod?.end_date ?? null,
-          pendingTickets: ticketsRes.count ?? 0,
-        });
+       const currentPeriod = recentPeriods[0] ?? null;
+       return {
+         totalHoursWorked: Math.round(hours * 10) / 10,
+         todaySummary: { shiftsToday: todayShiftIds.length, assignedToday: assignedCount, clockedIn: 0, openEntries: openEntriesRes.count ?? 0 },
+         stats: {
+           totalEmployees: empRes.count ?? 0,
+           activePeriod: currentPeriod ? `${currentPeriod.start_date} → ${currentPeriod.end_date}` : null,
+           periodStatus: currentPeriod?.status ?? null,
+           totalImports: 0,
+           totalMovements: 0,
+           periodTotal: Math.round(periodTotal * 100) / 100,
+           periodStartDate: currentPeriod?.start_date ?? null,
+           periodEndDate: currentPeriod?.end_date ?? null,
+           pendingTickets: ticketsRes.count ?? 0,
+         },
+       };
+     },
+   });
 
+   useEffect(() => {
+     if (!criticalQuery.data) return;
+     const d = criticalQuery.data;
+     setTotalHoursWorked(d.totalHoursWorked);
+     setTodaySummary(d.todaySummary);
+     setStats(d.stats);
+   }, [criticalQuery.data]);
 
-        setLoading(false);
-      } catch (err) {
-        console.error("Dashboard critical fetch error:", err);
-        setFetchError(true);
-        setLoading(false);
-      }
-    }
+   useEffect(() => {
+     setLoading(!selectedCompanyId ? true : criticalQuery.isLoading);
+     setFetchError(criticalQuery.isError);
+   }, [selectedCompanyId, criticalQuery.isLoading, criticalQuery.isError]);
 
-    fetchCritical();
-  }, [selectedCompanyId]);
+   // ── PHASE 2: Secondary data (deferred – charts, activity, sparklines) ──
+   const secondaryQuery = useQuery({
+     queryKey: ["dashboard", "secondary", selectedCompanyId, payrollConfig?.payroll_week_start_day ?? null, payrollConfig?.expected_close_day ?? null, payrollConfig?.overdue_grace_days ?? null],
+     enabled: !!selectedCompanyId && !!criticalQuery.data,
+     staleTime: 30_000,
+     queryFn: async () => {
+       const cid = selectedCompanyId!;
+       const monthStart = new Date();
+       monthStart.setDate(1);
+       const monthStartStr = monthStart.toISOString().split("T")[0];
 
-  // ── PHASE 2: Secondary data (deferred – charts, activity, sparklines) ──
-  useEffect(() => {
-    if (!selectedCompanyId || loading) return;
+       const [
+         impRes, movRes, shiftReqRes, pendMovRes, attRes,
+         missingPhotoRes, clientsRes, staffReqRes, invRes,
+         compChangesRes, compAnalysisRes, empCreatedRes, allPeriodsRes,
+         annRes, actRes,
+       ] = await Promise.all([
+         supabase.from("imports").select("id", { count: "exact", head: true }).eq("company_id", cid),
+         supabase.from("movements").select("id", { count: "exact", head: true }).eq("company_id", cid),
+         supabase.from("shift_requests").select("id", { count: "exact", head: true }).eq("company_id", cid).eq("status", "pending"),
+         supabase.from("movements").select("id", { count: "exact", head: true }).eq("company_id", cid).eq("approval_status", "pending"),
+         supabase.from("shift_attendance_confirmations").select("id", { count: "exact", head: true }).eq("company_id", cid).eq("status", "pending"),
+         supabase.from("employees").select("id", { count: "exact", head: true }).eq("company_id", cid).eq("is_active", true).is("avatar_url", null),
+         supabase.from("clients").select("id", { count: "exact", head: true }).eq("company_id", cid).is("deleted_at", null).eq("status", "active"),
+         supabase.from("staffing_requests").select("id", { count: "exact", head: true }).eq("company_id", cid).not("status", "in", '("completed","cancelled","rejected")'),
+         supabase.from("legacy_invoices").select("id, status, grand_total").eq("company_id", cid),
+         supabase.from("compensation_change_log").select("id", { count: "exact", head: true }).eq("company_id", cid).gte("changed_at", monthStartStr),
+         supabase.from("compensation_analysis_summary").select("daily_payment_detected, ride_payment_detected, mixed_compensation_detected").eq("company_id", cid),
+         supabase.from("employees").select("created_at").eq("company_id", cid).eq("is_active", true).order("created_at", { ascending: true }),
+         supabase.from("pay_periods").select("id, start_date, end_date, status, paid_at, published_at").eq("company_id", cid).order("start_date", { ascending: false }).limit(20),
+         supabase.from("announcements").select("id, title, body, priority, pinned, published_at, media_urls").eq("company_id", cid).not("published_at", "is", null).is("deleted_at", null).order("published_at", { ascending: false }).limit(5),
+         supabase.from("activity_log").select("id, action, entity_type, entity_id, created_at, details").eq("company_id", cid).order("created_at", { ascending: false }).limit(10),
+       ]);
 
-    const cid = selectedCompanyId;
-    const today = new Date().toISOString().split("T")[0];
-    const monthStart = new Date();
-    monthStart.setDate(1);
-    const monthStartStr = monthStart.toISOString().split("T")[0];
+       // Chart pipeline (mirrors original)
+       const allPeriods = allPeriodsRes.data ?? [];
+       let chartMapped: any[] = [];
+       const closedOrPaid = allPeriods.filter(p => ["closed", "paid", "published"].includes(p.status) || !!p.paid_at || !!p.published_at);
+       const chartPeriods = closedOrPaid.length > 0
+         ? [...closedOrPaid].reverse().slice(-8)
+         : [...allPeriods].reverse().slice(-8);
+       if (chartPeriods.length > 0) {
+         const periodIds = chartPeriods.map(p => p.id);
 
-    async function fetchSecondary() {
-      try {
-        const [
-          impRes, movRes, shiftReqRes, pendMovRes, attRes,
-          missingPhotoRes, clientsRes, staffReqRes, invRes,
-          compChangesRes, compAnalysisRes, empCreatedRes, allPeriodsRes,
-          annRes, actRes,
-        ] = await Promise.all([
-          supabase.from("imports").select("id", { count: "exact", head: true }).eq("company_id", cid),
-          supabase.from("movements").select("id", { count: "exact", head: true }).eq("company_id", cid),
-          supabase.from("shift_requests").select("id", { count: "exact", head: true }).eq("company_id", cid).eq("status", "pending"),
-          supabase.from("movements").select("id", { count: "exact", head: true }).eq("company_id", cid).eq("approval_status", "pending"),
-          supabase.from("shift_attendance_confirmations").select("id", { count: "exact", head: true }).eq("company_id", cid).eq("status", "pending"),
-          supabase.from("employees").select("id", { count: "exact", head: true }).eq("company_id", cid).eq("is_active", true).is("avatar_url", null),
-          supabase.from("clients").select("id", { count: "exact", head: true }).eq("company_id", cid).is("deleted_at", null).eq("status", "active"),
-          supabase.from("staffing_requests").select("id", { count: "exact", head: true }).eq("company_id", cid).not("status", "in", '("completed","cancelled","rejected")'),
-          supabase.from("legacy_invoices").select("id, status, grand_total").eq("company_id", cid),
-          supabase.from("compensation_change_log").select("id", { count: "exact", head: true }).eq("company_id", cid).gte("changed_at", monthStartStr),
-          supabase.from("compensation_analysis_summary").select("daily_payment_detected, ride_payment_detected, mixed_compensation_detected").eq("company_id", cid),
-          supabase.from("employees").select("created_at").eq("company_id", cid).eq("is_active", true).order("created_at", { ascending: true }),
-          supabase.from("pay_periods").select("id, start_date, end_date, status, paid_at, published_at").eq("company_id", cid).order("start_date", { ascending: false }).limit(20),
-          supabase.from("announcements").select("id, title, body, priority, pinned, published_at, media_urls").eq("company_id", cid).not("published_at", "is", null).is("deleted_at", null).order("published_at", { ascending: false }).limit(5),
-          supabase.from("activity_log").select("id, action, entity_type, entity_id, created_at, details").eq("company_id", cid).order("created_at", { ascending: false }).limit(10),
-        ]);
+         const [rpsRes, chartMovRes] = await Promise.all([
+           supabase.from("reconciliation_period_status").select("id, period_id").eq("company_id", cid).in("period_id", periodIds).neq("status", "superseded"),
+           supabase.from("movements").select("period_id, total_value, concept_id, concepts(category, name)").eq("company_id", cid).in("period_id", periodIds),
+         ]);
 
-        setStats(prev => ({ ...prev, totalImports: impRes.count ?? 0, totalMovements: movRes.count ?? 0 }));
+         const rpsList = rpsRes.data ?? [];
+         const rfrByPeriod: Record<string, { base: number; pending: boolean }> = {};
 
-        setPendingCounts({
-          shiftRequests: shiftReqRes.count ?? 0,
-          pendingMovements: pendMovRes.count ?? 0,
-          openTickets: stats.pendingTickets,
-          pendingAttendance: attRes.count ?? 0,
-        });
-        const missingPhoto = missingPhotoRes.count ?? 0;
-        setMissingPhotoCount(missingPhoto);
+         if (rpsList.length > 0) {
+           const rpsIds = rpsList.map(r => r.id);
+           const { data: rfrData } = await supabase.from("reconciliation_final_records")
+             .select("period_status_id, grand_total")
+             .eq("company_id", cid)
+             .in("period_status_id", rpsIds);
 
-        // Marketplace KPIs (uses data already fetched)
-        if (tenantType === 'marketplace') {
-          const total = stats.totalEmployees || 0;
-          // Count employees with email (empCreatedRes has all active employees)
-          const withEmailCount = ((empCreatedRes as any).data ?? []).length; // already filtered is_active
-          setMarketplaceKpis({
-            totalProfiles: total,
-            withPhoto: total - missingPhoto,
-            missingPhoto: missingPhoto,
-            withEmail: withEmailCount,
-            missingEmail: total - withEmailCount,
-            workerProfiles: 0,
-          });
-        }
+           const rpsToPayPeriod: Record<string, string> = {};
+           rpsList.forEach(r => { rpsToPayPeriod[r.id] = r.period_id; });
 
-        const invoices = invRes.data ?? [];
-        const unpaid = invoices.filter(i => ["issued", "sent", "viewed", "overdue"].includes(i.status));
-        const overdue = invoices.filter(i => i.status === "overdue");
-        setCommercialKpis({
-          activeClients: clientsRes.count ?? 0,
-          openRequests: staffReqRes.count ?? 0,
-          unpaidInvoices: unpaid.length,
-          overdueInvoices: overdue.length,
-          unpaidTotal: unpaid.reduce((s, i) => s + (i.grand_total || 0), 0),
-          overdueTotal: overdue.reduce((s, i) => s + (i.grand_total || 0), 0),
-        });
+           (rfrData ?? []).forEach((rfr: any) => {
+             const ppId = rpsToPayPeriod[rfr.period_status_id];
+             if (!ppId) return;
+             if (!rfrByPeriod[ppId]) rfrByPeriod[ppId] = { base: 0, pending: false };
+             rfrByPeriod[ppId].base += Number(rfr.grand_total || 0);
+           });
+         }
 
-        const analysis = compAnalysisRes.data ?? [];
-        setCompKpis({
-          rateChanges: compChangesRes.count ?? 0,
-          dailyPatterns: analysis.filter(a => a.daily_payment_detected).length,
-          ridePayments: analysis.filter(a => a.ride_payment_detected).length,
-          warnings: analysis.filter(a => a.mixed_compensation_detected).length,
-        });
+         const periodsWithoutRecon = periodIds.filter(id => !rfrByPeriod[id]);
+         if (periodsWithoutRecon.length > 0) {
+           const { data: pbpData } = await supabase.from("period_base_pay")
+             .select("period_id, base_total_pay")
+             .eq("company_id", cid)
+             .in("period_id", periodsWithoutRecon);
+           (pbpData ?? []).forEach((bp: any) => {
+             if (!rfrByPeriod[bp.period_id]) rfrByPeriod[bp.period_id] = { base: 0, pending: false };
+             rfrByPeriod[bp.period_id].base += Number(bp.base_total_pay || 0);
+           });
+         }
 
-        const empCreated = empCreatedRes.data ?? [];
-        if (empCreated.length > 0) {
-          const months: Record<string, number> = {};
-          empCreated.forEach(e => { const m = format(parseISO(e.created_at), "yyyy-MM"); months[m] = (months[m] || 0) + 1; });
-          const keys = Object.keys(months).sort().slice(-6);
-          let cum = empCreated.filter(e => format(parseISO(e.created_at), "yyyy-MM") < (keys[0] || "")).length;
-          setSparkEmployees(keys.map(k => { cum += months[k]; return cum; }));
-        }
+         const classifyExtra = (name: string): string => {
+           const n = (name || "").toLowerCase();
+           if (n.includes("weekend") || n.includes("daily pay")) return "turnos";
+           if (n.includes("transporte") || n.includes("ryde") || n.includes("ride") || n.includes("especial ryde")) return "transporte";
+           if (n.includes("propina") || n.includes("tip")) return "propinas";
+           if (n.includes("reintegro") || n.includes("reimbursement")) return "reintegros";
+           if (n.includes("viaje") || n.includes("travel")) return "viaje";
+           return "otros";
+         };
 
-        const allPeriods = allPeriodsRes.data ?? [];
-        if (allPeriods.length > 0) {
-          const infos = allPeriods.map(p => calculateOverdue(p, payrollConfig));
-          setOverdueInfos(infos.filter(i => i.isOverdue));
-          setPeriodSummary({
-            open: allPeriods.filter(p => p.status === "open").length,
-            closed: allPeriods.filter(p => p.status === "closed").length,
-            published: allPeriods.filter(p => !!p.published_at).length,
-            paid: allPeriods.filter(p => !!(p as any).paid_at).length,
-          });
-        }
+         chartMapped = chartPeriods.map(p => {
+           const baseInfo = rfrByPeriod[p.id];
+           const base = baseInfo ? Math.round(baseInfo.base) : 0;
+           const periodMovs = (chartMovRes.data ?? []).filter((m: any) => m.period_id === p.id);
+           const extraBuckets: Record<string, number> = { turnos: 0, transporte: 0, propinas: 0, reintegros: 0, viaje: 0, otros: 0 };
+           let extrasTotal = 0;
+           let deducciones = 0;
+           for (const m of periodMovs) {
+             const val = Number(m.total_value || 0);
+             if (m.concepts?.category === "deduction") {
+               deducciones += Math.abs(val);
+             } else if (m.concepts?.category === "extra") {
+               extrasTotal += val;
+               const bucket = classifyExtra(m.concepts?.name || "");
+               extraBuckets[bucket] += val;
+             }
+           }
+           const hasMov = extrasTotal > 0 || deducciones > 0;
+           const pending = base === 0 && hasMov;
+           return {
+             label: format(parseISO(p.start_date), "dd MMM", { locale: enUS }),
+             base: Math.round(base),
+             extras: Math.round(extrasTotal),
+             deducciones: Math.round(deducciones),
+             pending,
+             _turnos: Math.round(extraBuckets.turnos),
+             _transporte: Math.round(extraBuckets.transporte),
+             _propinas: Math.round(extraBuckets.propinas),
+             _reintegros: Math.round(extraBuckets.reintegros),
+             _viaje: Math.round(extraBuckets.viaje),
+             _otros: Math.round(extraBuckets.otros),
+           };
+         });
+       }
 
-        // ── Chart: Show periods with actual payroll activity, not empty future periods ──
-        // allPeriods is DESC — filter to periods with status != 'open' OR that have base pay, then take last 8
-        const closedOrPaid = allPeriods.filter(p => ["closed", "paid", "published"].includes(p.status) || !!p.paid_at || !!p.published_at);
-        const chartPeriods = closedOrPaid.length > 0
-          ? [...closedOrPaid].reverse().slice(-8)
-          : [...allPeriods].reverse().slice(-8); // fallback if no closed periods
-        if (chartPeriods.length > 0) {
-          const periodIds = chartPeriods.map(p => p.id);
+       // Announcements + reactions
+       const anns = (annRes.data ?? []) as any[];
+       let feedAnns: any[] = [];
+       if (anns.length > 0) {
+         const annIds = anns.map(a => a.id);
+         const { data: reactions } = await supabase.from("announcement_reactions").select("announcement_id").in("announcement_id", annIds);
+         const countMap: Record<string, number> = {};
+         (reactions ?? []).forEach(r => { countMap[r.announcement_id] = (countMap[r.announcement_id] || 0) + 1; });
+         feedAnns = anns.map(a => ({ ...a, media_urls: Array.isArray(a.media_urls) ? a.media_urls : [], reaction_count: countMap[a.id] || 0 }));
+       }
 
-          // Get reconciliation period statuses that link to these pay_periods
-          const [rpsRes, chartMovRes] = await Promise.all([
-            supabase.from("reconciliation_period_status").select("id, period_id").eq("company_id", cid).in("period_id", periodIds).neq("status", "superseded"),
-            supabase.from("movements").select("period_id, total_value, concept_id, concepts(category, name)").eq("company_id", cid).in("period_id", periodIds),
-          ]);
+       return {
+         impCount: impRes.count ?? 0,
+         movCount: movRes.count ?? 0,
+         shiftReqCount: shiftReqRes.count ?? 0,
+         pendMovCount: pendMovRes.count ?? 0,
+         attCount: attRes.count ?? 0,
+         missingPhotoCount: missingPhotoRes.count ?? 0,
+         clientsCount: clientsRes.count ?? 0,
+         staffReqCount: staffReqRes.count ?? 0,
+         invoices: invRes.data ?? [],
+         compChangesCount: compChangesRes.count ?? 0,
+         compAnalysis: compAnalysisRes.data ?? [],
+         empCreated: empCreatedRes.data ?? [],
+         allPeriods,
+         feedAnns,
+         activity: actRes.data ?? [],
+         chartMapped,
+       };
+     },
+   });
 
-          const rpsList = rpsRes.data ?? [];
-          let rfrByPeriod: Record<string, { base: number; pending: boolean }> = {};
+   // Push secondary query results into existing state (preserves 1:1 UX).
+   useEffect(() => {
+     if (!secondaryQuery.data) return;
+     const d = secondaryQuery.data;
 
-          if (rpsList.length > 0) {
-            const rpsIds = rpsList.map(r => r.id);
-            const { data: rfrData } = await supabase.from("reconciliation_final_records")
-              .select("period_status_id, grand_total")
-              .eq("company_id", cid)
-              .in("period_status_id", rpsIds);
+     setStats(prev => ({ ...prev, totalImports: d.impCount, totalMovements: d.movCount }));
 
-            // Map reconciliation_period_status.id -> pay_period.id
-            const rpsToPayPeriod: Record<string, string> = {};
-            rpsList.forEach(r => { rpsToPayPeriod[r.id] = r.period_id; });
+     setPendingCounts({
+       shiftRequests: d.shiftReqCount,
+       pendingMovements: d.pendMovCount,
+       openTickets: stats.pendingTickets,
+       pendingAttendance: d.attCount,
+     });
+     setMissingPhotoCount(d.missingPhotoCount);
 
-            (rfrData ?? []).forEach((rfr: any) => {
-              const ppId = rpsToPayPeriod[rfr.period_status_id];
-              if (!ppId) return;
-              if (!rfrByPeriod[ppId]) rfrByPeriod[ppId] = { base: 0, pending: false };
-              rfrByPeriod[ppId].base += Number(rfr.grand_total || 0);
-            });
-          }
+     if (tenantType === "marketplace") {
+       const total = stats.totalEmployees || 0;
+       const withEmailCount = d.empCreated.length;
+       setMarketplaceKpis({
+         totalProfiles: total,
+         withPhoto: total - d.missingPhotoCount,
+         missingPhoto: d.missingPhotoCount,
+         withEmail: withEmailCount,
+         missingEmail: total - withEmailCount,
+         workerProfiles: 0,
+       });
+     }
 
-          // Fallback: also check period_base_pay for periods without reconciliation data
-          const periodsWithoutRecon = periodIds.filter(id => !rfrByPeriod[id]);
-          if (periodsWithoutRecon.length > 0) {
-            const { data: pbpData } = await supabase.from("period_base_pay")
-              .select("period_id, base_total_pay")
-              .eq("company_id", cid)
-              .in("period_id", periodsWithoutRecon);
-            (pbpData ?? []).forEach((bp: any) => {
-              if (!rfrByPeriod[bp.period_id]) rfrByPeriod[bp.period_id] = { base: 0, pending: false };
-              rfrByPeriod[bp.period_id].base += Number(bp.base_total_pay || 0);
-            });
-          }
+     const unpaid = d.invoices.filter((i: any) => ["issued", "sent", "viewed", "overdue"].includes(i.status));
+     const overdue = d.invoices.filter((i: any) => i.status === "overdue");
+     setCommercialKpis({
+       activeClients: d.clientsCount,
+       openRequests: d.staffReqCount,
+       unpaidInvoices: unpaid.length,
+       overdueInvoices: overdue.length,
+       unpaidTotal: unpaid.reduce((s: number, i: any) => s + (i.grand_total || 0), 0),
+       overdueTotal: overdue.reduce((s: number, i: any) => s + (i.grand_total || 0), 0),
+     });
 
-          // Classify extras into sub-buckets by concept name pattern
-          const classifyExtra = (name: string): string => {
-            const n = (name || "").toLowerCase();
-            if (n.includes("weekend") || n.includes("daily pay")) return "turnos";
-            if (n.includes("transporte") || n.includes("ryde") || n.includes("ride") || n.includes("especial ryde")) return "transporte";
-            if (n.includes("propina") || n.includes("tip")) return "propinas";
-            if (n.includes("reintegro") || n.includes("reimbursement")) return "reintegros";
-            if (n.includes("viaje") || n.includes("travel")) return "viaje";
-            return "otros";
-          };
+     setCompKpis({
+       rateChanges: d.compChangesCount,
+       dailyPatterns: d.compAnalysis.filter((a: any) => a.daily_payment_detected).length,
+       ridePayments: d.compAnalysis.filter((a: any) => a.ride_payment_detected).length,
+       warnings: d.compAnalysis.filter((a: any) => a.mixed_compensation_detected).length,
+     });
 
-          const mapped = chartPeriods.map(p => {
-            const baseInfo = rfrByPeriod[p.id];
-            const base = baseInfo ? Math.round(baseInfo.base) : 0;
-            const periodMovs = (chartMovRes.data ?? []).filter((m: any) => m.period_id === p.id);
-            const extraBuckets: Record<string, number> = { turnos: 0, transporte: 0, propinas: 0, reintegros: 0, viaje: 0, otros: 0 };
-            let extrasTotal = 0;
-            let deducciones = 0;
-            for (const m of periodMovs) {
-              const val = Number(m.total_value || 0);
-              if (m.concepts?.category === "deduction") {
-                deducciones += Math.abs(val);
-              } else if (m.concepts?.category === "extra") {
-                extrasTotal += val;
-                const bucket = classifyExtra(m.concepts?.name || "");
-                extraBuckets[bucket] += val;
-              }
-            }
-            const hasMov = extrasTotal > 0 || deducciones > 0;
-            const pending = base === 0 && hasMov;
-            return {
-              label: format(parseISO(p.start_date), "dd MMM", { locale: enUS }),
-              base: Math.round(base),
-              extras: Math.round(extrasTotal),
-              deducciones: Math.round(deducciones),
-              pending,
-              _turnos: Math.round(extraBuckets.turnos),
-              _transporte: Math.round(extraBuckets.transporte),
-              _propinas: Math.round(extraBuckets.propinas),
-              _reintegros: Math.round(extraBuckets.reintegros),
-              _viaje: Math.round(extraBuckets.viaje),
-              _otros: Math.round(extraBuckets.otros),
-            };
-          });
-          setChartData(mapped);
-          setSparkPayments(mapped.map(d => d.base + d.extras));
-        }
+     if (d.empCreated.length > 0) {
+       const months: Record<string, number> = {};
+       d.empCreated.forEach((e: any) => { const m = format(parseISO(e.created_at), "yyyy-MM"); months[m] = (months[m] || 0) + 1; });
+       const keys = Object.keys(months).sort().slice(-6);
+       let cum = d.empCreated.filter((e: any) => format(parseISO(e.created_at), "yyyy-MM") < (keys[0] || "")).length;
+       setSparkEmployees(keys.map(k => { cum += months[k]; return cum; }));
+     }
 
-        const anns = (annRes.data ?? []) as any[];
-        if (anns.length > 0) {
-          const annIds = anns.map(a => a.id);
-          const { data: reactions } = await supabase.from("announcement_reactions").select("announcement_id").in("announcement_id", annIds);
-          const countMap: Record<string, number> = {};
-          (reactions ?? []).forEach(r => { countMap[r.announcement_id] = (countMap[r.announcement_id] || 0) + 1; });
-          setFeedAnnouncements(anns.map(a => ({ ...a, media_urls: Array.isArray(a.media_urls) ? a.media_urls : [], reaction_count: countMap[a.id] || 0 })));
-        } else {
-          setFeedAnnouncements([]);
-        }
-        setActivityItems(actRes.data ?? []);
-      } catch (err) {
-        console.error("Dashboard secondary fetch error:", err);
-      }
-    }
+     if (d.allPeriods.length > 0) {
+       const infos = d.allPeriods.map((p: any) => calculateOverdue(p, payrollConfig));
+       setOverdueInfos(infos.filter((i: PeriodOverdueInfo) => i.isOverdue));
+       setPeriodSummary({
+         open: d.allPeriods.filter((p: any) => p.status === "open").length,
+         closed: d.allPeriods.filter((p: any) => p.status === "closed").length,
+         published: d.allPeriods.filter((p: any) => !!p.published_at).length,
+         paid: d.allPeriods.filter((p: any) => !!p.paid_at).length,
+       });
+     }
 
-    fetchSecondary();
-  }, [selectedCompanyId, loading, payrollConfig]);
+     if (d.chartMapped.length > 0) {
+       setChartData(d.chartMapped);
+       setSparkPayments(d.chartMapped.map((x: any) => x.base + x.extras));
+     }
+
+     setFeedAnnouncements(d.feedAnns);
+     setActivityItems(d.activity);
+     // stats.pendingTickets/stats.totalEmployees + tenantType + payrollConfig are
+     // intentionally read from the latest closure to match the pre-migration
+     // behavior (Phase 2 originally read them from the surrounding scope).
+     // eslint-disable-next-line react-hooks/exhaustive-deps
+   }, [secondaryQuery.data, tenantType, payrollConfig]);
+
 
   const periodProgress = useMemo(() => {
     if (!stats.periodStartDate || !stats.periodEndDate) return 0;
