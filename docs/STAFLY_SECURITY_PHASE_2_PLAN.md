@@ -736,3 +736,8 @@ DO $$ DECLARE sig text; funcs text[] := ARRAY[ /* paste bucket list */ ]; BEGIN
 1. **PIN hashing S4-C design** — refactor `authPassword(access_pin)` so reader flip becomes safe; introduce per-tenant feature flag `security.pin_hash_enabled`.
 2. **Storage bucket cleanup** — 4 "Public Bucket Allows Listing" linter warnings still open; audit each bucket's intended audience.
 3. **`SECURITY DEFINER` body audit** — second pass to confirm every function's internal queries respect tenant scoping (independent of the grant cleanup we just did).
+
+## S7-L-preflight note (2026-06-23)
+
+The owner-approval runbook and staged SQL for flipping **Stafly Demo** to `hash_only_ready` are maintained in `docs/STAFLY_AUTH_PASSWORD_REFACTOR_PLAN.md` (Sprint S7-L-preflight). No SQL writes, code changes, migrations, RLS/grant changes, or real-tenant enablement are part of this preflight. The actual flip execution requires a separate approved sprint (S7-L-b) and explicit owner sign-off per that runbook.
+
