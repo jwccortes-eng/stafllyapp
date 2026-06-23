@@ -36,6 +36,7 @@ import { ShiftCloseoutSection } from "@/components/shifts/closeout/ShiftCloseout
 import { ShiftLifecycleTimeline } from "@/components/shifts/ShiftLifecycleTimeline";
 import { CaptainNextActionCard } from "@/components/shifts/CaptainNextActionCard";
 import { LiveShiftBoard } from "@/components/shifts/LiveShiftBoard";
+import { AttendanceEvidenceCard } from "@/components/shifts/ops/AttendanceEvidenceCard";
 
 import {
   TraceabilitySnapshot,
@@ -169,7 +170,7 @@ export function MobileShiftOperationsSheet({
       setHubOpen(true);
     }
   }, [open, initialOpenTeamHub, shift?.id]);
-  const { allRoles, canAccessAdminForCompany } = useAuth();
+  const { allRoles, canAccessAdminForCompany, user } = useAuth();
   const { selectedCompanyId } = useCompany();
 
   // Per-shift attendance + clock cache. Loaded when sheet opens.
@@ -804,6 +805,33 @@ export function MobileShiftOperationsSheet({
               </>
             ) : null}
           </section>
+
+          {/* 4b. Asistencia & evidencia — paridad con desktop (helpers puros,
+              cero writes a time_entries / payroll). Sólo visible cuando hay
+              tenant + asignaciones; las validaciones admin se guardan en
+              shift_notes.attendance_validation, igual que en escritorio. */}
+          {shift && selectedCompanyId && assignedWorkers.length > 0 ? (
+            <section>
+              <AttendanceEvidenceCard
+                shift={shift as any}
+                assignments={assignments.map(a => {
+                  const e = empById.get(a.employee_id);
+                  return {
+                    id: a.id,
+                    employee_id: a.employee_id,
+                    status: (a as any).status ?? "",
+                    employee: e ? {
+                      first_name: e.first_name ?? "",
+                      last_name: e.last_name ?? "",
+                      phone_number: (e as any).phone_number ?? null,
+                    } : null,
+                  };
+                })}
+                companyId={selectedCompanyId}
+                userId={user?.id ?? null}
+              />
+            </section>
+          ) : null}
 
           {/* 5. Cierre diario — alerta compacta solo si urgente (hoy / pasado) */}
           {shift && selectedCompanyId && (dateBucket === "today" || dateBucket === "past") ? (
