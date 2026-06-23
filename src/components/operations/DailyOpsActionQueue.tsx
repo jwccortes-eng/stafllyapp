@@ -2,9 +2,20 @@
  * DailyOpsActionQueue — "Qué resolver ahora".
  *
  * Read-only. Renders prioritized action cards from buildActionQueue().
+ * Mobile (< md): each item is a tappable row that opens a bottom Sheet
+ * (Mobile Action Queue pattern) with full context + the existing Operar CTA.
+ * Desktop: unchanged grid of cards with inline Operar button.
  */
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet";
 import {
   AlertTriangle,
   Car,
@@ -38,6 +49,12 @@ const TONE = {
   info: "border-primary/20 bg-primary/5 text-primary",
 } as const;
 
+const URGENCY_LABEL: Record<ActionItem["urgency"], string> = {
+  critical: "Crítico",
+  high: "Alto",
+  info: "Informativo",
+};
+
 interface Props {
   items: ActionItem[];
   onOperate: (shiftId: string) => void;
@@ -45,6 +62,8 @@ interface Props {
 }
 
 export function DailyOpsActionQueue({ items, onOperate, compact }: Props) {
+  const [drawerItem, setDrawerItem] = useState<ActionItem | null>(null);
+
   if (items.length === 0) {
     return (
       <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 px-5 py-6 text-center">
@@ -58,45 +77,186 @@ export function DailyOpsActionQueue({ items, onOperate, compact }: Props) {
       </div>
     );
   }
+
   return (
-    <div className={cn("grid gap-2", compact ? "grid-cols-1" : "grid-cols-1 lg:grid-cols-2")}>
-      {items.map((it) => (
-        <div
-          key={it.id}
-          className={cn(
-            "rounded-2xl border p-3.5 flex items-start gap-3",
-            TONE[it.urgency],
-          )}
-        >
-          <div className="mt-0.5 shrink-0">{ICON[it.kind]}</div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <Badge
+    <>
+      <div className={cn("grid gap-2", compact ? "grid-cols-1" : "grid-cols-1 lg:grid-cols-2")}>
+        {items.map((it) =>
+          compact ? (
+            <button
+              key={it.id}
+              type="button"
+              onClick={() => setDrawerItem(it)}
+              className={cn(
+                "rounded-2xl border p-3.5 flex items-start gap-3 text-left w-full active:scale-[0.99] transition-transform",
+                TONE[it.urgency],
+              )}
+            >
+              <div className="mt-0.5 shrink-0">{ICON[it.kind]}</div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Badge
+                    variant="outline"
+                    className="text-[10px] px-1.5 py-0 h-4 font-semibold border-current"
+                  >
+                    {ACTION_KIND_LABEL[it.kind]}
+                  </Badge>
+                  <span className="text-[11px] text-muted-foreground truncate">
+                    {it.subtitle}
+                  </span>
+                </div>
+                <p className="text-sm font-semibold text-foreground mt-1 line-clamp-2">
+                  {it.title}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+                  {it.message}
+                </p>
+              </div>
+              <ChevronRight className="h-4 w-4 shrink-0 mt-1 opacity-60" />
+            </button>
+          ) : (
+            <div
+              key={it.id}
+              className={cn(
+                "rounded-2xl border p-3.5 flex items-start gap-3",
+                TONE[it.urgency],
+              )}
+            >
+              <div className="mt-0.5 shrink-0">{ICON[it.kind]}</div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Badge
+                    variant="outline"
+                    className="text-[10px] px-1.5 py-0 h-4 font-semibold border-current"
+                  >
+                    {ACTION_KIND_LABEL[it.kind]}
+                  </Badge>
+                  <span className="text-[11px] text-muted-foreground truncate">
+                    {it.subtitle}
+                  </span>
+                </div>
+                <p className="text-sm font-semibold text-foreground mt-1 truncate">
+                  {it.title}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">{it.message}</p>
+              </div>
+              <Button
+                size="sm"
                 variant="outline"
-                className="text-[10px] px-1.5 py-0 h-4 font-semibold border-current"
+                className="h-8 text-xs gap-1 shrink-0"
+                onClick={() => onOperate(it.shiftId)}
               >
-                {ACTION_KIND_LABEL[it.kind]}
-              </Badge>
-              <span className="text-[11px] text-muted-foreground truncate">
-                {it.subtitle}
-              </span>
+                Operar
+                <ChevronRight className="h-3.5 w-3.5" />
+              </Button>
             </div>
-            <p className="text-sm font-semibold text-foreground mt-1 truncate">
-              {it.title}
-            </p>
-            <p className="text-xs text-muted-foreground mt-0.5">{it.message}</p>
-          </div>
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-8 text-xs gap-1 shrink-0"
-            onClick={() => onOperate(it.shiftId)}
-          >
-            Operar
-            <ChevronRight className="h-3.5 w-3.5" />
-          </Button>
-        </div>
-      ))}
+          ),
+        )}
+      </div>
+
+      <Sheet open={!!drawerItem} onOpenChange={(o) => !o && setDrawerItem(null)}>
+        <SheetContent
+          side="bottom"
+          className="rounded-t-2xl pb-[calc(env(safe-area-inset-bottom,0px)+8px)] max-h-[88vh] overflow-y-auto"
+        >
+          {drawerItem && (
+            <>
+              <SheetHeader className="text-left">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Badge
+                    variant="outline"
+                    className={cn("text-[10px] px-1.5 py-0 h-5 font-semibold", TONE[drawerItem.urgency])}
+                  >
+                    {URGENCY_LABEL[drawerItem.urgency]}
+                  </Badge>
+                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-5 font-semibold">
+                    {ACTION_KIND_LABEL[drawerItem.kind]}
+                  </Badge>
+                </div>
+                <SheetTitle className="text-base mt-2">{drawerItem.title}</SheetTitle>
+                <SheetDescription className="text-xs">
+                  {drawerItem.subtitle}
+                </SheetDescription>
+              </SheetHeader>
+
+              <div className="mt-4 space-y-3 text-sm">
+                <div className="rounded-xl border border-border/60 bg-muted/30 p-3">
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">
+                    Qué pasa
+                  </p>
+                  <p className="text-foreground">{drawerItem.message}</p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <MetaCell label="Horario" value={fmtTimeRange(drawerItem.shift)} />
+                  <MetaCell label="Afectados" value={String(drawerItem.count)} />
+                  {drawerItem.shift.client_name && (
+                    <MetaCell label="Cliente" value={drawerItem.shift.client_name} />
+                  )}
+                  {(drawerItem.shift.job_site_name ||
+                    drawerItem.shift.meeting_point_location_name ||
+                    drawerItem.shift.meeting_point) && (
+                    <MetaCell
+                      label="Lugar"
+                      value={
+                        drawerItem.shift.job_site_name ??
+                        drawerItem.shift.meeting_point_location_name ??
+                        drawerItem.shift.meeting_point ??
+                        "—"
+                      }
+                    />
+                  )}
+                  {drawerItem.shift.shift_code && (
+                    <MetaCell label="Código" value={drawerItem.shift.shift_code} />
+                  )}
+                </div>
+
+                <p className="text-[11px] text-muted-foreground leading-snug">
+                  Las horas programadas son referencia operativa. Payroll se calcula
+                  con fichajes reales o validaciones aprobadas.
+                </p>
+              </div>
+
+              <div className="mt-4 sticky bottom-0 bg-background pt-2">
+                <Button
+                  className="w-full h-11 text-sm gap-1"
+                  onClick={() => {
+                    const id = drawerItem.shiftId;
+                    setDrawerItem(null);
+                    onOperate(id);
+                  }}
+                >
+                  Operar turno
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
+    </>
+  );
+}
+
+function MetaCell({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-border/50 bg-card px-2.5 py-1.5">
+      <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+        {label}
+      </p>
+      <p className="text-xs font-medium text-foreground truncate">{value}</p>
     </div>
   );
+}
+
+function fmtTimeRange(s: { start_time: string; end_time: string }): string {
+  const fmt = (iso: string) => {
+    try {
+      const d = new Date(iso);
+      return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    } catch {
+      return iso;
+    }
+  };
+  return `${fmt(s.start_time)} – ${fmt(s.end_time)}`;
 }
