@@ -9,6 +9,7 @@ import { useCompany } from "@/hooks/useCompany";
 import { useAuth } from "@/hooks/useAuth";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { isAdminLevelRole } from "@/lib/roles";
 import { AdminProductSwitcher } from "@/components/admin/AdminProductSwitcher";
 
 /**
@@ -45,7 +46,7 @@ export default function MobileAdminHome() {
   const { selectedCompanyId, selectedCompany, isModuleActive, isGlobalMode } = useCompany();
   const { role: globalRole, hasModuleAccess, fullName, getRoleForCompany } = useAuth();
   const role = isGlobalMode ? globalRole : getRoleForCompany(selectedCompanyId);
-  const isAdminRole = role === "developer" || role === "owner" || role === "company_owner" || role === "admin";
+  const isAdminRole = isAdminLevelRole(role);
 
   const [badges, setBadges] = useState<{ tickets: number; shift_requests: number }>({ tickets: 0, shift_requests: 0 });
 
