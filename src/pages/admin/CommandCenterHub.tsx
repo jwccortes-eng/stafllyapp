@@ -5,7 +5,7 @@
  *
  * Sprint S3 changes (frontend-only):
  *   - Compact KPI strip at the top: today shifts, pending assignments,
- *     open clocks, periods in review, docs pending review. All counts are
+ *     open clocks, open pay periods, docs pending review. All counts are
  *     tenant-scoped (`.eq("company_id", selectedCompanyId)` FIRST in the
  *     chain). Counts are `count: "exact", head: true` only — no row data
  *     pulled, no writes, no payroll calculations.
@@ -138,7 +138,7 @@ function useCommandCenterKpis(companyId: string | null) {
           .from("pay_periods")
           .select("id", { count: "exact", head: true })
           .eq("company_id", companyId)
-          .in("status", ["needs_review", "in_review", "review"]);
+          .eq("status", "open");
 
         const docsPendingQ = sb
           .from("employee_documents")
@@ -190,7 +190,7 @@ function KpiStrip({ counts, loading }: { counts: KpiCounts; loading: boolean }) 
     { label: "Turnos hoy",       value: counts.todayShifts,        icon: CalendarDays, tone: "neutral", to: "/app/command-center?tab=today",     hint: "Hoy" },
     { label: "Respuestas pend.", value: counts.pendingAssignments, icon: Users,        tone: counts.pendingAssignments > 0 ? "warn" : "neutral", to: "/app/command-center?tab=attention", hint: "Asignaciones" },
     { label: "Relojes abiertos", value: counts.openClocks,         icon: Clock,        tone: counts.openClocks > 0 ? "warn" : "neutral",         to: "/app/timeclock",                    hint: "Time entries" },
-    { label: "Validación",       value: counts.periodsInReview,    icon: ScanEye,      tone: counts.periodsInReview > 0 ? "info" : "neutral",    to: "/app/command-center?tab=payroll",   hint: "Periodos" },
+    { label: "Periodos abiertos", value: counts.periodsInReview,    icon: ScanEye,      tone: counts.periodsInReview > 0 ? "info" : "neutral",    to: "/app/command-center?tab=payroll",   hint: "Periodos" },
     { label: "Docs pendientes",  value: counts.docsPending,        icon: FileWarning,  tone: counts.docsPending > 0 ? "warn" : "neutral",        to: "/app/documents",                    hint: "Revisión" },
   ];
 
