@@ -11,13 +11,17 @@ import { cn } from "@/lib/utils";
 import { ArrowLeftRight, ChevronRight, Clock, Users, AlertCircle, CheckCircle2 } from "lucide-react";
 
 export function AdminSummaryCard() {
-  const { canAccessAdmin, canAccessPortal, setActiveMode } = useAuth();
+  const { canAccessAdminForCompany, canAccessPortal, setActiveMode } = useAuth();
   const { selectedCompanyId } = useCompany();
   const navigate = useNavigate();
   const [counts, setCounts] = useState({ shiftsToday: 0, clockedIn: 0, pendingApprovals: 0 });
   const [loading, setLoading] = useState(true);
 
-  const shouldShow = canAccessAdmin && canAccessPortal;
+  // S3.5A: tenant-scoped admin check (was global canAccessAdmin).
+  // Same admin role set, but now respects selectedCompanyId — an admin in
+  // Company A no longer triggers this card when viewing Company B.
+  const canAdminHere = canAccessAdminForCompany(selectedCompanyId);
+  const shouldShow = canAdminHere && canAccessPortal;
 
   const loadData = useCallback(async () => {
     if (!selectedCompanyId) return;
