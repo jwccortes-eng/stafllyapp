@@ -138,7 +138,7 @@ function useCommandCenterKpis(companyId: string | null) {
           .from("pay_periods")
           .select("id", { count: "exact", head: true })
           .eq("company_id", companyId)
-          .in("status", ["needs_review", "in_review", "review"]);
+          .eq("status", "open");
 
         const docsPendingQ = sb
           .from("employee_documents")
