@@ -39,9 +39,11 @@ import {
 } from "@/components/ui/table";
 import { PremiumPageHeader } from "@/components/ui/premium-page-header";
 import { EmptyState } from "@/components/ui/empty-state";
+import { MobileQueueRow, MobileQueueDrawer } from "@/components/admin/mobile";
 import { Search, Download, ExternalLink, UserSearch, FileText, CalendarClock, Pencil, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatDateUS } from "@/lib/date-format";
+import { cn } from "@/lib/utils";
 
 type FilterKey = "all" | "needs_review" | "missing" | "pending" | "expired" | "expiring_soon" | "missing_expiration" | "rejected" | "approved";
 
@@ -176,6 +178,7 @@ export default function DocumentsCenter() {
   }), [rows, missingRows, missingExpirationRows]);
 
   const [previewRow, setPreviewRow] = useState<UnifiedDocumentRow | null>(null);
+  const [drawerRow, setDrawerRow] = useState<UnifiedDocumentRow | null>(null);
 
   const handleView = (row: UnifiedDocumentRow) => {
     if (!row.file_path) {
@@ -297,69 +300,94 @@ export default function DocumentsCenter() {
               description="Adjust the filters or search term."
             />
           ) : (
-            <div className="rounded-md border overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Worker</TableHead>
-                    <TableHead>Document type</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Expiration</TableHead>
-                    <TableHead>Source</TableHead>
-                    <TableHead>Uploaded</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filtered.map((r) => (
-                    <TableRow key={r.id}>
-                      <TableCell className="font-medium">{r.worker_name}</TableCell>
-                      <TableCell>{r.document_type}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={STATUS_TONE[r.status]}>
-                          {DOC_STATUS_LABEL[r.status]}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
-                        <ExpirationCell row={r} onSaved={refresh} />
-                      </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">{DOC_SOURCE_LABEL[r.source]}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground">{fmtDate(r.created_at)}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="inline-flex gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 px-2 text-[11px]"
-                            onClick={() => handleView(r)}
-                            disabled={!r.file_path}
-                          >
-                            <Eye className="h-3 w-3 mr-1" />
-                            Preview
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 px-2 text-[11px]"
-                            onClick={() => handleOpenInTab(r)}
-                            disabled={!r.file_path}
-                            title="Open in new tab"
-                          >
-                            <ExternalLink className="h-3 w-3" />
-                          </Button>
-                          <Button asChild variant="ghost" size="sm" className="h-7 px-2 text-[11px]">
-                            <Link to={`/app/employees/${r.employee_id}`}>
-                              <UserSearch className="h-3 w-3 mr-1" />
-                              Worker
-                            </Link>
-                          </Button>
-                        </div>
-                      </TableCell>
+            <>
+              {/* Mobile (<md): tappable rows + drawer-per-row.
+                  Desktop (md+): existing 7-col table, untouched. */}
+              <div className="md:hidden space-y-2">
+                {filtered.map((r) => (
+                  <MobileQueueRow
+                    key={r.id}
+                    onClick={() => setDrawerRow(r)}
+                    primary={r.document_type}
+                    secondary={r.worker_name}
+                    topMeta={
+                      <Badge variant="outline" className={cn("text-[10px] py-0 px-1.5", STATUS_TONE[r.status])}>
+                        {DOC_STATUS_LABEL[r.status]}
+                      </Badge>
+                    }
+                    rightSlot={
+                      <span className="text-[10px] text-muted-foreground tabular-nums">
+                        {fmtDate(r.created_at)}
+                      </span>
+                    }
+                  />
+                ))}
+              </div>
+
+              <div className="hidden md:block rounded-md border overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Worker</TableHead>
+                      <TableHead>Document type</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Expiration</TableHead>
+                      <TableHead>Source</TableHead>
+                      <TableHead>Uploaded</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                  </TableHeader>
+                  <TableBody>
+                    {filtered.map((r) => (
+                      <TableRow key={r.id}>
+                        <TableCell className="font-medium">{r.worker_name}</TableCell>
+                        <TableCell>{r.document_type}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className={STATUS_TONE[r.status]}>
+                            {DOC_STATUS_LABEL[r.status]}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          <ExpirationCell row={r} onSaved={refresh} />
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">{DOC_SOURCE_LABEL[r.source]}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">{fmtDate(r.created_at)}</TableCell>
+                        <TableCell className="text-right">
+                          <div className="inline-flex gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 px-2 text-[11px]"
+                              onClick={() => handleView(r)}
+                              disabled={!r.file_path}
+                            >
+                              <Eye className="h-3 w-3 mr-1" />
+                              Preview
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 px-2 text-[11px]"
+                              onClick={() => handleOpenInTab(r)}
+                              disabled={!r.file_path}
+                              title="Open in new tab"
+                            >
+                              <ExternalLink className="h-3 w-3" />
+                            </Button>
+                            <Button asChild variant="ghost" size="sm" className="h-7 px-2 text-[11px]">
+                              <Link to={`/app/employees/${r.employee_id}`}>
+                                <UserSearch className="h-3 w-3 mr-1" />
+                                Worker
+                              </Link>
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
@@ -395,6 +423,95 @@ export default function DocumentsCenter() {
           />
         ) : undefined}
       />
+
+      {/* Mobile drawer-per-row (read-only detail + existing CTAs only). */}
+      <MobileQueueDrawer
+        open={!!drawerRow}
+        onOpenChange={(o) => !o && setDrawerRow(null)}
+        maxHeightClassName="max-h-[88dvh]"
+        headerMeta={drawerRow ? (
+          <>
+            <Badge variant="outline" className={cn("text-[10px] py-0 px-1.5", STATUS_TONE[drawerRow.status])}>
+              {DOC_STATUS_LABEL[drawerRow.status]}
+            </Badge>
+            <Badge variant="secondary" className="text-[10px] py-0 px-1.5">
+              {DOC_SOURCE_LABEL[drawerRow.source]}
+            </Badge>
+          </>
+        ) : undefined}
+        title={drawerRow?.document_type}
+        description={drawerRow?.worker_name}
+        footer={drawerRow ? (
+          <div className="flex flex-col gap-2">
+            {drawerRow.file_path && (
+              <Button
+                className="w-full gap-2"
+                onClick={() => {
+                  const r = drawerRow;
+                  setDrawerRow(null);
+                  handleView(r);
+                }}
+              >
+                <Eye className="h-4 w-4" />
+                Preview document
+              </Button>
+            )}
+            <div className="grid grid-cols-2 gap-2">
+              {drawerRow.file_path && (
+                <Button
+                  variant="outline"
+                  className="w-full gap-1.5"
+                  onClick={() => handleOpenInTab(drawerRow)}
+                >
+                  <ExternalLink className="h-3.5 w-3.5" />
+                  Open in tab
+                </Button>
+              )}
+              <Button asChild variant="outline" className={cn("w-full gap-1.5", !drawerRow.file_path && "col-span-2")}>
+                <Link to={`/app/employees/${drawerRow.employee_id}`} onClick={() => setDrawerRow(null)}>
+                  <UserSearch className="h-3.5 w-3.5" />
+                  Worker
+                </Link>
+              </Button>
+            </div>
+          </div>
+        ) : undefined}
+      >
+        {drawerRow && (
+          <>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <DocMetaCell label="Expiration" value={
+                drawerRow.expires_at
+                  ? (formatDateUS(new Date(drawerRow.expires_at)) || "—")
+                  : (expirationPolicyFor(drawerRow.category) === "required" || expirationPolicyFor(drawerRow.category) === "recommended" ? "Missing" : "—")
+              } />
+              <DocMetaCell label="Uploaded" value={fmtDate(drawerRow.created_at)} />
+              <DocMetaCell label="Source" value={DOC_SOURCE_LABEL[drawerRow.source]} />
+              <DocMetaCell label="Category" value={String(drawerRow.category)} />
+            </div>
+
+            {drawerRow.rejection_reason && (
+              <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2.5 text-xs text-rose-700">
+                <p className="font-semibold text-[10px] uppercase tracking-wider mb-1">Reason</p>
+                <p>{drawerRow.rejection_reason}</p>
+              </div>
+            )}
+
+            <p className="text-[10px] text-muted-foreground/80 leading-relaxed">
+              Solo lectura. Para editar la fecha de expiración, usa la vista desktop.
+            </p>
+          </>
+        )}
+      </MobileQueueDrawer>
+    </div>
+  );
+}
+
+function DocMetaCell({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-border/50 bg-card px-2.5 py-1.5">
+      <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{label}</p>
+      <p className="text-xs font-medium text-foreground truncate">{value}</p>
     </div>
   );
 }
