@@ -190,8 +190,12 @@ function emptySection(): SectionState {
 
 export default function DailyClose() {
   const { selectedCompanyId, selectedCompany } = useCompany();
+  const isMobile = useIsMobile();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [date, setDate] = useState<Date>(new Date());
   const [popoverOpen, setPopoverOpen] = useState(false);
+  // S4.1A — mobile drawer-per-step state (Mobile Action Queue pattern).
+  const [drawerStep, setDrawerStep] = useState<SectionKey | null>(null);
   const [snap, setSnap] = useState<SnapshotData>({
     loading: true,
     error: null,
