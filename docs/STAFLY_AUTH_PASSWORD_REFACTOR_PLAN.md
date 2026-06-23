@@ -1901,3 +1901,122 @@ Code, edge functions (`employee-auth`, `kiosk-clock`, `front-desk-checkin`), `pi
 2. Open a focused sprint to investigate the 1×500 on 5550100099 (auth.users password ↔ access_pin alignment for synthetic demo users) — does **not** block S7-L outcome.
 3. Build a side-effect-free QA harness for kiosk-clock / front-desk-checkin **before** any S7-M scoping.
 4. Do **not** advance to hash_only, plaintext kill, authPassword decoupling, or any real-tenant enablement.
+
+---
+
+## S7-M — Side-effect-free PIN QA Harness Design — 2026-06-23
+
+**Sprint type:** Design / doc-only. No code, no SQL writes, no migrations, no RLS/grants, no payroll, no real-tenant changes, no hash_only, no plaintext deletion, no authPassword refactor, no edits to `kiosk-clock` or `front-desk-checkin`. Implementation is deferred to S7-N.
+
+### 1. Flows that need test coverage
+- **kiosk-clock PIN gate** — `supabase/functions/kiosk-clock/index.ts`
+  - Gate: lines 134–181, `validatePinDual({ employee_id, storedPlaintext, storedHash, providedPin, mode, demo })`. Mode resolution honors `security.pin_auth_mode` (`legacy` / `dual` / `hash_only_ready` / `hash_only`).
+- **front-desk-checkin PIN gate** — `supabase/functions/front-desk-checkin/index.ts`
+  - Gate: lines 215–262, identical `validatePinDual` call shape.
+
+Both gates share the same `_shared/pin-validation.ts` and `_shared/security-flags.ts` modules already validated in S7-L-c-ext via `employee-auth`.
+
+### 2. Side effects AFTER the gate (what blocks QA today)
+
+**kiosk-clock** (post-gate, lines 227–288):
+- INSERT into `time_entries` (clock-in / fallback)
+- UPDATE `time_entries` (clock-out)
+- INSERT into `clock_events` (audit row)
+- Rate-limit INSERT into `auth_rate_limits` on fail (lines 338, 370)
+
+**front-desk-checkin** (post-gate, lines 480–949):
+- INSERT into `office_visits` (multiple action branches: update_self, photo_in, check_in, check_out, audit)
+- INSERT into `security_alerts` (line 120) on certain failures
+- Rate-limit INSERT into `auth_rate_limits` (line 995)
+
+Every successful PIN validation in these two functions today is followed by an operational write. That is the exact reason kiosk/front-desk could not be exercised under `hash_only_ready` in S7-L-c-ext.
+
+### 3. Isolation options compared
+
+| Option | What it does | Side-effect risk | Surface area touched | Reuses S7-G/K validator | Tenant-scoping cost |
+|---|---|---|---|---|---|
+| **A. `dry_run=true` body flag** on each existing function | Skip all post-gate writes when flag is set | High — relies on every write branch checking the flag; one missed branch leaks artifacts | Both edge functions, every write path | ✅ (same path) | Must hard-gate to demo inside each function |
+| **B. `qa_mode=true` body flag** | Same as A but combined with stricter logging/echo of telemetry | High — same risk as A | Both edge functions | ✅ | Same as A |
+| **C. `action="validate_only"` branch** inside each existing function | New action that runs only the PIN gate and returns telemetry | Medium — bounded by branch; still touches production code paths | Both edge functions | ✅ | Single early-return guard per function |
+| **D. New internal `pin-qa-validate` edge function (service-role-only)** | Standalone fn that imports the shared validator and runs the gate only — never imports clock/visit/rate-limit code | **Lowest** — physically cannot insert into `time_entries`, `clock_events`, `office_visits`, `auth_rate_limits` | New file only; existing fns untouched | ✅ (same `validatePinDual` + `getEffectivePinAuthMode`) | Single tenant guard inside the new fn |
+| **E. Shared validation RPC** (DB-side `internal_verify_pin_qa`) | DB function callable only by service role; returns telemetry shape | Low for fn itself, but moves logic + needs migration + RLS/grants | DB migration + new RPC | Partial — duplicates resolver/telemetry layer | DB-side filter |
+
+### 4. Recommendation — **Option D**
+A new edge function `pin-qa-validate` is the safest, smallest-blast-radius option:
+- It physically cannot create `time_entries`, `clock_events`, `office_visits`, `auth_rate_limits`, `security_alerts` — those tables are never imported.
+- It reuses the **exact** code path validated in S7-L-c-ext (`_shared/pin-validation.ts` + `_shared/security-flags.ts`), so QA evidence transfers directly to kiosk-clock / front-desk-checkin behavioral parity.
+- Zero edits to `kiosk-clock` / `front-desk-checkin` — preserves the strict no-regression posture.
+- One file to review, one file to delete on rollback. No migration, no RLS, no grants.
+
+Options A/B/C are rejected because each one mutates the two production PIN-gated functions, which is exactly the surface the no-regression policy protects.
+Option E is rejected because it requires a migration, grants, and duplicates resolver/telemetry logic outside the path actually used by the three edge functions.
+
+### 5. Required guardrails on the new `pin-qa-validate` fn (for S7-N)
+Hard, non-negotiable. Each must fail-closed.
+
+1. **Service-role only auth** — verify `Authorization: Bearer <SERVICE_ROLE_JWT>` by decoding `role === "service_role"`; reject `anon` / `authenticated`. No public callability.
+2. **Tenant whitelist** — reject unless `employee.company_id` resolves to a company with `is_demo = true`. Real tenants → 403 immediately, before any DB read beyond the company-flag lookup.
+3. **No writes** — function MUST NOT import or call `time_entries`, `clock_events`, `office_visits`, `auth_rate_limits`, `security_alerts`, `payroll_*`, `reconciliation_*`, `scheduled_shifts`, `shift_assignments`, `historical_payroll_entries`, `pay_periods`, `period_base_pay`, Connecteam tables. Enforced by code review + a static grep test in CI (`rg -n "\.insert|\.update|\.delete|\.upsert" supabase/functions/pin-qa-validate` must return 0 hits).
+4. **No rate-limit mutation** — must not insert into `auth_rate_limits`. QA traffic is bounded by the harness, not by production rate limits.
+5. **Telemetry contract** — emit the same `[pin-auth-validate]` and `[pin-auth-mode]` log shape as the three production fns, plus `harness: "pin-qa-validate"`. No PIN, no `access_pin`, no `access_pin_hash`, no full hash, no password, no token, no email. Phone allowed only as the same normalized 10-digit form already used in `[phone-login]` (no worse than current baseline; tracked separately as backlog).
+6. **Mode echo** — must echo `effective_mode` to the caller so the harness can assert against `hash_only_ready` / `dual` / `legacy` without inferring.
+7. **No session minting** — must NOT call `auth.signInWithPassword` or `auth.admin.createUser`. PIN validation only. (This also sidesteps the `authPassword` desync risk seen on 5550100099 in S7-L-c-ext.)
+8. **Demo-only kill switch** — single `if (!company.is_demo) return 403` guard, plus a startup assertion that aborts the request if the resolved tenant ID equals any in a hard-coded `BLOCKED_REAL_TENANT_IDS` list (defensive).
+
+### 6. Avoiding misuse on real tenants
+- Service-role-only + demo-only is enforced **in the function body**, not at the caller.
+- No `verify_jwt` toggle dance — the function decodes the JWT itself and asserts `role==="service_role"`.
+- Owner approval required to deploy the function; deploy gated behind an explicit S7-N approval message.
+- If a real tenant ID ever resolves: function returns 403, logs `[pin-qa-validate] BLOCKED non-demo tenant`, and (proposed) writes a single row to a new `qa_harness_violations` table — deferred to S7-N scoping, not designed here.
+
+### 7. Logging without secrets
+Same redaction rules already in `_shared/pin-validation.ts`:
+- Log: `ctx`, `mode`, `company_id`, `employee_id`, `has_hash`, `hash_version`, `validation_source`, `hash_mismatch`, `hash_error`, `fallback_suppressed`, `suppressed_reason`, `result`, `harness`.
+- Never log: `pin`, `storedPlaintext`, `storedHash`, the hash string, any auth token, email, full name. Phone leak in `[phone-login]` stays as separate backlog (not introduced here, not worsened).
+
+### 8. Payroll / operational safety
+By construction, `pin-qa-validate` cannot touch:
+- `pay_periods`, `period_base_pay`, `payroll_*`
+- `reconciliation_*`, `historical_payroll_entries`
+- `time_entries`, `clock_events`
+- `scheduled_shifts`, `shift_assignments`
+- `office_visits`, `security_alerts`, `auth_rate_limits`
+- Connecteam import tables
+
+This is enforced by the file-level grep guard (#3 above) and verified during QA review of the new file before deploy.
+
+### 9. Rollback
+Single-step: `supabase functions delete pin-qa-validate`. No DB rollback needed (no migration, no RLS, no grants, no data). All three production edge functions remain on the same code path validated through S7-L-c-ext.
+
+### 10. QA matrix to run once S7-N ships
+For Stafly Demo only, under `security.pin_auth_mode = "hash_only_ready"`:
+
+| # | Target | Worker | PIN supplied | Expected `result` | Expected `validation_source` | Expected `suppressed_reason` | Expected `hash_error` |
+|---|---|---|---|---|---|---|---|
+| 1 | kiosk gate via harness | demo worker w/ valid hash | correct | ok | hash | null | false |
+| 2 | kiosk gate via harness | demo worker w/ valid hash | wrong | fail | null | hash_mismatch | false |
+| 3 | front-desk gate via harness | demo worker w/ valid hash | correct | ok | hash | null | false |
+| 4 | front-desk gate via harness | demo worker w/ valid hash | wrong | fail | null | hash_mismatch | false |
+| 5 | harness | real-tenant employee_id | any | 403 BLOCKED | n/a | n/a | n/a |
+| 6 | harness with non-service-role JWT | any | any | 401 | n/a | n/a | n/a |
+| 7 | post-run table delta check | — | — | 0 rows in `time_entries`, `clock_events`, `office_visits`, `auth_rate_limits`, `security_alerts` for window | — | — | — |
+
+Pass criteria: all 7 cases match expected; payroll safety query returns 0 across the same 7 tables checked in S7-L-c-ext.
+
+### 11. What was NOT touched in S7-M
+Code (no files edited), edge functions, `_shared/pin-validation.ts`, `_shared/security-flags.ts`, `internal_verify_pin_hash`, `authPassword`, `access_pin(_hash)`, RLS, grants, payroll, time/clock/shift/reconciliation tables, Connecteam, real tenants, `company_settings`, plaintext data. Stafly Demo remains on `hash_only_ready` per S7-L-c-ext PASS.
+
+### 12. Risks found
+- **Telemetry drift**: if `_shared/pin-validation.ts` ever changes after S7-N ships, the harness must redeploy to keep parity with production edge fns. Mitigation: harness imports the shared module, no copy/paste.
+- **Service-role JWT handling**: the harness verifies the JWT manually; a bug in the verification logic could expose the gate. Mitigation: explicit decode + `role==="service_role"` check + demo-only guard + grep-test for write calls.
+- **Misuse via wrong tenant in body**: caller could pass a real `employee_id`. Mitigation: lookup company by `employee_id`, then `is_demo` guard.
+- **Doesn't cover post-gate logic in kiosk/front-desk**: harness validates the PIN gate only — clock-in/out flow and office_visits flow are still untested under `hash_only_ready`. Acceptable for S7-N scope; broader end-to-end testing remains deferred.
+
+### 13. S7-N implementation proposal (NOT executed here)
+1. Create `supabase/functions/pin-qa-validate/index.ts` implementing the contract in §5.
+2. Add CI grep guard: `rg -n "\.insert|\.update|\.upsert|\.delete" supabase/functions/pin-qa-validate` must be empty.
+3. Deploy behind explicit owner approval, demo-only.
+4. Run the §10 QA matrix; document results in `S7-N` section of this doc.
+5. Re-confirm payroll safety counts equal those in S7-L-c-ext.
+6. On any failure → delete the function (§9) and re-evaluate.
+7. Do **not** advance to hash_only, plaintext kill, authPassword decoupling, or real-tenant enablement on the strength of S7-N alone — that requires its own approval gate.
