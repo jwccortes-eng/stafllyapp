@@ -1386,3 +1386,124 @@ Both are pure setting flips — no schema, no data, no `access_pin*` mutations.
 - **R1 (blocker):** zero demo PIN telemetry in observed window → cannot validate hash path under load → S7-L-b NOT safe to ship.
 - **R2 (low):** `[phone-login]` logs normalized phone digits. Pre-existing; document for separate scrub sprint.
 - **R3 (low):** `dual` mode is structurally safe (fallback still active), so the prolonged absence of `validation_source="hash"` events is observability gap, not a security regression.
+
+## Sprint S7-L-a-ext — Controlled Demo PIN Exercise (2026-06-23)
+
+**Type:** QA exercise on Stafly Demo only. No code, migrations, RLS, grants, payroll, settings, real-tenant, plaintext-deletion, or `authPassword` changes.
+
+### Guardrails reviewed
+No touch to `company_settings` values, `employee-auth`/`kiosk-clock`/`front-desk-checkin` code, `authPassword`, `internal_verify_pin_hash`, `access_pin`/`access_pin_hash` data, RLS, grants, payroll (`pay_periods`, `period_base_pay`, `reconciliation_*`, `historical_payroll_entries`, `time_entries`, `clock_events`, `scheduled_shifts`, `shift_assignments`), or Connecteam.
+
+### 1. Pre-check (read-only)
+- Stafly Demo = `"dual"` ✅
+- `hash_only_ready` tenants: 0 ✅
+- Real tenants in `dual`: 0 ✅
+- Demo hashes valid (crypt): **7/7** ✅
+- Fixtures pending: 0 ✅
+- Rate-limit rows in last 1h: 0 ✅
+- Workers with phone (PIN-flow eligible): **6/7** (worker #7 `…dfa` has no phone → portal/kiosk/front-desk unreachable for that one)
+
+### 2. QA artifact protocol
+All artifacts created in this sprint are tagged `[QA_ARTIFACT 2026-06-23 S7-L-a-ext]` in this doc (the underlying tables — `auth_rate_limits` for wrong-PIN, Supabase `auth.sessions` for successful logins — have no metadata column for inline tagging).
+
+### 3. Portal / employee-auth login QA — EXECUTED
+6 demo workers × 1 correct-PIN login + 1 intentional wrong-PIN on worker #1.
+
+Edge response codes:
+| Worker | HTTP | Hash gate | Notes |
+|---|---|---|---|
+| #1 | 200 | ok | session issued |
+| #2 | 200 | ok | session issued |
+| #3 | 200 | ok | session issued |
+| #4 | 200 | ok | session issued |
+| #5 | 200 | ok | session issued |
+| #6 | 500 | **ok** | hash gate passed; downstream Supabase `signInWithPassword` failed ("Invalid login credentials") — `authPassword(pin)` user not provisioned for that demo worker. Out of scope for this sprint (auth decoupling = S7-K+). Pre-existing demo data issue, NOT a hash-path regression. |
+| #1 (wrong PIN `0000`) | 401 | mismatch | intentional, generic "PIN incorrecto" surface |
+
+### 4. Kiosk QA — **BLOCKED**
+`kiosk-clock` endpoint validates PIN then immediately writes `clock_events` + opens/closes `time_entries`. No QA-mode plumbing exists to skip the clock side-effect (per memory `qa-tenant-mismatch-2026-06-01` we already had one demo contamination incident). Exercising 6 calls would create 6 `clock_events` and either 6 open `time_entries` or alternating in/out — touching `time_entries` semantics is explicitly forbidden by this sprint's guardrails. **NOT executed.**
+
+### 5. Front-desk QA — **BLOCKED**
+`front-desk-checkin` `lookup` action does not validate PIN (phone-only). PIN gate lives behind `update_self` / `create_visit` / `submit_rating` / `start_visit` paths, all of which write `front_desk_visits`, audit rows, or mutate employee profile fields. No safe PIN-only probe exists. **NOT executed.**
+
+### 6. Telemetry sweep (employee-auth, post-exercise)
+From edge logs `[pin-auth-validate]` ctx=login, company=demo, window 2026-06-23 00:10:20Z–00:10:40Z:
+
+| Metric | Count |
+|---|---|
+| Total validations | **7** |
+| `validation_source="hash"` | **6** ✅ (all 6 successful correct-PIN logins) |
+| `validation_source="plaintext_fallback"` | 0 ✅ |
+| `hash_error=true` | **0** ✅ |
+| `hash_mismatch=true` | 1 (intentional wrong-PIN, worker #1) |
+| `fallback_suppressed` | 0 |
+| `suppressed_reason` | none |
+| `result=ok` | 6 |
+| `result=fail` | 1 (intentional) |
+
+Per-flow:
+- employee-auth: 7 events as above.
+- kiosk-clock: 0 (blocked, see §4).
+- front-desk-checkin: 0 (blocked, see §5).
+
+Coverage vs target (21): **6 hash events / 21 planned (28%)**. Reduced ceiling per safe-flow blockers documented in §4 and §5. All hash events emitted from `employee-auth` cover the shared `validatePinDual` + `internal_verify_pin_hash` path that the other two flows also use, so the hash path itself is exercised end-to-end.
+
+### 7. Sensitive log audit
+Sampled all `[pin-auth-validate]` and `[pin-auth-mode]` log lines. No `PIN`, `access_pin`, `access_pin_hash`, full hash, password, token, email, or phone present. Pre-existing `[phone-login]` emits `normalizedPhone` (10 digits) — already flagged in S7-L-a §4, out of scope.
+
+### 8. Cleanup / artifact review
+| Table | Rows added by QA | Action |
+|---|---|---|
+| `auth.sessions` (Supabase) | 5 demo Supabase sessions | Allowed to expire naturally per provider TTL. No removal — touching `auth` schema is forbidden. |
+| `auth_rate_limits` | 1 row (demo phone for worker #1 wrong-PIN) | Left intact (audit trail). Will auto-clear on next successful login or admin sweep. |
+| `clock_events`, `time_entries`, `front_desk_visits`, `scheduled_shifts`, `shift_assignments`, payroll tables | **0** | Confirmed unchanged. |
+| `company_settings` | 0 | Demo still `"dual"`. |
+| `employees` (`access_pin`, `access_pin_hash`) | 0 | 7/7 hashes still valid via crypt(). |
+
+No real-tenant artifacts. Local credential file `/tmp/demo_creds.txt` deleted post-run.
+
+### 9. GO / NO-GO for S7-L-b → **CONDITIONAL GO**
+
+Hard criteria:
+- Demo remains `dual` ✅
+- 0 tenants in `hash_only_ready` ✅
+- 0 real tenants in `dual` ✅
+- 7/7 hashes valid ✅
+- `hash_error=0` ✅
+- No unexpected `plaintext_fallback` ✅ (zero observed)
+- No sensitive log leak ✅
+- Artifacts documented/acceptable ✅
+
+Soft criteria:
+- ≥21 correct-PIN hash events: **NOT met** (6/21 due to documented kiosk/front-desk side-effect blockers).
+- Worker #6 surfaced an `authPassword`/Supabase password mismatch — orthogonal to the hash path, but worth tracking before flipping to `hash_only_ready` because under `hash_only_ready` the *hash* gate would still pass for #6 and the downstream Supabase failure would persist identically (no behavior change). Not a flip blocker.
+
+**Recommendation:** GO for S7-L-b with the caveat that kiosk-clock and front-desk-checkin hash exercise will only be observable via natural demo traffic post-flip. The shared `validatePinDual` + `internal_verify_pin_hash` path was exercised cleanly via employee-auth, so the runtime contract is validated. Owner/dev should explicitly acknowledge the reduced cross-flow coverage before approving.
+
+### 10. Exact flip SQL (S7-L-b — staged, NOT executed)
+```sql
+INSERT INTO public.company_settings (company_id, key, value)
+VALUES ('d3500000-0000-4000-8000-000000000001', 'security.pin_auth_mode', '"hash_only_ready"'::jsonb)
+ON CONFLICT (company_id, key) DO UPDATE
+  SET value = EXCLUDED.value, updated_at = now()
+WHERE public.company_settings.company_id = 'd3500000-0000-4000-8000-000000000001'
+  AND public.company_settings.key = 'security.pin_auth_mode';
+```
+
+### 11. Exact rollback SQL (S7-L-b — staged, NOT executed)
+```sql
+-- Soft rollback
+UPDATE public.company_settings SET value='"dual"'::jsonb, updated_at=now()
+WHERE company_id='d3500000-0000-4000-8000-000000000001' AND key='security.pin_auth_mode';
+-- Hard rollback
+UPDATE public.company_settings SET value='"legacy"'::jsonb, updated_at=now()
+WHERE company_id='d3500000-0000-4000-8000-000000000001' AND key='security.pin_auth_mode';
+```
+
+### What was NOT touched
+`company_settings` values, all three edge functions, `_shared/pin-validation.ts`, `_shared/security-flags.ts`, `internal_verify_pin_hash`, `authPassword`, `access_pin`, `access_pin_hash` data, RLS, grants, payroll, `time_entries`, `clock_events`, `scheduled_shifts`, `shift_assignments`, `front_desk_visits`, Connecteam, real tenants. Zero migrations created.
+
+### Risks found
+- **R1 (medium):** kiosk + front-desk hash path lacks safe QA harness → no synthetic coverage possible without writing `clock_events`/`time_entries`/`front_desk_visits`. Recommend a future QA-mode plumbing sprint (`S7-L-a-harness`) before any production-tenant rollout beyond demo.
+- **R2 (low — pre-existing):** Demo worker #6 cannot complete login (`authPassword(pin)` Supabase password mismatch). Hash gate works; downstream auth seed missing. Orthogonal to S7-L-b.
+- **R3 (low — known):** `[phone-login]` logs normalized phone. Pre-existing; separate scrub sprint.
