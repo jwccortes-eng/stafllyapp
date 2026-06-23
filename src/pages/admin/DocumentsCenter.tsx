@@ -43,6 +43,7 @@ import { MobileQueueRow, MobileQueueDrawer } from "@/components/admin/mobile";
 import { Search, Download, ExternalLink, UserSearch, FileText, CalendarClock, Pencil, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatDateUS } from "@/lib/date-format";
+import { cn } from "@/lib/utils";
 
 type FilterKey = "all" | "needs_review" | "missing" | "pending" | "expired" | "expiring_soon" | "missing_expiration" | "rejected" | "approved";
 
