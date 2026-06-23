@@ -299,69 +299,94 @@ export default function DocumentsCenter() {
               description="Adjust the filters or search term."
             />
           ) : (
-            <div className="rounded-md border overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Worker</TableHead>
-                    <TableHead>Document type</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Expiration</TableHead>
-                    <TableHead>Source</TableHead>
-                    <TableHead>Uploaded</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filtered.map((r) => (
-                    <TableRow key={r.id}>
-                      <TableCell className="font-medium">{r.worker_name}</TableCell>
-                      <TableCell>{r.document_type}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={STATUS_TONE[r.status]}>
-                          {DOC_STATUS_LABEL[r.status]}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
-                        <ExpirationCell row={r} onSaved={refresh} />
-                      </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">{DOC_SOURCE_LABEL[r.source]}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground">{fmtDate(r.created_at)}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="inline-flex gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 px-2 text-[11px]"
-                            onClick={() => handleView(r)}
-                            disabled={!r.file_path}
-                          >
-                            <Eye className="h-3 w-3 mr-1" />
-                            Preview
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 px-2 text-[11px]"
-                            onClick={() => handleOpenInTab(r)}
-                            disabled={!r.file_path}
-                            title="Open in new tab"
-                          >
-                            <ExternalLink className="h-3 w-3" />
-                          </Button>
-                          <Button asChild variant="ghost" size="sm" className="h-7 px-2 text-[11px]">
-                            <Link to={`/app/employees/${r.employee_id}`}>
-                              <UserSearch className="h-3 w-3 mr-1" />
-                              Worker
-                            </Link>
-                          </Button>
-                        </div>
-                      </TableCell>
+            <>
+              {/* Mobile (<md): tappable rows + drawer-per-row.
+                  Desktop (md+): existing 7-col table, untouched. */}
+              <div className="md:hidden space-y-2">
+                {filtered.map((r) => (
+                  <MobileQueueRow
+                    key={r.id}
+                    onClick={() => setDrawerRow(r)}
+                    primary={r.document_type}
+                    secondary={r.worker_name}
+                    topMeta={
+                      <Badge variant="outline" className={cn("text-[10px] py-0 px-1.5", STATUS_TONE[r.status])}>
+                        {DOC_STATUS_LABEL[r.status]}
+                      </Badge>
+                    }
+                    rightSlot={
+                      <span className="text-[10px] text-muted-foreground tabular-nums">
+                        {fmtDate(r.created_at)}
+                      </span>
+                    }
+                  />
+                ))}
+              </div>
+
+              <div className="hidden md:block rounded-md border overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Worker</TableHead>
+                      <TableHead>Document type</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Expiration</TableHead>
+                      <TableHead>Source</TableHead>
+                      <TableHead>Uploaded</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                  </TableHeader>
+                  <TableBody>
+                    {filtered.map((r) => (
+                      <TableRow key={r.id}>
+                        <TableCell className="font-medium">{r.worker_name}</TableCell>
+                        <TableCell>{r.document_type}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className={STATUS_TONE[r.status]}>
+                            {DOC_STATUS_LABEL[r.status]}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          <ExpirationCell row={r} onSaved={refresh} />
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">{DOC_SOURCE_LABEL[r.source]}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">{fmtDate(r.created_at)}</TableCell>
+                        <TableCell className="text-right">
+                          <div className="inline-flex gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 px-2 text-[11px]"
+                              onClick={() => handleView(r)}
+                              disabled={!r.file_path}
+                            >
+                              <Eye className="h-3 w-3 mr-1" />
+                              Preview
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 px-2 text-[11px]"
+                              onClick={() => handleOpenInTab(r)}
+                              disabled={!r.file_path}
+                              title="Open in new tab"
+                            >
+                              <ExternalLink className="h-3 w-3" />
+                            </Button>
+                            <Button asChild variant="ghost" size="sm" className="h-7 px-2 text-[11px]">
+                              <Link to={`/app/employees/${r.employee_id}`}>
+                                <UserSearch className="h-3 w-3 mr-1" />
+                                Worker
+                              </Link>
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
