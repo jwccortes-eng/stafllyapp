@@ -177,6 +177,7 @@ export default function DocumentsCenter() {
   }), [rows, missingRows, missingExpirationRows]);
 
   const [previewRow, setPreviewRow] = useState<UnifiedDocumentRow | null>(null);
+  const [drawerRow, setDrawerRow] = useState<UnifiedDocumentRow | null>(null);
 
   const handleView = (row: UnifiedDocumentRow) => {
     if (!row.file_path) {
