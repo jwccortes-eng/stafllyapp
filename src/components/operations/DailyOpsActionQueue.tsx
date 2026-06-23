@@ -77,18 +77,13 @@ export function DailyOpsActionQueue({ items, onOperate, compact }: Props) {
       <div className={cn("grid gap-2", compact ? "grid-cols-1" : "grid-cols-1 lg:grid-cols-2")}>
         {items.map((it) =>
           compact ? (
-            <button
+            <MobileQueueRow
               key={it.id}
-              type="button"
               onClick={() => setDrawerItem(it)}
-              className={cn(
-                "rounded-2xl border p-3.5 flex items-start gap-3 text-left w-full active:scale-[0.99] transition-transform",
-                TONE[it.urgency],
-              )}
-            >
-              <div className="mt-0.5 shrink-0">{ICON[it.kind]}</div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
+              className={cn("rounded-2xl p-3.5", TONE[it.urgency])}
+              leading={<div className="mt-0.5">{ICON[it.kind]}</div>}
+              topMeta={
+                <>
                   <Badge
                     variant="outline"
                     className="text-[10px] px-1.5 py-0 h-4 font-semibold border-current"
@@ -98,16 +93,11 @@ export function DailyOpsActionQueue({ items, onOperate, compact }: Props) {
                   <span className="text-[11px] text-muted-foreground truncate">
                     {it.subtitle}
                   </span>
-                </div>
-                <p className="text-sm font-semibold text-foreground mt-1 line-clamp-2">
-                  {it.title}
-                </p>
-                <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
-                  {it.message}
-                </p>
-              </div>
-              <ChevronRight className="h-4 w-4 shrink-0 mt-1 opacity-60" />
-            </button>
+                </>
+              }
+              primary={it.title}
+              secondary={it.message}
+            />
           ) : (
             <div
               key={it.id}
@@ -148,86 +138,79 @@ export function DailyOpsActionQueue({ items, onOperate, compact }: Props) {
         )}
       </div>
 
-      <Sheet open={!!drawerItem} onOpenChange={(o) => !o && setDrawerItem(null)}>
-        <SheetContent
-          side="bottom"
-          className="rounded-t-2xl pb-[calc(env(safe-area-inset-bottom,0px)+8px)] max-h-[88vh] overflow-y-auto"
-        >
-          {drawerItem && (
-            <>
-              <SheetHeader className="text-left">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <Badge
-                    variant="outline"
-                    className={cn("text-[10px] px-1.5 py-0 h-5 font-semibold", TONE[drawerItem.urgency])}
-                  >
-                    {URGENCY_LABEL[drawerItem.urgency]}
-                  </Badge>
-                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-5 font-semibold">
-                    {ACTION_KIND_LABEL[drawerItem.kind]}
-                  </Badge>
-                </div>
-                <SheetTitle className="text-base mt-2">{drawerItem.title}</SheetTitle>
-                <SheetDescription className="text-xs">
-                  {drawerItem.subtitle}
-                </SheetDescription>
-              </SheetHeader>
+      <MobileQueueDrawer
+        open={!!drawerItem}
+        onOpenChange={(o) => !o && setDrawerItem(null)}
+        maxHeightClassName="max-h-[88vh]"
+        headerMeta={drawerItem ? (
+          <>
+            <Badge
+              variant="outline"
+              className={cn("text-[10px] px-1.5 py-0 h-5 font-semibold", TONE[drawerItem.urgency])}
+            >
+              {URGENCY_LABEL[drawerItem.urgency]}
+            </Badge>
+            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-5 font-semibold">
+              {ACTION_KIND_LABEL[drawerItem.kind]}
+            </Badge>
+          </>
+        ) : undefined}
+        title={drawerItem?.title}
+        description={drawerItem?.subtitle}
+        footer={drawerItem ? (
+          <Button
+            className="w-full h-11 text-sm gap-1"
+            onClick={() => {
+              const id = drawerItem.shiftId;
+              setDrawerItem(null);
+              onOperate(id);
+            }}
+          >
+            Operar turno
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        ) : undefined}
+      >
+        {drawerItem && (
+          <>
+            <div className="rounded-xl border border-border/60 bg-muted/30 p-3">
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">
+                Qué pasa
+              </p>
+              <p className="text-foreground text-sm">{drawerItem.message}</p>
+            </div>
 
-              <div className="mt-4 space-y-3 text-sm">
-                <div className="rounded-xl border border-border/60 bg-muted/30 p-3">
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">
-                    Qué pasa
-                  </p>
-                  <p className="text-foreground">{drawerItem.message}</p>
-                </div>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <MetaCell label="Horario" value={fmtTimeRange(drawerItem.shift)} />
+              <MetaCell label="Afectados" value={String(drawerItem.count)} />
+              {drawerItem.shift.client_name && (
+                <MetaCell label="Cliente" value={drawerItem.shift.client_name} />
+              )}
+              {(drawerItem.shift.job_site_name ||
+                drawerItem.shift.meeting_point_location_name ||
+                drawerItem.shift.meeting_point) && (
+                <MetaCell
+                  label="Lugar"
+                  value={
+                    drawerItem.shift.job_site_name ??
+                    drawerItem.shift.meeting_point_location_name ??
+                    drawerItem.shift.meeting_point ??
+                    "—"
+                  }
+                />
+              )}
+              {drawerItem.shift.shift_code && (
+                <MetaCell label="Código" value={drawerItem.shift.shift_code} />
+              )}
+            </div>
 
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <MetaCell label="Horario" value={fmtTimeRange(drawerItem.shift)} />
-                  <MetaCell label="Afectados" value={String(drawerItem.count)} />
-                  {drawerItem.shift.client_name && (
-                    <MetaCell label="Cliente" value={drawerItem.shift.client_name} />
-                  )}
-                  {(drawerItem.shift.job_site_name ||
-                    drawerItem.shift.meeting_point_location_name ||
-                    drawerItem.shift.meeting_point) && (
-                    <MetaCell
-                      label="Lugar"
-                      value={
-                        drawerItem.shift.job_site_name ??
-                        drawerItem.shift.meeting_point_location_name ??
-                        drawerItem.shift.meeting_point ??
-                        "—"
-                      }
-                    />
-                  )}
-                  {drawerItem.shift.shift_code && (
-                    <MetaCell label="Código" value={drawerItem.shift.shift_code} />
-                  )}
-                </div>
-
-                <p className="text-[11px] text-muted-foreground leading-snug">
-                  Las horas programadas son referencia operativa. Payroll se calcula
-                  con fichajes reales o validaciones aprobadas.
-                </p>
-              </div>
-
-              <div className="mt-4 sticky bottom-0 bg-background pt-2">
-                <Button
-                  className="w-full h-11 text-sm gap-1"
-                  onClick={() => {
-                    const id = drawerItem.shiftId;
-                    setDrawerItem(null);
-                    onOperate(id);
-                  }}
-                >
-                  Operar turno
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </>
-          )}
-        </SheetContent>
-      </Sheet>
+            <p className="text-[11px] text-muted-foreground leading-snug">
+              Las horas programadas son referencia operativa. Payroll se calcula
+              con fichajes reales o validaciones aprobadas.
+            </p>
+          </>
+        )}
+      </MobileQueueDrawer>
     </>
   );
 }
