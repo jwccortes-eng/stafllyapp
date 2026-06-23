@@ -190,7 +190,7 @@ function KpiStrip({ counts, loading }: { counts: KpiCounts; loading: boolean }) 
     { label: "Turnos hoy",       value: counts.todayShifts,        icon: CalendarDays, tone: "neutral", to: "/app/command-center?tab=today",     hint: "Hoy" },
     { label: "Respuestas pend.", value: counts.pendingAssignments, icon: Users,        tone: counts.pendingAssignments > 0 ? "warn" : "neutral", to: "/app/command-center?tab=attention", hint: "Asignaciones" },
     { label: "Relojes abiertos", value: counts.openClocks,         icon: Clock,        tone: counts.openClocks > 0 ? "warn" : "neutral",         to: "/app/timeclock",                    hint: "Time entries" },
-    { label: "Validación",       value: counts.periodsInReview,    icon: ScanEye,      tone: counts.periodsInReview > 0 ? "info" : "neutral",    to: "/app/command-center?tab=payroll",   hint: "Periodos" },
+    { label: "Periodos abiertos", value: counts.periodsInReview,    icon: ScanEye,      tone: counts.periodsInReview > 0 ? "info" : "neutral",    to: "/app/command-center?tab=payroll",   hint: "Periodos" },
     { label: "Docs pendientes",  value: counts.docsPending,        icon: FileWarning,  tone: counts.docsPending > 0 ? "warn" : "neutral",        to: "/app/documents",                    hint: "Revisión" },
   ];
 
