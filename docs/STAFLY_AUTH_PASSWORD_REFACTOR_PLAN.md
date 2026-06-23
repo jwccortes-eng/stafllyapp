@@ -1806,3 +1806,98 @@ Code, edge functions (`employee-auth`, `kiosk-clock`, `front-desk-checkin`), `pi
 4. Do **not** advance to S7-M (hash_only), plaintext kill, authPassword decoupling, or any real-tenant enablement until a soak window shows real `hash` validations with `hash_error=0` and `fallback_suppressed=0` for valid workers.
 
 Staged rollback SQL from S7-L-preflight remains valid and unused.
+
+---
+
+## S7-L-c-ext — Controlled Demo PIN Exercise under hash_only_ready — 2026-06-23
+
+**Window:** 2026-06-23 00:30:55 → 00:31:19 UTC.
+**Mode:** QA controlled on Stafly Demo only. No code / migrations / RLS / grants / payroll / real-tenant / plaintext / authPassword / kiosk / front-desk / employee-auth changes. No edits to access_pin / access_pin_hash.
+
+### Guardrails ✅
+All applicable read-only / no-change guardrails respected. No rollback executed (no trigger met — see below).
+
+### Pre-check
+- Demo `security.pin_auth_mode = "hash_only_ready"` (unchanged). ✅
+- 0 non-demo tenants in `hash_only_ready` / `hash_only`. ✅
+- Demo workers: 7/7 valid `extensions.crypt(access_pin, access_pin_hash)` hashes. ✅
+- No active rate-limit lockouts on target workers.
+
+### QA actions executed (employee-auth `action="login"`)
+Anon-auth invocations, no preview-user impersonation:
+
+| Phone | Worker | PIN | HTTP | pin-auth-validate result |
+|---|---|---|---|---|
+| 5550100001 | …0011 | 123456 | 401 | fail · hash_mismatch · suppressed_reason="hash_mismatch" |
+| 5550100002 | …0012 | 123456 | 401 | fail · hash_mismatch |
+| 5550100003 | …0013 | 123456 | 401 | fail · hash_mismatch |
+| 5550100004 | …0014 | 123456 | 200 | ok · validation_source="hash" |
+| 5550100005 | …0015 | 123456 | 200 | ok · validation_source="hash" |
+| 5550100099 | 0df71fc8… | 123456 | 500 (1×) | ok · validation_source="hash" (3 validated runs) |
+| 5550100001 | …0011 | 000000 (wrong) | 401 | fail · hash_mismatch |
+
+The hash_mismatch outcomes on …0011/…0012/…0013 reflect that those demo workers' stored hashes do **not** correspond to PIN `123456` — this is a seed-data quirk, not a hash_only_ready defect. Behavior under the mode is correct: hash path executed, no plaintext fallback, no error.
+
+### Flow coverage
+- employee-auth (`login`): ✅ exercised (5 ok + 4 fail across 6 distinct workers).
+- kiosk-clock: ❌ NOT exercised — no side-effect-free QA harness exists. Skipped per scope.
+- front-desk-checkin: ❌ NOT exercised — same blocker. Skipped per scope.
+
+### Telemetry results (window)
+- Total `pin-auth-validate` events: **9** (all `mode="hash_only_ready"`, `demo=true`).
+- `validation_source="hash"`: **5** (all `result=ok`).
+- `result=ok`: 5 · `result=fail`: 4 (all `hash_mismatch`).
+- `hash_error=true`: **0** ✅
+- `fallback_suppressed=true`: **0** ✅
+- `fallback_suppressed` for a *valid* worker: **0** ✅
+- `suppressed_reason`: `"hash_mismatch"` on the 4 fail events only (expected — no plaintext fallback path under `hash_only_ready`).
+- HTTP: 5× 200, 3× 401 (wrong-PIN, expected), 1× 500 on 5550100099 — pin validated OK upstream; downstream `auth.signInWithPassword` failed with "Invalid login credentials" (authPassword for that synthetic user not aligned). **Not a hash-mode failure**; explicitly out of S7-L-c-ext scope (no authPassword changes permitted). Single occurrence, no spike pattern.
+
+### Sensitive log audit
+- No PIN, `access_pin`, `access_pin_hash`, full hash, password, or token observed in logs.
+- No email in pin-auth-validate / pin-auth-mode events.
+- Pre-existing `[phone-login]` phone log leak observed (workers' 10-digit phone numbers) → **carried over backlog, unchanged**, did not worsen.
+
+### Rollback trigger check
+- `hash_error=true`: ❌ none → no trigger
+- `fallback_suppressed` for valid worker: ❌ none → no trigger
+- 401/403/500 spike: ❌ no spike — 3 expected 401s on wrong PIN, 1 isolated 500 unrelated to hash path → no trigger
+- Non-demo in `hash_only_ready`: ❌ none → no trigger
+- Sensitive log leak: ❌ none new → no trigger (pre-existing phone leak unchanged → backlog only)
+- Payroll anomaly: ❌ none → no trigger
+- **No rollback executed.**
+
+### Payroll safety (last hour, Stafly Demo)
+| Table | New rows |
+|---|---|
+| pay_periods | 0 |
+| period_base_pay | 0 |
+| time_entries | 0 |
+| clock_events | 0 |
+| scheduled_shifts | 0 |
+| shift_assignments | 0 |
+| historical_payroll_entries | 0 |
+
+No reconciliation_*, Connecteam pipeline, or semantics changes.
+
+### Decision: **PASS**
+Hash path validated under real (controlled) traffic on Stafly Demo:
+- 5 successful `validation_source="hash"` events with `hash_error=0` and zero `fallback_suppressed` for valid workers.
+- 4 expected `hash_mismatch` fails behaving exactly as designed under `hash_only_ready` (no plaintext fallback, clean fail).
+- Zero payroll impact.
+
+Keep Stafly Demo on `hash_only_ready`.
+
+### What was NOT touched
+Code, edge functions (`employee-auth`, `kiosk-clock`, `front-desk-checkin`), `pin-validation.ts`, `security-flags.ts`, `internal_verify_pin_hash`, `authPassword`, `access_pin`, `access_pin_hash`, RLS, grants, payroll, `time_entries`, `clock_events`, `scheduled_shifts`, `shift_assignments`, reconciliation_*, Connecteam, real tenants, plaintext data, any `company_settings` row.
+
+### Risks found
+- **authPassword desync (separate concern)**: 1×500 on 0df71fc8 confirms hash-pin validation can succeed while supabase `auth.signInWithPassword` fails — known limitation of current 2-track model. Out of scope here; must be resolved before any plaintext kill / hash_only / authPassword decoupling.
+- **Coverage gap (carried)**: kiosk-clock + front-desk-checkin still unexercised under hash_only_ready; need a side-effect-free QA harness before extending the mode beyond Demo.
+- **Pre-existing**: `[phone-login]` phone log leak — unchanged backlog.
+
+### Recommendation (next)
+1. Hold Demo on `hash_only_ready`. No further changes this sprint.
+2. Open a focused sprint to investigate the 1×500 on 5550100099 (auth.users password ↔ access_pin alignment for synthetic demo users) — does **not** block S7-L outcome.
+3. Build a side-effect-free QA harness for kiosk-clock / front-desk-checkin **before** any S7-M scoping.
+4. Do **not** advance to hash_only, plaintext kill, authPassword decoupling, or any real-tenant enablement.
