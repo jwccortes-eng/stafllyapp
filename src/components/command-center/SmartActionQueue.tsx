@@ -75,32 +75,31 @@ export function SmartActionQueue({ companyId }: Props) {
     async function load() {
       try {
         const sb: any = supabase;
-        const openQ = sb.from("time_entries").select("id", { count: "exact", head: true }).is("clock_out", null);
-        const unmatchedQ = sb.from("historical_payroll_entries").select("id", { count: "exact", head: true }).is("matched_employee_id", null);
-        const noPortalQ = sb.from("employees").select("id", { count: "exact", head: true }).eq("is_active", true).is("user_id", null);
-        const reqQ = sb.from("service_requests").select("id", { count: "exact", head: true })
+
+        // S3 cleanup: chain .eq("company_id", …) FIRST on every query so the
+        // tenant scope is visually obvious in code review and never appears
+        // "after" the status/review filter. RLS already enforces this; this
+        // is a legibility + future-proofing guardrail, not a behavior change.
+        const scope = <T extends any>(qb: T): T => {
+          if (companyId) (qb as any).eq("company_id", companyId);
+          return qb;
+        };
+
+        const openQ        = scope(sb.from("time_entries").select("id", { count: "exact", head: true })).is("clock_out", null);
+        const unmatchedQ   = scope(sb.from("historical_payroll_entries").select("id", { count: "exact", head: true })).is("matched_employee_id", null);
+        const noPortalQ    = scope(sb.from("employees").select("id", { count: "exact", head: true })).eq("is_active", true).is("user_id", null);
+        const reqQ         = scope(sb.from("service_requests").select("id", { count: "exact", head: true }))
           .in("status", ["new", "reviewing", "approved_for_scheduling"]);
-        const docsPendingQ = sb.from("employee_documents").select("id", { count: "exact", head: true }).eq("review_status", "pending");
-        const docsRejectedQ = sb.from("employee_documents").select("id", { count: "exact", head: true }).eq("review_status", "rejected");
+        const docsPendingQ  = scope(sb.from("employee_documents").select("id", { count: "exact", head: true })).eq("review_status", "pending");
+        const docsRejectedQ = scope(sb.from("employee_documents").select("id", { count: "exact", head: true })).eq("review_status", "rejected");
 
         // Expiry windows for the unified expiry classifier (admin docs only).
-        const nowIso = new Date().toISOString();
+        const nowIso  = new Date().toISOString();
         const in30Iso = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-        const docsExpiredQ = sb.from("employee_documents").select("id", { count: "exact", head: true })
+        const docsExpiredQ  = scope(sb.from("employee_documents").select("id", { count: "exact", head: true }))
           .eq("review_status", "approved").not("expires_at", "is", null).lte("expires_at", nowIso);
-        const docsExpiringQ = sb.from("employee_documents").select("id", { count: "exact", head: true })
+        const docsExpiringQ = scope(sb.from("employee_documents").select("id", { count: "exact", head: true }))
           .eq("review_status", "approved").not("expires_at", "is", null).gt("expires_at", nowIso).lte("expires_at", in30Iso);
-
-        if (companyId) {
-          openQ.eq("company_id", companyId);
-          unmatchedQ.eq("company_id", companyId);
-          noPortalQ.eq("company_id", companyId);
-          reqQ.eq("company_id", companyId);
-          docsPendingQ.eq("company_id", companyId);
-          docsRejectedQ.eq("company_id", companyId);
-          docsExpiredQ.eq("company_id", companyId);
-          docsExpiringQ.eq("company_id", companyId);
-        }
 
         const [openRes, unmatchedRes, noPortalRes, reqRes, dpRes, drRes, deRes, dxRes] = await Promise.all([
           openQ, unmatchedQ, noPortalQ, reqQ, docsPendingQ, docsRejectedQ, docsExpiredQ, docsExpiringQ,
