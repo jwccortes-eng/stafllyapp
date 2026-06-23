@@ -1273,3 +1273,116 @@ Deno unit tests, mocked RPC client, both modes:
 2. **S7-L-b (single-row flip):** Update one row in `company_settings` for Stafly Demo only: `value` → `"hash_only_ready"`. No code change. Verify telemetry shows `fallback_suppressed=false` consistently. If any `fallback_suppressed=true` event appears, revert the row to `"dual"` immediately (single UPDATE). Real tenants and `authPassword` remain out of scope until the separate auth-decoupling workstream.
 
 Hash-only (no plaintext stored at all) and the full auth-decoupling/random-password path remain explicitly out of scope for both S7-L sub-steps.
+
+## Sprint S7-L-a — Demo `hash_only_ready` Soak Gate (Read-Only) (2026-06-23)
+
+**Type:** Observability / read-only. No code, SQL writes, migrations, RLS, grants, auth, payroll, or settings changes.
+
+### Guardrails reviewed
+No edits to `company_settings`, `employee-auth`, `kiosk-clock`, `front-desk-checkin`, `_shared/pin-validation.ts`, `_shared/security-flags.ts`, `internal_verify_pin_hash`, `authPassword`, `access_pin`, `access_pin_hash`, RLS, grants, payroll (`pay_periods`, `period_base_pay`, `reconciliation_*`, `historical_payroll_entries`, `time_entries`, `clock_events`, `scheduled_shifts`, `shift_assignments`), or Connecteam pipeline. Zero real-tenant touch.
+
+### 1. Settings verification (read-only SQL)
+`SELECT company_id, key, value FROM company_settings WHERE key='security.pin_auth_mode'`:
+- **1 row total**: Stafly Demo (`d3500000-…-0001`) = `"dual"`.
+- `hash_only_ready` tenants: **0**.
+- Real tenants in `dual`: **0**.
+- Real tenants with any non-default mode: **0** (all real tenants fall through to `legacy` via missing row).
+
+### 2. Hash verification (counts only — no PIN/hash/PII exported)
+Demo (`company_id = d3500000-…-0001`):
+| Metric | Count |
+|---|---|
+| Total demo workers | 7 |
+| With `access_pin` (plaintext) | 7 |
+| With `access_pin_hash` | 7 |
+| `extensions.crypt(access_pin, access_pin_hash) = access_pin_hash` | **7/7 ✅** |
+
+S7-J restore confirmed intact. No drift since 2026-06-22.
+
+### 3. Telemetry soak — Stafly Demo
+Edge function logs queried for `pin-auth-validate` / `pin-auth` across `employee-auth`, `kiosk-clock`, `front-desk-checkin`:
+
+| Function | Demo PIN validations in window | Notes |
+|---|---|---|
+| employee-auth | **0** | Only phone-login activity (`[phone-login]`), not PIN |
+| kiosk-clock | **0** | No invocations |
+| front-desk-checkin | **0** | No invocations |
+
+Aggregate:
+- `validation_source=hash`: 0
+- `validation_source=plaintext_fallback`: 0
+- `hash_error=true`: **0 ✅**
+- `hash_mismatch=true`: 0
+- `fallback_suppressed`: 0
+- `suppressed_reason`: n/a
+- Unexpected fallbacks: none
+
+### 4. Sensitive log audit
+Sampled `employee-auth` recent logs: no `access_pin`, `access_pin_hash`, full hash, password, token, email, or phone leak. `[phone-login]` emits only a normalized phone (10-digit) — pre-existing telemetry, out of scope for this sprint. Recommend a follow-up to scrub the normalized-phone field, tracked separately (NOT part of S7-L).
+
+### 5. Operational check
+- Portal login demo: not exercised in this window (QA-mode plumbing required to avoid artifacts). No 500s observed in available logs.
+- Kiosk demo: no invocations; not exercised to avoid demo artifacts.
+- Front-desk demo: no invocations; not exercised.
+- No worker-facing leak of hash state surfaced anywhere.
+- No 500s/anomalies in observable logs.
+
+### 6. GO / NO-GO for S7-L-b
+
+**Decision: NO-GO (insufficient soak evidence).**
+
+Acceptance criteria for S7-L-b flip require non-zero `validation_source="hash"` traffic in Stafly Demo with `hash_error=0` and `hash_mismatch=0` across all three flows. Current window shows **0 demo PIN validations** across `employee-auth` / `kiosk-clock` / `front-desk-checkin`, so we cannot certify that the hash path is exercised under real demo load. Hash integrity (7/7) and zero-error baseline are necessary but not sufficient.
+
+**Blocker:** lack of synthetic or live demo PIN traffic during the soak window.
+
+### 7. Recommendation S7-L-a-ext (precondition for S7-L-b)
+Before S7-L-b is approved:
+1. Run a controlled QA-mode demo-PIN exercise sprint (S7-L-a-ext, read-only behavior + light demo-only writes already covered by S7-J pattern): 1× employee-auth login, 1× kiosk-clock punch, 1× front-desk-checkin per demo worker, then immediate artifact contention per the QA-artifact protocol (`[QA_ARTIFACT 2026-06-23]` tagging, `status=cancelled`/`removed`, no payroll touch).
+2. Re-run S7-L-a telemetry sweep; require ≥21 events with `validation_source="hash"`, `hash_error=0`, `hash_mismatch=0`.
+3. Then proceed to S7-L-b.
+
+### 8. Exact flip SQL (S7-L-b — NOT executed)
+```sql
+-- FLIP: Stafly Demo dual → hash_only_ready
+INSERT INTO public.company_settings (company_id, key, value)
+VALUES (
+  'd3500000-0000-4000-8000-000000000001',
+  'security.pin_auth_mode',
+  '"hash_only_ready"'::jsonb
+)
+ON CONFLICT (company_id, key) DO UPDATE
+  SET value = EXCLUDED.value, updated_at = now()
+WHERE public.company_settings.company_id = 'd3500000-0000-4000-8000-000000000001'
+  AND public.company_settings.key = 'security.pin_auth_mode';
+```
+
+### 9. Exact rollback SQL (S7-L-b — NOT executed)
+```sql
+-- ROLLBACK soft: hash_only_ready → dual
+UPDATE public.company_settings
+SET value = '"dual"'::jsonb, updated_at = now()
+WHERE company_id = 'd3500000-0000-4000-8000-000000000001'
+  AND key = 'security.pin_auth_mode';
+
+-- ROLLBACK hard (if full demo lockout protection needed): → legacy
+UPDATE public.company_settings
+SET value = '"legacy"'::jsonb, updated_at = now()
+WHERE company_id = 'd3500000-0000-4000-8000-000000000001'
+  AND key = 'security.pin_auth_mode';
+```
+
+Both are pure setting flips — no schema, no data, no `access_pin*` mutations.
+
+### 10. S7-L-b gate (when re-attempted)
+- Owner/developer written approval.
+- On-call assigned for the flip window.
+- Observation window post-flip: 24h with hourly telemetry sweep.
+- **No-go conditions:** any `hash_error>0`, any unexpected `suppressed_reason`, any non-demo tenant resolving non-`legacy`, any worker-facing hash-state leak, any auth/payroll anomaly correlated with the flip.
+
+### What was NOT touched
+`company_settings` values, edge code (employee-auth / kiosk-clock / front-desk-checkin), `_shared/pin-validation.ts`, `_shared/security-flags.ts`, `internal_verify_pin_hash`, `authPassword`, `access_pin`, `access_pin_hash`, RLS, grants, payroll, `time_entries`, `clock_events`, `scheduled_shifts`, `shift_assignments`, Connecteam, real tenants. Zero migrations created.
+
+### Risks found
+- **R1 (blocker):** zero demo PIN telemetry in observed window → cannot validate hash path under load → S7-L-b NOT safe to ship.
+- **R2 (low):** `[phone-login]` logs normalized phone digits. Pre-existing; document for separate scrub sprint.
+- **R3 (low):** `dual` mode is structurally safe (fallback still active), so the prolonged absence of `validation_source="hash"` events is observability gap, not a security regression.
