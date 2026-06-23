@@ -801,65 +801,170 @@ export default function PayrollReviewQueue() {
             )}
 
 
-          {/* Bucket accordion */}
-          {buckets.some(b => b.rows.length > 0) && (
-            <Accordion type="multiple" defaultValue={buckets.filter(b => b.rows.length > 0).map(b => b.id)} className="space-y-2">
-              {buckets.map(b => {
-                const sev = SEVERITY_STYLE[b.severity];
+          {/* Bucket accordion.
+              S4: if `?bucket=` is present and valid, only that bucket opens
+              by default; otherwise all non-empty buckets open as before.
+              Mobile: each row is a tappable card that opens a drawer-per-row
+              with the full row detail (drawer-per-row pattern). */}
+          {buckets.some(b => b.rows.length > 0) && (() => {
+            const validFocus = focusedBucket && buckets.some(b => b.id === focusedBucket) ? focusedBucket : null;
+            const defaultOpen = validFocus
+              ? [validFocus]
+              : buckets.filter(b => b.rows.length > 0).map(b => b.id);
+            return (
+              <Accordion type="multiple" defaultValue={defaultOpen} className="space-y-2">
+                {buckets.map(b => {
+                  const sev = SEVERITY_STYLE[b.severity];
+                  const SevIcon = sev.icon;
+                  const isFocused = validFocus === b.id;
+                  return (
+                    <AccordionItem
+                      key={b.id}
+                      value={b.id}
+                      className={cn(
+                        "border rounded-lg px-3 bg-card",
+                        isFocused && "ring-2 ring-primary/40",
+                      )}
+                    >
+                      <AccordionTrigger className="hover:no-underline py-3">
+                        <div className="flex items-center gap-3 w-full">
+                          <span className={cn("h-2 w-2 rounded-full shrink-0", sev.dot)} />
+                          <SevIcon className={cn("h-4 w-4 shrink-0",
+                            b.severity === "block" ? "text-destructive" : b.severity === "warn" ? "text-warning" : "text-muted-foreground"
+                          )} />
+                          <span className="text-sm font-semibold text-left">{b.title}</span>
+                          <Badge variant="outline" className={cn("text-[10px] py-0 px-1.5 hidden sm:inline-flex", sev.chip)}>{sev.label}</Badge>
+                          {b.affectsPay && <Badge variant="outline" className="text-[10px] py-0 px-1.5 hidden sm:inline-flex">Afecta pago</Badge>}
+                          <span className="ml-auto text-sm font-mono tabular-nums text-muted-foreground">{b.rows.length}</span>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent className="pb-3">
+                        <p className="text-xs text-muted-foreground mb-3">{b.description}</p>
+                        {b.rows.length === 0 ? (
+                          <div className="text-xs text-muted-foreground py-2 flex items-center gap-1.5">
+                            <CheckCircle2 className="h-3.5 w-3.5 text-earning" /> No hay bloques pendientes en esta etapa.
+                          </div>
+                        ) : isMobile ? (
+                          <div className="space-y-2">
+                            {b.rows.slice(0, 100).map(r => (
+                              <button
+                                key={r.key}
+                                type="button"
+                                onClick={() => setDrawerRow({ row: r, bucket: b })}
+                                className="w-full text-left flex items-center gap-3 rounded-lg border border-border/60 bg-background/40 px-3 py-2.5 active:scale-[0.99] active:bg-muted/50 transition"
+                              >
+                                <div className="min-w-0 flex-1">
+                                  <div className="text-sm font-medium truncate">{r.primary}</div>
+                                  {r.secondary && <div className="text-xs text-muted-foreground line-clamp-2">{r.secondary}</div>}
+                                </div>
+                                {typeof r.amount === "number" && (
+                                  <div className="text-sm font-mono tabular-nums text-right shrink-0">
+                                    {moneyFmt.format(r.amount)}
+                                  </div>
+                                )}
+                                <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                              </button>
+                            ))}
+                            {b.rows.length > 100 && (
+                              <div className="pt-2 text-xs text-muted-foreground">
+                                Mostrando los primeros 100 de {b.rows.length} bloques.
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="divide-y divide-border/50">
+                            {b.rows.slice(0, 100).map(r => (
+                              <div key={r.key} className="flex items-center gap-3 py-2">
+                                <div className="min-w-0 flex-1">
+                                  <div className="text-sm font-medium truncate">{r.primary}</div>
+                                  {r.secondary && <div className="text-xs text-muted-foreground truncate">{r.secondary}</div>}
+                                </div>
+                                {typeof r.amount === "number" && (
+                                  <div className="text-sm font-mono tabular-nums text-right shrink-0 w-24">
+                                    {moneyFmt.format(r.amount)}
+                                  </div>
+                                )}
+                                {r.link && (
+                                  <Button asChild size="sm" variant="ghost" className="h-7 text-xs gap-1 shrink-0">
+                                    <Link to={r.link.to}>{r.link.label}<ExternalLink className="h-3 w-3" /></Link>
+                                  </Button>
+                                )}
+                              </div>
+                            ))}
+                            {b.rows.length > 100 && (
+                              <div className="pt-2 text-xs text-muted-foreground">
+                                Mostrando los primeros 100 de {b.rows.length} bloques.
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </AccordionContent>
+                    </AccordionItem>
+                  );
+                })}
+              </Accordion>
+            );
+          })()}
+
+          {/* Mobile drawer-per-row (read-only detail + existing CTA if any) */}
+          <Sheet open={!!drawerRow} onOpenChange={(o) => !o && setDrawerRow(null)}>
+            <SheetContent side="bottom" className="rounded-t-2xl max-h-[85dvh] overflow-y-auto">
+              {drawerRow && (() => {
+                const { row, bucket } = drawerRow;
+                const sev = SEVERITY_STYLE[bucket.severity];
                 const SevIcon = sev.icon;
                 return (
-                  <AccordionItem key={b.id} value={b.id} className="border rounded-lg px-3 bg-card">
-                    <AccordionTrigger className="hover:no-underline py-3">
-                      <div className="flex items-center gap-3 w-full">
-                        <span className={cn("h-2 w-2 rounded-full shrink-0", sev.dot)} />
-                        <SevIcon className={cn("h-4 w-4 shrink-0",
-                          b.severity === "block" ? "text-destructive" : b.severity === "warn" ? "text-warning" : "text-muted-foreground"
-                        )} />
-                        <span className="text-sm font-semibold text-left">{b.title}</span>
-                        <Badge variant="outline" className={cn("text-[10px] py-0 px-1.5", sev.chip)}>{sev.label}</Badge>
-                        {b.affectsPay && <Badge variant="outline" className="text-[10px] py-0 px-1.5">Afecta pago</Badge>}
-                        <span className="ml-auto text-sm font-mono tabular-nums text-muted-foreground">{b.rows.length}</span>
+                  <>
+                    <SheetHeader className="text-left space-y-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Badge variant="outline" className={cn("text-[10px] py-0 px-1.5 gap-1", sev.chip)}>
+                          <SevIcon className="h-3 w-3" /> {bucket.title}
+                        </Badge>
+                        {bucket.affectsPay && (
+                          <Badge variant="outline" className="text-[10px] py-0 px-1.5">Afecta pago</Badge>
+                        )}
+                        {row.badge && (
+                          <Badge variant="outline" className="text-[10px] py-0 px-1.5 capitalize">{row.badge}</Badge>
+                        )}
                       </div>
-                    </AccordionTrigger>
-                    <AccordionContent className="pb-3">
-                      <p className="text-xs text-muted-foreground mb-3">{b.description}</p>
-                      {b.rows.length === 0 ? (
-                        <div className="text-xs text-muted-foreground py-2 flex items-center gap-1.5">
-                          <CheckCircle2 className="h-3.5 w-3.5 text-earning" /> No hay bloques pendientes en esta etapa.
-                        </div>
-                      ) : (
-                        <div className="divide-y divide-border/50">
-                          {b.rows.slice(0, 100).map(r => (
-                            <div key={r.key} className="flex items-center gap-3 py-2">
-                              <div className="min-w-0 flex-1">
-                                <div className="text-sm font-medium truncate">{r.primary}</div>
-                                {r.secondary && <div className="text-xs text-muted-foreground truncate">{r.secondary}</div>}
-                              </div>
-                              {typeof r.amount === "number" && (
-                                <div className="text-sm font-mono tabular-nums text-right shrink-0 w-24">
-                                  {moneyFmt.format(r.amount)}
-                                </div>
-                              )}
-                              {r.link && (
-                                <Button asChild size="sm" variant="ghost" className="h-7 text-xs gap-1 shrink-0">
-                                  <Link to={r.link.to}>{r.link.label}<ExternalLink className="h-3 w-3" /></Link>
-                                </Button>
-                              )}
-                            </div>
-                          ))}
-                          {b.rows.length > 100 && (
-                            <div className="pt-2 text-xs text-muted-foreground">
-                              Mostrando los primeros 100 de {b.rows.length} bloques.
-                            </div>
-                          )}
+                      <SheetTitle className="text-base">{row.primary}</SheetTitle>
+                      {row.secondary && (
+                        <SheetDescription className="text-xs leading-relaxed">
+                          {row.secondary}
+                        </SheetDescription>
+                      )}
+                    </SheetHeader>
+
+                    <div className="mt-4 space-y-3">
+                      {typeof row.amount === "number" && (
+                        <div className="flex items-center justify-between rounded-lg border bg-muted/30 px-3 py-2.5">
+                          <span className="text-xs uppercase tracking-wide text-muted-foreground">Monto</span>
+                          <span className="text-base font-mono tabular-nums">{moneyFmt.format(row.amount)}</span>
                         </div>
                       )}
-                    </AccordionContent>
-                  </AccordionItem>
+                      <div className="rounded-lg border bg-background px-3 py-2.5 text-[11px] text-muted-foreground leading-relaxed">
+                        {bucket.description}
+                      </div>
+                      <p className="text-[10px] text-muted-foreground/80 leading-relaxed">
+                        Solo lectura. Payroll real sigue basado en Connecteam y reconciliación. No se modifican fichajes ni periodos desde este detalle.
+                      </p>
+                    </div>
+
+                    {row.link && (
+                      <div className="mt-4 sticky bottom-0 bg-background pt-3 pb-[calc(env(safe-area-inset-bottom,0px)+8px)] border-t">
+                        <Button asChild className="w-full gap-2" onClick={() => setDrawerRow(null)}>
+                          <Link to={row.link.to}>
+                            {row.link.label}
+                            <ExternalLink className="h-4 w-4" />
+                          </Link>
+                        </Button>
+                      </div>
+                    )}
+                  </>
                 );
-              })}
-            </Accordion>
-          )}
+              })()}
+            </SheetContent>
+          </Sheet>
         </>
       )}
 
