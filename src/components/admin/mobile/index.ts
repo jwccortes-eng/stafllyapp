@@ -5,3 +5,5 @@ export { MobileSummaryStrip, MobileMetricCard, type MobileMetric } from "./Mobil
 export { MobileEntityCard } from "./MobileEntityCard";
 export { MobileOperationsSheet } from "./MobileOperationsSheet";
 export { MobileAdminModuleShell } from "./MobileAdminModuleShell";
+export { MobileQueueRow, type MobileQueueRowProps } from "./MobileQueueRow";
+export { MobileQueueDrawer, type MobileQueueDrawerProps } from "./MobileQueueDrawer";

@@ -30,9 +30,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import {
-  Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
-} from "@/components/ui/sheet";
+import { MobileQueueRow, MobileQueueDrawer } from "@/components/admin/mobile";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 
@@ -659,21 +657,17 @@ export default function DailyClose() {
             const Icon = meta.icon;
             const StatusIcon = tone.icon;
             return (
-              <button
+              <MobileQueueRow
                 key={meta.key}
-                type="button"
                 onClick={() => setDrawerStep(meta.key)}
-                className={cn(
-                  "w-full text-left flex items-center gap-3 rounded-xl border border-border/60 bg-card",
-                  "px-3 py-3 active:scale-[0.99] active:bg-muted/40 transition",
-                  tone.ring,
-                )}
-              >
-                <div className={cn("rounded-lg p-2 shrink-0", tone.iconBg)}>
-                  <Icon className="h-4 w-4" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
+                className={cn("bg-card items-center", tone.ring)}
+                leading={
+                  <div className={cn("rounded-lg p-2", tone.iconBg)}>
+                    <Icon className="h-4 w-4" />
+                  </div>
+                }
+                topMeta={
+                  <>
                     <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
                       Paso {i + 1}
                     </span>
@@ -681,119 +675,115 @@ export default function DailyClose() {
                       <StatusIcon className="h-2.5 w-2.5" />
                       {tone.label}
                     </Badge>
-                  </div>
-                  <div className="text-sm font-semibold leading-tight mt-0.5 truncate">
-                    {meta.title}
-                  </div>
-                  <div className="text-xs text-muted-foreground truncate">
-                    {snap.loading ? "Cargando…" : `${state.primary} · ${state.detail}`}
-                  </div>
-                </div>
-                <ChevronRightIcon className="h-4 w-4 text-muted-foreground shrink-0" />
-              </button>
+                  </>
+                }
+                primary={meta.title}
+                secondary={snap.loading ? "Cargando…" : `${state.primary} · ${state.detail}`}
+              />
             );
           })}
         </div>
 
         {/* Mobile drawer-per-step (read-only detail + existing CTA if any) */}
-        <Sheet
-          open={!!drawerStep}
-          onOpenChange={(o) => {
+        {(() => {
+          const entry = drawerStep ? ordered.find((o) => o.meta.key === drawerStep) : null;
+          const handleOpenChange = (o: boolean) => {
             if (!o) {
               setDrawerStep(null);
-              // Clear ?step= from URL if present, preserve other params.
               if (searchParams.get("step")) {
                 const next = new URLSearchParams(searchParams);
                 next.delete("step");
                 setSearchParams(next, { replace: true });
               }
             }
-          }}
-        >
-          <SheetContent side="bottom" className="rounded-t-2xl max-h-[88dvh] overflow-y-auto">
-            {drawerStep && (() => {
-              const entry = ordered.find((o) => o.meta.key === drawerStep);
-              if (!entry) return null;
-              const { meta, state } = entry;
-              const tone = STATUS_TONE[state.status];
-              const StatusIcon = tone.icon;
-              const Icon = meta.icon;
-              return (
+          };
+          if (!entry) {
+            return (
+              <MobileQueueDrawer
+                open={false}
+                onOpenChange={handleOpenChange}
+                maxHeightClassName="max-h-[88dvh]"
+              />
+            );
+          }
+          const { meta, state } = entry;
+          const tone = STATUS_TONE[state.status];
+          const StatusIcon = tone.icon;
+          const Icon = meta.icon;
+          return (
+            <MobileQueueDrawer
+              open={!!drawerStep}
+              onOpenChange={handleOpenChange}
+              maxHeightClassName="max-h-[88dvh]"
+              headerMeta={
                 <>
-                  <SheetHeader className="text-left space-y-2">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <div className={cn("rounded-lg p-1.5", tone.iconBg)}>
-                        <Icon className="h-4 w-4" />
-                      </div>
-                      <Badge variant="outline" className={cn("text-[10px] py-0 px-1.5 gap-1", tone.chip)}>
-                        <StatusIcon className="h-3 w-3" />
-                        {tone.label}
-                      </Badge>
-                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                        {meta.category}
-                      </span>
-                    </div>
-                    <SheetTitle className="text-base">{meta.title}</SheetTitle>
-                    <SheetDescription className="text-sm leading-relaxed">
-                      <span className="font-mono text-base font-semibold tabular-nums text-foreground">
-                        {snap.loading ? "…" : state.primary}
-                      </span>
-                      {" — "}
-                      {state.detail}
-                    </SheetDescription>
-                  </SheetHeader>
-
-                  <div className="mt-4 space-y-3">
-                    <dl className="space-y-2 rounded-lg border border-border/60 bg-muted/20 p-3 text-xs">
-                      <div>
-                        <dt className="font-semibold uppercase tracking-wider text-[10px] text-muted-foreground">Qué revisa</dt>
-                        <dd className="mt-0.5 text-foreground/85">{meta.whatItChecks}</dd>
-                      </div>
-                      <div>
-                        <dt className="font-semibold uppercase tracking-wider text-[10px] text-muted-foreground">Por qué importa</dt>
-                        <dd className="mt-0.5 text-foreground/85">{meta.whyItMatters}</dd>
-                      </div>
-                      <div>
-                        <dt className="font-semibold uppercase tracking-wider text-[10px] text-muted-foreground">Decisión</dt>
-                        <dd className="mt-0.5 text-foreground/85">{meta.decision}</dd>
-                      </div>
-                    </dl>
-
-                    {state.examples && state.examples.length > 0 && (
-                      <div className="space-y-1.5 rounded-lg border border-dashed border-border/60 bg-muted/30 p-2.5">
-                        {state.examples.slice(0, 2).map((ex, i) => (
-                          <div key={i} className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <span className={cn("h-1 w-1 rounded-full opacity-60", tone.dot)} />
-                            <span className="truncate">{ex}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {meta.footnote && (
-                      <p className="text-[11px] text-muted-foreground/80 leading-relaxed">{meta.footnote}</p>
-                    )}
-
-                    <p className="text-[10px] text-muted-foreground/80 leading-relaxed">
-                      Solo lectura. Esta vista no cierra payroll, no edita time_entries y no manda notificaciones.
-                    </p>
+                  <div className={cn("rounded-lg p-1.5", tone.iconBg)}>
+                    <Icon className="h-4 w-4" />
                   </div>
-
-                  {state.href && state.ctaLabel && (
-                    <div className="mt-4 sticky bottom-0 bg-background pt-3 pb-[calc(env(safe-area-inset-bottom,0px)+8px)] border-t">
-                      <Button asChild className="w-full gap-2" onClick={() => setDrawerStep(null)}>
-                        <Link to={state.href}>
-                          {state.ctaLabel}
-                          <ArrowRight className="h-4 w-4" />
-                        </Link>
-                      </Button>
-                    </div>
-                  )}
+                  <Badge variant="outline" className={cn("text-[10px] py-0 px-1.5 gap-1", tone.chip)}>
+                    <StatusIcon className="h-3 w-3" />
+                    {tone.label}
+                  </Badge>
+                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                    {meta.category}
+                  </span>
                 </>
-              );
-            })()}
-          </SheetContent>
-        </Sheet>
+              }
+              title={meta.title}
+              description={
+                <>
+                  <span className="font-mono text-base font-semibold tabular-nums text-foreground">
+                    {snap.loading ? "…" : state.primary}
+                  </span>
+                  {" — "}
+                  {state.detail}
+                </>
+              }
+              footer={state.href && state.ctaLabel ? (
+                <Button asChild className="w-full gap-2" onClick={() => setDrawerStep(null)}>
+                  <Link to={state.href}>
+                    {state.ctaLabel}
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </Button>
+              ) : undefined}
+            >
+              <dl className="space-y-2 rounded-lg border border-border/60 bg-muted/20 p-3 text-xs">
+                <div>
+                  <dt className="font-semibold uppercase tracking-wider text-[10px] text-muted-foreground">Qué revisa</dt>
+                  <dd className="mt-0.5 text-foreground/85">{meta.whatItChecks}</dd>
+                </div>
+                <div>
+                  <dt className="font-semibold uppercase tracking-wider text-[10px] text-muted-foreground">Por qué importa</dt>
+                  <dd className="mt-0.5 text-foreground/85">{meta.whyItMatters}</dd>
+                </div>
+                <div>
+                  <dt className="font-semibold uppercase tracking-wider text-[10px] text-muted-foreground">Decisión</dt>
+                  <dd className="mt-0.5 text-foreground/85">{meta.decision}</dd>
+                </div>
+              </dl>
+
+              {state.examples && state.examples.length > 0 && (
+                <div className="space-y-1.5 rounded-lg border border-dashed border-border/60 bg-muted/30 p-2.5">
+                  {state.examples.slice(0, 2).map((ex, i) => (
+                    <div key={i} className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <span className={cn("h-1 w-1 rounded-full opacity-60", tone.dot)} />
+                      <span className="truncate">{ex}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {meta.footnote && (
+                <p className="text-[11px] text-muted-foreground/80 leading-relaxed">{meta.footnote}</p>
+              )}
+
+              <p className="text-[10px] text-muted-foreground/80 leading-relaxed">
+                Solo lectura. Esta vista no cierra payroll, no edita time_entries y no manda notificaciones.
+              </p>
+            </MobileQueueDrawer>
+          );
+        })()}
 
 
         {/* Qué falta para cerrar el día */}
