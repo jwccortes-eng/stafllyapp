@@ -845,23 +845,17 @@ export default function PayrollReviewQueue() {
                         ) : isMobile ? (
                           <div className="space-y-2">
                             {b.rows.slice(0, 100).map(r => (
-                              <button
+                              <MobileQueueRow
                                 key={r.key}
-                                type="button"
                                 onClick={() => setDrawerRow({ row: r, bucket: b })}
-                                className="w-full text-left flex items-center gap-3 rounded-lg border border-border/60 bg-background/40 px-3 py-2.5 active:scale-[0.99] active:bg-muted/50 transition"
-                              >
-                                <div className="min-w-0 flex-1">
-                                  <div className="text-sm font-medium truncate">{r.primary}</div>
-                                  {r.secondary && <div className="text-xs text-muted-foreground line-clamp-2">{r.secondary}</div>}
-                                </div>
-                                {typeof r.amount === "number" && (
-                                  <div className="text-sm font-mono tabular-nums text-right shrink-0">
+                                primary={r.primary}
+                                secondary={r.secondary}
+                                rightSlot={typeof r.amount === "number" ? (
+                                  <div className="text-sm font-mono tabular-nums">
                                     {moneyFmt.format(r.amount)}
                                   </div>
-                                )}
-                                <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-                              </button>
+                                ) : undefined}
+                              />
                             ))}
                             {b.rows.length > 100 && (
                               <div className="pt-2 text-xs text-muted-foreground">
