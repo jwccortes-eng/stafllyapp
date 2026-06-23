@@ -2109,3 +2109,141 @@ Single step: delete `supabase/functions/pin-qa-validate/` (both `index.ts` and `
 1. **Owner-executed QA matrix run** (cases 1–6) against the deployed `pin-qa-validate` from a trusted environment that holds the service-role JWT. Capture the 6 telemetry events and re-verify the §"Post-run delta" query returns 0 across all 8 tables.
 2. On clean PASS, document results in a new `S7-O` section. Still do **not** advance to `hash_only`, plaintext kill, `authPassword` decoupling, or any real-tenant enablement — each requires its own gate.
 3. Independently, scope a focused sprint to resolve the `authPassword` desync surfaced on 5550100099 (S7-L-c-ext); this is a prerequisite for any future `hash_only` consideration, but is **not** a prerequisite for S7-O.
+
+---
+
+## S7-O — Owner-executed `pin-qa-validate` QA Matrix (Runbook + Tracking)
+
+**Type:** QA / documentation. **Code changes:** none. **SQL writes:** none. **Migrations:** none. **RLS/grants:** none. **Payroll:** none. **Real-tenant enablement:** none. **`company_settings`:** unchanged. **Plaintext deletion:** none. **`authPassword`:** unchanged. **Production PIN-gated functions (`employee-auth`, `kiosk-clock`, `front-desk-checkin`):** unchanged.
+
+### Why this sprint exists
+S7-N created `supabase/functions/pin-qa-validate/index.ts` (service-role-only, demo-only, no writes, reuses `resolveDemoDualMode` + `validatePinDual` + `internal_verify_pin_hash`). CI no-write guard PASS. Deployed 2026-06-23 00:38 UTC. The Lovable agent cannot execute cases 1–6 because the service-role JWT is intentionally not exposed to the sandbox. Owner/on-call must run them from a trusted environment.
+
+### Guardrails (must hold for entire run)
+- Use **only Stafly Demo** workers (`is_demo=true`, id `d3500000-0000-0000-0000-000000000001`).
+- Do **NOT** use Quality Staff, MyStaff, JKitchen, or any other real tenant — except the controlled case 6 (real `employee_id` → expect 403), executed once with owner approval.
+- Never paste the service-role JWT into chat, docs, screenshots, commit messages, ticket bodies, or logs.
+- Never paste real PINs into docs/chat. Reference them as `<DEMO_PIN_OK>` / `<DEMO_PIN_BAD>`.
+- No writes to any table. No payroll touched. No changes to `company_settings.security.pin_auth_mode` (Demo stays `hash_only_ready`).
+- Rollback trigger (revert Demo to `dual`) if any of: `hash_error=true`, `fallback_suppressed` for a valid worker, non-demo resolves `hash_only_ready`, sensitive log leakage, any payroll anomaly.
+
+### Environment (no secrets)
+- Endpoint: `POST https://<project>.supabase.co/functions/v1/pin-qa-validate`
+- Auth header: `Authorization: Bearer $SERVICE_ROLE_JWT` (env var only; never inline).
+- Content-Type: `application/json`.
+- Body shape: `{ "employee_id": "<uuid>", "pin": "<DEMO_PIN_*>", "ctx": "kiosk" | "front_desk" | "portal" }`.
+
+### Owner runbook (copy-paste, fill blanks locally)
+
+```bash
+# Required env (set in your shell, do NOT commit):
+#   export SERVICE_ROLE_JWT='...'        # service_role key, never log
+#   export DEMO_EMP='<demo employee uuid>'   # from Stafly Demo tenant
+#   export DEMO_PIN_OK='<correct pin>'        # never paste into docs
+#   export DEMO_PIN_BAD='000000'              # any wrong pin
+#   export REAL_EMP='<one real-tenant employee uuid>'  # case 6 only
+#   export FN_URL='https://<project>.supabase.co/functions/v1/pin-qa-validate'
+
+run() { # $1=ctx $2=pin $3=emp
+  curl -sS -o /tmp/qa_body.json -w 'HTTP %{http_code}\n' \
+    -H "Authorization: Bearer $SERVICE_ROLE_JWT" \
+    -H 'Content-Type: application/json' \
+    -X POST "$FN_URL" \
+    -d "{\"employee_id\":\"$3\",\"pin\":\"$2\",\"ctx\":\"$1\"}"
+  jq . /tmp/qa_body.json
+}
+
+# Case 1: kiosk + correct
+run kiosk     "$DEMO_PIN_OK"  "$DEMO_EMP"
+# Case 2: kiosk + wrong
+run kiosk     "$DEMO_PIN_BAD" "$DEMO_EMP"
+# Case 3: front_desk + correct
+run front_desk "$DEMO_PIN_OK"  "$DEMO_EMP"
+# Case 4: front_desk + wrong
+run front_desk "$DEMO_PIN_BAD" "$DEMO_EMP"
+# Case 5: portal + correct
+run portal    "$DEMO_PIN_OK"  "$DEMO_EMP"
+# Case 6: real tenant employee_id (owner-approved single shot)
+run kiosk     "$DEMO_PIN_BAD" "$REAL_EMP"
+# Case 7 (optional re-confirm): anon JWT → 401
+curl -sS -o /dev/null -w 'HTTP %{http_code}\n' \
+  -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+  -H 'Content-Type: application/json' -X POST "$FN_URL" \
+  -d "{\"employee_id\":\"$DEMO_EMP\",\"pin\":\"0\",\"ctx\":\"kiosk\"}"
+# Case 8 (optional re-confirm): no Authorization → 401
+curl -sS -o /dev/null -w 'HTTP %{http_code}\n' \
+  -H 'Content-Type: application/json' -X POST "$FN_URL" \
+  -d "{\"employee_id\":\"$DEMO_EMP\",\"pin\":\"0\",\"ctx\":\"kiosk\"}"
+```
+
+### Expected outcomes
+
+| # | ctx          | input          | HTTP   | ok    | mode               | validation_source | result | Notes |
+|---|--------------|----------------|--------|-------|--------------------|-------------------|--------|-------|
+| 1 | kiosk        | correct PIN    | 200    | true  | `hash_only_ready`  | `hash`            | `ok`   | `hash_error=false`, `fallback_suppressed=false` |
+| 2 | kiosk        | wrong PIN      | 200/401| false | `hash_only_ready`  | `hash`            | `fail` | `hash_mismatch=true` OR `suppressed_reason="hash_mismatch"`; no secret leakage |
+| 3 | front_desk   | correct PIN    | 200    | true  | `hash_only_ready`  | `hash`            | `ok`   | — |
+| 4 | front_desk   | wrong PIN      | 200/401| false | `hash_only_ready`  | `hash`            | `fail` | as case 2 |
+| 5 | portal       | correct PIN    | 200    | true  | `hash_only_ready`  | `hash`            | `ok`   | — |
+| 6 | kiosk        | real-tenant emp| 403    | —     | —                  | —                 | —      | no validation details, no PII, no writes |
+| 7 | kiosk        | anon JWT       | 401    | —     | —                  | —                 | —      | already PASS in S7-N |
+| 8 | kiosk        | no Authorization| 401   | —     | —                  | —                 | —      | already PASS in S7-N |
+
+### Post-run delta verification (owner runs from trusted SQL console)
+
+Capture counts immediately before and after the run; deltas must be **0** for all of:
+`time_entries`, `clock_events`, `office_visits`, `security_alerts`, `auth_rate_limits`, `pay_periods`, `period_base_pay`, `historical_payroll_entries`.
+
+```sql
+SELECT 'time_entries' t, count(*) FROM time_entries WHERE created_at > now() - interval '15 minutes'
+UNION ALL SELECT 'clock_events', count(*) FROM clock_events WHERE created_at > now() - interval '15 minutes'
+UNION ALL SELECT 'office_visits', count(*) FROM office_visits WHERE created_at > now() - interval '15 minutes'
+UNION ALL SELECT 'security_alerts', count(*) FROM security_alerts WHERE created_at > now() - interval '15 minutes'
+UNION ALL SELECT 'auth_rate_limits', count(*) FROM auth_rate_limits WHERE created_at > now() - interval '15 minutes'
+UNION ALL SELECT 'pay_periods', count(*) FROM pay_periods WHERE created_at > now() - interval '15 minutes'
+UNION ALL SELECT 'period_base_pay', count(*) FROM period_base_pay WHERE created_at > now() - interval '15 minutes'
+UNION ALL SELECT 'historical_payroll_entries', count(*) FROM historical_payroll_entries WHERE created_at > now() - interval '15 minutes';
+```
+
+### Sensitive log audit checklist
+Pull edge function logs for `pin-qa-validate` for the run window and confirm absence of: service-role JWT (`eyJ…`), the literal PINs used, the strings `access_pin`, `access_pin_hash`, `password`, `token`, employee email, employee phone. Telemetry should contain only: `ctx`, `mode`, `validation_source`, `result`, `hash_error`, `hash_mismatch`, `fallback_suppressed`, `suppressed_reason`, request id, timestamp.
+
+### Results capture template (owner fills in after run)
+
+```
+Executor:        <name>
+Trusted env:     <e.g. owner laptop / on-call host>  (no secret values)
+Run window UTC:  <start> – <end>
+Demo tenant id:  d3500000-0000-0000-0000-000000000001
+Demo emp id:     <uuid>
+Real emp id:     <uuid>            (case 6 only)
+
+Case 1: HTTP=___  ok=___  source=___  result=___  hash_error=___  fallback_suppressed=___
+Case 2: HTTP=___  ok=___  source=___  result=___  hash_mismatch=___  suppressed_reason=___
+Case 3: HTTP=___  ok=___  source=___  result=___
+Case 4: HTTP=___  ok=___  source=___  result=___  hash_mismatch=___  suppressed_reason=___
+Case 5: HTTP=___  ok=___  source=___  result=___
+Case 6: HTTP=___  (expected 403, no validation details, no PII)
+Case 7: HTTP=___  (expected 401)
+Case 8: HTTP=___  (expected 401)
+
+Post-run delta (all must be 0):
+  time_entries=___  clock_events=___  office_visits=___  security_alerts=___
+  auth_rate_limits=___  pay_periods=___  period_base_pay=___  historical_payroll_entries=___
+
+Sensitive log audit: PASS / FAIL  (notes: ______)
+Demo `pin_auth_mode` after run: hash_only_ready  (must be unchanged)
+```
+
+### Status (Lovable agent)
+- **Owner execution:** **PENDING** — requires service-role JWT in a trusted environment; intentionally unavailable to the Lovable sandbox.
+- **What the agent did this sprint:** documentation + runbook only. No code, no SQL, no migrations, no RLS/grants, no payroll, no `company_settings`, no edits to `employee-auth` / `kiosk-clock` / `front-desk-checkin`, no edits to `pin-qa-validate`, no plaintext deletion, no `authPassword` changes.
+
+### Risks
+- Owner pastes service-role JWT or PINs into chat/docs by accident → mitigated by runbook using env vars + `<DEMO_PIN_*>` placeholders.
+- Case 6 momentarily targets a real tenant employee id; mitigation: function returns 403 before any validation, no writes possible (CI guard), and the call is single-shot with owner approval.
+- Telemetry drift if `_shared/pin-validation.ts` or `internal_verify_pin_hash` change between S7-N and the owner run — re-validate before relying on prior PASS evidence.
+
+### Decision gate
+- **PASS** (all 8 cases match expected + zero delta + clean log audit) → S7-P: design owner-approved soak window and gate criteria for any future `pin_auth_mode` advancement on Demo. **Do NOT** advance to `hash_only`, plaintext kill, `authPassword` decoupling, or real-tenant rollout on the strength of S7-O alone.
+- **Any failure** → rollback Demo to `dual` per S7-L-b rollback contract; open a focused defect sprint before re-running.
