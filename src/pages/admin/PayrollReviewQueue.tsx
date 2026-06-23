@@ -124,6 +124,15 @@ export default function PayrollReviewQueue() {
   const { canAccessAdminForCompany } = useAuth();
   const { selectedCompanyId, selectedCompany, loading: companyLoading } = useCompany();
   const [selectedPeriodId, setSelectedPeriodId] = useState<string | null>(null);
+  const isMobile = useIsMobile();
+
+  // S4 deep links — `?bucket=` focuses one bucket; `?period=` preselects period.
+  const [searchParams] = useSearchParams();
+  const focusedBucket = searchParams.get("bucket");
+  const periodParam = searchParams.get("period");
+
+  // Mobile drawer-per-row state.
+  const [drawerRow, setDrawerRow] = useState<{ row: BucketRow; bucket: BucketDef } | null>(null);
 
   // Hooks declared before any early return (Rules of Hooks).
   const canAccess = canAccessAdminForCompany(selectedCompanyId);
