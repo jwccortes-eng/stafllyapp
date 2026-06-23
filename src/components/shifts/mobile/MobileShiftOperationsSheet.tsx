@@ -815,7 +815,7 @@ export function MobileShiftOperationsSheet({
               <AttendanceEvidenceCard
                 shift={shift as any}
                 assignments={assignments.map(a => {
-                  const e = empById.get(a.employee_id);
+                  const e = employees.find(emp => emp.id === a.employee_id);
                   return {
                     id: a.id,
                     employee_id: a.employee_id,
