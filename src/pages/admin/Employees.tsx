@@ -202,11 +202,12 @@ function EmployeeForm({ fields, form, setForm, loading, onSubmit, submitLabel }:
 export default function Employees() {
   usePageView("Employees");
   const { selectedCompanyId, selectedCompany } = useCompany();
-  const { role, allRoles, canAccessAdmin } = useAuth();
-  // Effective privilege: trust either the resolved highest-priority role OR the
-  // company-membership-derived `canAccessAdmin` flag (covers cases where the
-  // global role resolves to "user" but the user is admin/owner inside the
-  // currently selected company).
+  const { role, allRoles, canAccessAdminForCompany } = useAuth();
+  // S3.5A: tenant-scoped admin check (was global canAccessAdmin).
+  // Effective privilege: trust either the resolved highest-priority role OR
+  // company-scoped admin access for the currently selected tenant. Same admin
+  // role set as before — no permission widening.
+  const canAdminHere = canAccessAdminForCompany(selectedCompanyId);
   const isPrivileged =
     role === 'developer' ||
     role === 'owner' ||
@@ -216,7 +217,7 @@ export default function Employees() {
     allRoles.has('owner') ||
     allRoles.has('company_owner') ||
     allRoles.has('admin') ||
-    canAccessAdmin;
+    canAdminHere;
 
   // Diagnostic log (safe — no PII). Helps confirm why the duplicates entry
   // does or doesn't show in the current company context.
@@ -226,12 +227,12 @@ export default function Employees() {
       console.log("Workers duplicates access", {
         role,
         allRoles: Array.from(allRoles),
-        canAccessAdmin,
+        canAdminHere,
         isPrivileged,
         selectedCompanyId,
       });
     }
-  }, [role, allRoles, canAccessAdmin, isPrivileged, selectedCompanyId]);
+  }, [role, allRoles, canAdminHere, isPrivileged, selectedCompanyId]);
   const { canAddEmployees, limits, plan } = useSubscription();
   const { config: onboardingConfig, updateConfig: updateOnboardingConfig, loading: onboardingConfigLoading } = useOnboardingConfig();
   const { invitations, logInvitation, refetch: refetchInvitations } = useEmployeeInvitations(selectedCompanyId ?? null);
