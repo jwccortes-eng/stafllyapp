@@ -1697,3 +1697,43 @@ The remaining risk is **coverage breadth**, not correctness. The shared helper c
 - **R2 (low — pre-existing):** Demo worker #6 downstream `authPassword(pin)` mismatch. Hash path works; not a flip blocker.
 - **R3 (low — pre-existing):** `[phone-login]` logs normalized phone digits. Separate scrub sprint; not a flip blocker.
 
+
+---
+
+## S7-L-b — Flip Stafly Demo to `hash_only_ready` (EXECUTED 2026-06-23)
+
+**Scope:** single setting flip. Stafly Demo only (`d3500000-0000-4000-8000-000000000001`).
+**Owner approval:** Jorge (Stafly Demo only). **On-call / rollback owner:** Jorge.
+**Monitoring window:** 24h post-flip.
+
+### Change
+- `company_settings.value` for `(company_id=demo, key='security.pin_auth_mode')`: `"dual"` → `"hash_only_ready"`.
+- Verified post-flip: demo mode = `"hash_only_ready"`; real tenants in `hash_only_ready`/`hash_only` = **0**.
+
+### Guardrails enforced in migration
+- Aborted if target company `is_demo` ≠ `true`.
+- Aborted if any non-demo / non-test tenant already in `hash_only_ready` / `hash_only`.
+- Post-checks re-asserted demo mode + zero real tenants.
+
+### What was NOT touched
+Edge code, `pin-validation.ts`, `security-flags.ts`, `internal_verify_pin_hash`, `authPassword`, `access_pin`, `access_pin_hash`, RLS, grants, kiosk-clock / front-desk-checkin logic, payroll, `time_entries`, `clock_events`, `scheduled_shifts`, `shift_assignments`, Connecteam, real tenants, plaintext data.
+
+### Rollback (staged, NOT executed)
+- **Soft (preferred):** UPSERT same row back to `"dual"`.
+- **Hard:** UPSERT same row to `"legacy"`.
+
+### Rollback triggers (immediate revert to `"dual"`)
+- any `hash_error=true`
+- `fallback_suppressed` for a valid worker
+- spike in 401/403/500 on `employee-auth` / `kiosk-clock` / `front-desk-checkin`
+- any non-demo tenant resolving `hash_only_ready`
+- sensitive data in logs
+- any payroll anomaly (even indirect)
+
+### Monitoring plan (24h)
+- Telemetry: counts of `validation_source="hash"`, `plaintext_fallback`, `hash_error`, `hash_mismatch`, `fallback_suppressed`, scoped to demo.
+- Sensitive log audit: PIN / hash / password / token / email / SSN never present.
+- Operational: 401/403/500 rates on the three PIN edge functions.
+
+### Recommendation
+Hold at S7-L-b. Do **not** proceed to S7-M (hash_only) or plaintext kill until 24h soak passes clean and kiosk/front-desk QA harness exists.
