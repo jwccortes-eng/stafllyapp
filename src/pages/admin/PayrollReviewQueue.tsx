@@ -177,6 +177,14 @@ export default function PayrollReviewQueue() {
     return periodsQ.data.list.find(p => p.id === effectivePeriodId) ?? null;
   }, [effectivePeriodId, periodsQ.data]);
 
+  // S4: honor `?period=` deep link once periods load (tenant-scoped query above).
+  useEffect(() => {
+    if (!periodParam || selectedPeriodId) return;
+    const list = periodsQ.data?.list;
+    if (!list) return;
+    if (list.some(p => p.id === periodParam)) setSelectedPeriodId(periodParam);
+  }, [periodParam, periodsQ.data, selectedPeriodId]);
+
   // ── Bucket data aggregation ─────────────────────────────────────────────
   const dataQ = useQuery({
     queryKey: ["prq", "buckets", selectedCompanyId, effectivePeriodId],
