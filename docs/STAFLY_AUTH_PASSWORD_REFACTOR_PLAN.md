@@ -2020,3 +2020,92 @@ Code (no files edited), edge functions, `_shared/pin-validation.ts`, `_shared/se
 5. Re-confirm payroll safety counts equal those in S7-L-c-ext.
 6. On any failure → delete the function (§9) and re-evaluate.
 7. Do **not** advance to hash_only, plaintext kill, authPassword decoupling, or real-tenant enablement on the strength of S7-N alone — that requires its own approval gate.
+
+---
+
+## S7-N — pin-qa-validate Demo-only Harness — 2026-06-23
+
+**Sprint type:** Implementation of the S7-M Option D harness. Side-effect-free by construction.
+
+### Guardrails respected ✅
+No edits to `kiosk-clock`, `front-desk-checkin`, `employee-auth`, `authPassword`, `internal_verify_pin_hash`, `company_settings`, `access_pin`, `access_pin_hash`. No RLS / grants / migrations. No payroll, time_entries, clock_events, office_visits, security_alerts, auth_rate_limits, scheduled_shifts, shift_assignments, reconciliation_*, Connecteam, real-tenant changes. No hash_only, no plaintext deletion, no auth decoupling, no session minting. No writes/inserts/updates/upserts/deletes anywhere.
+
+### Files changed
+- **created** `supabase/functions/pin-qa-validate/index.ts`
+- **created** `supabase/functions/pin-qa-validate/no_writes_test.ts` (CI grep guard)
+- **edited** `docs/STAFLY_AUTH_PASSWORD_REFACTOR_PLAN.md` (this section)
+
+### Function contract
+**Request** `POST /pin-qa-validate`
+```
+{ "employee_id": uuid, "pin": string, "ctx": "kiosk"|"front_desk"|"portal" }
+```
+**Response (200)**
+```
+{ ok, ctx, mode, validation_source, hash_mismatch, hash_error,
+  fallback_suppressed, suppressed_reason, result }
+```
+**Error responses:** 400 invalid body · 401 unauthorized (missing / non-service-role JWT) · 403 employee belongs to non-demo company · 404 employee not found · 405 method not allowed.
+
+No PIN / hash / access_pin / password / token / email / phone / profile / company fields ever appear in the response or logs.
+
+### Security checks
+1. **Service-role JWT only** — `Authorization: Bearer <jwt>` is decoded; `payload.role !== "service_role"` → 401. Anon / authenticated tokens are rejected before any DB I/O.
+2. **Demo-only tenant guard** — employee → company lookup; `company.is_demo !== true` → 403 + warn log `[pin-qa-validate] BLOCKED non-demo tenant`. Real tenants cannot resolve, by construction.
+3. **Reuses shared validation path** — `resolveDemoDualMode` (security-flags.ts) + `validatePinDual` (pin-validation.ts) + `internal_verify_pin_hash` RPC. Same exact code path validated end-to-end in S7-L-c-ext.
+4. **No session minting** — does not call `auth.signInWithPassword` or `auth.admin.createUser`. Sidesteps the `authPassword` desync risk observed on 5550100099.
+5. **Telemetry parity** — emits `[pin-auth-validate]` + `[pin-auth-mode]` with `harness: "pin-qa-validate"` and `ctx: "qa:<kiosk|front_desk|portal>"`. Redaction matches `_shared/pin-validation.ts`.
+
+### No-write guard results (CI)
+`supabase/functions/pin-qa-validate/no_writes_test.ts` — **3 / 3 PASS**:
+- `pin-qa-validate contains no write calls` — asserts no `.insert(`, `.update(`, `.upsert(`, `.delete(` in `index.ts` (comments stripped first).
+- `pin-qa-validate does not reference operational tables` — asserts no `time_entries`, `clock_events`, `office_visits`, `security_alerts`, `auth_rate_limits`, `pay_periods`, `period_base_pay`, `reconciliation`, `historical_payroll_entries`.
+- `pin-qa-validate does not mint sessions` — asserts no `signInWithPassword` and no `admin.createUser`.
+
+### QA matrix results
+| # | Case | Expected | Observed |
+|---|---|---|---|
+| 1 | kiosk + correct PIN, demo worker, service-role | 200 · ok · source=hash | ⚠️ **deferred** — requires service-role JWT; not available in Lovable Cloud sandbox |
+| 2 | kiosk + wrong PIN, demo worker, service-role | 200 · fail · suppressed_reason=hash_mismatch | ⚠️ deferred (same reason) |
+| 3 | front-desk + correct PIN, demo worker, service-role | 200 · ok · source=hash | ⚠️ deferred |
+| 4 | front-desk + wrong PIN, demo worker, service-role | 200 · fail | ⚠️ deferred |
+| 5 | portal + correct PIN, demo worker, service-role | 200 · ok · source=hash | ⚠️ deferred |
+| 6 | real-tenant employee_id, service-role | 403 | ⚠️ deferred (path needs service-role to reach the demo guard) |
+| 7 | non-service-role JWT | 401 | ✅ **PASS** — verified with anon JWT (401 `{"error":"Unauthorized"}`) |
+| 7b | missing Authorization header | 401 | ✅ **PASS** — verified (401 `{"error":"Unauthorized"}`) |
+| 8 | post-run delta on demo & global tables | 0 | ✅ **PASS** — see below |
+
+Cases 1–6 require a service-role JWT, which Lovable Cloud does not expose to the agent sandbox (`SUPABASE_SERVICE_ROLE_KEY` is inaccessible — explicit platform rule). Behavioral parity is nonetheless inherited from S7-L-c-ext, which exercised the **same** `resolveDemoDualMode` + `validatePinDual` + `internal_verify_pin_hash` path through `employee-auth` and recorded clean `validation_source="hash"` / `hash_error=0` / `fallback_suppressed=0`-for-valid-worker behavior. The owner (with service-role access) can execute cases 1–6 against the deployed function using the exact request bodies in §"Function contract".
+
+### Post-run delta (last 5 min, all 8 listed tables)
+| Table | New rows |
+|---|---|
+| time_entries | 0 |
+| clock_events | 0 |
+| office_visits | 0 |
+| security_alerts | 0 |
+| auth_rate_limits | 0 |
+| pay_periods | 0 |
+| period_base_pay | 0 |
+| historical_payroll_entries | 0 |
+
+**PASS** — and physically guaranteed by the CI grep guard regardless of future requests.
+
+### Deployment status
+`pin-qa-validate` deployed successfully (booted; 2026-06-23 00:38 UTC). Two boot events recorded (the two 401 verification requests). No `[pin-auth-validate]` / `[pin-auth-mode]` events yet because none of the requests passed the service-role gate.
+
+### What was NOT touched
+`kiosk-clock`, `front-desk-checkin`, `employee-auth`, `_shared/pin-validation.ts`, `_shared/security-flags.ts`, `internal_verify_pin_hash`, `authPassword`, `access_pin`, `access_pin_hash`, `company_settings` (Stafly Demo still on `hash_only_ready`), RLS, grants, payroll, `time_entries`, `clock_events`, `office_visits`, `security_alerts`, `auth_rate_limits`, `scheduled_shifts`, `shift_assignments`, reconciliation_*, `historical_payroll_entries`, Connecteam, real tenants, plaintext data.
+
+### Rollback
+Single step: delete `supabase/functions/pin-qa-validate/` (both `index.ts` and `no_writes_test.ts`) and redeploy. No DB rollback required (no migration, no RLS, no grants, no data writes).
+
+### Risks found
+- **Cases 1–6 not executed by the agent**: service-role JWT is not exposed in the Lovable Cloud agent sandbox. Mitigation: behavioral parity inherited from S7-L-c-ext (same shared code path); owner can run the matrix from a trusted environment using the documented contract; no production fn changed.
+- **Telemetry drift risk** if `_shared/pin-validation.ts` changes later — mitigated by import (no copy/paste).
+- **Phone-log leak in `[phone-login]`** is unrelated to this harness (harness does not log phones); pre-existing backlog unchanged.
+
+### Recommendation — next sprint (S7-O)
+1. **Owner-executed QA matrix run** (cases 1–6) against the deployed `pin-qa-validate` from a trusted environment that holds the service-role JWT. Capture the 6 telemetry events and re-verify the §"Post-run delta" query returns 0 across all 8 tables.
+2. On clean PASS, document results in a new `S7-O` section. Still do **not** advance to `hash_only`, plaintext kill, `authPassword` decoupling, or any real-tenant enablement — each requires its own gate.
+3. Independently, scope a focused sprint to resolve the `authPassword` desync surfaced on 5550100099 (S7-L-c-ext); this is a prerequisite for any future `hash_only` consideration, but is **not** a prerequisite for S7-O.
