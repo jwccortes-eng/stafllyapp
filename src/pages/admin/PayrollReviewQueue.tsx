@@ -17,14 +17,15 @@
  *     the highest sequence_number
  */
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link, Navigate } from "react-router-dom";
+import { Link, Navigate, useSearchParams } from "react-router-dom";
 import { format, parseISO, isAfter, isBefore } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
 import { usePageView } from "@/hooks/useAuditLog";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -36,9 +37,12 @@ import {
   Accordion, AccordionContent, AccordionItem, AccordionTrigger,
 } from "@/components/ui/accordion";
 import {
+  Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
+} from "@/components/ui/sheet";
+import {
   Loader2, ShieldCheck, AlertTriangle, AlertCircle, CheckCircle2,
   Users, Clock, CalendarX, Car, FileWarning, ScanEye, Lock,
-  ExternalLink, Info, ClipboardList,
+  ExternalLink, Info, ClipboardList, ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
