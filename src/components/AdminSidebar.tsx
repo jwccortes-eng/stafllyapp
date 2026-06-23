@@ -16,6 +16,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
 import { useSubscription } from "@/hooks/useSubscription";
 import { cn } from "@/lib/utils";
+import { isAdminLevelRole } from "@/lib/roles";
 import {
   Tooltip, TooltipContent, TooltipTrigger,
 } from "@/components/ui/tooltip";
@@ -108,7 +109,9 @@ const COMPANY_LINKS: LinkDef[] = [
   { to: "/app/timeclock", icon: Clock, label: "Time Clock", module: "shifts", section: "Daily Operations" },
   { to: "/app/live-map", icon: MapIcon, label: "Live Map", module: null, section: "Daily Operations" },
   { to: "/app/front-desk", icon: ContactRound, label: "Front Desk", module: null, section: "Daily Operations" },
-  { to: "/app/ops-center", icon: Radio, label: "Today's Operations (legacy)", module: null, section: "Daily Operations" },
+  // S3: "Today's Operations (legacy)" link removed from sidebar to reduce nav noise.
+  // Route `/app/ops-center` REMAINS mounted (see App.tsx) so bookmarks and the
+  // CommandCenterHub "Vista completa" deep link keep working.
 
   // B) TEAM
   { to: "/app/employees", icon: Users, label: "Team", module: "employees", section: "Team" },
@@ -177,7 +180,7 @@ export default function AdminSidebar() {
   // Tenant-scoped role: NEVER use global role to gate per-tenant UI.
   // In Global Mode (developer/owner platform view), fall back to global role.
   const role = isGlobalMode ? globalRole : getRoleForCompany(selectedCompanyId);
-  const isAdminRole = role === 'developer' || role === 'owner' || role === 'company_owner' || role === 'admin';
+  const isAdminRole = isAdminLevelRole(role);
   const { canAccessModule, requiredPlanForModule, isTrial, trialDaysLeft } = useSubscription();
   const location = useLocation();
   const navigate = useNavigate();

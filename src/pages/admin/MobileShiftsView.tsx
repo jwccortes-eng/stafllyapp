@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   CalendarDays, SlidersHorizontal, ChevronRight,
@@ -14,8 +14,15 @@ import { useShiftsConfig } from "@/hooks/useShiftsConfig";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+
 import { ShiftFilters, EMPTY_FILTERS, type ShiftFilterState } from "@/components/shifts/ShiftFilters";
-import { MobileShiftOperationsSheet } from "@/components/shifts/mobile/MobileShiftOperationsSheet";
+// S3: lazy-load the 2k-line operations sheet so it doesn't ship in the
+// initial Mobile Shifts bundle. Same component, same props, same behavior.
+const MobileShiftOperationsSheet = lazy(() =>
+  import("@/components/shifts/mobile/MobileShiftOperationsSheet").then(m => ({
+    default: m.MobileShiftOperationsSheet,
+  }))
+);
 import { MobileQuickCreateShiftSheet } from "@/components/shifts/mobile/MobileQuickCreateShiftSheet";
 import { isDraftShift, isPublishedShift } from "@/lib/shifts/shift-guards";
 import type { Shift, Assignment, Employee, SelectOption } from "@/components/shifts/types";
@@ -597,20 +604,26 @@ export default function MobileShiftsView() {
         </SheetContent>
       </Sheet>
 
-      {/* Operations Snapshot — mobile-first sheet (read-only Phase 1.5) */}
-      <MobileShiftOperationsSheet
-        shift={detailShift}
-        open={detailOpen}
-        onOpenChange={(o) => {
-          setDetailOpen(o);
-          if (!o) setDetailManageTeam(false);
-        }}
-        assignments={assignments}
-        employees={employees}
-        clientName={detailShift?.client_id ? clientById.get(detailShift.client_id) ?? "—" : "—"}
-        locationName={detailShift?.location_id ? locationById.get(detailShift.location_id) ?? "" : ""}
-        initialOpenTeamHub={detailManageTeam}
-      />
+      {/* Operations Snapshot — mobile-first sheet (read-only Phase 1.5).
+          S3: wrapped in Suspense for lazy import; fallback only shows while
+          the chunk is in flight on first open. */}
+      {detailOpen && (
+        <Suspense fallback={null}>
+          <MobileShiftOperationsSheet
+            shift={detailShift}
+            open={detailOpen}
+            onOpenChange={(o) => {
+              setDetailOpen(o);
+              if (!o) setDetailManageTeam(false);
+            }}
+            assignments={assignments}
+            employees={employees}
+            clientName={detailShift?.client_id ? clientById.get(detailShift.client_id) ?? "—" : "—"}
+            locationName={detailShift?.location_id ? locationById.get(detailShift.location_id) ?? "" : ""}
+            initialOpenTeamHub={detailManageTeam}
+          />
+        </Suspense>
+      )}
 
       {/* Mobile Quick Create — writes to scheduled_shifts via same RLS as desktop */}
       <MobileQuickCreateShiftSheet

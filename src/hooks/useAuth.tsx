@@ -40,8 +40,20 @@ interface AuthContextType {
   /** Active mode: admin panel or employee portal */
   activeMode: ActiveMode;
   setActiveMode: (mode: ActiveMode) => void;
-  /** DEPRECATED — global flag, true if user has any admin-level role anywhere.
-   *  Use canAccessAdminForCompany(selectedCompanyId) for tenant-scoped checks. */
+  /**
+   * @deprecated SECURITY: GLOBAL admin flag — true if the user has ANY
+   * admin-level role in ANY tenant. Using this to gate per-tenant UI causes
+   * cross-tenant access (a company_owner in Tenant A would appear admin in
+   * Tenant B).
+   *
+   * Use `canAccessAdminForCompany(selectedCompanyId)` for tenant-scoped
+   * access checks, and `getRoleForCompany(selectedCompanyId)` + the
+   * `isAdminLevelRole()` helper (`@/lib/roles`) for tenant-scoped role
+   * comparisons.
+   *
+   * Existing call sites are kept for back-compat (sign-in routing, dual-mode
+   * switchers, employee portal fallback). NEW code MUST NOT consume this.
+   */
   canAccessAdmin: boolean;
   /** Whether user has an employee profile (anywhere) */
   canAccessPortal: boolean;
