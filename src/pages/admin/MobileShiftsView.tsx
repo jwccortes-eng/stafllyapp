@@ -14,7 +14,7 @@ import { useShiftsConfig } from "@/hooks/useShiftsConfig";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Skeleton } from "@/components/ui/skeleton";
+
 import { ShiftFilters, EMPTY_FILTERS, type ShiftFilterState } from "@/components/shifts/ShiftFilters";
 // S3: lazy-load the 2k-line operations sheet so it doesn't ship in the
 // initial Mobile Shifts bundle. Same component, same props, same behavior.
