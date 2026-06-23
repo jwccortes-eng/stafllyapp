@@ -512,7 +512,7 @@ function AdminDashboardDesktop() {
 
    // ── PHASE 2: Secondary data (deferred – charts, activity, sparklines) ──
    const secondaryQuery = useQuery({
-     queryKey: ["dashboard", "secondary", selectedCompanyId, payrollConfig?.start_day_of_week ?? null],
+     queryKey: ["dashboard", "secondary", selectedCompanyId, payrollConfig?.payroll_week_start_day ?? null, payrollConfig?.expected_close_day ?? null, payrollConfig?.overdue_grace_days ?? null],
      enabled: !!selectedCompanyId && !!criticalQuery.data,
      staleTime: 30_000,
      queryFn: async () => {
