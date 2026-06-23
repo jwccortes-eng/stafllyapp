@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { buildPastelMap, ASSIGNMENT_STATUS_CONFIG } from "@/components/shifts/pastel-utils";
 import {
