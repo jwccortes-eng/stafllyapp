@@ -5,7 +5,7 @@
  *
  * Sprint S3 changes (frontend-only):
  *   - Compact KPI strip at the top: today shifts, pending assignments,
- *     open clocks, periods in review, docs pending review. All counts are
+ *     open clocks, open pay periods, docs pending review. All counts are
  *     tenant-scoped (`.eq("company_id", selectedCompanyId)` FIRST in the
  *     chain). Counts are `count: "exact", head: true` only — no row data
  *     pulled, no writes, no payroll calculations.
