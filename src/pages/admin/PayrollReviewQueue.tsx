@@ -899,64 +899,64 @@ export default function PayrollReviewQueue() {
           })()}
 
           {/* Mobile drawer-per-row (read-only detail + existing CTA if any) */}
-          <Sheet open={!!drawerRow} onOpenChange={(o) => !o && setDrawerRow(null)}>
-            <SheetContent side="bottom" className="rounded-t-2xl max-h-[85dvh] overflow-y-auto">
-              {drawerRow && (() => {
-                const { row, bucket } = drawerRow;
-                const sev = SEVERITY_STYLE[bucket.severity];
-                const SevIcon = sev.icon;
-                return (
+          {(() => {
+            const dr = drawerRow;
+            if (!dr) {
+              return (
+                <MobileQueueDrawer
+                  open={false}
+                  onOpenChange={(o) => !o && setDrawerRow(null)}
+                  maxHeightClassName="max-h-[85dvh]"
+                />
+              );
+            }
+            const { row, bucket } = dr;
+            const sev = SEVERITY_STYLE[bucket.severity];
+            const SevIcon = sev.icon;
+            return (
+              <MobileQueueDrawer
+                open={!!drawerRow}
+                onOpenChange={(o) => !o && setDrawerRow(null)}
+                maxHeightClassName="max-h-[85dvh]"
+                headerMeta={
                   <>
-                    <SheetHeader className="text-left space-y-2">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <Badge variant="outline" className={cn("text-[10px] py-0 px-1.5 gap-1", sev.chip)}>
-                          <SevIcon className="h-3 w-3" /> {bucket.title}
-                        </Badge>
-                        {bucket.affectsPay && (
-                          <Badge variant="outline" className="text-[10px] py-0 px-1.5">Afecta pago</Badge>
-                        )}
-                        {row.badge && (
-                          <Badge variant="outline" className="text-[10px] py-0 px-1.5 capitalize">{row.badge}</Badge>
-                        )}
-                      </div>
-                      <SheetTitle className="text-base">{row.primary}</SheetTitle>
-                      {row.secondary && (
-                        <SheetDescription className="text-xs leading-relaxed">
-                          {row.secondary}
-                        </SheetDescription>
-                      )}
-                    </SheetHeader>
-
-                    <div className="mt-4 space-y-3">
-                      {typeof row.amount === "number" && (
-                        <div className="flex items-center justify-between rounded-lg border bg-muted/30 px-3 py-2.5">
-                          <span className="text-xs uppercase tracking-wide text-muted-foreground">Monto</span>
-                          <span className="text-base font-mono tabular-nums">{moneyFmt.format(row.amount)}</span>
-                        </div>
-                      )}
-                      <div className="rounded-lg border bg-background px-3 py-2.5 text-[11px] text-muted-foreground leading-relaxed">
-                        {bucket.description}
-                      </div>
-                      <p className="text-[10px] text-muted-foreground/80 leading-relaxed">
-                        Solo lectura. Payroll real sigue basado en Connecteam y reconciliación. No se modifican fichajes ni periodos desde este detalle.
-                      </p>
-                    </div>
-
-                    {row.link && (
-                      <div className="mt-4 sticky bottom-0 bg-background pt-3 pb-[calc(env(safe-area-inset-bottom,0px)+8px)] border-t">
-                        <Button asChild className="w-full gap-2" onClick={() => setDrawerRow(null)}>
-                          <Link to={row.link.to}>
-                            {row.link.label}
-                            <ExternalLink className="h-4 w-4" />
-                          </Link>
-                        </Button>
-                      </div>
+                    <Badge variant="outline" className={cn("text-[10px] py-0 px-1.5 gap-1", sev.chip)}>
+                      <SevIcon className="h-3 w-3" /> {bucket.title}
+                    </Badge>
+                    {bucket.affectsPay && (
+                      <Badge variant="outline" className="text-[10px] py-0 px-1.5">Afecta pago</Badge>
+                    )}
+                    {row.badge && (
+                      <Badge variant="outline" className="text-[10px] py-0 px-1.5 capitalize">{row.badge}</Badge>
                     )}
                   </>
-                );
-              })()}
-            </SheetContent>
-          </Sheet>
+                }
+                title={row.primary}
+                description={row.secondary}
+                footer={row.link ? (
+                  <Button asChild className="w-full gap-2" onClick={() => setDrawerRow(null)}>
+                    <Link to={row.link.to}>
+                      {row.link.label}
+                      <ExternalLink className="h-4 w-4" />
+                    </Link>
+                  </Button>
+                ) : undefined}
+              >
+                {typeof row.amount === "number" && (
+                  <div className="flex items-center justify-between rounded-lg border bg-muted/30 px-3 py-2.5">
+                    <span className="text-xs uppercase tracking-wide text-muted-foreground">Monto</span>
+                    <span className="text-base font-mono tabular-nums">{moneyFmt.format(row.amount)}</span>
+                  </div>
+                )}
+                <div className="rounded-lg border bg-background px-3 py-2.5 text-[11px] text-muted-foreground leading-relaxed">
+                  {bucket.description}
+                </div>
+                <p className="text-[10px] text-muted-foreground/80 leading-relaxed">
+                  Solo lectura. Payroll real sigue basado en Connecteam y reconciliación. No se modifican fichajes ni periodos desde este detalle.
+                </p>
+              </MobileQueueDrawer>
+            );
+          })()}
         </>
       )}
 
