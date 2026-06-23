@@ -469,9 +469,21 @@ export default function DailyClose() {
     { meta: SECTION_META.payroll, state: payroll },
   ];
 
+  // S4.1A — honor `?step=` deep link (validated against the local checklist enum).
+  useEffect(() => {
+    const stepParam = searchParams.get("step") as SectionKey | null;
+    if (!stepParam) return;
+    if (ordered.some((o) => o.meta.key === stepParam)) {
+      setDrawerStep(stepParam);
+    }
+    // run once per stepParam change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
   const okCount = ordered.filter((s) => s.state.status === "ok").length;
   const totalCount = ordered.length;
   const progressPct = Math.round((okCount / totalCount) * 100);
+
 
   // "Qué falta para cerrar el día" — top 3 blockers
   const blockers = ordered
