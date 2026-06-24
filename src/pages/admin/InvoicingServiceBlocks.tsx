@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { MobileFilterPills } from "@/components/admin/mobile";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -217,7 +218,18 @@ export default function InvoicingServiceBlocks() {
       )}
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as ServiceBlockStatus)}>
-        <TabsList>
+        <MobileFilterPills<ServiceBlockStatus>
+          items={[
+            { key: "pending", label: "Pending", count: counts.pending },
+            { key: "approved", label: "Approved", count: counts.approved },
+            { key: "invoiced", label: "Invoiced", count: counts.invoiced },
+            { key: "discarded", label: "Discarded", count: counts.discarded },
+          ]}
+          value={tab}
+          onChange={(v) => setTab(v)}
+          ariaLabel="Service block status filter"
+        />
+        <TabsList className="hidden md:inline-flex">
           <TabsTrigger value="pending">Pending ({counts.pending})</TabsTrigger>
           <TabsTrigger value="approved">Approved ({counts.approved})</TabsTrigger>
           <TabsTrigger value="invoiced">Invoiced ({counts.invoiced})</TabsTrigger>
