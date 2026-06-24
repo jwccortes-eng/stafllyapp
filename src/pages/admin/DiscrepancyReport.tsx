@@ -517,51 +517,17 @@ export default function DiscrepancyReport() {
       {/* Status tabs */}
       {items.length > 0 && (
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
-          {/* S5.5 — Mobile Filter Pills pattern (docs/MOBILE_ACTION_QUEUE.md). */}
-          <div className="md:hidden -mx-3 px-3 overflow-x-auto no-scrollbar">
-            <div
-              className="flex items-center gap-1.5 pb-1 w-max"
-              role="tablist"
-              aria-label="Discrepancy status filter"
-            >
-              {([
-                { key: "ready", label: "Listos", count: readyItems.length },
-                { key: "review", label: "Revisión", count: reviewItems.length },
-                { key: "resolved", label: "Resueltos", count: resolvedItems.length },
-              ] as const).map((t) => {
-                const active = t.key === activeTab;
-                return (
-                  <button
-                    key={t.key}
-                    type="button"
-                    role="tab"
-                    aria-selected={active}
-                    onClick={() => setActiveTab(t.key as typeof activeTab)}
-                    className={cn(
-                      "h-8 px-3 rounded-full inline-flex items-center gap-1.5 text-xs font-medium whitespace-nowrap border transition-colors",
-                      active
-                        ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                        : "bg-card text-foreground/80 border-border/60",
-                    )}
-                  >
-                    <span>{t.label}</span>
-                    {t.count > 0 && (
-                      <span
-                        className={cn(
-                          "min-w-[16px] h-[16px] px-1 rounded-full text-[9px] font-bold inline-flex items-center justify-center tabular-nums",
-                          active
-                            ? "bg-primary-foreground/20 text-primary-foreground"
-                            : "bg-muted text-muted-foreground",
-                        )}
-                      >
-                        {t.count > 99 ? "99+" : t.count}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+          {/* S6 — shared <MobileFilterPills>. Desktop TabsList preserved below. */}
+          <MobileFilterPills<typeof activeTab>
+            items={[
+              { key: "ready", label: "Listos", count: readyItems.length },
+              { key: "review", label: "Revisión", count: reviewItems.length },
+              { key: "resolved", label: "Resueltos", count: resolvedItems.length },
+            ]}
+            value={activeTab}
+            onChange={(next) => setActiveTab(next)}
+            ariaLabel="Discrepancy status filter"
+          />
 
           {/* Desktop: existing TabsList, untouched semantics. */}
           <TabsList className="hidden md:inline-flex w-full sm:w-auto">
