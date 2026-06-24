@@ -22,6 +22,7 @@ import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { writeExcelFile } from "@/lib/safe-xlsx";
 import { toast } from "sonner";
+import { MobileFilterPills } from "@/components/admin/mobile";
 
 /* ── Legacy operational types (kept for KPIs/grouping) ── */
 type LegacyType = "no_show" | "late_arrival" | "early_departure" | "extra_clock" | "ok";
