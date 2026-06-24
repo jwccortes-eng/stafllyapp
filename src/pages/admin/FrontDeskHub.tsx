@@ -27,6 +27,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { MobileFilterPills } from "@/components/admin/mobile";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -86,6 +87,7 @@ export default function FrontDeskHub() {
   const [range, setRange] = useState<string>("7d");
   const [loading, setLoading] = useState(true);
   const [visits, setVisits] = useState<VisitRow[]>([]);
+  const [tab, setTab] = useState("queue");
 
   useEffect(() => {
     if (!selectedCompanyId) return;
@@ -192,8 +194,18 @@ export default function FrontDeskHub() {
       </div>
 
       {/* ─── TABS ─── */}
-      <Tabs defaultValue="queue">
-        <TabsList>
+      <Tabs value={tab} onValueChange={setTab}>
+        <MobileFilterPills
+          items={[
+            { key: "queue", label: "Queue", count: queueVisits.length },
+            { key: "followups", label: "Follow-ups", count: followupVisits.length },
+            { key: "all", label: "All visits", count: visits.length },
+          ]}
+          value={tab}
+          onChange={(v) => setTab(v)}
+          ariaLabel="Visit filter"
+        />
+        <TabsList className="hidden md:inline-flex">
           <TabsTrigger value="queue">Queue ({queueVisits.length})</TabsTrigger>
           <TabsTrigger value="followups">Follow-ups ({followupVisits.length})</TabsTrigger>
           <TabsTrigger value="all">All visits ({visits.length})</TabsTrigger>
