@@ -28,6 +28,17 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { MobileFilterPills } from "@/components/admin/mobile";
+
+const APPLICATION_TAB_ITEMS = [
+  { key: "pending", label: "Pendientes" },
+  { key: "under_review", label: "En revisión" },
+  { key: "needs_info", label: "Info" },
+  { key: "approved", label: "Aprobadas" },
+  { key: "rejected", label: "Rechazadas" },
+  { key: "duplicate", label: "Duplicadas" },
+  { key: "all", label: "Todas" },
+] as const;
 
 type AppStatus = "pending" | "under_review" | "needs_info" | "approved" | "rejected" | "duplicate" | "archived";
 
