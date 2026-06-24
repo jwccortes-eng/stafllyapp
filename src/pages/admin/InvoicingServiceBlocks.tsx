@@ -218,7 +218,18 @@ export default function InvoicingServiceBlocks() {
       )}
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as ServiceBlockStatus)}>
-        <TabsList>
+        <MobileFilterPills<ServiceBlockStatus>
+          items={[
+            { key: "pending", label: "Pending", count: counts.pending },
+            { key: "approved", label: "Approved", count: counts.approved },
+            { key: "invoiced", label: "Invoiced", count: counts.invoiced },
+            { key: "discarded", label: "Discarded", count: counts.discarded },
+          ]}
+          value={tab}
+          onChange={(v) => setTab(v)}
+          ariaLabel="Service block status filter"
+        />
+        <TabsList className="hidden md:inline-flex">
           <TabsTrigger value="pending">Pending ({counts.pending})</TabsTrigger>
           <TabsTrigger value="approved">Approved ({counts.approved})</TabsTrigger>
           <TabsTrigger value="invoiced">Invoiced ({counts.invoiced})</TabsTrigger>
