@@ -87,6 +87,7 @@ export default function FrontDeskHub() {
   const [range, setRange] = useState<string>("7d");
   const [loading, setLoading] = useState(true);
   const [visits, setVisits] = useState<VisitRow[]>([]);
+  const [tab, setTab] = useState("queue");
 
   useEffect(() => {
     if (!selectedCompanyId) return;
