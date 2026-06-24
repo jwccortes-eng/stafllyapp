@@ -85,6 +85,52 @@
 
 ---
 
+## MobileFilterPills Adoption Guardrail
+
+> Use `<MobileFilterPills>` only when the screen already has mobile tabs/filters that match the approved pattern. Do not force it into unrelated layouts.
+
+### When to use
+
+- The screen has **4+ status filters** that currently render as `TabsList` on mobile and consume too much vertical or horizontal space.
+- The desktop layout already uses `Tabs` (`value` / `onValueChange`) or an equivalent controlled state.
+- Count badges are optional but, when present, follow the "show only if > 0" rule.
+- The consumer can drive state via `value` + `onChange` without adding new queries, mutations, or route logic.
+
+### When NOT to use
+
+- **Fewer than 3 filters** — a native `TabsList` or simple buttons are enough.
+- **Desktop-only screens** — the component is explicitly `md:hidden`; it will not render on desktop.
+- **Filters that need icons inside each chip** — the current API supports text + count only.
+- **Complex filter UIs with nested groups, search, or multi-select** — use a dedicated filter sheet or panel instead.
+- **Scenarios that require URL bar sync** — while possible, prefer inline state unless the page already uses `?status=` params; the component does not handle routing internally.
+- **Non-tab-like navigation** — do not repurpose pills as a secondary nav bar or breadcrumbs.
+
+### Expected props
+
+| Prop | Type | Required | Description |
+|------|------|----------|-------------|
+| `items` | `ReadonlyArray<{ key: TKey; label: string; count?: number }>` | Yes | Filter definitions. `count` is optional and hidden when `0`. |
+| `value` | `TKey` | Yes | Active filter key — controlled by the consumer. |
+| `onChange` | `(next: TKey) => void` | Yes | Callback when a pill is tapped. |
+| `ariaLabel` | `string` | Yes | Accessible label for the `role="tablist"` container. |
+| `className` | `string` | No | Optional override on the outer scroll container. |
+
+### Guarantees preserved
+
+- **Mobile-only** — hidden on `md` and up via `md:hidden`. Desktop keeps its own `TabsList` unchanged.
+- **Accessibility** — `role="tablist"`, per-chip `role="tab"`, and `aria-selected` are always present.
+- **Optional badge** — counts render only when `> 0`, visually capped at `99+`.
+- **Horizontal scroll** — `overflow-x-auto no-scrollbar` with inner `w-max`; no wrapping.
+- **Consumer-controlled state** — the component is purely presentational; it does not own filter logic, URL params, or side effects.
+
+### Migration rule
+
+- If a screen already has inline pills duplicated from another consumer, migrate it to `<MobileFilterPills>`.
+- If a screen has a **different** mobile filter UX (e.g., a filter button that opens a bottom sheet), do **not** migrate — document the divergence instead.
+- Never refactor desktop tabs into pills; the component is invisible on desktop by design.
+
+---
+
 ## Real Implementations
 
 | Sprint | Area | Components Used | Status |
@@ -96,6 +142,10 @@
 | S5.1 | DocumentsCenter | MobileQueueRow, MobileQueueDrawer | Approved |
 | S5.2 | DocumentsCenter filter pills | Mobile filter pills (inline) | Approved |
 | S5.3 | Documentation | — | Documented |
+| S5.4 | Applications filter pills | MobileFilterPills (inline, before extraction) | Approved |
+| S5.5 | DiscrepancyReport filter pills | MobileFilterPills (inline, before extraction) | Approved |
+| S6 | MobileFilterPills extraction | MobileFilterPills (shared component) | Approved |
+| S6.1 | Adoption guardrail docs | — | Documented |
 
 ---
 
