@@ -194,8 +194,18 @@ export default function FrontDeskHub() {
       </div>
 
       {/* ─── TABS ─── */}
-      <Tabs defaultValue="queue">
-        <TabsList>
+      <Tabs value={tab} onValueChange={setTab}>
+        <MobileFilterPills
+          items={[
+            { key: "queue", label: "Queue", count: queueVisits.length },
+            { key: "followups", label: "Follow-ups", count: followupVisits.length },
+            { key: "all", label: "All visits", count: visits.length },
+          ]}
+          value={tab}
+          onChange={(v) => setTab(v)}
+          ariaLabel="Visit filter"
+        />
+        <TabsList className="hidden md:inline-flex">
           <TabsTrigger value="queue">Queue ({queueVisits.length})</TabsTrigger>
           <TabsTrigger value="followups">Follow-ups ({followupVisits.length})</TabsTrigger>
           <TabsTrigger value="all">All visits ({visits.length})</TabsTrigger>
