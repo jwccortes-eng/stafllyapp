@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { MobileFilterPills } from "@/components/admin/mobile";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -182,7 +183,17 @@ export default function InvoicingClients() {
           />
         </div>
         <Tabs value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)}>
-          <TabsList className="h-9">
+          <MobileFilterPills<StatusFilter>
+            items={[
+              { key: "active", label: "Activos", count: counts.active },
+              { key: "inactive", label: "Archivados", count: counts.inactive },
+              { key: "all", label: "Todos", count: counts.total },
+            ]}
+            value={statusFilter}
+            onChange={(v) => setStatusFilter(v)}
+            ariaLabel="Client status filter"
+          />
+          <TabsList className="h-9 hidden md:inline-flex">
             <TabsTrigger value="active" className="text-xs">Activos ({counts.active})</TabsTrigger>
             <TabsTrigger value="inactive" className="text-xs">Archivados ({counts.inactive})</TabsTrigger>
             <TabsTrigger value="all" className="text-xs">Todos ({counts.total})</TabsTrigger>
