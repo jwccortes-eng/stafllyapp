@@ -448,7 +448,7 @@ export default function Applications() {
       </div>
 
       <Tabs value={tab} onValueChange={setTab}>
-        {(() => null)()}
+        
         {/* S5.4 — Mobile Filter Pills pattern (docs/MOBILE_ACTION_QUEUE.md). */}
         {/* Mobile: horizontal scrollable pill chips, one-handed, no wrap. */}
         <div className="md:hidden -mx-3 px-3 overflow-x-auto no-scrollbar">
