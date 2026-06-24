@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { MobileFilterPills } from "@/components/admin/mobile";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
@@ -223,7 +224,17 @@ export default function ShiftRequests() {
       />
 
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList className="h-8 bg-muted/50">
+        <MobileFilterPills
+          items={[
+            { key: "pending", label: "Pendientes", count: pendingCount },
+            { key: "approved", label: "Aprobadas" },
+            { key: "rejected", label: "Rechazadas" },
+          ]}
+          value={tab}
+          onChange={(v) => setTab(v)}
+          ariaLabel="Shift request status filter"
+        />
+        <TabsList className="h-8 bg-muted/50 hidden md:inline-flex">
           <TabsTrigger value="pending" className="text-[11px] gap-1 data-[state=active]:bg-background">
             Pendientes {pendingCount > 0 && <Badge variant="secondary" className="h-4 px-1 text-[9px]">{pendingCount}</Badge>}
           </TabsTrigger>
