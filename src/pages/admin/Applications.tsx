@@ -448,7 +448,53 @@ export default function Applications() {
       </div>
 
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList className="bg-muted/50 h-10 flex-wrap">
+        {(() => null)()}
+        {/* S5.4 — Mobile Filter Pills pattern (docs/MOBILE_ACTION_QUEUE.md). */}
+        {/* Mobile: horizontal scrollable pill chips, one-handed, no wrap. */}
+        <div className="md:hidden -mx-3 px-3 overflow-x-auto no-scrollbar">
+          <div
+            className="flex items-center gap-1.5 pb-1 w-max"
+            role="tablist"
+            aria-label="Application status filter"
+          >
+            {[{ key: "pending", label: "Pendientes" }, { key: "under_review", label: "En revisión" }, { key: "needs_info", label: "Info" }, { key: "approved", label: "Aprobadas" }, { key: "rejected", label: "Rechazadas" }, { key: "duplicate", label: "Duplicadas" }, { key: "all", label: "Todas" }].map((t) => {
+              const active = t.key === tab;
+              const count = counts[t.key] ?? 0;
+              return (
+                <button
+                  key={t.key}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  onClick={() => setTab(t.key)}
+                  className={cn(
+                    "h-8 px-3 rounded-full inline-flex items-center gap-1.5 text-xs font-medium whitespace-nowrap border transition-colors",
+                    active
+                      ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                      : "bg-card text-foreground/80 border-border/60",
+                  )}
+                >
+                  <span>{t.label}</span>
+                  {count > 0 && (
+                    <span
+                      className={cn(
+                        "min-w-[16px] h-[16px] px-1 rounded-full text-[9px] font-bold inline-flex items-center justify-center tabular-nums",
+                        active
+                          ? "bg-primary-foreground/20 text-primary-foreground"
+                          : "bg-muted text-muted-foreground",
+                      )}
+                    >
+                      {count > 99 ? "99+" : count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Desktop: existing wrapped Tabs, untouched semantics. */}
+        <TabsList className="hidden md:flex bg-muted/50 h-10 flex-wrap">
           {[{ key: "pending", label: "Pendientes" }, { key: "under_review", label: "En revisión" }, { key: "needs_info", label: "Info" }, { key: "approved", label: "Aprobadas" }, { key: "rejected", label: "Rechazadas" }, { key: "duplicate", label: "Duplicadas" }, { key: "all", label: "Todas" }].map((t) => (
             <TabsTrigger key={t.key} value={t.key} className="gap-1 text-[11px] data-[state=active]:shadow-sm">
               {t.label}
