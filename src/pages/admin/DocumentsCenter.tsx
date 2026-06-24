@@ -279,47 +279,12 @@ export default function DocumentsCenter() {
           </div>
 
           {/* Mobile: horizontal scrollable pill chips, one-handed, no vertical stacking. */}
-          <div className="md:hidden -mx-3 px-3 overflow-x-auto no-scrollbar">
-            <div
-              className="flex items-center gap-1.5 pb-1 w-max"
-              role="tablist"
-              aria-label="Document status filter"
-            >
-              {FILTERS.map((f) => {
-                const active = f.key === activeFilter;
-                const count = counts[f.key];
-                return (
-                  <button
-                    key={f.key}
-                    type="button"
-                    role="tab"
-                    aria-selected={active}
-                    onClick={() => setFilter(f.key)}
-                    className={cn(
-                      "h-8 px-3 rounded-full inline-flex items-center gap-1.5 text-xs font-medium whitespace-nowrap border transition-colors",
-                      active
-                        ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                        : "bg-card text-foreground/80 border-border/60",
-                    )}
-                  >
-                    <span>{f.label}</span>
-                    {count > 0 && (
-                      <span
-                        className={cn(
-                          "min-w-[16px] h-[16px] px-1 rounded-full text-[9px] font-bold inline-flex items-center justify-center tabular-nums",
-                          active
-                            ? "bg-primary-foreground/20 text-primary-foreground"
-                            : "bg-muted text-muted-foreground",
-                        )}
-                      >
-                        {count > 99 ? "99+" : count}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+          <MobileFilterPills<FilterKey>
+            items={FILTERS.map((f) => ({ key: f.key, label: f.label, count: counts[f.key] }))}
+            value={activeFilter}
+            onChange={setFilter}
+            ariaLabel="Document status filter"
+          />
 
           {/* Desktop: existing wrapped Tabs, untouched semantics. */}
           <Tabs
