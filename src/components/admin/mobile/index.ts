@@ -7,3 +7,4 @@ export { MobileOperationsSheet } from "./MobileOperationsSheet";
 export { MobileAdminModuleShell } from "./MobileAdminModuleShell";
 export { MobileQueueRow, type MobileQueueRowProps } from "./MobileQueueRow";
 export { MobileQueueDrawer, type MobileQueueDrawerProps } from "./MobileQueueDrawer";
+export { MobileFilterPills, type MobileFilterPillItem } from "./MobileFilterPills";
