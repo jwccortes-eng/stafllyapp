@@ -16167,6 +16167,17 @@ export type Database = {
       }
     }
     Functions: {
+      _eic_b64url_decode: { Args: { p_text: string }; Returns: string }
+      _eic_b64url_encode: { Args: { p_bytes: string }; Returns: string }
+      _eic_check_rate_limit: { Args: { p_user_id: string }; Returns: undefined }
+      _eic_get_match_token_secret: { Args: never; Returns: string }
+      _eic_mask_email: { Args: { p_email: string }; Returns: string }
+      _eic_mask_name: { Args: { p_name: string }; Returns: string }
+      _eic_mask_phone: { Args: { p_phone: string }; Returns: string }
+      _eic_normalize_email: { Args: { p_raw: string }; Returns: string }
+      _eic_normalize_phone: { Args: { p_raw: string }; Returns: string }
+      _eic_sign_match_token: { Args: { p_payload: Json }; Returns: string }
+      _eic_verify_match_token: { Args: { p_token: string }; Returns: Json }
       _get_cron_secret: { Args: never; Returns: string }
       admin_get_employees_with_fiscal: {
         Args: { p_company_id: string }
@@ -16304,6 +16315,18 @@ export type Database = {
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
+      }
+      ecosystem_identity_attach_existing_employee_to_auth_user: {
+        Args: {
+          p_match_token: string
+          p_target_company_id: string
+          p_target_employee_id: string
+        }
+        Returns: Json
+      }
+      ecosystem_identity_lookup_for_existing_employee: {
+        Args: { p_target_company_id: string; p_target_employee_id: string }
+        Returns: Json
       }
       employee_has_access_pin: {
         Args: { _employee_id: string }
