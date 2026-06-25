@@ -96,3 +96,23 @@ No other row in any table was written.
 - Owner authorization phrase received: **`EXECUTOR = TEMP EDGE FUNCTION`** + target-bound authorization for `4df1c02f-5055-4686-850d-fcd3e1e3274e`.
 - All stop conditions evaluated; none triggered.
 - Result: **PASS**.
+
+## 12. Post-Attach Monitoring PASS
+**Monitoring window:** 2026-06-25 22:54 → 2026-06-25 (close)  
+**Decision:** Controlled success — close attach, keep observation.
+
+| # | Check | Result |
+|---|-------|--------|
+| 1 | `user_id` set on target | ✅ Confirmed — `e4793c12…2168d` remains mapped |
+| 2 | `portal_access_enabled` | ✅ Confirmed **`true`** |
+| 3 | No other MSS or non-MSS employees modified | ✅ Confirmed — only target row changed |
+| 4 | No RLS errors detected | ✅ Confirmed |
+| 5 | Payroll / shifts / documents / compensation deltas | ✅ **0** — protected tables untouched |
+| 6 | `eic_attach` audit count | ✅ Remains **2** (no additional attach events) |
+| 7 | No new invitations generated | ✅ Confirmed |
+| 8 | Recommendation | **Observe 24–72 h** — no revert required at this time |
+
+### 12.1 Monitoring conclusion
+- The single-worker attach is **closed as a controlled success**.
+- **No further MSS attaches are authorized.** No batch operations, no new lookups, no additional edge deployments, and no schema/migration/frontend/payroll/shift/document/compensation/auth changes are permitted for this initiative.
+- **Next checkpoint:** Re-run the same monitoring query set in 24–72 h. If results remain clean (no new deltas, no RLS errors, no new invitations, `eic_attach` count still 2), the monitoring task can be formally closed and a protocol for the next 1–3 workers can be designed with **separate authorization required per target**.
