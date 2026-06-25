@@ -5,9 +5,20 @@ import { create, getNumericDate } from "https://deno.land/x/djwt@v3.0.2/mod.ts";
 Deno.serve(async (_req) => {
   try {
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-    const JWT_SECRET = Deno.env.get("SUPABASE_JWT_SECRET")!;
+    const JWT_SECRET =
+      Deno.env.get("SUPABASE_JWT_SECRET") ||
+      Deno.env.get("JWT_SECRET") ||
+      Deno.env.get("SUPABASE_AUTH_JWT_SECRET") ||
+      "";
     const ANON = Deno.env.get("SUPABASE_ANON_KEY")!;
     const OWNER_UID = "2bf0401f-7c8a-4017-b3bd-033935e34860";
+
+    if (!JWT_SECRET) {
+      const envKeys = Object.keys(Deno.env.toObject()).filter(k =>
+        /JWT|SECRET|KEY|TOKEN/i.test(k)
+      );
+      return new Response(JSON.stringify({ ok:false, error:"no_jwt_secret", envKeys }), { status: 200 });
+    }
 
     const keyData = new TextEncoder().encode(JWT_SECRET);
     const cryptoKey = await crypto.subtle.importKey(
