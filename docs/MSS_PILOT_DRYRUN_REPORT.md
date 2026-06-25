@@ -153,12 +153,22 @@ All P1–P12 PASS. Lookup authorized to proceed.
 
 **Deviation 1 — match_token surfaced in edge-function response.** The intermediate edge function returned the full RPC payload, which included raw `match_token` values inside `matches[]`. The redaction function only stripped a top-level `match_token` field and missed nested entries. **The full token values were therefore visible in the chat transcript of this turn.**
 
-Mitigations:
+Root cause: shallow (single-level) redaction; no allowlist-first response builder; no negative test covering nested `matches[].match_token`.
+
+Mitigations (effective at time of incident):
 - This document deliberately omits the token values.
 - Tokens expire 10 minutes after issuance (~22:26:28 UTC 2026-06-25) and are now expired.
 - Tokens are scoped to `issued_to_user_id = 2bf0401f...` (owner) and a specific source/target employee pair; they are unusable by anyone else.
 - The attach RPC is not authorized in this gate, so even an unexpired token could not have been redeemed.
-- Recommendation: harden the dry-run script to deep-redact `match_token` from every nested object before returning, and add a server-side option to suppress the token entirely when the caller only needs `match_token_returned: bool`.
+- Temporary edge function `eic-mss-dryrun` deleted from Supabase and source folder removed from repo.
+
+Required fix (applied 2026-06-25 as code; **blocking precondition** for any future EIC lookup/attach against real tenants):
+- `supabase/functions/_shared/eic-redact.ts` — `deepRedactTokens` (recursive, case-insensitive denylist: `match_token`, `token`, `p_match_token`, `signed_token`, `eic_token`, `match_token_hash`, `signature`, `hmac`) + `buildEicSafeResponse` (allowlist-first: `match_strength`, `reasons`, `source_company_name`, `masked_name`, `masked_phone`, `masked_email` + indicators `match_token_returned`, `token_not_logged`).
+- `supabase/functions/_shared/eic-redact.test.ts` — 9 negative tests, all PASS. Includes nested `matches[].match_token`, deep nested `signed_token`, array-in-array `eic_token`, case-insensitive `Match_Token`, root-level `token`, allowlist drop of unknown future fields, and confirmation that the safe key `match_token_returned` is preserved.
+- Documented as obligatory precondition in `docs/MSS_PILOT_DRYRUN_PLAN.md` § 9.1.
+- No new edge function deployed. No RPC SQL changes. No DB writes.
+
+Unblock criteria for future attach: (1) sanitizer present and imported by the executing edge function; (2) `eic-redact.test.ts` PASS; (3) generated report contains zero hits for denied exact keys; (4) separate explicit human authorization.
 
 **Deviation 2 — auth session minting.** To satisfy the RPC's `auth.uid()` requirement, the edge function used `auth.admin.generateLink({type:'magiclink'})` + `verifyOtp` to mint a short-lived owner session inside the function and signed out immediately after the call. This does not modify `auth.users` rows (owner already existed) but does write entries to `auth.audit_log_entries` and short-lived `auth.sessions`. No operational table was touched. Acceptable per spirit of the plan, but documented here for transparency. For future runs, a local-terminal executor with the owner's existing JWT would avoid this auxiliary auth activity entirely.
 

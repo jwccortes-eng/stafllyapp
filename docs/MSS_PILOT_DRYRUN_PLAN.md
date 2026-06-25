@@ -236,6 +236,37 @@ notes: <string breve, sin PII>
 - **Todo reporte se redacta antes de compartir.**
 - **El dry-run no activa portal, onboarding, documentos ni shifts.**
 
+### 9.1 Token Redaction Hardening (precondición obligatoria — 2026-06-25)
+
+Cualquier ejecución EIC real futura (lookup o attach, en MSS o en cualquier
+tenant productivo) debe cumplir **todos** los siguientes requisitos antes
+de invocar el RPC:
+
+1. La edge function importa y usa `supabase/functions/_shared/eic-redact.ts`:
+   - `deepRedactTokens(value)` para cualquier estructura intermedia.
+   - `buildEicSafeResponse(rpcRow)` (allowlist-first) para construir el
+     payload de respuesta. **Solo** los campos
+     `match_strength`, `reasons`, `source_company_name`, `masked_name`,
+     `masked_phone`, `masked_email` pueden salir, más los indicadores
+     `match_token_returned` y `token_not_logged`.
+2. Keys exactas (case-insensitive) prohibidas en cualquier profundidad de
+   logs, respuestas, reportes, archivos o transcripts:
+   `match_token`, `token`, `p_match_token`, `signed_token`, `eic_token`,
+   `match_token_hash`, `signature`, `hmac`.
+   La key segura `match_token_returned` **sí** está permitida.
+3. **Prohibido** `console.log` de payloads completos del RPC. Solo loggear
+   `stage`, `row_count`, `error.code`, `error.message`.
+4. **Prohibido** persistir respuesta cruda del RPC en `docs/**` o `/tmp/**`.
+5. Tests negativos (`supabase/functions/_shared/eic-redact.test.ts`) deben
+   estar en verde — incluye fixture `matches[].match_token` y variantes
+   profundas / case-insensitive / array-en-array.
+6. Cualquier campo nuevo emitido por el RPC en el futuro **no** sale
+   automáticamente: requiere edit explícito de `SAFE_FIELDS` con revisión
+   de redacción.
+
+Sin estos seis puntos verificables, no se autoriza nuevo lookup, nuevo
+dry-run ni attach.
+
 ---
 
 ## 10. Autorización de ejecución (por completar por owner)
