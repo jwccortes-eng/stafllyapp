@@ -2877,6 +2877,27 @@ export type Database = {
           },
         ]
       }
+      eic_rate_limits: {
+        Row: {
+          attempt_type: string
+          created_at: string
+          id: string
+          identifier: string
+        }
+        Insert: {
+          attempt_type?: string
+          created_at?: string
+          id?: string
+          identifier: string
+        }
+        Update: {
+          attempt_type?: string
+          created_at?: string
+          id?: string
+          identifier?: string
+        }
+        Relationships: []
+      }
       email_send_log: {
         Row: {
           created_at: string
