@@ -1,48 +1,44 @@
 // TEMPORARY EIC dry-run lookup. Delete after run.
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { create, getNumericDate } from "https://deno.land/x/djwt@v3.0.2/mod.ts";
 
 Deno.serve(async (_req) => {
   try {
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-    const JWT_SECRET =
-      Deno.env.get("SUPABASE_JWT_SECRET") ||
-      Deno.env.get("JWT_SECRET") ||
-      Deno.env.get("SUPABASE_AUTH_JWT_SECRET") ||
-      "";
     const ANON = Deno.env.get("SUPABASE_ANON_KEY")!;
-    const OWNER_UID = "2bf0401f-7c8a-4017-b3bd-033935e34860";
+    const SRK = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const OWNER_EMAIL = "jwc.cortes@gmail.com";
 
-    if (!JWT_SECRET) {
-      const envKeys = Object.keys(Deno.env.toObject()).filter(k =>
-        /JWT|SECRET|KEY|TOKEN/i.test(k)
-      );
-      return new Response(JSON.stringify({ ok:false, error:"no_jwt_secret", envKeys }), { status: 200 });
-    }
-
-    const keyData = new TextEncoder().encode(JWT_SECRET);
-    const cryptoKey = await crypto.subtle.importKey(
-      "raw", keyData, { name: "HMAC", hash: "SHA-256" }, false, ["sign","verify"]
-    );
-    const jwt = await create(
-      { alg: "HS256", typ: "JWT" },
-      {
-        sub: OWNER_UID,
-        role: "authenticated",
-        aud: "authenticated",
-        iss: `${SUPABASE_URL}/auth/v1`,
-        iat: getNumericDate(0),
-        exp: getNumericDate(60 * 5),
-      },
-      cryptoKey,
-    );
-
-    const client = createClient(SUPABASE_URL, ANON, {
-      global: { headers: { Authorization: `Bearer ${jwt}` } },
+    const admin = createClient(SUPABASE_URL, SRK, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
 
-    const { data, error } = await client.rpc(
+    // 1. Generate magiclink and get hashed_token
+    const { data: linkData, error: linkErr } = await admin.auth.admin.generateLink({
+      type: "magiclink",
+      email: OWNER_EMAIL,
+    });
+    if (linkErr) return j({ ok:false, stage:"generateLink", error: linkErr.message });
+    const tokenHash = (linkData as any)?.properties?.hashed_token;
+    if (!tokenHash) return j({ ok:false, stage:"generateLink", error:"no_hashed_token" });
+
+    // 2. Verify OTP to get a real session JWT
+    const anonClient = createClient(SUPABASE_URL, ANON, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+    const { data: vData, error: vErr } = await anonClient.auth.verifyOtp({
+      type: "magiclink",
+      token_hash: tokenHash,
+    });
+    if (vErr) return j({ ok:false, stage:"verifyOtp", error: vErr.message });
+    const accessToken = vData.session?.access_token;
+    if (!accessToken) return j({ ok:false, stage:"verifyOtp", error:"no_access_token" });
+
+    // 3. Call lookup as owner
+    const userClient = createClient(SUPABASE_URL, ANON, {
+      global: { headers: { Authorization: `Bearer ${accessToken}` } },
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+    const { data, error } = await userClient.rpc(
       "ecosystem_identity_lookup_for_existing_employee",
       {
         p_target_employee_id: "4df1c02f-5055-4686-850d-fcd3e1e3274e",
@@ -50,17 +46,25 @@ Deno.serve(async (_req) => {
       },
     );
 
-    if (error) {
-      return new Response(JSON.stringify({ ok: false, error }), { status: 200 });
-    }
+    // 4. Sign out to invalidate session
+    try { await userClient.auth.signOut(); } catch (_) {}
 
-    // Redact match_token before returning
-    const redacted: any = Array.isArray(data) ? data.map(redact) : redact(data);
-    return new Response(JSON.stringify({ ok: true, redacted }), { status: 200 });
+    if (error) return j({ ok:false, stage:"rpc", error });
+
+    const rows = Array.isArray(data) ? data : [data];
+    const redacted = rows.map(redact);
+    return j({ ok:true, redacted, row_count: rows.length });
   } catch (e) {
-    return new Response(JSON.stringify({ ok: false, exception: String(e) }), { status: 200 });
+    return j({ ok:false, exception: String(e) });
   }
 });
+
+function j(o: unknown) {
+  return new Response(JSON.stringify(o, null, 2), {
+    status: 200,
+    headers: { "Content-Type": "application/json" },
+  });
+}
 
 function redact(row: any) {
   if (!row || typeof row !== "object") return row;
