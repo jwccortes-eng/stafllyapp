@@ -33,6 +33,7 @@ export default function EmployeeLayout() {
   const { user, role, employeeActive, employeeId, allEmployeeIds, resolveEmployeeForCompany, loading, signOut, fullName, canAccessAdmin, canAccessAdminForCompany } = useAuth();
   const { companies, selectedCompanyId, selectedCompany, switchCompany } = useCompany();
   const { stableEmployeeId, isResolvingEmployee } = useEffectiveEmployee();
+  const location = useLocation();
   const isMobile = useIsMobile();
   const { isModuleEnabled, enabledModules, loading: modulesLoading } = usePortalModules();
   const [moreOpen, setMoreOpen] = useState(false);
