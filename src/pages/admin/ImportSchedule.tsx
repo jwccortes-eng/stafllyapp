@@ -434,48 +434,110 @@ export default function ImportSchedule() {
 
   /** Process a single workbook sheet and return parsed groups + unavailability */
   const parseSheetData = (wb: SafeWorkbook, sheetName: string, dateMode: DateMode) => {
+    const emptyDiag = {
+      rawRows: 0, invalidDates: 0, missingFields: 0, payrollConcepts: 0,
+      sampleInvalidDates: [] as string[],
+      detectedHeaders: [] as string[],
+      headerMapping: {} as Partial<Record<LogicalField, string>>,
+      missingByReason: { date: 0, start: 0, end: 0, titleJob: 0, users: 0, invalidTime: 0 },
+      sampleRow: null as Record<string, string> | null,
+    };
     const empty = {
       groups: [] as ShiftGroup[],
       unavail: [] as { name: string; date: string }[],
       dates: [] as string[],
-      diag: { rawRows: 0, invalidDates: 0, missingFields: 0, payrollConcepts: 0, sampleInvalidDates: [] as string[] },
+      diag: emptyDiag,
     };
     const ws = getSheet(wb, sheetName);
     if (!ws) return empty;
-    const json = safeSheetToJson<Record<string, string>>(ws, { defval: "" });
-    if (json.length === 0) return empty;
+    const rawJson = safeSheetToJson<Record<string, unknown>>(ws, { defval: "" });
+    if (rawJson.length === 0) return empty;
+
+    // Header-row auto-detection: skip metadata/cover rows if present.
+    const offset = detectHeaderRowOffset(rawJson);
+    let json: Record<string, string>[];
+    if (offset === 0) {
+      json = rawJson as Record<string, string>[];
+    } else {
+      const headerRow = Object.values(rawJson[offset - 1] ?? {}).map(v => String(v ?? ""));
+      const dataRows = rawJson.slice(offset);
+      json = dataRows.map(r => {
+        const vals = Object.values(r);
+        const obj: Record<string, string> = {};
+        headerRow.forEach((h, i) => { obj[h] = String(vals[i] ?? ""); });
+        return obj;
+      });
+    }
+
+    const detectedHeaders = Object.keys(json[0] ?? {});
+    const idx = buildHeaderIndex(detectedHeaders);
+    const get = (row: Record<string, string>, field: LogicalField): string => {
+      const key = idx[field];
+      return key ? String(row[key] ?? "").trim() : "";
+    };
 
     const groupsMap: Record<string, ShiftGroup> = {};
     const unavail: { name: string; date: string }[] = [];
     const allDates: string[] = [];
-    const diag = { rawRows: json.length, invalidDates: 0, missingFields: 0, payrollConcepts: 0, sampleInvalidDates: [] as string[] };
+    const diag = {
+      ...emptyDiag,
+      rawRows: json.length,
+      detectedHeaders,
+      headerMapping: idx,
+      sampleRow: json[0] ?? null,
+      sampleInvalidDates: [] as string[],
+      missingByReason: { date: 0, start: 0, end: 0, titleJob: 0, users: 0, invalidTime: 0 },
+    };
 
     for (const row of json) {
-      const dateRaw = row["Date"] ?? "";
+      const dateRaw = get(row, "date");
       const isoDate = parseDate(dateRaw, dateMode);
       if (!isoDate) {
-        if (String(dateRaw).trim()) {
+        if (dateRaw) {
           diag.invalidDates++;
-          if (diag.sampleInvalidDates.length < 5) diag.sampleInvalidDates.push(String(dateRaw));
+          if (diag.sampleInvalidDates.length < 5) diag.sampleInvalidDates.push(dateRaw);
+        } else {
+          diag.missingFields++;
+          diag.missingByReason.date++;
         }
         continue;
       }
       allDates.push(isoDate);
-      const availStatus = (row["Availability status"] ?? "").trim().toLowerCase();
-      const userName = (row["Users"] ?? "").trim();
+      const availStatus = get(row, "availability").toLowerCase();
+      const userName = get(row, "users");
       if (availStatus === "unavailable") {
         if (userName) unavail.push({ name: userName, date: isoDate });
         continue;
       }
-      const shiftTitle = (row["Shift title"] ?? "").trim();
-      const startRaw = (row["Start"] ?? "").trim();
-      const endRaw = (row["End"] ?? "").trim();
-      const job = (row["Job"] ?? "").trim();
-      if (!shiftTitle && !job && !startRaw) { diag.missingFields++; continue; }
+      const shiftTitle = get(row, "shiftTitle");
+      let startRaw = get(row, "start");
+      let endRaw = get(row, "end");
+      const job = get(row, "job");
+
+      // Combined time range fallback.
+      if ((!startRaw || !endRaw) && idx.timeRange) {
+        const range = parseTimeRange(get(row, "timeRange"));
+        if (range) { startRaw = startRaw || range.start; endRaw = endRaw || range.end; }
+      } else if ((!startRaw || !endRaw) && startRaw) {
+        const range = parseTimeRange(startRaw);
+        if (range) { startRaw = range.start; endRaw = endRaw || range.end; }
+      }
+
+      if (!shiftTitle && !job && !startRaw) {
+        diag.missingFields++;
+        diag.missingByReason.titleJob++;
+        continue;
+      }
       const startTime = parseTime(startRaw);
       const endTime = parseTime(endRaw);
-      if (!startTime || !endTime) { diag.missingFields++; continue; }
-      const combined = `${shiftTitle} ${job} ${(row["Sub item"] ?? "")}`.toLowerCase();
+      if (!startTime || !endTime) {
+        diag.missingFields++;
+        if (!startRaw) diag.missingByReason.start++;
+        else if (!endRaw) diag.missingByReason.end++;
+        else diag.missingByReason.invalidTime++;
+        continue;
+      }
+      const combined = `${shiftTitle} ${job} ${get(row, "subItem")}`.toLowerCase();
       const isPayrollConcept = /pay\s*ride|pagar|tip\s*pool|1\/2\s*ride|x\s*hour.*pay/i.test(combined)
         || /^99\s*[-–]/.test(job.trim());
       if (isPayrollConcept) { diag.payrollConcepts++; continue; }
@@ -483,14 +545,16 @@ export default function ImportSchedule() {
       if (!groupsMap[groupKey]) {
         groupsMap[groupKey] = {
           key: groupKey, shiftCode: shiftTitle, date: isoDate, startTime, endTime, job,
-          subItem: (row["Sub item"] ?? "").trim(), address: (row["Address"] ?? "").trim(),
-          note: (row["Note"] ?? "").trim(), tags: (row["Shift tags"] ?? "").trim(),
-          status: (row["Last Status"] ?? "").trim(), employees: [], employeeStatuses: [],
+          subItem: get(row, "subItem"), address: get(row, "address"),
+          note: get(row, "note"), tags: get(row, "tags"),
+          status: get(row, "status"), employees: [], employeeStatuses: [],
         };
       }
       if (userName && !groupsMap[groupKey].employees.includes(userName)) {
         groupsMap[groupKey].employees.push(userName);
-        groupsMap[groupKey].employeeStatuses.push((row["Last Status"] ?? "").trim());
+        groupsMap[groupKey].employeeStatuses.push(get(row, "status"));
+      } else if (!userName) {
+        diag.missingByReason.users++;
       }
     }
     return { groups: Object.values(groupsMap), unavail, dates: allDates, diag };
