@@ -708,6 +708,8 @@ export default function ImportSchedule() {
     setParsingAux(false);
   }, [toast]);
 
+  const isInvertedRange = !!filterFrom && !!filterTo && filterTo < filterFrom;
+
   const filteredGroups = shiftGroups.filter(g => {
     // If the date range is inverted, deliberately return nothing so the UI
     // doesn't show a misleading "0" without an explanation. The warning
@@ -717,8 +719,6 @@ export default function ImportSchedule() {
     if (filterTo && g.date > filterTo) return false;
     return true;
   });
-
-  const isInvertedRange = !!filterFrom && !!filterTo && filterTo < filterFrom;
 
   // Effective range for safety checks: prefer manual filter, fall back to file range.
   // When the range is inverted we fall back to the file range so the pay-period
