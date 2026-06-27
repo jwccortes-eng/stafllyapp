@@ -127,6 +127,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [fullName, setFullName] = useState<string | null>(null);
   const hydratedUserIdRef = useRef<string | null>(null);
   const activeModeRef = useRef<ActiveMode>(activeMode);
+  // Suppress "session expired" UX when the user themselves chose to sign out.
+  const userInitiatedSignOutRef = useRef<boolean>(false);
+  // Track whether we ever observed an authenticated session in this tab,
+  // so we only flag SIGNED_OUT as "expired" when there was something to lose.
+  const hadAuthedSessionRef = useRef<boolean>(false);
 
   useEffect(() => {
     activeModeRef.current = activeMode;
