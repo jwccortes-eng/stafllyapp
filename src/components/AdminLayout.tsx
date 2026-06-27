@@ -154,7 +154,10 @@ export default function AdminLayout() {
     );
   }
 
-  if (!user) return <Navigate to="/auth" replace />;
+  if (!user) {
+    saveIntendedRoute(location.pathname + location.search);
+    return <Navigate to="/auth" replace />;
+  }
 
   if (recoveringAdminCompanyId || shouldRecoverAdmin) {
     return (
