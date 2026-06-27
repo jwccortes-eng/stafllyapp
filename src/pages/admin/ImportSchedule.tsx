@@ -708,15 +708,23 @@ export default function ImportSchedule() {
     setParsingAux(false);
   }, [toast]);
 
+  const isInvertedRange = !!filterFrom && !!filterTo && filterTo < filterFrom;
+
   const filteredGroups = shiftGroups.filter(g => {
+    // If the date range is inverted, deliberately return nothing so the UI
+    // doesn't show a misleading "0" without an explanation. The warning
+    // below explains the inverted range instead.
+    if (isInvertedRange) return false;
     if (filterFrom && g.date < filterFrom) return false;
     if (filterTo && g.date > filterTo) return false;
     return true;
   });
 
   // Effective range for safety checks: prefer manual filter, fall back to file range.
-  const effectiveRangeFrom = filterFrom || dateRange?.from || null;
-  const effectiveRangeTo = filterTo || dateRange?.to || null;
+  // When the range is inverted we fall back to the file range so the pay-period
+  // lock check still has a valid interval to evaluate.
+  const effectiveRangeFrom = (isInvertedRange ? dateRange?.from : filterFrom) || dateRange?.from || null;
+  const effectiveRangeTo = (isInvertedRange ? dateRange?.to : filterTo) || dateRange?.to || null;
 
   // Detect pay periods that overlap the import range and are non-mutable.
   // We BLOCK live writes against closed/published/paid periods unless dry-run.
@@ -762,6 +770,11 @@ export default function ImportSchedule() {
     if (!selectedCompanyId) {
       console.warn("[ImportSchedule] handleImport blocked: no selectedCompanyId");
       toast({ title: "Sin empresa seleccionada", description: "Selecciona una empresa antes de importar.", variant: "destructive" });
+      return;
+    }
+    if (isInvertedRange) {
+      console.warn("[ImportSchedule] handleImport blocked: inverted date range", { filterFrom, filterTo });
+      toast({ title: "Rango de fechas invertido", description: "La fecha Hasta debe ser igual o posterior a Desde. Corrige el rango antes de continuar.", variant: "destructive" });
       return;
     }
     if (filteredGroups.length === 0) {
@@ -2176,7 +2189,22 @@ export default function ImportSchedule() {
                 )}
                 {filteredGroups.length === 0 && parseDiagnostics.parsedGroups > 0 && (
                   <p className="text-amber-700">
-                    Hay {parseDiagnostics.parsedGroups} turno(s) en el archivo, pero ninguno cae en el rango {filterFrom || "—"} → {filterTo || "—"}. Ajusta el filtro de fechas.
+                    {isInvertedRange ? (
+                      <>
+                        El rango de fechas está invertido. La fecha Hasta debe ser igual o posterior a Desde.{" "}
+                        {dateRange?.to && (
+                          <button
+                            type="button"
+                            className="underline font-medium hover:text-amber-800"
+                            onClick={() => setFilterTo(dateRange.to)}
+                          >
+                            Corregir Hasta al fin del archivo ({dateRange.to})
+                          </button>
+                        )}
+                      </>
+                    ) : (
+                      `Hay ${parseDiagnostics.parsedGroups} turno(s) en el archivo, pero ninguno cae en el rango ${filterFrom || "—"} → ${filterTo || "—"}. Ajusta el filtro de fechas.`
+                    )}
                   </p>
                 )}
                 {filteredGroups.length === 0 && parseDiagnostics.parsedGroups === 0 && (
@@ -2232,6 +2260,29 @@ export default function ImportSchedule() {
                     Archivo: {dateRange.from} → {dateRange.to}
                   </p>
                 </div>
+                {isInvertedRange && (
+                  <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+                    <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="font-medium">El rango de fechas está invertido.</p>
+                      <p className="text-xs opacity-90">
+                        La fecha Hasta debe ser igual o posterior a Desde. Ajusta el rango antes de continuar.
+                        {dateRange?.to && filterTo !== dateRange.to && (
+                          <>
+                            {" "}
+                            <button
+                              type="button"
+                              className="underline font-medium hover:opacity-100"
+                              onClick={() => setFilterTo(dateRange.to)}
+                            >
+                              Usar fin del archivo ({dateRange.to})
+                            </button>
+                          </>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                )}
                 {/* Quick range presets — phased reimport plan */}
                 <div className="flex flex-wrap gap-2 items-center">
                   <span className="text-xs text-muted-foreground">Rangos rápidos:</span>
@@ -2424,16 +2475,16 @@ export default function ImportSchedule() {
                   variant="outline"
                   size="sm"
                   onClick={() => void handleImport({ dryRun: true })}
-                  disabled={importing || filteredGroups.length === 0}
-                  title="Ejecuta auditoría completa sin escribir en la base de datos"
+                  disabled={importing || filteredGroups.length === 0 || isInvertedRange}
+                  title={isInvertedRange ? "Corrige el rango de fechas antes de continuar" : "Ejecuta auditoría completa sin escribir en la base de datos"}
                 >
                   {importing && dryRun ? "Auditando…" : `Auditar (dry-run) (${filteredGroups.length})`}
                 </Button>
                 <Button
                   size="sm"
                   onClick={() => void handleImport({ dryRun: false })}
-                  disabled={importing || filteredGroups.length === 0 || (hasLockedPeriods && !dryRun)}
-                  title={hasLockedPeriods ? "Hay periodos bloqueados — usa el modo Auditoría" : ""}
+                  disabled={importing || filteredGroups.length === 0 || (hasLockedPeriods && !dryRun) || isInvertedRange}
+                  title={isInvertedRange ? "Corrige el rango de fechas antes de continuar" : hasLockedPeriods ? "Hay periodos bloqueados — usa el modo Auditoría" : ""}
                 >
                   {importing && !dryRun ? "Procesando…" : `Procesar importación (${filteredGroups.length})`}
                 </Button>
