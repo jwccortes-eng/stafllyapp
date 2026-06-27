@@ -340,20 +340,33 @@ export default function ImportSchedule() {
   const [periodsLoading, setPeriodsLoading] = useState(false);
 
   /** Process a single workbook sheet and return parsed groups + unavailability */
-  const parseSheetData = (wb: SafeWorkbook, sheetName: string) => {
+  const parseSheetData = (wb: SafeWorkbook, sheetName: string, dateMode: DateMode) => {
+    const empty = {
+      groups: [] as ShiftGroup[],
+      unavail: [] as { name: string; date: string }[],
+      dates: [] as string[],
+      diag: { rawRows: 0, invalidDates: 0, missingFields: 0, payrollConcepts: 0, sampleInvalidDates: [] as string[] },
+    };
     const ws = getSheet(wb, sheetName);
-    if (!ws) return { groups: [] as ShiftGroup[], unavail: [] as { name: string; date: string }[], dates: [] as string[] };
+    if (!ws) return empty;
     const json = safeSheetToJson<Record<string, string>>(ws, { defval: "" });
-    if (json.length === 0) return { groups: [] as ShiftGroup[], unavail: [] as { name: string; date: string }[], dates: [] as string[] };
+    if (json.length === 0) return empty;
 
     const groupsMap: Record<string, ShiftGroup> = {};
     const unavail: { name: string; date: string }[] = [];
     const allDates: string[] = [];
+    const diag = { rawRows: json.length, invalidDates: 0, missingFields: 0, payrollConcepts: 0, sampleInvalidDates: [] as string[] };
 
     for (const row of json) {
       const dateRaw = row["Date"] ?? "";
-      const isoDate = parseDate(dateRaw);
-      if (!isoDate) continue;
+      const isoDate = parseDate(dateRaw, dateMode);
+      if (!isoDate) {
+        if (String(dateRaw).trim()) {
+          diag.invalidDates++;
+          if (diag.sampleInvalidDates.length < 5) diag.sampleInvalidDates.push(String(dateRaw));
+        }
+        continue;
+      }
       allDates.push(isoDate);
       const availStatus = (row["Availability status"] ?? "").trim().toLowerCase();
       const userName = (row["Users"] ?? "").trim();
@@ -365,14 +378,14 @@ export default function ImportSchedule() {
       const startRaw = (row["Start"] ?? "").trim();
       const endRaw = (row["End"] ?? "").trim();
       const job = (row["Job"] ?? "").trim();
-      if (!shiftTitle && !job && !startRaw) continue;
+      if (!shiftTitle && !job && !startRaw) { diag.missingFields++; continue; }
       const startTime = parseTime(startRaw);
       const endTime = parseTime(endRaw);
-      if (!startTime || !endTime) continue;
+      if (!startTime || !endTime) { diag.missingFields++; continue; }
       const combined = `${shiftTitle} ${job} ${(row["Sub item"] ?? "")}`.toLowerCase();
       const isPayrollConcept = /pay\s*ride|pagar|tip\s*pool|1\/2\s*ride|x\s*hour.*pay/i.test(combined)
         || /^99\s*[-–]/.test(job.trim());
-      if (isPayrollConcept) continue;
+      if (isPayrollConcept) { diag.payrollConcepts++; continue; }
       const groupKey = `${shiftTitle}|${isoDate}|${startTime}|${endTime}|${job}`;
       if (!groupsMap[groupKey]) {
         groupsMap[groupKey] = {
@@ -387,7 +400,7 @@ export default function ImportSchedule() {
         groupsMap[groupKey].employeeStatuses.push((row["Last Status"] ?? "").trim());
       }
     }
-    return { groups: Object.values(groupsMap), unavail, dates: allDates };
+    return { groups: Object.values(groupsMap), unavail, dates: allDates, diag };
   };
 
   const handleFileUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
