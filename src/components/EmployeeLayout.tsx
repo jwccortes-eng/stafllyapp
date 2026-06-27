@@ -106,7 +106,10 @@ export default function EmployeeLayout() {
     );
   }
 
-  if (!user) return <Navigate to="/auth" replace />;
+  if (!user) {
+    saveIntendedRoute(location.pathname + location.search);
+    return <Navigate to="/auth" replace />;
+  }
   if (!renderEmployeeId) return <Navigate to={canAccessAdmin ? "/app" : "/auth"} replace />;
 
   const effectiveEmployeeId = renderEmployeeId;
