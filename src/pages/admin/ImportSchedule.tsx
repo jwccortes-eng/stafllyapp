@@ -147,16 +147,120 @@ function parseTime(raw: string): string | null {
 }
 
 /**
- * Parse date: MM/DD/YYYY → YYYY-MM-DD
+ * Robust date parsing for Connecteam exports.
+ *
+ * Accepts:
+ *   - ISO `YYYY-MM-DD` (or longer ISO strings — first 10 chars used)
+ *   - `DD/MM/YYYY` or `MM/DD/YYYY` (mode-disambiguated)
+ *   - Excel serial date numbers (numeric strings, days since 1899-12-30)
+ *   - JS Date.toString() output (e.g. "Wed Jun 24 2026 …")
+ *
+ * Validates: month 1–12, day 1–31, year ≥ 1900. Returns null on anything else.
+ * Never returns malformed ISO like "2026-24-06".
  */
-function parseDate(raw: string): string | null {
-  if (!raw) return null;
-  const match = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-  if (match) {
-    return `${match[3]}-${match[1].padStart(2, "0")}-${match[2].padStart(2, "0")}`;
+export type DateMode = "DMY" | "MDY";
+
+function isValidYMD(y: number, m: number, d: number): boolean {
+  if (!Number.isInteger(y) || !Number.isInteger(m) || !Number.isInteger(d)) return false;
+  if (y < 1900 || y > 2999) return false;
+  if (m < 1 || m > 12) return false;
+  if (d < 1 || d > 31) return false;
+  // Round-trip via Date to catch e.g. Feb 30
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  return dt.getUTCFullYear() === y && dt.getUTCMonth() === m - 1 && dt.getUTCDate() === d;
+}
+
+function toISO(y: number, m: number, d: number): string {
+  return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+}
+
+/**
+ * Detect DD/MM vs MM/DD from a sample of raw date strings.
+ * - If any first-part > 12 → DMY.
+ * - Else if any second-part > 12 → MDY.
+ * - Else ambiguous → fallback (default "MDY" for legacy Connecteam US exports).
+ */
+export function detectDateFormat(samples: string[], fallback: DateMode = "MDY"): DateMode {
+  let dmyHit = false;
+  let mdyHit = false;
+  for (const raw of samples) {
+    if (!raw) continue;
+    const m = String(raw).trim().match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+    if (!m) continue;
+    const a = parseInt(m[1], 10);
+    const b = parseInt(m[2], 10);
+    if (a > 12 && b <= 12) dmyHit = true;
+    if (b > 12 && a <= 12) mdyHit = true;
   }
-  if (/^\d{4}-\d{2}-\d{2}/.test(raw)) return raw.slice(0, 10);
+  if (dmyHit && !mdyHit) return "DMY";
+  if (mdyHit && !dmyHit) return "MDY";
+  return fallback;
+}
+
+function parseExcelSerial(n: number): string | null {
+  if (!Number.isFinite(n) || n < 60 || n > 80000) return null;
+  // Excel epoch is 1899-12-30 (accounts for the 1900 leap-year bug).
+  const ms = Math.round(n * 86400000);
+  const dt = new Date(Date.UTC(1899, 11, 30) + ms);
+  const y = dt.getUTCFullYear();
+  const m = dt.getUTCMonth() + 1;
+  const d = dt.getUTCDate();
+  return isValidYMD(y, m, d) ? toISO(y, m, d) : null;
+}
+
+export function parseDate(raw: unknown, mode: DateMode = "MDY"): string | null {
+  if (raw == null) return null;
+
+  // Native Date (ExcelJS sometimes returns these before stringification).
+  if (raw instanceof Date && !isNaN(raw.getTime())) {
+    return toISO(raw.getUTCFullYear(), raw.getUTCMonth() + 1, raw.getUTCDate());
+  }
+
+  // Numeric Excel serial.
+  if (typeof raw === "number") {
+    return parseExcelSerial(raw);
+  }
+
+  const s = String(raw).trim();
+  if (!s) return null;
+
+  // ISO `YYYY-MM-DD…`
+  const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) {
+    const y = +iso[1], m = +iso[2], d = +iso[3];
+    return isValidYMD(y, m, d) ? toISO(y, m, d) : null;
+  }
+
+  // Slash/dash separated D/M/Y or M/D/Y.
+  const slash = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (slash) {
+    const a = +slash[1], b = +slash[2], y = +slash[3];
+    const day = mode === "DMY" ? a : b;
+    const month = mode === "DMY" ? b : a;
+    return isValidYMD(y, month, day) ? toISO(y, month, day) : null;
+  }
+
+  // Numeric string Excel serial.
+  if (/^\d+(\.\d+)?$/.test(s)) {
+    return parseExcelSerial(parseFloat(s));
+  }
+
+  // Fallback: JS Date.parse (handles "Wed Jun 24 2026 …", "2026-06-24T…").
+  const t = Date.parse(s);
+  if (!isNaN(t)) {
+    const dt = new Date(t);
+    const y = dt.getUTCFullYear();
+    const m = dt.getUTCMonth() + 1;
+    const d = dt.getUTCDate();
+    if (isValidYMD(y, m, d)) return toISO(y, m, d);
+  }
+
   return null;
+}
+
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+function isIsoDate(s: string | null | undefined): s is string {
+  return !!s && ISO_DATE_RE.test(s);
 }
 
 /**
