@@ -587,15 +587,26 @@ export default function ImportSchedule() {
     for (const f of validFiles) {
       const data = await f.arrayBuffer();
       const wb = await safeRead(data);
-      const names = getSheetNames(wb);
-      const sheetName = names[0];
+      const sheetName = pickScheduleSheet(wb);
       if (!sheetName) continue;
       loaded.push({ wb, sheetName });
       const ws = getSheet(wb, sheetName);
       if (!ws) continue;
-      const rows = safeSheetToJson<Record<string, string>>(ws, { defval: "" });
-      for (const r of rows) {
-        const d = String(r["Date"] ?? "").trim();
+      const rows = safeSheetToJson<Record<string, unknown>>(ws, { defval: "" });
+      const offset = detectHeaderRowOffset(rows);
+      const sampleRows: Record<string, unknown>[] = offset === 0 ? rows : (() => {
+        const headerRow = Object.values(rows[offset - 1] ?? {}).map(v => String(v ?? ""));
+        return rows.slice(offset).map(r => {
+          const vals = Object.values(r);
+          const obj: Record<string, string> = {};
+          headerRow.forEach((h, i) => { obj[h] = String(vals[i] ?? ""); });
+          return obj;
+        });
+      })();
+      const idx = buildHeaderIndex(Object.keys(sampleRows[0] ?? {}));
+      const dateKey = idx.date;
+      for (const r of sampleRows) {
+        const d = dateKey ? String((r as Record<string, unknown>)[dateKey] ?? "").trim() : "";
         if (d) dateSamples.push(d);
         if (dateSamples.length >= 200) break;
       }
@@ -609,6 +620,11 @@ export default function ImportSchedule() {
     const mergedDiag = {
       rawRows: 0, invalidDates: 0, missingFields: 0, payrollConcepts: 0,
       sampleInvalidDates: [] as string[],
+      sheetName: loaded[0]?.sheetName ?? "",
+      detectedHeaders: [] as string[],
+      headerMapping: {} as Partial<Record<LogicalField, string>>,
+      missingByReason: { date: 0, start: 0, end: 0, titleJob: 0, users: 0, invalidTime: 0 },
+      sampleRow: null as Record<string, string> | null,
     };
 
     for (const { wb, sheetName } of loaded) {
@@ -623,6 +639,13 @@ export default function ImportSchedule() {
       for (const s of result.diag.sampleInvalidDates) {
         if (mergedDiag.sampleInvalidDates.length < 5) mergedDiag.sampleInvalidDates.push(s);
       }
+      if (!mergedDiag.detectedHeaders.length) {
+        mergedDiag.detectedHeaders = result.diag.detectedHeaders;
+        mergedDiag.headerMapping = result.diag.headerMapping;
+        mergedDiag.sampleRow = result.diag.sampleRow;
+      }
+      (Object.keys(mergedDiag.missingByReason) as (keyof typeof mergedDiag.missingByReason)[])
+        .forEach(k => { mergedDiag.missingByReason[k] += result.diag.missingByReason[k]; });
     }
 
     // Deduplicate groups across files (same key = same shift)
@@ -643,7 +666,10 @@ export default function ImportSchedule() {
     const mergedGroups = Object.values(dedupMap);
     setShiftGroups(mergedGroups);
     setUnavailableRecords(allUnavail);
-    setParseDiagnostics({ ...mergedDiag, parsedGroups: mergedGroups.length, detectedDateMode: dateMode });
+    const requiredLogical: LogicalField[] = ["date", "start", "end", "users"];
+    const missingLogical = requiredLogical.filter(f => !mergedDiag.headerMapping[f]);
+    if (!mergedDiag.headerMapping.shiftTitle && !mergedDiag.headerMapping.job) missingLogical.push("shiftTitle");
+    setParseDiagnostics({ ...mergedDiag, parsedGroups: mergedGroups.length, detectedDateMode: dateMode, missingLogical });
 
     // Only use valid ISO dates for the file range / auto-filter seed.
     const validDates = allDates.filter(isIsoDate).sort();
