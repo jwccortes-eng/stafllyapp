@@ -1974,6 +1974,37 @@ export default function ImportSchedule() {
             </Card>
           </div>
 
+          {/* Parse diagnostics + zero-rows reason */}
+          {parseDiagnostics && (
+            <Card className="border-muted">
+              <CardContent className="p-4 space-y-2 text-xs">
+                <div className="flex flex-wrap gap-x-4 gap-y-1 text-muted-foreground">
+                  <span>Filas leídas: <strong className="text-foreground">{parseDiagnostics.rawRows}</strong></span>
+                  <span>Grupos parseados: <strong className="text-foreground">{parseDiagnostics.parsedGroups}</strong></span>
+                  <span>Fechas inválidas: <strong className={parseDiagnostics.invalidDates ? "text-amber-600" : "text-foreground"}>{parseDiagnostics.invalidDates}</strong></span>
+                  <span>Campos faltantes: <strong className="text-foreground">{parseDiagnostics.missingFields}</strong></span>
+                  <span>Conceptos de payroll: <strong className="text-foreground">{parseDiagnostics.payrollConcepts}</strong></span>
+                  <span>Formato fecha detectado: <Badge variant="outline" className="text-[10px]">{parseDiagnostics.detectedDateMode === "DMY" ? "DD/MM/YYYY" : "MM/DD/YYYY"}</Badge></span>
+                </div>
+                {parseDiagnostics.sampleInvalidDates.length > 0 && (
+                  <p className="text-amber-700">
+                    Ejemplos de fechas no reconocidas: {parseDiagnostics.sampleInvalidDates.map(s => `"${s}"`).join(", ")}
+                  </p>
+                )}
+                {filteredGroups.length === 0 && parseDiagnostics.parsedGroups > 0 && (
+                  <p className="text-amber-700">
+                    Hay {parseDiagnostics.parsedGroups} turno(s) en el archivo, pero ninguno cae en el rango {filterFrom || "—"} → {filterTo || "—"}. Ajusta el filtro de fechas.
+                  </p>
+                )}
+                {filteredGroups.length === 0 && parseDiagnostics.parsedGroups === 0 && (
+                  <p className="text-amber-700">
+                    No se pudo parsear ningún turno. Verifica que el archivo sea el export de horario de Connecteam y que la columna <code>Date</code> tenga fechas válidas.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           {/* Date filter + safety presets */}
           {dateRange && (
             <Card>
