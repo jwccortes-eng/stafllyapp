@@ -125,6 +125,18 @@ export default function Auth() {
   useEffect(() => {
     if (authLoading || !user) return;
 
+    // Prefer the route the user was trying to reach before being bounced to
+    // /auth (saved by the route guards). Only honor it when it matches the
+    // user's current access surface; otherwise fall through to defaults.
+    const pickIntended = (): string | null => {
+      const intended = consumeIntendedRoute();
+      if (!intended) return null;
+      if (intended.startsWith("/parceros")) return intended;
+      if (intended.startsWith("/app") && canAccessAdmin) return intended;
+      if (intended.startsWith("/portal") && canAccessPortal) return intended;
+      return null;
+    };
+
     if (phoneRedirectPendingRef.current) {
       console.info("[phone-login]", {
         step: "post-session-redirect",
@@ -133,6 +145,13 @@ export default function Auth() {
         canAccessPortal,
         activeMode,
       });
+
+      const intended = pickIntended();
+      if (intended) {
+        phoneRedirectPendingRef.current = false;
+        navigate(intended, { replace: true });
+        return;
+      }
 
       if (canAccessAdmin) {
         phoneRedirectPendingRef.current = false;
@@ -150,19 +169,11 @@ export default function Auth() {
     const autoSetup = async () => {
       // [SECURITY 2026-05-01] Self-service company creation is DISABLED platform-wide.
       // Stafly is invite-only pre-launch. Only developers can provision tenants.
-      // The legacy auto-setup-from-signup flow has been removed to prevent
-      // unauthorized tenants like the "Llc" incident (see activity_log
-      // action='unauthorized_self_signup_suspended').
-
-      // Parceros context: any authenticated user can access /parceros (layout
-      // only requires a session). When the user came from /parceros, prefer it
-      // as the destination regardless of admin/portal access. We only redirect
-      // when at least one access path exists, so workers without any role still
-      // see the "no access" state instead of bouncing into Parceros silently.
-      // Parceros context: any authenticated user can access /parceros (layout
-      // only requires a session). When the user came from /parceros OR the
-      // build is the Parceros flavor, prefer /parceros as the destination
-      // regardless of admin/portal access.
+      const intended = pickIntended();
+      if (intended) {
+        navigate(intended, { replace: true });
+        return;
+      }
       if (fromParceros) {
         navigate("/parceros");
       } else if (canAccessAdmin && canAccessPortal) {
@@ -175,6 +186,7 @@ export default function Auth() {
     };
     autoSetup();
   }, [user, role, authLoading, navigate, canAccessAdmin, canAccessPortal, activeMode, fromParceros]);
+
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
