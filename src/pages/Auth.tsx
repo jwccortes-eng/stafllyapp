@@ -51,6 +51,32 @@ export default function Auth() {
     [searchParams]
   );
 
+  // One-shot toast when the user lands here after a server-side session loss
+  // (refresh-token race in Lovable Preview, multi-tab signOut, stale token).
+  useEffect(() => {
+    const expired = consumeSessionExpired();
+    if (expired) {
+      toast({
+        title: "Sesión expirada",
+        description: "Tu sesión expiró o fue abierta en otra pestaña. Inicia sesión nuevamente.",
+        variant: "destructive",
+      });
+    }
+  }, [toast]);
+
+  // Lightweight multi-tab warning — fires once, only when more than one tab is
+  // active in the same browser profile. Does NOT block any production flow.
+  useEffect(() => {
+    const stop = watchTabPresence(() => {
+      toast({
+        title: "Varias pestañas abiertas",
+        description: "Para evitar cierre de sesión en Preview, usa una sola pestaña.",
+      });
+    });
+    return stop;
+  }, [toast]);
+
+
   useEffect(() => {
     const redirectTarget = phoneRedirectPendingRef.current
       ? (canAccessAdmin ? "/app" : canAccessPortal ? "/portal" : null)
