@@ -134,16 +134,33 @@ interface TargetShiftDiagnostic {
  * Parse time strings like "05:30am", "11:30pm", "All Day" → "HH:mm" (24h)
  */
 function parseTime(raw: string): string | null {
-  if (!raw || raw.toLowerCase().includes("all day")) return null;
-  const cleaned = raw.trim().toLowerCase();
-  const match = cleaned.match(/^(\d{1,2}):(\d{2})\s*(am|pm)$/i);
-  if (!match) return null;
-  let h = parseInt(match[1], 10);
-  const m = match[2];
-  const ampm = match[3].toLowerCase();
+  if (!raw) return null;
+  const cleaned = String(raw).trim().toLowerCase();
+  if (!cleaned || cleaned.includes("all day")) return null;
+  // Forms accepted: "9:00am", "09:00 am", "9 am", "9:00", "09:00", "9", "9.30pm"
+  const m = cleaned.match(/^(\d{1,2})(?:[:.](\d{2}))?\s*(am|pm)?$/i);
+  if (!m) return null;
+  let h = parseInt(m[1], 10);
+  const mins = m[2] ?? "00";
+  const ampm = m[3]?.toLowerCase();
   if (ampm === "pm" && h < 12) h += 12;
   if (ampm === "am" && h === 12) h = 0;
-  return `${String(h).padStart(2, "0")}:${m}`;
+  if (h < 0 || h > 23) return null;
+  if (parseInt(mins, 10) > 59) return null;
+  return `${String(h).padStart(2, "0")}:${mins}`;
+}
+
+/** Parse combined ranges like "9:00 AM - 5:00 PM", "09:00-17:00", "9 AM to 5 PM". */
+function parseTimeRange(raw: string): { start: string; end: string } | null {
+  if (!raw) return null;
+  const s = String(raw).trim();
+  if (!s) return null;
+  const parts = s.split(/\s*(?:-|–|—|to|a)\s*/i);
+  if (parts.length !== 2) return null;
+  const start = parseTime(parts[0]);
+  const end = parseTime(parts[1]);
+  if (!start || !end) return null;
+  return { start, end };
 }
 
 /**
