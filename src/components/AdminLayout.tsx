@@ -22,6 +22,7 @@ import { ModeSwitcher } from "@/components/ModeSwitcher";
 import { AdminProductSwitcher } from "@/components/admin/AdminProductSwitcher";
 
 import { safeLocalStorage } from "@/lib/safe-storage";
+import { saveIntendedRoute } from "@/lib/auth-session";
 
 function MobilePageTitle({ items }: { items: NavItem[] }) {
   const location = useLocation();
