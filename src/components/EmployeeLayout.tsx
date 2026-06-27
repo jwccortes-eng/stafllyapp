@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { ModeSwitcher } from "@/components/ModeSwitcher";
-import { Outlet, Navigate } from "react-router-dom";
+import { saveIntendedRoute } from "@/lib/auth-session";
+import { Outlet, Navigate, useLocation } from "react-router-dom";
 import { User, Building2, ChevronDown, Check } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
@@ -32,6 +33,7 @@ export default function EmployeeLayout() {
   const { user, role, employeeActive, employeeId, allEmployeeIds, resolveEmployeeForCompany, loading, signOut, fullName, canAccessAdmin, canAccessAdminForCompany } = useAuth();
   const { companies, selectedCompanyId, selectedCompany, switchCompany } = useCompany();
   const { stableEmployeeId, isResolvingEmployee } = useEffectiveEmployee();
+  const location = useLocation();
   const isMobile = useIsMobile();
   const { isModuleEnabled, enabledModules, loading: modulesLoading } = usePortalModules();
   const [moreOpen, setMoreOpen] = useState(false);
@@ -104,7 +106,10 @@ export default function EmployeeLayout() {
     );
   }
 
-  if (!user) return <Navigate to="/auth" replace />;
+  if (!user) {
+    saveIntendedRoute(location.pathname + location.search);
+    return <Navigate to="/auth" replace />;
+  }
   if (!renderEmployeeId) return <Navigate to={canAccessAdmin ? "/app" : "/auth"} replace />;
 
   const effectiveEmployeeId = renderEmployeeId;

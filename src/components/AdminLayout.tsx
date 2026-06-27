@@ -22,6 +22,7 @@ import { ModeSwitcher } from "@/components/ModeSwitcher";
 import { AdminProductSwitcher } from "@/components/admin/AdminProductSwitcher";
 
 import { safeLocalStorage } from "@/lib/safe-storage";
+import { saveIntendedRoute } from "@/lib/auth-session";
 
 function MobilePageTitle({ items }: { items: NavItem[] }) {
   const location = useLocation();
@@ -153,7 +154,10 @@ export default function AdminLayout() {
     );
   }
 
-  if (!user) return <Navigate to="/auth" replace />;
+  if (!user) {
+    saveIntendedRoute(location.pathname + location.search);
+    return <Navigate to="/auth" replace />;
+  }
 
   if (recoveringAdminCompanyId || shouldRecoverAdmin) {
     return (
