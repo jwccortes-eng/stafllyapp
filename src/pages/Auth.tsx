@@ -13,6 +13,7 @@ import { Mail, Lock, Eye, EyeOff, Loader2, ShieldCheck, Phone, Radio, Hash, Brie
 import { StaflyLogo } from "@/components/brand/StaflyBrand";
 import { EmployeeAuthFlow } from "@/components/auth/EmployeeAuthFlow";
 import { IS_PARCEROS_FLAVOR } from "@/lib/app-flavor";
+import { consumeSessionExpired, consumeIntendedRoute, watchTabPresence } from "@/lib/auth-session";
 
 type LoginMethod = "email" | "phone";
 
