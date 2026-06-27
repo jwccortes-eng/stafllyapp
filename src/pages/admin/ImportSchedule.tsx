@@ -134,16 +134,33 @@ interface TargetShiftDiagnostic {
  * Parse time strings like "05:30am", "11:30pm", "All Day" → "HH:mm" (24h)
  */
 function parseTime(raw: string): string | null {
-  if (!raw || raw.toLowerCase().includes("all day")) return null;
-  const cleaned = raw.trim().toLowerCase();
-  const match = cleaned.match(/^(\d{1,2}):(\d{2})\s*(am|pm)$/i);
-  if (!match) return null;
-  let h = parseInt(match[1], 10);
-  const m = match[2];
-  const ampm = match[3].toLowerCase();
+  if (!raw) return null;
+  const cleaned = String(raw).trim().toLowerCase();
+  if (!cleaned || cleaned.includes("all day")) return null;
+  // Forms accepted: "9:00am", "09:00 am", "9 am", "9:00", "09:00", "9", "9.30pm"
+  const m = cleaned.match(/^(\d{1,2})(?:[:.](\d{2}))?\s*(am|pm)?$/i);
+  if (!m) return null;
+  let h = parseInt(m[1], 10);
+  const mins = m[2] ?? "00";
+  const ampm = m[3]?.toLowerCase();
   if (ampm === "pm" && h < 12) h += 12;
   if (ampm === "am" && h === 12) h = 0;
-  return `${String(h).padStart(2, "0")}:${m}`;
+  if (h < 0 || h > 23) return null;
+  if (parseInt(mins, 10) > 59) return null;
+  return `${String(h).padStart(2, "0")}:${mins}`;
+}
+
+/** Parse combined ranges like "9:00 AM - 5:00 PM", "09:00-17:00", "9 AM to 5 PM". */
+function parseTimeRange(raw: string): { start: string; end: string } | null {
+  if (!raw) return null;
+  const s = String(raw).trim();
+  if (!s) return null;
+  const parts = s.split(/\s*(?:-|–|—|to|a)\s*/i);
+  if (parts.length !== 2) return null;
+  const start = parseTime(parts[0]);
+  const end = parseTime(parts[1]);
+  if (!start || !end) return null;
+  return { start, end };
 }
 
 /**
@@ -279,6 +296,76 @@ function parseName(raw: string): { first: string; last: string } | null {
   return { first: toTitleCase(parts[0]), last: toTitleCase(parts.slice(1).join(" ")) };
 }
 
+/** Logical schedule fields → list of accepted header aliases (case/space/punct-insensitive). */
+type LogicalField =
+  | "date" | "shiftTitle" | "job" | "start" | "end" | "timeRange"
+  | "users" | "subItem" | "address" | "note" | "tags" | "status" | "availability";
+
+const HEADER_ALIASES: Record<LogicalField, string[]> = {
+  date: ["date", "shift date", "day", "fecha"],
+  shiftTitle: ["shift title", "title", "shift name", "name", "service"],
+  job: ["job", "job name", "client", "customer", "location", "position", "site", "venue"],
+  start: ["start", "start time", "shift start", "from", "begins", "hora inicio", "inicio"],
+  end: ["end", "end time", "shift end", "to", "ends", "hora fin", "fin"],
+  timeRange: ["time", "hours", "shift time", "start - end", "start-end", "horario"],
+  users: ["users", "user", "assigned users", "employees", "members", "workers", "assignees", "staff", "team members", "empleados"],
+  subItem: ["sub item", "subitem", "sub-item"],
+  address: ["address", "job address", "location address", "site address", "direccion"],
+  note: ["note", "notes", "description", "comments", "nota", "notas"],
+  tags: ["shift tags", "tags", "etiquetas"],
+  status: ["last status", "status", "shift status", "estado"],
+  availability: ["availability status", "availability", "avail status", "disponibilidad"],
+};
+
+function normalizeHeaderKey(h: string): string {
+  return String(h ?? "")
+    .toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[_\-]+/g, " ")
+    .replace(/[^\w\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** Map logical field → actual header key present in the row. */
+function buildHeaderIndex(headers: string[]): Partial<Record<LogicalField, string>> {
+  const norm = new Map<string, string>();
+  for (const h of headers) norm.set(normalizeHeaderKey(h), h);
+  const index: Partial<Record<LogicalField, string>> = {};
+  for (const [field, aliases] of Object.entries(HEADER_ALIASES) as [LogicalField, string[]][]) {
+    for (const a of aliases) {
+      const n = normalizeHeaderKey(a);
+      if (norm.has(n)) { index[field] = norm.get(n)!; break; }
+    }
+  }
+  return index;
+}
+
+/** Scan first N rows for a likely header row (returns data-row offset, 0 = use row 1 as header). */
+function detectHeaderRowOffset(rows: Record<string, unknown>[], maxScan = 5): number {
+  const firstScore = Object.keys(buildHeaderIndex(Object.keys(rows[0] ?? {}))).length;
+  if (firstScore >= 2) return 0;
+  for (let i = 0; i < Math.min(maxScan, rows.length); i++) {
+    const candidate = Object.values(rows[i] ?? {}).map(v => String(v ?? ""));
+    if (Object.keys(buildHeaderIndex(candidate)).length >= 3) return i + 1;
+  }
+  return 0;
+}
+
+/** Pick first sheet with ≥3 recognized schedule headers; fallback to first sheet. */
+function pickScheduleSheet(wb: SafeWorkbook): string | null {
+  const names = getSheetNames(wb);
+  for (const name of names) {
+    const ws = getSheet(wb, name);
+    if (!ws) continue;
+    const rows = safeSheetToJson<Record<string, unknown>>(ws, { defval: "" });
+    if (!rows.length) continue;
+    const headerSource = Object.keys(rows[0] ?? {});
+    if (Object.keys(buildHeaderIndex(headerSource)).length >= 3) return name;
+  }
+  return names[0] ?? null;
+}
+
 export default function ImportSchedule() {
   const { selectedCompanyId } = useCompany();
   const { toast } = useToast();
@@ -306,6 +393,12 @@ export default function ImportSchedule() {
     parsedGroups: number;
     detectedDateMode: DateMode;
     sampleInvalidDates: string[];
+    sheetName: string;
+    detectedHeaders: string[];
+    headerMapping: Partial<Record<LogicalField, string>>;
+    missingLogical: LogicalField[];
+    missingByReason: { date: number; start: number; end: number; titleJob: number; users: number; invalidTime: number };
+    sampleRow: Record<string, string> | null;
   } | null>(null);
   const [deletePasswordOpen, setDeletePasswordOpen] = useState(false);
   const [importProgress, setImportProgress] = useState<{ current: number; total: number; phase: string } | null>(null);
@@ -341,48 +434,110 @@ export default function ImportSchedule() {
 
   /** Process a single workbook sheet and return parsed groups + unavailability */
   const parseSheetData = (wb: SafeWorkbook, sheetName: string, dateMode: DateMode) => {
+    const emptyDiag = {
+      rawRows: 0, invalidDates: 0, missingFields: 0, payrollConcepts: 0,
+      sampleInvalidDates: [] as string[],
+      detectedHeaders: [] as string[],
+      headerMapping: {} as Partial<Record<LogicalField, string>>,
+      missingByReason: { date: 0, start: 0, end: 0, titleJob: 0, users: 0, invalidTime: 0 },
+      sampleRow: null as Record<string, string> | null,
+    };
     const empty = {
       groups: [] as ShiftGroup[],
       unavail: [] as { name: string; date: string }[],
       dates: [] as string[],
-      diag: { rawRows: 0, invalidDates: 0, missingFields: 0, payrollConcepts: 0, sampleInvalidDates: [] as string[] },
+      diag: emptyDiag,
     };
     const ws = getSheet(wb, sheetName);
     if (!ws) return empty;
-    const json = safeSheetToJson<Record<string, string>>(ws, { defval: "" });
-    if (json.length === 0) return empty;
+    const rawJson = safeSheetToJson<Record<string, unknown>>(ws, { defval: "" });
+    if (rawJson.length === 0) return empty;
+
+    // Header-row auto-detection: skip metadata/cover rows if present.
+    const offset = detectHeaderRowOffset(rawJson);
+    let json: Record<string, string>[];
+    if (offset === 0) {
+      json = rawJson as Record<string, string>[];
+    } else {
+      const headerRow = Object.values(rawJson[offset - 1] ?? {}).map(v => String(v ?? ""));
+      const dataRows = rawJson.slice(offset);
+      json = dataRows.map(r => {
+        const vals = Object.values(r);
+        const obj: Record<string, string> = {};
+        headerRow.forEach((h, i) => { obj[h] = String(vals[i] ?? ""); });
+        return obj;
+      });
+    }
+
+    const detectedHeaders = Object.keys(json[0] ?? {});
+    const idx = buildHeaderIndex(detectedHeaders);
+    const get = (row: Record<string, string>, field: LogicalField): string => {
+      const key = idx[field];
+      return key ? String(row[key] ?? "").trim() : "";
+    };
 
     const groupsMap: Record<string, ShiftGroup> = {};
     const unavail: { name: string; date: string }[] = [];
     const allDates: string[] = [];
-    const diag = { rawRows: json.length, invalidDates: 0, missingFields: 0, payrollConcepts: 0, sampleInvalidDates: [] as string[] };
+    const diag = {
+      ...emptyDiag,
+      rawRows: json.length,
+      detectedHeaders,
+      headerMapping: idx,
+      sampleRow: json[0] ?? null,
+      sampleInvalidDates: [] as string[],
+      missingByReason: { date: 0, start: 0, end: 0, titleJob: 0, users: 0, invalidTime: 0 },
+    };
 
     for (const row of json) {
-      const dateRaw = row["Date"] ?? "";
+      const dateRaw = get(row, "date");
       const isoDate = parseDate(dateRaw, dateMode);
       if (!isoDate) {
-        if (String(dateRaw).trim()) {
+        if (dateRaw) {
           diag.invalidDates++;
-          if (diag.sampleInvalidDates.length < 5) diag.sampleInvalidDates.push(String(dateRaw));
+          if (diag.sampleInvalidDates.length < 5) diag.sampleInvalidDates.push(dateRaw);
+        } else {
+          diag.missingFields++;
+          diag.missingByReason.date++;
         }
         continue;
       }
       allDates.push(isoDate);
-      const availStatus = (row["Availability status"] ?? "").trim().toLowerCase();
-      const userName = (row["Users"] ?? "").trim();
+      const availStatus = get(row, "availability").toLowerCase();
+      const userName = get(row, "users");
       if (availStatus === "unavailable") {
         if (userName) unavail.push({ name: userName, date: isoDate });
         continue;
       }
-      const shiftTitle = (row["Shift title"] ?? "").trim();
-      const startRaw = (row["Start"] ?? "").trim();
-      const endRaw = (row["End"] ?? "").trim();
-      const job = (row["Job"] ?? "").trim();
-      if (!shiftTitle && !job && !startRaw) { diag.missingFields++; continue; }
+      const shiftTitle = get(row, "shiftTitle");
+      let startRaw = get(row, "start");
+      let endRaw = get(row, "end");
+      const job = get(row, "job");
+
+      // Combined time range fallback.
+      if ((!startRaw || !endRaw) && idx.timeRange) {
+        const range = parseTimeRange(get(row, "timeRange"));
+        if (range) { startRaw = startRaw || range.start; endRaw = endRaw || range.end; }
+      } else if ((!startRaw || !endRaw) && startRaw) {
+        const range = parseTimeRange(startRaw);
+        if (range) { startRaw = range.start; endRaw = endRaw || range.end; }
+      }
+
+      if (!shiftTitle && !job && !startRaw) {
+        diag.missingFields++;
+        diag.missingByReason.titleJob++;
+        continue;
+      }
       const startTime = parseTime(startRaw);
       const endTime = parseTime(endRaw);
-      if (!startTime || !endTime) { diag.missingFields++; continue; }
-      const combined = `${shiftTitle} ${job} ${(row["Sub item"] ?? "")}`.toLowerCase();
+      if (!startTime || !endTime) {
+        diag.missingFields++;
+        if (!startRaw) diag.missingByReason.start++;
+        else if (!endRaw) diag.missingByReason.end++;
+        else diag.missingByReason.invalidTime++;
+        continue;
+      }
+      const combined = `${shiftTitle} ${job} ${get(row, "subItem")}`.toLowerCase();
       const isPayrollConcept = /pay\s*ride|pagar|tip\s*pool|1\/2\s*ride|x\s*hour.*pay/i.test(combined)
         || /^99\s*[-–]/.test(job.trim());
       if (isPayrollConcept) { diag.payrollConcepts++; continue; }
@@ -390,14 +545,16 @@ export default function ImportSchedule() {
       if (!groupsMap[groupKey]) {
         groupsMap[groupKey] = {
           key: groupKey, shiftCode: shiftTitle, date: isoDate, startTime, endTime, job,
-          subItem: (row["Sub item"] ?? "").trim(), address: (row["Address"] ?? "").trim(),
-          note: (row["Note"] ?? "").trim(), tags: (row["Shift tags"] ?? "").trim(),
-          status: (row["Last Status"] ?? "").trim(), employees: [], employeeStatuses: [],
+          subItem: get(row, "subItem"), address: get(row, "address"),
+          note: get(row, "note"), tags: get(row, "tags"),
+          status: get(row, "status"), employees: [], employeeStatuses: [],
         };
       }
       if (userName && !groupsMap[groupKey].employees.includes(userName)) {
         groupsMap[groupKey].employees.push(userName);
-        groupsMap[groupKey].employeeStatuses.push((row["Last Status"] ?? "").trim());
+        groupsMap[groupKey].employeeStatuses.push(get(row, "status"));
+      } else if (!userName) {
+        diag.missingByReason.users++;
       }
     }
     return { groups: Object.values(groupsMap), unavail, dates: allDates, diag };
@@ -430,15 +587,26 @@ export default function ImportSchedule() {
     for (const f of validFiles) {
       const data = await f.arrayBuffer();
       const wb = await safeRead(data);
-      const names = getSheetNames(wb);
-      const sheetName = names[0];
+      const sheetName = pickScheduleSheet(wb);
       if (!sheetName) continue;
       loaded.push({ wb, sheetName });
       const ws = getSheet(wb, sheetName);
       if (!ws) continue;
-      const rows = safeSheetToJson<Record<string, string>>(ws, { defval: "" });
-      for (const r of rows) {
-        const d = String(r["Date"] ?? "").trim();
+      const rows = safeSheetToJson<Record<string, unknown>>(ws, { defval: "" });
+      const offset = detectHeaderRowOffset(rows);
+      const sampleRows: Record<string, unknown>[] = offset === 0 ? rows : (() => {
+        const headerRow = Object.values(rows[offset - 1] ?? {}).map(v => String(v ?? ""));
+        return rows.slice(offset).map(r => {
+          const vals = Object.values(r);
+          const obj: Record<string, string> = {};
+          headerRow.forEach((h, i) => { obj[h] = String(vals[i] ?? ""); });
+          return obj;
+        });
+      })();
+      const idx = buildHeaderIndex(Object.keys(sampleRows[0] ?? {}));
+      const dateKey = idx.date;
+      for (const r of sampleRows) {
+        const d = dateKey ? String((r as Record<string, unknown>)[dateKey] ?? "").trim() : "";
         if (d) dateSamples.push(d);
         if (dateSamples.length >= 200) break;
       }
@@ -452,6 +620,11 @@ export default function ImportSchedule() {
     const mergedDiag = {
       rawRows: 0, invalidDates: 0, missingFields: 0, payrollConcepts: 0,
       sampleInvalidDates: [] as string[],
+      sheetName: loaded[0]?.sheetName ?? "",
+      detectedHeaders: [] as string[],
+      headerMapping: {} as Partial<Record<LogicalField, string>>,
+      missingByReason: { date: 0, start: 0, end: 0, titleJob: 0, users: 0, invalidTime: 0 },
+      sampleRow: null as Record<string, string> | null,
     };
 
     for (const { wb, sheetName } of loaded) {
@@ -466,6 +639,13 @@ export default function ImportSchedule() {
       for (const s of result.diag.sampleInvalidDates) {
         if (mergedDiag.sampleInvalidDates.length < 5) mergedDiag.sampleInvalidDates.push(s);
       }
+      if (!mergedDiag.detectedHeaders.length) {
+        mergedDiag.detectedHeaders = result.diag.detectedHeaders;
+        mergedDiag.headerMapping = result.diag.headerMapping;
+        mergedDiag.sampleRow = result.diag.sampleRow;
+      }
+      (Object.keys(mergedDiag.missingByReason) as (keyof typeof mergedDiag.missingByReason)[])
+        .forEach(k => { mergedDiag.missingByReason[k] += result.diag.missingByReason[k]; });
     }
 
     // Deduplicate groups across files (same key = same shift)
@@ -486,7 +666,10 @@ export default function ImportSchedule() {
     const mergedGroups = Object.values(dedupMap);
     setShiftGroups(mergedGroups);
     setUnavailableRecords(allUnavail);
-    setParseDiagnostics({ ...mergedDiag, parsedGroups: mergedGroups.length, detectedDateMode: dateMode });
+    const requiredLogical: LogicalField[] = ["date", "start", "end", "users"];
+    const missingLogical = requiredLogical.filter(f => !mergedDiag.headerMapping[f]);
+    if (!mergedDiag.headerMapping.shiftTitle && !mergedDiag.headerMapping.job) missingLogical.push("shiftTitle");
+    setParseDiagnostics({ ...mergedDiag, parsedGroups: mergedGroups.length, detectedDateMode: dateMode, missingLogical });
 
     // Only use valid ISO dates for the file range / auto-filter seed.
     const validDates = allDates.filter(isIsoDate).sort();
@@ -2001,6 +2184,33 @@ export default function ImportSchedule() {
                     No se pudo parsear ningún turno. Verifica que el archivo sea el export de horario de Connecteam y que la columna <code>Date</code> tenga fechas válidas.
                   </p>
                 )}
+                {/* Header mapping + missing-by-reason breakdown */}
+                <div className="pt-2 border-t border-border/50 space-y-1">
+                  <p className="text-muted-foreground">
+                    Hoja: <strong className="text-foreground">{parseDiagnostics.sheetName || "—"}</strong>
+                  </p>
+                  <p className="text-muted-foreground">
+                    Headers detectados ({parseDiagnostics.detectedHeaders.length}): {parseDiagnostics.detectedHeaders.slice(0, 20).map(h => `"${h}"`).join(", ") || "—"}
+                  </p>
+                  <p className="text-muted-foreground">
+                    Mapeo reconocido: {Object.entries(parseDiagnostics.headerMapping).map(([k, v]) => `${k}→"${v}"`).join(", ") || "ninguno"}
+                  </p>
+                  {parseDiagnostics.missingLogical.length > 0 && (
+                    <p className="text-amber-700">
+                      Campos lógicos faltantes en el archivo: {parseDiagnostics.missingLogical.join(", ")}
+                    </p>
+                  )}
+                  {parseDiagnostics.missingFields > 0 && (
+                    <p className="text-muted-foreground">
+                      Filas descartadas por: date={parseDiagnostics.missingByReason.date}, title/job={parseDiagnostics.missingByReason.titleJob}, start={parseDiagnostics.missingByReason.start}, end={parseDiagnostics.missingByReason.end}, time inválido={parseDiagnostics.missingByReason.invalidTime}, sin users={parseDiagnostics.missingByReason.users}
+                    </p>
+                  )}
+                  {parseDiagnostics.sampleRow && (
+                    <p className="text-muted-foreground">
+                      Muestra fila 1 — date:"{parseDiagnostics.headerMapping.date ? parseDiagnostics.sampleRow[parseDiagnostics.headerMapping.date] : "—"}" · start:"{parseDiagnostics.headerMapping.start ? parseDiagnostics.sampleRow[parseDiagnostics.headerMapping.start] : "—"}" · end:"{parseDiagnostics.headerMapping.end ? parseDiagnostics.sampleRow[parseDiagnostics.headerMapping.end] : "—"}" · users:"{parseDiagnostics.headerMapping.users ? parseDiagnostics.sampleRow[parseDiagnostics.headerMapping.users] : "—"}" · job:"{parseDiagnostics.headerMapping.job ? parseDiagnostics.sampleRow[parseDiagnostics.headerMapping.job] : "—"}" · title:"{parseDiagnostics.headerMapping.shiftTitle ? parseDiagnostics.sampleRow[parseDiagnostics.headerMapping.shiftTitle] : "—"}"
+                    </p>
+                  )}
+                </div>
               </CardContent>
             </Card>
           )}
