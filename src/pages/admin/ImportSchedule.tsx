@@ -421,22 +421,51 @@ export default function ImportSchedule() {
     setFile(validFiles[0]); // Keep first for backward compat
     setParsingFiles(true);
 
-    // Parse all files and merge results
-    let allGroups: ShiftGroup[] = [];
-    let allUnavail: { name: string; date: string }[] = [];
-    let allDates: string[] = [];
+    // Two-pass: first read every workbook + collect raw Date strings to detect DMY vs MDY,
+    // then re-parse with the detected mode.
+    type Loaded = { wb: SafeWorkbook; sheetName: string };
+    const loaded: Loaded[] = [];
+    const dateSamples: string[] = [];
 
     for (const f of validFiles) {
       const data = await f.arrayBuffer();
       const wb = await safeRead(data);
       const names = getSheetNames(wb);
-      // Use first sheet of each file
       const sheetName = names[0];
       if (!sheetName) continue;
-      const result = parseSheetData(wb, sheetName);
+      loaded.push({ wb, sheetName });
+      const ws = getSheet(wb, sheetName);
+      if (!ws) continue;
+      const rows = safeSheetToJson<Record<string, string>>(ws, { defval: "" });
+      for (const r of rows) {
+        const d = String(r["Date"] ?? "").trim();
+        if (d) dateSamples.push(d);
+        if (dateSamples.length >= 200) break;
+      }
+    }
+
+    const dateMode = detectDateFormat(dateSamples, "MDY");
+
+    let allGroups: ShiftGroup[] = [];
+    let allUnavail: { name: string; date: string }[] = [];
+    let allDates: string[] = [];
+    const mergedDiag = {
+      rawRows: 0, invalidDates: 0, missingFields: 0, payrollConcepts: 0,
+      sampleInvalidDates: [] as string[],
+    };
+
+    for (const { wb, sheetName } of loaded) {
+      const result = parseSheetData(wb, sheetName, dateMode);
       allGroups = [...allGroups, ...result.groups];
       allUnavail = [...allUnavail, ...result.unavail];
       allDates = [...allDates, ...result.dates];
+      mergedDiag.rawRows += result.diag.rawRows;
+      mergedDiag.invalidDates += result.diag.invalidDates;
+      mergedDiag.missingFields += result.diag.missingFields;
+      mergedDiag.payrollConcepts += result.diag.payrollConcepts;
+      for (const s of result.diag.sampleInvalidDates) {
+        if (mergedDiag.sampleInvalidDates.length < 5) mergedDiag.sampleInvalidDates.push(s);
+      }
     }
 
     // Deduplicate groups across files (same key = same shift)
@@ -445,7 +474,6 @@ export default function ImportSchedule() {
       if (!dedupMap[g.key]) {
         dedupMap[g.key] = g;
       } else {
-        // Merge employees from duplicate
         for (let i = 0; i < g.employees.length; i++) {
           if (!dedupMap[g.key].employees.includes(g.employees[i])) {
             dedupMap[g.key].employees.push(g.employees[i]);
@@ -458,12 +486,18 @@ export default function ImportSchedule() {
     const mergedGroups = Object.values(dedupMap);
     setShiftGroups(mergedGroups);
     setUnavailableRecords(allUnavail);
+    setParseDiagnostics({ ...mergedDiag, parsedGroups: mergedGroups.length, detectedDateMode: dateMode });
 
-    if (allDates.length > 0) {
-      allDates.sort();
-      setDateRange({ from: allDates[0], to: allDates[allDates.length - 1] });
-      setFilterFrom(allDates[0]);
-      setFilterTo(allDates[allDates.length - 1]);
+    // Only use valid ISO dates for the file range / auto-filter seed.
+    const validDates = allDates.filter(isIsoDate).sort();
+    if (validDates.length > 0) {
+      setDateRange({ from: validDates[0], to: validDates[validDates.length - 1] });
+      setFilterFrom(validDates[0]);
+      setFilterTo(validDates[validDates.length - 1]);
+    } else {
+      setDateRange(null);
+      setFilterFrom("");
+      setFilterTo("");
     }
 
     setParsingFiles(false);
