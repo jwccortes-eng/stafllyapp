@@ -440,6 +440,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [fetchUserData, resetAuthState]);
 
   const signOut = async () => {
+    userInitiatedSignOutRef.current = true;
+    clearSessionExpired();
     try {
       await supabase.auth.signOut();
     } catch (err) {
