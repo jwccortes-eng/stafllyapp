@@ -147,16 +147,120 @@ function parseTime(raw: string): string | null {
 }
 
 /**
- * Parse date: MM/DD/YYYY → YYYY-MM-DD
+ * Robust date parsing for Connecteam exports.
+ *
+ * Accepts:
+ *   - ISO `YYYY-MM-DD` (or longer ISO strings — first 10 chars used)
+ *   - `DD/MM/YYYY` or `MM/DD/YYYY` (mode-disambiguated)
+ *   - Excel serial date numbers (numeric strings, days since 1899-12-30)
+ *   - JS Date.toString() output (e.g. "Wed Jun 24 2026 …")
+ *
+ * Validates: month 1–12, day 1–31, year ≥ 1900. Returns null on anything else.
+ * Never returns malformed ISO like "2026-24-06".
  */
-function parseDate(raw: string): string | null {
-  if (!raw) return null;
-  const match = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-  if (match) {
-    return `${match[3]}-${match[1].padStart(2, "0")}-${match[2].padStart(2, "0")}`;
+export type DateMode = "DMY" | "MDY";
+
+function isValidYMD(y: number, m: number, d: number): boolean {
+  if (!Number.isInteger(y) || !Number.isInteger(m) || !Number.isInteger(d)) return false;
+  if (y < 1900 || y > 2999) return false;
+  if (m < 1 || m > 12) return false;
+  if (d < 1 || d > 31) return false;
+  // Round-trip via Date to catch e.g. Feb 30
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  return dt.getUTCFullYear() === y && dt.getUTCMonth() === m - 1 && dt.getUTCDate() === d;
+}
+
+function toISO(y: number, m: number, d: number): string {
+  return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+}
+
+/**
+ * Detect DD/MM vs MM/DD from a sample of raw date strings.
+ * - If any first-part > 12 → DMY.
+ * - Else if any second-part > 12 → MDY.
+ * - Else ambiguous → fallback (default "MDY" for legacy Connecteam US exports).
+ */
+export function detectDateFormat(samples: string[], fallback: DateMode = "MDY"): DateMode {
+  let dmyHit = false;
+  let mdyHit = false;
+  for (const raw of samples) {
+    if (!raw) continue;
+    const m = String(raw).trim().match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+    if (!m) continue;
+    const a = parseInt(m[1], 10);
+    const b = parseInt(m[2], 10);
+    if (a > 12 && b <= 12) dmyHit = true;
+    if (b > 12 && a <= 12) mdyHit = true;
   }
-  if (/^\d{4}-\d{2}-\d{2}/.test(raw)) return raw.slice(0, 10);
+  if (dmyHit && !mdyHit) return "DMY";
+  if (mdyHit && !dmyHit) return "MDY";
+  return fallback;
+}
+
+function parseExcelSerial(n: number): string | null {
+  if (!Number.isFinite(n) || n < 60 || n > 80000) return null;
+  // Excel epoch is 1899-12-30 (accounts for the 1900 leap-year bug).
+  const ms = Math.round(n * 86400000);
+  const dt = new Date(Date.UTC(1899, 11, 30) + ms);
+  const y = dt.getUTCFullYear();
+  const m = dt.getUTCMonth() + 1;
+  const d = dt.getUTCDate();
+  return isValidYMD(y, m, d) ? toISO(y, m, d) : null;
+}
+
+export function parseDate(raw: unknown, mode: DateMode = "MDY"): string | null {
+  if (raw == null) return null;
+
+  // Native Date (ExcelJS sometimes returns these before stringification).
+  if (raw instanceof Date && !isNaN(raw.getTime())) {
+    return toISO(raw.getUTCFullYear(), raw.getUTCMonth() + 1, raw.getUTCDate());
+  }
+
+  // Numeric Excel serial.
+  if (typeof raw === "number") {
+    return parseExcelSerial(raw);
+  }
+
+  const s = String(raw).trim();
+  if (!s) return null;
+
+  // ISO `YYYY-MM-DD…`
+  const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) {
+    const y = +iso[1], m = +iso[2], d = +iso[3];
+    return isValidYMD(y, m, d) ? toISO(y, m, d) : null;
+  }
+
+  // Slash/dash separated D/M/Y or M/D/Y.
+  const slash = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (slash) {
+    const a = +slash[1], b = +slash[2], y = +slash[3];
+    const day = mode === "DMY" ? a : b;
+    const month = mode === "DMY" ? b : a;
+    return isValidYMD(y, month, day) ? toISO(y, month, day) : null;
+  }
+
+  // Numeric string Excel serial.
+  if (/^\d+(\.\d+)?$/.test(s)) {
+    return parseExcelSerial(parseFloat(s));
+  }
+
+  // Fallback: JS Date.parse (handles "Wed Jun 24 2026 …", "2026-06-24T…").
+  const t = Date.parse(s);
+  if (!isNaN(t)) {
+    const dt = new Date(t);
+    const y = dt.getUTCFullYear();
+    const m = dt.getUTCMonth() + 1;
+    const d = dt.getUTCDate();
+    if (isValidYMD(y, m, d)) return toISO(y, m, d);
+  }
+
   return null;
+}
+
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+function isIsoDate(s: string | null | undefined): s is string {
+  return !!s && ISO_DATE_RE.test(s);
 }
 
 /**
@@ -193,6 +297,16 @@ export default function ImportSchedule() {
   const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
   const [summary, setSummary] = useState<ImportSummary | null>(null);
   const [dateRange, setDateRange] = useState<{ from: string; to: string } | null>(null);
+  // Parse diagnostics surfaced in Step 3
+  const [parseDiagnostics, setParseDiagnostics] = useState<{
+    rawRows: number;
+    invalidDates: number;
+    missingFields: number;
+    payrollConcepts: number;
+    parsedGroups: number;
+    detectedDateMode: DateMode;
+    sampleInvalidDates: string[];
+  } | null>(null);
   const [deletePasswordOpen, setDeletePasswordOpen] = useState(false);
   const [importProgress, setImportProgress] = useState<{ current: number; total: number; phase: string } | null>(null);
   const [parsingFiles, setParsingFiles] = useState(false);
@@ -226,20 +340,33 @@ export default function ImportSchedule() {
   const [periodsLoading, setPeriodsLoading] = useState(false);
 
   /** Process a single workbook sheet and return parsed groups + unavailability */
-  const parseSheetData = (wb: SafeWorkbook, sheetName: string) => {
+  const parseSheetData = (wb: SafeWorkbook, sheetName: string, dateMode: DateMode) => {
+    const empty = {
+      groups: [] as ShiftGroup[],
+      unavail: [] as { name: string; date: string }[],
+      dates: [] as string[],
+      diag: { rawRows: 0, invalidDates: 0, missingFields: 0, payrollConcepts: 0, sampleInvalidDates: [] as string[] },
+    };
     const ws = getSheet(wb, sheetName);
-    if (!ws) return { groups: [] as ShiftGroup[], unavail: [] as { name: string; date: string }[], dates: [] as string[] };
+    if (!ws) return empty;
     const json = safeSheetToJson<Record<string, string>>(ws, { defval: "" });
-    if (json.length === 0) return { groups: [] as ShiftGroup[], unavail: [] as { name: string; date: string }[], dates: [] as string[] };
+    if (json.length === 0) return empty;
 
     const groupsMap: Record<string, ShiftGroup> = {};
     const unavail: { name: string; date: string }[] = [];
     const allDates: string[] = [];
+    const diag = { rawRows: json.length, invalidDates: 0, missingFields: 0, payrollConcepts: 0, sampleInvalidDates: [] as string[] };
 
     for (const row of json) {
       const dateRaw = row["Date"] ?? "";
-      const isoDate = parseDate(dateRaw);
-      if (!isoDate) continue;
+      const isoDate = parseDate(dateRaw, dateMode);
+      if (!isoDate) {
+        if (String(dateRaw).trim()) {
+          diag.invalidDates++;
+          if (diag.sampleInvalidDates.length < 5) diag.sampleInvalidDates.push(String(dateRaw));
+        }
+        continue;
+      }
       allDates.push(isoDate);
       const availStatus = (row["Availability status"] ?? "").trim().toLowerCase();
       const userName = (row["Users"] ?? "").trim();
@@ -251,14 +378,14 @@ export default function ImportSchedule() {
       const startRaw = (row["Start"] ?? "").trim();
       const endRaw = (row["End"] ?? "").trim();
       const job = (row["Job"] ?? "").trim();
-      if (!shiftTitle && !job && !startRaw) continue;
+      if (!shiftTitle && !job && !startRaw) { diag.missingFields++; continue; }
       const startTime = parseTime(startRaw);
       const endTime = parseTime(endRaw);
-      if (!startTime || !endTime) continue;
+      if (!startTime || !endTime) { diag.missingFields++; continue; }
       const combined = `${shiftTitle} ${job} ${(row["Sub item"] ?? "")}`.toLowerCase();
       const isPayrollConcept = /pay\s*ride|pagar|tip\s*pool|1\/2\s*ride|x\s*hour.*pay/i.test(combined)
         || /^99\s*[-–]/.test(job.trim());
-      if (isPayrollConcept) continue;
+      if (isPayrollConcept) { diag.payrollConcepts++; continue; }
       const groupKey = `${shiftTitle}|${isoDate}|${startTime}|${endTime}|${job}`;
       if (!groupsMap[groupKey]) {
         groupsMap[groupKey] = {
@@ -273,7 +400,7 @@ export default function ImportSchedule() {
         groupsMap[groupKey].employeeStatuses.push((row["Last Status"] ?? "").trim());
       }
     }
-    return { groups: Object.values(groupsMap), unavail, dates: allDates };
+    return { groups: Object.values(groupsMap), unavail, dates: allDates, diag };
   };
 
   const handleFileUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -294,22 +421,51 @@ export default function ImportSchedule() {
     setFile(validFiles[0]); // Keep first for backward compat
     setParsingFiles(true);
 
-    // Parse all files and merge results
-    let allGroups: ShiftGroup[] = [];
-    let allUnavail: { name: string; date: string }[] = [];
-    let allDates: string[] = [];
+    // Two-pass: first read every workbook + collect raw Date strings to detect DMY vs MDY,
+    // then re-parse with the detected mode.
+    type Loaded = { wb: SafeWorkbook; sheetName: string };
+    const loaded: Loaded[] = [];
+    const dateSamples: string[] = [];
 
     for (const f of validFiles) {
       const data = await f.arrayBuffer();
       const wb = await safeRead(data);
       const names = getSheetNames(wb);
-      // Use first sheet of each file
       const sheetName = names[0];
       if (!sheetName) continue;
-      const result = parseSheetData(wb, sheetName);
+      loaded.push({ wb, sheetName });
+      const ws = getSheet(wb, sheetName);
+      if (!ws) continue;
+      const rows = safeSheetToJson<Record<string, string>>(ws, { defval: "" });
+      for (const r of rows) {
+        const d = String(r["Date"] ?? "").trim();
+        if (d) dateSamples.push(d);
+        if (dateSamples.length >= 200) break;
+      }
+    }
+
+    const dateMode = detectDateFormat(dateSamples, "MDY");
+
+    let allGroups: ShiftGroup[] = [];
+    let allUnavail: { name: string; date: string }[] = [];
+    let allDates: string[] = [];
+    const mergedDiag = {
+      rawRows: 0, invalidDates: 0, missingFields: 0, payrollConcepts: 0,
+      sampleInvalidDates: [] as string[],
+    };
+
+    for (const { wb, sheetName } of loaded) {
+      const result = parseSheetData(wb, sheetName, dateMode);
       allGroups = [...allGroups, ...result.groups];
       allUnavail = [...allUnavail, ...result.unavail];
       allDates = [...allDates, ...result.dates];
+      mergedDiag.rawRows += result.diag.rawRows;
+      mergedDiag.invalidDates += result.diag.invalidDates;
+      mergedDiag.missingFields += result.diag.missingFields;
+      mergedDiag.payrollConcepts += result.diag.payrollConcepts;
+      for (const s of result.diag.sampleInvalidDates) {
+        if (mergedDiag.sampleInvalidDates.length < 5) mergedDiag.sampleInvalidDates.push(s);
+      }
     }
 
     // Deduplicate groups across files (same key = same shift)
@@ -318,7 +474,6 @@ export default function ImportSchedule() {
       if (!dedupMap[g.key]) {
         dedupMap[g.key] = g;
       } else {
-        // Merge employees from duplicate
         for (let i = 0; i < g.employees.length; i++) {
           if (!dedupMap[g.key].employees.includes(g.employees[i])) {
             dedupMap[g.key].employees.push(g.employees[i]);
@@ -331,12 +486,18 @@ export default function ImportSchedule() {
     const mergedGroups = Object.values(dedupMap);
     setShiftGroups(mergedGroups);
     setUnavailableRecords(allUnavail);
+    setParseDiagnostics({ ...mergedDiag, parsedGroups: mergedGroups.length, detectedDateMode: dateMode });
 
-    if (allDates.length > 0) {
-      allDates.sort();
-      setDateRange({ from: allDates[0], to: allDates[allDates.length - 1] });
-      setFilterFrom(allDates[0]);
-      setFilterTo(allDates[allDates.length - 1]);
+    // Only use valid ISO dates for the file range / auto-filter seed.
+    const validDates = allDates.filter(isIsoDate).sort();
+    if (validDates.length > 0) {
+      setDateRange({ from: validDates[0], to: validDates[validDates.length - 1] });
+      setFilterFrom(validDates[0]);
+      setFilterTo(validDates[validDates.length - 1]);
+    } else {
+      setDateRange(null);
+      setFilterFrom("");
+      setFilterTo("");
     }
 
     setParsingFiles(false);
@@ -377,7 +538,7 @@ export default function ImportSchedule() {
   // Detect pay periods that overlap the import range and are non-mutable.
   // We BLOCK live writes against closed/published/paid periods unless dry-run.
   useEffect(() => {
-    if (!selectedCompanyId || !effectiveRangeFrom || !effectiveRangeTo) {
+    if (!selectedCompanyId || !isIsoDate(effectiveRangeFrom) || !isIsoDate(effectiveRangeTo)) {
       setLockedPeriods([]);
       return;
     }
@@ -1812,6 +1973,37 @@ export default function ImportSchedule() {
               <p className="text-2xl font-bold tabular-nums">{unavailableRecords.filter(u => (!filterFrom || u.date >= filterFrom) && (!filterTo || u.date <= filterTo)).length}</p>
             </Card>
           </div>
+
+          {/* Parse diagnostics + zero-rows reason */}
+          {parseDiagnostics && (
+            <Card className="border-muted">
+              <CardContent className="p-4 space-y-2 text-xs">
+                <div className="flex flex-wrap gap-x-4 gap-y-1 text-muted-foreground">
+                  <span>Filas leídas: <strong className="text-foreground">{parseDiagnostics.rawRows}</strong></span>
+                  <span>Grupos parseados: <strong className="text-foreground">{parseDiagnostics.parsedGroups}</strong></span>
+                  <span>Fechas inválidas: <strong className={parseDiagnostics.invalidDates ? "text-amber-600" : "text-foreground"}>{parseDiagnostics.invalidDates}</strong></span>
+                  <span>Campos faltantes: <strong className="text-foreground">{parseDiagnostics.missingFields}</strong></span>
+                  <span>Conceptos de payroll: <strong className="text-foreground">{parseDiagnostics.payrollConcepts}</strong></span>
+                  <span>Formato fecha detectado: <Badge variant="outline" className="text-[10px]">{parseDiagnostics.detectedDateMode === "DMY" ? "DD/MM/YYYY" : "MM/DD/YYYY"}</Badge></span>
+                </div>
+                {parseDiagnostics.sampleInvalidDates.length > 0 && (
+                  <p className="text-amber-700">
+                    Ejemplos de fechas no reconocidas: {parseDiagnostics.sampleInvalidDates.map(s => `"${s}"`).join(", ")}
+                  </p>
+                )}
+                {filteredGroups.length === 0 && parseDiagnostics.parsedGroups > 0 && (
+                  <p className="text-amber-700">
+                    Hay {parseDiagnostics.parsedGroups} turno(s) en el archivo, pero ninguno cae en el rango {filterFrom || "—"} → {filterTo || "—"}. Ajusta el filtro de fechas.
+                  </p>
+                )}
+                {filteredGroups.length === 0 && parseDiagnostics.parsedGroups === 0 && (
+                  <p className="text-amber-700">
+                    No se pudo parsear ningún turno. Verifica que el archivo sea el export de horario de Connecteam y que la columna <code>Date</code> tenga fechas válidas.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           {/* Date filter + safety presets */}
           {dateRange && (
