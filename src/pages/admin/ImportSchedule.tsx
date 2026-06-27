@@ -538,7 +538,7 @@ export default function ImportSchedule() {
   // Detect pay periods that overlap the import range and are non-mutable.
   // We BLOCK live writes against closed/published/paid periods unless dry-run.
   useEffect(() => {
-    if (!selectedCompanyId || !effectiveRangeFrom || !effectiveRangeTo) {
+    if (!selectedCompanyId || !isIsoDate(effectiveRangeFrom) || !isIsoDate(effectiveRangeTo)) {
       setLockedPeriods([]);
       return;
     }
