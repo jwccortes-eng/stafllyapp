@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { ModeSwitcher } from "@/components/ModeSwitcher";
+import { saveIntendedRoute } from "@/lib/auth-session";
+import { useLocation } from "react-router-dom";
 import { Outlet, Navigate } from "react-router-dom";
 import { User, Building2, ChevronDown, Check } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
