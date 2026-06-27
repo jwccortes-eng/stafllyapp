@@ -297,6 +297,16 @@ export default function ImportSchedule() {
   const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
   const [summary, setSummary] = useState<ImportSummary | null>(null);
   const [dateRange, setDateRange] = useState<{ from: string; to: string } | null>(null);
+  // Parse diagnostics surfaced in Step 3
+  const [parseDiagnostics, setParseDiagnostics] = useState<{
+    rawRows: number;
+    invalidDates: number;
+    missingFields: number;
+    payrollConcepts: number;
+    parsedGroups: number;
+    detectedDateMode: DateMode;
+    sampleInvalidDates: string[];
+  } | null>(null);
   const [deletePasswordOpen, setDeletePasswordOpen] = useState(false);
   const [importProgress, setImportProgress] = useState<{ current: number; total: number; phase: string } | null>(null);
   const [parsingFiles, setParsingFiles] = useState(false);
