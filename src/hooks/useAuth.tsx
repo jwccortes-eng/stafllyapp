@@ -2,6 +2,11 @@ import { useState, useEffect, createContext, useContext, ReactNode, useCallback,
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
 import { safeLocalStorage } from "@/lib/safe-storage";
+import {
+  markSessionExpired,
+  clearSupabaseAuthStorage,
+  clearSessionExpired,
+} from "@/lib/auth-session";
 
 type AppRole = 'developer' | 'owner' | 'company_owner' | 'admin' | 'manager' | 'supervisor' | 'employee' | null;
 type ActiveMode = 'admin' | 'employee';
