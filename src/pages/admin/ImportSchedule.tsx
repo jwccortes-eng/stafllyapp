@@ -308,11 +308,93 @@ export default function ImportSchedule() {
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [previewRows, setPreviewRows] = useState<Record<string, string>[]>([]);
   const [headers, setHeaders] = useState<string[]>([]);
-  const [shiftGroups, setShiftGroups] = useState<ShiftGroup[]>([]);
-  const [unavailableRecords, setUnavailableRecords] = useState<{ name: string; date: string }[]>([]);
-  const [importing, setImporting] = useState(false);
-  const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
-  const [summary, setSummary] = useState<ImportSummary | null>(null);
+/** Logical schedule fields → list of accepted header aliases (case/space/punct-insensitive). */
+type LogicalField =
+  | "date" | "shiftTitle" | "job" | "start" | "end" | "timeRange"
+  | "users" | "subItem" | "address" | "note" | "tags" | "status" | "availability";
+
+const HEADER_ALIASES: Record<LogicalField, string[]> = {
+  date: ["date", "shift date", "day", "fecha"],
+  shiftTitle: ["shift title", "title", "shift name", "name", "service"],
+  job: ["job", "job name", "client", "customer", "location", "position", "site", "venue"],
+  start: ["start", "start time", "shift start", "from", "begins", "hora inicio", "inicio"],
+  end: ["end", "end time", "shift end", "to", "ends", "hora fin", "fin"],
+  timeRange: ["time", "hours", "shift time", "start - end", "start-end", "horario"],
+  users: ["users", "user", "assigned users", "employees", "members", "workers", "assignees", "staff", "team members", "empleados"],
+  subItem: ["sub item", "subitem", "sub-item"],
+  address: ["address", "job address", "location address", "site address", "direccion"],
+  note: ["note", "notes", "description", "comments", "nota", "notas"],
+  tags: ["shift tags", "tags", "etiquetas"],
+  status: ["last status", "status", "shift status", "estado"],
+  availability: ["availability status", "availability", "avail status", "disponibilidad"],
+};
+
+function normalizeHeaderKey(h: string): string {
+  return String(h ?? "")
+    .toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // strip accents
+    .replace(/[_\-]+/g, " ")
+    .replace(/[^\w\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** Map logical field → actual header key present in the row. */
+function buildHeaderIndex(headers: string[]): Partial<Record<LogicalField, string>> {
+  const norm = new Map<string, string>(); // normalized → original
+  for (const h of headers) norm.set(normalizeHeaderKey(h), h);
+  const index: Partial<Record<LogicalField, string>> = {};
+  for (const [field, aliases] of Object.entries(HEADER_ALIASES) as [LogicalField, string[]][]) {
+    for (const a of aliases) {
+      const n = normalizeHeaderKey(a);
+      if (norm.has(n)) { index[field] = norm.get(n)!; break; }
+    }
+  }
+  return index;
+}
+
+/** Best header row: scan first N rows; row with most alias hits wins (≥2). */
+function detectHeaderRowOffset(rows: Record<string, unknown>[], maxScan = 5): number {
+  // safeSheetToJson already uses row 1 as header; if that's good, offset = 0.
+  // If first row keys score < 2 hits, try to find a better row by treating row i as new header.
+  const firstScore = Object.keys(rows[0] ?? {}).reduce(
+    (s, k) => s + (Object.keys(buildHeaderIndex([k])).length > 0 ? 1 : 0), 0,
+  );
+  if (firstScore >= 2) return 0;
+  for (let i = 0; i < Math.min(maxScan, rows.length); i++) {
+    const candidate = Object.values(rows[i] ?? {}).map(v => String(v ?? ""));
+    const idx = buildHeaderIndex(candidate);
+    if (Object.keys(idx).length >= 3) return i + 1; // header is row i, data starts after
+  }
+  return 0;
+}
+
+/** Pick first sheet with ≥3 recognized schedule headers; fallback to first sheet. */
+function pickScheduleSheet(wb: SafeWorkbook): string | null {
+  const names = getSheetNames(wb);
+  for (const name of names) {
+    const ws = getSheet(wb, name);
+    if (!ws) continue;
+    const rows = safeSheetToJson<Record<string, unknown>>(ws, { defval: "" });
+    if (!rows.length) continue;
+    const offset = detectHeaderRowOffset(rows);
+    const headerSource = offset === 0 ? Object.keys(rows[0]) : Object.values(rows[offset - 1] ?? {}).map(v => String(v ?? ""));
+    if (Object.keys(buildHeaderIndex(headerSource)).length >= 3) return name;
+  }
+  return names[0] ?? null;
+}
+
+export default function ImportSchedule() {
+  const { selectedCompanyId } = useCompany();
+  const { toast } = useToast();
+  const navigate = useNavigate();
+  const [files, setFiles] = useState<File[]>([]);
+  const [file, setFile] = useState<File | null>(null);
+  const [workbook, setWorkbook] = useState<SafeWorkbook | null>(null);
+  const [sheets, setSheets] = useState<string[]>([]);
+  const [selectedSheet, setSelectedSheet] = useState("");
+  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
+  const [previewRows, setPreviewRows] = useState<Record<string, string>[]>([]);
   const [dateRange, setDateRange] = useState<{ from: string; to: string } | null>(null);
   // Parse diagnostics surfaced in Step 3
   const [parseDiagnostics, setParseDiagnostics] = useState<{
