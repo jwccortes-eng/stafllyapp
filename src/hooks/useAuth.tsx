@@ -365,7 +365,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // ModeSwitcher writes still persist for the current session.
           if (event === "SIGNED_IN") {
             safeLocalStorage.removeItem("stafly-active-mode");
+            clearSessionExpired();
           }
+          hadAuthedSessionRef.current = true;
           setLoading(true);
           setTimeout(() => {
             void fetchUserData(nextSession.user.id).finally(() => {
@@ -374,6 +376,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             });
           }, 0);
         } else {
+          // SIGNED_OUT (or USER_DELETED). If the user did NOT explicitly sign
+          // out, surface a friendly "session expired" message on /auth — this
+          // is the Lovable Preview / multi-tab refresh-token race case.
+          if (event === "SIGNED_OUT" && hadAuthedSessionRef.current && !userInitiatedSignOutRef.current) {
+            markSessionExpired("session_not_found");
+            clearSupabaseAuthStorage();
+          }
+          userInitiatedSignOutRef.current = false;
+          hadAuthedSessionRef.current = false;
           resetAuthState();
           hydratedUserIdRef.current = null;
           setLoading(false);
@@ -381,7 +392,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     );
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    // Boot path: detect a stale localStorage session (session JSON present but
+    // server says session_not_found). Fail gracefully → wipe + flag expired.
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (session?.user) {
+        hadAuthedSessionRef.current = true;
+        try {
+          const { error } = await supabase.auth.getUser();
+          if (error) {
+            const msg = (error.message || "").toLowerCase();
+            const stale =
+              msg.includes("session_not_found") ||
+              msg.includes("invalid refresh") ||
+              msg.includes("jwt") ||
+              error.status === 401 ||
+              error.status === 403;
+            if (stale) {
+              markSessionExpired("stale_local");
+              clearSupabaseAuthStorage();
+              try { await supabase.auth.signOut(); } catch { /* noop */ }
+              if (mounted) {
+                resetAuthState();
+                setUser(null);
+                setSession(null);
+                setLoading(false);
+              }
+              return;
+            }
+          }
+        } catch {
+          // Network hiccup — fall through and let normal flow handle it.
+        }
+      }
       void syncSession(session);
     }).catch((err) => {
       if (import.meta.env.DEV) console.error('Error restoring session:', err);
