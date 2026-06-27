@@ -2184,6 +2184,33 @@ export default function ImportSchedule() {
                     No se pudo parsear ningún turno. Verifica que el archivo sea el export de horario de Connecteam y que la columna <code>Date</code> tenga fechas válidas.
                   </p>
                 )}
+                {/* Header mapping + missing-by-reason breakdown */}
+                <div className="pt-2 border-t border-border/50 space-y-1">
+                  <p className="text-muted-foreground">
+                    Hoja: <strong className="text-foreground">{parseDiagnostics.sheetName || "—"}</strong>
+                  </p>
+                  <p className="text-muted-foreground">
+                    Headers detectados ({parseDiagnostics.detectedHeaders.length}): {parseDiagnostics.detectedHeaders.slice(0, 20).map(h => `"${h}"`).join(", ") || "—"}
+                  </p>
+                  <p className="text-muted-foreground">
+                    Mapeo reconocido: {Object.entries(parseDiagnostics.headerMapping).map(([k, v]) => `${k}→"${v}"`).join(", ") || "ninguno"}
+                  </p>
+                  {parseDiagnostics.missingLogical.length > 0 && (
+                    <p className="text-amber-700">
+                      Campos lógicos faltantes en el archivo: {parseDiagnostics.missingLogical.join(", ")}
+                    </p>
+                  )}
+                  {parseDiagnostics.missingFields > 0 && (
+                    <p className="text-muted-foreground">
+                      Filas descartadas por: date={parseDiagnostics.missingByReason.date}, title/job={parseDiagnostics.missingByReason.titleJob}, start={parseDiagnostics.missingByReason.start}, end={parseDiagnostics.missingByReason.end}, time inválido={parseDiagnostics.missingByReason.invalidTime}, sin users={parseDiagnostics.missingByReason.users}
+                    </p>
+                  )}
+                  {parseDiagnostics.sampleRow && (
+                    <p className="text-muted-foreground">
+                      Muestra fila 1 — date:"{parseDiagnostics.headerMapping.date ? parseDiagnostics.sampleRow[parseDiagnostics.headerMapping.date] : "—"}" · start:"{parseDiagnostics.headerMapping.start ? parseDiagnostics.sampleRow[parseDiagnostics.headerMapping.start] : "—"}" · end:"{parseDiagnostics.headerMapping.end ? parseDiagnostics.sampleRow[parseDiagnostics.headerMapping.end] : "—"}" · users:"{parseDiagnostics.headerMapping.users ? parseDiagnostics.sampleRow[parseDiagnostics.headerMapping.users] : "—"}" · job:"{parseDiagnostics.headerMapping.job ? parseDiagnostics.sampleRow[parseDiagnostics.headerMapping.job] : "—"}" · title:"{parseDiagnostics.headerMapping.shiftTitle ? parseDiagnostics.sampleRow[parseDiagnostics.headerMapping.shiftTitle] : "—"}"
+                    </p>
+                  )}
+                </div>
               </CardContent>
             </Card>
           )}
