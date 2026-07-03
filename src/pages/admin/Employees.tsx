@@ -2324,6 +2324,16 @@ export default function Employees() {
                 );
               })()}
               <div className="ml-auto sm:ml-auto flex items-center gap-0.5">
+                {viewEmployee && (isPendingIdentity(viewEmployee as any) || isPlaceholderWorker(viewEmployee as any)) && isPrivileged && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100"
+                    onClick={() => setIdentityResolveOpen(true)}
+                  >
+                    Resolver identidad
+                  </Button>
+                )}
                 <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => { if (viewEmployee) toggleActive(viewEmployee); }}>
                   {viewEmployee?.is_active ? <><Archive className="h-3 w-3 mr-1" />Archivar</> : <><UserCheck className="h-3 w-3 mr-1" />Activar</>}
                 </Button>
