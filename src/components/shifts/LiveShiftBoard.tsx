@@ -30,6 +30,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
+import { IdentityBadges } from "@/components/employee/IdentityBadges";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { isEmployeeDriver } from "./types";
