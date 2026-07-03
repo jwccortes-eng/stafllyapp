@@ -15,6 +15,7 @@ import { normalizePhone } from "@/lib/phone";
 import type { WorkerDocumentSignals } from "@/lib/documents-signals";
 
 export type RiskKey =
+  | "pending_identity"
   | "duplicate_review"
   | "suspicious_email"
   | "missing_role"
@@ -47,6 +48,7 @@ export interface RiskTag {
 }
 
 const RISK_META: Record<RiskKey, Omit<RiskTag, "key">> = {
+  pending_identity:    { label: "Pending identity",       tone: "destructive", description: "Identidad no resuelta (placeholder, emergency o unresolved). Revisar antes de asignar o aprobar payroll." },
   duplicate_review:    { label: "Revisión de duplicados", tone: "warning",     description: "Comparte teléfono, email o código con otro registro." },
   suspicious_email:    { label: "Email sospechoso",     tone: "warning",     description: "Email parece compartido, genérico o un placeholder." },
   missing_role:        { label: "Falta rol",             tone: "muted",       description: "Sin rol asignado." },
@@ -73,11 +75,11 @@ const RISK_META: Record<RiskKey, Omit<RiskTag, "key">> = {
  * The full grid stays available behind the "Ver diagnóstico completo" toggle.
  */
 export const PRIMARY_RISK_KEYS: RiskKey[] = [
+  "pending_identity",
   "missing_required_document",
   "duplicate_review",
   "portal_not_active",
   "missing_phone",
-  "missing_location",
   "expired_document",
 ];
 
