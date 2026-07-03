@@ -2363,6 +2363,17 @@ export default function Employees() {
         </SheetContent>
       </Sheet>
 
+      {/* Identity Resolution Drawer (Phase 2B) */}
+      <IdentityResolutionDrawer
+        open={identityResolveOpen}
+        onOpenChange={setIdentityResolveOpen}
+        employee={viewEmployee as any}
+        companyName={selectedCompany?.name}
+        companyEmployees={employees as any}
+        onResolved={() => fetchEmployees()}
+      />
+
+
       {/* Invite Dialog */}
       {viewEmployee && <EmployeeInviteDialog open={inviteOpen} onOpenChange={setInviteOpen} employee={viewEmployee} inviteToken={invitations[viewEmployee.id]?.invite_token ?? null} onInviteSent={(channel) => { logInvitation(viewEmployee.id, channel); refetchInvitations(); }} />}
 
