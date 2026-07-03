@@ -4189,6 +4189,12 @@ export type Database = {
           has_car: string | null
           has_vehicle: boolean | null
           id: string
+          identity_notes: string | null
+          identity_resolved_at: string | null
+          identity_resolved_by: string | null
+          identity_resolved_employee_id: string | null
+          identity_source: string | null
+          identity_status: string
           is_active: boolean
           languages: string[] | null
           last_login: string | null
@@ -4197,7 +4203,9 @@ export type Database = {
           must_change_pin: boolean
           onboarding_completed_at: string | null
           onboarding_status: string | null
+          original_placeholder_name: string | null
           passport_public: boolean
+          payroll_approval_blocked: boolean
           phone_number: string | null
           photo_rejection_reason: string | null
           photo_review_status: string | null
@@ -4212,6 +4220,8 @@ export type Database = {
           profile_status: Database["public"]["Enums"]["employee_profile_status"]
           qualify: string | null
           recommended_by: string | null
+          requires_identity_resolution: boolean
+          resolved_person_id: string | null
           service_category_ids: string[] | null
           skills: string[] | null
           ssn_last4: string | null
@@ -4220,6 +4230,7 @@ export type Database = {
           updated_at: string
           user_id: string | null
           verification_ssn_ein: string | null
+          worker_type: string
           years_experience: number | null
         }
         Insert: {
@@ -4264,6 +4275,12 @@ export type Database = {
           has_car?: string | null
           has_vehicle?: boolean | null
           id?: string
+          identity_notes?: string | null
+          identity_resolved_at?: string | null
+          identity_resolved_by?: string | null
+          identity_resolved_employee_id?: string | null
+          identity_source?: string | null
+          identity_status?: string
           is_active?: boolean
           languages?: string[] | null
           last_login?: string | null
@@ -4272,7 +4289,9 @@ export type Database = {
           must_change_pin?: boolean
           onboarding_completed_at?: string | null
           onboarding_status?: string | null
+          original_placeholder_name?: string | null
           passport_public?: boolean
+          payroll_approval_blocked?: boolean
           phone_number?: string | null
           photo_rejection_reason?: string | null
           photo_review_status?: string | null
@@ -4287,6 +4306,8 @@ export type Database = {
           profile_status?: Database["public"]["Enums"]["employee_profile_status"]
           qualify?: string | null
           recommended_by?: string | null
+          requires_identity_resolution?: boolean
+          resolved_person_id?: string | null
           service_category_ids?: string[] | null
           skills?: string[] | null
           ssn_last4?: string | null
@@ -4295,6 +4316,7 @@ export type Database = {
           updated_at?: string
           user_id?: string | null
           verification_ssn_ein?: string | null
+          worker_type?: string
           years_experience?: number | null
         }
         Update: {
@@ -4339,6 +4361,12 @@ export type Database = {
           has_car?: string | null
           has_vehicle?: boolean | null
           id?: string
+          identity_notes?: string | null
+          identity_resolved_at?: string | null
+          identity_resolved_by?: string | null
+          identity_resolved_employee_id?: string | null
+          identity_source?: string | null
+          identity_status?: string
           is_active?: boolean
           languages?: string[] | null
           last_login?: string | null
@@ -4347,7 +4375,9 @@ export type Database = {
           must_change_pin?: boolean
           onboarding_completed_at?: string | null
           onboarding_status?: string | null
+          original_placeholder_name?: string | null
           passport_public?: boolean
+          payroll_approval_blocked?: boolean
           phone_number?: string | null
           photo_rejection_reason?: string | null
           photo_review_status?: string | null
@@ -4362,6 +4392,8 @@ export type Database = {
           profile_status?: Database["public"]["Enums"]["employee_profile_status"]
           qualify?: string | null
           recommended_by?: string | null
+          requires_identity_resolution?: boolean
+          resolved_person_id?: string | null
           service_category_ids?: string[] | null
           skills?: string[] | null
           ssn_last4?: string | null
@@ -4370,6 +4402,7 @@ export type Database = {
           updated_at?: string
           user_id?: string | null
           verification_ssn_ein?: string | null
+          worker_type?: string
           years_experience?: number | null
         }
         Relationships: [
@@ -4385,6 +4418,20 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employees_identity_resolved_employee_id_fkey"
+            columns: ["identity_resolved_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employees_identity_resolved_employee_id_fkey"
+            columns: ["identity_resolved_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
             referencedColumns: ["id"]
           },
           {
