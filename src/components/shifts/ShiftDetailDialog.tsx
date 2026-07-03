@@ -67,6 +67,7 @@ import { ShiftRoleSlotsTeamPanel } from "./ShiftRoleSlotsTeamPanel";
 import { ShiftLifecycleTimeline } from "./ShiftLifecycleTimeline";
 import { CaptainNextActionCard } from "./CaptainNextActionCard";
 import { LiveShiftBoard } from "./LiveShiftBoard";
+import { IdentityBadges } from "@/components/employee/IdentityBadges";
 
 import { GenerateBillingBlockButton } from "./GenerateBillingBlockButton";
 import { ExportConnecteamPreviewDialog } from "./integrations/ExportConnecteamPreviewDialog";
