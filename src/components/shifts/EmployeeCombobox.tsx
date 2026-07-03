@@ -83,15 +83,16 @@ const isDriver = (e: Employee) => isEmployeeDriver(e);
 
 /**
  * Placeholder / system / external / agency / payroll-unsafe detection.
- * Mirrors the classification used by DevCommandCenter and the
- * `placeholder/system-detection` core memory rule. These workers are NOT
- * real employees and must be excluded from the picker by default.
  *
- * Conservative: unknown `person_type_guess` + null `payroll_safe` ⇒ treated
- * as a real employee (do not hide). Only explicit signals trigger hiding.
+ * Phase 2A: now also honors the Phase 1 identity columns (worker_type /
+ * identity_status). Legacy signals (payroll_safe / person_type_guess) are
+ * kept for forward compatibility even though they don't exist in the DB
+ * today — the OR-fallback is conservative and safe.
  */
+import { isPlaceholderWorker as isIdentityPlaceholder } from "@/lib/employee-identity";
 const PLACEHOLDER_TYPES = new Set(["placeholder", "system", "external", "external_labor", "agency", "temp"]);
 function isPlaceholderLike(e: Employee): boolean {
+  if (isIdentityPlaceholder(e as any)) return true;
   if (e.payroll_safe === false) return true;
   const t = (e.person_type_guess ?? "").toLowerCase().trim();
   if (t && PLACEHOLDER_TYPES.has(t)) return true;
