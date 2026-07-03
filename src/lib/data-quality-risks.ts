@@ -123,6 +123,7 @@ export function analyzeEmployeeRisks(
 ): RiskAnalysisResult {
   const byId = new Map<string, RiskKey[]>();
   const counts: Record<RiskKey, number> = {
+    pending_identity: 0,
     duplicate_review: 0,
     suspicious_email: 0,
     missing_role: 0,
