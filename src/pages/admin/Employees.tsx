@@ -63,6 +63,8 @@ import { BulkRateAssignment } from "@/components/employee/BulkRateAssignment";
 import { EmployeeInviteDialog } from "@/components/employee/EmployeeInviteDialog";
 import WorkerDataQualityReview from "@/components/employee/WorkerDataQualityReview";
 import WorkerDocumentsCompliance from "@/components/employee/WorkerDocumentsCompliance";
+import IdentityResolutionDrawer from "@/components/employee/IdentityResolutionDrawer";
+import { isPendingIdentity, isPlaceholderWorker } from "@/lib/employee-identity";
 import { QuickAddInviteWizard } from "@/components/employee/QuickAddInviteWizard";
 import { useEmployeeInvitations } from "@/hooks/useEmployeeInvitations";
 import { canInviteWorker, isWorkerInviteFailed } from "@/lib/worker-actions";
