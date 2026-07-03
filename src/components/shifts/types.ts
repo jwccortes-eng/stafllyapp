@@ -80,6 +80,17 @@ export interface Employee {
   person_type_guess?: string | null;
   /** Explicit boolean flag: false ⇒ unsafe for payroll/scheduling (placeholder-like). */
   payroll_safe?: boolean | null;
+  // ── Phase 1 identity columns (read-only in Phase 2A). ────────────────────
+  /** real_employee | emergency_worker | legacy_placeholder | imported_placeholder */
+  worker_type?: string | null;
+  /** verified | pending_identity | unresolved | rejected | merged | legacy_placeholder */
+  identity_status?: string | null;
+  requires_identity_resolution?: boolean | null;
+  /** UI hint only — does NOT change payroll math today. */
+  payroll_approval_blocked?: boolean | null;
+  original_placeholder_name?: string | null;
+  identity_source?: string | null;
+  identity_notes?: string | null;
 }
 
 /**

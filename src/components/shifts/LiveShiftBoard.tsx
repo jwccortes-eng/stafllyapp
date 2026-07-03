@@ -30,6 +30,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
+import { IdentityBadges } from "@/components/employee/IdentityBadges";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { isEmployeeDriver } from "./types";
@@ -519,6 +520,7 @@ function WorkerCard({ row }: { row: WorkerRow }) {
               <UserX className="h-2.5 w-2.5 mr-0.5" /> Rechazó
             </Badge>
           )}
+          <IdentityBadges employee={e} size="xs" />
         </div>
         <div className="flex items-center gap-1.5 mt-0.5 text-[10px] text-muted-foreground tabular-nums">
           <Clock className="h-2.5 w-2.5" />

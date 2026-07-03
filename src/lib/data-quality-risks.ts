@@ -15,6 +15,7 @@ import { normalizePhone } from "@/lib/phone";
 import type { WorkerDocumentSignals } from "@/lib/documents-signals";
 
 export type RiskKey =
+  | "pending_identity"
   | "duplicate_review"
   | "suspicious_email"
   | "missing_role"
@@ -47,6 +48,7 @@ export interface RiskTag {
 }
 
 const RISK_META: Record<RiskKey, Omit<RiskTag, "key">> = {
+  pending_identity:    { label: "Pending identity",       tone: "destructive", description: "Identidad no resuelta (placeholder, emergency o unresolved). Revisar antes de asignar o aprobar payroll." },
   duplicate_review:    { label: "Revisión de duplicados", tone: "warning",     description: "Comparte teléfono, email o código con otro registro." },
   suspicious_email:    { label: "Email sospechoso",     tone: "warning",     description: "Email parece compartido, genérico o un placeholder." },
   missing_role:        { label: "Falta rol",             tone: "muted",       description: "Sin rol asignado." },
@@ -73,11 +75,11 @@ const RISK_META: Record<RiskKey, Omit<RiskTag, "key">> = {
  * The full grid stays available behind the "Ver diagnóstico completo" toggle.
  */
 export const PRIMARY_RISK_KEYS: RiskKey[] = [
+  "pending_identity",
   "missing_required_document",
   "duplicate_review",
   "portal_not_active",
   "missing_phone",
-  "missing_location",
   "expired_document",
 ];
 
@@ -121,6 +123,7 @@ export function analyzeEmployeeRisks(
 ): RiskAnalysisResult {
   const byId = new Map<string, RiskKey[]>();
   const counts: Record<RiskKey, number> = {
+    pending_identity: 0,
     duplicate_review: 0,
     suspicious_email: 0,
     missing_role: 0,
@@ -191,7 +194,20 @@ export function analyzeEmployeeRisks(
     const isActive = e?.is_active !== false;
     const portalActive = !!e?.user_id;
 
-    // System placeholder — highest signal first.
+    // Pending identity — driven by Phase 1 DB columns. Highest priority signal
+    // because it directly impacts payroll safety across all tenants.
+    const wt = (e?.worker_type ?? "").toString();
+    const idSt = (e?.identity_status ?? "").toString();
+    if (
+      e?.requires_identity_resolution === true ||
+      e?.payroll_approval_blocked === true ||
+      (wt && wt !== "real_employee") ||
+      (idSt && idSt !== "verified" && idSt !== "merged" && idSt !== "rejected")
+    ) {
+      tags.push("pending_identity");
+    }
+
+    // System placeholder — legacy name-only detection kept for safety.
     if (PLACEHOLDER_NAME_RE.test(fullName) || /^system$/i.test(e?.first_name ?? "")) {
       tags.push("system_placeholder");
     }
@@ -266,7 +282,11 @@ export function analyzeEmployeeRisks(
  * NOTE: This does NOT change payroll calculations. It is a UI hint only.
  */
 export function computePayrollReadiness(risks: RiskKey[]): PayrollReadiness {
-  if (risks.includes("system_placeholder") || risks.includes("test_account")) {
+  if (
+    risks.includes("pending_identity") ||
+    risks.includes("system_placeholder") ||
+    risks.includes("test_account")
+  ) {
     return "blocked_visual";
   }
   if (
@@ -290,6 +310,7 @@ export function getRiskMeta(key: RiskKey): RiskTag {
 }
 
 export const RISK_ORDER: RiskKey[] = [
+  "pending_identity",
   "system_placeholder",
   "test_account",
   "expired_document",
