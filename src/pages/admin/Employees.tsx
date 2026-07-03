@@ -63,6 +63,8 @@ import { BulkRateAssignment } from "@/components/employee/BulkRateAssignment";
 import { EmployeeInviteDialog } from "@/components/employee/EmployeeInviteDialog";
 import WorkerDataQualityReview from "@/components/employee/WorkerDataQualityReview";
 import WorkerDocumentsCompliance from "@/components/employee/WorkerDocumentsCompliance";
+import IdentityResolutionDrawer from "@/components/employee/IdentityResolutionDrawer";
+import { isPendingIdentity, isPlaceholderWorker } from "@/lib/employee-identity";
 import { QuickAddInviteWizard } from "@/components/employee/QuickAddInviteWizard";
 import { useEmployeeInvitations } from "@/hooks/useEmployeeInvitations";
 import { canInviteWorker, isWorkerInviteFailed } from "@/lib/worker-actions";
@@ -291,6 +293,7 @@ export default function Employees() {
   const [deleteTarget, setDeleteTarget] = useState<EmployeeRecord | null>(null);
   const [passwordOpen, setPasswordOpen] = useState(false);
   const [viewEmployee, setViewEmployee] = useState<EmployeeRecord | null>(null);
+  const [identityResolveOpen, setIdentityResolveOpen] = useState(false);
   const [profileActiveTab, setProfileActiveTab] = useState<string>("info");
   const [isEditing, setIsEditing] = useState(false);
   const [importPreview, setImportPreview] = useState<ImportPreviewRow[]>([]);
@@ -2321,6 +2324,16 @@ export default function Employees() {
                 );
               })()}
               <div className="ml-auto sm:ml-auto flex items-center gap-0.5">
+                {viewEmployee && (isPendingIdentity(viewEmployee as any) || isPlaceholderWorker(viewEmployee as any)) && isPrivileged && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100"
+                    onClick={() => setIdentityResolveOpen(true)}
+                  >
+                    Resolver identidad
+                  </Button>
+                )}
                 <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => { if (viewEmployee) toggleActive(viewEmployee); }}>
                   {viewEmployee?.is_active ? <><Archive className="h-3 w-3 mr-1" />Archivar</> : <><UserCheck className="h-3 w-3 mr-1" />Activar</>}
                 </Button>
@@ -2349,6 +2362,17 @@ export default function Employees() {
           </ScrollArea>
         </SheetContent>
       </Sheet>
+
+      {/* Identity Resolution Drawer (Phase 2B) */}
+      <IdentityResolutionDrawer
+        open={identityResolveOpen}
+        onOpenChange={setIdentityResolveOpen}
+        employee={viewEmployee as any}
+        companyName={selectedCompany?.name}
+        companyEmployees={employees as any}
+        onResolved={() => fetchEmployees()}
+      />
+
 
       {/* Invite Dialog */}
       {viewEmployee && <EmployeeInviteDialog open={inviteOpen} onOpenChange={setInviteOpen} employee={viewEmployee} inviteToken={invitations[viewEmployee.id]?.invite_token ?? null} onInviteSent={(channel) => { logInvitation(viewEmployee.id, channel); refetchInvitations(); }} />}
