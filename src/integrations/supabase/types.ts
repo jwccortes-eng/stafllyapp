@@ -16349,6 +16349,7 @@ export type Database = {
         Args: { p_target_company_id: string; p_target_employee_id: string }
         Returns: Json
       }
+      email_queue_dispatch: { Args: never; Returns: undefined }
       employee_has_access_pin: {
         Args: { _employee_id: string }
         Returns: boolean
