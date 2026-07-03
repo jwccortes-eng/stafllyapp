@@ -23,4 +23,10 @@ export const EMPLOYEE_COLUMNS_NO_FISCAL =
   "has_vehicle, onboarding_status, onboarding_completed_at, " +
   "address_line, address_city, address_state, address_zip, languages, " +
   "profile_status, deleted_at, merged_into_employee_id, address_structured, " +
-  "preferred_name";
+  "preferred_name, " +
+  // Phase 1 identity/placeholder fields — needed for IdentityBadges,
+  // Data-Quality risk detection, and Phase 2B IdentityResolutionDrawer.
+  "worker_type, identity_status, requires_identity_resolution, " +
+  "payroll_approval_blocked, original_placeholder_name, identity_source, " +
+  "identity_notes, identity_resolved_employee_id, identity_resolved_at, " +
+  "identity_resolved_by";

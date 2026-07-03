@@ -43,6 +43,9 @@ import { ProfileSummaryGrid } from "@/components/employee/ProfileSummaryGrid";
 import { EmployeeInviteDialog } from "@/components/employee/EmployeeInviteDialog";
 import { ArchiveEmployeeDialog } from "@/components/employee/ArchiveEmployeeDialog";
 import { NextActionCard } from "@/components/employee/NextActionCard";
+import IdentityResolutionDrawer from "@/components/employee/IdentityResolutionDrawer";
+import { isPendingIdentity, isPlaceholderWorker } from "@/lib/employee-identity";
+import { ShieldAlert } from "lucide-react";
 import { selectWorkerNextAction, type WorkerNextAction } from "@/lib/worker-next-action";
 import { canInviteWorker, canActivateWorker, canArchiveWorker } from "@/lib/worker-actions";
 import { WorkerPhotoStatusChip } from "@/components/employee/WorkerPhotoStatusChip";
@@ -121,6 +124,8 @@ export default function UnifiedPersonProfile() {
   const [form, setForm] = useState<Record<string, string>>({});
   const [inviteOpen, setInviteOpen] = useState(false);
   const [archiveOpen, setArchiveOpen] = useState(false);
+  const [identityOpen, setIdentityOpen] = useState(false);
+  const [companyRoster, setCompanyRoster] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<string>("info");
 
   // Snapshot data
@@ -451,6 +456,21 @@ export default function UnifiedPersonProfile() {
     toast({ title: next ? "Activated" : "Archived" });
   };
 
+  // ── Lazy same-company roster for Identity Resolution drawer (Link/Merge) ──
+  const openIdentityDrawer = async () => {
+    if (!employee?.company_id) return;
+    if (companyRoster.length === 0) {
+      const { data } = await (supabase as any)
+        .from("employees")
+        .select("id, company_id, first_name, last_name, is_active, worker_type, identity_status")
+        .eq("company_id", employee.company_id)
+        .limit(2000);
+      setCompanyRoster(data ?? []);
+    }
+    setIdentityOpen(true);
+  };
+
+
   // ── Snapshot strip metrics ──────────────────────────────────────────────
   const snapshotMetrics: SnapshotMetric[] = useMemo(() => {
     if (!employee) return [];
@@ -745,6 +765,18 @@ export default function UnifiedPersonProfile() {
                     <Pencil className="h-3.5 w-3.5 mr-1.5" /> Edit
                   </Button>
                 )}
+
+                {employee && isPrivileged && (isPendingIdentity(employee as any) || isPlaceholderWorker(employee as any)) && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-8 text-xs border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100"
+                    onClick={openIdentityDrawer}
+                  >
+                    <ShieldAlert className="h-3.5 w-3.5 mr-1.5" /> Resolver identidad
+                  </Button>
+                )}
+
 
                 {/* Invite / Resend — label and tone reflect current state.
                     NOTE: We intentionally do NOT show a "Sending…" loading state here.
@@ -1369,6 +1401,25 @@ export default function UnifiedPersonProfile() {
           onArchived={() => {
             setArchiveOpen(false);
             navigate("/app/employees");
+          }}
+        />
+      )}
+
+      {employee && (
+        <IdentityResolutionDrawer
+          open={identityOpen}
+          onOpenChange={setIdentityOpen}
+          employee={employee as any}
+          companyName={selectedCompany?.name}
+          companyEmployees={companyRoster}
+          onResolved={async () => {
+            // Re-fetch employee row to reflect updated identity fields.
+            const { data } = await (supabase as any)
+              .from("employees")
+              .select(EMPLOYEE_COLUMNS_NO_FISCAL)
+              .eq("id", employee.id)
+              .maybeSingle();
+            if (data) setEmployee(data);
           }}
         />
       )}
