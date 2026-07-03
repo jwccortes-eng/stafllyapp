@@ -51,6 +51,7 @@ import {
 } from "lucide-react";
 
 const RISK_ICON: Record<RiskKey, React.ComponentType<{ className?: string }>> = {
+  pending_identity: ShieldAlert,
   system_placeholder: Bot,
   test_account: FlaskConical,
   duplicate_review: Users2,

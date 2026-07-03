@@ -31,7 +31,6 @@ export type ProfileTabId =
 
 const RISK_TO_TAB: Record<RiskKey, ProfileTabId> = {
   pending_identity: "info",
-  system_replaces_marker_below: undefined as never,
   system_placeholder: "info",
   test_account: "info",
   duplicate_review: "info",
