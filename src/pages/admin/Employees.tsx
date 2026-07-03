@@ -291,6 +291,7 @@ export default function Employees() {
   const [deleteTarget, setDeleteTarget] = useState<EmployeeRecord | null>(null);
   const [passwordOpen, setPasswordOpen] = useState(false);
   const [viewEmployee, setViewEmployee] = useState<EmployeeRecord | null>(null);
+  const [identityResolveOpen, setIdentityResolveOpen] = useState(false);
   const [profileActiveTab, setProfileActiveTab] = useState<string>("info");
   const [isEditing, setIsEditing] = useState(false);
   const [importPreview, setImportPreview] = useState<ImportPreviewRow[]>([]);
