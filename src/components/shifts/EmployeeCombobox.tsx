@@ -434,12 +434,12 @@ export function EmployeeCombobox({
             <ShieldAlert className="h-3 w-3" />
             {showPlaceholders ? (
               <span>
-                Mostrando placeholders / externos.{" "}
-                <span className="text-warning font-semibold">No son trabajadores reales — no usar en payroll.</span>
+                Mostrando placeholders / emergency / unresolved.{" "}
+                <span className="text-warning font-semibold">Identidad no verificada — no asignar a payroll sin resolver.</span>
               </span>
             ) : (
               <span>
-                Placeholders / externos ocultos:{" "}
+                Placeholders / emergency / unresolved ocultos:{" "}
                 <span className="font-semibold text-foreground">{placeholderHiddenCount}</span>
               </span>
             )}
@@ -454,7 +454,7 @@ export function EmployeeCombobox({
                 : "bg-muted text-muted-foreground hover:bg-muted/80",
             )}
           >
-            {showPlaceholders ? "Ocultar placeholders" : "Mostrar placeholders / externos"}
+            {showPlaceholders ? "Ocultar" : "Mostrar unresolved / emergency"}
           </button>
         </div>
       )}
