@@ -1051,7 +1051,7 @@ export function ShiftDetailDialog({
                       >
                         <EmployeeAvatar firstName={emp.first_name} lastName={emp.last_name} avatarUrl={emp.avatar_url} gender={emp.gender} size="xs" />
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-1 flex-wrap">
                             <p className="text-[11px] font-semibold truncate">{emp.first_name} {emp.last_name}</p>
                             {empIsDriver && (
                               <span className="h-3.5 px-1 rounded bg-earning/15 text-earning text-[7px] font-bold flex items-center shrink-0 ring-1 ring-earning/20">
@@ -1064,6 +1064,7 @@ export function ShiftDetailDialog({
                             {noPortal && (
                               <span className="h-3.5 px-1 rounded bg-warning/10 text-warning text-[7px] font-bold shrink-0" title="Sin portal — no tiene cuenta activa">Sin portal</span>
                             )}
+                            <IdentityBadges employee={emp} size="xs" />
                           </div>
                         </div>
                         {/* Contact on hover */}
