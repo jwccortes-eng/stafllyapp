@@ -300,7 +300,7 @@ export default function PayrollReviewQueue() {
       // Phase 2C-B — identity-flagged workers for this tenant. Scoped by
       // company_id, respects RLS. Read-only: we only surface these rows
       // visually; no writes, no payroll enforcement.
-      const { data: idFlagged } = await supabase
+      const { data: idFlaggedRaw } = await supabase
         .from("employees")
         .select("id, full_name, worker_type, identity_status, requires_identity_resolution, payroll_approval_blocked, original_placeholder_name, portal_access_enabled")
         .eq("company_id", cid)
@@ -310,7 +310,8 @@ export default function PayrollReviewQueue() {
           "worker_type.in.(emergency_worker,legacy_placeholder,imported_placeholder)",
           "identity_status.neq.verified",
         ].join(","));
-      for (const e of idFlagged ?? []) {
+      const idFlagged = (idFlaggedRaw ?? []) as any[];
+      for (const e of idFlagged) {
         if (!empMap.has(e.id)) empMap.set(e.id, e);
       }
 
