@@ -302,7 +302,7 @@ export default function PayrollReviewQueue() {
       // visually; no writes, no payroll enforcement.
       const { data: idFlaggedRaw } = await supabase
         .from("employees")
-        .select("id, full_name, worker_type, identity_status, requires_identity_resolution, payroll_approval_blocked, original_placeholder_name, portal_access_enabled")
+        .select("id, first_name, last_name, worker_type, identity_status, requires_identity_resolution, payroll_approval_blocked, original_placeholder_name, portal_access_enabled")
         .eq("company_id", cid)
         .or([
           "payroll_approval_blocked.eq.true",
@@ -693,7 +693,8 @@ export default function PayrollReviewQueue() {
       if (adjN) evidence.push(`${adjN} ajuste(s)`);
       const evLabel = evidence.length ? evidence.join(" · ") : "Sin items de payroll en este periodo";
 
-      const displayName = e.full_name || e.original_placeholder_name || `Worker ${eid.slice(0, 8)}`;
+      const composedName = [e.first_name, e.last_name].filter(Boolean).join(" ").trim();
+      const displayName = composedName || e.original_placeholder_name || `Worker ${eid.slice(0, 8)}`;
       return {
         key: `idblock-${eid}`,
         primary: displayName,
