@@ -693,7 +693,8 @@ export default function PayrollReviewQueue() {
       if (adjN) evidence.push(`${adjN} ajuste(s)`);
       const evLabel = evidence.length ? evidence.join(" · ") : "Sin items de payroll en este periodo";
 
-      const displayName = e.full_name || e.original_placeholder_name || `Worker ${eid.slice(0, 8)}`;
+      const composedName = [e.first_name, e.last_name].filter(Boolean).join(" ").trim();
+      const displayName = composedName || e.original_placeholder_name || `Worker ${eid.slice(0, 8)}`;
       return {
         key: `idblock-${eid}`,
         primary: displayName,
