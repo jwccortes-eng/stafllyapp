@@ -97,62 +97,126 @@ Deno.serve(async (req) => {
       return json({ error: "No tienes acceso a esta compañía" }, 403);
     }
 
-    // Fetch existing employees
+    // Fetch existing employees (extended for Phase 2C-C identity awareness).
     const { data: existingEmployees } = await supabase
       .from("employees")
-      .select("id, first_name, last_name, connecteam_employee_id")
+      .select(
+        "id, first_name, last_name, connecteam_employee_id, worker_type, identity_status, requires_identity_resolution, payroll_approval_blocked, original_placeholder_name",
+      )
       .eq("company_id", companyId);
 
-    const existingByConnecteamId = new Set<string>();
-    const existingByName = new Set<string>();
+    const existingByConnecteamId = new Map<string, any>();
+    const existingByName = new Map<string, any>();
 
     for (const emp of existingEmployees ?? []) {
       if (emp.connecteam_employee_id) {
-        existingByConnecteamId.add(emp.connecteam_employee_id);
+        existingByConnecteamId.set(emp.connecteam_employee_id, emp);
       }
-      existingByName.add(normalizeName(`${emp.first_name} ${emp.last_name}`));
+      existingByName.set(normalizeName(`${emp.first_name} ${emp.last_name}`), emp);
     }
 
-    // Filter: skip SYSTEM rows, existing employees
+    // Phase 2C-C · identity source label
+    const rawSource = ((await Promise.resolve()).valueOf(), ""); // no-op keeps diff local
+    const identitySource =
+      (rows[0] as any)?.identity_source_override === "connecteam" ||
+      rows.some((r) => (r.connecteam_employee_id ?? "").trim().length > 0)
+        ? "connecteam"
+        : "import";
+
     const toInsert: any[] = [];
-    let skippedSystem = 0;
+    const toUpdatePending: {
+      id: string;
+      original_placeholder_name: string;
+      identity_source: string;
+    }[] = [];
+    const verifiedPlaceholderWarnings: {
+      employee_id: string;
+      name: string;
+      incoming_name: string;
+    }[] = [];
+
     let skippedExisting = 0;
     let skippedNoName = 0;
+    let taggedPlaceholder = 0;
 
     for (const row of rows) {
       const firstName = (row.first_name ?? "").trim();
       const lastName = (row.last_name ?? "").trim();
 
-      if (!firstName || !lastName) {
+      if (!firstName && !lastName) {
+        skippedNoName++;
+        continue;
+      }
+      // Placeholder rows may legitimately arrive with only a first name
+      // (e.g. "System 3"). Require at least first_name to persist safely.
+      if (!firstName) {
         skippedNoName++;
         continue;
       }
 
-      if (firstName.toUpperCase() === "SYSTEM" || firstName.toUpperCase() === "CONECTEAM") {
-        skippedSystem++;
-        continue;
-      }
-
+      const incomingIsPlaceholder = isPlaceholderName(firstName, lastName);
       const connecteamId = (row.connecteam_employee_id ?? "").trim();
-      if (connecteamId && existingByConnecteamId.has(connecteamId)) {
+      const nameKey = normalizeName(`${firstName} ${lastName || ""}`);
+
+      // Existing match (connecteam id first, then normalized name).
+      const existing =
+        (connecteamId && existingByConnecteamId.get(connecteamId)) ||
+        existingByName.get(nameKey);
+
+      if (existing) {
         skippedExisting++;
+        if (incomingIsPlaceholder) {
+          const existingIsVerified =
+            existing.identity_status === "verified" ||
+            (!existing.requires_identity_resolution &&
+              (!existing.worker_type || existing.worker_type === "real_employee") &&
+              !existing.payroll_approval_blocked);
+
+          if (existingIsVerified) {
+            // Never auto-downgrade a verified employee. Warn only.
+            verifiedPlaceholderWarnings.push({
+              employee_id: existing.id,
+              name: `${existing.first_name ?? ""} ${existing.last_name ?? ""}`.trim(),
+              incoming_name: `${firstName} ${lastName}`.trim(),
+            });
+          } else {
+            // Existing pending/placeholder: refresh identity metadata only.
+            toUpdatePending.push({
+              id: existing.id,
+              original_placeholder_name:
+                existing.original_placeholder_name ||
+                `${firstName} ${lastName}`.trim(),
+              identity_source: identitySource,
+            });
+          }
+        }
         continue;
       }
 
-      const nameKey = normalizeName(`${firstName} ${lastName}`);
-      if (existingByName.has(nameKey)) {
-        skippedExisting++;
-        continue;
-      }
+      // Prevent double-insert within same batch.
+      if (connecteamId) existingByConnecteamId.set(connecteamId, { id: "__pending__" });
+      existingByName.set(nameKey, { id: "__pending__" });
 
-      // Prevent double-insert within same batch
-      if (connecteamId) existingByConnecteamId.add(connecteamId);
-      existingByName.add(nameKey);
+      const identityPatch = incomingIsPlaceholder
+        ? {
+            worker_type: "imported_placeholder",
+            identity_status: "pending_identity",
+            requires_identity_resolution: true,
+            payroll_approval_blocked: true,
+            portal_access_enabled: false,
+            user_id: null,
+            identity_source: identitySource,
+            original_placeholder_name: `${firstName} ${lastName}`.trim(),
+            added_via: row.added_via || identitySource,
+          }
+        : {};
+
+      if (incomingIsPlaceholder) taggedPlaceholder++;
 
       toInsert.push({
         company_id: companyId,
         first_name: firstName,
-        last_name: lastName,
+        last_name: lastName || "",
         email: row.email || null,
         country_code: row.country_code || null,
         phone_number: row.phone_number || null,
@@ -172,6 +236,7 @@ Deno.serve(async (req) => {
         groups: row.groups || null,
         tags: row.tags || null,
         is_active: false,
+        ...identityPatch,
       });
     }
 
@@ -200,6 +265,21 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Phase 2C-C · refresh existing pending/placeholder identity metadata.
+    let refreshedPending = 0;
+    for (const upd of toUpdatePending) {
+      const { error: updErr } = await supabase
+        .from("employees")
+        .update({
+          original_placeholder_name: upd.original_placeholder_name,
+          identity_source: upd.identity_source,
+          requires_identity_resolution: true,
+        })
+        .eq("id", upd.id)
+        .eq("company_id", companyId);
+      if (!updErr) refreshedPending++;
+    }
+
     // Log
     await supabase.from("activity_log").insert({
       user_id: user.id,
@@ -209,7 +289,9 @@ Deno.serve(async (req) => {
       details: {
         totalRows: rows.length,
         inserted,
-        skippedSystem,
+        taggedPlaceholder,
+        refreshedPending,
+        verifiedPlaceholderWarnings: verifiedPlaceholderWarnings.length,
         skippedExisting,
         skippedNoName,
         errors,
@@ -219,7 +301,9 @@ Deno.serve(async (req) => {
     return json({
       success: true,
       inserted,
-      skippedSystem,
+      taggedPlaceholder,
+      refreshedPending,
+      verifiedPlaceholderWarnings,
       skippedExisting,
       skippedNoName,
       errors,
