@@ -291,11 +291,28 @@ export default function PayrollReviewQueue() {
       const { data: emps } = empIds.size
         ? await supabase
             .from("employees")
-            .select("id, full_name, profile_status, employer_identification")
+            .select("id, full_name, profile_status, employer_identification, worker_type, identity_status, requires_identity_resolution, payroll_approval_blocked, original_placeholder_name")
             .in("id", Array.from(empIds))
         : { data: [] as any[] };
       const empMap = new Map<string, any>();
       for (const e of emps ?? []) empMap.set(e.id, e);
+
+      // Phase 2C-B — identity-flagged workers for this tenant. Scoped by
+      // company_id, respects RLS. Read-only: we only surface these rows
+      // visually; no writes, no payroll enforcement.
+      const { data: idFlagged } = await supabase
+        .from("employees")
+        .select("id, full_name, worker_type, identity_status, requires_identity_resolution, payroll_approval_blocked, original_placeholder_name, portal_access_enabled")
+        .eq("company_id", cid)
+        .or([
+          "payroll_approval_blocked.eq.true",
+          "requires_identity_resolution.eq.true",
+          "worker_type.in.(emergency_worker,legacy_placeholder,imported_placeholder)",
+          "identity_status.neq.verified",
+        ].join(","));
+      for (const e of idFlagged ?? []) {
+        if (!empMap.has(e.id)) empMap.set(e.id, e);
+      }
 
       return {
         period,
@@ -310,6 +327,7 @@ export default function PayrollReviewQueue() {
         closeouts: closeouts ?? [],
         rides: rides ?? [],
         empMap,
+        idFlagged: (idFlagged ?? []) as any[],
       };
     },
   });
