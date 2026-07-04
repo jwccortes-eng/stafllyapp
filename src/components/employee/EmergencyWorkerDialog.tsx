@@ -173,7 +173,7 @@ export default function EmergencyWorkerDialog({
       .insert({
         company_id: selectedCompanyId,       // scoped, never manual
         first_name: v.first_name,
-        last_name: v.last_name || null,
+        last_name: v.last_name || "",
         phone_number: phoneNorm,
         is_active: true,
         // Phase 1 identity fields — fixed
