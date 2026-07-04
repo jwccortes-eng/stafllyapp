@@ -39,6 +39,7 @@ interface Props {
   adminError?: string | null;
   onToggleEmployee: (id: string) => void;
   onAddNewEmployee?: () => void;
+  onAddEmergencyWorker?: () => void;
   onChange: (patch: { claimable?: boolean; shiftAdminId?: string }) => void;
 }
 
@@ -64,6 +65,7 @@ function TeamSectionImpl({
   adminError,
   onToggleEmployee,
   onAddNewEmployee,
+  onAddEmergencyWorker,
   onChange,
 }: Props) {
   return (
@@ -101,6 +103,7 @@ function TeamSectionImpl({
             availabilityOverrides={availabilityOverrides}
             availabilityBlockMode="warning"
             onAddNewEmployee={onAddNewEmployee}
+            onAddEmergencyWorker={onAddEmergencyWorker}
             requiresDriver={transportRequired}
             showBulkActions={transportRequired || (slotsNum > 0 && selectedEmployees.length < slotsNum)}
             remainingSlots={Math.max(slotsNum - selectedEmployees.length, 0)}

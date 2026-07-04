@@ -103,6 +103,13 @@ interface ShiftDetailDialogProps {
   availabilityOverrides?: AvailabilityOverride[];
   /** Callback when user wants to add a brand-new employee from the combobox */
   onAddNewEmployee?: () => void;
+  /** Phase 2C-A — Callback when user requests to create an Emergency Worker
+   *  for this shift. Parent owns the dialog + roster refresh. On success the
+   *  parent should call `onEmergencyWorkerCreated(id)` to pre-select. */
+  onAddEmergencyWorker?: (ctx: { shiftId: string; shiftLabel: string }) => void;
+  /** Ref-like id: when set to a workerId matching this shift, the detail
+   *  dialog will pre-select that worker in the assignment panel. */
+  pendingPreselectId?: string | null;
   /** When false, hides all claimable UI */
   allowClaims?: boolean;
   /** Initial tab to open (e.g. "attendance" via deep-link). Defaults to "details". */
@@ -168,7 +175,8 @@ export function ShiftDetailDialog({
   shift, open, onOpenChange, assignments, employees, locations, clients, allShifts = [],
   canEdit, onAddEmployees, onRemoveAssignment, onEdit, onPublish, onSave, onRequestAction,
   onDuplicate, onDelete,
-  availabilityConfigs = [], availabilityOverrides = [], onAddNewEmployee, allowClaims = true,
+  availabilityConfigs = [], availabilityOverrides = [], onAddNewEmployee,
+  onAddEmergencyWorker, pendingPreselectId, allowClaims = true,
   initialTab,
 }: ShiftDetailDialogProps) {
   const { user, canAccessAdminForCompany } = useAuth();
@@ -193,6 +201,15 @@ export function ShiftDetailDialog({
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
   const [notifyOpen, setNotifyOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
+
+  // Phase 2C-A — When parent creates an emergency worker for this shift,
+  // pre-select the id in the assignment panel and reveal it so the operator
+  // can confirm the assignment in the normal flow.
+  useEffect(() => {
+    if (!pendingPreselectId || !shift) return;
+    setSelected((prev) => (prev.includes(pendingPreselectId) ? prev : [...prev, pendingPreselectId]));
+    setShowAddPanel(true);
+  }, [pendingPreselectId, shift]);
 
   // Typed role slots (only present when shift came from a service request)
   const [roleSlots, setRoleSlots] = useState<ShiftRoleSlot[]>([]);
@@ -1188,6 +1205,14 @@ export function ShiftDetailDialog({
                         remainingSlots={Math.max(0, slotsNum - shiftAssignments.length)}
                         requiresDriver={!!(shift as any).transportation_required}
                         onAddNewEmployee={onAddNewEmployee}
+                        onAddEmergencyWorker={
+                          isAdminForTenant && shift && onAddEmergencyWorker
+                            ? () => onAddEmergencyWorker({
+                                shiftId: shift.id,
+                                shiftLabel: `${shift.title ?? "Turno"} · ${shift.date ?? ""} · ${(shift.start_time ?? "").slice(0,5)}–${(shift.end_time ?? "").slice(0,5)}`,
+                              })
+                            : undefined
+                        }
                         debugContext={{
                           selectedCompanyId,
                           companyName: selectedCompany?.name ?? null,
@@ -1619,6 +1644,11 @@ export function ShiftDetailDialog({
       selectedCompanyId={selectedCompanyId ?? null}
       shiftCompanyId={(shift as any)?.company_id ?? selectedCompanyId ?? null}
     />
+
+    {/* Phase 2C-A — Pre-select an emergency worker created from parent.
+        The dialog itself lives in the parent (Shifts.tsx) so the roster
+        can be refreshed after creation. */}
+    
     </>
   );
 }
