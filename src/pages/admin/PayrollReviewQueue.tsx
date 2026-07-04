@@ -664,8 +664,54 @@ export default function PayrollReviewQueue() {
         };
       });
 
+    // Phase 2C-B — Bloqueado · Identidad pendiente (visual, read-only).
+    // Surface identity-flagged workers with any period-related context.
+    // Priority: payroll_approval_blocked > requires_identity_resolution >
+    // worker_type placeholder > identity_status != verified.
+    const identityBlocked: BucketRow[] = (d.idFlagged ?? []).map((e: any) => {
+      const reasons: string[] = [];
+      if (e.payroll_approval_blocked) reasons.push("Payroll bloqueado");
+      const wt = e.worker_type as string | null;
+      if (wt === "emergency_worker") reasons.push("Emergency worker");
+      else if (wt === "legacy_placeholder") reasons.push("Legacy placeholder");
+      else if (wt === "imported_placeholder") reasons.push("Imported placeholder");
+      if (e.requires_identity_resolution) reasons.push("Identidad pendiente");
+      else if (e.identity_status && e.identity_status !== "verified") reasons.push(`Estado: ${e.identity_status}`);
+
+      // Period-linked evidence counts (visual only)
+      const eid = e.id;
+      const pbpN = d.pbp.filter(r => r.employee_id === eid).length;
+      const histN = d.hist.filter(r => r.matched_employee_id === eid).length;
+      const teN = d.timeEntries.filter(t => t.employee_id === eid).length;
+      const asgN = d.assigns.filter(a => a.employee_id === eid).length;
+      const adjN = d.adj.filter(r => r.employee_id === eid).length;
+      const evidence: string[] = [];
+      if (pbpN) evidence.push(`${pbpN} fila(s) de pago`);
+      if (histN) evidence.push(`${histN} import`);
+      if (teN) evidence.push(`${teN} fichaje(s)`);
+      if (asgN) evidence.push(`${asgN} asignación(es)`);
+      if (adjN) evidence.push(`${adjN} ajuste(s)`);
+      const evLabel = evidence.length ? evidence.join(" · ") : "Sin items de payroll en este periodo";
+
+      const displayName = e.full_name || e.original_placeholder_name || `Worker ${eid.slice(0, 8)}`;
+      return {
+        key: `idblock-${eid}`,
+        primary: displayName,
+        secondary: `${reasons.join(" · ") || "Identidad no verificada"} · ${evLabel}`,
+        badge: e.payroll_approval_blocked ? "Payroll bloqueado" : "Identidad pendiente",
+        link: { to: `/app/employees/${eid}`, label: "Ver / resolver identidad" },
+      };
+    })
+    // Priority: payroll_approval_blocked first, then pending resolution, then placeholders.
+    .sort((a, b) => {
+      const rank = (r: BucketRow) =>
+        r.badge === "Payroll bloqueado" ? 0 : r.badge === "Identidad pendiente" ? 1 : 2;
+      return rank(a) - rank(b);
+    });
+
     return [
-      // ── Operational priority queue (Centro de Validación) ──
+      // ── Identity blocker (Phase 2C-B) ──
+      { id: "identity-blocked", title: "Bloqueado · Identidad pendiente", description: "Workers con identidad no verificada o payroll bloqueado. Revisa o resuelve la identidad antes de aprobar payroll. Solo visual — no modifica pagos ni fichajes.", severity: "block", affectsPay: false, rows: identityBlocked },
       { id: "requiere-correccion", title: "Requiere corrección",        description: "Cierres rechazados o que requieren seguimiento del capitán o María.", severity: "block", affectsPay: false, rows: requiereCorreccion },
       { id: "fichajes-abiertos",   title: "Con fichajes abiertos",      description: "Hay entradas sin salida registrada. Cerrar o validar antes del pago.", severity: "block", affectsPay: false, rows: fichajesAbiertos },
       { id: "pendiente-cierre",    title: "Pendiente cierre del turno", description: "Turnos ya ocurridos sin cierre enviado por el capitán.",               severity: "warn",  affectsPay: false, rows: pendienteCierre },
