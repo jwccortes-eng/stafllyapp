@@ -40,6 +40,18 @@ function normalizeName(s: string): string {
     .trim();
 }
 
+// Phase 2C-C · Placeholder auto-tagging
+// Mirror of src/lib/placeholder-name.ts (kept inline because Deno edge
+// functions cannot import from the src/ tree). Keep both in sync.
+const PLACEHOLDER_NAME_RE =
+  /^\s*(system|user\s*pend(iente)?|unknown|temp(orary)?|placeholder|pending|pend)\b/i;
+
+function isPlaceholderName(firstName: string, lastName: string): boolean {
+  const full = `${firstName ?? ""} ${lastName ?? ""}`.trim();
+  if (!full) return false;
+  return PLACEHOLDER_NAME_RE.test(full);
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
