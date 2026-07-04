@@ -328,7 +328,7 @@ export default function PayrollReviewQueue() {
         closeouts: closeouts ?? [],
         rides: rides ?? [],
         empMap,
-        idFlagged: (idFlagged ?? []) as any[],
+        idFlagged,
       };
     },
   });
