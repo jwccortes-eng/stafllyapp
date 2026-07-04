@@ -34,6 +34,9 @@ interface EmployeeComboboxProps {
   shiftGroup?: string | null;
   /** Show "+ Add new employee" option and callback when selected */
   onAddNewEmployee?: () => void;
+  /** Show "+ Emergency worker" option (admin-only entry to
+   *  EmergencyWorkerDialog). Callback opens the dialog in the parent. */
+  onAddEmergencyWorker?: () => void;
   /** Optional context for the diagnostic banner shown when employees=[] or filter empties out.
    *  Always-on (admin-friendly empty state). The full debug panel is gated by `debugMode`. */
   debugContext?: {
@@ -110,7 +113,7 @@ export function EmployeeCombobox({
   employees, selected, onToggle, shifts = [], assignments = [], shiftDate, shiftStart, shiftEnd,
   maxHeight = "220px", showChips = true, availabilityConfigs = [], availabilityOverrides = [],
   availabilityBlockMode = "warning", showBulkActions = false, remainingSlots, requiresDriver = false,
-  shiftGroup, onAddNewEmployee, debugContext,
+  shiftGroup, onAddNewEmployee, onAddEmergencyWorker, debugContext,
   debugMode = false, debugWorker = null, debugSearches, debugWorkerFlags,
 }: EmployeeComboboxProps) {
   const [search, setSearch] = useState("");
@@ -520,6 +523,7 @@ export function EmployeeCombobox({
         getGroup={getGroup}
         handleToggle={handleToggle}
         onAddNewEmployee={onAddNewEmployee}
+        onAddEmergencyWorker={onAddEmergencyWorker}
         maxHeight={maxHeight}
         search={search}
         employees={employees}
@@ -566,6 +570,7 @@ interface VirtualEmployeeListProps {
   getGroup: (e: Employee) => GroupKey;
   handleToggle: (id: string) => void;
   onAddNewEmployee?: () => void;
+  onAddEmergencyWorker?: () => void;
   maxHeight: string;
   search: string;
   employees: Employee[];
@@ -576,7 +581,8 @@ interface VirtualEmployeeListProps {
 type FlatItem =
   | { type: "header"; key: string; group: GroupKey }
   | { type: "row"; key: string; emp: Employee }
-  | { type: "add"; key: string };
+  | { type: "add"; key: string }
+  | { type: "emergency"; key: string };
 
 const ROW_HEIGHT = 58;
 const HEADER_HEIGHT = 22;
@@ -587,7 +593,7 @@ function VirtualEmployeeList(props: VirtualEmployeeListProps) {
   const {
     sorted, selected, conflictMap, unavailableMap, availabilityBlockMode,
     requiresDriver, groupBreaks, readyCount, dupHints, getGroup, handleToggle,
-    onAddNewEmployee, maxHeight, search, employees, filtered, debugContext,
+    onAddNewEmployee, onAddEmergencyWorker, maxHeight, search, employees, filtered, debugContext,
   } = props;
 
   // Build flat item list (headers + rows + add button).
@@ -600,8 +606,9 @@ function VirtualEmployeeList(props: VirtualEmployeeListProps) {
       out.push({ type: "row", key: emp.id, emp });
     }
     if (onAddNewEmployee) out.push({ type: "add", key: "__add__" });
+    if (onAddEmergencyWorker) out.push({ type: "emergency", key: "__emergency__" });
     return out;
-  }, [sorted, selected, groupBreaks, getGroup, onAddNewEmployee]);
+  }, [sorted, selected, groupBreaks, getGroup, onAddNewEmployee, onAddEmergencyWorker]);
 
   // Cumulative offsets for accurate windowing with mixed heights.
   const offsets = useMemo(() => {
@@ -609,7 +616,10 @@ function VirtualEmployeeList(props: VirtualEmployeeListProps) {
     arr[0] = 0;
     for (let i = 0; i < items.length; i++) {
       const it = items[i];
-      const h = it.type === "header" ? HEADER_HEIGHT : it.type === "add" ? ADD_HEIGHT : ROW_HEIGHT;
+      const h =
+        it.type === "header" ? HEADER_HEIGHT :
+        it.type === "add" || it.type === "emergency" ? ADD_HEIGHT :
+        ROW_HEIGHT;
       arr[i + 1] = arr[i] + h;
     }
     return arr;
@@ -736,6 +746,20 @@ function VirtualEmployeeList(props: VirtualEmployeeListProps) {
                   </button>
                 );
               }
+              if (item.type === "emergency") {
+                return (
+                  <button
+                    key={item.key}
+                    type="button"
+                    onClick={onAddEmergencyWorker}
+                    style={{ height: ADD_HEIGHT }}
+                    className="flex items-center gap-2 w-full px-2 py-2 text-xs font-semibold text-amber-800 bg-amber-50/60 hover:bg-amber-100 transition-colors border-t border-amber-200"
+                  >
+                    <AlertTriangle className="h-3.5 w-3.5" />
+                    + Emergency worker (pending identity)
+                  </button>
+                );
+              }
               if (item.type === "header") {
                 const labels: Record<GroupKey, { label: string; color: string; icon: React.ReactNode }> = {
                   ready: { label: `Disponibles · ${readyCount}`, color: "text-earning", icon: <UserCheck className="h-2.5 w-2.5" /> },
@@ -757,6 +781,7 @@ function VirtualEmployeeList(props: VirtualEmployeeListProps) {
                   </div>
                 );
               }
+              if (item.type !== "row") return null;
               const emp = item.emp;
               const isSelected = selected.includes(emp.id);
               const conflicts = conflictMap.get(emp.id);

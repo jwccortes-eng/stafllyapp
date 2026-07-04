@@ -51,6 +51,7 @@ import { EmployeeCombobox } from "@/components/shifts/EmployeeCombobox";
 import { ShiftRepeatSection, DEFAULT_REPEAT, computeRepeatDates, type RepeatConfig } from "@/components/shifts/ShiftRepeatSection";
 import { QuickCreatePopover } from "@/components/shifts/QuickCreatePopover";
 import { QuickAddInviteWizard } from "@/components/employee/QuickAddInviteWizard";
+import EmergencyWorkerDialog, { type EmergencyWorkerCreated } from "@/components/employee/EmergencyWorkerDialog";
 import { ShiftFormFields, useShiftFormSignals, type ShiftFormState } from "@/components/shifts/ShiftFormFields";
 import { ShiftFormShell } from "@/components/shifts/ShiftFormShell";
 import { ShiftDraftBanner, ShiftDraftStatusPill } from "@/components/shifts/ShiftDraftBanner";
@@ -126,6 +127,7 @@ function CreateShiftDialogInline(props: {
   onRequestSave: () => void;
   onSaveDraft: () => void;
   onAddNewEmployee: () => void;
+  onAddEmergencyWorker?: () => void;
   onClientCreated: (id: string, name: string) => void;
   onLocationCreated: (id: string, name: string, address: string) => void;
   draftStatus?: DraftStatus;
@@ -253,6 +255,7 @@ function CreateShiftDialogInline(props: {
         showEmployeePicker
         renderInlineSummary={false}
         onAddNewEmployee={props.onAddNewEmployee}
+        onAddEmergencyWorker={props.onAddEmergencyWorker}
         onQuickAddClient={async (name) => {
           if (!props.selectedCompanyId) return;
           const { data, error } = await supabase.from("clients").insert({
@@ -459,6 +462,16 @@ function DesktopShifts() {
   const [jobSiteAddress, setJobSiteAddress] = useState<string>("");
   const [repeatConfig, setRepeatConfig] = useState<RepeatConfig>(DEFAULT_REPEAT);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
+  // Phase 2C-A — Emergency Worker create flow (admin-only). Owned here so
+  // roster refresh + pre-select can be applied for both entry points
+  // (CreateShiftDialogInline and ShiftDetailDialog).
+  const [emergencyState, setEmergencyState] = useState<{
+    open: boolean;
+    shiftId: string | null;   // null when creating from an unpublished shift
+    shiftLabel: string;
+    target: "create" | "detail"; // where the pre-select should land
+  }>({ open: false, shiftId: null, shiftLabel: "", target: "create" });
+  const [emergencyPreselectId, setEmergencyPreselectId] = useState<string | null>(null);
   const [copyingWeek, setCopyingWeek] = useState(false);
 
   // Filtered shifts
@@ -2284,6 +2297,10 @@ function DesktopShifts() {
         onRequestSave={() => setConfirmOpen(true)}
         onSaveDraft={handleSaveDraft}
         onAddNewEmployee={() => setQuickAddOpen(true)}
+        onAddEmergencyWorker={() => {
+          const label = `${title || "Turno"} · ${date || "—"} · ${(startTime || "").slice(0,5)}–${(endTime || "").slice(0,5)}`;
+          setEmergencyState({ open: true, shiftId: null, shiftLabel: label, target: "create" });
+        }}
         onClientCreated={(id, name) => {
           setClients(prev => [...prev, { id, name }]);
           setClientId(id);
@@ -2470,6 +2487,10 @@ function DesktopShifts() {
         availabilityConfigs={availConfigs}
         availabilityOverrides={availOverrides}
         onAddNewEmployee={() => setQuickAddOpen(true)}
+        onAddEmergencyWorker={({ shiftId, shiftLabel }) => {
+          setEmergencyState({ open: true, shiftId, shiftLabel, target: "detail" });
+        }}
+        pendingPreselectId={emergencyState.target === "detail" ? emergencyPreselectId : null}
         allowClaims={shiftsConfig.allow_claims}
       />
 
@@ -2514,6 +2535,23 @@ function DesktopShifts() {
           // Auto-select the new employee in the create form if it's open
           if (createOpen && newEmp?.id) {
             setSelectedEmployees(prev => [...prev, newEmp.id]);
+          }
+        }}
+      />
+
+      {/* Phase 2C-A — Emergency Worker create flow (admin-only). */}
+      <EmergencyWorkerDialog
+        open={emergencyState.open}
+        onOpenChange={(o) => setEmergencyState((s) => ({ ...s, open: o }))}
+        shiftId={emergencyState.shiftId}
+        shiftLabel={emergencyState.shiftLabel}
+        onCreated={(worker: EmergencyWorkerCreated) => {
+          loadData();
+          if (emergencyState.target === "create" && createOpen) {
+            setSelectedEmployees((prev) => (prev.includes(worker.id) ? prev : [...prev, worker.id]));
+          }
+          if (emergencyState.target === "detail") {
+            setEmergencyPreselectId(worker.id);
           }
         }}
       />

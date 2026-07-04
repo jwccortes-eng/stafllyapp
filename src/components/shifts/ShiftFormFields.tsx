@@ -102,6 +102,8 @@ export interface ShiftFormFieldsProps {
   onQuickAddClient?: (name: string) => Promise<void>;
   onQuickAddLocation?: (name: string, address: string) => Promise<void>;
   onAddNewEmployee?: () => void;
+  /** Phase 2C-A — Emergency worker create entry from combobox */
+  onAddEmergencyWorker?: () => void;
 
   /** EDIT mode only */
   shift?: Shift | null;
@@ -329,6 +331,7 @@ export function ShiftFormFields({
   onQuickAddClient,
   onQuickAddLocation,
   onAddNewEmployee,
+  onAddEmergencyWorker,
   shift,
   qrAttendanceMode,
   qrToken,
@@ -452,6 +455,7 @@ export function ShiftFormFields({
       adminError={adminError}
       onToggleEmployee={toggleEmployee}
       onAddNewEmployee={onAddNewEmployee}
+      onAddEmergencyWorker={onAddEmergencyWorker}
       onChange={handlePatch}
     />
   );
