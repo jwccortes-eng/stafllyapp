@@ -115,13 +115,14 @@ Deno.serve(async (req) => {
       existingByName.set(normalizeName(`${emp.first_name} ${emp.last_name}`), emp);
     }
 
-    // Phase 2C-C · identity source label
-    const rawSource = ((await Promise.resolve()).valueOf(), ""); // no-op keeps diff local
-    const identitySource =
-      (rows[0] as any)?.identity_source_override === "connecteam" ||
-      rows.some((r) => (r.connecteam_employee_id ?? "").trim().length > 0)
-        ? "connecteam"
-        : "import";
+    // Phase 2C-C · identity source label. Connecteam source is inferred from
+    // the presence of any connecteam_employee_id in the incoming payload;
+    // otherwise treated as a generic bulk import.
+    const identitySource = rows.some(
+      (r) => (r.connecteam_employee_id ?? "").trim().length > 0,
+    )
+      ? "connecteam"
+      : "import";
 
     const toInsert: any[] = [];
     const toUpdatePending: {
