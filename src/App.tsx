@@ -40,6 +40,7 @@ const PrivacyPolicy = lazy(() => import("./pages/legal/PrivacyPolicy"));
 const CookiePolicy = lazy(() => import("./pages/legal/CookiePolicy"));
 const HelpCenter = lazy(() => import("./pages/help/HelpCenter"));
 const UserManual = lazy(() => import("./pages/help/UserManual"));
+const OAuthConsent = lazy(() => import("./pages/OAuthConsent"));
 
 // Admin pages
 const PayPeriods = lazy(() => import("./pages/admin/PayPeriods"));
