@@ -40,6 +40,7 @@ const PrivacyPolicy = lazy(() => import("./pages/legal/PrivacyPolicy"));
 const CookiePolicy = lazy(() => import("./pages/legal/CookiePolicy"));
 const HelpCenter = lazy(() => import("./pages/help/HelpCenter"));
 const UserManual = lazy(() => import("./pages/help/UserManual"));
+const OAuthConsent = lazy(() => import("./pages/OAuthConsent"));
 
 // Admin pages
 const PayPeriods = lazy(() => import("./pages/admin/PayPeriods"));
@@ -251,6 +252,7 @@ function App() {
               <Route path="/install" element={<Install />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/login" element={<Navigate to="/auth" replace />} />
+              <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
 
               <Route path="/auth/callback" element={<AuthCallback />} />
               <Route path="/reset-password" element={<ResetPassword />} />
