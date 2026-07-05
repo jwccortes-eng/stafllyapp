@@ -131,6 +131,7 @@ export default function Auth() {
     const pickIntended = (): string | null => {
       const intended = consumeIntendedRoute();
       if (!intended) return null;
+      if (intended.startsWith("/.lovable/oauth/consent")) return intended;
       if (intended.startsWith("/parceros")) return intended;
       if (intended.startsWith("/app") && canAccessAdmin) return intended;
       if (intended.startsWith("/portal") && canAccessPortal) return intended;
