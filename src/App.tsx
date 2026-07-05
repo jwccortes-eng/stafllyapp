@@ -252,6 +252,7 @@ function App() {
               <Route path="/install" element={<Install />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/login" element={<Navigate to="/auth" replace />} />
+              <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
 
               <Route path="/auth/callback" element={<AuthCallback />} />
               <Route path="/reset-password" element={<ResetPassword />} />
