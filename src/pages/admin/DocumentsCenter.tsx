@@ -144,6 +144,23 @@ export default function DocumentsCenter() {
     [rows],
   );
 
+  // Optional per-worker scoping (?employee=<id>) — used when the Worker Profile
+  // deep-links "Revisar documentos pendientes" here. Frontend-only filter over
+  // the rows already returned by useCompanyDocuments (which is company-scoped).
+  const employeeParam = searchParams.get("employee");
+  const scopedEmployeeName = useMemo(() => {
+    if (!employeeParam) return null;
+    const e = employeeMap.get(employeeParam);
+    if (!e) return null;
+    return `${e.first_name ?? ""} ${e.last_name ?? ""}`.trim() || "Worker";
+  }, [employeeParam, employeeMap]);
+
+  const clearEmployeeFilter = () => {
+    const sp = new URLSearchParams(searchParams);
+    sp.delete("employee");
+    setSearchParams(sp, { replace: true });
+  };
+
   const filtered = useMemo(() => {
     let base: UnifiedDocumentRow[] = rows;
     switch (activeFilter) {
@@ -158,13 +175,16 @@ export default function DocumentsCenter() {
       case "all":
       default:             base = rows;
     }
+    if (employeeParam) {
+      base = base.filter((r) => r.employee_id === employeeParam);
+    }
     const q = search.trim().toLowerCase();
     if (!q) return base;
     return base.filter((r) =>
       r.worker_name.toLowerCase().includes(q) ||
       r.document_type.toLowerCase().includes(q),
     );
-  }, [rows, missingRows, missingExpirationRows, activeFilter, search]);
+  }, [rows, missingRows, missingExpirationRows, activeFilter, search, employeeParam]);
 
   const counts = useMemo(() => ({
     all: rows.length,
