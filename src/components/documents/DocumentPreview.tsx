@@ -82,7 +82,11 @@ export default function DocumentPreview({ item, actions, banner }: Props) {
     return () => { cancelled = true; };
   }, [item.file_path]);
 
-  const expState = classifyExpiration(item.category, item.expires_at ?? null);
+  // Sentinel dates like 3000-01-01 mean "never expires" — never render 01/01/3000.
+  const sentinelExp = isSentinelExpiration(item.expires_at ?? null);
+  const expState = sentinelExp
+    ? "valid"
+    : classifyExpiration(item.category, item.expires_at ?? null);
   const expTone =
     expState === "expired"            ? "border-rose-200 bg-rose-50 text-rose-700" :
     expState === "expiring_soon"      ? "border-amber-200 bg-amber-50 text-amber-700" :
@@ -91,10 +95,7 @@ export default function DocumentPreview({ item, actions, banner }: Props) {
                                         "border-muted-foreground/20 bg-muted/30 text-muted-foreground";
 
   const expDisplay = item.expires_at
-    ? (() => {
-        const d = new Date(item.expires_at as string);
-        return Number.isNaN(d.getTime()) ? "—" : (formatDateUS(d) || "—");
-      })()
+    ? formatExpirationDisplay(item.expires_at)
     : EXPIRATION_STATE_LABEL[expState];
 
   const uploadedDisplay = item.uploaded_at
@@ -103,6 +104,14 @@ export default function DocumentPreview({ item, actions, banner }: Props) {
         return Number.isNaN(d.getTime()) ? null : formatDateUS(d);
       })()
     : null;
+
+  // Spanish-first status label for the header chip. The DB value stays as
+  // "pending" / "approved" / "rejected" — this is only what the admin reads.
+  const statusLabelEs: Record<"pending" | "approved" | "rejected", string> = {
+    pending: "Pendiente de revisión",
+    approved: "Aprobado",
+    rejected: "Rechazado",
+  };
 
   return (
     <div className="flex flex-col gap-3">
@@ -114,9 +123,12 @@ export default function DocumentPreview({ item, actions, banner }: Props) {
             <span className="truncate">{item.file_name || item.document_type || "Documento"}</span>
           </div>
           {item.review_status && (
-            <Badge variant="outline" className={REVIEW_TONE[item.review_status] ?? ""}>
-              {item.review_status === "pending" ? "Pending review" :
-               item.review_status === "approved" ? "Approved" : "Rejected"}
+            <Badge
+              variant="outline"
+              className={REVIEW_TONE[item.review_status] ?? ""}
+              title="Estado actual del documento. Guardar cambios en este modal no aprueba el documento."
+            >
+              Estado actual: {statusLabelEs[item.review_status]}
             </Badge>
           )}
         </div>
@@ -136,11 +148,17 @@ export default function DocumentPreview({ item, actions, banner }: Props) {
               Subido {uploadedDisplay}
             </span>
           )}
-          <Badge variant="outline" className={expTone}>
+          <Badge variant="outline" className={expTone} title={sentinelExp ? "Este documento fue marcado como sin vencimiento." : undefined}>
             <CalendarClock className="h-3 w-3 mr-1" />
             {expDisplay}
           </Badge>
         </div>
+        {item.review_status === "pending" && (
+          <p className="text-[10.5px] text-muted-foreground/80 leading-snug">
+            Este documento sigue <strong>pendiente de revisión</strong> y aún no cuenta para resolver requisitos.
+            Guardar cambios en este modal actualiza metadata (por ejemplo fecha de vencimiento), <strong>no aprueba el documento</strong>.
+          </p>
+        )}
       </div>
 
       {banner}
