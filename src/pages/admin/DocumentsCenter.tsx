@@ -23,10 +23,13 @@ import {
   expirationPolicyFor,
   EXPIRATION_STATE_LABEL,
 } from "@/lib/onboarding/document-expiration-policy";
-import { updateDocumentExpiration } from "@/lib/document-actions";
+import { updateDocumentExpiration, fromEmployeeDocument } from "@/lib/document-actions";
 import { resolveEmployeeDocumentUrl } from "@/lib/employee-documents";
 import DocumentPreviewDialog from "@/components/documents/DocumentPreviewDialog";
 import AssistedExtractionPanel from "@/components/documents/AssistedExtractionPanel";
+import DocumentReviewActions from "@/components/documents/DocumentReviewActions";
+import { useAuth } from "@/hooks/useAuth";
+import { getRequiredDocumentsForCompany } from "@/lib/onboarding/required-documents";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -58,9 +61,18 @@ const STATUS_TONE: Record<UnifiedDocStatus, string> = {
 
 export default function DocumentsCenter() {
   const { selectedCompanyId } = useCompany();
+  const { canAccessAdminForCompany } = useAuth();
+  const canReview = canAccessAdminForCompany(selectedCompanyId ?? null);
   const { toast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState("");
+
+  const { data: requiredCategories = [] } = useQuery({
+    queryKey: ["documents-center-required", selectedCompanyId],
+    enabled: !!selectedCompanyId,
+    queryFn: async () =>
+      selectedCompanyId ? await getRequiredDocumentsForCompany(selectedCompanyId) : [],
+  });
 
   // Workers (for "missing" filter and worker name fallback).
   const { data: employees = [] } = useQuery({
@@ -475,6 +487,28 @@ export default function DocumentsCenter() {
             previewRow.status === "approved" ? "approved" :
             previewRow.status === "rejected" ? "rejected" : "pending",
         } : null}
+        actions={previewRow && previewRow.source === "admin_upload" && previewRow.rawId ? (
+          <DocumentReviewActions
+            doc={fromEmployeeDocument({
+              id: previewRow.rawId,
+              employee_id: previewRow.employee_id,
+              company_id: previewRow.company_id,
+              name: previewRow.file_name ?? previewRow.document_type,
+              file_url: previewRow.file_path,
+              file_size: null,
+              category: String(previewRow.category),
+              created_at: previewRow.created_at ?? new Date().toISOString(),
+              review_status: previewRow.status === "approved" ? "approved"
+                : previewRow.status === "rejected" ? "rejected" : "pending",
+              reviewed_at: previewRow.reviewed_at,
+              rejection_reason: previewRow.rejection_reason ?? null,
+              expires_at: previewRow.expires_at,
+            })}
+            requiredCategories={requiredCategories}
+            canReview={canReview}
+            onChanged={() => { void refresh(); setPreviewRow(null); }}
+          />
+        ) : undefined}
         side={previewRow && previewRow.source === "admin_upload" && previewRow.rawId ? (
           <AssistedExtractionPanel
             target={{
@@ -490,6 +524,7 @@ export default function DocumentsCenter() {
           />
         ) : undefined}
       />
+
 
       {/* Mobile drawer-per-row (read-only detail + existing CTAs only). */}
       <MobileQueueDrawer

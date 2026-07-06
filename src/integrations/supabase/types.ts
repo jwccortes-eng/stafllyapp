@@ -2877,6 +2877,81 @@ export type Database = {
           },
         ]
       }
+      document_review_events: {
+        Row: {
+          action: string
+          company_id: string
+          created_at: string
+          employee_document_id: string
+          employee_id: string
+          id: string
+          new_status: string | null
+          previous_status: string | null
+          reason: string | null
+          reviewed_by: string | null
+        }
+        Insert: {
+          action: string
+          company_id: string
+          created_at?: string
+          employee_document_id: string
+          employee_id: string
+          id?: string
+          new_status?: string | null
+          previous_status?: string | null
+          reason?: string | null
+          reviewed_by?: string | null
+        }
+        Update: {
+          action?: string
+          company_id?: string
+          created_at?: string
+          employee_document_id?: string
+          employee_id?: string
+          id?: string
+          new_status?: string | null
+          previous_status?: string | null
+          reason?: string | null
+          reviewed_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_review_events_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_review_events_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_review_events_employee_document_id_fkey"
+            columns: ["employee_document_id"]
+            isOneToOne: false
+            referencedRelation: "employee_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_review_events_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_review_events_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       eic_rate_limits: {
         Row: {
           attempt_type: string
