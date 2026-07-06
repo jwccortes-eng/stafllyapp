@@ -40,9 +40,10 @@ import {
 import { PremiumPageHeader } from "@/components/ui/premium-page-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { MobileQueueRow, MobileQueueDrawer, MobileFilterPills } from "@/components/admin/mobile";
-import { Search, Download, ExternalLink, UserSearch, FileText, CalendarClock, Pencil, Eye } from "lucide-react";
+import { Search, Download, ExternalLink, UserSearch, FileText, CalendarClock, Pencil, Eye, ClipboardCheck, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatDateUS } from "@/lib/date-format";
+import { formatExpirationDisplay, isSentinelExpiration } from "@/lib/documents/expiration-display";
 import { cn } from "@/lib/utils";
 
 type FilterKey = "all" | "needs_review" | "missing" | "pending" | "expired" | "expiring_soon" | "missing_expiration" | "rejected" | "approved";
@@ -143,6 +144,23 @@ export default function DocumentsCenter() {
     [rows],
   );
 
+  // Optional per-worker scoping (?employee=<id>) — used when the Worker Profile
+  // deep-links "Revisar documentos pendientes" here. Frontend-only filter over
+  // the rows already returned by useCompanyDocuments (which is company-scoped).
+  const employeeParam = searchParams.get("employee");
+  const scopedEmployeeName = useMemo(() => {
+    if (!employeeParam) return null;
+    const e = employeeMap.get(employeeParam);
+    if (!e) return null;
+    return `${e.first_name ?? ""} ${e.last_name ?? ""}`.trim() || "Worker";
+  }, [employeeParam, employeeMap]);
+
+  const clearEmployeeFilter = () => {
+    const sp = new URLSearchParams(searchParams);
+    sp.delete("employee");
+    setSearchParams(sp, { replace: true });
+  };
+
   const filtered = useMemo(() => {
     let base: UnifiedDocumentRow[] = rows;
     switch (activeFilter) {
@@ -157,13 +175,16 @@ export default function DocumentsCenter() {
       case "all":
       default:             base = rows;
     }
+    if (employeeParam) {
+      base = base.filter((r) => r.employee_id === employeeParam);
+    }
     const q = search.trim().toLowerCase();
     if (!q) return base;
     return base.filter((r) =>
       r.worker_name.toLowerCase().includes(q) ||
       r.document_type.toLowerCase().includes(q),
     );
-  }, [rows, missingRows, missingExpirationRows, activeFilter, search]);
+  }, [rows, missingRows, missingExpirationRows, activeFilter, search, employeeParam]);
 
   const counts = useMemo(() => ({
     all: rows.length,
@@ -278,6 +299,26 @@ export default function DocumentsCenter() {
             </Button>
           </div>
 
+          {/* Scoped-employee chip — shown when we arrived via ?employee=<id>
+              (e.g. from Worker Profile "Revisar documentos pendientes"). */}
+          {employeeParam && scopedEmployeeName && (
+            <div className="flex items-center gap-2 text-xs bg-primary/5 border border-primary/20 rounded-md px-2.5 py-1.5">
+              <UserSearch className="h-3.5 w-3.5 text-primary" />
+              <span className="text-foreground">
+                Mostrando solo documentos de <strong>{scopedEmployeeName}</strong>
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 px-1.5 ml-auto text-[10.5px]"
+                onClick={clearEmployeeFilter}
+              >
+                <X className="h-3 w-3 mr-1" />
+                Quitar filtro
+              </Button>
+            </div>
+          )}
+
           {/* Mobile: horizontal scrollable pill chips, one-handed, no vertical stacking. */}
           <MobileFilterPills<FilterKey>
             items={FILTERS.map((f) => ({ key: f.key, label: f.label, count: counts[f.key] }))}
@@ -367,16 +408,29 @@ export default function DocumentsCenter() {
                         <TableCell className="text-xs text-muted-foreground">{fmtDate(r.created_at)}</TableCell>
                         <TableCell className="text-right">
                           <div className="inline-flex gap-1">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-7 px-2 text-[11px]"
-                              onClick={() => handleView(r)}
-                              disabled={!r.file_path}
-                            >
-                              <Eye className="h-3 w-3 mr-1" />
-                              Preview
-                            </Button>
+                            {(() => {
+                              // "Revisar" for anything not yet approved (opens the
+                              // same preview modal + AssistedExtractionPanel with
+                              // status chip). "Preview" stays for approved rows.
+                              const isReview = r.status !== "approved" && !!r.file_path;
+                              return (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 px-2 text-[11px]"
+                                  onClick={() => handleView(r)}
+                                  disabled={!r.file_path}
+                                  title={isReview ? "Abrir para revisar (edición de metadata, no aprueba)" : "Vista previa"}
+                                >
+                                  {isReview ? (
+                                    <ClipboardCheck className="h-3 w-3 mr-1" />
+                                  ) : (
+                                    <Eye className="h-3 w-3 mr-1" />
+                                  )}
+                                  {isReview ? "Revisar" : "Preview"}
+                                </Button>
+                              );
+                            })()}
                             <Button
                               variant="ghost"
                               size="sm"
@@ -495,8 +549,8 @@ export default function DocumentsCenter() {
             <div className="grid grid-cols-2 gap-2 text-xs">
               <DocMetaCell label="Expiration" value={
                 drawerRow.expires_at
-                  ? (formatDateUS(new Date(drawerRow.expires_at)) || "—")
-                  : (expirationPolicyFor(drawerRow.category) === "required" || expirationPolicyFor(drawerRow.category) === "recommended" ? "Missing" : "—")
+                  ? formatExpirationDisplay(drawerRow.expires_at)
+                  : (expirationPolicyFor(drawerRow.category) === "required" || expirationPolicyFor(drawerRow.category) === "recommended" ? "Falta" : "—")
               } />
               <DocMetaCell label="Uploaded" value={fmtDate(drawerRow.created_at)} />
               <DocMetaCell label="Source" value={DOC_SOURCE_LABEL[drawerRow.source]} />
@@ -544,12 +598,14 @@ function ExpirationCell({
 
   useEffect(() => { setValue(row.expires_at ?? ""); }, [row.expires_at]);
 
-  const expState = classifyExpiration(row.category, row.expires_at);
+  const sentinel = isSentinelExpiration(row.expires_at);
+  const expState = sentinel ? "valid" : classifyExpiration(row.category, row.expires_at);
   const policy = expirationPolicyFor(row.category);
   // v1: only admin documents are editable (onboarding table has no expires_at column).
   const editable = row.source === "admin_upload" && !!row.rawId;
 
   const display = (() => {
+    if (sentinel) return "No requiere vencimiento";
     if (row.expires_at) {
       const d = new Date(row.expires_at);
       if (!isNaN(d.getTime())) return formatDateUS(d) || "—";

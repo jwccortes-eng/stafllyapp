@@ -64,12 +64,15 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 /**
  * selectWorkerNextAction
  *
- * Priority ladder (first match wins):
+ * Priority ladder (first match wins). 2026-07-06: docs jumped ahead of PIN and
+ * email — an operator with missing/pending/expired docs should always be
+ * pointed to Documents before generating a PIN or invitation.
+ *
  *  1. missing phone           → "Agregar teléfono"
- *  2. missing PIN             → "Generar PIN"
- *  3. missing/invalid email   → "Corregir email"
- *  4. missing required docs   → "Completar documentos"
- *  5. expired/rejected docs   → "Revisar documentos"
+ *  2. missing required docs   → "Completar documentos"
+ *  3. expired/rejected/pending docs → "Revisar documentos"
+ *  4. missing PIN             → "Generar PIN"
+ *  5. missing/invalid email   → "Corregir email"
  *  6. portal not active, ready→ "Enviar invitación"
  *  7. invitation failed/dlq   → "Reintentar invitación"
  *  8. invitation sent > 24h   → "Dar seguimiento"
@@ -113,35 +116,8 @@ export function selectWorkerNextAction(
     };
   }
 
-  // 2. missing PIN
-  if (!hasPin) {
-    return {
-      key: "missing_pin",
-      label: "Generar PIN",
-      helper: "Necesario para activar acceso al portal.",
-      tone: "critical",
-      cta: "open_access",
-      ctaLabel: "Ir a Acceso",
-      targetTab: "access",
-    };
-  }
-
-  // 3. invalid / missing email
-  if (!hasValidEmail) {
-    return {
-      key: "missing_email",
-      label: "Corregir email",
-      helper: hasEmailField
-        ? "El email registrado no es válido. Edítalo para enviar invitación por correo."
-        : "Sin email registrado. Agrégalo para enviar invitación por correo.",
-      tone: "attention",
-      cta: "edit_contact",
-      ctaLabel: "Editar email",
-      targetTab: "info",
-    };
-  }
-
-  // 4. missing required documents
+  // 2. missing required documents — pointed to Documents BEFORE PIN so
+  //    generating a PIN never distracts from a payroll-blocking gap.
   if (missingDocs > 0) {
     return {
       key: "missing_required_documents",
@@ -154,7 +130,7 @@ export function selectWorkerNextAction(
     };
   }
 
-  // 5. expired / rejected / pending docs
+  // 3. expired / rejected / pending docs — same reasoning: revisar antes de PIN.
   if (expired > 0 || rejected > 0 || pending > 0) {
     return {
       key: "review_documents",
@@ -163,11 +139,39 @@ export function selectWorkerNextAction(
         ? "Hay documentos vencidos. Pide la versión actualizada."
         : rejected > 0
           ? "Hay documentos rechazados. Solicita reemplazo."
-          : "Hay documentos pendientes de revisión.",
+          : "Hay documentos pendientes de revisión que aún no cuentan como aprobados.",
       tone: expired > 0 || rejected > 0 ? "attention" : "followup",
       cta: "open_documents",
       ctaLabel: "Ir a Documentos",
       targetTab: "docs",
+    };
+  }
+
+  // 4. missing PIN
+  if (!hasPin) {
+    return {
+      key: "missing_pin",
+      label: "Generar PIN",
+      helper: "Necesario para activar acceso al portal.",
+      tone: "critical",
+      cta: "open_access",
+      ctaLabel: "Ir a Acceso",
+      targetTab: "access",
+    };
+  }
+
+  // 5. invalid / missing email
+  if (!hasValidEmail) {
+    return {
+      key: "missing_email",
+      label: "Corregir email",
+      helper: hasEmailField
+        ? "El email registrado no es válido. Edítalo para enviar invitación por correo."
+        : "Sin email registrado. Agrégalo para enviar invitación por correo.",
+      tone: "attention",
+      cta: "edit_contact",
+      ctaLabel: "Editar email",
+      targetTab: "info",
     };
   }
 
