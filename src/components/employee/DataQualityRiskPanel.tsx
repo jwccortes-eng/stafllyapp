@@ -85,6 +85,8 @@ interface Props {
   /** Mobile-only actionable view: hides readiness chips, export and back-office
    * risks. Shows only worker-cleanup risks an operator can act on from a phone. */
   actionableOnly?: boolean;
+  /** Tenant name shown as a badge in the header to make scoping explicit. */
+  companyName?: string | null;
 }
 
 const ACTIONABLE_RISK_KEYS: RiskKey[] = [
@@ -93,6 +95,20 @@ const ACTIONABLE_RISK_KEYS: RiskKey[] = [
   "rejected_document",
   "duplicate_review",
 ];
+
+// Fase 1 (2026-07-06): override user-facing readiness labels here to make it
+// clear this is a data-quality signal, NOT a payroll approval. The underlying
+// computePayrollReadiness and READINESS_LABEL contract are untouched.
+const READINESS_LABEL_UI: Record<PayrollReadiness, string> = {
+  ready: "Sin alertas de calidad",
+  needs_review: "Necesitan revisión",
+  blocked_visual: "Riesgo de calidad",
+};
+const READINESS_HINT: Record<PayrollReadiness, string> = {
+  ready: "Sin señales de riesgo detectadas. No es una aprobación de payroll.",
+  needs_review: "Datos incompletos o dudosos: revisa antes de payroll o invitaciones masivas.",
+  blocked_visual: "Alto riesgo de datos (placeholders, duplicados, historicos activos, etc.).",
+};
 
 export default function DataQualityRiskPanel({ employees, documentSignals, riskFilter, onRiskFilterChange, compact = false, actionableOnly = false }: Props) {
   const [expanded, setExpanded] = useState(!compact);
