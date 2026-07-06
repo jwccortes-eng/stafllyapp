@@ -40,9 +40,10 @@ import {
 import { PremiumPageHeader } from "@/components/ui/premium-page-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { MobileQueueRow, MobileQueueDrawer, MobileFilterPills } from "@/components/admin/mobile";
-import { Search, Download, ExternalLink, UserSearch, FileText, CalendarClock, Pencil, Eye } from "lucide-react";
+import { Search, Download, ExternalLink, UserSearch, FileText, CalendarClock, Pencil, Eye, ClipboardCheck, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatDateUS } from "@/lib/date-format";
+import { formatExpirationDisplay, isSentinelExpiration } from "@/lib/documents/expiration-display";
 import { cn } from "@/lib/utils";
 
 type FilterKey = "all" | "needs_review" | "missing" | "pending" | "expired" | "expiring_soon" | "missing_expiration" | "rejected" | "approved";
