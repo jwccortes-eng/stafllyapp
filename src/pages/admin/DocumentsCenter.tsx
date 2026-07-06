@@ -61,9 +61,18 @@ const STATUS_TONE: Record<UnifiedDocStatus, string> = {
 
 export default function DocumentsCenter() {
   const { selectedCompanyId } = useCompany();
+  const { canAccessAdminForCompany } = useAuth();
+  const canReview = canAccessAdminForCompany(selectedCompanyId ?? null);
   const { toast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState("");
+
+  const { data: requiredCategories = [] } = useQuery({
+    queryKey: ["documents-center-required", selectedCompanyId],
+    enabled: !!selectedCompanyId,
+    queryFn: async () =>
+      selectedCompanyId ? await getRequiredDocumentsForCompany(selectedCompanyId) : [],
+  });
 
   // Workers (for "missing" filter and worker name fallback).
   const { data: employees = [] } = useQuery({
