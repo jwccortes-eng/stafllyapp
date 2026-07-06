@@ -23,10 +23,13 @@ import {
   expirationPolicyFor,
   EXPIRATION_STATE_LABEL,
 } from "@/lib/onboarding/document-expiration-policy";
-import { updateDocumentExpiration } from "@/lib/document-actions";
+import { updateDocumentExpiration, fromEmployeeDocument } from "@/lib/document-actions";
 import { resolveEmployeeDocumentUrl } from "@/lib/employee-documents";
 import DocumentPreviewDialog from "@/components/documents/DocumentPreviewDialog";
 import AssistedExtractionPanel from "@/components/documents/AssistedExtractionPanel";
+import DocumentReviewActions from "@/components/documents/DocumentReviewActions";
+import { useAuth } from "@/hooks/useAuth";
+import { getRequiredDocumentsForCompany } from "@/lib/onboarding/required-documents";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
