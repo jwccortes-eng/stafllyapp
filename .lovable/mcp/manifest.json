@@ -12,14 +12,14 @@
   "mcp": {
     "server": {
       "name": "stafly-mcp",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "title": "Stafly"
     },
     "tools": [
       {
         "name": "echo",
         "title": "Echo",
-        "description": "Echo the input text back to the caller. Useful to verify connectivity to the Stafly MCP server.",
+        "description": "Echo the input text back to the caller. Useful to verify connectivity to the Stafly MCP server. Read-only, no data access.",
         "annotations": {
           "readOnlyHint": true,
           "idempotentHint": true,
@@ -31,6 +31,7 @@
             "text": {
               "type": "string",
               "minLength": 1,
+              "maxLength": 500,
               "description": "Text to echo back."
             }
           },
@@ -45,7 +46,7 @@
       {
         "name": "whoami",
         "title": "Who am I",
-        "description": "Return the identity of the signed-in Stafly user connected via MCP (user id, email, client id).",
+        "description": "Return the identity of the signed-in Stafly user connected via MCP (user id, email, client id). Read-only.",
         "annotations": {
           "readOnlyHint": true,
           "idempotentHint": true,
@@ -61,7 +62,7 @@
       {
         "name": "list_my_shifts",
         "title": "List my upcoming shifts",
-        "description": "List the signed-in worker's upcoming shift assignments (next N days). Respects Stafly RLS — only shifts the caller is allowed to see are returned.",
+        "description": "List the signed-in worker's upcoming shift assignments (next N days). Only shifts assigned to the caller are returned; RLS + active-employee filter prevent cross-worker or cross-tenant leakage. Payroll, time entries, coworkers, GPS, and admin notes are NOT exposed. Read-only.",
         "annotations": {
           "readOnlyHint": true,
           "idempotentHint": true,
