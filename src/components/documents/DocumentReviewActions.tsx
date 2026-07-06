@@ -16,7 +16,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { CheckCircle2, XCircle, Loader2, AlertTriangle } from "lucide-react";
+import { CheckCircle2, XCircle, Loader2, AlertTriangle, ShieldAlert } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   approveDocument, rejectDocument,
@@ -59,6 +59,23 @@ export default function DocumentReviewActions({
   );
 
   if (!doc || doc.source !== "employee_documents" || !canReview) return null;
+
+  // W-9 guardrail: approvals/rejections must go through the formal W-9 flow
+  // (not yet released). Preview + history remain visible in the parent dialog.
+  if (category === "w9") {
+    return (
+      <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-[11.5px] text-amber-900">
+        <ShieldAlert className="h-4 w-4 mt-0.5 shrink-0" />
+        <div className="leading-snug">
+          <div className="font-semibold">Revisión formal W-9 requerida</div>
+          <div className="text-amber-800">
+            W-9 requiere revisión formal en el flujo W-9. Puedes visualizar este
+            documento aquí, pero no aprobarlo ni rechazarlo desde Documents Center.
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const handleApprove = async () => {
     setConfirmOpen(false);
