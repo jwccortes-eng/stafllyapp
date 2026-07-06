@@ -299,6 +299,26 @@ export default function DocumentsCenter() {
             </Button>
           </div>
 
+          {/* Scoped-employee chip — shown when we arrived via ?employee=<id>
+              (e.g. from Worker Profile "Revisar documentos pendientes"). */}
+          {employeeParam && scopedEmployeeName && (
+            <div className="flex items-center gap-2 text-xs bg-primary/5 border border-primary/20 rounded-md px-2.5 py-1.5">
+              <UserSearch className="h-3.5 w-3.5 text-primary" />
+              <span className="text-foreground">
+                Mostrando solo documentos de <strong>{scopedEmployeeName}</strong>
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 px-1.5 ml-auto text-[10.5px]"
+                onClick={clearEmployeeFilter}
+              >
+                <X className="h-3 w-3 mr-1" />
+                Quitar filtro
+              </Button>
+            </div>
+          )}
+
           {/* Mobile: horizontal scrollable pill chips, one-handed, no vertical stacking. */}
           <MobileFilterPills<FilterKey>
             items={FILTERS.map((f) => ({ key: f.key, label: f.label, count: counts[f.key] }))}
