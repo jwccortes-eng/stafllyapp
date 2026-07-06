@@ -28,6 +28,7 @@ import { resolveEmployeeDocumentUrl } from "@/lib/employee-documents";
 import DocumentPreviewDialog from "@/components/documents/DocumentPreviewDialog";
 import AssistedExtractionPanel from "@/components/documents/AssistedExtractionPanel";
 import DocumentReviewActions from "@/components/documents/DocumentReviewActions";
+import DocumentHistoryPanel from "@/components/documents/DocumentHistoryPanel";
 import { useAuth } from "@/hooks/useAuth";
 import { getRequiredDocumentsForCompany } from "@/lib/onboarding/required-documents";
 import { Card, CardContent } from "@/components/ui/card";
