@@ -66,7 +66,7 @@ async function withMcpAudit(ctx, toolName, fn) {
     };
   }
   const rate = await checkRateLimit(ctx, toolName);
-  if (!rate.allowed) {
+  if (rate.allowed === false) {
     await logInvocation(ctx, toolName, false, Date.now() - start, "rate_limited");
     return {
       content: [
