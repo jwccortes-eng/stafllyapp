@@ -326,11 +326,13 @@ function ReadinessChip({
   label,
   value,
   tone,
+  title,
 }: {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   value: number;
   tone: "success" | "warning" | "destructive";
+  title?: string;
 }) {
   const cls =
     tone === "success"
@@ -339,7 +341,10 @@ function ReadinessChip({
       ? "border-amber-200 bg-amber-50 text-amber-700"
       : "border-rose-200 bg-rose-50 text-rose-700";
   return (
-    <span className={cn("inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-[10.5px] font-medium", cls)}>
+    <span
+      className={cn("inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-[10.5px] font-medium", cls)}
+      title={title}
+    >
       <Icon className="h-3 w-3" />
       <span className="font-mono tabular-nums font-semibold">{value}</span>
       <span className="opacity-80">{label}</span>
