@@ -27,6 +27,7 @@ import {
   classifyExpiration,
   EXPIRATION_STATE_LABEL,
 } from "@/lib/onboarding/document-expiration-policy";
+import { formatExpirationDisplay, isSentinelExpiration } from "@/lib/documents/expiration-display";
 
 export interface DocumentPreviewItem {
   file_path: string;          // storage path (or legacy URL — resolver handles it)
