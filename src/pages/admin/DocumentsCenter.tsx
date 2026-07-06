@@ -549,8 +549,8 @@ export default function DocumentsCenter() {
             <div className="grid grid-cols-2 gap-2 text-xs">
               <DocMetaCell label="Expiration" value={
                 drawerRow.expires_at
-                  ? (formatDateUS(new Date(drawerRow.expires_at)) || "—")
-                  : (expirationPolicyFor(drawerRow.category) === "required" || expirationPolicyFor(drawerRow.category) === "recommended" ? "Missing" : "—")
+                  ? formatExpirationDisplay(drawerRow.expires_at)
+                  : (expirationPolicyFor(drawerRow.category) === "required" || expirationPolicyFor(drawerRow.category) === "recommended" ? "Falta" : "—")
               } />
               <DocMetaCell label="Uploaded" value={fmtDate(drawerRow.created_at)} />
               <DocMetaCell label="Source" value={DOC_SOURCE_LABEL[drawerRow.source]} />
