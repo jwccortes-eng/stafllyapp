@@ -158,12 +158,25 @@ export default function DataQualityRiskPanel({ employees, documentSignals, riskF
                 <Badge variant="outline" className="text-[9px] uppercase tracking-wider border-amber-300/60 text-amber-700 bg-amber-50">
                   Beta
                 </Badge>
+                {companyName && (
+                  <Badge
+                    variant="outline"
+                    className="text-[10px] font-medium border-primary/30 text-primary/90 bg-primary/[0.04]"
+                    title="Análisis limitado al tenant seleccionado."
+                  >
+                    Tenant: {companyName}
+                  </Badge>
+                )}
               </div>
               {!compact && (
                 <p className="text-[11px] text-muted-foreground mt-0.5 max-w-xl">
-                  Solo señales de preparación — no cambia los cálculos de payroll. Usa
-                  estas tarjetas para limpiar registros antes de payroll, invitaciones
-                  masivas o asignaciones críticas.
+                  Análisis sobre todos los workers del tenant; puede incluir históricos e inactivos.
+                  Es una señal de calidad de datos, <strong>no una aprobación de payroll</strong>.
+                </p>
+              )}
+              {compact && (
+                <p className="text-[11px] text-muted-foreground mt-0.5 max-w-xl">
+                  Incluye históricos e inactivos. Señal de calidad, no aprobación de payroll.
                 </p>
               )}
             </div>
@@ -174,21 +187,24 @@ export default function DataQualityRiskPanel({ employees, documentSignals, riskF
               <>
                 <ReadinessChip
                   icon={ShieldCheck}
-                  label={READINESS_LABEL.ready}
+                  label={READINESS_LABEL_UI.ready}
                   value={readinessTotals.ready}
                   tone="success"
+                  title={READINESS_HINT.ready}
                 />
                 <ReadinessChip
                   icon={Sparkles}
-                  label={READINESS_LABEL.needs_review}
+                  label={READINESS_LABEL_UI.needs_review}
                   value={readinessTotals.needs_review}
                   tone="warning"
+                  title={READINESS_HINT.needs_review}
                 />
                 <ReadinessChip
                   icon={ShieldAlert}
-                  label={READINESS_LABEL.blocked_visual}
+                  label={READINESS_LABEL_UI.blocked_visual}
                   value={readinessTotals.blocked_visual}
                   tone="destructive"
+                  title={READINESS_HINT.blocked_visual}
                 />
                 <Button
                   variant="outline"
