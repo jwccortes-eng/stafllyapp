@@ -933,11 +933,14 @@ export default function Employees() {
   };
 
   // KPI strip for the premium header.
+  // NOTE (Fase 1, 2026-07-06): labels aclarados sin cambiar fórmulas.
+  //  · "Activos con portal" = is_active !== false && !!user_id (misma lógica de antes).
+  //  · "Workers con docs pendientes" = cuenta de workers, no cantidad total de requisitos.
   const kpis: PremiumPageHeaderKpi[] = [
     { label: "Total", value: statusCounts.all, onClick: () => setStatusTab("all"), active: statusTab === "all" },
-    { label: "Active", value: statusCounts.active, accent: "success", onClick: () => setStatusTab("active"), active: statusTab === "active" },
-    { label: "Pending App Activation", value: statusCounts.pending, accent: statusCounts.pending > 0 ? "warning" : "default", onClick: () => setStatusTab("pending"), active: statusTab === "pending" },
-    { label: "Missing Documents", value: statusCounts["missing-docs"], accent: statusCounts["missing-docs"] > 0 ? "destructive" : "default", onClick: () => setStatusTab("missing-docs"), active: statusTab === "missing-docs" },
+    { label: "Activos con portal", value: statusCounts.active, hint: "Workers activos con cuenta de portal vinculada.", accent: "success", onClick: () => setStatusTab("active"), active: statusTab === "active" },
+    { label: "Pendientes de activar app", value: statusCounts.pending, hint: "Invitación enviada, portal aún sin acceder.", accent: statusCounts.pending > 0 ? "warning" : "default", onClick: () => setStatusTab("pending"), active: statusTab === "pending" },
+    { label: "Workers con docs pendientes", value: statusCounts["missing-docs"], hint: "Cuenta workers con onboarding/documentos pendientes, no requisitos totales.", accent: statusCounts["missing-docs"] > 0 ? "destructive" : "default", onClick: () => setStatusTab("missing-docs"), active: statusTab === "missing-docs" },
     { label: "Drivers", value: statusCounts.drivers, accent: "primary", onClick: () => setStatusTab("drivers"), active: statusTab === "drivers" },
   ];
 
@@ -1252,19 +1255,20 @@ export default function Employees() {
                   <Badge
                     variant="outline"
                     className="h-5 px-1.5 bg-warning/10 text-warning border-warning/30 text-[10px] font-semibold"
+                    title="Cuenta grupos detectados, no personas únicas."
                   >
-                    {strongDuplicateCount} {strongDuplicateCount === 1 ? "group" : "groups"}
+                    {strongDuplicateCount} {strongDuplicateCount === 1 ? "grupo con posible duplicado" : "grupos con posible duplicado"}
                   </Badge>
                 ) : (
                   <Badge variant="outline" className="h-5 px-1.5 text-[10px] text-muted-foreground border-border">
-                    clean
+                    Sin duplicados detectados
                   </Badge>
                 )}
               </div>
               <p className="text-xs text-muted-foreground mt-0.5 truncate">
                 {strongDuplicateCount > 0
-                  ? "Possible duplicate workers detected. Review before they affect shifts or payroll."
-                  : "No strong duplicate signals in the current view. Run a deep scan anytime."}
+                  ? "Grupos con posibles duplicados. Revisa antes de que impacten shifts o payroll."
+                  : "Sin señales fuertes de duplicados en la vista actual. Puedes correr un escaneo profundo cuando quieras."}
               </p>
             </div>
             <Button
@@ -1277,7 +1281,7 @@ export default function Employees() {
               }}
             >
               <UserSearch className="h-3.5 w-3.5 mr-1.5" />
-              Detect Duplicates
+              Revisar duplicados
             </Button>
           </CardContent>
         </Card>
@@ -1373,6 +1377,7 @@ export default function Employees() {
               riskFilter={riskFilter}
               onRiskFilterChange={setRiskFilter}
               compact
+              companyName={selectedCompany?.name ?? null}
             />
           </div>
           <MobileDataQualitySummary

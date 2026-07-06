@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllPaginated } from "@/lib/supabase-pagination";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -150,15 +151,22 @@ export default function CompaniesPage() {
 
     if (!data) return;
 
-    const [{ data: cuData }, { data: modules }, { data: subs }, { data: profiles }, { data: empCounts }] = await Promise.all([
+    // Employees are paginated to bypass PostgREST's implicit 1000-row cap so
+    // the "Empleados totales" column reflects the true global count.
+    const [{ data: cuData }, { data: modules }, { data: subs }, { data: profiles }, empRes] = await Promise.all([
       supabase.from("company_users").select("company_id, user_id, role"),
       supabase.from("company_modules").select("company_id, is_active, module"),
       supabase.from("subscriptions").select("company_id, plan, status, stripe_customer_id, stripe_subscription_id, current_period_end"),
       supabase.from("profiles").select("user_id, email, full_name"),
-      supabase.from("employees").select("company_id, id"),
+      fetchAllPaginated<{ company_id: string; id: string }>((from, to) =>
+        supabase.from("employees").select("company_id, id").order("id", { ascending: true }).range(from, to),
+      ),
     ]);
+    const empCounts = empRes.data;
 
-    const profileMap = new Map((profiles ?? []).map(p => [p.user_id, p]));
+    const profileMap = new Map<string, { user_id: string; email: string | null; full_name: string | null }>(
+      ((profiles ?? []) as Array<{ user_id: string; email: string | null; full_name: string | null }>).map(p => [p.user_id, p]),
+    );
 
     const cuByCompany: Record<string, CompanyUser[]> = {};
     (cuData ?? []).forEach(cu => {

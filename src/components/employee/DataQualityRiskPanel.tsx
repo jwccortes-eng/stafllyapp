@@ -85,6 +85,8 @@ interface Props {
   /** Mobile-only actionable view: hides readiness chips, export and back-office
    * risks. Shows only worker-cleanup risks an operator can act on from a phone. */
   actionableOnly?: boolean;
+  /** Tenant name shown as a badge in the header to make scoping explicit. */
+  companyName?: string | null;
 }
 
 const ACTIONABLE_RISK_KEYS: RiskKey[] = [
@@ -94,7 +96,21 @@ const ACTIONABLE_RISK_KEYS: RiskKey[] = [
   "duplicate_review",
 ];
 
-export default function DataQualityRiskPanel({ employees, documentSignals, riskFilter, onRiskFilterChange, compact = false, actionableOnly = false }: Props) {
+// Fase 1 (2026-07-06): override user-facing readiness labels here to make it
+// clear this is a data-quality signal, NOT a payroll approval. The underlying
+// computePayrollReadiness and READINESS_LABEL contract are untouched.
+const READINESS_LABEL_UI: Record<PayrollReadiness, string> = {
+  ready: "Sin alertas de calidad",
+  needs_review: "Necesitan revisión",
+  blocked_visual: "Riesgo de calidad",
+};
+const READINESS_HINT: Record<PayrollReadiness, string> = {
+  ready: "Sin señales de riesgo detectadas. No es una aprobación de payroll.",
+  needs_review: "Datos incompletos o dudosos: revisa antes de payroll o invitaciones masivas.",
+  blocked_visual: "Alto riesgo de datos (placeholders, duplicados, historicos activos, etc.).",
+};
+
+export default function DataQualityRiskPanel({ employees, documentSignals, riskFilter, onRiskFilterChange, compact = false, actionableOnly = false, companyName }: Props) {
   const [expanded, setExpanded] = useState(!compact);
   const { byId, counts } = useMemo(
     () => analyzeEmployeeRisks(employees, documentSignals),
@@ -142,12 +158,25 @@ export default function DataQualityRiskPanel({ employees, documentSignals, riskF
                 <Badge variant="outline" className="text-[9px] uppercase tracking-wider border-amber-300/60 text-amber-700 bg-amber-50">
                   Beta
                 </Badge>
+                {companyName && (
+                  <Badge
+                    variant="outline"
+                    className="text-[10px] font-medium border-primary/30 text-primary/90 bg-primary/[0.04]"
+                    title="Análisis limitado al tenant seleccionado."
+                  >
+                    Tenant: {companyName}
+                  </Badge>
+                )}
               </div>
               {!compact && (
                 <p className="text-[11px] text-muted-foreground mt-0.5 max-w-xl">
-                  Solo señales de preparación — no cambia los cálculos de payroll. Usa
-                  estas tarjetas para limpiar registros antes de payroll, invitaciones
-                  masivas o asignaciones críticas.
+                  Análisis sobre todos los workers del tenant; puede incluir históricos e inactivos.
+                  Es una señal de calidad de datos, <strong>no una aprobación de payroll</strong>.
+                </p>
+              )}
+              {compact && (
+                <p className="text-[11px] text-muted-foreground mt-0.5 max-w-xl">
+                  Incluye históricos e inactivos. Señal de calidad, no aprobación de payroll.
                 </p>
               )}
             </div>
@@ -158,21 +187,24 @@ export default function DataQualityRiskPanel({ employees, documentSignals, riskF
               <>
                 <ReadinessChip
                   icon={ShieldCheck}
-                  label={READINESS_LABEL.ready}
+                  label={READINESS_LABEL_UI.ready}
                   value={readinessTotals.ready}
                   tone="success"
+                  title={READINESS_HINT.ready}
                 />
                 <ReadinessChip
                   icon={Sparkles}
-                  label={READINESS_LABEL.needs_review}
+                  label={READINESS_LABEL_UI.needs_review}
                   value={readinessTotals.needs_review}
                   tone="warning"
+                  title={READINESS_HINT.needs_review}
                 />
                 <ReadinessChip
                   icon={ShieldAlert}
-                  label={READINESS_LABEL.blocked_visual}
+                  label={READINESS_LABEL_UI.blocked_visual}
                   value={readinessTotals.blocked_visual}
                   tone="destructive"
+                  title={READINESS_HINT.blocked_visual}
                 />
                 <Button
                   variant="outline"
@@ -294,11 +326,13 @@ function ReadinessChip({
   label,
   value,
   tone,
+  title,
 }: {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   value: number;
   tone: "success" | "warning" | "destructive";
+  title?: string;
 }) {
   const cls =
     tone === "success"
@@ -307,7 +341,10 @@ function ReadinessChip({
       ? "border-amber-200 bg-amber-50 text-amber-700"
       : "border-rose-200 bg-rose-50 text-rose-700";
   return (
-    <span className={cn("inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-[10.5px] font-medium", cls)}>
+    <span
+      className={cn("inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-[10.5px] font-medium", cls)}
+      title={title}
+    >
       <Icon className="h-3 w-3" />
       <span className="font-mono tabular-nums font-semibold">{value}</span>
       <span className="opacity-80">{label}</span>

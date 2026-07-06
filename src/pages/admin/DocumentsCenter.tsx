@@ -254,9 +254,9 @@ export default function DocumentsCenter() {
         subtitle="Read-only view of every uploaded document and missing required item across the company."
         kpis={[
           { label: "Total", value: counts.all },
-          { label: "Needs review", value: counts.needs_review, accent: "warning" },
-          { label: "Missing", value: counts.missing, accent: "warning" },
-          { label: "Expired", value: counts.expired, accent: "destructive" },
+          { label: "Necesitan revisión", value: counts.needs_review, accent: "warning" },
+          { label: "Requisitos faltantes", value: counts.missing, hint: "Puede haber varios requisitos por worker.", accent: "warning" },
+          { label: "Vencidos", value: counts.expired, accent: "destructive" },
         ]}
       />
 
