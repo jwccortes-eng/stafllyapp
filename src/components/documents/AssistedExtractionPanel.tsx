@@ -215,16 +215,23 @@ export default function AssistedExtractionPanel({ target, onSaved }: Props) {
       </div>
 
       {editable ? (
-        <Button
-          type="button"
-          size="sm"
-          className="w-full h-8 text-[11px]"
-          onClick={handleConfirmExpiration}
-          disabled={savingExp}
-        >
-          {savingExp ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Check className="h-3.5 w-3.5 mr-1.5" />}
-          Confirmar fecha de vencimiento
-        </Button>
+        <>
+          <Button
+            type="button"
+            size="sm"
+            className="w-full h-8 text-[11px]"
+            onClick={handleConfirmExpiration}
+            disabled={savingExp}
+            title="Solo actualiza la fecha de vencimiento. No aprueba el documento."
+          >
+            {savingExp ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Check className="h-3.5 w-3.5 mr-1.5" />}
+            Guardar fecha de vencimiento
+          </Button>
+          <p className="text-[10.5px] text-amber-700/90 leading-snug">
+            Guardar cambios <strong>no aprueba</strong> el documento — solo actualiza metadata (fecha de vencimiento).
+            El estado permanece <strong>Pendiente de revisión</strong>.
+          </p>
+        </>
       ) : (
         <p className="text-[10px] text-muted-foreground italic">
           Edición de vencimiento disponible solo para documentos de admin en esta versión.
@@ -233,7 +240,8 @@ export default function AssistedExtractionPanel({ target, onSaved }: Props) {
 
       <p className="text-[10px] text-muted-foreground/70 leading-snug">
         v1 guarda únicamente la fecha de vencimiento. El resto de los campos quedan como sugerencia
-        hasta que se apruebe el esquema de extracción persistente.
+        hasta que se apruebe el esquema de extracción persistente. La aprobación formal (con audit trail)
+        aún no está disponible en este modal.
       </p>
     </div>
   );
