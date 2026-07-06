@@ -1184,6 +1184,37 @@ export default function UnifiedPersonProfile() {
                       </CollapsibleContent>
                     </Collapsible>
                   )}
+
+                  {/* Pending-docs bridge — clarifies that documents "en revisión"
+                      do NOT yet resolve missing requirements, and deep-links to
+                      Documents Center scoped to this worker. Read-only. */}
+                  {pendingDocs > 0 && (
+                    <div className="mt-3 rounded-md border border-amber-200/70 bg-amber-50/60 px-3 py-2 flex items-start gap-2">
+                      <span className="mt-0.5 h-1.5 w-1.5 rounded-full bg-warning shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[11.5px] text-amber-900 leading-snug">
+                          {missingDocsCount > 0 ? (
+                            <>
+                              Hay <strong>{pendingDocs}</strong> documento{pendingDocs === 1 ? "" : "s"} en revisión que podría{pendingDocs === 1 ? "" : "n"} resolver <strong>{missingDocsCount}</strong> requisito{missingDocsCount === 1 ? "" : "s"} faltante{missingDocsCount === 1 ? "" : "s"}.
+                            </>
+                          ) : (
+                            <>
+                              Hay <strong>{pendingDocs}</strong> documento{pendingDocs === 1 ? "" : "s"} en revisión. Aún no cuentan como aprobados.
+                            </>
+                          )}
+                        </p>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="mt-2 h-7 text-[11px] border-amber-300 text-amber-800 hover:bg-amber-100/60"
+                          onClick={() => navigate(`/app/documents?status=pending&employee=${employee.id}`)}
+                        >
+                          Revisar documentos pendientes
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </>
               )}
             </CardContent>
