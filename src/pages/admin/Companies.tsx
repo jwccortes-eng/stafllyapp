@@ -164,7 +164,9 @@ export default function CompaniesPage() {
     ]);
     const empCounts = empRes.data;
 
-    const profileMap = new Map((profiles ?? []).map(p => [p.user_id, p]));
+    const profileMap = new Map<string, { user_id: string; email: string | null; full_name: string | null }>(
+      ((profiles ?? []) as Array<{ user_id: string; email: string | null; full_name: string | null }>).map(p => [p.user_id, p]),
+    );
 
     const cuByCompany: Record<string, CompanyUser[]> = {};
     (cuData ?? []).forEach(cu => {
