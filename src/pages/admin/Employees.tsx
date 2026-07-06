@@ -1255,19 +1255,20 @@ export default function Employees() {
                   <Badge
                     variant="outline"
                     className="h-5 px-1.5 bg-warning/10 text-warning border-warning/30 text-[10px] font-semibold"
+                    title="Cuenta grupos detectados, no personas únicas."
                   >
-                    {strongDuplicateCount} {strongDuplicateCount === 1 ? "group" : "groups"}
+                    {strongDuplicateCount} {strongDuplicateCount === 1 ? "grupo con posible duplicado" : "grupos con posible duplicado"}
                   </Badge>
                 ) : (
                   <Badge variant="outline" className="h-5 px-1.5 text-[10px] text-muted-foreground border-border">
-                    clean
+                    Sin duplicados detectados
                   </Badge>
                 )}
               </div>
               <p className="text-xs text-muted-foreground mt-0.5 truncate">
                 {strongDuplicateCount > 0
-                  ? "Possible duplicate workers detected. Review before they affect shifts or payroll."
-                  : "No strong duplicate signals in the current view. Run a deep scan anytime."}
+                  ? "Grupos con posibles duplicados. Revisa antes de que impacten shifts o payroll."
+                  : "Sin señales fuertes de duplicados en la vista actual. Puedes correr un escaneo profundo cuando quieras."}
               </p>
             </div>
             <Button
@@ -1280,7 +1281,7 @@ export default function Employees() {
               }}
             >
               <UserSearch className="h-3.5 w-3.5 mr-1.5" />
-              Detect Duplicates
+              Revisar duplicados
             </Button>
           </CardContent>
         </Card>
