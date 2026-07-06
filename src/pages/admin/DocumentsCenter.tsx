@@ -408,16 +408,29 @@ export default function DocumentsCenter() {
                         <TableCell className="text-xs text-muted-foreground">{fmtDate(r.created_at)}</TableCell>
                         <TableCell className="text-right">
                           <div className="inline-flex gap-1">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-7 px-2 text-[11px]"
-                              onClick={() => handleView(r)}
-                              disabled={!r.file_path}
-                            >
-                              <Eye className="h-3 w-3 mr-1" />
-                              Preview
-                            </Button>
+                            {(() => {
+                              // "Revisar" for anything not yet approved (opens the
+                              // same preview modal + AssistedExtractionPanel with
+                              // status chip). "Preview" stays for approved rows.
+                              const isReview = r.status !== "approved" && !!r.file_path;
+                              return (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 px-2 text-[11px]"
+                                  onClick={() => handleView(r)}
+                                  disabled={!r.file_path}
+                                  title={isReview ? "Abrir para revisar (edición de metadata, no aprueba)" : "Vista previa"}
+                                >
+                                  {isReview ? (
+                                    <ClipboardCheck className="h-3 w-3 mr-1" />
+                                  ) : (
+                                    <Eye className="h-3 w-3 mr-1" />
+                                  )}
+                                  {isReview ? "Revisar" : "Preview"}
+                                </Button>
+                              );
+                            })()}
                             <Button
                               variant="ghost"
                               size="sm"
