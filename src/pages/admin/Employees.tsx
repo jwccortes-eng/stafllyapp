@@ -1377,6 +1377,7 @@ export default function Employees() {
               riskFilter={riskFilter}
               onRiskFilterChange={setRiskFilter}
               compact
+              companyName={selectedCompany?.name ?? null}
             />
           </div>
           <MobileDataQualitySummary
