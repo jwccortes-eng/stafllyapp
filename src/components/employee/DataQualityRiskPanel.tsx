@@ -110,7 +110,7 @@ const READINESS_HINT: Record<PayrollReadiness, string> = {
   blocked_visual: "Alto riesgo de datos (placeholders, duplicados, historicos activos, etc.).",
 };
 
-export default function DataQualityRiskPanel({ employees, documentSignals, riskFilter, onRiskFilterChange, compact = false, actionableOnly = false }: Props) {
+export default function DataQualityRiskPanel({ employees, documentSignals, riskFilter, onRiskFilterChange, compact = false, actionableOnly = false, companyName }: Props) {
   const [expanded, setExpanded] = useState(!compact);
   const { byId, counts } = useMemo(
     () => analyzeEmployeeRisks(employees, documentSignals),
