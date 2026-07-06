@@ -487,6 +487,28 @@ export default function DocumentsCenter() {
             previewRow.status === "approved" ? "approved" :
             previewRow.status === "rejected" ? "rejected" : "pending",
         } : null}
+        actions={previewRow && previewRow.source === "admin_upload" && previewRow.rawId ? (
+          <DocumentReviewActions
+            doc={fromEmployeeDocument({
+              id: previewRow.rawId,
+              employee_id: previewRow.employee_id,
+              company_id: previewRow.company_id,
+              name: previewRow.file_name ?? previewRow.document_type,
+              file_url: previewRow.file_path,
+              file_size: null,
+              category: String(previewRow.category),
+              created_at: previewRow.created_at ?? new Date().toISOString(),
+              review_status: previewRow.status === "approved" ? "approved"
+                : previewRow.status === "rejected" ? "rejected" : "pending",
+              reviewed_at: previewRow.reviewed_at,
+              rejection_reason: previewRow.rejection_reason ?? null,
+              expires_at: previewRow.expires_at,
+            })}
+            requiredCategories={requiredCategories}
+            canReview={canReview}
+            onChanged={() => { void refresh(); setPreviewRow(null); }}
+          />
+        ) : undefined}
         side={previewRow && previewRow.source === "admin_upload" && previewRow.rawId ? (
           <AssistedExtractionPanel
             target={{
@@ -502,6 +524,7 @@ export default function DocumentsCenter() {
           />
         ) : undefined}
       />
+
 
       {/* Mobile drawer-per-row (read-only detail + existing CTAs only). */}
       <MobileQueueDrawer
