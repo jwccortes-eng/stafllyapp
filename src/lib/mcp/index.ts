@@ -12,9 +12,9 @@ const projectRef = import.meta.env.VITE_SUPABASE_PROJECT_ID ?? "project-ref-unse
 export default defineMcp({
   name: "stafly-mcp",
   title: "Stafly",
-  version: "0.1.0",
+  version: "0.2.0",
   instructions:
-    "Stafly agent integration. Read-only tools for identity and worker shifts. Use `echo` to verify connectivity, `whoami` to confirm the signed-in Stafly user, and `list_my_shifts` to view upcoming assignments. Payroll, time entries, employees, and shifts writes are intentionally not exposed.",
+    "Stafly agent integration. Read-only tools scoped to the signed-in worker. `echo` verifies connectivity, `whoami` returns basic identity (user id, email, oauth client id), `list_my_shifts` returns the caller's own upcoming assignments with company context. Every call is rate-limited per user/tool and audit-logged (metadata only — no arguments, results, tokens, or coworker/payroll data). Writes to payroll, time entries, shifts, employees, documents, payments, bookings, and chat are intentionally NOT exposed.",
   auth: auth.oauth.issuer({
     issuer: `https://${projectRef}.supabase.co/auth/v1`,
     acceptedAudiences: "authenticated",

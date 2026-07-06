@@ -41,6 +41,7 @@ const CookiePolicy = lazy(() => import("./pages/legal/CookiePolicy"));
 const HelpCenter = lazy(() => import("./pages/help/HelpCenter"));
 const UserManual = lazy(() => import("./pages/help/UserManual"));
 const OAuthConsent = lazy(() => import("./pages/OAuthConsent"));
+const PortalIntegrations = lazy(() => import("./pages/portal/Integrations"));
 
 // Admin pages
 const PayPeriods = lazy(() => import("./pages/admin/PayPeriods"));
@@ -444,6 +445,7 @@ function App() {
                 <Route path="documents" element={<PortalModuleGuard moduleKey="my_documents"><MyDocuments /></PortalModuleGuard>} />
                 <Route path="update-center" element={<UpdateCenter />} />
                 <Route path="shift-captain/:shiftId" element={<ShiftCaptainRoom />} />
+                <Route path="integrations" element={<PortalIntegrations />} />
               </Route>
 
               <Route path="*" element={<NotFound />} />

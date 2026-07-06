@@ -7051,6 +7051,42 @@ export type Database = {
           },
         ]
       }
+      mcp_invocations: {
+        Row: {
+          created_at: string
+          error_code: string | null
+          id: string
+          invoked_at: string
+          latency_ms: number | null
+          oauth_client_id: string | null
+          ok: boolean
+          tool_name: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          error_code?: string | null
+          id?: string
+          invoked_at?: string
+          latency_ms?: number | null
+          oauth_client_id?: string | null
+          ok: boolean
+          tool_name: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          error_code?: string | null
+          id?: string
+          invoked_at?: string
+          latency_ms?: number | null
+          oauth_client_id?: string | null
+          ok?: boolean
+          tool_name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       message_reactions: {
         Row: {
           created_at: string

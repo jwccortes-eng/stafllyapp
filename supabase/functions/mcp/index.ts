@@ -8,13 +8,106 @@ import { auth, defineMcp } from "npm:@lovable.dev/mcp-js@0.20.0";
 // src/lib/mcp/tools/echo.ts
 import { defineTool } from "npm:@lovable.dev/mcp-js@0.20.0";
 import { z } from "npm:zod@^3.23.8";
+
+// src/lib/mcp/lib/audit.ts
+import { createClient } from "npm:@supabase/supabase-js@^2.97.0";
+function mcpSupabase(ctx) {
+  return createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_PUBLISHABLE_KEY,
+    {
+      global: { headers: { Authorization: `Bearer ${ctx.getToken()}` } },
+      auth: { persistSession: false, autoRefreshToken: false }
+    }
+  );
+}
+var RATE_LIMITS = {
+  __default: { windowSec: 60, max: 60 },
+  echo: { windowSec: 60, max: 60 },
+  whoami: { windowSec: 60, max: 30 },
+  list_my_shifts: { windowSec: 60, max: 20 }
+};
+async function checkRateLimit(ctx, toolName) {
+  const cfg = RATE_LIMITS[toolName] ?? RATE_LIMITS.__default;
+  try {
+    const supabase = mcpSupabase(ctx);
+    const since = new Date(Date.now() - cfg.windowSec * 1e3).toISOString();
+    const { count, error } = await supabase.from("mcp_invocations").select("id", { count: "exact", head: true }).eq("user_id", ctx.getUserId()).eq("tool_name", toolName).gte("invoked_at", since);
+    if (error) return { allowed: true };
+    if ((count ?? 0) >= cfg.max) {
+      return { allowed: false, retryAfterSec: cfg.windowSec };
+    }
+    return { allowed: true };
+  } catch {
+    return { allowed: true };
+  }
+}
+async function logInvocation(ctx, toolName, ok, latencyMs, errorCode) {
+  try {
+    const supabase = mcpSupabase(ctx);
+    await supabase.from("mcp_invocations").insert({
+      user_id: ctx.getUserId(),
+      oauth_client_id: ctx.getClientId() ?? null,
+      tool_name: toolName,
+      ok,
+      latency_ms: Math.max(0, Math.round(latencyMs)),
+      error_code: errorCode ?? null
+    });
+  } catch {
+  }
+}
+async function withMcpAudit(ctx, toolName, fn) {
+  const start = Date.now();
+  if (!ctx.isAuthenticated()) {
+    await logInvocation(ctx, toolName, false, Date.now() - start, "unauthenticated");
+    return {
+      content: [{ type: "text", text: "Not authenticated" }],
+      isError: true
+    };
+  }
+  const rate = await checkRateLimit(ctx, toolName);
+  if (rate.allowed === false) {
+    await logInvocation(ctx, toolName, false, Date.now() - start, "rate_limited");
+    return {
+      content: [
+        {
+          type: "text",
+          text: `Rate limit exceeded for ${toolName}. Try again in ~${rate.retryAfterSec}s.`
+        }
+      ],
+      isError: true
+    };
+  }
+  try {
+    const result = await fn();
+    const ok = !result?.isError;
+    await logInvocation(
+      ctx,
+      toolName,
+      ok,
+      Date.now() - start,
+      ok ? null : "tool_error"
+    );
+    return result;
+  } catch {
+    await logInvocation(ctx, toolName, false, Date.now() - start, "handler_error");
+    return {
+      content: [{ type: "text", text: "Internal error" }],
+      isError: true
+    };
+  }
+}
+
+// src/lib/mcp/tools/echo.ts
 var echo_default = defineTool({
   name: "echo",
   title: "Echo",
-  description: "Echo the input text back to the caller. Useful to verify connectivity to the Stafly MCP server.",
-  inputSchema: { text: z.string().min(1).describe("Text to echo back.") },
+  description: "Echo the input text back to the caller. Useful to verify connectivity to the Stafly MCP server. Read-only, no data access.",
+  inputSchema: { text: z.string().min(1).max(500).describe("Text to echo back.") },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
-  handler: ({ text }) => ({ content: [{ type: "text", text }] })
+  handler: async ({ text }, ctx) => withMcpAudit(ctx, "echo", async () => ({
+    content: [{ type: "text", text }]
+  }))
 });
 
 // src/lib/mcp/tools/whoami.ts
@@ -22,13 +115,10 @@ import { defineTool as defineTool2 } from "npm:@lovable.dev/mcp-js@0.20.0";
 var whoami_default = defineTool2({
   name: "whoami",
   title: "Who am I",
-  description: "Return the identity of the signed-in Stafly user connected via MCP (user id, email, client id).",
+  description: "Return the identity of the signed-in Stafly user connected via MCP (user id, email, client id). Read-only.",
   inputSchema: {},
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
-  handler: (_input, ctx) => {
-    if (!ctx.isAuthenticated()) {
-      return { content: [{ type: "text", text: "Not authenticated" }], isError: true };
-    }
+  handler: async (_input, ctx) => withMcpAudit(ctx, "whoami", async () => {
     const payload = {
       user_id: ctx.getUserId(),
       email: ctx.getUserEmail(),
@@ -38,46 +128,74 @@ var whoami_default = defineTool2({
       content: [{ type: "text", text: JSON.stringify(payload, null, 2) }],
       structuredContent: payload
     };
-  }
+  })
 });
 
 // src/lib/mcp/tools/list-my-shifts.ts
-import { createClient } from "npm:@supabase/supabase-js@^2.97.0";
 import { defineTool as defineTool3 } from "npm:@lovable.dev/mcp-js@0.20.0";
 import { z as z2 } from "npm:zod@^3.23.8";
-function supabaseForUser(ctx) {
-  return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_PUBLISHABLE_KEY, {
-    global: { headers: { Authorization: `Bearer ${ctx.getToken()}` } },
-    auth: { persistSession: false, autoRefreshToken: false }
-  });
-}
 var list_my_shifts_default = defineTool3({
   name: "list_my_shifts",
   title: "List my upcoming shifts",
-  description: "List the signed-in worker's upcoming shift assignments (next N days). Respects Stafly RLS \u2014 only shifts the caller is allowed to see are returned.",
+  description: "List the signed-in worker's upcoming shift assignments (next N days). Only shifts assigned to the caller are returned; RLS + active-employee filter prevent cross-worker or cross-tenant leakage. Payroll, time entries, coworkers, GPS, and admin notes are NOT exposed. Read-only.",
   inputSchema: {
     days_ahead: z2.number().int().min(1).max(30).default(7).describe("How many days ahead to look."),
     limit: z2.number().int().min(1).max(50).default(20)
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
-  handler: async ({ days_ahead, limit }, ctx) => {
-    if (!ctx.isAuthenticated()) {
-      return { content: [{ type: "text", text: "Not authenticated" }], isError: true };
-    }
-    const supabase = supabaseForUser(ctx);
+  handler: async ({ days_ahead, limit }, ctx) => withMcpAudit(ctx, "list_my_shifts", async () => {
+    const supabase = mcpSupabase(ctx);
     const from = /* @__PURE__ */ new Date();
     const to = new Date(Date.now() + days_ahead * 24 * 60 * 60 * 1e3);
     const { data, error } = await supabase.from("shift_assignments").select(
-      "id, status, scheduled_shifts!inner(id, start_at, end_at, title, meeting_point, publication_status)"
-    ).gte("scheduled_shifts.start_at", from.toISOString()).lte("scheduled_shifts.start_at", to.toISOString()).order("scheduled_shifts(start_at)", { ascending: true }).limit(limit);
+      `id,
+           status,
+           employees!inner(is_active,user_id),
+           scheduled_shifts!inner(
+             id,start_at,end_at,title,meeting_point,publication_status,company_id,
+             companies(name)
+           )`
+    ).eq("employees.is_active", true).eq("employees.user_id", ctx.getUserId()).gte("scheduled_shifts.start_at", from.toISOString()).lte("scheduled_shifts.start_at", to.toISOString()).order("scheduled_shifts(start_at)", { ascending: true }).limit(limit);
     if (error) {
-      return { content: [{ type: "text", text: error.message }], isError: true };
+      return {
+        content: [{ type: "text", text: "Could not load shifts." }],
+        isError: true
+      };
+    }
+    const rows = data ?? [];
+    const assignments = rows.filter((r) => r.scheduled_shifts && r.employees?.is_active).map((r) => ({
+      assignment_id: r.id,
+      assignment_status: r.status,
+      shift_id: r.scheduled_shifts.id,
+      start_at: r.scheduled_shifts.start_at,
+      end_at: r.scheduled_shifts.end_at,
+      title: r.scheduled_shifts.title,
+      meeting_point: r.scheduled_shifts.meeting_point,
+      publication_status: r.scheduled_shifts.publication_status,
+      company_id: r.scheduled_shifts.company_id,
+      company_name: r.scheduled_shifts.companies?.name ?? null
+    }));
+    if (assignments.length === 0) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: "No upcoming shifts found in the requested window."
+          }
+        ],
+        structuredContent: { assignments: [] }
+      };
     }
     return {
-      content: [{ type: "text", text: JSON.stringify(data ?? [], null, 2) }],
-      structuredContent: { assignments: data ?? [] }
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(assignments, null, 2)
+        }
+      ],
+      structuredContent: { assignments }
     };
-  }
+  })
 });
 
 // src/lib/mcp/index.ts
@@ -85,8 +203,8 @@ var projectRef = "jplhtputzixwqarqlrth";
 var mcp_default = defineMcp({
   name: "stafly-mcp",
   title: "Stafly",
-  version: "0.1.0",
-  instructions: "Stafly agent integration. Read-only tools for identity and worker shifts. Use `echo` to verify connectivity, `whoami` to confirm the signed-in Stafly user, and `list_my_shifts` to view upcoming assignments. Payroll, time entries, employees, and shifts writes are intentionally not exposed.",
+  version: "0.2.0",
+  instructions: "Stafly agent integration. Read-only tools scoped to the signed-in worker. `echo` verifies connectivity, `whoami` returns basic identity (user id, email, oauth client id), `list_my_shifts` returns the caller's own upcoming assignments with company context. Every call is rate-limited per user/tool and audit-logged (metadata only \u2014 no arguments, results, tokens, or coworker/payroll data). Writes to payroll, time entries, shifts, employees, documents, payments, bookings, and chat are intentionally NOT exposed.",
   auth: auth.oauth.issuer({
     issuer: `https://${projectRef}.supabase.co/auth/v1`,
     acceptedAudiences: "authenticated"
