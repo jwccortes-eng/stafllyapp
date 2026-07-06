@@ -73,7 +73,7 @@ export function DocumentReasonDialog({
         onOpenChange(o);
       }}
     >
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md" aria-describedby="doc-reason-desc">
         <DialogHeader>
           <div className="flex items-center gap-3">
             <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${tone}`}>
@@ -81,7 +81,7 @@ export function DocumentReasonDialog({
             </div>
             <div>
               <DialogTitle>{title}</DialogTitle>
-              <DialogDescription className="text-xs mt-0.5 truncate max-w-[260px]">
+              <DialogDescription id="doc-reason-desc" className="text-xs mt-0.5 truncate max-w-[260px]">
                 {documentName}
               </DialogDescription>
             </div>

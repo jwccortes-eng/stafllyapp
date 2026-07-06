@@ -28,6 +28,7 @@ import { resolveEmployeeDocumentUrl } from "@/lib/employee-documents";
 import DocumentPreviewDialog from "@/components/documents/DocumentPreviewDialog";
 import AssistedExtractionPanel from "@/components/documents/AssistedExtractionPanel";
 import DocumentReviewActions from "@/components/documents/DocumentReviewActions";
+import DocumentHistoryPanel from "@/components/documents/DocumentHistoryPanel";
 import { useAuth } from "@/hooks/useAuth";
 import { getRequiredDocumentsForCompany } from "@/lib/onboarding/required-documents";
 import { Card, CardContent } from "@/components/ui/card";
@@ -488,26 +489,29 @@ export default function DocumentsCenter() {
             previewRow.status === "rejected" ? "rejected" : "pending",
         } : null}
         actions={previewRow && previewRow.source === "admin_upload" && previewRow.rawId ? (
-          <DocumentReviewActions
-            doc={fromEmployeeDocument({
-              id: previewRow.rawId,
-              employee_id: previewRow.employee_id,
-              company_id: previewRow.company_id,
-              name: previewRow.file_name ?? previewRow.document_type,
-              file_url: previewRow.file_path,
-              file_size: null,
-              category: String(previewRow.category),
-              created_at: previewRow.created_at ?? new Date().toISOString(),
-              review_status: previewRow.status === "approved" ? "approved"
-                : previewRow.status === "rejected" ? "rejected" : "pending",
-              reviewed_at: previewRow.reviewed_at,
-              rejection_reason: previewRow.rejection_reason ?? null,
-              expires_at: previewRow.expires_at,
-            })}
-            requiredCategories={requiredCategories}
-            canReview={canReview}
-            onChanged={() => { void refresh(); setPreviewRow(null); }}
-          />
+          <div className="space-y-2">
+            <DocumentReviewActions
+              doc={fromEmployeeDocument({
+                id: previewRow.rawId,
+                employee_id: previewRow.employee_id,
+                company_id: previewRow.company_id,
+                name: previewRow.file_name ?? previewRow.document_type,
+                file_url: previewRow.file_path,
+                file_size: null,
+                category: String(previewRow.category),
+                created_at: previewRow.created_at ?? new Date().toISOString(),
+                review_status: previewRow.status === "approved" ? "approved"
+                  : previewRow.status === "rejected" ? "rejected" : "pending",
+                reviewed_at: previewRow.reviewed_at,
+                rejection_reason: previewRow.rejection_reason ?? null,
+                expires_at: previewRow.expires_at,
+              })}
+              requiredCategories={requiredCategories}
+              canReview={canReview}
+              onChanged={() => { void refresh(); setPreviewRow(null); }}
+            />
+            <DocumentHistoryPanel documentId={previewRow.rawId} canReview={canReview} />
+          </div>
         ) : undefined}
         side={previewRow && previewRow.source === "admin_upload" && previewRow.rawId ? (
           <AssistedExtractionPanel

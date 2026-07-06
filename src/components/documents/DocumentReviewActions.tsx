@@ -154,10 +154,10 @@ export default function DocumentReviewActions({
       )}
 
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent aria-describedby="approve-doc-desc">
           <AlertDialogHeader>
             <AlertDialogTitle>Aprobar documento</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogDescription id="approve-doc-desc">
               {isRequired
                 ? `Este documento contará como aprobado para el requisito "${category}".`
                 : "Este documento quedará aprobado, pero la categoría no forma parte de los requisitos del worker."}
