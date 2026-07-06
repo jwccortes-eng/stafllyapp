@@ -1,5 +1,14 @@
 # Changelog — Stafly
 
+## 2026-07-06 — Desktop responsive polish (AdminLayout)
+
+- **AdminLayout main container**: padding escalonado `p-3 sm:p-4 lg:p-6 xl:p-8` (más compacto en laptops pequeñas 1280–1366, más aire en monitores grandes).
+- **Ancho máximo**: `max-w-[1600px]` con extensión `2xl:max-w-[1760px]` para monitores 1920+; contenido centrado con `mx-auto`.
+- **Anti-overflow**: agregado `min-w-0` en `<main>` y wrapper interno + `overflow-x-hidden` en el shell para evitar scroll horizontal global cuando una tabla/card hija empuja el ancho. Tablas internas mantienen su propio `overflow-x-auto` (verificado en DocumentsCenter).
+- **Sin cambios**: lógica de negocio, payroll, time_entries, shift_assignments, scheduled_shifts, documents review, employee_documents, contractor_w9, payments, bookings, chat, auth, RLS, tenants, datos reales, migraciones, mobile layout (mobile shell no tocado).
+- **QA visual**: breakpoints objetivo 1280/1366/1440/1920/2560; mobile 390x844 intacto (rama `isMobile` no modificada).
+
+
 ## 2026-07-06 — Document Review v1 (Internal Admin Ready) + W-9 guardrail
 
 - **Release**: Document Review v1 publicado como release interno/admin-only.

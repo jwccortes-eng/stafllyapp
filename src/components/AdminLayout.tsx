@@ -307,16 +307,16 @@ export default function AdminLayout() {
   // Desktop layout: Sidebar + TopBar + Content
   return (
     <SidebarContext.Provider value={{ collapsed, setCollapsed: (v: boolean) => { setCollapsed(v); safeLocalStorage.setItem("sidebar-collapsed", String(v)); } }}>
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background overflow-x-hidden">
         <AdminSidebar />
         <TopBar collapsed={collapsed} />
         <CommandPalette />
         <main className={cn(
-          "transition-all duration-300 ease-in-out min-h-[calc(100vh-3.5rem)]",
+          "transition-all duration-300 ease-in-out min-h-[calc(100vh-3.5rem)] min-w-0",
           collapsed ? "ms-[68px]" : "ms-[256px]",
-          "p-4 sm:p-5 lg:p-6 pt-4"
+          "p-3 sm:p-4 lg:p-6 xl:p-8 pt-4"
         )}>
-          <div className="animate-fade-in max-w-[1600px] mx-auto">
+          <div className="animate-fade-in w-full max-w-[1600px] 2xl:max-w-[1760px] mx-auto min-w-0">
             <Outlet />
           </div>
         </main>
