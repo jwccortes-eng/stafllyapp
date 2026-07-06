@@ -598,12 +598,14 @@ function ExpirationCell({
 
   useEffect(() => { setValue(row.expires_at ?? ""); }, [row.expires_at]);
 
-  const expState = classifyExpiration(row.category, row.expires_at);
+  const sentinel = isSentinelExpiration(row.expires_at);
+  const expState = sentinel ? "valid" : classifyExpiration(row.category, row.expires_at);
   const policy = expirationPolicyFor(row.category);
   // v1: only admin documents are editable (onboarding table has no expires_at column).
   const editable = row.source === "admin_upload" && !!row.rawId;
 
   const display = (() => {
+    if (sentinel) return "No requiere vencimiento";
     if (row.expires_at) {
       const d = new Date(row.expires_at);
       if (!isNaN(d.getTime())) return formatDateUS(d) || "—";
