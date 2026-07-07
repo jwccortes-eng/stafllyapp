@@ -40,6 +40,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { PayrollSourceGuardrailBanner } from "@/components/payroll/PayrollSourceGuardrailBanner";
+import Upcoming60Sheet from "@/components/ops/Upcoming60Sheet";
 
 type CardTone = "ok" | "attention" | "urgent" | "info" | "muted";
 
