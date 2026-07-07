@@ -96,6 +96,57 @@ E2E_EMPLOYEE_ID=<qa-employee-uuid> \
 bunx playwright test root-cause-review-notes --project=desktop
 ```
 
+## Sprint 31 · Review notes RLS negative-path spec (opt-in)
+
+`tests/e2e/root-cause-review-notes-permissions.spec.ts` validates the
+RLS boundary for `payroll_review_notes`: a QA user with **only**
+`payroll:view` (no `payroll:edit`) must not be able to create or archive
+notes from the `RootCauseExplorer`. Complements the happy-path spec
+(Sprint 28 / 30) which runs with a `payroll:edit` user.
+
+- **Opt-in only.** Skips unless `E2E_NOTE_PERMISSIONS_TEST_ENABLED=true`.
+- **Never runs against production.** Same URL guard as the happy path.
+- **Requires a distinct storage state** (`E2E_STORAGE_STATE_VIEW_ONLY`)
+  so the happy-path auth is never overwritten.
+- **Desktop-only** for now.
+- **What the spec asserts:**
+  - The RootCauseExplorer drawer renders.
+  - If the save UI surfaces at all, either the button is disabled, or
+    clicking it does not fire a request that reaches
+    `payroll_review_notes`, or an error toast appears — the
+    `"Nota guardada"` toast must never show.
+  - If any existing note exposes an "Archivar" button, invoking it must
+    not produce the `"Nota archivada"` toast.
+  - The network guard records every mutating request the view-only
+    session emits toward `payroll_review_notes`, any sensitive
+    payroll/time/shift table, RPC endpoints, edge functions, or storage
+    writes. Any recorded violation fails the test loudly.
+- **No physical DELETE, no service_role, no PII.** The spec never asks
+  the app for elevated privileges — it just observes whether the UI +
+  RLS combination correctly denies writes.
+
+Env vars:
+
+| Var                                    | Purpose                                                    |
+| -------------------------------------- | ---------------------------------------------------------- |
+| `E2E_NOTE_PERMISSIONS_TEST_ENABLED`    | `true` to opt in.                                          |
+| `E2E_STORAGE_STATE_VIEW_ONLY`          | Playwright storage state for a `payroll:view`-only user.   |
+| `E2E_BASE_URL`                         | QA/staging preview URL (never production).                 |
+| `E2E_EMPLOYEE_ID`                      | Real `employees.id` in that QA company.                    |
+| `E2E_ROOT_CAUSE_URL` (optional)        | Override URL that opens `RootCauseExplorer`.               |
+
+Example run:
+
+```bash
+E2E_NOTE_PERMISSIONS_TEST_ENABLED=true \
+E2E_BASE_URL=https://<qa-preview>.lovable.app \
+E2E_STORAGE_STATE_VIEW_ONLY=./.playwright/auth-view-only.json \
+E2E_EMPLOYEE_ID=<qa-employee-uuid> \
+bunx playwright test root-cause-review-notes-permissions --project=desktop
+```
+
+
+
 
 
 ## Running
