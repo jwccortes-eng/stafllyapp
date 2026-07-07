@@ -585,7 +585,8 @@ export default function PayrollNativeDryRun() {
                             const days = nativeAgg.get(r.employee_id)?.days;
                             const hasDays = !!days && days.size > 0;
                             return (
-                              <>
+                              <Fragment key={r.employee_id}>
+
                                 <TableRow
                                   key={r.employee_id}
                                   className={hasDays ? "cursor-pointer" : ""}
