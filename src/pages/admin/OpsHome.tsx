@@ -132,16 +132,41 @@ function isIncompleteShift(s: TodayOpsShift): boolean {
 
 export default function OpsHome() {
   const navigate = useNavigate();
-  const { selectedCompanyId } = useCompany();
+  const { selectedCompanyId, selectedCompany } = useCompany();
   const today = useMemo(() => new Date(), []);
   const tomorrow = useMemo(() => addDays(today, 1), [today]);
 
   const todayOps = useTodayOperations(selectedCompanyId ?? null, today);
   const tomorrowOps = useTodayOperations(selectedCompanyId ?? null, tomorrow);
 
+  // Lightweight, safe read-only query for today's rejected assignments.
+  // Scoped to today's shift ids that already loaded — one small IN() query.
+  const [rejectedCount, setRejectedCount] = useState<number | null>(null);
+  const todayShiftIdsKey = todayOps.shifts.map((s) => s.id).join(",");
+  useEffect(() => {
+    let cancelled = false;
+    const ids = todayShiftIdsKey ? todayShiftIdsKey.split(",") : [];
+    if (!selectedCompanyId || ids.length === 0) {
+      setRejectedCount(0);
+      return;
+    }
+    (async () => {
+      const { count, error } = await supabase
+        .from("shift_assignments")
+        .select("id", { count: "exact", head: true })
+        .in("shift_id", ids)
+        .eq("status", "rejected");
+      if (cancelled) return;
+      setRejectedCount(error ? null : (count ?? 0));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedCompanyId, todayShiftIdsKey]);
+
   const t = todayOps.totals;
 
-  // Derive counts safely from already-loaded state — no new queries.
+  // Derive counts safely from already-loaded state — no extra heavy queries.
   const acceptedCount = t.confirmed;
   const pendingCount = Math.max(t.assigned - t.confirmed, 0);
   const needsCloseout = todayOps.shifts.filter((s) => s.ops.bucket === "needs_closeout").length;
@@ -154,6 +179,7 @@ export default function OpsHome() {
   const hoursToReview = t.open_clocks + t.missing_clock_outs;
 
   const anyLoading = todayOps.loading || tomorrowOps.loading;
+  const todayLabel = format(today, "EEEE d 'de' MMMM", { locale: es });
 
   return (
     <div className="space-y-5 max-w-[1400px]">
