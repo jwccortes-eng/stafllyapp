@@ -668,6 +668,13 @@ export default function Attendance() {
                 )}
               </div>
             )}
+            {/* Sprint 23 — Context note when the local filter is active. */}
+            {focusEmployeeFilter && (
+              <div className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                <Info className="h-3 w-3 shrink-0" />
+                <span>{REVIEW_COPY.localFilterNoteAttendance}</span>
+              </div>
+            )}
           </div>
 
           {/* Attendance Table */}
