@@ -414,7 +414,73 @@ export function RootCauseExplorer(props: RootCauseExplorerProps) {
               </p>
             </section>
 
-            {/* Safe CTAs */}
+            {/* Best review point */}
+            {bestPoint && (
+              <section className="space-y-1.5">
+                <div className="text-xs font-semibold flex items-center gap-1.5">
+                  <Target className="h-3.5 w-3.5 text-primary" />
+                  Mejor punto de revisión
+                </div>
+                <div className="rounded-lg border border-primary/30 bg-primary/5 px-3 py-2">
+                  <div className="text-[12px] font-semibold">{bestPoint.label}</div>
+                  <div className="text-[11px] text-muted-foreground">{bestPoint.hint}</div>
+                </div>
+                <p className="text-[10px] text-muted-foreground/80 italic">
+                  Recomendación visual. No ejecuta acción automática.
+                </p>
+              </section>
+            )}
+
+            {/* Manual review checklist */}
+            <section className="space-y-2">
+              <div className="text-xs font-semibold flex items-center gap-1.5">
+                <ClipboardList className="h-3.5 w-3.5 text-muted-foreground" />
+                Checklist de revisión manual
+              </div>
+              <p className="text-[10px] text-muted-foreground">
+                Checklist manual. Las correcciones deben realizarse desde los flujos
+                normales de administración. Esta vista no marca completado, no guarda
+                notas y no corrige datos.
+              </p>
+              {checklist.length === 0 ? (
+                <p className="text-[11px] text-muted-foreground py-2">
+                  Sin acciones sugeridas: no se detectan causas operativas evidentes en este dry-run.
+                </p>
+              ) : (
+                <ul className="space-y-2">
+                  {checklist.map((item) => (
+                    <li
+                      key={item.key}
+                      className={cn(
+                        "rounded-lg border bg-card px-3 py-2 space-y-1.5",
+                        highlightKey === item.key
+                          ? "border-primary/60 ring-1 ring-primary/40"
+                          : "border-border/60",
+                      )}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="text-[12px] font-semibold leading-tight">{item.title}</div>
+                        <SeverityBadge severity={item.severity} />
+                      </div>
+                      <p className="text-[11px] text-muted-foreground leading-relaxed">
+                        {item.reason}
+                      </p>
+                      <Button asChild variant="outline" size="sm" className="h-7 text-[11px] gap-1.5 mt-1">
+                        <Link to={item.ctaHref}>
+                          <ExternalLink className="h-3 w-3" />
+                          {item.ctaLabel}
+                        </Link>
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <p className="text-[10px] text-muted-foreground italic">
+                Resolver desde el flujo normal. Esta vista no corrige datos.
+              </p>
+            </section>
+
+            {/* Safe generic CTAs (always available) */}
             <section className="space-y-2">
               <div className="text-xs font-semibold">Revisar en flujos normales</div>
               <p className="text-[10px] text-muted-foreground">
@@ -423,22 +489,22 @@ export function RootCauseExplorer(props: RootCauseExplorerProps) {
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <CTA
-                  to={`/app/timeclock?when=today&filter=needs-review`}
+                  to={buildTimeClockUrl({ date: anchorDate || null })}
                   label="Abrir Time Clock"
-                  hint="Revisar fichajes que necesitan atención"
+                  hint={anchorDate ? `Contexto: ${anchorDate}` : "Contexto: hoy"}
                 />
                 <CTA
-                  to={`/app/attendance?when=today`}
+                  to={buildAttendanceUrl({ date: anchorDate || null, employeeId: worker?.id ?? null })}
                   label="Abrir Attendance"
-                  hint="Revisar asistencia del día"
+                  hint={anchorDate ? `Contexto: ${anchorDate}` : "Contexto: hoy"}
                 />
                 <CTA
-                  to={anchorDate ? `/app/shifts?date=${anchorDate}` : `/app/shifts?when=today`}
+                  to={buildShiftsUrl({ date: anchorDate || null })}
                   label="Abrir Shifts"
                   hint={anchorDate ? `Contexto: ${anchorDate}` : "Contexto: hoy"}
                 />
                 <CTA
-                  to={`/app/payroll-review-queue`}
+                  to={buildReviewQueueUrl({ periodId: period?.id ?? null, employeeId: worker?.id ?? null })}
                   label="Abrir Payroll Review Queue"
                   hint="Cola de revisión existente"
                 />
