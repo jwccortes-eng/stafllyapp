@@ -44,6 +44,7 @@ import {
   ExternalLink, Info, ClipboardList, ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { REVIEW_COPY, REVIEW_REASON_LABELS, reviewReasonLabel } from "@/utils/reviewNavigationCopy";
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
