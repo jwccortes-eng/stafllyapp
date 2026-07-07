@@ -344,7 +344,7 @@ export default function MobileTimeCommandView() {
           </div>
           <ul className="divide-y divide-border/40">
             {alerts.slice(0, 5).map(a => (
-              <AlertRow key={`${a.type}-${a.entry.id}`} item={a} onOpen={() => setAlertDetail(a)} />
+              <AlertRow key={`${a.type}-${a.entry.id}`} item={a} focused={focusEntryId === a.entry.id} onOpen={() => setAlertDetail(a)} />
             ))}
           </ul>
         </Card>
