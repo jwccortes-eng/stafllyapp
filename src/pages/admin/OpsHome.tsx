@@ -294,14 +294,21 @@ export default function OpsHome() {
           <CockpitSection title="Asistencia" caption="Estado en tiempo real de hoy">
             <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
               <OpsCard
-                title="Aceptados / Pendientes"
-                count={`${acceptedCount} / ${pendingCount}`}
+                title="Aceptados / Pendientes / Rechazados"
+                count={`${acceptedCount} / ${pendingCount} / ${rejectedCount ?? "—"}`}
                 hint={`${t.assigned} asignados hoy`}
-                tone={pendingCount > 0 ? "attention" : "ok"}
+                tone={pendingCount > 0 || (rejectedCount ?? 0) > 0 ? "attention" : "ok"}
                 icon={<UserCheck className="h-4 w-4" />}
                 to="/app/daily-ops"
                 cta="Ver operación diaria"
                 empty="Sin asignaciones"
+                footer={
+                  rejectedCount === null ? (
+                    <Badge variant="outline" className="text-[10px] h-5">
+                      rechazados no disponibles
+                    </Badge>
+                  ) : null
+                }
               />
               <OpsCard
                 title="Fichados ahora"
@@ -332,8 +339,8 @@ export default function OpsHome() {
                 count={incompleteToday}
                 hint={
                   incompleteTomorrow > 0
-                    ? `+${incompleteTomorrow} mañana`
-                    : "Sin datos faltantes en mañana"
+                    ? `+${incompleteTomorrow} mañana · rate no disponible en esta vista`
+                    : "Rate no disponible en esta vista todavía"
                 }
                 tone={incompleteToday > 0 ? "attention" : "ok"}
                 icon={<ClipboardList className="h-4 w-4" />}
