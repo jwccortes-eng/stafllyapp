@@ -319,37 +319,51 @@ export default function OpsHome() {
                 </p>
               </div>
             ) : (
-              <div className="grid gap-3 grid-cols-3">
-                <OpsCard
-                  title="Turnos próximos"
-                  count={upcoming60.total}
-                  hint="Inician en ≤ 60 min"
-                  tone="info"
-                  icon={<Clock className="h-4 w-4" />}
-                  to="/app/shifts?when=today"
-                  cta="Ver hoy"
-                />
-                <OpsCard
-                  title="Con cobertura"
-                  count={upcoming60.covered}
-                  hint="Slots completos"
-                  tone={upcoming60.covered === upcoming60.total ? "ok" : "muted"}
-                  icon={<CheckCircle2 className="h-4 w-4" />}
-                  to="/app/daily-ops"
-                  cta="Operación diaria"
-                />
-                <OpsCard
-                  title="Necesitan atención"
-                  count={upcoming60.needsAttention}
-                  hint={upcoming60.needsAttention > 0 ? "Slots abiertos" : "Todo cubierto"}
-                  tone={upcoming60.needsAttention > 0 ? "urgent" : "ok"}
-                  icon={<AlertTriangle className="h-4 w-4" />}
-                  to="/app/shifts?filter=needs-staffing"
-                  cta="Buscar cobertura"
-                />
-              </div>
+              <>
+                <div className="grid gap-3 grid-cols-3">
+                  <OpsCard
+                    title="Turnos próximos"
+                    count={upcoming60.total}
+                    hint="Inician en ≤ 60 min"
+                    tone="info"
+                    icon={<Clock className="h-4 w-4" />}
+                    to="/app/shifts?when=today"
+                    cta="Ver hoy"
+                  />
+                  <OpsCard
+                    title="Con cobertura"
+                    count={upcoming60.covered}
+                    hint="Slots completos"
+                    tone={upcoming60.covered === upcoming60.total ? "ok" : "muted"}
+                    icon={<CheckCircle2 className="h-4 w-4" />}
+                    to="/app/daily-ops?when=today"
+                    cta="Operación diaria"
+                  />
+                  <OpsCard
+                    title="Necesitan atención"
+                    count={upcoming60.needsAttention}
+                    hint={upcoming60.needsAttention > 0 ? "Slots abiertos" : "Todo cubierto"}
+                    tone={upcoming60.needsAttention > 0 ? "urgent" : "ok"}
+                    icon={<AlertTriangle className="h-4 w-4" />}
+                    to="/app/staffing-center?filter=needs-staffing"
+                    cta="Buscar cobertura"
+                  />
+                </div>
+                <div className="flex justify-end">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-xs gap-1.5"
+                    onClick={() => setUpcomingSheetOpen(true)}
+                  >
+                    <Clock className="h-3.5 w-3.5" />
+                    Revisar próximos turnos
+                  </Button>
+                </div>
+              </>
             )}
           </CockpitSection>
+
 
           {/* Asistencia */}
           <CockpitSection title="Asistencia" caption="Estado en tiempo real de hoy">
