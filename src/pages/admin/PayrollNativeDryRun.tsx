@@ -635,7 +635,8 @@ export default function PayrollNativeDryRun() {
                                     </TableCell>
                                   </TableRow>
                                 )}
-                              </>
+                              </Fragment>
+
                             );
                           })}
                         </TableBody>
