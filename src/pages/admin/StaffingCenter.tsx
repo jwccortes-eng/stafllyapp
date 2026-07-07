@@ -20,7 +20,8 @@
  *  - employees (names for the recent-responses feed)
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import OpsFilterBanner from "@/components/ops/OpsFilterBanner";
 import { format, addDays, parseISO, formatDistanceToNow } from "date-fns";
 import { enUS } from "date-fns/locale";
 import {
