@@ -353,17 +353,36 @@ export default function Attendance() {
     setSelectedDate(new Date());
   }, [searchParams, setSearchParams]);
 
+  // ─── Sprint 21: Optional local "focus on employee" filter ───
+  // 100% client-side over rows already loaded. No new queries. No URL writes.
+  // Only offered when the focused employee is actually present in the loaded
+  // day; disabled by default (explicit opt-in via chip).
+  const [focusEmployeeFilter, setFocusEmployeeFilter] = useState(false);
+  const canFilterByFocusedEmployee = !!focusEmployeeId && employeePresent;
+  // Reset filter when the focused employee changes or disappears.
+  useEffect(() => {
+    if (!canFilterByFocusedEmployee) setFocusEmployeeFilter(false);
+  }, [canFilterByFocusedEmployee, focusEmployeeId]);
+  const focusedEmployeeName = useMemo(() => {
+    if (!focusEmployeeId) return null;
+    const r = rows.find((row) => row.employeeId === focusEmployeeId);
+    return r ? `${r.firstName} ${r.lastName}`.trim() : null;
+  }, [rows, focusEmployeeId]);
+
 
   // ─── Filter rows ───
   const filteredRows = useMemo(() => {
     let r = rows;
+    if (focusEmployeeFilter && focusEmployeeId) {
+      r = r.filter((row) => row.employeeId === focusEmployeeId);
+    }
     if (statusFilter !== "all") r = r.filter((row) => row.status === statusFilter);
     if (search) {
       const q = search.toLowerCase();
       r = r.filter((row) => `${row.firstName} ${row.lastName}`.toLowerCase().includes(q) || row.shiftTitle.toLowerCase().includes(q));
     }
     return r;
-  }, [rows, statusFilter, search]);
+  }, [rows, statusFilter, search, focusEmployeeFilter, focusEmployeeId]);
 
   // ─── KPI counts ───
   const kpis = useMemo(() => {
