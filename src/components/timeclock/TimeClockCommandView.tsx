@@ -85,9 +85,37 @@ export default function TimeClockCommandView() {
   const [loading, setLoading] = useState(true);
   const [now, setNow] = useState(new Date());
   const [search, setSearch] = useState("");
-  const [activeTab, setActiveTab] = useState<string>("live");
-  const [tabAutoSet, setTabAutoSet] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialWhen = searchParams.get("when");
+  const initialOpsFilter = searchParams.get("filter");
+  const opsInitialTab = (() => {
+    if (initialOpsFilter === "open") return "live";
+    if (initialOpsFilter === "stale") return "alerts";
+    if (initialOpsFilter === "needs-review") return "approvals";
+    if (initialWhen === "today") return "today";
+    return null;
+  })();
+  const [activeTab, setActiveTab] = useState<string>(opsInitialTab ?? "live");
+  const [tabAutoSet, setTabAutoSet] = useState(!!opsInitialTab);
   const [alertDetail, setAlertDetail] = useState<AlertItem | null>(null);
+  const [opsFilterActive, setOpsFilterActive] = useState<boolean>(
+    !!initialWhen || !!initialOpsFilter,
+  );
+  const opsFilterLabel = (() => {
+    const parts: string[] = [];
+    if (initialWhen === "today") parts.push("Hoy");
+    if (initialOpsFilter === "open") parts.push("Fichajes abiertos");
+    if (initialOpsFilter === "stale") parts.push("Fichajes viejos");
+    if (initialOpsFilter === "needs-review") parts.push("Requieren revisión");
+    return parts.join(" · ") || "Filtro Ops";
+  })();
+  const clearOpsFilter = useCallback(() => {
+    setOpsFilterActive(false);
+    const next = new URLSearchParams(searchParams);
+    next.delete("when");
+    next.delete("filter");
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   const openWorker = (id: string) => navigate(`/app/people/${id}`);
   const openAlert = (item: AlertItem) => setAlertDetail(item);
