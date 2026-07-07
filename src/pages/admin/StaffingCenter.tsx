@@ -514,6 +514,13 @@ export default function StaffingCenter() {
         </div>
       </header>
 
+      <OpsFilterBanner
+        active={opsFilterActive}
+        label={opsFilterLabel}
+        onClear={clearOpsFilter}
+      />
+
+
       {error && (
         <Card className="border-destructive/40 bg-destructive/5">
           <CardContent className="p-3 text-xs text-destructive">{error}</CardContent>
