@@ -639,6 +639,35 @@ export default function Attendance() {
                 className="pl-8 h-8 text-xs"
               />
             </div>
+
+            {/* Sprint 21 — Optional local employee-focus filter (read-only). */}
+            {canFilterByFocusedEmployee && (
+              <div className="inline-flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/5 pl-2.5 pr-1 py-0.5 text-[11px] text-primary max-w-full">
+                <span className="font-semibold shrink-0">Empleado enfocado</span>
+                {focusedEmployeeName && (
+                  <span className="text-muted-foreground truncate max-w-[140px]">· {focusedEmployeeName}</span>
+                )}
+                {focusEmployeeFilter ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 text-[11px] px-2 shrink-0"
+                    onClick={() => setFocusEmployeeFilter(false)}
+                  >
+                    Mostrar todos
+                  </Button>
+                ) : (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 text-[11px] px-2 shrink-0"
+                    onClick={() => setFocusEmployeeFilter(true)}
+                  >
+                    Filtrar por empleado
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Attendance Table */}
