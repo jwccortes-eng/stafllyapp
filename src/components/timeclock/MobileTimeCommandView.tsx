@@ -26,6 +26,7 @@ import {
 import { format, differenceInMinutes, startOfWeek, endOfWeek } from "date-fns";
 import { enUS } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { useTimeClockFocus } from "@/hooks/useTimeClockFocus";
 
 const OPEN_ENTRY_WARN_HOURS = 12;
 const OPEN_ENTRY_STALE_HOURS = 24;
@@ -256,6 +257,17 @@ export default function MobileTimeCommandView() {
     return Array.from(map.values()).sort((a, b) => b.trackedMin - a.trackedMin);
   }, [weekEntries, empMap]);
 
+  // ─── Sprint 12: Root-Cause Explorer deep-link focus ───
+  const loadedEntryIds = useMemo(() => entries.map((e) => e.id), [entries]);
+  const {
+    focusEntryId, focusDate, focusShiftId, entryPresent, hasFocus,
+  } = useTimeClockFocus({ loading, loadedEntryIds });
+
+  useEffect(() => {
+    if (focusEntryId) setMode("today");
+  }, [focusEntryId]);
+
+
   if (!selectedCompanyId) {
     return (
       <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-400">
@@ -279,6 +291,30 @@ export default function MobileTimeCommandView() {
         label={filterLabel}
         onClear={clearOpsFilter}
       />
+      {hasFocus && (
+        <div
+          role="status"
+          className={cn(
+            "rounded-xl border px-3 py-2 text-[11px] flex items-start gap-2",
+            entryPresent || !focusEntryId
+              ? "border-primary/40 bg-primary/5 text-primary"
+              : "border-amber-500/40 bg-amber-500/5 text-amber-700 dark:text-amber-400",
+          )}
+        >
+          <span className="mt-0.5 inline-flex h-1.5 w-1.5 rounded-full bg-current shrink-0" />
+          <div className="min-w-0 flex-1">
+            <div className="font-semibold">
+              {entryPresent ? "Enfocando fichaje desde revisión" : focusEntryId ? "Fichaje fuera del rango cargado" : "Vista desde revisión"}
+            </div>
+            <div className="opacity-80 truncate">
+              {focusDate && <>Día {focusDate}</>}
+              {focusEntryId && <> · <code className="font-mono">{focusEntryId.slice(0, 8)}</code></>}
+              {focusShiftId && <> · turno <code className="font-mono">{focusShiftId.slice(0, 8)}</code></>}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Compact KPI strip — single row, scrollable on narrow */}
       <div className="grid grid-cols-5 gap-1.5">
         <Kpi label="Programados" value={kpis.scheduled} />
@@ -308,7 +344,7 @@ export default function MobileTimeCommandView() {
           </div>
           <ul className="divide-y divide-border/40">
             {alerts.slice(0, 5).map(a => (
-              <AlertRow key={`${a.type}-${a.entry.id}`} item={a} onOpen={() => setAlertDetail(a)} />
+              <AlertRow key={`${a.type}-${a.entry.id}`} item={a} focused={focusEntryId === a.entry.id} onOpen={() => setAlertDetail(a)} />
             ))}
           </ul>
         </Card>
@@ -360,7 +396,7 @@ function TodayView({ live, missing, closedToday }: {
         ) : (
           <ul className="divide-y divide-border/40">
             {live.map(r => (
-              <li key={r.entry.id} className="flex items-center gap-3 px-3.5 py-2.5">
+              <li key={r.entry.id} data-entry-id={r.entry.id} className="flex items-center gap-3 px-3.5 py-2.5">
                 <EmployeeAvatar
                   avatarUrl={r.employee.avatar_url}
                   firstName={r.employee.first_name}
@@ -515,7 +551,7 @@ function Kpi({ label, value, tone = "muted" }: { label: string; value: number | 
   );
 }
 
-function AlertRow({ item, onOpen }: { item: AlertItem; onOpen: () => void }) {
+function AlertRow({ item, onOpen, focused = false }: { item: AlertItem; onOpen: () => void; focused?: boolean }) {
   const toneCls =
     item.type === "stale_open" ? "bg-rose-500/10 text-rose-700 border-rose-500/30"
     : item.type === "long_open" || item.type === "very_long" ? "bg-amber-500/10 text-amber-700 border-amber-500/30"
@@ -527,17 +563,28 @@ function AlertRow({ item, onOpen }: { item: AlertItem; onOpen: () => void }) {
     item.type === "very_long" ? "Muy largo" :
     item.type === "needs_review" ? "Revisar" : "Sin turno";
   return (
-    <li className="flex items-center gap-3 px-3.5 py-2.5 active:bg-muted/40 cursor-pointer" onClick={onOpen}>
+    <li
+      data-entry-id={item.entry.id}
+      className={cn(
+        "flex items-center gap-3 px-3.5 py-2.5 active:bg-muted/40 cursor-pointer",
+        focused && "bg-primary/5 border-l-2 border-primary scroll-mt-24",
+      )}
+      onClick={onOpen}
+    >
       <EmployeeAvatar avatarUrl={item.employee.avatar_url} firstName={item.employee.first_name} lastName={item.employee.last_name} size="sm" />
       <div className="min-w-0 flex-1">
         <div className="text-sm font-semibold truncate">{item.employee.first_name} {item.employee.last_name}</div>
         <div className="text-[11px] text-muted-foreground truncate">{item.reason}</div>
       </div>
+      {focused && (
+        <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-wider bg-primary/10 text-primary border-primary/40">foco</Badge>
+      )}
       <Badge variant="outline" className={cn("text-[10px] font-semibold uppercase tracking-wider", toneCls)}>{label}</Badge>
       <ChevronRight className="h-4 w-4 text-muted-foreground" />
     </li>
   );
 }
+
 
 function AlertDetailSheet({ item, onClose, onOpenWorker, onReviewInTime }: {
   item: AlertItem | null;

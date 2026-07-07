@@ -36,6 +36,7 @@ import { toast } from "sonner";
 import StaflyCalmProcessingBanner from "@/components/common/StaflyCalmProcessingBanner";
 import { APP_BASE_URL } from "@/lib/app-url";
 import { cn } from "@/lib/utils";
+import { useTimeClockFocus } from "@/hooks/useTimeClockFocus";
 
 // ─── thresholds ──────────────────────────────────────────────
 const OPEN_ENTRY_WARN_HOURS = 12;
@@ -238,6 +239,29 @@ export default function TimeClockCommandView() {
     return alerts.filter((a) => a.type === "stale_open" || a.type === "needs_review" || a.type === "very_long");
   }, [alerts]);
 
+  // ─── Sprint 12: consume Root-Cause Explorer deep-link params ─────
+  const loadedEntryIds = useMemo(() => entries.map((e) => e.id), [entries]);
+  const {
+    focusEntryId, focusDate, focusShiftId, entryPresent, hasFocus,
+  } = useTimeClockFocus({ loading, loadedEntryIds });
+
+  // Auto-route to the tab that actually contains the focused entry so
+  // scroll-into-view has a rendered target. Runs once per focus id.
+  const [focusTabApplied, setFocusTabApplied] = useState<string | null>(null);
+  useEffect(() => {
+    if (!focusEntryId || focusTabApplied === focusEntryId) return;
+    let target: string | null = null;
+    if (alerts.some((a) => a.entry.id === focusEntryId)) target = "alerts";
+    else if (liveRows.some((r) => r.entry.id === focusEntryId)) target = "live";
+    else if (closedTodayEntries.some((e) => e.id === focusEntryId)) target = "today";
+    if (target) {
+      setActiveTab(target);
+      setTabAutoSet(true);
+      setFocusTabApplied(focusEntryId);
+    }
+  }, [focusEntryId, alerts, liveRows, closedTodayEntries, focusTabApplied]);
+
+
   const filteredLive = useMemo(() => {
     if (!search.trim()) return liveRows;
     const q = search.trim().toLowerCase();
@@ -435,7 +459,7 @@ export default function TimeClockCommandView() {
         ) : (
           <ul className="divide-y divide-border/40">
             {alerts.slice(0, 8).map((item) => (
-              <AlertRow key={`${item.type}-${item.entry.id}`} item={item} onOpen={() => openAlert(item)} />
+              <AlertRow key={`${item.type}-${item.entry.id}`} item={item} focused={focusEntryId === item.entry.id} onOpen={() => openAlert(item)} />
             ))}
           </ul>
         )}
@@ -447,6 +471,31 @@ export default function TimeClockCommandView() {
         label={opsFilterLabel}
         onClear={clearOpsFilter}
       />
+      {hasFocus && (
+        <div
+          role="status"
+          className={cn(
+            "rounded-xl border px-3.5 py-2.5 text-xs flex items-start gap-2",
+            entryPresent || !focusEntryId
+              ? "border-primary/40 bg-primary/5 text-primary"
+              : "border-amber-500/40 bg-amber-500/5 text-amber-700 dark:text-amber-400",
+          )}
+        >
+          <span className="mt-0.5 inline-flex h-1.5 w-1.5 rounded-full bg-current shrink-0" />
+          <div className="min-w-0 flex-1 space-y-0.5">
+            <div className="font-semibold">
+              {entryPresent ? "Enfocando fichaje desde revisión" : focusEntryId ? "Fichaje enfocado no está en la vista actual" : "Vista desde revisión"}
+            </div>
+            <div className="text-[11px] opacity-80 truncate">
+              {focusDate && <>Día {focusDate}</>}
+              {focusEntryId && <> · entry <code className="font-mono">{focusEntryId.slice(0, 8)}</code></>}
+              {focusShiftId && <> · turno <code className="font-mono">{focusShiftId.slice(0, 8)}</code></>}
+              {focusEntryId && !entryPresent && <> · fuera del rango cargado (hoy). Ajusta el día para verlo.</>}
+            </div>
+          </div>
+        </div>
+      )}
+
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="w-full sm:w-auto flex-wrap h-auto gap-1">
           <TabsTrigger value="live" className="gap-1.5 text-xs">
@@ -519,7 +568,7 @@ export default function TimeClockCommandView() {
             ) : (
               <ul className="divide-y divide-border/40">
                 {filteredLive.map((r) => (
-                  <LiveRow key={r.entry.id} row={r} onOpen={() => openWorker(r.employee.id)} />
+                  <LiveRow key={r.entry.id} row={r} focused={focusEntryId === r.entry.id} onOpen={() => openWorker(r.employee.id)} />
                 ))}
               </ul>
             )}
@@ -543,7 +592,7 @@ export default function TimeClockCommandView() {
             ) : (
               <ul className="divide-y divide-border/40">
                 {alerts.map((item) => (
-                  <AlertRow key={`${item.type}-${item.entry.id}`} item={item} onOpen={() => openAlert(item)} />
+                  <AlertRow key={`${item.type}-${item.entry.id}`} item={item} focused={focusEntryId === item.entry.id} onOpen={() => openAlert(item)} />
                 ))}
               </ul>
             )}
@@ -664,7 +713,7 @@ export default function TimeClockCommandView() {
             ) : (
               <ul className="divide-y divide-border/40">
                 {approvals.map((item) => (
-                  <AlertRow key={`${item.type}-${item.entry.id}`} item={item} onOpen={() => openAlert(item)} />
+                  <AlertRow key={`${item.type}-${item.entry.id}`} item={item} focused={focusEntryId === item.entry.id} onOpen={() => openAlert(item)} />
                 ))}
               </ul>
             )}
@@ -1024,7 +1073,7 @@ function CalmEmpty({
   );
 }
 
-function AlertRow({ item, onOpen }: { item: AlertItem; onOpen: () => void }) {
+function AlertRow({ item, onOpen, focused = false }: { item: AlertItem; onOpen: () => void; focused?: boolean }) {
   const toneCls =
     item.type === "stale_open"
       ? "bg-rose-500/10 text-rose-700 border-rose-500/30"
@@ -1040,7 +1089,11 @@ function AlertRow({ item, onOpen }: { item: AlertItem; onOpen: () => void }) {
     item.type === "needs_review" ? "Revisar" : "Sin turno";
   return (
     <li
-      className="flex items-center gap-3 px-5 py-3 hover:bg-accent/40 cursor-pointer transition"
+      data-entry-id={item.entry.id}
+      className={cn(
+        "flex items-center gap-3 px-5 py-3 hover:bg-accent/40 cursor-pointer transition",
+        focused && "bg-primary/5 border-l-2 border-primary scroll-mt-24",
+      )}
       onClick={onOpen}
     >
       <EmployeeAvatar
@@ -1062,6 +1115,11 @@ function AlertRow({ item, onOpen }: { item: AlertItem; onOpen: () => void }) {
         </div>
         <div className="text-xs text-muted-foreground truncate">{item.reason}</div>
       </div>
+      {focused && (
+        <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-wider bg-primary/10 text-primary border-primary/40">
+          foco
+        </Badge>
+      )}
       <Badge variant="outline" className={cn("text-[10px] font-semibold uppercase tracking-wider", toneCls)}>
         {label}
       </Badge>
@@ -1073,14 +1131,20 @@ function AlertRow({ item, onOpen }: { item: AlertItem; onOpen: () => void }) {
 function LiveRow({
   row,
   onOpen,
+  focused = false,
 }: {
   row: { entry: TimeEntry; employee: Employee; minutes: number };
   onOpen: () => void;
+  focused?: boolean;
 }) {
   const sched = row.entry.scheduled_shifts;
   return (
     <li
-      className="flex items-center gap-3 px-5 py-3 hover:bg-accent/40 cursor-pointer transition"
+      data-entry-id={row.entry.id}
+      className={cn(
+        "flex items-center gap-3 px-5 py-3 hover:bg-accent/40 cursor-pointer transition",
+        focused && "bg-primary/5 border-l-2 border-primary scroll-mt-24",
+      )}
       onClick={onOpen}
     >
       <EmployeeAvatar
@@ -1117,6 +1181,11 @@ function LiveRow({
         <div className="text-sm font-bold tabular-nums">{formatDuration(row.minutes)}</div>
         <div className="text-[10px] uppercase tracking-wider text-muted-foreground">transcurrido</div>
       </div>
+      {focused && (
+        <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-wider bg-primary/10 text-primary border-primary/40">
+          foco
+        </Badge>
+      )}
       <ChevronRight className="h-4 w-4 text-muted-foreground" />
     </li>
   );
