@@ -239,6 +239,29 @@ export default function TimeClockCommandView() {
     return alerts.filter((a) => a.type === "stale_open" || a.type === "needs_review" || a.type === "very_long");
   }, [alerts]);
 
+  // ─── Sprint 12: consume Root-Cause Explorer deep-link params ─────
+  const loadedEntryIds = useMemo(() => entries.map((e) => e.id), [entries]);
+  const {
+    focusEntryId, focusDate, focusShiftId, entryPresent, hasFocus,
+  } = useTimeClockFocus({ loading, loadedEntryIds });
+
+  // Auto-route to the tab that actually contains the focused entry so
+  // scroll-into-view has a rendered target. Runs once per focus id.
+  const [focusTabApplied, setFocusTabApplied] = useState<string | null>(null);
+  useEffect(() => {
+    if (!focusEntryId || focusTabApplied === focusEntryId) return;
+    let target: string | null = null;
+    if (alerts.some((a) => a.entry.id === focusEntryId)) target = "alerts";
+    else if (liveRows.some((r) => r.entry.id === focusEntryId)) target = "live";
+    else if (closedTodayEntries.some((e) => e.id === focusEntryId)) target = "today";
+    if (target) {
+      setActiveTab(target);
+      setTabAutoSet(true);
+      setFocusTabApplied(focusEntryId);
+    }
+  }, [focusEntryId, alerts, liveRows, closedTodayEntries, focusTabApplied]);
+
+
   const filteredLive = useMemo(() => {
     if (!search.trim()) return liveRows;
     const q = search.trim().toLowerCase();
