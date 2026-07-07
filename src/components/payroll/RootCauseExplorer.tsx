@@ -29,9 +29,22 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
-  ShieldAlert, ExternalLink, Info, Clock, AlertTriangle,
+  ShieldAlert, ExternalLink, Info, Clock, AlertTriangle, ClipboardList, Target,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  buildAttendanceUrl,
+  buildChecklist,
+  buildReviewQueueUrl,
+  buildShiftsUrl,
+  buildTimeClockUrl,
+  bestReviewPoint,
+  detectCauses,
+  HIGHLIGHTABLE_REASONS,
+  type CauseKey,
+  type ChecklistItem,
+  type Severity,
+} from "@/utils/payrollDryRunReviewRouter";
 
 export interface RCEEntry {
   id: string;
