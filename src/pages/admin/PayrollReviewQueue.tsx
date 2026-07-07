@@ -901,6 +901,29 @@ export default function PayrollReviewQueue() {
 
       <PayrollSourceGuardrailBanner />
 
+      {/* S16 — Period resolver banners (read-only, tenant-scoped). */}
+      {resolvedFromUrl && (
+        <Card className="border-primary/30 bg-primary/5">
+          <CardContent className="py-2.5 px-4 flex flex-wrap items-center gap-2 text-xs">
+            <Badge variant="outline" className="gap-1.5 border-primary/40 text-primary">
+              <ScanEye className="h-3 w-3" /> Período abierto desde revisión
+            </Badge>
+            <span className="text-muted-foreground">
+              Cargado por deep-link · solo lectura.
+            </span>
+          </CardContent>
+        </Card>
+      )}
+      {resolveNotFound && (
+        <Card className="border-warning/40 bg-warning/10">
+          <CardContent className="py-2.5 px-4 flex flex-wrap items-center gap-2 text-xs text-warning">
+            <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+            <span>Período no encontrado o no disponible para esta compañía. Mostrando período por defecto.</span>
+          </CardContent>
+        </Card>
+      )}
+
+
       {/* S15 — Root-Cause context banner (read-only hint). */}
       {(reasonHuman || focusEmployeeId) && (
         <Card className="border-primary/30 bg-primary/5">
