@@ -305,6 +305,50 @@ export default function OpsHome() {
             </div>
           </CockpitSection>
 
+          {/* Próximos 60 min */}
+          <CockpitSection
+            title="Próximos 60 minutos"
+            caption={upcoming60.total > 0 ? `${upcoming60.total} turnos iniciando pronto` : undefined}
+          >
+            {upcoming60.total === 0 ? (
+              <div className="rounded-2xl border border-dashed border-border/60 bg-muted/20 px-4 py-6 text-center">
+                <p className="text-xs text-muted-foreground">
+                  No hay turnos iniciando en los próximos 60 minutos.
+                </p>
+              </div>
+            ) : (
+              <div className="grid gap-3 grid-cols-3">
+                <OpsCard
+                  title="Turnos próximos"
+                  count={upcoming60.total}
+                  hint="Inician en ≤ 60 min"
+                  tone="info"
+                  icon={<Clock className="h-4 w-4" />}
+                  to="/app/shifts?when=today"
+                  cta="Ver hoy"
+                />
+                <OpsCard
+                  title="Con cobertura"
+                  count={upcoming60.covered}
+                  hint="Slots completos"
+                  tone={upcoming60.covered === upcoming60.total ? "ok" : "muted"}
+                  icon={<CheckCircle2 className="h-4 w-4" />}
+                  to="/app/daily-ops"
+                  cta="Operación diaria"
+                />
+                <OpsCard
+                  title="Necesitan atención"
+                  count={upcoming60.needsAttention}
+                  hint={upcoming60.needsAttention > 0 ? "Slots abiertos" : "Todo cubierto"}
+                  tone={upcoming60.needsAttention > 0 ? "urgent" : "ok"}
+                  icon={<AlertTriangle className="h-4 w-4" />}
+                  to="/app/shifts?filter=needs-staffing"
+                  cta="Buscar cobertura"
+                />
+              </div>
+            )}
+          </CockpitSection>
+
           {/* Asistencia */}
           <CockpitSection title="Asistencia" caption="Estado en tiempo real de hoy">
             <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
