@@ -261,5 +261,69 @@ Secrets requeridos (QA/staging únicamente):
 
 ---
 
-**Historial:** Sprints 11–19. Este pack (S20) es documentación pura y no
-introduce código en `src/`.
+## Anexo visual (Sprint 24)
+
+Capturas oficiales del flujo, generadas por el harness Playwright en
+QA/staging. **Solo QA/staging, cero PII, cero producción.** Guía completa
+de generación y reglas: [`docs/assets/root-cause-review/README.md`](./assets/root-cause-review/README.md).
+
+> Mientras los `.png` reales no estén commiteados, cada entrada de abajo
+> muestra el nombre canónico esperado (`*.png.placeholder`). Reemplazar el
+> placeholder por el PNG real con el mismo nombre base para que el enlace
+> renderice.
+
+### Desktop (1366 / 1440)
+
+1. **Root-Cause Explorer con checklist + evidencia**
+   ![Explorer checklist](./assets/root-cause-review/01-explorer-checklist.png)
+   Vista de una anomalía con causa raíz, checklist de revisión y evidencia
+   asociada. Punto de partida del flujo.
+
+2. **Time Clock abierto desde revisión con entry enfocada**
+   ![Time Clock focus](./assets/root-cause-review/02-timeclock-focus.png)
+   Banner "Abierto desde revisión · Causa raíz" + fila `time_entry`
+   resaltada. Scroll automático al elemento.
+
+3. **Attendance abierto desde revisión con empleado enfocado**
+   ![Attendance focus](./assets/root-cause-review/03-attendance-focus.png)
+   Fecha cargada, empleado enfocado, chip "Empleado enfocado" visible.
+
+4. **Attendance con filtro local activo + nota de vista filtrada**
+   ![Attendance local filter](./assets/root-cause-review/04-attendance-local-filter.png)
+   Filtro local opt-in aplicado. Nota compacta *"Vista filtrada localmente ·
+   no modifica attendance ni payroll"*.
+
+5. **Shifts con `ShiftDetailDialog` abierto desde revisión**
+   ![Shift detail](./assets/root-cause-review/05-shifts-detail-dialog.png)
+   Deep-link abre el dialog con el turno correcto ya seleccionado.
+
+6. **Payroll Review Queue con worker enfocado**
+   ![Review queue worker focus](./assets/root-cause-review/06-review-queue-worker-focus.png)
+   Buckets expandidos, worker resaltado, chip "Trabajador enfocado" visible.
+
+7. **Payroll Review Queue con filtro local activo + nota**
+   ![Review queue local filter](./assets/root-cause-review/07-review-queue-local-filter.png)
+   Filtro local aplicado. Nota *"Vista filtrada localmente · los totales
+   siguen mostrando el período completo · no modifica payroll"*. KPIs
+   intactos.
+
+8. **Fallback ámbar "No encontrado en el rango cargado"**
+   ![Amber fallback](./assets/root-cause-review/08-amber-fallback-not-found.png)
+   Estado ámbar cuando el ID enfocado no existe en el rango cargado.
+   Nunca falla silenciosamente.
+
+### Mobile (390 × 844 · Pixel 5)
+
+9. **Mobile Time Clock / Attendance con banner compacto**
+   ![Mobile banner](./assets/root-cause-review/09-mobile-timeclock-banner.png)
+   Banner "Abierto desde revisión" en versión compacta, sin overflow.
+
+10. **Mobile Payroll Review Queue con foco**
+    ![Mobile review queue](./assets/root-cause-review/10-mobile-review-queue-focus.png)
+    Foco visible en fila, chip legible, notas compactas sin PII.
+
+---
+
+**Historial:** Sprints 11–19 (implementación), S20 (demo pack textual),
+S21–S23 (filtros locales y notas de contexto), **S24 (este anexo visual)**.
+Este pack es documentación pura y no introduce código en `src/`.
