@@ -1889,8 +1889,34 @@ function DesktopShifts() {
         }
       />
 
+      {/* Sprint 3: active Ops-cockpit filter chip (only visible when arrived via deep-link) */}
+      {activeOpsChip && (
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-primary/30 bg-primary/5 px-3 py-2 text-xs">
+          <span className="inline-flex items-center gap-1.5 font-semibold text-primary">
+            <ScanEye className="h-3.5 w-3.5" />
+            Filtro activo: {activeOpsChip}
+          </span>
+          <span className="text-muted-foreground">
+            Aplicado desde el Ops Cockpit. Los filtros manuales siguen funcionando.
+          </span>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-6 px-2 text-[11px] ml-auto"
+            onClick={() => {
+              setActiveOpsChip(null);
+              setIncompleteOnly(false);
+              setFilters(f => ({ ...f, needsStaffingOnly: false }));
+            }}
+          >
+            Limpiar filtro
+          </Button>
+        </div>
+      )}
+
       {/* ── OPS KPI STRIP ── */}
       <OpsKpiStrip items={opsKpis} />
+
 
       {/* ── Qué necesita atención ── compact action center (UI-only, deep-links to existing filters) */}
       {!loading && attentionChips.length > 0 && (
