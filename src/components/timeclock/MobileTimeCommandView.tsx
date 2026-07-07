@@ -234,7 +234,7 @@ export default function MobileTimeCommandView() {
       }
     });
     return issues;
-  }, [liveRows, closedTodayEntries, empMap]);
+  }, [liveRows, closedTodayEntries, empMap, isToday]);
 
   const clockedEmpIds = useMemo(() => new Set(openEntries.map(e => e.employee_id)), [openEntries]);
   const closedEmpIds = useMemo(() => new Set(closedTodayEntries.map(e => e.employee_id)), [closedTodayEntries]);
