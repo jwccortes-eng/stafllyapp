@@ -256,7 +256,8 @@ export default function PayrollReviewQueue() {
     queryFn: async () => {
       const cid = selectedCompanyId!;
       const pid = effectivePeriodId!;
-      const period = periodsQ.data?.list.find(p => p.id === pid);
+      const period = periodsLookupRef.current.find(p => p.id === pid)
+        ?? periodsQ.data?.list.find(p => p.id === pid);
       if (!period) throw new Error("Period not found");
 
       // 1) period_base_pay (Stafly-side finalized rows, current source of truth)
