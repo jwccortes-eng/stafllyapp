@@ -911,6 +911,7 @@ export default function PayrollNativeDryRun() {
         status={rows.find((r) => r.employee_id === exploreId)?.status ?? null}
         reasons={rows.find((r) => r.employee_id === exploreId)?.reasons ?? []}
         entries={entries}
+        focusReason={searchParams.get("reason")}
       />
     </div>
   );

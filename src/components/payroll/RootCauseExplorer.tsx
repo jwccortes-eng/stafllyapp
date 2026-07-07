@@ -29,9 +29,22 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
-  ShieldAlert, ExternalLink, Info, Clock, AlertTriangle,
+  ShieldAlert, ExternalLink, Info, Clock, AlertTriangle, ClipboardList, Target,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  buildAttendanceUrl,
+  buildChecklist,
+  buildReviewQueueUrl,
+  buildShiftsUrl,
+  buildTimeClockUrl,
+  bestReviewPoint,
+  detectCauses,
+  HIGHLIGHTABLE_REASONS,
+  type CauseKey,
+  type ChecklistItem,
+  type Severity,
+} from "@/utils/payrollDryRunReviewRouter";
 
 export interface RCEEntry {
   id: string;
@@ -58,6 +71,8 @@ export interface RootCauseExplorerProps {
   status: "match" | "minor" | "critical" | "not_comparable" | null;
   reasons: string[];
   entries: RCEEntry[]; // ALL native entries for the period; will filter to worker
+  /** Optional dominant reason key to highlight (from BatchTrendPanel deep-link). Ignored if unknown. */
+  focusReason?: string | null;
 }
 
 const ABNORMAL_MAX_HOURS = 16;
@@ -87,7 +102,7 @@ function localTime(iso: string): string {
 }
 
 export function RootCauseExplorer(props: RootCauseExplorerProps) {
-  const { open, onOpenChange, worker, period, referenceHours, nativeHours, deltaHours, status, reasons, entries } = props;
+  const { open, onOpenChange, worker, period, referenceHours, nativeHours, deltaHours, status, reasons, entries, focusReason } = props;
 
   const workerEntries = useMemo<EnrichedEntry[]>(() => {
     if (!worker) return [];
@@ -186,6 +201,34 @@ export function RootCauseExplorer(props: RootCauseExplorerProps) {
   }, [counts, referenceHours, nativeHours, deltaHours]);
 
   const anchorDate = period?.start_date ?? "";
+
+  const causes = useMemo<CauseKey[]>(
+    () => detectCauses({ counts, referenceHours, nativeHours, deltaHours }),
+    [counts, referenceHours, nativeHours, deltaHours],
+  );
+
+  const checklist = useMemo<ChecklistItem[]>(
+    () =>
+      buildChecklist(
+        { counts, referenceHours, nativeHours, deltaHours },
+        {
+          employeeId: worker?.id ?? null,
+          periodId: period?.id ?? null,
+          anchorDate: anchorDate || null,
+          problematicDate: null,
+          timeEntryId: null,
+          shiftId: null,
+        },
+      ),
+    [counts, referenceHours, nativeHours, deltaHours, worker?.id, period?.id, anchorDate],
+  );
+
+  const bestPoint = useMemo(() => bestReviewPoint(causes), [causes]);
+
+  const highlightKey: CauseKey | null =
+    focusReason && HIGHLIGHTABLE_REASONS.has(focusReason as CauseKey)
+      ? (focusReason as CauseKey)
+      : null;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -371,7 +414,73 @@ export function RootCauseExplorer(props: RootCauseExplorerProps) {
               </p>
             </section>
 
-            {/* Safe CTAs */}
+            {/* Best review point */}
+            {bestPoint && (
+              <section className="space-y-1.5">
+                <div className="text-xs font-semibold flex items-center gap-1.5">
+                  <Target className="h-3.5 w-3.5 text-primary" />
+                  Mejor punto de revisión
+                </div>
+                <div className="rounded-lg border border-primary/30 bg-primary/5 px-3 py-2">
+                  <div className="text-[12px] font-semibold">{bestPoint.label}</div>
+                  <div className="text-[11px] text-muted-foreground">{bestPoint.hint}</div>
+                </div>
+                <p className="text-[10px] text-muted-foreground/80 italic">
+                  Recomendación visual. No ejecuta acción automática.
+                </p>
+              </section>
+            )}
+
+            {/* Manual review checklist */}
+            <section className="space-y-2">
+              <div className="text-xs font-semibold flex items-center gap-1.5">
+                <ClipboardList className="h-3.5 w-3.5 text-muted-foreground" />
+                Checklist de revisión manual
+              </div>
+              <p className="text-[10px] text-muted-foreground">
+                Checklist manual. Las correcciones deben realizarse desde los flujos
+                normales de administración. Esta vista no marca completado, no guarda
+                notas y no corrige datos.
+              </p>
+              {checklist.length === 0 ? (
+                <p className="text-[11px] text-muted-foreground py-2">
+                  Sin acciones sugeridas: no se detectan causas operativas evidentes en este dry-run.
+                </p>
+              ) : (
+                <ul className="space-y-2">
+                  {checklist.map((item) => (
+                    <li
+                      key={item.key}
+                      className={cn(
+                        "rounded-lg border bg-card px-3 py-2 space-y-1.5",
+                        highlightKey === item.key
+                          ? "border-primary/60 ring-1 ring-primary/40"
+                          : "border-border/60",
+                      )}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="text-[12px] font-semibold leading-tight">{item.title}</div>
+                        <SeverityBadge severity={item.severity} />
+                      </div>
+                      <p className="text-[11px] text-muted-foreground leading-relaxed">
+                        {item.reason}
+                      </p>
+                      <Button asChild variant="outline" size="sm" className="h-7 text-[11px] gap-1.5 mt-1">
+                        <Link to={item.ctaHref}>
+                          <ExternalLink className="h-3 w-3" />
+                          {item.ctaLabel}
+                        </Link>
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <p className="text-[10px] text-muted-foreground italic">
+                Resolver desde el flujo normal. Esta vista no corrige datos.
+              </p>
+            </section>
+
+            {/* Safe generic CTAs (always available) */}
             <section className="space-y-2">
               <div className="text-xs font-semibold">Revisar en flujos normales</div>
               <p className="text-[10px] text-muted-foreground">
@@ -380,22 +489,22 @@ export function RootCauseExplorer(props: RootCauseExplorerProps) {
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <CTA
-                  to={`/app/timeclock?when=today&filter=needs-review`}
+                  to={buildTimeClockUrl({ date: anchorDate || null })}
                   label="Abrir Time Clock"
-                  hint="Revisar fichajes que necesitan atención"
+                  hint={anchorDate ? `Contexto: ${anchorDate}` : "Contexto: hoy"}
                 />
                 <CTA
-                  to={`/app/attendance?when=today`}
+                  to={buildAttendanceUrl({ date: anchorDate || null, employeeId: worker?.id ?? null })}
                   label="Abrir Attendance"
-                  hint="Revisar asistencia del día"
+                  hint={anchorDate ? `Contexto: ${anchorDate}` : "Contexto: hoy"}
                 />
                 <CTA
-                  to={anchorDate ? `/app/shifts?date=${anchorDate}` : `/app/shifts?when=today`}
+                  to={buildShiftsUrl({ date: anchorDate || null })}
                   label="Abrir Shifts"
                   hint={anchorDate ? `Contexto: ${anchorDate}` : "Contexto: hoy"}
                 />
                 <CTA
-                  to={`/app/payroll-review-queue`}
+                  to={buildReviewQueueUrl({ periodId: period?.id ?? null, employeeId: worker?.id ?? null })}
                   label="Abrir Payroll Review Queue"
                   hint="Cola de revisión existente"
                 />
@@ -452,5 +561,20 @@ function CTA({ to, label, hint }: { to: string; label: string; hint: string }) {
         </span>
       </Link>
     </Button>
+  );
+}
+
+function SeverityBadge({ severity }: { severity: Severity }) {
+  const cls =
+    severity === "alta"
+      ? "border-destructive/40 text-destructive bg-destructive/5"
+      : severity === "media"
+      ? "border-amber-400/40 text-amber-800 dark:text-amber-200 bg-amber-500/5"
+      : "border-border/60 text-muted-foreground bg-muted/40";
+  const label = severity === "alta" ? "Alta" : severity === "media" ? "Media" : "Baja";
+  return (
+    <Badge variant="outline" className={cn("text-[9px] shrink-0", cls)}>
+      {label}
+    </Badge>
   );
 }

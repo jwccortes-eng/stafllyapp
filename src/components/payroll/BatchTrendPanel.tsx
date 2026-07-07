@@ -446,7 +446,22 @@ export function BatchTrendPanel({
                           <TableCell>
                             <Button asChild variant="ghost" size="sm" className="h-7 px-2 text-[10px] gap-1">
                               <Link
-                                to={`/app/payroll-native-dry-run?period=${r.periodIds[r.periodIds.length - 1]}&explore=${r.employee_id}`}
+                                to={(() => {
+                                  const periodId = r.periodIds[r.periodIds.length - 1];
+                                  const base = `/app/payroll-native-dry-run?period=${periodId}&explore=${r.employee_id}`;
+                                  // Map dominant BatchTrend reason → CauseKey the explorer can highlight.
+                                  const REASON_MAP: Record<string, string> = {
+                                    open_entries: "open_entries",
+                                    no_shift_link: "no_shift_link",
+                                    abnormal_duration: "abnormal_duration",
+                                    midnight_cross: "midnight_cross",
+                                    overlap_entries: "overlap",
+                                    delta_critical: "delta_critical_unexplained",
+                                  };
+                                  const dominant = topReasons.find(([k]) => REASON_MAP[k])?.[0];
+                                  const mapped = dominant ? REASON_MAP[dominant] : null;
+                                  return mapped ? `${base}&reason=${mapped}` : base;
+                                })()}
                                 title="Abrir Root-Cause Explorer read-only en el último período crítico"
                               >
                                 <ExternalLink className="h-3 w-3" /> Explorar
