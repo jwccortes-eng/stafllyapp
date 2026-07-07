@@ -717,6 +717,9 @@ function DesktopShifts() {
     setSelectedShift(found);
     setDetailInitialTab(tabParam);
     setDetailOpen(true);
+    toast.info("Abierto desde revisión", {
+      description: "Solo navegación: no modifica payroll.",
+    });
     clearParams();
   }, [shifts, searchParams, setSearchParams, loading]);
 
