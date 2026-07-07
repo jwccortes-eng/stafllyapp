@@ -1060,15 +1060,15 @@ export default function PayrollReviewQueue() {
               Mobile: each row is a tappable card that opens a drawer-per-row
               with the full row detail (drawer-per-row pattern). */}
           {buckets.some(b => b.rows.length > 0) && (() => {
-            const validFocus = focusedBucket && buckets.some(b => b.id === focusedBucket) ? focusedBucket : null;
+            const validFocus = focusedBucket && displayedBuckets.some(b => b.id === focusedBucket) ? focusedBucket : null;
             const baseOpen = validFocus
               ? [validFocus]
-              : buckets.filter(b => b.rows.length > 0).map(b => b.id);
+              : displayedBuckets.filter(b => b.rows.length > 0).map(b => b.id);
             // S15 — also expand any bucket that contains the focused worker.
             const defaultOpen = Array.from(new Set([...baseOpen, ...focusedBucketIds]));
             return (
               <Accordion type="multiple" defaultValue={defaultOpen} className="space-y-2">
-                {buckets.map(b => {
+                {displayedBuckets.map(b => {
                   const sev = SEVERITY_STYLE[b.severity];
                   const SevIcon = sev.icon;
                   const isFocused = validFocus === b.id || focusedBucketIds.includes(b.id);
