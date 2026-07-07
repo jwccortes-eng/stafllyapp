@@ -9,7 +9,8 @@
  * (Call / WhatsApp / Review in Time) — never navigate directly to worker profile.
  */
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import OpsFilterBanner from "@/components/ops/OpsFilterBanner";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
 import { Card } from "@/components/ui/card";
