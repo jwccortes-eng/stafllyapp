@@ -1182,6 +1182,24 @@ export default function PayrollReviewQueue() {
             );
           })()}
 
+          {/* Sprint 22 — Empty state when the local worker filter hides everything. */}
+          {focusWorkerFilter && displayedBuckets.length === 0 && (
+            <Card className="border-warning/40 bg-warning/10">
+              <CardContent className="py-3 px-4 flex flex-wrap items-center gap-2 text-xs text-warning">
+                <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                <span>Sin filas del trabajador enfocado en la cola cargada.</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-[11px] px-2 ml-auto"
+                  onClick={() => setFocusWorkerFilter(false)}
+                >
+                  Mostrar todos
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Mobile drawer-per-row (read-only detail + existing CTA if any) */}
           {(() => {
             const dr = drawerRow;
