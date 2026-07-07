@@ -38,7 +38,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
-  Loader2, ShieldAlert, ArrowLeft, Info, ChevronRight, ChevronDown, Download,
+  Loader2, ShieldAlert, ArrowLeft, Info, ChevronRight, ChevronDown, Download, Search,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -49,6 +49,7 @@ import {
   type DryRunCsvRow,
 } from "@/utils/exportDryRunCsv";
 import { BatchTrendPanel } from "@/components/payroll/BatchTrendPanel";
+import { RootCauseExplorer } from "@/components/payroll/RootCauseExplorer";
 
 interface Period {
   id: string;
