@@ -71,6 +71,8 @@ export interface RootCauseExplorerProps {
   status: "match" | "minor" | "critical" | "not_comparable" | null;
   reasons: string[];
   entries: RCEEntry[]; // ALL native entries for the period; will filter to worker
+  /** Optional dominant reason key to highlight (from BatchTrendPanel deep-link). Ignored if unknown. */
+  focusReason?: string | null;
 }
 
 const ABNORMAL_MAX_HOURS = 16;
