@@ -123,6 +123,16 @@ test.describe("Root-Cause deep-link ecosystem (READ-ONLY)", () => {
     await page.exposeBinding("__harnessGuard", async (_src, action: string) => {
       throw new Error(`Harness attempted forbidden action: ${action}`);
     });
+    // Network guard: fail on any mutating request against sensitive tables.
+    page.on("request", (req) => {
+      const method = req.method().toUpperCase();
+      if (!MUTATING_METHODS.has(method)) return;
+      const url = req.url();
+      if (AUTH_ALLOWLIST.some((re) => re.test(url))) return;
+      if (SENSITIVE_ENDPOINT.test(url)) {
+        throw new Error(`Forbidden mutating request: ${method} ${url}`);
+      }
+    });
     // Preflight base URL. If auth is missing, this catches it early.
     await page.goto("/", { waitUntil: "domcontentloaded" });
     testInfo.annotations.push({ type: "note", description: `real ids: ${JSON.stringify(HAS_REAL)}` });
