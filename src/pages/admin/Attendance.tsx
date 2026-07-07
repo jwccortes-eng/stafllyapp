@@ -27,6 +27,7 @@ import { format, parseISO, differenceInMinutes, isAfter, isBefore, startOfDay, e
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useDeepLinkFocus } from "@/hooks/useDeepLinkFocus";
+import { REVIEW_COPY } from "@/utils/reviewNavigationCopy";
 
 /* ─── Types ─── */
 
@@ -516,23 +517,24 @@ export default function Attendance() {
           <div className="min-w-0 flex-1 space-y-0.5">
             <div className="font-semibold">
               {entryPresent || employeePresent
-                ? "Enfocando desde revisión"
+                ? REVIEW_COPY.bannerFromReview
                 : (focusEntryId && !entryPresent) || (focusEmployeeId && !employeePresent)
-                ? "Elemento fuera del rango cargado o no encontrado"
+                ? REVIEW_COPY.notFoundInRange
                 : !isViewingToday
-                ? "Viendo día histórico"
-                : "Abierto desde revisión"}
+                ? REVIEW_COPY.viewingHistoricalDay
+                : REVIEW_COPY.bannerFromReview}
             </div>
             <div className="text-[11px] opacity-80 truncate">
               Día <span className="font-mono">{dateStrView}</span>
-              {!isViewingToday && <> (histórico)</>}
+              {!isViewingToday && <> · {REVIEW_COPY.viewingHistoricalDay.toLowerCase()}</>}
               {focusEmployeeId && <> · empleado <code className="font-mono">{focusEmployeeId.slice(0, 8)}</code></>}
               {focusEntryId && <> · entry <code className="font-mono">{focusEntryId.slice(0, 8)}</code></>}
             </div>
+            <div className="text-[10px] opacity-70 mt-0.5">{REVIEW_COPY.readOnlyNote}</div>
           </div>
           {!isViewingToday && (
             <Button variant="ghost" size="sm" className="h-7 text-[11px] px-2 shrink-0" onClick={clearDateFocus}>
-              Volver a hoy
+              {REVIEW_COPY.backToToday}
             </Button>
           )}
         </div>

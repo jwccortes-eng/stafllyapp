@@ -44,6 +44,7 @@ import {
   ExternalLink, Info, ClipboardList, ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { REVIEW_COPY, REVIEW_REASON_LABELS, reviewReasonLabel } from "@/utils/reviewNavigationCopy";
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -60,21 +61,9 @@ interface BucketRow {
   employeeId?: string | null;
 }
 
-// ── S15 Root-Cause reason labels (read-only, hint only) ───────────────────
-const REASON_LABELS: Record<string, string> = {
-  open_entries: "Fichajes abiertos",
-  no_shift_link: "Fichajes sin turno",
-  overlap: "Entradas solapadas",
-  abnormal_duration: "Duración anormal",
-  midnight_cross: "Cruce de medianoche",
-  missing_pbp: "Sin reconciliación PBP",
-  no_native_entries: "Sin fichajes nativos",
-  delta_critical_unexplained: "Diferencia crítica sin explicar",
-};
-function reasonLabel(key: string | null): string | null {
-  if (!key) return null;
-  return REASON_LABELS[key] ?? key.replace(/_/g, " ");
-}
+// ── S15/S19 Root-Cause reason labels (sourced from reviewNavigationCopy) ──
+const REASON_LABELS = REVIEW_REASON_LABELS;
+const reasonLabel = reviewReasonLabel;
 
 interface BucketDef {
   id: string;
@@ -906,10 +895,10 @@ export default function PayrollReviewQueue() {
         <Card className="border-primary/30 bg-primary/5">
           <CardContent className="py-2.5 px-4 flex flex-wrap items-center gap-2 text-xs">
             <Badge variant="outline" className="gap-1.5 border-primary/40 text-primary">
-              <ScanEye className="h-3 w-3" /> Período abierto desde revisión
+              <ScanEye className="h-3 w-3" /> {REVIEW_COPY.bannerFromReview}
             </Badge>
             <span className="text-muted-foreground">
-              Cargado por deep-link · solo lectura.
+              Período cargado por deep-link · {REVIEW_COPY.readOnlyNote.toLowerCase()}.
             </span>
           </CardContent>
         </Card>
@@ -918,22 +907,22 @@ export default function PayrollReviewQueue() {
         <Card className="border-warning/40 bg-warning/10">
           <CardContent className="py-2.5 px-4 flex flex-wrap items-center gap-2 text-xs text-warning">
             <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-            <span>Período no encontrado o no disponible para esta compañía. Mostrando período por defecto.</span>
+            <span>{REVIEW_COPY.notFoundInRange} · mostrando período por defecto.</span>
           </CardContent>
         </Card>
       )}
 
 
-      {/* S15 — Root-Cause context banner (read-only hint). */}
+      {/* S15/S19 — Root-Cause context banner (read-only hint). */}
       {(reasonHuman || focusEmployeeId) && (
         <Card className="border-primary/30 bg-primary/5">
           <CardContent className="py-3 px-4 flex flex-wrap items-center gap-2 text-xs">
             <Badge variant="outline" className="gap-1.5 border-primary/40 text-primary">
-              <ScanEye className="h-3 w-3" /> Abierto desde causa raíz
+              <ScanEye className="h-3 w-3" /> {REVIEW_COPY.bannerFromReview}
             </Badge>
             {reasonHuman && (
               <span className="text-foreground">
-                Motivo: <span className="font-semibold">{reasonHuman}</span>
+                {REVIEW_COPY.bannerRootCausePrefix}: <span className="font-semibold">{reasonHuman}</span>
               </span>
             )}
             {focusEmployeeId && focusedEmployeePresent && (
@@ -944,11 +933,11 @@ export default function PayrollReviewQueue() {
             {focusEmployeeId && !focusedEmployeePresent && (
               <span className="ml-auto inline-flex items-center gap-1.5 rounded-md border border-warning/40 bg-warning/10 px-2 py-1 text-warning">
                 <AlertTriangle className="h-3 w-3" />
-                Empleado no encontrado en la cola cargada
+                Empleado {REVIEW_COPY.notFoundInRange.toLowerCase()}
               </span>
             )}
             <span className="ml-auto text-[10px] text-muted-foreground">
-              Solo lectura — no modifica payroll ni fichajes.
+              {REVIEW_COPY.readOnlyNote}
             </span>
           </CardContent>
         </Card>

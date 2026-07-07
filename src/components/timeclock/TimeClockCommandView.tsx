@@ -37,6 +37,7 @@ import StaflyCalmProcessingBanner from "@/components/common/StaflyCalmProcessing
 import { APP_BASE_URL } from "@/lib/app-url";
 import { cn } from "@/lib/utils";
 import { useTimeClockFocus } from "@/hooks/useTimeClockFocus";
+import { REVIEW_COPY } from "@/utils/reviewNavigationCopy";
 
 // ─── thresholds ──────────────────────────────────────────────
 const OPEN_ENTRY_WARN_HOURS = 12;
@@ -438,11 +439,11 @@ export default function TimeClockCommandView() {
           label="Necesita revisión"
           value={kpis.lateReview}
         />
-        <KpiCard icon={Users} tone="muted" label="Fichajes de hoy" value={kpis.todayEntries} />
+        <KpiCard icon={Users} tone="muted" label={isToday ? "Fichajes de hoy" : "Fichajes del día"} value={kpis.todayEntries} />
         <KpiCard
           icon={ClipboardCheck}
           tone="muted"
-          label="Horas registradas hoy"
+          label={isToday ? "Horas registradas hoy" : "Horas registradas del día"}
           value={formatHoursShort(kpis.totalMinutesToday)}
         />
       </div>
@@ -511,19 +512,20 @@ export default function TimeClockCommandView() {
           <div className="min-w-0 flex-1 space-y-0.5">
             <div className="font-semibold">
               {entryPresent
-                ? "Enfocando fichaje desde revisión"
+                ? REVIEW_COPY.bannerFromReview
                 : focusEntryId
-                ? "Fichaje fuera del rango cargado o no encontrado"
+                ? REVIEW_COPY.notFoundInRange
                 : !isToday
-                ? "Viendo día histórico"
-                : "Vista desde revisión"}
+                ? REVIEW_COPY.viewingHistoricalDay
+                : REVIEW_COPY.bannerFromReview}
             </div>
             <div className="text-[11px] opacity-80 truncate">
               Día <span className="font-mono">{viewDateKey}</span>
-              {!isToday && <> (histórico)</>}
+              {!isToday && <> · {REVIEW_COPY.viewingHistoricalDay.toLowerCase()}</>}
               {focusEntryId && <> · entry <code className="font-mono">{focusEntryId.slice(0, 8)}</code></>}
               {focusShiftId && <> · turno <code className="font-mono">{focusShiftId.slice(0, 8)}</code></>}
             </div>
+            <div className="text-[10px] opacity-70 mt-0.5">{REVIEW_COPY.readOnlyNote}</div>
           </div>
           {!isToday && (
             <Button
@@ -536,7 +538,7 @@ export default function TimeClockCommandView() {
                 setSearchParams(next, { replace: true });
               }}
             >
-              Volver a hoy
+              {REVIEW_COPY.backToToday}
             </Button>
           )}
         </div>

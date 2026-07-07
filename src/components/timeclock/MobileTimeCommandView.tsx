@@ -27,6 +27,7 @@ import { format, differenceInMinutes, startOfWeek, endOfWeek } from "date-fns";
 import { enUS } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useTimeClockFocus } from "@/hooks/useTimeClockFocus";
+import { REVIEW_COPY } from "@/utils/reviewNavigationCopy";
 
 const OPEN_ENTRY_WARN_HOURS = 12;
 const OPEN_ENTRY_STALE_HOURS = 24;
@@ -325,19 +326,20 @@ export default function MobileTimeCommandView() {
           <div className="min-w-0 flex-1">
             <div className="font-semibold">
               {entryPresent
-                ? "Enfocando fichaje desde revisión"
+                ? REVIEW_COPY.bannerFromReview
                 : focusEntryId
-                ? "Fichaje fuera del rango cargado o no encontrado"
+                ? REVIEW_COPY.notFoundInRange
                 : !isToday
-                ? "Viendo día histórico"
-                : "Vista desde revisión"}
+                ? REVIEW_COPY.viewingHistoricalDay
+                : REVIEW_COPY.bannerFromReview}
             </div>
             <div className="opacity-80 truncate">
               Día <span className="font-mono">{todayKey}</span>
-              {!isToday && <> (histórico)</>}
+              {!isToday && <> · {REVIEW_COPY.viewingHistoricalDay.toLowerCase()}</>}
               {focusEntryId && <> · <code className="font-mono">{focusEntryId.slice(0, 8)}</code></>}
               {focusShiftId && <> · turno <code className="font-mono">{focusShiftId.slice(0, 8)}</code></>}
             </div>
+            <div className="text-[10px] opacity-70 mt-0.5">{REVIEW_COPY.readOnlyNote}</div>
           </div>
           {!isToday && (
             <button
