@@ -144,6 +144,8 @@ export default function OpsHome() {
   // Scoped to today's shift ids that already loaded — one small IN() query.
   const [rejectedCount, setRejectedCount] = useState<number | null>(null);
   const [upcomingSheetOpen, setUpcomingSheetOpen] = useState(false);
+  const [lastRefreshedAt, setLastRefreshedAt] = useState<Date>(() => new Date());
+  const [nowTick, setNowTick] = useState(0);
   const todayShiftIdsKey = todayOps.shifts.map((s) => s.id).join(",");
   useEffect(() => {
     let cancelled = false;
@@ -165,6 +167,35 @@ export default function OpsHome() {
       cancelled = true;
     };
   }, [selectedCompanyId, todayShiftIdsKey]);
+
+  // Sprint 5: silent auto-refresh every 60s. Skipped while the "Próximos 60 min"
+  // drawer is open to avoid resetting user focus. Read-only: reuses existing
+  // refresh() from useTodayOperations (no new subscriptions, no polling < 60s).
+  useEffect(() => {
+    if (!selectedCompanyId) return;
+    const iv = setInterval(() => {
+      if (upcomingSheetOpen) return;
+      if (document.hidden) return;
+      todayOps.refresh();
+      tomorrowOps.refresh();
+      setLastRefreshedAt(new Date());
+    }, 60_000);
+    return () => clearInterval(iv);
+  }, [selectedCompanyId, upcomingSheetOpen, todayOps, tomorrowOps]);
+
+  // Ticker to update "hace X min" label without extra refreshes.
+  useEffect(() => {
+    const iv = setInterval(() => setNowTick((n) => n + 1), 30_000);
+    return () => clearInterval(iv);
+  }, []);
+
+  const lastRefreshLabel = useMemo(() => {
+    void nowTick;
+    const diffSec = Math.max(0, Math.floor((Date.now() - lastRefreshedAt.getTime()) / 1000));
+    if (diffSec < 45) return "Actualizado ahora";
+    const mins = Math.round(diffSec / 60);
+    return `Actualizado hace ${mins} min`;
+  }, [lastRefreshedAt, nowTick]);
 
   const t = todayOps.totals;
 
@@ -221,6 +252,7 @@ export default function OpsHome() {
               onClick={() => {
                 todayOps.refresh();
                 tomorrowOps.refresh();
+                setLastRefreshedAt(new Date());
               }}
               title="Actualizar"
             >
@@ -239,6 +271,10 @@ export default function OpsHome() {
         <span className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-2.5 py-1 capitalize">
           <CalendarDays className="h-3 w-3" />
           {todayLabel}
+        </span>
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-secondary/60 px-2.5 py-1 text-[11px]">
+          <RefreshCw className="h-3 w-3" />
+          {lastRefreshLabel} · auto-refresh 60s
         </span>
         <PayrollSourceGuardrailBanner variant="compact" />
       </div>

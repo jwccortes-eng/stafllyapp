@@ -138,6 +138,7 @@ const ShiftOperations = lazy(() => import("./pages/admin/ShiftOperations"));
 const OperationsCommandCenter = lazy(() => import("./pages/admin/OperationsCommandCenter"));
 const DailyOps = lazy(() => import("./pages/admin/DailyOps"));
 const OpsHome = lazy(() => import("./pages/admin/OpsHome"));
+const PayrollNativeDryRun = lazy(() => import("./pages/admin/PayrollNativeDryRun"));
 const StagedReconciliation = lazy(() => import("./pages/admin/StagedReconciliation"));
 const CompensationValidation = lazy(() => import("./pages/admin/CompensationValidation"));
 const PayrollPilotClose = lazy(() => import("./pages/admin/PayrollPilotClose"));
@@ -402,6 +403,7 @@ function App() {
                 <Route path="payroll-reconciliation" element={<CompanyRequiredGuard><PayrollReconciliation /></CompanyRequiredGuard>} />
                 <Route path="payroll-review-queue" element={<CompanyRequiredGuard><PayrollReviewQueue /></CompanyRequiredGuard>} />
                 <Route path="weekly-payroll-reconciliation" element={<CompanyRequiredGuard><WeeklyPayrollReconciliation /></CompanyRequiredGuard>} />
+                <Route path="payroll-native-dry-run" element={<CompanyRequiredGuard><PayrollNativeDryRun /></CompanyRequiredGuard>} />
                 <Route path="compensation-adoption" element={<CompanyRequiredGuard><CompensationAdoption /></CompanyRequiredGuard>} />
                 <Route path="applications" element={<CompanyRequiredGuard><Applications /></CompanyRequiredGuard>} />
                 <Route path="referrals" element={<Referrals />} />
