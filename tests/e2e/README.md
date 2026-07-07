@@ -56,6 +56,42 @@ it exercises the amber-fallback branches without depending on prod data.
 | `E2E_TIME_ENTRY_ID` | Real `time_entries.id` in that company              |
 | `E2E_SHIFT_ID`      | Real `scheduled_shifts.id` in that company          |
 | `E2E_TARGET_DATE`   | `YYYY-MM-DD` for `date=` params (default today)     |
+| `E2E_NOTE_TEST_ENABLED` | **Sprint 28.** Set to `true` to enable the notes-persistence spec. Off by default. |
+| `E2E_ROOT_CAUSE_URL`    | **Sprint 28.** Optional override for the URL that opens `RootCauseExplorer`. Defaults to `/app/payroll-native-dry-run?explore=<E2E_EMPLOYEE_ID>`. |
+
+## Sprint 28 · Review notes persistence spec (opt-in)
+
+`tests/e2e/root-cause-review-notes.spec.ts` verifies that the Sprint 27
+`payroll_review_notes` MVP saves and lists a note end-to-end through the
+`RootCauseExplorer`.
+
+- **Opt-in only.** Skips unless `E2E_NOTE_TEST_ENABLED=true`.
+- **Never runs against production.** Refuses `E2E_BASE_URL` matching
+  `staflyapps.com` or `staflyapp.lovable.app`.
+- **Requires** a valid `E2E_STORAGE_STATE` for a QA user with `payroll`
+  module `view` + `edit` permission, plus `E2E_EMPLOYEE_ID`.
+- **Writes exactly one row** to `public.payroll_review_notes` per run,
+  with a synthetic `[E2E RootCause Note] <ISO timestamp>` prefix and no
+  PII. All other mutating requests are blocked by the network guard
+  (`time_entries`, `scheduled_shifts`, `shift_assignments`, `pay_periods`,
+  `payroll_*` except `payroll_review_notes`, `movements`,
+  `reconciliation_*`, `compensation_*`, `payroll_rate_snapshots`). Only
+  `POST` is allowed on the notes endpoint — `PATCH`/`PUT`/`DELETE` fail.
+- **Desktop-only** for now; mobile is deferred to a future sprint.
+- **No cleanup.** MVP has no DELETE, so QA accumulates synthetic notes
+  until an archived/cleanup path lands.
+
+Example run:
+
+```bash
+E2E_NOTE_TEST_ENABLED=true \
+E2E_BASE_URL=https://<qa-preview>.lovable.app \
+E2E_STORAGE_STATE=./.playwright/auth.json \
+E2E_EMPLOYEE_ID=<qa-employee-uuid> \
+bunx playwright test root-cause-review-notes --project=desktop
+```
+
+
 
 ## Running
 
