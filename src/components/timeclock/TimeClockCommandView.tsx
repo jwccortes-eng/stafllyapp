@@ -1131,14 +1131,20 @@ function AlertRow({ item, onOpen, focused = false }: { item: AlertItem; onOpen: 
 function LiveRow({
   row,
   onOpen,
+  focused = false,
 }: {
   row: { entry: TimeEntry; employee: Employee; minutes: number };
   onOpen: () => void;
+  focused?: boolean;
 }) {
   const sched = row.entry.scheduled_shifts;
   return (
     <li
-      className="flex items-center gap-3 px-5 py-3 hover:bg-accent/40 cursor-pointer transition"
+      data-entry-id={row.entry.id}
+      className={cn(
+        "flex items-center gap-3 px-5 py-3 hover:bg-accent/40 cursor-pointer transition",
+        focused && "bg-primary/5 border-l-2 border-primary scroll-mt-24",
+      )}
       onClick={onOpen}
     >
       <EmployeeAvatar
