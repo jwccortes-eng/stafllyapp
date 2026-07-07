@@ -20,7 +20,7 @@
  *   - Corrections must be done from the normal admin flows — this drawer
  *     only diagnoses.
  */
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
@@ -39,6 +39,7 @@ import {
   buildShiftsUrl,
   buildTimeClockUrl,
   bestReviewPoint,
+  deriveRootCauseAnchors,
   detectCauses,
   HIGHLIGHTABLE_REASONS,
   type CauseKey,
@@ -207,28 +208,76 @@ export function RootCauseExplorer(props: RootCauseExplorerProps) {
     [counts, referenceHours, nativeHours, deltaHours],
   );
 
+  // Per-cause anchors (day / entry / shift) derived from the already-loaded entries.
+  const anchors = useMemo(
+    () =>
+      deriveRootCauseAnchors(
+        workerEntries.map((e) => ({
+          id: e.id,
+          clock_in: e.clock_in,
+          clock_out: e.clock_out,
+          shift_id: e.shift_id,
+          day: e.day,
+          durationHours: e.flags.durationHours,
+          flags: {
+            open: e.flags.open,
+            noShift: e.flags.noShift,
+            overlap: e.flags.overlap,
+            abnormal: e.flags.abnormal,
+            midnight: e.flags.midnight,
+          },
+        })),
+      ),
+    [workerEntries],
+  );
+
+  const routerCtx = useMemo(
+    () => ({
+      employeeId: worker?.id ?? null,
+      periodId: period?.id ?? null,
+      anchorDate: anchorDate || null,
+      problematicDate: null,
+      timeEntryId: null,
+      shiftId: null,
+    }),
+    [worker?.id, period?.id, anchorDate],
+  );
+
   const checklist = useMemo<ChecklistItem[]>(
     () =>
       buildChecklist(
         { counts, referenceHours, nativeHours, deltaHours },
-        {
-          employeeId: worker?.id ?? null,
-          periodId: period?.id ?? null,
-          anchorDate: anchorDate || null,
-          problematicDate: null,
-          timeEntryId: null,
-          shiftId: null,
-        },
+        routerCtx,
+        anchors,
       ),
-    [counts, referenceHours, nativeHours, deltaHours, worker?.id, period?.id, anchorDate],
+    [counts, referenceHours, nativeHours, deltaHours, routerCtx, anchors],
   );
 
-  const bestPoint = useMemo(() => bestReviewPoint(causes), [causes]);
+  const bestPoint = useMemo(
+    () => bestReviewPoint(causes, anchors, routerCtx),
+    [causes, anchors, routerCtx],
+  );
 
   const highlightKey: CauseKey | null =
     focusReason && HIGHLIGHTABLE_REASONS.has(focusReason as CauseKey)
       ? (focusReason as CauseKey)
       : null;
+
+  /** Day (YYYY-MM-DD) to visually highlight in the timeline based on focusReason. */
+  const highlightDay: string | null =
+    (highlightKey && anchors[highlightKey]?.date) ?? null;
+
+  // When the drawer opens with a focus reason that has a day anchor, scroll to it.
+  useEffect(() => {
+    if (!open || !highlightDay) return;
+    const t = setTimeout(() => {
+      const el = typeof document !== "undefined"
+        ? document.getElementById(`rce-day-${highlightDay}`)
+        : null;
+      el?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 120);
+    return () => clearTimeout(t);
+  }, [open, highlightDay]);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -348,10 +397,31 @@ export function RootCauseExplorer(props: RootCauseExplorerProps) {
                 </p>
               ) : (
                 <div className="space-y-2">
-                  {byDay.map(([day, list]) => (
-                    <div key={day} className="rounded-lg border border-border/60 bg-card overflow-hidden">
-                      <div className="px-3 py-1.5 bg-muted/40 text-[11px] font-semibold flex items-center justify-between">
-                        <span>{day}</span>
+                  {byDay.map(([day, list]) => {
+                    const isHighlighted = highlightDay === day;
+                    return (
+                    <div
+                      key={day}
+                      id={`rce-day-${day}`}
+                      className={cn(
+                        "rounded-lg border bg-card overflow-hidden transition-colors",
+                        isHighlighted
+                          ? "border-primary/60 ring-1 ring-primary/40"
+                          : "border-border/60",
+                      )}
+                    >
+                      <div className={cn(
+                        "px-3 py-1.5 text-[11px] font-semibold flex items-center justify-between",
+                        isHighlighted ? "bg-primary/10" : "bg-muted/40",
+                      )}>
+                        <span className="flex items-center gap-1.5">
+                          {day}
+                          {isHighlighted && (
+                            <Badge variant="outline" className="text-[9px] border-primary/50 text-primary bg-primary/5">
+                              foco
+                            </Badge>
+                          )}
+                        </span>
                         <span className="text-[10px] text-muted-foreground font-normal">
                           {list.length} entrada{list.length === 1 ? "" : "s"}
                         </span>
@@ -405,7 +475,8 @@ export function RootCauseExplorer(props: RootCauseExplorerProps) {
                         ))}
                       </ul>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
               <p className="text-[10px] text-muted-foreground flex items-start gap-1">
@@ -421,9 +492,19 @@ export function RootCauseExplorer(props: RootCauseExplorerProps) {
                   <Target className="h-3.5 w-3.5 text-primary" />
                   Mejor punto de revisión
                 </div>
-                <div className="rounded-lg border border-primary/30 bg-primary/5 px-3 py-2">
-                  <div className="text-[12px] font-semibold">{bestPoint.label}</div>
-                  <div className="text-[11px] text-muted-foreground">{bestPoint.hint}</div>
+                <div className="rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 space-y-1.5">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="text-[12px] font-semibold">{bestPoint.label}</div>
+                      <div className="text-[11px] text-muted-foreground">{bestPoint.hint}</div>
+                    </div>
+                    <Button asChild variant="outline" size="sm" className="h-7 text-[11px] gap-1.5 shrink-0">
+                      <Link to={bestPoint.ctaHref}>
+                        <ExternalLink className="h-3 w-3" />
+                        {bestPoint.ctaLabel}
+                      </Link>
+                    </Button>
+                  </div>
                 </div>
                 <p className="text-[10px] text-muted-foreground/80 italic">
                   Recomendación visual. No ejecuta acción automática.
@@ -465,12 +546,36 @@ export function RootCauseExplorer(props: RootCauseExplorerProps) {
                       <p className="text-[11px] text-muted-foreground leading-relaxed">
                         {item.reason}
                       </p>
-                      <Button asChild variant="outline" size="sm" className="h-7 text-[11px] gap-1.5 mt-1">
-                        <Link to={item.ctaHref}>
-                          <ExternalLink className="h-3 w-3" />
-                          {item.ctaLabel}
-                        </Link>
-                      </Button>
+                      {item.evidence && (
+                        <div className="rounded-md bg-muted/40 border border-border/50 px-2 py-1 text-[10.5px] text-foreground/80 flex items-start gap-1.5">
+                          <Info className="h-3 w-3 mt-0.5 shrink-0 text-muted-foreground" />
+                          <span>{item.evidence}</span>
+                        </div>
+                      )}
+                      <div className="flex flex-wrap gap-1.5 mt-1">
+                        <Button asChild variant="outline" size="sm" className="h-7 text-[11px] gap-1.5">
+                          <Link to={item.ctaHref}>
+                            <ExternalLink className="h-3 w-3" />
+                            {item.ctaLabel}
+                          </Link>
+                        </Button>
+                        {item.anchorDate && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 text-[11px] gap-1.5 text-muted-foreground"
+                            onClick={() => {
+                              const el = typeof document !== "undefined"
+                                ? document.getElementById(`rce-day-${item.anchorDate}`)
+                                : null;
+                              el?.scrollIntoView({ behavior: "smooth", block: "start" });
+                            }}
+                          >
+                            Ver día
+                          </Button>
+                        )}
+                      </div>
                     </li>
                   ))}
                 </ul>
