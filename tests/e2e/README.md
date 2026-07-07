@@ -59,11 +59,12 @@ it exercises the amber-fallback branches without depending on prod data.
 | `E2E_NOTE_TEST_ENABLED` | **Sprint 28.** Set to `true` to enable the notes-persistence spec. Off by default. |
 | `E2E_ROOT_CAUSE_URL`    | **Sprint 28.** Optional override for the URL that opens `RootCauseExplorer`. Defaults to `/app/payroll-native-dry-run?explore=<E2E_EMPLOYEE_ID>`. |
 
-## Sprint 28 · Review notes persistence spec (opt-in)
+## Sprint 28 → Sprint 30 · Review notes create + archive spec (opt-in)
 
-`tests/e2e/root-cause-review-notes.spec.ts` verifies that the Sprint 27
-`payroll_review_notes` MVP saves and lists a note end-to-end through the
-`RootCauseExplorer`.
+`tests/e2e/root-cause-review-notes.spec.ts` verifies the full lifecycle of a
+`payroll_review_notes` row through the `RootCauseExplorer`: create → list →
+archive (soft-delete) → hidden from active list. Sprint 30 adds the archive
+cleanup step so QA no longer accumulates active E2E notes.
 
 - **Opt-in only.** Skips unless `E2E_NOTE_TEST_ENABLED=true`.
 - **Never runs against production.** Refuses `E2E_BASE_URL` matching
@@ -72,14 +73,18 @@ it exercises the amber-fallback branches without depending on prod data.
   module `view` + `edit` permission, plus `E2E_EMPLOYEE_ID`.
 - **Writes exactly one row** to `public.payroll_review_notes` per run,
   with a synthetic `[E2E RootCause Note] <ISO timestamp>` prefix and no
-  PII. All other mutating requests are blocked by the network guard
-  (`time_entries`, `scheduled_shifts`, `shift_assignments`, `pay_periods`,
-  `payroll_*` except `payroll_review_notes`, `movements`,
-  `reconciliation_*`, `compensation_*`, `payroll_rate_snapshots`). Only
-  `POST` is allowed on the notes endpoint — `PATCH`/`PUT`/`DELETE` fail.
-- **Desktop-only** for now; mobile is deferred to a future sprint.
-- **No cleanup.** MVP has no DELETE, so QA accumulates synthetic notes
-  until an archived/cleanup path lands.
+  PII. The same row is soft-deleted (archived) before the test ends.
+- **Network guard** blocks all mutations on `time_entries`,
+  `scheduled_shifts`, `shift_assignments`, `pay_periods`, `payroll_*`
+  (except `payroll_review_notes`), `payroll_adjustments`, `movements`,
+  `reconciliation_*`, `compensation_*`, `payroll_rate_snapshots`, plus
+  any `rpc/`, `functions/v1/`, or storage-write endpoint. On the notes
+  endpoint only `POST` (create) and `PATCH`/`PUT` (archive) are allowed;
+  physical `DELETE` throws.
+- **Desktop-only** for now; mobile is deferred.
+- **Cleanup:** the archive step leaves the note with `archived_at`
+  populated so it disappears from the active list. Physical delete is
+  never performed.
 
 Example run:
 
