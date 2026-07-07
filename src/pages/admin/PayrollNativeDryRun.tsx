@@ -22,7 +22,7 @@
  *  - Anomaly detection is VISUAL ONLY: never edits, closes, or corrects
  *    entries.
  */
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
