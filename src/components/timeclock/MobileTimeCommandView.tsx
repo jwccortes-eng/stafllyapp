@@ -72,6 +72,7 @@ type Mode = "today" | "week";
 export default function MobileTimeCommandView() {
   const { selectedCompanyId } = useCompany();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [entries, setEntries] = useState<TimeEntry[]>([]);
   const [weekEntries, setWeekEntries] = useState<TimeEntry[]>([]);
@@ -80,6 +81,38 @@ export default function MobileTimeCommandView() {
   const [now, setNow] = useState(new Date());
   const [mode, setMode] = useState<Mode>("today");
   const [alertDetail, setAlertDetail] = useState<AlertItem | null>(null);
+
+  // Sprint 5: hydrate mobile view from Ops Cockpit deep-link query params.
+  // Supported: ?when=today|tomorrow, ?filter=open|stale|needs-review
+  // Mobile has only two modes (today/week); "tomorrow" gracefully documents
+  // via banner. Filters do NOT rewrite queries — they surface a banner and
+  // steer the operator toward the alerts / live sections already visible.
+  const filterParam = searchParams.get("filter");
+  const whenParam = searchParams.get("when");
+  const filterLabel = useMemo(() => {
+    const parts: string[] = [];
+    if (whenParam === "today") parts.push("Hoy");
+    else if (whenParam === "tomorrow") parts.push("Mañana (no soportado en móvil — mostrando hoy)");
+    if (filterParam === "open") parts.push("Fichajes abiertos");
+    else if (filterParam === "stale") parts.push("Alertas · fichajes largos");
+    else if (filterParam === "needs-review") parts.push("Requieren revisión");
+    return parts.join(" · ");
+  }, [filterParam, whenParam]);
+  const hasOpsFilter = Boolean(filterLabel);
+
+  useEffect(() => {
+    if (whenParam === "tomorrow") return; // mobile shows today; banner documents
+    if (filterParam === "open" || filterParam === "stale" || filterParam === "needs-review") {
+      setMode("today");
+    }
+  }, [filterParam, whenParam]);
+
+  const clearOpsFilter = () => {
+    const next = new URLSearchParams(searchParams);
+    next.delete("filter");
+    next.delete("when");
+    setSearchParams(next, { replace: true });
+  };
 
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 30000);
