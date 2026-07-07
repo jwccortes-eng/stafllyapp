@@ -56,6 +56,24 @@ interface BucketRow {
   link?: { to: string; label: string } | null;
   amount?: number | null;
   badge?: string | null;
+  /** Optional worker id, used by S15 deep-link focus (?employee=/?explore=). */
+  employeeId?: string | null;
+}
+
+// ── S15 Root-Cause reason labels (read-only, hint only) ───────────────────
+const REASON_LABELS: Record<string, string> = {
+  open_entries: "Fichajes abiertos",
+  no_shift_link: "Fichajes sin turno",
+  overlap: "Entradas solapadas",
+  abnormal_duration: "Duración anormal",
+  midnight_cross: "Cruce de medianoche",
+  missing_pbp: "Sin reconciliación PBP",
+  no_native_entries: "Sin fichajes nativos",
+  delta_critical_unexplained: "Diferencia crítica sin explicar",
+};
+function reasonLabel(key: string | null): string | null {
+  if (!key) return null;
+  return REASON_LABELS[key] ?? key.replace(/_/g, " ");
 }
 
 interface BucketDef {
@@ -129,6 +147,10 @@ export default function PayrollReviewQueue() {
   const [searchParams] = useSearchParams();
   const focusedBucket = searchParams.get("bucket");
   const periodParam = searchParams.get("period");
+  // S15 — Root-Cause deep link (read-only hints only).
+  const focusEmployeeId = searchParams.get("employee") || searchParams.get("explore");
+  const reasonKey = searchParams.get("reason");
+  const reasonHuman = reasonLabel(reasonKey);
 
   // Mobile drawer-per-row state.
   const [drawerRow, setDrawerRow] = useState<{ row: BucketRow; bucket: BucketDef } | null>(null);
@@ -365,6 +387,7 @@ export default function PayrollReviewQueue() {
       .map(r => ({
         key: r.id,
         primary: empName(r.employee_id),
+        employeeId: r.employee_id,
         secondary: `${r.total_paid_hours ?? 0}h`,
         amount: Number(r.base_total_pay ?? 0),
         link: empLink(r.employee_id),
@@ -376,6 +399,7 @@ export default function PayrollReviewQueue() {
       .map(h => ({
         key: h.id,
         primary: h.worker_name_raw ?? "(unnamed)",
+        employeeId: h.matched_employee_id ?? null,
         secondary: h.needs_identity_review ? "Identity review flagged" : "No employee match",
         amount: Number(h.base_total_pay ?? 0),
         link: { to: "/app/payroll-reconciliation", label: "Open reconciliation" },
@@ -388,6 +412,7 @@ export default function PayrollReviewQueue() {
         .map(r => ({
           key: `rfr-${r.id}`,
           primary: empName(r.employee_id),
+          employeeId: r.employee_id,
           secondary: `${r.conflict_count} conflict${r.conflict_count === 1 ? "" : "s"} · ${r.reconciliation_status ?? "—"}`,
           amount: Number(r.final_total_pay ?? 0),
           link: empLink(r.employee_id),
@@ -397,6 +422,7 @@ export default function PayrollReviewQueue() {
         .map(r => ({
           key: `pbp-anom-${r.id}`,
           primary: empName(r.employee_id),
+          employeeId: r.employee_id,
           secondary: `Anomaly: ${Object.keys((r.anomaly_flags as any) ?? {}).join(", ") || "flagged"}`,
           amount: Number(r.base_total_pay ?? 0),
           link: empLink(r.employee_id),
@@ -416,6 +442,7 @@ export default function PayrollReviewQueue() {
         return {
           key: a.id,
           primary: empName(a.employee_id),
+          employeeId: a.employee_id,
           secondary: s ? `${s.shift_code ?? s.title ?? "Shift"} · ${s.date}` : "Shift",
           link: { to: `/app/shifts`, label: "Open shift" },
         };
@@ -445,6 +472,7 @@ export default function PayrollReviewQueue() {
       return {
         key: `noassign-${empId}`,
         primary: empName(empId),
+        employeeId: empId,
         secondary: parts.join(" · "),
         amount: info.hasPay ? info.payAmount : undefined,
         link: info.hasPay ? empLink(empId) : { to: "/app/timeclock", label: "Open Time Clock" },
@@ -479,6 +507,7 @@ export default function PayrollReviewQueue() {
         return {
           key: r.id,
           primary: empName(r.driver_id),
+          employeeId: r.driver_id,
           secondary: `${r.ride_type ?? "ride"} · ${r.passenger_count ?? 0} passengers · no movement linked${s ? ` · ${s.date}` : ""}`,
           link: { to: `/app/movements`, label: "Open movements" },
         };
@@ -491,6 +520,7 @@ export default function PayrollReviewQueue() {
         .map(m => ({
           key: `mv-${m.id}`,
           primary: empName(m.employee_id),
+          employeeId: m.employee_id,
           secondary: `Movement · ${m.approval_status ?? "pending"}${m.note ? ` · ${m.note}` : ""}`,
           amount: Number(m.total_value ?? 0),
           link: { to: "/app/movements", label: "Open movements" },
@@ -504,6 +534,7 @@ export default function PayrollReviewQueue() {
       .map(r => ({
         key: `disp-${r.id}`,
         primary: empName(r.employee_id),
+        employeeId: r.employee_id,
         secondary: `Disputed · ${r.reconciliation_status}`,
         amount: Number(r.final_total_pay ?? 0),
         link: empLink(r.employee_id),
@@ -520,6 +551,7 @@ export default function PayrollReviewQueue() {
       .map(r => ({
         key: `doc-${r.id}`,
         primary: empName(r.employee_id),
+        employeeId: r.employee_id,
         secondary: `Profile: ${d.empMap.get(r.employee_id)?.profile_status ?? "—"} · has payable row`,
         amount: Number(r.base_total_pay ?? 0),
         link: empLink(r.employee_id),
@@ -579,6 +611,7 @@ export default function PayrollReviewQueue() {
         .map(t => ({
           key: `hr-te-${t.id}`,
           primary: empName(t.employee_id),
+          employeeId: t.employee_id,
           secondary: `Duration > 16h (${t.clock_in ? format(parseISO(t.clock_in), "MMM d") : ""})`,
           link: { to: "/app/timeclock", label: "Open Time Clock" },
         })),
@@ -587,6 +620,7 @@ export default function PayrollReviewQueue() {
         .map(r => ({
           key: `hr-pbp-${r.id}`,
           primary: empName(r.employee_id),
+          employeeId: r.employee_id,
           secondary: Number(r.base_total_pay ?? 0) <= 0 ? "Zero / negative pay" : "Pay > $3,000",
           amount: Number(r.base_total_pay ?? 0),
           link: empLink(r.employee_id),
@@ -596,6 +630,7 @@ export default function PayrollReviewQueue() {
         .map(h => ({
           key: `hr-hist-${h.id}`,
           primary: h.worker_name_raw ?? "(unnamed)",
+          employeeId: h.matched_employee_id ?? null,
           secondary: Number(h.base_total_pay ?? 0) <= 0 ? "Zero / negative imported pay" : "Imported pay > $3,000",
           amount: Number(h.base_total_pay ?? 0),
           link: { to: "/app/payroll-reconciliation", label: "Open reconciliation" },
@@ -660,6 +695,7 @@ export default function PayrollReviewQueue() {
         return {
           key: `fa-${t.id}`,
           primary: empName(t.employee_id),
+          employeeId: t.employee_id,
           secondary: `${s ? `${s.title ?? s.shift_code ?? "Turno"} · ` : ""}entrada ${t.clock_in ? format(parseISO(t.clock_in), "MMM d HH:mm") : "—"} · falta salida`,
           link: { to: `/app/timeclock`, label: "Abrir reloj" },
         };
@@ -699,6 +735,7 @@ export default function PayrollReviewQueue() {
       return {
         key: `idblock-${eid}`,
         primary: displayName,
+        employeeId: eid,
         secondary: `${reasons.join(" · ") || "Identidad no verificada"} · ${evLabel}`,
         badge: e.payroll_approval_blocked ? "Payroll bloqueado" : "Identidad pendiente",
         link: { to: `/app/employees/${eid}`, label: "Ver / resolver identidad" },
@@ -735,6 +772,41 @@ export default function PayrollReviewQueue() {
       { id: "high-risk",      title: "Alto riesgo / fuera de umbral",    description: "Duración > 16h, pago > $3,000, o pago en cero/negativo.",                    severity: "block", affectsPay: true,  rows: highRisk },
     ];
   }, [dataQ.data]);
+
+  // S15 — which buckets contain the focused employee (if any), and whether
+  // that employee is present anywhere in the loaded review queue.
+  const focusedBucketIds = useMemo(() => {
+    if (!focusEmployeeId) return [] as string[];
+    return buckets
+      .filter(b => b.rows.some(r => r.employeeId === focusEmployeeId))
+      .map(b => b.id);
+  }, [buckets, focusEmployeeId]);
+  const focusedEmployeePresent = focusedBucketIds.length > 0;
+  const [focusScrolled, setFocusScrolled] = useState<string | null>(null);
+  useEffect(() => {
+    if (!focusEmployeeId || !focusedEmployeePresent) return;
+    if (focusScrolled === focusEmployeeId) return;
+    const timers: number[] = [];
+    const attempt = () => {
+      const el = document.querySelector(
+        `[data-employee-id="${CSS.escape(focusEmployeeId)}"]`,
+      );
+      if (el) {
+        (el as HTMLElement).scrollIntoView({ behavior: "smooth", block: "center" });
+        setFocusScrolled(focusEmployeeId);
+        return true;
+      }
+      return false;
+    };
+    [80, 300, 700, 1400].forEach(d => {
+      timers.push(window.setTimeout(() => {
+        if (focusScrolled === focusEmployeeId) return;
+        attempt();
+      }, d));
+    });
+    return () => timers.forEach(t => window.clearTimeout(t));
+  }, [focusEmployeeId, focusedEmployeePresent, focusScrolled]);
+
 
   // ── Early returns AFTER all hooks ───────────────────────────────────────
   if (companyLoading) {
@@ -784,6 +856,38 @@ export default function PayrollReviewQueue() {
       </div>
 
       <PayrollSourceGuardrailBanner />
+
+      {/* S15 — Root-Cause context banner (read-only hint). */}
+      {(reasonHuman || focusEmployeeId) && (
+        <Card className="border-primary/30 bg-primary/5">
+          <CardContent className="py-3 px-4 flex flex-wrap items-center gap-2 text-xs">
+            <Badge variant="outline" className="gap-1.5 border-primary/40 text-primary">
+              <ScanEye className="h-3 w-3" /> Abierto desde causa raíz
+            </Badge>
+            {reasonHuman && (
+              <span className="text-foreground">
+                Motivo: <span className="font-semibold">{reasonHuman}</span>
+              </span>
+            )}
+            {focusEmployeeId && focusedEmployeePresent && (
+              <span className="text-muted-foreground">
+                · Enfocando worker en la cola
+              </span>
+            )}
+            {focusEmployeeId && !focusedEmployeePresent && (
+              <span className="ml-auto inline-flex items-center gap-1.5 rounded-md border border-warning/40 bg-warning/10 px-2 py-1 text-warning">
+                <AlertTriangle className="h-3 w-3" />
+                Empleado no encontrado en la cola cargada
+              </span>
+            )}
+            <span className="ml-auto text-[10px] text-muted-foreground">
+              Solo lectura — no modifica payroll ni fichajes.
+            </span>
+          </CardContent>
+        </Card>
+      )}
+
+
 
 
 
@@ -877,15 +981,17 @@ export default function PayrollReviewQueue() {
               with the full row detail (drawer-per-row pattern). */}
           {buckets.some(b => b.rows.length > 0) && (() => {
             const validFocus = focusedBucket && buckets.some(b => b.id === focusedBucket) ? focusedBucket : null;
-            const defaultOpen = validFocus
+            const baseOpen = validFocus
               ? [validFocus]
               : buckets.filter(b => b.rows.length > 0).map(b => b.id);
+            // S15 — also expand any bucket that contains the focused worker.
+            const defaultOpen = Array.from(new Set([...baseOpen, ...focusedBucketIds]));
             return (
               <Accordion type="multiple" defaultValue={defaultOpen} className="space-y-2">
                 {buckets.map(b => {
                   const sev = SEVERITY_STYLE[b.severity];
                   const SevIcon = sev.icon;
-                  const isFocused = validFocus === b.id;
+                  const isFocused = validFocus === b.id || focusedBucketIds.includes(b.id);
                   return (
                     <AccordionItem
                       key={b.id}
@@ -915,19 +1021,30 @@ export default function PayrollReviewQueue() {
                           </div>
                         ) : isMobile ? (
                           <div className="space-y-2">
-                            {b.rows.slice(0, 100).map(r => (
+                            {b.rows.slice(0, 100).map(r => {
+                              const rowFocused = !!focusEmployeeId && r.employeeId === focusEmployeeId;
+                              return (
                               <MobileQueueRow
                                 key={r.key}
                                 onClick={() => setDrawerRow({ row: r, bucket: b })}
                                 primary={r.primary}
                                 secondary={r.secondary}
+                                data-employee-id={r.employeeId ?? undefined}
+                                className={cn(
+                                  "scroll-mt-24",
+                                  rowFocused && "ring-2 ring-primary/60 bg-primary/5 border-primary/40",
+                                )}
+                                topMeta={rowFocused ? (
+                                  <Badge variant="outline" className="text-[9px] py-0 px-1.5 border-primary/50 text-primary">foco</Badge>
+                                ) : undefined}
                                 rightSlot={typeof r.amount === "number" ? (
                                   <div className="text-sm font-mono tabular-nums">
                                     {moneyFmt.format(r.amount)}
                                   </div>
                                 ) : undefined}
                               />
-                            ))}
+                              );
+                            })}
                             {b.rows.length > 100 && (
                               <div className="pt-2 text-xs text-muted-foreground">
                                 Mostrando los primeros 100 de {b.rows.length} bloques.
@@ -936,10 +1053,24 @@ export default function PayrollReviewQueue() {
                           </div>
                         ) : (
                           <div className="divide-y divide-border/50">
-                            {b.rows.slice(0, 100).map(r => (
-                              <div key={r.key} className="flex items-center gap-3 py-2">
+                            {b.rows.slice(0, 100).map(r => {
+                              const rowFocused = !!focusEmployeeId && r.employeeId === focusEmployeeId;
+                              return (
+                              <div
+                                key={r.key}
+                                data-employee-id={r.employeeId ?? undefined}
+                                className={cn(
+                                  "flex items-center gap-3 py-2 scroll-mt-24 rounded-md px-2 -mx-2",
+                                  rowFocused && "ring-2 ring-primary/60 bg-primary/5",
+                                )}
+                              >
                                 <div className="min-w-0 flex-1">
-                                  <div className="text-sm font-medium truncate">{r.primary}</div>
+                                  <div className="text-sm font-medium truncate flex items-center gap-2">
+                                    {rowFocused && (
+                                      <Badge variant="outline" className="text-[9px] py-0 px-1.5 border-primary/50 text-primary shrink-0">foco</Badge>
+                                    )}
+                                    <span className="truncate">{r.primary}</span>
+                                  </div>
                                   {r.secondary && <div className="text-xs text-muted-foreground truncate">{r.secondary}</div>}
                                 </div>
                                 {typeof r.amount === "number" && (
@@ -953,7 +1084,8 @@ export default function PayrollReviewQueue() {
                                   </Button>
                                 )}
                               </div>
-                            ))}
+                              );
+                            })}
                             {b.rows.length > 100 && (
                               <div className="pt-2 text-xs text-muted-foreground">
                                 Mostrando los primeros 100 de {b.rows.length} bloques.
@@ -961,6 +1093,7 @@ export default function PayrollReviewQueue() {
                             )}
                           </div>
                         )}
+
                       </AccordionContent>
                     </AccordionItem>
                   );
