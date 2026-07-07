@@ -1073,7 +1073,7 @@ function CalmEmpty({
   );
 }
 
-function AlertRow({ item, onOpen }: { item: AlertItem; onOpen: () => void }) {
+function AlertRow({ item, onOpen, focused = false }: { item: AlertItem; onOpen: () => void; focused?: boolean }) {
   const toneCls =
     item.type === "stale_open"
       ? "bg-rose-500/10 text-rose-700 border-rose-500/30"
@@ -1089,7 +1089,11 @@ function AlertRow({ item, onOpen }: { item: AlertItem; onOpen: () => void }) {
     item.type === "needs_review" ? "Revisar" : "Sin turno";
   return (
     <li
-      className="flex items-center gap-3 px-5 py-3 hover:bg-accent/40 cursor-pointer transition"
+      data-entry-id={item.entry.id}
+      className={cn(
+        "flex items-center gap-3 px-5 py-3 hover:bg-accent/40 cursor-pointer transition",
+        focused && "bg-primary/5 border-l-2 border-primary scroll-mt-24",
+      )}
       onClick={onOpen}
     >
       <EmployeeAvatar
