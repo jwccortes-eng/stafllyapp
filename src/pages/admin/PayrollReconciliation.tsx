@@ -984,6 +984,9 @@ export default function PayrollReconciliationPage() {
           </div>
         </div>
 
+        <PayrollSourceGuardrailBanner />
+
+
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 gap-3">
             <Loader2 className="h-6 w-6 animate-spin text-primary" />
