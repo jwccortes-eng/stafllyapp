@@ -439,11 +439,11 @@ export default function TimeClockCommandView() {
           label="Necesita revisión"
           value={kpis.lateReview}
         />
-        <KpiCard icon={Users} tone="muted" label="Fichajes de hoy" value={kpis.todayEntries} />
+        <KpiCard icon={Users} tone="muted" label={isToday ? "Fichajes de hoy" : "Fichajes del día"} value={kpis.todayEntries} />
         <KpiCard
           icon={ClipboardCheck}
           tone="muted"
-          label="Horas registradas hoy"
+          label={isToday ? "Horas registradas hoy" : "Horas registradas del día"}
           value={formatHoursShort(kpis.totalMinutesToday)}
         />
       </div>
