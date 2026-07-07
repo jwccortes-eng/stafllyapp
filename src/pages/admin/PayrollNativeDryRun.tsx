@@ -974,7 +974,7 @@ const REASON_LABEL: Record<ReasonKey, string> = {
 };
 
 function ReasonChip({ reason }: { reason: ReasonKey }) {
-  const danger = reason === "abnormal_duration" || reason === "missing_pbp";
+  const danger = reason === "abnormal_duration" || reason === "missing_pbp" || reason === "overlap_entries";
   const warn = reason === "open_entries" || reason === "no_shift_link" || reason === "no_native_entries";
   return (
     <Badge
