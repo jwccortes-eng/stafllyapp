@@ -459,7 +459,7 @@ export default function TimeClockCommandView() {
         ) : (
           <ul className="divide-y divide-border/40">
             {alerts.slice(0, 8).map((item) => (
-              <AlertRow key={`${item.type}-${item.entry.id}`} item={item} onOpen={() => openAlert(item)} />
+              <AlertRow key={`${item.type}-${item.entry.id}`} item={item} focused={focusEntryId === item.entry.id} onOpen={() => openAlert(item)} />
             ))}
           </ul>
         )}
@@ -568,7 +568,7 @@ export default function TimeClockCommandView() {
             ) : (
               <ul className="divide-y divide-border/40">
                 {filteredLive.map((r) => (
-                  <LiveRow key={r.entry.id} row={r} onOpen={() => openWorker(r.employee.id)} />
+                  <LiveRow key={r.entry.id} row={r} focused={focusEntryId === r.entry.id} onOpen={() => openWorker(r.employee.id)} />
                 ))}
               </ul>
             )}
@@ -592,7 +592,7 @@ export default function TimeClockCommandView() {
             ) : (
               <ul className="divide-y divide-border/40">
                 {alerts.map((item) => (
-                  <AlertRow key={`${item.type}-${item.entry.id}`} item={item} onOpen={() => openAlert(item)} />
+                  <AlertRow key={`${item.type}-${item.entry.id}`} item={item} focused={focusEntryId === item.entry.id} onOpen={() => openAlert(item)} />
                 ))}
               </ul>
             )}
@@ -713,7 +713,7 @@ export default function TimeClockCommandView() {
             ) : (
               <ul className="divide-y divide-border/40">
                 {approvals.map((item) => (
-                  <AlertRow key={`${item.type}-${item.entry.id}`} item={item} onOpen={() => openAlert(item)} />
+                  <AlertRow key={`${item.type}-${item.entry.id}`} item={item} focused={focusEntryId === item.entry.id} onOpen={() => openAlert(item)} />
                 ))}
               </ul>
             )}
