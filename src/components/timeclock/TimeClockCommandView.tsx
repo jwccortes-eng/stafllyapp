@@ -13,8 +13,9 @@
  *  - Scheduled shifts shown as operational context only, never as pay
  *  - All queries scoped by selectedCompanyId
  */
-import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState, useCallback } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import OpsFilterBanner from "@/components/ops/OpsFilterBanner";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
 import { Card } from "@/components/ui/card";
