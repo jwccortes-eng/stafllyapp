@@ -147,6 +147,10 @@ export default function PayrollReviewQueue() {
   const [searchParams] = useSearchParams();
   const focusedBucket = searchParams.get("bucket");
   const periodParam = searchParams.get("period");
+  // S15 — Root-Cause deep link (read-only hints only).
+  const focusEmployeeId = searchParams.get("employee") || searchParams.get("explore");
+  const reasonKey = searchParams.get("reason");
+  const reasonHuman = reasonLabel(reasonKey);
 
   // Mobile drawer-per-row state.
   const [drawerRow, setDrawerRow] = useState<{ row: BucketRow; bucket: BucketDef } | null>(null);
