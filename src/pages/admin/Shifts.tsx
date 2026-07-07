@@ -345,7 +345,15 @@ function DesktopShifts() {
   const isInitialized = useRef(false);
 
   // Parse URL params on mount
+  // Sprint 3: also honor `?when=today|tomorrow` from /app/ops deep-links.
   const initialDate = useMemo(() => {
+    const when = searchParams.get("when");
+    if (when === "today") return new Date();
+    if (when === "tomorrow") {
+      const d = new Date();
+      d.setDate(d.getDate() + 1);
+      return d;
+    }
     const d = searchParams.get("date");
     if (d) {
       const parsed = parse(d, "yyyy-MM-dd", new Date());
@@ -357,7 +365,24 @@ function DesktopShifts() {
   const initialView = useMemo(() => {
     const v = searchParams.get("view");
     if (v && ["day", "week", "month", "employee", "client"].includes(v)) return v as ViewMode;
+    // Sprint 3: deep-links from Ops Cockpit imply a single-day focus.
+    if (searchParams.get("when") === "today" || searchParams.get("when") === "tomorrow") {
+      return "day" as ViewMode;
+    }
     return "week" as ViewMode;
+  }, []);
+
+  // Sprint 3: Ops-driven filter (needs-staffing | incomplete). Kept in local
+  // state so the chip persists even after the URL sync drops the query param.
+  const initialOpsFilter = useMemo<null | "needs-staffing" | "incomplete">(() => {
+    const f = searchParams.get("filter");
+    if (f === "needs-staffing" || f === "incomplete") return f;
+    return null;
+  }, []);
+  const initialWhenLabel = useMemo<null | "today" | "tomorrow">(() => {
+    const w = searchParams.get("when");
+    if (w === "today" || w === "tomorrow") return w;
+    return null;
   }, []);
 
   const [shifts, setShifts] = useState<Shift[]>([]);
