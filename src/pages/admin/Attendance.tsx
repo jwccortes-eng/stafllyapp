@@ -21,7 +21,7 @@ import { SmartDateInput } from "@/components/ui/smart-date-input";
 import { formatDateUS } from "@/lib/date-format";
 import {
   ScanEye, Users, Clock, AlertTriangle, CheckCircle2, XCircle,
-  Search, CalendarIcon, ArrowUpDown, ChevronDown, Eye,
+  Search, CalendarIcon, ArrowUpDown, ChevronDown, Eye, Info,
 } from "lucide-react";
 import { format, parseISO, differenceInMinutes, isAfter, isBefore, startOfDay, endOfDay, eachDayOfInterval } from "date-fns";
 import { es } from "date-fns/locale";
