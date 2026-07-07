@@ -689,8 +689,9 @@ function DesktopShifts() {
   useEffect(() => { refreshShifts(); }, [refreshShifts]);
 
   // Deep-link: open shift detail (and specific tab) from /app/shifts?shiftId=...&tab=attendance
+  // Sprint 14: also accept `?shift=<id>` as an alias, matching Root-Cause Explorer CTAs.
   useEffect(() => {
-    const sid = searchParams.get("shiftId");
+    const sid = searchParams.get("shiftId") ?? searchParams.get("shift");
     if (!sid || shifts.length === 0) return;
     const found = shifts.find(s => s.id === sid);
     if (!found) return;
@@ -701,10 +702,12 @@ function DesktopShifts() {
     setSearchParams(prev => {
       const p = new URLSearchParams(prev);
       p.delete("shiftId");
+      p.delete("shift");
       p.delete("tab");
       return p;
     }, { replace: true });
   }, [shifts, searchParams, setSearchParams]);
+
 
   // Stable click handler — prevents child views from re-rendering on every parent render.
   const handleShiftClick = useCallback((s: Shift) => {
