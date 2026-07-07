@@ -194,6 +194,22 @@ export default function PayrollNativeDryRun() {
   );
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
+  const exploreId = searchParams.get("explore") || null;
+  const setExploreId = useCallback(
+    (id: string | null) => {
+      setSearchParams(
+        (prev) => {
+          const p = new URLSearchParams(prev);
+          if (id) p.set("explore", id);
+          else p.delete("explore");
+          return p;
+        },
+        { replace: true },
+      );
+    },
+    [setSearchParams],
+  );
+
   const setFilter = useCallback(
     (next: FilterKey) => {
       setSearchParams(
