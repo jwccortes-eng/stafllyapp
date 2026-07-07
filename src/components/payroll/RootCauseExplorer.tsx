@@ -46,8 +46,11 @@ import {
   type ChecklistItem,
   type Severity,
 } from "@/utils/payrollDryRunReviewRouter";
-import { REVIEW_COPY, REVIEW_NOTE_CHIPS, type ReviewNoteChipKey } from "@/utils/reviewNavigationCopy";
+import { REVIEW_COPY, REVIEW_NOTE_CHIPS, reviewNoteStatusLabel, type ReviewNoteChipKey } from "@/utils/reviewNavigationCopy";
 import { Textarea } from "@/components/ui/textarea";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { Loader2, StickyNote } from "lucide-react";
 
 export interface RCEEntry {
   id: string;
