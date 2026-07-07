@@ -48,6 +48,7 @@ import {
   downloadDryRunCsv,
   type DryRunCsvRow,
 } from "@/utils/exportDryRunCsv";
+import { BatchTrendPanel } from "@/components/payroll/BatchTrendPanel";
 
 interface Period {
   id: string;
