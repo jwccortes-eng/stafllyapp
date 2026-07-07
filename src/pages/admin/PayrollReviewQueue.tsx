@@ -840,6 +840,30 @@ export default function PayrollReviewQueue() {
     return () => timers.forEach(t => window.clearTimeout(t));
   }, [focusEmployeeId, focusedEmployeePresent, focusScrolled]);
 
+  // ─── Sprint 22: Optional local worker-focus filter ───
+  // 100% client-side over buckets/rows already built. No new queries, no URL
+  // writes, no changes to payroll math. Opt-in via chip; auto-resets when the
+  // focused worker, the active period, or the worker's presence changes.
+  const [focusWorkerFilter, setFocusWorkerFilter] = useState(false);
+  const canFilterByFocusedWorker = !!focusEmployeeId && focusedEmployeePresent;
+  useEffect(() => {
+    if (!canFilterByFocusedWorker) setFocusWorkerFilter(false);
+  }, [canFilterByFocusedWorker, focusEmployeeId, effectivePeriodId]);
+  const focusedWorkerName = useMemo(() => {
+    if (!focusEmployeeId) return null;
+    for (const b of buckets) {
+      const r = b.rows.find(x => x.employeeId === focusEmployeeId);
+      if (r?.primary) return r.primary;
+    }
+    return null;
+  }, [buckets, focusEmployeeId]);
+  const displayedBuckets = useMemo(() => {
+    if (!focusWorkerFilter || !focusEmployeeId) return buckets;
+    return buckets
+      .map(b => ({ ...b, rows: b.rows.filter(r => r.employeeId === focusEmployeeId) }))
+      .filter(b => b.rows.length > 0);
+  }, [buckets, focusWorkerFilter, focusEmployeeId]);
+
 
   // ── Early returns AFTER all hooks ───────────────────────────────────────
   if (companyLoading) {
