@@ -546,12 +546,36 @@ export function RootCauseExplorer(props: RootCauseExplorerProps) {
                       <p className="text-[11px] text-muted-foreground leading-relaxed">
                         {item.reason}
                       </p>
-                      <Button asChild variant="outline" size="sm" className="h-7 text-[11px] gap-1.5 mt-1">
-                        <Link to={item.ctaHref}>
-                          <ExternalLink className="h-3 w-3" />
-                          {item.ctaLabel}
-                        </Link>
-                      </Button>
+                      {item.evidence && (
+                        <div className="rounded-md bg-muted/40 border border-border/50 px-2 py-1 text-[10.5px] text-foreground/80 flex items-start gap-1.5">
+                          <Info className="h-3 w-3 mt-0.5 shrink-0 text-muted-foreground" />
+                          <span>{item.evidence}</span>
+                        </div>
+                      )}
+                      <div className="flex flex-wrap gap-1.5 mt-1">
+                        <Button asChild variant="outline" size="sm" className="h-7 text-[11px] gap-1.5">
+                          <Link to={item.ctaHref}>
+                            <ExternalLink className="h-3 w-3" />
+                            {item.ctaLabel}
+                          </Link>
+                        </Button>
+                        {item.anchorDate && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 text-[11px] gap-1.5 text-muted-foreground"
+                            onClick={() => {
+                              const el = typeof document !== "undefined"
+                                ? document.getElementById(`rce-day-${item.anchorDate}`)
+                                : null;
+                              el?.scrollIntoView({ behavior: "smooth", block: "start" });
+                            }}
+                          >
+                            Ver día
+                          </Button>
+                        )}
+                      </div>
                     </li>
                   ))}
                 </ul>
