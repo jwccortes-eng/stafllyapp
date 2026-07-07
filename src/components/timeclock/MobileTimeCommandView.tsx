@@ -124,7 +124,23 @@ export default function MobileTimeCommandView() {
   // never lingers on screen after context switch.
   useEffect(() => { setAlertDetail(null); }, [selectedCompanyId, mode]);
 
-  const todayKey = format(now, "yyyy-MM-dd");
+  // ─── Sprint 13: historical date loader from ?date=YYYY-MM-DD ───
+  const dateParam = searchParams.get("date");
+  const parsedDateParam = useMemo(() => {
+    if (!dateParam || !/^\d{4}-\d{2}-\d{2}$/.test(dateParam)) return null;
+    const d = new Date(`${dateParam}T00:00:00`);
+    return isNaN(d.getTime()) ? null : d;
+  }, [dateParam]);
+  const viewDate = useMemo(() => {
+    if (parsedDateParam) {
+      const d = new Date(parsedDateParam);
+      d.setHours(0, 0, 0, 0);
+      return d;
+    }
+    return now;
+  }, [parsedDateParam, now]);
+  const todayKey = format(viewDate, "yyyy-MM-dd");
+  const isToday = todayKey === format(now, "yyyy-MM-dd");
 
   const load = async () => {
     if (!selectedCompanyId) return;
