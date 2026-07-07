@@ -868,7 +868,7 @@ export default function PayrollReviewQueue() {
     return <Navigate to="/app" replace />;
   }
 
-  const periods = periodsQ.data?.list ?? [];
+  const periods = mergedPeriods;
   const pbpCounts = periodsQ.data?.pbpCounts ?? {};
   const totalsBySeverity = buckets.reduce((acc, b) => {
     acc[b.severity] = (acc[b.severity] ?? 0) + b.rows.length;
