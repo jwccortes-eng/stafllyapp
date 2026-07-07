@@ -353,17 +353,36 @@ export default function Attendance() {
     setSelectedDate(new Date());
   }, [searchParams, setSearchParams]);
 
+  // ─── Sprint 21: Optional local "focus on employee" filter ───
+  // 100% client-side over rows already loaded. No new queries. No URL writes.
+  // Only offered when the focused employee is actually present in the loaded
+  // day; disabled by default (explicit opt-in via chip).
+  const [focusEmployeeFilter, setFocusEmployeeFilter] = useState(false);
+  const canFilterByFocusedEmployee = !!focusEmployeeId && employeePresent;
+  // Reset filter when the focused employee changes or disappears.
+  useEffect(() => {
+    if (!canFilterByFocusedEmployee) setFocusEmployeeFilter(false);
+  }, [canFilterByFocusedEmployee, focusEmployeeId]);
+  const focusedEmployeeName = useMemo(() => {
+    if (!focusEmployeeId) return null;
+    const r = rows.find((row) => row.employeeId === focusEmployeeId);
+    return r ? `${r.firstName} ${r.lastName}`.trim() : null;
+  }, [rows, focusEmployeeId]);
+
 
   // ─── Filter rows ───
   const filteredRows = useMemo(() => {
     let r = rows;
+    if (focusEmployeeFilter && focusEmployeeId) {
+      r = r.filter((row) => row.employeeId === focusEmployeeId);
+    }
     if (statusFilter !== "all") r = r.filter((row) => row.status === statusFilter);
     if (search) {
       const q = search.toLowerCase();
       r = r.filter((row) => `${row.firstName} ${row.lastName}`.toLowerCase().includes(q) || row.shiftTitle.toLowerCase().includes(q));
     }
     return r;
-  }, [rows, statusFilter, search]);
+  }, [rows, statusFilter, search, focusEmployeeFilter, focusEmployeeId]);
 
   // ─── KPI counts ───
   const kpis = useMemo(() => {
@@ -620,6 +639,35 @@ export default function Attendance() {
                 className="pl-8 h-8 text-xs"
               />
             </div>
+
+            {/* Sprint 21 — Optional local employee-focus filter (read-only). */}
+            {canFilterByFocusedEmployee && (
+              <div className="inline-flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/5 pl-2.5 pr-1 py-0.5 text-[11px] text-primary max-w-full">
+                <span className="font-semibold shrink-0">Empleado enfocado</span>
+                {focusedEmployeeName && (
+                  <span className="text-muted-foreground truncate max-w-[140px]">· {focusedEmployeeName}</span>
+                )}
+                {focusEmployeeFilter ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 text-[11px] px-2 shrink-0"
+                    onClick={() => setFocusEmployeeFilter(false)}
+                  >
+                    Mostrar todos
+                  </Button>
+                ) : (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 text-[11px] px-2 shrink-0"
+                    onClick={() => setFocusEmployeeFilter(true)}
+                  >
+                    Filtrar por empleado
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Attendance Table */}
