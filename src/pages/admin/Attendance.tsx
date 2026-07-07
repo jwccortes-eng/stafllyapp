@@ -457,6 +457,12 @@ export default function Attendance() {
         Las horas programadas son referencia operativa. Payroll se calcula con fichajes reales o validaciones aprobadas.
       </p>
 
+      <OpsFilterBanner
+        active={opsFilterActive}
+        label={opsFilterLabel}
+        onClear={clearOpsFilter}
+      />
+
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
           <TabsTrigger value="live">En vivo</TabsTrigger>
