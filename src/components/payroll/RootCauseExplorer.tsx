@@ -385,8 +385,36 @@ export function RootCauseExplorer(props: RootCauseExplorerProps) {
       toast.error(REVIEW_COPY.reviewNoteSaveError);
     } finally {
       setSaving(false);
+  }
+
+  async function handleArchiveNote(noteId: string) {
+    if (!companyId) return;
+    setArchivingId(noteId);
+    try {
+      const { data: userRes, error: userErr } = await supabase.auth.getUser();
+      if (userErr || !userRes.user) throw new Error("no-auth");
+      const { error } = await supabase
+        .from("payroll_review_notes")
+        .update({
+          archived_at: new Date().toISOString(),
+          archived_by: userRes.user.id,
+          updated_at: new Date().toISOString(),
+          updated_by: userRes.user.id,
+        })
+        .eq("id", noteId)
+        .is("archived_at", null);
+      if (error) throw error;
+      toast.success(REVIEW_COPY.reviewNoteArchiveSuccess);
+      setArchiveConfirmId(null);
+      setNotesReloadTick((t) => t + 1);
+    } catch {
+      toast.error(REVIEW_COPY.reviewNoteArchiveError);
+    } finally {
+      setArchivingId(null);
     }
   }
+
+
 
 
   return (
