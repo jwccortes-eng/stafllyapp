@@ -143,6 +143,7 @@ export default function OpsHome() {
   // Lightweight, safe read-only query for today's rejected assignments.
   // Scoped to today's shift ids that already loaded — one small IN() query.
   const [rejectedCount, setRejectedCount] = useState<number | null>(null);
+  const [upcomingSheetOpen, setUpcomingSheetOpen] = useState(false);
   const todayShiftIdsKey = todayOps.shifts.map((s) => s.id).join(",");
   useEffect(() => {
     let cancelled = false;
