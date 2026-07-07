@@ -20,7 +20,7 @@
  *   - Corrections must be done from the normal admin flows — this drawer
  *     only diagnoses.
  */
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
