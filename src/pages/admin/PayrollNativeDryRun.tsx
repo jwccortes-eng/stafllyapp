@@ -38,7 +38,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
-  Loader2, ShieldAlert, ArrowLeft, Info, ChevronRight, ChevronDown, Download,
+  Loader2, ShieldAlert, ArrowLeft, Info, ChevronRight, ChevronDown, Download, Search,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -49,6 +49,7 @@ import {
   type DryRunCsvRow,
 } from "@/utils/exportDryRunCsv";
 import { BatchTrendPanel } from "@/components/payroll/BatchTrendPanel";
+import { RootCauseExplorer } from "@/components/payroll/RootCauseExplorer";
 
 interface Period {
   id: string;
@@ -192,6 +193,22 @@ export default function PayrollNativeDryRun() {
     [setSearchParams],
   );
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+
+  const exploreId = searchParams.get("explore") || null;
+  const setExploreId = useCallback(
+    (id: string | null) => {
+      setSearchParams(
+        (prev) => {
+          const p = new URLSearchParams(prev);
+          if (id) p.set("explore", id);
+          else p.delete("explore");
+          return p;
+        },
+        { replace: true },
+      );
+    },
+    [setSearchParams],
+  );
 
   const setFilter = useCallback(
     (next: FilterKey) => {
@@ -830,6 +847,15 @@ export default function PayrollNativeDryRun() {
                                         .map((k) => (
                                           <ReasonChip key={k} reason={k} />
                                         ))}
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-6 px-2 text-[10px] gap-1 ml-1"
+                                        onClick={(e) => { e.stopPropagation(); setExploreId(r.employee_id); }}
+                                        title="Explorar posibles causas (read-only)"
+                                      >
+                                        <Search className="h-3 w-3" /> Explorar
+                                      </Button>
                                     </div>
                                   </TableCell>
                                 </TableRow>
@@ -863,6 +889,29 @@ export default function PayrollNativeDryRun() {
           )}
         </>
       )}
+
+      <RootCauseExplorer
+        open={!!exploreId}
+        onOpenChange={(o) => { if (!o) setExploreId(null); }}
+        worker={
+          exploreId
+            ? {
+                id: exploreId,
+                name: (() => {
+                  const r = rows.find((x) => x.employee_id === exploreId);
+                  return r?.name ?? "Worker";
+                })(),
+              }
+            : null
+        }
+        period={selectedPeriod}
+        referenceHours={rows.find((r) => r.employee_id === exploreId)?.connecteamHours ?? null}
+        nativeHours={rows.find((r) => r.employee_id === exploreId)?.nativeHours ?? null}
+        deltaHours={rows.find((r) => r.employee_id === exploreId)?.deltaHours ?? null}
+        status={rows.find((r) => r.employee_id === exploreId)?.status ?? null}
+        reasons={rows.find((r) => r.employee_id === exploreId)?.reasons ?? []}
+        entries={entries}
+      />
     </div>
   );
 }
