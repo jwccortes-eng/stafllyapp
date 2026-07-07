@@ -64,6 +64,8 @@ export interface RCEEntry {
 export interface RootCauseExplorerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Sprint 27 — required to persist review notes under the correct tenant. */
+  companyId?: string | null;
   worker: { id: string; name: string } | null;
   period: {
     id: string;
