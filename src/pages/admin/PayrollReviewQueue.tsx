@@ -1021,19 +1021,30 @@ export default function PayrollReviewQueue() {
                           </div>
                         ) : isMobile ? (
                           <div className="space-y-2">
-                            {b.rows.slice(0, 100).map(r => (
+                            {b.rows.slice(0, 100).map(r => {
+                              const rowFocused = !!focusEmployeeId && r.employeeId === focusEmployeeId;
+                              return (
                               <MobileQueueRow
                                 key={r.key}
                                 onClick={() => setDrawerRow({ row: r, bucket: b })}
                                 primary={r.primary}
                                 secondary={r.secondary}
+                                data-employee-id={r.employeeId ?? undefined}
+                                className={cn(
+                                  "scroll-mt-24",
+                                  rowFocused && "ring-2 ring-primary/60 bg-primary/5 border-primary/40",
+                                )}
+                                topMeta={rowFocused ? (
+                                  <Badge variant="outline" className="text-[9px] py-0 px-1.5 border-primary/50 text-primary">foco</Badge>
+                                ) : undefined}
                                 rightSlot={typeof r.amount === "number" ? (
                                   <div className="text-sm font-mono tabular-nums">
                                     {moneyFmt.format(r.amount)}
                                   </div>
                                 ) : undefined}
                               />
-                            ))}
+                              );
+                            })}
                             {b.rows.length > 100 && (
                               <div className="pt-2 text-xs text-muted-foreground">
                                 Mostrando los primeros 100 de {b.rows.length} bloques.
@@ -1042,10 +1053,24 @@ export default function PayrollReviewQueue() {
                           </div>
                         ) : (
                           <div className="divide-y divide-border/50">
-                            {b.rows.slice(0, 100).map(r => (
-                              <div key={r.key} className="flex items-center gap-3 py-2">
+                            {b.rows.slice(0, 100).map(r => {
+                              const rowFocused = !!focusEmployeeId && r.employeeId === focusEmployeeId;
+                              return (
+                              <div
+                                key={r.key}
+                                data-employee-id={r.employeeId ?? undefined}
+                                className={cn(
+                                  "flex items-center gap-3 py-2 scroll-mt-24 rounded-md px-2 -mx-2",
+                                  rowFocused && "ring-2 ring-primary/60 bg-primary/5",
+                                )}
+                              >
                                 <div className="min-w-0 flex-1">
-                                  <div className="text-sm font-medium truncate">{r.primary}</div>
+                                  <div className="text-sm font-medium truncate flex items-center gap-2">
+                                    {rowFocused && (
+                                      <Badge variant="outline" className="text-[9px] py-0 px-1.5 border-primary/50 text-primary shrink-0">foco</Badge>
+                                    )}
+                                    <span className="truncate">{r.primary}</span>
+                                  </div>
                                   {r.secondary && <div className="text-xs text-muted-foreground truncate">{r.secondary}</div>}
                                 </div>
                                 {typeof r.amount === "number" && (
@@ -1059,7 +1084,8 @@ export default function PayrollReviewQueue() {
                                   </Button>
                                 )}
                               </div>
-                            ))}
+                              );
+                            })}
                             {b.rows.length > 100 && (
                               <div className="pt-2 text-xs text-muted-foreground">
                                 Mostrando los primeros 100 de {b.rows.length} bloques.
@@ -1067,6 +1093,7 @@ export default function PayrollReviewQueue() {
                             )}
                           </div>
                         )}
+
                       </AccordionContent>
                     </AccordionItem>
                   );
