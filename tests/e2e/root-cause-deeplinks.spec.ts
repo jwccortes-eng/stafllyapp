@@ -242,7 +242,7 @@ test.describe("Root-Cause deep-link ecosystem (READ-ONLY)", () => {
     await assertPageAlive(page);
     if (testInfo.project.name === "mobile") await assertNoHorizontalOverflow(page);
     // No S15/S16 banner should appear when there are no params.
-    const banner = page.locator("text=/Abierto desde causa ra[ií]z|Per[ií]odo abierto desde revisi[oó]n/i");
+    const banner = page.locator("text=/Abierto desde revisi[oó]n|Per[ií]odo abierto desde revisi[oó]n|Causa ra[ií]z/i");
     await expect.soft(banner).toHaveCount(0);
     await screenshot(page, "review-queue-base", testInfo.project.name);
     expect(diag.pageErrors).toEqual([]);
