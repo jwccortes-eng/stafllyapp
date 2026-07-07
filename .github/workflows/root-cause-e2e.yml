@@ -1,0 +1,105 @@
+name: Root-Cause E2E (Playwright)
+
+# Sprint 18 — CI wiring for the read-only Root-Cause deep-link harness.
+# Runs desktop + mobile Playwright projects against a QA/staging preview,
+# uploads screenshots and the HTML report as artifacts. Never touches
+# production data: use QA-only IDs and a QA-only storage state.
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: "QA/staging base URL (overrides secret E2E_BASE_URL)"
+        required: false
+        type: string
+  pull_request:
+    paths:
+      - "tests/e2e/**"
+      - "playwright.config.ts"
+      - ".github/workflows/root-cause-e2e.yml"
+  schedule:
+    # Nightly smoke against QA.
+    - cron: "0 6 * * *"
+
+concurrency:
+  group: root-cause-e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    name: Playwright desktop + mobile
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      # QA/staging only. Never point this at production.
+      E2E_BASE_URL: ${{ github.event.inputs.base_url || secrets.E2E_BASE_URL }}
+      # QA-only IDs. When any are missing the harness falls back to
+      # synthetic UUIDs and only exercises the amber-fallback branches.
+      E2E_COMPANY_ID:    ${{ secrets.E2E_COMPANY_ID }}
+      E2E_PAY_PERIOD_ID: ${{ secrets.E2E_PAY_PERIOD_ID }}
+      E2E_EMPLOYEE_ID:   ${{ secrets.E2E_EMPLOYEE_ID }}
+      E2E_TIME_ENTRY_ID: ${{ secrets.E2E_TIME_ENTRY_ID }}
+      E2E_SHIFT_ID:      ${{ secrets.E2E_SHIFT_ID }}
+      E2E_TARGET_DATE:   ${{ secrets.E2E_TARGET_DATE }}
+      # Base64-encoded Playwright storage state for a QA-only admin user.
+      # Decoded into .playwright/auth.json below.
+      E2E_STORAGE_STATE_B64: ${{ secrets.E2E_STORAGE_STATE_B64 }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Install Playwright Chromium
+        run: bunx playwright install --with-deps chromium
+
+      - name: Reconstruct storage state (if provided)
+        if: env.E2E_STORAGE_STATE_B64 != ''
+        run: |
+          mkdir -p .playwright
+          printf '%s' "$E2E_STORAGE_STATE_B64" | base64 -d > .playwright/auth.json
+          echo "E2E_STORAGE_STATE=$PWD/.playwright/auth.json" >> "$GITHUB_ENV"
+
+      - name: Guard against production URLs
+        run: |
+          url="${E2E_BASE_URL:-http://localhost:8080}"
+          echo "Target: $url"
+          case "$url" in
+            *staflyapps.com*|*staflyapp.lovable.app*)
+              echo "::error::Refusing to run E2E against production URL: $url"
+              exit 1
+              ;;
+          esac
+
+      - name: Run Playwright (desktop + mobile)
+        env:
+          CI: "1"
+        run: bunx playwright test --project=desktop --project=mobile
+
+      - name: Upload Playwright HTML report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report
+          retention-days: 14
+          if-no-files-found: ignore
+
+      - name: Upload Root-Cause screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: root-cause-screenshots
+          path: test-results/root-cause/**
+          retention-days: 14
+          if-no-files-found: ignore
+
+      - name: Cleanup storage state
+        if: always()
+        run: rm -f .playwright/auth.json
