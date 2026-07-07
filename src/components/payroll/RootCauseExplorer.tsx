@@ -463,7 +463,8 @@ export function RootCauseExplorer(props: RootCauseExplorerProps) {
                         ))}
                       </ul>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
               <p className="text-[10px] text-muted-foreground flex items-start gap-1">
