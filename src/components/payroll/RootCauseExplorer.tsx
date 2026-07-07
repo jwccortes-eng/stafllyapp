@@ -20,7 +20,7 @@
  *   - Corrections must be done from the normal admin flows — this drawer
  *     only diagnoses.
  */
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
@@ -46,6 +46,8 @@ import {
   type ChecklistItem,
   type Severity,
 } from "@/utils/payrollDryRunReviewRouter";
+import { REVIEW_COPY, REVIEW_NOTE_CHIPS, type ReviewNoteChipKey } from "@/utils/reviewNavigationCopy";
+import { Textarea } from "@/components/ui/textarea";
 
 export interface RCEEntry {
   id: string;
@@ -278,6 +280,22 @@ export function RootCauseExplorer(props: RootCauseExplorerProps) {
     }, 120);
     return () => clearTimeout(t);
   }, [open, highlightDay]);
+
+  // Sprint 25 — Local, non-persistent review note draft.
+  // In-memory only: no localStorage, no sessionStorage, no DB, no mutations.
+  // Cleared when drawer closes or worker/period changes.
+  const [noteDraft, setNoteDraft] = useState("");
+  const [noteChip, setNoteChip] = useState<ReviewNoteChipKey | null>(null);
+  useEffect(() => {
+    if (!open) {
+      setNoteDraft("");
+      setNoteChip(null);
+    }
+  }, [open]);
+  useEffect(() => {
+    setNoteDraft("");
+    setNoteChip(null);
+  }, [worker?.id, period?.id]);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -613,6 +631,71 @@ export function RootCauseExplorer(props: RootCauseExplorerProps) {
                   label="Abrir Payroll Review Queue"
                   hint="Cola de revisión existente"
                 />
+              </div>
+            </section>
+
+            {/* Sprint 25 — Local review note draft (non-persistent). */}
+            <section className="space-y-2">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div className="text-xs font-semibold flex items-center gap-1.5">
+                  <ClipboardList className="h-3.5 w-3.5 text-muted-foreground" />
+                  {REVIEW_COPY.reviewNoteTitle}
+                </div>
+                <Badge
+                  variant="outline"
+                  className="text-[10px] px-1.5 py-0 h-5 border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-200 font-normal"
+                >
+                  {REVIEW_COPY.reviewNoteDraftBadge}
+                </Badge>
+              </div>
+              <p className="text-[10px] text-muted-foreground leading-relaxed">
+                {REVIEW_COPY.reviewNoteHelp}
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {REVIEW_NOTE_CHIPS.map((chip) => {
+                  const active = noteChip === chip.key;
+                  return (
+                    <button
+                      key={chip.key}
+                      type="button"
+                      onClick={() => setNoteChip(active ? null : chip.key)}
+                      className={cn(
+                        "px-2 py-0.5 rounded-full text-[11px] border transition-colors",
+                        active
+                          ? "border-primary/60 bg-primary/10 text-primary"
+                          : "border-border/60 bg-muted/30 text-muted-foreground hover:bg-muted/60",
+                      )}
+                      aria-pressed={active}
+                    >
+                      {chip.label}
+                    </button>
+                  );
+                })}
+              </div>
+              <Textarea
+                value={noteDraft}
+                onChange={(e) => setNoteDraft(e.target.value)}
+                placeholder={REVIEW_COPY.reviewNotePlaceholder}
+                rows={3}
+                className="text-[12px] resize-y min-h-[72px]"
+              />
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <span className="text-[10px] text-muted-foreground italic">
+                  {noteDraft.length > 0 || noteChip
+                    ? "Cambios locales · no persistidos"
+                    : "Sin cambios locales"}
+                </span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-[11px]"
+                  disabled
+                  aria-disabled="true"
+                  title={REVIEW_COPY.reviewNoteSaveDisabled}
+                >
+                  {REVIEW_COPY.reviewNoteSaveDisabled}
+                </Button>
               </div>
             </section>
 
