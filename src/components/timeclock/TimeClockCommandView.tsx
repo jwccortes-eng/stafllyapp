@@ -87,6 +87,25 @@ export default function TimeClockCommandView() {
   const [now, setNow] = useState(new Date());
   const [search, setSearch] = useState("");
   const [searchParams, setSearchParams] = useSearchParams();
+
+  // ─── Sprint 13: historical date loader from ?date=YYYY-MM-DD ───
+  // Strictly read-only: shifts the loaded day window, never mutates data.
+  const dateParam = searchParams.get("date");
+  const parsedDateParam = useMemo(() => {
+    if (!dateParam || !/^\d{4}-\d{2}-\d{2}$/.test(dateParam)) return null;
+    const d = new Date(`${dateParam}T00:00:00`);
+    return isNaN(d.getTime()) ? null : d;
+  }, [dateParam]);
+  const viewDate = useMemo(() => {
+    if (parsedDateParam) {
+      const d = new Date(parsedDateParam);
+      d.setHours(0, 0, 0, 0);
+      return d;
+    }
+    return now;
+  }, [parsedDateParam, now]);
+  const viewDateKey = format(viewDate, "yyyy-MM-dd");
+  const isToday = viewDateKey === format(now, "yyyy-MM-dd");
   const initialWhen = searchParams.get("when");
   const initialOpsFilter = searchParams.get("filter");
   const opsInitialTab = (() => {
@@ -131,7 +150,7 @@ export default function TimeClockCommandView() {
   // never lingers on screen after context switch.
   useEffect(() => { setAlertDetail(null); }, [selectedCompanyId, activeTab]);
 
-  const todayKey = format(now, "yyyy-MM-dd");
+  const todayKey = viewDateKey;
 
   const load = async () => {
     if (!selectedCompanyId) return;
@@ -210,16 +229,21 @@ export default function TimeClockCommandView() {
 
   const alerts = useMemo<AlertItem[]>(() => {
     const issues: AlertItem[] = [];
-    liveRows.forEach((r) => {
-      const hours = r.minutes / 60;
-      if (hours >= OPEN_ENTRY_STALE_HOURS) {
-        issues.push({ ...r, type: "stale_open", reason: `Fichaje abierto desde hace ${Math.round(hours)}h — posiblemente falta salida` });
-      } else if (hours >= OPEN_ENTRY_WARN_HOURS) {
-        issues.push({ ...r, type: "long_open", reason: `Fichaje abierto largo — ${Math.round(hours)}h` });
-      } else if (!r.entry.shift_id && !r.entry.scheduled_shifts) {
-        issues.push({ ...r, type: "no_shift", reason: "Fichaje sin turno programado vinculado" });
-      }
-    });
+    // Time-since-clock-in alerts are only meaningful for the live "today"
+    // window. When viewing a historical day, `now` vs `clock_in` produces
+    // huge deltas that would flood the UI with false stale/long alerts.
+    if (isToday) {
+      liveRows.forEach((r) => {
+        const hours = r.minutes / 60;
+        if (hours >= OPEN_ENTRY_STALE_HOURS) {
+          issues.push({ ...r, type: "stale_open", reason: `Fichaje abierto desde hace ${Math.round(hours)}h — posiblemente falta salida` });
+        } else if (hours >= OPEN_ENTRY_WARN_HOURS) {
+          issues.push({ ...r, type: "long_open", reason: `Fichaje abierto largo — ${Math.round(hours)}h` });
+        } else if (!r.entry.shift_id && !r.entry.scheduled_shifts) {
+          issues.push({ ...r, type: "no_shift", reason: "Fichaje sin turno programado vinculado" });
+        }
+      });
+    }
     closedTodayEntries.forEach((e) => {
       const emp = empMap.get(e.employee_id);
       if (!emp) return;
@@ -233,7 +257,7 @@ export default function TimeClockCommandView() {
       }
     });
     return issues;
-  }, [liveRows, closedTodayEntries, empMap]);
+  }, [liveRows, closedTodayEntries, empMap, isToday]);
 
   const approvals = useMemo<AlertItem[]>(() => {
     return alerts.filter((a) => a.type === "stale_open" || a.type === "needs_review" || a.type === "very_long");
@@ -275,17 +299,17 @@ export default function TimeClockCommandView() {
     });
   }, [liveRows, search]);
 
-  // Today's window
+  // Loaded day window (today OR the ?date=YYYY-MM-DD historical day).
   const todayStart = useMemo(() => {
-    const d = new Date(now);
+    const d = new Date(viewDate);
     d.setHours(0, 0, 0, 0);
     return d;
-  }, [now]);
+  }, [viewDate]);
   const todayEnd = useMemo(() => {
-    const d = new Date(now);
+    const d = new Date(viewDate);
     d.setHours(23, 59, 59, 999);
     return d;
-  }, [now]);
+  }, [viewDate]);
 
   /**
    * Tracked minutes attributable to TODAY.
@@ -471,30 +495,53 @@ export default function TimeClockCommandView() {
         label={opsFilterLabel}
         onClear={clearOpsFilter}
       />
-      {hasFocus && (
+      {(hasFocus || !isToday) && (
         <div
           role="status"
           className={cn(
             "rounded-xl border px-3.5 py-2.5 text-xs flex items-start gap-2",
-            entryPresent || !focusEntryId
+            entryPresent || (!focusEntryId && !isToday)
               ? "border-primary/40 bg-primary/5 text-primary"
-              : "border-amber-500/40 bg-amber-500/5 text-amber-700 dark:text-amber-400",
+              : focusEntryId && !entryPresent
+              ? "border-amber-500/40 bg-amber-500/5 text-amber-700 dark:text-amber-400"
+              : "border-primary/40 bg-primary/5 text-primary",
           )}
         >
           <span className="mt-0.5 inline-flex h-1.5 w-1.5 rounded-full bg-current shrink-0" />
           <div className="min-w-0 flex-1 space-y-0.5">
             <div className="font-semibold">
-              {entryPresent ? "Enfocando fichaje desde revisión" : focusEntryId ? "Fichaje enfocado no está en la vista actual" : "Vista desde revisión"}
+              {entryPresent
+                ? "Enfocando fichaje desde revisión"
+                : focusEntryId
+                ? "Fichaje fuera del rango cargado o no encontrado"
+                : !isToday
+                ? "Viendo día histórico"
+                : "Vista desde revisión"}
             </div>
             <div className="text-[11px] opacity-80 truncate">
-              {focusDate && <>Día {focusDate}</>}
+              Día <span className="font-mono">{viewDateKey}</span>
+              {!isToday && <> (histórico)</>}
               {focusEntryId && <> · entry <code className="font-mono">{focusEntryId.slice(0, 8)}</code></>}
               {focusShiftId && <> · turno <code className="font-mono">{focusShiftId.slice(0, 8)}</code></>}
-              {focusEntryId && !entryPresent && <> · fuera del rango cargado (hoy). Ajusta el día para verlo.</>}
             </div>
           </div>
+          {!isToday && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 text-[11px] px-2 shrink-0"
+              onClick={() => {
+                const next = new URLSearchParams(searchParams);
+                next.delete("date");
+                setSearchParams(next, { replace: true });
+              }}
+            >
+              Volver a hoy
+            </Button>
+          )}
         </div>
       )}
+
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="w-full sm:w-auto flex-wrap h-auto gap-1">

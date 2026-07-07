@@ -124,7 +124,23 @@ export default function MobileTimeCommandView() {
   // never lingers on screen after context switch.
   useEffect(() => { setAlertDetail(null); }, [selectedCompanyId, mode]);
 
-  const todayKey = format(now, "yyyy-MM-dd");
+  // ─── Sprint 13: historical date loader from ?date=YYYY-MM-DD ───
+  const dateParam = searchParams.get("date");
+  const parsedDateParam = useMemo(() => {
+    if (!dateParam || !/^\d{4}-\d{2}-\d{2}$/.test(dateParam)) return null;
+    const d = new Date(`${dateParam}T00:00:00`);
+    return isNaN(d.getTime()) ? null : d;
+  }, [dateParam]);
+  const viewDate = useMemo(() => {
+    if (parsedDateParam) {
+      const d = new Date(parsedDateParam);
+      d.setHours(0, 0, 0, 0);
+      return d;
+    }
+    return now;
+  }, [parsedDateParam, now]);
+  const todayKey = format(viewDate, "yyyy-MM-dd");
+  const isToday = todayKey === format(now, "yyyy-MM-dd");
 
   const load = async () => {
     if (!selectedCompanyId) return;
@@ -193,16 +209,18 @@ export default function MobileTimeCommandView() {
 
   const alerts = useMemo<AlertItem[]>(() => {
     const issues: AlertItem[] = [];
-    liveRows.forEach(r => {
-      const hours = r.minutes / 60;
-      if (hours >= OPEN_ENTRY_STALE_HOURS) {
-        issues.push({ ...r, type: "stale_open", reason: `Fichaje abierto desde hace ${Math.round(hours)}h — posiblemente falta salida` });
-      } else if (hours >= OPEN_ENTRY_WARN_HOURS) {
-        issues.push({ ...r, type: "long_open", reason: `Fichaje abierto largo — ${Math.round(hours)}h` });
-      } else if (!r.entry.shift_id && !r.entry.scheduled_shifts) {
-        issues.push({ ...r, type: "no_shift", reason: "Fichaje sin turno programado vinculado" });
-      }
-    });
+    if (isToday) {
+      liveRows.forEach(r => {
+        const hours = r.minutes / 60;
+        if (hours >= OPEN_ENTRY_STALE_HOURS) {
+          issues.push({ ...r, type: "stale_open", reason: `Fichaje abierto desde hace ${Math.round(hours)}h — posiblemente falta salida` });
+        } else if (hours >= OPEN_ENTRY_WARN_HOURS) {
+          issues.push({ ...r, type: "long_open", reason: `Fichaje abierto largo — ${Math.round(hours)}h` });
+        } else if (!r.entry.shift_id && !r.entry.scheduled_shifts) {
+          issues.push({ ...r, type: "no_shift", reason: "Fichaje sin turno programado vinculado" });
+        }
+      });
+    }
     closedTodayEntries.forEach(e => {
       const emp = empMap.get(e.employee_id);
       if (!emp) return;
@@ -216,7 +234,7 @@ export default function MobileTimeCommandView() {
       }
     });
     return issues;
-  }, [liveRows, closedTodayEntries, empMap]);
+  }, [liveRows, closedTodayEntries, empMap, isToday]);
 
   const clockedEmpIds = useMemo(() => new Set(openEntries.map(e => e.employee_id)), [openEntries]);
   const closedEmpIds = useMemo(() => new Set(closedTodayEntries.map(e => e.employee_id)), [closedTodayEntries]);
@@ -291,29 +309,52 @@ export default function MobileTimeCommandView() {
         label={filterLabel}
         onClear={clearOpsFilter}
       />
-      {hasFocus && (
+      {(hasFocus || !isToday) && (
         <div
           role="status"
           className={cn(
             "rounded-xl border px-3 py-2 text-[11px] flex items-start gap-2",
-            entryPresent || !focusEntryId
+            entryPresent || (!focusEntryId && !isToday)
               ? "border-primary/40 bg-primary/5 text-primary"
-              : "border-amber-500/40 bg-amber-500/5 text-amber-700 dark:text-amber-400",
+              : focusEntryId && !entryPresent
+              ? "border-amber-500/40 bg-amber-500/5 text-amber-700 dark:text-amber-400"
+              : "border-primary/40 bg-primary/5 text-primary",
           )}
         >
           <span className="mt-0.5 inline-flex h-1.5 w-1.5 rounded-full bg-current shrink-0" />
           <div className="min-w-0 flex-1">
             <div className="font-semibold">
-              {entryPresent ? "Enfocando fichaje desde revisión" : focusEntryId ? "Fichaje fuera del rango cargado" : "Vista desde revisión"}
+              {entryPresent
+                ? "Enfocando fichaje desde revisión"
+                : focusEntryId
+                ? "Fichaje fuera del rango cargado o no encontrado"
+                : !isToday
+                ? "Viendo día histórico"
+                : "Vista desde revisión"}
             </div>
             <div className="opacity-80 truncate">
-              {focusDate && <>Día {focusDate}</>}
+              Día <span className="font-mono">{todayKey}</span>
+              {!isToday && <> (histórico)</>}
               {focusEntryId && <> · <code className="font-mono">{focusEntryId.slice(0, 8)}</code></>}
               {focusShiftId && <> · turno <code className="font-mono">{focusShiftId.slice(0, 8)}</code></>}
             </div>
           </div>
+          {!isToday && (
+            <button
+              type="button"
+              className="text-[11px] font-semibold underline shrink-0"
+              onClick={() => {
+                const next = new URLSearchParams(searchParams);
+                next.delete("date");
+                setSearchParams(next, { replace: true });
+              }}
+            >
+              Hoy
+            </button>
+          )}
         </div>
       )}
+
 
       {/* Compact KPI strip — single row, scrollable on narrow */}
       <div className="grid grid-cols-5 gap-1.5">
