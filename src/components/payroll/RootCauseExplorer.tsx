@@ -385,10 +385,31 @@ export function RootCauseExplorer(props: RootCauseExplorerProps) {
                 </p>
               ) : (
                 <div className="space-y-2">
-                  {byDay.map(([day, list]) => (
-                    <div key={day} className="rounded-lg border border-border/60 bg-card overflow-hidden">
-                      <div className="px-3 py-1.5 bg-muted/40 text-[11px] font-semibold flex items-center justify-between">
-                        <span>{day}</span>
+                  {byDay.map(([day, list]) => {
+                    const isHighlighted = highlightDay === day;
+                    return (
+                    <div
+                      key={day}
+                      id={`rce-day-${day}`}
+                      className={cn(
+                        "rounded-lg border bg-card overflow-hidden transition-colors",
+                        isHighlighted
+                          ? "border-primary/60 ring-1 ring-primary/40"
+                          : "border-border/60",
+                      )}
+                    >
+                      <div className={cn(
+                        "px-3 py-1.5 text-[11px] font-semibold flex items-center justify-between",
+                        isHighlighted ? "bg-primary/10" : "bg-muted/40",
+                      )}>
+                        <span className="flex items-center gap-1.5">
+                          {day}
+                          {isHighlighted && (
+                            <Badge variant="outline" className="text-[9px] border-primary/50 text-primary bg-primary/5">
+                              foco
+                            </Badge>
+                          )}
+                        </span>
                         <span className="text-[10px] text-muted-foreground font-normal">
                           {list.length} entrada{list.length === 1 ? "" : "s"}
                         </span>
