@@ -150,7 +150,7 @@ export default function TimeClockCommandView() {
   // never lingers on screen after context switch.
   useEffect(() => { setAlertDetail(null); }, [selectedCompanyId, activeTab]);
 
-  const todayKey = format(now, "yyyy-MM-dd");
+  const todayKey = viewDateKey;
 
   const load = async () => {
     if (!selectedCompanyId) return;
