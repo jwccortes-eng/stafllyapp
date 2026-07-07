@@ -290,7 +290,7 @@ export default function OpsHome() {
                 hint={t.needs_staff > 0 ? "Slots abiertos" : "Todo cubierto"}
                 tone={t.needs_staff > 0 ? "attention" : "ok"}
                 icon={<UserPlus className="h-4 w-4" />}
-                to="/app/staffing-center"
+                to="/app/staffing-center?filter=needs-staffing"
                 cta="Ir a staffing"
                 empty="Todo cubierto"
               />
@@ -300,7 +300,7 @@ export default function OpsHome() {
                 hint={urgentReplacements > 0 ? "Publicados sin personal" : "Sin urgencias"}
                 tone={urgentReplacements > 0 ? "urgent" : "ok"}
                 icon={<Repeat className="h-4 w-4" />}
-                to="/app/shifts?filter=needs-staffing"
+                to="/app/staffing-center?filter=needs-staffing"
                 cta="Buscar cobertura"
                 empty="Sin urgencias"
               />
