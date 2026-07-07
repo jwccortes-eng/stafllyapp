@@ -724,18 +724,18 @@ export function RootCauseExplorer(props: RootCauseExplorerProps) {
               </div>
             </section>
 
-            {/* Sprint 25 — Local review note draft (non-persistent). */}
+            {/* Sprint 27 — Persisted review notes (MVP). */}
             <section className="space-y-2">
               <div className="flex items-center justify-between gap-2 flex-wrap">
                 <div className="text-xs font-semibold flex items-center gap-1.5">
-                  <ClipboardList className="h-3.5 w-3.5 text-muted-foreground" />
+                  <StickyNote className="h-3.5 w-3.5 text-muted-foreground" />
                   {REVIEW_COPY.reviewNoteTitle}
                 </div>
                 <Badge
                   variant="outline"
-                  className="text-[10px] px-1.5 py-0 h-5 border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-200 font-normal"
+                  className="text-[10px] px-1.5 py-0 h-5 border-border/60 bg-muted/40 text-muted-foreground font-normal"
                 >
-                  {REVIEW_COPY.reviewNoteDraftBadge}
+                  {REVIEW_COPY.reviewNotePersistBadge}
                 </Badge>
               </div>
               <p className="text-[10px] text-muted-foreground leading-relaxed">
@@ -749,11 +749,13 @@ export function RootCauseExplorer(props: RootCauseExplorerProps) {
                       key={chip.key}
                       type="button"
                       onClick={() => setNoteChip(active ? null : chip.key)}
+                      disabled={saving}
                       className={cn(
                         "px-2 py-0.5 rounded-full text-[11px] border transition-colors",
                         active
                           ? "border-primary/60 bg-primary/10 text-primary"
                           : "border-border/60 bg-muted/30 text-muted-foreground hover:bg-muted/60",
+                        saving && "opacity-60 cursor-not-allowed",
                       )}
                       aria-pressed={active}
                     >
@@ -767,27 +769,79 @@ export function RootCauseExplorer(props: RootCauseExplorerProps) {
                 onChange={(e) => setNoteDraft(e.target.value)}
                 placeholder={REVIEW_COPY.reviewNotePlaceholder}
                 rows={3}
+                maxLength={2000}
+                disabled={saving}
                 className="text-[12px] resize-y min-h-[72px]"
               />
               <div className="flex items-center justify-between gap-2 flex-wrap">
-                <span className="text-[10px] text-muted-foreground italic">
-                  {noteDraft.length > 0 || noteChip
-                    ? "Cambios locales · no persistidos"
-                    : "Sin cambios locales"}
+                <span className="text-[10px] text-muted-foreground">
+                  {noteDraft.length}/2000
                 </span>
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="default"
                   size="sm"
-                  className="h-7 text-[11px]"
-                  disabled
-                  aria-disabled="true"
-                  title={REVIEW_COPY.reviewNoteSaveDisabled}
+                  className="h-7 text-[11px] gap-1.5"
+                  disabled={!canSaveNote}
+                  onClick={handleSaveNote}
                 >
-                  {REVIEW_COPY.reviewNoteSaveDisabled}
+                  {saving && <Loader2 className="h-3 w-3 animate-spin" />}
+                  {saving ? REVIEW_COPY.reviewNoteSaving : REVIEW_COPY.reviewNoteSaveLabel}
                 </Button>
               </div>
+
+              {/* Saved notes list for current context */}
+              <div className="mt-2 space-y-1.5">
+                <div className="text-[11px] font-semibold text-muted-foreground">
+                  {REVIEW_COPY.reviewNoteListTitle}
+                </div>
+                {notesLoading ? (
+                  <div className="text-[11px] text-muted-foreground flex items-center gap-1.5 py-1">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Cargando…
+                  </div>
+                ) : notesError ? (
+                  <p className="text-[11px] text-destructive py-1">{notesError}</p>
+                ) : notes.length === 0 ? (
+                  <p className="text-[11px] text-muted-foreground italic py-1">
+                    {REVIEW_COPY.reviewNoteListEmpty}
+                  </p>
+                ) : (
+                  <ul className="space-y-1.5">
+                    {notes.map((n) => {
+                      const statusLabel = reviewNoteStatusLabel(n.status);
+                      const dt = new Date(n.created_at);
+                      const when = isNaN(dt.getTime()) ? n.created_at : dt.toLocaleString();
+                      return (
+                        <li
+                          key={n.id}
+                          className="rounded-md border border-border/60 bg-card px-2.5 py-1.5 space-y-1"
+                        >
+                          <div className="flex items-center justify-between gap-2 flex-wrap">
+                            {statusLabel ? (
+                              <Badge
+                                variant="outline"
+                                className="text-[10px] px-1.5 py-0 h-4 border-primary/40 bg-primary/5 text-primary font-normal"
+                              >
+                                {statusLabel}
+                              </Badge>
+                            ) : <span />}
+                            <span className="text-[10px] text-muted-foreground">{when}</span>
+                          </div>
+                          <p className="text-[11.5px] text-foreground/90 whitespace-pre-wrap break-words leading-relaxed">
+                            {n.note}
+                          </p>
+                          <div className="text-[10px] text-muted-foreground italic">
+                            {REVIEW_COPY.reviewNoteAuthorFallback}
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </div>
             </section>
+
 
             <div className="pt-2 border-t border-border/60">
               <Button
