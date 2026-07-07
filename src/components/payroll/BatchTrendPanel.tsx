@@ -443,6 +443,16 @@ export function BatchTrendPanel({
                             </div>
                           </TableCell>
                           <TableCell><StatusBadge status={r.lastStatus} /></TableCell>
+                          <TableCell>
+                            <Button asChild variant="ghost" size="sm" className="h-7 px-2 text-[10px] gap-1">
+                              <Link
+                                to={`/app/payroll-native-dry-run?period=${r.periodIds[r.periodIds.length - 1]}&explore=${r.employee_id}`}
+                                title="Abrir Root-Cause Explorer read-only en el último período crítico"
+                              >
+                                <ExternalLink className="h-3 w-3" /> Explorar
+                              </Link>
+                            </Button>
+                          </TableCell>
                         </TableRow>
                       );
                     })}
