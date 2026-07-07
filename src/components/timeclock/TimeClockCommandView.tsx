@@ -87,6 +87,25 @@ export default function TimeClockCommandView() {
   const [now, setNow] = useState(new Date());
   const [search, setSearch] = useState("");
   const [searchParams, setSearchParams] = useSearchParams();
+
+  // ─── Sprint 13: historical date loader from ?date=YYYY-MM-DD ───
+  // Strictly read-only: shifts the loaded day window, never mutates data.
+  const dateParam = searchParams.get("date");
+  const parsedDateParam = useMemo(() => {
+    if (!dateParam || !/^\d{4}-\d{2}-\d{2}$/.test(dateParam)) return null;
+    const d = new Date(`${dateParam}T00:00:00`);
+    return isNaN(d.getTime()) ? null : d;
+  }, [dateParam]);
+  const viewDate = useMemo(() => {
+    if (parsedDateParam) {
+      const d = new Date(parsedDateParam);
+      d.setHours(0, 0, 0, 0);
+      return d;
+    }
+    return now;
+  }, [parsedDateParam, now]);
+  const viewDateKey = format(viewDate, "yyyy-MM-dd");
+  const isToday = viewDateKey === format(now, "yyyy-MM-dd");
   const initialWhen = searchParams.get("when");
   const initialOpsFilter = searchParams.get("filter");
   const opsInitialTab = (() => {
