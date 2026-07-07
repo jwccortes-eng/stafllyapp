@@ -476,6 +476,12 @@ export default function OpsHome() {
           </CockpitSection>
         </>
       )}
+
+      <Upcoming60Sheet
+        open={upcomingSheetOpen}
+        onOpenChange={setUpcomingSheetOpen}
+        shifts={todayOps.shifts}
+      />
     </div>
   );
 }
