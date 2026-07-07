@@ -646,12 +646,26 @@ export default function Attendance() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filteredRows.map((row) => (
-                      <TableRow key={`${row.employeeId}-${row.shiftId}`}>
+                    filteredRows.map((row) => {
+                      const isFocused =
+                        (!!focusEntryId && row.timeEntryId === focusEntryId) ||
+                        (!focusEntryId && !!focusEmployeeId && row.employeeId === focusEmployeeId);
+                      return (
+                      <TableRow
+                        key={`${row.employeeId}-${row.shiftId}`}
+                        data-entry-id={row.timeEntryId ?? undefined}
+                        data-employee-id={row.employeeId}
+                        className={cn(
+                          isFocused && "bg-primary/5 border-l-2 border-primary scroll-mt-24",
+                        )}
+                      >
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <EmployeeAvatar firstName={row.firstName} lastName={row.lastName} avatarUrl={row.avatarUrl} gender={row.gender} size="sm" />
                             <span className="text-sm font-medium truncate">{row.firstName} {row.lastName}</span>
+                            {isFocused && (
+                              <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-wider bg-primary/10 text-primary border-primary/40">foco</Badge>
+                            )}
                           </div>
                         </TableCell>
                         <TableCell className="text-sm">{row.shiftTitle}</TableCell>
