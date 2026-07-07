@@ -4,6 +4,10 @@ Read-only Playwright harness for Sprint 17. Validates deep-links from the
 Root-Cause Explorer into Time Clock, Attendance, Shifts and Payroll Review
 Queue **without mutating any data**.
 
+> **Contexto completo del flujo, params por módulo, checklists de QA
+> mobile/desktop, checklist de seguridad y guion de demo:**
+> [`docs/root-cause-review-demo-pack.md`](../../docs/root-cause-review-demo-pack.md).
+
 ## What it does
 
 - Navigates each deep-link (with and without params).
