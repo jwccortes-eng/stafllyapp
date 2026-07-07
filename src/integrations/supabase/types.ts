@@ -9372,6 +9372,63 @@ export type Database = {
           },
         ]
       }
+      payroll_review_notes: {
+        Row: {
+          archived_at: string | null
+          archived_by: string | null
+          company_id: string
+          created_at: string
+          created_by: string
+          id: string
+          note: string
+          period_id: string | null
+          reason: string | null
+          shift_id: string | null
+          source_module: string
+          status: string | null
+          time_entry_id: string | null
+          updated_at: string | null
+          updated_by: string | null
+          worker_id: string | null
+        }
+        Insert: {
+          archived_at?: string | null
+          archived_by?: string | null
+          company_id: string
+          created_at?: string
+          created_by: string
+          id?: string
+          note: string
+          period_id?: string | null
+          reason?: string | null
+          shift_id?: string | null
+          source_module?: string
+          status?: string | null
+          time_entry_id?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+          worker_id?: string | null
+        }
+        Update: {
+          archived_at?: string | null
+          archived_by?: string | null
+          company_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          note?: string
+          period_id?: string | null
+          reason?: string | null
+          shift_id?: string | null
+          source_module?: string
+          status?: string | null
+          time_entry_id?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+          worker_id?: string | null
+        }
+        Relationships: []
+      }
       period_base_pay: {
         Row: {
           anomaly_flags: Json | null

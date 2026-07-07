@@ -46,8 +46,11 @@ import {
   type ChecklistItem,
   type Severity,
 } from "@/utils/payrollDryRunReviewRouter";
-import { REVIEW_COPY, REVIEW_NOTE_CHIPS, type ReviewNoteChipKey } from "@/utils/reviewNavigationCopy";
+import { REVIEW_COPY, REVIEW_NOTE_CHIPS, reviewNoteStatusLabel, type ReviewNoteChipKey } from "@/utils/reviewNavigationCopy";
 import { Textarea } from "@/components/ui/textarea";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { Loader2, StickyNote } from "lucide-react";
 
 export interface RCEEntry {
   id: string;
@@ -61,6 +64,8 @@ export interface RCEEntry {
 export interface RootCauseExplorerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Sprint 27 — required to persist review notes under the correct tenant. */
+  companyId?: string | null;
   worker: { id: string; name: string } | null;
   period: {
     id: string;
@@ -105,7 +110,7 @@ function localTime(iso: string): string {
 }
 
 export function RootCauseExplorer(props: RootCauseExplorerProps) {
-  const { open, onOpenChange, worker, period, referenceHours, nativeHours, deltaHours, status, reasons, entries, focusReason } = props;
+  const { open, onOpenChange, companyId, worker, period, referenceHours, nativeHours, deltaHours, status, reasons, entries, focusReason } = props;
 
   const workerEntries = useMemo<EnrichedEntry[]>(() => {
     if (!worker) return [];
@@ -281,11 +286,27 @@ export function RootCauseExplorer(props: RootCauseExplorerProps) {
     return () => clearTimeout(t);
   }, [open, highlightDay]);
 
-  // Sprint 25 — Local, non-persistent review note draft.
-  // In-memory only: no localStorage, no sessionStorage, no DB, no mutations.
-  // Cleared when drawer closes or worker/period changes.
+  // Sprint 27 — Persisted review notes (MVP).
+  // Context is derived from company/period/worker/highlightKey. Notes NEVER
+  // modify payroll, time_entries, shifts, movements or reconciliation.
   const [noteDraft, setNoteDraft] = useState("");
   const [noteChip, setNoteChip] = useState<ReviewNoteChipKey | null>(null);
+  const [saving, setSaving] = useState(false);
+  interface ReviewNote {
+    id: string;
+    note: string;
+    status: string | null;
+    created_at: string;
+    created_by: string;
+  }
+  const [notes, setNotes] = useState<ReviewNote[]>([]);
+  const [notesLoading, setNotesLoading] = useState(false);
+  const [notesError, setNotesError] = useState<string | null>(null);
+  const [notesReloadTick, setNotesReloadTick] = useState(0);
+
+  const notesReason: string | null = highlightKey ?? null;
+
+  // Reset draft when drawer closes or context changes.
   useEffect(() => {
     if (!open) {
       setNoteDraft("");
@@ -295,7 +316,76 @@ export function RootCauseExplorer(props: RootCauseExplorerProps) {
   useEffect(() => {
     setNoteDraft("");
     setNoteChip(null);
-  }, [worker?.id, period?.id]);
+  }, [worker?.id, period?.id, notesReason]);
+
+  // Load existing notes for the current context.
+  useEffect(() => {
+    if (!open || !companyId) {
+      setNotes([]);
+      setNotesError(null);
+      return;
+    }
+    let cancelled = false;
+    setNotesLoading(true);
+    setNotesError(null);
+    (async () => {
+      let q = supabase
+        .from("payroll_review_notes")
+        .select("id,note,status,created_at,created_by")
+        .eq("company_id", companyId)
+        .is("archived_at", null)
+        .order("created_at", { ascending: false })
+        .limit(20);
+      if (period?.id) q = q.eq("period_id", period.id); else q = q.is("period_id", null);
+      if (worker?.id) q = q.eq("worker_id", worker.id); else q = q.is("worker_id", null);
+      if (notesReason) q = q.eq("reason", notesReason); else q = q.is("reason", null);
+      const { data, error } = await q;
+      if (cancelled) return;
+      if (error) {
+        setNotesError(REVIEW_COPY.reviewNoteListLoadError);
+        setNotes([]);
+      } else {
+        setNotes((data ?? []) as ReviewNote[]);
+      }
+      setNotesLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, [open, companyId, period?.id, worker?.id, notesReason, notesReloadTick]);
+
+  const canSaveNote = !!companyId && (noteDraft.trim().length > 0 || noteChip !== null) && !saving;
+
+  async function handleSaveNote() {
+    if (!companyId) return;
+    const trimmed = noteDraft.trim();
+    if (trimmed.length === 0 && !noteChip) return;
+    setSaving(true);
+    try {
+      const { data: userRes, error: userErr } = await supabase.auth.getUser();
+      if (userErr || !userRes.user) throw new Error("no-auth");
+      const { error } = await supabase.from("payroll_review_notes").insert({
+        company_id: companyId,
+        period_id: period?.id ?? null,
+        worker_id: worker?.id ?? null,
+        reason: notesReason,
+        time_entry_id: null,
+        shift_id: null,
+        source_module: "root_cause_explorer",
+        note: trimmed.length > 0 ? trimmed : (noteChip ? `[${reviewNoteStatusLabel(noteChip)}]` : ""),
+        status: noteChip,
+        created_by: userRes.user.id,
+      });
+      if (error) throw error;
+      toast.success(REVIEW_COPY.reviewNoteSaveSuccess);
+      setNoteDraft("");
+      setNoteChip(null);
+      setNotesReloadTick((t) => t + 1);
+    } catch {
+      toast.error(REVIEW_COPY.reviewNoteSaveError);
+    } finally {
+      setSaving(false);
+    }
+  }
+
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -634,18 +724,18 @@ export function RootCauseExplorer(props: RootCauseExplorerProps) {
               </div>
             </section>
 
-            {/* Sprint 25 — Local review note draft (non-persistent). */}
+            {/* Sprint 27 — Persisted review notes (MVP). */}
             <section className="space-y-2">
               <div className="flex items-center justify-between gap-2 flex-wrap">
                 <div className="text-xs font-semibold flex items-center gap-1.5">
-                  <ClipboardList className="h-3.5 w-3.5 text-muted-foreground" />
+                  <StickyNote className="h-3.5 w-3.5 text-muted-foreground" />
                   {REVIEW_COPY.reviewNoteTitle}
                 </div>
                 <Badge
                   variant="outline"
-                  className="text-[10px] px-1.5 py-0 h-5 border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-200 font-normal"
+                  className="text-[10px] px-1.5 py-0 h-5 border-border/60 bg-muted/40 text-muted-foreground font-normal"
                 >
-                  {REVIEW_COPY.reviewNoteDraftBadge}
+                  {REVIEW_COPY.reviewNotePersistBadge}
                 </Badge>
               </div>
               <p className="text-[10px] text-muted-foreground leading-relaxed">
@@ -659,11 +749,13 @@ export function RootCauseExplorer(props: RootCauseExplorerProps) {
                       key={chip.key}
                       type="button"
                       onClick={() => setNoteChip(active ? null : chip.key)}
+                      disabled={saving}
                       className={cn(
                         "px-2 py-0.5 rounded-full text-[11px] border transition-colors",
                         active
                           ? "border-primary/60 bg-primary/10 text-primary"
                           : "border-border/60 bg-muted/30 text-muted-foreground hover:bg-muted/60",
+                        saving && "opacity-60 cursor-not-allowed",
                       )}
                       aria-pressed={active}
                     >
@@ -677,27 +769,79 @@ export function RootCauseExplorer(props: RootCauseExplorerProps) {
                 onChange={(e) => setNoteDraft(e.target.value)}
                 placeholder={REVIEW_COPY.reviewNotePlaceholder}
                 rows={3}
+                maxLength={2000}
+                disabled={saving}
                 className="text-[12px] resize-y min-h-[72px]"
               />
               <div className="flex items-center justify-between gap-2 flex-wrap">
-                <span className="text-[10px] text-muted-foreground italic">
-                  {noteDraft.length > 0 || noteChip
-                    ? "Cambios locales · no persistidos"
-                    : "Sin cambios locales"}
+                <span className="text-[10px] text-muted-foreground">
+                  {noteDraft.length}/2000
                 </span>
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="default"
                   size="sm"
-                  className="h-7 text-[11px]"
-                  disabled
-                  aria-disabled="true"
-                  title={REVIEW_COPY.reviewNoteSaveDisabled}
+                  className="h-7 text-[11px] gap-1.5"
+                  disabled={!canSaveNote}
+                  onClick={handleSaveNote}
                 >
-                  {REVIEW_COPY.reviewNoteSaveDisabled}
+                  {saving && <Loader2 className="h-3 w-3 animate-spin" />}
+                  {saving ? REVIEW_COPY.reviewNoteSaving : REVIEW_COPY.reviewNoteSaveLabel}
                 </Button>
               </div>
+
+              {/* Saved notes list for current context */}
+              <div className="mt-2 space-y-1.5">
+                <div className="text-[11px] font-semibold text-muted-foreground">
+                  {REVIEW_COPY.reviewNoteListTitle}
+                </div>
+                {notesLoading ? (
+                  <div className="text-[11px] text-muted-foreground flex items-center gap-1.5 py-1">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Cargando…
+                  </div>
+                ) : notesError ? (
+                  <p className="text-[11px] text-destructive py-1">{notesError}</p>
+                ) : notes.length === 0 ? (
+                  <p className="text-[11px] text-muted-foreground italic py-1">
+                    {REVIEW_COPY.reviewNoteListEmpty}
+                  </p>
+                ) : (
+                  <ul className="space-y-1.5">
+                    {notes.map((n) => {
+                      const statusLabel = reviewNoteStatusLabel(n.status);
+                      const dt = new Date(n.created_at);
+                      const when = isNaN(dt.getTime()) ? n.created_at : dt.toLocaleString();
+                      return (
+                        <li
+                          key={n.id}
+                          className="rounded-md border border-border/60 bg-card px-2.5 py-1.5 space-y-1"
+                        >
+                          <div className="flex items-center justify-between gap-2 flex-wrap">
+                            {statusLabel ? (
+                              <Badge
+                                variant="outline"
+                                className="text-[10px] px-1.5 py-0 h-4 border-primary/40 bg-primary/5 text-primary font-normal"
+                              >
+                                {statusLabel}
+                              </Badge>
+                            ) : <span />}
+                            <span className="text-[10px] text-muted-foreground">{when}</span>
+                          </div>
+                          <p className="text-[11.5px] text-foreground/90 whitespace-pre-wrap break-words leading-relaxed">
+                            {n.note}
+                          </p>
+                          <div className="text-[10px] text-muted-foreground italic">
+                            {REVIEW_COPY.reviewNoteAuthorFallback}
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </div>
             </section>
+
 
             <div className="pt-2 border-t border-border/60">
               <Button

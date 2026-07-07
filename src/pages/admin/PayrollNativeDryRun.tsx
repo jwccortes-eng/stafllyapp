@@ -893,6 +893,7 @@ export default function PayrollNativeDryRun() {
       <RootCauseExplorer
         open={!!exploreId}
         onOpenChange={(o) => { if (!o) setExploreId(null); }}
+        companyId={selectedCompanyId}
         worker={
           exploreId
             ? {
