@@ -1181,6 +1181,11 @@ function LiveRow({
         <div className="text-sm font-bold tabular-nums">{formatDuration(row.minutes)}</div>
         <div className="text-[10px] uppercase tracking-wider text-muted-foreground">transcurrido</div>
       </div>
+      {focused && (
+        <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-wider bg-primary/10 text-primary border-primary/40">
+          foco
+        </Badge>
+      )}
       <ChevronRight className="h-4 w-4 text-muted-foreground" />
     </li>
   );
