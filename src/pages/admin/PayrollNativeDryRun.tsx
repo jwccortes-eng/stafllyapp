@@ -175,6 +175,22 @@ export default function PayrollNativeDryRun() {
   const urlFilter = searchParams.get("filter") as FilterKey | null;
   const filter: FilterKey =
     urlFilter && FILTER_KEYS.includes(urlFilter) ? urlFilter : "all";
+  const urlView = searchParams.get("view");
+  const view: "single" | "batch" = urlView === "batch" ? "batch" : "single";
+  const setView = useCallback(
+    (next: "single" | "batch") => {
+      setSearchParams(
+        (prev) => {
+          const p = new URLSearchParams(prev);
+          if (next === "batch") p.set("view", "batch");
+          else p.delete("view");
+          return p;
+        },
+        { replace: true },
+      );
+    },
+    [setSearchParams],
+  );
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   const setFilter = useCallback(
