@@ -209,16 +209,18 @@ export default function MobileTimeCommandView() {
 
   const alerts = useMemo<AlertItem[]>(() => {
     const issues: AlertItem[] = [];
-    liveRows.forEach(r => {
-      const hours = r.minutes / 60;
-      if (hours >= OPEN_ENTRY_STALE_HOURS) {
-        issues.push({ ...r, type: "stale_open", reason: `Fichaje abierto desde hace ${Math.round(hours)}h — posiblemente falta salida` });
-      } else if (hours >= OPEN_ENTRY_WARN_HOURS) {
-        issues.push({ ...r, type: "long_open", reason: `Fichaje abierto largo — ${Math.round(hours)}h` });
-      } else if (!r.entry.shift_id && !r.entry.scheduled_shifts) {
-        issues.push({ ...r, type: "no_shift", reason: "Fichaje sin turno programado vinculado" });
-      }
-    });
+    if (isToday) {
+      liveRows.forEach(r => {
+        const hours = r.minutes / 60;
+        if (hours >= OPEN_ENTRY_STALE_HOURS) {
+          issues.push({ ...r, type: "stale_open", reason: `Fichaje abierto desde hace ${Math.round(hours)}h — posiblemente falta salida` });
+        } else if (hours >= OPEN_ENTRY_WARN_HOURS) {
+          issues.push({ ...r, type: "long_open", reason: `Fichaje abierto largo — ${Math.round(hours)}h` });
+        } else if (!r.entry.shift_id && !r.entry.scheduled_shifts) {
+          issues.push({ ...r, type: "no_shift", reason: "Fichaje sin turno programado vinculado" });
+        }
+      });
+    }
     closedTodayEntries.forEach(e => {
       const emp = empMap.get(e.employee_id);
       if (!emp) return;
