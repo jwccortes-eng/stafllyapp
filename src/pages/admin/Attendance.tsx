@@ -26,6 +26,7 @@ import {
 import { format, parseISO, differenceInMinutes, isAfter, isBefore, startOfDay, endOfDay, eachDayOfInterval } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { useDeepLinkFocus } from "@/hooks/useDeepLinkFocus";
 
 /* ─── Types ─── */
 
