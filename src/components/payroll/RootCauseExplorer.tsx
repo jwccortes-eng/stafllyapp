@@ -207,28 +207,64 @@ export function RootCauseExplorer(props: RootCauseExplorerProps) {
     [counts, referenceHours, nativeHours, deltaHours],
   );
 
+  // Per-cause anchors (day / entry / shift) derived from the already-loaded entries.
+  const anchors = useMemo(
+    () =>
+      deriveRootCauseAnchors(
+        workerEntries.map((e) => ({
+          id: e.id,
+          clock_in: e.clock_in,
+          clock_out: e.clock_out,
+          shift_id: e.shift_id,
+          day: e.day,
+          durationHours: e.flags.durationHours,
+          flags: {
+            open: e.flags.open,
+            noShift: e.flags.noShift,
+            overlap: e.flags.overlap,
+            abnormal: e.flags.abnormal,
+            midnight: e.flags.midnight,
+          },
+        })),
+      ),
+    [workerEntries],
+  );
+
+  const routerCtx = useMemo(
+    () => ({
+      employeeId: worker?.id ?? null,
+      periodId: period?.id ?? null,
+      anchorDate: anchorDate || null,
+      problematicDate: null,
+      timeEntryId: null,
+      shiftId: null,
+    }),
+    [worker?.id, period?.id, anchorDate],
+  );
+
   const checklist = useMemo<ChecklistItem[]>(
     () =>
       buildChecklist(
         { counts, referenceHours, nativeHours, deltaHours },
-        {
-          employeeId: worker?.id ?? null,
-          periodId: period?.id ?? null,
-          anchorDate: anchorDate || null,
-          problematicDate: null,
-          timeEntryId: null,
-          shiftId: null,
-        },
+        routerCtx,
+        anchors,
       ),
-    [counts, referenceHours, nativeHours, deltaHours, worker?.id, period?.id, anchorDate],
+    [counts, referenceHours, nativeHours, deltaHours, routerCtx, anchors],
   );
 
-  const bestPoint = useMemo(() => bestReviewPoint(causes), [causes]);
+  const bestPoint = useMemo(
+    () => bestReviewPoint(causes, anchors, routerCtx),
+    [causes, anchors, routerCtx],
+  );
 
   const highlightKey: CauseKey | null =
     focusReason && HIGHLIGHTABLE_REASONS.has(focusReason as CauseKey)
       ? (focusReason as CauseKey)
       : null;
+
+  /** Day (YYYY-MM-DD) to visually highlight in the timeline based on focusReason. */
+  const highlightDay: string | null =
+    (highlightKey && anchors[highlightKey]?.date) ?? null;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
