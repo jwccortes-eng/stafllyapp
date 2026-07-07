@@ -597,8 +597,23 @@ export default function PayrollNativeDryRun() {
         <Card><CardContent className="py-10 text-center text-sm text-muted-foreground">
           Selecciona una compañía para ejecutar el dry-run.
         </CardContent></Card>
+      ) : view === "batch" ? (
+        <>
+          <div className="flex gap-1.5 border-b border-border/60">
+            <TabBtn active={false} onClick={() => setView("single")}>Período único</TabBtn>
+            <TabBtn active={true} onClick={() => setView("batch")}>Comparar períodos</TabBtn>
+          </div>
+          <BatchTrendPanel
+            companyId={selectedCompanyId}
+            companyName={selectedCompany?.name ?? ""}
+          />
+        </>
       ) : (
         <>
+          <div className="flex gap-1.5 border-b border-border/60">
+            <TabBtn active={true} onClick={() => setView("single")}>Período único</TabBtn>
+            <TabBtn active={false} onClick={() => setView("batch")}>Comparar períodos</TabBtn>
+          </div>
           <Card>
             <CardContent className="py-4 flex flex-wrap items-center gap-3">
               <div className="text-xs text-muted-foreground">Compañía</div>
