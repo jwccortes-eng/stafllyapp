@@ -26,6 +26,7 @@ import {
 import { format, parseISO, differenceInMinutes, isAfter, isBefore, startOfDay, endOfDay, eachDayOfInterval } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { useDeepLinkFocus } from "@/hooks/useDeepLinkFocus";
 
 /* ─── Types ─── */
 
@@ -124,7 +125,17 @@ export default function Attendance() {
   const [searchParams, setSearchParams] = useSearchParams();
   const initialWhen = searchParams.get("when");
   const initialFilter = searchParams.get("filter");
+  // Sprint 14: honor ?date=YYYY-MM-DD from Root-Cause Explorer deep-links
+  // (strict format; invalid → silent fallback to today).
+  const parsedDateParam = useMemo(() => {
+    const raw = searchParams.get("date");
+    if (!raw || !/^\d{4}-\d{2}-\d{2}$/.test(raw)) return null;
+    const [y, m, d] = raw.split("-").map(Number);
+    const dt = new Date(y, m - 1, d);
+    return isNaN(dt.getTime()) ? null : dt;
+  }, [searchParams]);
   const [selectedDate, setSelectedDate] = useState<Date>(() => {
+    if (parsedDateParam) return parsedDateParam;
     if (initialWhen === "tomorrow") {
       const d = new Date();
       d.setDate(d.getDate() + 1);
@@ -316,6 +327,32 @@ export default function Attendance() {
     });
   }, [assignments, timeEntries, clockEvents]);
 
+  // ─── Sprint 14: Root-Cause Explorer focus (time_entry / employee) ───
+  const dateStrView = format(selectedDate, "yyyy-MM-dd");
+  const isViewingToday = dateStrView === format(new Date(), "yyyy-MM-dd");
+  const loadedEntryIds = useMemo(
+    () => rows.map(r => r.timeEntryId).filter((x): x is string => !!x),
+    [rows],
+  );
+  const loadedEmployeeIds = useMemo(() => rows.map(r => r.employeeId), [rows]);
+  const loadingRows = !assignments || !timeEntries;
+  const { focusId: focusEntryId, present: entryPresent } = useDeepLinkFocus({
+    param: "time_entry", attribute: "entry",
+    loading: loadingRows, loadedIds: loadedEntryIds,
+  });
+  const { focusId: focusEmployeeId, present: employeePresent } = useDeepLinkFocus({
+    param: "employee", attribute: "employee",
+    loading: loadingRows, loadedIds: loadedEmployeeIds,
+  });
+  const hasReviewFocus = !!focusEntryId || !!focusEmployeeId || !!parsedDateParam;
+  const clearDateFocus = useCallback(() => {
+    const next = new URLSearchParams(searchParams);
+    next.delete("date");
+    setSearchParams(next, { replace: true });
+    setSelectedDate(new Date());
+  }, [searchParams, setSearchParams]);
+
+
   // ─── Filter rows ───
   const filteredRows = useMemo(() => {
     let r = rows;
@@ -463,6 +500,45 @@ export default function Attendance() {
         onClear={clearOpsFilter}
       />
 
+      {(hasReviewFocus || !isViewingToday) && (
+        <div
+          role="status"
+          className={cn(
+            "rounded-xl border px-3.5 py-2.5 text-xs flex items-start gap-2",
+            entryPresent || employeePresent || (!focusEntryId && !focusEmployeeId && !isViewingToday)
+              ? "border-primary/40 bg-primary/5 text-primary"
+              : (focusEntryId && !entryPresent) || (focusEmployeeId && !employeePresent)
+              ? "border-amber-500/40 bg-amber-500/5 text-amber-700 dark:text-amber-400"
+              : "border-primary/40 bg-primary/5 text-primary",
+          )}
+        >
+          <span className="mt-0.5 inline-flex h-1.5 w-1.5 rounded-full bg-current shrink-0" />
+          <div className="min-w-0 flex-1 space-y-0.5">
+            <div className="font-semibold">
+              {entryPresent || employeePresent
+                ? "Enfocando desde revisión"
+                : (focusEntryId && !entryPresent) || (focusEmployeeId && !employeePresent)
+                ? "Elemento fuera del rango cargado o no encontrado"
+                : !isViewingToday
+                ? "Viendo día histórico"
+                : "Abierto desde revisión"}
+            </div>
+            <div className="text-[11px] opacity-80 truncate">
+              Día <span className="font-mono">{dateStrView}</span>
+              {!isViewingToday && <> (histórico)</>}
+              {focusEmployeeId && <> · empleado <code className="font-mono">{focusEmployeeId.slice(0, 8)}</code></>}
+              {focusEntryId && <> · entry <code className="font-mono">{focusEntryId.slice(0, 8)}</code></>}
+            </div>
+          </div>
+          {!isViewingToday && (
+            <Button variant="ghost" size="sm" className="h-7 text-[11px] px-2 shrink-0" onClick={clearDateFocus}>
+              Volver a hoy
+            </Button>
+          )}
+        </div>
+      )}
+
+
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
           <TabsTrigger value="live">En vivo</TabsTrigger>
@@ -570,12 +646,26 @@ export default function Attendance() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filteredRows.map((row) => (
-                      <TableRow key={`${row.employeeId}-${row.shiftId}`}>
+                    filteredRows.map((row) => {
+                      const isFocused =
+                        (!!focusEntryId && row.timeEntryId === focusEntryId) ||
+                        (!focusEntryId && !!focusEmployeeId && row.employeeId === focusEmployeeId);
+                      return (
+                      <TableRow
+                        key={`${row.employeeId}-${row.shiftId}`}
+                        data-entry-id={row.timeEntryId ?? undefined}
+                        data-employee-id={row.employeeId}
+                        className={cn(
+                          isFocused && "bg-primary/5 border-l-2 border-primary scroll-mt-24",
+                        )}
+                      >
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <EmployeeAvatar firstName={row.firstName} lastName={row.lastName} avatarUrl={row.avatarUrl} gender={row.gender} size="sm" />
                             <span className="text-sm font-medium truncate">{row.firstName} {row.lastName}</span>
+                            {isFocused && (
+                              <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-wider bg-primary/10 text-primary border-primary/40">foco</Badge>
+                            )}
                           </div>
                         </TableCell>
                         <TableCell className="text-sm">{row.shiftTitle}</TableCell>
@@ -598,7 +688,8 @@ export default function Attendance() {
                           ) : "—"}
                         </TableCell>
                       </TableRow>
-                    ))
+                      );
+                    })
                   )}
                 </TableBody>
               </Table>

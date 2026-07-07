@@ -689,22 +689,38 @@ function DesktopShifts() {
   useEffect(() => { refreshShifts(); }, [refreshShifts]);
 
   // Deep-link: open shift detail (and specific tab) from /app/shifts?shiftId=...&tab=attendance
+  // Sprint 14: also accept `?shift=<id>` as an alias, matching Root-Cause Explorer CTAs.
+  // If the id isn't in the currently loaded range, surface a soft "not found"
+  // toast and clear the param so the user isn't stuck in a broken state.
   useEffect(() => {
-    const sid = searchParams.get("shiftId");
-    if (!sid || shifts.length === 0) return;
+    const sid = searchParams.get("shiftId") ?? searchParams.get("shift");
+    if (!sid) return;
+    if (loading || shifts.length === 0) return;
     const found = shifts.find(s => s.id === sid);
-    if (!found) return;
+    const clearParams = () => {
+      setSearchParams(prev => {
+        const p = new URLSearchParams(prev);
+        p.delete("shiftId");
+        p.delete("shift");
+        p.delete("tab");
+        return p;
+      }, { replace: true });
+    };
+    if (!found) {
+      toast.warning("Turno no encontrado en el rango cargado", {
+        description: "Ajusta la fecha o el rango de la vista.",
+      });
+      clearParams();
+      return;
+    }
     const tabParam = searchParams.get("tab") || undefined;
     setSelectedShift(found);
     setDetailInitialTab(tabParam);
     setDetailOpen(true);
-    setSearchParams(prev => {
-      const p = new URLSearchParams(prev);
-      p.delete("shiftId");
-      p.delete("tab");
-      return p;
-    }, { replace: true });
-  }, [shifts, searchParams, setSearchParams]);
+    clearParams();
+  }, [shifts, searchParams, setSearchParams, loading]);
+
+
 
   // Stable click handler — prevents child views from re-rendering on every parent render.
   const handleShiftClick = useCallback((s: Shift) => {
