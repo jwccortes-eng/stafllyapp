@@ -186,7 +186,7 @@ export default function OpsHome() {
       <PageHeader
         variant="3"
         title="Operaciones"
-        subtitle="Cockpit unificado — qué está pasando hoy, qué necesita acción y dónde continuar."
+        subtitle="Centro principal para revisar cobertura, asistencia, cierre y payroll review."
         rightSlot={
           <div className="flex items-center gap-2">
             <Button
@@ -212,6 +212,19 @@ export default function OpsHome() {
           </div>
         }
       />
+
+      {/* Mini operational header: company + date + short guardrail */}
+      <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-2.5 py-1 font-semibold text-foreground">
+          <ShieldCheck className="h-3 w-3 text-primary" />
+          {selectedCompany?.name ?? "Sin compañía"}
+        </span>
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-2.5 py-1 capitalize">
+          <CalendarDays className="h-3 w-3" />
+          {todayLabel}
+        </span>
+        <PayrollSourceGuardrailBanner variant="compact" />
+      </div>
 
       {!selectedCompanyId ? (
         <div className="rounded-2xl border border-dashed border-border/60 bg-muted/20 px-6 py-16 text-center">
