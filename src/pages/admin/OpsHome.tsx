@@ -181,6 +181,21 @@ export default function OpsHome() {
   const anyLoading = todayOps.loading || tomorrowOps.loading;
   const todayLabel = format(today, "EEEE d 'de' MMMM", { locale: es });
 
+  // Sprint 3: "Próximos 60 min" — presentational derivation from already-loaded
+  // today's shifts. No new query. Uses date + start_time text as-is.
+  const upcoming60 = useMemo(() => {
+    const now = new Date();
+    const in60 = new Date(now.getTime() + 60 * 60_000);
+    const items = todayOps.shifts.filter((s) => {
+      const start = new Date(`${s.date}T${s.start_time}`);
+      return start >= now && start <= in60;
+    });
+    const covered = items.filter((s) => s.ops.assigned_active >= (s.slots ?? 1)).length;
+    const needsAttention = items.length - covered;
+    return { total: items.length, covered, needsAttention };
+  }, [todayOps.shifts]);
+
+
   return (
     <div className="space-y-5 max-w-[1400px]">
       <PageHeader
