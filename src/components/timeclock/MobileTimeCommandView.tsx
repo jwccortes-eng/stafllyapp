@@ -291,6 +291,30 @@ export default function MobileTimeCommandView() {
         label={filterLabel}
         onClear={clearOpsFilter}
       />
+      {hasFocus && (
+        <div
+          role="status"
+          className={cn(
+            "rounded-xl border px-3 py-2 text-[11px] flex items-start gap-2",
+            entryPresent || !focusEntryId
+              ? "border-primary/40 bg-primary/5 text-primary"
+              : "border-amber-500/40 bg-amber-500/5 text-amber-700 dark:text-amber-400",
+          )}
+        >
+          <span className="mt-0.5 inline-flex h-1.5 w-1.5 rounded-full bg-current shrink-0" />
+          <div className="min-w-0 flex-1">
+            <div className="font-semibold">
+              {entryPresent ? "Enfocando fichaje desde revisión" : focusEntryId ? "Fichaje fuera del rango cargado" : "Vista desde revisión"}
+            </div>
+            <div className="opacity-80 truncate">
+              {focusDate && <>Día {focusDate}</>}
+              {focusEntryId && <> · <code className="font-mono">{focusEntryId.slice(0, 8)}</code></>}
+              {focusShiftId && <> · turno <code className="font-mono">{focusShiftId.slice(0, 8)}</code></>}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Compact KPI strip — single row, scrollable on narrow */}
       <div className="grid grid-cols-5 gap-1.5">
         <Kpi label="Programados" value={kpis.scheduled} />
