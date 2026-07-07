@@ -847,6 +847,15 @@ export default function PayrollNativeDryRun() {
                                         .map((k) => (
                                           <ReasonChip key={k} reason={k} />
                                         ))}
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-6 px-2 text-[10px] gap-1 ml-1"
+                                        onClick={(e) => { e.stopPropagation(); setExploreId(r.employee_id); }}
+                                        title="Explorar posibles causas (read-only)"
+                                      >
+                                        <Search className="h-3 w-3" /> Explorar
+                                      </Button>
                                     </div>
                                   </TableCell>
                                 </TableRow>
