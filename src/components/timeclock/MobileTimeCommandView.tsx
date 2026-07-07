@@ -551,7 +551,7 @@ function Kpi({ label, value, tone = "muted" }: { label: string; value: number | 
   );
 }
 
-function AlertRow({ item, onOpen }: { item: AlertItem; onOpen: () => void }) {
+function AlertRow({ item, onOpen, focused = false }: { item: AlertItem; onOpen: () => void; focused?: boolean }) {
   const toneCls =
     item.type === "stale_open" ? "bg-rose-500/10 text-rose-700 border-rose-500/30"
     : item.type === "long_open" || item.type === "very_long" ? "bg-amber-500/10 text-amber-700 border-amber-500/30"
@@ -563,17 +563,28 @@ function AlertRow({ item, onOpen }: { item: AlertItem; onOpen: () => void }) {
     item.type === "very_long" ? "Muy largo" :
     item.type === "needs_review" ? "Revisar" : "Sin turno";
   return (
-    <li className="flex items-center gap-3 px-3.5 py-2.5 active:bg-muted/40 cursor-pointer" onClick={onOpen}>
+    <li
+      data-entry-id={item.entry.id}
+      className={cn(
+        "flex items-center gap-3 px-3.5 py-2.5 active:bg-muted/40 cursor-pointer",
+        focused && "bg-primary/5 border-l-2 border-primary scroll-mt-24",
+      )}
+      onClick={onOpen}
+    >
       <EmployeeAvatar avatarUrl={item.employee.avatar_url} firstName={item.employee.first_name} lastName={item.employee.last_name} size="sm" />
       <div className="min-w-0 flex-1">
         <div className="text-sm font-semibold truncate">{item.employee.first_name} {item.employee.last_name}</div>
         <div className="text-[11px] text-muted-foreground truncate">{item.reason}</div>
       </div>
+      {focused && (
+        <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-wider bg-primary/10 text-primary border-primary/40">foco</Badge>
+      )}
       <Badge variant="outline" className={cn("text-[10px] font-semibold uppercase tracking-wider", toneCls)}>{label}</Badge>
       <ChevronRight className="h-4 w-4 text-muted-foreground" />
     </li>
   );
 }
+
 
 function AlertDetailSheet({ item, onClose, onOpenWorker, onReviewInTime }: {
   item: AlertItem | null;
