@@ -125,7 +125,17 @@ export default function Attendance() {
   const [searchParams, setSearchParams] = useSearchParams();
   const initialWhen = searchParams.get("when");
   const initialFilter = searchParams.get("filter");
+  // Sprint 14: honor ?date=YYYY-MM-DD from Root-Cause Explorer deep-links
+  // (strict format; invalid → silent fallback to today).
+  const parsedDateParam = useMemo(() => {
+    const raw = searchParams.get("date");
+    if (!raw || !/^\d{4}-\d{2}-\d{2}$/.test(raw)) return null;
+    const [y, m, d] = raw.split("-").map(Number);
+    const dt = new Date(y, m - 1, d);
+    return isNaN(dt.getTime()) ? null : dt;
+  }, [searchParams]);
   const [selectedDate, setSelectedDate] = useState<Date>(() => {
+    if (parsedDateParam) return parsedDateParam;
     if (initialWhen === "tomorrow") {
       const d = new Date();
       d.setDate(d.getDate() + 1);
