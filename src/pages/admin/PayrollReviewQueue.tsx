@@ -17,7 +17,7 @@
  *     the highest sequence_number
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, Navigate, useSearchParams } from "react-router-dom";
 import { format, parseISO, isAfter, isBefore } from "date-fns";
