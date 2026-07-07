@@ -17,7 +17,7 @@
  *     the highest sequence_number
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, Navigate, useSearchParams } from "react-router-dom";
 import { format, parseISO, isAfter, isBefore } from "date-fns";
@@ -186,7 +186,48 @@ export default function PayrollReviewQueue() {
     },
   });
 
-  // Apply default period once data loads
+  // S16 — Period Resolver.
+  // If `?period=` refers to a period outside the initially loaded window,
+  // resolve it read-only, tenant-scoped (id + company_id) and merge it into
+  // the local list so the selector shows it exactly once and Review Queue
+  // can drill into it. Never creates or mutates periods.
+  const baseList = periodsQ.data?.list;
+  const paramInBase = !!periodParam && !!baseList && baseList.some(p => p.id === periodParam);
+  const needsResolve = !!periodParam && !!baseList && !paramInBase;
+  const resolvePeriodQ = useQuery({
+    queryKey: ["prq", "resolve-period", selectedCompanyId, periodParam],
+    enabled: !!selectedCompanyId && canAccess && needsResolve,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("pay_periods")
+        .select("id, sequence_number, start_date, end_date, status, reconciliation_status, paid_at, closed_at")
+        .eq("company_id", selectedCompanyId!)
+        .eq("id", periodParam!)
+        .maybeSingle();
+      if (error) throw error;
+      return (data ?? null) as PayPeriodLite | null;
+    },
+  });
+  const resolvedPeriod = resolvePeriodQ.data ?? null;
+  const resolveAttempted = needsResolve && !resolvePeriodQ.isLoading;
+  const resolveNotFound = resolveAttempted && resolvedPeriod === null;
+  const resolvedFromUrl = !!periodParam && !paramInBase && !!resolvedPeriod;
+
+  // Merged periods list (base + resolved, dedup by id).
+  const mergedPeriods = useMemo<PayPeriodLite[]>(() => {
+    const base = baseList ?? [];
+    if (resolvedPeriod && !base.some(p => p.id === resolvedPeriod.id)) {
+      return [resolvedPeriod, ...base];
+    }
+    return base;
+  }, [baseList, resolvedPeriod]);
+
+  // Ref kept in sync for use inside dataQ.queryFn without changing its key.
+  const periodsLookupRef = useRef<PayPeriodLite[]>([]);
+  useEffect(() => { periodsLookupRef.current = mergedPeriods; }, [mergedPeriods]);
+
+  // Apply default period once data loads. Never auto-picks the resolved
+  // period — that only happens via explicit URL selection below.
   const effectivePeriodId = useMemo(() => {
     if (selectedPeriodId) return selectedPeriodId;
     if (!periodsQ.data) return null;
@@ -194,17 +235,19 @@ export default function PayrollReviewQueue() {
   }, [selectedPeriodId, periodsQ.data]);
 
   const selectedPeriod = useMemo(() => {
-    if (!effectivePeriodId || !periodsQ.data) return null;
-    return periodsQ.data.list.find(p => p.id === effectivePeriodId) ?? null;
-  }, [effectivePeriodId, periodsQ.data]);
+    if (!effectivePeriodId) return null;
+    return mergedPeriods.find(p => p.id === effectivePeriodId) ?? null;
+  }, [effectivePeriodId, mergedPeriods]);
 
-  // S4: honor `?period=` deep link once periods load (tenant-scoped query above).
+  // S4/S16: honor `?period=` deep link once periods load (tenant-scoped).
+  // Selects the period if it exists in the base list OR was resolved via S16.
   useEffect(() => {
     if (!periodParam || selectedPeriodId) return;
-    const list = periodsQ.data?.list;
-    if (!list) return;
-    if (list.some(p => p.id === periodParam)) setSelectedPeriodId(periodParam);
-  }, [periodParam, periodsQ.data, selectedPeriodId]);
+    if (paramInBase) { setSelectedPeriodId(periodParam); return; }
+    if (resolvedFromUrl) { setSelectedPeriodId(periodParam); return; }
+  }, [periodParam, paramInBase, resolvedFromUrl, selectedPeriodId]);
+
+
 
   // ── Bucket data aggregation ─────────────────────────────────────────────
   const dataQ = useQuery({
@@ -213,7 +256,8 @@ export default function PayrollReviewQueue() {
     queryFn: async () => {
       const cid = selectedCompanyId!;
       const pid = effectivePeriodId!;
-      const period = periodsQ.data?.list.find(p => p.id === pid);
+      const period = periodsLookupRef.current.find(p => p.id === pid)
+        ?? periodsQ.data?.list.find(p => p.id === pid);
       if (!period) throw new Error("Period not found");
 
       // 1) period_base_pay (Stafly-side finalized rows, current source of truth)
@@ -824,7 +868,7 @@ export default function PayrollReviewQueue() {
     return <Navigate to="/app" replace />;
   }
 
-  const periods = periodsQ.data?.list ?? [];
+  const periods = mergedPeriods;
   const pbpCounts = periodsQ.data?.pbpCounts ?? {};
   const totalsBySeverity = buckets.reduce((acc, b) => {
     acc[b.severity] = (acc[b.severity] ?? 0) + b.rows.length;
@@ -856,6 +900,29 @@ export default function PayrollReviewQueue() {
       </div>
 
       <PayrollSourceGuardrailBanner />
+
+      {/* S16 — Period resolver banners (read-only, tenant-scoped). */}
+      {resolvedFromUrl && (
+        <Card className="border-primary/30 bg-primary/5">
+          <CardContent className="py-2.5 px-4 flex flex-wrap items-center gap-2 text-xs">
+            <Badge variant="outline" className="gap-1.5 border-primary/40 text-primary">
+              <ScanEye className="h-3 w-3" /> Período abierto desde revisión
+            </Badge>
+            <span className="text-muted-foreground">
+              Cargado por deep-link · solo lectura.
+            </span>
+          </CardContent>
+        </Card>
+      )}
+      {resolveNotFound && (
+        <Card className="border-warning/40 bg-warning/10">
+          <CardContent className="py-2.5 px-4 flex flex-wrap items-center gap-2 text-xs text-warning">
+            <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+            <span>Período no encontrado o no disponible para esta compañía. Mostrando período por defecto.</span>
+          </CardContent>
+        </Card>
+      )}
+
 
       {/* S15 — Root-Cause context banner (read-only hint). */}
       {(reasonHuman || focusEmployeeId) && (
