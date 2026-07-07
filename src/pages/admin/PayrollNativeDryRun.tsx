@@ -889,6 +889,29 @@ export default function PayrollNativeDryRun() {
           )}
         </>
       )}
+
+      <RootCauseExplorer
+        open={!!exploreId}
+        onOpenChange={(o) => { if (!o) setExploreId(null); }}
+        worker={
+          exploreId
+            ? {
+                id: exploreId,
+                name: (() => {
+                  const r = rows.find((x) => x.employee_id === exploreId);
+                  return r?.name ?? "Worker";
+                })(),
+              }
+            : null
+        }
+        period={selectedPeriod}
+        referenceHours={rows.find((r) => r.employee_id === exploreId)?.connecteamHours ?? null}
+        nativeHours={rows.find((r) => r.employee_id === exploreId)?.nativeHours ?? null}
+        deltaHours={rows.find((r) => r.employee_id === exploreId)?.deltaHours ?? null}
+        status={rows.find((r) => r.employee_id === exploreId)?.status ?? null}
+        reasons={rows.find((r) => r.employee_id === exploreId)?.reasons ?? []}
+        entries={entries}
+      />
     </div>
   );
 }
