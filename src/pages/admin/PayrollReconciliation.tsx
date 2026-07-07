@@ -979,6 +979,11 @@ export default function PayrollReconciliationPage() {
                 <Clock className="h-4 w-4" />Placeholder
               </Button>
             )}
+            <Button asChild variant="ghost" size="sm" className="rounded-xl gap-1.5 text-xs text-muted-foreground hover:text-foreground">
+              <a href="/app/payroll-native-dry-run">
+                <Eye className="h-4 w-4" />Ver dry-run nativo
+              </a>
+            </Button>
             <Button onClick={() => setShowCreateDialog(true)} size="sm" className="rounded-xl gap-1.5">
               <Plus className="h-4 w-4" />Nuevo batch
             </Button>
