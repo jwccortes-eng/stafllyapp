@@ -303,6 +303,8 @@ export function RootCauseExplorer(props: RootCauseExplorerProps) {
   const [notesLoading, setNotesLoading] = useState(false);
   const [notesError, setNotesError] = useState<string | null>(null);
   const [notesReloadTick, setNotesReloadTick] = useState(0);
+  const [archiveConfirmId, setArchiveConfirmId] = useState<string | null>(null);
+  const [archivingId, setArchivingId] = useState<string | null>(null);
 
   const notesReason: string | null = highlightKey ?? null;
 
@@ -385,6 +387,36 @@ export function RootCauseExplorer(props: RootCauseExplorerProps) {
       setSaving(false);
     }
   }
+
+
+  async function handleArchiveNote(noteId: string) {
+    if (!companyId) return;
+    setArchivingId(noteId);
+    try {
+      const { data: userRes, error: userErr } = await supabase.auth.getUser();
+      if (userErr || !userRes.user) throw new Error("no-auth");
+      const { error } = await supabase
+        .from("payroll_review_notes")
+        .update({
+          archived_at: new Date().toISOString(),
+          archived_by: userRes.user.id,
+          updated_at: new Date().toISOString(),
+          updated_by: userRes.user.id,
+        })
+        .eq("id", noteId)
+        .is("archived_at", null);
+      if (error) throw error;
+      toast.success(REVIEW_COPY.reviewNoteArchiveSuccess);
+      setArchiveConfirmId(null);
+      setNotesReloadTick((t) => t + 1);
+    } catch {
+      toast.error(REVIEW_COPY.reviewNoteArchiveError);
+    } finally {
+      setArchivingId(null);
+    }
+  }
+
+
 
 
   return (
@@ -831,8 +863,50 @@ export function RootCauseExplorer(props: RootCauseExplorerProps) {
                           <p className="text-[11.5px] text-foreground/90 whitespace-pre-wrap break-words leading-relaxed">
                             {n.note}
                           </p>
-                          <div className="text-[10px] text-muted-foreground italic">
-                            {REVIEW_COPY.reviewNoteAuthorFallback}
+                          <div className="flex items-center justify-between gap-2 flex-wrap">
+                            <div className="text-[10px] text-muted-foreground italic">
+                              {REVIEW_COPY.reviewNoteAuthorFallback}
+                            </div>
+                            {archiveConfirmId === n.id ? (
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="text-[10px] text-muted-foreground">
+                                  {REVIEW_COPY.reviewNoteArchiveConfirm}
+                                </span>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-6 text-[10px] px-2"
+                                  disabled={archivingId === n.id}
+                                  onClick={() => setArchiveConfirmId(null)}
+                                >
+                                  {REVIEW_COPY.reviewNoteArchiveCancel}
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="default"
+                                  size="sm"
+                                  className="h-6 text-[10px] px-2 gap-1"
+                                  disabled={archivingId === n.id}
+                                  onClick={() => handleArchiveNote(n.id)}
+                                >
+                                  {archivingId === n.id && <Loader2 className="h-3 w-3 animate-spin" />}
+                                  {archivingId === n.id
+                                    ? REVIEW_COPY.reviewNoteArchiving
+                                    : REVIEW_COPY.reviewNoteArchiveConfirmCta}
+                                </Button>
+                              </div>
+                            ) : (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 text-[10px] px-2 text-muted-foreground hover:text-foreground"
+                                onClick={() => setArchiveConfirmId(n.id)}
+                              >
+                                {REVIEW_COPY.reviewNoteArchiveLabel}
+                              </Button>
+                            )}
                           </div>
                         </li>
                       );
