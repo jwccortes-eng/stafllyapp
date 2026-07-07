@@ -138,6 +138,7 @@ const ShiftOperations = lazy(() => import("./pages/admin/ShiftOperations"));
 const OperationsCommandCenter = lazy(() => import("./pages/admin/OperationsCommandCenter"));
 const DailyOps = lazy(() => import("./pages/admin/DailyOps"));
 const OpsHome = lazy(() => import("./pages/admin/OpsHome"));
+const PayrollNativeDryRun = lazy(() => import("./pages/admin/PayrollNativeDryRun"));
 const StagedReconciliation = lazy(() => import("./pages/admin/StagedReconciliation"));
 const CompensationValidation = lazy(() => import("./pages/admin/CompensationValidation"));
 const PayrollPilotClose = lazy(() => import("./pages/admin/PayrollPilotClose"));
