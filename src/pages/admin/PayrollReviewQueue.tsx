@@ -995,6 +995,13 @@ export default function PayrollReviewQueue() {
               </Button>
             )}
           </div>
+          {/* Sprint 23 — Context note when the local filter is active. */}
+          {focusWorkerFilter && (
+            <div className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
+              <Info className="h-3 w-3 shrink-0" />
+              <span>{REVIEW_COPY.localFilterNoteReviewQueue}</span>
+            </div>
+          )}
         </div>
       )}
 
