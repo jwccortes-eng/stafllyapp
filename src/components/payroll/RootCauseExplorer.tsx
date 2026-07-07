@@ -202,6 +202,34 @@ export function RootCauseExplorer(props: RootCauseExplorerProps) {
 
   const anchorDate = period?.start_date ?? "";
 
+  const causes = useMemo<CauseKey[]>(
+    () => detectCauses({ counts, referenceHours, nativeHours, deltaHours }),
+    [counts, referenceHours, nativeHours, deltaHours],
+  );
+
+  const checklist = useMemo<ChecklistItem[]>(
+    () =>
+      buildChecklist(
+        { counts, referenceHours, nativeHours, deltaHours },
+        {
+          employeeId: worker?.id ?? null,
+          periodId: period?.id ?? null,
+          anchorDate: anchorDate || null,
+          problematicDate: null,
+          timeEntryId: null,
+          shiftId: null,
+        },
+      ),
+    [counts, referenceHours, nativeHours, deltaHours, worker?.id, period?.id, anchorDate],
+  );
+
+  const bestPoint = useMemo(() => bestReviewPoint(causes), [causes]);
+
+  const highlightKey: CauseKey | null =
+    focusReason && HIGHLIGHTABLE_REASONS.has(focusReason as CauseKey)
+      ? (focusReason as CauseKey)
+      : null;
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
