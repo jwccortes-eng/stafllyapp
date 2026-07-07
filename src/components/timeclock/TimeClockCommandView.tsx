@@ -294,17 +294,17 @@ export default function TimeClockCommandView() {
     });
   }, [liveRows, search]);
 
-  // Today's window
+  // Loaded day window (today OR the ?date=YYYY-MM-DD historical day).
   const todayStart = useMemo(() => {
-    const d = new Date(now);
+    const d = new Date(viewDate);
     d.setHours(0, 0, 0, 0);
     return d;
-  }, [now]);
+  }, [viewDate]);
   const todayEnd = useMemo(() => {
-    const d = new Date(now);
+    const d = new Date(viewDate);
     d.setHours(23, 59, 59, 999);
     return d;
-  }, [now]);
+  }, [viewDate]);
 
   /**
    * Tracked minutes attributable to TODAY.
