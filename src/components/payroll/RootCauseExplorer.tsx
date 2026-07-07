@@ -39,6 +39,7 @@ import {
   buildShiftsUrl,
   buildTimeClockUrl,
   bestReviewPoint,
+  deriveRootCauseAnchors,
   detectCauses,
   HIGHLIGHTABLE_REASONS,
   type CauseKey,
