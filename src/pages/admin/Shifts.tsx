@@ -552,8 +552,21 @@ function DesktopShifts() {
         return slots > 0 && assigned < slots;
       });
     }
+    if (incompleteOnly) {
+      // Sprint 3: presentational filter — flags shifts missing site, meeting
+      // point, or client. Uses fields already loaded; no new queries. Rate is
+      // intentionally excluded (lives in compensation_profiles).
+      result = result.filter(s => {
+        const missingSite = !s.location_id;
+        const missingMeeting =
+          !(s as any).meeting_point_location_id &&
+          !((s as any).meeting_point ?? "").trim();
+        const missingClient = !s.client_id;
+        return missingSite || missingMeeting || missingClient;
+      });
+    }
     return result;
-  }, [shifts, assignments, filters]);
+  }, [shifts, assignments, filters, incompleteOnly]);
 
   // ── KPI metrics ──
   const kpiMetrics = useMemo(() => {
