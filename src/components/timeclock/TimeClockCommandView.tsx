@@ -37,6 +37,7 @@ import StaflyCalmProcessingBanner from "@/components/common/StaflyCalmProcessing
 import { APP_BASE_URL } from "@/lib/app-url";
 import { cn } from "@/lib/utils";
 import { useTimeClockFocus } from "@/hooks/useTimeClockFocus";
+import { REVIEW_COPY } from "@/utils/reviewNavigationCopy";
 
 // ─── thresholds ──────────────────────────────────────────────
 const OPEN_ENTRY_WARN_HOURS = 12;
