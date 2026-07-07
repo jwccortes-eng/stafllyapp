@@ -110,7 +110,7 @@ function localTime(iso: string): string {
 }
 
 export function RootCauseExplorer(props: RootCauseExplorerProps) {
-  const { open, onOpenChange, worker, period, referenceHours, nativeHours, deltaHours, status, reasons, entries, focusReason } = props;
+  const { open, onOpenChange, companyId, worker, period, referenceHours, nativeHours, deltaHours, status, reasons, entries, focusReason } = props;
 
   const workerEntries = useMemo<EnrichedEntry[]>(() => {
     if (!worker) return [];
