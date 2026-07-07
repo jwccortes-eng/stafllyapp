@@ -102,6 +102,42 @@ Tune the arrays in `tests/e2e/root-cause-deeplinks.spec.ts`
 (`CONSOLE_IGNORE`, `NETWORK_IGNORE`) if your project needs different noise
 filters.
 
+## CI (Sprint 18)
+
+Workflow: `.github/workflows/root-cause-e2e.yml`. Runs on `workflow_dispatch`,
+nightly cron, and PRs that touch the harness. It installs Bun deps, installs
+Playwright Chromium, then runs `bunx playwright test --project=desktop --project=mobile`.
+
+Required GitHub Actions secrets (QA/staging only — never production):
+
+| Secret                    | Purpose                                              |
+| ------------------------- | ---------------------------------------------------- |
+| `E2E_BASE_URL`            | QA/staging preview URL                               |
+| `E2E_STORAGE_STATE_B64`   | Base64 of Playwright storage state JSON (QA admin)   |
+| `E2E_COMPANY_ID`          | QA company id (informational)                        |
+| `E2E_PAY_PERIOD_ID`       | QA `pay_periods.id`                                  |
+| `E2E_EMPLOYEE_ID`         | QA `employees.id`                                    |
+| `E2E_TIME_ENTRY_ID`       | QA `time_entries.id`                                 |
+| `E2E_SHIFT_ID`            | QA `scheduled_shifts.id`                             |
+| `E2E_TARGET_DATE`         | `YYYY-MM-DD`                                         |
+
+Generate the storage state locally against QA, then base64-encode it:
+
+```bash
+bunx playwright codegen --save-storage=.playwright/auth.json "$E2E_BASE_URL"
+base64 -w0 .playwright/auth.json | pbcopy  # paste into E2E_STORAGE_STATE_B64
+```
+
+If any ID secret is missing the harness uses the synthetic UUID
+`00000000-0000-0000-0000-000000000000` and only validates the amber-fallback
+branches. The workflow refuses to run against `staflyapps.com` /
+`staflyapp.lovable.app` (production).
+
+Artifacts uploaded on every run:
+
+- `playwright-report` — full HTML report (`playwright-report/index.html`)
+- `root-cause-screenshots` — `test-results/root-cause/**` PNGs
+
 ## Limitations
 
 - Requires an authenticated storage state to reach `/app/*`. Without it
@@ -112,3 +148,6 @@ filters.
   gracefully and still asserts.
 - Synthetic-id fallback branches are validated; full focus assertions
   require real ids via env vars.
+- The sandbox where this project is developed has no auth session and no
+  QA preview URL, so the CI workflow cannot be executed from the agent —
+  it must run on GitHub Actions with the secrets above configured.
