@@ -442,6 +442,11 @@ export default function TimeClockCommandView() {
       </Card>
 
       {/* ─── Tabs ──────────────────────────────────────────── */}
+      <OpsFilterBanner
+        active={opsFilterActive}
+        label={opsFilterLabel}
+        onClear={clearOpsFilter}
+      />
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="w-full sm:w-auto flex-wrap h-auto gap-1">
           <TabsTrigger value="live" className="gap-1.5 text-xs">
