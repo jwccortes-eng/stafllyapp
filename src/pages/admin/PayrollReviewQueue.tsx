@@ -967,6 +967,37 @@ export default function PayrollReviewQueue() {
         </Card>
       )}
 
+      {/* Sprint 22 — Optional local worker-focus filter chip (read-only). */}
+      {canFilterByFocusedWorker && (
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="inline-flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/5 pl-2.5 pr-1 py-0.5 text-[11px] text-primary max-w-full">
+            <span className="font-semibold shrink-0">Trabajador enfocado</span>
+            <span className="text-muted-foreground truncate max-w-[180px]">
+              · {focusedWorkerName ?? (focusEmployeeId ? focusEmployeeId.slice(0, 8) : "")}
+            </span>
+            {focusWorkerFilter ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 text-[11px] px-2 shrink-0"
+                onClick={() => setFocusWorkerFilter(false)}
+              >
+                Mostrar todos
+              </Button>
+            ) : (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 text-[11px] px-2 shrink-0"
+                onClick={() => setFocusWorkerFilter(true)}
+              >
+                Filtrar por trabajador
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
+
 
 
 
