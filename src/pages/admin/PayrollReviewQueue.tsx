@@ -383,6 +383,7 @@ export default function PayrollReviewQueue() {
       .map(r => ({
         key: r.id,
         primary: empName(r.employee_id),
+        employeeId: r.employee_id,
         secondary: `${r.total_paid_hours ?? 0}h`,
         amount: Number(r.base_total_pay ?? 0),
         link: empLink(r.employee_id),
@@ -394,6 +395,7 @@ export default function PayrollReviewQueue() {
       .map(h => ({
         key: h.id,
         primary: h.worker_name_raw ?? "(unnamed)",
+        employeeId: h.matched_employee_id ?? null,
         secondary: h.needs_identity_review ? "Identity review flagged" : "No employee match",
         amount: Number(h.base_total_pay ?? 0),
         link: { to: "/app/payroll-reconciliation", label: "Open reconciliation" },
@@ -406,6 +408,7 @@ export default function PayrollReviewQueue() {
         .map(r => ({
           key: `rfr-${r.id}`,
           primary: empName(r.employee_id),
+          employeeId: r.employee_id,
           secondary: `${r.conflict_count} conflict${r.conflict_count === 1 ? "" : "s"} · ${r.reconciliation_status ?? "—"}`,
           amount: Number(r.final_total_pay ?? 0),
           link: empLink(r.employee_id),
@@ -415,6 +418,7 @@ export default function PayrollReviewQueue() {
         .map(r => ({
           key: `pbp-anom-${r.id}`,
           primary: empName(r.employee_id),
+          employeeId: r.employee_id,
           secondary: `Anomaly: ${Object.keys((r.anomaly_flags as any) ?? {}).join(", ") || "flagged"}`,
           amount: Number(r.base_total_pay ?? 0),
           link: empLink(r.employee_id),
@@ -434,6 +438,7 @@ export default function PayrollReviewQueue() {
         return {
           key: a.id,
           primary: empName(a.employee_id),
+          employeeId: a.employee_id,
           secondary: s ? `${s.shift_code ?? s.title ?? "Shift"} · ${s.date}` : "Shift",
           link: { to: `/app/shifts`, label: "Open shift" },
         };
@@ -463,6 +468,7 @@ export default function PayrollReviewQueue() {
       return {
         key: `noassign-${empId}`,
         primary: empName(empId),
+        employeeId: empId,
         secondary: parts.join(" · "),
         amount: info.hasPay ? info.payAmount : undefined,
         link: info.hasPay ? empLink(empId) : { to: "/app/timeclock", label: "Open Time Clock" },
@@ -497,6 +503,7 @@ export default function PayrollReviewQueue() {
         return {
           key: r.id,
           primary: empName(r.driver_id),
+          employeeId: r.driver_id,
           secondary: `${r.ride_type ?? "ride"} · ${r.passenger_count ?? 0} passengers · no movement linked${s ? ` · ${s.date}` : ""}`,
           link: { to: `/app/movements`, label: "Open movements" },
         };
@@ -509,6 +516,7 @@ export default function PayrollReviewQueue() {
         .map(m => ({
           key: `mv-${m.id}`,
           primary: empName(m.employee_id),
+          employeeId: m.employee_id,
           secondary: `Movement · ${m.approval_status ?? "pending"}${m.note ? ` · ${m.note}` : ""}`,
           amount: Number(m.total_value ?? 0),
           link: { to: "/app/movements", label: "Open movements" },
@@ -522,6 +530,7 @@ export default function PayrollReviewQueue() {
       .map(r => ({
         key: `disp-${r.id}`,
         primary: empName(r.employee_id),
+        employeeId: r.employee_id,
         secondary: `Disputed · ${r.reconciliation_status}`,
         amount: Number(r.final_total_pay ?? 0),
         link: empLink(r.employee_id),
@@ -538,6 +547,7 @@ export default function PayrollReviewQueue() {
       .map(r => ({
         key: `doc-${r.id}`,
         primary: empName(r.employee_id),
+        employeeId: r.employee_id,
         secondary: `Profile: ${d.empMap.get(r.employee_id)?.profile_status ?? "—"} · has payable row`,
         amount: Number(r.base_total_pay ?? 0),
         link: empLink(r.employee_id),
@@ -597,6 +607,7 @@ export default function PayrollReviewQueue() {
         .map(t => ({
           key: `hr-te-${t.id}`,
           primary: empName(t.employee_id),
+          employeeId: t.employee_id,
           secondary: `Duration > 16h (${t.clock_in ? format(parseISO(t.clock_in), "MMM d") : ""})`,
           link: { to: "/app/timeclock", label: "Open Time Clock" },
         })),
@@ -605,6 +616,7 @@ export default function PayrollReviewQueue() {
         .map(r => ({
           key: `hr-pbp-${r.id}`,
           primary: empName(r.employee_id),
+          employeeId: r.employee_id,
           secondary: Number(r.base_total_pay ?? 0) <= 0 ? "Zero / negative pay" : "Pay > $3,000",
           amount: Number(r.base_total_pay ?? 0),
           link: empLink(r.employee_id),
@@ -614,6 +626,7 @@ export default function PayrollReviewQueue() {
         .map(h => ({
           key: `hr-hist-${h.id}`,
           primary: h.worker_name_raw ?? "(unnamed)",
+          employeeId: h.matched_employee_id ?? null,
           secondary: Number(h.base_total_pay ?? 0) <= 0 ? "Zero / negative imported pay" : "Imported pay > $3,000",
           amount: Number(h.base_total_pay ?? 0),
           link: { to: "/app/payroll-reconciliation", label: "Open reconciliation" },
@@ -678,6 +691,7 @@ export default function PayrollReviewQueue() {
         return {
           key: `fa-${t.id}`,
           primary: empName(t.employee_id),
+          employeeId: t.employee_id,
           secondary: `${s ? `${s.title ?? s.shift_code ?? "Turno"} · ` : ""}entrada ${t.clock_in ? format(parseISO(t.clock_in), "MMM d HH:mm") : "—"} · falta salida`,
           link: { to: `/app/timeclock`, label: "Abrir reloj" },
         };
@@ -717,6 +731,7 @@ export default function PayrollReviewQueue() {
       return {
         key: `idblock-${eid}`,
         primary: displayName,
+        employeeId: eid,
         secondary: `${reasons.join(" · ") || "Identidad no verificada"} · ${evLabel}`,
         badge: e.payroll_approval_blocked ? "Payroll bloqueado" : "Identidad pendiente",
         link: { to: `/app/employees/${eid}`, label: "Ver / resolver identidad" },
