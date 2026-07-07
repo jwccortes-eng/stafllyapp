@@ -396,7 +396,7 @@ function TodayView({ live, missing, closedToday }: {
         ) : (
           <ul className="divide-y divide-border/40">
             {live.map(r => (
-              <li key={r.entry.id} className="flex items-center gap-3 px-3.5 py-2.5">
+              <li key={r.entry.id} data-entry-id={r.entry.id} className="flex items-center gap-3 px-3.5 py-2.5">
                 <EmployeeAvatar
                   avatarUrl={r.employee.avatar_url}
                   firstName={r.employee.first_name}
