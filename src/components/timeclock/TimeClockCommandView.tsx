@@ -36,6 +36,7 @@ import { toast } from "sonner";
 import StaflyCalmProcessingBanner from "@/components/common/StaflyCalmProcessingBanner";
 import { APP_BASE_URL } from "@/lib/app-url";
 import { cn } from "@/lib/utils";
+import { useTimeClockFocus } from "@/hooks/useTimeClockFocus";
 
 // ─── thresholds ──────────────────────────────────────────────
 const OPEN_ENTRY_WARN_HOURS = 12;
