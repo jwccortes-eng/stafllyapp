@@ -374,7 +374,7 @@ export default function OpsHome() {
                 hint={`${t.assigned} asignados hoy`}
                 tone={pendingCount > 0 || (rejectedCount ?? 0) > 0 ? "attention" : "ok"}
                 icon={<UserCheck className="h-4 w-4" />}
-                to="/app/daily-ops"
+                to="/app/daily-ops?when=today"
                 cta="Ver operación diaria"
                 empty="Sin asignaciones"
                 footer={
@@ -391,7 +391,7 @@ export default function OpsHome() {
                 hint={`${t.open_clocks} clocks abiertos`}
                 tone={t.clocked_in_now > 0 ? "info" : "muted"}
                 icon={<Clock className="h-4 w-4" />}
-                to="/app/timeclock"
+                to="/app/timeclock?when=today&filter=open"
                 cta="Abrir reloj"
                 empty="Nadie fichado"
               />
@@ -405,7 +405,7 @@ export default function OpsHome() {
                 }
                 tone={lateOrNoShow > 0 ? "urgent" : "ok"}
                 icon={<AlertTriangle className="h-4 w-4" />}
-                to="/app/attendance"
+                to="/app/attendance?when=today&filter=no-shows"
                 cta="Ver asistencia"
                 empty="Sin alertas"
               />
