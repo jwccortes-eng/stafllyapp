@@ -51,6 +51,12 @@ const NETWORK_IGNORE = [
   /mapbox/i,
 ];
 
+// Endpoints/tables the harness must NEVER hit with a mutating verb.
+const SENSITIVE_ENDPOINT = /(time_entries|scheduled_shifts|shift_assignments|pay_periods|payroll_[a-z_]+|movements|reconciliation[a-z_]*|compensation[a-z_]*|payroll_rate_snapshots)/i;
+const MUTATING_METHODS = new Set(["POST", "PATCH", "PUT", "DELETE"]);
+// Benign auth/session traffic we tolerate even with mutating verbs.
+const AUTH_ALLOWLIST = [/\/auth\/v1\//i, /\/token\?/i, /\/logout/i];
+
 // Selectors used to detect forbidden action controls that must NEVER be
 // clicked by the harness. If we would ever try to click one of these, the
 // test fails immediately.
