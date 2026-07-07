@@ -411,7 +411,22 @@ function DesktopShifts() {
   const [weekViewMode, setWeekViewMode] = useState<"grid" | "job" | "employee">("job");
   const [currentDay, setCurrentDay] = useState(() => initialDate);
   const [weekStart, setWeekStart] = useState(() => startOfWeek(initialDate, { weekStartsOn: payrollWeekStart }));
-  const [filters, setFilters] = useState<ShiftFilterState>(EMPTY_FILTERS);
+  const [filters, setFilters] = useState<ShiftFilterState>(() => ({
+    ...EMPTY_FILTERS,
+    // Sprint 3: initial hydration from ?filter=needs-staffing.
+    needsStaffingOnly: initialOpsFilter === "needs-staffing" ? true : EMPTY_FILTERS.needsStaffingOnly,
+  }));
+  // Sprint 3: incomplete filter is not part of ShiftFilterState; kept as a
+  // sibling local toggle so we don't have to touch the shared schema.
+  const [incompleteOnly, setIncompleteOnly] = useState<boolean>(initialOpsFilter === "incomplete");
+  // Chip label that persists after URL sync strips the ops params.
+  const [activeOpsChip, setActiveOpsChip] = useState<string | null>(() => {
+    if (initialWhenLabel === "today") return "Turnos de hoy";
+    if (initialWhenLabel === "tomorrow") return "Turnos de mañana";
+    if (initialOpsFilter === "needs-staffing") return "Necesitan staff";
+    if (initialOpsFilter === "incomplete") return "Turnos incompletos";
+    return null;
+  });
   const [currentMonth, setCurrentMonth] = useState(() => initialDate);
 
   // Re-align weekStart when payroll config loads
