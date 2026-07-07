@@ -563,3 +563,18 @@ function CTA({ to, label, hint }: { to: string; label: string; hint: string }) {
     </Button>
   );
 }
+
+function SeverityBadge({ severity }: { severity: Severity }) {
+  const cls =
+    severity === "alta"
+      ? "border-destructive/40 text-destructive bg-destructive/5"
+      : severity === "media"
+      ? "border-amber-400/40 text-amber-800 dark:text-amber-200 bg-amber-500/5"
+      : "border-border/60 text-muted-foreground bg-muted/40";
+  const label = severity === "alta" ? "Alta" : severity === "media" ? "Media" : "Baja";
+  return (
+    <Badge variant="outline" className={cn("text-[9px] shrink-0", cls)}>
+      {label}
+    </Badge>
+  );
+}
