@@ -408,6 +408,7 @@ export function BatchTrendPanel({
                       <TableHead className="text-[11px] text-right">Δ acumulado</TableHead>
                       <TableHead className="text-[11px]">Razones frecuentes</TableHead>
                       <TableHead className="text-[11px]">Último estado</TableHead>
+                      <TableHead className="text-[11px] w-8"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
