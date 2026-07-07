@@ -225,7 +225,7 @@ test.describe("Root-Cause deep-link ecosystem (READ-ONLY)", () => {
     if (testInfo.project.name === "mobile") await assertNoHorizontalOverflow(page);
     // Expected: reason banner ("Abierto desde causa raíz" + "Entradas
     // solapadas") OR amber fallback if the period/employee doesn't resolve.
-    const banner = page.locator("text=/Abierto desde causa ra[ií]z|Entradas solapadas|no encontrado|no disponible/i").first();
+    const banner = page.locator("text=/Abierto desde revisi[oó]n|Causa ra[ií]z|Entradas solapadas|no encontrado|no disponible/i").first();
     await expect.soft(banner).toBeVisible({ timeout: 5_000 }).catch(() => {});
     await screenshot(page, "review-queue", testInfo.project.name);
     // Sanity: harness must never see a control being auto-clicked. Check
