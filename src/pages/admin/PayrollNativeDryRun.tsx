@@ -1021,3 +1021,28 @@ function ReasonChip({ reason }: { reason: ReasonKey }) {
     </Badge>
   );
 }
+
+function TabBtn({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "h-9 px-4 text-xs font-medium border-b-2 -mb-px transition-colors",
+        active
+          ? "border-primary text-foreground"
+          : "border-transparent text-muted-foreground hover:text-foreground",
+      )}
+    >
+      {children}
+    </button>
+  );
+}
