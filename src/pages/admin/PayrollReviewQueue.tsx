@@ -186,7 +186,48 @@ export default function PayrollReviewQueue() {
     },
   });
 
-  // Apply default period once data loads
+  // S16 — Period Resolver.
+  // If `?period=` refers to a period outside the initially loaded window,
+  // resolve it read-only, tenant-scoped (id + company_id) and merge it into
+  // the local list so the selector shows it exactly once and Review Queue
+  // can drill into it. Never creates or mutates periods.
+  const baseList = periodsQ.data?.list;
+  const paramInBase = !!periodParam && !!baseList && baseList.some(p => p.id === periodParam);
+  const needsResolve = !!periodParam && !!baseList && !paramInBase;
+  const resolvePeriodQ = useQuery({
+    queryKey: ["prq", "resolve-period", selectedCompanyId, periodParam],
+    enabled: !!selectedCompanyId && canAccess && needsResolve,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("pay_periods")
+        .select("id, sequence_number, start_date, end_date, status, reconciliation_status, paid_at, closed_at")
+        .eq("company_id", selectedCompanyId!)
+        .eq("id", periodParam!)
+        .maybeSingle();
+      if (error) throw error;
+      return (data ?? null) as PayPeriodLite | null;
+    },
+  });
+  const resolvedPeriod = resolvePeriodQ.data ?? null;
+  const resolveAttempted = needsResolve && !resolvePeriodQ.isLoading;
+  const resolveNotFound = resolveAttempted && resolvedPeriod === null;
+  const resolvedFromUrl = !!periodParam && !paramInBase && !!resolvedPeriod;
+
+  // Merged periods list (base + resolved, dedup by id).
+  const mergedPeriods = useMemo<PayPeriodLite[]>(() => {
+    const base = baseList ?? [];
+    if (resolvedPeriod && !base.some(p => p.id === resolvedPeriod.id)) {
+      return [resolvedPeriod, ...base];
+    }
+    return base;
+  }, [baseList, resolvedPeriod]);
+
+  // Ref kept in sync for use inside dataQ.queryFn without changing its key.
+  const periodsLookupRef = useRef<PayPeriodLite[]>([]);
+  useEffect(() => { periodsLookupRef.current = mergedPeriods; }, [mergedPeriods]);
+
+  // Apply default period once data loads. Never auto-picks the resolved
+  // period — that only happens via explicit URL selection below.
   const effectivePeriodId = useMemo(() => {
     if (selectedPeriodId) return selectedPeriodId;
     if (!periodsQ.data) return null;
@@ -194,17 +235,19 @@ export default function PayrollReviewQueue() {
   }, [selectedPeriodId, periodsQ.data]);
 
   const selectedPeriod = useMemo(() => {
-    if (!effectivePeriodId || !periodsQ.data) return null;
-    return periodsQ.data.list.find(p => p.id === effectivePeriodId) ?? null;
-  }, [effectivePeriodId, periodsQ.data]);
+    if (!effectivePeriodId) return null;
+    return mergedPeriods.find(p => p.id === effectivePeriodId) ?? null;
+  }, [effectivePeriodId, mergedPeriods]);
 
-  // S4: honor `?period=` deep link once periods load (tenant-scoped query above).
+  // S4/S16: honor `?period=` deep link once periods load (tenant-scoped).
+  // Selects the period if it exists in the base list OR was resolved via S16.
   useEffect(() => {
     if (!periodParam || selectedPeriodId) return;
-    const list = periodsQ.data?.list;
-    if (!list) return;
-    if (list.some(p => p.id === periodParam)) setSelectedPeriodId(periodParam);
-  }, [periodParam, periodsQ.data, selectedPeriodId]);
+    if (paramInBase) { setSelectedPeriodId(periodParam); return; }
+    if (resolvedFromUrl) { setSelectedPeriodId(periodParam); return; }
+  }, [periodParam, paramInBase, resolvedFromUrl, selectedPeriodId]);
+
+
 
   // ── Bucket data aggregation ─────────────────────────────────────────────
   const dataQ = useQuery({
