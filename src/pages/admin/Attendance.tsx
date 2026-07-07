@@ -121,9 +121,43 @@ function fmtTime(t: string | null) {
 
 export default function Attendance() {
   const { selectedCompanyId } = useCompany();
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialWhen = searchParams.get("when");
+  const initialFilter = searchParams.get("filter");
+  const [selectedDate, setSelectedDate] = useState<Date>(() => {
+    if (initialWhen === "tomorrow") {
+      const d = new Date();
+      d.setDate(d.getDate() + 1);
+      return d;
+    }
+    return new Date();
+  });
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>(() => {
+    if (initialFilter === "no-shows") return "no-show";
+    if (initialFilter === "late") return "late";
+    return "all";
+  });
+  const [opsFilterActive, setOpsFilterActive] = useState<boolean>(
+    !!initialWhen || !!initialFilter,
+  );
+  const opsFilterLabel = useMemo(() => {
+    const parts: string[] = [];
+    if (initialWhen === "today") parts.push("Hoy");
+    if (initialWhen === "tomorrow") parts.push("Mañana");
+    if (initialFilter === "no-shows") parts.push("No-shows");
+    if (initialFilter === "late") parts.push("Tardanzas");
+    return parts.join(" · ") || "Filtro Ops";
+  }, [initialWhen, initialFilter]);
+  const clearOpsFilter = useCallback(() => {
+    setStatusFilter("all");
+    setSelectedDate(new Date());
+    setOpsFilterActive(false);
+    const next = new URLSearchParams(searchParams);
+    next.delete("when");
+    next.delete("filter");
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
   const [tab, setTab] = useState("live");
   const [reportRange, setReportRange] = useState<{ from: Date; to: Date }>({
     from: new Date(new Date().setDate(new Date().getDate() - 7)),
