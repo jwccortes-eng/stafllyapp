@@ -46,6 +46,8 @@ import {
   type ChecklistItem,
   type Severity,
 } from "@/utils/payrollDryRunReviewRouter";
+import { REVIEW_COPY, REVIEW_NOTE_CHIPS, type ReviewNoteChipKey } from "@/utils/reviewNavigationCopy";
+import { Textarea } from "@/components/ui/textarea";
 
 export interface RCEEntry {
   id: string;
