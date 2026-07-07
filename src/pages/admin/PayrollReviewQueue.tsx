@@ -56,6 +56,24 @@ interface BucketRow {
   link?: { to: string; label: string } | null;
   amount?: number | null;
   badge?: string | null;
+  /** Optional worker id, used by S15 deep-link focus (?employee=/?explore=). */
+  employeeId?: string | null;
+}
+
+// ── S15 Root-Cause reason labels (read-only, hint only) ───────────────────
+const REASON_LABELS: Record<string, string> = {
+  open_entries: "Fichajes abiertos",
+  no_shift_link: "Fichajes sin turno",
+  overlap: "Entradas solapadas",
+  abnormal_duration: "Duración anormal",
+  midnight_cross: "Cruce de medianoche",
+  missing_pbp: "Sin reconciliación PBP",
+  no_native_entries: "Sin fichajes nativos",
+  delta_critical_unexplained: "Diferencia crítica sin explicar",
+};
+function reasonLabel(key: string | null): string | null {
+  if (!key) return null;
+  return REASON_LABELS[key] ?? key.replace(/_/g, " ");
 }
 
 interface BucketDef {
