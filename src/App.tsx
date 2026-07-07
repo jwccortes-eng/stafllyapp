@@ -403,6 +403,7 @@ function App() {
                 <Route path="payroll-reconciliation" element={<CompanyRequiredGuard><PayrollReconciliation /></CompanyRequiredGuard>} />
                 <Route path="payroll-review-queue" element={<CompanyRequiredGuard><PayrollReviewQueue /></CompanyRequiredGuard>} />
                 <Route path="weekly-payroll-reconciliation" element={<CompanyRequiredGuard><WeeklyPayrollReconciliation /></CompanyRequiredGuard>} />
+                <Route path="payroll-native-dry-run" element={<CompanyRequiredGuard><PayrollNativeDryRun /></CompanyRequiredGuard>} />
                 <Route path="compensation-adoption" element={<CompanyRequiredGuard><CompensationAdoption /></CompanyRequiredGuard>} />
                 <Route path="applications" element={<CompanyRequiredGuard><Applications /></CompanyRequiredGuard>} />
                 <Route path="referrals" element={<Referrals />} />
