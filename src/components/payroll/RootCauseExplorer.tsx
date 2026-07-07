@@ -863,8 +863,50 @@ export function RootCauseExplorer(props: RootCauseExplorerProps) {
                           <p className="text-[11.5px] text-foreground/90 whitespace-pre-wrap break-words leading-relaxed">
                             {n.note}
                           </p>
-                          <div className="text-[10px] text-muted-foreground italic">
-                            {REVIEW_COPY.reviewNoteAuthorFallback}
+                          <div className="flex items-center justify-between gap-2 flex-wrap">
+                            <div className="text-[10px] text-muted-foreground italic">
+                              {REVIEW_COPY.reviewNoteAuthorFallback}
+                            </div>
+                            {archiveConfirmId === n.id ? (
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="text-[10px] text-muted-foreground">
+                                  {REVIEW_COPY.reviewNoteArchiveConfirm}
+                                </span>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-6 text-[10px] px-2"
+                                  disabled={archivingId === n.id}
+                                  onClick={() => setArchiveConfirmId(null)}
+                                >
+                                  {REVIEW_COPY.reviewNoteArchiveCancel}
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="default"
+                                  size="sm"
+                                  className="h-6 text-[10px] px-2 gap-1"
+                                  disabled={archivingId === n.id}
+                                  onClick={() => handleArchiveNote(n.id)}
+                                >
+                                  {archivingId === n.id && <Loader2 className="h-3 w-3 animate-spin" />}
+                                  {archivingId === n.id
+                                    ? REVIEW_COPY.reviewNoteArchiving
+                                    : REVIEW_COPY.reviewNoteArchiveConfirmCta}
+                                </Button>
+                              </div>
+                            ) : (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 text-[10px] px-2 text-muted-foreground hover:text-foreground"
+                                onClick={() => setArchiveConfirmId(n.id)}
+                              >
+                                {REVIEW_COPY.reviewNoteArchiveLabel}
+                              </Button>
+                            )}
                           </div>
                         </li>
                       );
