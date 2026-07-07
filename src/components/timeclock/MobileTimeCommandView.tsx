@@ -257,6 +257,17 @@ export default function MobileTimeCommandView() {
     return Array.from(map.values()).sort((a, b) => b.trackedMin - a.trackedMin);
   }, [weekEntries, empMap]);
 
+  // ─── Sprint 12: Root-Cause Explorer deep-link focus ───
+  const loadedEntryIds = useMemo(() => entries.map((e) => e.id), [entries]);
+  const {
+    focusEntryId, focusDate, focusShiftId, entryPresent, hasFocus,
+  } = useTimeClockFocus({ loading, loadedEntryIds });
+
+  useEffect(() => {
+    if (focusEntryId) setMode("today");
+  }, [focusEntryId]);
+
+
   if (!selectedCompanyId) {
     return (
       <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-400">
