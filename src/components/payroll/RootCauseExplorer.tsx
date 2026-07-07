@@ -385,7 +385,9 @@ export function RootCauseExplorer(props: RootCauseExplorerProps) {
       toast.error(REVIEW_COPY.reviewNoteSaveError);
     } finally {
       setSaving(false);
+    }
   }
+
 
   async function handleArchiveNote(noteId: string) {
     if (!companyId) return;
