@@ -688,7 +688,8 @@ export default function Attendance() {
                           ) : "—"}
                         </TableCell>
                       </TableRow>
-                    ))
+                      );
+                    })
                   )}
                 </TableBody>
               </Table>
