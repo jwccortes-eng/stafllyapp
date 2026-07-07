@@ -773,6 +773,41 @@ export default function PayrollReviewQueue() {
     ];
   }, [dataQ.data]);
 
+  // S15 — which buckets contain the focused employee (if any), and whether
+  // that employee is present anywhere in the loaded review queue.
+  const focusedBucketIds = useMemo(() => {
+    if (!focusEmployeeId) return [] as string[];
+    return buckets
+      .filter(b => b.rows.some(r => r.employeeId === focusEmployeeId))
+      .map(b => b.id);
+  }, [buckets, focusEmployeeId]);
+  const focusedEmployeePresent = focusedBucketIds.length > 0;
+  const [focusScrolled, setFocusScrolled] = useState<string | null>(null);
+  useEffect(() => {
+    if (!focusEmployeeId || !focusedEmployeePresent) return;
+    if (focusScrolled === focusEmployeeId) return;
+    const timers: number[] = [];
+    const attempt = () => {
+      const el = document.querySelector(
+        `[data-employee-id="${CSS.escape(focusEmployeeId)}"]`,
+      );
+      if (el) {
+        (el as HTMLElement).scrollIntoView({ behavior: "smooth", block: "center" });
+        setFocusScrolled(focusEmployeeId);
+        return true;
+      }
+      return false;
+    };
+    [80, 300, 700, 1400].forEach(d => {
+      timers.push(window.setTimeout(() => {
+        if (focusScrolled === focusEmployeeId) return;
+        attempt();
+      }, d));
+    });
+    return () => timers.forEach(t => window.clearTimeout(t));
+  }, [focusEmployeeId, focusedEmployeePresent, focusScrolled]);
+
+
   // ── Early returns AFTER all hooks ───────────────────────────────────────
   if (companyLoading) {
     return <div className="flex items-center justify-center py-20"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>;
