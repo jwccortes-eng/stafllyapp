@@ -281,6 +281,22 @@ export function RootCauseExplorer(props: RootCauseExplorerProps) {
     return () => clearTimeout(t);
   }, [open, highlightDay]);
 
+  // Sprint 25 — Local, non-persistent review note draft.
+  // In-memory only: no localStorage, no sessionStorage, no DB, no mutations.
+  // Cleared when drawer closes or worker/period changes.
+  const [noteDraft, setNoteDraft] = useState("");
+  const [noteChip, setNoteChip] = useState<ReviewNoteChipKey | null>(null);
+  useEffect(() => {
+    if (!open) {
+      setNoteDraft("");
+      setNoteChip(null);
+    }
+  }, [open]);
+  useEffect(() => {
+    setNoteDraft("");
+    setNoteChip(null);
+  }, [worker?.id, period?.id]);
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
