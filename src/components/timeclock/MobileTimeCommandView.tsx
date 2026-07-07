@@ -274,6 +274,11 @@ export default function MobileTimeCommandView() {
 
   return (
     <div className="space-y-4">
+      <OpsFilterBanner
+        active={hasOpsFilter}
+        label={filterLabel}
+        onClear={clearOpsFilter}
+      />
       {/* Compact KPI strip — single row, scrollable on narrow */}
       <div className="grid grid-cols-5 gap-1.5">
         <Kpi label="Programados" value={kpis.scheduled} />
