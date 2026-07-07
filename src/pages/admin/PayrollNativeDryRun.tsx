@@ -48,6 +48,7 @@ import {
   downloadDryRunCsv,
   type DryRunCsvRow,
 } from "@/utils/exportDryRunCsv";
+import { BatchTrendPanel } from "@/components/payroll/BatchTrendPanel";
 
 interface Period {
   id: string;
@@ -174,6 +175,22 @@ export default function PayrollNativeDryRun() {
   const urlFilter = searchParams.get("filter") as FilterKey | null;
   const filter: FilterKey =
     urlFilter && FILTER_KEYS.includes(urlFilter) ? urlFilter : "all";
+  const urlView = searchParams.get("view");
+  const view: "single" | "batch" = urlView === "batch" ? "batch" : "single";
+  const setView = useCallback(
+    (next: "single" | "batch") => {
+      setSearchParams(
+        (prev) => {
+          const p = new URLSearchParams(prev);
+          if (next === "batch") p.set("view", "batch");
+          else p.delete("view");
+          return p;
+        },
+        { replace: true },
+      );
+    },
+    [setSearchParams],
+  );
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   const setFilter = useCallback(
@@ -597,8 +614,23 @@ export default function PayrollNativeDryRun() {
         <Card><CardContent className="py-10 text-center text-sm text-muted-foreground">
           Selecciona una compañía para ejecutar el dry-run.
         </CardContent></Card>
+      ) : view === "batch" ? (
+        <>
+          <div className="flex gap-1.5 border-b border-border/60">
+            <TabBtn active={false} onClick={() => setView("single")}>Período único</TabBtn>
+            <TabBtn active={true} onClick={() => setView("batch")}>Comparar períodos</TabBtn>
+          </div>
+          <BatchTrendPanel
+            companyId={selectedCompanyId}
+            companyName={selectedCompany?.name ?? ""}
+          />
+        </>
       ) : (
         <>
+          <div className="flex gap-1.5 border-b border-border/60">
+            <TabBtn active={true} onClick={() => setView("single")}>Período único</TabBtn>
+            <TabBtn active={false} onClick={() => setView("batch")}>Comparar períodos</TabBtn>
+          </div>
           <Card>
             <CardContent className="py-4 flex flex-wrap items-center gap-3">
               <div className="text-xs text-muted-foreground">Compañía</div>
@@ -987,5 +1019,30 @@ function ReasonChip({ reason }: { reason: ReasonKey }) {
     >
       {REASON_LABEL[reason]}
     </Badge>
+  );
+}
+
+function TabBtn({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "h-9 px-4 text-xs font-medium border-b-2 -mb-px transition-colors",
+        active
+          ? "border-primary text-foreground"
+          : "border-transparent text-muted-foreground hover:text-foreground",
+      )}
+    >
+      {children}
+    </button>
   );
 }
