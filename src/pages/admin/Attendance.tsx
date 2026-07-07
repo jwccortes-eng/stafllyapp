@@ -21,7 +21,7 @@ import { SmartDateInput } from "@/components/ui/smart-date-input";
 import { formatDateUS } from "@/lib/date-format";
 import {
   ScanEye, Users, Clock, AlertTriangle, CheckCircle2, XCircle,
-  Search, CalendarIcon, ArrowUpDown, ChevronDown, Eye,
+  Search, CalendarIcon, ArrowUpDown, ChevronDown, Eye, Info,
 } from "lucide-react";
 import { format, parseISO, differenceInMinutes, isAfter, isBefore, startOfDay, endOfDay, eachDayOfInterval } from "date-fns";
 import { es } from "date-fns/locale";
@@ -666,6 +666,13 @@ export default function Attendance() {
                     Filtrar por empleado
                   </Button>
                 )}
+              </div>
+            )}
+            {/* Sprint 23 — Context note when the local filter is active. */}
+            {focusEmployeeFilter && (
+              <div className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                <Info className="h-3 w-3 shrink-0" />
+                <span>{REVIEW_COPY.localFilterNoteAttendance}</span>
               </div>
             )}
           </div>

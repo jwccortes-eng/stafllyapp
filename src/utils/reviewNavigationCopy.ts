@@ -15,6 +15,8 @@ export const REVIEW_COPY = {
   viewingHistoricalDay: "Día seleccionado",
   viewingToday: "Hoy",
   backToToday: "Volver a hoy",
+  localFilterNoteAttendance: "Vista filtrada localmente · no modifica attendance ni payroll",
+  localFilterNoteReviewQueue: "Vista filtrada localmente · los totales siguen mostrando el período completo · no modifica payroll",
 } as const;
 
 /** Human labels for reason keys emitted by the Root-Cause Explorer. */
