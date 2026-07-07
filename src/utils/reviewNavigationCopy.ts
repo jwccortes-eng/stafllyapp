@@ -31,6 +31,14 @@ export const REVIEW_COPY = {
   reviewNoteListEmpty: "Aún no hay notas guardadas para esta causa.",
   reviewNoteListLoadError: "No se pudieron cargar las notas guardadas.",
   reviewNoteAuthorFallback: "Usuario del equipo",
+  // Sprint 29 — archive MVP.
+  reviewNoteArchiveLabel: "Archivar",
+  reviewNoteArchiving: "Archivando…",
+  reviewNoteArchiveConfirm: "Archivar esta nota la ocultará de esta revisión, pero no la borrará.",
+  reviewNoteArchiveConfirmCta: "Archivar",
+  reviewNoteArchiveCancel: "Cancelar",
+  reviewNoteArchiveSuccess: "Nota archivada",
+  reviewNoteArchiveError: "No se pudo archivar la nota. Verifica permisos o intenta de nuevo.",
 } as const;
 
 /**
