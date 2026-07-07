@@ -495,30 +495,53 @@ export default function TimeClockCommandView() {
         label={opsFilterLabel}
         onClear={clearOpsFilter}
       />
-      {hasFocus && (
+      {(hasFocus || !isToday) && (
         <div
           role="status"
           className={cn(
             "rounded-xl border px-3.5 py-2.5 text-xs flex items-start gap-2",
-            entryPresent || !focusEntryId
+            entryPresent || (!focusEntryId && !isToday)
               ? "border-primary/40 bg-primary/5 text-primary"
-              : "border-amber-500/40 bg-amber-500/5 text-amber-700 dark:text-amber-400",
+              : focusEntryId && !entryPresent
+              ? "border-amber-500/40 bg-amber-500/5 text-amber-700 dark:text-amber-400"
+              : "border-primary/40 bg-primary/5 text-primary",
           )}
         >
           <span className="mt-0.5 inline-flex h-1.5 w-1.5 rounded-full bg-current shrink-0" />
           <div className="min-w-0 flex-1 space-y-0.5">
             <div className="font-semibold">
-              {entryPresent ? "Enfocando fichaje desde revisión" : focusEntryId ? "Fichaje enfocado no está en la vista actual" : "Vista desde revisión"}
+              {entryPresent
+                ? "Enfocando fichaje desde revisión"
+                : focusEntryId
+                ? "Fichaje fuera del rango cargado o no encontrado"
+                : !isToday
+                ? "Viendo día histórico"
+                : "Vista desde revisión"}
             </div>
             <div className="text-[11px] opacity-80 truncate">
-              {focusDate && <>Día {focusDate}</>}
+              Día <span className="font-mono">{viewDateKey}</span>
+              {!isToday && <> (histórico)</>}
               {focusEntryId && <> · entry <code className="font-mono">{focusEntryId.slice(0, 8)}</code></>}
               {focusShiftId && <> · turno <code className="font-mono">{focusShiftId.slice(0, 8)}</code></>}
-              {focusEntryId && !entryPresent && <> · fuera del rango cargado (hoy). Ajusta el día para verlo.</>}
             </div>
           </div>
+          {!isToday && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 text-[11px] px-2 shrink-0"
+              onClick={() => {
+                const next = new URLSearchParams(searchParams);
+                next.delete("date");
+                setSearchParams(next, { replace: true });
+              }}
+            >
+              Volver a hoy
+            </Button>
+          )}
         </div>
       )}
+
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="w-full sm:w-auto flex-wrap h-auto gap-1">
