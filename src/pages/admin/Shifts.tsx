@@ -345,7 +345,15 @@ function DesktopShifts() {
   const isInitialized = useRef(false);
 
   // Parse URL params on mount
+  // Sprint 3: also honor `?when=today|tomorrow` from /app/ops deep-links.
   const initialDate = useMemo(() => {
+    const when = searchParams.get("when");
+    if (when === "today") return new Date();
+    if (when === "tomorrow") {
+      const d = new Date();
+      d.setDate(d.getDate() + 1);
+      return d;
+    }
     const d = searchParams.get("date");
     if (d) {
       const parsed = parse(d, "yyyy-MM-dd", new Date());
@@ -357,7 +365,24 @@ function DesktopShifts() {
   const initialView = useMemo(() => {
     const v = searchParams.get("view");
     if (v && ["day", "week", "month", "employee", "client"].includes(v)) return v as ViewMode;
+    // Sprint 3: deep-links from Ops Cockpit imply a single-day focus.
+    if (searchParams.get("when") === "today" || searchParams.get("when") === "tomorrow") {
+      return "day" as ViewMode;
+    }
     return "week" as ViewMode;
+  }, []);
+
+  // Sprint 3: Ops-driven filter (needs-staffing | incomplete). Kept in local
+  // state so the chip persists even after the URL sync drops the query param.
+  const initialOpsFilter = useMemo<null | "needs-staffing" | "incomplete">(() => {
+    const f = searchParams.get("filter");
+    if (f === "needs-staffing" || f === "incomplete") return f;
+    return null;
+  }, []);
+  const initialWhenLabel = useMemo<null | "today" | "tomorrow">(() => {
+    const w = searchParams.get("when");
+    if (w === "today" || w === "tomorrow") return w;
+    return null;
   }, []);
 
   const [shifts, setShifts] = useState<Shift[]>([]);
@@ -386,7 +411,22 @@ function DesktopShifts() {
   const [weekViewMode, setWeekViewMode] = useState<"grid" | "job" | "employee">("job");
   const [currentDay, setCurrentDay] = useState(() => initialDate);
   const [weekStart, setWeekStart] = useState(() => startOfWeek(initialDate, { weekStartsOn: payrollWeekStart }));
-  const [filters, setFilters] = useState<ShiftFilterState>(EMPTY_FILTERS);
+  const [filters, setFilters] = useState<ShiftFilterState>(() => ({
+    ...EMPTY_FILTERS,
+    // Sprint 3: initial hydration from ?filter=needs-staffing.
+    needsStaffingOnly: initialOpsFilter === "needs-staffing" ? true : EMPTY_FILTERS.needsStaffingOnly,
+  }));
+  // Sprint 3: incomplete filter is not part of ShiftFilterState; kept as a
+  // sibling local toggle so we don't have to touch the shared schema.
+  const [incompleteOnly, setIncompleteOnly] = useState<boolean>(initialOpsFilter === "incomplete");
+  // Chip label that persists after URL sync strips the ops params.
+  const [activeOpsChip, setActiveOpsChip] = useState<string | null>(() => {
+    if (initialWhenLabel === "today") return "Turnos de hoy";
+    if (initialWhenLabel === "tomorrow") return "Turnos de mañana";
+    if (initialOpsFilter === "needs-staffing") return "Necesitan staff";
+    if (initialOpsFilter === "incomplete") return "Turnos incompletos";
+    return null;
+  });
   const [currentMonth, setCurrentMonth] = useState(() => initialDate);
 
   // Re-align weekStart when payroll config loads
@@ -512,8 +552,21 @@ function DesktopShifts() {
         return slots > 0 && assigned < slots;
       });
     }
+    if (incompleteOnly) {
+      // Sprint 3: presentational filter — flags shifts missing site, meeting
+      // point, or client. Uses fields already loaded; no new queries. Rate is
+      // intentionally excluded (lives in compensation_profiles).
+      result = result.filter(s => {
+        const missingSite = !s.location_id;
+        const missingMeeting =
+          !(s as any).meeting_point_location_id &&
+          !((s as any).meeting_point ?? "").trim();
+        const missingClient = !s.client_id;
+        return missingSite || missingMeeting || missingClient;
+      });
+    }
     return result;
-  }, [shifts, assignments, filters]);
+  }, [shifts, assignments, filters, incompleteOnly]);
 
   // ── KPI metrics ──
   const kpiMetrics = useMemo(() => {
@@ -1836,8 +1889,34 @@ function DesktopShifts() {
         }
       />
 
+      {/* Sprint 3: active Ops-cockpit filter chip (only visible when arrived via deep-link) */}
+      {activeOpsChip && (
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-primary/30 bg-primary/5 px-3 py-2 text-xs">
+          <span className="inline-flex items-center gap-1.5 font-semibold text-primary">
+            <ScanEye className="h-3.5 w-3.5" />
+            Filtro activo: {activeOpsChip}
+          </span>
+          <span className="text-muted-foreground">
+            Aplicado desde el Ops Cockpit. Los filtros manuales siguen funcionando.
+          </span>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-6 px-2 text-[11px] ml-auto"
+            onClick={() => {
+              setActiveOpsChip(null);
+              setIncompleteOnly(false);
+              setFilters(f => ({ ...f, needsStaffingOnly: false }));
+            }}
+          >
+            Limpiar filtro
+          </Button>
+        </div>
+      )}
+
       {/* ── OPS KPI STRIP ── */}
       <OpsKpiStrip items={opsKpis} />
+
 
       {/* ── Qué necesita atención ── compact action center (UI-only, deep-links to existing filters) */}
       {!loading && attentionChips.length > 0 && (
