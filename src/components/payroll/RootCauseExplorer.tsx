@@ -286,11 +286,27 @@ export function RootCauseExplorer(props: RootCauseExplorerProps) {
     return () => clearTimeout(t);
   }, [open, highlightDay]);
 
-  // Sprint 25 — Local, non-persistent review note draft.
-  // In-memory only: no localStorage, no sessionStorage, no DB, no mutations.
-  // Cleared when drawer closes or worker/period changes.
+  // Sprint 27 — Persisted review notes (MVP).
+  // Context is derived from company/period/worker/highlightKey. Notes NEVER
+  // modify payroll, time_entries, shifts, movements or reconciliation.
   const [noteDraft, setNoteDraft] = useState("");
   const [noteChip, setNoteChip] = useState<ReviewNoteChipKey | null>(null);
+  const [saving, setSaving] = useState(false);
+  interface ReviewNote {
+    id: string;
+    note: string;
+    status: string | null;
+    created_at: string;
+    created_by: string;
+  }
+  const [notes, setNotes] = useState<ReviewNote[]>([]);
+  const [notesLoading, setNotesLoading] = useState(false);
+  const [notesError, setNotesError] = useState<string | null>(null);
+  const [notesReloadTick, setNotesReloadTick] = useState(0);
+
+  const notesReason: string | null = highlightKey ?? null;
+
+  // Reset draft when drawer closes or context changes.
   useEffect(() => {
     if (!open) {
       setNoteDraft("");
@@ -300,7 +316,76 @@ export function RootCauseExplorer(props: RootCauseExplorerProps) {
   useEffect(() => {
     setNoteDraft("");
     setNoteChip(null);
-  }, [worker?.id, period?.id]);
+  }, [worker?.id, period?.id, notesReason]);
+
+  // Load existing notes for the current context.
+  useEffect(() => {
+    if (!open || !companyId) {
+      setNotes([]);
+      setNotesError(null);
+      return;
+    }
+    let cancelled = false;
+    setNotesLoading(true);
+    setNotesError(null);
+    (async () => {
+      let q = supabase
+        .from("payroll_review_notes")
+        .select("id,note,status,created_at,created_by")
+        .eq("company_id", companyId)
+        .is("archived_at", null)
+        .order("created_at", { ascending: false })
+        .limit(20);
+      if (period?.id) q = q.eq("period_id", period.id); else q = q.is("period_id", null);
+      if (worker?.id) q = q.eq("worker_id", worker.id); else q = q.is("worker_id", null);
+      if (notesReason) q = q.eq("reason", notesReason); else q = q.is("reason", null);
+      const { data, error } = await q;
+      if (cancelled) return;
+      if (error) {
+        setNotesError(REVIEW_COPY.reviewNoteListLoadError);
+        setNotes([]);
+      } else {
+        setNotes((data ?? []) as ReviewNote[]);
+      }
+      setNotesLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, [open, companyId, period?.id, worker?.id, notesReason, notesReloadTick]);
+
+  const canSaveNote = !!companyId && (noteDraft.trim().length > 0 || noteChip !== null) && !saving;
+
+  async function handleSaveNote() {
+    if (!companyId) return;
+    const trimmed = noteDraft.trim();
+    if (trimmed.length === 0 && !noteChip) return;
+    setSaving(true);
+    try {
+      const { data: userRes, error: userErr } = await supabase.auth.getUser();
+      if (userErr || !userRes.user) throw new Error("no-auth");
+      const { error } = await supabase.from("payroll_review_notes").insert({
+        company_id: companyId,
+        period_id: period?.id ?? null,
+        worker_id: worker?.id ?? null,
+        reason: notesReason,
+        time_entry_id: null,
+        shift_id: null,
+        source_module: "root_cause_explorer",
+        note: trimmed.length > 0 ? trimmed : (noteChip ? `[${reviewNoteStatusLabel(noteChip)}]` : ""),
+        status: noteChip,
+        created_by: userRes.user.id,
+      });
+      if (error) throw error;
+      toast.success(REVIEW_COPY.reviewNoteSaveSuccess);
+      setNoteDraft("");
+      setNoteChip(null);
+      setNotesReloadTick((t) => t + 1);
+    } catch {
+      toast.error(REVIEW_COPY.reviewNoteSaveError);
+    } finally {
+      setSaving(false);
+    }
+  }
+
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
