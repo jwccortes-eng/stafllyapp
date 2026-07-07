@@ -857,6 +857,38 @@ export default function PayrollReviewQueue() {
 
       <PayrollSourceGuardrailBanner />
 
+      {/* S15 — Root-Cause context banner (read-only hint). */}
+      {(reasonHuman || focusEmployeeId) && (
+        <Card className="border-primary/30 bg-primary/5">
+          <CardContent className="py-3 px-4 flex flex-wrap items-center gap-2 text-xs">
+            <Badge variant="outline" className="gap-1.5 border-primary/40 text-primary">
+              <ScanEye className="h-3 w-3" /> Abierto desde causa raíz
+            </Badge>
+            {reasonHuman && (
+              <span className="text-foreground">
+                Motivo: <span className="font-semibold">{reasonHuman}</span>
+              </span>
+            )}
+            {focusEmployeeId && focusedEmployeePresent && (
+              <span className="text-muted-foreground">
+                · Enfocando worker en la cola
+              </span>
+            )}
+            {focusEmployeeId && !focusedEmployeePresent && (
+              <span className="ml-auto inline-flex items-center gap-1.5 rounded-md border border-warning/40 bg-warning/10 px-2 py-1 text-warning">
+                <AlertTriangle className="h-3 w-3" />
+                Empleado no encontrado en la cola cargada
+              </span>
+            )}
+            <span className="ml-auto text-[10px] text-muted-foreground">
+              Solo lectura — no modifica payroll ni fichajes.
+            </span>
+          </CardContent>
+        </Card>
+      )}
+
+
+
 
 
       {/* Period selector */}
