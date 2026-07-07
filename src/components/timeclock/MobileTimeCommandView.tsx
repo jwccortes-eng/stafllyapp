@@ -26,6 +26,7 @@ import {
 import { format, differenceInMinutes, startOfWeek, endOfWeek } from "date-fns";
 import { enUS } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { useTimeClockFocus } from "@/hooks/useTimeClockFocus";
 
 const OPEN_ENTRY_WARN_HOURS = 12;
 const OPEN_ENTRY_STALE_HOURS = 24;
