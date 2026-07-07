@@ -40,6 +40,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { PayrollSourceGuardrailBanner } from "@/components/payroll/PayrollSourceGuardrailBanner";
+import Upcoming60Sheet from "@/components/ops/Upcoming60Sheet";
 
 type CardTone = "ok" | "attention" | "urgent" | "info" | "muted";
 
@@ -142,6 +143,7 @@ export default function OpsHome() {
   // Lightweight, safe read-only query for today's rejected assignments.
   // Scoped to today's shift ids that already loaded — one small IN() query.
   const [rejectedCount, setRejectedCount] = useState<number | null>(null);
+  const [upcomingSheetOpen, setUpcomingSheetOpen] = useState(false);
   const todayShiftIdsKey = todayOps.shifts.map((s) => s.id).join(",");
   useEffect(() => {
     let cancelled = false;
@@ -288,7 +290,7 @@ export default function OpsHome() {
                 hint={t.needs_staff > 0 ? "Slots abiertos" : "Todo cubierto"}
                 tone={t.needs_staff > 0 ? "attention" : "ok"}
                 icon={<UserPlus className="h-4 w-4" />}
-                to="/app/staffing-center"
+                to="/app/staffing-center?filter=needs-staffing"
                 cta="Ir a staffing"
                 empty="Todo cubierto"
               />
@@ -298,7 +300,7 @@ export default function OpsHome() {
                 hint={urgentReplacements > 0 ? "Publicados sin personal" : "Sin urgencias"}
                 tone={urgentReplacements > 0 ? "urgent" : "ok"}
                 icon={<Repeat className="h-4 w-4" />}
-                to="/app/shifts?filter=needs-staffing"
+                to="/app/staffing-center?filter=needs-staffing"
                 cta="Buscar cobertura"
                 empty="Sin urgencias"
               />
@@ -317,37 +319,51 @@ export default function OpsHome() {
                 </p>
               </div>
             ) : (
-              <div className="grid gap-3 grid-cols-3">
-                <OpsCard
-                  title="Turnos próximos"
-                  count={upcoming60.total}
-                  hint="Inician en ≤ 60 min"
-                  tone="info"
-                  icon={<Clock className="h-4 w-4" />}
-                  to="/app/shifts?when=today"
-                  cta="Ver hoy"
-                />
-                <OpsCard
-                  title="Con cobertura"
-                  count={upcoming60.covered}
-                  hint="Slots completos"
-                  tone={upcoming60.covered === upcoming60.total ? "ok" : "muted"}
-                  icon={<CheckCircle2 className="h-4 w-4" />}
-                  to="/app/daily-ops"
-                  cta="Operación diaria"
-                />
-                <OpsCard
-                  title="Necesitan atención"
-                  count={upcoming60.needsAttention}
-                  hint={upcoming60.needsAttention > 0 ? "Slots abiertos" : "Todo cubierto"}
-                  tone={upcoming60.needsAttention > 0 ? "urgent" : "ok"}
-                  icon={<AlertTriangle className="h-4 w-4" />}
-                  to="/app/shifts?filter=needs-staffing"
-                  cta="Buscar cobertura"
-                />
-              </div>
+              <>
+                <div className="grid gap-3 grid-cols-3">
+                  <OpsCard
+                    title="Turnos próximos"
+                    count={upcoming60.total}
+                    hint="Inician en ≤ 60 min"
+                    tone="info"
+                    icon={<Clock className="h-4 w-4" />}
+                    to="/app/shifts?when=today"
+                    cta="Ver hoy"
+                  />
+                  <OpsCard
+                    title="Con cobertura"
+                    count={upcoming60.covered}
+                    hint="Slots completos"
+                    tone={upcoming60.covered === upcoming60.total ? "ok" : "muted"}
+                    icon={<CheckCircle2 className="h-4 w-4" />}
+                    to="/app/daily-ops?when=today"
+                    cta="Operación diaria"
+                  />
+                  <OpsCard
+                    title="Necesitan atención"
+                    count={upcoming60.needsAttention}
+                    hint={upcoming60.needsAttention > 0 ? "Slots abiertos" : "Todo cubierto"}
+                    tone={upcoming60.needsAttention > 0 ? "urgent" : "ok"}
+                    icon={<AlertTriangle className="h-4 w-4" />}
+                    to="/app/staffing-center?filter=needs-staffing"
+                    cta="Buscar cobertura"
+                  />
+                </div>
+                <div className="flex justify-end">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-xs gap-1.5"
+                    onClick={() => setUpcomingSheetOpen(true)}
+                  >
+                    <Clock className="h-3.5 w-3.5" />
+                    Revisar próximos turnos
+                  </Button>
+                </div>
+              </>
             )}
           </CockpitSection>
+
 
           {/* Asistencia */}
           <CockpitSection title="Asistencia" caption="Estado en tiempo real de hoy">
@@ -358,7 +374,7 @@ export default function OpsHome() {
                 hint={`${t.assigned} asignados hoy`}
                 tone={pendingCount > 0 || (rejectedCount ?? 0) > 0 ? "attention" : "ok"}
                 icon={<UserCheck className="h-4 w-4" />}
-                to="/app/daily-ops"
+                to="/app/daily-ops?when=today"
                 cta="Ver operación diaria"
                 empty="Sin asignaciones"
                 footer={
@@ -375,7 +391,7 @@ export default function OpsHome() {
                 hint={`${t.open_clocks} clocks abiertos`}
                 tone={t.clocked_in_now > 0 ? "info" : "muted"}
                 icon={<Clock className="h-4 w-4" />}
-                to="/app/timeclock"
+                to="/app/timeclock?when=today&filter=open"
                 cta="Abrir reloj"
                 empty="Nadie fichado"
               />
@@ -389,7 +405,7 @@ export default function OpsHome() {
                 }
                 tone={lateOrNoShow > 0 ? "urgent" : "ok"}
                 icon={<AlertTriangle className="h-4 w-4" />}
-                to="/app/attendance"
+                to="/app/attendance?when=today&filter=no-shows"
                 cta="Ver asistencia"
                 empty="Sin alertas"
               />
@@ -460,6 +476,12 @@ export default function OpsHome() {
           </CockpitSection>
         </>
       )}
+
+      <Upcoming60Sheet
+        open={upcomingSheetOpen}
+        onOpenChange={setUpcomingSheetOpen}
+        shifts={todayOps.shifts}
+      />
     </div>
   );
 }

@@ -20,7 +20,8 @@
  *  - employees (names for the recent-responses feed)
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import OpsFilterBanner from "@/components/ops/OpsFilterBanner";
 import { format, addDays, parseISO, formatDistanceToNow } from "date-fns";
 import { enUS } from "date-fns/locale";
 import {
@@ -283,6 +284,25 @@ export default function StaffingCenter() {
   const { selectedCompanyId, selectedCompany } = useCompany();
   const canManageShifts = role === "owner" || role === "admin" || role === "company_owner" || role === "developer" || hasModuleAccess("shifts", "edit");
 
+  const [searchParams, setSearchParams] = useSearchParams();
+  const opsWhen = searchParams.get("when");
+  const opsFilter = searchParams.get("filter");
+  const opsFilterActive = !!opsWhen || !!opsFilter;
+  const opsFilterLabel = (() => {
+    const parts: string[] = [];
+    if (opsWhen === "today") parts.push("Hoy");
+    if (opsWhen === "tomorrow") parts.push("Mañana");
+    if (opsFilter === "needs-staffing") parts.push("Necesitan personal");
+    return parts.join(" · ") || "Filtro Ops";
+  })();
+  const clearOpsFilter = useCallback(() => {
+    const next = new URLSearchParams(searchParams);
+    next.delete("when");
+    next.delete("filter");
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
+
+
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -493,6 +513,13 @@ export default function StaffingCenter() {
           <SummaryTile label="Pending responses" value={loading ? "—" : totalPendingResponses} tone={totalPendingResponses > 0 ? "warn" : "good"} />
         </div>
       </header>
+
+      <OpsFilterBanner
+        active={opsFilterActive}
+        label={opsFilterLabel}
+        onClear={clearOpsFilter}
+      />
+
 
       {error && (
         <Card className="border-destructive/40 bg-destructive/5">
