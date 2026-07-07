@@ -7,6 +7,7 @@ import { usePageView } from "@/hooks/useAuditLog";
 import { useCompany } from "@/hooks/useCompany";
 import { useAuth } from "@/hooks/useAuth";
 import { PageHeader } from "@/components/ui/page-header";
+import { PayrollSourceGuardrailBanner } from "@/components/payroll/PayrollSourceGuardrailBanner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -983,6 +984,9 @@ export default function PayrollReconciliationPage() {
             </Button>
           </div>
         </div>
+
+        <PayrollSourceGuardrailBanner />
+
 
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 gap-3">

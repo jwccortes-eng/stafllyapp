@@ -10,7 +10,7 @@ import {
   Inbox, Wrench, Lock, Sparkles, ClipboardList, Receipt, Brain,
   Map as MapIcon, ContactRound, Award, GitCompareArrows,
   FileText, Bell, UserPlus, Star, ArrowLeftRight, Globe, ShieldCheck,
-  Monitor, Radio, UserPlus2, Banknote, Scale, FileSearch, ScanEye,
+  Monitor, Radio, UserPlus2, Banknote, Scale, FileSearch, ScanEye, Radar,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
@@ -103,6 +103,7 @@ const COMPANY_LINKS: LinkDef[] = [
   // visually-secondary legacy entry at the bottom of the group (route untouched,
   // bookmarks still work).
   { to: "/app", icon: LayoutDashboard, label: "Home", module: null, end: true, section: "Daily Operations" },
+  { to: "/app/ops", icon: Radar, label: "Operations", module: null, section: "Daily Operations" },
   { to: "/app/command-center", icon: Radio, label: "Command Center", module: null, section: "Daily Operations" },
   { to: "/app/shifts", icon: CalendarDays, label: "Shifts", module: "shifts", section: "Daily Operations" },
   { to: "/app/attendance", icon: ShieldCheck, label: "Attendance", module: null, section: "Daily Operations" },

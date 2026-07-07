@@ -1,0 +1,357 @@
+/**
+ * OpsHome — Unified Operations Cockpit (/app/ops)
+ *
+ * Spanish-first, mobile-first, desktop-friendly single-screen cockpit that
+ * composes existing operational signals into 9 action cards. This page is a
+ * pure SHELL that reuses existing hooks (`useTodayOperations`) and deep-links
+ * to the canonical destination pages. It never writes and never computes
+ * payroll.
+ *
+ * Hard rules:
+ *  - No writes anywhere. No RLS/auth/edge/tenant changes.
+ *  - No new business logic beyond safe presentational derivations.
+ *  - Scheduled hours are NEVER worked hours. Payroll source stays
+ *    Connecteam/reconciliation — surfaced via PayrollSourceGuardrailBanner.
+ */
+import { useMemo } from "react";
+import { addDays } from "date-fns";
+import { useNavigate, Link } from "react-router-dom";
+import {
+  AlertTriangle,
+  ArrowRight,
+  CalendarDays,
+  CheckCircle2,
+  ClipboardCheck,
+  ClipboardList,
+  Clock,
+  RefreshCw,
+  Repeat,
+  UserCheck,
+  UserPlus,
+  Users,
+} from "lucide-react";
+import { useCompany } from "@/hooks/useCompany";
+import { useTodayOperations, type TodayOpsShift } from "@/hooks/useTodayOperations";
+import { PageHeader } from "@/components/ui/page-header";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+import { PayrollSourceGuardrailBanner } from "@/components/payroll/PayrollSourceGuardrailBanner";
+
+type CardTone = "ok" | "attention" | "urgent" | "info" | "muted";
+
+interface OpsCardProps {
+  title: string;
+  count: number | string;
+  hint?: string;
+  tone?: CardTone;
+  icon: React.ReactNode;
+  to: string;
+  cta?: string;
+  empty?: string;
+  footer?: React.ReactNode;
+}
+
+const TONE: Record<CardTone, { ring: string; badge: string; num: string }> = {
+  ok:        { ring: "border-emerald-300/50 dark:border-emerald-400/20", badge: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300", num: "text-emerald-700 dark:text-emerald-300" },
+  attention: { ring: "border-amber-300/60 dark:border-amber-400/30",     badge: "bg-amber-500/10 text-amber-800 dark:text-amber-200",       num: "text-amber-700 dark:text-amber-200" },
+  urgent:    { ring: "border-destructive/40",                            badge: "bg-destructive/10 text-destructive",                       num: "text-destructive" },
+  info:      { ring: "border-primary/30",                                badge: "bg-primary/10 text-primary",                               num: "text-primary" },
+  muted:     { ring: "border-border/60",                                 badge: "bg-muted text-muted-foreground",                           num: "text-foreground" },
+};
+
+function OpsCard({ title, count, hint, tone = "muted", icon, to, cta = "Abrir", empty, footer }: OpsCardProps) {
+  const t = TONE[tone];
+  const isEmpty = count === 0 || count === "0";
+  return (
+    <Link
+      to={to}
+      className={cn(
+        "group relative flex flex-col rounded-2xl border bg-card p-4 transition-all hover:bg-accent/40 hover:shadow-sm min-h-[128px]",
+        t.ring,
+      )}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className={cn("inline-flex h-8 w-8 items-center justify-center rounded-lg", t.badge)}>
+            {icon}
+          </span>
+          <span className="text-[13px] font-semibold text-foreground truncate">{title}</span>
+        </div>
+        <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+      </div>
+
+      <div className="mt-3 flex items-baseline gap-2">
+        <span className={cn("text-3xl font-bold tabular-nums leading-none", t.num)}>{count}</span>
+        {hint && <span className="text-[11px] text-muted-foreground truncate">{hint}</span>}
+      </div>
+
+      <div className="mt-auto pt-3 flex items-center justify-between">
+        <span className="text-[11px] text-muted-foreground">
+          {isEmpty && empty ? empty : cta}
+        </span>
+        {footer}
+      </div>
+    </Link>
+  );
+}
+
+function CockpitSection({
+  title,
+  caption,
+  children,
+}: {
+  title: string;
+  caption?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="space-y-2.5">
+      <div className="flex items-baseline justify-between gap-2 px-0.5">
+        <h2 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
+          {title}
+        </h2>
+        {caption && <span className="text-[11px] text-muted-foreground">{caption}</span>}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+/** Presentational: shift missing operational fields. Read-only derivation. */
+function isIncompleteShift(s: TodayOpsShift): boolean {
+  const missingLocation = !s.location_id && !s.job_site_name;
+  const missingMeeting = !s.meeting_point_location_id && !s.meeting_point;
+  const missingClient = !s.client_id && !s.client_name;
+  // pay_rate not present in TodayOpsShift; incomplete = missing site OR meeting OR client
+  return missingLocation || missingMeeting || missingClient;
+}
+
+export default function OpsHome() {
+  const navigate = useNavigate();
+  const { selectedCompanyId } = useCompany();
+  const today = useMemo(() => new Date(), []);
+  const tomorrow = useMemo(() => addDays(today, 1), [today]);
+
+  const todayOps = useTodayOperations(selectedCompanyId ?? null, today);
+  const tomorrowOps = useTodayOperations(selectedCompanyId ?? null, tomorrow);
+
+  const t = todayOps.totals;
+
+  // Derive counts safely from already-loaded state — no new queries.
+  const acceptedCount = t.confirmed;
+  const pendingCount = Math.max(t.assigned - t.confirmed, 0);
+  const needsCloseout = todayOps.shifts.filter((s) => s.ops.bucket === "needs_closeout").length;
+  const urgentReplacements = todayOps.shifts.filter(
+    (s) => s.ops.bucket === "needs_staff" && s.publication_status === "published",
+  ).length;
+  const incompleteToday = todayOps.shifts.filter(isIncompleteShift).length;
+  const incompleteTomorrow = tomorrowOps.shifts.filter(isIncompleteShift).length;
+  const lateOrNoShow = t.not_clocked_in + t.missing_clock_outs;
+  const hoursToReview = t.open_clocks + t.missing_clock_outs;
+
+  const anyLoading = todayOps.loading || tomorrowOps.loading;
+
+  return (
+    <div className="space-y-5 max-w-[1400px]">
+      <PageHeader
+        variant="3"
+        title="Operaciones"
+        subtitle="Cockpit unificado — qué está pasando hoy, qué necesita acción y dónde continuar."
+        rightSlot={
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 text-xs gap-1.5"
+              onClick={() => navigate("/app/shifts")}
+            >
+              <CalendarDays className="h-3.5 w-3.5" /> Programación
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-9 w-9"
+              onClick={() => {
+                todayOps.refresh();
+                tomorrowOps.refresh();
+              }}
+              title="Actualizar"
+            >
+              <RefreshCw className={cn("h-4 w-4", anyLoading && "animate-spin")} />
+            </Button>
+          </div>
+        }
+      />
+
+      {!selectedCompanyId ? (
+        <div className="rounded-2xl border border-dashed border-border/60 bg-muted/20 px-6 py-16 text-center">
+          <p className="text-sm font-semibold text-foreground">Sin compañía seleccionada</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Elige una compañía en la barra superior para ver la operación.
+          </p>
+        </div>
+      ) : (
+        <>
+          {/* Cobertura */}
+          <CockpitSection
+            title="Cobertura"
+            caption={anyLoading ? "Cargando…" : `${t.shifts} hoy · ${tomorrowOps.totals.shifts} mañana`}
+          >
+            <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+              <OpsCard
+                title="Turnos de hoy"
+                count={t.shifts}
+                hint={`${t.assigned}/${t.required} slots`}
+                tone={t.shifts === 0 ? "muted" : t.assigned < t.required ? "attention" : "ok"}
+                icon={<CalendarDays className="h-4 w-4" />}
+                to="/app/shifts?when=today"
+                cta="Ver hoy"
+                empty="Sin turnos hoy"
+              />
+              <OpsCard
+                title="Turnos de mañana"
+                count={tomorrowOps.totals.shifts}
+                hint={`${tomorrowOps.totals.assigned}/${tomorrowOps.totals.required} slots`}
+                tone={
+                  tomorrowOps.totals.shifts === 0
+                    ? "muted"
+                    : tomorrowOps.totals.assigned < tomorrowOps.totals.required
+                    ? "attention"
+                    : "ok"
+                }
+                icon={<CalendarDays className="h-4 w-4" />}
+                to="/app/shifts?when=tomorrow"
+                cta="Ver mañana"
+                empty="Sin turnos mañana"
+              />
+              <OpsCard
+                title="Necesitan staff"
+                count={t.needs_staff}
+                hint={t.needs_staff > 0 ? "Slots abiertos" : "Todo cubierto"}
+                tone={t.needs_staff > 0 ? "attention" : "ok"}
+                icon={<UserPlus className="h-4 w-4" />}
+                to="/app/staffing-center"
+                cta="Ir a staffing"
+                empty="Todo cubierto"
+              />
+              <OpsCard
+                title="Reemplazos urgentes"
+                count={urgentReplacements}
+                hint={urgentReplacements > 0 ? "Publicados sin personal" : "Sin urgencias"}
+                tone={urgentReplacements > 0 ? "urgent" : "ok"}
+                icon={<Repeat className="h-4 w-4" />}
+                to="/app/shifts?filter=needs-staffing"
+                cta="Buscar cobertura"
+                empty="Sin urgencias"
+              />
+            </div>
+          </CockpitSection>
+
+          {/* Asistencia */}
+          <CockpitSection title="Asistencia" caption="Estado en tiempo real de hoy">
+            <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+              <OpsCard
+                title="Aceptados / Pendientes"
+                count={`${acceptedCount} / ${pendingCount}`}
+                hint={`${t.assigned} asignados hoy`}
+                tone={pendingCount > 0 ? "attention" : "ok"}
+                icon={<UserCheck className="h-4 w-4" />}
+                to="/app/daily-ops"
+                cta="Ver operación diaria"
+                empty="Sin asignaciones"
+              />
+              <OpsCard
+                title="Fichados ahora"
+                count={t.clocked_in_now}
+                hint={`${t.open_clocks} clocks abiertos`}
+                tone={t.clocked_in_now > 0 ? "info" : "muted"}
+                icon={<Clock className="h-4 w-4" />}
+                to="/app/timeclock"
+                cta="Abrir reloj"
+                empty="Nadie fichado"
+              />
+              <OpsCard
+                title="No-shows / tardanzas"
+                count={lateOrNoShow}
+                hint={
+                  lateOrNoShow > 0
+                    ? `${t.not_clocked_in} sin entrada · ${t.missing_clock_outs} sin salida`
+                    : "Sin alertas"
+                }
+                tone={lateOrNoShow > 0 ? "urgent" : "ok"}
+                icon={<AlertTriangle className="h-4 w-4" />}
+                to="/app/attendance"
+                cta="Ver asistencia"
+                empty="Sin alertas"
+              />
+              <OpsCard
+                title="Turnos incompletos"
+                count={incompleteToday}
+                hint={
+                  incompleteTomorrow > 0
+                    ? `+${incompleteTomorrow} mañana`
+                    : "Sin datos faltantes en mañana"
+                }
+                tone={incompleteToday > 0 ? "attention" : "ok"}
+                icon={<ClipboardList className="h-4 w-4" />}
+                to="/app/shifts?filter=incomplete"
+                cta="Revisar detalles"
+                empty="Todos completos"
+                footer={
+                  incompleteToday > 0 ? (
+                    <Badge variant="outline" className="text-[10px] h-5">
+                      falta sitio · meeting · cliente
+                    </Badge>
+                  ) : null
+                }
+              />
+            </div>
+          </CockpitSection>
+
+          {/* Cierre y Payroll */}
+          <CockpitSection title="Cierre y Payroll" caption="Validación operativa — sin cálculo nativo de pago">
+            <div className="grid gap-3 grid-cols-1 lg:grid-cols-3">
+              <OpsCard
+                title="Pendientes de closeout"
+                count={needsCloseout}
+                hint={needsCloseout > 0 ? "Turnos con clock abierto tras el fin" : "Todo cerrado"}
+                tone={needsCloseout > 0 ? "attention" : "ok"}
+                icon={<CheckCircle2 className="h-4 w-4" />}
+                to="/app/payroll-review-queue"
+                cta="Ir al Centro de Validación"
+                empty="Todo cerrado"
+              />
+              <OpsCard
+                title="Horas por revisar"
+                count={hoursToReview}
+                hint={
+                  hoursToReview > 0
+                    ? `${t.open_clocks} abiertos · ${t.missing_clock_outs} sin salida`
+                    : "Nada pendiente"
+                }
+                tone={hoursToReview > 0 ? "attention" : "ok"}
+                icon={<ClipboardCheck className="h-4 w-4" />}
+                to="/app/payroll-review-queue"
+                cta="Revisar horas"
+                empty="Nada pendiente"
+              />
+              <OpsCard
+                title="Reconciliación payroll"
+                count={t.shifts > 0 ? "Connecteam" : "—"}
+                hint="Fuente actual de pago"
+                tone="info"
+                icon={<Users className="h-4 w-4" />}
+                to="/app/payroll-reconciliation"
+                cta="Abrir reconciliación"
+                empty="Sin datos"
+              />
+            </div>
+
+            <PayrollSourceGuardrailBanner className="mt-1" />
+          </CockpitSection>
+        </>
+      )}
+    </div>
+  );
+}
