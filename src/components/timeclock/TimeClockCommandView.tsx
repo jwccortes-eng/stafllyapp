@@ -1115,6 +1115,11 @@ function AlertRow({ item, onOpen, focused = false }: { item: AlertItem; onOpen: 
         </div>
         <div className="text-xs text-muted-foreground truncate">{item.reason}</div>
       </div>
+      {focused && (
+        <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-wider bg-primary/10 text-primary border-primary/40">
+          foco
+        </Badge>
+      )}
       <Badge variant="outline" className={cn("text-[10px] font-semibold uppercase tracking-wider", toneCls)}>
         {label}
       </Badge>
