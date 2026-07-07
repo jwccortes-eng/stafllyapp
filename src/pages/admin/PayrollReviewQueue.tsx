@@ -840,6 +840,30 @@ export default function PayrollReviewQueue() {
     return () => timers.forEach(t => window.clearTimeout(t));
   }, [focusEmployeeId, focusedEmployeePresent, focusScrolled]);
 
+  // ─── Sprint 22: Optional local worker-focus filter ───
+  // 100% client-side over buckets/rows already built. No new queries, no URL
+  // writes, no changes to payroll math. Opt-in via chip; auto-resets when the
+  // focused worker, the active period, or the worker's presence changes.
+  const [focusWorkerFilter, setFocusWorkerFilter] = useState(false);
+  const canFilterByFocusedWorker = !!focusEmployeeId && focusedEmployeePresent;
+  useEffect(() => {
+    if (!canFilterByFocusedWorker) setFocusWorkerFilter(false);
+  }, [canFilterByFocusedWorker, focusEmployeeId, effectivePeriodId]);
+  const focusedWorkerName = useMemo(() => {
+    if (!focusEmployeeId) return null;
+    for (const b of buckets) {
+      const r = b.rows.find(x => x.employeeId === focusEmployeeId);
+      if (r?.primary) return r.primary;
+    }
+    return null;
+  }, [buckets, focusEmployeeId]);
+  const displayedBuckets = useMemo(() => {
+    if (!focusWorkerFilter || !focusEmployeeId) return buckets;
+    return buckets
+      .map(b => ({ ...b, rows: b.rows.filter(r => r.employeeId === focusEmployeeId) }))
+      .filter(b => b.rows.length > 0);
+  }, [buckets, focusWorkerFilter, focusEmployeeId]);
+
 
   // ── Early returns AFTER all hooks ───────────────────────────────────────
   if (companyLoading) {
@@ -943,6 +967,37 @@ export default function PayrollReviewQueue() {
         </Card>
       )}
 
+      {/* Sprint 22 — Optional local worker-focus filter chip (read-only). */}
+      {canFilterByFocusedWorker && (
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="inline-flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/5 pl-2.5 pr-1 py-0.5 text-[11px] text-primary max-w-full">
+            <span className="font-semibold shrink-0">Trabajador enfocado</span>
+            <span className="text-muted-foreground truncate max-w-[180px]">
+              · {focusedWorkerName ?? (focusEmployeeId ? focusEmployeeId.slice(0, 8) : "")}
+            </span>
+            {focusWorkerFilter ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 text-[11px] px-2 shrink-0"
+                onClick={() => setFocusWorkerFilter(false)}
+              >
+                Mostrar todos
+              </Button>
+            ) : (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 text-[11px] px-2 shrink-0"
+                onClick={() => setFocusWorkerFilter(true)}
+              >
+                Filtrar por trabajador
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
+
 
 
 
@@ -1036,15 +1091,15 @@ export default function PayrollReviewQueue() {
               Mobile: each row is a tappable card that opens a drawer-per-row
               with the full row detail (drawer-per-row pattern). */}
           {buckets.some(b => b.rows.length > 0) && (() => {
-            const validFocus = focusedBucket && buckets.some(b => b.id === focusedBucket) ? focusedBucket : null;
+            const validFocus = focusedBucket && displayedBuckets.some(b => b.id === focusedBucket) ? focusedBucket : null;
             const baseOpen = validFocus
               ? [validFocus]
-              : buckets.filter(b => b.rows.length > 0).map(b => b.id);
+              : displayedBuckets.filter(b => b.rows.length > 0).map(b => b.id);
             // S15 — also expand any bucket that contains the focused worker.
             const defaultOpen = Array.from(new Set([...baseOpen, ...focusedBucketIds]));
             return (
               <Accordion type="multiple" defaultValue={defaultOpen} className="space-y-2">
-                {buckets.map(b => {
+                {displayedBuckets.map(b => {
                   const sev = SEVERITY_STYLE[b.severity];
                   const SevIcon = sev.icon;
                   const isFocused = validFocus === b.id || focusedBucketIds.includes(b.id);
@@ -1157,6 +1212,24 @@ export default function PayrollReviewQueue() {
               </Accordion>
             );
           })()}
+
+          {/* Sprint 22 — Empty state when the local worker filter hides everything. */}
+          {focusWorkerFilter && displayedBuckets.length === 0 && (
+            <Card className="border-warning/40 bg-warning/10">
+              <CardContent className="py-3 px-4 flex flex-wrap items-center gap-2 text-xs text-warning">
+                <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                <span>Sin filas del trabajador enfocado en la cola cargada.</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-[11px] px-2 ml-auto"
+                  onClick={() => setFocusWorkerFilter(false)}
+                >
+                  Mostrar todos
+                </Button>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Mobile drawer-per-row (read-only detail + existing CTA if any) */}
           {(() => {
