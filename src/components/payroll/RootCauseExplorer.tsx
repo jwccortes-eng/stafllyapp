@@ -303,6 +303,8 @@ export function RootCauseExplorer(props: RootCauseExplorerProps) {
   const [notesLoading, setNotesLoading] = useState(false);
   const [notesError, setNotesError] = useState<string | null>(null);
   const [notesReloadTick, setNotesReloadTick] = useState(0);
+  const [archiveConfirmId, setArchiveConfirmId] = useState<string | null>(null);
+  const [archivingId, setArchivingId] = useState<string | null>(null);
 
   const notesReason: string | null = highlightKey ?? null;
 
