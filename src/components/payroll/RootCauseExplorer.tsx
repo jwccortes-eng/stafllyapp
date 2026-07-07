@@ -267,6 +267,18 @@ export function RootCauseExplorer(props: RootCauseExplorerProps) {
   const highlightDay: string | null =
     (highlightKey && anchors[highlightKey]?.date) ?? null;
 
+  // When the drawer opens with a focus reason that has a day anchor, scroll to it.
+  useEffect(() => {
+    if (!open || !highlightDay) return;
+    const t = setTimeout(() => {
+      const el = typeof document !== "undefined"
+        ? document.getElementById(`rce-day-${highlightDay}`)
+        : null;
+      el?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 120);
+    return () => clearTimeout(t);
+  }, [open, highlightDay]);
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
