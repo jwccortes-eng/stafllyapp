@@ -782,6 +782,10 @@ export default function PayrollReviewQueue() {
         </div>
       </div>
 
+      <PayrollSourceGuardrailBanner />
+
+
+
       {/* Period selector */}
       <Card>
         <CardContent className="py-4 flex flex-col md:flex-row md:items-center gap-3">
