@@ -13,8 +13,9 @@
  *  - Scheduled hours are NEVER worked hours. Payroll source stays
  *    Connecteam/reconciliation — surfaced via PayrollSourceGuardrailBanner.
  */
-import { useMemo } from "react";
-import { addDays } from "date-fns";
+import { useEffect, useMemo, useState } from "react";
+import { addDays, format } from "date-fns";
+import { es } from "date-fns/locale";
 import { useNavigate, Link } from "react-router-dom";
 import {
   AlertTriangle,
@@ -26,10 +27,12 @@ import {
   Clock,
   RefreshCw,
   Repeat,
+  ShieldCheck,
   UserCheck,
   UserPlus,
   Users,
 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
 import { useTodayOperations, type TodayOpsShift } from "@/hooks/useTodayOperations";
 import { PageHeader } from "@/components/ui/page-header";
