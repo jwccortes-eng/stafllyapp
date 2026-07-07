@@ -327,6 +327,32 @@ export default function Attendance() {
     });
   }, [assignments, timeEntries, clockEvents]);
 
+  // ─── Sprint 14: Root-Cause Explorer focus (time_entry / employee) ───
+  const dateStrView = format(selectedDate, "yyyy-MM-dd");
+  const isViewingToday = dateStrView === format(new Date(), "yyyy-MM-dd");
+  const loadedEntryIds = useMemo(
+    () => rows.map(r => r.timeEntryId).filter((x): x is string => !!x),
+    [rows],
+  );
+  const loadedEmployeeIds = useMemo(() => rows.map(r => r.employeeId), [rows]);
+  const loadingRows = !assignments || !timeEntries;
+  const { focusId: focusEntryId, present: entryPresent } = useDeepLinkFocus({
+    param: "time_entry", attribute: "entry",
+    loading: loadingRows, loadedIds: loadedEntryIds,
+  });
+  const { focusId: focusEmployeeId, present: employeePresent } = useDeepLinkFocus({
+    param: "employee", attribute: "employee",
+    loading: loadingRows, loadedIds: loadedEmployeeIds,
+  });
+  const hasReviewFocus = !!focusEntryId || !!focusEmployeeId || !!parsedDateParam;
+  const clearDateFocus = useCallback(() => {
+    const next = new URLSearchParams(searchParams);
+    next.delete("date");
+    setSearchParams(next, { replace: true });
+    setSelectedDate(new Date());
+  }, [searchParams, setSearchParams]);
+
+
   // ─── Filter rows ───
   const filteredRows = useMemo(() => {
     let r = rows;
