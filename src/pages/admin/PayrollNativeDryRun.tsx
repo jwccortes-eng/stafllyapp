@@ -43,7 +43,6 @@ import {
 import { cn } from "@/lib/utils";
 import {
   detectTimeEntryOverlaps,
-  type OverlapStats,
 } from "@/utils/detectTimeEntryOverlaps";
 import {
   downloadDryRunCsv,
