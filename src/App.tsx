@@ -393,6 +393,7 @@ function App() {
                 <Route path="shift-ops" element={<CompanyRequiredGuard><ShiftOperations /></CompanyRequiredGuard>} />
                 <Route path="ops-center" element={<CompanyRequiredGuard><OperationsCommandCenter /></CompanyRequiredGuard>} />
                 <Route path="daily-ops" element={<CompanyRequiredGuard><DailyOps /></CompanyRequiredGuard>} />
+                <Route path="ops" element={<CompanyRequiredGuard><OpsHome /></CompanyRequiredGuard>} />
                 <Route path="front-desk-reports" element={<Navigate to="/app/front-desk" replace />} />
                 <Route path="front-desk" element={<CompanyRequiredGuard><FrontDeskHub /></CompanyRequiredGuard>} />
                 <Route path="compensation-validation" element={<CompanyRequiredGuard><CompensationValidation /></CompanyRequiredGuard>} />
