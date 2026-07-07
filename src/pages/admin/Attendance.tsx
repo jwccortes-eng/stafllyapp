@@ -500,6 +500,45 @@ export default function Attendance() {
         onClear={clearOpsFilter}
       />
 
+      {(hasReviewFocus || !isViewingToday) && (
+        <div
+          role="status"
+          className={cn(
+            "rounded-xl border px-3.5 py-2.5 text-xs flex items-start gap-2",
+            entryPresent || employeePresent || (!focusEntryId && !focusEmployeeId && !isViewingToday)
+              ? "border-primary/40 bg-primary/5 text-primary"
+              : (focusEntryId && !entryPresent) || (focusEmployeeId && !employeePresent)
+              ? "border-amber-500/40 bg-amber-500/5 text-amber-700 dark:text-amber-400"
+              : "border-primary/40 bg-primary/5 text-primary",
+          )}
+        >
+          <span className="mt-0.5 inline-flex h-1.5 w-1.5 rounded-full bg-current shrink-0" />
+          <div className="min-w-0 flex-1 space-y-0.5">
+            <div className="font-semibold">
+              {entryPresent || employeePresent
+                ? "Enfocando desde revisión"
+                : (focusEntryId && !entryPresent) || (focusEmployeeId && !employeePresent)
+                ? "Elemento fuera del rango cargado o no encontrado"
+                : !isViewingToday
+                ? "Viendo día histórico"
+                : "Abierto desde revisión"}
+            </div>
+            <div className="text-[11px] opacity-80 truncate">
+              Día <span className="font-mono">{dateStrView}</span>
+              {!isViewingToday && <> (histórico)</>}
+              {focusEmployeeId && <> · empleado <code className="font-mono">{focusEmployeeId.slice(0, 8)}</code></>}
+              {focusEntryId && <> · entry <code className="font-mono">{focusEntryId.slice(0, 8)}</code></>}
+            </div>
+          </div>
+          {!isViewingToday && (
+            <Button variant="ghost" size="sm" className="h-7 text-[11px] px-2 shrink-0" onClick={clearDateFocus}>
+              Volver a hoy
+            </Button>
+          )}
+        </div>
+      )}
+
+
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
           <TabsTrigger value="live">En vivo</TabsTrigger>
