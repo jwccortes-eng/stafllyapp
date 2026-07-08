@@ -240,6 +240,15 @@ export default function ShiftOperations() {
       .eq("shift_id", shiftId);
     setHasTimeEntries((teCount ?? 0) > 0);
 
+    // Sprint 42 — read-only lifecycle row from Centro de Validación.
+    // Never mutates. `maybeSingle()` because most shifts don't have a closeout yet.
+    const { data: closeout } = await supabase
+      .from("shift_closeout_reports")
+      .select("status, review_status, final_approval_status")
+      .eq("shift_id", shiftId)
+      .maybeSingle();
+    setCloseoutRow(closeout ?? null);
+
     setLoading(false);
   };
 
