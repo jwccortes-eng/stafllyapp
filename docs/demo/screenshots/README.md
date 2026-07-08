@@ -81,3 +81,12 @@ Nombres esperados según `STAFly_COMMAND_CENTER_SPRINT_45_ASSET_RUNBOOK.md` §3.
 ## Regla de payroll (recordatorio)
 
 Ninguna captura debe sugerir que Stafly paga automáticamente. Payroll se calcula con horas reales de `time_entries` o ajustes aprobados en el Centro de Validación. Screenshots del PRQ deben mostrar el guardrail visible.
+
+---
+
+## Nota Sprint 47 — Origen obligatorio de las capturas
+
+Los 21 assets pendientes deben capturarse **exclusivamente** desde el tenant demo `STAFly Demo Hospitality Ops` (ver `STAFly_COMMAND_CENTER_DEMO_TENANT_PLAN.md`). Cualquier PNG capturado desde Vista global o tenant productivo debe ser rechazado y borrado.
+
+Placeholders demo válidos en nombres de archivo / captions:
+`COMPANY_DEMO_ID`, `SHIFT_DEMO_FUTURE`, `SHIFT_DEMO_INPROGRESS`, `SHIFT_DEMO_ENDED`, `SHIFT_DEMO_SUBMITTED`, `SHIFT_DEMO_NEEDS_CORR`, `SHIFT_DEMO_PENDING_FINAL`, `SHIFT_DEMO_APPROVED`, `SHIFT_DEMO_NO_SHOW`, `SHIFT_DEMO_MISSING_INFO`.

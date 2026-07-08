@@ -74,3 +74,22 @@ Cada uno con worker demo asignado y cliente demo asociado.
 
 - [ ] Cerrar sesión admin en staging al terminar.
 - [ ] Borrar cache/cookies del navegador antes de la próxima demo si se cambió de tenant.
+
+---
+
+## Nota Sprint 47 — Tenant demo obligatorio
+
+A partir de Sprint 47 la captura de assets **solo** puede hacerse desde el tenant demo aislado `STAFly Demo Hospitality Ops`. Prohibido capturar desde "Vista global" o desde cualquier tenant productivo.
+
+Ver:
+- `STAFly_COMMAND_CENTER_DEMO_TENANT_PLAN.md`
+- `STAFly_COMMAND_CENTER_SPRINT_47_DEMO_TENANT_RUNBOOK.md`
+
+Checklist mínimo agregado:
+
+- [ ] Sidebar muestra **una sola** empresa: STAFly Demo Hospitality Ops.
+- [ ] Cuenta usada es admin demo (`admin.demo@example.com` o equivalente), no personal.
+- [ ] Ningún tenant productivo visible ni accesible desde esta sesión.
+- [ ] Todos los emails visibles terminan en `@example.com`.
+- [ ] Todos los teléfonos visibles están en el rango 555-01XX.
+- [ ] Todos los nombres visibles contienen "Demo".
