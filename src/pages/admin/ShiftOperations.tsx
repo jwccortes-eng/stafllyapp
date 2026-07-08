@@ -34,8 +34,10 @@ import {
   getShiftOperationalStatus, getShiftMissingItems, getShiftRisks,
   getRecommendedNextActions, normalizeArea,
 } from "@/lib/shifts/shift-operations-intelligence";
+import { getShiftPhase, phaseChipClasses } from "@/lib/shifts/shift-phase";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, ClipboardCheck, Timer } from "lucide-react";
+import { Link } from "react-router-dom";
 
 interface ShiftDetail {
   id: string;
