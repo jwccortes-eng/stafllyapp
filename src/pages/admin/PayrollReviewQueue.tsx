@@ -715,6 +715,7 @@ export default function PayrollReviewQueue() {
           key: `hr-te-${t.id}`,
           primary: empName(t.employee_id),
           employeeId: t.employee_id,
+          shiftId: t.shift_id ?? null,
           secondary: `Duration > 16h (${t.clock_in ? format(parseISO(t.clock_in), "MMM d") : ""})`,
           link: { to: "/app/timeclock", label: "Open Time Clock" },
         })),
