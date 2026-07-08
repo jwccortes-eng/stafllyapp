@@ -169,6 +169,7 @@ export default function ShiftOperations() {
     setLocationName("");
     setLocationAddress("");
     setHasTimeEntries(false);
+    setCloseoutRow(null);
     setLoading(true);
     if (shiftId && selectedCompanyId) {
       loadAll();
