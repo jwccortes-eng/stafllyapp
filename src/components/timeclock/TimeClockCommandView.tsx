@@ -264,11 +264,29 @@ export default function TimeClockCommandView() {
     return alerts.filter((a) => a.type === "stale_open" || a.type === "needs_review" || a.type === "very_long");
   }, [alerts]);
 
-  // ─── Sprint 12: consume Root-Cause Explorer deep-link params ─────
+  // ─── Sprint 12/36: consume Root-Cause Explorer + Shift Ops deep-link params ─────
   const loadedEntryIds = useMemo(() => entries.map((e) => e.id), [entries]);
+  const focusEntriesInput = useMemo(
+    () => entries.map((e) => ({ id: e.id, employee_id: e.employee_id, shift_id: e.shift_id })),
+    [entries],
+  );
   const {
-    focusEntryId, focusDate, focusShiftId, entryPresent, hasFocus,
-  } = useTimeClockFocus({ loading, loadedEntryIds });
+    focusEntryId, focusDate, focusShiftId, focusEmployeeId,
+    entryPresent, hasFocus, originFromShiftOps, missingEntry,
+  } = useTimeClockFocus({ loading, loadedEntryIds, entries: focusEntriesInput });
+
+  // Sprint 36: when Shift Ops sends us an employeeId, prefill the search box
+  // once with the worker's full name so they're immediately isolated in the
+  // Live/All tabs. Never overwrites a search the operator already typed.
+  const [searchPrefilledFor, setSearchPrefilledFor] = useState<string | null>(null);
+  useEffect(() => {
+    if (!focusEmployeeId || searchPrefilledFor === focusEmployeeId) return;
+    if (search.trim()) return;
+    const emp = empMap.get(focusEmployeeId);
+    if (!emp) return;
+    setSearch(`${emp.first_name} ${emp.last_name}`.trim());
+    setSearchPrefilledFor(focusEmployeeId);
+  }, [focusEmployeeId, empMap, search, searchPrefilledFor]);
 
   // Auto-route to the tab that actually contains the focused entry so
   // scroll-into-view has a rendered target. Runs once per focus id.
@@ -285,6 +303,15 @@ export default function TimeClockCommandView() {
       setFocusTabApplied(focusEntryId);
     }
   }, [focusEntryId, alerts, liveRows, closedTodayEntries, focusTabApplied]);
+
+  // Missing-entry case: land on "today" so the operator sees the day view and
+  // banner explaining there is no fichaje for this shift/worker pair.
+  useEffect(() => {
+    if (missingEntry && !tabAutoSet) {
+      setActiveTab("today");
+      setTabAutoSet(true);
+    }
+  }, [missingEntry, tabAutoSet]);
 
 
   const filteredLive = useMemo(() => {
