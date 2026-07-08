@@ -376,11 +376,26 @@ export default function ShiftOperations() {
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div className="flex-1">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <h1 className="text-lg font-bold font-heading">{shift.title}</h1>
             <Badge variant={shift.status === "published" ? "default" : shift.status === "locked" ? "secondary" : "outline"} className="text-[10px]">
               {shift.status}
             </Badge>
+            {(() => {
+              const info = getShiftPhase(shift);
+              return (
+                <span
+                  className={cn(
+                    "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold",
+                    phaseChipClasses(info.tone),
+                  )}
+                  data-testid="shift-phase-chip"
+                >
+                  <Timer className="h-2.5 w-2.5" />
+                  {info.label}
+                </span>
+              );
+            })()}
           </div>
           <p className="text-xs text-muted-foreground mt-0.5">
             Centro de Operaciones del Turno
