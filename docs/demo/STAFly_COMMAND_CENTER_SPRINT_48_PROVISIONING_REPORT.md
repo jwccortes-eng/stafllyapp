@@ -101,3 +101,13 @@ Todos siguen **definidos pero no seedeados**. Ver `STAFly_COMMAND_CENTER_DEMO_TE
 - **Payroll logic:** sin cambios.
 - **RLS / auth / edge functions:** sin cambios.
 - **Payments / bookings / chat:** sin cambios.
+
+---
+
+## Nota Sprint 49 — Opción A elegida (segundo proyecto Supabase)
+
+Sprint 49 formaliza el plan para crear un **segundo proyecto Supabase** dedicado a staging/demo, separado de la DB productiva. Es la ruta principal para desbloquear Sprint 48 (seed del tenant demo) y Sprint 46B (screenshots + Looms).
+
+Ver `STAFly_COMMAND_CENTER_SPRINT_49_STAGING_ENV_PLAN.md` para arquitectura, schema sync sin datos, seed demo, RLS/payroll-safe y checklist de aprobación.
+
+Hasta que el segundo proyecto exista y pase el checklist §10 del plan Sprint 49, **prohibido** correr el runbook de seed contra la DB productiva actual.
