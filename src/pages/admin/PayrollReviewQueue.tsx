@@ -592,6 +592,7 @@ export default function PayrollReviewQueue() {
         return {
           key: s.id,
           primary: s.title ?? s.shift_code ?? "Shift",
+          shiftId: s.id,
           secondary: `${s.date} · ${issues.join(" · ")}`,
           link: { to: `/app/shifts`, label: "Open shift" },
         };
