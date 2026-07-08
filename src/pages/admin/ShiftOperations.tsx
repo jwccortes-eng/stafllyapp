@@ -415,6 +415,25 @@ export default function ShiftOperations() {
                 </span>
               );
             })()}
+            {(() => {
+              const status = deriveCloseoutReviewStatus(closeoutRow, shift.date);
+              const p = presentCloseoutReviewStatus(status);
+              return (
+                <Link
+                  to={`/app/payroll-review-queue?shiftId=${encodeURIComponent(shift.id)}`}
+                  title={`${p.description} · Estado leído desde Centro de Validación. No cambia payroll.`}
+                  className={cn(
+                    "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold hover:opacity-90 transition",
+                    closeoutBadgeClasses(p.tone),
+                  )}
+                  data-testid="closeout-review-badge"
+                  data-status={status}
+                >
+                  <ClipboardCheck className="h-2.5 w-2.5" />
+                  {p.label}
+                </Link>
+              );
+            })()}
           </div>
           <p className="text-xs text-muted-foreground mt-0.5">
             Centro de Operaciones del Turno
