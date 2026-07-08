@@ -59,6 +59,8 @@ interface BucketRow {
   badge?: string | null;
   /** Optional worker id, used by S15 deep-link focus (?employee=/?explore=). */
   employeeId?: string | null;
+  /** Optional shift id, used by Sprint 38 deep-link focus (?shiftId=). */
+  shiftId?: string | null;
 }
 
 // ── S15/S19 Root-Cause reason labels (sourced from reviewNavigationCopy) ──
@@ -133,11 +135,16 @@ export default function PayrollReviewQueue() {
   const isMobile = useIsMobile();
 
   // S4 deep links — `?bucket=` focuses one bucket; `?period=` preselects period.
-  const [searchParams] = useSearchParams();
+  // Sprint 38 — accept aliases `payPeriodId`, `employeeId`, and new `shiftId`.
+  const [searchParams, setSearchParams] = useSearchParams();
   const focusedBucket = searchParams.get("bucket");
-  const periodParam = searchParams.get("period");
+  const periodParam = searchParams.get("period") ?? searchParams.get("payPeriodId");
   // S15 — Root-Cause deep link (read-only hints only).
-  const focusEmployeeId = searchParams.get("employee") || searchParams.get("explore");
+  const focusEmployeeId =
+    searchParams.get("employee")
+    ?? searchParams.get("explore")
+    ?? searchParams.get("employeeId");
+  const shiftIdParam = searchParams.get("shiftId");
   const reasonKey = searchParams.get("reason");
   const reasonHuman = reasonLabel(reasonKey);
 
@@ -235,6 +242,63 @@ export default function PayrollReviewQueue() {
     if (paramInBase) { setSelectedPeriodId(periodParam); return; }
     if (resolvedFromUrl) { setSelectedPeriodId(periodParam); return; }
   }, [periodParam, paramInBase, resolvedFromUrl, selectedPeriodId]);
+
+  // ── Sprint 38 — Shift focus (read-only) ─────────────────────────────────
+  // When `?shiftId=` arrives from Shift Ops, resolve the shift metadata
+  // (date/title) so the UI can show context + resolve the pay period if the
+  // caller didn't send one. Only SELECTs; never writes.
+  const shiftFocusQ = useQuery({
+    queryKey: ["prq", "shift-focus", selectedCompanyId, shiftIdParam],
+    enabled: !!selectedCompanyId && canAccess && !!shiftIdParam,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("scheduled_shifts")
+        .select("id, date, title, shift_code, company_id")
+        .eq("company_id", selectedCompanyId!)
+        .eq("id", shiftIdParam!)
+        .maybeSingle();
+      if (error) throw error;
+      return (data ?? null) as {
+        id: string; date: string; title: string | null;
+        shift_code: string | null; company_id: string;
+      } | null;
+    },
+  });
+  const focusedShift = shiftFocusQ.data ?? null;
+
+  // Resolve period by shift.date when caller did not send one.
+  const periodByShiftQ = useQuery({
+    queryKey: ["prq", "period-by-shift-date", selectedCompanyId, focusedShift?.date ?? null],
+    enabled: !!selectedCompanyId && canAccess && !!focusedShift && !periodParam,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("pay_periods")
+        .select("id, sequence_number, start_date, end_date, status, reconciliation_status, paid_at, closed_at")
+        .eq("company_id", selectedCompanyId!)
+        .lte("start_date", focusedShift!.date)
+        .gte("end_date", focusedShift!.date)
+        .order("sequence_number", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return (data ?? null) as PayPeriodLite | null;
+    },
+  });
+
+  // When we resolved the period from the shift, push it into the URL so it
+  // sticks and downstream queries key on it. Uses `replace` to avoid new
+  // history entries. Never issues writes on the DB.
+  useEffect(() => {
+    if (!shiftIdParam) return;
+    if (periodParam) return;
+    const resolved = periodByShiftQ.data;
+    if (!resolved) return;
+    const next = new URLSearchParams(searchParams);
+    if (next.get("period")) return;
+    next.set("period", resolved.id);
+    setSearchParams(next, { replace: true });
+  }, [shiftIdParam, periodParam, periodByShiftQ.data, searchParams, setSearchParams]);
+
 
 
 
@@ -476,6 +540,7 @@ export default function PayrollReviewQueue() {
           key: a.id,
           primary: empName(a.employee_id),
           employeeId: a.employee_id,
+          shiftId: a.shift_id,
           secondary: s ? `${s.shift_code ?? s.title ?? "Shift"} · ${s.date}` : "Shift",
           link: { to: `/app/shifts`, label: "Open shift" },
         };
@@ -527,6 +592,7 @@ export default function PayrollReviewQueue() {
         return {
           key: s.id,
           primary: s.title ?? s.shift_code ?? "Shift",
+          shiftId: s.id,
           secondary: `${s.date} · ${issues.join(" · ")}`,
           link: { to: `/app/shifts`, label: "Open shift" },
         };
@@ -541,6 +607,7 @@ export default function PayrollReviewQueue() {
           key: r.id,
           primary: empName(r.driver_id),
           employeeId: r.driver_id,
+          shiftId: r.shift_id,
           secondary: `${r.ride_type ?? "ride"} · ${r.passenger_count ?? 0} passengers · no movement linked${s ? ` · ${s.date}` : ""}`,
           link: { to: `/app/movements`, label: "Open movements" },
         };
@@ -599,6 +666,7 @@ export default function PayrollReviewQueue() {
           return {
             key: `co-noshow-${c.id}`,
             primary: s?.title ?? s?.shift_code ?? "Shift",
+            shiftId: c.shift_id,
             secondary: `${s?.date ?? ""} · closeout reports ${c.no_show_count} no-show(s) but time entries exist`,
             link: { to: `/app/shifts`, label: "Open shift" },
           };
@@ -614,6 +682,7 @@ export default function PayrollReviewQueue() {
         .map(s => ({
           key: `co-present-${s.id}`,
           primary: s.title ?? s.shift_code ?? "Shift",
+          shiftId: s.id,
           secondary: `${s.date} · closeout indicates present but no time entries logged`,
           link: { to: `/app/shifts`, label: "Open shift" },
         })),
@@ -632,6 +701,7 @@ export default function PayrollReviewQueue() {
         return {
           key: `final-${c.id}`,
           primary: s?.title ?? s?.shift_code ?? "Turno",
+          shiftId: c.shift_id,
           secondary: `${s?.date ?? ""} · aprobado por María, pendiente aprobación final`,
           link: { to: `/app/shifts`, label: "Abrir turno" },
         };
@@ -645,6 +715,7 @@ export default function PayrollReviewQueue() {
           key: `hr-te-${t.id}`,
           primary: empName(t.employee_id),
           employeeId: t.employee_id,
+          shiftId: t.shift_id ?? null,
           secondary: `Duration > 16h (${t.clock_in ? format(parseISO(t.clock_in), "MMM d") : ""})`,
           link: { to: "/app/timeclock", label: "Open Time Clock" },
         })),
@@ -678,6 +749,7 @@ export default function PayrollReviewQueue() {
       .map(s => ({
         key: `pc-${s.id}`,
         primary: s.title ?? s.shift_code ?? "Turno",
+        shiftId: s.id,
         secondary: `${s.date} · sin cierre enviado por el capitán`,
         link: { to: `/app/shifts`, label: "Abrir bloque" },
       }));
@@ -689,6 +761,7 @@ export default function PayrollReviewQueue() {
         return {
           key: `rm-${c.id}`,
           primary: s?.title ?? s?.shift_code ?? "Turno",
+          shiftId: c.shift_id,
           secondary: `${s?.date ?? ""} · cierre enviado, esperando revisión de María`,
           link: { to: `/app/shifts`, label: "Abrir bloque" },
         };
@@ -704,6 +777,7 @@ export default function PayrollReviewQueue() {
         return {
           key: `rc-${c.id}`,
           primary: s?.title ?? s?.shift_code ?? "Turno",
+          shiftId: c.shift_id,
           secondary: `${s?.date ?? ""} · ${c.review_status === "needs_followup" ? "requiere seguimiento" : "rechazado · necesita corrección"}`,
           link: { to: `/app/shifts`, label: "Abrir bloque" },
         };
@@ -716,6 +790,7 @@ export default function PayrollReviewQueue() {
         return {
           key: `lp-${c.id}`,
           primary: s?.title ?? s?.shift_code ?? "Turno",
+          shiftId: c.shift_id,
           secondary: `${s?.date ?? ""} · aprobación final completada`,
           link: { to: `/app/shifts`, label: "Ver bloque" },
         };
@@ -729,6 +804,7 @@ export default function PayrollReviewQueue() {
           key: `fa-${t.id}`,
           primary: empName(t.employee_id),
           employeeId: t.employee_id,
+          shiftId: t.shift_id ?? null,
           secondary: `${s ? `${s.title ?? s.shift_code ?? "Turno"} · ` : ""}entrada ${t.clock_in ? format(parseISO(t.clock_in), "MMM d HH:mm") : "—"} · falta salida`,
           link: { to: `/app/timeclock`, label: "Abrir reloj" },
         };
@@ -858,11 +934,42 @@ export default function PayrollReviewQueue() {
     return null;
   }, [buckets, focusEmployeeId]);
   const displayedBuckets = useMemo(() => {
-    if (!focusWorkerFilter || !focusEmployeeId) return buckets;
-    return buckets
-      .map(b => ({ ...b, rows: b.rows.filter(r => r.employeeId === focusEmployeeId) }))
-      .filter(b => b.rows.length > 0);
-  }, [buckets, focusWorkerFilter, focusEmployeeId]);
+    let list = buckets;
+    // Sprint 38 — deep-link shift focus filters rows to those matching shiftId.
+    if (shiftIdParam) {
+      list = list
+        .map(b => ({ ...b, rows: b.rows.filter(r => r.shiftId === shiftIdParam) }))
+        .filter(b => b.rows.length > 0);
+    }
+    if (focusWorkerFilter && focusEmployeeId) {
+      list = list
+        .map(b => ({ ...b, rows: b.rows.filter(r => r.employeeId === focusEmployeeId) }))
+        .filter(b => b.rows.length > 0);
+    }
+    return list;
+  }, [buckets, focusWorkerFilter, focusEmployeeId, shiftIdParam]);
+
+  // Sprint 38 — worker count for the focused shift (before filtering).
+  const shiftFocusWorkerCount = useMemo(() => {
+    if (!shiftIdParam) return 0;
+    const set = new Set<string>();
+    for (const b of buckets) {
+      for (const r of b.rows) {
+        if (r.shiftId === shiftIdParam && r.employeeId) set.add(r.employeeId);
+      }
+    }
+    return set.size;
+  }, [buckets, shiftIdParam]);
+  const shiftFocusHasRows = useMemo(() => {
+    if (!shiftIdParam) return false;
+    return buckets.some(b => b.rows.some(r => r.shiftId === shiftIdParam));
+  }, [buckets, shiftIdParam]);
+
+  const clearShiftFocus = () => {
+    const next = new URLSearchParams(searchParams);
+    next.delete("shiftId");
+    setSearchParams(next, { replace: true });
+  };
 
 
   // ── Early returns AFTER all hooks ───────────────────────────────────────
@@ -966,6 +1073,58 @@ export default function PayrollReviewQueue() {
           </CardContent>
         </Card>
       )}
+
+      {/* Sprint 38 — Shift Ops deep-link context banner (read-only). */}
+      {shiftIdParam && (
+        <Card className="border-primary/30 bg-primary/5">
+          <CardContent className="py-3 px-4 flex flex-col gap-2 text-xs">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="outline" className="gap-1.5 border-primary/40 text-primary">
+                <ScanEye className="h-3 w-3" /> Caso abierto desde Shift Ops
+              </Badge>
+              <span className="text-muted-foreground">
+                Revisa evidencia antes de cualquier corrección. Solo lectura.
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 text-[11px] px-2 ml-auto"
+                onClick={clearShiftFocus}
+              >
+                Quitar filtro
+              </Button>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="inline-flex items-center gap-1.5 rounded-full border border-primary/40 bg-background pl-2.5 pr-2 py-0.5 text-[11px] text-primary max-w-full">
+                <span className="font-semibold shrink-0">Turno enfocado</span>
+                <span className="text-muted-foreground truncate max-w-[280px]">
+                  · {focusedShift?.title ?? focusedShift?.shift_code ?? (shiftFocusQ.isLoading ? "cargando…" : `Shift ${shiftIdParam.slice(0, 8)}`)}
+                  {focusedShift?.date ? ` · ${focusedShift.date}` : ""}
+                  {` · ${shiftFocusWorkerCount} worker${shiftFocusWorkerCount === 1 ? "" : "s"}`}
+                </span>
+              </div>
+              {!periodParam && periodByShiftQ.isLoading && (
+                <span className="text-[11px] text-muted-foreground inline-flex items-center gap-1">
+                  <Loader2 className="h-3 w-3 animate-spin" /> resolviendo periodo…
+                </span>
+              )}
+              {!periodParam && !periodByShiftQ.isLoading && focusedShift && !periodByShiftQ.data && (
+                <span className="text-[11px] text-warning inline-flex items-center gap-1">
+                  <AlertTriangle className="h-3 w-3" /> No hay periodo que cubra {focusedShift.date}.
+                </span>
+              )}
+            </div>
+            {!shiftFocusHasRows && !dataQ.isLoading && (
+              <div className="inline-flex items-center gap-1.5 rounded-md border border-warning/40 bg-warning/10 px-2 py-1.5 text-warning">
+                <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                <span>Este turno no tiene items en la queue del periodo activo.</span>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+
 
       {/* Sprint 22 — Optional local worker-focus filter chip (read-only). */}
       {canFilterByFocusedWorker && (
