@@ -145,6 +145,57 @@ E2E_EMPLOYEE_ID=<qa-employee-uuid> \
 bunx playwright test root-cause-review-notes-permissions --project=desktop
 ```
 
+## Sprint 32 · Review notes cross-company negative spec (opt-in)
+
+`tests/e2e/root-cause-review-notes-cross-company.spec.ts` validates the
+multi-tenant boundary: a QA/staging user authenticated into **Company A**
+must not be able to view, create, archive or mutate
+`payroll_review_notes` (or any payroll/timekeeping-adjacent data) that
+belongs to **Company B** via `RootCauseExplorer`. Complements the
+happy-path (Sprint 28/30) and view-only (Sprint 31) specs.
+
+- **Opt-in only.** Skips unless `E2E_NOTE_CROSS_COMPANY_TEST_ENABLED=true`.
+- **Never runs against production.** Same URL guard as sibling specs.
+- **Requires a dedicated storage state** (`E2E_STORAGE_STATE_CROSS_COMPANY`)
+  distinct from the happy-path and view-only auths.
+- **Desktop-only** for now; mobile deferred.
+- **What the spec asserts:**
+  - No notes from other harness runs (`[E2E RootCause Note]`, `[E2E RLS-neg]`)
+    are visible.
+  - If the save UI surfaces, `"Nota guardada"` toast must never appear.
+  - If an "Archivar" button surfaces, `"Nota archivada"` toast must
+    never appear.
+  - Network guard records every mutating request the cross-company
+    session emits toward `payroll_review_notes`, any sensitive
+    payroll/time/shift table, RPC endpoints, edge functions, or storage
+    writes. Any recorded violation fails the test loudly.
+- **No physical DELETE, no service_role, no PII.** Synthetic content
+  uses the prefix `[E2E cross-company neg] <ISO>`.
+- Guard stores only method + URL — no request bodies — to avoid leaking
+  sensitive payloads into test logs.
+
+Env vars:
+
+| Var                                    | Purpose                                                    |
+| -------------------------------------- | ---------------------------------------------------------- |
+| `E2E_NOTE_CROSS_COMPANY_TEST_ENABLED`  | `true` to opt in.                                          |
+| `E2E_STORAGE_STATE_CROSS_COMPANY`      | Storage state for a user in a DIFFERENT company than `E2E_EMPLOYEE_ID`. |
+| `E2E_BASE_URL`                         | QA/staging preview URL (never production).                 |
+| `E2E_EMPLOYEE_ID`                      | `employees.id` in the OTHER (target) company.              |
+| `E2E_ROOT_CAUSE_URL` (optional)        | Override URL that opens `RootCauseExplorer`.               |
+
+Example run:
+
+```bash
+E2E_NOTE_CROSS_COMPANY_TEST_ENABLED=true \
+E2E_BASE_URL=https://<qa-preview>.lovable.app \
+E2E_STORAGE_STATE_CROSS_COMPANY=./.playwright/auth-cross-company.json \
+E2E_EMPLOYEE_ID=<other-company-employee-uuid> \
+bunx playwright test root-cause-review-notes-cross-company --project=desktop
+```
+
+
+
 
 
 
