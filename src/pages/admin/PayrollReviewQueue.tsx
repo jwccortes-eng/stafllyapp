@@ -135,11 +135,16 @@ export default function PayrollReviewQueue() {
   const isMobile = useIsMobile();
 
   // S4 deep links — `?bucket=` focuses one bucket; `?period=` preselects period.
-  const [searchParams] = useSearchParams();
+  // Sprint 38 — accept aliases `payPeriodId`, `employeeId`, and new `shiftId`.
+  const [searchParams, setSearchParams] = useSearchParams();
   const focusedBucket = searchParams.get("bucket");
-  const periodParam = searchParams.get("period");
+  const periodParam = searchParams.get("period") ?? searchParams.get("payPeriodId");
   // S15 — Root-Cause deep link (read-only hints only).
-  const focusEmployeeId = searchParams.get("employee") || searchParams.get("explore");
+  const focusEmployeeId =
+    searchParams.get("employee")
+    ?? searchParams.get("explore")
+    ?? searchParams.get("employeeId");
+  const shiftIdParam = searchParams.get("shiftId");
   const reasonKey = searchParams.get("reason");
   const reasonHuman = reasonLabel(reasonKey);
 
