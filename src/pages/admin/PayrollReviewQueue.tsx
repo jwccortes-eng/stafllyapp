@@ -607,6 +607,7 @@ export default function PayrollReviewQueue() {
           key: r.id,
           primary: empName(r.driver_id),
           employeeId: r.driver_id,
+          shiftId: r.shift_id,
           secondary: `${r.ride_type ?? "ride"} · ${r.passenger_count ?? 0} passengers · no movement linked${s ? ` · ${s.date}` : ""}`,
           link: { to: `/app/movements`, label: "Open movements" },
         };
