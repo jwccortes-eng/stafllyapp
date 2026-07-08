@@ -184,3 +184,13 @@ URLs demo:
 ## Confirmación de alcance
 
 Este sprint es **documentation-only**. No hay migraciones, no hay writes, no se creó ningún tenant, no se generaron `time_entries`, no se tocó RLS ni auth ni edge functions ni payments ni bookings ni chat.
+
+---
+
+## Nota Sprint 48 — Provisioning bloqueado
+
+Sprint 48 verificó que el proyecto opera sobre Lovable Cloud con **una única base de datos** que contiene 8 tenants productivos. **No existe staging separado**. Por seguridad, el tenant demo `STAFly Demo Hospitality Ops` **no fue provisionado**. Todos los IDs y el usuario `admin.demo@example.com` siguen pendientes.
+
+Ver razón completa y opciones de desbloqueo en `STAFly_COMMAND_CENTER_SPRINT_48_PROVISIONING_REPORT.md`.
+
+Hasta que se elija Opción A (proyecto Supabase separado), B (guardrails + feature flag) o C (mockups sintéticos), **prohibido** ejecutar el runbook de seed en esta DB.

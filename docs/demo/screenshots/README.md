@@ -90,3 +90,13 @@ Los 21 assets pendientes deben capturarse **exclusivamente** desde el tenant dem
 
 Placeholders demo válidos en nombres de archivo / captions:
 `COMPANY_DEMO_ID`, `SHIFT_DEMO_FUTURE`, `SHIFT_DEMO_INPROGRESS`, `SHIFT_DEMO_ENDED`, `SHIFT_DEMO_SUBMITTED`, `SHIFT_DEMO_NEEDS_CORR`, `SHIFT_DEMO_PENDING_FINAL`, `SHIFT_DEMO_APPROVED`, `SHIFT_DEMO_NO_SHOW`, `SHIFT_DEMO_MISSING_INFO`.
+
+---
+
+## Nota Sprint 48 — Provisioning bloqueado
+
+Sprint 48 verificó que el proyecto opera sobre Lovable Cloud con **una única base de datos** que contiene 8 tenants productivos. **No existe staging separado**. Por seguridad, el tenant demo `STAFly Demo Hospitality Ops` **no fue provisionado**. Todos los IDs y el usuario `admin.demo@example.com` siguen pendientes.
+
+Ver razón completa y opciones de desbloqueo en `STAFly_COMMAND_CENTER_SPRINT_48_PROVISIONING_REPORT.md`.
+
+Hasta que se elija Opción A (proyecto Supabase separado), B (guardrails + feature flag) o C (mockups sintéticos), **prohibido** ejecutar el runbook de seed en esta DB.
