@@ -276,15 +276,20 @@ export default function MobileTimeCommandView() {
     return Array.from(map.values()).sort((a, b) => b.trackedMin - a.trackedMin);
   }, [weekEntries, empMap]);
 
-  // ─── Sprint 12: Root-Cause Explorer deep-link focus ───
+  // ─── Sprint 12/36: Root-Cause Explorer + Shift Ops deep-link focus ───
   const loadedEntryIds = useMemo(() => entries.map((e) => e.id), [entries]);
+  const focusEntriesInput = useMemo(
+    () => entries.map((e) => ({ id: e.id, employee_id: e.employee_id, shift_id: e.shift_id })),
+    [entries],
+  );
   const {
-    focusEntryId, focusDate, focusShiftId, entryPresent, hasFocus,
-  } = useTimeClockFocus({ loading, loadedEntryIds });
+    focusEntryId, focusDate, focusShiftId, focusEmployeeId,
+    entryPresent, hasFocus, originFromShiftOps, missingEntry,
+  } = useTimeClockFocus({ loading, loadedEntryIds, entries: focusEntriesInput });
 
   useEffect(() => {
-    if (focusEntryId) setMode("today");
-  }, [focusEntryId]);
+    if (focusEntryId || originFromShiftOps) setMode("today");
+  }, [focusEntryId, originFromShiftOps]);
 
 
   if (!selectedCompanyId) {
