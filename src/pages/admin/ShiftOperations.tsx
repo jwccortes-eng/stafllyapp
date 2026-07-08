@@ -35,6 +35,9 @@ import {
   getRecommendedNextActions, normalizeArea,
 } from "@/lib/shifts/shift-operations-intelligence";
 import { getShiftPhase, phaseChipClasses } from "@/lib/shifts/shift-phase";
+import {
+  deriveCloseoutReviewStatus, presentCloseoutReviewStatus, closeoutBadgeClasses,
+} from "@/lib/shifts/closeout-review-status";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronDown, ClipboardCheck, Timer } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -147,6 +150,12 @@ export default function ShiftOperations() {
   const [locationsList, setLocationsList] = useState<LocationOption[]>([]);
   const [editOpen, setEditOpen] = useState(false);
   const [hasTimeEntries, setHasTimeEntries] = useState(false);
+  // Sprint 42 — read-only closeout review row (`shift_closeout_reports`)
+  const [closeoutRow, setCloseoutRow] = useState<{
+    status: string | null;
+    review_status: string | null;
+    final_approval_status: string | null;
+  } | null>(null);
   const staffingRef = useRef<HTMLDivElement | null>(null);
   const scrollToStaffing = () => staffingRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
 
@@ -163,6 +172,7 @@ export default function ShiftOperations() {
     setLocationName("");
     setLocationAddress("");
     setHasTimeEntries(false);
+    setCloseoutRow(null);
     setLoading(true);
     if (shiftId && selectedCompanyId) {
       loadAll();
@@ -232,6 +242,15 @@ export default function ShiftOperations() {
       .select("id", { count: "exact", head: true })
       .eq("shift_id", shiftId);
     setHasTimeEntries((teCount ?? 0) > 0);
+
+    // Sprint 42 — read-only lifecycle row from Centro de Validación.
+    // Never mutates. `maybeSingle()` because most shifts don't have a closeout yet.
+    const { data: closeout } = await supabase
+      .from("shift_closeout_reports")
+      .select("status, review_status, final_approval_status")
+      .eq("shift_id", shiftId)
+      .maybeSingle();
+    setCloseoutRow(closeout ?? null);
 
     setLoading(false);
   };
@@ -394,6 +413,25 @@ export default function ShiftOperations() {
                   <Timer className="h-2.5 w-2.5" />
                   {info.label}
                 </span>
+              );
+            })()}
+            {(() => {
+              const status = deriveCloseoutReviewStatus(closeoutRow, shift.date);
+              const p = presentCloseoutReviewStatus(status);
+              return (
+                <Link
+                  to={`/app/payroll-review-queue?shiftId=${encodeURIComponent(shift.id)}`}
+                  title={`${p.description} · Estado leído desde Centro de Validación. No cambia payroll.`}
+                  className={cn(
+                    "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold hover:opacity-90 transition",
+                    closeoutBadgeClasses(p.tone),
+                  )}
+                  data-testid="closeout-review-badge"
+                  data-status={status}
+                >
+                  <ClipboardCheck className="h-2.5 w-2.5" />
+                  {p.label}
+                </Link>
               );
             })()}
           </div>
