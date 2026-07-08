@@ -97,3 +97,14 @@ Outline de 8–10 slides para convertir el Command Center en un pitch comercial 
 - Colores: paleta Stafly, evitar gradientes purple/indigo genéricos.
 - Screenshots reales del staging (no mockups genéricos AI).
 - Mobile: si se muestra, usar cards + KPIs compactos, nunca charts.
+
+---
+
+## Nota Sprint 46 — Estado de assets visuales
+
+Los screenshots referenciados en el mapping slide↔visual (ver `STAFly_COMMAND_CENTER_SPRINT_45_ASSET_RUNBOOK.md` §5) están **pendientes de captura en tenant demo aislado**. Ver estado en `docs/demo/screenshots/README.md`.
+
+Slides que ya pueden armarse **sin visual bloqueante**: 2, 3, 8, 9 (mensaje puro).
+Slides bloqueados hasta tener screenshots demo: 1, 4, 5, 6, 7, 10.
+
+Mientras tanto se puede usar `docs/demo/screenshots/05-command-center-mobile-emptystate.png` como referencia neutra del layout mobile, sin exponer datos de ningún tenant.
