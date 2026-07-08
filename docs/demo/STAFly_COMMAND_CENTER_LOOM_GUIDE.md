@@ -92,3 +92,28 @@ Guiones cortos (2–4 min cada uno) para grabar 5 Looms secuenciales que expliqu
 - [ ] Micrófono probado.
 - [ ] Guion abierto en segunda pantalla.
 - [ ] Ningún dato real de cliente/worker visible.
+
+---
+
+## Nota Sprint 46 — URLs demo y placeholders
+
+Al grabar los Looms, sustituir `<id>` por un `shift_id` **del tenant demo aislado**. No usar IDs de tenants productivos.
+
+Placeholders seguros para el guion:
+
+- `SHIFT_DEMO_FUTURE` — turno futuro
+- `SHIFT_DEMO_INPROGRESS` — turno en curso
+- `SHIFT_DEMO_ENDED` — turno terminado sin cierre
+- `SHIFT_DEMO_SUBMITTED` — cierre enviado
+- `SHIFT_DEMO_NEEDS_CORR` — requiere corrección
+- `SHIFT_DEMO_PENDING_FINAL` — pendiente final
+- `SHIFT_DEMO_APPROVED` — aprobado (opcional)
+
+URLs demo (siempre en staging):
+
+- `https://<staging-host>/app/command-center`
+- `https://<staging-host>/app/shift-ops?id=SHIFT_DEMO_INPROGRESS`
+- `https://<staging-host>/app/timeclock?shiftId=SHIFT_DEMO_INPROGRESS`
+- `https://<staging-host>/app/payroll-review-queue?shiftId=SHIFT_DEMO_SUBMITTED`
+
+Prohibido pegar en el guion cualquier UUID real de producción.
