@@ -243,6 +243,63 @@ export default function PayrollReviewQueue() {
     if (resolvedFromUrl) { setSelectedPeriodId(periodParam); return; }
   }, [periodParam, paramInBase, resolvedFromUrl, selectedPeriodId]);
 
+  // ── Sprint 38 — Shift focus (read-only) ─────────────────────────────────
+  // When `?shiftId=` arrives from Shift Ops, resolve the shift metadata
+  // (date/title) so the UI can show context + resolve the pay period if the
+  // caller didn't send one. Only SELECTs; never writes.
+  const shiftFocusQ = useQuery({
+    queryKey: ["prq", "shift-focus", selectedCompanyId, shiftIdParam],
+    enabled: !!selectedCompanyId && canAccess && !!shiftIdParam,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("scheduled_shifts")
+        .select("id, date, title, shift_code, company_id")
+        .eq("company_id", selectedCompanyId!)
+        .eq("id", shiftIdParam!)
+        .maybeSingle();
+      if (error) throw error;
+      return (data ?? null) as {
+        id: string; date: string; title: string | null;
+        shift_code: string | null; company_id: string;
+      } | null;
+    },
+  });
+  const focusedShift = shiftFocusQ.data ?? null;
+
+  // Resolve period by shift.date when caller did not send one.
+  const periodByShiftQ = useQuery({
+    queryKey: ["prq", "period-by-shift-date", selectedCompanyId, focusedShift?.date ?? null],
+    enabled: !!selectedCompanyId && canAccess && !!focusedShift && !periodParam,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("pay_periods")
+        .select("id, sequence_number, start_date, end_date, status, reconciliation_status, paid_at, closed_at")
+        .eq("company_id", selectedCompanyId!)
+        .lte("start_date", focusedShift!.date)
+        .gte("end_date", focusedShift!.date)
+        .order("sequence_number", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return (data ?? null) as PayPeriodLite | null;
+    },
+  });
+
+  // When we resolved the period from the shift, push it into the URL so it
+  // sticks and downstream queries key on it. Uses `replace` to avoid new
+  // history entries. Never issues writes on the DB.
+  useEffect(() => {
+    if (!shiftIdParam) return;
+    if (periodParam) return;
+    const resolved = periodByShiftQ.data;
+    if (!resolved) return;
+    const next = new URLSearchParams(searchParams);
+    if (next.get("period")) return;
+    next.set("period", resolved.id);
+    setSearchParams(next, { replace: true });
+  }, [shiftIdParam, periodParam, periodByShiftQ.data, searchParams, setSearchParams]);
+
+
 
 
   // ── Bucket data aggregation ─────────────────────────────────────────────
