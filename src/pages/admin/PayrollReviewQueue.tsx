@@ -540,6 +540,7 @@ export default function PayrollReviewQueue() {
           key: a.id,
           primary: empName(a.employee_id),
           employeeId: a.employee_id,
+          shiftId: a.shift_id,
           secondary: s ? `${s.shift_code ?? s.title ?? "Shift"} · ${s.date}` : "Shift",
           link: { to: `/app/shifts`, label: "Open shift" },
         };
