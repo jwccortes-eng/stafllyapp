@@ -194,10 +194,15 @@ E2E_EMPLOYEE_ID=<other-company-employee-uuid> \
 bunx playwright test root-cause-review-notes-cross-company --project=desktop
 ```
 
+## Sprint 32A · QA evidence runbook
 
-
-
-
+Full instructions for producing real QA/staging evidence for the Sprint
+31 (view-only) and Sprint 32 (cross-company) negative specs live in
+[`docs/qa/root-cause-review-notes-negative-guards-qa-evidence.md`](../../docs/qa/root-cause-review-notes-negative-guards-qa-evidence.md).
+That runbook covers storage-state generation, env vars, commands,
+expected pass/fail signals, screenshot paths, and the evidence log
+table to update after each run. Both specs remain opt-in and are not on
+any CI required path yet.
 
 
 ## Running
