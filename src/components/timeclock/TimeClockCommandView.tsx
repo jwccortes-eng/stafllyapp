@@ -523,6 +523,37 @@ export default function TimeClockCommandView() {
         label={opsFilterLabel}
         onClear={clearOpsFilter}
       />
+      {originFromShiftOps && (
+        <div
+          role="status"
+          className={cn(
+            "rounded-xl border px-3.5 py-2.5 text-xs flex items-start gap-2",
+            missingEntry
+              ? "border-amber-500/40 bg-amber-500/5 text-amber-700 dark:text-amber-400"
+              : "border-primary/40 bg-primary/5 text-primary",
+          )}
+        >
+          <span className="mt-0.5 inline-flex h-1.5 w-1.5 rounded-full bg-current shrink-0" />
+          <div className="min-w-0 flex-1 space-y-0.5">
+            <div className="font-semibold">
+              Caso abierto desde Shift Ops. Revisa evidencia antes de cualquier corrección.
+            </div>
+            {missingEntry && (
+              <div className="text-[11px]">
+                Sin fichaje registrado — validar con evidencia. No se creó ninguna entrada automáticamente.
+              </div>
+            )}
+            <div className="text-[11px] opacity-80 truncate">
+              {focusEmployeeId && (
+                <>trabajador <code className="font-mono">{focusEmployeeId.slice(0, 8)}</code></>
+              )}
+              {focusShiftId && (
+                <> · turno <code className="font-mono">{focusShiftId.slice(0, 8)}</code></>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
       {(hasFocus || !isToday) && (
         <div
           role="status"
