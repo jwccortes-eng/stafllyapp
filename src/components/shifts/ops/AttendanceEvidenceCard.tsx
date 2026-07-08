@@ -276,15 +276,28 @@ export function AttendanceEvidenceCard({ shift, assignments, companyId, userId }
                       size="sm"
                       variant="outline"
                       className={cn("h-7 px-2 text-[10px]", ACTION_TONE[act.tone])}
+                      title={
+                        act.kind === "close_open_clock" || act.kind === "review_hours"
+                          ? "No cambia payroll. La revisión final se hace en Centro de Validación."
+                          : undefined
+                      }
                       onClick={() => {
                         if (act.kind === "mark_present_no_clock") openValidation(a, "present_no_clock");
                         else if (act.kind === "mark_late_no_clock") openValidation(a, "late_no_clock");
                         else if (act.kind === "mark_absent") openValidation(a, "absent_confirmed");
                         else if (act.kind === "mark_left_early") openValidation(a, "left_early_no_clock");
                         else if (act.kind === "close_open_clock") {
-                          toast.info("Cerrar clock-out se hace en Reloj de tiempo. Sin clock evidence usa una validación admin.");
+                          if (a.employee_id && shift.id) {
+                            navigate(`/app/timeclock?employeeId=${encodeURIComponent(a.employee_id)}&shiftId=${encodeURIComponent(shift.id)}`);
+                          } else {
+                            toast.info("Cerrar clock-out se hace en Reloj de tiempo. Sin clock evidence usa una validación admin.");
+                          }
                         } else if (act.kind === "review_hours") {
-                          toast.info("La revisión final de horas se hace en Centro de Validación antes de payroll.");
+                          if (shift.id) {
+                            navigate(`/app/payroll-review-queue?shiftId=${encodeURIComponent(shift.id)}`);
+                          } else {
+                            toast.info("La revisión final de horas se hace en Centro de Validación antes de payroll.");
+                          }
                         }
                       }}
                     >
