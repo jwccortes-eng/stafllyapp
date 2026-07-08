@@ -666,6 +666,7 @@ export default function PayrollReviewQueue() {
           return {
             key: `co-noshow-${c.id}`,
             primary: s?.title ?? s?.shift_code ?? "Shift",
+            shiftId: c.shift_id,
             secondary: `${s?.date ?? ""} · closeout reports ${c.no_show_count} no-show(s) but time entries exist`,
             link: { to: `/app/shifts`, label: "Open shift" },
           };
@@ -681,6 +682,7 @@ export default function PayrollReviewQueue() {
         .map(s => ({
           key: `co-present-${s.id}`,
           primary: s.title ?? s.shift_code ?? "Shift",
+          shiftId: s.id,
           secondary: `${s.date} · closeout indicates present but no time entries logged`,
           link: { to: `/app/shifts`, label: "Open shift" },
         })),
