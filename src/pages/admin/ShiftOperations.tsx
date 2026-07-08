@@ -431,19 +431,13 @@ export default function ShiftOperations() {
         </div>
       )}
 
-      {/* Phase 1 QW#3 — Staffing Required banner */}
-      <StaffingRequiredBanner
-        slots={shift.slots ?? 0}
-        assigned={assignments.filter(a => a.status !== "rejected").length}
-        pending={assignments.filter(a => a.status === "pending").length}
-        rejected={assignments.filter(a => a.status === "rejected").length}
-        specialInstructions={shift.special_instructions}
-        isDraft={shift.status === "draft" || shift.publication_status === "draft"}
-        onScrollToStaffing={scrollToStaffing}
-      />
-
-      {/* Operational copilot blocks (read-only heuristics) */}
+      {/* Sprint 40 — Phase-aware Command Center layout.
+          Same components as before, reordered by shift phase so the most
+          urgent block sits above the fold. UI-only, zero writes on mount. */}
       {(() => {
+        const phaseInfo = getShiftPhase(shift);
+        const phase = phaseInfo.phase;
+
         const hasLocation = !!(shift.location_id || (shift as any).job_site_location_id || (shift as any).job_site_address);
         const hasLocationAddress = !!locationAddress || !!(shift as any).job_site_address || !!(shift as any).manual_address;
         const hasMeetingPoint = !!shift.meeting_point || !!(shift as any).meeting_point_location_id;
@@ -452,60 +446,204 @@ export default function ShiftOperations() {
         const risks = getShiftRisks(shift as any, assignments as any);
         const actions = getRecommendedNextActions(shift as any, assignments as any, missing, risks);
         const { recommended, pool } = buildCandidatePool(employees as any, assignments as any, locationName || null);
-        return (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <div className="lg:col-span-2 space-y-4">
-              <SmartSummaryCard status={status} />
-              <NextActionsCard
-                actions={actions}
-                handlers={{
-                  onEditShift: () => setEditOpen(true),
-                  onAssignWorker: scrollToStaffing,
-                  onMessagePending: () => toast.info("Mensajería masiva próximamente"),
-                  onPublish: () => setEditOpen(true),
-                }}
-              />
-              <AssignedTeamCard assignments={assignments as any} />
-              {selectedCompanyId && (
-                <AttendanceEvidenceCard
-                  shift={{ id: shift.id, date: shift.date, start_time: shift.start_time, end_time: shift.end_time, status: shift.status }}
-                  assignments={assignments as any}
-                  companyId={selectedCompanyId}
-                  userId={user?.id ?? null}
-                />
-              )}
-              <div ref={staffingRef} className="scroll-mt-24">
-                <CandidatesCard
-                  recommended={recommended}
-                  pool={pool}
-                  shiftAreaHint={locationName || null}
-                  onAssign={async (employeeId) => {
-                    if (!shiftId || !selectedCompanyId) return;
-                    const { error } = await supabase.from("shift_assignments").insert({
-                      company_id: selectedCompanyId,
-                      shift_id: shiftId,
-                      employee_id: employeeId,
-                      status: "pending",
-                    } as any);
-                    if (error) toast.error(error.message);
-                    else { toast.success("Worker asignado"); loadAll(); }
-                  }}
-                />
-              </div>
+
+        const activeAssigned = assignments.filter(a => a.status !== "rejected").length;
+        const shortStaffed = (shift.slots ?? 0) > activeAssigned;
+        // Only surface StaffingRequiredBanner while it can still be acted on.
+        const showStaffingBanner = shortStaffed && (phase === "before" || phase === "imminent" || phase === "in_progress");
+
+        // Transport shortfall auto-elevation
+        const transportShort = shift.transportation_required && drivers < carsNeeded;
+
+        // Recent attendance validation notes (24h) — read-only, from already
+        // loaded `notes`. No extra query, no writes.
+        const recentValidations = notes.filter(n => {
+          if (n.note_type !== "attendance_validation") return false;
+          const age = Date.now() - new Date(n.created_at).getTime();
+          return age <= 24 * 60 * 60 * 1000;
+        });
+
+        const attendanceEvidenceBlock = selectedCompanyId ? (
+          <AttendanceEvidenceCard
+            shift={{ id: shift.id, date: shift.date, start_time: shift.start_time, end_time: shift.end_time, status: shift.status }}
+            assignments={assignments as any}
+            companyId={selectedCompanyId}
+            userId={user?.id ?? null}
+          />
+        ) : null;
+
+        const nextActionsBlock = (
+          <NextActionsCard
+            actions={actions}
+            handlers={{
+              onEditShift: () => setEditOpen(true),
+              onAssignWorker: scrollToStaffing,
+              onMessagePending: () => toast.info("Mensajería masiva próximamente"),
+              onPublish: () => setEditOpen(true),
+            }}
+          />
+        );
+
+        const assignedTeamBlock = <AssignedTeamCard assignments={assignments as any} />;
+
+        const candidatesBlock = (
+          <div ref={staffingRef} className="scroll-mt-24">
+            <CandidatesCard
+              recommended={recommended}
+              pool={pool}
+              shiftAreaHint={locationName || null}
+              onAssign={async (employeeId) => {
+                if (!shiftId || !selectedCompanyId) return;
+                const { error } = await supabase.from("shift_assignments").insert({
+                  company_id: selectedCompanyId,
+                  shift_id: shiftId,
+                  employee_id: employeeId,
+                  status: "pending",
+                } as any);
+                if (error) toast.error(error.message);
+                else { toast.success("Worker asignado"); loadAll(); }
+              }}
+            />
+          </div>
+        );
+
+        // Sprint 40 — "Preparar cierre" card (deep-links only, zero writes).
+        const closeoutCard = (
+          <div className="rounded-2xl border border-primary/25 bg-primary/[0.04] p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <ClipboardCheck className="h-4 w-4 text-primary" />
+              <h2 className="text-sm font-bold">Preparar cierre</h2>
             </div>
-            <div className="space-y-4">
-              <MissingItemsCard items={missing} onEdit={() => setEditOpen(true)} />
-              <RisksCard risks={risks} />
-              <WorkerPreviewCard
-                shift={shift as any}
-                clientName={clientName}
-                locationName={locationName}
-                locationAddress={locationAddress}
-              />
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Revisa fichajes abiertos y evidencia antes de mandar el turno a validación de horas.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Link
+                to={`/app/timeclock?shiftId=${encodeURIComponent(shift.id)}`}
+                className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-border/50 bg-card px-3 py-2 text-[11px] font-semibold hover:bg-muted/40 transition"
+              >
+                <Clock className="h-3.5 w-3.5" /> Abrir Time Clock
+              </Link>
+              <Link
+                to={`/app/payroll-review-queue?shiftId=${encodeURIComponent(shift.id)}`}
+                className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-[11px] font-semibold text-primary-foreground hover:bg-primary/90 transition"
+              >
+                <ClipboardCheck className="h-3.5 w-3.5" /> Revisar horas
+              </Link>
             </div>
           </div>
         );
+
+        const recentValidationsBanner = recentValidations.length > 0 && (phase === "in_progress" || phase === "after" || phase === "closed") ? (
+          <div className="rounded-xl border border-info/25 bg-info/[0.05] px-4 py-2.5 flex items-start gap-2.5">
+            <CheckCircle2 className="h-4 w-4 text-info mt-0.5 shrink-0" />
+            <div className="flex-1 text-[11px] leading-relaxed">
+              <p className="font-semibold text-info">
+                {recentValidations.length} validación{recentValidations.length === 1 ? "" : "es"} de asistencia en las últimas 24h.
+              </p>
+              <p className="text-muted-foreground">
+                Revisa la evidencia abajo antes de cerrar el turno o mandar a payroll.
+              </p>
+            </div>
+          </div>
+        ) : null;
+
+        const transportAlertBanner = transportShort && (phase === "before" || phase === "imminent" || phase === "in_progress") ? (
+          <div className="rounded-xl border border-destructive/30 bg-destructive/[0.05] px-4 py-2.5 flex items-start gap-2.5">
+            <AlertTriangle className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
+            <div className="flex-1 text-[11px] leading-relaxed">
+              <p className="font-semibold text-destructive">
+                Faltan {carsNeeded - drivers} conductor(es) para cubrir transporte.
+              </p>
+              <p className="text-muted-foreground">
+                Asigna el rol "Conductor" desde staffing para cerrar la capacidad de vehículos.
+              </p>
+            </div>
+          </div>
+        ) : null;
+
+        // Sidebar (right column) is stable across phases.
+        const sidebar = (
+          <div className="space-y-4">
+            <MissingItemsCard items={missing} onEdit={() => setEditOpen(true)} />
+            <RisksCard risks={risks} />
+            <WorkerPreviewCard
+              shift={shift as any}
+              clientName={clientName}
+              locationName={locationName}
+              locationAddress={locationAddress}
+            />
+          </div>
+        );
+
+        // Main column ordering per phase
+        let main: React.ReactNode;
+        if (phase === "before") {
+          main = (
+            <div className="lg:col-span-2 space-y-4">
+              <SmartSummaryCard status={status} />
+              {nextActionsBlock}
+              {candidatesBlock}
+              {assignedTeamBlock}
+              {attendanceEvidenceBlock}
+            </div>
+          );
+        } else if (phase === "imminent" || phase === "in_progress") {
+          main = (
+            <div className="lg:col-span-2 space-y-4">
+              <SmartSummaryCard status={status} />
+              {attendanceEvidenceBlock}
+              {assignedTeamBlock}
+              {nextActionsBlock}
+              {candidatesBlock}
+            </div>
+          );
+        } else if (phase === "after") {
+          main = (
+            <div className="lg:col-span-2 space-y-4">
+              {closeoutCard}
+              {attendanceEvidenceBlock}
+              <SmartSummaryCard status={status} />
+              {assignedTeamBlock}
+              {nextActionsBlock}
+              {candidatesBlock}
+            </div>
+          );
+        } else {
+          // closed
+          main = (
+            <div className="lg:col-span-2 space-y-4">
+              {closeoutCard}
+              <SmartSummaryCard status={status} />
+              {attendanceEvidenceBlock}
+              {assignedTeamBlock}
+            </div>
+          );
+        }
+
+        return (
+          <>
+            {showStaffingBanner && (
+              <StaffingRequiredBanner
+                slots={shift.slots ?? 0}
+                assigned={activeAssigned}
+                pending={assignments.filter(a => a.status === "pending").length}
+                rejected={assignments.filter(a => a.status === "rejected").length}
+                specialInstructions={shift.special_instructions}
+                isDraft={shift.status === "draft" || shift.publication_status === "draft"}
+                onScrollToStaffing={scrollToStaffing}
+              />
+            )}
+            {transportAlertBanner}
+            {recentValidationsBanner}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              {main}
+              {sidebar}
+            </div>
+          </>
+        );
       })()}
+
 
       {/* Detalle avanzado (legacy panels) — collapsed by default, hidden when empty */}
       <Collapsible>
