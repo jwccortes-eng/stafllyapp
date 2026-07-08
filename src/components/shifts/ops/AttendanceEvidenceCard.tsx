@@ -87,6 +87,7 @@ const ACTION_TONE: Record<"primary" | "warn" | "danger", string> = {
 };
 
 export function AttendanceEvidenceCard({ shift, assignments, companyId, userId }: Props) {
+  const navigate = useNavigate();
   const [entries, setEntries] = useState<ClockEntry[]>([]);
   const [validations, setValidations] = useState<AdminValidation[]>([]);
   const [loading, setLoading] = useState(true);
