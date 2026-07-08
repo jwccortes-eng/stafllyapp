@@ -108,3 +108,13 @@ Slides que ya pueden armarse **sin visual bloqueante**: 2, 3, 8, 9 (mensaje puro
 Slides bloqueados hasta tener screenshots demo: 1, 4, 5, 6, 7, 10.
 
 Mientras tanto se puede usar `docs/demo/screenshots/05-command-center-mobile-emptystate.png` como referencia neutra del layout mobile, sin exponer datos de ningún tenant.
+
+---
+
+## Nota Sprint 48 — Provisioning bloqueado
+
+Sprint 48 verificó que el proyecto opera sobre Lovable Cloud con **una única base de datos** que contiene 8 tenants productivos. **No existe staging separado**. Por seguridad, el tenant demo `STAFly Demo Hospitality Ops` **no fue provisionado**. Todos los IDs y el usuario `admin.demo@example.com` siguen pendientes.
+
+Ver razón completa y opciones de desbloqueo en `STAFly_COMMAND_CENTER_SPRINT_48_PROVISIONING_REPORT.md`.
+
+Hasta que se elija Opción A (proyecto Supabase separado), B (guardrails + feature flag) o C (mockups sintéticos), **prohibido** ejecutar el runbook de seed en esta DB.

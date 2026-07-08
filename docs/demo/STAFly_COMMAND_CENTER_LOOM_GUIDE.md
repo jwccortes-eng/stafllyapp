@@ -117,3 +117,13 @@ URLs demo (siempre en staging):
 - `https://<staging-host>/app/payroll-review-queue?shiftId=SHIFT_DEMO_SUBMITTED`
 
 Prohibido pegar en el guion cualquier UUID real de producción.
+
+---
+
+## Nota Sprint 48 — Provisioning bloqueado
+
+Sprint 48 verificó que el proyecto opera sobre Lovable Cloud con **una única base de datos** que contiene 8 tenants productivos. **No existe staging separado**. Por seguridad, el tenant demo `STAFly Demo Hospitality Ops` **no fue provisionado**. Todos los IDs y el usuario `admin.demo@example.com` siguen pendientes.
+
+Ver razón completa y opciones de desbloqueo en `STAFly_COMMAND_CENTER_SPRINT_48_PROVISIONING_REPORT.md`.
+
+Hasta que se elija Opción A (proyecto Supabase separado), B (guardrails + feature flag) o C (mockups sintéticos), **prohibido** ejecutar el runbook de seed en esta DB.
