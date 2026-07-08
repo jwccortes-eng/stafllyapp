@@ -59,6 +59,8 @@ interface BucketRow {
   badge?: string | null;
   /** Optional worker id, used by S15 deep-link focus (?employee=/?explore=). */
   employeeId?: string | null;
+  /** Optional shift id, used by Sprint 38 deep-link focus (?shiftId=). */
+  shiftId?: string | null;
 }
 
 // ── S15/S19 Root-Cause reason labels (sourced from reviewNavigationCopy) ──
