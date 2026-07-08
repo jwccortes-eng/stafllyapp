@@ -934,11 +934,42 @@ export default function PayrollReviewQueue() {
     return null;
   }, [buckets, focusEmployeeId]);
   const displayedBuckets = useMemo(() => {
-    if (!focusWorkerFilter || !focusEmployeeId) return buckets;
-    return buckets
-      .map(b => ({ ...b, rows: b.rows.filter(r => r.employeeId === focusEmployeeId) }))
-      .filter(b => b.rows.length > 0);
-  }, [buckets, focusWorkerFilter, focusEmployeeId]);
+    let list = buckets;
+    // Sprint 38 — deep-link shift focus filters rows to those matching shiftId.
+    if (shiftIdParam) {
+      list = list
+        .map(b => ({ ...b, rows: b.rows.filter(r => r.shiftId === shiftIdParam) }))
+        .filter(b => b.rows.length > 0);
+    }
+    if (focusWorkerFilter && focusEmployeeId) {
+      list = list
+        .map(b => ({ ...b, rows: b.rows.filter(r => r.employeeId === focusEmployeeId) }))
+        .filter(b => b.rows.length > 0);
+    }
+    return list;
+  }, [buckets, focusWorkerFilter, focusEmployeeId, shiftIdParam]);
+
+  // Sprint 38 — worker count for the focused shift (before filtering).
+  const shiftFocusWorkerCount = useMemo(() => {
+    if (!shiftIdParam) return 0;
+    const set = new Set<string>();
+    for (const b of buckets) {
+      for (const r of b.rows) {
+        if (r.shiftId === shiftIdParam && r.employeeId) set.add(r.employeeId);
+      }
+    }
+    return set.size;
+  }, [buckets, shiftIdParam]);
+  const shiftFocusHasRows = useMemo(() => {
+    if (!shiftIdParam) return false;
+    return buckets.some(b => b.rows.some(r => r.shiftId === shiftIdParam));
+  }, [buckets, shiftIdParam]);
+
+  const clearShiftFocus = () => {
+    const next = new URLSearchParams(searchParams);
+    next.delete("shiftId");
+    setSearchParams(next, { replace: true });
+  };
 
 
   // ── Early returns AFTER all hooks ───────────────────────────────────────
