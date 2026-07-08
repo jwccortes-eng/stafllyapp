@@ -147,6 +147,12 @@ export default function ShiftOperations() {
   const [locationsList, setLocationsList] = useState<LocationOption[]>([]);
   const [editOpen, setEditOpen] = useState(false);
   const [hasTimeEntries, setHasTimeEntries] = useState(false);
+  // Sprint 42 — read-only closeout review row (`shift_closeout_reports`)
+  const [closeoutRow, setCloseoutRow] = useState<{
+    status: string | null;
+    review_status: string | null;
+    final_approval_status: string | null;
+  } | null>(null);
   const staffingRef = useRef<HTMLDivElement | null>(null);
   const scrollToStaffing = () => staffingRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
 
