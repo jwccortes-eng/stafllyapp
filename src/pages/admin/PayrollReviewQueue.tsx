@@ -1074,6 +1074,58 @@ export default function PayrollReviewQueue() {
         </Card>
       )}
 
+      {/* Sprint 38 — Shift Ops deep-link context banner (read-only). */}
+      {shiftIdParam && (
+        <Card className="border-primary/30 bg-primary/5">
+          <CardContent className="py-3 px-4 flex flex-col gap-2 text-xs">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="outline" className="gap-1.5 border-primary/40 text-primary">
+                <ScanEye className="h-3 w-3" /> Caso abierto desde Shift Ops
+              </Badge>
+              <span className="text-muted-foreground">
+                Revisa evidencia antes de cualquier corrección. Solo lectura.
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 text-[11px] px-2 ml-auto"
+                onClick={clearShiftFocus}
+              >
+                Quitar filtro
+              </Button>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="inline-flex items-center gap-1.5 rounded-full border border-primary/40 bg-background pl-2.5 pr-2 py-0.5 text-[11px] text-primary max-w-full">
+                <span className="font-semibold shrink-0">Turno enfocado</span>
+                <span className="text-muted-foreground truncate max-w-[280px]">
+                  · {focusedShift?.title ?? focusedShift?.shift_code ?? (shiftFocusQ.isLoading ? "cargando…" : `Shift ${shiftIdParam.slice(0, 8)}`)}
+                  {focusedShift?.date ? ` · ${focusedShift.date}` : ""}
+                  {` · ${shiftFocusWorkerCount} worker${shiftFocusWorkerCount === 1 ? "" : "s"}`}
+                </span>
+              </div>
+              {!periodParam && periodByShiftQ.isLoading && (
+                <span className="text-[11px] text-muted-foreground inline-flex items-center gap-1">
+                  <Loader2 className="h-3 w-3 animate-spin" /> resolviendo periodo…
+                </span>
+              )}
+              {!periodParam && !periodByShiftQ.isLoading && focusedShift && !periodByShiftQ.data && (
+                <span className="text-[11px] text-warning inline-flex items-center gap-1">
+                  <AlertTriangle className="h-3 w-3" /> No hay periodo que cubra {focusedShift.date}.
+                </span>
+              )}
+            </div>
+            {!shiftFocusHasRows && !dataQ.isLoading && (
+              <div className="inline-flex items-center gap-1.5 rounded-md border border-warning/40 bg-warning/10 px-2 py-1.5 text-warning">
+                <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                <span>Este turno no tiene items en la queue del periodo activo.</span>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+
+
       {/* Sprint 22 — Optional local worker-focus filter chip (read-only). */}
       {canFilterByFocusedWorker && (
         <div className="flex flex-wrap items-center gap-2">
