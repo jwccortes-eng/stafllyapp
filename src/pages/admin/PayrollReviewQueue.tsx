@@ -749,6 +749,7 @@ export default function PayrollReviewQueue() {
       .map(s => ({
         key: `pc-${s.id}`,
         primary: s.title ?? s.shift_code ?? "Turno",
+        shiftId: s.id,
         secondary: `${s.date} · sin cierre enviado por el capitán`,
         link: { to: `/app/shifts`, label: "Abrir bloque" },
       }));
@@ -760,6 +761,7 @@ export default function PayrollReviewQueue() {
         return {
           key: `rm-${c.id}`,
           primary: s?.title ?? s?.shift_code ?? "Turno",
+          shiftId: c.shift_id,
           secondary: `${s?.date ?? ""} · cierre enviado, esperando revisión de María`,
           link: { to: `/app/shifts`, label: "Abrir bloque" },
         };
@@ -775,6 +777,7 @@ export default function PayrollReviewQueue() {
         return {
           key: `rc-${c.id}`,
           primary: s?.title ?? s?.shift_code ?? "Turno",
+          shiftId: c.shift_id,
           secondary: `${s?.date ?? ""} · ${c.review_status === "needs_followup" ? "requiere seguimiento" : "rechazado · necesita corrección"}`,
           link: { to: `/app/shifts`, label: "Abrir bloque" },
         };
@@ -787,6 +790,7 @@ export default function PayrollReviewQueue() {
         return {
           key: `lp-${c.id}`,
           primary: s?.title ?? s?.shift_code ?? "Turno",
+          shiftId: c.shift_id,
           secondary: `${s?.date ?? ""} · aprobación final completada`,
           link: { to: `/app/shifts`, label: "Ver bloque" },
         };
@@ -800,6 +804,7 @@ export default function PayrollReviewQueue() {
           key: `fa-${t.id}`,
           primary: empName(t.employee_id),
           employeeId: t.employee_id,
+          shiftId: t.shift_id ?? null,
           secondary: `${s ? `${s.title ?? s.shift_code ?? "Turno"} · ` : ""}entrada ${t.clock_in ? format(parseISO(t.clock_in), "MMM d HH:mm") : "—"} · falta salida`,
           link: { to: `/app/timeclock`, label: "Abrir reloj" },
         };
