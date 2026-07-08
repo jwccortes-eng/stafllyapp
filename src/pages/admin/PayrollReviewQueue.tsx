@@ -701,6 +701,7 @@ export default function PayrollReviewQueue() {
         return {
           key: `final-${c.id}`,
           primary: s?.title ?? s?.shift_code ?? "Turno",
+          shiftId: c.shift_id,
           secondary: `${s?.date ?? ""} · aprobado por María, pendiente aprobación final`,
           link: { to: `/app/shifts`, label: "Abrir turno" },
         };
