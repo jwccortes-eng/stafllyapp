@@ -1,8 +1,28 @@
-# STAFly Command Center — Sprint 52: Provisioning Report (BLOQUEADO)
+# STAFly Command Center — Sprint 52: Provisioning Report (HANDOFF OUT-OF-BAND)
 
-**Fecha:** 2026-07-09
-**Estado:** ⛔ **Bloqueado en infraestructura.** No se ejecutó ninguna acción contra producción. Cero DB writes, cero secrets escritos, cero cambios a `src/**`, cero cambios a payroll/auth/RLS/edge functions/tenants reales.
-**Depende de:** acción humana out-of-band (owner del workspace + DevOps con acceso a Supabase y a Lovable Workspace Settings).
+**Fecha del handoff:** 2026-07-09
+**Estado:** 🟡 **Handoff formal aceptado por el owner.** La ejecución sale del alcance del agente Lovable y pasa a owner + DevOps. Este proyecto Lovable **no** ejecuta ninguna acción de infraestructura mientras tanto (cero DB writes, cero migraciones, cero secrets escritos, cero cambios a `src/**`, cero cambios a payroll/auth/RLS/edge functions/tenants reales).
+**Depende de:** owner del workspace + DevOps con acceso a Supabase (crear proyecto) y a Lovable Workspace Settings (crear segundo proyecto Lovable).
+
+---
+
+## 0. Formulario de completion (rellenar cuando termine la ejecución humana)
+
+Marcar cada campo cuando el paso correspondiente del §2 esté cerrado. **No pegar secrets aquí** (ni project ref completo, ni URLs completas, ni anon key, ni service role, ni DB password).
+
+- [ ] **Fecha de ejecución:** `YYYY-MM-DD`
+- [ ] **Responsable:** `<nombre / handle interno>`
+- [ ] **Últimos 4 chars del project ref staging:** `xxxx` (solo los últimos 4, para identificación)
+- [ ] **Región Supabase staging:** `<región>` (debe coincidir con producción)
+- [ ] **Fecha del deploy Lovable staging:** `YYYY-MM-DD HH:MM TZ`
+- [ ] **Screenshot del badge visible en el nuevo preview URL:** adjuntar en `docs/demo/screenshots/sp52-badge-staging-desktop.png` y `sp52-badge-staging-mobile.png` — deben mostrar el chip amarillo "STAGING / DEMO · Synthetic data only. No production data." y **no** deben mostrar la URL productiva ni ningún dato real.
+- [ ] **Pasos 1–6 del §2 completados sin incidentes:** sí / no (si no, describir en §6 "Incidentes de ejecución").
+- [ ] **Side effects auditados (§2 Paso 4):** sí / no + lista de triggers/funciones neutralizados.
+
+Hasta que este formulario esté rellenado y los dos screenshots existan en el repo, **Sprint 47 (seed) sigue prohibido** y **Sprint 46B (captura) sigue prohibido**.
+
+---
+
 
 ---
 
