@@ -13,6 +13,7 @@ import { OfflineBanner } from "@/components/OfflineBanner";
 import { SoundProvider } from "@/hooks/useSound";
 import { LanguageProvider } from "@/i18n";
 import { Loader2 } from "lucide-react";
+import { EnvBadge } from "@/components/EnvBadge";
 
 // Eager: shell components needed immediately
 import AdminLayout from "./components/AdminLayout";
