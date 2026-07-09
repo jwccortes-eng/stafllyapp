@@ -110,3 +110,23 @@ Sprint 49 formaliza el plan para crear un **segundo proyecto Supabase** dedicado
 Ver `STAFly_COMMAND_CENTER_SPRINT_49_STAGING_ENV_PLAN.md` para arquitectura, schema sync sin datos, seed demo, RLS/payroll-safe y checklist de aprobación.
 
 Hasta que el segundo proyecto exista y pase el checklist §10 del plan Sprint 49, **prohibido** correr el runbook de seed contra la DB productiva actual.
+
+---
+
+## Nota Sprint 50 — Badge visual obligatorio en toda captura
+
+A partir de Sprint 50 el frontend renderiza un **badge global "STAGING / DEMO"** (amarillo, esquina inferior centrada, no bloqueante) siempre que el build corra contra un ambiente no productivo. La detección es 100% build-time (env vars) y **nunca** consulta la base de datos.
+
+**Regla de captura:**
+
+- ✅ Todo screenshot publicado en `docs/demo/screenshots/` DEBE incluir el badge amarillo "STAGING / DEMO · Synthetic data only" visible.
+- ❌ Cualquier PNG **sin** el badge se considera capturado desde producción y debe ser **rechazado y borrado** inmediatamente.
+
+**Cómo verificar el ambiente antes de capturar:**
+
+1. Cargar la app y revisar la esquina inferior centrada — debe verse el chip amarillo.
+2. Abrir la consola del navegador y confirmar en el log `[stafly-build]` que `supabaseUrl` apunta al proyecto **staging/demo** (no al project ref productivo).
+3. Confirmar que `VITE_APP_ENV=staging` o `demo` en la configuración del build (o que se está sirviendo desde un host de preview Lovable, que por defecto se marca como staging).
+4. Si el badge no aparece: **NO capturar**. El build está apuntando a producción.
+
+Ver `../STAFly_COMMAND_CENTER_STAGING_CHECKLIST.md` §10 para el procedimiento completo.
