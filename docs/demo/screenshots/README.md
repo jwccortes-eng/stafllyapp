@@ -130,3 +130,11 @@ A partir de Sprint 50 el frontend renderiza un **badge global "STAGING / DEMO"**
 4. Si el badge no aparece: **NO capturar**. El build está apuntando a producción.
 
 Ver `../STAFly_COMMAND_CENTER_STAGING_CHECKLIST.md` §10 para el procedimiento completo.
+
+---
+
+## Nota Sprint 51 — Demo Vendible Controlada
+
+Sprint 51 mapea cada uno de los 9 escenarios operativos a un screenshot con objetivo comercial explícito y agrega un guion vendible de 3 minutos. Ver `../STAFly_COMMAND_CENTER_SPRINT_51_DEMO_VENDIBLE.md` §3 (mapa escenario→pantalla→objetivo) y §5 (pre-flight por captura).
+
+Regla reforzada: todo PNG publicado debe (a) mostrar el badge amarillo STAGING/DEMO y (b) corresponder a un escenario listado en §3 de ese documento. Screenshots sin escenario asignado no entran al deck.
