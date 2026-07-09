@@ -144,3 +144,14 @@ Talking points prohibidos: "paga solo", "payroll automático", "reemplaza al con
 2. **Seed:** ejecutar el runbook Sprint 47 exclusivamente contra ese proyecto para generar los 9 turnos demo con los IDs sintéticos.
 3. **Sprint 46B:** con el badge visible y el tenant demo aislado, capturar los 10 PNGs de §4 siguiendo el pre-flight de §5.
 4. **Deck:** ensamblar el deck con las 10 capturas mapeadas al guion de §6.
+
+---
+
+## Nota Sprint 52 — Provisioning sigue bloqueado (acción humana requerida)
+
+Sprint 52 verificó que el segundo proyecto Supabase staging/demo **no puede ser creado desde el agente** (no existe tool para crear proyectos Supabase, y ejecutar migraciones desde este proyecto Lovable escribiría en producción). Se documentó el runbook completo out-of-band en `STAFly_COMMAND_CENTER_SPRINT_52_PROVISIONING_REPORT.md` §2 (Pasos 1–7).
+
+Hasta que el owner ejecute Pasos 1–6 de ese runbook, **prohibido**:
+- correr migraciones "solo para verificar" contra el proyecto actual,
+- correr el seed Sprint 47 contra la DB actual,
+- capturar screenshots que no muestren el badge amarillo STAGING/DEMO.
