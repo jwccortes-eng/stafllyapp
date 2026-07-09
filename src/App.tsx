@@ -247,6 +247,7 @@ function App() {
           <Sonner />
           <NetworkListener />
           <OfflineBanner />
+          <EnvBadge />
           <ErrorBoundary>
           <BrowserRouter>
             <Suspense fallback={<PageFallback />}>
