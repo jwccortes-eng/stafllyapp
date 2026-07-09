@@ -142,3 +142,11 @@ Cualquier screenshot o frame de Loom **sin** el badge amarillo se considera capt
 ### Producción
 
 En producción (`VITE_APP_ENV=production` o build servido desde dominio productivo), el componente `<EnvBadge/>` retorna `null`: cero badge, cero copy, cero interferencia con la UX real.
+
+---
+
+## 11. Sprint 51 — Demo vendible controlada
+
+Sprint 51 formaliza los 9 escenarios operativos vendibles, sus screenshots asociados y un guion de 3 minutos para AE/founder. Ver `STAFly_COMMAND_CENTER_SPRINT_51_DEMO_VENDIBLE.md`.
+
+Antes de grabar cualquier Loom o capturar cualquier PNG, correr el pre-flight §1 de ese documento (5 checks: badge visible, supabaseUrl staging, VITE_APP_ENV, tenant demo aislado, usuario admin.demo@example.com). Falla cualquiera → no capturar.
