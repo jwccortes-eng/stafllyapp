@@ -1,5 +1,13 @@
 # Stafly Command Center v1 — Sprint 47 Demo Tenant Runbook
 
+> ⛔ **ESTADO: ABORTADO el 2026-07-09.** Sprint 47 no se ejecutó porque el gate de Sprint 52 no está cumplido. Ver `STAFly_COMMAND_CENTER_SPRINT_47_ABORT_REPORT_2026_07_09.md`.
+>
+> Este runbook **solo** puede reintentarse como **Sprint 47B** cuando:
+> 1. Formulario SP52 §0 esté completo.
+> 2. Existan `docs/demo/screenshots/sp52-badge-staging-desktop.png` y `sp52-badge-staging-mobile.png`.
+> 3. Side effects externos estén auditados/neutralizados.
+> 4. El build Lovable apunte a un Supabase staging/demo real (no al project ref productivo `jplhtputzixwqarqlrth`).
+
 **Documentation-only.** Este runbook describe **cómo** provisionar el tenant demo "STAFly Demo Hospitality Ops" definido en `STAFly_COMMAND_CENTER_DEMO_TENANT_PLAN.md`. **No ejecuta cambios** — cualquier paso técnico debe ser revisado y aprobado explícitamente antes de correrse contra staging.
 
 ---

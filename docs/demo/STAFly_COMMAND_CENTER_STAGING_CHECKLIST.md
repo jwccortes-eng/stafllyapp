@@ -161,3 +161,18 @@ Hasta que el owner ejecute Pasos 1–6 de ese runbook, **prohibido**:
 - correr migraciones "solo para verificar" contra el proyecto actual,
 - correr el seed Sprint 47 contra la DB actual,
 - capturar screenshots que no muestren el badge amarillo STAGING/DEMO.
+
+---
+
+## Nota Sprint 47 — ABORTADO el 2026-07-09
+
+Sprint 47 fue **abortado antes de cualquier write** porque el gate de Sprint 52 no estaba cumplido. Ver reporte completo en `STAFly_COMMAND_CENTER_SPRINT_47_ABORT_REPORT_2026_07_09.md`.
+
+Condiciones para reintentar como **Sprint 47B**:
+1. Formulario SP52 §0 completado (fecha, responsable, últimos 4 chars del project ref staging, región).
+2. Los dos screenshots `docs/demo/screenshots/sp52-badge-staging-desktop.png` y `sp52-badge-staging-mobile.png` existen en el repo.
+3. Side effects externos auditados y neutralizados (lista en SP52 §0).
+4. Segundo proyecto Lovable apunta a Supabase staging/demo (no al project ref productivo `jplhtputzixwqarqlrth`).
+5. Build Lovable staging/demo desplegado y badge visible.
+
+**Regla de oro:** si `PGHOST` o `VITE_SUPABASE_URL` apuntan al proyecto productivo, el seed queda **prohibido**. Cualquier `INSERT` desde este proyecto actual escribiría en producción.
