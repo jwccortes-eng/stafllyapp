@@ -113,3 +113,32 @@ Sprint 49 formaliza el plan para crear un **segundo proyecto Supabase** dedicado
 Ver `STAFly_COMMAND_CENTER_SPRINT_49_STAGING_ENV_PLAN.md` para arquitectura, schema sync sin datos, seed demo, RLS/payroll-safe y checklist de aprobación.
 
 Hasta que el segundo proyecto exista y pase el checklist §10 del plan Sprint 49, **prohibido** correr el runbook de seed contra la DB productiva actual.
+
+---
+
+## 10. Sprint 50 — Verificación visual de ambiente antes de capturar
+
+Desde Sprint 50 el frontend renderiza un badge global **"STAGING / DEMO · Synthetic data only. No production data."** cuando el build corre contra un ambiente no productivo. La fuente de verdad es build-time (`VITE_APP_ENV`) más un fallback de hostname para hosts de preview Lovable. **No consulta la base de datos.**
+
+### Variables de entorno
+
+| Variable | Valores | Efecto |
+|---|---|---|
+| `VITE_APP_ENV` | `production` / `staging` / `demo` | Determina si se muestra el badge. Ausente = fallback por hostname. |
+| `VITE_SUPABASE_URL` | URL del proyecto Supabase | Debe apuntar al proyecto **staging/demo** (Sprint 49). Nunca al productivo cuando `VITE_APP_ENV=staging|demo`. |
+
+### Pre-flight visual (obligatorio antes de cada sesión de capturas o Loom)
+
+- [ ] Badge amarillo "STAGING / DEMO" visible en la esquina inferior centrada, tanto en desktop como en mobile.
+- [ ] Consola del navegador → log `[stafly-build]` muestra `supabaseUrl` del proyecto staging/demo (NO el ref productivo).
+- [ ] `VITE_APP_ENV` en la configuración del deploy = `staging` o `demo`.
+- [ ] El badge NO tapa CTAs primarios ni la bottom nav mobile (posicionado con `pointer-events-none` en el contenedor exterior).
+- [ ] Sidebar/tenant switcher muestra únicamente el tenant demo aislado.
+
+### Regla de rechazo
+
+Cualquier screenshot o frame de Loom **sin** el badge amarillo se considera capturado desde un build productivo y debe ser **rechazado y borrado**. Ningún asset comercial (deck, landing, redes) puede publicarse sin el badge visible.
+
+### Producción
+
+En producción (`VITE_APP_ENV=production` o build servido desde dominio productivo), el componente `<EnvBadge/>` retorna `null`: cero badge, cero copy, cero interferencia con la UX real.
