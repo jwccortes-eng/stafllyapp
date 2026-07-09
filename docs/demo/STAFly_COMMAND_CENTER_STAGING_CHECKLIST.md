@@ -150,3 +150,14 @@ En producción (`VITE_APP_ENV=production` o build servido desde dominio producti
 Sprint 51 formaliza los 9 escenarios operativos vendibles, sus screenshots asociados y un guion de 3 minutos para AE/founder. Ver `STAFly_COMMAND_CENTER_SPRINT_51_DEMO_VENDIBLE.md`.
 
 Antes de grabar cualquier Loom o capturar cualquier PNG, correr el pre-flight §1 de ese documento (5 checks: badge visible, supabaseUrl staging, VITE_APP_ENV, tenant demo aislado, usuario admin.demo@example.com). Falla cualquiera → no capturar.
+
+---
+
+## Nota Sprint 52 — Provisioning sigue bloqueado (acción humana requerida)
+
+Sprint 52 verificó que el segundo proyecto Supabase staging/demo **no puede ser creado desde el agente** (no existe tool para crear proyectos Supabase, y ejecutar migraciones desde este proyecto Lovable escribiría en producción). Se documentó el runbook completo out-of-band en `STAFly_COMMAND_CENTER_SPRINT_52_PROVISIONING_REPORT.md` §2 (Pasos 1–7).
+
+Hasta que el owner ejecute Pasos 1–6 de ese runbook, **prohibido**:
+- correr migraciones "solo para verificar" contra el proyecto actual,
+- correr el seed Sprint 47 contra la DB actual,
+- capturar screenshots que no muestren el badge amarillo STAGING/DEMO.

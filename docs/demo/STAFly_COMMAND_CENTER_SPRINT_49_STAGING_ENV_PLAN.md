@@ -211,3 +211,14 @@ Checklist seed demo:
 - **Producción:** no tocada.
 - **Datos reales:** no leídos, no copiados, no expuestos.
 - **Secrets:** ninguno guardado en repo.
+
+---
+
+## Nota Sprint 52 — Provisioning sigue bloqueado (acción humana requerida)
+
+Sprint 52 verificó que el segundo proyecto Supabase staging/demo **no puede ser creado desde el agente** (no existe tool para crear proyectos Supabase, y ejecutar migraciones desde este proyecto Lovable escribiría en producción). Se documentó el runbook completo out-of-band en `STAFly_COMMAND_CENTER_SPRINT_52_PROVISIONING_REPORT.md` §2 (Pasos 1–7).
+
+Hasta que el owner ejecute Pasos 1–6 de ese runbook, **prohibido**:
+- correr migraciones "solo para verificar" contra el proyecto actual,
+- correr el seed Sprint 47 contra la DB actual,
+- capturar screenshots que no muestren el badge amarillo STAGING/DEMO.

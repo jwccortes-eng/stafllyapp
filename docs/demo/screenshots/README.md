@@ -138,3 +138,14 @@ Ver `../STAFly_COMMAND_CENTER_STAGING_CHECKLIST.md` §10 para el procedimiento c
 Sprint 51 mapea cada uno de los 9 escenarios operativos a un screenshot con objetivo comercial explícito y agrega un guion vendible de 3 minutos. Ver `../STAFly_COMMAND_CENTER_SPRINT_51_DEMO_VENDIBLE.md` §3 (mapa escenario→pantalla→objetivo) y §5 (pre-flight por captura).
 
 Regla reforzada: todo PNG publicado debe (a) mostrar el badge amarillo STAGING/DEMO y (b) corresponder a un escenario listado en §3 de ese documento. Screenshots sin escenario asignado no entran al deck.
+
+---
+
+## Nota Sprint 52 — Provisioning sigue bloqueado (acción humana requerida)
+
+Sprint 52 verificó que el segundo proyecto Supabase staging/demo **no puede ser creado desde el agente** (no existe tool para crear proyectos Supabase, y ejecutar migraciones desde este proyecto Lovable escribiría en producción). Se documentó el runbook completo out-of-band en `STAFly_COMMAND_CENTER_SPRINT_52_PROVISIONING_REPORT.md` §2 (Pasos 1–7).
+
+Hasta que el owner ejecute Pasos 1–6 de ese runbook, **prohibido**:
+- correr migraciones "solo para verificar" contra el proyecto actual,
+- correr el seed Sprint 47 contra la DB actual,
+- capturar screenshots que no muestren el badge amarillo STAGING/DEMO.
