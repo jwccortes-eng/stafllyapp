@@ -318,31 +318,23 @@ export function ShiftRouteHeader({
       )}
 
       <div className="flex items-end justify-between gap-3 mb-3">
-        <div className="flex flex-col gap-1">
-          <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground/70">
-            {isWorker ? "Entrada" : "Inicio"}
-          </span>
-          <span className="text-[44px] leading-none font-bold font-mono tabular-nums tracking-tight text-foreground">
-            {start}
-          </span>
-          <span className="text-[11px] text-muted-foreground/75 leading-tight first-letter:uppercase">
-            {day.label}
-          </span>
-        </div>
+        <OperationalTimeBlock
+          label={isWorker ? "Entrada" : "Inicio"}
+          time={start}
+          caption={day.label}
+          size="hero"
+          align="left"
+          className="first-letter:uppercase"
+        />
         {end && (
-          <div className="flex flex-col gap-1 items-end text-right pb-1 opacity-80">
-            <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground/70">
-              {isWorker ? "Termina aprox." : "Termina"}
-            </span>
-            <span className="text-[18px] font-bold font-mono tabular-nums leading-none text-foreground">
-              {end}
-            </span>
-            {coverageLabel && variant === "admin" && (
-              <span className="text-[11px] text-muted-foreground/75">
-                {coverageLabel}
-              </span>
-            )}
-          </div>
+          <OperationalTimeBlock
+            label={isWorker ? "Termina aprox." : "Termina"}
+            time={end}
+            caption={coverageLabel && variant === "admin" ? coverageLabel : null}
+            size="row"
+            align="right"
+            className="pb-1 opacity-80"
+          />
         )}
       </div>
 
@@ -358,34 +350,50 @@ export function ShiftRouteHeader({
       </div>
 
       {meetingPoint && (
-        <div className="flex items-start gap-2.5 rounded-xl border border-border/40 bg-muted/25 px-3 py-2.5 mb-3">
-          <div className="mt-0.5 h-7 w-7 shrink-0 rounded-lg bg-background border border-border/50 flex items-center justify-center">
-            <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground/70 leading-none mb-1">
-              Punto de encuentro
-            </p>
-            <p className="text-[13px] font-semibold text-foreground leading-snug truncate">
-              {meetingPoint}
-            </p>
-          </div>
-          {meetingTime && (
-            <div className="shrink-0 text-right">
-              <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-muted-foreground/70 leading-none mb-1">
-                Hora
-              </p>
-              <p className="text-[15px] font-bold font-mono tabular-nums text-foreground leading-none">
-                {trimTime(meetingTime)}
-              </p>
-            </div>
-          )}
+        <AgendaMeetingPointRow
+          point={{
+            address: meetingPoint,
+            time: meetingTime ? trimTime(meetingTime) : null,
+            caption: null,
+          }}
+          density="comfortable"
+          className="mb-3"
+        />
+      )}
+
+      {actionItems && actionItems.length > 0 && (
+        <div className="flex flex-wrap gap-2 mt-2">
+          {actionItems.map((a) => (
+            <Button
+              key={a.id}
+              type="button"
+              size="sm"
+              variant={
+                a.tone === "primary"
+                  ? "default"
+                  : a.tone === "danger"
+                    ? "destructive"
+                    : "outline"
+              }
+              disabled={a.disabled || a.loading}
+              onClick={a.onClick}
+              className="h-8 text-xs gap-1"
+            >
+              {a.loading ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                a.icon
+              )}
+              {a.label}
+            </Button>
+          ))}
         </div>
       )}
 
       {actions}
     </>
   );
+
 
   const body =
     density === "full" ? fullBody : density === "list" ? listBody : compactBody;
