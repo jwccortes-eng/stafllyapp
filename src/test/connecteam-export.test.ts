@@ -342,7 +342,9 @@ describe("connecteam-export: safety boundary", () => {
     const exported = Object.keys(mod).sort();
     expect(exported).toEqual([
       "CONNECTEAM_HEADERS",
+      "CSV_UTF8_BOM",
       "buildConnecteamRow",
+      "bulkExportFilename",
       "effectiveAssignmentsForExport",
       "exportFilename",
       "resolveAddress",
