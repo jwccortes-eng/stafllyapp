@@ -2198,6 +2198,19 @@ function DesktopShifts() {
                   {bulkUnlocking ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Unlock className="h-3.5 w-3.5" />}
                   Desbloquear turnos filtrados
                 </button>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                  Integraciones
+                </DropdownMenuLabel>
+                <button
+                  type="button"
+                  onClick={() => setBulkExportConnecteamOpen(true)}
+                  className="w-full text-left flex items-center gap-2 px-2 py-1.5 text-xs hover:bg-accent rounded"
+                  title="Exporta los turnos del rango/filtros actuales al formato de Connecteam. Read-only, no toca payroll."
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  Exportar Turnos → Connecteam (.csv)
+                </button>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
