@@ -29,6 +29,7 @@
  */
 import type { Shift, Assignment, Employee, SelectOption } from "@/components/shifts/types";
 import { resolveConnecteamJobAndSubItem } from "./connecteam-compat";
+import { isPlaceholderName } from "@/lib/placeholder-name";
 
 
 /** Connecteam import template — column order is canonical and MUST NOT change. */
