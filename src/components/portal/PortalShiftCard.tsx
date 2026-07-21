@@ -232,7 +232,7 @@ export function PortalShiftCard({
 
       <ShiftRouteHeader
         variant="worker"
-        density="compact"
+        density="full"
         title={titleDisplay}
         date={shift.date}
         startTime={shift.start_time}
