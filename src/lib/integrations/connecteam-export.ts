@@ -264,7 +264,12 @@ export function buildConnecteamRow(
       const emp = ctx.employees.find(e => e.id === a.employee_id);
       if (!emp) return null;
       const full = `${emp.first_name ?? ""} ${emp.last_name ?? ""}`.trim();
-      return full || null;
+      if (!full) return null;
+      // Never export placeholder identities (System X, Unknown, Temp, Placeholder…).
+      if (isPlaceholderName({ first_name: emp.first_name, last_name: emp.last_name, full_name: full })) {
+        return null;
+      }
+      return full;
     })
     .filter((n): n is string => !!n);
 
@@ -278,7 +283,7 @@ export function buildConnecteamRow(
   // Users: empty by default in v1.1 (Connecteam needs exact identifiers).
   const usersValue = opts.includeUsers ? userNames.join("; ") : "";
 
-  // Note: notes + special_instructions + `Ref: <shift_code>` + Stafly id.
+  // Note: notes + special_instructions + `Ref: <shift_code>` (never Stafly UUID).
   const noteParts: string[] = [];
   if (s.notes && s.notes.trim()) noteParts.push(s.notes.trim());
   if (s.special_instructions && s.special_instructions.trim()) {
@@ -287,7 +292,6 @@ export function buildConnecteamRow(
   if (s.shift_code && s.shift_code.trim()) {
     noteParts.push(`Ref: ${s.shift_code.trim()}`);
   }
-  noteParts.push(`Stafly shift id: ${s.id}`);
   const note = noteParts.join(" · ");
 
   const row: ConnecteamRow = {
