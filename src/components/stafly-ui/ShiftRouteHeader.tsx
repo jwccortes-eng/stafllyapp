@@ -82,6 +82,12 @@ export interface ShiftRouteHeaderProps {
   density?: ShiftRouteHeaderDensity;
   eyebrow?: string;
   actions?: React.ReactNode;
+  /**
+   * Typed, structured actions rendered as a horizontal row of buttons after
+   * the body. Prefer this over `actions` for standard button affordances.
+   * If both are provided, `actionItems` renders first, then `actions`.
+   */
+  actionItems?: ShiftRouteHeaderAction[];
   trailing?: React.ReactNode;
   onClick?: () => void;
   /** Optional href; renders as <Link> when provided and onClick is not used. */
