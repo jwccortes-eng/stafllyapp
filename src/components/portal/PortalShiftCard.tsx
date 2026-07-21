@@ -64,16 +64,6 @@ function getStatusMeta(status: string): { tone: OpsStatusTone; label: string; ra
   }
 }
 
-function calcDuration(start: string, end: string): string {
-  const s = new Date(`2000-01-01T${start}`);
-  let e = new Date(`2000-01-01T${end}`);
-  if (e <= s) e = new Date(e.getTime() + 86400000);
-  const mins = differenceInMinutes(e, s);
-  const h = Math.floor(mins / 60);
-  const m = mins % 60;
-  return m > 0 ? `${h}h ${m}m` : `${h}h`;
-}
-
 function getCountdown(dateStr: string, startTime: string): string | null {
   const now = new Date();
   const [h, m] = startTime.split(":").map(Number);
@@ -85,14 +75,6 @@ function getCountdown(dateStr: string, startTime: string): string | null {
   const mins = Math.floor((diff % 3600000) / 60000);
   if (hrs > 0) return `en ${hrs}h ${mins}m`;
   return `en ${mins}m`;
-}
-
-/** Day label used in compact + full views. */
-function dayLabel(dateStr: string): string {
-  const d = parseISO(dateStr);
-  if (isToday(d)) return "Today";
-  if (isTomorrow(d)) return "Tomorrow";
-  return format(d, "EEE d MMM", { locale: es });
 }
 
 export function PortalShiftCard({
