@@ -3,12 +3,9 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { parseISO, isToday } from "date-fns";
-import { Button } from "@/components/ui/button";
-import { OpsStatusChip as _OpsStatusChip, type OpsStatusTone } from "@/components/operations/OpsStatusChip";
+import { type OpsStatusTone } from "@/components/operations/OpsStatusChip";
 import { formatDisplayName } from "@/lib/format-helpers";
 import { ShiftRouteHeader, type ShiftRouteHeaderTone } from "@/components/stafly-ui";
-// Note: OpsStatusChip retained as type-only reference via OpsStatusTone below.
-void _OpsStatusChip;
 
 /** Map ops chip tone → ShiftRouteHeader tone (visual parity preserved). */
 function mapStatusTone(tone: OpsStatusTone): ShiftRouteHeaderTone {
