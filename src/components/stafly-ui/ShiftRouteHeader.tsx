@@ -33,6 +33,10 @@ import { ChevronRight, MapPin, Briefcase, Navigation } from "lucide-react";
 import { format, parseISO, isToday, isTomorrow } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
+import { OperationalTimeBlock } from "@/components/mobile-agenda/OperationalTimeBlock";
+import { AgendaMeetingPointRow } from "@/components/mobile-agenda/AgendaMeetingPointRow";
 
 export type ShiftRouteHeaderVariant = "worker" | "admin";
 export type ShiftRouteHeaderDensity = "full" | "compact" | "list";
@@ -42,6 +46,23 @@ export type ShiftRouteHeaderTone =
   | "warning"
   | "danger"
   | "info";
+
+/**
+ * Typed action descriptor for ShiftRouteHeader.
+ * Prefer this over the raw `actions` ReactNode slot when a header renders
+ * standard button-shaped affordances — it keeps styling consistent across
+ * worker/admin surfaces and unblocks future OperationalAgendaHero absorption.
+ * The existing `actions` prop (ReactNode) remains supported for bespoke UI.
+ */
+export interface ShiftRouteHeaderAction {
+  id: string;
+  icon?: React.ReactNode;
+  label: string;
+  onClick?: () => void;
+  disabled?: boolean;
+  loading?: boolean;
+  tone?: "primary" | "secondary" | "danger";
+}
 
 export interface ShiftRouteHeaderProps {
   title: string;
