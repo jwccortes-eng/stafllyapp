@@ -250,6 +250,35 @@ export function ShiftRouteHeader({
         </div>
       )}
 
+      {actionItems && actionItems.length > 0 && (
+        <div className="flex flex-wrap gap-2 mt-2">
+          {actionItems.map((a) => (
+            <Button
+              key={a.id}
+              type="button"
+              size="sm"
+              variant={
+                a.tone === "primary"
+                  ? "default"
+                  : a.tone === "danger"
+                    ? "destructive"
+                    : "outline"
+              }
+              disabled={a.disabled || a.loading}
+              onClick={a.onClick}
+              className="h-8 text-xs gap-1"
+            >
+              {a.loading ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                a.icon
+              )}
+              {a.label}
+            </Button>
+          ))}
+        </div>
+      )}
+
       {actions && <div className="mt-2">{actions}</div>}
     </>
   );
