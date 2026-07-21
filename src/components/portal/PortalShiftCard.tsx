@@ -1,13 +1,14 @@
 import {
-  Clock, MapPin, CheckCircle2, LogIn, ChevronRight, Briefcase,
+  CheckCircle2, LogIn, ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { format, parseISO, isToday, isTomorrow, differenceInMinutes } from "date-fns";
-import { es } from "date-fns/locale";
+import { parseISO, isToday } from "date-fns";
 import { Button } from "@/components/ui/button";
-import { OpsStatusChip, type OpsStatusTone } from "@/components/operations/OpsStatusChip";
+import { OpsStatusChip as _OpsStatusChip, type OpsStatusTone } from "@/components/operations/OpsStatusChip";
 import { formatDisplayName } from "@/lib/format-helpers";
 import { ShiftRouteHeader, type ShiftRouteHeaderTone } from "@/components/stafly-ui";
+// Note: OpsStatusChip retained as type-only reference via OpsStatusTone below.
+void _OpsStatusChip;
 
 /** Map ops chip tone → ShiftRouteHeader tone (visual parity preserved). */
 function mapStatusTone(tone: OpsStatusTone): ShiftRouteHeaderTone {
