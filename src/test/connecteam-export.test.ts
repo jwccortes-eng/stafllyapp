@@ -137,13 +137,15 @@ describe("connecteam-export: buildConnecteamRow mapping", () => {
     expect(row["Shift title"]).toBe("Turno A");
     expect(row["Shift title"]).not.toContain("0042");
     expect(row.Note).toContain("Ref: 0042");
-    expect(row.Note).toContain("Stafly shift id: shift-abc12345");
+    // Hardening: internal Stafly UUID must never appear in the export.
+    expect(row.Note).not.toMatch(/Stafly shift id/i);
+    expect(row.Note).not.toContain("shift-abc12345");
   });
 
-  it("omits Ref: when shift has no legacy code", () => {
+  it("omits Ref: when shift has no legacy code and never leaks Stafly UUID", () => {
     const row = buildConnecteamRow(mkShift({ shift_code: null }), buildCtx);
     expect(row.Note).not.toMatch(/Ref:/);
-    expect(row.Note).toContain("Stafly shift id:");
+    expect(row.Note).not.toMatch(/Stafly shift id/i);
   });
 });
 
