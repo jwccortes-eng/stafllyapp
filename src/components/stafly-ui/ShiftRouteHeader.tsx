@@ -137,6 +137,7 @@ export function ShiftRouteHeader({
   density = "compact",
   eyebrow,
   actions,
+  actionItems,
   trailing,
   onClick,
   to,
