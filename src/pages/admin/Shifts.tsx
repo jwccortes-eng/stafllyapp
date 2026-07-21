@@ -2734,6 +2734,18 @@ function DesktopShifts() {
           />
         );
       })()}
+
+      <ExportConnecteamBulkDialog
+        open={bulkExportConnecteamOpen}
+        onOpenChange={setBulkExportConnecteamOpen}
+        shifts={filteredShifts}
+        assignments={assignments}
+        employees={employees}
+        clients={clients}
+        locations={locations}
+        isAdmin={isAdminForCompany}
+        selectedCompanyId={selectedCompanyId}
+      />
     </div>
   );
 }
