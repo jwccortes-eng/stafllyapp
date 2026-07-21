@@ -510,3 +510,14 @@ export function exportFilename(shift: Shift): string {
   const short = (shift.id || "shift").slice(0, 8);
   return `connecteam-shift-${ymd}-${short}.csv`;
 }
+
+/** UTF-8 BOM prefix — mejora la apertura del CSV en Excel/Numbers con acentos. */
+export const CSV_UTF8_BOM = "\uFEFF";
+
+/** Bulk export filename: stafly-connecteam-shifts-YYYY-MM-DD.csv (fecha local hoy). */
+export function bulkExportFilename(today: Date = new Date()): string {
+  const y = today.getFullYear();
+  const m = String(today.getMonth() + 1).padStart(2, "0");
+  const d = String(today.getDate()).padStart(2, "0");
+  return `stafly-connecteam-shifts-${y}-${m}-${d}.csv`;
+}

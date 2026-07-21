@@ -24,7 +24,7 @@ import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, A
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Calendar as CalendarWidget } from "@/components/ui/calendar";
-import { Plus, Loader2, ChevronLeft, ChevronRight, CalendarDays, LayoutGrid, Users, Building2, Calendar, CalendarIcon, AlertTriangle, CheckCircle2, Clock, Lock, Unlock, Send, Upload, MoreHorizontal, ScanEye, MessageSquare, Hash, CreditCard, FileText, Car, UserX, Map, MapPin, Copy, Settings2, CalendarRange } from "lucide-react";
+import { Plus, Loader2, ChevronLeft, ChevronRight, CalendarDays, LayoutGrid, Users, Building2, Calendar, CalendarIcon, AlertTriangle, CheckCircle2, Clock, Lock, Unlock, Send, Upload, MoreHorizontal, ScanEye, MessageSquare, Hash, CreditCard, FileText, Car, UserX, Map, MapPin, Copy, Settings2, CalendarRange, Download } from "lucide-react";
 import { formatDisplayText } from "@/lib/format-helpers";
 import { PageHeader } from "@/components/ui/page-header";
 import { OpsKpiStrip, type OpsKpiItem } from "@/components/operations/OpsKpiStrip";
@@ -61,6 +61,7 @@ import { WorkspaceSummary } from "@/components/shifts/workspace/WorkspaceSummary
 import { buildPrePublishReview } from "@/lib/shifts/build-pre-publish-review";
 import { getShiftLocationStatus } from "@/lib/shifts/location-status";
 import { PrePublishDialog } from "@/components/shifts/workspace/PrePublishDialog";
+import { ExportConnecteamBulkDialog } from "@/components/shifts/integrations/ExportConnecteamBulkDialog";
 import type { Shift, Assignment, SelectOption, Employee, ViewMode } from "@/components/shifts/types";
 import { formatShiftCode } from "@/components/shifts/types";
 import { isDraftShift, isPublishedShift } from "@/lib/shifts/shift-guards";
@@ -399,6 +400,8 @@ function DesktopShifts() {
   const employeeRoster = useEmployeeRoster(selectedCompanyId, "shifts");
   const employees = employeeRoster.employees;
   const [createOpen, setCreateOpen] = useState(false);
+  const [bulkExportConnecteamOpen, setBulkExportConnecteamOpen] = useState(false);
+  const isAdminForCompany = role === "owner" || role === "admin";
 
   // Open create dialog when navigated with ?create=1
   useEffect(() => {
@@ -2195,6 +2198,19 @@ function DesktopShifts() {
                   {bulkUnlocking ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Unlock className="h-3.5 w-3.5" />}
                   Desbloquear turnos filtrados
                 </button>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                  Integraciones
+                </DropdownMenuLabel>
+                <button
+                  type="button"
+                  onClick={() => setBulkExportConnecteamOpen(true)}
+                  className="w-full text-left flex items-center gap-2 px-2 py-1.5 text-xs hover:bg-accent rounded"
+                  title="Exporta los turnos del rango/filtros actuales al formato de Connecteam. Read-only, no toca payroll."
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  Exportar Turnos → Connecteam (.csv)
+                </button>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -2718,6 +2734,18 @@ function DesktopShifts() {
           />
         );
       })()}
+
+      <ExportConnecteamBulkDialog
+        open={bulkExportConnecteamOpen}
+        onOpenChange={setBulkExportConnecteamOpen}
+        shifts={filteredShifts}
+        assignments={assignments}
+        employees={employees}
+        clients={clients}
+        locations={locations}
+        isAdmin={isAdminForCompany}
+        selectedCompanyId={selectedCompanyId}
+      />
     </div>
   );
 }
