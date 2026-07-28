@@ -78,6 +78,12 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
   /** Tracks whether the user has manually switched company in this session */
   const [manuallySelected, setManuallySelected] = useState(false);
 
+  useEffect(() => {
+    const id = logMount("CompanyProvider");
+    return () => logUnmount("CompanyProvider", id);
+  }, []);
+
+
   const canUseGlobalMode = !!role && GLOBAL_MODE_ROLES.has(role);
   const isGlobalMode = canUseGlobalMode && selectedCompanyId === null;
 
