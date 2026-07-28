@@ -384,6 +384,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             clearSessionExpired();
           }
           hadAuthedSessionRef.current = true;
+          // A session came back — cancel any pending recovery probe.
+          if (recoveryTimerRef.current) {
+            window.clearTimeout(recoveryTimerRef.current);
+            recoveryTimerRef.current = null;
+          }
+          setAuthState("authenticated");
           setLoading(true);
           setTimeout(() => {
             void fetchUserData(nextSession.user.id).finally(() => {
@@ -392,17 +398,64 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             });
           }, 0);
         } else {
-          // SIGNED_OUT (or USER_DELETED). If the user did NOT explicitly sign
-          // out, surface a friendly "session expired" message on /auth — this
-          // is the Lovable Preview / multi-tab refresh-token race case.
-          if (event === "SIGNED_OUT" && hadAuthedSessionRef.current && !userInitiatedSignOutRef.current) {
-            markSessionExpired("session_not_found");
-            clearSupabaseAuthStorage();
-          }
+          // SIGNED_OUT / USER_DELETED path.
+          const userInitiated = userInitiatedSignOutRef.current;
+          const hadAuthed = hadAuthedSessionRef.current;
           userInitiatedSignOutRef.current = false;
+
+          if (event === "SIGNED_OUT" && hadAuthed && !userInitiated) {
+            // STAFLY-CTX-001: don't collapse UI immediately. Enter recovering
+            // and run a bounded probe. If the session reappears (rare race)
+            // we resume; otherwise we confirm expiry and log out cleanly.
+            // Preserve session/user/role visually — sensitive mutations MUST
+            // be gated by consumers on authState !== "authenticated".
+            setAuthState("recovering");
+            if (recoveryTimerRef.current) {
+              window.clearTimeout(recoveryTimerRef.current);
+            }
+            const runProbe = async (attemptsLeft: number) => {
+              if (!mounted) return;
+              try {
+                const { data } = await supabase.auth.getSession();
+                if (data.session?.user) {
+                  setSession(data.session);
+                  setUser(data.session.user);
+                  setAuthState("authenticated");
+                  recoveryTimerRef.current = null;
+                  return;
+                }
+              } catch {
+                // fall through to backoff / definitive expiry
+              }
+              const offline = typeof navigator !== "undefined" && navigator.onLine === false;
+              if (offline && attemptsLeft > 0) {
+                recoveryTimerRef.current = window.setTimeout(
+                  () => void runProbe(attemptsLeft - 1),
+                  2000,
+                );
+                return;
+              }
+              // Definitive expiry.
+              markSessionExpired("session_not_found");
+              clearSupabaseAuthStorage();
+              hadAuthedSessionRef.current = false;
+              resetAuthState();
+              setUser(null);
+              setSession(null);
+              hydratedUserIdRef.current = null;
+              setAuthState("unauthenticated");
+              setLoading(false);
+              recoveryTimerRef.current = null;
+            };
+            recoveryTimerRef.current = window.setTimeout(() => void runProbe(3), 800);
+            return;
+          }
+
+          // User-initiated sign-out OR no prior authed session (fresh visitor).
           hadAuthedSessionRef.current = false;
           resetAuthState();
           hydratedUserIdRef.current = null;
+          setAuthState("unauthenticated");
           setLoading(false);
         }
       }
