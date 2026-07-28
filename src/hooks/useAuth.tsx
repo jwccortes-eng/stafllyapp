@@ -7,6 +7,7 @@ import {
   clearSupabaseAuthStorage,
   clearSessionExpired,
 } from "@/lib/auth-session";
+import { publishAuthState } from "@/lib/auth-mutation-gate";
 
 type AppRole = 'developer' | 'owner' | 'company_owner' | 'admin' | 'manager' | 'supervisor' | 'employee' | null;
 type ActiveMode = 'admin' | 'employee';
