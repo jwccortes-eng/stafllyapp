@@ -136,6 +136,8 @@ export default function ShiftOperations() {
   const [locationName, setLocationName] = useState("");
   const [locationAddress, setLocationAddress] = useState("");
   const [loading, setLoading] = useState(true);
+  // STAFLY-CTX-001 — background refresh indicator (no reemplaza la vista).
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Note form
   const [newNoteType, setNewNoteType] = useState("internal");
