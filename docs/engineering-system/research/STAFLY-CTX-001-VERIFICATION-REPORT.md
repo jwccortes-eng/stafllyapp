@@ -298,3 +298,138 @@ If regression appears in QA before those items land → **`Reabierto`**.
 ### 10. Scope confirmation
 
 RLS, migrations, tenants, memberships schema, payroll, time_entries, shift_assignments, scheduled_shifts, payments, bookings, chat, documents, edge functions, reconciliation, imports and production data — **not modified**. Verified via file-level diff scope.
+
+---
+
+## Mutation Gate Validation (post-implementación)
+
+**Fecha:** 2026-07-28
+**Estado del bug:** `En validación` (sin cambio; falta smoke mobile real).
+
+### Arquitectura elegida
+
+Gate único, module-scoped, publicado por `AuthProvider`:
+
+- `src/lib/auth-mutation-gate.ts` — fuente única de verdad para
+  "¿puedo escribir ahora?".
+  - `publishAuthState(state)` — único escritor, llamado por
+    `AuthProvider` vía `useEffect` cuando `authState` transiciona.
+  - `assertAuthReady()` / `guardMutation(fn)` — imperativos para
+    handlers `onSubmit`, RPCs y wrappers propios.
+  - `useMutationGate()` — hook React (`useSyncExternalStore`) que
+    expone `{ authState, canMutate, blockedReason, guard, assertReady }`.
+    CTAs pueden desactivarse con `disabled={!canMutate}` y mostrar
+    `blockedReason` como tooltip/toast humano.
+- `MutationBlockedError` con `code: "auth_recovering" | "auth_unauthenticated"`
+  y mensajes localizados listos para toast:
+  - `"Reconectando sesión. Podrás continuar en unos segundos."`
+  - `"Tu sesión expiró. Vuelve a iniciar sesión para continuar."`
+
+No se creó un segundo silo de permisos: el gate solo refleja
+`authState` de `useAuth` — sigue siendo la autoridad única de sesión,
+y RLS sigue siendo la autoridad final del servidor.
+
+### Comportamiento por estado
+
+| `authState`       | `canMutate` | `guard(fn)`                                | UX esperada                                   |
+| ----------------- | ----------- | ------------------------------------------ | --------------------------------------------- |
+| `initializing`    | false       | throws `auth_unauthenticated`              | CTAs deshabilitados durante boot              |
+| `authenticated`   | true        | invoca `fn` normalmente                    | Operación normal                              |
+| `recovering`      | false       | throws `auth_recovering` **sin llamar fn** | Overlay visible, formulario intacto, sin retry |
+| `unauthenticated` | false       | throws `auth_unauthenticated`              | Ruta protegida ya redirige a `/auth`          |
+
+Transición `recovering → authenticated`: **no hay auto-retry**. El
+usuario decide reenviar (idempotencia desconocida). Transición
+`recovering → unauthenticated`: la mutation nunca ejecutada; el flujo
+existente de `signOut` maneja el redirect.
+
+### Archivos modificados
+
+- `src/lib/auth-mutation-gate.ts` — **nuevo** gate + hook + errores.
+- `src/hooks/useAuth.tsx` — importa `publishAuthState` y publica cada
+  transición de `authState`. Cero cambios en la máquina de estados.
+- `src/test/auth-mutation-gate.test.tsx` — **nuevo**, 8 tests.
+
+### Mutations protegidas
+
+Cualquier consumidor que adopte `useMutationGate()` /
+`guardMutation()` queda cubierto automáticamente. El gate está
+disponible para (adopción incremental, fuera del alcance de este
+sprint envolver cada llamada existente):
+
+- crear/editar/publicar shift (`useShifts`, `ShiftEditDialog`)
+- asignar/actualizar worker (`useShiftAssignments`, `useEmployees`)
+- aprobar time entries (`useTimeEntries`, PRQ)
+- cerrar shifts (`useShiftCloseout`)
+- acciones administrativas (`useCompensationMutations`, etc.)
+
+### Mutations fuera de alcance en este sprint
+
+- Reescritura de cada hook de mutation para envolver la llamada en
+  `guard(...)`. Se propone adoptar el helper en los flujos críticos
+  en un sprint posterior (`DS3.3 — Mutation Gate Adoption`).
+- Cancelación de requests ya en vuelo cuando entra `recovering`
+  (`AbortController` broadcast). Requiere refactor mayor.
+- Reintentos idempotentes: intencionalmente NO se implementa.
+
+### Tests agregados
+
+`src/test/auth-mutation-gate.test.tsx` (vitest + jsdom):
+
+1. Bloquea mutación durante `recovering` — `fn` no se llama.
+2. Bloquea mutación durante `unauthenticated` con code correcto.
+3. Bloquea durante `initializing`.
+4. Permite mutación durante `authenticated`.
+5. NO auto-retry al reabrir el gate.
+6. Mensajes humanos correctos por estado.
+7. `useMutationGate()` re-renderiza en transiciones y expone
+   `blockedReason` correcto.
+8. `guard` del hook bloquea `fn` antes de invocarla.
+
+Resultado: **8/8 passed** (`bunx vitest run
+src/test/auth-mutation-gate.test.tsx`). Typecheck: **limpio**
+(`bunx tsgo --noEmit`).
+
+### QA desktop
+
+- Overlay "Reconectando sesión…" ya validado en el sprint anterior.
+- Gate imperativo verificado con tests (equivalente funcional al QA
+  manual — la garantía "no sale la request" es determinística en el
+  test unitario).
+
+### QA mobile
+
+`NO VALIDADO EN MOBILE REAL` — requiere dispositivo físico y
+provisioning demo tenant (bloqueado, ver Sprint 52 report).
+
+### Confirmaciones de seguridad
+
+- **Sin auto-retry**: el gate re-lanza `MutationBlockedError`; el
+  llamador decide.
+- **Sin doble escritura**: `assertAuthReady()` se evalúa **antes** de
+  invocar `fn` — la request nunca sale si el gate está cerrado.
+- **Sin cambios en RLS, payroll, production data, migrations, schema,
+  edge functions ni multi-tenant logic.**
+- **Sin cambios** en `refetchOnWindowFocus`, `sessionStorage` layout,
+  probe de recuperación, o comportamiento de `SIGNED_OUT`.
+
+### Riesgos residuales
+
+1. **Adopción incremental**: mientras los hooks de mutation no
+   adopten `guard(...)`, siguen expuestos al escenario original
+   (backend rechaza con 401/403 → toast técnico). RLS los protege
+   igual; solo la UX degrada.
+2. **Requests en vuelo**: si `recovering` entra mientras un
+   `insert` ya voló, el gate no lo cancela. Solo aplica pre-flight.
+3. **Timing del publish**: la primera renderización de un
+   consumidor ve `initializing` durante ~1 tick antes de que
+   `AuthProvider` publique. Aceptable — CTAs deshabilitados durante
+   boot es el comportamiento correcto.
+
+### Estado final recomendado del bug
+
+`En validación` — mantener. Promover a `Validado` solo tras:
+
+- smoke mobile real en dispositivo físico;
+- adopción de `guard(...)` en al menos crear/editar shift + aprobar
+  time entry (siguiente sprint).

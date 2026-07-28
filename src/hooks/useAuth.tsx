@@ -7,6 +7,7 @@ import {
   clearSupabaseAuthStorage,
   clearSessionExpired,
 } from "@/lib/auth-session";
+import { publishAuthState } from "@/lib/auth-mutation-gate";
 
 type AppRole = 'developer' | 'owner' | 'company_owner' | 'admin' | 'manager' | 'supervisor' | 'employee' | null;
 type ActiveMode = 'admin' | 'employee';
@@ -128,6 +129,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [authState, setAuthState] = useState<AuthState>("initializing");
+
+  // Publish to the module-scope mutation gate so non-React callers
+  // (guardMutation / assertAuthReady) see the same lifecycle state as
+  // hooks and components. STAFLY-CTX-001.
+  useEffect(() => { publishAuthState(authState); }, [authState]);
+
   const [role, setRole] = useState<AppRole>(null);
   const [allRoles, setAllRoles] = useState<Set<string>>(new Set());
   const [companyRoles, setCompanyRoles] = useState<Record<string, string>>({});
