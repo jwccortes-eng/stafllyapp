@@ -521,6 +521,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = async () => {
     userInitiatedSignOutRef.current = true;
     clearSessionExpired();
+    if (recoveryTimerRef.current) {
+      window.clearTimeout(recoveryTimerRef.current);
+      recoveryTimerRef.current = null;
+    }
     try {
       await supabase.auth.signOut();
     } catch (err) {
@@ -535,6 +539,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setPermissions([]);
     setActionPermissions([]);
     setFullName(null);
+    setAuthState("unauthenticated");
     // Wipe SW + CacheStorage so the next user on this device never inherits
     // cached responses or a stale bundle (Aline / iPhone fix, Apr 2026).
     try {
