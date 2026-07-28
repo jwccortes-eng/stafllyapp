@@ -2,7 +2,13 @@ import { useState, useEffect, createContext, useContext, ReactNode, useCallback 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { queryClient } from "@/lib/query-client";
-import { safeLocalStorage } from "@/lib/safe-storage";
+
+import {
+  readSelectedCompanyForTab,
+  writeSelectedCompanyForTab,
+  clearSelectedCompanyForTab,
+  migrateLegacySelectedCompany,
+} from "@/lib/auth-session";
 
 interface Company {
   id: string;
@@ -55,6 +61,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
   const {
     user,
     session,
+    authState,
     role,
     loading: authLoading,
     companyRoles,
@@ -95,16 +102,23 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
   const setSelectedCompanyId = useCallback((id: string | null) => {
     setSelectedCompanyIdRaw(id);
     setManuallySelected(true);
+    const uid = user?.id ?? null;
     if (id) {
-      safeLocalStorage.setItem("selectedCompanyId", id);
+      writeSelectedCompanyForTab(uid, id);
     } else {
-      safeLocalStorage.removeItem("selectedCompanyId");
+      clearSelectedCompanyForTab(uid);
     }
-  }, []);
+  }, [user?.id]);
 
   const fetchCompanies = useCallback(async () => {
     if (authLoading) {
       setLoading(true);
+      return;
+    }
+
+    // STAFLY-CTX-001: while auth is probing a suspicious SIGNED_OUT, keep the
+    // current company context intact. Do NOT hit the network or reset state.
+    if (authState === "recovering") {
       return;
     }
 
@@ -151,61 +165,65 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
 
     setCompanies(list);
 
-    // CRITICAL: read fresh values from storage (not from closure) so a recent
-    // company switch is NOT overwritten back to "first company" when this re-runs.
-    const currentSelection = safeLocalStorage.getItem("selectedCompanyId");
+    // Per-tab source of truth for the active company. On first load for this
+    // user in this tab, migrate the legacy global localStorage key ONCE so
+    // returning users don't lose their selection, then drop it to prevent
+    // cross-tab bleed.
+    const validIds = list.map((c) => c.id);
+    const migrated = migrateLegacySelectedCompany(user.id, validIds);
+    let currentSelection = readSelectedCompanyForTab(user.id);
+    if (!currentSelection && migrated) {
+      writeSelectedCompanyForTab(user.id, migrated);
+      currentSelection = migrated;
+    }
 
     if (canUseGlobalMode) {
       // Developer/owner: respect a valid stored selection if it still belongs
-      // to an accessible company; otherwise drop to global mode (don't keep
-      // a stale id pointing at an inaccessible tenant).
+      // to an accessible company; otherwise drop to global mode.
       const validStored = currentSelection && list.some(c => c.id === currentSelection)
         ? currentSelection
         : null;
       if (manuallySelected) {
-        // User just switched this session — keep their choice if valid.
         if (!validStored && selectedCompanyId !== null) {
           setSelectedCompanyIdRaw(null);
-          safeLocalStorage.removeItem("selectedCompanyId");
+          clearSelectedCompanyForTab(user.id);
         }
-          resolvedSelection = validStored ?? selectedCompanyId;
+        resolvedSelection = validStored ?? selectedCompanyId;
       } else if (validStored) {
         setSelectedCompanyIdRaw(validStored);
-          resolvedSelection = validStored;
+        resolvedSelection = validStored;
       } else {
         setSelectedCompanyIdRaw(null);
-        safeLocalStorage.removeItem("selectedCompanyId");
-          resolvedSelection = null;
+        clearSelectedCompanyForTab(user.id);
+        resolvedSelection = null;
       }
     } else {
       // Regular users MUST have a company context.
-      // Trust localStorage as source of truth — do NOT clobber a valid selection.
       const validStored = currentSelection && list.some(c => c.id === currentSelection)
         ? currentSelection
         : null;
 
       if (validStored) {
         setSelectedCompanyIdRaw(validStored);
-          resolvedSelection = validStored;
+        resolvedSelection = validStored;
       } else if (list.length > 0) {
-        // Stored id pointed to an inaccessible/missing company — clean it up.
         if (currentSelection && currentSelection !== list[0].id) {
-          safeLocalStorage.removeItem("selectedCompanyId");
+          clearSelectedCompanyForTab(user.id);
         }
         const first = list[0].id;
         setSelectedCompanyIdRaw(first);
-        safeLocalStorage.setItem("selectedCompanyId", first);
-          resolvedSelection = first;
+        writeSelectedCompanyForTab(user.id, first);
+        resolvedSelection = first;
       } else {
         setSelectedCompanyIdRaw(null);
-        safeLocalStorage.removeItem("selectedCompanyId");
-          resolvedSelection = null;
+        clearSelectedCompanyForTab(user.id);
+        resolvedSelection = null;
       }
     }
 
     setLoading(false);
       logPostLoginDebug("company-provider-resolved", list, resolvedSelection, false);
-  }, [authLoading, user, role, canUseGlobalMode, manuallySelected, selectedCompanyId, logPostLoginDebug]);
+  }, [authLoading, authState, user, role, canUseGlobalMode, manuallySelected, selectedCompanyId, logPostLoginDebug]);
 
   /** Switch company: update state + invalidate all cached queries */
   const switchCompany = useCallback((id: string | null) => {

@@ -24,9 +24,23 @@ interface ActionPermission {
   granted: boolean;
 }
 
+export type AuthState = "initializing" | "authenticated" | "recovering" | "unauthenticated";
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
+  /**
+   * Explicit lifecycle state (STAFLY-CTX-001):
+   *  - initializing: first boot, session not yet resolved
+   *  - authenticated: valid session in memory
+   *  - recovering: Supabase emitted SIGNED_OUT unexpectedly (e.g. after a
+   *    background token refresh) — we're probing whether it's a transient
+   *    hiccup or a definitive expiry. UI must preserve context but block
+   *    sensitive mutations.
+   *  - unauthenticated: no session (fresh visitor, controlled sign-out, or
+   *    confirmed expiry).
+   */
+  authState: AuthState;
   /** Highest-priority GLOBAL role (developer/owner only — from user_roles).
    *  Per-company roles live in companyRoles. Do NOT use this to gate admin
    *  access for a specific tenant. */
@@ -86,6 +100,7 @@ const GLOBAL_CROSS_TENANT_ROLES = new Set(['developer', 'owner', 'founder']);
 const AuthContext = createContext<AuthContextType>({
   user: null,
   session: null,
+  authState: "initializing",
   role: null,
   allRoles: new Set(),
   activeMode: 'admin',
@@ -112,6 +127,7 @@ const AuthContext = createContext<AuthContextType>({
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
+  const [authState, setAuthState] = useState<AuthState>("initializing");
   const [role, setRole] = useState<AppRole>(null);
   const [allRoles, setAllRoles] = useState<Set<string>>(new Set());
   const [companyRoles, setCompanyRoles] = useState<Record<string, string>>({});
@@ -132,6 +148,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Track whether we ever observed an authenticated session in this tab,
   // so we only flag SIGNED_OUT as "expired" when there was something to lose.
   const hadAuthedSessionRef = useRef<boolean>(false);
+  const recoveryTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     activeModeRef.current = activeMode;
@@ -308,11 +325,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(nextSession?.user ?? null);
 
       if (nextSession?.user) {
+        hadAuthedSessionRef.current = true;
+        setAuthState("authenticated");
         await fetchUserData(nextSession.user.id);
         hydratedUserIdRef.current = nextSession.user.id;
       } else {
         resetAuthState();
         hydratedUserIdRef.current = null;
+        setAuthState("unauthenticated");
       }
 
       if (mounted) {
@@ -368,6 +388,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             clearSessionExpired();
           }
           hadAuthedSessionRef.current = true;
+          // A session came back — cancel any pending recovery probe.
+          if (recoveryTimerRef.current) {
+            window.clearTimeout(recoveryTimerRef.current);
+            recoveryTimerRef.current = null;
+          }
+          setAuthState("authenticated");
           setLoading(true);
           setTimeout(() => {
             void fetchUserData(nextSession.user.id).finally(() => {
@@ -376,17 +402,64 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             });
           }, 0);
         } else {
-          // SIGNED_OUT (or USER_DELETED). If the user did NOT explicitly sign
-          // out, surface a friendly "session expired" message on /auth — this
-          // is the Lovable Preview / multi-tab refresh-token race case.
-          if (event === "SIGNED_OUT" && hadAuthedSessionRef.current && !userInitiatedSignOutRef.current) {
-            markSessionExpired("session_not_found");
-            clearSupabaseAuthStorage();
-          }
+          // SIGNED_OUT / USER_DELETED path.
+          const userInitiated = userInitiatedSignOutRef.current;
+          const hadAuthed = hadAuthedSessionRef.current;
           userInitiatedSignOutRef.current = false;
+
+          if (event === "SIGNED_OUT" && hadAuthed && !userInitiated) {
+            // STAFLY-CTX-001: don't collapse UI immediately. Enter recovering
+            // and run a bounded probe. If the session reappears (rare race)
+            // we resume; otherwise we confirm expiry and log out cleanly.
+            // Preserve session/user/role visually — sensitive mutations MUST
+            // be gated by consumers on authState !== "authenticated".
+            setAuthState("recovering");
+            if (recoveryTimerRef.current) {
+              window.clearTimeout(recoveryTimerRef.current);
+            }
+            const runProbe = async (attemptsLeft: number) => {
+              if (!mounted) return;
+              try {
+                const { data } = await supabase.auth.getSession();
+                if (data.session?.user) {
+                  setSession(data.session);
+                  setUser(data.session.user);
+                  setAuthState("authenticated");
+                  recoveryTimerRef.current = null;
+                  return;
+                }
+              } catch {
+                // fall through to backoff / definitive expiry
+              }
+              const offline = typeof navigator !== "undefined" && navigator.onLine === false;
+              if (offline && attemptsLeft > 0) {
+                recoveryTimerRef.current = window.setTimeout(
+                  () => void runProbe(attemptsLeft - 1),
+                  2000,
+                );
+                return;
+              }
+              // Definitive expiry.
+              markSessionExpired("session_not_found");
+              clearSupabaseAuthStorage();
+              hadAuthedSessionRef.current = false;
+              resetAuthState();
+              setUser(null);
+              setSession(null);
+              hydratedUserIdRef.current = null;
+              setAuthState("unauthenticated");
+              setLoading(false);
+              recoveryTimerRef.current = null;
+            };
+            recoveryTimerRef.current = window.setTimeout(() => void runProbe(3), 800);
+            return;
+          }
+
+          // User-initiated sign-out OR no prior authed session (fresh visitor).
           hadAuthedSessionRef.current = false;
           resetAuthState();
           hydratedUserIdRef.current = null;
+          setAuthState("unauthenticated");
           setLoading(false);
         }
       }
@@ -415,6 +488,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 resetAuthState();
                 setUser(null);
                 setSession(null);
+                setAuthState("unauthenticated");
                 setLoading(false);
               }
               return;
@@ -429,12 +503,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (import.meta.env.DEV) console.error('Error restoring session:', err);
       if (mounted) {
         resetAuthState();
+        setAuthState("unauthenticated");
         setLoading(false);
       }
     });
 
     return () => {
       mounted = false;
+      if (recoveryTimerRef.current) {
+        window.clearTimeout(recoveryTimerRef.current);
+        recoveryTimerRef.current = null;
+      }
       subscription.unsubscribe();
     };
   }, [fetchUserData, resetAuthState]);
@@ -442,6 +521,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = async () => {
     userInitiatedSignOutRef.current = true;
     clearSessionExpired();
+    if (recoveryTimerRef.current) {
+      window.clearTimeout(recoveryTimerRef.current);
+      recoveryTimerRef.current = null;
+    }
     try {
       await supabase.auth.signOut();
     } catch (err) {
@@ -456,6 +539,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setPermissions([]);
     setActionPermissions([]);
     setFullName(null);
+    setAuthState("unauthenticated");
     // Wipe SW + CacheStorage so the next user on this device never inherits
     // cached responses or a stale bundle (Aline / iPhone fix, Apr 2026).
     try {
@@ -537,7 +621,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider value={{
-      user, session, role, allRoles, companyRoles,
+      user, session, authState, role, allRoles, companyRoles,
       getRoleForCompany, canAccessAdminForCompany, canAccessPortalForCompany,
       activeMode, setActiveMode,
       canAccessAdmin, canAccessPortal,
@@ -546,7 +630,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       resolveEmployeeForCompany,
     }}>
       {children}
+      <SessionRecoveringOverlay authState={authState} />
     </AuthContext.Provider>
+  );
+}
+
+/** Minimal, non-blocking "Reconectando sesión…" indicator. */
+function SessionRecoveringOverlay({ authState }: { authState: AuthState }) {
+  if (authState !== "recovering") return null;
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className="fixed bottom-4 right-4 z-[9999] rounded-md border border-border bg-background/95 px-3 py-2 text-xs text-foreground shadow-md backdrop-blur"
+    >
+      <span className="inline-flex items-center gap-2">
+        <span className="h-2 w-2 animate-pulse rounded-full bg-primary" />
+        Reconectando sesión…
+      </span>
+    </div>
   );
 }
 

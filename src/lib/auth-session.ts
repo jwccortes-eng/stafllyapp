@@ -127,3 +127,69 @@ export function watchTabPresence(onMultipleTabs: () => void): () => void {
 }
 
 export { SESSION_EXPIRED_KEY, INTENDED_ROUTE_KEY };
+
+/* -------------------------------------------------------------------------
+ * Per-tab Company Context storage (STAFLY-CTX-001 fix)
+ *
+ * Auth is shared across tabs (Supabase localStorage token). Company Context
+ * is per-tab: the active company selection lives in sessionStorage, keyed by
+ * the authenticated user id, so a switch in Tab A never overwrites Tab B.
+ *
+ * The legacy global localStorage key `selectedCompanyId` is read ONCE as a
+ * migration hint, validated against the user's authorized companies, and
+ * then cleared from localStorage to stop cross-tab bleed.
+ * ------------------------------------------------------------------------- */
+
+const SELECTED_COMPANY_LEGACY_KEY = "selectedCompanyId";
+const SELECTED_COMPANY_TAB_PREFIX = "stafly:selectedCompanyId:";
+const LEGACY_MIGRATION_DONE_PREFIX = "stafly:selectedCompanyId:migrated:";
+
+function selectedCompanyKey(userId: string): string {
+  return SELECTED_COMPANY_TAB_PREFIX + userId;
+}
+
+/** Read the tab-scoped selected company id for this user. */
+export function readSelectedCompanyForTab(userId: string | null | undefined): string | null {
+  if (!userId) return null;
+  return safeSessionStorage.getItem(selectedCompanyKey(userId));
+}
+
+/** Write the tab-scoped selected company id for this user. */
+export function writeSelectedCompanyForTab(userId: string | null | undefined, companyId: string): void {
+  if (!userId) return;
+  safeSessionStorage.setItem(selectedCompanyKey(userId), companyId);
+}
+
+/** Clear the tab-scoped selected company id for this user. */
+export function clearSelectedCompanyForTab(userId: string | null | undefined): void {
+  if (!userId) return;
+  safeSessionStorage.removeItem(selectedCompanyKey(userId));
+}
+
+/**
+ * One-shot migration from the legacy global localStorage key. Returns the
+ * legacy value only if it is present in `validIds`; otherwise returns null.
+ * After the first call for a user, the legacy key is removed from
+ * localStorage so future tabs cannot inherit stale cross-tenant state.
+ */
+export function migrateLegacySelectedCompany(
+  userId: string | null | undefined,
+  validIds: string[],
+): string | null {
+  if (!userId) return null;
+  const flagKey = LEGACY_MIGRATION_DONE_PREFIX + userId;
+  if (safeSessionStorage.getItem(flagKey)) return null;
+  const legacy = safeLocalStorage.getItem(SELECTED_COMPANY_LEGACY_KEY);
+  safeSessionStorage.setItem(flagKey, "1");
+  // Always drop the legacy global key — it is no longer authoritative and
+  // keeping it would let a second tab overwrite this tab's selection.
+  safeLocalStorage.removeItem(SELECTED_COMPANY_LEGACY_KEY);
+  if (legacy && validIds.includes(legacy)) return legacy;
+  return null;
+}
+
+export {
+  SELECTED_COMPANY_LEGACY_KEY,
+  SELECTED_COMPANY_TAB_PREFIX,
+};
+
