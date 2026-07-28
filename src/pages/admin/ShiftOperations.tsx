@@ -184,25 +184,48 @@ export default function ShiftOperations() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shiftId, selectedCompanyId, location.key]);
 
-  // Refetch when the tab regains focus so admins coming back from another tab
-  // (or after publishing/editing from a sibling view) never see stale state
-  // that would otherwise require a manual refresh.
+  // STAFLY-CTX-001 — Operational Resume Fix.
+  // Antes: focus + visibilitychange llamaban `loadAll()` que hacía
+  // `setLoading(true)` y reemplazaba toda la pantalla por skeleton, perdiendo
+  // formularios y scroll. Ahora coalescemos ambos eventos en una ventana
+  // corta y ejecutamos un refresh en background que NO toca `loading`.
   useEffect(() => {
-    const onFocus = () => {
-      if (shiftId && selectedCompanyId && !document.hidden) loadAll();
+    if (!shiftId || !selectedCompanyId) return;
+    let lastRun = 0;
+    let timer: number | null = null;
+    const COALESCE_MS = 1500;
+    const MIN_INTERVAL_MS = 10_000;
+
+    const scheduleRefresh = () => {
+      if (document.hidden) return;
+      const now = Date.now();
+      if (now - lastRun < MIN_INTERVAL_MS) return;
+      if (timer !== null) return;
+      timer = window.setTimeout(() => {
+        timer = null;
+        lastRun = Date.now();
+        void loadAll({ background: true });
+      }, COALESCE_MS);
     };
-    window.addEventListener("focus", onFocus);
-    document.addEventListener("visibilitychange", onFocus);
+
+    window.addEventListener("focus", scheduleRefresh);
+    document.addEventListener("visibilitychange", scheduleRefresh);
     return () => {
-      window.removeEventListener("focus", onFocus);
-      document.removeEventListener("visibilitychange", onFocus);
+      window.removeEventListener("focus", scheduleRefresh);
+      document.removeEventListener("visibilitychange", scheduleRefresh);
+      if (timer !== null) window.clearTimeout(timer);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shiftId, selectedCompanyId]);
 
-  const loadAll = async () => {
+  const loadAll = async (opts?: { background?: boolean }) => {
     if (!shiftId || !selectedCompanyId) return;
-    setLoading(true);
+    const background = opts?.background === true;
+    // Solo mostramos el skeleton de pantalla completa en la carga inicial.
+    // Los refreshes en background mantienen el contenido montado y solo
+    // muestran un indicador discreto "Actualizando…".
+    if (background) setIsRefreshing(true);
+    else setLoading(true);
 
     const [shiftRes, assignRes, timelineRes, notesRes, empsRes, clientsRes, locsRes] = await Promise.all([
       supabase.from("scheduled_shifts").select("*").eq("id", shiftId).single(),
@@ -254,7 +277,8 @@ export default function ShiftOperations() {
       .maybeSingle();
     setCloseoutRow(closeout ?? null);
 
-    setLoading(false);
+    if (background) setIsRefreshing(false);
+    else setLoading(false);
   };
 
   const handleAddNote = async () => {
