@@ -93,7 +93,7 @@ export default function Index() {
     } else {
       navigate("/login", { replace: true });
     }
-  }, [activeMode, allEmployeeIds, authLoading, canAccessAdmin, canAccessAdminForCompany, canAccessPortal, canAccessPortalForCompany, companies, companyLoading, companyRoles, navigate, selectedCompany, selectedCompanyId, session, user]);
+  }, [activeMode, allEmployeeIds, authLoading, authState, canAccessAdmin, canAccessAdminForCompany, canAccessPortal, canAccessPortalForCompany, companies, companyLoading, companyRoles, navigate, selectedCompany, selectedCompanyId, session, user]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background">
