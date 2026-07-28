@@ -3,6 +3,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { queryClient } from "@/lib/query-client";
 import { safeLocalStorage } from "@/lib/safe-storage";
+import {
+  readSelectedCompanyForTab,
+  writeSelectedCompanyForTab,
+  clearSelectedCompanyForTab,
+  migrateLegacySelectedCompany,
+} from "@/lib/auth-session";
 
 interface Company {
   id: string;
