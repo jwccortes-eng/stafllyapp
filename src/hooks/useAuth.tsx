@@ -358,6 +358,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       (event, nextSession) => {
         if (!mounted) return;
 
+        console.info("[STAFLY-CTX-001][auth-event]", {
+          event,
+          documentInstanceId,
+          appInstanceId,
+          authStatePrev: authState,
+          hasSession: !!nextSession,
+          userIdSame: nextSession?.user?.id === hydratedUserIdRef.current,
+          hydratedUserIdSet: !!hydratedUserIdRef.current,
+          visibilityState: typeof document !== "undefined" ? document.visibilityState : null,
+          pathname: typeof window !== "undefined" ? window.location.pathname : null,
+          ts: Date.now(),
+        });
+
         console.info("[post-login-debug]", {
           step: "use-auth-state-change",
           userId: nextSession?.user?.id ?? null,
