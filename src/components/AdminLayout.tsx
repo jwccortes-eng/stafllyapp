@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useMemo, useEffect } from "react";
+import React, { createContext, useContext, useState, useMemo, useEffect, useRef } from "react";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import AdminSidebar from "./AdminSidebar";
 import TopBar from "./TopBar";
@@ -39,6 +39,37 @@ function MobilePageTitle({ items }: { items: NavItem[] }) {
 }
 
 const SidebarContext = createContext<{ collapsed: boolean; setCollapsed: (v: boolean) => void }>({ collapsed: false, setCollapsed: () => {} });
+
+function AdminLayoutFullScreenLoader({ authLoading, companyLoading }: { authLoading: boolean; companyLoading: boolean }) {
+  const startedAtRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    const startedAt = performance.now();
+    startedAtRef.current = startedAt;
+    console.info("[STAFLY-CTX-001][full-screen-loading] start", {
+      component: "AdminLayoutFullScreenLoader",
+      parent: "AdminLayout",
+      authLoading,
+      companyLoading,
+      startedAt,
+    });
+    return () => {
+      console.info("[STAFLY-CTX-001][full-screen-loading] end", {
+        component: "AdminLayoutFullScreenLoader",
+        parent: "AdminLayout",
+        authLoadingAtStart: authLoading,
+        companyLoadingAtStart: companyLoading,
+        durationMs: Math.round(performance.now() - (startedAtRef.current ?? startedAt)),
+      });
+    };
+  }, [authLoading, companyLoading]);
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
+    </div>
+  );
+}
 
 export function useSidebarCollapsed() {
   return useContext(SidebarContext);
@@ -147,11 +178,7 @@ export default function AdminLayout() {
   ]);
 
   if (!authReady || !companyReady) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
-      </div>
-    );
+    return <AdminLayoutFullScreenLoader authLoading={authLoading} companyLoading={companyLoading} />;
   }
 
   if (!user) {

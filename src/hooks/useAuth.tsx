@@ -422,11 +422,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             recoveryTimerRef.current = null;
           }
           setAuthState("authenticated");
+          console.info("[STAFLY-CTX-001][auth-loading] start", {
+            provider: "AuthProvider",
+            event,
+            reason: "authenticated auth event rehydrates user data",
+          });
           setLoading(true);
           setTimeout(() => {
             void fetchUserData(nextSession.user.id).finally(() => {
               hydratedUserIdRef.current = nextSession.user.id;
-              if (mounted) setLoading(false);
+              if (mounted) {
+                console.info("[STAFLY-CTX-001][auth-loading] end", {
+                  provider: "AuthProvider",
+                  event,
+                  reason: "user data hydration completed",
+                });
+                setLoading(false);
+              }
             });
           }, 0);
         } else {
