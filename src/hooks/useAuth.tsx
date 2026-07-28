@@ -24,9 +24,23 @@ interface ActionPermission {
   granted: boolean;
 }
 
+export type AuthState = "initializing" | "authenticated" | "recovering" | "unauthenticated";
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
+  /**
+   * Explicit lifecycle state (STAFLY-CTX-001):
+   *  - initializing: first boot, session not yet resolved
+   *  - authenticated: valid session in memory
+   *  - recovering: Supabase emitted SIGNED_OUT unexpectedly (e.g. after a
+   *    background token refresh) — we're probing whether it's a transient
+   *    hiccup or a definitive expiry. UI must preserve context but block
+   *    sensitive mutations.
+   *  - unauthenticated: no session (fresh visitor, controlled sign-out, or
+   *    confirmed expiry).
+   */
+  authState: AuthState;
   /** Highest-priority GLOBAL role (developer/owner only — from user_roles).
    *  Per-company roles live in companyRoles. Do NOT use this to gate admin
    *  access for a specific tenant. */
