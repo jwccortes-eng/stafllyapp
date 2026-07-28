@@ -485,6 +485,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 resetAuthState();
                 setUser(null);
                 setSession(null);
+                setAuthState("unauthenticated");
                 setLoading(false);
               }
               return;
@@ -499,12 +500,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (import.meta.env.DEV) console.error('Error restoring session:', err);
       if (mounted) {
         resetAuthState();
+        setAuthState("unauthenticated");
         setLoading(false);
       }
     });
 
     return () => {
       mounted = false;
+      if (recoveryTimerRef.current) {
+        window.clearTimeout(recoveryTimerRef.current);
+        recoveryTimerRef.current = null;
+      }
       subscription.unsubscribe();
     };
   }, [fetchUserData, resetAuthState]);
