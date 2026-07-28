@@ -426,6 +426,16 @@ export default function ShiftOperations() {
             <Badge variant={shift.status === "published" ? "default" : shift.status === "locked" ? "secondary" : "outline"} className="text-[10px]">
               {shift.status}
             </Badge>
+            {isRefreshing && (
+              <span
+                className="inline-flex items-center gap-1 rounded-full border border-border/40 bg-muted/60 px-2 py-0.5 text-[10px] text-muted-foreground"
+                aria-live="polite"
+                data-testid="shift-ops-refresh-chip"
+              >
+                <Loader2 className="h-2.5 w-2.5 animate-spin" />
+                Actualizando…
+              </span>
+            )}
             {(() => {
               const info = getShiftPhase(shift);
               return (
