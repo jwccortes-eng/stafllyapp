@@ -325,11 +325,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(nextSession?.user ?? null);
 
       if (nextSession?.user) {
+        hadAuthedSessionRef.current = true;
+        setAuthState("authenticated");
         await fetchUserData(nextSession.user.id);
         hydratedUserIdRef.current = nextSession.user.id;
       } else {
         resetAuthState();
         hydratedUserIdRef.current = null;
+        setAuthState("unauthenticated");
       }
 
       if (mounted) {
