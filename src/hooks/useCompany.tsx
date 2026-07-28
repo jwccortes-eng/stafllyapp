@@ -112,6 +112,11 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
 
   const fetchCompanies = useCallback(async () => {
     if (authLoading) {
+      console.info("[STAFLY-CTX-001][company-loading] start", {
+        provider: "CompanyProvider",
+        reason: "authLoading became true",
+        authState,
+      });
       setLoading(true);
       return;
     }
@@ -130,6 +135,11 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    console.info("[STAFLY-CTX-001][company-loading] start", {
+      provider: "CompanyProvider",
+      reason: "fetchCompanies started",
+      authState,
+    });
     setLoading(true);
 
     let list: Company[] = [];
@@ -221,8 +231,13 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
       }
     }
 
+    console.info("[STAFLY-CTX-001][company-loading] end", {
+      provider: "CompanyProvider",
+      reason: "fetchCompanies completed",
+      authState,
+    });
     setLoading(false);
-      logPostLoginDebug("company-provider-resolved", list, resolvedSelection, false);
+    logPostLoginDebug("company-provider-resolved", list, resolvedSelection, false);
   }, [authLoading, authState, user, role, canUseGlobalMode, manuallySelected, selectedCompanyId, logPostLoginDebug]);
 
   /** Switch company: update state + invalidate all cached queries */
