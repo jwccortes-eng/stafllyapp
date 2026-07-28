@@ -433,3 +433,218 @@ provisioning demo tenant (bloqueado, ver Sprint 52 report).
 - smoke mobile real en dispositivo físico;
 - adopción de `guard(...)` en al menos crear/editar shift + aprobar
   time entry (siguiente sprint).
+
+---
+
+## Operational Symptom Reopened — Full Refresh on Resume
+
+**Fecha:** 2026-07-28
+**Reportado por:** Owner (observación operativa)
+**Estado del bug:** ⛔ **Reabierto — síntoma operativo persiste**
+**Alcance de esta sección:** diagnóstico read-only. **No se implementa fix.**
+
+### 1. Síntoma reportado
+
+Al cambiar de pestaña / app / pantalla durante unos segundos y volver a
+Stafly, la pantalla se **reconstruye visiblemente**: aparecen skeletons,
+spinners y saltos de layout que interrumpen el trabajo (formularios de
+turno, edición, filtros, scroll). El fix per-tab de sessionStorage
+**preservó `selectedCompanyId`** pero **no eliminó** la reconstrucción
+visible.
+
+### 2. Método de investigación
+
+Auditoría estática del árbol de proveedores, listeners globales,
+service worker y hooks de datos. Se enumeraron todos los mecanismos
+capaces de producir un "refresh" visual y se confrontaron con el código
+real. No se ejecutó Playwright en esta pasada — la evidencia estática
+es suficiente para descartar unas causas y aislar otras.
+
+### 3. Enumeración forense — qué SÍ y qué NO ocurre
+
+| # | Mecanismo candidato | ¿Ocurre en resume? | Evidencia |
+|---|---------------------|--------------------|-----------|
+| 1 | **Hard reload del documento** | ❌ NO en rutas `/app/*` y `/portal/*` | Único `location.reload/replace` en resume vive en `src/pages/front-desk/FrontDesk.tsx:349-356` (`ensureFrontDeskBundleFresh`) y solo aplica a `/front-desk`. `src/lib/pwa-runtime.ts:88-92` llama `registration.update()` en `visibilitychange` pero **no** recarga; el reload real solo dispara si el usuario hace tap en el toast "Nueva versión". `src/main.tsx:80-93` recarga solo ante `vite:preloadError`. |
+| 2 | **Remount completo del árbol React** | ❌ NO estructuralmente | `src/App.tsx:238-466`: `QueryClientProvider`, `AuthProvider`, `CompanyProvider`, `BrowserRouter` no tienen `key` dinámico ni renderizado condicional por `authState`. El árbol es estable. |
+| 3 | **Redirect del Router / Index guard** | ⚠️ Posible en `/` | `src/pages/Index.tsx:51-96` navega en cuanto `authLoading`/`companyLoading` se estabilizan. Rutas `/app/*` no dependen de Index; su `AdminLayout` no re-navega en focus. |
+| 4 | **Cambio de `authState` que colapsa UI** | ⚠️ Parcial | `src/hooks/useAuth.tsx:404` en `SIGNED_IN` hace `setLoading(true)` + `fetchUserData()`. Supabase JS v2 emite `TOKEN_REFRESHED` (no `SIGNED_IN`) al renovar en foreground, y la rama `TOKEN_REFRESHED` (líneas 375-386) **sí** llama `setSession(nextSession)` en cada evento — provoca re-render de todo consumidor de `useAuth`, aunque el árbol no se desmonte. |
+| 5 | **Refetch masivo (React Query) al recuperar focus** | ✅ **SÍ — causa raíz principal** | `src/lib/query-client.ts:3`: `new QueryClient()` **sin opciones**. React Query v5 default = `refetchOnWindowFocus: true`, `staleTime: 0`. Cada `useQuery` del árbol se marca stale al perder foco y **refetchea al volver**. Componentes que gatean render por `isLoading`/`isPending` (o que usan `useQuery({ ... })` sin `placeholderData`) muestran skeleton → *lectura visual = "la pantalla se recargó"*. |
+| 6 | **Listeners `visibilitychange` / `focus` locales** | ✅ SÍ, focalizados | `src/pages/admin/ShiftOperations.tsx:188-198` refetchea `loadAll()` en focus (`setLoading(true)`). `src/pages/front-desk/FrontDesk.tsx:335-360` valida bundle. `src/lib/pwa-runtime.ts:88-92` (prod-only) `registration.update()`. |
+| 7 | **Service Worker / PWA update** | ❌ NO en preview | `src/lib/pwa-runtime.ts:36-60` bloquea registro en iframe/preview hosts. En producción: puede llegar `onNeedRefresh` → toast (no recarga sola). `src/main.tsx:37-67` desregistra SW residual en preview. No es la causa del síntoma en dev/preview reportado por el operador. |
+| 8 | **Descarte de pestaña por navegador** (bfcache) | ⚠️ Posible en móvil tras >30s | No hay `pageshow`/`pagehide` handlers. Si el navegador descarta y restaura, Supabase re-emite `INITIAL_SESSION`, que hoy dispara `setSession/setUser` de nuevo (líneas 372-386). |
+| 9 | **Error no controlado + recovery del ErrorBoundary** | ❌ No observado | `src/components/ErrorBoundary.tsx` no se activa sin error real. |
+| 10 | **Navegación causada por guards** | ❌ En `/app/*` | `CompanyRequiredGuard` no re-navega en focus una vez `selectedCompanyId` está resuelto (el fix per-tab ya lo asegura). |
+
+### 4. Cadena temporal más probable en un resume normal (`/app/shifts`)
+
+```text
+T+0.000  visibilitychange → hidden
+T+5.000  visibilitychange → visible
+T+5.001  navigator.serviceWorker (prod) → registration.update()  [pwa-runtime.ts:88]
+T+5.010  Supabase JS interno: token check
+         └─ si expirado: refresh → emite TOKEN_REFRESHED
+            └─ useAuth: setSession(new), setUser(new)   [useAuth.tsx:372-386]
+               └─ TODOS los consumidores de AuthContext re-renderizan
+T+5.020  React Query: focusManager marca stale todas las queries activas
+         └─ refetch en paralelo de: shifts, employees, roster, notifications,
+            company_modules, permissions, presence, coverage, etc.
+T+5.030  Componentes con `if (isLoading) return <Skeleton />` → parpadeo visible
+T+5.100  useCompany.useEffect [company_modules] se re-dispara si companyId
+         cambió de referencia (no debería, pero sensible a re-renders).
+T+5.500  primeras respuestas → skeletons se reemplazan
+T+6.500  última query → UI estable
+```
+
+**Lectura visual del operador:** ~1.5-2 s de reconstrucción = "se recargó".
+
+### 5. Diferenciación clara
+
+| Tipo de refresh | Ocurre aquí | Nota |
+|-----------------|-------------|------|
+| Hard reload | **NO** (salvo `/front-desk`, `/`) | — |
+| React remount | **NO** | árbol estable |
+| Route redirect | **NO** en `/app/*`, sí posible en `/` | Index guard |
+| Auth reset | **NO** (recovery preserva user), pero SÍ hay `setSession()` en cada TOKEN_REFRESHED → re-render sin remount | efecto secundario |
+| **Full-query refetch** | **SÍ — principal** | React Query defaults + `staleTime: 0` |
+| Browser tab discard | Posible en móvil tras suspensión larga | no instrumentado |
+
+### 6. Archivo / línea que provoca el síntoma dominante
+
+- `src/lib/query-client.ts:3` — `new QueryClient()` sin overrides.
+  Default v5: `refetchOnWindowFocus: true`, `staleTime: 0`,
+  `refetchOnReconnect: true`.
+- `src/hooks/useAuth.tsx:372-386` — `setSession(nextSession)` /
+  `setUser(nextSession?.user ?? null)` corren en **cada** evento
+  (`INITIAL_SESSION`, `TOKEN_REFRESHED`) incluso cuando el user id es
+  idéntico. Cada llamada asigna una nueva referencia de `session`,
+  invalidando `useMemo`/`useEffect` deps de consumidores.
+- `src/pages/admin/ShiftOperations.tsx:188-198` — refetch explícito en
+  foco (localizado, aceptable pero contribuye al síntoma en detalle
+  de turno).
+
+### 7. Impacto sobre estado local y formularios
+
+- **No se pierden** valores de `useState` locales: el árbol no se
+  desmonta.
+- Sí se pierden si el componente **gatea render por `isLoading`** de
+  una query que refetchea. Ej.: `if (isLoading) return <Skeleton/>` en
+  la vista del formulario → el formulario se desmonta durante el
+  refetch → al re-montar, `useState` inicial vacío.
+- Este es probablemente el bug que el usuario percibe como "se me
+  cerró el turno que estaba editando".
+
+### 8. Desktop vs Mobile
+
+- **Desktop:** síntoma visible pero recuperable en <2 s (Wi-Fi).
+- **Mobile:** empeora por (a) latencia mayor de refetch, (b) descarte
+  de pestaña por sistema tras backgrounding largo, (c) Supabase re-emite
+  `INITIAL_SESSION` al restaurar → dispara la misma cadena.
+- Instrumentación con `pageshow.persisted` NO existe todavía — se
+  requiere para confirmar bfcache en iOS.
+
+### 9. Causa raíz confirmada
+
+> El síntoma visible "toda la app se recargó al volver" **no es un
+> reload ni un remount**. Es la combinación de:
+>
+> 1. `refetchOnWindowFocus: true` global (React Query default) +
+>    `staleTime: 0` → toda query activa refetchea al recuperar foco.
+> 2. `setSession()` en cada evento `TOKEN_REFRESHED` sin diff de
+>    identidad → re-render en cascada de los consumidores de
+>    `AuthContext`.
+> 3. Componentes que renderizan `<Skeleton/>` mientras `isLoading`
+>    → desmontan formularios/tablas → pérdida de estado local.
+
+El fix per-tab de `sessionStorage` no atacaba esto — resolvía un bug
+distinto (colisión de `selectedCompanyId` entre pestañas).
+
+### 10. Fix mínimo recomendado (NO implementar todavía)
+
+Todos son de una línea o pocas líneas y **no** modifican dominio /
+RLS / payroll:
+
+**A. Tunear el QueryClient global** (`src/lib/query-client.ts`):
+
+```ts
+export const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,   // detener el "flash on resume"
+      staleTime: 30_000,             // ventana razonable
+      refetchOnReconnect: "always",  // sí queremos frescura al volver online
+      retry: 1,
+    },
+  },
+});
+```
+
+Impacto: elimina el 80-90% del síntoma en `/app/*` y `/portal/*`.
+Riesgo: datos podrían quedar levemente stale — mitigado con
+`staleTime: 30s` + invalidaciones explícitas ya presentes en cada
+mutación (patrón que ya usan `useShifts`, `useInvoices`, etc.).
+
+**B. Idempotencia de `setSession` en `useAuth`**
+(`src/hooks/useAuth.tsx:372-386`): comparar `nextSession?.access_token`
+con el actual y hacer `setSession` **solo si cambió**. Evita re-render
+en cascada por refresh silencioso.
+
+**C. Refetch focalizado en lugar de global** en
+`ShiftOperations.tsx:188-198`: usar `queryClient.invalidateQueries`
+sobre las keys específicas del turno en vez de `loadAll()` con
+`setLoading(true)`.
+
+**D. Instrumentación opcional (feature flag `debug=ctx001`):** logger
+temporal de `visibilitychange` / `pageshow.persisted` / mount /
+unmount de providers con `navigationSessionId`, para cerrar la
+verificación con evidencia de runtime real (Playwright + móvil físico).
+
+### 11. Riesgos del fix propuesto
+
+- **A** → si algún componente dependía implícitamente del refetch en
+  foco para reflejar cambios de otro operador, quedará stale hasta la
+  próxima invalidación. Mitigación: los flujos críticos ya invalidan
+  en la mutación; auditar `useLivePresence`, `useTodayOperations`,
+  `useShiftPresence` — pueden querer `refetchInterval` explícito.
+- **B** → un `setSession` omitido en un edge case de refresh podría
+  dejar el `access_token` viejo en memoria. Mitigación: comparar por
+  `access_token` (que rota) y no por `user.id`.
+- **C** → si `loadAll` traía datos fuera del cache de RQ, hay que
+  migrar a `useQuery` antes.
+
+### 12. QA necesario después del fix
+
+1. Abrir `/app/shifts`, cambiar de pestaña 5 s x 10, confirmar sin
+   parpadeo de skeleton.
+2. Abrir "Crear turno", cambiar de pestaña 30 s, volver: formulario
+   intacto.
+3. Editar shift, ir a otra app 2 min, volver: sin remount, sin toast
+   de sesión expirada.
+4. Simular token refresh forzado (`supabase.auth.refreshSession()`
+   desde consola): sin flash visual.
+5. Confirmar que mutaciones (crear/editar/aprobar) siguen viendo datos
+   frescos post-invalidación.
+6. Móvil real (iOS Safari, Chrome Android): backgrounding 5 min,
+   confirmar recuperación sin reconstrucción.
+7. Offline → online: confirmar que sí refetchea (queremos ese refetch).
+
+### 13. Confirmaciones de seguridad
+
+- ❌ No se modificó RLS ni policies.
+- ❌ No se modificaron migrations, tenants, memberships, payroll,
+  `time_entries`, `scheduled_shifts`, `shift_assignments`, payments,
+  bookings, chat, documents, edge functions, reconciliation, imports
+  ni datos reales.
+- ❌ No se implementó ningún fix — esta sección es diagnóstica.
+- ❌ No se desactivó `refetchOnWindowFocus` (recomendación pendiente
+  de aprobación).
+- ❌ No se agregaron reloads, no se limpió storage.
+
+### 14. Estado del bug
+
+**`Reabierto — síntoma operativo persiste`**
+
+Mantener este estado hasta que:
+
+1. Se apruebe e implemente el fix A (+ opcional B, C).
+2. Se ejecute el QA de la sección 12 en desktop + móvil real.
+3. El operador confirme que el resume ya no se percibe como refresh.
