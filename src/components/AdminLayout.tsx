@@ -41,15 +41,17 @@ function MobilePageTitle({ items }: { items: NavItem[] }) {
 const SidebarContext = createContext<{ collapsed: boolean; setCollapsed: (v: boolean) => void }>({ collapsed: false, setCollapsed: () => {} });
 
 function AdminLayoutFullScreenLoader({ authLoading, companyLoading }: { authLoading: boolean; companyLoading: boolean }) {
-  const startedAtRef = useRef(performance.now());
+  const startedAtRef = useRef<number | null>(null);
 
   useEffect(() => {
+    const startedAt = performance.now();
+    startedAtRef.current = startedAt;
     console.info("[STAFLY-CTX-001][full-screen-loading] start", {
       component: "AdminLayoutFullScreenLoader",
       parent: "AdminLayout",
       authLoading,
       companyLoading,
-      startedAt: startedAtRef.current,
+      startedAt,
     });
     return () => {
       console.info("[STAFLY-CTX-001][full-screen-loading] end", {
@@ -57,7 +59,7 @@ function AdminLayoutFullScreenLoader({ authLoading, companyLoading }: { authLoad
         parent: "AdminLayout",
         authLoadingAtStart: authLoading,
         companyLoadingAtStart: companyLoading,
-        durationMs: Math.round(performance.now() - startedAtRef.current),
+        durationMs: Math.round(performance.now() - (startedAtRef.current ?? startedAt)),
       });
     };
   }, [authLoading, companyLoading]);
