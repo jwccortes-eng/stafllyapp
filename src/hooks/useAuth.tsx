@@ -8,6 +8,7 @@ import {
   clearSessionExpired,
 } from "@/lib/auth-session";
 import { publishAuthState } from "@/lib/auth-mutation-gate";
+import { logMount, logUnmount, documentInstanceId, appInstanceId } from "@/lib/ctx001-forensics";
 
 type AppRole = 'developer' | 'owner' | 'company_owner' | 'admin' | 'manager' | 'supervisor' | 'employee' | null;
 type ActiveMode = 'admin' | 'employee';
