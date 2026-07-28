@@ -100,6 +100,7 @@ const GLOBAL_CROSS_TENANT_ROLES = new Set(['developer', 'owner', 'founder']);
 const AuthContext = createContext<AuthContextType>({
   user: null,
   session: null,
+  authState: "initializing",
   role: null,
   allRoles: new Set(),
   activeMode: 'admin',
@@ -126,6 +127,7 @@ const AuthContext = createContext<AuthContextType>({
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
+  const [authState, setAuthState] = useState<AuthState>("initializing");
   const [role, setRole] = useState<AppRole>(null);
   const [allRoles, setAllRoles] = useState<Set<string>>(new Set());
   const [companyRoles, setCompanyRoles] = useState<Record<string, string>>({});
