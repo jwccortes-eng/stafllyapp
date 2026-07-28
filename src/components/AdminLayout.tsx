@@ -23,6 +23,7 @@ import { AdminProductSwitcher } from "@/components/admin/AdminProductSwitcher";
 
 import { safeLocalStorage } from "@/lib/safe-storage";
 import { saveIntendedRoute } from "@/lib/auth-session";
+import { logMount, logUnmount } from "@/lib/ctx001-forensics";
 
 function MobilePageTitle({ items }: { items: NavItem[] }) {
   const location = useLocation();
