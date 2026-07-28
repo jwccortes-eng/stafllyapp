@@ -621,7 +621,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider value={{
-      user, session, role, allRoles, companyRoles,
+      user, session, authState, role, allRoles, companyRoles,
       getRoleForCompany, canAccessAdminForCompany, canAccessPortalForCompany,
       activeMode, setActiveMode,
       canAccessAdmin, canAccessPortal,
@@ -630,7 +630,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       resolveEmployeeForCompany,
     }}>
       {children}
+      <SessionRecoveringOverlay authState={authState} />
     </AuthContext.Provider>
+  );
+}
+
+/** Minimal, non-blocking "Reconectando sesión…" indicator. */
+function SessionRecoveringOverlay({ authState }: { authState: AuthState }) {
+  if (authState !== "recovering") return null;
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className="fixed bottom-4 right-4 z-[9999] rounded-md border border-border bg-background/95 px-3 py-2 text-xs text-foreground shadow-md backdrop-blur"
+    >
+      <span className="inline-flex items-center gap-2">
+        <span className="h-2 w-2 animate-pulse rounded-full bg-primary" />
+        Reconectando sesión…
+      </span>
+    </div>
   );
 }
 
