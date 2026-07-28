@@ -131,6 +131,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [authState, setAuthState] = useState<AuthState>("initializing");
 
+  // STAFLY-CTX-001 forensics: track AuthProvider mount identity.
+  useEffect(() => {
+    const id = logMount("AuthProvider");
+    return () => logUnmount("AuthProvider", id);
+  }, []);
+
   // Publish to the module-scope mutation gate so non-React callers
   // (guardMutation / assertAuthReady) see the same lifecycle state as
   // hooks and components. STAFLY-CTX-001.
