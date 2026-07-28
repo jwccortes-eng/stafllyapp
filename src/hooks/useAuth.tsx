@@ -369,8 +369,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           event,
         });
 
-        setSession(nextSession);
-        setUser(nextSession?.user ?? null);
+        // STAFLY-CTX-001 — Idempotencia de sesión.
+        // Comparamos identidad de la sesión antes de invocar setState. Si la
+        // sesión nueva es materialmente equivalente (mismo user.id y mismo
+        // access_token) no propagamos un re-render a los consumidores de
+        // AuthContext. Esto es crítico para TOKEN_REFRESHED, que en Supabase
+        // v2 puede dispararse en cada foco/refresh silencioso incluso cuando
+        // el token vigente sigue siendo válido.
+        //
+        // Campos comparados y por qué:
+        //  - user.id: única forma segura de detectar un cambio de usuario.
+        //  - access_token: refleja rotación real del JWT.
+        // NO comparamos expires_at porque cambia con cada refresh silencioso
+        // sin implicar un cambio de identidad de sesión.
+        setSession((prev) => {
+          const same =
+            prev?.user?.id === nextSession?.user?.id &&
+            prev?.access_token === nextSession?.access_token;
+          return same ? prev : nextSession;
+        });
+        setUser((prev) => {
+          const same = prev?.id === nextSession?.user?.id;
+          return same ? prev : (nextSession?.user ?? null);
+        });
 
         if (event === "INITIAL_SESSION" || event === "TOKEN_REFRESHED") {
           if (event === "INITIAL_SESSION" && !nextSession) {
