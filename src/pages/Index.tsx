@@ -17,6 +17,7 @@ export default function Index() {
   const {
     user,
     session,
+    authState,
     loading: authLoading,
     canAccessAdmin,
     canAccessPortal,
@@ -48,7 +49,8 @@ export default function Index() {
   }, [navigate]);
 
   useEffect(() => {
-    if (authLoading || companyLoading) return;
+    // STAFLY-CTX-001: never redirect while auth is probing recovery.
+    if (authLoading || companyLoading || authState === "recovering" || authState === "initializing") return;
 
     const redirectTarget = !user
       ? "/login"
