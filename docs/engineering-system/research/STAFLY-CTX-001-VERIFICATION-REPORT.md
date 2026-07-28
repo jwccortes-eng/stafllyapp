@@ -648,3 +648,68 @@ Mantener este estado hasta que:
 1. Se apruebe e implemente el fix A (+ opcional B, C).
 2. Se ejecute el QA de la sección 12 en desktop + móvil real.
 3. El operador confirme que el resume ya no se percibe como refresh.
+
+---
+
+## Operational Resume Fix — Implementation and Runtime Validation (2026-07-28)
+
+### Archivos modificados
+- `src/pages/admin/ShiftOperations.tsx` — refetch de focus/visibilitychange reemplazado por refresh en background coalescido.
+- `src/hooks/useAuth.tsx` — `setSession`/`setUser` idempotentes por `user.id` + `access_token`.
+- `src/lib/query-client.ts` — defaults conservadores (`staleTime: 30_000`, `retry: 1`, `refetchOnReconnect: "always"`).
+
+### ShiftOperations — listener ajustado
+- Ambos eventos (`focus`, `visibilitychange`) se coalescen en una ventana de 1.5s.
+- Rate-limit adicional: no se ejecuta más de una vez cada 10s.
+- `loadAll({ background: true })` NO llama `setLoading(true)`; usa `setIsRefreshing(true)` que solo renderiza un chip discreto "Actualizando…" en el header.
+- Formulario, filtros, scroll y Company Context permanecen intactos porque el árbol no se desmonta.
+
+### Auth idempotency
+- Se compara `prev.user.id === next.user.id && prev.access_token === next.access_token`.
+- Si son equivalentes, `setSession`/`setUser` devuelven la referencia anterior → React no re-renderiza consumidores.
+- SIGNED_IN, SIGNED_OUT, expiración definitiva y recovery quedan intactos.
+- No se logean tokens ni se almacenan manualmente.
+
+### Query Client
+- Cambio conservador: staleTime 30s. NO se desactivó `refetchOnWindowFocus` global.
+- Queries operativas ya con staleTime propio (Dashboard, employeeRoster, companyConfig) siguen funcionando igual.
+
+### Requests antes / después (ShiftOperations, foco recuperado)
+- Antes: 9 requests (7 en paralelo + time_entries count + closeout) por cada evento `focus` **y** cada `visibilitychange` → hasta 18 requests por retorno de pestaña.
+- Después: 9 requests como máximo cada 10s, coalescidos.
+
+### Loading states clasificados
+- `loading` → **initial loading** (única fuente de skeleton full-screen).
+- `isRefreshing` → **background refresh** (chip discreto).
+- `savingNote` → **mutation pending**.
+- No hay uso indebido de `isFetching` como carga inicial.
+
+### QA desktop — Escenario A
+1. `/app/shift-ops?id=<id>` cargado. Formulario "Nueva nota" con texto sin enviar.
+2. Cambio a otra pestaña 5s → regreso. ✅ Sin skeleton full-screen. ✅ Texto de la nota preservado. ✅ Chip "Actualizando…" visible ~1s.
+3. 30s fuera → regreso. ✅ Idéntico resultado.
+4. 10 cambios rápidos (<10s cada uno) → solo 1 request de refresh (rate-limit).
+5. Company Context no cambia; ruta no cambia; sin redirect.
+
+### QA mobile
+NO VALIDADO EN MOBILE REAL. Solo viewport 375px vía Playwright: comportamiento equivalente al desktop.
+
+### Escenario B — Auth
+- Simulación `TOKEN_REFRESHED` con misma sesión → `setSession` devuelve prev → sin re-render global (verificado por ausencia de logs de consumidores).
+- Cambio real de user.id → sí se propaga.
+- SIGNED_OUT definitivo → resetAuthState + unauthenticated, sin cambios.
+
+### Escenario C — Otras pantallas
+- Dashboard, Events, Daily Operations, Shifts, formulario de crear turno: sin listener de focus custom; el fix de QueryClient (staleTime 30s) atenúa el flicker residual pero no lo elimina en todos los casos. Fuera de alcance de este ciclo.
+
+### Riesgos residuales
+- Pantallas fuera de ShiftOperations aún pueden mostrar spinners al recuperar foco si sus queries están stale >30s.
+- El chip "Actualizando…" no propaga errores del refresh — si el fetch falla, se mantiene el snapshot anterior sin toast.
+- Mutation gate ya existente (ciclo previo) sigue activo; no se tocó.
+
+### Seguridad
+- Cero cambios en RLS, migrations, tenants, payroll, time_entries, scheduled_shifts, shift_assignments, edge functions o production data.
+- Payroll continúa usando horas reales de `time_entries`.
+
+### Estado recomendado del bug
+`Reabierto` — pendiente confirmación visual del usuario en producción/preview.
