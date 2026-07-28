@@ -148,6 +148,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Track whether we ever observed an authenticated session in this tab,
   // so we only flag SIGNED_OUT as "expired" when there was something to lose.
   const hadAuthedSessionRef = useRef<boolean>(false);
+  const recoveryTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     activeModeRef.current = activeMode;
