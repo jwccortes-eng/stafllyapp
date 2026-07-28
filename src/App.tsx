@@ -242,6 +242,7 @@ function App() {
     const id = logMount("App");
     return () => logUnmount("App", id);
   }, []);
+  return (
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
     <LanguageProvider>
     <QueryClientProvider client={queryClient}>
