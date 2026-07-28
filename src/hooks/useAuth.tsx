@@ -8,6 +8,7 @@ import {
   clearSessionExpired,
 } from "@/lib/auth-session";
 import { publishAuthState } from "@/lib/auth-mutation-gate";
+import { logMount, logUnmount, documentInstanceId, appInstanceId } from "@/lib/ctx001-forensics";
 
 type AppRole = 'developer' | 'owner' | 'company_owner' | 'admin' | 'manager' | 'supervisor' | 'employee' | null;
 type ActiveMode = 'admin' | 'employee';
@@ -129,6 +130,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [authState, setAuthState] = useState<AuthState>("initializing");
+
+  // STAFLY-CTX-001 forensics: track AuthProvider mount identity.
+  useEffect(() => {
+    const id = logMount("AuthProvider");
+    return () => logUnmount("AuthProvider", id);
+  }, []);
 
   // Publish to the module-scope mutation gate so non-React callers
   // (guardMutation / assertAuthReady) see the same lifecycle state as
@@ -350,6 +357,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, nextSession) => {
         if (!mounted) return;
+
+        console.info("[STAFLY-CTX-001][auth-event]", {
+          event,
+          documentInstanceId,
+          appInstanceId,
+          authStatePrev: authState,
+          hasSession: !!nextSession,
+          userIdSame: nextSession?.user?.id === hydratedUserIdRef.current,
+          hydratedUserIdSet: !!hydratedUserIdRef.current,
+          visibilityState: typeof document !== "undefined" ? document.visibilityState : null,
+          pathname: typeof window !== "undefined" ? window.location.pathname : null,
+          ts: Date.now(),
+        });
 
         console.info("[post-login-debug]", {
           step: "use-auth-state-change",

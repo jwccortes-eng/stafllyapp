@@ -2,6 +2,7 @@ import { useState, useEffect, createContext, useContext, ReactNode, useCallback 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { queryClient } from "@/lib/query-client";
+import { logMount, logUnmount } from "@/lib/ctx001-forensics";
 
 import {
   readSelectedCompanyForTab,
@@ -76,6 +77,12 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
   const [activeModules, setActiveModules] = useState<Set<string>>(new Set());
   /** Tracks whether the user has manually switched company in this session */
   const [manuallySelected, setManuallySelected] = useState(false);
+
+  useEffect(() => {
+    const id = logMount("CompanyProvider");
+    return () => logUnmount("CompanyProvider", id);
+  }, []);
+
 
   const canUseGlobalMode = !!role && GLOBAL_MODE_ROLES.has(role);
   const isGlobalMode = canUseGlobalMode && selectedCompanyId === null;

@@ -234,7 +234,14 @@ function RootRoute() {
   return <PublicLanding />;
 }
 
+import { useEffect } from "react";
+import { logMount, logUnmount } from "@/lib/ctx001-forensics";
+
 function App() {
+  useEffect(() => {
+    const id = logMount("App");
+    return () => logUnmount("App", id);
+  }, []);
   return (
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
     <LanguageProvider>

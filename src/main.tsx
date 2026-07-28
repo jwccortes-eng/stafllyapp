@@ -3,6 +3,9 @@ import { HelmetProvider } from "react-helmet-async";
 import App from "./App.tsx";
 import "./index.css";
 import { registerPwa, APP_VERSION, APP_BUILD_TIME } from "./lib/pwa-runtime";
+import { installCtx001Forensics, documentInstanceId, appInstanceId } from "./lib/ctx001-forensics";
+
+installCtx001Forensics();
 
 /**
  * Build stamp — visible in EVERY browser, every host (preview, prod, incognito).
