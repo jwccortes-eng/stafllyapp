@@ -193,3 +193,108 @@ Los `console.info('[post-login-debug]')` y `console.info('[auth-role-debug]')` *
 ---
 
 Fin del reporte. No se implementó fix. No se declaró "corregido". No se cambió estado del tablero.
+
+---
+
+## Post-Implementation Audit & Regression QA (2026-07-28)
+
+**State transition:** `Corregido` → **`En validación`** (NOT `Validado` — mutation-gating and full mobile QA outstanding).
+
+### 1. Files modified (this fix cycle)
+
+| File | Change |
+|---|---|
+| `src/lib/auth-session.ts` | + `readSelectedCompanyForTab`, `writeSelectedCompanyForTab`, `clearSelectedCompanyForTab`, `migrateLegacySelectedCompany`. Keys: `stafly:selectedCompanyId:<uid>` (sessionStorage), `stafly:selectedCompanyId:migrated:<uid>` (sessionStorage flag), legacy `selectedCompanyId` (localStorage, deleted on first read). |
+| `src/hooks/useAuth.tsx` | + `AuthState` type (`initializing \| authenticated \| recovering \| unauthenticated`). + `recoveryTimerRef`. + bounded probe on unexpected `SIGNED_OUT`. + `SessionRecoveringOverlay` ("Reconectando sesión…"). `signOut()` clears probe and sets `unauthenticated`. |
+| `src/hooks/useCompany.tsx` | Uses per-tab helpers instead of `safeLocalStorage.'selectedCompanyId'`. Early-returns from `fetchCompanies` when `authState === "recovering"` (preserves context, no network). Migrates legacy key once per user via `migrateLegacySelectedCompany`. |
+| `src/pages/Index.tsx` | Redirect guard also waits on `authState === "recovering" \| "initializing"` (no premature `/login`). |
+
+**Not modified:** RLS, migrations, edge functions, payroll, time_entries, shift_assignments, scheduled_shifts, payments, bookings, chat, documents, reconciliation, imports, production data. Confirmed with `git status` / diff scope.
+
+### 2. Probe / retry logic — bounds
+
+- Trigger: `SIGNED_OUT` + `hadAuthedSessionRef=true` + `!userInitiated`.
+- Initial delay: **800 ms**, then `runProbe(3)`.
+- Each probe calls `supabase.auth.getSession()`:
+  - Session present → `authState = authenticated`, resume. **No redirect. No reload.**
+  - No session AND `navigator.onLine === false` AND attemptsLeft > 0 → backoff **2 s**, decrement.
+  - Otherwise → definitive expiry: `markSessionExpired`, `clearSupabaseAuthStorage`, `resetAuthState`, `authState = unauthenticated`. Falls through to normal login redirect path.
+- **Max total time in `recovering`:** ~800 ms + 3 × 2 s = **≤ 6.8 s**. Bounded. No infinite loop.
+- `signOut()` and effect cleanup both `clearTimeout` the probe.
+
+### 3. Security review
+
+| Control | Status | Evidence |
+|---|---|---|
+| No indefinite ignore of `SIGNED_OUT` | ✅ | Bounded probe ≤6.8s, then hard logout. |
+| No admin access retained without valid session | ⚠️ Partial | `authState = recovering` preserves in-memory `role`/`session` (by design, so UI doesn't flash). RLS on the server remains the final authority — any request during the ~6.8s window will fail server-side if the JWT is truly invalid. **No client-side mutation gate was added.** See Residual Risks §11. |
+| No manual token storage | ✅ | Only `sessionStorage` writes are companyId + migration flag. Tokens stay in Supabase's own `localStorage` key. |
+| sessionStorage contains only non-sensitive prefs | ✅ | UUID + `"1"` flag. Grepped. |
+| Restored company validated against memberships | ✅ | `migrateLegacySelectedCompany(uid, validIds)` returns `null` if legacy id not in fetched list. `useCompany.fetchCompanies` re-validates on every load (`list.some(c=>c.id===currentSelection)`). |
+| RLS remains final authority | ✅ | Not touched. |
+| `recovering` has timeout | ✅ | See §2. |
+| No infinite recovery loop | ✅ | `attemptsLeft` monotonically decreases; single online probe. |
+| No full SPA reload during recovery | ✅ | No `window.location.reload/href` in probe path. `signOut()` still does `href="/"` — that is user-initiated. |
+| No other-tenant data shown mid-transition | ✅ | `useCompany` early-returns from `fetchCompanies` during `recovering`, so `companies`/`selectedCompanyId` don't churn. React Query cache is not proactively purged; keys already include `selectedCompanyId` in consumers audited previously (MRI-001). |
+
+### 4. Runtime QA — Desktop (Playwright, headless Chromium, injected session)
+
+Reproducibles under `/tmp/browser/ctx001-qa/`.
+
+| # | Scenario | Result |
+|---|---|---|
+| 1 | Boot Tab A authenticated | ✅ `authState=authenticated`, no legacy key present after boot (`localStorage.selectedCompanyId=null`), migration flag written. |
+| 4/5/6 | 10 rapid tab-switches (visibilitychange storm) | ✅ Storage snapshot identical before/after; no `SIGNED_OUT` fired; no context churn. |
+| 10 | Offline detection during probe | ✅ static: `navigator.onLine === false` branch backs off; retries bounded. Not exercised in headless run (browser reports `online`). |
+| 11/12 | Two tabs with same user | ✅ Each tab has its own sessionStorage; per-tab keys observed. |
+| 13/14 | Manual sessionStorage mutation in Tab A | ✅ Tab B's `stafly:selectedCompanyId:*` values unchanged (`ISOLATION_OK: True`). |
+| 18 | Invalid companyId in sessionStorage | ✅ `fetchCompanies` filters via `list.some(...)`; falls back to first accessible company (non-global user) or `null` (global). |
+| 19 | Legacy key with valid UUID | ✅ static: `migrateLegacySelectedCompany` returns the id when present in `validIds`, promotes to sessionStorage, deletes legacy key. |
+| 20 | Legacy key with invalid UUID | ✅ runtime-verified: seeded `legacy-invalid-uuid`; after boot, `localStorage.selectedCompanyId=null`, no session key with that value. |
+| 23 | Global Mode (developer user) | ✅ No accidental company activation; `selectedCompanyId=null` preserved. |
+
+**Not exercised in this pass (require additional harness / real Supabase failure injection):**
+- 2, 8, 9: forced-refresh-failure ingress into `recovering` — the probe path is covered by static reasoning + prior verification report (CR-A). Not re-triggered in this run.
+- 15: cross-tab logout propagation — relies on Supabase's own multi-tab sync (`storage` event on the auth token). **Not explicitly wired by this fix.**
+- 16, 17, 21: user removed / role change / account switch — need multi-user fixtures.
+- 24, 25: form-open-during-recovering — no explicit mutation gate exists (see §11).
+
+### 5. Mobile QA
+
+**NO VALIDADO EN MOBILE REAL.** Capacitor / iOS Safari / Android WebView background-refresh semantics not exercised in this pass.
+
+### 6. Automated tests
+
+**No new unit or integration tests were added in this cycle.** This is a residual gap. Recommended additions:
+- `src/lib/auth-session.test.ts`: legacy migration (valid / invalid / already-migrated / no user).
+- `src/hooks/useAuth.test.tsx`: `SIGNED_OUT` → `recovering` → session-returns → `authenticated`; `SIGNED_OUT` → probe exhaustion → `unauthenticated`.
+- `src/hooks/useCompany.test.tsx`: `recovering` short-circuits `fetchCompanies`; invalid stored id rejected.
+
+### 7. Evidence summary
+
+- **Per-tab context:** `stafly:selectedCompanyId:<uid>` in `sessionStorage`; browser guarantees isolation. Snapshot from Playwright confirms Tab A/B do not share sessionStorage entries.
+- **Legacy migration:** localStorage `selectedCompanyId` deleted on first boot per user; sessionStorage flag `stafly:selectedCompanyId:migrated:<uid>=1` prevents re-migration.
+- **Recovering preservation:** `useCompany` skips fetch; `Index` skips redirect; overlay renders. Verified statically by grep + inspection.
+- **Definitive logout:** probe exhaustion path calls `clearSupabaseAuthStorage()` + `markSessionExpired("session_not_found")` + `setAuthState("unauthenticated")`. `signOut()` additionally clears PWA caches.
+
+### 8. Residual risks
+
+1. **No client-side mutation gate on `authState !== "authenticated"`.** During the ≤6.8s `recovering` window, any user-triggered mutation will hit the network; RLS + JWT validation will reject stale tokens, but the UX is a raw server error rather than a friendly "reconectando" block. **Fix in a follow-up:** wrap sensitive `useMutation` calls (payroll close, timeclock edits, shift publish) with an `assertAuthReady()` helper.
+2. **Cross-tab logout sync not explicitly wired.** Relies on Supabase's own multi-tab `storage` event to propagate `SIGNED_OUT`. Not re-tested in this cycle.
+3. **No unit tests added.** State machine and migration are validated only via static analysis + one Playwright scenario.
+4. **Mobile not validated.**
+5. **`refetchOnWindowFocus` on QueryClient** still defaults to true (audit finding from ECOSYSTEM-AUDIT-2026-07 §5). Not in scope for this fix, but reduces the value of `recovering`-preservation because focus re-triggers query refetches independently.
+
+### 9. Recommendation
+
+**Estado: `En validación`.** Do not close as `Validado` until:
+- [ ] Mutation gate helper implemented and applied to at least payroll/timeclock/shift publish.
+- [ ] Unit tests added per §6.
+- [ ] One mobile smoke test (Capacitor build or iOS Safari) executed.
+- [ ] Real forced-refresh-failure reproduced end-to-end (not just probed statically).
+
+If regression appears in QA before those items land → **`Reabierto`**.
+
+### 10. Scope confirmation
+
+RLS, migrations, tenants, memberships schema, payroll, time_entries, shift_assignments, scheduled_shifts, payments, bookings, chat, documents, edge functions, reconciliation, imports and production data — **not modified**. Verified via file-level diff scope.
