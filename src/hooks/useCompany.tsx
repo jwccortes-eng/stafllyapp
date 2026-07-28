@@ -2,6 +2,7 @@ import { useState, useEffect, createContext, useContext, ReactNode, useCallback 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { queryClient } from "@/lib/query-client";
+import { logMount, logUnmount } from "@/lib/ctx001-forensics";
 
 import {
   readSelectedCompanyForTab,
