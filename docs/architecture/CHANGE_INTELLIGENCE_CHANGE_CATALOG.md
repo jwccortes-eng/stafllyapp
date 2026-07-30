@@ -405,4 +405,32 @@ Un tipo de cambio que no supere el checklist no se incorpora.
 
 ---
 
-*Catálogo v1.0 — 27 tipos de cambio en 6 dominios. Extensible. Sin implementación asociada.*
+---
+
+## Anexo D3 — Resolución de audiencia `manager_directo`
+
+Toda fila del catálogo que declare `manager_directo` como audiencia se resuelve
+**exclusivamente** con `DirectManagerSet(shift)` (ver D3 en `CHANGE_INTELLIGENCE_DECISIONS_F0.md`):
+relación explícita persona ↔ turno, con precedencia estricta
+`shift_explicit → location_responsibility → client_responsibility →
+operational_unit_responsibility → duty_manager → unresolved`, sin mezclar niveles.
+
+El rol genérico `manager` **no** es criterio de audiencia en ninguna fila del catálogo.
+
+### Audiencia por familia de cambio (normativa)
+
+| Familia | Destinatarios | Nunca |
+| --- | --- | --- |
+| Cambio de empleado (reemplazo/alta/baja) | trabajador que sale, trabajador que entra, supervisor del turno si existe, `manager_directo` resuelto | demás trabajadores, todos los managers, admins sin responsabilidad, payroll salvo consecuencia real |
+| Hora / fecha / dirección | trabajadores asignados, supervisor del turno, `manager_directo` solo si la fila lo marca relevante | ampliación jerárquica |
+| Nota interna | solo roles expresamente autorizados en la fila | trabajadores, siempre |
+
+### Deduplicación
+
+Si una persona califica como supervisor y como `manager_directo` (o por varias
+relaciones), se emite **una sola** comunicación consolidada usando `deduplication_key`.
+
+---
+
+*Catálogo v1.0 — 27 tipos de cambio en 6 dominios. Anexo D3 incorporado. Sin implementación asociada.*
+

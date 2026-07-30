@@ -137,3 +137,48 @@ de "imposibilidad de envío accidental" sea estructural, no disciplinario.
 
 **Dependencia nueva (D11):** definir `materiality` por campo para cada `changeType`
 del catálogo antes de codificar el primer adapter.
+
+---
+
+## 8. D3 en el contrato — `relation` es evidencia, no rol
+
+El motor sigue sin conocer Turnos. La regla D3 se expresa en el sobre estándar:
+el **adapter del dominio** resuelve las relaciones explícitas y las declara; el motor
+solo aplica precedencia genérica sobre ellas.
+
+```ts
+interface AudienceRef {
+  partyId: string;
+  partyType: 'worker' | 'manager' | 'client' | 'admin';
+  relation: 'assigned' | 'candidate' | 'owner' | 'supervisor' | 'observer'
+          | 'responsible';                 // manager con responsabilidad explícita
+  relationshipType?:                        // evidencia D3 (solo con relation='responsible')
+    | 'shift_explicit'
+    | 'location_responsibility'
+    | 'client_responsibility'
+    | 'operational_unit_responsibility'
+    | 'duty_manager';
+  resolutionPriority?: 1 | 2 | 3 | 4 | 5;   // menor = mayor precedencia
+  sourceObjectId?: string;                  // objeto que prueba la relación
+  deduplicationKey: string;                 // colapsa multi-rol en una comunicación
+  reachableChannels: Channel[];
+}
+```
+
+**Regla genérica del motor (L3):** entre los `AudienceRef` con `relation='responsible'`,
+conserva únicamente los de **menor `resolutionPriority` presente** y descarta el resto.
+Si no hay ninguno, emite `managerResolution.status = 'unresolved'` y continúa con las
+demás relaciones (`assigned`, `supervisor`).
+
+**Prohibiciones del contrato:**
+- Un adapter **no** puede emitir `relation='responsible'` derivado del rol genérico
+  `manager`, de la membresía al tenant ni de la autoría del cambio. Evento sin
+  `relationshipType` y `sourceObjectId` → rechazado por esquema.
+- El motor **no** amplía audiencia por jerarquía: no existe input que lo permita.
+
+**Criterios añadidos:**
+- **CA-ISO-7:** un evento con `relation='responsible'` sin evidencia (`relationshipType`
+  + `sourceObjectId`) es inválido y se rechaza.
+- **CA-ISO-8:** la selección por precedencia es pura y determinista; los casos
+  CA-D3-01…10 se expresan como fixtures del sobre, sin dependencias de dominio.
+
