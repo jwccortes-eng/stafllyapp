@@ -1,259 +1,139 @@
+# F1 — Change Intelligence · Modo Observación · Plan técnico final
 
-# Ecosystem Identity Checkpoint (EIC) — Plan técnico
-
-> Objetivo: dejar de parchar caso por caso. Un único **checkpoint reutilizable** que toda creación/activación de worker debe atravesar, en cualquier company, hoy y futura. Tenant-safe, sin tocar payroll, sin copiar documentos.
-
----
-
-## 1. Root cause real
-
-**Por qué MSS no pasó por identity checkpoint:**
-- Smart Identity Resolution **existe pero solo vive dentro de un edge function**: `supabase/functions/resolve-applicant-identity/index.ts`. Está cableado únicamente al flujo `/apply/:slug` (applications públicas).
-- Los **demás flujos de creación** llaman directo a `supabase.from("employees").insert(...)` o a importadores bulk sin invocar ese resolver.
-- Los helpers existentes (`findExistingEmployeeInCompany` en `src/lib/employee-duplicates.ts`, `computeDuplicateHints` en `src/lib/employee-duplicate-hints.ts`) son **intra-company únicamente** (filtran `.eq("company_id", X)`). No miran ecosistema.
-- MSS fue cargado vía import bulk → bypass total.
-
-**Flujos que SÍ usan algún identity matching hoy:**
-| Flujo | Qué usa | Scope |
-|---|---|---|
-| `/apply/:slug` (public application) | `resolve-applicant-identity` edge fn | Intra-company (filtra por `company_id`) |
-| Quick Add en EmployeeCombobox | `findExistingEmployeeInCompany` | Intra-company |
-| Assignment selector | `computeDuplicateHints` | Intra-company, solo hint visual |
-| Onboarding wizard | `resolve-applicant-identity` | Intra-company |
-
-**Flujos que NO lo usan:**
-- Full form de creación de employee (`/app/employees` → "Add worker")
-- Bulk imports (`import-inactive-employees`, `bulk-import-shifts`, MSS roster load)
-- `invite-admin`, `send-employee-credentials`
-- Referrals (`referral-submit`)
-- Migration sync (`migration-employee-sync`)
-- Cualquier `INSERT INTO employees` directo desde UI admin
-
-**Gap exacto:**
-1. **Scope:** todo lookup es company-local. Nadie consulta cross-tenant.
-2. **Cobertura:** solo 1 de ~8 entry points pasa por el resolver.
-3. **Modelo:** `employees` se trata como "persona", no como "membership de persona en company". No hay un identificador estable ecosistema → la única vía de unión hoy es `auth.users.id` vía `employees.user_id`, y solo está poblado en ~9 humanos.
+Sin código hasta aprobación. Cero envíos reales. Cero migraciones.
 
 ---
 
-## 2. Diseño de solución ecosistema
+## 1. Archivos a crear o modificar
 
-### 2.1 Dónde vive el checkpoint
+### Motor puro (sin dominio, sin canales) — `src/lib/change-intelligence/engine/`
+| Archivo | Rol |
+| --- | --- |
+| `types.ts` | `DomainChangeEvent`, `FieldDelta`, `AudienceRef`, `ObservationRecord`, `EngineDecision` |
+| `detect.ts` | L1: filtra `cosmetic`/`internal` y deltas netos nulos |
+| `classify.ts` | L2: nivel 0–3 por `semantic` + `materiality` + registry |
+| `audience.ts` | L3: precedencia D3, dedupe por `deduplicationKey`, `unresolved` |
+| `compose.ts` | L4: redacción antes → después desde plantillas del registry |
+| `route.ts` | L5: canal **simulado** + ventana de consolidación |
+| `observe.ts` | Orquestador puro: evento → `ObservationRecord` |
+| `registry.ts` | Carga declarativa de `ChangeTypeRegistration` |
+| `version.ts` | `ENGINE_VERSION` |
 
-**Cliente:** un único hook + componente UI.
-- `src/lib/identity/ecosystem-lookup.ts` — funciones puras de normalización y scoring (testeable).
-- `src/hooks/useEcosystemIdentityCheck.tsx` — React Query hook que ejecuta el lookup y devuelve `{ matches, recommendation, auditPayload }`.
-- `src/components/identity/EcosystemIdentityCheckpoint.tsx` — UI compartida: drawer/modal con HIGH/MEDIUM/LOW matches y acciones permitidas.
+### Registry de catálogo (datos, no lógica) — `src/lib/change-intelligence/catalog/`
+`scheduling.registry.ts` — los 6 `changeType` autorizados con nivel, matriz de audiencia, ack y plantillas.
 
-**Servidor (P0, sin nueva tabla):** un RPC SECURITY DEFINER **read-only y tenant-safe**:
-- `public.ecosystem_identity_lookup(p_phone text, p_email text, p_first_name text, p_last_name text)` →
-  - Busca en `employees` cross-company por phone normalizado / email lower / nombre normalizado.
-  - Devuelve **payload mínimo y enmascarado**: `{ employee_id, company_id, company_name, has_user_id, is_active, masked_name, masked_phone, masked_email, match_strength, match_reasons[] }`.
-  - **Nunca** expone SSN, documentos, payroll, compensación, notas, dirección, ni nombre completo si el caller no es admin de esa company.
-  - `GRANT EXECUTE TO authenticated`. Internamente verifica que el caller tenga rol admin/owner en **al menos una company activa** (gate básico anti-scraping); developer/owner global ven todo sin enmascarar.
+### Adapter de dominio (propiedad de Scheduling) — `src/lib/change-intelligence/adapters/scheduling/`
+| Archivo | Rol |
+| --- | --- |
+| `buildShiftEvent.ts` | diff de `scheduled_shifts` → `FieldDelta[]` |
+| `buildAssignmentEvent.ts` | alta/baja/reemplazo desde `shift_assignments` |
+| `resolveAudienceHints.ts` | `shift_admin_id`, `assignment_role='shift_admin'` → `responsible`; `check_in_admin` → `supervisor`; asignados → `assigned` |
+| `resolveReachability.ts` | puente employee → `employees.user_id` → `profiles` → canal |
+| `legacyBaseline.ts` | audiencia que el comportamiento actual habría notificado |
+| `emit.ts` | único punto que invoca el motor; se retira para apagar F1 |
 
-**Servidor (P0):** RPC de attach:
-- `public.identity_attach_to_company(p_source_employee_id uuid, p_target_company_id uuid, p_confirmation_token text)` →
-  - Solo permite si el caller es admin de `p_target_company_id`.
-  - Solo crea **un nuevo `employees` row en la target company** con `user_id` heredado (si existe y `match_strength='HIGH'`).
-  - **No copia**: documentos, compensación, rates, financial, payroll, shifts, time_entries, assignments, ratings.
-  - Escribe `activity_log` (audit obligatorio) con `action='identity_attach'`, `metadata={source_employee_id, source_company_id, match_reasons}`.
-  - Devuelve el nuevo `employees.id` en la target company.
+### Sink de observación — `src/lib/change-intelligence/observation/`
+`sink.ts` (interfaz), `memory-sink.ts`, `console-sink.ts`, `local-buffer-sink.ts` (ring buffer en `sessionStorage`, sin PII más allá de ids), `report.ts` (10 preguntas de divergencia), `redact.ts`.
 
-### 2.2 Reutilización por flujo
+### Inspección (dev-only) — `src/pages/admin/dev/ChangeIntelligenceObservation.tsx`
+Ruta `/app/dev/ci-observation`, visible solo con flag activo. Tabla de `ObservationRecord`, detalle de decisión y exclusiones, botón "Exportar JSON/CSV".
 
-Todos los flujos consumen **el mismo hook + UI**:
+### Modificados
+- `src/lib/flags.ts` (o equivalente): `CI_OBSERVATION_MODE`, default **off**.
+- `src/App.tsx`: registro de la ruta dev-only tras el flag.
+- Puntos de guardado de turno/asignación: **una** llamada `emit(...)` en `try/catch` no bloqueante.
 
-| Flujo | Punto de integración | Comportamiento |
-|---|---|---|
-| Quick Add (`EmployeeCombobox`) | Antes de crear → llama checkpoint | HIGH match → ofrece "Activar para esta company" |
-| Full Form (`/app/employees` create) | Step inicial obligatorio | HIGH/MEDIUM bloquea "Crear nuevo" hasta confirmar |
-| `/apply/:slug` | Reemplaza interno de `resolve-applicant-identity` con el mismo RPC | Mantiene scenarios actuales + extiende a cross-tenant suggestion |
-| Bulk Import (CSV/Connecteam) | P0: dry-run report. P1: blocking review queue | Genera CSV de matches HIGH/MEDIUM antes de insertar |
-| Invitations (`invite-admin`, `send-employee-credentials`) | Llama checkpoint antes de generar invite | Si HIGH existe → "Reactivar / Asignar" |
-| Referrals (`referral-submit`) | Hoy ya hace dedupe por phone → extender a checkpoint | Marca referral con `existing_ecosystem_match=true` |
-| Campaigns / Parceros futuros | Mismo hook | Vía consent layer (P2) |
-
-**Patrón obligatorio (lint rule en P1):** ningún `from("employees").insert(...)` directo en código nuevo. Centralizar en `createEmployeeViaCheckpoint()`.
+**No se toca:** payroll, time entries, asignaciones reales, `notifications`, edge functions, esquema.
 
 ---
 
-## 3. Flujo UX (3–4 clicks)
+## 2. Paquetes y límites
 
 ```text
-[Admin tipea nombre/teléfono]
-        │
-        ▼  (1) Search/create worker  — onBlur dispara lookup ecosistema
-[Checkpoint Drawer]
-  ┌─────────────────────────────────────────────┐
-  │ Posible coincidencia encontrada             │
-  │ • Maria L. — Quality Staff (HIGH · phone)   │
-  │ • Maria L. — JKitchen (MEDIUM · name)       │
-  │                                             │
-  │ [Es la misma persona]  [Crear nueva]        │
-  └─────────────────────────────────────────────┘
-        │
-        ▼  (2) Confirm identity  — admin selecciona HIGH match
-[Confirmación tenant-safe]
-  ┌─────────────────────────────────────────────┐
-  │ Activarás a Maria L. para MSS               │
-  │ Reutiliza acceso portal: SÍ                 │
-  │ No se copian documentos, payroll, ratings.  │
-  │                                             │
-  │ [Cancelar]   [Activar para MSS]             │
-  └─────────────────────────────────────────────┘
-        │
-        ▼  (3) Activate for company  — RPC identity_attach_to_company
-[Done]
-        │
-        ▼  (4) Optional: Send portal invite / open profile
+adapters/scheduling  ──emite──▶  engine (puro)  ──escribe──▶  observation/sink
+      │                              │
+   conoce DB                  no conoce nada          sin capacidades de envío
 ```
 
-**Mobile:** mismo flujo en bottom sheet (`MobileQueueDrawer` reutilizado). Máx 4 taps.
+- El motor no importa nada de `shifts|payroll|recruit|document|timeclock|supabase`.
+- El motor no importa ningún cliente de push/email/SMS/WhatsApp.
+- El adapter no clasifica, no redacta, no elige canal.
+- Test estructural (`engine.boundaries.test.ts`) recorre los imports y falla si se viola.
 
 ---
 
-## 4. Reglas de match
+## 3. Persistencia e inspección del log
 
-Implementadas en `src/lib/identity/ecosystem-lookup.ts`:
+F1 **no crea tablas**. Tres sinks componibles:
+1. **Memory sink** — en tests, determinista.
+2. **Console sink** — `[CI:OBS]` con payload redactado, solo con flag activo.
+3. **Local buffer sink** — ring buffer de 500 registros en `sessionStorage`, namespaced por usuario, exportable a JSON/CSV desde la pantalla dev.
 
-| Strength | Regla | Acción permitida |
-|---|---|---|
-| **HIGH** | (phone normalizado + nombre normalizado coinciden) **o** (email lower + nombre) **o** mismo `user_id` ya vinculado en otra company | Attach directo con confirmación humana 1-click |
-| **MEDIUM** | phone solo **o** email solo **o** nombre+apellido normalizado con fuzzy score ≥ 0.9 | Requiere revisión manual; UI muestra pero no permite 1-click attach |
-| **LOW** | nombre similar fonético / Levenshtein bajo | Solo mostrar como hint; **prohibido attach** |
-
-Normalización reutiliza helpers ya probados: `normalizePhone`, `normalizeEmployeeEmail`, `normalizeText` + `phoneticKey` de `employee-search.ts`. **Sin reimplementar**.
+El análisis se hace sobre el JSON exportado. Persistencia en base de datos se evalúa en F2, con migración explícita y aprobación.
 
 ---
 
-## 5. Data model
+## 4. Estrategia frente al 97,7 % `unresolved`
 
-### P0 (sin tocar passport)
-- **Sin nuevas tablas.** Reusamos `employees` + `auth.users.id` como puente.
-- Convención: si dos `employees` rows comparten `user_id`, son **la misma persona** en companies distintas. Si no hay `user_id`, el RPC retorna candidatos pero el link humano lo confirma el admin.
-- Una columna opcional **no destructiva** en `employees`: `linked_via_checkpoint_at timestamptz NULL`, `linked_from_employee_id uuid NULL` (audit forense). No cambia RLS ni queries existentes.
-
-### P1 (review queue + bulk)
-- Tabla `identity_review_queue` para imports/bulk: filas `pending|approved|rejected` con `proposed_action`, `match_payload`, `reviewer_id`. Tenant-scoped.
-
-### P2 (passport real)
-- Adoptar `worker_profiles` como passport con `UNIQUE(employee_id)` y tabla puente `worker_passport_links(passport_id, employee_id, company_id)`.
-- Migración data: backfill desde `linked_via_checkpoint_at`.
-- Consent layer para documentos (`worker_consent_records` ya existe — extender).
-
-### Relación auth.users ↔ employees multi-company
-- 1 `auth.users` → N `employees` (uno por company).
-- EIC propone reutilizar `user_id` solo si HIGH match → portal único cross-company para esa persona.
-- `worker_profiles` actual no se rompe: seguimos sin escribir ahí en P0/P1.
+- `unresolved` es un **atributo del registro**, no un evento adicional: no genera alerta por ocurrencia.
+- Agregación por `shiftId`: un solo `managerResolution` por operación, no por delta.
+- El reporte muestra `unresolved` agrupado por **causa de configuración** (turno sin `shift_admin_id`, ubicación sin responsable…), no por turno.
+- La comunicación a trabajadores nunca se bloquea ni se retrasa por `unresolved`.
 
 ---
 
-## 6. Guardrails obligatorios (en el RPC + en el hook)
+## 5. Muestreo y agregación de alertas simuladas
 
-Antes de cualquier create/import:
-1. **Normalizar** phone (10 dígitos) y email (lower+trim) — usar helpers existentes.
-2. **Lookup ecosistema** vía RPC `ecosystem_identity_lookup`.
-3. **Lookup auth.users** vía `has_user_id` flag del RPC (no exponemos el id raw cross-tenant).
-4. **Warning UI** bloqueante si hay HIGH match.
-5. **No permitir** `createEmployee` sin pasar por `EcosystemIdentityCheckpoint` (lint + runtime assert en P1).
-6. **Audit log obligatorio** en `activity_log`: `identity_lookup`, `identity_attach`, `identity_skip_with_confirmation`.
-7. **No bulk auto-attach.** Imports generan review queue, nunca attach sin click humano.
-8. **Rate-limit** del RPC: 60 calls/min/usuario para evitar scraping cross-tenant.
+- Alertas de configuración **coalescidas por `(company_id, causa, ventana 24h)`** → una entrada agregada con contador y hasta 10 ids de ejemplo.
+- Nivel 0 se registra pero se marca `suppressed`, fuera del conteo de comunicaciones.
+- Console sink limitado a 1 línea por `correlationId`; el detalle vive en el buffer.
+- Muestreo configurable (default 100 % en dev, 10 % si el volumen supera 1.000 registros/sesión).
 
 ---
 
-## 7. Plan de implementación
+## 6. Casos de prueba unitarios
 
-### P0 (este sprint — Ecosystem Identity Checkpoint v1)
-1. Migración: RPC `ecosystem_identity_lookup` (SECURITY DEFINER, masked payload, admin-only) + RPC `identity_attach_to_company` + 2 columnas audit en `employees` + GRANTs.
-2. `src/lib/identity/ecosystem-lookup.ts` (puro, testeado).
-3. `src/hooks/useEcosystemIdentityCheck.tsx` (React Query).
-4. `src/components/identity/EcosystemIdentityCheckpoint.tsx` (drawer reutilizable mobile+desktop).
-5. **Wire-in obligatorio:**
-   - MSS activation flow (botón "Activar workers existentes" en `/app/employees` cuando company = MSS y hay matches HIGH con QS).
-   - Quick Add (`EmployeeCombobox` "Add new").
-   - Full Form (`/app/employees` create dialog).
-6. Imports: solo **dry-run report** descargable, no blocking todavía.
-7. Tests: matching rules + RPC tenant-safety.
+- **D3:** CA-D3-01…CA-D3-10 como fixtures del sobre estándar.
+- **Precedencia:** `shift_explicit` presente descarta niveles inferiores; dos explícitos → ambos.
+- **Dedupe:** manager + supervisor misma persona → un destinatario, una comunicación.
+- **Materialidad:** nota interna → nivel 0, cero trabajadores; cambio neto nulo → silencio.
+- **Reemplazo:** un solo `ChangeSet`; saliente y entrante con mensajes distintos; supervisor con mensaje de reemplazo; ningún otro trabajador.
+- **Reachability:** afectado sin puente employee→user → `unreachable` con razón, presente en el reporte.
+- **Autor:** actor sin relación explícita nunca es destinatario.
+- **Determinismo:** mismo evento → `ObservationRecord` byte-idéntico salvo timestamps.
+- **Idempotencia:** mismo `eventId` dos veces → una decisión.
+- **Estructural:** cero imports de dominio y de canales en el motor.
 
-### P1
-1. Bulk imports con blocking review queue (`identity_review_queue` tabla).
-2. Invitations, referrals, applications adoptan el checkpoint.
-3. Global review queue UI en `/app/identity-review` (developer/owner only).
-4. ESLint rule + runtime assert: prohibir `employees.insert` directo.
+## 7. Casos de prueba de integración
 
-### P2
-1. Passport real (`worker_profiles` con UNIQUE) + tabla puente.
-2. Consent layer para documentos (`worker_consent_records` extendido).
-3. Publicación controlada de documentos por company con doble consent (worker + company source).
+- Editar hora, fecha y ubicación de un turno real de QA → 1 `correlationId`, deltas correctos, cero mutaciones extra (verificado con conteos antes/después en `scheduled_shifts`, `shift_assignments`, `notifications`, `time_entries`).
+- Reemplazo de trabajador en una operación → consolidación en un `ChangeSet`.
+- Cancelación de turno → nivel 3, ack probatorio simulado, sin envío.
+- Turno con `shift_admin_id` seteado vs. turno sin él → `shift_explicit` vs. `unresolved`.
+- Turno con `check_in_admin` → supervisor, nunca manager.
+- Corrida sobre un lote de QA → reporte de divergencia con las 10 respuestas.
+- Flag apagado → cero registros, cero logs, cero coste.
 
 ---
 
-## 8. Qué NO se toca
+## 8. Plan de rollback
 
-Confirmado bajo zero-write contract:
-- auth core, RLS sin aprobación, payroll calculations, time_entries, scheduled_shifts, shift_assignments, employee_documents reales, worker_documents, payments, bookings, chat, edge functions críticas, production data fuera del cambio aprobado, companies/tenants, campaigns activas, partner logic.
+1. **Nivel 1 (inmediato):** apagar `CI_OBSERVATION_MODE`. El motor deja de ejecutarse; ningún flujo de negocio cambia.
+2. **Nivel 2:** eliminar la llamada `emit(...)` de los puntos de guardado (una línea por punto).
+3. **Nivel 3:** borrar el directorio `src/lib/change-intelligence/` y la ruta dev.
 
-Activar `user_id` o portal access **no** activa payroll. Payroll sigue dependiendo de `time_entries` reales (regla raíz del proyecto).
-
----
-
-## 9. Criterios de aceptación
-
-- [ ] Ningún flujo principal puede crear worker sin pasar por `EcosystemIdentityCheckpoint`.
-- [ ] MSS puede activar workers existentes de QS sin crear `auth.users` duplicado.
-- [ ] Quick Add muestra matches antes de crear.
-- [ ] Full Form muestra matches antes de crear.
-- [ ] Import genera dry-run de duplicados antes de insertar (P0); blocking en P1.
-- [ ] RLS sigue tenant-scoped: RPC enmascara y solo retorna metadata.
-- [ ] Payroll calculations **idénticas** antes/después (smoke test: `pay_periods.status='paid'` no se mueve).
-- [ ] `activity_log` registra cada `identity_lookup` / `identity_attach`.
-- [ ] Mobile: flujo resuelto en ≤ 4 taps, sin charts.
-- [ ] Desktop: revisión masiva en review queue (P1).
-- [ ] Funciona para cualquier company actual y futura (no contiene strings hardcoded de MSS/QS).
+Sin migraciones que revertir, sin datos que limpiar, sin estado de negocio afectado. CA-F1-11 se cumple por construcción: no existe dependencia de entrega que desmontar.
 
 ---
 
-## 10. Reporte final
+## 9. Confirmación de cero envíos reales
 
-### Arquitectura propuesta
-Capa cliente (hook + UI compartida) + capa server (2 RPCs SECURITY DEFINER read-only / single-write tenant-gated) + audit log. **No** edge function nueva en P0.
+El paquete del motor y el adapter **no importan ningún transporte**. No hay llamadas a edge functions, ni inserciones en `notifications`, ni providers de push/SMS/email/WhatsApp. `route.ts` devuelve un canal como **valor de decisión**, nunca ejecuta una entrega. El test estructural bloquea la introducción de cualquier dependencia de canal. CA-F1-01 verificado por prueba, no por disciplina.
 
-### Componentes reutilizables
-- `ecosystem-lookup.ts` (puro)
-- `useEcosystemIdentityCheck` (hook)
-- `EcosystemIdentityCheckpoint` (drawer mobile+desktop)
-- `ecosystem_identity_lookup` (RPC)
-- `identity_attach_to_company` (RPC)
+## 10. Confirmación de cero migraciones
 
-### Archivos que se tocarían (P0)
-- **Nuevos:** los 5 de arriba + 1 migración + 1 test file.
-- **Modificados (mínimo invasivo):**
-  - `src/components/EmployeeCombobox.tsx` (quick add path)
-  - `src/pages/admin/Employees.tsx` o el create dialog asociado (full form path)
-  - Nueva acción en `/app/employees` cuando `selectedCompany = MSS` (entry point para activación masiva controlada cross-tenant)
-
-### Riesgos
-| Riesgo | Mitigación |
-|---|---|
-| Exponer datos cross-tenant vía RPC | Payload enmascarado + gate de "admin en al menos una company" + rate-limit |
-| Falsos HIGH matches | Requiere confirmación humana siempre; nunca auto-attach |
-| Romper `/apply/:slug` existente | P0 **no** modifica el edge function; P1 lo refactoriza encima del mismo RPC |
-| Bulk imports históricos | P0 solo dry-run; P1 blocking queue |
-| `worker_profiles` adoption | Diferido a P2, no se toca en P0/P1 |
-
-### Confirmaciones
-- ✅ **No es MSS-only.** MSS es el primer consumidor pero la capa es ecosistema-wide; cero strings de MSS/QS en código.
-- ✅ **Previene futuros duplicados** en cualquier flujo que adopte el hook (P0: 3 flujos; P1: 7; P2: todos).
-- ✅ **Payroll guardrail:** ningún path del checkpoint escribe en payroll/time_entries/shifts/compensation. Smoke test incluido.
-
-### QA plan
-- **Mobile:** Quick Add con HIGH match → drawer → confirm → attach (≤4 taps). MSS activation en bottom sheet.
-- **Desktop:** Full Form bloquea "Crear" hasta resolver HIGH match. MSS bulk review desde `/app/employees`.
-- **RLS:** RPC llamado por admin de QS no debe ver SSN/documentos de MSS (payload enmascarado verificado en test). Caller sin rol admin → RPC retorna `[]`.
-- **Payroll guardrail:** seed un attach completo en Stafly Demo Company; verificar `time_entries`, `pay_periods`, `period_base_pay`, `historical_payroll_entries`, `compensation_profiles` **delta = 0**.
+F1 no crea, altera ni elimina tablas, columnas, tipos, políticas, funciones ni triggers. Todas las lecturas son `SELECT` sobre objetos existentes (`scheduled_shifts`, `shift_assignments`, `employees`, `profiles`). No se crean tablas de responsabilidad: los niveles 2–5 de D3 permanecen `unresolved` hasta que se apruebe el modelo de datos en una fase posterior.
 
 ---
 
-**Pendiente:** tu aprobación para arrancar P0 (migración RPC + hook + UI + 3 wire-ins). Hasta entonces, **cero cambios**.
+**Alcance de cambios cubierto:** solo `shift.time_changed`, `shift.date_changed`, `shift.location_changed`, `shift.worker_added`, `shift.worker_removed`, `shift.cancelled`. Ningún otro dominio.
