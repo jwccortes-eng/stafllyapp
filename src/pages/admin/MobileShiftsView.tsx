@@ -636,6 +636,12 @@ export default function MobileShiftsView() {
         shift={editShift}
         open={editOpen}
         onOpenChange={(o) => { setEditOpen(o); if (!o) setEditShift(null); }}
+        companyId={selectedCompanyId}
+        clients={clients}
+        locations={locations}
+        employees={employees}
+        assignments={assignments}
+
         onSaved={(patch) => {
           setShifts((prev) => prev.map((s) => (editShift && s.id === editShift.id ? { ...s, ...patch } as Shift : s)));
           setDetailShift((prev) => (editShift && prev?.id === editShift.id ? { ...prev, ...patch } as Shift : prev));
