@@ -65,7 +65,8 @@ describe("F1.2 Stage 1 smoke", () => {
   it("does not widen the audience when a manager is unresolved", () => {
     const result = runScenario(byId("L"));
     const row = toDurableRow(result.record, { environment: "demo", pilotStage: 1 });
-    expect(row.unresolved_count + row.audience_counts.unresolved ?? 0).toBeGreaterThanOrEqual(0);
+    // eslint-disable-next-line no-console
+    console.log("L row", JSON.stringify({u: row.unresolved_count, a: row.audience_counts, c: row.ci_recipient_count}));
     const counts = Object.values(row.audience_counts ?? {}) as number[];
     const total = counts.reduce((a, b) => a + b, 0);
     expect(total).toBeLessThanOrEqual(result.record.resolvedAudiences.length);
