@@ -17,6 +17,8 @@ import {
   setDurableObservation,
   getDurableEnvironment,
   getDurablePilotStage,
+  getDurableCompanyAllowlist,
+  setDurableCompanyAllowlist,
 } from "@/lib/change-intelligence/flags";
 import { getDurableSinkStats } from "@/lib/change-intelligence/observation/durable-sink";
 
@@ -53,6 +55,7 @@ export function DurableObservationPanel() {
   const [loading, setLoading] = useState(false);
   const [durable, setDurable] = useState(() => isDurableObservationEnabled());
   const [stats, setStats] = useState(() => getDurableSinkStats());
+  const [companies, setCompanies] = useState(() => getDurableCompanyAllowlist().join(", "));
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -112,6 +115,26 @@ export function DurableObservationPanel() {
               }}
             />
             <Label htmlFor="ci-durable">Persistencia durable (OFF por defecto)</Label>
+          </div>
+          <div className="flex items-center gap-2">
+            <Label htmlFor="ci-durable-companies" className="text-xs">
+              Compañías activadas (ids)
+            </Label>
+            <input
+              id="ci-durable-companies"
+              value={companies}
+              placeholder="ninguna"
+              onChange={(e) => setCompanies(e.target.value)}
+              onBlur={() =>
+                setDurableCompanyAllowlist(
+                  companies
+                    .split(",")
+                    .map((v) => v.trim())
+                    .filter(Boolean),
+                )
+              }
+              className="h-8 w-72 rounded-md border border-input bg-background px-2 text-xs"
+            />
           </div>
           <Button variant="outline" size="sm" onClick={() => void load()} disabled={loading}>
             Recargar evidencia
