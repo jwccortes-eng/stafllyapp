@@ -416,7 +416,7 @@ function App() {
                 <Route path="payroll-mappings" element={<CompanyRequiredGuard><PayrollMappings /></CompanyRequiredGuard>} />
                 <Route path="payroll-reconciliation" element={<CompanyRequiredGuard><PayrollReconciliation /></CompanyRequiredGuard>} />
                 <Route path="payroll-review-queue" element={<CompanyRequiredGuard><PayrollReviewQueue /></CompanyRequiredGuard>} />
-                <Route path="dev/change-intelligence" element={<ChangeIntelligenceObservation />} />
+                <Route path="dev/operational-authorization" element={<OperationalAuthorizationObservation />} />
 
                 <Route path="weekly-payroll-reconciliation" element={<CompanyRequiredGuard><WeeklyPayrollReconciliation /></CompanyRequiredGuard>} />
                 <Route path="payroll-native-dry-run" element={<CompanyRequiredGuard><PayrollNativeDryRun /></CompanyRequiredGuard>} />
