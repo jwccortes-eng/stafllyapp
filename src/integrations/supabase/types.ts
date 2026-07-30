@@ -8763,6 +8763,297 @@ export type Database = {
           },
         ]
       }
+      oai_observation_daily_metrics: {
+        Row: {
+          assigned_after_negative: number
+          authority_unresolved: number
+          blocked_count: number
+          company_id: string
+          context_losses: number
+          contradictions: number
+          created_at: string
+          id: string
+          persistence_issues: number
+          total_observations: number
+          unclassified_requirements: number
+          warned_count: number
+          window_day: string
+        }
+        Insert: {
+          assigned_after_negative?: number
+          authority_unresolved?: number
+          blocked_count?: number
+          company_id: string
+          context_losses?: number
+          contradictions?: number
+          created_at?: string
+          id?: string
+          persistence_issues?: number
+          total_observations?: number
+          unclassified_requirements?: number
+          warned_count?: number
+          window_day: string
+        }
+        Update: {
+          assigned_after_negative?: number
+          authority_unresolved?: number
+          blocked_count?: number
+          company_id?: string
+          context_losses?: number
+          contradictions?: number
+          created_at?: string
+          id?: string
+          persistence_issues?: number
+          total_observations?: number
+          unclassified_requirements?: number
+          warned_count?: number
+          window_day?: string
+        }
+        Relationships: []
+      }
+      oai_observations: {
+        Row: {
+          actor_ref: string | null
+          assignment_result: string
+          authority_status: string
+          cascade_conflicts: string[]
+          client_ref: string | null
+          company_id: string
+          context_available: string[]
+          context_loss_detected: boolean
+          context_missing: string[]
+          contract_version: number
+          contradiction_detected: boolean
+          correlation_id: string
+          created_at: string
+          document_state_summary: Json
+          engine_version: string
+          evaluated_at: string
+          eventual_outcome: string
+          evidence_grade_summary: Json
+          human_action: string
+          id: string
+          latency_ms_from_block: number | null
+          legacy_mixed_signal_present: boolean
+          location_ref: string | null
+          navigation_count: number
+          observation_id: string
+          observation_only: boolean
+          observed_at: string
+          persistence_issue_detected: boolean
+          rule_version: string
+          shift_ref: string | null
+          simulated_oai_outcome: string
+          simulated_reason_codes: string[]
+          source_surface: string
+          system_block_reasons: string[]
+          system_readiness_state: string
+          trigger_type: string
+          unclassified_requirements: string[]
+          winning_requirement_source: string
+          worker_ref: string
+        }
+        Insert: {
+          actor_ref?: string | null
+          assignment_result: string
+          authority_status?: string
+          cascade_conflicts?: string[]
+          client_ref?: string | null
+          company_id: string
+          context_available?: string[]
+          context_loss_detected?: boolean
+          context_missing?: string[]
+          contract_version: number
+          contradiction_detected?: boolean
+          correlation_id: string
+          created_at?: string
+          document_state_summary?: Json
+          engine_version: string
+          evaluated_at: string
+          eventual_outcome?: string
+          evidence_grade_summary?: Json
+          human_action: string
+          id?: string
+          latency_ms_from_block?: number | null
+          legacy_mixed_signal_present?: boolean
+          location_ref?: string | null
+          navigation_count?: number
+          observation_id: string
+          observation_only?: boolean
+          observed_at: string
+          persistence_issue_detected?: boolean
+          rule_version: string
+          shift_ref?: string | null
+          simulated_oai_outcome: string
+          simulated_reason_codes?: string[]
+          source_surface: string
+          system_block_reasons?: string[]
+          system_readiness_state: string
+          trigger_type: string
+          unclassified_requirements?: string[]
+          winning_requirement_source?: string
+          worker_ref: string
+        }
+        Update: {
+          actor_ref?: string | null
+          assignment_result?: string
+          authority_status?: string
+          cascade_conflicts?: string[]
+          client_ref?: string | null
+          company_id?: string
+          context_available?: string[]
+          context_loss_detected?: boolean
+          context_missing?: string[]
+          contract_version?: number
+          contradiction_detected?: boolean
+          correlation_id?: string
+          created_at?: string
+          document_state_summary?: Json
+          engine_version?: string
+          evaluated_at?: string
+          eventual_outcome?: string
+          evidence_grade_summary?: Json
+          human_action?: string
+          id?: string
+          latency_ms_from_block?: number | null
+          legacy_mixed_signal_present?: boolean
+          location_ref?: string | null
+          navigation_count?: number
+          observation_id?: string
+          observation_only?: boolean
+          observed_at?: string
+          persistence_issue_detected?: boolean
+          rule_version?: string
+          shift_ref?: string | null
+          simulated_oai_outcome?: string
+          simulated_reason_codes?: string[]
+          source_surface?: string
+          system_block_reasons?: string[]
+          system_readiness_state?: string
+          trigger_type?: string
+          unclassified_requirements?: string[]
+          winning_requirement_source?: string
+          worker_ref?: string
+        }
+        Relationships: []
+      }
+      oai_persistence_probes: {
+        Row: {
+          company_id: string
+          correlation_id: string
+          elapsed_ms: number
+          expected_state: string
+          id: string
+          immediate_ui_state: string
+          mismatch_detected: boolean
+          observation_id: string
+          observation_only: boolean
+          observed_at: string
+          persisted_state: string
+          reloaded_state: string
+          requirement_code: string
+          source_surface: string
+          worker_ref: string
+        }
+        Insert: {
+          company_id: string
+          correlation_id: string
+          elapsed_ms: number
+          expected_state: string
+          id?: string
+          immediate_ui_state: string
+          mismatch_detected: boolean
+          observation_id: string
+          observation_only?: boolean
+          observed_at?: string
+          persisted_state: string
+          reloaded_state: string
+          requirement_code: string
+          source_surface: string
+          worker_ref: string
+        }
+        Update: {
+          company_id?: string
+          correlation_id?: string
+          elapsed_ms?: number
+          expected_state?: string
+          id?: string
+          immediate_ui_state?: string
+          mismatch_detected?: boolean
+          observation_id?: string
+          observation_only?: boolean
+          observed_at?: string
+          persisted_state?: string
+          reloaded_state?: string
+          requirement_code?: string
+          source_surface?: string
+          worker_ref?: string
+        }
+        Relationships: []
+      }
+      oai_pilot_allowlist: {
+        Row: {
+          approved_at: string
+          approved_by: string | null
+          company_id: string
+          daily_cap: number
+          environment: string
+          id: string
+          notes: string | null
+          window_ends_at: string
+          window_starts_at: string
+        }
+        Insert: {
+          approved_at?: string
+          approved_by?: string | null
+          company_id: string
+          daily_cap?: number
+          environment?: string
+          id?: string
+          notes?: string | null
+          window_ends_at: string
+          window_starts_at?: string
+        }
+        Update: {
+          approved_at?: string
+          approved_by?: string | null
+          company_id?: string
+          daily_cap?: number
+          environment?: string
+          id?: string
+          notes?: string | null
+          window_ends_at?: string
+          window_starts_at?: string
+        }
+        Relationships: []
+      }
+      oai_platform_allowlist: {
+        Row: {
+          expires_at: string
+          granted_at: string
+          granted_by: string | null
+          id: string
+          reason: string | null
+          user_id: string
+        }
+        Insert: {
+          expires_at: string
+          granted_at?: string
+          granted_by?: string | null
+          id?: string
+          reason?: string | null
+          user_id: string
+        }
+        Update: {
+          expires_at?: string
+          granted_at?: string
+          granted_by?: string | null
+          id?: string
+          reason?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       office_visits: {
         Row: {
           activity_timeline: Json
@@ -17122,6 +17413,22 @@ export type Database = {
           source_queue: string
         }
         Returns: number
+      }
+      oai_can_read_observations: { Args: never; Returns: boolean }
+      oai_delete_company_observations: {
+        Args: { _company_id: string }
+        Returns: {
+          deleted_observations: number
+          deleted_probes: number
+        }[]
+      }
+      oai_purge_expired_observations: {
+        Args: never
+        Returns: {
+          deleted_metrics: number
+          deleted_observations: number
+          deleted_probes: number
+        }[]
       }
       pick_workers_to_rate: {
         Args: { _shift_id: string }
