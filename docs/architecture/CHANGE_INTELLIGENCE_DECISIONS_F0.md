@@ -288,4 +288,95 @@ F1–F5 pueden avanzar sin esto. Pero si se aplaza más allá de F6, el riesgo d
 
 ---
 
-*Fin del dossier de decisiones. Pendiente de aprobación humana. No existe código asociado.*
+---
+
+## D3 — CERRADA: definición oficial de `manager_directo`
+
+**Estado:** cerrada y aprobada. Reemplaza cualquier interpretación previa.
+
+Un `manager_directo` es **solo** quien tiene responsabilidad operacional explícita
+sobre **ese turno concreto**. No lo determina el rol genérico `manager`, ni la
+pertenencia a la compañía, ni el acceso administrativo amplio. Debe existir una
+relación verificable persona ↔ turno.
+
+### Orden de resolución (precedencia estricta, `else`)
+
+```text
+DirectManagerSet(shift) =
+  explicitShiftManagers            (P1)
+  else explicitLocationManagers    (P2)
+  else explicitClientManagers      (P3)
+  else explicitOperationalUnitMgrs (P4)
+  else activeDutyManagers          (P5)
+  else emptySet                    (P6 → unresolved)
+```
+
+`else` significa **no mezclar niveles**: encontrada una relación válida de mayor
+precedencia, los niveles inferiores no aportan destinatarios.
+
+| Prioridad | relationship_type | Requiere |
+| --- | --- | --- |
+| 1 | `shift_explicit` | asignación explícita manager ↔ turno |
+| 2 | `location_responsibility` | asignación explícita manager ↔ ubicación |
+| 3 | `client_responsibility` | asignación explícita manager ↔ cliente/cuenta |
+| 4 | `operational_unit_responsibility` | asignación explícita manager ↔ equipo/unidad |
+| 5 | `duty_manager` | guardia verificable para fecha y franja |
+| — | `unresolved` | ninguna de las anteriores |
+
+### Reglas de precedencia
+
+- Varios managers explícitos en el mismo turno → **todos** son `manager_directo`.
+- Con manager de turno explícito, **no** se agregan managers de ubicación, cliente ni unidad.
+- La audiencia **nunca** se amplía por jerarquía organizacional.
+- Mayor nivel jerárquico no convierte a nadie en afectado.
+
+### Escalamiento controlado (nivel 6)
+
+Sin manager resoluble: no notificar a todos los managers; registrar
+`manager_resolution_status = unresolved`; emitir alerta interna de configuración a
+administradores autorizados; mantener el cambio en auditoría; **continuar** notificando
+a trabajadores y supervisores claramente afectados.
+
+### Supervisor ≠ Manager directo
+
+- **Supervisor:** coordina la ejecución inmediata; recibe cambios de personal, hora,
+  dirección, transporte, punto de encuentro y cancelación.
+- **Manager directo:** responsabilidad operacional o decisoria; recibe solo lo relevante
+  a esa responsabilidad.
+- Misma persona en ambos roles → **una sola comunicación consolidada** (dedupe).
+
+### Requisitos de evidencia (por resolución)
+
+`manager_id`, `relationship_type`, `source_object_id`, `resolution_priority`,
+`resolved_at`, `reason`, `whether_notification_was_required`, `deduplication_key`.
+
+### Reglas de seguridad
+
+1. Nunca resolver audiencia solo por el rol `manager`.
+2. Nunca notificar a todos los managers del tenant.
+3. Nunca inferir responsabilidad por haber creado o editado el turno.
+4. El autor del cambio no es destinatario automático.
+5. Auditar no implica notificar.
+6. La ausencia de manager no bloquea comunicaciones críticas a trabajadores.
+7. Las relaciones ambiguas se registran, no se adivinan.
+8. Duplicados por múltiples roles → una sola comunicación.
+
+### Casos de aceptación
+
+| Caso | Escenario | Resultado esperado |
+| --- | --- | --- |
+| CA-D3-01 | Turno con manager explícito | solo ese manager |
+| CA-D3-02 | Sin manager de turno, con manager de ubicación | manager de ubicación |
+| CA-D3-03 | Manager de turno + de ubicación | solo el de turno |
+| CA-D3-04 | Dos managers explícitos del turno | ambos |
+| CA-D3-05 | 5 managers en la compañía, ninguno con relación | ninguno; `unresolved` |
+| CA-D3-06 | Autor = admin global sin relación | no es manager directo |
+| CA-D3-07 | Supervisor y manager son la misma persona | una comunicación consolidada |
+| CA-D3-08 | Reemplazo de trabajador | saliente, entrante, supervisor y manager aplicables |
+| CA-D3-09 | Nota interna sin impacto operacional | ningún trabajador recibe nada |
+| CA-D3-10 | Sin manager resoluble y cambia la dirección | trabajadores notificados; manager `unresolved` |
+
+---
+
+*Fin del dossier de decisiones. D3 cerrada. No existe código asociado.*
+
