@@ -103,11 +103,11 @@ export const schedulingRegistry: ChangeTypeRegistration[] = [
     requiresAck: "probatory",
     templates: {
       assigned:
-        "El turno {subject.label} del {context.shiftDate} fue cancelado. No debes presentarte. Confirma que viste esta cancelación antes de {context.ackDeadline}.",
+        "El turno {subject.label} ({context.shiftDate}) fue cancelado. No debes presentarte. Confirma que viste esta cancelación antes de {context.ackDeadline}.",
       supervisor:
-        "El turno {subject.label} del {context.shiftDate} fue cancelado. No habrá operación; avisa al personal en sitio y confirma antes de {context.ackDeadline}.",
+        "El turno {subject.label} ({context.shiftDate}) fue cancelado. No habrá operación; avisa al personal en sitio y confirma antes de {context.ackDeadline}.",
       responsible:
-        "El turno {subject.label} del {context.shiftDate} fue cancelado. Verifica impacto con el cliente y confirma antes de {context.ackDeadline}.",
+        "El turno {subject.label} ({context.shiftDate}) fue cancelado. Verifica impacto con el cliente y confirma antes de {context.ackDeadline}.",
     },
   },
 ];
