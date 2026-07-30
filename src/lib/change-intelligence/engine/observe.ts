@@ -74,6 +74,7 @@ export function observe(
         suppressedCount: event.legacyAudience?.length ?? 0,
         legacyManagersWithoutExplicitRelation: 0,
       },
+      context: event.context,
       observationOnly: true,
     };
   }
@@ -155,6 +156,7 @@ export function observe(
       suppressedCount: Math.max(0, legacyCount - ciCount),
       legacyManagersWithoutExplicitRelation: legacyManagerNoise,
     },
+    context: event.context,
     observationOnly: true,
   };
 }
