@@ -38,7 +38,7 @@ export function OaiObservationGuard({ children }: { children: ReactNode }) {
     productionOverride: import.meta.env.VITE_OAI_PANEL_PROD_OVERRIDE === "true",
   });
 
-  if (!decision.allowed) {
+  if (decision.allowed !== true) {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 px-4 text-center">
         <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-muted">
