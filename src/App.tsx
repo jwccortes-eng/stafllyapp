@@ -86,6 +86,8 @@ const CompanyConfig = lazy(() => import("./pages/admin/CompanyConfig"));
 const Automations = lazy(() => import("./pages/admin/Automations"));
 const PayrollSettings = lazy(() => import("./pages/admin/PayrollSettings"));
 const PayrollReviewQueue = lazy(() => import("./pages/admin/PayrollReviewQueue"));
+const ChangeIntelligenceObservation = lazy(() => import("./pages/admin/dev/ChangeIntelligenceObservation"));
+
 const MonetizationReport = lazy(() => import("./pages/admin/MonetizationReport"));
 const Pricing = lazy(() => import("./pages/admin/Pricing"));
 const Billing = lazy(() => import("./pages/admin/Billing"));
