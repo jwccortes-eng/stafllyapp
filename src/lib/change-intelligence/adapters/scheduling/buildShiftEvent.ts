@@ -49,8 +49,9 @@ export function shiftLabel(shift: ShiftSnapshot): string {
 export function diffShift(before: ShiftSnapshot, after: ShiftSnapshot): FieldDelta[] {
   const deltas: FieldDelta[] = [];
   for (const [field, spec] of Object.entries(FIELD_SPEC)) {
-    const b = (before as Record<string, unknown>)[field] as ScalarOrRef | undefined;
-    const a = (after as Record<string, unknown>)[field] as ScalarOrRef | undefined;
+    const b = (before as unknown as Record<string, ScalarOrRef | undefined>)[field];
+    const a = (after as unknown as Record<string, ScalarOrRef | undefined>)[field];
+
     if (b === undefined && a === undefined) continue;
     if ((b ?? null) === (a ?? null)) continue;
     deltas.push({
