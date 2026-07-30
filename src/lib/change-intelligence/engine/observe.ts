@@ -156,6 +156,7 @@ export function observe(
       suppressedCount: Math.max(0, legacyCount - ciCount),
       legacyManagersWithoutExplicitRelation: legacyManagerNoise,
     },
+    context: event.context,
     observationOnly: true,
   };
 }
