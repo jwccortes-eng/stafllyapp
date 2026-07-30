@@ -82,3 +82,36 @@ export function getObservationSampleRate(): number {
   if (!Number.isFinite(raw) || raw <= 0 || raw > 1) return 1;
   return raw;
 }
+
+/* ------------------------------------------------------------------
+ * F1.2 Stage 1 — per-company activation.
+ * There is NO environment fallback and NO role fallback: a company is
+ * observed only if its id is explicitly listed here AND has a live row
+ * in ci_pilot_allowlist. An empty list means "no company is observed".
+ * ------------------------------------------------------------------ */
+const DURABLE_COMPANIES_KEY = "ci:durable-companies";
+
+export function getDurableCompanyAllowlist(): string[] {
+  const raw = read(DURABLE_COMPANIES_KEY);
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((v) => typeof v === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+export function setDurableCompanyAllowlist(companyIds: string[]): void {
+  try {
+    if (companyIds.length === 0) localStorage.removeItem(DURABLE_COMPANIES_KEY);
+    else localStorage.setItem(DURABLE_COMPANIES_KEY, JSON.stringify(companyIds));
+  } catch {
+    /* noop */
+  }
+}
+
+export function isDurableCompanyAllowed(companyId: string | null | undefined): boolean {
+  if (!companyId) return false;
+  return getDurableCompanyAllowlist().includes(companyId);
+}
