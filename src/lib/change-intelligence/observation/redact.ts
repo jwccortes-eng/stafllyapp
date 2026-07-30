@@ -28,11 +28,23 @@ const CONTEXT_ALLOWLIST = new Set([
 ]);
 
 const EMAIL = /[\w.+-]+@[\w-]+\.[\w.]+/g;
-const LONG_DIGITS = /\+?\d[\d\s().-]{6,}\d/g;
+/** Phone-like runs only. Dates, times and shift codes must survive intact. */
+const PHONE_LIKE = /\+?\d[\d\s().-]{6,}\d/g;
+const ISO_DATE = /\d{4}-\d{2}-\d{2}/;
+const CLOCK_TIME = /\d{1,2}:\d{2}/;
+
+function looksLikePhone(candidate: string): boolean {
+  if (ISO_DATE.test(candidate) || CLOCK_TIME.test(candidate)) return false;
+  const digits = candidate.replace(/\D/g, "");
+  return digits.length >= 9;
+}
 
 export function scrubText(value: string): string {
-  return value.replace(EMAIL, "[email]").replace(LONG_DIGITS, "[num]");
+  return value
+    .replace(EMAIL, "[email]")
+    .replace(PHONE_LIKE, (match) => (looksLikePhone(match) ? "[num]" : match));
 }
+
 
 function scrubValue(value: ScalarOrRef): ScalarOrRef {
   return typeof value === "string" ? scrubText(value) : value;
