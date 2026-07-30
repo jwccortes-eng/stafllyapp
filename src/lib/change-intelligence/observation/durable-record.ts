@@ -200,8 +200,8 @@ export function toDurableRow(
     resolved_role_types: [
       ...new Set(
         record.managerResolution.evidence
-          .map((e) => e.relationshipType)
-          .filter((t): t is string => typeof t === "string"),
+          .map((e) => String(e.relationshipType))
+          .filter((t) => t.length > 0),
       ),
     ],
     unresolved_count: record.unresolvedAudiences.length,
