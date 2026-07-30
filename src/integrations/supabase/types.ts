@@ -971,6 +971,296 @@ export type Database = {
         }
         Relationships: []
       }
+      ci_observation_daily_metrics: {
+        Row: {
+          change_type: string
+          ci_recipient_count: number
+          company_id: string
+          day: string
+          deduplication_count: number
+          dropped_by_limit: number
+          dropped_by_sampling: number
+          environment: string
+          evaluations: number
+          legacy_recipient_count: number
+          level0: number
+          level1: number
+          level2: number
+          level3: number
+          message_quality_fail: number
+          persisted: number
+          privacy_gate_fail: number
+          unreachable_count: number
+          unresolved_count: number
+          updated_at: string
+        }
+        Insert: {
+          change_type: string
+          ci_recipient_count?: number
+          company_id: string
+          day: string
+          deduplication_count?: number
+          dropped_by_limit?: number
+          dropped_by_sampling?: number
+          environment: string
+          evaluations?: number
+          legacy_recipient_count?: number
+          level0?: number
+          level1?: number
+          level2?: number
+          level3?: number
+          message_quality_fail?: number
+          persisted?: number
+          privacy_gate_fail?: number
+          unreachable_count?: number
+          unresolved_count?: number
+          updated_at?: string
+        }
+        Update: {
+          change_type?: string
+          ci_recipient_count?: number
+          company_id?: string
+          day?: string
+          deduplication_count?: number
+          dropped_by_limit?: number
+          dropped_by_sampling?: number
+          environment?: string
+          evaluations?: number
+          legacy_recipient_count?: number
+          level0?: number
+          level1?: number
+          level2?: number
+          level3?: number
+          message_quality_fail?: number
+          persisted?: number
+          privacy_gate_fail?: number
+          unreachable_count?: number
+          unresolved_count?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      ci_observation_reviews: {
+        Row: {
+          created_at: string
+          notes: string | null
+          observation_id: string
+          review_id: string
+          reviewer_user_id: string
+          verdict: string
+        }
+        Insert: {
+          created_at?: string
+          notes?: string | null
+          observation_id: string
+          review_id?: string
+          reviewer_user_id: string
+          verdict: string
+        }
+        Update: {
+          created_at?: string
+          notes?: string | null
+          observation_id?: string
+          review_id?: string
+          reviewer_user_id?: string
+          verdict?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ci_observation_reviews_observation_id_fkey"
+            columns: ["observation_id"]
+            isOneToOne: false
+            referencedRelation: "ci_observations"
+            referencedColumns: ["observation_id"]
+          },
+        ]
+      }
+      ci_observations: {
+        Row: {
+          acknowledgement_required: string | null
+          adapter_version: string
+          aggregate_id: string | null
+          aggregate_type: string | null
+          audience_counts: Json
+          change_type: string
+          ci_recipient_count: number
+          client_ref: string | null
+          company_id: string
+          correlation_id: string | null
+          created_at: string
+          deadline_category: string | null
+          deduplication_count: number
+          delta_semantics: string[]
+          domain: string
+          engine_version: string
+          environment: string
+          event_id: string
+          impact_level: number
+          legacy_recipient_count: number
+          location_ref: string | null
+          message_quality_gate: string | null
+          message_quality_issues: string[]
+          observation_id: string
+          observation_only: boolean
+          observed_at: string
+          occurred_at: string
+          pilot_stage: number
+          privacy_gate: string | null
+          privacy_gate_findings: string[]
+          resolved_role_types: string[]
+          simulated_channel: string
+          suppression_reasons: string[]
+          unreachable_count: number
+          unresolved_causes: string[]
+          unresolved_count: number
+        }
+        Insert: {
+          acknowledgement_required?: string | null
+          adapter_version?: string
+          aggregate_id?: string | null
+          aggregate_type?: string | null
+          audience_counts?: Json
+          change_type: string
+          ci_recipient_count?: number
+          client_ref?: string | null
+          company_id: string
+          correlation_id?: string | null
+          created_at?: string
+          deadline_category?: string | null
+          deduplication_count?: number
+          delta_semantics?: string[]
+          domain: string
+          engine_version: string
+          environment: string
+          event_id: string
+          impact_level: number
+          legacy_recipient_count?: number
+          location_ref?: string | null
+          message_quality_gate?: string | null
+          message_quality_issues?: string[]
+          observation_id?: string
+          observation_only?: boolean
+          observed_at?: string
+          occurred_at: string
+          pilot_stage: number
+          privacy_gate?: string | null
+          privacy_gate_findings?: string[]
+          resolved_role_types?: string[]
+          simulated_channel?: string
+          suppression_reasons?: string[]
+          unreachable_count?: number
+          unresolved_causes?: string[]
+          unresolved_count?: number
+        }
+        Update: {
+          acknowledgement_required?: string | null
+          adapter_version?: string
+          aggregate_id?: string | null
+          aggregate_type?: string | null
+          audience_counts?: Json
+          change_type?: string
+          ci_recipient_count?: number
+          client_ref?: string | null
+          company_id?: string
+          correlation_id?: string | null
+          created_at?: string
+          deadline_category?: string | null
+          deduplication_count?: number
+          delta_semantics?: string[]
+          domain?: string
+          engine_version?: string
+          environment?: string
+          event_id?: string
+          impact_level?: number
+          legacy_recipient_count?: number
+          location_ref?: string | null
+          message_quality_gate?: string | null
+          message_quality_issues?: string[]
+          observation_id?: string
+          observation_only?: boolean
+          observed_at?: string
+          occurred_at?: string
+          pilot_stage?: number
+          privacy_gate?: string | null
+          privacy_gate_findings?: string[]
+          resolved_role_types?: string[]
+          simulated_channel?: string
+          suppression_reasons?: string[]
+          unreachable_count?: number
+          unresolved_causes?: string[]
+          unresolved_count?: number
+        }
+        Relationships: []
+      }
+      ci_pilot_allowlist: {
+        Row: {
+          company_id: string
+          created_at: string
+          daily_limit: number
+          enabled: boolean
+          enabled_at: string
+          enabled_by: string | null
+          environment: string
+          expires_at: string | null
+          notes: string | null
+          pilot_stage: number
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          daily_limit?: number
+          enabled?: boolean
+          enabled_at?: string
+          enabled_by?: string | null
+          environment?: string
+          expires_at?: string | null
+          notes?: string | null
+          pilot_stage?: number
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          daily_limit?: number
+          enabled?: boolean
+          enabled_at?: string
+          enabled_by?: string | null
+          environment?: string
+          expires_at?: string | null
+          notes?: string | null
+          pilot_stage?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      ci_platform_allowlist: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          expires_at: string | null
+          notes: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          expires_at?: string | null
+          notes?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          expires_at?: string | null
+          notes?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       client_contacts: {
         Row: {
           client_id: string
@@ -16513,6 +16803,12 @@ export type Database = {
         Args: { _company_id: string; _shift_id: string }
         Returns: boolean
       }
+      ci_can_read_observations: { Args: { _user_id: string }; Returns: boolean }
+      ci_delete_company_observations: {
+        Args: { _company_id: string; _include_metrics?: boolean }
+        Returns: Json
+      }
+      ci_purge_expired_observations: { Args: never; Returns: Json }
       cleanup_expired_rate_limits: { Args: never; Returns: undefined }
       company_user_can_access_employee_doc_path: {
         Args: { _path: string }

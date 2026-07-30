@@ -13,6 +13,7 @@ import { createMemorySink } from "../../observation/memory-sink";
 import { createConsoleSink } from "../../observation/console-sink";
 import { createLocalBufferSink } from "../../observation/local-buffer-sink";
 import { composeSinks, type ObservationSink } from "../../observation/sink";
+import { persistObservation } from "../../observation/durable-sink";
 import type { DomainChangeEvent, ObservationRecord } from "../../engine/types";
 
 const registry = new ChangeTypeRegistry(schedulingRegistry);
@@ -45,6 +46,9 @@ export function emitShiftObservation(
   try {
     const record = observe(event, { registry });
     getObservationSink(userId).write(record);
+    // F1.2 — best-effort durable evidence. No-op unless the durable flag is ON
+    // and the company has a live pilot allowlist row. Never blocks, never retries.
+    persistObservation(record);
     return record;
   } catch (error) {
     // Observation must never break an operational flow.

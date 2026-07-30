@@ -17,6 +17,7 @@ import {
 import { aggregateUnresolved } from "@/lib/change-intelligence/observation/unresolved-aggregate";
 import { runAllScenarios } from "@/lib/change-intelligence/validation/run-scenarios";
 import { ObservationAccessGuard } from "@/components/change-intelligence/ObservationAccessGuard";
+import { DurableObservationPanel } from "@/components/change-intelligence/DurableObservationPanel";
 import { useAuth } from "@/hooks/useAuth";
 
 function useRecords(userId: string | null, refreshKey: number) {
@@ -133,6 +134,8 @@ function ChangeIntelligenceObservation() {
           </span>
         </CardContent>
       </Card>
+
+      <DurableObservationPanel />
 
       <Card>
         <CardHeader className="pb-3">
