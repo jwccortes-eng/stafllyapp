@@ -14,6 +14,9 @@ import {
   buildDivergenceReport,
   buildSimulatedConfigAlerts,
 } from "@/lib/change-intelligence/observation/report";
+import { aggregateUnresolved } from "@/lib/change-intelligence/observation/unresolved-aggregate";
+import { runAllScenarios } from "@/lib/change-intelligence/validation/run-scenarios";
+import { ObservationAccessGuard } from "@/components/change-intelligence/ObservationAccessGuard";
 import { useAuth } from "@/hooks/useAuth";
 
 function useRecords(userId: string | null, refreshKey: number) {
@@ -23,10 +26,19 @@ function useRecords(userId: string | null, refreshKey: number) {
   }, [userId, refreshKey]);
 }
 
-export default function ChangeIntelligenceObservation() {
+export default function ChangeIntelligenceObservationPage() {
+  return (
+    <ObservationAccessGuard>
+      <ChangeIntelligenceObservation />
+    </ObservationAccessGuard>
+  );
+}
+
+function ChangeIntelligenceObservation() {
   const { user } = useAuth();
   const userId = user?.id ?? null;
   const [refreshKey, setRefreshKey] = useState(0);
+  const [showScenarios, setShowScenarios] = useState(false);
   const enabled = useSyncExternalStore(
     () => () => {},
     () => isObservationModeEnabled(),
@@ -34,9 +46,16 @@ export default function ChangeIntelligenceObservation() {
   );
   const [, force] = useState(0);
 
-  const records = useRecords(userId, refreshKey);
+  const liveRecords = useRecords(userId, refreshKey);
+  const scenarioResults = useMemo(() => (showScenarios ? runAllScenarios() : []), [showScenarios]);
+  const records = useMemo(
+    () => (showScenarios ? scenarioResults.map((r) => r.record) : liveRecords),
+    [showScenarios, scenarioResults, liveRecords],
+  );
   const report = useMemo(() => buildDivergenceReport(records), [records]);
   const alerts = useMemo(() => buildSimulatedConfigAlerts(records), [records]);
+  const unresolved = useMemo(() => aggregateUnresolved(records), [records]);
+
 
   const metrics: Array<[string, string | number]> = [
     ["Destinatarios legacy", report.legacyRecipients],
