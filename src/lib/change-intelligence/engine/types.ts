@@ -199,5 +199,7 @@ export interface ObservationRecord {
   suppressionReason: string | null;
   legacyBehaviorComparison: LegacyComparison;
   /** Always true in F1. Guarantees no real delivery happened. */
+  /** Non-sensitive grouping context copied from the event (ids/labels only). */
+  context: Record<string, ScalarOrRef>;
   observationOnly: true;
 }
