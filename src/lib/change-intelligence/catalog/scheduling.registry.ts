@@ -73,7 +73,7 @@ export const schedulingRegistry: ChangeTypeRegistration[] = [
     requiresAck: "light",
     templates: {
       assigned:
-        "Fuiste asignado al turno {subject.label} el {context.shiftDate}. Debes presentarte en el horario y lugar indicados en el turno. Confirma que aceptas la asignación antes de {context.ackDeadline}.",
+        "Fuiste asignado al turno {subject.label} ({context.shiftDate}). Debes presentarte en el horario y lugar indicados en el turno. Confirma que aceptas la asignación antes de {context.ackDeadline}.",
       supervisor:
         "{context.workerInLabel} entra al turno {subject.label} ({context.shiftDate}). Inclúyelo en el briefing y en el control de asistencia.",
       responsible:
@@ -87,9 +87,9 @@ export const schedulingRegistry: ChangeTypeRegistration[] = [
     requiresAck: "light",
     templates: {
       removed:
-        "Ya no estás asignado al turno {subject.label} del {context.shiftDate}. No debes presentarte. No se requiere acción de tu parte; este turno ya no cuenta en tu agenda.",
+        "Ya no estás asignado al turno {subject.label} ({context.shiftDate}). No debes presentarte. No se requiere acción de tu parte; este turno ya no cuenta en tu agenda.",
       assigned:
-        "Fuiste asignado al turno {subject.label} el {context.shiftDate} en reemplazo de {context.workerOutLabel}. Debes presentarte en el horario y lugar del turno. Confirma la asignación antes de {context.ackDeadline}.",
+        "Fuiste asignado al turno {subject.label} ({context.shiftDate}) en reemplazo de {context.workerOutLabel}. Debes presentarte en el horario y lugar del turno. Confirma la asignación antes de {context.ackDeadline}.",
       supervisor:
         "{context.workerOutLabel} sale y {context.workerInLabel} entra en {subject.label} ({context.shiftDate}). Actualiza el briefing y el control de asistencia con la persona correcta.",
       responsible:
