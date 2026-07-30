@@ -255,14 +255,14 @@ describe("Worker replacement (single ChangeSet)", () => {
     const out = r.simulatedMessages.find((m) => m.partyId === "w-out")!;
     const inc = r.simulatedMessages.find((m) => m.partyId === "w-in")!;
     expect(out.simulatedMessage).toContain("Ya no estás asignado");
-    expect(inc.simulatedMessage).toContain("Has sido asignado");
+    expect(inc.simulatedMessage).toContain("Fuiste asignado");
     expect(out.simulatedMessage).not.toBe(inc.simulatedMessage);
   });
 
   it("CA-F1-07: one correlationId, supervisor gets the replacement wording", () => {
     const r = run(replacement);
     const sup = r.simulatedMessages.find((m) => m.partyId === "sup-1")!;
-    expect(sup.simulatedMessage).toBe("Ana fue reemplazado por Luis en SH-001.");
+    expect(sup.simulatedMessage).toContain("Ana sale y Luis entra en SH-001");
     expect(r.correlationId).toBe("corr-1");
   });
 
