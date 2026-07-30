@@ -91,6 +91,19 @@ sin modificar ningún dominio. Ver `CHANGE_INTELLIGENCE_DOMAIN_EVENT_CONTRACT.md
 
 ---
 
+## P17 — Responsabilidad explícita (invariante)
+
+Nadie es destinatario por su rol, su jerarquía, su pertenencia al tenant ni por haber
+creado o editado el objeto. Un manager solo recibe comunicación si existe una relación
+explícita y verificable con el turno concreto, resuelta por precedencia estricta (D3).
+En ausencia de relación se registra `unresolved` y se alerta la configuración: **nunca**
+se notifica a todos los managers. La ausencia de manager jamás bloquea la comunicación
+crítica a los trabajadores afectados. Supervisor y manager son audiencias distintas; una
+misma persona recibe una sola comunicación consolidada.
+
+---
+
+
 ## Lo que Change Intelligence **no** es
 
 
