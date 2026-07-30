@@ -255,6 +255,7 @@ function App() {
           <NetworkListener />
           <OfflineBanner />
           <EnvBadge />
+          <SignOutConfirmRoot />
           <ErrorBoundary>
           <BrowserRouter>
             <Suspense fallback={<PageFallback />}>
