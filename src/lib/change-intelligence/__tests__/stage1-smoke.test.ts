@@ -69,7 +69,7 @@ describe("F1.2 Stage 1 smoke", () => {
     expect((row.unresolved_count ?? 0) >= 1).toBe(true);
     const counts = Object.values(row.audience_counts ?? {}) as number[];
     const total = counts.reduce((a, b) => a + b, 0);
-    expect(total).toBeLessThanOrEqual(result.record.recipients.length);
+    expect(total).toBeLessThanOrEqual(result.record.resolvedAudiences.length);
   });
 
   it("only observes the explicitly activated company", () => {
