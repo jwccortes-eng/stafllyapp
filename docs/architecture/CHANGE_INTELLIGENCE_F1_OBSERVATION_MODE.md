@@ -200,4 +200,37 @@ F1 termina, y solo entonces se evalúa F2, cuando:
 
 ---
 
-*Plan F1 v1.0. Pendiente de autorización. No existe código asociado a este documento.*
+---
+
+## D3 cerrada — impacto en F1
+
+**D3 deja de ser dependencia abierta.** F1 implementa `resolveDirectManagers()` como
+función pura sobre `audienceHints[]` del sobre estándar, aplicando la precedencia
+`shift_explicit → location_responsibility → client_responsibility →
+operational_unit_responsibility → duty_manager → unresolved`, sin mezcla de niveles.
+
+### Requisitos F1 añadidos
+
+- **F1-D3-a:** cada `ObservationRecord` incluye un bloque `managerResolution` con
+  `manager_id`, `relationship_type`, `source_object_id`, `resolution_priority`,
+  `resolved_at`, `reason`, `whether_notification_was_required`, `deduplication_key`.
+- **F1-D3-b:** cuando el set queda vacío, se registra
+  `manager_resolution_status = unresolved` + alerta de configuración simulada; jamás
+  fallback a "todos los managers".
+- **F1-D3-c:** los trabajadores y supervisores afectados se resuelven de forma
+  independiente; un manager `unresolved` no los suprime.
+- **F1-D3-d:** dedupe supervisor/manager verificado por `deduplication_key`.
+- **F1-D3-e:** el autor del cambio se excluye salvo relación explícita independiente.
+
+### Criterios de aceptación nuevos
+
+**CA-16:** los 10 casos CA-D3-01…CA-D3-10 pasan como tests deterministas del motor.
+**CA-17:** ningún `ObservationRecord` de la corrida shadow contiene un destinatario
+manager sin `relationship_type` explícito distinto de `unresolved`.
+**CA-18:** informe de divergencia reporta cuántas notificaciones legacy a managers
+serían suprimidas por D3.
+
+---
+
+*Plan F1 v1.1 — D3 cerrada. Pendiente de autorización. No existe código asociado a este documento.*
+
