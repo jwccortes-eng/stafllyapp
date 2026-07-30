@@ -82,7 +82,17 @@ Un mensaje irrelevante no cuesta una notificación: cuesta la atención que la p
 
 ---
 
+## P16 — Independencia de dominio (invariante)
+
+Change Intelligence no conoce la lógica de Turnos, Nómina, Reclutamiento ni Documentos.
+Opera únicamente sobre eventos de dominio estandarizados (`DomainChangeEvent`), de modo
+que cualquier capacidad del ecosistema pueda usarlo sin acoplamiento y CI pueda evolucionar
+sin modificar ningún dominio. Ver `CHANGE_INTELLIGENCE_DOMAIN_EVENT_CONTRACT.md`.
+
+---
+
 ## Lo que Change Intelligence **no** es
+
 
 - No es un feed de actividad.
 - No es un canal de anuncios ni de marketing interno.
@@ -105,3 +115,5 @@ Un mensaje irrelevante no cuesta una notificación: cuesta la atención que la p
 - `CHANGE_INTELLIGENCE_V1.md` — modelo conceptual y arquitectura
 - `CHANGE_INTELLIGENCE_DECISIONS_F0.md` — decisiones DEC-CI-01…05
 - `CHANGE_INTELLIGENCE_CHANGE_CATALOG.md` — catálogo oficial de tipos de cambio
+- `CHANGE_INTELLIGENCE_DOMAIN_EVENT_CONTRACT.md` — contrato de eventos de dominio (P16)
+
