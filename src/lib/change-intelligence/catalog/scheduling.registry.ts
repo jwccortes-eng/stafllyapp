@@ -63,7 +63,7 @@ export const schedulingRegistry: ChangeTypeRegistration[] = [
       supervisor:
         "Cambió la ubicación de {subject.label} ({context.shiftDate}). {diff}. Verifica traslados y punto de encuentro del equipo antes de {context.ackDeadline}.",
       responsible:
-        "Cambió la ubicación de {subject.label} ({context.shiftDate}). {diff}. Confirma que el equipo asignado puede llegar al nuevo sitio.",
+        "Cambió la ubicación de {subject.label} ({context.shiftDate}). {diff}. Confirma que el equipo asignado puede llegar al nuevo sitio antes de {context.ackDeadline}.",
     },
   },
   {
