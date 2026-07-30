@@ -74,6 +74,7 @@ export function observe(
         suppressedCount: event.legacyAudience?.length ?? 0,
         legacyManagersWithoutExplicitRelation: 0,
       },
+      context: event.context,
       observationOnly: true,
     };
   }
