@@ -14,6 +14,7 @@ import { SoundProvider } from "@/hooks/useSound";
 import { LanguageProvider } from "@/i18n";
 import { Loader2 } from "lucide-react";
 import { EnvBadge } from "@/components/EnvBadge";
+import { SignOutConfirmRoot } from "@/components/LogoutConfirmDialog";
 
 // Eager: shell components needed immediately
 import AdminLayout from "./components/AdminLayout";
@@ -255,6 +256,7 @@ function App() {
           <NetworkListener />
           <OfflineBanner />
           <EnvBadge />
+          <SignOutConfirmRoot />
           <ErrorBoundary>
           <BrowserRouter>
             <Suspense fallback={<PageFallback />}>
