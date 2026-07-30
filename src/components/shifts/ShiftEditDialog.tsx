@@ -136,7 +136,14 @@ export function ShiftEditDialog({
   if (shift.status === "locked") return null;
 
   const handleSave = async () => {
+    if (saving) return; // double-tap guard — never allows a second UPDATE
     if (!form.date) return;
+    // Time sanity: block only the impossible case (identical start/end).
+    // Overnight shifts (end < start) stay allowed — they are legitimate.
+    if (form.startTime && form.endTime && form.startTime === form.endTime) {
+      toast.error("La hora final debe ser distinta de la hora de inicio.");
+      return;
+    }
     if (shiftAssignedIds.length > 0 && !form.shiftAdminId) {
       toast.error("Selecciona un admin del turno antes de guardar. El responsable operativo es obligatorio.");
       return;
@@ -145,6 +152,7 @@ export function ShiftEditDialog({
       toast.error("El admin del turno debe ser uno de los empleados asignados.");
       return;
     }
+
     setSaving(true);
     try {
       const payload = formStateToShiftPayload(form, allowClaims);
