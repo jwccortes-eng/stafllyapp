@@ -14,6 +14,7 @@ import {
   getDurableEnvironment,
   getDurablePilotStage,
   getObservationSampleRate,
+  isDurableCompanyAllowed,
 } from "../flags";
 
 export interface DurableSinkStats {
@@ -86,6 +87,10 @@ export function persistObservation(
     stats.lastError = String(error);
     return;
   }
+
+  // Stage 1 gate: only companies explicitly listed are observed.
+  // No environment fallback, no role fallback, no implicit activation.
+  if (!isDurableCompanyAllowed(row.company_id)) return;
 
   stats.attempted += 1;
   void supabase.functions
