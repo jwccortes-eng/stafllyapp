@@ -65,8 +65,11 @@ describe("F1.2 Stage 1 smoke", () => {
   it("does not widen the audience when a manager is unresolved", () => {
     const result = runScenario(byId("L"));
     const row = toDurableRow(result.record, { environment: "demo", pilotStage: 1 });
-    // eslint-disable-next-line no-console
-    console.log("L row", JSON.stringify({u: row.unresolved_count, a: row.audience_counts, c: row.ci_recipient_count}));
+    // Unresolved manager must NOT be replaced by a broader fallback audience:
+    // only the directly affected worker stays in scope.
+    expect(row.audience_counts).toEqual({ assigned: 1 });
+    expect(row.ci_recipient_count).toBe(1);
+    expect(row.resolved_role_types).not.toContain("company_fallback");
     const counts = Object.values(row.audience_counts ?? {}) as number[];
     const total = counts.reduce((a, b) => a + b, 0);
     expect(total).toBeLessThanOrEqual(result.record.resolvedAudiences.length);
