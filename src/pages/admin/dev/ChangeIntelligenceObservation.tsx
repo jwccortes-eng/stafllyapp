@@ -120,9 +120,127 @@ function ChangeIntelligenceObservation() {
           >
             Limpiar buffer
           </Button>
-          <span className="text-sm text-muted-foreground">{records.length} registros</span>
+          <div className="flex items-center gap-3">
+            <Switch
+              id="ci-scenarios"
+              checked={showScenarios}
+              onCheckedChange={setShowScenarios}
+            />
+            <Label htmlFor="ci-scenarios">Matriz de escenarios A–O (sintética)</Label>
+          </div>
+          <span className="text-sm text-muted-foreground">
+            {records.length} registros {showScenarios ? "sintéticos" : "reales"}
+          </span>
         </CardContent>
       </Card>
+
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">
+            Manager no resuelto — vista agregada (configuración, no ruido por turno)
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-wrap gap-6 text-sm">
+            <div>
+              <p className="text-xs text-muted-foreground">Evaluaciones</p>
+              <p className="text-xl font-semibold">{unresolved.totalEvaluations}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Sin manager resuelto</p>
+              <p className="text-xl font-semibold">
+                {unresolved.unresolvedCount} ({unresolved.unresolvedPct}%)
+              </p>
+            </div>
+          </div>
+          <div className="grid gap-4 md:grid-cols-3">
+            {(
+              [
+                ["Por compañía", unresolved.byCompany],
+                ["Por ubicación", unresolved.byLocation],
+                ["Por cliente", unresolved.byClient],
+              ] as const
+            ).map(([title, groups]) => (
+              <div key={title} className="space-y-1">
+                <p className="text-xs font-medium text-muted-foreground">{title}</p>
+                {groups.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">—</p>
+                ) : (
+                  groups.slice(0, 5).map((g) => (
+                    <div
+                      key={g.key}
+                      className="flex items-center justify-between rounded-md border p-2 text-sm"
+                    >
+                      <span className="truncate">{g.label}</span>
+                      <Badge variant="outline">{g.count}</Badge>
+                    </div>
+                  ))
+                )}
+              </div>
+            ))}
+          </div>
+          <div className="space-y-1">
+            <p className="text-xs font-medium text-muted-foreground">
+              Turnos futuros prioritarios (aún corregibles)
+            </p>
+            {unresolved.priorityFutureShifts.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Ninguno.</p>
+            ) : (
+              unresolved.priorityFutureShifts.slice(0, 10).map((s) => (
+                <div
+                  key={`${s.aggregateId}-${s.changeType}`}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-md border p-2 text-sm"
+                >
+                  <span className="truncate">
+                    {s.subjectLabel} · {s.shiftDate ?? "sin fecha"}
+                  </span>
+                  <span className="flex items-center gap-2">
+                    <Badge variant="secondary">N{s.impactLevel}</Badge>
+                    <span className="font-mono text-xs text-muted-foreground">{s.cause}</span>
+                  </span>
+                </div>
+              ))
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {showScenarios && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Resultado por escenario</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {scenarioResults.map(({ scenario, record }) => (
+              <div key={scenario.id} className="rounded-md border p-3 text-sm">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant="outline">{scenario.id}</Badge>
+                  <span className="font-medium">{scenario.title}</span>
+                  <Badge variant="secondary">Nivel {record.impactLevel}</Badge>
+                  <Badge variant="outline">{record.simulatedMessages.length} mensajes</Badge>
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">{scenario.expectation}</p>
+                <ul className="mt-2 space-y-1">
+                  {record.simulatedMessages.map((m) => (
+                    <li key={m.partyId} className="rounded bg-muted p-2 text-xs">
+                      <span className="font-mono">
+                        {m.relation} · {m.simulatedChannel}
+                      </span>
+                      : {m.simulatedMessage}
+                    </li>
+                  ))}
+                  {record.simulatedMessages.length === 0 && (
+                    <li className="text-xs text-muted-foreground">
+                      Silencio · {record.suppressionReason ?? "sin destinatarios"}
+                    </li>
+                  )}
+                </ul>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
 
       <section className="grid grid-cols-2 gap-3 md:grid-cols-5">
         {metrics.map(([label, value]) => (
