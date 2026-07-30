@@ -1,78 +1,81 @@
 /**
  * MobileShiftEditSheet — mobile-first edit of an existing shift.
  *
- * Scope (intentionally narrow):
- *  - Loads the CURRENT values of the shift (date, start, end, slots,
- *    meeting point, notes).
- *  - Saves with a single UPDATE on scheduled_shifts filtered by the existing
- *    shift id. Never INSERTs, never touches tenant/company_id, assignments,
- *    time_entries or payroll.
- *  - Only the fields the operator actually changed are sent.
+ * Field parity: renders the SAME <ShiftFormFields/> used by "Crear turno" and
+ * by the desktop edit dialog (stack layout), so every editable column is
+ * available on mobile: cliente, dirección del evento (job site), punto de
+ * encuentro, hora de encuentro, transporte, pago, instrucciones, etc.
+ *
+ * Persistence rules:
+ *  - Single UPDATE on scheduled_shifts filtered by the existing shift id.
+ *    Never an INSERT. tenant_id / company_id / assignments untouched.
+ *  - Only the columns the operator actually changed are sent.
+ *  - Never touches time_entries, attendance or payroll.
+ *  - meeting_point and job_site_address stay independent columns.
  */
 import { useEffect, useMemo, useState } from "react";
 import { Loader2, Save, X, AlertTriangle } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { SmartDateInput } from "@/components/ui/smart-date-input";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import type { Shift } from "@/components/shifts/types";
+import {
+  ShiftFormFields,
+  EMPTY_SHIFT_FORM_STATE,
+  shiftToFormState,
+  formStateToShiftPayload,
+  type ShiftFormState,
+  type LocationOption,
+} from "@/components/shifts/ShiftFormFields";
+import type { Shift, SelectOption, Employee, Assignment } from "@/components/shifts/types";
 
 interface Props {
   shift: Shift | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Reference data — same lists the create flow uses. */
+  clients?: SelectOption[];
+  locations?: LocationOption[];
+  employees?: Employee[];
+  assignments?: Assignment[];
+  companyId?: string | null;
+  allowClaims?: boolean;
   /** Called after a successful UPDATE so the caller can refresh its lists. */
   onSaved?: (patch: Record<string, any>) => void;
 }
 
-interface EditState {
-  date: string;
-  startTime: string;
-  endTime: string;
-  slots: string;
-  meetingPoint: string;
-  notes: string;
-}
-
 const hhmm = (t?: string | null) => (t ? t.slice(0, 5) : "");
-
-function toState(shift: Shift): EditState {
-  const s = shift as any;
-  return {
-    date: shift.date ?? "",
-    startTime: hhmm(shift.start_time),
-    endTime: hhmm(shift.end_time),
-    slots: shift.slots != null ? String(shift.slots) : "1",
-    meetingPoint: s.meeting_point ?? "",
-    notes: shift.notes ?? "",
-  };
-}
 
 const minutes = (t: string) => {
   const [h, m] = t.split(":").map(Number);
   return (h || 0) * 60 + (m || 0);
 };
 
-export function MobileShiftEditSheet({ shift, open, onOpenChange, onSaved }: Props) {
-  const [form, setForm] = useState<EditState>(() => (shift ? toState(shift) : {
-    date: "", startTime: "", endTime: "", slots: "1", meetingPoint: "", notes: "",
-  }));
+export function MobileShiftEditSheet({
+  shift,
+  open,
+  onOpenChange,
+  clients = [],
+  locations = [],
+  employees = [],
+  assignments = [],
+  companyId = null,
+  allowClaims = true,
+  onSaved,
+}: Props) {
+  const [form, setForm] = useState<ShiftFormState>(EMPTY_SHIFT_FORM_STATE);
   const [overnight, setOvernight] = useState(false);
   const [saving, setSaving] = useState(false);
   const [confirmClose, setConfirmClose] = useState(false);
 
   useEffect(() => {
     if (shift && open) {
-      setForm(toState(shift));
+      setForm(shiftToFormState(shift));
       setOvernight(
         !!shift.start_time && !!shift.end_time &&
         minutes(hhmm(shift.end_time)) < minutes(hhmm(shift.start_time))
@@ -81,7 +84,7 @@ export function MobileShiftEditSheet({ shift, open, onOpenChange, onSaved }: Pro
     }
   }, [shift?.id, open]);
 
-  const initial = useMemo(() => (shift ? toState(shift) : null), [shift?.id, shift?.date, shift?.start_time, shift?.end_time, shift?.slots, shift?.notes]);
+  const initial = useMemo(() => (shift ? shiftToFormState(shift) : null), [shift]);
   const isDirty = useMemo(
     () => (initial ? JSON.stringify(initial) !== JSON.stringify(form) : false),
     [initial, form]
@@ -102,8 +105,6 @@ export function MobileShiftEditSheet({ shift, open, onOpenChange, onSaved }: Pro
         ? "La hora final es anterior a la inicial. Marca “Turno nocturno” si cruza la medianoche."
         : null;
 
-  const patch = (p: Partial<EditState>) => setForm((prev) => ({ ...prev, ...p }));
-
   const requestClose = () => {
     if (saving) return;
     if (isDirty) setConfirmClose(true);
@@ -119,23 +120,19 @@ export function MobileShiftEditSheet({ shift, open, onOpenChange, onSaved }: Pro
       return;
     }
 
-    // Only the fields the operator actually changed.
+    // Diff the full payload against the shift's current values so we only send
+    // the columns that actually changed.
+    const next = formStateToShiftPayload(form, allowClaims);
+    const prev = formStateToShiftPayload(shiftToFormState(shift), allowClaims);
     const updates: Record<string, any> = {};
-    const cur = shift as any;
-    if (form.date !== cur.date) updates.date = form.date;
-    if (form.startTime !== hhmm(cur.start_time)) updates.start_time = form.startTime;
-    if (form.endTime !== hhmm(cur.end_time)) updates.end_time = form.endTime;
-    const slotsNum = parseInt(form.slots, 10);
-    if (!Number.isNaN(slotsNum) && slotsNum !== cur.slots) updates.slots = slotsNum;
-    if (form.meetingPoint.trim() !== (cur.meeting_point ?? "")) {
-      updates.meeting_point = form.meetingPoint.trim() || null;
+    for (const key of Object.keys(next)) {
+      if (JSON.stringify(next[key]) !== JSON.stringify(prev[key])) updates[key] = next[key];
     }
-    if (form.notes.trim() !== (cur.notes ?? "")) updates.notes = form.notes.trim() || null;
 
     if (Object.keys(updates).length === 0) { toast.info("Sin cambios"); onOpenChange(false); return; }
 
     setSaving(true);
-    // UPDATE by existing id — never an INSERT, company_id untouched.
+    // UPDATE by existing id — never an INSERT, company_id/tenant untouched.
     const { error } = await supabase
       .from("scheduled_shifts")
       .update(updates as any)
@@ -172,43 +169,23 @@ export function MobileShiftEditSheet({ shift, open, onOpenChange, onSaved }: Pro
             </Button>
           </div>
 
-          {/* Body */}
-          <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
-            <div>
-              <Label className="text-xs font-medium text-muted-foreground">Fecha</Label>
-              <div className="mt-1.5">
-                <SmartDateInput
-                  value={form.date}
-                  onChange={(iso) => patch({ date: iso })}
-                  placeholder="MM/DD/YYYY"
-                  aria-label="Fecha del turno"
-                  inputClassName="h-12 text-base"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label className="text-xs font-medium text-muted-foreground">Hora de inicio</Label>
-                <Input
-                  type="time"
-                  value={form.startTime}
-                  onChange={(e) => patch({ startTime: e.target.value })}
-                  className="h-12 text-base mt-1.5"
-                  aria-label="Hora de inicio"
-                />
-              </div>
-              <div>
-                <Label className="text-xs font-medium text-muted-foreground">Hora final</Label>
-                <Input
-                  type="time"
-                  value={form.endTime}
-                  onChange={(e) => patch({ endTime: e.target.value })}
-                  className="h-12 text-base mt-1.5"
-                  aria-label="Hora de finalización"
-                />
-              </div>
-            </div>
+          {/* Body — full field parity with "Crear turno" */}
+          <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+            <ShiftFormFields
+              layout="stack"
+              mode="edit"
+              companyId={companyId}
+              value={form}
+              onChange={(patch) => setForm((p) => ({ ...p, ...patch }))}
+              clients={clients}
+              locations={locations}
+              employees={employees}
+              assignments={assignments}
+              allowClaims={allowClaims}
+              shift={shift}
+              showEmployeePicker={false}
+              renderInlineSummary={false}
+            />
 
             {crossesMidnight && (
               <label className="flex items-start gap-2.5 rounded-xl border border-amber-500/40 bg-amber-500/5 px-3 py-2.5">
@@ -225,41 +202,6 @@ export function MobileShiftEditSheet({ shift, open, onOpenChange, onSaved }: Pro
               </label>
             )}
 
-            <div>
-              <Label className="text-xs font-medium text-muted-foreground">Plazas</Label>
-              <Input
-                type="number"
-                min={1}
-                inputMode="numeric"
-                value={form.slots}
-                onChange={(e) => patch({ slots: e.target.value })}
-                className="h-12 text-base mt-1.5"
-                aria-label="Plazas requeridas"
-              />
-            </div>
-
-            <div>
-              <Label className="text-xs font-medium text-muted-foreground">Punto de encuentro</Label>
-              <Input
-                value={form.meetingPoint}
-                onChange={(e) => patch({ meetingPoint: e.target.value })}
-                className="h-12 text-base mt-1.5"
-                placeholder="Dónde se reúne el equipo"
-                aria-label="Punto de encuentro"
-              />
-            </div>
-
-            <div>
-              <Label className="text-xs font-medium text-muted-foreground">Notas internas</Label>
-              <Textarea
-                value={form.notes}
-                onChange={(e) => patch({ notes: e.target.value })}
-                className="mt-1.5 min-h-[96px] text-base"
-                placeholder="Instrucciones u observaciones"
-                aria-label="Notas internas"
-              />
-            </div>
-
             {validationError && (
               <div className="flex items-start gap-2 rounded-xl border border-destructive/30 bg-destructive/5 px-3 py-2.5">
                 <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
@@ -268,8 +210,8 @@ export function MobileShiftEditSheet({ shift, open, onOpenChange, onSaved }: Pro
             )}
 
             <p className="text-[11px] text-muted-foreground leading-snug">
-              Editar el horario programado no modifica fichajes ni payroll. Las asignaciones del
-              equipo se conservan.
+              Editar el turno no modifica fichajes ni payroll. Las asignaciones del equipo se
+              conservan. La dirección del evento y el punto de encuentro son campos distintos.
             </p>
           </div>
 
