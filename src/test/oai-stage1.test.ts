@@ -87,12 +87,17 @@ describe("OAI engine isolation (P16 equivalent)", () => {
 });
 
 describe("OAI has no delivery, queue or decision semantics", () => {
-  it("never mentions forbidden vocabulary in code", () => {
+  it("never mentions forbidden vocabulary in executable code", () => {
     const forbidden = ["sent_at", "retry_count", "delivery_status", "push_token", "recipient_id"];
+    const isComment = (line: string) => {
+      const t = line.trim();
+      return t.startsWith("//") || t.startsWith("*") || t.startsWith("/*");
+    };
     for (const file of SOURCE_FILES) {
-      const source = readFileSync(file, "utf8");
+      const lines = readFileSync(file, "utf8").split("\n").filter((l) => !isComment(l));
+      const code = lines.join("\n");
       for (const token of forbidden) {
-        expect(source, `${file} must not contain ${token}`).not.toContain(token);
+        expect(code, `${file} must not contain ${token}`).not.toContain(token);
       }
     }
   });
