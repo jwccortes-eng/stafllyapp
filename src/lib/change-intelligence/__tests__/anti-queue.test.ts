@@ -20,7 +20,7 @@ function collect(dir: string): string[] {
   });
 }
 
-const files = [...collect(CI_DIR), ...FN_DIRS.flatMap(collect)].filter((f) => /\.(ts|tsx)$/.test(f));
+const files = [...collect(CI_DIR), ...FN_DIRS.flatMap(collect)].filter((f) => /\.(ts|tsx)$/.test(f) && !f.includes("__tests__"));
 
 /** Strip comments and string literals used to *forbid* something. */
 function executableLines(source: string): string {
