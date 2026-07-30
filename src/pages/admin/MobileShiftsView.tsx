@@ -24,6 +24,8 @@ const MobileShiftOperationsSheet = lazy(() =>
   }))
 );
 import { MobileQuickCreateShiftSheet } from "@/components/shifts/mobile/MobileQuickCreateShiftSheet";
+import { MobileShiftEditSheet } from "@/components/shifts/mobile/MobileShiftEditSheet";
+
 import { isDraftShift, isPublishedShift } from "@/lib/shifts/shift-guards";
 import type { Shift, Assignment, Employee, SelectOption } from "@/components/shifts/types";
 import { cn } from "@/lib/utils";
@@ -115,6 +117,9 @@ export default function MobileShiftsView() {
 
   const [detailShift, setDetailShift] = useState<Shift | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  const [editShift, setEditShift] = useState<Shift | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
+
   const [detailManageTeam, setDetailManageTeam] = useState(false);
   // Tracks whether we've already attempted to consume a deep-link intent
   // for the current shifts payload (avoids reopening on every refresh).
@@ -621,9 +626,23 @@ export default function MobileShiftsView() {
             clientName={detailShift?.client_id ? clientById.get(detailShift.client_id) ?? "—" : "—"}
             locationName={detailShift?.location_id ? locationById.get(detailShift.location_id) ?? "" : ""}
             initialOpenTeamHub={detailManageTeam}
+            onEdit={canEdit ? (s) => { setEditShift(s); setEditOpen(true); } : undefined}
           />
         </Suspense>
       )}
+
+      {/* Edit existing shift — UPDATE only, keeps id/tenant/assignments intact */}
+      <MobileShiftEditSheet
+        shift={editShift}
+        open={editOpen}
+        onOpenChange={(o) => { setEditOpen(o); if (!o) setEditShift(null); }}
+        onSaved={(patch) => {
+          setShifts((prev) => prev.map((s) => (editShift && s.id === editShift.id ? { ...s, ...patch } as Shift : s)));
+          setDetailShift((prev) => (editShift && prev?.id === editShift.id ? { ...prev, ...patch } as Shift : prev));
+          setReloadKey((k) => k + 1);
+        }}
+      />
+
 
       {/* Mobile Quick Create — writes to scheduled_shifts via same RLS as desktop */}
       <MobileQuickCreateShiftSheet

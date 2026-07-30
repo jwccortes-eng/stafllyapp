@@ -119,7 +119,11 @@ interface Props {
   meetingPoint?: string | null;
   /** When true and the sheet opens, immediately open the Manage Team hub. */
   initialOpenTeamHub?: boolean;
+  /** Optional — when provided (and the user can manage shifts), shows the
+   *  "Editar turno" action. The parent owns the edit surface. */
+  onEdit?: (shift: Shift) => void;
 }
+
 
 function formatTimeShort(t: string): string {
   if (!t) return "—";
@@ -153,7 +157,7 @@ function initials(e: Employee): string {
 
 export function MobileShiftOperationsSheet({
   shift, open, onOpenChange, assignments, employees,
-  clientName, locationName, meetingPoint, initialOpenTeamHub,
+  clientName, locationName, meetingPoint, initialOpenTeamHub, onEdit,
 }: Props) {
   const navigate = useNavigate();
   const [traceOpen, setTraceOpen] = useState(false);
@@ -238,6 +242,8 @@ export function MobileShiftOperationsSheet({
   }, [shift?.id, open, reloadKey]);
 
   const canValidate = canManageShifts({ allRoles, canAccessAdminForCompany, companyId: selectedCompanyId });
+  const editLocked = ["locked", "archived", "cancelled"].includes(shift?.status ?? "");
+
 
   const data = useMemo(() => {
     if (!shift) return null;
@@ -1209,9 +1215,21 @@ export function MobileShiftOperationsSheet({
               Ver asistencia
             </Button>
           )}
+          {canValidate && onEdit && !editLocked && (
+            <Button
+              variant="outline"
+              className="w-full h-11 rounded-xl text-sm font-semibold gap-2 mt-2"
+              onClick={() => { onOpenChange(false); onEdit(shift); }}
+              aria-label="Editar fecha y horario de este turno"
+            >
+              <FileEdit className="h-4 w-4" />
+              Editar turno
+            </Button>
+          )}
           <p className="mt-2 text-center text-[11px] text-muted-foreground">
             Acciones seguras disponibles en móvil. Cambios avanzados siguen en escritorio.
           </p>
+
         </div>
       </SheetContent>
     </Sheet>
