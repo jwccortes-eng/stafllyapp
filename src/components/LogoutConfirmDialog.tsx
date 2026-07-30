@@ -126,10 +126,7 @@ export function SignOutConfirmRoot() {
         if (!next && !busy) closeConfirmation();
       }}
     >
-      <AlertDialogContent
-        onEscapeKeyDown={(e) => busy && e.preventDefault()}
-        onInteractOutside={(e) => e.preventDefault()}
-      >
+      <AlertDialogContent onEscapeKeyDown={(e) => { if (busy) e.preventDefault(); }}>
         <AlertDialogHeader>
           <AlertDialogTitle>¿Cerrar sesión?</AlertDialogTitle>
           <AlertDialogDescription>
