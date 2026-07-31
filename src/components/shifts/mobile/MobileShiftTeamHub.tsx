@@ -22,7 +22,7 @@
  *  - Worker portal unaffected. Desktop unaffected. Payroll/RLS untouched.
  */
 
-import { memo, useEffect, useMemo, useState } from "react";
+import { createContext, memo, useContext, useEffect, useMemo, useState } from "react";
 import {
   X, Users, ShieldCheck, Clock, ExternalLink, Inbox,
   CheckCircle2, AlertCircle, UserMinus, UserX, Phone, MessageSquare,
@@ -48,8 +48,11 @@ import { normalizePhone, buildWhatsAppTargets } from "@/lib/phone";
 import { useToast } from "@/hooks/use-toast";
 import { allowedNextStatusesFor, type AssignmentNextStatus, type ClaimDecision } from "@/lib/shifts/team-actions";
 import { MobileTeamActionDialog } from "@/components/shifts/mobile/MobileTeamActionDialog";
-import { isOnboardingComplete } from "@/lib/onboarding";
-import { isGraceEligibleCompany, isWithinGraceWindow, GRACE_POLICY_DAYS } from "@/lib/shifts/readiness-grace";
+import {
+  describeAssignmentStatus, optimisticStatus,
+  type AssignmentStatus, type ReadinessState,
+} from "@/lib/shifts/assignment-status";
+import { useAssignmentStatuses } from "@/hooks/useAssignmentStatuses";
 import { formatDistanceToNowStrict, format, parseISO, isToday, isTomorrow } from "date-fns";
 import { enUS } from "date-fns/locale";
 import {
@@ -113,7 +116,8 @@ function buildRecommendedDisplay(c: RankedCandidate): {
 
   // 3. Readiness
   if (reasonSet.has("ready")) candidates.push({ key: "ready", label: "Listo", tone: "good" });
-  else if (reasonSet.has("grace_period")) candidates.push({ key: "grace_period", label: "Período de gracia", tone: "good" });
+  else if (reasonSet.has("compliance_warning")) candidates.push({ key: "compliance_warning", label: "Compliance pendiente", tone: "good" });
+  else if (reasonSet.has("override_required")) candidates.push({ key: "override_required", label: "Requiere autorización", tone: "risk" });
 
   // 4. Venue / client history (count-aware)
   if (c.locationHistoryCount > 0) {
@@ -165,56 +169,64 @@ function buildRecommendedDisplay(c: RankedCandidate): {
   return { chips, summary };
 }
 
-/* ─── Worker readiness (read-only, mirrors backend EMPLOYEE_NOT_READY guard) ─── */
+/* ─── Worker readiness — presentation only ───────────────────────────────
+ * All rules live in Postgres (`get_employee_assignment_status`). This file
+ * never decides who can be assigned; it only renders the backend verdict.
+ * `missing_phone` is a contactability hint and never blocks.
+ * ---------------------------------------------------------------------- */
 
-type ReadinessState =
-  | "ready" | "grace_period"
-  | "incomplete_blocked" | "pending_documents_blocked"
-  | "onboarding_pending" | "missing_phone"
-  | "inactive" | "unknown";
+type HubReadinessState = ReadinessState | "missing_phone";
 
 interface Readiness {
-  state: ReadinessState;
+  state: HubReadinessState;
   canBeApproved: boolean;
+  requiresOverride: boolean;
   label: string;
   helper: string;
 }
 
-const GRACE_HELPER = `Worker can be approved during the ${GRACE_POLICY_DAYS}-day grace period. Profile still needs completion.`;
+/** Context so every subtree reads the same batched backend verdict. */
+const AssignmentStatusContext = createContext<Map<string, AssignmentStatus>>(new Map());
+const useStatusMap = () => useContext(AssignmentStatusContext);
 
-function computeReadiness(e: Employee | undefined, companyId?: string | null): Readiness {
-  if (!e) return { state: "unknown", canBeApproved: false, label: "Requiere revisión", helper: "No se pudo cargar el registro del trabajador." };
-  if (e.is_active === false) return { state: "inactive", canBeApproved: false, label: "Inactivo", helper: "Reactiva al trabajador antes de aprobar." };
+function readinessFor(
+  e: Employee | undefined,
+  statuses: Map<string, AssignmentStatus>,
+): Readiness {
+  if (!e) {
+    return {
+      state: "needs_review", canBeApproved: false, requiresOverride: false,
+      label: "Requiere revisión", helper: "No se pudo cargar el registro del trabajador.",
+    };
+  }
+  const status = statuses.get(e.id) ?? optimisticStatus(e.id);
+  const p = describeAssignmentStatus(status);
 
-  const profileIncomplete = e.profile_status === "incomplete" || e.profile_status === "pending_documents";
-  const inGrace = profileIncomplete && isGraceEligibleCompany(companyId) && isWithinGraceWindow();
+  if (status.readiness === "ready" && !normalizePhone(e.phone_number)) {
+    return {
+      state: "missing_phone", canBeApproved: true, requiresOverride: false,
+      label: "Sin teléfono",
+      helper: "Agrega un teléfono — sin él no se puede contactar al trabajador.",
+    };
+  }
 
-  if (e.profile_status === "incomplete") {
-    if (inGrace) return { state: "grace_period", canBeApproved: true, label: "Perfil incompleto · período de gracia", helper: GRACE_HELPER };
-    return { state: "incomplete_blocked", canBeApproved: false, label: "Perfil incompleto · bloqueado", helper: "Completa el perfil del trabajador antes de aprobar esta solicitud." };
-  }
-  if (e.profile_status === "pending_documents") {
-    if (inGrace) return { state: "grace_period", canBeApproved: true, label: "Faltan documentos · período de gracia", helper: GRACE_HELPER };
-    return { state: "pending_documents_blocked", canBeApproved: false, label: "Faltan documentos · bloqueado", helper: "El trabajador debe subir los documentos requeridos." };
-  }
-  if (!normalizePhone(e.phone_number)) {
-    return { state: "missing_phone", canBeApproved: true, label: "Sin teléfono", helper: "Agrega un teléfono — sin él no se puede contactar al trabajador." };
-  }
-  if (e.onboarding_status && !isOnboardingComplete(e.onboarding_status) && e.profile_status !== "active") {
-    return { state: "onboarding_pending", canBeApproved: true, label: "Onboarding pendiente", helper: "El trabajador aún no completó el onboarding." };
-  }
-  return { state: "ready", canBeApproved: true, label: "Listo", helper: "Trabajador listo para turnos." };
+  return {
+    state: status.readiness,
+    canBeApproved: p.canAssign,
+    requiresOverride: p.requiresOverride,
+    label: p.label,
+    helper: `${p.reason} ${p.action}`.trim(),
+  };
 }
 
-const READINESS_TONE: Record<ReadinessState, "good" | "info" | "warn" | "bad" | "muted"> = {
+const READINESS_TONE: Record<HubReadinessState, "good" | "info" | "warn" | "bad" | "muted"> = {
   ready: "good",
-  grace_period: "warn",
-  incomplete_blocked: "bad",
-  pending_documents_blocked: "bad",
-  onboarding_pending: "warn",
+  compliance_warning: "warn",
+  override_required: "warn",
+  compliance_blocked: "bad",
   missing_phone: "warn",
   inactive: "bad",
-  unknown: "muted",
+  needs_review: "muted",
 };
 
 function ReadinessChip({ readiness, className }: { readiness: Readiness; className?: string }) {
@@ -400,7 +412,7 @@ function MobileShiftTeamHubImpl({
   };
   const openClaimAction = (requestId: string, decision: ClaimDecision, workerName: string, employeeId?: string) => {
     if (decision === "approved" && employeeId) {
-      const r = computeReadiness(empById.get(employeeId), companyId);
+      const r = readinessFor(empById.get(employeeId), statusById);
       if (!r.canBeApproved) {
         toast({
           title: "Worker not ready to be approved",
@@ -414,7 +426,7 @@ function MobileShiftTeamHubImpl({
     setActionDialogOpen(true);
   };
   const openAssignWorkerAction = (employeeId: string, workerName: string) => {
-    const r = computeReadiness(empById.get(employeeId), companyId);
+    const r = readinessFor(empById.get(employeeId), statusById);
     if (!r.canBeApproved) {
       toast({
         title: "Worker not ready to be assigned",
@@ -428,7 +440,7 @@ function MobileShiftTeamHubImpl({
       shiftId: shift.id,
       employeeId,
       workerName,
-      graceWarning: r.state === "grace_period" ? r.helper : null,
+      graceWarning: r.state === "compliance_warning" ? r.helper : null,
     });
     setActionDialogOpen(true);
   };
@@ -483,6 +495,10 @@ function MobileShiftTeamHubImpl({
     for (const e of employees) m.set(e.id, e);
     return m;
   }, [employees]);
+
+  // Single source of truth: backend assignment verdict for the whole roster.
+  const employeeIds = useMemo(() => employees.map(e => e.id), [employees]);
+  const { statusById } = useAssignmentStatuses(employeeIds, companyId);
 
   const grouped = useMemo(() => {
     const buckets: Record<Bucket, HubAssignment[]> = {
@@ -618,6 +634,7 @@ function MobileShiftTeamHubImpl({
   ];
 
   return (
+    <AssignmentStatusContext.Provider value={statusById}>
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
@@ -819,7 +836,9 @@ function MobileShiftTeamHubImpl({
         />
       </SheetContent>
     </Sheet>
+    </AssignmentStatusContext.Provider>
   );
+
 }
 
 export const MobileShiftTeamHub = memo(MobileShiftTeamHubImpl);
@@ -958,7 +977,8 @@ function WorkerRow({
   const wa = hasPhone ? buildWhatsAppTargets(phoneDigits, "") : null;
   const allowedActions = allowedNextStatusesFor(assignment.status);
   const showMenu = canManage && allowedActions.length > 0;
-  const readiness = computeReadiness(employee, companyId);
+  const statusMap = useStatusMap();
+  const readiness = readinessFor(employee, statusMap);
   const [phoneDialogOpen, setPhoneDialogOpen] = useState(false);
   const [phoneInput, setPhoneInput] = useState("");
   const [savingPhone, setSavingPhone] = useState(false);
@@ -1219,6 +1239,7 @@ function ClaimsTab({
   onViewWorker: (employeeId: string) => void;
   onCopyReminder: (workerName: string) => void;
 }) {
+  const statusMap = useStatusMap();
   return (
     <section aria-label="Solicitudes de trabajadores">
       <SectionTitle icon={Inbox} helper={HUB_COPY.claimsHelper}>
@@ -1249,7 +1270,7 @@ function ClaimsTab({
               c.status === "approved" ? "good" :
               c.status === "rejected" ? "bad" : "warn";
             const isPending = c.status === "pending";
-            const readiness = computeReadiness(e, companyId);
+            const readiness = readinessFor(e, statusMap);
             const blocked = isPending && !readiness.canBeApproved;
             const statusLabel =
               c.status === "approved" ? "Aprobada" :
@@ -1437,14 +1458,14 @@ function classifyGroup(c: RankedCandidate): RecGroup {
   if (!c.canAssign) return "caution";
   if (c.conflictDetected) return "caution";
   if (c.riskFlags && c.riskFlags.length > 0) return "caution";
-  if (c.readinessState !== "ready" && c.readinessState !== "grace_period") return "caution";
+  if (c.readinessState !== "ready" && c.readinessState !== "compliance_warning") return "caution";
 
   // Best match: assignable, ready, no risk, strong score.
   if (c.score >= 150 && c.readinessState === "ready") return "best";
 
   // Good options: decent score, or grace, or has history.
   if (c.score >= 80) return "good";
-  if (c.readinessState === "grace_period") return "good";
+  if (c.readinessState === "compliance_warning") return "good";
   if ((c.locationHistoryCount ?? 0) > 0 || (c.clientHistoryCount ?? 0) > 0) return "good";
 
   return "caution";
@@ -1476,7 +1497,7 @@ function buildWhyReasons(c: RankedCandidate): string[] {
 
   // Readiness
   if (c.readinessState === "ready") lines.push("Perfil listo para turnos.");
-  else if (c.readinessState === "grace_period") lines.push("En período de gracia — puede aprobarse.");
+  else if (c.readinessState === "compliance_warning") lines.push("Compliance pendiente — no bloquea la asignación.");
   else lines.push("Perfil no está listo (bloqueado).");
 
   // Contact / availability
@@ -1523,6 +1544,7 @@ function RecommendedTab({
   onAssign: (employeeId: string, workerName: string) => void;
   onOpenDesktop: () => void;
 }) {
+  const statusMap = useStatusMap();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<RecFilter>("all");
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
@@ -1616,9 +1638,9 @@ function RecommendedTab({
     return employees
       .filter(e => e.is_active !== false)
       .filter(e => !takenIds.has(e.id))
-      .map(e => ({ e, r: computeReadiness(e, companyId) }))
-      .filter(x => x.r.state !== "inactive" && x.r.state !== "unknown");
-  }, [employees, takenIds, companyId]);
+      .map(e => ({ e, r: readinessFor(e, statusMap) }))
+      .filter(x => x.r.state !== "inactive" && x.r.state !== "needs_review");
+  }, [employees, takenIds, statusMap]);
 
   // Batch-fetch signals once per (shift, eligible) change.
   useEffect(() => {
@@ -1821,7 +1843,7 @@ function RecommendedTab({
       if (filter === "strong_history" && (c.locationHistoryCount ?? 0) < 5) return false;
       if (filter === "no_risk" && ((c.riskFlags?.length ?? 0) > 0 || c.conflictDetected)) return false;
       if (filter === "ready" && c.readinessState !== "ready") return false;
-      if (filter === "grace" && c.readinessState !== "grace_period") return false;
+      if (filter === "grace" && c.readinessState !== "compliance_warning") return false;
       if (filter === "phone" && !c.phone) return false;
       if (filter === "history" && c.clientHistoryCount === 0 && c.locationHistoryCount === 0) return false;
       if (filter === "drivers" && !c.driver) return false;
@@ -1969,7 +1991,7 @@ function RecommendedTab({
             const badgeTone =
               c.readinessState === "ready"
                 ? "border-emerald-300/60 text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30"
-                : c.readinessState === "grace_period"
+                : c.readinessState === "compliance_warning"
                   ? "border-amber-300/60 text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30"
                   : "border-rose-300/60 text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/30";
             return (
@@ -1985,7 +2007,7 @@ function RecommendedTab({
                   <div className="flex items-center gap-1.5 min-w-0">
                     <p className="text-[13.5px] font-semibold text-foreground truncate">{c.name}</p>
                     <span className={cn("h-[16px] inline-flex items-center rounded-full border px-1.5 text-[9.5px] font-semibold shrink-0", badgeTone)}>
-                      {c.readinessState === "ready" ? "Listo" : c.readinessState === "grace_period" ? "Gracia" : "Bloqueado"}
+                      {c.readinessState === "ready" ? "Listo" : c.readinessState === "compliance_warning" ? "Gracia" : "Bloqueado"}
                     </span>
                   </div>
                   {c.phone ? (
