@@ -123,6 +123,8 @@ export function MobileTeamActionDialog({
         /employee_inactive/i.test(msg) ? "Reactivate the worker before assigning." :
         /employee_wrong_company/i.test(msg) ? "Worker doesn't belong to this company." :
         /shift_not_found/i.test(msg) ? "Shift no longer exists." :
+        /compliance_override_required/i.test(msg) ? "La política de la compañía exige una aprobación explícita para este trabajador." :
+        /compliance_blocked/i.test(msg) ? "La política de cumplimiento de la compañía bloquea a este trabajador." :
         /employee_not_ready|EMPLOYEE_NOT_READY/i.test(msg) ? "This worker needs to complete their profile before being assigned." :
         msg;
       toast({ title: "Action failed", description: friendly, variant: "destructive" });

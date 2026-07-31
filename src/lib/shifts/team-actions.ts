@@ -81,7 +81,9 @@ export interface AssignWorkerInput {
  * Server-side guarantees:
  *   - Authorization via can_manage_shift_company.
  *   - Same-company employee/shift.
- *   - Readiness gated by get_employee_shift_readiness (60-day grace policy).
+ *   - Single source of truth: get_employee_assignment_status (company policy).
+ *     Compliance pendings only warn unless the company policy is
+ *     require_override / block; admin overrides bypass.
  *   - No duplicates against active assignments.
  *   - Inserts as status='pending', response_status='pending' (worker still must accept).
  *   - Writes shift_audit_log row (action='assignment_created').
