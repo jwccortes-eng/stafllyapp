@@ -116,7 +116,8 @@ function buildRecommendedDisplay(c: RankedCandidate): {
 
   // 3. Readiness
   if (reasonSet.has("ready")) candidates.push({ key: "ready", label: "Listo", tone: "good" });
-  else if (reasonSet.has("grace_period")) candidates.push({ key: "grace_period", label: "Período de gracia", tone: "good" });
+  else if (reasonSet.has("compliance_warning")) candidates.push({ key: "compliance_warning", label: "Compliance pendiente", tone: "good" });
+  else if (reasonSet.has("override_required")) candidates.push({ key: "override_required", label: "Requiere autorización", tone: "risk" });
 
   // 4. Venue / client history (count-aware)
   if (c.locationHistoryCount > 0) {
@@ -495,6 +496,10 @@ function MobileShiftTeamHubImpl({
     return m;
   }, [employees]);
 
+  // Single source of truth: backend assignment verdict for the whole roster.
+  const employeeIds = useMemo(() => employees.map(e => e.id), [employees]);
+  const { statusById } = useAssignmentStatuses(employeeIds, companyId);
+
   const grouped = useMemo(() => {
     const buckets: Record<Bucket, HubAssignment[]> = {
       confirmed: [], accepted: [], pending: [],
@@ -629,6 +634,7 @@ function MobileShiftTeamHubImpl({
   ];
 
   return (
+    <AssignmentStatusContext.Provider value={statusById}>
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
@@ -969,7 +975,8 @@ function WorkerRow({
   const wa = hasPhone ? buildWhatsAppTargets(phoneDigits, "") : null;
   const allowedActions = allowedNextStatusesFor(assignment.status);
   const showMenu = canManage && allowedActions.length > 0;
-  const readiness = readinessFor(employee, useStatusMap());
+  const statusMap = useStatusMap();
+  const readiness = readinessFor(employee, statusMap);
   const [phoneDialogOpen, setPhoneDialogOpen] = useState(false);
   const [phoneInput, setPhoneInput] = useState("");
   const [savingPhone, setSavingPhone] = useState(false);
@@ -1230,6 +1237,7 @@ function ClaimsTab({
   onViewWorker: (employeeId: string) => void;
   onCopyReminder: (workerName: string) => void;
 }) {
+  const statusMap = useStatusMap();
   return (
     <section aria-label="Solicitudes de trabajadores">
       <SectionTitle icon={Inbox} helper={HUB_COPY.claimsHelper}>
@@ -1534,6 +1542,7 @@ function RecommendedTab({
   onAssign: (employeeId: string, workerName: string) => void;
   onOpenDesktop: () => void;
 }) {
+  const statusMap = useStatusMap();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<RecFilter>("all");
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
