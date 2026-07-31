@@ -836,7 +836,9 @@ function MobileShiftTeamHubImpl({
         />
       </SheetContent>
     </Sheet>
+    </AssignmentStatusContext.Provider>
   );
+
 }
 
 export const MobileShiftTeamHub = memo(MobileShiftTeamHubImpl);
