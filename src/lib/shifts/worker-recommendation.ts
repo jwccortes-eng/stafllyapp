@@ -16,15 +16,20 @@ import type { Employee, Shift } from "@/components/shifts/types";
 import { isEmployeeDriver } from "@/components/shifts/types";
 import { normalizePhone } from "@/lib/phone";
 
+/**
+ * Canonical readiness states resolved by the backend
+ * (`public.get_employee_assignment_status`) plus the presentation-only
+ * `missing_phone` hint. Compliance never blocks unless the company policy
+ * says so — see src/lib/shifts/assignment-status.ts.
+ */
 export type RecReadinessState =
   | "ready"
-  | "grace_period"
-  | "incomplete_blocked"
-  | "pending_documents_blocked"
-  | "onboarding_pending"
+  | "compliance_warning"
+  | "override_required"
+  | "compliance_blocked"
   | "missing_phone"
   | "inactive"
-  | "unknown";
+  | "needs_review";
 
 export interface ReviewSignal {
   avg_overall_score: number | null;
@@ -78,7 +83,8 @@ export const EMPTY_SIGNALS: RecommendationSignals = {
 
 export type ReasonChipKey =
   | "ready"
-  | "grace_period"
+  | "compliance_warning"
+  | "override_required"
   | "has_phone"
   | "has_app"
   | "available"
@@ -175,8 +181,9 @@ export function rankCandidate(input: ScoreInput): RankedCandidate {
 
   // ── Readiness
   if (readinessState === "ready") { score += 100; reasons.push("ready"); }
-  else if (readinessState === "grace_period") { score += 80; reasons.push("grace_period"); }
-  else if (readinessState === "inactive" || readinessState === "incomplete_blocked" || readinessState === "pending_documents_blocked") {
+  else if (readinessState === "compliance_warning") { score += 80; reasons.push("compliance_warning"); }
+  else if (readinessState === "override_required") { score += 40; reasons.push("override_required"); }
+  else if (readinessState === "inactive" || readinessState === "compliance_blocked") {
     score -= 100;
   }
 
@@ -276,7 +283,8 @@ export function rankCandidate(input: ScoreInput): RankedCandidate {
 
 export const REASON_CHIP_LABEL: Record<ReasonChipKey, string> = {
   ready: "Ready",
-  grace_period: "Grace period",
+  compliance_warning: "Compliance pendiente",
+  override_required: "Requiere autorización",
   has_phone: "Has phone",
   has_app: "App access",
   available: "Available",
