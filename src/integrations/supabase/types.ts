@@ -370,6 +370,51 @@ export type Database = {
           },
         ]
       }
+      assignment_compliance_audit: {
+        Row: {
+          assigned_by: string | null
+          assignment_id: string | null
+          assignment_policy_used: string
+          assignment_status: string | null
+          company_id: string | null
+          compliance_status: string
+          created_at: string
+          employee_id: string
+          id: string
+          operational_status: string
+          override_used: boolean
+          shift_id: string | null
+        }
+        Insert: {
+          assigned_by?: string | null
+          assignment_id?: string | null
+          assignment_policy_used: string
+          assignment_status?: string | null
+          company_id?: string | null
+          compliance_status: string
+          created_at?: string
+          employee_id: string
+          id?: string
+          operational_status: string
+          override_used?: boolean
+          shift_id?: string | null
+        }
+        Update: {
+          assigned_by?: string | null
+          assignment_id?: string | null
+          assignment_policy_used?: string
+          assignment_status?: string | null
+          company_id?: string | null
+          compliance_status?: string
+          created_at?: string
+          employee_id?: string
+          id?: string
+          operational_status?: string
+          override_used?: boolean
+          shift_id?: string | null
+        }
+        Relationships: []
+      }
       auth_rate_limits: {
         Row: {
           created_at: string
@@ -17192,6 +17237,10 @@ export type Database = {
         Args: { _shift_id: string }
         Returns: number
       }
+      get_assignment_compliance_policy: {
+        Args: { _company_id: string }
+        Returns: string
+      }
       get_company_by_invite_code: {
         Args: { _invite_code: string }
         Returns: {
@@ -17209,6 +17258,10 @@ export type Database = {
           memberships: Json
           user_id: string
         }[]
+      }
+      get_employee_assignment_status: {
+        Args: { _company_id?: string; _employee_id: string }
+        Returns: Json
       }
       get_employee_for_activation: {
         Args: { _employee_id: string; _invite_token: string }
@@ -17233,6 +17286,13 @@ export type Database = {
       get_employee_shift_readiness: {
         Args: { _company_id?: string; _employee_id: string }
         Returns: string
+      }
+      get_employees_assignment_status: {
+        Args: { _company_id?: string; _employee_ids: string[] }
+        Returns: {
+          employee_id: string
+          status: Json
+        }[]
       }
       get_invitation_by_token: {
         Args: { _token: string }
