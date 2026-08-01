@@ -1087,8 +1087,19 @@ export function MobileQuickCreateShiftSheet({
                   hint={`Cobertura ${coverage}% de ${slots}`}
                   tone={team.length >= slots ? "success" : "warning"}
                   onEdit={() => setStep("equipo")}
+                />
+                <SummaryRow
+                  icon={<Users className="h-4 w-4" />}
+                  label="Transporte"
+                  value={driverSummaryLine(driverPlan)}
+                  hint={driverPlan.driversRequired > 0 ? driverStatus.hint : undefined}
+                  tone={driverPlan.driversRequired === 0
+                    ? undefined
+                    : driverStatus.incomplete ? "warning" : "success"}
+                  onEdit={() => setStep("equipo")}
                   last
                 />
+
               </div>
             )}
           </div>
