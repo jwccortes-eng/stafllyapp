@@ -33,39 +33,42 @@ export function buildPastelMap(ids: string[]): Map<string, PastelPillClass> {
   return map;
 }
 
-/** Shift status → pastel badge config */
+/** Shift status → badge config (OX-2: familias semánticas, sin paleta propia) */
+const familyPill = (family: StatusFamily) => `status-badge border ${FAMILY_CLASSES[family]}`;
+
 export const SHIFT_STATUS_CONFIG: Record<string, { label: string; className: string }> = {
-  draft:       { label: "Draft",         className: "status-badge bg-[hsl(var(--pastel-yellow))] text-[hsl(var(--pastel-yellow-text))]" },
-  open:        { label: "Open",          className: "status-badge bg-[hsl(var(--pastel-sky))] text-[hsl(var(--pastel-sky-text))]" },
-  published:   { label: "Published",     className: "status-badge bg-[hsl(var(--pastel-green))] text-[hsl(var(--pastel-green-text))]" },
-  assigned:    { label: "Assigned",      className: "status-badge bg-[hsl(var(--pastel-teal))] text-[hsl(var(--pastel-teal-text))]" },
-  confirmed:   { label: "Confirmed",     className: "status-badge bg-[hsl(var(--pastel-green))] text-[hsl(var(--pastel-green-text))]" },
-  in_progress: { label: "In Progress",   className: "status-badge bg-[hsl(var(--pastel-sky))] text-[hsl(var(--pastel-sky-text))]" },
-  completed:   { label: "Completed",     className: "status-badge bg-[hsl(var(--pastel-indigo))] text-[hsl(var(--pastel-indigo-text))]" },
-  issue:       { label: "Issue",         className: "status-badge bg-[hsl(var(--pastel-rose))] text-[hsl(var(--pastel-rose-text))]" },
-  canceled:    { label: "Cancelled",     className: "status-badge bg-[hsl(var(--pastel-orange))] text-[hsl(var(--pastel-orange-text))]" },
-  cancelled:   { label: "Cancelled",     className: "status-badge bg-[hsl(var(--pastel-orange))] text-[hsl(var(--pastel-orange-text))]" },
-  locked:      { label: "Locked",        className: "status-badge bg-[hsl(var(--pastel-violet))] text-[hsl(var(--pastel-violet-text))]" },
+  draft:       { label: "Draft",       className: familyPill("neutral") },
+  open:        { label: "Open",        className: familyPill("progress") },
+  published:   { label: "Published",   className: familyPill("positive") },
+  assigned:    { label: "Assigned",    className: familyPill("positive") },
+  confirmed:   { label: "Confirmed",   className: familyPill("positive") },
+  in_progress: { label: "In Progress", className: familyPill("progress") },
+  completed:   { label: "Completed",   className: familyPill("positive") },
+  issue:       { label: "Issue",       className: familyPill("critical") },
+  canceled:    { label: "Cancelled",   className: familyPill("critical") },
+  cancelled:   { label: "Cancelled",   className: familyPill("critical") },
+  locked:      { label: "Locked",      className: familyPill("neutral") },
 };
 
-/** Attendance/clock status → pastel badge config */
+/** Attendance/clock status → badge config */
 export const CLOCK_STATUS_CONFIG: Record<string, { label: string; className: string }> = {
-  on_time:          { label: "On Time",            className: "status-badge bg-[hsl(var(--pastel-green))] text-[hsl(var(--pastel-green-text))]" },
-  late:             { label: "Late",               className: "status-badge bg-[hsl(var(--pastel-yellow))] text-[hsl(var(--pastel-yellow-text))]" },
-  missing_clock_in: { label: "Missing Clock In",   className: "status-badge bg-[hsl(var(--pastel-rose))] text-[hsl(var(--pastel-rose-text))]" },
-  missing_clock_out:{ label: "Missing Clock Out",  className: "status-badge bg-[hsl(var(--pastel-orange))] text-[hsl(var(--pastel-orange-text))]" },
-  corrected:        { label: "Corrected",          className: "status-badge bg-[hsl(var(--pastel-violet))] text-[hsl(var(--pastel-violet-text))]" },
-  approved:         { label: "Approved",           className: "status-badge bg-[hsl(var(--pastel-green))] text-[hsl(var(--pastel-green-text))]" },
-  pending:          { label: "Pending",            className: "status-badge bg-[hsl(var(--pastel-yellow))] text-[hsl(var(--pastel-yellow-text))]" },
-  flagged:          { label: "Flagged",            className: "status-badge bg-[hsl(var(--pastel-rose))] text-[hsl(var(--pastel-rose-text))]" },
-  rejected:         { label: "Rejected",           className: "status-badge bg-[hsl(var(--pastel-rose))] text-[hsl(var(--pastel-rose-text))]" },
-  imported:         { label: "Imported",           className: "status-badge bg-[hsl(var(--pastel-sky))] text-[hsl(var(--pastel-sky-text))]" },
-  reviewed:         { label: "Reviewed",           className: "status-badge bg-[hsl(var(--pastel-teal))] text-[hsl(var(--pastel-teal-text))]" },
+  on_time:          { label: "On Time",           className: familyPill("positive") },
+  late:             { label: "Late",              className: familyPill("warning") },
+  missing_clock_in: { label: "Missing Clock In",  className: familyPill("critical") },
+  missing_clock_out:{ label: "Missing Clock Out", className: familyPill("critical") },
+  corrected:        { label: "Corrected",         className: familyPill("progress") },
+  approved:         { label: "Approved",          className: familyPill("positive") },
+  pending:          { label: "Pending",           className: familyPill("warning") },
+  flagged:          { label: "Flagged",           className: familyPill("critical") },
+  rejected:         { label: "Rejected",          className: familyPill("critical") },
+  imported:         { label: "Imported",          className: familyPill("neutral") },
+  reviewed:         { label: "Reviewed",          className: familyPill("progress") },
 };
 
 /** Assignment status config */
 export const ASSIGNMENT_STATUS_CONFIG: Record<string, { label: string; dotClass: string }> = {
-  confirmed: { label: "Accepted",  dotClass: "bg-emerald-500" },
-  pending:   { label: "Pending",   dotClass: "bg-amber-400" },
-  rejected:  { label: "Rejected",  dotClass: "bg-rose-500" },
+  confirmed: { label: "Accepted",  dotClass: FAMILY_DOT_CLASSES.positive },
+  pending:   { label: "Pending",   dotClass: FAMILY_DOT_CLASSES.warning },
+  rejected:  { label: "Rejected",  dotClass: FAMILY_DOT_CLASSES.critical },
 };
+
