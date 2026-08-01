@@ -182,22 +182,42 @@ export default function OcsCatalog() {
       <Section title="ValidationCard — ¿Qué decisión debo tomar?">
         <ValidationCard
           {...common}
-          title="Horas de Laura Giraldo el 12 ago"
-          subtitle="Turno #0258 · Grupo Andina"
+          title="Laura Giraldo"
+          subtitle="Grupo Andina · 12 de agosto · 08:00–17:00"
+          person={{ name: "Laura Giraldo", role: "Bartender" }}
+          headline="9,5 horas pendientes de aprobación"
+          contextChips={["Aprobación de horas"]}
           evidence={[
             { label: "Programado", value: "8,0 h" },
             { label: "Fichado", value: "9,5 h", attention: true },
             { label: "Entrada", value: "07:52" },
             { label: "Salida", value: "17:22" },
           ]}
-          consequence="Al aprobar, estas horas quedan disponibles para payroll."
+          secondaryEvidence={[
+            { label: "Descanso", value: "30 min" },
+            { label: "Origen del fichaje", value: "QR" },
+          ]}
+          humanContext={[
+            { label: "Responsable del turno", value: "Marta Ruiz" },
+            { label: "Última actualización", value: "12 ago, 17:30" },
+          ]}
+          conversation={[
+            {
+              id: "demo-1",
+              author: "Laura Giraldo",
+              authorRole: "Worker",
+              body: "Me quedé 1 h extra por el desmontaje.",
+            },
+          ]}
+          consequence="Al aprobar, este turno queda listo para payroll."
           decision={{ label: "Aprobar horas", icon: Check, onClick: demo("Aprobar horas") }}
           alternatives={[
-            { label: "Ajustar", onClick: demo("Ajustar") },
+            { label: "Solicitar corrección", onClick: demo("Solicitar corrección") },
             { label: "Rechazar", icon: X, onClick: demo("Rechazar"), tone: "danger" },
           ]}
         />
       </Section>
+
 
       <Section title="KpiCard — ¿Qué significa este indicador?">
         <KpiCard
