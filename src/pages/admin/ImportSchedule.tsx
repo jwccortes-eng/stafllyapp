@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, ChevronDown, Trash2, Info, Lock, CalendarDays, Users, MapPin, Building2, Download, ArrowRight, AlertTriangle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { useToast } from "@/hooks/use-toast";
+import { notifyActionRequired, notifyError, notifyInfo, notifySuccess, notifyWarning } from "@/lib/feedback/notify";
 import { getUserFriendlyError } from "@/lib/error-helpers";
 import { safeRead, safeSheetToJson, getSheetNames, getSheet } from "@/lib/safe-xlsx";
 import type { SafeWorkbook } from "@/lib/safe-xlsx";
@@ -368,7 +368,6 @@ function pickScheduleSheet(wb: SafeWorkbook): string | null {
 
 export default function ImportSchedule() {
   const { selectedCompanyId } = useCompany();
-  const { toast } = useToast();
   const navigate = useNavigate();
   const [files, setFiles] = useState<File[]>([]);
   const [file, setFile] = useState<File | null>(null);
@@ -566,7 +565,12 @@ export default function ImportSchedule() {
 
     const validFiles = selectedFiles.filter(f => {
       if (f.size > MAX_FILE_SIZE) {
-        toast({ title: "Error", description: `"${f.name}" demasiado grande (máx 10MB)`, variant: "destructive" });
+        notifyError({
+          key: "import-file-size",
+          title: "Archivo demasiado grande",
+          fact: `"${f.name}" supera el máximo de 10MB.`,
+          consequence: "No se cargó. Divide el archivo o exporta un rango menor.",
+        });
         return false;
       }
       return true;
@@ -685,7 +689,7 @@ export default function ImportSchedule() {
 
     setParsingFiles(false);
     setStep(3);
-  }, [toast]);
+  }, []);
 
   /** Optional: load Connecteam Users export to enrich matching with phone/email/Connecteam ID. */
   const handleAuxUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -697,16 +701,24 @@ export default function ImportSchedule() {
       const parsed = await parseConnecteamFile(buf, f.name);
       setAuxUsers(parsed as AuxUserRecord[]);
       setAuxFileName(f.name);
-      toast({
+      notifySuccess({
+        key: "import-aux",
         title: "Mapa auxiliar cargado",
-        description: `${parsed.length} usuarios disponibles para matching enriquecido (phone/email/Connecteam ID).`,
+        fact: `${parsed.length} usuarios disponibles para emparejar por teléfono, email o ID.`,
+        consequence: "Mejorará el matching de workers en esta importación.",
       });
     } catch (err: any) {
       console.error("[ImportSchedule] aux parse failed:", err);
-      toast({ title: "Error parseando mapa auxiliar", description: getUserFriendlyError(err), variant: "destructive" });
+      notifyError({
+        key: "import-aux",
+        title: "No pudimos leer el mapa auxiliar",
+        fact: getUserFriendlyError(err),
+        consequence: "La importación continúa sin matching enriquecido.",
+        cause: err,
+      });
     }
     setParsingAux(false);
-  }, [toast]);
+  }, []);
 
   const isInvertedRange = !!filterFrom && !!filterTo && filterTo < filterFrom;
 
@@ -769,17 +781,32 @@ export default function ImportSchedule() {
     const isDryRun = options?.dryRun ?? dryRun;
     if (!selectedCompanyId) {
       console.warn("[ImportSchedule] handleImport blocked: no selectedCompanyId");
-      toast({ title: "Sin empresa seleccionada", description: "Selecciona una empresa antes de importar.", variant: "destructive" });
+      notifyWarning({
+        key: "import-guard",
+        title: "Sin empresa seleccionada",
+        fact: "No hay una compañía activa.",
+        consequence: "Selecciona una empresa antes de importar.",
+      });
       return;
     }
     if (isInvertedRange) {
       console.warn("[ImportSchedule] handleImport blocked: inverted date range", { filterFrom, filterTo });
-      toast({ title: "Rango de fechas invertido", description: "La fecha Hasta debe ser igual o posterior a Desde. Corrige el rango antes de continuar.", variant: "destructive" });
+      notifyWarning({
+        key: "import-guard",
+        title: "Rango de fechas invertido",
+        fact: "La fecha Hasta es anterior a Desde.",
+        consequence: "No se importó nada. Corrige el rango para continuar.",
+      });
       return;
     }
     if (filteredGroups.length === 0) {
       console.warn("[ImportSchedule] handleImport blocked: filteredGroups is empty");
-      toast({ title: "Nada para importar", description: "No hay turnos en el rango seleccionado.", variant: "destructive" });
+      notifyWarning({
+        key: "import-guard",
+        title: "Nada para importar",
+        fact: "No hay turnos dentro del rango seleccionado.",
+        consequence: "Amplía el rango o revisa el archivo cargado.",
+      });
       return;
     }
 
@@ -789,10 +816,13 @@ export default function ImportSchedule() {
     // open periods, or run the import in audit (dry-run) mode.
     if (hasLockedPeriods && !isDryRun) {
       console.warn("[ImportSchedule] handleImport blocked: locked pay periods overlap range", lockedPeriods);
-      toast({
-        title: "Periodos de nómina bloqueados",
-        description: `${lockedPeriods.length} periodo(s) en este rango están cerrados/publicados/pagados. Usa el modo Auditoría (dry-run) o ajusta el rango.`,
-        variant: "destructive",
+      // Guard de payroll: informamos sin ofrecer reintento, la acción correcta
+      // es cambiar de modo o de rango, no repetir el mismo intento.
+      notifyActionRequired({
+        key: "import-payroll-lock",
+        title: "Hay periodos de nómina bloqueados",
+        fact: `${lockedPeriods.length} periodo(s) del rango están cerrados, publicados o pagados.`,
+        consequence: "No se escribió nada. Usa el modo Auditoría o ajusta el rango.",
       });
       return;
     }
@@ -1997,7 +2027,13 @@ export default function ImportSchedule() {
       setSummary(prev => prev ? { ...prev, batchStatus: "failed" } : prev);
       setResult({ success: false, message: getUserFriendlyError(err) });
       setStep(4); // ensure user sees the result/error screen instead of being stuck on Step 3
-      toast({ title: "Error", description: getUserFriendlyError(err), variant: "destructive" });
+      notifyError({
+        key: "import-run",
+        title: "La importación no se completó",
+        fact: getUserFriendlyError(err),
+        consequence: "Revisa el reporte antes de reintentar para no duplicar turnos.",
+        cause: err,
+      });
     }
 
     setImporting(false);
@@ -2582,7 +2618,12 @@ export default function ImportSchedule() {
             const downloadUnmatchedCsv = () => {
               const reviewRows = summary.normalizedRows.filter(r => /match_status=(unmatched|ambiguous)/.test(r.notes ?? ""));
               if (reviewRows.length === 0) {
-                toast({ title: "No hay filas para revisar", description: "Todos los empleados quedaron emparejados." });
+                notifyInfo({
+                  key: "import-review",
+                  title: "No hay filas para revisar",
+                  fact: "Todos los workers quedaron emparejados.",
+                  consequence: "Puedes continuar con la importación.",
+                });
                 return;
               }
               const headers = [
@@ -2617,7 +2658,12 @@ export default function ImportSchedule() {
               a.download = `unmatched_${summary.batchId ?? "import"}_${new Date().toISOString().slice(0, 10)}.csv`;
               a.click();
               URL.revokeObjectURL(url);
-              toast({ title: "CSV descargado", description: `${reviewRows.length} filas para revisión.` });
+              notifySuccess({
+                key: "import-review-csv",
+                title: "CSV de revisión descargado",
+                fact: `${reviewRows.length} filas requieren revisión manual.`,
+                consequence: "Corrígelas y vuelve a cargar el archivo.",
+              });
             };
 
             const goToOrphanShifts = () => {
@@ -2721,7 +2767,12 @@ export default function ImportSchedule() {
                         size="sm"
                         onClick={() => {
                           navigator.clipboard.writeText(summary.batchId!);
-                          toast({ title: "Batch ID copiado" });
+                          notifySuccess({
+                            key: "import-batch-copy",
+                            title: "Batch ID copiado",
+                            fact: "El identificador está en tu portapapeles.",
+                            consequence: "Úsalo para rastrear esta importación en auditoría.",
+                          });
                         }}
                       >
                         Copiar batch ID
@@ -2785,9 +2836,19 @@ export default function ImportSchedule() {
             const onCopy = async () => {
               try {
                 await navigator.clipboard.writeText(failuresToText(all));
-                toast({ title: "Reporte copiado", description: `${all.length} bloqueos en el portapapeles.` });
+                notifySuccess({
+                  key: "import-blocks-copy",
+                  title: "Reporte copiado",
+                  fact: `${all.length} bloqueos están en tu portapapeles.`,
+                  consequence: "Compártelo con quien deba resolverlos.",
+                });
               } catch {
-                toast({ title: "No se pudo copiar", variant: "destructive" });
+                notifyError({
+                  key: "import-blocks-copy",
+                  title: "No pudimos copiar el reporte",
+                  fact: "Tu navegador bloqueó el acceso al portapapeles.",
+                  consequence: "Descarga el CSV como alternativa.",
+                });
               }
             };
             const onExport = () => {
