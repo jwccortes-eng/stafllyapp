@@ -959,12 +959,12 @@ export function buildValidationCenterModel(
 
   for (const e of input.hours) {
     if (!inFocus(e.shift_id)) continue;
-    items.push(buildHoursItem(e, perms, now));
+    items.push(enrichHours(buildHoursItem(e, perms, now), e, now));
   }
   for (const c of input.closeouts) {
     if (!inFocus(c.shift_id)) continue;
-    const item = buildCloseoutItem(c, perms, now);
-    if (item) items.push(item);
+    const draft = buildCloseoutItem(c, perms, now);
+    if (draft) items.push(enrichCloseout(draft, c));
   }
 
   const actionable = items.filter((i) => ACTIONABLE.includes(i.status));
