@@ -46,6 +46,13 @@ type Assignment = {
   id: string;
   employee_id: string;
   status: string;
+  /**
+   * Optional but STRONGLY recommended: when present the card hard-filters the
+   * roster to this shift. Callers that pass a company-wide assignment list
+   * (mobile sheet did, causing foreign workers to appear here) are corrected
+   * defensively instead of silently rendering another shift's team.
+   */
+  shift_id?: string | null;
   employee?: { first_name: string; last_name: string; phone_number: string | null } | null;
 };
 
