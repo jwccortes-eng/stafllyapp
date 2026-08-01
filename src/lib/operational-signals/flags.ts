@@ -47,16 +47,20 @@ export function isEnforcementEnabled(): boolean {
   return false;
 }
 
-/** Durable recording of shadow decisions (off by default). */
-export function isShadowPersistenceEnabled(): boolean {
-  if (isKillSwitchEngaged()) return false;
-  if (import.meta.env.VITE_OSE_SHADOW_PERSISTENCE === "true") return true;
-  return read(PERSIST_KEY) === "on";
+/**
+ * F1.1 — Durable recording of shadow decisions is NO LONGER a global flag.
+ * It is resolved per company from `operational_signal_shadow_config`
+ * (see ./company-config). This local switch only exists as an operator-side
+ * "pause" that can turn recording OFF for the current device/session.
+ */
+export function isLocalPersistencePaused(): boolean {
+  return read(PERSIST_KEY) === "paused";
 }
 
-export function setShadowPersistenceEnabled(enabled: boolean): void {
-  write(PERSIST_KEY, enabled ? "on" : null);
+export function setLocalPersistencePaused(paused: boolean): void {
+  write(PERSIST_KEY, paused ? "paused" : null);
 }
+
 
 /** Internal analysis dashboard visibility (staff only, on top of RLS). */
 export function isShadowPanelEnabled(): boolean {

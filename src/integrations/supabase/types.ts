@@ -9267,6 +9267,51 @@ export type Database = {
           },
         ]
       }
+      operational_signal_shadow_config: {
+        Row: {
+          company_id: string
+          created_at: string
+          notes: string | null
+          persistence_enabled: boolean
+          sample_rate: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          notes?: string | null
+          persistence_enabled?: boolean
+          sample_rate?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          notes?: string | null
+          persistence_enabled?: boolean
+          sample_rate?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "operational_signal_shadow_config_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "operational_signal_shadow_config_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       operational_signal_shadow_decisions: {
         Row: {
           acknowledgement_deadline_seconds: number | null
