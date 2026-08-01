@@ -38,6 +38,8 @@ import { getShiftPhase, phaseChipClasses } from "@/lib/shifts/shift-phase";
 import {
   deriveCloseoutReviewStatus, presentCloseoutReviewStatus, closeoutBadgeClasses,
 } from "@/lib/shifts/closeout-review-status";
+import { ShiftClosureCard } from "@/components/shifts/ShiftClosureCard";
+
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronDown, ClipboardCheck, Timer } from "lucide-react";
 import { Link } from "react-router-dom";
