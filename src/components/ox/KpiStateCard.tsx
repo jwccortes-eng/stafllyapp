@@ -70,17 +70,12 @@ export function KpiStateCard({ label, state, onRetry, onClick, className }: KpiS
         return (
           <div className="min-h-[44px]">
             <div className="flex items-baseline gap-1.5">
-              <span
-                className={cn(
-                  "text-2xl font-bold tabular-nums leading-none",
-                  n > 0 ? "text-foreground" : "text-muted-foreground",
-                )}
-              >
+              <span className={cn(MT.metric, n > 0 ? "text-foreground" : "text-muted-foreground")}>
                 {n}
               </span>
-              <span className="text-xs font-medium text-muted-foreground">{state.unit}</span>
+              <span className={cn(MT.caption, "font-medium text-muted-foreground")}>{state.unit}</span>
             </div>
-            <p className="text-xs text-muted-foreground mt-1 leading-snug">{state.message}</p>
+            <p className={cn(MT.caption, "text-muted-foreground mt-1 leading-snug")}>{state.message}</p>
           </div>
         );
       }
@@ -94,13 +89,14 @@ export function KpiStateCard({ label, state, onRetry, onClick, className }: KpiS
       {...(clickable ? { type: "button", onClick } : {})}
       className={cn(
         "w-full text-left rounded-2xl border border-border/50 bg-card shadow-xs p-3.5",
-        clickable && "active:scale-[0.98] transition-transform",
+        clickable && cn("active:scale-[0.98] transition-transform min-h-[88px]", FOCUS_RING),
         className,
       )}
     >
-      <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/80 mb-1.5">
+      <div className={cn(MT_EYEBROW, "text-muted-foreground mb-1.5")}>
         {label}
       </div>
+
       {body()}
     </Tag>
   );

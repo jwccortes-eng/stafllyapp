@@ -633,7 +633,7 @@ function Kpi({ label, value, tone = "muted" }: { label: string; value: number | 
     : tone === "danger" ? "text-rose-600"
     : "text-foreground";
   return (
-    <div className="rounded-xl border border-border/50 bg-card px-1.5 py-2 text-center">
+    <div className="rounded-xl border border-border/50 bg-card px-1.5 py-2 min-h-[44px] flex flex-col items-center justify-center text-center">
       <div className={cn("text-base font-bold tabular-nums leading-tight", toneCls)}>{value}</div>
       <div className="text-[12px] uppercase tracking-wider text-muted-foreground font-semibold leading-tight mt-0.5">{label}</div>
     </div>
