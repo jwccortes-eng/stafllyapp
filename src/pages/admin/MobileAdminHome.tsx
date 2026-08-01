@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Users, CalendarDays, Clock, DollarSign, Inbox, Building2,
-  Search, ArrowRight, CheckCircle2,
+  Search, ArrowRight, CheckCircle2, ChevronRight, AlertTriangle, RotateCw,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
@@ -11,17 +11,16 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { cn } from "@/lib/utils";
 import { isAdminLevelRole } from "@/lib/roles";
 import { ContextSwitcher } from "@/components/context/ContextSwitcher";
-import { KpiCard, OperationalCard } from "@/components/ocs";
+import { OperationalCard } from "@/components/ocs";
 import {
   type MetricState, loadingMetric, errorMetric, notApplicableMetric, countMetric,
 } from "@/lib/ox/metric-state";
 
-
-
 /**
- * Mobile-first Admin Home — Command Center style.
- * Frontend-only. Reuses existing routes, permissions and tenant scoping.
- * Desktop Dashboard is untouched; this only renders when useIsMobile() is true.
+ * OX-5 — Mobile Presence Compression.
+ * Mobile-first Admin Home. Frontend-only: same queries, permissions and tenant
+ * scoping as before; only the presentation is compressed so the first screen
+ * answers "¿cómo está la operación?", "¿qué necesita atención?" y "¿qué sigue?".
  */
 
 type ActionKey =
@@ -30,7 +29,6 @@ type ActionKey =
 interface ActionDef {
   key: ActionKey;
   label: string;
-  hint: string;
   to: string;
   icon: any;
   module: string | null;
@@ -39,14 +37,13 @@ interface ActionDef {
 }
 
 const ACTIONS: ActionDef[] = [
-  { key: "workers", label: "Workers", hint: "Equipo y perfiles", to: "/app/employees", icon: Users, module: "employees", accent: "bg-primary/10 text-primary" },
-  { key: "shifts", label: "Turnos", hint: "Programación y asignación", to: "/app/shifts", icon: CalendarDays, module: "shifts", badgeKey: "shift_requests", accent: "bg-status-warning-bg text-status-warning" },
-  { key: "timeclock", label: "Fichajes", hint: "Asistencia en vivo", to: "/app/timeclock", icon: Clock, module: "shifts", accent: "bg-status-success-bg text-status-success" },
-  { key: "payroll", label: "Payroll", hint: "Periodos y reportes", to: "/app/periods", icon: DollarSign, module: "periods", accent: "bg-status-progress-bg text-status-progress" },
-  { key: "tickets", label: "Solicitudes", hint: "Tickets y bandeja", to: "/app/requests", icon: Inbox, module: null, badgeKey: "tickets", accent: "bg-muted text-muted-foreground" },
-  { key: "clients", label: "Clientes", hint: "Cuentas y sedes", to: "/app/clients", icon: Building2, module: "clients", accent: "bg-status-neutral-bg text-status-neutral" },
+  { key: "workers", label: "Workers", to: "/app/employees", icon: Users, module: "employees", accent: "bg-primary/10 text-primary" },
+  { key: "shifts", label: "Turnos", to: "/app/shifts", icon: CalendarDays, module: "shifts", badgeKey: "shift_requests", accent: "bg-status-warning-bg text-status-warning" },
+  { key: "timeclock", label: "Fichajes", to: "/app/timeclock", icon: Clock, module: "shifts", accent: "bg-status-success-bg text-status-success" },
+  { key: "payroll", label: "Payroll", to: "/app/periods", icon: DollarSign, module: "periods", accent: "bg-status-progress-bg text-status-progress" },
+  { key: "tickets", label: "Solicitudes", to: "/app/requests", icon: Inbox, module: null, badgeKey: "tickets", accent: "bg-muted text-muted-foreground" },
+  { key: "clients", label: "Clientes", to: "/app/clients", icon: Building2, module: "clients", accent: "bg-status-neutral-bg text-status-neutral" },
 ];
-
 
 type BadgeState = { kind: "loading" | "error" | "ready"; value: number };
 
@@ -196,52 +193,83 @@ export default function MobileAdminHome() {
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true }));
   };
 
+  const metrics = [shiftsToday, clockedIn, hoursToReview, pendingResponses];
+  const anyLoading = metrics.some((m) => m.kind === "loading");
+  const anyError = metrics.some((m) => m.kind === "error");
 
   const allCalm =
-    [shiftsToday, clockedIn, hoursToReview, pendingResponses].every(
-      (m) => m.kind === "zero_confirmed",
-    ) &&
+    metrics.every((m) => m.kind === "zero_confirmed") &&
     (clockedIn.value ?? 0) === 0 &&
     (hoursToReview.value ?? 0) === 0 &&
     (pendingResponses.value ?? 0) === 0;
 
+  // Only what demands a decision, in priority order.
+  const attention = [
+    {
+      key: "hours",
+      count: hoursToReview.value ?? 0,
+      ok: hoursToReview.kind !== "loading" && hoursToReview.kind !== "error",
+      label: (n: number) => `${n} ${n === 1 ? "hora por validar" : "horas por validar"}`,
+      hint: "Bloquean el cierre del periodo.",
+      to: "/app/validation-center",
+    },
+    {
+      key: "responses",
+      count: pendingResponses.value ?? 0,
+      ok: pendingResponses.kind !== "loading" && pendingResponses.kind !== "error",
+      label: (n: number) => `${n} sin responder`,
+      hint: "El turno puede quedarse sin cobertura.",
+      to: "/app/shifts",
+    },
+    {
+      key: "open",
+      count: clockedIn.value ?? 0,
+      ok: clockedIn.kind !== "loading" && clockedIn.kind !== "error",
+      label: (n: number) => `${n} ${n === 1 ? "fichaje abierto" : "fichajes abiertos"}`,
+      hint: "Sin clock-out no se validan horas.",
+      to: "/app/timeclock",
+    },
+  ].filter((a) => a.ok && a.count > 0);
+
+  const headline = anyLoading
+    ? "Leyendo tu operación…"
+    : anyError
+      ? "No pudimos leer parte de tu operación."
+      : allCalm
+        ? "Todo bajo control."
+        : attention.length > 0
+          ? `${attention.length} ${attention.length === 1 ? "asunto necesita" : "asuntos necesitan"} tu atención.`
+          : "Tu operación avanza sin pendientes.";
+
   return (
     <div className="min-h-full pb-[calc(env(safe-area-inset-bottom,0px)+72px)]">
-      {/* Identidad + saludo */}
-      <div className="px-5 pt-5 pb-4 space-y-3.5">
-        <ContextSwitcher placement="header" />
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight leading-tight">
-            {greeting},<br />
-            <span className="text-primary">{firstName}.</span>
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1.5">
-            Esto es lo que necesita tu atención hoy en {companyLabel}.
+      {/* Anfitriona: la empresa encabeza, Stafly acompaña */}
+      <div className="px-5 pt-5 pb-4">
+        <div className="flex items-center gap-2">
+          <p className="min-w-0 flex-1 text-[11px] uppercase tracking-[0.16em] text-muted-foreground/80 truncate">
+            {companyLabel}
           </p>
+          <button
+            type="button"
+            onClick={openCommandPalette}
+            aria-label="Buscar"
+            className="h-11 w-11 shrink-0 rounded-xl border border-border/50 bg-card flex items-center justify-center active:scale-[0.96] transition-transform"
+          >
+            <Search className="h-[18px] w-[18px] text-muted-foreground" />
+          </button>
+          <div className="shrink-0 w-11">
+            <ContextSwitcher placement="header" collapsed />
+          </div>
         </div>
+        <h1 className="text-[22px] font-semibold tracking-tight leading-tight mt-2">
+          {greeting}, <span className="text-primary">{firstName}</span>
+        </h1>
+        <p className="text-sm text-muted-foreground mt-1">{headline}</p>
       </div>
 
-      {/* Búsqueda */}
-      <div className="px-5 pb-4">
-        <button
-          type="button"
-          onClick={openCommandPalette}
-          className={cn(
-            "w-full flex items-center gap-3 h-12 px-4 rounded-2xl",
-            "bg-muted/50 hover:bg-muted/70 active:scale-[0.99] transition-all",
-            "border border-border/40 text-left"
-          )}
-        >
-          <Search className="h-4 w-4 text-muted-foreground shrink-0" />
-          <span className="text-sm text-muted-foreground truncate">
-            Buscar workers, turnos, clientes…
-          </span>
-        </button>
-      </div>
-
-      {/* Momento de calma — nunca un vacío frío */}
-      {allCalm && (
-        <div className="px-5 mb-5">
+      {/* Primer scroll: sólo lo que exige decisión — o la confirmación de calma */}
+      <div className="px-5 mb-5">
+        {allCalm ? (
           <OperationalCard
             status="ready"
             statusLabel="Sin pendientes"
@@ -251,63 +279,79 @@ export default function MobileAdminHome() {
               </span>
             }
             title="Todo bajo control"
-            primary={
-              <p className="text-sm">
-                Tus operaciones de hoy están cubiertas y nadie espera una decisión tuya.
-              </p>
-            }
-            secondary="Si algo cambia, aparecerá aquí antes de convertirse en un problema."
+            primary={<p className="text-sm">Nadie espera una decisión tuya.</p>}
             action={{ label: "Ver la operación de hoy", onClick: () => navigate("/app/command-center") }}
           />
-        </div>
-      )}
-
-      {/* Operación de hoy — nunca un cero silencioso */}
-      <div className="px-5 mb-5">
-        <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground mb-2 px-1">
-          Operación de hoy
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <KpiCard
-            label="Turnos hoy"
-            state={shiftsToday}
-            variant="compact"
-            onRetry={reload}
-            onClick={() => navigate("/app/shifts")}
-          />
-          <KpiCard
-            label="Fichajes"
-            state={clockedIn}
-            variant="compact"
-            consequence="Sin clock-out no se pueden validar horas."
-            onRetry={reload}
-            onClick={() => navigate("/app/timeclock")}
-          />
-          <KpiCard
-            label="Por revisar"
-            state={hoursToReview}
-            variant="compact"
-            consequence="Bloquean el cierre del periodo de pago."
-            onRetry={reload}
-            onClick={() => navigate("/app/validation-center")}
-          />
-          <KpiCard
-            label="Sin responder"
-            state={pendingResponses}
-            variant="compact"
-            consequence="El turno puede quedarse sin cobertura."
-            onRetry={reload}
-            onClick={() => navigate("/app/shifts")}
-          />
-        </div>
+        ) : anyLoading ? (
+          <div className="rounded-2xl border border-border/50 bg-card p-4 space-y-2.5">
+            <div className="h-4 w-2/3 rounded bg-muted animate-pulse" />
+            <div className="h-4 w-1/2 rounded bg-muted animate-pulse" />
+          </div>
+        ) : attention.length > 0 ? (
+          <div className="rounded-2xl border border-border/50 bg-card divide-y divide-border/40 overflow-hidden">
+            {attention.map((a) => (
+              <button
+                key={a.key}
+                onClick={() => navigate(a.to)}
+                className="w-full flex items-center gap-3 px-4 py-3.5 min-h-[56px] text-left active:bg-muted/40 transition-colors"
+              >
+                <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-status-warning-bg text-status-warning">
+                  <AlertTriangle className="h-4 w-4" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-semibold tracking-tight truncate">
+                    {a.label(a.count)}
+                  </span>
+                  <span className="block text-[11px] text-muted-foreground truncate">{a.hint}</span>
+                </span>
+                <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+              </button>
+            ))}
+          </div>
+        ) : anyError ? (
+          <button
+            onClick={reload}
+            className="w-full flex items-center gap-3 rounded-2xl border border-border/50 bg-card px-4 py-3.5 min-h-[56px] text-left active:bg-muted/40"
+          >
+            <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-status-danger-bg text-status-danger">
+              <RotateCw className="h-4 w-4" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-semibold">Datos incompletos</span>
+              <span className="block text-[11px] text-muted-foreground">Toca para reintentar.</span>
+            </span>
+          </button>
+        ) : (
+          <div className="rounded-2xl border border-border/50 bg-card px-4 py-3.5">
+            <p className="text-sm">Sin decisiones pendientes ahora mismo.</p>
+          </div>
+        )}
       </div>
 
-      {/* Accesos de operación */}
+      {/* Pulso de hoy — una sola historia, no cuatro widgets */}
+      <div className="px-5 mb-5">
+        <button
+          onClick={() => navigate("/app/command-center")}
+          className="w-full rounded-2xl border border-border/50 bg-card p-4 text-left active:bg-muted/30 transition-colors"
+        >
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+              Hoy
+            </span>
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          </div>
+          <div className="grid grid-cols-4 gap-2">
+            <Pulse label="Turnos" state={shiftsToday} />
+            <Pulse label="Activos" state={clockedIn} />
+            <Pulse label="Validar" state={hoursToReview} />
+            <Pulse label="Sin resp." state={pendingResponses} />
+          </div>
+        </button>
+      </div>
+
+      {/* Accesos de operación — icono + nombre, sin texto de apoyo */}
       <div className="px-5">
-        <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground mb-2 px-1">
-          Tu operación
-        </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-3 gap-2.5">
           {visibleActions.map((a) => {
             const Icon = a.icon;
             const badge: BadgeState = a.badgeKey ? badges[a.badgeKey] : { kind: "ready", value: 0 };
@@ -318,33 +362,29 @@ export default function MobileAdminHome() {
                 key={a.key}
                 onClick={() => navigate(a.to)}
                 className={cn(
-                  "group relative flex flex-col items-start text-left",
-                  "rounded-2xl border border-border/50 bg-card",
-                  "p-3.5 min-h-[104px]",
-                  "active:scale-[0.97] hover:border-border transition-all"
+                  "relative flex flex-col items-start text-left",
+                  "rounded-2xl border border-border/50 bg-card p-3 min-h-[76px]",
+                  "active:scale-[0.97] transition-all",
                 )}
               >
-                <div className={cn("h-9 w-9 rounded-xl flex items-center justify-center mb-2", a.accent)}>
-                  <Icon className="h-[18px] w-[18px]" />
+                <div className={cn("h-8 w-8 rounded-lg flex items-center justify-center mb-2", a.accent)}>
+                  <Icon className="h-[17px] w-[17px]" />
                 </div>
-                <div className="flex items-center gap-2 w-full">
-                  <span className="text-[13px] font-semibold tracking-tight truncate">{a.label}</span>
-                  {badge.kind === "error" && (
-                    <StatusBadge status="failed" label="Sin dato" size="sm" className="ml-auto" />
-                  )}
-                  {badge.kind === "ready" && count > 0 && (
-                    <StatusBadge
-                      status="pending"
-                      label={count > 9 ? "9+" : String(count)}
-                      size="sm"
-                      indicator="dot"
-                      className="ml-auto"
-                    />
-                  )}
-                </div>
-                <span className="text-[11px] text-muted-foreground mt-1 leading-tight truncate w-full">
-                  {a.hint}
+                <span className="text-[12.5px] font-semibold tracking-tight truncate w-full">
+                  {a.label}
                 </span>
+                {badge.kind === "error" && (
+                  <StatusBadge status="failed" label="!" size="sm" className="absolute top-2 right-2" />
+                )}
+                {badge.kind === "ready" && count > 0 && (
+                  <StatusBadge
+                    status="pending"
+                    label={count > 9 ? "9+" : String(count)}
+                    size="sm"
+                    indicator="dot"
+                    className="absolute top-2 right-2"
+                  />
+                )}
               </button>
             );
           })}
@@ -352,33 +392,40 @@ export default function MobileAdminHome() {
       </div>
 
       {/* Accesos rápidos */}
-      <div className="px-5 mt-6">
-        <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground mb-2 px-1">
-          Acceso rápido
-        </div>
+      <div className="px-5 mt-5">
         <div className="rounded-2xl border border-border/50 bg-card divide-y divide-border/40 overflow-hidden">
           <QuickLink label="Mapa en vivo" to="/app/live-map" onNav={navigate} />
           <QuickLink label="Anuncios" to="/app/announcements" onNav={navigate} />
-          <QuickLink label="Front Desk" to="/app/front-desk" onNav={navigate} />
           <QuickLink label="Reportes" to="/app/summary" onNav={navigate} />
         </div>
-      </div>
-
-      <div className="px-5 mt-6 mb-2">
-        <p className="text-[11px] text-center text-muted-foreground/70">
-          Toca <span className="font-semibold">Más</span> en la barra inferior para la navegación completa.
-        </p>
       </div>
     </div>
   );
 }
 
+function Pulse({ label, state }: { label: string; state: MetricState }) {
+  const value =
+    state.kind === "loading" ? "·" : state.kind === "error" ? "—" : String(state.value ?? 0);
+  return (
+    <div className="min-w-0">
+      <div
+        className={cn(
+          "text-[20px] font-semibold leading-none tabular-nums",
+          state.kind === "error" && "text-muted-foreground",
+        )}
+      >
+        {value}
+      </div>
+      <div className="text-[10.5px] text-muted-foreground mt-1 truncate">{label}</div>
+    </div>
+  );
+}
 
 function QuickLink({ label, to, onNav }: { label: string; to: string; onNav: (to: string) => void }) {
   return (
     <button
       onClick={() => onNav(to)}
-      className="w-full flex items-center justify-between px-4 py-3.5 active:bg-muted/40 transition-colors"
+      className="w-full flex items-center justify-between px-4 py-3.5 min-h-[48px] active:bg-muted/40 transition-colors"
     >
       <span className="text-sm font-medium">{label}</span>
       <ArrowRight className="h-4 w-4 text-muted-foreground" />
