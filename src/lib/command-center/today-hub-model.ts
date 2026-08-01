@@ -327,25 +327,42 @@ export function buildTodayHubModel(input: TodayHubInput): TodayHubModel {
       boostKind: string,
     ) => attention.push({ ...item, _boost: roleBoost(role, boostKind) });
 
-    /* — Critical: gente sin registrar entrada en turno en curso — */
-    if (ops.bucket === "in_progress" && ops.not_started > 0) {
+    /* — Asistencia: NUNCA se asume no-show (OX-4.3.1) — */
+    const attendance = readAttendance({
+      bucket: ops.bucket,
+      assigned,
+      clockedIn: ops.clocked_in,
+      notStarted: ops.not_started,
+      minutesUntilStart: mins,
+      confirmedNoShows: ops.confirmed_no_shows ?? null,
+    });
+    if (
+      attendance &&
+      (attendance.state === "no_show_confirmed" ||
+        attendance.state === "missing_checkin" ||
+        attendance.state === "awaiting_checkin")
+    ) {
       push(
         {
-          id: `${shift.id}:no-show`,
+          id: `${shift.id}:attendance`,
           kind: "risk",
-          priority: "critical",
-          status: "no_show",
-          headline: `${ops.not_started} sin registrar entrada en ${shift.title}`,
-          because: `El turno está en curso (${range}) y ${ops.not_started} de ${assigned} asignados no tienen fichaje.`,
-          impact: "Cobertura real menor a la comprometida con el cliente.",
-          action: perms.canOperate
-            ? { label: "Operar turno", href: ROUTES.shiftOps(shift.id) }
+          priority: attendance.priority,
+          status: attendance.status,
+          headline: `${attendance.label} — ${attendance.count} en ${shift.title}`,
+          because: `${attendance.detail} Turno ${range}.`,
+          impact:
+            attendance.state === "no_show_confirmed"
+              ? "Cobertura real menor a la comprometida con el cliente."
+              : "La cobertura real aún no está confirmada en sitio.",
+          action: perms.canManageAttendance
+            ? { label: "Revisar asistencia", href: ROUTES.shiftOps(shift.id) }
             : undefined,
           shiftId: shift.id,
         },
-        "no_show",
+        attendance.state === "no_show_confirmed" ? "no_show" : "attendance",
       );
     }
+
 
     /* — Cobertura incompleta — */
     if (missing > 0 && ops.bucket !== "closed") {
