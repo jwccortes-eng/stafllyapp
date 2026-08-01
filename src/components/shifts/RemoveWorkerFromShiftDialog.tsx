@@ -138,13 +138,13 @@ export function RemoveWorkerFromShiftDialog({
         )}
 
         <AlertDialogFooter className="gap-2 sm:gap-2">
-          <AlertDialogCancel className={cn(TAP.min, "rounded-full")} disabled={submitting}>
+          <AlertDialogCancel className={cn(TAP, "rounded-full")} disabled={submitting}>
             Cancelar
           </AlertDialogCancel>
           <AlertDialogAction
             onClick={(e) => { e.preventDefault(); void submit(); }}
             disabled={submitting || !assignmentId}
-            className={cn(TAP.min, "rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90")}
+            className={cn(TAP, "rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90")}
           >
             {submitting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : "Retirar del turno"}
           </AlertDialogAction>
