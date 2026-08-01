@@ -15,7 +15,7 @@ import {
   type OcsDensity,
 } from "@/components/ocs";
 import { Button } from "@/components/ui/button";
-import { notify } from "@/lib/feedback/notify";
+import { notifyInfo } from "@/lib/feedback/notify";
 import { MT, MT_EYEBROW, TAP, FOCUS_RING } from "@/lib/mobile/mobile-scale";
 import { cn } from "@/lib/utils";
 
@@ -38,7 +38,7 @@ export default function OcsCatalog() {
   const mode = readonly ? "readonly" : "interactive";
 
   const demo = (label: string) => () =>
-    notify.info({
+    notifyInfo({
       title: "Acción de catálogo",
       fact: `Se pulsó "${label}".`,
       consequence: "El catálogo no ejecuta operaciones reales.",
