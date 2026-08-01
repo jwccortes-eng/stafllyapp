@@ -93,7 +93,7 @@ export function checkInCompleteTerminal(input: {
     facts,
     consequence: "Todo el equipo quedó registrado en sitio.",
     next: "Las horas reales se acumulan hasta el clock-out.",
-    statusKey: "checked_in",
+    statusKey: "active",
   };
 }
 
@@ -123,7 +123,7 @@ export function assignmentCompleteTerminal(input: {
     facts: [input.workerName, ...(input.shiftLabel ? [input.shiftLabel] : [])],
     consequence: "El worker quedó asignado a este turno.",
     next: "Recibirá el turno en su portal.",
-    statusKey: "assigned",
+    statusKey: "confirmed",
   };
 }
 
