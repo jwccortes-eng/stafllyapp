@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   CalendarDays, SlidersHorizontal, ChevronRight,
-  Users, AlertTriangle, Building2, Plus,
+  Users, AlertTriangle, Plus,
 } from "lucide-react";
 import { ShiftRouteHeader, type ShiftRouteHeaderTone } from "@/components/stafly-ui";
 import { format, parseISO, isToday, isTomorrow, addDays } from "date-fns";
@@ -731,11 +731,6 @@ function ShiftCard({
 }: ShiftCardProps) {
   const visibleNames = assignedEmployees.slice(0, 2).map(e => `${e.first_name} ${e.last_name?.[0] ?? ""}.`);
   const more = Math.max(0, assignedEmployees.length - 2);
-  const coverBarColor =
-    coverage >= 100 ? "bg-emerald-500" :
-    coverage >= 60 ? "bg-amber-500" :
-    "bg-rose-500";
-
   const handleKey = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
@@ -817,18 +812,6 @@ function ShiftCard({
 }
 
 
-
-function Warning({ icon: Icon, label, tone }: { icon: any; label: string; tone: "bad" | "warn" }) {
-  const cls = tone === "bad"
-    ? "bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/30"
-    : "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30";
-  return (
-    <span className={cn("inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-md border", cls)}>
-      <Icon className="h-3 w-3" />
-      {label}
-    </span>
-  );
-}
 
 function SkeletonList() {
   return (
