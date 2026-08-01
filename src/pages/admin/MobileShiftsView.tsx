@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import { ShiftRouteHeader, type ShiftRouteHeaderTone } from "@/components/stafly-ui";
 import { format, parseISO, isToday, isTomorrow, addDays } from "date-fns";
-import { enUS } from "date-fns/locale";
+import { es } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
@@ -81,9 +81,9 @@ function formatTimeShort(t: string): string {
 function dateGroupLabel(dateStr: string): string {
   try {
     const d = parseISO(dateStr);
-    if (isToday(d)) return "Today";
-    if (isTomorrow(d)) return "Tomorrow";
-    return format(d, "EEE MMM d", { locale: enUS });
+    if (isToday(d)) return "Hoy";
+    if (isTomorrow(d)) return "Mañana";
+    return format(d, "EEE d MMM", { locale: es });
   } catch {
     return dateStr;
   }
@@ -104,7 +104,7 @@ export default function MobileShiftsView() {
   // Tab from URL (?tab=today) so back/forward works; fallback to "today"
   const initialTab = (searchParams.get("tab") as TabKey) || "today";
   const [tab, setTab] = useState<TabKey>(
-    TABS.some(t => t.key === initialTab) ? initialTab : "today"
+    [...TABS, ...SECONDARY_TABS].some(t => t.key === initialTab) ? initialTab : "today"
   );
 
   const [shifts, setShifts] = useState<Shift[]>([]);
@@ -268,8 +268,8 @@ export default function MobileShiftsView() {
       setDetailManageTeam(wantManageTeam);
       setDetailOpen(true);
     } else {
-      toast("Shift not found in this view.", {
-        description: "Try switching tabs or removing filters.",
+      toast("No encontramos ese turno en esta vista.", {
+        description: "Cambia de pestaña o quita los filtros activos.",
       });
     }
 
@@ -428,7 +428,7 @@ export default function MobileShiftsView() {
           <div className="min-w-0">
             <h1 className="text-2xl font-semibold tracking-tight leading-tight">Turnos</h1>
             <p className="text-xs text-muted-foreground truncate mt-0.5">
-              {selectedCompany?.name ?? "Todas las empresas"} · {format(new Date(), "EEE MMM d", { locale: enUS })}
+              {selectedCompany?.name ?? "Todas las empresas"} · {format(new Date(), "EEE d MMM", { locale: es })}
             </p>
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
@@ -510,7 +510,7 @@ export default function MobileShiftsView() {
           ) : (
             <div className="space-y-2.5">
               <div className="text-xs text-muted-foreground px-1 mb-1">
-                {pendingRequests.length} pending request{pendingRequests.length === 1 ? "" : "s"}
+                {pendingRequests.length} solicitud{pendingRequests.length === 1 ? "" : "es"} pendiente{pendingRequests.length === 1 ? "" : "s"}
               </div>
               {pendingRequests.map(req => (
                 <RequestRow
@@ -527,7 +527,7 @@ export default function MobileShiftsView() {
                 className="w-full h-11 mt-2"
                 onClick={handleOpenRequests}
               >
-                Manage in Shift Requests
+                Gestionar solicitudes
                 <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
             </div>
@@ -547,7 +547,7 @@ export default function MobileShiftsView() {
                     {group.label}
                   </span>
                   <span className="text-xs text-muted-foreground">
-                    · {group.shifts.length} shift{group.shifts.length === 1 ? "" : "s"}
+                    · {group.shifts.length} turno{group.shifts.length === 1 ? "" : "s"}
                   </span>
                 </div>
                 <div className="space-y-2.5">
@@ -590,7 +590,7 @@ export default function MobileShiftsView() {
       <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
         <SheetContent side="bottom" className="h-[85vh] rounded-t-2xl px-4 pt-4 overflow-y-auto">
           <SheetHeader className="text-left mb-3">
-            <SheetTitle>Filters</SheetTitle>
+            <SheetTitle>Filtros</SheetTitle>
           </SheetHeader>
           <div className="space-y-4">
             <ShiftFilters
@@ -603,10 +603,10 @@ export default function MobileShiftsView() {
           </div>
           <div className="sticky bottom-0 bg-background pt-3 pb-[max(env(safe-area-inset-bottom,0px),12px)] flex items-center gap-2 mt-4 border-t border-border/40">
             <Button variant="ghost" className="flex-1" onClick={() => setFilters(EMPTY_FILTERS)}>
-              Clear
+              Limpiar
             </Button>
             <Button className="flex-1" onClick={() => setFiltersOpen(false)}>
-              Apply
+              Aplicar
             </Button>
           </div>
         </SheetContent>
@@ -869,7 +869,7 @@ function SkeletonList() {
 
 function RequestRow({ req, onOpen }: { req: PendingRequest; onOpen: () => void }) {
   const dateStr = req.shift_date ? (() => {
-    try { return format(parseISO(req.shift_date!), "EEE MMM d", { locale: enUS }); } catch { return req.shift_date; }
+    try { return format(parseISO(req.shift_date!), "EEE MMM d", { locale: es }); } catch { return req.shift_date; }
   })() : "—";
   const time = req.shift_start && req.shift_end
     ? `${req.shift_start.slice(0,5)}–${req.shift_end.slice(0,5)}`
@@ -883,11 +883,11 @@ function RequestRow({ req, onOpen }: { req: PendingRequest; onOpen: () => void }
       <div className="flex items-start justify-between gap-2 mb-1.5">
         <div className="text-sm font-semibold truncate">{req.employee_name}</div>
         <Badge variant="outline" className="text-[10px] border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10">
-          Pending
+          Pendiente
         </Badge>
       </div>
       <div className="text-xs text-muted-foreground truncate">
-        {req.shift_title ?? "Shift"} · {dateStr}{time ? ` · ${time}` : ""}
+        {req.shift_title ?? "Turno"} · {dateStr}{time ? ` · ${time}` : ""}
       </div>
       {req.message && (
         <div className="text-xs text-foreground/80 mt-1.5 line-clamp-2">"{req.message}"</div>
@@ -921,9 +921,9 @@ function ErrorState({ message, onRetry }: { message: string; onRetry: () => void
       <div className="h-14 w-14 rounded-2xl bg-rose-500/10 flex items-center justify-center mb-3">
         <AlertTriangle className="h-6 w-6 text-rose-600" />
       </div>
-      <h3 className="text-base font-semibold mb-1">Couldn't load shifts</h3>
+      <h3 className="text-base font-semibold mb-1">No pudimos cargar los turnos</h3>
       <p className="text-sm text-muted-foreground max-w-[300px] leading-relaxed mb-4">{message}</p>
-      <Button size="sm" variant="outline" onClick={onRetry}>Retry</Button>
+      <Button size="sm" variant="outline" onClick={onRetry}>Reintentar</Button>
     </div>
   );
 }
