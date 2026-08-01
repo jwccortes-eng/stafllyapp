@@ -462,14 +462,35 @@ function Pulse({ label, state }: { label: string; state: MetricState }) {
   );
 }
 
-function QuickLink({ label, to, onNav }: { label: string; to: string; onNav: (to: string) => void }) {
+function QuickLink({
+  label,
+  to,
+  onNav,
+  badge,
+}: {
+  label: string;
+  to: string;
+  onNav: (to: string) => void;
+  badge?: number;
+}) {
   return (
     <button
       onClick={() => onNav(to)}
-      className="w-full flex items-center justify-between px-4 py-3.5 min-h-[48px] active:bg-muted/40 transition-colors"
+      className="w-full flex items-center justify-between gap-2 px-4 py-3.5 min-h-[48px] active:bg-muted/40 transition-colors"
     >
-      <span className="text-sm font-medium">{label}</span>
-      <ArrowRight className="h-4 w-4 text-muted-foreground" />
+      <span className="text-sm font-medium truncate">{label}</span>
+      <span className="flex items-center gap-2 shrink-0">
+        {badge !== undefined && (
+          <StatusBadge
+            status="pending"
+            label={badge > 9 ? "9+" : String(badge)}
+            size="sm"
+            indicator="dot"
+          />
+        )}
+        <ArrowRight className="h-4 w-4 text-muted-foreground" />
+      </span>
     </button>
   );
 }
+
