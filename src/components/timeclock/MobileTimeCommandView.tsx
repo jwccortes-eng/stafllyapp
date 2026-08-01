@@ -633,11 +633,10 @@ function Kpi({ label, value, tone = "muted" }: { label: string; value: number | 
 }
 
 function AlertRow({ item, onOpen, focused = false }: { item: AlertItem; onOpen: () => void; focused?: boolean }) {
-  const toneCls =
-    item.type === "stale_open" ? "bg-rose-500/10 text-rose-700 border-rose-500/30"
-    : item.type === "long_open" || item.type === "very_long" ? "bg-amber-500/10 text-amber-700 border-amber-500/30"
-    : item.type === "needs_review" ? "bg-violet-500/10 text-violet-700 border-violet-500/30"
-    : "bg-sky-500/10 text-sky-700 border-sky-500/30";
+  const statusKey =
+    item.type === "stale_open" ? "expired"
+    : item.type === "long_open" || item.type === "very_long" ? "late"
+    : item.type === "needs_review" ? "needs_review" : "missing";
   const label =
     item.type === "stale_open" ? "Vencido" :
     item.type === "long_open" ? "Largo" :
@@ -646,22 +645,25 @@ function AlertRow({ item, onOpen, focused = false }: { item: AlertItem; onOpen: 
   return (
     <li
       data-entry-id={item.entry.id}
+      role="button"
+      tabIndex={0}
+      aria-label={`${item.employee.first_name} ${item.employee.last_name} — ${label}. Ver detalle`}
       className={cn(
-        "flex items-center gap-3 px-3.5 py-2.5 active:bg-muted/40 cursor-pointer",
+        "flex items-center gap-3 px-3.5 py-2.5 min-h-[56px] active:bg-muted/40 cursor-pointer",
+        FOCUS_RING,
         focused && "bg-primary/5 border-l-2 border-primary scroll-mt-24",
       )}
       onClick={onOpen}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(); } }}
     >
       <EmployeeAvatar avatarUrl={item.employee.avatar_url} firstName={item.employee.first_name} lastName={item.employee.last_name} size="sm" />
       <div className="min-w-0 flex-1">
-        <div className="text-sm font-semibold truncate">{item.employee.first_name} {item.employee.last_name}</div>
+        <div className={cn(MT.body, "font-semibold truncate")}>{item.employee.first_name} {item.employee.last_name}</div>
         <div className="text-[12px] text-muted-foreground truncate">{item.reason}</div>
       </div>
-      {focused && (
-        <Badge variant="outline" className="text-[12px] font-bold uppercase tracking-wider bg-primary/10 text-primary border-primary/40">foco</Badge>
-      )}
-      <Badge variant="outline" className={cn("text-[12px] font-semibold uppercase tracking-wider", toneCls)}>{label}</Badge>
-      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+      {focused && <StatusBadge status="informational" label="Foco" size="sm" />}
+      <StatusBadge status={statusKey} label={label} size="sm" />
+      <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden="true" />
     </li>
   );
 }

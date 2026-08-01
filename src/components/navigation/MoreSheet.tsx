@@ -137,15 +137,16 @@ export function MoreSheet({
 
         <SheetHeader className="px-5 pt-2 pb-3 flex-row items-center justify-between space-y-0 shrink-0">
           <div className="text-left">
-            <SheetTitle className="text-base font-bold font-heading text-foreground">{t("launcher.title")}</SheetTitle>
-            <p className="text-[11px] text-muted-foreground mt-0.5">
+            <SheetTitle className={cn(MT.section, "font-heading text-foreground")}>{t("launcher.title")}</SheetTitle>
+            <p className={cn(MT.caption, "text-muted-foreground mt-0.5")}>
               {t("launcher.pin_hint")} ({pinnedIds.length}/{maxPins})
             </p>
           </div>
-          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl" onClick={onClose} aria-label={t("common.close")}>
-            <X className="h-4 w-4" />
+          <Button variant="ghost" size="icon" className="h-11 w-11 rounded-xl" onClick={onClose} aria-label={t("common.close")}>
+            <X className="h-5 w-5" />
           </Button>
         </SheetHeader>
+
 
         <div className="flex-1 overflow-y-auto px-5 pb-6 space-y-6">
           {/* Pinned shortcuts */}
