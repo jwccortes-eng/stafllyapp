@@ -38,7 +38,7 @@ describe("<SmartWorkCard /> — base behavior", () => {
     expect(screen.getByText("Aceptar")).toBeInTheDocument();
     // P0 · SHIFT IDENTITY: sin shift_ref, el fallback histórico es "#250" y no
     // compite con ningún otro número en la tarjeta.
-    expect(screen.getByText("#250")).toBeInTheDocument();
+    expect(screen.getByText("#0250")).toBeInTheDocument();
     expect(screen.queryByText(/Trabajo\s*0250/)).toBeNull();
     expect(screen.getByText("Estimado")).toBeInTheDocument();
   });
