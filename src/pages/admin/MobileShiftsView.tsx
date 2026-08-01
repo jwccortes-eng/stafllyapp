@@ -2,11 +2,11 @@ import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   CalendarDays, SlidersHorizontal, ChevronRight,
-  Users, AlertTriangle, Building2, Eye, Plus,
+  Users, AlertTriangle, Building2, Plus,
 } from "lucide-react";
 import { ShiftRouteHeader, type ShiftRouteHeaderTone } from "@/components/stafly-ui";
 import { format, parseISO, isToday, isTomorrow, addDays } from "date-fns";
-import { enUS } from "date-fns/locale";
+import { es } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
@@ -41,10 +41,13 @@ import { toast } from "sonner";
 type TabKey = "today" | "upcoming" | "needs" | "requests";
 
 const TABS: { key: TabKey; label: string }[] = [
-  { key: "today", label: "Today" },
-  { key: "upcoming", label: "Upcoming" },
-  { key: "needs", label: "Needs Staff" },
-  { key: "requests", label: "Requests" },
+  { key: "today", label: "Hoy" },
+  { key: "upcoming", label: "Próximos" },
+];
+
+const SECONDARY_TABS: { key: TabKey; label: string }[] = [
+  { key: "needs", label: "Necesitan gente" },
+  { key: "requests", label: "Solicitudes" },
 ];
 
 interface PendingRequest {
@@ -78,9 +81,9 @@ function formatTimeShort(t: string): string {
 function dateGroupLabel(dateStr: string): string {
   try {
     const d = parseISO(dateStr);
-    if (isToday(d)) return "Today";
-    if (isTomorrow(d)) return "Tomorrow";
-    return format(d, "EEE MMM d", { locale: enUS });
+    if (isToday(d)) return "Hoy";
+    if (isTomorrow(d)) return "Mañana";
+    return format(d, "EEE d MMM", { locale: es });
   } catch {
     return dateStr;
   }
@@ -101,7 +104,7 @@ export default function MobileShiftsView() {
   // Tab from URL (?tab=today) so back/forward works; fallback to "today"
   const initialTab = (searchParams.get("tab") as TabKey) || "today";
   const [tab, setTab] = useState<TabKey>(
-    TABS.some(t => t.key === initialTab) ? initialTab : "today"
+    [...TABS, ...SECONDARY_TABS].some(t => t.key === initialTab) ? initialTab : "today"
   );
 
   const [shifts, setShifts] = useState<Shift[]>([]);
@@ -265,8 +268,8 @@ export default function MobileShiftsView() {
       setDetailManageTeam(wantManageTeam);
       setDetailOpen(true);
     } else {
-      toast("Shift not found in this view.", {
-        description: "Try switching tabs or removing filters.",
+      toast("No encontramos ese turno en esta vista.", {
+        description: "Cambia de pestaña o quita los filtros activos.",
       });
     }
 
@@ -425,7 +428,7 @@ export default function MobileShiftsView() {
           <div className="min-w-0">
             <h1 className="text-2xl font-semibold tracking-tight leading-tight">Turnos</h1>
             <p className="text-xs text-muted-foreground truncate mt-0.5">
-              {selectedCompany?.name ?? "Todas las empresas"} · {format(new Date(), "EEE MMM d", { locale: enUS })}
+              {selectedCompany?.name ?? "Todas las empresas"} · {format(new Date(), "EEE d MMM", { locale: es })}
             </p>
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
@@ -458,8 +461,8 @@ export default function MobileShiftsView() {
         </div>
 
 
-        {/* Tabs (pills) */}
-        <div className="flex items-center gap-1.5 overflow-x-auto -mx-4 px-4 scrollbar-none">
+        {/* Dos anclas principales: Hoy y Próximos */}
+        <div className="grid grid-cols-2 gap-1.5 p-1 rounded-2xl bg-muted/50">
           {TABS.map(t => {
             const count = tabCounts[t.key];
             const active = tab === t.key;
@@ -468,36 +471,65 @@ export default function MobileShiftsView() {
                 key={t.key}
                 onClick={() => setTab(t.key)}
                 className={cn(
-                  "shrink-0 inline-flex items-center gap-1.5 px-3.5 h-9 rounded-full text-sm font-medium transition-all",
+                  "h-11 rounded-xl text-sm font-semibold transition-all inline-flex items-center justify-center gap-1.5",
                   active
-                    ? "bg-primary text-primary-foreground shadow-sm"
-                    : "bg-muted/60 text-muted-foreground hover:bg-muted active:scale-[0.97]"
+                    ? "bg-card text-foreground shadow-sm"
+                    : "text-muted-foreground active:scale-[0.97]"
                 )}
               >
                 <span>{t.label}</span>
-                {count > 0 && (
-                  <span className={cn(
-                    "h-[18px] min-w-[18px] px-1 inline-flex items-center justify-center rounded-full text-[10px] font-bold leading-none",
-                    active ? "bg-primary-foreground/20 text-primary-foreground" : "bg-background text-foreground"
-                  )}>
-                    {count}
-                  </span>
+                <span className={cn(
+                  "tabular-nums text-xs font-semibold",
+                  active ? "text-primary" : "text-muted-foreground/70"
+                )}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Secundarias: sólo aparecen cuando hay algo que atender */}
+        <div className="flex items-center gap-2 mt-2">
+          {SECONDARY_TABS.map(t => {
+            const count = tabCounts[t.key];
+            const active = tab === t.key;
+            if (count === 0 && !active) return null;
+            return (
+              <button
+                key={t.key}
+                onClick={() => setTab(t.key)}
+                className={cn(
+                  "inline-flex items-center gap-1.5 h-9 px-3 rounded-full text-xs font-medium transition-all border",
+                  active
+                    ? "border-primary/40 bg-primary/10 text-primary"
+                    : "border-border/50 text-muted-foreground active:scale-[0.97]"
                 )}
+              >
+                {t.label}
+                <span className="tabular-nums font-semibold">{count}</span>
               </button>
             );
           })}
         </div>
       </div>
 
-      {/* Summary strip */}
-      <div className="px-4 pt-3">
-        <div className="grid grid-cols-4 gap-2">
-          <SummaryCard label="Shifts" value={summary.shifts} />
-          <SummaryCard label="Hours" value={summary.hours} />
-          <SummaryCard label="Workers" value={summary.workers} />
-          <SummaryCard label="Coverage" value={`${summary.coverage}%`} accent={summary.coverage >= 90 ? "good" : summary.coverage >= 60 ? "warn" : "bad"} />
+      {/* Pulso de la vista: una sola línea, no cuatro tarjetas */}
+      {!loading && !error && tab !== "requests" && summary.shifts > 0 && (
+        <div className="px-4 pt-3">
+          <p className="text-xs text-muted-foreground">
+            <span className="font-semibold text-foreground tabular-nums">{summary.shifts}</span> turnos ·{" "}
+            <span className="font-semibold text-foreground tabular-nums">{summary.workers}</span> personas ·{" "}
+            <span className={cn(
+              "font-semibold tabular-nums",
+              summary.coverage >= 90 ? "text-status-success" : summary.coverage >= 60 ? "text-status-warning" : "text-status-danger"
+            )}>
+              {summary.coverage}%
+            </span>{" "}
+            de cobertura
+          </p>
         </div>
-      </div>
+      )}
 
       {/* List */}
       <div className="px-4 pt-4">
@@ -507,7 +539,7 @@ export default function MobileShiftsView() {
           ) : (
             <div className="space-y-2.5">
               <div className="text-xs text-muted-foreground px-1 mb-1">
-                {pendingRequests.length} pending request{pendingRequests.length === 1 ? "" : "s"}
+                {pendingRequests.length} solicitud{pendingRequests.length === 1 ? "" : "es"} pendiente{pendingRequests.length === 1 ? "" : "s"}
               </div>
               {pendingRequests.map(req => (
                 <RequestRow
@@ -524,7 +556,7 @@ export default function MobileShiftsView() {
                 className="w-full h-11 mt-2"
                 onClick={handleOpenRequests}
               >
-                Manage in Shift Requests
+                Gestionar solicitudes
                 <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
             </div>
@@ -544,7 +576,7 @@ export default function MobileShiftsView() {
                     {group.label}
                   </span>
                   <span className="text-xs text-muted-foreground">
-                    · {group.shifts.length} shift{group.shifts.length === 1 ? "" : "s"}
+                    · {group.shifts.length} turno{group.shifts.length === 1 ? "" : "s"}
                   </span>
                 </div>
                 <div className="space-y-2.5">
@@ -587,7 +619,7 @@ export default function MobileShiftsView() {
       <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
         <SheetContent side="bottom" className="h-[85vh] rounded-t-2xl px-4 pt-4 overflow-y-auto">
           <SheetHeader className="text-left mb-3">
-            <SheetTitle>Filters</SheetTitle>
+            <SheetTitle>Filtros</SheetTitle>
           </SheetHeader>
           <div className="space-y-4">
             <ShiftFilters
@@ -600,10 +632,10 @@ export default function MobileShiftsView() {
           </div>
           <div className="sticky bottom-0 bg-background pt-3 pb-[max(env(safe-area-inset-bottom,0px),12px)] flex items-center gap-2 mt-4 border-t border-border/40">
             <Button variant="ghost" className="flex-1" onClick={() => setFilters(EMPTY_FILTERS)}>
-              Clear
+              Limpiar
             </Button>
             <Button className="flex-1" onClick={() => setFiltersOpen(false)}>
-              Apply
+              Aplicar
             </Button>
           </div>
         </SheetContent>
@@ -672,20 +704,6 @@ export default function MobileShiftsView() {
 }
 
 /* ───────────── Subcomponents ───────────── */
-
-function SummaryCard({ label, value, accent }: { label: string; value: number | string; accent?: "good" | "warn" | "bad" }) {
-  const accentClass =
-    accent === "good" ? "text-emerald-600 dark:text-emerald-400" :
-    accent === "warn" ? "text-amber-600 dark:text-amber-400" :
-    accent === "bad" ? "text-rose-600 dark:text-rose-400" :
-    "text-foreground";
-  return (
-    <div className="rounded-2xl border border-border/50 bg-card px-2.5 py-3 text-center shadow-sm">
-      <div className={cn("text-xl font-semibold tabular-nums leading-none", accentClass)}>{value}</div>
-      <div className="text-[11px] text-muted-foreground mt-1.5 font-medium">{label}</div>
-    </div>
-  );
-}
 
 interface ShiftCardProps {
   shift: Shift;
@@ -782,11 +800,6 @@ function ShiftCard({
               )}
           </span>
         </div>
-        {slots > 0 && (
-          <span className="text-xs font-mono tabular-nums text-muted-foreground shrink-0">
-            {assignedEmployees.length}/{slots}
-          </span>
-        )}
       </div>
 
       {/* Coverage bar */}
@@ -800,34 +813,21 @@ function ShiftCard({
       )}
 
       {/* Warnings */}
-      {(understaffed || noClient) && (
+      {noClient && (
         <div className="flex flex-wrap items-center gap-1.5 mt-2">
-          {understaffed && (
-            <Warning icon={Users} label="Falta personal" tone="bad" />
-          )}
-          {noClient && (
-            <Warning icon={Building2} label="Sin cliente" tone="warn" />
-          )}
+          <Warning icon={Building2} label="Sin cliente" tone="warn" />
         </div>
       )}
 
-      {/* Footer: explicit affordance + Operations button */}
+      {/* Una sola acción: entrar a operar el turno */}
       <div className="mt-3 pt-3 border-t border-border/40 flex items-center justify-between gap-2">
-        <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-          <Eye className="h-3.5 w-3.5" />
-          Ver operaciones
+        <span className="text-xs text-muted-foreground truncate">
+          {understaffed ? "Necesita gente" : "Equipo cubierto"}
         </span>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onOpen();
-          }}
-          className="inline-flex items-center gap-1 h-8 px-3 rounded-lg text-xs font-semibold bg-primary/10 text-primary hover:bg-primary/15 active:scale-95 transition"
-        >
-          Operaciones
+        <span className="inline-flex items-center gap-1 text-xs font-semibold text-primary">
+          Operar
           <ChevronRight className="h-3.5 w-3.5" />
-        </button>
+        </span>
       </div>
     </div>
   );
@@ -866,7 +866,7 @@ function SkeletonList() {
 
 function RequestRow({ req, onOpen }: { req: PendingRequest; onOpen: () => void }) {
   const dateStr = req.shift_date ? (() => {
-    try { return format(parseISO(req.shift_date!), "EEE MMM d", { locale: enUS }); } catch { return req.shift_date; }
+    try { return format(parseISO(req.shift_date!), "EEE MMM d", { locale: es }); } catch { return req.shift_date; }
   })() : "—";
   const time = req.shift_start && req.shift_end
     ? `${req.shift_start.slice(0,5)}–${req.shift_end.slice(0,5)}`
@@ -880,11 +880,11 @@ function RequestRow({ req, onOpen }: { req: PendingRequest; onOpen: () => void }
       <div className="flex items-start justify-between gap-2 mb-1.5">
         <div className="text-sm font-semibold truncate">{req.employee_name}</div>
         <Badge variant="outline" className="text-[10px] border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10">
-          Pending
+          Pendiente
         </Badge>
       </div>
       <div className="text-xs text-muted-foreground truncate">
-        {req.shift_title ?? "Shift"} · {dateStr}{time ? ` · ${time}` : ""}
+        {req.shift_title ?? "Turno"} · {dateStr}{time ? ` · ${time}` : ""}
       </div>
       {req.message && (
         <div className="text-xs text-foreground/80 mt-1.5 line-clamp-2">"{req.message}"</div>
@@ -918,9 +918,9 @@ function ErrorState({ message, onRetry }: { message: string; onRetry: () => void
       <div className="h-14 w-14 rounded-2xl bg-rose-500/10 flex items-center justify-center mb-3">
         <AlertTriangle className="h-6 w-6 text-rose-600" />
       </div>
-      <h3 className="text-base font-semibold mb-1">Couldn't load shifts</h3>
+      <h3 className="text-base font-semibold mb-1">No pudimos cargar los turnos</h3>
       <p className="text-sm text-muted-foreground max-w-[300px] leading-relaxed mb-4">{message}</p>
-      <Button size="sm" variant="outline" onClick={onRetry}>Retry</Button>
+      <Button size="sm" variant="outline" onClick={onRetry}>Reintentar</Button>
     </div>
   );
 }
