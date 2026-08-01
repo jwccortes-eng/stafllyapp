@@ -54,12 +54,14 @@ export function observeOperationalEvent(
             decision.recommendedAudience.length,
           ),
           risk_detected: decision.riskDetected,
-          recommended_audience: decision.recommendedAudience as unknown as object,
-          excluded_audience: decision.excludedAudience as unknown as object,
-          decision_payload: {
-            escalation_hint: decision.escalationHint,
-            event_payload: event.eventPayload ?? {},
-          },
+          recommended_audience: JSON.parse(JSON.stringify(decision.recommendedAudience)),
+          excluded_audience: JSON.parse(JSON.stringify(decision.excludedAudience)),
+          decision_payload: JSON.parse(
+            JSON.stringify({
+              escalation_hint: decision.escalationHint,
+              event_payload: event.eventPayload ?? {},
+            }),
+          ),
           decision_version: decision.decisionVersion,
         }])
         .then(
