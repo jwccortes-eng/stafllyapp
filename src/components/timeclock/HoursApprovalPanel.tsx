@@ -179,17 +179,27 @@ export function HoursApprovalPanel({ companyId, shiftId, onChanged }: HoursAppro
 
   if (rows === null) {
     return (
-      <div className="flex items-center gap-2 p-4 text-sm text-muted-foreground">
-        <Loader2 className="h-4 w-4 animate-spin" /> Cargando horas reales…
+      <div className="space-y-2 p-1" aria-busy="true" aria-live="polite">
+        <span className="sr-only">Cargando horas reales</span>
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="rounded-xl border border-border/50 bg-card p-3">
+            <Skeleton className="h-4 w-40" />
+            <Skeleton className="h-3.5 w-24 mt-2" />
+            <Skeleton className="h-5 w-20 mt-2 rounded-full" />
+          </div>
+        ))}
       </div>
     );
   }
 
   if (rows.length === 0) {
     return (
-      <p className="text-sm text-muted-foreground p-4 leading-relaxed">
-        Aún no hay fichajes registrados en este turno. No se crean horas automáticamente.
-      </p>
+      <div className="p-4">
+        <p className={cn(MT.bodyStrong, "text-foreground")}>Sin fichajes en este turno</p>
+        <p className={cn(MT.body, "text-muted-foreground mt-1 leading-relaxed")}>
+          Nadie registró entrada todavía. Stafly no crea horas automáticamente: cuando el equipo fiche, aparecerán aquí para aprobar.
+        </p>
+      </div>
     );
   }
 
@@ -201,27 +211,30 @@ export function HoursApprovalPanel({ companyId, shiftId, onChanged }: HoursAppro
           const hours = realHoursOf(r);
           const checked = selected.has(r.id);
           return (
-            <li
-              key={r.id}
-              className="flex items-start gap-3 rounded-xl border border-border/50 bg-card p-3"
-            >
-              <label className="flex items-center min-h-[44px] min-w-[44px] justify-center -m-1 cursor-pointer">
-                <Checkbox checked={checked} onCheckedChange={() => toggle(r.id)} />
-              </label>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold truncate">{r.workerName}</p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {hours === null ? "Sin salida registrada" : `${hours} horas reales`}
-                </p>
-                <span
-                  className={cn(
-                    "inline-flex mt-1.5 items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold",
-                    STATE_TONE[state],
-                  )}
-                >
-                  {HOURS_STATE_LABEL[state]}
+            <li key={r.id}>
+              <button
+                type="button"
+                onClick={() => toggle(r.id)}
+                aria-pressed={checked}
+                className={cn(
+                  "w-full text-left flex items-start gap-3 rounded-xl border p-3 min-h-[64px] transition-colors",
+                  FOCUS_RING,
+                  checked ? "border-primary/50 bg-primary/[0.06]" : "border-border/50 bg-card",
+                )}
+              >
+                <span className="flex items-center justify-center h-11 w-11 -m-1 shrink-0">
+                  <Checkbox checked={checked} tabIndex={-1} aria-hidden className="pointer-events-none" />
                 </span>
-              </div>
+                <span className="flex-1 min-w-0">
+                  <span className={cn(MT.bodyStrong, "block truncate")}>{r.workerName}</span>
+                  <span className={cn(MT.body, "block text-muted-foreground mt-0.5")}>
+                    {hours === null ? "Sin salida registrada" : `${hours} horas reales`}
+                  </span>
+                  <span className="mt-1.5 block">
+                    <StatusBadge status={state} label={HOURS_STATE_LABEL[state]} size="md" />
+                  </span>
+                </span>
+              </button>
             </li>
           );
         })}
@@ -232,33 +245,40 @@ export function HoursApprovalPanel({ companyId, shiftId, onChanged }: HoursAppro
           value={reason}
           onChange={(e) => setReason(e.target.value)}
           placeholder="Motivo de la devolución (obligatorio)"
-          className="text-sm"
+          className={MT.body}
           rows={2}
         />
       )}
 
-      <div className="flex flex-col sm:flex-row gap-2">
-        <Button
-          onClick={runApprove}
-          disabled={busy || selected.size === 0}
-          className="min-h-[44px] flex-1"
-        >
-          {busy ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <CheckCircle2 className="h-4 w-4 mr-1.5" />}
-          Aprobar horas{selected.size > 0 ? ` (${selected.size})` : ""}
-        </Button>
-        <Button
-          variant="outline"
-          onClick={() => (showReason ? runReturn() : setShowReason(true))}
-          disabled={busy || selected.size === 0}
-          className="min-h-[44px]"
-        >
-          <Undo2 className="h-4 w-4 mr-1.5" />
-          {showReason ? "Confirmar devolución" : "Devolver para corrección"}
-        </Button>
+      <div className={THUMB_BAR}>
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={runApprove}
+            disabled={busy || selected.size === 0}
+            className={cn("min-h-[48px] flex-1", MT.bodyStrong)}
+          >
+            {busy ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <CheckCircle2 className="h-4 w-4 mr-1.5" />}
+            Aprobar horas{selected.size > 0 ? ` (${selected.size})` : ""}
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => (showReason ? runReturn() : setShowReason(true))}
+            disabled={busy || selected.size === 0}
+            className="min-h-[48px] min-w-[48px] px-3"
+            aria-label={showReason ? "Confirmar devolución" : "Devolver para corrección"}
+            title={showReason ? "Confirmar devolución" : "Devolver para corrección"}
+          >
+            <Undo2 className="h-4 w-4" />
+            <span className={cn(MT.body, "ml-1.5 hidden sm:inline")}>
+              {showReason ? "Confirmar devolución" : "Devolver"}
+            </span>
+          </Button>
+        </div>
+        <p className={cn(MT.caption, "text-muted-foreground leading-relaxed mt-2")}>
+          Payroll sigue usando únicamente las horas reales de fichaje. Aprobar no recalcula ni modifica pagos.
+        </p>
       </div>
-      <p className="text-[11px] text-muted-foreground leading-relaxed">
-        Payroll sigue usando únicamente las horas reales de fichaje. Aprobar no recalcula ni modifica pagos.
-      </p>
     </div>
   );
 }
+

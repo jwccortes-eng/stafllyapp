@@ -43,6 +43,8 @@ import {
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { formatShiftCode, type Shift, type Employee } from "@/components/shifts/types";
+import { FAMILY_CLASSES } from "@/lib/status/status-registry";
+import { MT } from "@/lib/mobile/mobile-scale";
 import { supabase } from "@/integrations/supabase/client";
 import { normalizePhone, buildWhatsAppTargets } from "@/lib/phone";
 import { useToast } from "@/hooks/use-toast";
@@ -234,7 +236,7 @@ function ReadinessChip({ readiness, className }: { readiness: Readiness; classNa
   return (
     <Badge
       variant="outline"
-      className={cn("h-[18px] px-1.5 text-[10px] font-semibold whitespace-nowrap inline-flex items-center", toneToClass(READINESS_TONE[readiness.state]), className)}
+      className={cn("h-[18px] px-1.5 text-[12px] font-semibold whitespace-nowrap inline-flex items-center", toneToClass(READINESS_TONE[readiness.state]), className)}
       title={readiness.helper}
     >
       <AlertCircle className="h-2.5 w-2.5 mr-0.5" />
@@ -646,16 +648,16 @@ function MobileShiftTeamHubImpl({
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5">
-                <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
+                <span className="text-[12px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
                   Gestionar equipo
                 </span>
                 {shift.shift_code && (
-                  <span className="text-[10px] font-mono font-semibold text-muted-foreground/80 truncate">
+                  <span className="text-[12px] font-mono font-semibold text-muted-foreground/80 truncate">
                     #{formatShiftCode(shift.shift_code)}
                   </span>
                 )}
                 {shift.publication_status && shift.publication_status !== "published" && (
-                  <Badge variant="outline" className="h-[16px] px-1 text-[9px] uppercase tracking-wider">
+                  <Badge variant="outline" className="h-[16px] px-1 text-[12px] uppercase tracking-wider">
                     {shift.publication_status}
                   </Badge>
                 )}
@@ -663,21 +665,21 @@ function MobileShiftTeamHubImpl({
               <h2 className="text-[15px] font-semibold tracking-tight leading-snug line-clamp-1 mt-0.5">
                 {clientName && clientName !== "—" ? clientName : (shift.title || "Turno")}
               </h2>
-              <p className="text-[11px] text-muted-foreground truncate">
+              <p className="text-[12px] text-muted-foreground truncate">
                 {dateLabel(shift.date)} · <span className="text-foreground/85 font-semibold">{locationName || "Falta ubicación"}</span>
               </p>
               {/* Stafly Work Route — Entrada + termina aprox. + coverage en una línea compacta. */}
               <div className="mt-1 flex items-baseline gap-1.5 flex-wrap">
-                <span className="text-[9.5px] font-bold uppercase tracking-[0.14em] text-muted-foreground/70">Entrada</span>
+                <span className="text-[12px] font-bold uppercase tracking-[0.14em] text-muted-foreground/70">Entrada</span>
                 <span className="text-[15px] font-bold font-mono tabular-nums text-foreground leading-none">{formatTimeShort(shift.start_time)}</span>
-                <span className="text-[10.5px] text-muted-foreground/80">· termina aprox. <span className="font-mono tabular-nums">{formatTimeShort(shift.end_time)}</span></span>
-                <span className="text-[10.5px] text-muted-foreground/60">·</span>
-                <span className="text-[10.5px] font-semibold text-foreground/85 tabular-nums">
+                <span className="text-[12px] text-muted-foreground/80">· termina aprox. <span className="font-mono tabular-nums">{formatTimeShort(shift.end_time)}</span></span>
+                <span className="text-[12px] text-muted-foreground/60">·</span>
+                <span className="text-[12px] font-semibold text-foreground/85 tabular-nums">
                   {staffedCount}/{slots || "—"}{openSpots > 0 ? ` · faltan ${openSpots}` : ""}
                 </span>
               </div>
               {(meetingPoint || hasMeetingPointLocation) && (
-                <p className="text-[10.5px] text-muted-foreground mt-0.5 truncate flex items-center gap-1">
+                <p className="text-[12px] text-muted-foreground mt-0.5 truncate flex items-center gap-1">
                   <MapPin className="h-3 w-3 shrink-0 opacity-70" />
                   <span className="truncate">
                     Encuentro: <span className="text-foreground/90 font-medium">{meetingPoint || "—"}</span>
@@ -688,7 +690,7 @@ function MobileShiftTeamHubImpl({
             </div>
             <Button
               variant="ghost" size="sm"
-              className="h-8 px-2 rounded-full shrink-0 -mt-0.5 -mr-1 text-[11px] gap-1"
+              className="h-8 px-2 rounded-full shrink-0 -mt-0.5 -mr-1 text-[12px] gap-1"
               onClick={() => onOpenChange(false)}
               aria-label="Volver al turno"
             >
@@ -712,7 +714,7 @@ function MobileShiftTeamHubImpl({
                   aria-selected={active}
                   onClick={() => setTab(t.key)}
                   className={cn(
-                    "shrink-0 snap-start px-2.5 h-7 rounded-full text-[11.5px] font-semibold transition-colors flex items-center gap-1 whitespace-nowrap",
+                    "shrink-0 snap-start px-2.5 h-7 rounded-full text-[12px] font-semibold transition-colors flex items-center gap-1 whitespace-nowrap",
                     active
                       ? "bg-foreground text-background"
                       : "bg-muted/50 text-muted-foreground hover:bg-muted",
@@ -721,7 +723,7 @@ function MobileShiftTeamHubImpl({
                   {t.label}
                   {typeof t.badge === "number" && t.badge > 0 && (
                     <span className={cn(
-                      "min-w-[16px] h-[16px] px-1 rounded-full text-[9.5px] font-bold flex items-center justify-center tabular-nums",
+                      "min-w-[16px] h-[16px] px-1 rounded-full text-[12px] font-bold flex items-center justify-center tabular-nums",
                       active ? "bg-background/20 text-background" : "bg-foreground/10 text-foreground",
                     )}>
                       {t.badge}
@@ -814,7 +816,7 @@ function MobileShiftTeamHubImpl({
             />
           )}
 
-          <p className="px-0.5 pt-1 text-[11px] text-muted-foreground leading-snug">
+          <p className="px-0.5 pt-1 text-[12px] text-muted-foreground leading-snug">
             {HUB_COPY.safetyNote}
           </p>
         </div>
@@ -912,13 +914,13 @@ function AssignedTab({
                 <div className="flex items-center justify-between px-3 py-2 border-b border-border/40 bg-muted/30">
                   <div className="flex items-center gap-1.5">
                     <Icon className="h-3.5 w-3.5 text-muted-foreground" />
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                    <span className="text-[12px] font-bold uppercase tracking-wider text-muted-foreground">
                       {meta.label}
                     </span>
                   </div>
                   <Badge
                     variant="outline"
-                    className={cn("h-[20px] px-1.5 text-[10px] font-semibold", toneToClass(meta.tone))}
+                    className={cn("h-[20px] px-1.5 text-[12px] font-semibold", toneToClass(meta.tone))}
                   >
                     {list.length}
                   </Badge>
@@ -1045,7 +1047,7 @@ function WorkerRow({
       <div className="flex items-center gap-2">
         <Avatar className="h-8 w-8 shrink-0">
           {employee?.avatar_url ? <AvatarImage src={employee.avatar_url} alt="" /> : null}
-          <AvatarFallback className="text-[10px] font-semibold">
+          <AvatarFallback className="text-[12px] font-semibold">
             {initialsOf(employee)}
           </AvatarFallback>
         </Avatar>
@@ -1058,7 +1060,7 @@ function WorkerRow({
             {statusPill && (
               <span
                 className={cn(
-                  "inline-flex items-center h-[15px] px-1.5 rounded-full text-[9.5px] font-bold uppercase tracking-wide border whitespace-nowrap",
+                  "inline-flex items-center h-[15px] px-1.5 rounded-full text-[12px] font-bold uppercase tracking-wide border whitespace-nowrap",
                   statusPill.cls,
                 )}
                 title={isImportedNotResponded ? "Importado desde Connecteam. Aún no confirmado en Stafly." : undefined}
@@ -1067,12 +1069,12 @@ function WorkerRow({
               </span>
             )}
             {assignment.assignment_role && (
-              <span className="inline-flex items-center h-[15px] px-1 rounded-full bg-muted text-muted-foreground text-[9.5px] font-bold uppercase tracking-wide">
+              <span className="inline-flex items-center h-[15px] px-1 rounded-full bg-muted text-muted-foreground text-[12px] font-bold uppercase tracking-wide">
                 {assignment.assignment_role}
               </span>
             )}
             {!hasPhone && (
-              <span className="inline-flex items-center h-[15px] px-1.5 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-400 text-[9.5px] font-bold uppercase tracking-wide">
+              <span className="inline-flex items-center h-[15px] px-1.5 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-400 text-[12px] font-bold uppercase tracking-wide">
                 Sin tel.
               </span>
             )}
@@ -1098,7 +1100,7 @@ function WorkerRow({
                   href={wa.waMeUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="h-7 w-7 inline-flex items-center justify-center rounded-full bg-[#25D366]/10 text-[#128C4F] dark:text-[#25D366]"
+                  className="h-7 w-7 inline-flex items-center justify-center rounded-full bg-status-success-bg text-status-success"
                   aria-label="WhatsApp"
                 >
                   <MessageSquare className="h-3.5 w-3.5" />
@@ -1109,7 +1111,7 @@ function WorkerRow({
             <button
               type="button"
               onClick={() => setPhoneDialogOpen(true)}
-              className="h-7 px-2 inline-flex items-center gap-1 rounded-full bg-primary text-primary-foreground text-[10px] font-semibold"
+              className="h-7 px-2 inline-flex items-center gap-1 rounded-full bg-primary text-primary-foreground text-[12px] font-semibold"
               aria-label={`Agregar teléfono de ${name}`}
             >
               <Phone className="h-3 w-3" /> Tel
@@ -1127,7 +1129,7 @@ function WorkerRow({
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                <DropdownMenuLabel className="text-[12px] uppercase tracking-wider text-muted-foreground font-semibold">
                   Acción registrada
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
@@ -1163,7 +1165,7 @@ function WorkerRow({
         </div>
       </div>
       {(responseLabel || isImportedNotResponded) && (
-        <div className="ml-10 mt-0.5 text-[10px] text-muted-foreground leading-snug">
+        <div className="ml-10 mt-0.5 text-[12px] text-muted-foreground leading-snug">
           {isImportedNotResponded
             ? "Importado desde Connecteam. Aún no confirmado en Stafly."
             : responseLabel}
@@ -1186,7 +1188,7 @@ function WorkerRow({
               onChange={(e) => setPhoneInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") submitPhone(); }}
             />
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-[12px] text-muted-foreground">
               No se envían notificaciones. No se modifican registros duplicados.
             </p>
           </div>
@@ -1215,7 +1217,7 @@ function ContactBtn({
       href={href}
       target={external ? "_blank" : undefined}
       rel={external ? "noopener noreferrer" : undefined}
-      className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-muted/60 hover:bg-muted text-[11px] font-medium text-foreground"
+      className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-muted/60 hover:bg-muted text-[12px] font-medium text-foreground"
       aria-label={label}
     >
       <Icon className="h-3 w-3" />
@@ -1281,7 +1283,7 @@ function ClaimsTab({
                 <div className="flex items-start gap-2.5">
                   <Avatar className="h-8 w-8 shrink-0">
                     {e?.avatar_url ? <AvatarImage src={e.avatar_url} alt="" /> : null}
-                    <AvatarFallback className="text-[10px] font-semibold">
+                    <AvatarFallback className="text-[12px] font-semibold">
                       {initialsOf(e)}
                     </AvatarFallback>
                   </Avatar>
@@ -1292,7 +1294,7 @@ function ClaimsTab({
                       </p>
                       <Badge
                         variant="outline"
-                        className={cn("h-[18px] px-1.5 text-[10px] font-semibold", toneToClass(tone))}
+                        className={cn("h-[18px] px-1.5 text-[12px] font-semibold", toneToClass(tone))}
                       >
                         {statusLabel}
                       </Badge>
@@ -1307,13 +1309,13 @@ function ClaimsTab({
                         "{c.message}"
                       </p>
                     )}
-                    <p className="mt-1 text-[10px] text-muted-foreground">
+                    <p className="mt-1 text-[12px] text-muted-foreground">
                       {c.created_at ? new Date(c.created_at).toLocaleString() : ""}
                       {c.reviewed_at ? ` · revisada ${new Date(c.reviewed_at).toLocaleString()}` : ""}
                     </p>
 
                     {blocked && (
-                      <p className="mt-1.5 text-[11px] text-amber-700 dark:text-amber-400 leading-snug">
+                      <p className="mt-1.5 text-[12px] text-amber-700 dark:text-amber-400 leading-snug">
                         {readiness.helper}
                       </p>
                     )}
@@ -1327,7 +1329,7 @@ function ClaimsTab({
                           aria-disabled={blocked}
                           title={blocked ? readiness.helper : undefined}
                           className={cn(
-                            "inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-semibold transition-colors",
+                            "inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[12px] font-semibold transition-colors",
                             blocked
                               ? "bg-muted text-muted-foreground cursor-not-allowed"
                               : "bg-emerald-600 text-white hover:bg-emerald-700",
@@ -1339,7 +1341,7 @@ function ClaimsTab({
                         <button
                           type="button"
                           onClick={() => onClaimAction(c.id, "rejected", workerName, c.employee_id)}
-                          className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-muted hover:bg-muted/80 text-foreground text-[11px] font-semibold transition-colors"
+                          className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-muted hover:bg-muted/80 text-foreground text-[12px] font-semibold transition-colors"
                         >
                           <XCircle className="h-3 w-3" />
                           Rechazar
@@ -1349,7 +1351,7 @@ function ClaimsTab({
                             <button
                               type="button"
                               onClick={() => onViewWorker(e.id)}
-                              className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-muted/60 hover:bg-muted text-foreground text-[11px] font-semibold transition-colors"
+                              className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-muted/60 hover:bg-muted text-foreground text-[12px] font-semibold transition-colors"
                             >
                               <UserCog className="h-3 w-3" />
                               Ver perfil
@@ -1357,7 +1359,7 @@ function ClaimsTab({
                             <button
                               type="button"
                               onClick={() => onCopyReminder(workerName)}
-                              className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-muted/60 hover:bg-muted text-foreground text-[11px] font-semibold transition-colors"
+                              className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-muted/60 hover:bg-muted text-foreground text-[12px] font-semibold transition-colors"
                             >
                               <Copy className="h-3 w-3" />
                               Copiar recordatorio
@@ -1425,7 +1427,7 @@ function IssuesTab({
                 <div className="min-w-0 flex-1">
                   <p className="text-[13px] font-semibold leading-tight">{i.title}</p>
                   {i.helper && (
-                    <p className="mt-0.5 text-[11px] opacity-80 leading-snug">{i.helper}</p>
+                    <p className="mt-0.5 text-[12px] opacity-80 leading-snug">{i.helper}</p>
                   )}
                 </div>
               </li>
@@ -1892,7 +1894,7 @@ function RecommendedTab({
       </SectionTitle>
 
       {!shift.location_id && (
-        <p className="text-[11px] text-muted-foreground rounded-lg border border-dashed border-border/60 bg-muted/30 px-3 py-2 leading-snug">
+        <p className="text-[12px] text-muted-foreground rounded-lg border border-dashed border-border/60 bg-muted/30 px-3 py-2 leading-snug">
           Agrega una ubicación de trabajo para usar el historial. El punto de encuentro no cuenta como lugar trabajado.
         </p>
       )}
@@ -1916,7 +1918,7 @@ function RecommendedTab({
             type="button"
             onClick={() => setFilter(c.key)}
             className={cn(
-              "h-7 rounded-full px-2.5 text-[11px] font-semibold border",
+              "h-7 rounded-full px-2.5 text-[12px] font-semibold border",
               filter === c.key
                 ? "bg-primary text-primary-foreground border-primary"
                 : "bg-muted/40 text-muted-foreground border-border/50",
@@ -1928,7 +1930,7 @@ function RecommendedTab({
       </div>
 
       {signalsLoading && (
-        <p className="text-[11px] text-muted-foreground px-1">Afinando recomendaciones…</p>
+        <p className="text-[12px] text-muted-foreground px-1">Afinando recomendaciones…</p>
       )}
 
       {(() => {
@@ -1977,12 +1979,12 @@ function RecommendedTab({
             return (
               <div key={g} className="space-y-2">
                 <div className="flex items-center gap-2 px-0.5">
-                  <span className={cn("rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider", meta.tone)}>
+                  <span className={cn("rounded-full border px-2 py-0.5 text-[12px] font-bold uppercase tracking-wider", meta.tone)}>
                     {meta.label}
                   </span>
-                  <span className="text-[10px] tabular-nums text-muted-foreground">{list.length}</span>
+                  <span className="text-[12px] tabular-nums text-muted-foreground">{list.length}</span>
                 </div>
-                <p className="text-[10.5px] text-muted-foreground px-1 leading-snug">{meta.helper}</p>
+                <p className="text-[12px] text-muted-foreground px-1 leading-snug">{meta.helper}</p>
                 <ul className="space-y-2">
                   {list.map((c) => {
             const display = buildRecommendedDisplay(c);
@@ -2001,19 +2003,19 @@ function RecommendedTab({
               >
                 <Avatar className="h-9 w-9 mt-0.5 shrink-0">
                   {c.employee.avatar_url ? <AvatarImage src={c.employee.avatar_url} alt={c.name} /> : null}
-                  <AvatarFallback className="text-[11px] font-semibold">{c.initials}</AvatarFallback>
+                  <AvatarFallback className="text-[12px] font-semibold">{c.initials}</AvatarFallback>
                 </Avatar>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5 min-w-0">
                     <p className="text-[13.5px] font-semibold text-foreground truncate">{c.name}</p>
-                    <span className={cn("h-[16px] inline-flex items-center rounded-full border px-1.5 text-[9.5px] font-semibold shrink-0", badgeTone)}>
+                    <span className={cn("h-[16px] inline-flex items-center rounded-full border px-1.5 text-[12px] font-semibold shrink-0", badgeTone)}>
                       {c.readinessState === "ready" ? "Listo" : c.readinessState === "compliance_warning" ? "Gracia" : "Bloqueado"}
                     </span>
                   </div>
                   {c.phone ? (
-                    <p className="text-[10.5px] text-muted-foreground tabular-nums truncate">{c.phone}</p>
+                    <p className="text-[12px] text-muted-foreground tabular-nums truncate">{c.phone}</p>
                   ) : (
-                    <p className="text-[10.5px] text-amber-700 dark:text-amber-400">Sin teléfono</p>
+                    <p className="text-[12px] text-amber-700 dark:text-amber-400">Sin teléfono</p>
                   )}
                   {display.chips.length > 0 && (
                     <div className="mt-1 flex flex-wrap gap-1">
@@ -2024,7 +2026,7 @@ function RecommendedTab({
                           <span
                             key={`d-${ch.key}`}
                             className={cn(
-                              "text-[9.5px] font-medium px-1.5 py-0.5 rounded-md",
+                              "text-[12px] font-medium px-1.5 py-0.5 rounded-md",
                               ch.tone === "good"
                                 ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400"
                                 : isAlarming
@@ -2039,14 +2041,14 @@ function RecommendedTab({
                         );
                       })}
                       {!isExpanded && display.chips.length > 3 && (
-                        <span className="text-[9.5px] text-muted-foreground/80 px-1">+{display.chips.length - 3}</span>
+                        <span className="text-[12px] text-muted-foreground/80 px-1">+{display.chips.length - 3}</span>
                       )}
                     </div>
                   )}
                   <button
                     type="button"
                     onClick={() => toggleExpanded(c.employee.id)}
-                    className="mt-1 inline-flex items-center gap-1 text-[10px] font-semibold text-muted-foreground hover:text-foreground"
+                    className="mt-1 inline-flex items-center gap-1 text-[12px] font-semibold text-muted-foreground hover:text-foreground"
                     aria-expanded={isExpanded}
                   >
                     {isExpanded ? "Ocultar" : "¿Por qué?"}
@@ -2055,12 +2057,12 @@ function RecommendedTab({
                   {isExpanded && (
                     <>
                       {display.summary && (
-                        <p className="mt-1 text-[11px] text-foreground/80 leading-snug">{display.summary}</p>
+                        <p className="mt-1 text-[12px] text-foreground/80 leading-snug">{display.summary}</p>
                       )}
                       {whyLines.length > 0 && (
                         <ul className="mt-1.5 space-y-0.5 rounded-lg bg-muted/30 px-2 py-1.5">
                           {whyLines.map((w, i) => (
-                            <li key={i} className="text-[11px] text-foreground/80 leading-snug">• {w}</li>
+                            <li key={i} className="text-[12px] text-foreground/80 leading-snug">• {w}</li>
                           ))}
                         </ul>
                       )}
@@ -2082,7 +2084,7 @@ function RecommendedTab({
                       size="sm"
                       variant="outline"
                       disabled
-                      className="h-8 px-2.5 text-[11px]"
+                      className="h-8 px-2.5 text-[12px]"
                       title={
                         c.preferenceBlocked ? "Trabajador bloqueado para este cliente/lugar"
                         : c.conflictDetected ? "Tiene un turno superpuesto"
@@ -2097,14 +2099,14 @@ function RecommendedTab({
                       <DropdownMenuTrigger asChild>
                         <button
                           type="button"
-                          className="h-5 px-1 rounded-md text-[9.5px] font-medium text-muted-foreground/70 hover:bg-muted/60 inline-flex items-center gap-0.5"
+                          className="h-5 px-1 rounded-md text-[12px] font-medium text-muted-foreground/70 hover:bg-muted/60 inline-flex items-center gap-0.5"
                           aria-label={`Marcar afinidad para ${c.name}`}
                         >
                           <MoreVertical className="h-3 w-3" /> Afinidad
                         </button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-52">
-                        <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                        <DropdownMenuLabel className="text-[12px] uppercase tracking-wider text-muted-foreground font-semibold">
                           Marcar para este {shift.client_id ? "cliente" : "lugar"}
                         </DropdownMenuLabel>
                         <DropdownMenuSeparator />
@@ -2181,7 +2183,7 @@ function SectionTitle({
         </h3>
       </div>
       {helper ? (
-        <p className="mt-1 text-[11px] text-muted-foreground leading-snug">{helper}</p>
+        <p className="mt-1 text-[12px] text-muted-foreground leading-snug">{helper}</p>
       ) : null}
     </div>
   );
@@ -2206,7 +2208,7 @@ function StatTile({
             : "text-foreground";
   return (
     <div className="rounded-xl border border-border/50 bg-card px-3 py-2">
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
+      <p className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
       <p className={cn("mt-0.5 text-lg font-bold tabular-nums leading-tight", accentCls)}>{value}</p>
     </div>
   );

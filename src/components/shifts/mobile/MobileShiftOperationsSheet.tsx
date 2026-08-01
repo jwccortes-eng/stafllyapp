@@ -22,6 +22,8 @@ import { Label } from "@/components/ui/label";
 import { isDraftShift, isPublishedShift } from "@/lib/shifts/shift-guards";
 import { hasAnyOperationalLocation } from "@/lib/shifts/location-status";
 import { formatShiftCode, type Shift, type Assignment, type Employee } from "@/components/shifts/types";
+import { FAMILY_CLASSES } from "@/lib/status/status-registry";
+import { MT } from "@/lib/mobile/mobile-scale";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -488,12 +490,12 @@ export function MobileShiftOperationsSheet({
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5 mb-0.5">
                     {shift.shift_code && (
-                      <span className="inline-flex items-center gap-0.5 text-[10px] font-mono font-semibold text-muted-foreground/80">
+                      <span className="inline-flex items-center gap-0.5 text-[12px] font-mono font-semibold text-muted-foreground/80">
                         <Hash className="h-3 w-3" />
                         {formatShiftCode(shift.shift_code)}
                       </span>
                     )}
-                    <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground truncate">
+                    <span className="text-[12px] font-medium uppercase tracking-wider text-muted-foreground truncate">
                       {dateLabel(shift.date)}
                     </span>
                   </div>
@@ -516,13 +518,13 @@ export function MobileShiftOperationsSheet({
                   </p>
                   {/* Schedule line */}
                   <div className="mt-1.5 flex items-baseline gap-2">
-                    <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground/70">Entrada</span>
+                    <span className="text-[12px] font-bold uppercase tracking-[0.14em] text-muted-foreground/70">Entrada</span>
                     <span className="text-xl font-bold font-mono tabular-nums text-foreground leading-none">{startShort}</span>
-                    <span className="text-[11px] text-muted-foreground/80 truncate">· Termina aprox. <span className="font-mono tabular-nums">{endShort}</span></span>
+                    <span className="text-[12px] text-muted-foreground/80 truncate">· Termina aprox. <span className="font-mono tabular-nums">{endShort}</span></span>
                   </div>
                   {/* Trabajo + Encuentro */}
                   <div className="mt-2 space-y-1">
-                    <div className="flex items-start gap-1.5 text-[11px]">
+                    <div className="flex items-start gap-1.5 text-[12px]">
                       <Building2 className="h-3 w-3 shrink-0 mt-0.5 opacity-70 text-muted-foreground" />
                       <span className="text-muted-foreground shrink-0">Trabajo:</span>
                       {locationName ? (
@@ -531,7 +533,7 @@ export function MobileShiftOperationsSheet({
                         <span className="text-amber-700 dark:text-amber-400 font-medium">Falta ubicación</span>
                       )}
                     </div>
-                    <div className="flex items-start gap-1.5 text-[11px]">
+                    <div className="flex items-start gap-1.5 text-[12px]">
                       <MapPin className="h-3 w-3 shrink-0 mt-0.5 opacity-70 text-muted-foreground" />
                       <span className="text-muted-foreground shrink-0">Encuentro:</span>
                       {mp ? (
@@ -557,7 +559,7 @@ export function MobileShiftOperationsSheet({
                   {pill && (
                     <Badge
                       variant="outline"
-                      className={cn("h-[22px] px-2.5 text-[11px] font-bold tabular-nums", pill.cls)}
+                      className={cn("h-[22px] px-2.5 text-[12px] font-bold tabular-nums", pill.cls)}
                     >
                       {pill.label}
                     </Badge>
@@ -649,7 +651,7 @@ export function MobileShiftOperationsSheet({
                     </div>
                   )}
                   {helper && !primary && (
-                    <p className="text-[11px] text-muted-foreground italic">{helper}</p>
+                    <p className="text-[12px] text-muted-foreground italic">{helper}</p>
                   )}
                 </div>
               </section>
@@ -727,7 +729,7 @@ export function MobileShiftOperationsSheet({
               />
             ) : (
               <>
-                <p className="text-[11px] text-muted-foreground mb-1.5 px-0.5">
+                <p className="text-[12px] text-muted-foreground mb-1.5 px-0.5">
                   {MOBILE_SHIFT_COPY.assignedSortedHelper}
                 </p>
                 <div className="space-y-1">
@@ -805,7 +807,7 @@ export function MobileShiftOperationsSheet({
                   employees={employees}
                   canManage={canValidate}
                 />
-                <p className="mt-2 px-0.5 text-[11px] text-muted-foreground">
+                <p className="mt-2 px-0.5 text-[12px] text-muted-foreground">
                   Datos cargados desde el sistema de asistencia.
                 </p>
               </>
@@ -1020,7 +1022,7 @@ export function MobileShiftOperationsSheet({
                     >
                       <div className="flex items-center gap-1.5">
                         <ShieldCheck className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                        <span className="text-[12px] font-bold uppercase tracking-wider text-muted-foreground">
                           Cierre diario
                         </span>
                       </div>
@@ -1050,7 +1052,7 @@ export function MobileShiftOperationsSheet({
 
                 {/* Detalles del turno */}
                 <div>
-                  <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5 px-0.5">
+                  <p className="text-[12px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5 px-0.5">
                     Detalles del turno
                   </p>
                   <div className="rounded-2xl border border-border/50 bg-card divide-y divide-border/40">
@@ -1091,7 +1093,7 @@ export function MobileShiftOperationsSheet({
                             <p className="text-[13px] font-semibold text-foreground leading-tight">
                               Punto de encuentro registrado
                             </p>
-                            <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug">
+                            <p className="text-[12px] text-muted-foreground mt-0.5 leading-snug">
                               Este es el lugar donde se reúnen antes de ir al trabajo.
                             </p>
                             <p className="text-[12px] text-foreground/85 mt-1">
@@ -1119,7 +1121,7 @@ export function MobileShiftOperationsSheet({
 
                 {/* Notas */}
                 <div>
-                  <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5 px-0.5">
+                  <p className="text-[12px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5 px-0.5">
                     Notas
                   </p>
                   {shift.notes ? (
@@ -1147,7 +1149,7 @@ export function MobileShiftOperationsSheet({
                   >
                     <div className="flex items-center gap-1.5">
                       <Workflow className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                      <span className="text-[12px] font-bold uppercase tracking-wider text-muted-foreground">
                         Origen e historial
                       </span>
                     </div>
@@ -1231,7 +1233,7 @@ export function MobileShiftOperationsSheet({
               Editar turno
             </Button>
           )}
-          <p className="mt-2 text-center text-[11px] text-muted-foreground">
+          <p className="mt-2 text-center text-[12px] text-muted-foreground">
             Acciones seguras disponibles en móvil. Cambios avanzados siguen en escritorio.
           </p>
 
@@ -1323,13 +1325,13 @@ function SectionTitle({
           {children}
         </span>
         {badge && (
-          <span className="ml-auto inline-flex items-center h-[18px] px-1.5 rounded-full bg-muted text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+          <span className="ml-auto inline-flex items-center h-[18px] px-1.5 rounded-full bg-muted text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
             {badge}
           </span>
         )}
       </div>
       {helper && (
-        <p className="text-[11px] text-muted-foreground mt-1 leading-snug">
+        <p className="text-[12px] text-muted-foreground mt-1 leading-snug">
           {helper}
         </p>
       )}
@@ -1364,10 +1366,10 @@ function ErrorBlock({
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold text-foreground leading-tight">{title}</p>
           {helper && (
-            <p className="text-[11px] text-muted-foreground mt-1 leading-snug">{helper}</p>
+            <p className="text-[12px] text-muted-foreground mt-1 leading-snug">{helper}</p>
           )}
           {isDev && devHint && (
-            <p className="mt-1.5 text-[10px] font-mono text-rose-700/70 dark:text-rose-300/70 leading-snug break-words">
+            <p className="mt-1.5 text-[12px] font-mono text-rose-700/70 dark:text-rose-300/70 leading-snug break-words">
               {devHint}
             </p>
           )}
@@ -1431,13 +1433,13 @@ function EmptyBlock({
           <div className="flex items-center gap-1.5 flex-wrap">
             <span className="text-sm font-semibold text-foreground leading-tight">{title}</span>
             {badge && (
-              <span className="inline-flex items-center h-[18px] px-1.5 rounded-full bg-muted text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              <span className="inline-flex items-center h-[18px] px-1.5 rounded-full bg-muted text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
                 {badge}
               </span>
             )}
           </div>
           {helper && (
-            <p className="text-[11px] text-muted-foreground mt-1 leading-snug">{helper}</p>
+            <p className="text-[12px] text-muted-foreground mt-1 leading-snug">{helper}</p>
           )}
         </div>
       </div>
@@ -1486,7 +1488,7 @@ function CoverChip({
     tone === "muted" ? "bg-muted/50 text-muted-foreground border-border/50" :
     "bg-card text-foreground border-border/60";
   return (
-    <div className={cn("inline-flex items-center gap-1 h-7 px-2 rounded-full border text-[10.5px] font-medium", cls)}>
+    <div className={cn("inline-flex items-center gap-1 h-7 px-2 rounded-full border text-[12px] font-medium", cls)}>
       <span className="font-semibold tabular-nums">{value}</span>
       <span className="opacity-80">{label}</span>
     </div>
@@ -1683,7 +1685,7 @@ const WorkerRow = memo(function WorkerRow({
       >
         <Avatar className="h-8 w-8 shrink-0">
           {worker.avatar_url ? <AvatarImage src={worker.avatar_url} alt="" /> : null}
-          <AvatarFallback className="text-[10px] font-semibold bg-muted">
+          <AvatarFallback className="text-[12px] font-semibold bg-muted">
             {initialsStr || "·"}
           </AvatarFallback>
         </Avatar>
@@ -1694,7 +1696,7 @@ const WorkerRow = memo(function WorkerRow({
             </span>
             {isShiftAdmin && <Crown className="h-3 w-3 text-primary shrink-0" />}
             {roleBadge && (
-              <span className={cn("inline-flex items-center h-[15px] px-1 rounded-full border text-[9px] font-bold uppercase tracking-wider shrink-0", roleBadge.cls)}>
+              <span className={cn("inline-flex items-center h-[15px] px-1 rounded-full border text-[12px] font-bold uppercase tracking-wider shrink-0", roleBadge.cls)}>
                 {roleBadge.label}
               </span>
             )}
@@ -1704,13 +1706,13 @@ const WorkerRow = memo(function WorkerRow({
               <span
                 key={i}
                 title={c.title}
-                className={cn("inline-flex items-center h-[15px] px-1.5 rounded-full text-[9.5px] font-bold uppercase tracking-wide", chipToneCls(c.tone))}
+                className={cn("inline-flex items-center h-[15px] px-1.5 rounded-full text-[12px] font-bold uppercase tracking-wide", chipToneCls(c.tone))}
               >
                 {c.label}
               </span>
             ))}
             {chips.length > 3 && (
-              <span className="text-[9.5px] text-muted-foreground font-medium">+{chips.length - 3}</span>
+              <span className="text-[12px] text-muted-foreground font-medium">+{chips.length - 3}</span>
             )}
           </div>
         </div>
@@ -1732,7 +1734,7 @@ const WorkerRow = memo(function WorkerRow({
       {expanded && (
         <div className="px-2.5 pb-2.5 pt-1 border-t border-border/40">
           {isImportedNotResponded && (
-            <p className="text-[10.5px] text-muted-foreground mb-1.5">
+            <p className="text-[12px] text-muted-foreground mb-1.5">
               Importado desde Connecteam. Aún no confirmado en Stafly.
             </p>
           )}
@@ -1740,13 +1742,13 @@ const WorkerRow = memo(function WorkerRow({
             <div className="flex items-center gap-1.5">
               <a
                 href={`tel:${phone}`}
-                className="flex-1 inline-flex items-center justify-center gap-1.5 h-8 rounded-lg bg-primary/10 text-primary text-[11px] font-semibold"
+                className="flex-1 inline-flex items-center justify-center gap-1.5 h-8 rounded-lg bg-primary/10 text-primary text-[12px] font-semibold"
               >
                 <Phone className="h-3 w-3" /> Llamar
               </a>
               <a
                 href={`sms:${normalized || phone}`}
-                className="flex-1 inline-flex items-center justify-center gap-1.5 h-8 rounded-lg bg-muted text-foreground text-[11px] font-semibold"
+                className="flex-1 inline-flex items-center justify-center gap-1.5 h-8 rounded-lg bg-muted text-foreground text-[12px] font-semibold"
               >
                 <MessageSquare className="h-3 w-3" /> SMS
               </a>
@@ -1755,7 +1757,7 @@ const WorkerRow = memo(function WorkerRow({
                   href={wa.waMeUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex-1 inline-flex items-center justify-center gap-1.5 h-8 rounded-lg bg-[#25D366]/10 text-[#128C4F] dark:text-[#25D366] text-[11px] font-semibold"
+                  className="flex-1 inline-flex items-center justify-center gap-1.5 h-8 rounded-lg bg-status-success-bg text-status-success text-[12px] font-semibold"
                 >
                   <MessageCircle className="h-3 w-3" /> WA
                 </a>
@@ -1772,7 +1774,7 @@ const WorkerRow = memo(function WorkerRow({
           ) : (
             <div className="rounded-lg border border-dashed border-border/60 bg-muted/30 px-2.5 py-2 flex items-center gap-2">
               <Phone className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-              <div className="min-w-0 flex-1 text-[10.5px] text-muted-foreground leading-snug">
+              <div className="min-w-0 flex-1 text-[12px] text-muted-foreground leading-snug">
                 {MOBILE_SHIFT_COPY.noPhoneHelper}
               </div>
               {canManagePhone && (
@@ -1780,7 +1782,7 @@ const WorkerRow = memo(function WorkerRow({
                   type="button"
                   onClick={openPhoneDialog}
                   disabled={savingPhone}
-                  className="shrink-0 inline-flex items-center gap-1 h-7 px-2 rounded-full bg-primary text-primary-foreground text-[10.5px] font-semibold disabled:opacity-60"
+                  className="shrink-0 inline-flex items-center gap-1 h-7 px-2 rounded-full bg-primary text-primary-foreground text-[12px] font-semibold disabled:opacity-60"
                 >
                   <Phone className="h-3 w-3" />
                   {savingPhone ? "…" : "Agregar"}
@@ -1808,7 +1810,7 @@ const WorkerRow = memo(function WorkerRow({
               onChange={(e) => setPhoneInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") submitPhone(); }}
             />
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-[12px] text-muted-foreground">
               No se envían notificaciones. No se modifican registros duplicados.
             </p>
           </div>
@@ -1839,7 +1841,7 @@ function DetailRow({ icon: Icon, label, value, muted }: { icon: any; label: stri
 }
 
 function StatusPill({ draft, published, understaffed }: { draft: boolean; published: boolean; understaffed: boolean }) {
-  const base = "text-[11px] font-medium h-[22px] px-2 leading-none";
+  const base = "text-[12px] font-medium h-[22px] px-2 leading-none";
   if (draft) {
     return <Badge variant="outline" className={cn(base, FAMILY_CLASSES.warning)}>Draft</Badge>;
   }
@@ -1855,7 +1857,7 @@ function StatusPill({ draft, published, understaffed }: { draft: boolean; publis
 function PublicationBadge({
   status, draft, published,
 }: { status?: string | null; draft: boolean; published: boolean }) {
-  const base = "h-[22px] px-2 text-[11px] font-semibold leading-none";
+  const base = "h-[22px] px-2 text-[12px] font-semibold leading-none";
   const s = (status ?? "").toLowerCase();
   if (s === "cancelled" || s === "canceled") {
     return <Badge variant="outline" aria-label="Publication status: cancelled" className={cn(base, FAMILY_CLASSES.critical)}>Cancelled</Badge>;
@@ -2075,7 +2077,7 @@ function LocationReportDialog({
             <div><span className="text-muted-foreground">Cliente: </span>{clientName || "—"}</div>
             <div><span className="text-muted-foreground">Trabajo: </span>{jobSiteName || <span className="text-amber-700 dark:text-amber-400">(falta)</span>}</div>
             <div><span className="text-muted-foreground">Encuentro: </span>{meetingPoint || <span className="text-muted-foreground">—</span>}</div>
-            {notes && <div className="text-[11.5px] text-muted-foreground line-clamp-3">Notas: {notes}</div>}
+            {notes && <div className="text-[12px] text-muted-foreground line-clamp-3">Notas: {notes}</div>}
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="loc-correction">Nota de corrección</Label>
