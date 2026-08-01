@@ -234,10 +234,22 @@ export interface ValidationCenterModel {
 
 /* ── Entradas ────────────────────────────────────────────────────────── */
 
-export interface HoursEntryInput {
+/** Contexto operativo compartido por ambas fuentes. Todo opcional y real. */
+export interface ShiftContextInput {
+  shift_title?: string | null;
+  client_name?: string | null;
+  /** Fecha ISO (YYYY-MM-DD) del turno. */
+  shift_date?: string | null;
+  shift_start_time?: string | null;
+  shift_end_time?: string | null;
+}
+
+export interface HoursEntryInput extends ShiftContextInput {
   id: string;
   employee_id: string | null;
   worker_name: string | null;
+  worker_avatar_url?: string | null;
+  worker_role?: string | null;
   shift_id: string | null;
   shift_label?: string | null;
   clock_in: string | null;
@@ -246,9 +258,16 @@ export interface HoursEntryInput {
   /** pending | approved | rejected (estado de revisión, nunca valor de hora). */
   status: string | null;
   approved_at?: string | null;
+  approved_by_name?: string | null;
+  /** Comentario real del fichaje (worker o quien lo registró). */
+  notes?: string | null;
+  /** manual | qr | kiosk … origen del fichaje. */
+  entry_source?: string | null;
+  /** Responsable operativo del turno, si está definido. */
+  shift_admin_name?: string | null;
 }
 
-export interface CloseoutInput {
+export interface CloseoutInput extends ShiftContextInput {
   id: string;
   shift_id: string | null;
   shift_label?: string | null;
@@ -263,6 +282,19 @@ export interface CloseoutInput {
   submitted_at: string | null;
   reviewed_at?: string | null;
   reviewer_name?: string | null;
+  /** Quién envió el cierre (capitán / supervisor). */
+  submitted_by_name?: string | null;
+  /** Rol declarado de quien cerró. */
+  submitted_role?: string | null;
+  submitted_avatar_url?: string | null;
+  review_notes?: string | null;
+  client_feedback?: string | null;
+  final_approval_notes?: string | null;
+  final_approved_by_name?: string | null;
+  final_approved_at?: string | null;
+  uniform_ok?: boolean | null;
+  updated_at?: string | null;
+
 }
 
 export interface ValidationCenterInput {
