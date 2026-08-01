@@ -196,13 +196,15 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
           .sort((a, b) => a.name.localeCompare(b.name));
       }
     } catch (err) {
-      // Don't blow up the UI on transient/permission errors — leave the
-      // user with whatever they had cached and let the consumer decide.
+      // P0 OX — never fail silently: surface it and let the UI offer a retry.
       console.error("[useCompany] fetchCompanies failed:", err);
+      setLoadError("No pudimos cargar tus compañías.");
       list = [];
     }
 
+    if (list.length > 0) setLoadError(null);
     setCompanies(list);
+
 
     // Per-tab source of truth for the active company. On first load for this
     // user in this tab, migrate the legacy global localStorage key ONCE so
