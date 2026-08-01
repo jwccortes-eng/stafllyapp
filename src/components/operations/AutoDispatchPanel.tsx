@@ -34,7 +34,7 @@ import {
   Settings2, ShieldCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { toast } from "sonner";
+import { notifyError, notifySuccess, notifyWarning } from "@/lib/feedback/notify";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompanyConfig } from "@/hooks/useCompanyConfig";
@@ -101,6 +101,9 @@ export function AutoDispatchPanel({
   const isFullAuto = autoCfg.level === "full_auto";
 
   // ─── Load + persist + (optional) auto-execute ─────────────────────────
+  // OX-1 — permite ofrecer "Reintentar" dentro del propio toast de error.
+  const refreshRef = useRef<(() => Promise<void>) | null>(null);
+
   const refresh = useCallback(async () => {
     if (!companyId || isOff) {
       setSuggestions([]);
@@ -115,21 +118,40 @@ export function AutoDispatchPanel({
         try {
           const results = await executeAutoDispatch(companyId);
           const executed = results.filter(r => r.status === "executed");
+          const failed = results.filter(r => r.status !== "executed");
+          if (failed.length > 0) {
+            notifyWarning({
+              key: "auto-dispatch-partial",
+              title: `${failed.length} de ${results.length} turnos no se despacharon`,
+              fact: "El resto sí se ejecutó correctamente.",
+              consequence: "Revisa esos turnos y despáchalos manualmente.",
+            });
+          }
           if (executed.length > 0) {
             setLogRefreshKey(k => k + 1);
             executed.forEach(r => {
-              toast.success(
-                r.action === "auto_assign" ? "⚡ Auto-asignación" : "⚡ Auto-broadcast",
-                {
-                  description: r.action === "auto_assign"
-                    ? `Asignado a "${r.suggestion.shiftTitle}"`
-                    : `Broadcast enviado a ${r.notifiedEmployeeIds?.length ?? 0} workers`,
-                },
-              );
+              notifySuccess({
+                key: `auto-dispatch-${r.suggestion.id}`,
+                title: r.action === "auto_assign" ? "Auto-asignación ejecutada" : "Auto-broadcast enviado",
+                fact: r.action === "auto_assign"
+                  ? `Se asignó cobertura a "${r.suggestion.shiftTitle}".`
+                  : `Se notificó a ${r.notifiedEmployeeIds?.length ?? 0} workers.`,
+                consequence: r.action === "auto_assign"
+                  ? "El turno ya no figura sin cobertura."
+                  : "Las respuestas llegarán al panel de despacho.",
+              });
             });
           }
         } catch (err) {
-          console.warn("[AutoDispatchPanel] auto-execute failed", err);
+          // OX-1 — sin reintento automático: reintentar puede duplicar
+          // asignaciones o broadcasts. Solo informamos y dejamos decidir.
+          notifyWarning({
+            key: "auto-dispatch-execute",
+            title: "El despacho automático no se completó",
+            fact: "Uno o más turnos no pudieron auto-asignarse en este ciclo.",
+            consequence: "No se creó ninguna asignación parcial. Puedes despacharlos manualmente.",
+            cause: err,
+          });
         }
       }
 
@@ -142,11 +164,21 @@ export function AutoDispatchPanel({
         if (id) logIdMapRef.current.set(s.id, id);
       }
     } catch (err) {
-      console.warn("[AutoDispatchPanel] refresh failed", err);
+      // OX-1 — leer sugerencias es idempotente: el reintento es seguro.
+      notifyError({
+        key: "auto-dispatch-refresh",
+        title: "No pudimos actualizar las sugerencias",
+        fact: "La lista de despacho quedó con los datos anteriores.",
+        consequence: "Puede que falten turnos sin cobertura.",
+        action: { label: "Reintentar", onClick: () => { void refreshRef.current?.(); } },
+        cause: err,
+      });
     } finally {
       setLoading(false);
     }
   }, [companyId, isOff, isFullAuto]);
+
+  useEffect(() => { refreshRef.current = refresh; }, [refresh]);
 
   useEffect(() => {
     if (!companyId) return;
@@ -208,8 +240,13 @@ export function AutoDispatchPanel({
 
     // Drop from local list — refresh will rebuild if still relevant
     setSuggestions(prev => prev.filter(x => x.id !== s.id));
-    toast.success("Acción enviada", {
-      description: s.type === "REPLACE_WORKERS" ? "Revisa y confirma los reemplazos" : "Revisa la lista y envía el broadcast",
+    notifySuccess({
+      key: "auto-dispatch-action",
+      title: "Acción enviada a ejecución",
+      fact: s.type === "REPLACE_WORKERS"
+        ? "Se abrió el flujo de reemplazos."
+        : "Se abrió el flujo de broadcast.",
+      consequence: "La asignación se confirma en el siguiente paso.",
     });
   };
 

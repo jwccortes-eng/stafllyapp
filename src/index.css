@@ -93,6 +93,11 @@
     --warning: 36 100% 54%;
     --warning-foreground: 0 0% 100%;
 
+    /* OX-1 — feedback crítico (exige decisión del usuario) */
+    --critical: 350 85% 45%;
+    --critical-foreground: 0 0% 100%;
+
+
     --earning: 158 64% 48%;
     --earning-foreground: 0 0% 100%;
     --earning-bg: 158 45% 96%;
@@ -199,6 +204,9 @@
     --success: 158 70% 52%;
     --warning: 35 100% 62%;
     --destructive: 0 78% 60%;
+    --critical: 350 85% 58%;
+    --critical-foreground: 0 0% 100%;
+
 
     /* Surfaces */
     --surface-1: 230 22% 9%;
@@ -429,6 +437,12 @@
   .info-badge {
     @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold bg-primary/15 text-primary;
   }
+
+  /* OX-1 — feedback crítico: no se auto-cierra y se distingue del error normal. */
+  .stafly-toast--critical {
+    @apply border-l-4 border-l-critical;
+  }
+
 
   /* ── Pastel pills — scheduling module ── */
   .pastel-pill {

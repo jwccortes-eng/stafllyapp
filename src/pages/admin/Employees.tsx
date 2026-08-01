@@ -51,7 +51,7 @@ import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorBlock } from "@/components/ui/error-block";
 import { cn } from "@/lib/utils";
-import { useToast } from "@/hooks/use-toast";
+import { notifyError, notifySuccess, notifyWarning } from "@/lib/feedback/notify";
 import { getUserFriendlyError } from "@/lib/error-helpers";
 import { parseConnecteamFile, type ParsedEmployee } from "@/lib/connecteam-parser";
 import { safeRead, safeSheetToJson, getSheetNames, getSheet, writeExcelFile } from "@/lib/safe-xlsx";
@@ -321,15 +321,25 @@ export default function Employees() {
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [campaignOpen, setCampaignOpen] = useState(false);
   const { visibleColumns, savePreferences } = useColumnPreferences("employees");
-  const { toast } = useToast();
 
   // Quick action: copy active invite token as a shareable activation link.
   const copyInviteLink = async (token: string) => {
     try {
       await navigator.clipboard.writeText(inviteUrl(token));
-      toast({ title: "Invite link copied", description: "Paste it into any channel to share." });
-    } catch {
-      toast({ title: "Could not copy link", variant: "destructive" });
+      notifySuccess({
+        key: "invite-link-copy",
+        title: "Enlace de invitación copiado",
+        fact: "El enlace de activación está en tu portapapeles.",
+        consequence: "Compártelo por el canal que prefieras.",
+      });
+    } catch (e) {
+      notifyError({
+        key: "invite-link-copy",
+        title: "No pudimos copiar el enlace",
+        fact: "Tu navegador bloqueó el acceso al portapapeles.",
+        consequence: "Copia el enlace manualmente desde el perfil del worker.",
+        cause: e,
+      });
     }
   };
 
@@ -340,15 +350,31 @@ export default function Employees() {
       const { data, error } = await supabase.functions.invoke("bulk-portal-invite", {
         body: { company_id: selectedCompanyId },
       });
-      if (error) { toast({ title: "Error", description: "Failed to send invitations", variant: "destructive" }); return; }
-      if (data?.error) { toast({ title: "Error", description: data.error, variant: "destructive" }); return; }
-      toast({
-        title: "Invitations sent ✅",
-        description: `${data.processed} employees activated, ${data.emails_sent} emails sent${data.skipped > 0 ? `, ${data.skipped} skipped` : ""}`,
+      if (error || data?.error) {
+        notifyError({
+          key: "bulk-invite",
+          title: "No pudimos enviar las invitaciones",
+          fact: data?.error ?? "El envío masivo no se completó.",
+          consequence: "Ningún worker fue invitado. Vuelve a intentarlo.",
+          cause: error ?? data?.error,
+        });
+        return;
+      }
+      notifySuccess({
+        key: "bulk-invite",
+        title: "Invitaciones enviadas",
+        fact: `${data.processed} workers activados · ${data.emails_sent} emails enviados${data.skipped > 0 ? ` · ${data.skipped} omitidos` : ""}.`,
+        consequence: "Podrán acceder al portal en cuanto activen su cuenta.",
       });
       fetchEmployees();
     } catch (e: any) {
-      toast({ title: "Error", description: e?.message || "Connection error", variant: "destructive" });
+      notifyError({
+        key: "bulk-invite",
+        title: "No pudimos enviar las invitaciones",
+        fact: "Se perdió la conexión con el servidor.",
+        consequence: "Ningún worker fue invitado. Revisa tu conexión e intenta de nuevo.",
+        cause: e,
+      });
     } finally {
       setBulkInviting(false);
     }
@@ -377,10 +403,11 @@ export default function Employees() {
       return emp ? isInviteFailed(emp) : false;
     });
     if (failedIds.length === 0) {
-      toast({
-        title: "Nothing to re-invite",
-        description: "Select workers whose last invitation failed, bounced or hit DLQ.",
-        variant: "destructive",
+      notifyWarning({
+        key: "bulk-reinvite",
+        title: "No hay invitaciones para reenviar",
+        fact: "Ninguno de los workers seleccionados tiene una invitación fallida.",
+        consequence: "Selecciona workers cuyo último envío falló o rebotó.",
       });
       return;
     }
@@ -389,30 +416,47 @@ export default function Employees() {
       const { data, error } = await supabase.functions.invoke("bulk-portal-invite", {
         body: { company_id: selectedCompanyId, employee_ids: failedIds },
       });
-      if (error) { toast({ title: "Re-invite failed", description: "Could not resend invitations", variant: "destructive" }); return; }
-      if (data?.error) { toast({ title: "Re-invite failed", description: data.error, variant: "destructive" }); return; }
+      if (error || data?.error) {
+        notifyError({
+          key: "bulk-reinvite",
+          title: "No pudimos reenviar las invitaciones",
+          fact: data?.error ?? "El reenvío no se completó.",
+          consequence: "Los workers siguen sin invitación válida.",
+          cause: error ?? data?.error,
+        });
+        return;
+      }
       const sent = Number(data?.emails_sent ?? 0);
       const processed = Number(data?.processed ?? 0);
       const skipped = Number(data?.skipped ?? 0);
       // Backend can return success with 0 processed (e.g. all employees lack phone).
       // Surface that as a warning instead of a misleading "Re-invited 0 ✅".
       if (sent === 0 && processed === 0) {
-        toast({
-          title: "No invitations were sent",
-          description: data?.message
-            ?? "Selected workers may be missing a phone or have no eligible state. Open a profile to inspect.",
-          variant: "destructive",
+        // Éxito técnico con resultado cero: nunca lo presentamos como éxito.
+        notifyWarning({
+          key: "bulk-reinvite",
+          title: "No se envió ninguna invitación",
+          fact: data?.message ?? "Los workers seleccionados no tienen teléfono o no están en un estado elegible.",
+          consequence: "Abre un perfil para revisar qué dato falta.",
         });
       } else {
-        toast({
-          title: `Re-invited ${sent} worker${sent === 1 ? "" : "s"} ✅`,
-          description: `${processed} processed${skipped > 0 ? `, ${skipped} skipped` : ""}`,
+        notifySuccess({
+          key: "bulk-reinvite",
+          title: `${sent} invitación${sent === 1 ? "" : "es"} reenviada${sent === 1 ? "" : "s"}`,
+          fact: `${processed} procesados${skipped > 0 ? ` · ${skipped} omitidos` : ""}.`,
+          consequence: "Los workers recibirán un nuevo enlace de activación.",
         });
       }
       clearSelection();
       await Promise.all([fetchEmployees(), refetchInvitations()]);
     } catch (e: any) {
-      toast({ title: "Re-invite failed", description: e?.message || "Connection error", variant: "destructive" });
+      notifyError({
+        key: "bulk-reinvite",
+        title: "No pudimos reenviar las invitaciones",
+        fact: "Se perdió la conexión con el servidor.",
+        consequence: "No se envió nada. Revisa tu conexión e intenta de nuevo.",
+        cause: e,
+      });
     } finally {
       setBulkReinviting(false);
     }
@@ -492,15 +536,31 @@ export default function Employees() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (atEmployeeLimit) {
-      toast({ title: "Limit reached", description: `Your ${limits.label} plan allows up to ${limits.maxEmployees} active workers. Upgrade your plan to add more.`, variant: "destructive" });
+      notifyWarning({
+        key: "employee-limit",
+        title: "Alcanzaste el límite de tu plan",
+        fact: `El plan ${limits.label} permite hasta ${limits.maxEmployees} workers activos.`,
+        consequence: "Archiva workers inactivos o mejora tu plan para añadir más.",
+      });
       return;
     }
     setLoading(true);
     const { error } = await supabase.from("employees").insert({ ...buildInsertData(form), company_id: selectedCompanyId } as any);
     if (error) {
-      toast({ title: "Error", description: getUserFriendlyError(error), variant: "destructive" });
+      notifyError({
+        key: "employee-create",
+        title: "No pudimos crear el worker",
+        fact: getUserFriendlyError(error),
+        consequence: "No se guardó nada. Tus datos siguen en el formulario.",
+        cause: error,
+      });
     } else {
-      toast({ title: "Employee created" });
+      notifySuccess({
+        key: "employee-create",
+        title: "Worker creado",
+        fact: "El perfil quedó guardado.",
+        consequence: "Ya puedes asignarlo a turnos.",
+      });
       setOpen(false);
       setForm(emptyForm());
       fetchEmployees();
@@ -522,9 +582,20 @@ export default function Employees() {
     setLoading(true);
     const { error } = await supabase.from("employees").update(buildInsertData(form) as any).eq("id", editingEmployee.id);
     if (error) {
-      toast({ title: "Error", description: getUserFriendlyError(error), variant: "destructive" });
+      notifyError({
+        key: "employee-update",
+        title: "No pudimos guardar los cambios",
+        fact: getUserFriendlyError(error),
+        consequence: "El perfil quedó como estaba. Tus datos siguen en el formulario.",
+        cause: error,
+      });
     } else {
-      toast({ title: "Employee updated" });
+      notifySuccess({
+        key: "employee-update",
+        title: "Worker actualizado",
+        fact: "Los cambios quedaron guardados.",
+        consequence: "Se reflejan en los turnos futuros.",
+      });
       setEditOpen(false);
       setEditingEmployee(null);
       setForm(emptyForm());
@@ -537,9 +608,20 @@ export default function Employees() {
     if (!deleteTarget) return;
     const { error } = await supabase.from("employees").delete().eq("id", deleteTarget.id);
     if (error) {
-      toast({ title: "Delete error", description: getUserFriendlyError(error), variant: "destructive" });
+      notifyError({
+        key: "employee-delete",
+        title: "No pudimos archivar al worker",
+        fact: getUserFriendlyError(error),
+        consequence: "El worker sigue activo y asignable.",
+        cause: error,
+      });
     } else {
-      toast({ title: "Employee deleted" });
+      notifySuccess({
+        key: "employee-delete",
+        title: "Worker archivado",
+        fact: "Ya no aparece en la lista activa.",
+        consequence: "No podrá ser asignado a nuevos turnos.",
+      });
       fetchEmployees();
     }
     setDeleteTarget(null);
@@ -568,9 +650,20 @@ export default function Employees() {
 
     const { error } = await supabase.from("employees").update({ is_active: true }).eq("id", emp.id);
     if (error) {
-      toast({ title: "Error", description: getUserFriendlyError(error), variant: "destructive" });
+      notifyError({
+        key: "employee-reactivate",
+        title: "No pudimos reactivar al worker",
+        fact: getUserFriendlyError(error),
+        consequence: "Sigue archivado y no puede ser asignado.",
+        cause: error,
+      });
     } else {
-      toast({ title: "Employee reactivated" });
+      notifySuccess({
+        key: "employee-reactivate",
+        title: "Worker reactivado",
+        fact: "Vuelve a estar en la lista activa.",
+        consequence: "Ya puede ser asignado a turnos.",
+      });
       fetchEmployees();
     }
   };
@@ -725,7 +818,12 @@ export default function Employees() {
       return row;
     });
     await writeExcelFile(rows, "Employees", `employees_${new Date().toISOString().slice(0, 10)}.xlsx`);
-    toast({ title: "Exported", description: `${rows.length} employees exported to Excel` });
+    notifySuccess({
+      key: "employees-export",
+      title: "Exportación lista",
+      fact: `${rows.length} workers exportados a Excel.`,
+      consequence: "El archivo se descargó en tu dispositivo.",
+    });
   };
 
   const uniqueRoles = [...new Set(employees.map(e => e.employee_role).filter(Boolean))];
@@ -922,9 +1020,20 @@ export default function Employees() {
     setLoading(true);
     const { error } = await supabase.from("employees").update(buildInsertData(form) as any).eq("id", viewEmployee.id);
     if (error) {
-      toast({ title: "Error", description: getUserFriendlyError(error), variant: "destructive" });
+      notifyError({
+        key: "employee-update",
+        title: "No pudimos guardar los cambios",
+        fact: getUserFriendlyError(error),
+        consequence: "El perfil quedó como estaba.",
+        cause: error,
+      });
     } else {
-      toast({ title: "Employee updated" });
+      notifySuccess({
+        key: "employee-update",
+        title: "Worker actualizado",
+        fact: "Los cambios quedaron guardados.",
+        consequence: "Se reflejan en los turnos futuros.",
+      });
       setIsEditing(false);
       fetchEmployees();
       setViewEmployee(prev => prev ? { ...prev, ...buildInsertData(form) } : prev);
@@ -1505,29 +1614,43 @@ export default function Employees() {
             companyName: selectedCompany?.name ?? null,
           });
           if (!text) {
-            toast({
-              title: "Nothing to send",
-              description: "None of the selected workers have actionable missing items.",
-              variant: "destructive",
+            notifyWarning({
+              key: "bulk-reminders",
+              title: "No hay recordatorios que enviar",
+              fact: "Ninguno de los workers seleccionados tiene datos pendientes.",
+              consequence: "Selecciona workers con incidencias detectadas.",
             });
             return;
           }
           try {
             await navigator.clipboard.writeText(text);
-            toast({
-              title: `Copied ${included} reminder${included === 1 ? "" : "s"}`,
-              description: skipped > 0
-                ? `${skipped} worker${skipped === 1 ? "" : "s"} skipped (no actionable items). Paste into WhatsApp Web.`
-                : "Paste into WhatsApp Web — separators included.",
+            notifySuccess({
+              key: "bulk-reminders",
+              title: `${included} recordatorio${included === 1 ? "" : "s"} copiado${included === 1 ? "" : "s"}`,
+              fact: skipped > 0
+                ? `${skipped} worker${skipped === 1 ? "" : "s"} omitido${skipped === 1 ? "" : "s"} por no tener pendientes.`
+                : "El texto incluye separadores por worker.",
+              consequence: "Pégalo en WhatsApp Web para enviarlos.",
             });
-          } catch {
-            toast({ title: "Could not copy to clipboard", variant: "destructive" });
+          } catch (e) {
+            notifyError({
+              key: "bulk-reminders",
+              title: "No pudimos copiar los recordatorios",
+              fact: "Tu navegador bloqueó el acceso al portapapeles.",
+              consequence: "No se envió nada. Intenta desde otro navegador.",
+              cause: e,
+            });
           }
         };
 
         const handleExportSelectedCsv = () => {
           if (selectedWithIssues.length === 0) {
-            toast({ title: "Nothing to export", description: "None of the selected workers have detected issues.", variant: "destructive" });
+            notifyWarning({
+              key: "issues-export",
+              title: "No hay nada para exportar",
+              fact: "Ninguno de los workers seleccionados tiene incidencias.",
+              consequence: "Selecciona workers con datos pendientes.",
+            });
             return;
           }
           const header = ["worker_id", "first_name", "last_name", "email", "phone_number", "employer_identification", "is_active", "portal_active", "risk_tags"];
@@ -1555,7 +1678,12 @@ export default function Employees() {
           a.click();
           document.body.removeChild(a);
           URL.revokeObjectURL(url);
-          toast({ title: `Exported ${selectedWithIssues.length} workers`, description: "CSV downloaded." });
+          notifySuccess({
+            key: "issues-export",
+            title: `${selectedWithIssues.length} workers exportados`,
+            fact: "El CSV con las incidencias se descargó.",
+            consequence: "Compártelo con quien deba corregir los datos.",
+          });
         };
 
         return (

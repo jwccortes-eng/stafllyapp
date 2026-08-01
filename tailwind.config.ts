@@ -106,6 +106,11 @@ export default {
   				DEFAULT: 'hsl(var(--info))',
   				foreground: 'hsl(var(--info-foreground))'
   			},
+  			critical: {
+  				DEFAULT: 'hsl(var(--critical))',
+  				foreground: 'hsl(var(--critical-foreground))'
+  			},
+
   			'accent-warm': {
   				DEFAULT: 'hsl(var(--accent-warm))',
   				foreground: 'hsl(var(--accent-warm-foreground))'
