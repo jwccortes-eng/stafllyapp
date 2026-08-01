@@ -1213,10 +1213,19 @@ function DesktopShifts() {
     const changes = getChangedFields(oldShift, updates);
     if (changes.length === 0) { toast.info("Sin cambios"); return; }
 
-    const { error } = await supabase.from("scheduled_shifts")
-      .update(updates as any)
-      .eq("id", shiftId);
-    if (error) { toast.error(error.message); return; }
+    // P0 — guardado verificado: sin fila devuelta no hay éxito que anunciar.
+    const saveResult = await updateShiftVerified(shiftId, updates as any, selectedCompanyId ?? (oldShift as any).company_id ?? null);
+    if (!saveResult.ok) {
+      notifyError({
+        key: "shift-update-desktop",
+        title: "No pudimos guardar el turno",
+        fact: saveResult.message,
+        consequence: "El turno sigue como estaba. Revisa e inténtalo de nuevo.",
+      });
+      return;
+    }
+    const savedShift = saveResult.row;
+
 
     // Log audit
     const oldData: Record<string, any> = {};
