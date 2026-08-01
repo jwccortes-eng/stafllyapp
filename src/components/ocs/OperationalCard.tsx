@@ -67,6 +67,9 @@ export interface OperationalCardProps {
   action?: OcsAction;
   /** Acciones secundarias: máximo 3. */
   actions?: OcsAction[];
+  /** Pie opcional: detalle expandible o nota operativa. Siempre al final. */
+  footer?: React.ReactNode;
+
 
   variant?: OcsVariant;
   mode?: OcsMode;
