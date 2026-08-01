@@ -85,10 +85,10 @@ function WeekByJobViewImpl({ weekDays, shifts, assignments, locations, clients, 
     const isLocked = shift.status === "locked";
     const totalSlots = shift.slots ?? 1;
 
-    const accepted = shiftAssignments.filter(a => a.status === "accepted" || a.status === "confirmed").length;
-    const pending = shiftAssignments.filter(a => a.status === "pending").length;
-    const rejected = shiftAssignments.filter(a => a.status === "rejected").length;
-    const allAccepted = assignCount > 0 && accepted === assignCount;
+    // P0 — fuente única: cobertura = asignados activos / plazas.
+    const metrics = getShiftStaffingMetrics(shiftAssignments as any[], totalSlots);
+    const rejected = metrics.rejected;
+
 
     return (
       <div
