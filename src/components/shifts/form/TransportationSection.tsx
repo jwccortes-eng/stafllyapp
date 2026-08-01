@@ -46,7 +46,7 @@ function TransportationSectionImpl({
   transportRequired,
   carCapacity,
   transportNotes,
-  driverEmployeeId,
+  driverIds,
   ridesNeeded,
   driversInTeam,
   assignedCount,
