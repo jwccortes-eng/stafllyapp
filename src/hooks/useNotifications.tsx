@@ -181,6 +181,13 @@ export function useNotifications() {
     burstRef.current = { start: 0, count: 0 };
   }, [selectedCompanyId]);
 
+  // F1.1 — prime the per-company shadow persistence gate (read-only, failure-safe).
+  useEffect(() => {
+    if (!selectedCompanyId) return;
+    void loadShadowCompanyConfig(selectedCompanyId).catch(() => undefined);
+  }, [selectedCompanyId]);
+
+
   /**
    * Handle an incoming realtime notification:
    *  1. drop anything outside the ACTIVE company (multi-tenant isolation)
