@@ -12,6 +12,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
 import { useShiftsConfig } from "@/hooks/useShiftsConfig";
 import { Button } from "@/components/ui/button";
+import { OperationalScreenHeader } from "@/components/stafly-ui/OperationalScreenHeader";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
