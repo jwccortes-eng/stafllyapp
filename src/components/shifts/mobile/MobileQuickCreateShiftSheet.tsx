@@ -26,6 +26,16 @@ import {
   type AssignOutcome,
   type CreateResultSummary,
 } from "@/lib/shifts/assign-outcome";
+import {
+  EMPTY_DRIVER_PLAN,
+  reconcileDriverPlan,
+  toggleDriver,
+  describeDriverPlan,
+  assignmentRoleFor,
+  primaryDriverId,
+  driverSummaryLine,
+  type DriverPlan,
+} from "@/lib/shifts/driver-plan";
 import type { Shift, Assignment, Employee, SelectOption } from "@/components/shifts/types";
 import { useCompany } from "@/hooks/useCompany";
 import { buildCreationConfirmation, type CreationConfirmation, type PersistedShiftFacts } from "@/lib/shifts/shift-ref";
