@@ -69,6 +69,7 @@ import { TeamCard, KpiCard, InsightCard, ValidationCard, type TeamMemberSummary 
 import { TeamHubWorkerCard } from "@/components/shifts/team/TeamHubWorkerCard";
 import { TeamConversationCard } from "@/components/shifts/team/TeamConversationCard";
 import {
+import { ADMIN_LEX } from "@/lib/ox/lexicon";
   summarizeTeam, detectTeamRisks, teamSectionOf, teamPrimaryIntent,
   TEAM_SECTION_META, TEAM_SECTION_ORDER,
   type TeamSection, type TeamSummary, type TeamRisk,
@@ -999,7 +1000,7 @@ function AssignedTab({
   onOpenWorker: (employeeId: string) => void;
 }) {
   return (
-    <section aria-label="Equipo del turno" className="space-y-4">
+    <section aria-label={ADMIN_LEX.team} className="space-y-4">
       <SectionTitle icon={ShieldCheck} helper={HUB_COPY.assignedHelper}>
         Equipo
         <span className="ml-1.5 text-xs font-normal text-muted-foreground normal-case tracking-normal">

@@ -73,6 +73,7 @@ import { ExportConnecteamBulkDialog } from "@/components/shifts/integrations/Exp
 import type { Shift, Assignment, SelectOption, Employee, ViewMode } from "@/components/shifts/types";
 import { formatShiftCode } from "@/components/shifts/types";
 import { isDraftShift, isPublishedShift } from "@/lib/shifts/shift-guards";
+import { ADMIN_LEX } from "@/lib/ox/lexicon";
 
 // Fields that affect ALL assigned employees (broadcast notification)
 const BROADCAST_FIELDS = ["date", "start_time", "end_time", "location_id", "client_id"];
@@ -435,10 +436,10 @@ function DesktopShifts() {
   const [incompleteOnly, setIncompleteOnly] = useState<boolean>(initialOpsFilter === "incomplete");
   // Chip label that persists after URL sync strips the ops params.
   const [activeOpsChip, setActiveOpsChip] = useState<string | null>(() => {
-    if (initialWhenLabel === "today") return "Turnos de hoy";
-    if (initialWhenLabel === "tomorrow") return "Turnos de mañana";
+    if (initialWhenLabel === "today") return `${ADMIN_LEX.EntityPlural} de hoy`;
+    if (initialWhenLabel === "tomorrow") return `${ADMIN_LEX.EntityPlural} de mañana`;
     if (initialOpsFilter === "needs-staffing") return "Necesitan staff";
-    if (initialOpsFilter === "incomplete") return "Turnos incompletos";
+    if (initialOpsFilter === "incomplete") return `${ADMIN_LEX.EntityPlural} incompletos`;
     return null;
   });
   const [currentMonth, setCurrentMonth] = useState(() => initialDate);
@@ -1884,7 +1885,7 @@ function DesktopShifts() {
   const opsKpis: OpsKpiItem[] = [
     {
       key: "today",
-      label: "Turnos hoy",
+      label: `${ADMIN_LEX.EntityPlural} hoy`,
       value: loading ? "—" : kpiMetrics.todayShifts,
       tone: "primary",
       icon: <CalendarDays className="h-3.5 w-3.5" />,
@@ -1954,7 +1955,7 @@ function DesktopShifts() {
     <div className="space-y-4">
       {/* ── PAGE HEADER (unified with rest of app) ── */}
       <PageHeader
-        title="Turnos"
+        title={ADMIN_LEX.EntityPlural}
         subtitle="Planifica, publica y controla la cobertura de tu operación diaria."
         icon={CalendarRange}
         rightSlot={
@@ -1966,7 +1967,7 @@ function DesktopShifts() {
                 onClick={() => { resetForm(); setCreateOpen(true); }}
               >
                 <Plus className="h-4 w-4" />
-                Nuevo turno
+                {ADMIN_LEX.create}
               </Button>
             )}
             <DropdownMenu>
@@ -2304,7 +2305,7 @@ function DesktopShifts() {
                   title="Exporta los turnos del rango/filtros actuales al formato de Connecteam. Read-only, no toca payroll."
                 >
                   <Download className="h-3.5 w-3.5" />
-                  Exportar Turnos → Connecteam (.csv)
+                  Exportar {ADMIN_LEX.EntityPlural} → Connecteam (.csv)
                 </button>
               </DropdownMenuContent>
             </DropdownMenu>

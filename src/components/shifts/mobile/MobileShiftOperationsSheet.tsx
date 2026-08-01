@@ -49,6 +49,7 @@ import { LiveShiftBoard } from "@/components/shifts/LiveShiftBoard";
 import { AttendanceEvidenceCard } from "@/components/shifts/ops/AttendanceEvidenceCard";
 
 import {
+import { ADMIN_LEX } from "@/lib/ox/lexicon";
   TraceabilitySnapshot,
   type TraceRisk,
   type TraceTimelineEvent,
@@ -1202,7 +1203,7 @@ export function MobileShiftOperationsSheet({
                     className="gap-2 h-11 text-sm"
                     onClick={() => { onOpenChange(false); onEdit(shift); }}
                   >
-                    <FileEdit className="h-4 w-4" /> Editar turno
+                    <FileEdit className="h-4 w-4" /> {ADMIN_LEX.edit}
                   </DropdownMenuItem>
                 )}
                 {/* P0 — Cancelar detiene la operación futura, nunca borra la historia. */}
@@ -1211,7 +1212,7 @@ export function MobileShiftOperationsSheet({
                     className="gap-2 h-11 text-sm text-destructive focus:text-destructive"
                     onClick={() => setCancelOpen(true)}
                   >
-                    <CalendarX2 className="h-4 w-4" /> Cancelar turno
+                    <CalendarX2 className="h-4 w-4" /> {ADMIN_LEX.cancel}
                   </DropdownMenuItem>
                 )}
               </DropdownMenuContent>

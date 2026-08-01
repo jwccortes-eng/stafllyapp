@@ -32,6 +32,7 @@ import { displayShiftRef } from "@/lib/shifts/shift-ref";
 import type { Shift, Assignment, Employee, SelectOption } from "@/components/shifts/types";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { ADMIN_LEX } from "@/lib/ox/lexicon";
 
 /**
  * MobileShiftsView — Phase 1
@@ -429,7 +430,7 @@ export default function MobileShiftsView() {
         {/* OX-8.1 — cabecera canónica: empresa anfitriona → título → contexto → acción. */}
         <OperationalScreenHeader
           padded={false}
-          title="Turnos"
+          title={ADMIN_LEX.EntityPlural}
           context={format(new Date(), "EEE d MMM", { locale: es })}
           className="mb-3"
           action={
@@ -453,10 +454,10 @@ export default function MobileShiftsView() {
                   size="sm"
                   className="h-11 px-4 rounded-xl gap-1.5 font-semibold"
                   onClick={() => setCreateOpen(true)}
-                  aria-label="Crear turno"
+                  aria-label={ADMIN_LEX.create}
                 >
                   <Plus className="h-4 w-4" />
-                  Nuevo turno
+                  {ADMIN_LEX.create}
                 </Button>
               )}
             </>

@@ -35,6 +35,7 @@ import { OpsBroadcastDialog, type BroadcastIntent } from "@/components/operation
 import { AutoDispatchPanel } from "@/components/operations/AutoDispatchPanel";
 import { PostShiftRatingDialog, type PostShiftRatingMode } from "@/components/operations/PostShiftRatingDialog";
 import { FrontDeskWidget } from "@/components/front-desk/FrontDeskWidget";
+import { ADMIN_LEX } from "@/lib/ox/lexicon";
 
 // ─── Types ───
 interface ShiftRow {
@@ -459,7 +460,7 @@ export default function OperationsCommandCenter() {
 
           <div className="flex items-center gap-2 overflow-x-auto pb-1">
             <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5 shrink-0" onClick={() => navigate("/app/shifts")}>
-              <CalendarPlus className="h-3.5 w-3.5" /> Crear turno
+              <CalendarPlus className="h-3.5 w-3.5" /> {ADMIN_LEX.create}
             </Button>
             <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5 shrink-0" onClick={() => navigate("/app/invite-employees")}>
               <Send className="h-3.5 w-3.5" /> Invitar empleado

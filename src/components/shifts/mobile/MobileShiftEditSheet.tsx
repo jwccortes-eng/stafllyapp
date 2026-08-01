@@ -37,6 +37,7 @@ import { notifyWarning, notifyError } from "@/lib/feedback/notify";
 import { updateShiftVerified } from "@/lib/shifts/update-shift";
 
 import type { Shift, SelectOption, Employee, Assignment } from "@/components/shifts/types";
+import { ADMIN_LEX } from "@/lib/ox/lexicon";
 
 interface Props {
   shift: Shift | null;
@@ -219,7 +220,7 @@ export function MobileShiftEditSheet({
             style={{ paddingTop: "max(env(safe-area-inset-top, 0px), 0.75rem)" }}
           >
             <div className="min-w-0">
-              <h2 className="text-base font-semibold leading-tight">Editar turno</h2>
+              <h2 className="text-base font-semibold leading-tight">{ADMIN_LEX.edit}</h2>
               <p className="text-[11px] text-muted-foreground truncate">
                 {shift.title || "Turno"} · {shift.date}
               </p>

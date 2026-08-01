@@ -25,6 +25,7 @@ import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { PrePublishDialog, type PrePublishReviewData } from "./workspace/PrePublishDialog";
+import { ADMIN_LEX } from "@/lib/ox/lexicon";
 
 interface Props {
   open: boolean;
@@ -96,12 +97,12 @@ export function ShiftFormShell({
   summary,
   publishReview,
 }: Props) {
-  const headerTitle = mode === "create" ? "Nuevo turno rápido" : "Editar turno";
+  const headerTitle = mode === "create" ? `${ADMIN_LEX.create} rápido` : ADMIN_LEX.edit;
   const headerSubtitle = mode === "create"
     ? "Empieza con lo esencial o usa una plantilla."
     : "Configura los detalles del turno.";
   const defaultSaveLabel = mode === "create"
-    ? (onSaveDraft ? "Publicar" : "Crear turno")
+    ? (onSaveDraft ? "Publicar" : `Crear ${ADMIN_LEX.entity}`)
     : "Guardar cambios";
   const [confirmCloseOpen, setConfirmCloseOpen] = useState(false);
   const [publishReviewOpen, setPublishReviewOpen] = useState(false);
