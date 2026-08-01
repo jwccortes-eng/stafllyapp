@@ -46,6 +46,13 @@ type Assignment = {
   id: string;
   employee_id: string;
   status: string;
+  /**
+   * Optional but STRONGLY recommended: when present the card hard-filters the
+   * roster to this shift. Callers that pass a company-wide assignment list
+   * (mobile sheet did, causing foreign workers to appear here) are corrected
+   * defensively instead of silently rendering another shift's team.
+   */
+  shift_id?: string | null;
   employee?: { first_name: string; last_name: string; phone_number: string | null } | null;
 };
 
@@ -99,17 +106,40 @@ export function AttendanceEvidenceCard({ shift, assignments, companyId, userId }
     return () => clearInterval(t);
   }, []);
 
+  /**
+   * Canonical shift roster: assignments that belong to THIS shift and still
+   * represent an active team member. Replacements / removals / rejections are
+   * excluded from attendance + evidence, but their history stays in the DB.
+   */
+  const active = useMemo(
+    () =>
+      assignments.filter(
+        a =>
+          (a.shift_id == null || a.shift_id === shift.id) &&
+          a.status !== "rejected" &&
+          a.status !== "removed",
+      ),
+    [assignments, shift.id],
+  );
+
+  const rosterEmployeeIds = useMemo(
+    () => new Set(active.map(a => a.employee_id)),
+    [active],
+  );
+
   const load = async () => {
     setLoading(true);
     const [teRes, snRes] = await Promise.all([
       supabase
         .from("time_entries")
         .select("id, employee_id, clock_in, clock_out")
-        .eq("shift_id", shift.id),
+        .eq("shift_id", shift.id)
+        .eq("company_id", companyId),
       supabase
         .from("shift_notes")
         .select("id, note_type, content, linked_employee_id, created_at")
         .eq("shift_id", shift.id)
+        .eq("company_id", companyId)
         .eq("note_type", "attendance_validation")
         .order("created_at", { ascending: false }),
     ]);
@@ -121,31 +151,36 @@ export function AttendanceEvidenceCard({ shift, assignments, companyId, userId }
     setLoading(false);
   };
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [shift.id]);
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, [shift.id, companyId]);
 
+  // Evidence is indexed ONLY for workers on this shift's active roster.
+  // Rows belonging to replaced/removed workers stay in the DB (history) but
+  // never render as active team evidence.
   const entriesByEmployee = useMemo(() => {
     const m = new Map<string, ClockEntry[]>();
     for (const e of entries) {
+      if (!rosterEmployeeIds.has(e.employee_id)) continue;
       const arr = m.get(e.employee_id) ?? [];
       arr.push(e);
       m.set(e.employee_id, arr);
     }
     return m;
-  }, [entries]);
+  }, [entries, rosterEmployeeIds]);
 
   const validationsByEmployee = useMemo(() => {
     const m = new Map<string, AdminValidation[]>();
     for (const v of validations) {
+      if (!rosterEmployeeIds.has(v.employee_id)) continue;
       const arr = m.get(v.employee_id) ?? [];
       arr.push(v);
       m.set(v.employee_id, arr);
     }
     return m;
-  }, [validations]);
+  }, [validations, rosterEmployeeIds]);
 
   const summary = useMemo(
-    () => getShiftOperationalSummary(shift, assignments as any, entriesByEmployee, validationsByEmployee, nowIso),
-    [shift, assignments, entriesByEmployee, validationsByEmployee, nowIso],
+    () => getShiftOperationalSummary(shift, active as any, entriesByEmployee, validationsByEmployee, nowIso),
+    [shift, active, entriesByEmployee, validationsByEmployee, nowIso],
   );
 
   // Dialog state
@@ -191,7 +226,7 @@ export function AttendanceEvidenceCard({ shift, assignments, companyId, userId }
     setSaving(false);
   };
 
-  const active = assignments.filter(a => a.status !== "rejected" && a.status !== "removed");
+  const hasEvidence = entries.length > 0 || validations.length > 0;
 
   return (
     <div className="rounded-2xl border border-border/40 bg-card p-5 space-y-4">
@@ -221,10 +256,22 @@ export function AttendanceEvidenceCard({ shift, assignments, companyId, userId }
         <Kpi label="Ausente" value={summary.absent} tone="danger" />
       </div>
 
-      {/* Per-worker list */}
+      {/* Evidence empty state — scoped to THIS shift only. */}
+      {!loading && !hasEvidence && (
+        <div className="rounded-xl border border-dashed border-border/50 bg-muted/10 px-4 py-5 text-center">
+          <p className="text-[13px] font-medium text-foreground">Sin evidencia todavía.</p>
+          <p className="mt-1 text-[12px] text-muted-foreground leading-snug">
+            La evidencia de este turno aparecerá aquí cuando la operación comience.
+          </p>
+        </div>
+      )}
+
+      {/* Per-worker list — only active roster of this shift */}
       <div className="space-y-2">
         {active.length === 0 ? (
-          <p className="text-xs text-muted-foreground text-center py-4">Sin workers activos asignados.</p>
+          <p className="text-[13px] text-muted-foreground text-center py-4">
+            Sin workers activos asignados a este turno.
+          </p>
         ) : active.map(a => {
           const state = getAttendanceEvidenceState(
             shift,

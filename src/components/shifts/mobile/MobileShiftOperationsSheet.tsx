@@ -820,11 +820,16 @@ export function MobileShiftOperationsSheet({
             <section>
               <AttendanceEvidenceCard
                 shift={shift as any}
-                assignments={assignments.map(a => {
+                /* ROOT CAUSE FIX (P1): `assignments` is the company-wide list
+                   for the whole calendar. Passing it unscoped made attendance
+                   and evidence show workers from OTHER shifts. Always scope
+                   by shift_id here. */
+                assignments={staffedAssignments(assignments, shift.id).map(a => {
                   const e = employees.find(emp => emp.id === a.employee_id);
                   return {
                     id: a.id,
                     employee_id: a.employee_id,
+                    shift_id: a.shift_id,
                     status: (a as any).status ?? "",
                     employee: e ? {
                       first_name: e.first_name ?? "",
