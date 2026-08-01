@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { format, addDays } from "date-fns";
-import { Loader2, Check, AlertTriangle, Circle, Search, Users, X } from "lucide-react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { format, addDays, parseISO } from "date-fns";
+import { es } from "date-fns/locale";
+import {
+  Loader2, Check, Search, Users, X, ChevronLeft, ChevronRight,
+  Building2, Clock, UserPlus, Plus, Minus, MapPin, ClipboardList,
+} from "lucide-react";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,47 +13,65 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { toast } from "sonner";
+import { notifySuccess, notifyError, notifyWarning } from "@/lib/feedback/notify";
 import { SmartLocationField } from "@/components/shifts/form/SmartLocationField";
 import { ClientAvatar } from "@/components/ui/client-avatar";
+import { assignWorkerToShift } from "@/lib/shifts/team-actions";
+import type { Shift, Assignment, Employee, SelectOption } from "@/components/shifts/types";
 
 /**
- * MobileQuickCreateShiftSheet — operator-grade mobile quick create.
+ * MobileQuickCreateShiftSheet — OX-7 Fase 4 · "Create Shift, Operation First".
  *
- * Aligned with desktop ShiftFormFields/JobSiteSection/MeetingPointsSection:
- *  - Job Site is captured via SmartLocationField (free-text address first,
- *    saved location_v2 secondary). Writes to `job_site_address` and/or
- *    `job_site_location_id` — never forces a saved location.
- *  - Meeting Point uses the same SmartLocationField, writes `meeting_point`
- *    + optional `meeting_point_location_id`.
- *  - require_location passes when EITHER a manual job-site address OR a saved
- *    location is present (job_site_location_id OR job_site_address OR legacy
- *    location_id).
- *  - Premium mobile Client Picker (search + bottom-sheet list) replaces the
- *    native <select>.
+ * El flujo sigue el pensamiento del operations manager, no el modelo de datos:
  *
- * Reuses the EXACT same target table (`scheduled_shifts`) and columns the
- * desktop dialog uses, behind the SAME RLS policies. NO writes to time_entries,
- * payroll, shift_assignments, or any auth/payments/chat/documents table.
+ *   1. ¿Qué operación?      cliente · dónde · tipo de servicio
+ *   2. ¿Cuándo?             fecha · horario
+ *   3. ¿Con quién?          equipo (paso protagonista, pantalla completa)
+ *   4. ¿Algo especial?      punto de encuentro · indicaciones (opcional)
+ *   5. Confirmar            una sola acción
+ *
+ * Sin cambios de backend, RLS, payroll ni reglas de negocio: se usan las
+ * mismas escrituras que ya existían (`scheduled_shifts` insert + RPC
+ * `assign_worker_to_shift`, que aplica compliance y permisos server-side).
  */
-interface SelectOption { id: string; name: string; }
-
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   companyId: string | null;
   clients: SelectOption[];
-  /** kept for backwards compatibility; saved locations are now resolved via SmartLocationField/useLocationsV2 */
-  locations: SelectOption[];
+  /** compat: las ubicaciones guardadas se resuelven en SmartLocationField */
+  locations?: SelectOption[];
   requireClient: boolean;
   requireLocation: boolean;
   defaultStartTime?: string;
   defaultEndTime?: string;
   defaultSlots?: number;
+  /** Catálogo de personas activas para el paso "¿Con quién?" */
+  employees?: Employee[];
+  /** Turnos y asignaciones ya cargados: se usan para marcar ocupados ese día. */
+  shifts?: Shift[];
+  assignments?: Assignment[];
   onCreated: (shiftId: string) => void;
 }
 
-type PublishMode = "draft" | "published";
+type StepKey = "operacion" | "cuando" | "equipo" | "extras" | "confirmar";
+
+const STEPS: { key: StepKey; label: string; question: string }[] = [
+  { key: "operacion", label: "Operación", question: "¿Qué operación vas a cubrir?" },
+  { key: "cuando", label: "Cuándo", question: "¿Cuándo ocurre?" },
+  { key: "equipo", label: "Equipo", question: "¿Con quién?" },
+  { key: "extras", label: "Detalles", question: "¿Hace falta algo especial?" },
+  { key: "confirmar", label: "Confirmar", question: "Todo listo" },
+];
+
+const SERVICE_TYPES = ["Catering", "Montaje", "Limpieza", "Cocina", "Seguridad", "Logística"];
+
+const DURATIONS: { label: string; hours: number }[] = [
+  { label: "4 h", hours: 4 },
+  { label: "6 h", hours: 6 },
+  { label: "8 h", hours: 8 },
+  { label: "10 h", hours: 10 },
+];
 
 function toMinutes(t: string) {
   if (!t) return 0;
@@ -57,135 +79,94 @@ function toMinutes(t: string) {
   return (h || 0) * 60 + (m || 0);
 }
 
-// ── Premium Client Picker ─────────────────────────────────────────────────
-function MobileClientPicker({
-  clients, value, onChange, required,
+function fromMinutes(total: number) {
+  const m = ((total % 1440) + 1440) % 1440;
+  return `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+}
+
+function durationHours(start: string, end: string) {
+  const diff = (toMinutes(end) - toMinutes(start) + 1440) % 1440;
+  return diff / 60;
+}
+
+function shortDate(iso: string) {
+  try {
+    return format(parseISO(iso), "EEE d MMM", { locale: es });
+  } catch {
+    return iso;
+  }
+}
+
+function fullName(e: Employee) {
+  return `${e.first_name ?? ""} ${e.last_name ?? ""}`.trim() || "Trabajador";
+}
+
+function initials(name: string) {
+  return name.split(" ").filter(Boolean).slice(0, 2).map(p => p[0]?.toUpperCase()).join("");
+}
+
+/* ─────────── Paso 1: selector de cliente en pantalla completa ─────────── */
+function ClientPickerSheet({
+  open, onOpenChange, clients, value, onChange,
 }: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
   clients: SelectOption[];
   value: string;
   onChange: (id: string) => void;
-  required: boolean;
 }) {
-  const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
-
-  const selected = useMemo(
-    () => clients.find((c) => c.id === value) ?? null,
-    [clients, value],
-  );
-
   const filtered = useMemo(() => {
     const t = q.trim().toLowerCase();
-    if (!t) return clients;
-    return clients.filter((c) => c.name.toLowerCase().includes(t));
+    return t ? clients.filter(c => c.name.toLowerCase().includes(t)) : clients;
   }, [clients, q]);
 
   return (
-    <div className="space-y-1.5">
-      <Label>Cliente {required && <span className="text-destructive">*</span>}</Label>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className={cn(
-          "w-full h-11 rounded-xl border border-input bg-background px-3 flex items-center gap-2 text-left transition-colors hover:bg-muted/40",
-        )}
-      >
-        {selected ? (
-          <>
-            <ClientAvatar name={selected.name} size="sm" />
-            <span className="text-sm font-medium truncate flex-1">{selected.name}</span>
-            <span className="text-[11px] text-muted-foreground">Cambiar</span>
-          </>
-        ) : (
-          <>
-            <Users className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm text-muted-foreground flex-1">
-              {clients.length === 0 ? "No hay clientes en esta empresa" : "Selecciona un cliente"}
-            </span>
-          </>
-        )}
-      </button>
-
-      <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent
-          side="bottom"
-          className="h-[80dvh] rounded-t-2xl p-0 flex flex-col overflow-hidden"
-        >
-          <SheetHeader className="px-5 pt-5 pb-3 text-left border-b border-border/40">
-            <SheetTitle className="text-base">Selecciona un cliente</SheetTitle>
-          </SheetHeader>
-          <div className="px-5 py-3 border-b border-border/40">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/70" />
-              <Input
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                placeholder="Buscar cliente…"
-                className="h-11 pl-9"
-                autoFocus
-              />
-            </div>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="bottom" className="h-[80dvh] rounded-t-3xl p-0 flex flex-col overflow-hidden">
+        <div className="px-5 pt-5 pb-3 border-b border-border/40">
+          <p className="text-base font-semibold">¿Para qué cliente?</p>
+          <div className="relative mt-3">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/70" />
+            <Input
+              value={q}
+              onChange={e => setQ(e.target.value)}
+              placeholder="Buscar cliente…"
+              className="h-12 pl-9 text-base"
+            />
           </div>
-          <div className="flex-1 overflow-y-auto px-2 py-2">
-            {filtered.length === 0 ? (
-              <div className="px-3 py-8 text-center text-sm text-muted-foreground">
-                {clients.length === 0
-                  ? "Aún no hay clientes en esta empresa."
-                  : "Sin resultados para esa búsqueda."}
-              </div>
-            ) : (
-              filtered.map((c) => {
-                const isSel = c.id === value;
-                return (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onClick={() => {
-                      onChange(c.id);
-                      setOpen(false);
-                      setQ("");
-                    }}
-                    className={cn(
-                      "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left hover:bg-muted/60 transition-colors",
-                      isSel && "bg-primary/5",
-                    )}
-                  >
-                    <ClientAvatar name={c.name} size="sm" />
-                    <span className="text-sm font-medium truncate flex-1">{c.name}</span>
-                    {isSel && <Check className="h-4 w-4 text-primary" />}
-                  </button>
-                );
-              })
-            )}
-          </div>
-          <div
-            className="shrink-0 border-t border-border/40 px-5 pt-3 flex gap-2"
-            style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)" }}
-          >
-            {value && (
-              <Button
-                variant="ghost"
-                className="flex-1 h-11"
-                onClick={() => {
-                  onChange("");
-                  setOpen(false);
-                  setQ("");
-                }}
-              >
-                <X className="h-4 w-4 mr-1" /> Quitar selección
-              </Button>
-            )}
-            <Button
-              variant="outline"
-              className="flex-1 h-11"
-              onClick={() => setOpen(false)}
+        </div>
+        <div className="flex-1 overflow-y-auto px-2 py-2">
+          {filtered.length === 0 ? (
+            <p className="px-4 py-10 text-center text-sm text-muted-foreground">
+              {clients.length === 0 ? "Aún no hay clientes en esta empresa." : "Sin resultados."}
+            </p>
+          ) : filtered.map(c => (
+            <button
+              key={c.id}
+              type="button"
+              onClick={() => { onChange(c.id); onOpenChange(false); setQ(""); }}
+              className={cn(
+                "w-full min-h-[56px] flex items-center gap-3 px-3 rounded-xl text-left active:bg-muted/60 transition-colors",
+                c.id === value && "bg-primary/5",
+              )}
             >
-              Cerrar
-            </Button>
-          </div>
-        </SheetContent>
-      </Sheet>
-    </div>
+              <ClientAvatar name={c.name} size="sm" />
+              <span className="text-[15px] font-medium truncate flex-1">{c.name}</span>
+              {c.id === value && <Check className="h-4 w-4 text-primary" />}
+            </button>
+          ))}
+        </div>
+        <div
+          className="shrink-0 border-t border-border/40 px-5 pt-3"
+          style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)" }}
+        >
+          <Button variant="outline" className="w-full h-12" onClick={() => onOpenChange(false)}>
+            Cerrar
+          </Button>
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 }
 
@@ -195,130 +176,149 @@ export function MobileQuickCreateShiftSheet({
   defaultStartTime = "09:00",
   defaultEndTime = "17:00",
   defaultSlots = 1,
+  employees = [],
+  shifts = [],
+  assignments = [],
   onCreated,
 }: Props) {
   const { user, role, hasModuleAccess } = useAuth();
   const canCreate = role === "owner" || role === "admin" || hasModuleAccess("shifts", "edit");
 
   const todayStr = useMemo(() => format(new Date(), "yyyy-MM-dd"), []);
-  const tomorrowStr = useMemo(() => format(addDays(new Date(), 1), "yyyy-MM-dd"), []);
 
-  const [mode, setMode] = useState<PublishMode>("published");
-  const [title, setTitle] = useState("");
+  const [step, setStep] = useState<StepKey>("operacion");
+  const [clientId, setClientId] = useState("");
+  const [clientPickerOpen, setClientPickerOpen] = useState(false);
+  const [serviceType, setServiceType] = useState("");
+  const [jobSiteAddress, setJobSiteAddress] = useState("");
+  const [jobSiteLocationId, setJobSiteLocationId] = useState<string | null>(null);
+
   const [date, setDate] = useState(todayStr);
   const [startTime, setStartTime] = useState(defaultStartTime);
   const [endTime, setEndTime] = useState(defaultEndTime);
-  const [slots, setSlots] = useState<string>(String(defaultSlots));
-  const [clientId, setClientId] = useState<string>("");
 
-  // Job site — desktop parity: address-first, saved location optional
-  const [jobSiteAddress, setJobSiteAddress] = useState<string>("");
-  const [jobSiteLocationId, setJobSiteLocationId] = useState<string | null>(null);
+  const [slots, setSlots] = useState<number>(Math.max(1, defaultSlots));
+  const [team, setTeam] = useState<string[]>([]);
+  const [teamQuery, setTeamQuery] = useState("");
 
-  // Meeting point — same pattern
   const [meetingPoint, setMeetingPoint] = useState("");
   const [meetingPointLocationId, setMeetingPointLocationId] = useState<string | null>(null);
-
   const [notes, setNotes] = useState("");
+
   const [saving, setSaving] = useState(false);
-  const [warningAck, setWarningAck] = useState(false);
 
   useEffect(() => {
-    if (open) {
-      setMode("published");
-      setTitle("");
-      setDate(todayStr);
-      setStartTime(defaultStartTime);
-      setEndTime(defaultEndTime);
-      setSlots(String(defaultSlots));
-      setClientId("");
-      setJobSiteAddress("");
-      setJobSiteLocationId(null);
-      setMeetingPoint("");
-      setMeetingPointLocationId(null);
-      setNotes("");
-      setSaving(false);
-      setWarningAck(false);
-    }
+    if (!open) return;
+    setStep("operacion");
+    setClientId("");
+    setServiceType("");
+    setJobSiteAddress("");
+    setJobSiteLocationId(null);
+    setDate(todayStr);
+    setStartTime(defaultStartTime);
+    setEndTime(defaultEndTime);
+    setSlots(Math.max(1, defaultSlots));
+    setTeam([]);
+    setTeamQuery("");
+    setMeetingPoint("");
+    setMeetingPointLocationId(null);
+    setNotes("");
+    setSaving(false);
   }, [open, todayStr, defaultStartTime, defaultEndTime, defaultSlots]);
 
-  useEffect(() => {
-    setWarningAck(false);
-  }, [meetingPoint, meetingPointLocationId, notes, clientId, jobSiteAddress, jobSiteLocationId, mode]);
-
-  const slotsNum = Math.max(0, parseInt(slots) || 0);
-  const startMin = toMinutes(startTime);
-  const endMin = toMinutes(endTime);
-  const timesInvalid = !startTime || !endTime || startMin === endMin;
-
-  // Either manual address OR saved job-site satisfies "location" requirement
+  const client = useMemo(() => clients.find(c => c.id === clientId) ?? null, [clients, clientId]);
   const hasJobSite = !!(jobSiteLocationId || jobSiteAddress.trim());
+  const timesInvalid = !startTime || !endTime || toMinutes(startTime) === toMinutes(endTime);
 
-  // HARD errors — block both Draft and Publish (data integrity).
-  const hardErrors: string[] = [];
-  if (!companyId) hardErrors.push("Selecciona una empresa antes de crear un turno.");
-  if (!date) hardErrors.push("Fecha requerida.");
-  if (timesInvalid) hardErrors.push("Hora de inicio y fin no pueden ser iguales.");
-  if (slotsNum < 1) hardErrors.push("Debe haber al menos 1 trabajador.");
-  if (!canCreate) hardErrors.push("No tienes permiso para crear turnos en esta empresa.");
+  /* ── Personas: ocupadas ese mismo día (informativo, no bloquea) ── */
+  const busyIds = useMemo(() => {
+    const sameDay = new Set(shifts.filter(s => s.date === date).map(s => s.id));
+    const set = new Set<string>();
+    assignments.forEach(a => {
+      if (sameDay.has(a.shift_id) && !["removed", "rejected"].includes(a.status)) {
+        set.add(a.employee_id);
+      }
+    });
+    return set;
+  }, [shifts, assignments, date]);
 
-  // PUBLISH-only required (per company shifts_config).
-  const publishBlockers: string[] = [];
-  if (mode === "published" && requireClient && !clientId) {
-    publishBlockers.push("Cliente requerido por la configuración.");
-  }
-  if (mode === "published" && requireLocation && !hasJobSite) {
-    publishBlockers.push("Agrega una dirección del trabajo o selecciona una ubicación guardada.");
-  }
+  const roster = useMemo(() => {
+    const q = teamQuery.trim().toLowerCase();
+    const list = employees.filter(e => e.is_active !== false);
+    const matched = q
+      ? list.filter(e => fullName(e).toLowerCase().includes(q))
+      : list;
+    return [...matched].sort((a, b) => {
+      const sa = (team.includes(a.id) ? 0 : 1) - 0 + (busyIds.has(a.id) ? 2 : 0);
+      const sb = (team.includes(b.id) ? 0 : 1) - 0 + (busyIds.has(b.id) ? 2 : 0);
+      if (sa !== sb) return sa - sb;
+      return fullName(a).localeCompare(fullName(b));
+    });
+  }, [employees, teamQuery, team, busyIds]);
 
-  // SOFT warnings — recommended but not required.
-  const softWarnings: string[] = [];
-  if (mode === "published") {
-    if (!clientId && !requireClient) softWarnings.push("Sin cliente asignado.");
-    if (!hasJobSite && !requireLocation) softWarnings.push("Sin dirección del trabajo.");
-    if (!meetingPoint.trim() && !meetingPointLocationId) softWarnings.push("Sin punto de encuentro.");
-    if (!notes.trim()) softWarnings.push("Sin notas o instrucciones para el equipo.");
-  }
+  const coverage = slots > 0 ? Math.min(100, Math.round((team.length / slots) * 100)) : 0;
 
-  const needsWarningAck = mode === "published" && softWarnings.length > 0;
-  const valid =
-    hardErrors.length === 0 &&
-    publishBlockers.length === 0 &&
-    (!needsWarningAck || warningAck);
+  /* ── Validación por paso (misma semántica que antes, sin bloqueos nuevos) ── */
+  const stepIndex = STEPS.findIndex(s => s.key === step);
+  const stepBlocker: string | null = (() => {
+    if (!companyId) return "Selecciona una empresa antes de crear un turno.";
+    if (!canCreate) return "No tienes permiso para crear turnos en esta empresa.";
+    if (step === "operacion") {
+      if (requireClient && !clientId) return "Elige el cliente de esta operación.";
+      if (requireLocation && !hasJobSite) return "Indica dónde ocurre el trabajo.";
+      return null;
+    }
+    if (step === "cuando") {
+      if (!date) return "Elige la fecha.";
+      if (timesInvalid) return "La hora de inicio y fin no pueden ser iguales.";
+      return null;
+    }
+    if (step === "equipo" && slots < 1) return "Necesitas al menos una persona.";
+    return null;
+  })();
 
-  const checklist: { label: string; ok: boolean; required: boolean }[] = [
-    { label: "Fecha y horario válidos", ok: !!date && !timesInvalid, required: true },
-    { label: "Trabajadores requeridos", ok: slotsNum >= 1, required: true },
-    { label: "Cliente seleccionado", ok: !!clientId, required: requireClient },
-    { label: "Dirección o ubicación del trabajo", ok: hasJobSite, required: requireLocation },
-    { label: "Punto de encuentro", ok: !!(meetingPoint.trim() || meetingPointLocationId), required: false },
-    { label: "Notas o instrucciones", ok: !!notes.trim(), required: false },
-  ];
+  const goNext = () => {
+    if (stepBlocker) return;
+    const next = STEPS[stepIndex + 1];
+    if (next) setStep(next.key);
+  };
+  const goBack = () => {
+    const prev = STEPS[stepIndex - 1];
+    if (prev) setStep(prev.key);
+    else onOpenChange(false);
+  };
+
+  const toggleWorker = (id: string) => {
+    setTeam(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
+  const shiftTitle = useMemo(() => {
+    const parts = [serviceType || "Turno", client?.name].filter(Boolean);
+    return parts.join(" · ");
+  }, [serviceType, client]);
 
   const handleCreate = async () => {
-    if (!valid || !companyId) return;
+    if (!companyId || saving || stepBlocker) return;
     setSaving(true);
     try {
-      const isPublish = mode === "published";
       const insertData: any = {
         company_id: companyId,
-        title: title.trim() || "Turno",
+        title: shiftTitle,
         date,
         start_time: startTime,
         end_time: endTime,
-        slots: slotsNum,
+        slots,
         client_id: clientId || null,
-        // Desktop parity: job_site_* and meeting_point_* columns
         job_site_address: jobSiteAddress.trim() || null,
         job_site_location_id: jobSiteLocationId || null,
         meeting_point: meetingPoint.trim() || null,
         meeting_point_location_id: meetingPointLocationId || null,
         notes: notes.trim() || null,
         created_by: user?.id ?? null,
-        status: isPublish ? "published" : "draft",
-        publication_status: isPublish ? "published" : "draft",
-        published_at: isPublish ? new Date().toISOString() : null,
-        published_by: isPublish ? (user?.id ?? null) : null,
+        status: "published",
+        publication_status: "published",
+        published_at: new Date().toISOString(),
+        published_by: user?.id ?? null,
         claimable: false,
       };
 
@@ -327,298 +327,534 @@ export function MobileQuickCreateShiftSheet({
         .insert(insertData)
         .select("id")
         .single();
-
       if (error) throw error;
+      const shiftId = data!.id as string;
+
+      // Equipo: se asigna con la RPC existente (compliance y permisos server-side).
+      let assigned = 0;
+      const failed: string[] = [];
+      for (const employeeId of team) {
+        try {
+          await assignWorkerToShift({
+            shiftId,
+            employeeId,
+            source: "mobile_create_shift",
+          });
+          assigned += 1;
+        } catch (e) {
+          const person = employees.find(x => x.id === employeeId);
+          failed.push(person ? fullName(person) : "Trabajador");
+          console.error("[CreateShift] assign error", e);
+        }
+      }
 
       try {
         await supabase.rpc("log_activity_detailed", {
-          _action: isPublish ? "publicar_turno" : "guardar_turno_borrador",
+          _action: "publicar_turno",
           _entity_type: "scheduled_shift",
-          _entity_id: data!.id,
+          _entity_id: shiftId,
           _company_id: companyId,
-          _details: { source: "mobile_quick_create", mode },
+          _details: { source: "mobile_create_shift_flow", assigned },
           _old_data: null,
           _new_data: {
-            title: title.trim(),
-            date,
-            start_time: startTime,
-            end_time: endTime,
-            slots: slotsNum,
-            publication_status: insertData.publication_status,
-            has_job_site_address: !!insertData.job_site_address,
-            has_job_site_location: !!insertData.job_site_location_id,
+            title: shiftTitle, date, start_time: startTime, end_time: endTime,
+            slots, publication_status: "published",
           },
         } as any);
-      } catch { /* non-blocking */ }
+      } catch { /* no bloqueante */ }
 
-      toast.success(isPublish ? "Turno publicado" : "Turno guardado como borrador", {
-        description: `${title.trim() || "Turno"} · ${date} ${startTime}–${endTime}`,
-      });
-      onCreated(data!.id);
+      if (failed.length > 0) {
+        notifyWarning({
+          title: "Turno creado con equipo incompleto",
+          fact: `Se asignaron ${assigned} de ${team.length} personas. No se pudo asignar a ${failed.join(", ")}.`,
+          consequence: "El turno ya está publicado; completa el equipo desde el turno.",
+          key: "create-shift",
+        });
+      } else {
+        notifySuccess({
+          title: "Turno creado",
+          fact: `${shiftTitle} · ${shortDate(date)} ${startTime}–${endTime}.`,
+          consequence: assigned > 0
+            ? `${assigned} ${assigned === 1 ? "persona asignada" : "personas asignadas"}; deben confirmar su asistencia.`
+            : "Aún no tiene equipo asignado.",
+          key: "create-shift",
+        });
+      }
+
+      onCreated(shiftId);
       onOpenChange(false);
     } catch (e: any) {
-      console.error("[MobileQuickCreateShiftSheet] insert error", e);
-      toast.error(e?.message ?? "No se pudo crear el turno");
+      notifyError({
+        title: "No se pudo crear el turno",
+        fact: "El turno no se guardó y no se asignó a nadie.",
+        consequence: "Puedes reintentar sin duplicar información.",
+        action: { label: "Reintentar", onClick: () => { void handleCreate(); } },
+        cause: e,
+        key: "create-shift",
+      });
     } finally {
       setSaving(false);
     }
   };
 
-  const ctaLabel = saving
-    ? null
-    : mode === "published"
-      ? (needsWarningAck && !warningAck ? "Revisar antes de publicar" : "Publicar turno")
-      : "Guardar borrador";
+  const current = STEPS[stepIndex];
+  const isTeamStep = step === "equipo";
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="bottom"
-        className="h-[92dvh] rounded-t-2xl p-0 flex flex-col overflow-hidden"
-      >
-        <SheetHeader className="px-5 pt-5 pb-3 text-left border-b border-border/40">
-          <SheetTitle className="text-lg">Crear turno rápido</SheetTitle>
-          <p className="text-xs text-muted-foreground mt-1">
-            Guarda como borrador para completar después, o publica ahora si todo lo crítico está listo.
-          </p>
-        </SheetHeader>
-
-        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
-          {/* Mode toggle */}
-          <div className="grid grid-cols-2 gap-2 rounded-xl bg-muted/50 p-1">
-            <button
-              type="button"
-              onClick={() => setMode("draft")}
-              className={cn(
-                "h-10 rounded-lg text-sm font-medium transition-colors",
-                mode === "draft" ? "bg-background shadow-sm" : "text-muted-foreground",
-              )}
-            >
-              Borrador
-            </button>
-            <button
-              type="button"
-              onClick={() => setMode("published")}
-              className={cn(
-                "h-10 rounded-lg text-sm font-medium transition-colors",
-                mode === "published" ? "bg-background shadow-sm" : "text-muted-foreground",
-              )}
-            >
-              Publicar ahora
-            </button>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="qcs-title">Título</Label>
-            <Input
-              id="qcs-title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Ej. Catering evento Brooklyn"
-              className="h-11"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5 col-span-2">
-              <Label htmlFor="qcs-date">Fecha</Label>
-              <div className="flex gap-2">
-                <Input
-                  id="qcs-date"
-                  type="date"
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                  className="h-11 flex-1"
-                />
-                <Button
-                  type="button"
-                  variant={date === todayStr ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setDate(todayStr)}
-                  className="h-11 px-3 text-xs"
-                >
-                  Hoy
-                </Button>
-                <Button
-                  type="button"
-                  variant={date === tomorrowStr ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setDate(tomorrowStr)}
-                  className="h-11 px-3 text-xs"
-                >
-                  Mañana
-                </Button>
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="qcs-start">Inicio</Label>
-              <Input
-                id="qcs-start"
-                type="time"
-                value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
-                className="h-11"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="qcs-end">Fin aprox.</Label>
-              <Input
-                id="qcs-end"
-                type="time"
-                value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
-                className="h-11"
-              />
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="qcs-slots">Trabajadores requeridos</Label>
-            <Input
-              id="qcs-slots"
-              type="number"
-              inputMode="numeric"
-              min={1}
-              value={slots}
-              onChange={(e) => setSlots(e.target.value)}
-              className="h-11"
-            />
-          </div>
-
-          {/* Premium Client Picker */}
-          <MobileClientPicker
-            clients={clients}
-            value={clientId}
-            onChange={setClientId}
-            required={requireClient}
-          />
-
-          {/* Job Site — desktop parity (address first, saved optional) */}
-          <div className="space-y-1.5">
-            <Label>
-              Dirección del trabajo {requireLocation && <span className="text-destructive">*</span>}
-            </Label>
-            <SmartLocationField
-              companyId={companyId}
-              kind="job_site"
-              title="Dirección del trabajo"
-              helper="Pega la dirección que te envió el cliente o selecciona una ubicación guardada si la vas a reutilizar."
-              freeTextValue={jobSiteAddress}
-              savedLocationId={jobSiteLocationId}
-              onFreeText={(text) => setJobSiteAddress(text)}
-              onSavedLocation={(id) => {
-                setJobSiteLocationId(id);
-                if (id) setJobSiteAddress("");
-              }}
-              placeholder="Ej: 1601 Broadway, New York, NY"
-            />
-          </div>
-
-          {/* Meeting point */}
-          <div className="space-y-1.5">
-            <Label>Punto de encuentro (opcional)</Label>
-            <SmartLocationField
-              companyId={companyId}
-              kind="meeting_point"
-              title="Punto de encuentro"
-              helper="Lugar donde el equipo se reúne antes del job site."
-              freeTextValue={meetingPoint}
-              savedLocationId={meetingPointLocationId}
-              onFreeText={(text) => setMeetingPoint(text)}
-              onSavedLocation={(id, addr) => {
-                setMeetingPointLocationId(id);
-                setMeetingPoint(addr ?? (id ? meetingPoint : ""));
-              }}
-              placeholder="Ej. Chase Bank 74 & Roosevelt"
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="qcs-notes">Indicaciones para el trabajador (opcional)</Label>
-            <Textarea
-              id="qcs-notes"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Ej. Entrar por la puerta lateral, parking en sótano 2…"
-              rows={3}
-            />
-          </div>
-
-          {/* Readiness checklist */}
-          <div className="rounded-xl border border-border/60 bg-card/50 px-3 py-3 space-y-2">
-            <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-              Preparación del turno
-            </div>
-            <ul className="space-y-1.5">
-              {checklist.map((item, i) => (
-                <li key={i} className="flex items-center gap-2 text-xs">
-                  {item.ok ? (
-                    <Check className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                  ) : item.required ? (
-                    <AlertTriangle className="h-3.5 w-3.5 text-destructive shrink-0" />
-                  ) : (
-                    <Circle className="h-3.5 w-3.5 text-muted-foreground/60 shrink-0" />
-                  )}
-                  <span className={cn(
-                    item.ok ? "text-foreground" : item.required ? "text-destructive" : "text-muted-foreground",
-                  )}>
-                    {item.label}
-                    {item.required && !item.ok && <span className="ml-1">· requerido</span>}
-                    {!item.required && !item.ok && <span className="ml-1 opacity-70">· recomendado</span>}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Hard errors + publish blockers */}
-          {(hardErrors.length > 0 || publishBlockers.length > 0) && (
-            <div className="rounded-xl border border-destructive/30 bg-destructive/5 px-3 py-2.5 text-xs text-destructive space-y-1">
-              {[...hardErrors, ...publishBlockers].map((e, i) => <div key={i}>• {e}</div>)}
-            </div>
-          )}
-
-          {/* Soft warnings (Publish only) */}
-          {needsWarningAck && hardErrors.length === 0 && publishBlockers.length === 0 && (
-            <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 px-3 py-2.5 text-xs text-amber-700 dark:text-amber-300 space-y-2">
-              <div className="font-medium">Faltan datos recomendados antes de publicar:</div>
-              {softWarnings.map((w, i) => <div key={i}>• {w}</div>)}
-              <label className="flex items-start gap-2 pt-1 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={warningAck}
-                  onChange={(e) => setWarningAck(e.target.checked)}
-                  className="mt-0.5"
-                />
-                <span>Entiendo y quiero publicar igual. El equipo verá el turno con la información actual.</span>
-              </label>
-            </div>
-          )}
-        </div>
-
-        <div
-          className="shrink-0 border-t border-border/40 bg-background/95 backdrop-blur-sm px-5 pt-3 flex gap-2"
-          style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)" }}
+    <>
+      <Sheet open={open} onOpenChange={onOpenChange}>
+        <SheetContent
+          side="bottom"
+          className="h-[95dvh] rounded-t-3xl p-0 flex flex-col overflow-hidden gap-0"
         >
-          <Button
-            variant="ghost"
-            className="flex-1 h-11"
-            onClick={() => onOpenChange(false)}
-            disabled={saving}
+          {/* Cabecera: misión, no formulario */}
+          <div className="shrink-0 px-4 pt-3 pb-3 border-b border-border/40">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={goBack}
+                aria-label="Volver"
+                className="h-11 w-11 -ml-2 rounded-full inline-flex items-center justify-center active:bg-muted"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </button>
+              <div className="flex-1 min-w-0">
+                <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold">
+                  Paso {stepIndex + 1} de {STEPS.length} · {current.label}
+                </p>
+                <h2 className="text-[17px] font-bold leading-tight truncate">{current.question}</h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => onOpenChange(false)}
+                aria-label="Cerrar"
+                className="h-11 w-11 -mr-2 rounded-full inline-flex items-center justify-center active:bg-muted"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            {/* Progreso */}
+            <div className="mt-2.5 flex gap-1">
+              {STEPS.map((s, i) => (
+                <span
+                  key={s.key}
+                  className={cn(
+                    "h-1 flex-1 rounded-full transition-colors",
+                    i <= stepIndex ? "bg-primary" : "bg-muted",
+                  )}
+                />
+              ))}
+            </div>
+          </div>
+
+          <div className={cn("flex-1 overflow-y-auto", isTeamStep ? "px-0 py-0" : "px-4 py-4 space-y-5")}>
+            {/* ── PASO 1 · ¿Qué operación? ── */}
+            {step === "operacion" && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setClientPickerOpen(true)}
+                  className="w-full min-h-[64px] rounded-2xl border border-border/60 bg-card px-4 flex items-center gap-3 text-left active:bg-muted/50 transition-colors"
+                >
+                  {client ? <ClientAvatar name={client.name} size="sm" /> : (
+                    <span className="h-9 w-9 rounded-full bg-muted inline-flex items-center justify-center">
+                      <Building2 className="h-4 w-4 text-muted-foreground" />
+                    </span>
+                  )}
+                  <span className="flex-1 min-w-0">
+                    <span className="block text-[11px] text-muted-foreground">
+                      Cliente {requireClient && <span className="text-destructive">*</span>}
+                    </span>
+                    <span className="block text-[15px] font-semibold truncate">
+                      {client?.name ?? "Elegir cliente"}
+                    </span>
+                  </span>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                </button>
+
+                <div className="space-y-2">
+                  <Label className="text-[13px] flex items-center gap-1.5">
+                    <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
+                    Dónde ocurre {requireLocation && <span className="text-destructive">*</span>}
+                  </Label>
+                  <SmartLocationField
+                    companyId={companyId}
+                    kind="job_site"
+                    title="Dirección del trabajo"
+                    helper="Pega la dirección que te envió el cliente o usa una ubicación guardada."
+                    freeTextValue={jobSiteAddress}
+                    savedLocationId={jobSiteLocationId}
+                    onFreeText={setJobSiteAddress}
+                    onSavedLocation={(id) => {
+                      setJobSiteLocationId(id);
+                      if (id) setJobSiteAddress("");
+                    }}
+                    placeholder="Ej. 1601 Broadway, New York"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-[13px]">Tipo de servicio</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {SERVICE_TYPES.map(t => (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => setServiceType(prev => prev === t ? "" : t)}
+                        className={cn(
+                          "min-h-[44px] px-4 rounded-full border text-sm font-medium transition-colors",
+                          serviceType === t
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "border-border/60 bg-card active:bg-muted",
+                        )}
+                      >
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                  <Input
+                    value={SERVICE_TYPES.includes(serviceType) ? "" : serviceType}
+                    onChange={e => setServiceType(e.target.value)}
+                    placeholder="U otro nombre para la operación…"
+                    className="h-12 text-base"
+                  />
+                </div>
+              </>
+            )}
+
+            {/* ── PASO 2 · ¿Cuándo? ── */}
+            {step === "cuando" && (
+              <>
+                <div className="grid grid-cols-3 gap-2">
+                  {[0, 1, 2].map(offset => {
+                    const iso = format(addDays(new Date(), offset), "yyyy-MM-dd");
+                    const label = offset === 0 ? "Hoy" : offset === 1 ? "Mañana" : shortDate(iso);
+                    return (
+                      <button
+                        key={iso}
+                        type="button"
+                        onClick={() => setDate(iso)}
+                        className={cn(
+                          "min-h-[56px] rounded-2xl border text-sm font-semibold capitalize transition-colors",
+                          date === iso
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "border-border/60 bg-card active:bg-muted",
+                        )}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-[13px]">Otra fecha</Label>
+                  <Input
+                    type="date"
+                    value={date}
+                    onChange={e => setDate(e.target.value)}
+                    className="h-12 text-base"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-[13px]">Entrada</Label>
+                    <Input
+                      type="time"
+                      value={startTime}
+                      onChange={e => setStartTime(e.target.value)}
+                      className="h-12 text-base"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-[13px]">Salida</Label>
+                    <Input
+                      type="time"
+                      value={endTime}
+                      onChange={e => setEndTime(e.target.value)}
+                      className="h-12 text-base"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-[13px]">Duración</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {DURATIONS.map(d => {
+                      const active = Math.abs(durationHours(startTime, endTime) - d.hours) < 0.01;
+                      return (
+                        <button
+                          key={d.hours}
+                          type="button"
+                          onClick={() => setEndTime(fromMinutes(toMinutes(startTime) + d.hours * 60))}
+                          className={cn(
+                            "min-h-[44px] px-4 rounded-full border text-sm font-medium transition-colors",
+                            active
+                              ? "bg-primary text-primary-foreground border-primary"
+                              : "border-border/60 bg-card active:bg-muted",
+                          )}
+                        >
+                          {d.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                    <Clock className="h-3.5 w-3.5" />
+                    {timesInvalid
+                      ? "Ajusta el horario: inicio y fin no pueden coincidir."
+                      : `${durationHours(startTime, endTime).toFixed(1).replace(".0", "")} h de operación`}
+                  </p>
+                </div>
+              </>
+            )}
+
+            {/* ── PASO 3 · ¿Con quién? (protagonista) ── */}
+            {isTeamStep && (
+              <div className="flex flex-col h-full">
+                <div className="shrink-0 px-4 pt-3 pb-3 space-y-3 border-b border-border/40 bg-card/40">
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1">
+                      <p className="text-[13px] font-semibold">
+                        {team.length} de {slots} {slots === 1 ? "persona" : "personas"}
+                      </p>
+                      <div className="mt-1.5 h-1.5 rounded-full bg-muted overflow-hidden">
+                        <div
+                          className={cn(
+                            "h-full rounded-full transition-all",
+                            coverage >= 100 ? "bg-status-success" : coverage > 0 ? "bg-status-warning" : "bg-muted-foreground/30",
+                          )}
+                          style={{ width: `${coverage}%` }}
+                        />
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        aria-label="Menos plazas"
+                        onClick={() => setSlots(s => Math.max(1, s - 1))}
+                        className="h-11 w-11 rounded-xl border border-border/60 inline-flex items-center justify-center active:bg-muted"
+                      >
+                        <Minus className="h-4 w-4" />
+                      </button>
+                      <span className="w-8 text-center text-base font-bold tabular-nums">{slots}</span>
+                      <button
+                        type="button"
+                        aria-label="Más plazas"
+                        onClick={() => setSlots(s => s + 1)}
+                        className="h-11 w-11 rounded-xl border border-border/60 inline-flex items-center justify-center active:bg-muted"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/70" />
+                    <Input
+                      value={teamQuery}
+                      onChange={e => setTeamQuery(e.target.value)}
+                      placeholder="Buscar persona…"
+                      className="h-12 pl-9 text-base"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex-1 overflow-y-auto px-2 py-2">
+                  {roster.length === 0 ? (
+                    <div className="px-4 py-12 text-center">
+                      <Users className="h-6 w-6 mx-auto text-muted-foreground/50" />
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        {employees.length === 0
+                          ? "No hay personas activas en esta empresa."
+                          : "Nadie coincide con esa búsqueda."}
+                      </p>
+                    </div>
+                  ) : roster.map(e => {
+                    const name = fullName(e);
+                    const selected = team.includes(e.id);
+                    const busy = busyIds.has(e.id);
+                    return (
+                      <button
+                        key={e.id}
+                        type="button"
+                        onClick={() => toggleWorker(e.id)}
+                        className={cn(
+                          "w-full min-h-[60px] flex items-center gap-3 px-3 rounded-2xl text-left transition-colors active:bg-muted/60",
+                          selected && "bg-primary/5",
+                        )}
+                      >
+                        <span className={cn(
+                          "h-10 w-10 rounded-full inline-flex items-center justify-center text-xs font-bold shrink-0",
+                          selected ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground",
+                        )}>
+                          {selected ? <Check className="h-4 w-4" /> : initials(name)}
+                        </span>
+                        <span className="flex-1 min-w-0">
+                          <span className="block text-[15px] font-medium truncate">{name}</span>
+                          <span className={cn(
+                            "block text-[12px]",
+                            busy ? "text-status-warning" : "text-muted-foreground",
+                          )}>
+                            {busy ? "Ya tiene turno ese día" : "Disponible"}
+                          </span>
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* ── PASO 4 · ¿Algo especial? ── */}
+            {step === "extras" && (
+              <>
+                <p className="text-sm text-muted-foreground">
+                  Todo esto es opcional. Si no aplica, continúa.
+                </p>
+                <div className="space-y-2">
+                  <Label className="text-[13px]">Punto de encuentro</Label>
+                  <SmartLocationField
+                    companyId={companyId}
+                    kind="meeting_point"
+                    title="Punto de encuentro"
+                    helper="Lugar donde el equipo se reúne antes del job site."
+                    freeTextValue={meetingPoint}
+                    savedLocationId={meetingPointLocationId}
+                    onFreeText={setMeetingPoint}
+                    onSavedLocation={(id, addr) => {
+                      setMeetingPointLocationId(id);
+                      setMeetingPoint(addr ?? (id ? meetingPoint : ""));
+                    }}
+                    placeholder="Ej. Chase Bank 74 & Roosevelt"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[13px] flex items-center gap-1.5">
+                    <ClipboardList className="h-3.5 w-3.5 text-muted-foreground" />
+                    Indicaciones para el equipo
+                  </Label>
+                  <Textarea
+                    value={notes}
+                    onChange={e => setNotes(e.target.value)}
+                    placeholder="Ej. Entrar por la puerta lateral, uniforme negro…"
+                    rows={4}
+                    className="text-base"
+                  />
+                </div>
+              </>
+            )}
+
+            {/* ── PASO 5 · Confirmar ── */}
+            {step === "confirmar" && (
+              <div className="rounded-2xl border border-border/60 bg-card overflow-hidden">
+                <SummaryRow
+                  icon={<Building2 className="h-4 w-4" />}
+                  label="Cliente"
+                  value={client?.name ?? "Sin cliente"}
+                  hint={serviceType || undefined}
+                  onEdit={() => setStep("operacion")}
+                />
+                <SummaryRow
+                  icon={<Clock className="h-4 w-4" />}
+                  label="Horario"
+                  value={`${shortDate(date)} · ${startTime}–${endTime}`}
+                  hint={`${durationHours(startTime, endTime).toFixed(1).replace(".0", "")} h`}
+                  onEdit={() => setStep("cuando")}
+                />
+                <SummaryRow
+                  icon={<UserPlus className="h-4 w-4" />}
+                  label="Equipo"
+                  value={team.length === 0
+                    ? "Sin asignar todavía"
+                    : `${team.length} ${team.length === 1 ? "persona" : "personas"}`}
+                  hint={`Cobertura ${coverage}% de ${slots}`}
+                  tone={team.length >= slots ? "success" : "warning"}
+                  onEdit={() => setStep("equipo")}
+                  last
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Footer: una sola acción */}
+          <div
+            className="shrink-0 border-t border-border/40 bg-background/95 backdrop-blur-sm px-4 pt-3"
+            style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)" }}
           >
-            Cancelar
-          </Button>
-          <Button
-            className="flex-[1.4] h-11"
-            variant={mode === "draft" ? "outline" : "default"}
-            disabled={!valid || saving}
-            onClick={handleCreate}
-          >
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : ctaLabel}
-          </Button>
-        </div>
-      </SheetContent>
-    </Sheet>
+            {stepBlocker && (
+              <p className="text-xs text-destructive mb-2">{stepBlocker}</p>
+            )}
+            {step === "confirmar" ? (
+              <Button
+                className="w-full h-14 text-base font-semibold rounded-2xl"
+                disabled={saving || !!stepBlocker}
+                onClick={handleCreate}
+              >
+                {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : "Crear turno"}
+              </Button>
+            ) : (
+              <Button
+                className="w-full h-14 text-base font-semibold rounded-2xl"
+                disabled={!!stepBlocker}
+                onClick={goNext}
+              >
+                {isTeamStep && team.length === 0 ? "Continuar sin equipo" : "Continuar"}
+                <ChevronRight className="h-5 w-5 ml-1" />
+              </Button>
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      <ClientPickerSheet
+        open={clientPickerOpen}
+        onOpenChange={setClientPickerOpen}
+        clients={clients}
+        value={clientId}
+        onChange={setClientId}
+      />
+    </>
+  );
+}
+
+function SummaryRow({
+  icon, label, value, hint, onEdit, tone, last,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  hint?: string;
+  onEdit: () => void;
+  tone?: "success" | "warning";
+  last?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onEdit}
+      className={cn(
+        "w-full min-h-[64px] flex items-center gap-3 px-4 text-left active:bg-muted/50 transition-colors",
+        !last && "border-b border-border/40",
+      )}
+    >
+      <span className="h-9 w-9 rounded-full bg-muted inline-flex items-center justify-center text-muted-foreground shrink-0">
+        {icon}
+      </span>
+      <span className="flex-1 min-w-0">
+        <span className="block text-[11px] text-muted-foreground">{label}</span>
+        <span className="block text-[15px] font-semibold truncate">{value}</span>
+      </span>
+      {hint && (
+        <span className={cn(
+          "text-[12px] font-medium shrink-0",
+          tone === "success" ? "text-status-success"
+            : tone === "warning" ? "text-status-warning"
+              : "text-muted-foreground",
+        )}>
+          {hint}
+        </span>
+      )}
+      <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+    </button>
   );
 }
