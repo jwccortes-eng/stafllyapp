@@ -42,6 +42,7 @@ export interface HubShiftLike {
   end_time: string;
   slots?: number | null;
   shift_code?: string | null;
+  shift_ref?: string | null;
   client_name?: string | null;
   job_site_name?: string | null;
   meeting_point?: string | null;

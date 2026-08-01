@@ -42,6 +42,8 @@ export interface TodayOpsShift {
   publication_status: string | null;
   slots: number;
   shift_code: string | null;
+  /** P0.2 — referencia operativa visible por empresa (`QK-001573`). */
+  shift_ref: string | null;
   client_id: string | null;
   client_name: string | null;
   location_id: string | null;

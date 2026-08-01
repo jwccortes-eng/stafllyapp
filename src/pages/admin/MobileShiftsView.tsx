@@ -776,7 +776,7 @@ function ShiftCard({
         density="compact"
         title={headerTitle}
         clientName={clientName !== headerTitle ? clientName : null}
-        shiftCode={shift.shift_code}
+        shiftRef={displayShiftRef(shift)}
         date={shift.date}
         startTime={shift.start_time}
         endTime={shift.end_time}
