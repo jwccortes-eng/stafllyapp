@@ -195,31 +195,31 @@ export default function MobileAdminHome() {
   };
 
 
+  const allCalm =
+    [shiftsToday, clockedIn, hoursToReview, pendingResponses].every(
+      (m) => m.kind === "zero_confirmed",
+    ) &&
+    (clockedIn.value ?? 0) === 0 &&
+    (hoursToReview.value ?? 0) === 0 &&
+    (pendingResponses.value ?? 0) === 0;
+
   return (
     <div className="min-h-full pb-[calc(env(safe-area-inset-bottom,0px)+72px)]">
-      {/* Hero */}
-      <div className="px-5 pt-5 pb-4">
-        <div className="flex items-start gap-3">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.14em] text-muted-foreground mb-1.5">
-              <Sparkles className="h-3 w-3" />
-              <span className="truncate">{companyLabel}</span>
-            </div>
-            <h1 className="text-2xl font-semibold tracking-tight leading-tight">
-              {greeting},<br />
-              <span className="text-primary">{firstName}.</span>
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1.5">
-              Your command center. Tap to jump in.
-            </p>
-          </div>
-          <div className="shrink-0 pt-0.5">
-            <ContextSwitcher placement="header" collapsed />
-          </div>
+      {/* Identidad + saludo */}
+      <div className="px-5 pt-5 pb-4 space-y-3.5">
+        <ContextSwitcher placement="header" />
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight leading-tight">
+            {greeting},<br />
+            <span className="text-primary">{firstName}.</span>
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1.5">
+            Esto es lo que necesita tu atención hoy en {companyLabel}.
+          </p>
         </div>
       </div>
 
-      {/* Search bar */}
+      {/* Búsqueda */}
       <div className="px-5 pb-4">
         <button
           type="button"
@@ -232,15 +232,35 @@ export default function MobileAdminHome() {
         >
           <Search className="h-4 w-4 text-muted-foreground shrink-0" />
           <span className="text-sm text-muted-foreground truncate">
-            Search workers, shifts, clients…
+            Buscar workers, turnos, clientes…
           </span>
-          <kbd className="ml-auto text-[10px] font-mono text-muted-foreground/70 px-1.5 py-0.5 rounded bg-background/80 border border-border/40">
-            ⌘K
-          </kbd>
         </button>
       </div>
 
-      {/* P0 OX — Operación de hoy: nunca un cero silencioso */}
+      {/* Momento de calma — nunca un vacío frío */}
+      {allCalm && (
+        <div className="px-5 mb-5">
+          <OperationalCard
+            status="ready"
+            statusLabel="Sin pendientes"
+            leading={
+              <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-status-success-bg text-status-success">
+                <CheckCircle2 className="h-4 w-4" />
+              </span>
+            }
+            title="Todo bajo control"
+            primary={
+              <p className="text-sm">
+                Tus operaciones de hoy están cubiertas y nadie espera una decisión tuya.
+              </p>
+            }
+            secondary="Si algo cambia, aparecerá aquí antes de convertirse en un problema."
+            action={{ label: "Ver la operación de hoy", onClick: () => navigate("/app/command-center") }}
+          />
+        </div>
+      )}
+
+      {/* Operación de hoy — nunca un cero silencioso */}
       <div className="px-5 mb-5">
         <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground mb-2 px-1">
           Operación de hoy
@@ -280,8 +300,11 @@ export default function MobileAdminHome() {
         </div>
       </div>
 
-      {/* Action grid */}
+      {/* Accesos de operación */}
       <div className="px-5">
+        <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground mb-2 px-1">
+          Tu operación
+        </div>
         <div className="grid grid-cols-2 gap-3">
           {visibleActions.map((a) => {
             const Icon = a.icon;
@@ -295,29 +318,29 @@ export default function MobileAdminHome() {
                 className={cn(
                   "group relative flex flex-col items-start text-left",
                   "rounded-2xl border border-border/50 bg-card",
-                  "p-3 min-h-[96px]",
-                  "active:scale-[0.97] hover:border-border transition-all",
-                  "shadow-sm hover:shadow-md"
+                  "p-3.5 min-h-[104px]",
+                  "active:scale-[0.97] hover:border-border transition-all"
                 )}
               >
-                <div className={cn("h-9 w-9 rounded-lg flex items-center justify-center mb-2", a.accent)}>
+                <div className={cn("h-9 w-9 rounded-xl flex items-center justify-center mb-2", a.accent)}>
                   <Icon className="h-[18px] w-[18px]" />
                 </div>
                 <div className="flex items-center gap-2 w-full">
                   <span className="text-[13px] font-semibold tracking-tight truncate">{a.label}</span>
                   {badge.kind === "error" && (
-                    <Badge variant="secondary" className="h-4 px-1 text-[10px] font-semibold ml-auto bg-destructive/15 text-destructive border border-destructive/20">
-                      Error
-                    </Badge>
+                    <StatusBadge status="failed" label="Sin dato" size="sm" className="ml-auto" />
                   )}
                   {badge.kind === "ready" && count > 0 && (
-                    <Badge variant="secondary" className="h-4 px-1 text-[10px] font-semibold ml-auto bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/20">
-                      {count > 9 ? "9+" : count}
-                    </Badge>
+                    <StatusBadge
+                      status="pending"
+                      label={count > 9 ? "9+" : String(count)}
+                      size="sm"
+                      indicator="dot"
+                      className="ml-auto"
+                    />
                   )}
-
                 </div>
-                <span className="text-[10.5px] text-muted-foreground mt-0.5 leading-tight truncate w-full">
+                <span className="text-[11px] text-muted-foreground mt-1 leading-tight truncate w-full">
                   {a.hint}
                 </span>
               </button>
@@ -326,27 +349,28 @@ export default function MobileAdminHome() {
         </div>
       </div>
 
-      {/* Quick links */}
+      {/* Accesos rápidos */}
       <div className="px-5 mt-6">
         <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground mb-2 px-1">
-          Quick access
+          Acceso rápido
         </div>
         <div className="rounded-2xl border border-border/50 bg-card divide-y divide-border/40 overflow-hidden">
-          <QuickLink label="Live Map" to="/app/live-map" onNav={navigate} />
-          <QuickLink label="Announcements" to="/app/announcements" onNav={navigate} />
+          <QuickLink label="Mapa en vivo" to="/app/live-map" onNav={navigate} />
+          <QuickLink label="Anuncios" to="/app/announcements" onNav={navigate} />
           <QuickLink label="Front Desk" to="/app/front-desk" onNav={navigate} />
-          <QuickLink label="Reports" to="/app/summary" onNav={navigate} />
+          <QuickLink label="Reportes" to="/app/summary" onNav={navigate} />
         </div>
       </div>
 
       <div className="px-5 mt-6 mb-2">
         <p className="text-[11px] text-center text-muted-foreground/70">
-          Tap <span className="font-semibold">More</span> in the bottom bar for full navigation.
+          Toca <span className="font-semibold">Más</span> en la barra inferior para la navegación completa.
         </p>
       </div>
     </div>
   );
 }
+
 
 function QuickLink({ label, to, onNav }: { label: string; to: string; onNav: (to: string) => void }) {
   return (
