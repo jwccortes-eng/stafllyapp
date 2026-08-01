@@ -251,6 +251,8 @@ export function MobileShiftOperationsSheet({
 
   const canValidate = canManageShifts({ allRoles, canAccessAdminForCompany, companyId: selectedCompanyId });
   const editLocked = ["locked", "archived", "cancelled"].includes(shift?.status ?? "");
+  // P0 — Cancelación segura del turno (misma operación canónica que desktop).
+  const [cancelOpen, setCancelOpen] = useState(false);
 
 
   const data = useMemo(() => {
@@ -1201,7 +1203,17 @@ export function MobileShiftOperationsSheet({
                     <FileEdit className="h-4 w-4" /> Editar turno
                   </DropdownMenuItem>
                 )}
+                {/* P0 — Cancelar detiene la operación futura, nunca borra la historia. */}
+                {canValidate && !editLocked && (
+                  <DropdownMenuItem
+                    className="gap-2 h-11 text-sm text-destructive focus:text-destructive"
+                    onClick={() => setCancelOpen(true)}
+                  >
+                    <CalendarX2 className="h-4 w-4" /> Cancelar turno
+                  </DropdownMenuItem>
+                )}
               </DropdownMenuContent>
+
             </DropdownMenu>
           </div>
         </div>
