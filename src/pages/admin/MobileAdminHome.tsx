@@ -262,7 +262,9 @@ export default function MobileAdminHome() {
           >
             <Search className="h-[18px] w-[18px] text-muted-foreground" />
           </button>
-          <ContextSwitcher placement="header" collapsed />
+          <div className="shrink-0 w-11">
+            <ContextSwitcher placement="header" collapsed />
+          </div>
         </div>
         <p className="text-sm text-muted-foreground mt-2">{headline}</p>
       </div>
