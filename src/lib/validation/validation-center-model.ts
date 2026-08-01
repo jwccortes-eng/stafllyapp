@@ -393,7 +393,7 @@ function buildHoursItem(
   e: HoursEntryInput,
   p: ResolvedHubPermissions,
   now: Date,
-): ValidationItem {
+): ValidationItemDraft {
   const raw = (e.status ?? "pending").toLowerCase();
   const hours = realHours(e);
   const missingClockOut = !!e.clock_in && !e.clock_out;
