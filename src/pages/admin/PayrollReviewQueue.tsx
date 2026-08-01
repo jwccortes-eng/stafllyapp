@@ -255,14 +255,14 @@ export default function PayrollReviewQueue() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("scheduled_shifts")
-        .select("id, date, title, shift_code, company_id")
+        .select("id, date, title, shift_code, shift_ref, company_id")
         .eq("company_id", selectedCompanyId!)
         .eq("id", shiftIdParam!)
         .maybeSingle();
       if (error) throw error;
       return (data ?? null) as {
         id: string; date: string; title: string | null;
-        shift_code: string | null; company_id: string;
+        shift_code: string | null; shift_ref?: string | null; company_id: string;
       } | null;
     },
   });
