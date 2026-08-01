@@ -14,6 +14,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { OperationalCard, type OcsAction } from "./OperationalCard";
 import type { OcsDensity, OcsMode, OcsVariant } from "./tokens";
 import type { StatusKey } from "@/lib/status/status-registry";
+import { presentMetric, type MetricState } from "@/lib/ox/metric-state";
+
 
 export interface KpiCardProps {
   /** Nombre del indicador. */
