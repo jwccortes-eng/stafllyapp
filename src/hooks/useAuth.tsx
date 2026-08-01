@@ -9,6 +9,7 @@ import {
 } from "@/lib/auth-session";
 import { publishAuthState } from "@/lib/auth-mutation-gate";
 import { logMount, logUnmount, documentInstanceId, appInstanceId } from "@/lib/ctx001-forensics";
+import { notifyError } from "@/lib/feedback/notify";
 
 type AppRole = 'developer' | 'owner' | 'company_owner' | 'admin' | 'manager' | 'supervisor' | 'employee' | null;
 type ActiveMode = 'admin' | 'employee';
@@ -307,7 +308,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         canCreateShift: hasAdminRole,
       });
     } catch (err) {
-      if (import.meta.env.DEV) console.error('Error fetching user data:', err);
+      // OX-1 — la sesión existe pero no pudimos resolver rol/permisos.
+      // Nunca silencioso: el usuario debe saber por qué ve la app vacía.
+      notifyError({
+        key: "auth-session",
+        title: "No pudimos cargar tu sesión",
+        fact: "Tu perfil, rol y permisos no se pudieron leer.",
+        consequence: "Puede que veas la app sin datos o sin accesos.",
+        action: { label: "Reintentar", onClick: () => window.location.reload() },
+        cause: err,
+      });
       resetAuthState();
     }
   }, [resetAuthState]);
@@ -560,7 +570,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       void syncSession(session);
     }).catch((err) => {
-      if (import.meta.env.DEV) console.error('Error restoring session:', err);
+      // OX-1 — mismo `key` que arriba: una sola voz, sin apilar toasts.
+      notifyError({
+        key: "auth-session",
+        title: "No pudimos restaurar tu sesión",
+        fact: "La sesión guardada en este dispositivo no se pudo validar.",
+        consequence: "Vuelve a iniciar sesión para continuar.",
+        action: { label: "Reintentar", onClick: () => window.location.reload() },
+        cause: err,
+      });
       if (mounted) {
         resetAuthState();
         setAuthState("unauthenticated");
@@ -588,7 +606,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await supabase.auth.signOut();
     } catch (err) {
-      console.error("Sign out error:", err);
+      // OX-1 — intencionalmente SIN toast: el cierre local continúa abajo y
+      // el usuario es redirigido de inmediato. La sesión no queda ambigua.
+      console.error("[feedback:info] auth-signout-remote", err);
     }
     setUser(null);
     setSession(null);

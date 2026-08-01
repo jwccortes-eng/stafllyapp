@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { queryClient } from "@/lib/query-client";
 import { logMount, logUnmount } from "@/lib/ctx001-forensics";
 import { TenantSwitchStatus } from "@/components/ox/TenantSwitchStatus";
+import { notifyError, notifyWarning } from "@/lib/feedback/notify";
 
 
 import {
@@ -199,7 +200,15 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
       }
     } catch (err) {
       // P0 OX — never fail silently: surface it and let the UI offer a retry.
-      console.error("[useCompany] fetchCompanies failed:", err);
+      // OX-1 — banner + toast comparten `key`: nunca hay spam ni silencio.
+      notifyError({
+        key: "tenant-load",
+        title: "No pudimos cargar tus compañías",
+        fact: "La lista de compañías no se pudo leer.",
+        consequence: "Sigues en la compañía activa; algunos datos pueden no verse.",
+        action: { label: "Reintentar", onClick: () => window.location.reload() },
+        cause: err,
+      });
       setLoadError("No pudimos cargar tus compañías.");
       list = [];
     }
@@ -287,6 +296,12 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
     if (id !== null && !companies.some((c) => c.id === id)) {
       setPendingSwitchId(id);
       setSwitchState("error");
+      notifyWarning({
+        key: "tenant-no-access",
+        title: "No tienes acceso a esta compañía",
+        fact: "Esa compañía no está en tu lista de accesos.",
+        consequence: "Sigues en la compañía actual.",
+      });
       setSwitchError("No tienes acceso a esta compañía.");
       return;
     }
@@ -303,7 +318,15 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
       setSwitchState("idle");
       setPendingSwitchId(null);
     } catch (err) {
-      console.error("[useCompany] switchCompany failed:", err);
+      // OX-1 — el cambio de tenant es reintentable de forma segura: no
+      // escribe nada, solo mueve contexto y limpia caché.
+      notifyError({
+        key: "tenant-switch",
+        title: "No pudimos cambiar de compañía",
+        fact: "El cambio de contexto no se completó.",
+        consequence: "Sigues en la compañía anterior. No hay datos mezclados.",
+        cause: err,
+      });
       setSwitchState("error");
       setSwitchError("No pudimos cambiar de compañía. Sigues en la compañía anterior.");
     }
