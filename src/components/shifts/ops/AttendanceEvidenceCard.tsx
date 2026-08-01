@@ -226,7 +226,7 @@ export function AttendanceEvidenceCard({ shift, assignments, companyId, userId }
     setSaving(false);
   };
 
-  const active = assignments.filter(a => a.status !== "rejected" && a.status !== "removed");
+  const hasEvidence = entries.length > 0 || validations.length > 0;
 
   return (
     <div className="rounded-2xl border border-border/40 bg-card p-5 space-y-4">
