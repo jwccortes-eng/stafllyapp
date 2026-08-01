@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, Star, Clock, CheckCircle2, Phone, UserPlus, Zap, TrendingUp } from "lucide-react";
+import { Loader2, CheckCircle2, Phone, UserPlus, Zap } from "lucide-react";
+import { WorkerCard } from "@/components/ocs";
 
 interface ReplacementSuggestionDialogProps {
   open: boolean;
@@ -280,78 +281,52 @@ function CandidateRow({ candidate: c, rank, onAssign, assigning, disabled }: {
   assigning: string | null;
   disabled?: boolean;
 }) {
-  const repColor = (c.rep_score ?? 50) >= 70 ? "text-earning" : (c.rep_score ?? 50) >= 50 ? "text-warning" : "text-destructive";
+  const name = `${c.first_name ?? ""} ${c.last_name ?? ""}`.trim();
+  const extraTags = c.tags.filter(t => t !== "disponible" && t !== "ocupado");
+  const facts: string[] = [];
+  if (typeof c.rep_score === "number") facts.push(`Reputación ${Math.round(c.rep_score)}/100`);
+  if (c.total_shifts > 0) facts.push(`${c.total_shifts} turnos`);
 
   return (
-    <div className={cn(
-      "flex items-center gap-3 rounded-xl px-3 py-2.5 border transition-all",
-      disabled ? "opacity-50 border-border/20 bg-muted/10" : "border-border/30 bg-card hover:shadow-sm",
-      rank === 1 && !disabled && "border-primary/20 bg-primary/[0.02] shadow-sm",
-    )}>
-      {/* Rank */}
-      {rank && (
-        <div className={cn(
-          "h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0",
-          rank === 1 ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground",
-        )}>
-          {rank}
-        </div>
-      )}
-
-      {/* Avatar */}
-      <Avatar className="h-8 w-8 shrink-0">
-        {c.avatar_url && <AvatarImage src={c.avatar_url} />}
-        <AvatarFallback className="text-[10px] font-bold bg-primary/10 text-primary">
-          {c.first_name?.[0]}{c.last_name?.[0]}
-        </AvatarFallback>
-      </Avatar>
-
-      {/* Info */}
-      <div className="flex-1 min-w-0">
-        <p className="text-xs font-semibold truncate">
-          {c.first_name} {c.last_name}
-          {rank === 1 && !disabled && <span className="ml-1.5 text-[9px] text-primary font-bold">⭐ Recomendado</span>}
-        </p>
-        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-          {c.employee_role && (
-            <span className="text-[9px] text-muted-foreground">{c.employee_role}</span>
-          )}
-          <span className={cn("text-[9px] font-medium flex items-center gap-0.5", repColor)}>
-            <TrendingUp className="h-2.5 w-2.5" />
-            {Math.round(c.rep_score ?? 50)}
-          </span>
-          {c.total_shifts > 0 && (
-            <span className="text-[9px] text-muted-foreground flex items-center gap-0.5">
-              <Clock className="h-2.5 w-2.5" />
-              {c.total_shifts} turnos
-            </span>
-          )}
-          {c.tags.filter(t => t !== "disponible" && t !== "ocupado").map(t => (
-            <Badge key={t} variant="outline" className="text-[8px] h-4 px-1.5">
-              {t}
-            </Badge>
-          ))}
-        </div>
-      </div>
-
-      {/* Actions */}
-      <div className="flex items-center gap-1 shrink-0">
-        {c.phone_number && (
-          <a href={`https://wa.me/${c.phone_number.replace(/\D/g, "")}`} target="_blank" rel="noreferrer"
-            className="rounded-lg p-1.5 hover:bg-muted/50 transition-colors" onClick={e => e.stopPropagation()}>
-            <Phone className="h-3.5 w-3.5 text-muted-foreground" />
-          </a>
-        )}
-        <Button
-          size="sm"
-          className="h-7 text-[10px] gap-1 rounded-lg"
-          disabled={disabled || assigning === c.id}
-          onClick={() => onAssign(c.id)}
-        >
-          {assigning === c.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <UserPlus className="h-3 w-3" />}
-          Asignar
-        </Button>
-      </div>
-    </div>
+    <WorkerCard
+      name={name}
+      role={c.employee_role ?? undefined}
+      avatarUrl={c.avatar_url}
+      status={disabled ? "blocked" : "ready"}
+      statusLabel={disabled ? "Ocupado" : rank === 1 ? "Mejor reemplazo" : "Disponible"}
+      completedShifts={c.total_shifts > 0 ? c.total_shifts : undefined}
+      skills={extraTags}
+      blocker={disabled ? "Ya tiene un turno en este horario." : null}
+      recommendation={facts.length > 0 ? facts.join(" · ") : undefined}
+      variant="compact"
+      action={
+        disabled
+          ? undefined
+          : {
+              label: "Asignar",
+              icon: UserPlus,
+              loading: assigning === c.id,
+              onClick: () => onAssign(c.id),
+              "aria-label": `Asignar a ${name} como reemplazo`,
+            }
+      }
+      actions={
+        c.phone_number
+          ? [
+              {
+                label: "Contactar",
+                icon: Phone,
+                onClick: () =>
+                  window.open(
+                    `https://wa.me/${c.phone_number!.replace(/\D/g, "")}`,
+                    "_blank",
+                    "noopener,noreferrer",
+                  ),
+                "aria-label": `Contactar a ${name}`,
+              },
+            ]
+          : undefined
+      }
+    />
   );
 }
