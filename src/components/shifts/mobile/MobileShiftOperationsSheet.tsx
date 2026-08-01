@@ -578,79 +578,34 @@ export function MobileShiftOperationsSheet({
             </section>
           )}
 
-          {/* 2. Siguiente paso recomendado — primary recommended action */}
-          {(() => {
-            // Decide the single most urgent recommendation.
-            const missing = slots > 0 ? Math.max(0, slots - assignedCount) : 0;
-            let title = "Listo para operar";
-            let text = "El turno está cubierto y publicado.";
-            let primary: { label: string; onClick: () => void; icon: any } | null = null;
-            let secondary: { label: string; onClick: () => void; icon: any } | null = null;
-            let helper: string | null = null;
+          {/* 2. Equipo — única declaración de cobertura de la pantalla. Sin barra, sin CTA duplicada. */}
+          <section>
+            <div className="rounded-2xl border border-border/60 bg-card p-4">
+              <div className="flex items-center gap-1.5">
+                <Users className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-bold text-foreground">Equipo</span>
+              </div>
+              <p className="mt-1 text-[15px] font-semibold tabular-nums text-foreground">
+                {slots > 0
+                  ? `${assignedCount} de ${slots} cubiertos`
+                  : `${assignedCount} ${assignedCount === 1 ? "persona asignada" : "personas asignadas"}`}
+              </p>
+              <p
+                className={cn(
+                  "mt-0.5 text-[13px] leading-snug",
+                  understaffed ? "text-critical font-semibold" : "text-muted-foreground",
+                )}
+              >
+                {understaffed
+                  ? `Falta ${slots - assignedCount} ${slots - assignedCount === 1 ? "persona" : "personas"}`
+                  : slots > 0
+                    ? "Equipo completo"
+                    : "Este turno no define cupos"}
+              </p>
+            </div>
+          </section>
 
-            if (published && understaffed && canValidate) {
-              title = "Siguiente paso recomendado";
-              text = `Faltan ${missing} trabajador${missing === 1 ? "" : "es"} para completar este turno.`;
-              primary = { label: "Gestionar equipo", onClick: () => setHubOpen(true), icon: Users };
-            } else if (noLocation) {
-              title = "Siguiente paso recomendado";
-              text = "Falta la ubicación del trabajo. Repórtala desde móvil o edítala en escritorio para fijarla en el sistema.";
-              primary = { label: "Reportar ubicación", onClick: () => setLocationReportOpen(true), icon: MapPin };
-            } else if (!mp) {
-              title = "Siguiente paso recomendado";
-              text = "Falta punto de encuentro para los trabajadores.";
-              if (canValidate) {
-                primary = { label: "Notificar equipo", onClick: () => setNotifyOpen(true), icon: Bell };
-              } else {
-                helper = "Agrega el punto de encuentro desde escritorio.";
-              }
-            } else if (draft && canValidate) {
-              title = "Siguiente paso recomendado";
-              text = "Borrador — los trabajadores aún no lo ven. Revisa el equipo y publica desde escritorio.";
-              primary = { label: "Gestionar equipo", onClick: () => setHubOpen(true), icon: Users };
-            } else if (canValidate) {
-              primary = { label: "Gestionar equipo", onClick: () => setHubOpen(true), icon: Users };
-              secondary = { label: "Asistencia", onClick: handleViewAttendance, icon: ClipboardList };
-            } else {
-              return null;
-            }
 
-            return (
-              <section>
-                <div className="rounded-2xl border border-primary/30 bg-primary/[0.04] p-4">
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <Sparkles className="h-4 w-4 text-primary" />
-                    <span className="text-sm font-bold text-foreground">{title}</span>
-                  </div>
-                  <p className="text-[13px] text-foreground/85 leading-snug mb-3">{text}</p>
-                  {primary && (
-                    <div className="flex flex-col gap-2">
-                      <Button
-                        className="w-full h-12 rounded-xl text-sm font-bold gap-2"
-                        onClick={primary.onClick}
-                      >
-                        <primary.icon className="h-4 w-4" />
-                        {primary.label}
-                      </Button>
-                      {secondary && (
-                        <Button
-                          variant="outline"
-                          className="w-full h-10 rounded-xl text-sm font-semibold gap-2"
-                          onClick={secondary.onClick}
-                        >
-                          <secondary.icon className="h-4 w-4" />
-                          {secondary.label}
-                        </Button>
-                      )}
-                    </div>
-                  )}
-                  {helper && !primary && (
-                    <p className="text-[12px] text-muted-foreground italic">{helper}</p>
-                  )}
-                </div>
-              </section>
-            );
-          })()}
 
 
           {/* 3. Equipo asignado */}
