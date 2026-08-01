@@ -27,7 +27,7 @@ const baseInput: SmartWorkCardInput = {
 };
 
 describe("<SmartWorkCard /> — base behavior", () => {
-  it("worker standard: shows timing, action 'Aceptar', estimated pay label, Trabajo # secondary", () => {
+  it("worker standard: muestra horario, 'Aceptar', pago estimado y UNA sola referencia", () => {
     const vm = buildSmartWorkCardViewModel(baseInput, {
       audience: "worker",
       density: "standard",
@@ -36,7 +36,10 @@ describe("<SmartWorkCard /> — base behavior", () => {
     expect(screen.getByText("8:00 AM")).toBeInTheDocument();
     expect(screen.getByText(/Termina aprox/)).toBeInTheDocument();
     expect(screen.getByText("Aceptar")).toBeInTheDocument();
-    expect(screen.getByText(/Trabajo.*0250/)).toBeInTheDocument();
+    // P0 · SHIFT IDENTITY: sin shift_ref, el fallback histórico es "#250" y no
+    // compite con ningún otro número en la tarjeta.
+    expect(screen.getByText("#250")).toBeInTheDocument();
+    expect(screen.queryByText(/Trabajo\s*0250/)).toBeNull();
     expect(screen.getByText("Estimado")).toBeInTheDocument();
   });
 
