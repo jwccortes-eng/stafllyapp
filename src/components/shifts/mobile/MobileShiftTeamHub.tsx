@@ -384,7 +384,24 @@ function MobileShiftTeamHubImpl({
   >(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
+  // P0 — "Retirar del turno" tiene su propia operación canónica.
+  const [removeTarget, setRemoveTarget] = useState<
+    { assignmentId: string; workerName: string; roleLabel: string | null; statusLine: string | null } | null
+  >(null);
+
   const openAssignmentAction = (assignmentId: string, nextStatus: AssignmentNextStatus, workerName: string) => {
+    if (nextStatus === "removed") {
+      const a = assignments.find(x => x.id === assignmentId);
+      setRemoveTarget({
+        assignmentId,
+        workerName,
+        roleLabel: a?.assignment_role === "driver" ? "Conductor" : null,
+        statusLine: a?.status === "confirmed"
+          ? "Esta persona ya confirmó el turno. Se le notificará."
+          : "Esta persona está asignada pero aún no ha fichado.",
+      });
+      return;
+    }
     setActionMode({ kind: "assignment_state", assignmentId, nextStatus, workerName });
     setActionDialogOpen(true);
   };
