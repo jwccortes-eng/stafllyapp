@@ -56,6 +56,7 @@ const TYPE_COLORS: Record<string, string> = {
 
 export default function Notifications() {
   const { user } = useAuth();
+  const { selectedCompanyId } = useCompany();
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [loading, setLoading] = useState(true);
@@ -66,29 +67,39 @@ export default function Notifications() {
   const fetchAll = useCallback(async () => {
     if (!user) return;
     setLoading(true);
+    // F0 — multi-tenant isolation: always scope to the active company.
+    if (!selectedCompanyId) {
+      setNotifications([]);
+      setLoading(false);
+      return;
+    }
     const { data } = await supabase
       .from("notifications")
       .select("id, title, body, type, read_at, created_at, metadata, company_id")
       .eq("recipient_id", user.id)
+      .eq("company_id", selectedCompanyId)
       .order("created_at", { ascending: false })
       .limit(200);
     if (data) setNotifications(data as AppNotification[]);
     setLoading(false);
-  }, [user]);
+  }, [user, selectedCompanyId]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
   const markAsRead = async (id: string) => {
-    await supabase.from("notifications").update({ read_at: new Date().toISOString() }).eq("id", id);
+    if (!selectedCompanyId) return;
+    await supabase.from("notifications").update({ read_at: new Date().toISOString() }).eq("id", id).eq("company_id", selectedCompanyId);
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read_at: new Date().toISOString() } : n));
   };
 
   const markAllAsRead = async () => {
+    if (!selectedCompanyId) return;
     const unreadIds = filtered.filter(n => !n.read_at).map(n => n.id);
     if (unreadIds.length === 0) return;
-    await supabase.from("notifications").update({ read_at: new Date().toISOString() }).in("id", unreadIds);
+    await supabase.from("notifications").update({ read_at: new Date().toISOString() }).in("id", unreadIds).eq("company_id", selectedCompanyId);
     setNotifications(prev => prev.map(n => unreadIds.includes(n.id) ? { ...n, read_at: new Date().toISOString() } : n));
   };
+
 
   const handleClick = (n: AppNotification) => {
     if (!n.read_at) markAsRead(n.id);
