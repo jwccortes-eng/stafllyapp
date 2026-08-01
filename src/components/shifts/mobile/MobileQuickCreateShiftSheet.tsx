@@ -623,11 +623,15 @@ export function MobileQuickCreateShiftSheet({
                 </button>
               ) : <span className="h-11 w-11 -ml-2" />}
               <div className="flex-1 min-w-0">
-                <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold">
-                  {result ? "Resultado" : `Paso ${stepIndex + 1} de ${STEPS.length} · ${current.label}`}
+                <p className="flex items-center gap-1 text-[11px] uppercase tracking-wide text-muted-foreground font-semibold truncate">
+                  <Building2 className="h-3 w-3 shrink-0" />
+                  <span className="truncate">{companyName}</span>
+                  <span className="shrink-0">· {result ? "Resultado" : `Paso ${stepIndex + 1}/${STEPS.length}`}</span>
                 </p>
                 <h2 className="text-[17px] font-bold leading-tight truncate">
-                  {result ? "Qué pasó con cada persona" : current.question}
+                  {result
+                    ? (confirmation?.kind === "context_mismatch" ? "Revisa dónde quedó el turno" : "Turno creado")
+                    : current.question}
                 </h2>
               </div>
               <button
