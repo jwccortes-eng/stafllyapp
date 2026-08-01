@@ -1132,53 +1132,52 @@ export function MobileShiftOperationsSheet({
           </section>
         </div>
 
-        {/* Sticky footer — Phase 1A: primary = Manage team (operational), secondary = Attendance. */}
+        {/* Sticky footer — OX-9.2: UNA sola acción principal. El resto vive en overflow. */}
         <div className="px-5 pt-3 pb-[max(env(safe-area-inset-bottom,0px),12px)] border-t border-border/40 bg-background/95 backdrop-blur-sm">
-          {canValidate ? (
-            <div className="flex items-center gap-2">
-              <Button
-                className="flex-1 h-12 rounded-xl text-sm font-semibold gap-2"
-                onClick={() => setHubOpen(true)}
-                aria-label="Abrir gestión de equipo de este turno"
-              >
-                <Users className="h-4 w-4" />
-                Gestionar equipo
-              </Button>
-              <Button
-                variant="outline"
-                className="h-12 px-4 rounded-xl text-sm font-semibold gap-2"
-                onClick={handleViewAttendance}
-                aria-label="Ver asistencia"
-              >
-                <ClipboardList className="h-4 w-4" />
-                Asistencia
-              </Button>
-            </div>
-          ) : (
+          <div className="flex items-center gap-2">
             <Button
-              className="w-full h-12 rounded-xl text-sm font-semibold gap-2"
-              onClick={handleViewAttendance}
+              className="flex-1 h-12 rounded-xl text-sm font-bold gap-2"
+              onClick={primaryAction.onClick}
+              aria-label={primaryAction.label}
             >
-              <ClipboardList className="h-4 w-4" />
-              Ver asistencia
+              <primaryAction.icon className="h-4 w-4" />
+              {primaryAction.label}
             </Button>
-          )}
-          {canValidate && onEdit && !editLocked && (
-            <Button
-              variant="outline"
-              className="w-full h-11 rounded-xl text-sm font-semibold gap-2 mt-2"
-              onClick={() => { onOpenChange(false); onEdit(shift); }}
-              aria-label="Editar fecha y horario de este turno"
-            >
-              <FileEdit className="h-4 w-4" />
-              Editar turno
-            </Button>
-          )}
-          <p className="mt-2 text-center text-[12px] text-muted-foreground">
-            Acciones seguras disponibles en móvil. Cambios avanzados siguen en escritorio.
-          </p>
-
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-12 w-12 rounded-xl shrink-0"
+                  aria-label="Más acciones del turno"
+                >
+                  <MoreHorizontal className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-60">
+                {canValidate && primaryAction.key !== "team" && (
+                  <DropdownMenuItem className="gap-2 h-11 text-sm" onClick={() => setHubOpen(true)}>
+                    <Users className="h-4 w-4" /> Gestionar equipo
+                  </DropdownMenuItem>
+                )}
+                {primaryAction.key !== "operate" && (
+                  <DropdownMenuItem className="gap-2 h-11 text-sm" onClick={handleViewAttendance}>
+                    <ClipboardList className="h-4 w-4" /> Asistencia
+                  </DropdownMenuItem>
+                )}
+                {canValidate && onEdit && !editLocked && (
+                  <DropdownMenuItem
+                    className="gap-2 h-11 text-sm"
+                    onClick={() => { onOpenChange(false); onEdit(shift); }}
+                  >
+                    <FileEdit className="h-4 w-4" /> Editar turno
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
+
       </SheetContent>
     </Sheet>
     <MobileShiftTeamHub
