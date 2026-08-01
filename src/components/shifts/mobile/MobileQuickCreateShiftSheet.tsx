@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { format, addDays, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import {
   Loader2, Check, Search, Users, X, ChevronLeft, ChevronRight,
   Building2, Clock, UserPlus, Plus, Minus, MapPin, ClipboardList,
+  AlertTriangle, RotateCw,
 } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -17,7 +18,15 @@ import { notifySuccess, notifyError, notifyWarning } from "@/lib/feedback/notify
 import { SmartLocationField } from "@/components/shifts/form/SmartLocationField";
 import { ClientAvatar } from "@/components/ui/client-avatar";
 import { assignWorkerToShift } from "@/lib/shifts/team-actions";
+import {
+  buildAssignOutcome,
+  summarizeCreateResult,
+  retryableOutcomes,
+  type AssignOutcome,
+  type CreateResultSummary,
+} from "@/lib/shifts/assign-outcome";
 import type { Shift, Assignment, Employee, SelectOption } from "@/components/shifts/types";
+
 
 /**
  * MobileQuickCreateShiftSheet — OX-7 Fase 4 · "Create Shift, Operation First".
@@ -207,6 +216,17 @@ export function MobileQuickCreateShiftSheet({
 
   const [saving, setSaving] = useState(false);
 
+  /* ── FASE 4.1 · hardening transaccional ──
+   * submitLockRef: bloquea el doble tap (el estado `saving` es asíncrono).
+   * createdShiftIdRef: si el turno ya se insertó, un reintento NUNCA crea otro;
+   *   sólo reintenta las asignaciones que fallaron.
+   */
+  const submitLockRef = useRef(false);
+  const createdShiftIdRef = useRef<string | null>(null);
+  const [outcomes, setOutcomes] = useState<AssignOutcome[]>([]);
+  const [result, setResult] = useState<CreateResultSummary | null>(null);
+  const [confirmClose, setConfirmClose] = useState(false);
+
   useEffect(() => {
     if (!open) return;
     setStep("operacion");
@@ -224,7 +244,13 @@ export function MobileQuickCreateShiftSheet({
     setMeetingPointLocationId(null);
     setNotes("");
     setSaving(false);
+    setOutcomes([]);
+    setResult(null);
+    setConfirmClose(false);
+    submitLockRef.current = false;
+    createdShiftIdRef.current = null;
   }, [open, todayStr, defaultStartTime, defaultEndTime, defaultSlots]);
+
 
   const client = useMemo(() => clients.find(c => c.id === clientId) ?? null, [clients, clientId]);
   const hasJobSite = !!(jobSiteLocationId || jobSiteAddress.trim());
@@ -285,8 +311,22 @@ export function MobileQuickCreateShiftSheet({
   const goBack = () => {
     const prev = STEPS[stepIndex - 1];
     if (prev) setStep(prev.key);
-    else onOpenChange(false);
+    else requestClose();
   };
+
+  /** Hay trabajo del operador que se perdería al cerrar. */
+  const isDirty =
+    !!clientId || !!serviceType || !!jobSiteAddress.trim() || !!jobSiteLocationId ||
+    team.length > 0 || !!meetingPoint.trim() || !!notes.trim() ||
+    date !== todayStr || startTime !== defaultStartTime || endTime !== defaultEndTime;
+
+  function requestClose() {
+    if (saving) return;
+    if (result) { onOpenChange(false); return; }
+    if (isDirty) { setConfirmClose(true); return; }
+    onOpenChange(false);
+  }
+
 
   const toggleWorker = (id: string) => {
     setTeam(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
@@ -297,64 +337,98 @@ export function MobileQuickCreateShiftSheet({
     return parts.join(" · ");
   }, [serviceType, client]);
 
+  /**
+   * Ejecuta las asignaciones de forma secuencial y devuelve el resultado
+   * por persona. La RPC es la única autoridad (compliance/permisos).
+   */
+  const runAssignments = async (shiftId: string, ids: string[]): Promise<AssignOutcome[]> => {
+    const out: AssignOutcome[] = [];
+    for (const employeeId of ids) {
+      const person = employees.find(x => x.id === employeeId);
+      const name = person ? fullName(person) : "Trabajador";
+      try {
+        await assignWorkerToShift({ shiftId, employeeId, source: "mobile_create_shift" });
+        out.push(buildAssignOutcome(employeeId, name, null));
+      } catch (e) {
+        out.push(buildAssignOutcome(employeeId, name, e));
+      }
+    }
+    return out;
+  };
+
   const handleCreate = async () => {
-    if (!companyId || saving || stepBlocker) return;
+    if (!companyId || submitLockRef.current || stepBlocker) return;
+    submitLockRef.current = true;
     setSaving(true);
     try {
-      const insertData: any = {
-        company_id: companyId,
-        title: shiftTitle,
-        date,
-        start_time: startTime,
-        end_time: endTime,
-        slots,
-        client_id: clientId || null,
-        job_site_address: jobSiteAddress.trim() || null,
-        job_site_location_id: jobSiteLocationId || null,
-        meeting_point: meetingPoint.trim() || null,
-        meeting_point_location_id: meetingPointLocationId || null,
-        notes: notes.trim() || null,
-        created_by: user?.id ?? null,
-        status: "published",
-        publication_status: "published",
-        published_at: new Date().toISOString(),
-        published_by: user?.id ?? null,
-        claimable: false,
-      };
+      // Idempotencia: si el turno ya existe (reintento tras fallo parcial),
+      // NO se vuelve a insertar.
+      let shiftId = createdShiftIdRef.current;
 
-      const { data, error } = await supabase
-        .from("scheduled_shifts")
-        .insert(insertData)
-        .select("id")
-        .single();
-      if (error) throw error;
-      const shiftId = data!.id as string;
+      if (!shiftId) {
+        const insertData: any = {
+          company_id: companyId,
+          title: shiftTitle,
+          date,
+          start_time: startTime,
+          end_time: endTime,
+          slots,
+          client_id: clientId || null,
+          job_site_address: jobSiteAddress.trim() || null,
+          job_site_location_id: jobSiteLocationId || null,
+          meeting_point: meetingPoint.trim() || null,
+          meeting_point_location_id: meetingPointLocationId || null,
+          notes: notes.trim() || null,
+          created_by: user?.id ?? null,
+          status: "published",
+          publication_status: "published",
+          published_at: new Date().toISOString(),
+          published_by: user?.id ?? null,
+          claimable: false,
+        };
 
-      // Equipo: se asigna con la RPC existente (compliance y permisos server-side).
-      let assigned = 0;
-      const failed: string[] = [];
-      for (const employeeId of team) {
-        try {
-          await assignWorkerToShift({
-            shiftId,
-            employeeId,
-            source: "mobile_create_shift",
-          });
-          assigned += 1;
-        } catch (e) {
-          const person = employees.find(x => x.id === employeeId);
-          failed.push(person ? fullName(person) : "Trabajador");
-          console.error("[CreateShift] assign error", e);
-        }
+        const { data, error } = await supabase
+          .from("scheduled_shifts")
+          .insert(insertData)
+          .select("id")
+          .single();
+        if (error) throw error;
+        shiftId = data!.id as string;
+        createdShiftIdRef.current = shiftId;
       }
 
+      // Sólo se intentan las personas que aún no están resueltas: evita duplicar.
+      const pendingIds = outcomes.length > 0
+        ? retryableOutcomes(outcomes).map(o => o.employeeId)
+        : team;
+
+      const fresh = await runAssignments(shiftId, pendingIds);
+      const merged: AssignOutcome[] = [
+        ...outcomes.filter(o => !pendingIds.includes(o.employeeId)),
+        ...fresh,
+      ];
+      const ordered = team
+        .map(id => merged.find(o => o.employeeId === id))
+        .filter(Boolean) as AssignOutcome[];
+
+      setOutcomes(ordered);
+      const summary = summarizeCreateResult(ordered, team.length);
+      setResult(summary);
+
+      // Auditoría: siempre refleja el resultado real, incluidos los fallos.
       try {
         await supabase.rpc("log_activity_detailed", {
           _action: "publicar_turno",
           _entity_type: "scheduled_shift",
           _entity_id: shiftId,
           _company_id: companyId,
-          _details: { source: "mobile_create_shift_flow", assigned },
+          _details: {
+            source: "mobile_create_shift_flow",
+            result: summary.kind,
+            requested: team.length,
+            assigned: summary.okCount,
+            failed: ordered.filter(o => !o.ok).map(o => ({ employee_id: o.employeeId, code: o.code })),
+          },
           _old_data: null,
           _new_data: {
             title: shiftTitle, date, start_time: startTime, end_time: endTime,
@@ -363,46 +437,88 @@ export function MobileQuickCreateShiftSheet({
         } as any);
       } catch { /* no bloqueante */ }
 
-      if (failed.length > 0) {
+      onCreated(shiftId);
+
+      if (summary.kind === "created_partial") {
         notifyWarning({
-          title: "Turno creado con equipo incompleto",
-          fact: `Se asignaron ${assigned} de ${team.length} personas. No se pudo asignar a ${failed.join(", ")}.`,
-          consequence: "El turno ya está publicado; completa el equipo desde el turno.",
+          title: summary.title,
+          fact: summary.fact,
+          consequence: "El turno ya está publicado; revisa quién quedó fuera.",
           key: "create-shift",
         });
+        // Se queda abierto en la pantalla de resultado por persona.
       } else {
         notifySuccess({
-          title: "Turno creado",
+          title: summary.title,
           fact: `${shiftTitle} · ${shortDate(date)} ${startTime}–${endTime}.`,
-          consequence: assigned > 0
-            ? `${assigned} ${assigned === 1 ? "persona asignada" : "personas asignadas"}; deben confirmar su asistencia.`
-            : "Aún no tiene equipo asignado.",
+          consequence: summary.fact,
           key: "create-shift",
         });
+        onOpenChange(false);
       }
-
-      onCreated(shiftId);
-      onOpenChange(false);
     } catch (e: any) {
+      const created = !!createdShiftIdRef.current;
       notifyError({
-        title: "No se pudo crear el turno",
-        fact: "El turno no se guardó y no se asignó a nadie.",
-        consequence: "Puedes reintentar sin duplicar información.",
+        title: created ? "El turno se creó, pero el equipo no" : "No se pudo crear el turno",
+        fact: created
+          ? "El turno está publicado; las asignaciones quedaron pendientes."
+          : "El turno no se guardó y no se asignó a nadie.",
+        consequence: "Reintentar no crea un turno duplicado.",
         action: { label: "Reintentar", onClick: () => { void handleCreate(); } },
         cause: e,
         key: "create-shift",
       });
     } finally {
+      submitLockRef.current = false;
       setSaving(false);
     }
   };
 
+
   const current = STEPS[stepIndex];
   const isTeamStep = step === "equipo";
+  const canRetryAssignments = retryableOutcomes(outcomes).length > 0;
+
+  /* ── Pantalla de resultado por persona (sólo si algo falló) ── */
+  const resultView = result ? (
+    <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+      <div className="rounded-2xl border border-status-warning/40 bg-status-warning/5 p-4">
+        <p className="flex items-center gap-2 text-[15px] font-semibold">
+          <AlertTriangle className="h-4 w-4 text-status-warning shrink-0" />
+          {result.title}
+        </p>
+        <p className="mt-1 text-[13px] text-muted-foreground">{result.fact}</p>
+        <p className="mt-1 text-[13px] text-muted-foreground">
+          El turno ya está publicado. Nada de esto afecta payroll.
+        </p>
+      </div>
+
+      <div className="rounded-2xl border border-border/60 bg-card overflow-hidden divide-y divide-border/40">
+        {outcomes.map(o => (
+          <div key={o.employeeId} className="flex items-start gap-3 px-4 py-3">
+            <span className={cn(
+              "h-9 w-9 rounded-full inline-flex items-center justify-center text-xs font-bold shrink-0",
+              o.ok ? "bg-status-success/15 text-status-success" : "bg-status-warning/15 text-status-warning",
+            )}>
+              {o.ok ? <Check className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[15px] font-medium break-words">{o.name}</span>
+              <span className="block text-[13px] text-muted-foreground break-words">{o.reason}</span>
+              {!o.ok && (
+                <span className="mt-0.5 block text-[13px] font-medium break-words">{o.nextAction}</span>
+              )}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  ) : null;
 
   return (
     <>
-      <Sheet open={open} onOpenChange={onOpenChange}>
+      <Sheet open={open} onOpenChange={(v) => { if (v) onOpenChange(true); else requestClose(); }}>
+
         <SheetContent
           side="bottom"
           className="h-[95dvh] rounded-t-3xl p-0 flex flex-col overflow-hidden gap-0"
@@ -410,23 +526,27 @@ export function MobileQuickCreateShiftSheet({
           {/* Cabecera: misión, no formulario */}
           <div className="shrink-0 px-4 pt-3 pb-3 border-b border-border/40">
             <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={goBack}
-                aria-label="Volver"
-                className="h-11 w-11 -ml-2 rounded-full inline-flex items-center justify-center active:bg-muted"
-              >
-                <ChevronLeft className="h-5 w-5" />
-              </button>
+              {!result ? (
+                <button
+                  type="button"
+                  onClick={goBack}
+                  aria-label="Volver"
+                  className="h-11 w-11 -ml-2 rounded-full inline-flex items-center justify-center active:bg-muted"
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                </button>
+              ) : <span className="h-11 w-11 -ml-2" />}
               <div className="flex-1 min-w-0">
                 <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold">
-                  Paso {stepIndex + 1} de {STEPS.length} · {current.label}
+                  {result ? "Resultado" : `Paso ${stepIndex + 1} de ${STEPS.length} · ${current.label}`}
                 </p>
-                <h2 className="text-[17px] font-bold leading-tight truncate">{current.question}</h2>
+                <h2 className="text-[17px] font-bold leading-tight truncate">
+                  {result ? "Qué pasó con cada persona" : current.question}
+                </h2>
               </div>
               <button
                 type="button"
-                onClick={() => onOpenChange(false)}
+                onClick={requestClose}
                 aria-label="Cerrar"
                 className="h-11 w-11 -mr-2 rounded-full inline-flex items-center justify-center active:bg-muted"
               >
@@ -440,14 +560,16 @@ export function MobileQuickCreateShiftSheet({
                   key={s.key}
                   className={cn(
                     "h-1 flex-1 rounded-full transition-colors",
-                    i <= stepIndex ? "bg-primary" : "bg-muted",
+                    result || i <= stepIndex ? "bg-primary" : "bg-muted",
                   )}
                 />
               ))}
             </div>
           </div>
 
+          {result ? resultView : (
           <div className={cn("flex-1 overflow-y-auto", isTeamStep ? "px-0 py-0" : "px-4 py-4 space-y-5")}>
+
             {/* ── PASO 1 · ¿Qué operación? ── */}
             {step === "operacion" && (
               <>
@@ -775,34 +897,90 @@ export function MobileQuickCreateShiftSheet({
               </div>
             )}
           </div>
+          )}
 
           {/* Footer: una sola acción */}
           <div
             className="shrink-0 border-t border-border/40 bg-background/95 backdrop-blur-sm px-4 pt-3"
             style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)" }}
           >
-            {stepBlocker && (
-              <p className="text-xs text-destructive mb-2">{stepBlocker}</p>
-            )}
-            {step === "confirmar" ? (
-              <Button
-                className="w-full h-14 text-base font-semibold rounded-2xl"
-                disabled={saving || !!stepBlocker}
-                onClick={handleCreate}
-              >
-                {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : "Crear turno"}
-              </Button>
+            {result ? (
+              <div className="space-y-2">
+                {canRetryAssignments && (
+                  <Button
+                    variant="outline"
+                    className="w-full h-12 text-base font-semibold rounded-2xl"
+                    disabled={saving}
+                    onClick={handleCreate}
+                  >
+                    {saving
+                      ? <Loader2 className="h-5 w-5 animate-spin" />
+                      : <><RotateCw className="h-4 w-4 mr-2" />Reintentar los que fallaron</>}
+                  </Button>
+                )}
+                <Button
+                  className="w-full h-14 text-base font-semibold rounded-2xl"
+                  disabled={saving}
+                  onClick={() => onOpenChange(false)}
+                >
+                  Ir al turno
+                </Button>
+              </div>
             ) : (
-              <Button
-                className="w-full h-14 text-base font-semibold rounded-2xl"
-                disabled={!!stepBlocker}
-                onClick={goNext}
-              >
-                {isTeamStep && team.length === 0 ? "Continuar sin equipo" : "Continuar"}
-                <ChevronRight className="h-5 w-5 ml-1" />
-              </Button>
+              <>
+                {stepBlocker && (
+                  <p className="text-xs text-destructive mb-2">{stepBlocker}</p>
+                )}
+                {step === "confirmar" ? (
+                  <Button
+                    className="w-full h-14 text-base font-semibold rounded-2xl"
+                    disabled={saving || !!stepBlocker}
+                    onClick={handleCreate}
+                  >
+                    {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : "Crear turno"}
+                  </Button>
+                ) : (
+                  <Button
+                    className="w-full h-14 text-base font-semibold rounded-2xl"
+                    disabled={!!stepBlocker}
+                    onClick={goNext}
+                  >
+                    {isTeamStep && team.length === 0 ? "Continuar sin equipo" : "Continuar"}
+                    <ChevronRight className="h-5 w-5 ml-1" />
+                  </Button>
+                )}
+              </>
             )}
           </div>
+
+          {/* Confirmación de cierre con cambios sin guardar */}
+          {confirmClose && (
+            <div className="absolute inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-end">
+              <div
+                className="w-full rounded-t-3xl border-t border-border/60 bg-card p-5 space-y-3"
+                style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 16px)" }}
+              >
+                <p className="text-[17px] font-bold">¿Descartar este turno?</p>
+                <p className="text-[13px] text-muted-foreground">
+                  Todavía no se ha creado nada. Si sales, se pierde lo que llevas escrito.
+                </p>
+                <Button
+                  variant="outline"
+                  className="w-full h-12 rounded-2xl"
+                  onClick={() => setConfirmClose(false)}
+                >
+                  Seguir editando
+                </Button>
+                <Button
+                  variant="destructive"
+                  className="w-full h-12 rounded-2xl"
+                  onClick={() => { setConfirmClose(false); onOpenChange(false); }}
+                >
+                  Descartar
+                </Button>
+              </div>
+            </div>
+          )}
         </SheetContent>
       </Sheet>
 
@@ -813,6 +991,7 @@ export function MobileQuickCreateShiftSheet({
         value={clientId}
         onChange={setClientId}
       />
+
     </>
   );
 }
