@@ -83,22 +83,37 @@ export function CrossCompanyShiftHint({ query, noLocalResults, onSwitch }: Props
 
   if (hits.length === 0) return null;
 
+  const typed = normalizeShiftQuery(query);
+
   return (
     <div className="rounded-2xl border border-border/60 bg-card p-4 space-y-3">
-      <p className="text-[15px] font-semibold">Este turno existe en otra empresa</p>
-      {hits.map(h => (
+      <p className="text-[15px] font-semibold">Encontramos este turno en otra empresa</p>
+      {hits.map(h => {
+        const identity = getShiftDisplayIdentity(h, { companyName: h.company_name });
+        // El usuario buscó por un número anterior: se lo decimos, pero la
+        // identidad que mostramos es siempre la referencia canónica.
+        const searchedByLegacy =
+          identity.hasCanonicalRef && typed && identity.primaryRef.toUpperCase() !== typed;
+        return (
         <div key={h.shift_id} className="flex flex-wrap items-center gap-3">
           <span className="h-9 w-9 rounded-full bg-muted inline-flex items-center justify-center shrink-0">
             <Building2 className="h-4 w-4 text-muted-foreground" />
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block text-[14px] font-medium break-words">
-              {h.company_name} · {h.shift_ref ?? "—"}
+            <span className="block text-[13px] text-muted-foreground break-words">{h.company_name}</span>
+            <span className="block text-[15px] font-semibold font-mono break-words">
+              {identity.primaryRef}
             </span>
             <span className="block text-[13px] text-muted-foreground break-words">
               {h.title} · {h.date} · {h.start_time.slice(0, 5)}–{h.end_time.slice(0, 5)}
             </span>
+            {searchedByLegacy && (
+              <span className="block text-[12px] text-muted-foreground/80 break-words">
+                Buscado mediante referencia anterior {typed}.
+              </span>
+            )}
           </span>
+
           <Button
             variant="outline"
             className="min-h-[44px]"
