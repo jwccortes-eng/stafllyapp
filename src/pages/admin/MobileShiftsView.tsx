@@ -689,6 +689,9 @@ export default function MobileShiftsView() {
         companyId={selectedCompanyId}
         clients={clients}
         locations={locations}
+        employees={employees}
+        shifts={shifts}
+        assignments={assignments}
         requireClient={Boolean(shiftsConfig?.require_client)}
         requireLocation={Boolean(shiftsConfig?.require_location)}
         defaultStartTime={shiftsConfig?.default_start_time ?? "09:00"}
