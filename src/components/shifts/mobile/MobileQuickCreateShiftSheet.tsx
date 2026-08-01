@@ -229,6 +229,7 @@ export function MobileQuickCreateShiftSheet({
    */
   const submitLockRef = useRef(false);
   const createdShiftIdRef = useRef<string | null>(null);
+  const persistedRef = useRef<PersistedShiftFacts | null>(null);
   const [outcomes, setOutcomes] = useState<AssignOutcome[]>([]);
   const [result, setResult] = useState<CreateResultSummary | null>(null);
   const [confirmClose, setConfirmClose] = useState(false);
