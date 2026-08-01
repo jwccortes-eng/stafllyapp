@@ -27,6 +27,7 @@ import { MobileQuickCreateShiftSheet } from "@/components/shifts/mobile/MobileQu
 import { MobileShiftEditSheet } from "@/components/shifts/mobile/MobileShiftEditSheet";
 
 import { isDraftShift, isPublishedShift } from "@/lib/shifts/shift-guards";
+import { displayShiftRef } from "@/lib/shifts/shift-ref";
 import type { Shift, Assignment, Employee, SelectOption } from "@/components/shifts/types";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";

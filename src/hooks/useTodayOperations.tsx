@@ -262,6 +262,7 @@ export function useTodayOperations(
         publication_status: s.publication_status ?? null,
         slots,
         shift_code: s.shift_code ?? null,
+        shift_ref: (s as any).shift_ref ?? null,
         client_id: s.client_id ?? null,
         client_name: s.client_id ? (clientMap.get(s.client_id) ?? null) : null,
         location_id: s.location_id ?? null,
