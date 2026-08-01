@@ -35,6 +35,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { notifyError, notifyWarning } from "@/lib/feedback/notify";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompanyConfig } from "@/hooks/useCompanyConfig";
@@ -115,6 +116,15 @@ export function AutoDispatchPanel({
         try {
           const results = await executeAutoDispatch(companyId);
           const executed = results.filter(r => r.status === "executed");
+          const failed = results.filter(r => r.status !== "executed");
+          if (failed.length > 0) {
+            notifyWarning({
+              key: "auto-dispatch-partial",
+              title: `${failed.length} de ${results.length} turnos no se despacharon`,
+              fact: "El resto sí se ejecutó correctamente.",
+              consequence: "Revisa esos turnos y despáchalos manualmente.",
+            });
+          }
           if (executed.length > 0) {
             setLogRefreshKey(k => k + 1);
             executed.forEach(r => {
@@ -129,7 +139,15 @@ export function AutoDispatchPanel({
             });
           }
         } catch (err) {
-          console.warn("[AutoDispatchPanel] auto-execute failed", err);
+          // OX-1 — sin reintento automático: reintentar puede duplicar
+          // asignaciones o broadcasts. Solo informamos y dejamos decidir.
+          notifyWarning({
+            key: "auto-dispatch-execute",
+            title: "El despacho automático no se completó",
+            fact: "Uno o más turnos no pudieron auto-asignarse en este ciclo.",
+            consequence: "No se creó ninguna asignación parcial. Puedes despacharlos manualmente.",
+            cause: err,
+          });
         }
       }
 
@@ -142,7 +160,15 @@ export function AutoDispatchPanel({
         if (id) logIdMapRef.current.set(s.id, id);
       }
     } catch (err) {
-      console.warn("[AutoDispatchPanel] refresh failed", err);
+      // OX-1 — leer sugerencias es idempotente: el reintento es seguro.
+      notifyError({
+        key: "auto-dispatch-refresh",
+        title: "No pudimos actualizar las sugerencias",
+        fact: "La lista de despacho quedó con los datos anteriores.",
+        consequence: "Puede que falten turnos sin cobertura.",
+        action: { label: "Reintentar", onClick: () => { void refreshRef.current?.(); } },
+        cause: err,
+      });
     } finally {
       setLoading(false);
     }

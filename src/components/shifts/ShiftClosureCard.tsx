@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
+import { notifyError, notifySuccess } from "@/lib/feedback/notify";
 import {
   ClipboardCheck, CheckCircle2, AlertTriangle, Loader2, Info, Lock, RefreshCw,
 } from "lucide-react";
@@ -80,7 +81,8 @@ export function ShiftClosureCard({
         setClosedByName((data as any)?.full_name ?? null);
       }
     } catch (e) {
-      console.warn("[shift-closure] load failed", e);
+      // El bloque de error en pantalla ya es visible; el log queda para soporte.
+      console.error("[feedback:error] shift-closure-load", e);
       setLoadError(true);
     }
   }, [companyId, shiftId, assignedCount, shiftEnded]);
@@ -96,13 +98,26 @@ export function ShiftClosureCard({
         staffCountReported: assignedCount,
       });
       setCloseout(row);
-      toast.success("Turno cerrado correctamente.");
+      notifySuccess({
+        key: "shift-close",
+        title: "Turno cerrado",
+        fact: "El cierre quedó registrado con la evidencia del turno.",
+        consequence: "Este turno ya no admite cambios operativos.",
+      });
       setDialogOpen(false);
       await load();
       onClosed?.();
     } catch (e: any) {
-      toast.error("No pudimos cerrar el turno. Revisa los pendientes e intenta de nuevo.");
-      console.warn("[shift-closure] close failed", e);
+      // Reintento seguro: `closeShift` es idempotente (si ya está cerrado
+      // devuelve la fila existente en vez de volver a escribir).
+      notifyError({
+        key: "shift-close",
+        title: "No pudimos cerrar el turno",
+        fact: "No se registró ningún cambio.",
+        consequence: "El turno sigue abierto y conservas lo que ya revisaste.",
+        action: { label: "Reintentar", onClick: () => { void doCloseRef.current?.(); } },
+        cause: e,
+      });
     } finally {
       setSubmitting(false);
     }

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
+import { notifyError, notifySuccess, notifyWarning } from "@/lib/feedback/notify";
 import { Loader2, CheckCircle2, Undo2, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -58,7 +59,8 @@ export function HoursApprovalPanel({ companyId, shiftId, onChanged }: HoursAppro
       .eq("shift_id", shiftId)
       .order("clock_in", { ascending: true });
     if (error) {
-      console.warn("[hours-approval] load failed", error);
+      // El bloque de error en pantalla ya comunica el fallo al usuario.
+      console.error("[feedback:error] hours-approval-load", error);
       setLoadError(true);
       return;
     }
@@ -92,15 +94,26 @@ export function HoursApprovalPanel({ companyId, shiftId, onChanged }: HoursAppro
     setBusy(true);
     try {
       const n = await approveHours([...selected], { companyId, userId: user.id, shiftId });
-      toast.success(
-        n === 1 ? "1 registro de horas aprobado · listo para payroll" : `${n} registros aprobados · listos para payroll`,
-      );
+      notifySuccess({
+        key: "hours-approve",
+        title: "Horas aprobadas",
+        fact: n === 1 ? "1 registro fue aprobado." : `${n} registros fueron aprobados.`,
+        consequence: "Este turno ya puede avanzar hacia payroll.",
+      });
       setSelected(new Set());
       await load();
       onChanged?.();
     } catch (e: any) {
-      toast.error("No pudimos aprobar las horas. Intenta de nuevo.");
-      console.warn("[hours-approval] approve failed", e);
+      // Reintento seguro: la aprobación es un UPDATE por id, no crea filas.
+      // La selección se conserva intacta para no perder el contexto.
+      notifyError({
+        key: "hours-approve",
+        title: "No pudimos aprobar las horas",
+        fact: "No se realizaron cambios.",
+        consequence: "Tu selección sigue activa.",
+        action: { label: "Reintentar", onClick: () => { void runApproveRef.current?.(); } },
+        cause: e,
+      });
     } finally {
       setBusy(false);
     }
@@ -109,7 +122,12 @@ export function HoursApprovalPanel({ companyId, shiftId, onChanged }: HoursAppro
   const runReturn = async () => {
     if (busy || selected.size === 0 || !user) return;
     if (!reason.trim()) {
-      toast.error("Escribe el motivo para devolver las horas.");
+      notifyWarning({
+        key: "hours-return-reason",
+        title: "Falta el motivo",
+        fact: "Devolver horas requiere explicar qué debe corregirse.",
+        consequence: "El worker necesita saber qué revisar.",
+      });
       return;
     }
     setBusy(true);
@@ -117,15 +135,26 @@ export function HoursApprovalPanel({ companyId, shiftId, onChanged }: HoursAppro
       const n = await returnHoursForCorrection([...selected], reason.trim(), {
         companyId, userId: user.id, shiftId,
       });
-      toast.success(`${n} registro(s) devuelto(s) para corrección`);
+      notifySuccess({
+        key: "hours-return",
+        title: "Horas devueltas para corrección",
+        fact: n === 1 ? "1 registro fue devuelto." : `${n} registros fueron devueltos.`,
+        consequence: "Quedan fuera de payroll hasta que se corrijan.",
+      });
       setSelected(new Set());
       setReason("");
       setShowReason(false);
       await load();
       onChanged?.();
     } catch (e: any) {
-      toast.error("No pudimos devolver las horas. Intenta de nuevo.");
-      console.warn("[hours-approval] return failed", e);
+      notifyError({
+        key: "hours-return",
+        title: "No pudimos devolver las horas",
+        fact: "No se realizaron cambios.",
+        consequence: "Tu selección y el motivo escrito se conservan.",
+        action: { label: "Reintentar", onClick: () => { void runReturnRef.current?.(); } },
+        cause: e,
+      });
     } finally {
       setBusy(false);
     }
