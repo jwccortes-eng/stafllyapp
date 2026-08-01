@@ -399,23 +399,43 @@ export default function ValidationCenter() {
           <DialogHeader>
             <DialogTitle>{decision?.action.label}</DialogTitle>
             <DialogDescription>
-              {decision?.item.title}
-              {decision?.action.consequence ? ` — ${decision.action.consequence}` : ""}
+              {decision
+                ? [decision.item.title, decision.item.subtitle].filter(Boolean).join(" · ")
+                : ""}
             </DialogDescription>
           </DialogHeader>
 
           {decision ? (
             <div className="space-y-3">
+              <p className={cn(MT.bodyStrong)}>{decision.item.headline}</p>
+              {decision.action.consequence ? (
+                <p className={cn(MT.body, "text-muted-foreground")}>
+                  {decision.action.consequence}
+                </p>
+              ) : null}
               <dl className="grid grid-cols-2 gap-2">
                 {decision.item.evidence.map((e) => (
                   <div key={e.label}>
                     <dt className={cn(MT.caption, "text-muted-foreground")}>{e.label}</dt>
-                    <dd className={cn(MT.body, e.attention && "text-amber-600 font-medium")}>
+                    <dd className={cn(MT.body, e.attention && "text-status-warning font-medium")}>
                       {e.value}
                     </dd>
                   </div>
                 ))}
               </dl>
+              {decision.item.conversation.length > 0 ? (
+                <div className="rounded-xl border border-border/60 bg-muted/30 p-2.5 space-y-2">
+                  {decision.item.conversation.map((m) => (
+                    <div key={m.id}>
+                      <p className={cn(MT.caption, "text-muted-foreground")}>
+                        {m.author} · {m.authorRole}
+                      </p>
+                      <p className={MT.body}>{m.body}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+
               <p className={cn(MT.caption, "text-muted-foreground")}>
                 Prioridad {PRIORITY_LABEL[decision.item.priority]} · {decision.item.auditSummary}
               </p>
