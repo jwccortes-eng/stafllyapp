@@ -25,7 +25,7 @@ export function observeOperationalEvent(
     const persist = () => {
       void supabase
         .from("operational_signal_shadow_decisions")
-        .insert({
+        .insert([{
           company_id: event.companyId,
           event_id: event.eventId,
           correlation_id: event.correlationId ?? null,
@@ -61,7 +61,7 @@ export function observeOperationalEvent(
             event_payload: event.eventPayload ?? {},
           },
           decision_version: decision.decisionVersion,
-        })
+        }])
         .then(
           () => undefined,
           () => undefined,
