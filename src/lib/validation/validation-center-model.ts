@@ -704,6 +704,234 @@ function buildCloseoutItem(
   };
 }
 
+/* ── OX-4.4.1 — Capa humana ──────────────────────────────────────────── */
+
+const MONTHS_ES = [
+  "enero", "febrero", "marzo", "abril", "mayo", "junio",
+  "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
+];
+
+/** "31 de julio". Devuelve null si no hay fecha real. */
+function humanDate(isoDate: string | null | undefined): string | null {
+  if (!isoDate) return null;
+  const d = new Date(`${String(isoDate).slice(0, 10)}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return null;
+  return `${d.getDate()} de ${MONTHS_ES[d.getMonth()]}`;
+}
+
+/** "08:00–16:00". Null si falta cualquiera de los extremos. */
+function humanRange(start?: string | null, end?: string | null): string | null {
+  const s = start ? String(start).slice(0, 5) : null;
+  const e = end ? String(end).slice(0, 5) : null;
+  if (!s && !e) return null;
+  return s && e ? `${s}–${e}` : (s ?? e);
+}
+
+function contextOf(src: ShiftContextInput, fallbackTitle: string | null): ValidationContext {
+  return {
+    shiftTitle: (src.shift_title ?? "").trim() || fallbackTitle,
+    clientName: (src.client_name ?? "").trim() || null,
+    dateLabel: humanDate(src.shift_date),
+    timeRange: humanRange(src.shift_start_time, src.shift_end_time),
+  };
+}
+
+/** Segunda línea humana: "Marriott · 31 de julio · 08:00–16:00". */
+function contextLine(ctx: ValidationContext): string | null {
+  return [ctx.clientName, ctx.dateLabel, ctx.timeRange].filter(Boolean).join(" · ") || null;
+}
+
+function clean(text: string | null | undefined): string | null {
+  const t = (text ?? "").trim();
+  return t.length > 0 ? t : null;
+}
+
+/** Añade una nota humana sólo si el dato existe de verdad. */
+function pushNote(
+  notes: ValidationHumanNote[],
+  kind: ValidationHumanRole,
+  label: string,
+  value: string | null | undefined,
+  at?: string | null,
+) {
+  const v = clean(value);
+  if (!v) return;
+  notes.push({ kind, label, value: v, at: at ?? null });
+}
+
+function pushMessage(
+  thread: ValidationMessage[],
+  id: string,
+  author: string | null | undefined,
+  authorRole: string,
+  body: string | null | undefined,
+  at: string | null | undefined,
+  tone: ValidationMessage["tone"],
+) {
+  const text = clean(body);
+  if (!text) return;
+  thread.push({
+    id,
+    author: clean(author) ?? "Sin identificar",
+    authorRole,
+    body: text,
+    at: at ?? null,
+    tone,
+  });
+}
+
+/** Frase de decisión legible en menos de 3 segundos. */
+function headlineFor(draft: ValidationItemDraft, hours: number | null, openFor: number | null): string {
+  switch (draft.validationType) {
+    case "hours_approval":
+      return hours === null
+        ? "Horas pendientes de aprobación"
+        : `${hours} horas pendientes de aprobación`;
+    case "evidence_review":
+      return openFor !== null && openFor > 0
+        ? `Sin salida registrada · abierto hace ${Math.round(openFor)} h`
+        : "Sin salida registrada";
+    case "correction_requested":
+      return draft.source === "time_entries"
+        ? "Corrección solicitada · fuera de payroll"
+        : "Cierre devuelto al capitán";
+    case "ready_for_payroll":
+      return draft.source === "time_entries" && hours !== null
+        ? `${hours} horas aprobadas · listas para payroll`
+        : "Listo para payroll";
+    case "incident_review":
+      return "Incidencia reportada en el cierre";
+    case "exception_review":
+      return "Excepción de cierre sin resolver";
+    case "shift_closeout":
+    default:
+      return "Cierre de turno pendiente de revisión";
+  }
+}
+
+function enrichHours(draft: ValidationItemDraft, e: HoursEntryInput, now: Date): ValidationItem {
+  const hours = realHours(e);
+  const openFor = !e.clock_out ? hoursSinceIso(e.clock_in, now) : null;
+  const person: ValidationPerson = {
+    name: workerLabel(e.worker_name),
+    avatarUrl: clean(e.worker_avatar_url),
+    role: clean(e.worker_role),
+  };
+  const ctx = contextOf(e, shiftLabel(e));
+
+  const secondaryEvidence: ValidationEvidence[] = [];
+  if (e.clock_in) {
+    secondaryEvidence.push({
+      label: "Entrada registrada",
+      value: new Date(e.clock_in).toLocaleString("es"),
+    });
+  }
+  if (e.clock_out) {
+    secondaryEvidence.push({
+      label: "Salida registrada",
+      value: new Date(e.clock_out).toLocaleString("es"),
+    });
+  }
+  secondaryEvidence.push({ label: "Descanso", value: `${e.break_minutes ?? 0} min` });
+  if (clean(e.entry_source)) {
+    secondaryEvidence.push({ label: "Origen del fichaje", value: clean(e.entry_source)! });
+  }
+  if (clean(e.approved_by_name)) {
+    secondaryEvidence.push({ label: "Aprobado por", value: clean(e.approved_by_name)! });
+  }
+
+  const humanContext: ValidationHumanNote[] = [];
+  pushNote(humanContext, "created_by", "Fichaje de", person.name, e.clock_in);
+  pushNote(humanContext, "supervised_by", "Responsable del turno", e.shift_admin_name);
+  if (draft.status === "correction_requested") {
+    pushNote(humanContext, "awaiting", "Esperando a", person.name);
+  }
+  pushNote(humanContext, "updated", "Última actualización", 
+    e.approved_at ? new Date(e.approved_at).toLocaleString("es") : null, e.approved_at);
+
+  const conversation: ValidationMessage[] = [];
+  pushMessage(conversation, `${draft.id}:note`, person.name, "Worker", e.notes, e.clock_out ?? e.clock_in, "worker");
+
+  return {
+    ...draft,
+    title: person.name,
+    subtitle: contextLine(ctx) ?? shiftLabel(e),
+    headline: headlineFor(draft, hours, openFor),
+    person,
+    context: ctx,
+    secondaryEvidence,
+    humanContext,
+    conversation,
+  };
+}
+
+function enrichCloseout(draft: ValidationItemDraft, c: CloseoutInput): ValidationItem {
+  const ctx = contextOf(c, shiftLabel(c));
+  const submitter = clean(c.submitted_by_name);
+  const person: ValidationPerson | null = submitter
+    ? {
+        name: submitter,
+        avatarUrl: clean(c.submitted_avatar_url),
+        role: clean(c.submitted_role) ?? "Cerró el turno",
+      }
+    : null;
+
+  const secondaryEvidence: ValidationEvidence[] = [];
+  if (c.submitted_at) {
+    secondaryEvidence.push({
+      label: "Cierre enviado",
+      value: new Date(c.submitted_at).toLocaleString("es"),
+    });
+  }
+  if (typeof c.uniform_ok === "boolean") {
+    secondaryEvidence.push({
+      label: "Uniforme",
+      value: c.uniform_ok ? "Correcto" : "Con observaciones",
+      attention: !c.uniform_ok,
+    });
+  }
+  if (c.reviewed_at) {
+    secondaryEvidence.push({
+      label: "Revisado",
+      value: new Date(c.reviewed_at).toLocaleString("es"),
+    });
+  }
+  if (clean(c.final_approved_by_name)) {
+    secondaryEvidence.push({ label: "Firma final", value: clean(c.final_approved_by_name)! });
+  }
+
+  const humanContext: ValidationHumanNote[] = [];
+  pushNote(humanContext, "created_by", "Cierre enviado por", submitter, c.submitted_at);
+  pushNote(humanContext, "supervised_by", "Revisado por", c.reviewer_name, c.reviewed_at);
+  if (draft.status === "rejected" || draft.status === "correction_requested") {
+    pushNote(humanContext, "requested_correction", "Devuelto por", c.reviewer_name, c.reviewed_at);
+    pushNote(humanContext, "awaiting", "Esperando a", submitter ?? "el capitán");
+  }
+  const lastUpdate = c.updated_at ?? c.reviewed_at ?? c.submitted_at;
+  pushNote(humanContext, "updated", "Última actualización",
+    lastUpdate ? new Date(lastUpdate).toLocaleString("es") : null, lastUpdate);
+
+  const conversation: ValidationMessage[] = [];
+  pushMessage(conversation, `${draft.id}:notes`, submitter, clean(c.submitted_role) ?? "Capitán", c.notes, c.submitted_at, "worker");
+  pushMessage(conversation, `${draft.id}:review`, c.reviewer_name, "Supervisión", c.review_notes, c.reviewed_at, "supervisor");
+  pushMessage(conversation, `${draft.id}:client`, ctx.clientName ?? "Cliente", "Cliente", c.client_feedback, c.submitted_at, "client");
+  pushMessage(conversation, `${draft.id}:final`, c.final_approved_by_name, "Aprobación final", c.final_approval_notes, c.final_approved_at, "system");
+
+  const title = ctx.shiftTitle ?? "Turno";
+  return {
+    ...draft,
+    title,
+    subtitle: contextLine(ctx),
+    headline: headlineFor(draft, null, null),
+    person,
+    context: ctx,
+    secondaryEvidence,
+    humanContext,
+    conversation,
+  };
+}
+
+
 /* ── Modelo ──────────────────────────────────────────────────────────── */
 
 function sortItems(a: ValidationItem, b: ValidationItem): number {
