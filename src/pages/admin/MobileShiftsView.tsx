@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   CalendarDays, SlidersHorizontal, ChevronRight,
-  Users, AlertTriangle, Building2, Plus,
+  Users, AlertTriangle, Plus,
 } from "lucide-react";
 import { ShiftRouteHeader, type ShiftRouteHeaderTone } from "@/components/stafly-ui";
 import { format, parseISO, isToday, isTomorrow, addDays } from "date-fns";
@@ -521,9 +521,11 @@ export default function MobileShiftsView() {
       {/* Pulso de la vista: una sola línea, no cuatro tarjetas */}
       {!loading && !error && tab !== "requests" && summary.shifts > 0 && (
         <div className="px-4 pt-3">
-          <p className="text-xs text-muted-foreground">
-            <span className="font-semibold text-foreground tabular-nums">{summary.shifts}</span> turnos ·{" "}
-            <span className="font-semibold text-foreground tabular-nums">{summary.workers}</span> personas ·{" "}
+          <p className="text-[13px] text-muted-foreground">
+            <span className="font-semibold text-foreground tabular-nums">{summary.shifts}</span>{" "}
+            {summary.shifts === 1 ? "turno" : "turnos"} ·{" "}
+            <span className="font-semibold text-foreground tabular-nums">{summary.workers}</span>{" "}
+            {summary.workers === 1 ? "persona" : "personas"} ·{" "}
             <span className={cn(
               "font-semibold tabular-nums",
               summary.coverage >= 90 ? "text-status-success" : summary.coverage >= 60 ? "text-status-warning" : "text-status-danger"
@@ -534,6 +536,7 @@ export default function MobileShiftsView() {
           </p>
         </div>
       )}
+
 
       {/* List */}
       <div className="px-4 pt-4">
@@ -578,9 +581,6 @@ export default function MobileShiftsView() {
                 <div className="flex items-baseline gap-2 mb-2.5 px-1">
                   <span className="text-sm font-semibold text-foreground">
                     {group.label}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    · {group.shifts.length} turno{group.shifts.length === 1 ? "" : "s"}
                   </span>
                 </div>
                 <div className="space-y-2.5">
@@ -731,11 +731,6 @@ function ShiftCard({
 }: ShiftCardProps) {
   const visibleNames = assignedEmployees.slice(0, 2).map(e => `${e.first_name} ${e.last_name?.[0] ?? ""}.`);
   const more = Math.max(0, assignedEmployees.length - 2);
-  const coverBarColor =
-    coverage >= 100 ? "bg-emerald-500" :
-    coverage >= 60 ? "bg-amber-500" :
-    "bg-rose-500";
-
   const handleKey = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
@@ -769,8 +764,8 @@ function ShiftCard({
       onClick={onOpen}
       onKeyDown={handleKey}
       className={cn(
-        "group relative w-full text-left rounded-2xl border border-border/50 bg-card p-4 cursor-pointer select-none",
-        "active:scale-[0.98] hover:border-border transition-all shadow-sm hover:shadow-md",
+        "group relative w-full text-left rounded-3xl border border-border/40 bg-card p-4 cursor-pointer select-none",
+        "active:scale-[0.99] transition-transform",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
       )}
     >
@@ -787,53 +782,24 @@ function ShiftCard({
         jobSiteName={locationName || null}
         statusLabel={statusLabel}
         statusTone={statusTone}
-        coverageLabel={coverageLabel}
-        trailing={<ChevronRight className="h-4 w-4 text-muted-foreground/60 group-hover:text-muted-foreground transition-colors" />}
+        coverageLabel={null}
+        trailing={<ChevronRight className="h-4 w-4 text-muted-foreground/60" />}
         className="!bg-transparent !border-0 !shadow-none !p-0 !rounded-none"
       />
 
-      {/* Workers + coverage */}
-      <div className="flex items-center justify-between gap-3 mt-3 mb-2">
-        <div className="flex items-center gap-1.5 min-w-0">
-          <Users className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-          <span className="text-xs text-muted-foreground truncate">
-            {assignedEmployees.length === 0
-              ? slots > 0 ? `0 / ${slots} trabajadores` : "Sin asignar"
-              : (
-                <>
-                  {visibleNames.join(", ")}
-                  {more > 0 && <span className="font-medium"> +{more} más</span>}
-                </>
-              )}
-          </span>
-        </div>
-      </div>
-
-      {/* Coverage bar */}
-      {slots > 0 && (
-        <div className="h-1.5 rounded-full bg-muted/60 overflow-hidden mb-2">
-          <div
-            className={cn("h-full rounded-full transition-all", coverBarColor)}
-            style={{ width: `${Math.min(100, coverage)}%` }}
-          />
-        </div>
-      )}
-
-      {/* Warnings */}
-      {noClient && (
-        <div className="flex flex-wrap items-center gap-1.5 mt-2">
-          <Warning icon={Building2} label="Sin cliente" tone="warn" />
-        </div>
-      )}
-
-      {/* Una sola acción: entrar a operar el turno */}
-      <div className="mt-3 pt-3 border-t border-border/40 flex items-center justify-between gap-2">
-        <span className="text-xs text-muted-foreground truncate">
-          {understaffed ? "Necesita gente" : "Equipo cubierto"}
-        </span>
-        <span className="inline-flex items-center gap-1 text-xs font-semibold text-primary">
-          Operar
-          <ChevronRight className="h-3.5 w-3.5" />
+      {/* Las personas antes que los datos: una sola línea, sin barras ni chips */}
+      <div className="flex items-center gap-2 mt-3 min-w-0">
+        <Users className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+        <span className="text-[13px] text-muted-foreground truncate">
+          {assignedEmployees.length === 0
+            ? "Nadie asignado todavía"
+            : (
+              <>
+                {visibleNames.join(", ")}
+                {more > 0 && <span className="font-medium"> +{more}</span>}
+              </>
+            )}
+          {noClient && <span className="text-muted-foreground/70"> · sin cliente</span>}
         </span>
       </div>
     </div>
@@ -841,17 +807,6 @@ function ShiftCard({
 }
 
 
-function Warning({ icon: Icon, label, tone }: { icon: any; label: string; tone: "bad" | "warn" }) {
-  const cls = tone === "bad"
-    ? "bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/30"
-    : "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30";
-  return (
-    <span className={cn("inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-md border", cls)}>
-      <Icon className="h-3 w-3" />
-      {label}
-    </span>
-  );
-}
 
 function SkeletonList() {
   return (

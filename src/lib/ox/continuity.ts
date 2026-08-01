@@ -53,3 +53,44 @@ export const OX_HEADER = {
   /** ¿Qué está pasando? Una sola línea. */
   context: "text-[13px] md:text-sm leading-snug text-muted-foreground",
 } as const;
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * OX-9 — MOBILE PREMIUM EXPERIENCE
+ *
+ * Un solo ritmo móvil. Menos cajas, más continuidad. El color sólo comunica
+ * decisión, confianza, riesgo o éxito: nunca decora.
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+/** Respiración horizontal móvil. Única. */
+export const OX9_X = "px-5";
+
+/** Ritmo vertical entre bloques móviles. Amplio, calmado, uniforme. */
+export const OX9_STACK = "space-y-6";
+
+/**
+ * Superficie móvil silenciosa: sin sombra, sin borde duro. Es una zona,
+ * no una caja. Se usa cuando el contenido ya tiene jerarquía propia.
+ */
+export const OX9_QUIET = "rounded-3xl bg-card/70 border border-border/40";
+
+/** Lista continua: una sola superficie con separadores finos, no N tarjetas. */
+export const OX9_LIST = "rounded-3xl border border-border/40 bg-card divide-y divide-border/30 overflow-hidden";
+
+/** Fila táctil de lista: 60px reales, presión discreta. */
+export const OX9_ROW =
+  "w-full flex items-center gap-3.5 px-4 min-h-[60px] py-3 text-left transition-colors active:bg-muted/40";
+
+/** Eyebrow de sección móvil: se lee, no grita. */
+export const OX9_EYEBROW =
+  "text-[11px] font-medium tracking-[0.12em] uppercase text-muted-foreground/70";
+
+/** Título de bloque móvil. */
+export const OX9_BLOCK_TITLE = "text-[15px] font-semibold tracking-tight";
+
+/** Escala única de icono móvil. Una familia, un tamaño, una personalidad. */
+export const OX9_ICON = "h-[18px] w-[18px]";
+
+/** Contenedor de icono: siempre el mismo tamaño y radio. */
+export const OX9_ICON_TILE =
+  "inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl";
+

@@ -15,6 +15,10 @@ import { OperationalCard } from "@/components/ocs";
 import {
   type MetricState, loadingMetric, errorMetric, notApplicableMetric, countMetric,
 } from "@/lib/ox/metric-state";
+import {
+  OX9_X, OX9_STACK, OX9_QUIET, OX9_LIST, OX9_ROW,
+  OX9_EYEBROW, OX9_BLOCK_TITLE, OX9_ICON, OX9_ICON_TILE,
+} from "@/lib/ox/continuity";
 
 /**
  * OX-5 — Mobile Presence Compression.
@@ -252,10 +256,22 @@ export default function MobileAdminHome() {
           ? `${attention.length} ${attention.length === 1 ? "asunto necesita" : "asuntos necesitan"} tu atención.`
           : "Tu operación avanza sin pendientes.";
 
+  // OX-9 — el pulso deja de ser cuatro widgets: es una sola frase honesta.
+  const pulseLine = anyLoading
+    ? null
+    : [
+        shiftsToday.kind === "error"
+          ? null
+          : `${shiftsToday.value ?? 0} ${(shiftsToday.value ?? 0) === 1 ? "turno" : "turnos"} hoy`,
+        clockedIn.kind === "error" || (clockedIn.value ?? 0) === 0
+          ? null
+          : `${clockedIn.value} trabajando ahora`,
+      ].filter(Boolean).join(" · ");
+
   return (
-    <div className="min-h-full pb-[calc(env(safe-area-inset-bottom,0px)+72px)]">
+    <div className={cn("min-h-full", OX9_STACK, "pb-[calc(env(safe-area-inset-bottom,0px)+72px)]")}>
       {/* Anfitriona: la empresa encabeza, Stafly acompaña */}
-      <div className="px-5 pt-4 pb-4">
+      <div className={cn(OX9_X, "pt-4")}>
         <div className="flex items-stretch gap-2">
           <div className="min-w-0 flex-1">
             <ContextSwitcher placement="hero" />
@@ -264,27 +280,36 @@ export default function MobileAdminHome() {
             type="button"
             onClick={openCommandPalette}
             aria-label="Buscar"
-            className="w-14 shrink-0 rounded-2xl border border-border/50 bg-card flex items-center justify-center active:scale-[0.96] transition-transform"
+            className="w-14 shrink-0 rounded-2xl border border-border/40 bg-card flex items-center justify-center active:scale-[0.96] transition-transform"
           >
-            <Search className="h-[18px] w-[18px] text-muted-foreground" />
+            <Search className={cn(OX9_ICON, "text-muted-foreground")} />
           </button>
         </div>
-        <h1 className="text-[22px] font-semibold tracking-tight leading-tight mt-4">
+        <h1 className="text-[24px] font-semibold tracking-tight leading-tight mt-5">
           {greeting}, <span className="text-primary">{firstName}</span>
         </h1>
-        <p className="text-sm text-muted-foreground mt-1">{headline}</p>
+        <p className="text-[14px] text-muted-foreground mt-1.5 leading-snug">{headline}</p>
+        {pulseLine && (
+          <button
+            type="button"
+            onClick={() => navigate("/app/command-center")}
+            className="mt-2 inline-flex items-center gap-1 text-[13px] text-muted-foreground/80 active:text-foreground transition-colors"
+          >
+            {pulseLine}
+            <ChevronRight className="h-3.5 w-3.5" />
+          </button>
+        )}
       </div>
 
-
-      {/* Primer scroll: sólo lo que exige decisión — o la confirmación de calma */}
-      <div className="px-5 mb-5">
+      {/* Protagonista único: lo que exige decisión — o la confirmación de calma */}
+      <div className={OX9_X}>
         {allCalm ? (
           <OperationalCard
             status="ready"
             statusLabel="Sin pendientes"
             leading={
-              <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-status-success-bg text-status-success">
-                <CheckCircle2 className="h-4 w-4" />
+              <span className={cn(OX9_ICON_TILE, "bg-status-success-bg text-status-success")}>
+                <CheckCircle2 className={OX9_ICON} />
               </span>
             }
             title="Todo bajo control"
@@ -292,75 +317,48 @@ export default function MobileAdminHome() {
             action={{ label: "Ver la operación de hoy", onClick: () => navigate("/app/command-center") }}
           />
         ) : anyLoading ? (
-          <div className="rounded-2xl border border-border/50 bg-card p-4 space-y-2.5">
+          <div className={cn(OX9_QUIET, "p-4 space-y-2.5")}>
             <div className="h-4 w-2/3 rounded bg-muted animate-pulse" />
             <div className="h-4 w-1/2 rounded bg-muted animate-pulse" />
           </div>
         ) : attention.length > 0 ? (
-          <div className="rounded-2xl border border-border/50 bg-card divide-y divide-border/40 overflow-hidden">
+          <div className={OX9_LIST}>
             {attention.map((a) => (
-              <button
-                key={a.key}
-                onClick={() => navigate(a.to)}
-                className="w-full flex items-center gap-3 px-4 py-3.5 min-h-[56px] text-left active:bg-muted/40 transition-colors"
-              >
-                <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-status-warning-bg text-status-warning">
-                  <AlertTriangle className="h-4 w-4" />
+              <button key={a.key} onClick={() => navigate(a.to)} className={OX9_ROW}>
+                <span className={cn(OX9_ICON_TILE, "bg-status-warning-bg text-status-warning")}>
+                  <AlertTriangle className={OX9_ICON} />
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-semibold tracking-tight truncate">
+                  <span className="block text-[15px] font-semibold tracking-tight truncate">
                     {a.label(a.count)}
                   </span>
-                  <span className="block text-[11px] text-muted-foreground truncate">{a.hint}</span>
+                  <span className="block text-[12px] text-muted-foreground truncate">{a.hint}</span>
                 </span>
                 <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
               </button>
             ))}
           </div>
         ) : anyError ? (
-          <button
-            onClick={reload}
-            className="w-full flex items-center gap-3 rounded-2xl border border-border/50 bg-card px-4 py-3.5 min-h-[56px] text-left active:bg-muted/40"
-          >
-            <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-status-danger-bg text-status-danger">
-              <RotateCw className="h-4 w-4" />
+          <button onClick={reload} className={cn(OX9_LIST, OX9_ROW)}>
+            <span className={cn(OX9_ICON_TILE, "bg-status-danger-bg text-status-danger")}>
+              <RotateCw className={OX9_ICON} />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-sm font-semibold">Datos incompletos</span>
-              <span className="block text-[11px] text-muted-foreground">Toca para reintentar.</span>
+              <span className="block text-[15px] font-semibold">Datos incompletos</span>
+              <span className="block text-[12px] text-muted-foreground">Toca para reintentar.</span>
             </span>
           </button>
         ) : (
-          <div className="rounded-2xl border border-border/50 bg-card px-4 py-3.5">
+          <div className={cn(OX9_QUIET, "px-4 py-3.5")}>
             <p className="text-sm">Sin decisiones pendientes ahora mismo.</p>
           </div>
         )}
       </div>
 
-      {/* Pulso de hoy — una sola historia, no cuatro widgets */}
-      <div className="px-5 mb-5">
-        <button
-          onClick={() => navigate("/app/command-center")}
-          className="w-full rounded-2xl border border-border/50 bg-card p-4 text-left active:bg-muted/30 transition-colors"
-        >
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
-              Hoy
-            </span>
-            <ChevronRight className="h-4 w-4 text-muted-foreground" />
-          </div>
-          <div className="grid grid-cols-4 gap-2">
-            <Pulse label="Turnos" state={shiftsToday} />
-            <Pulse label="Activos" state={clockedIn} />
-            <Pulse label="Validar" state={hoursToReview} />
-            <Pulse label="Sin resp." state={pendingResponses} />
-          </div>
-        </button>
-      </div>
-
-      {/* Operación diaria — las cuatro anclas que se usan todos los días */}
-      <div className="px-5">
-        <div className="grid grid-cols-2 gap-2.5">
+      {/* Operación diaria — las cuatro anclas. Sólo el nombre: el icono ya explica. */}
+      <div className={OX9_X}>
+        <p className={cn(OX9_EYEBROW, "mb-2.5")}>Operación diaria</p>
+        <div className="grid grid-cols-2 gap-3">
           {dailyActions.map((a) => {
             const Icon = a.icon;
             const badge: BadgeState = a.badgeKey ? badges[a.badgeKey] : { kind: "ready", value: 0 };
@@ -372,23 +370,16 @@ export default function MobileAdminHome() {
                 onClick={() => navigate(a.to)}
                 className={cn(
                   "relative flex flex-col items-start text-left",
-                  "rounded-2xl border border-border/50 bg-card p-3.5 min-h-[92px]",
-                  "active:scale-[0.97] transition-all",
+                  OX9_QUIET,
+                  "p-4 min-h-[88px] active:scale-[0.98] transition-transform",
                 )}
               >
-                <div className={cn("h-9 w-9 rounded-xl flex items-center justify-center mb-2.5", a.accent)}>
-                  <Icon className="h-[18px] w-[18px]" />
+                <div className={cn(OX9_ICON_TILE, a.accent, "mb-3")}>
+                  <Icon className={OX9_ICON} />
                 </div>
-                <span className="text-[14px] font-semibold tracking-tight truncate w-full">
-                  {a.label}
-                </span>
-                {a.hint && (
-                  <span className="text-[11px] text-muted-foreground truncate w-full mt-0.5">
-                    {a.hint}
-                  </span>
-                )}
+                <span className={cn(OX9_BLOCK_TITLE, "truncate w-full")}>{a.label}</span>
                 {badge.kind === "error" && (
-                  <StatusBadge status="failed" label="!" size="sm" className="absolute top-2.5 right-2.5" />
+                  <StatusBadge status="failed" label="!" size="sm" className="absolute top-3 right-3" />
                 )}
                 {badge.kind === "ready" && count > 0 && (
                   <StatusBadge
@@ -396,7 +387,7 @@ export default function MobileAdminHome() {
                     label={count > 9 ? "9+" : String(count)}
                     size="sm"
                     indicator="dot"
-                    className="absolute top-2.5 right-2.5"
+                    className="absolute top-3 right-3"
                   />
                 )}
               </button>
@@ -406,14 +397,14 @@ export default function MobileAdminHome() {
       </div>
 
       {/* Todo lo demás pierde protagonismo, no acceso */}
-      <div className="px-5 mt-4">
+      <div className={OX9_X}>
         <button
           type="button"
           onClick={() => setMoreOpen((v) => !v)}
           aria-expanded={moreOpen}
-          className="w-full flex items-center justify-between rounded-2xl border border-border/50 bg-card px-4 py-3 min-h-[48px] active:bg-muted/40 transition-colors"
+          className="w-full flex items-center justify-between min-h-[48px] px-1 active:opacity-70 transition-opacity"
         >
-          <span className="text-sm font-medium">Más herramientas</span>
+          <span className={OX9_EYEBROW}>Más herramientas</span>
           <ChevronRight
             className={cn(
               "h-4 w-4 text-muted-foreground transition-transform",
@@ -423,7 +414,7 @@ export default function MobileAdminHome() {
         </button>
 
         {moreOpen && (
-          <div className="mt-2.5 rounded-2xl border border-border/50 bg-card divide-y divide-border/40 overflow-hidden animate-fade-in">
+          <div className={cn(OX9_LIST, "mt-1 animate-fade-in")}>
             {otherActions.map((a) => {
               const badge: BadgeState = a.badgeKey ? badges[a.badgeKey] : { kind: "ready", value: 0 };
               return (
@@ -447,23 +438,6 @@ export default function MobileAdminHome() {
   );
 }
 
-function Pulse({ label, state }: { label: string; state: MetricState }) {
-  const value =
-    state.kind === "loading" ? "·" : state.kind === "error" ? "—" : String(state.value ?? 0);
-  return (
-    <div className="min-w-0">
-      <div
-        className={cn(
-          "text-[20px] font-semibold leading-none tabular-nums",
-          state.kind === "error" && "text-muted-foreground",
-        )}
-      >
-        {value}
-      </div>
-      <div className="text-[10.5px] text-muted-foreground mt-1 truncate">{label}</div>
-    </div>
-  );
-}
 
 function QuickLink({
   label,
