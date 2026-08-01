@@ -17786,6 +17786,15 @@ export type Database = {
         }
         Returns: string
       }
+      remove_worker_from_shift: {
+        Args: {
+          p_assignment_id: string
+          p_reason?: string
+          p_replacement_employee_id?: string
+          p_source?: string
+        }
+        Returns: Json
+      }
       request_time_entry_correction: {
         Args: {
           p_company_id: string
