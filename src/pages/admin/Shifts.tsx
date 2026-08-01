@@ -2564,7 +2564,7 @@ function DesktopShifts() {
                   })()}
                   <p><span className="font-medium">Plazas:</span> {slots}</p>
                   <p><span className="font-medium">Empleados:</span> {selectedEmployees.length > 0 ? `${selectedEmployees.length} seleccionados` : "Ninguno"}</p>
-                  {transportRequired && <p><span className="font-medium">Transporte:</span> Requerido • {Math.ceil((parseInt(slots) || 1) / (parseInt(carCapacity) || 5))} vehículo(s) • Conductor: {driverEmployeeId ? employees.find(e => e.id === driverEmployeeId)?.first_name || "Asignado" : "⚠️ Sin asignar"}</p>}
+                  {transportRequired && <p><span className="font-medium">Transporte:</span> Requerido • {Math.ceil((parseInt(slots) || 1) / (parseInt(carCapacity) || 5))} vehículo(s) • Conductores: {driverIds.length > 0 ? driverIds.map(id => employees.find(e => e.id === id)?.first_name || "Asignado").join(", ") : "⚠️ Sin asignar"}</p>}
                   <p><span className="font-medium">Admin turno:</span> {shiftAdminId ? employees.find(e => e.id === shiftAdminId)?.first_name || "Asignado" : "⚠️ Sin asignar"}</p>
                   {claimable && <p><span className="font-medium">Reclamable:</span> Sí</p>}
                   {notes && <p><span className="font-medium">Notas:</span> {notes}</p>}
