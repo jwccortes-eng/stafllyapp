@@ -626,7 +626,14 @@ export function MobileQuickCreateShiftSheet({
               {o.ok ? <Check className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-[15px] font-medium break-words">{o.name}</span>
+              <span className="block text-[15px] font-medium break-words">
+                {o.name}
+                {driverPlan.driverIds.includes(o.employeeId) && (
+                  <span className="ml-2 align-middle rounded-full border border-border/60 px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
+                    Driver
+                  </span>
+                )}
+              </span>
               <span className="block text-[13px] text-muted-foreground break-words">{o.reason}</span>
               {!o.ok && (
                 <span className="mt-0.5 block text-[13px] font-medium break-words">{o.nextAction}</span>
