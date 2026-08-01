@@ -788,7 +788,7 @@ function AlertDetailSheet({ item, onClose, onOpenWorker, onReviewInTime }: {
           <div className="border-t border-border/50 bg-background/95 backdrop-blur-md px-5 py-3 space-y-2 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
             <div className="grid grid-cols-2 gap-2">
               {phoneRaw ? (
-                <a href={`tel:${phoneRaw}`} onClick={() => setTimeout(onClose, 50)} className="inline-flex items-center justify-center gap-1.5 h-11 rounded-xl bg-primary/10 text-primary text-sm font-semibold active:scale-[0.98]">
+                <a href={`tel:${phoneRaw}`} onClick={() => setTimeout(onClose, 50)} className={cn("inline-flex items-center justify-center gap-1.5 h-11 rounded-xl bg-primary/10 text-primary text-sm font-semibold active:scale-[0.98]", FOCUS_RING)}>
                   <Phone className="h-4 w-4" /> Llamar
                 </a>
               ) : (
@@ -797,7 +797,7 @@ function AlertDetailSheet({ item, onClose, onOpenWorker, onReviewInTime }: {
                 </span>
               )}
               {waPhone ? (
-                <a href={`https://wa.me/${waPhone}`} target="_blank" rel="noopener noreferrer" onClick={() => setTimeout(onClose, 50)} className="inline-flex items-center justify-center gap-1.5 h-11 rounded-xl bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-sm font-semibold active:scale-[0.98]">
+                <a href={`https://wa.me/${waPhone}`} target="_blank" rel="noopener noreferrer" onClick={() => setTimeout(onClose, 50)} className={cn("inline-flex items-center justify-center gap-1.5 h-11 rounded-xl bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-sm font-semibold active:scale-[0.98]", FOCUS_RING)}>
                   <MessageCircle className="h-4 w-4" /> WhatsApp
                 </a>
               ) : (
@@ -812,9 +812,12 @@ function AlertDetailSheet({ item, onClose, onOpenWorker, onReviewInTime }: {
             <button
               type="button"
               onClick={() => onOpenWorker(item.employee.id)}
-              className="w-full h-9 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-muted/50 inline-flex items-center justify-center gap-1.5 transition"
+              className={cn(
+                "w-full min-h-[44px] rounded-lg text-[12px] text-muted-foreground hover:text-foreground hover:bg-muted/50 inline-flex items-center justify-center gap-1.5 transition",
+                FOCUS_RING,
+              )}
             >
-              <Users className="h-3.5 w-3.5" /> Ver perfil del worker
+              <Users className="h-3.5 w-3.5" aria-hidden="true" /> Ver perfil del worker
             </button>
           </div>
         )}

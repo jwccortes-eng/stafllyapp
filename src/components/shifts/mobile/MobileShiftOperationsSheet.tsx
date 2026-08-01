@@ -450,15 +450,15 @@ export function MobileShiftOperationsSheet({
           // Single priority status pill: Unstaffed > Missing job site > No client > Draft > Complete > Published.
           const pill: { label: string; cls: string } | null =
             published && understaffed
-              ? { label: `Faltan ${missing}`, cls: "border-rose-500/40 text-rose-700 dark:text-rose-400 bg-rose-500/10" }
+              ? { label: `Faltan ${missing}`, cls: FAMILY_CLASSES.critical }
               : noLocation
-                ? { label: "Falta ubicación", cls: "border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10" }
+                ? { label: "Falta ubicación", cls: FAMILY_CLASSES.warning }
                 : noClient
-                  ? { label: "Falta cliente", cls: "border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10" }
+                  ? { label: "Falta cliente", cls: FAMILY_CLASSES.warning }
                   : draft
-                    ? { label: "Borrador", cls: "border-border/60 text-muted-foreground bg-muted/40" }
+                    ? { label: "Borrador", cls: FAMILY_CLASSES.neutral }
                     : published && fullyStaffed
-                      ? { label: "Completo", cls: "border-emerald-500/40 text-emerald-700 dark:text-emerald-400 bg-emerald-500/10" }
+                      ? { label: "Completo", cls: FAMILY_CLASSES.positive }
                       : published
                         ? { label: "Publicado", cls: "border-primary/30 text-primary bg-primary/5" }
                         : null;
@@ -1461,9 +1461,9 @@ function StatCard({ label, value, accent }: { label: string; value: number | str
 
 function BriefRow({ tone, text }: { tone: "good" | "warn" | "bad" | "info"; text: string }) {
   const map = {
-    good: { cls: "border-emerald-500/30 bg-emerald-500/5 text-emerald-700 dark:text-emerald-400", Icon: CheckCircle2 },
-    warn: { cls: "border-amber-500/30 bg-amber-500/5 text-amber-700 dark:text-amber-400", Icon: AlertTriangle },
-    bad:  { cls: "border-rose-500/30 bg-rose-500/5 text-rose-700 dark:text-rose-400", Icon: AlertTriangle },
+    good: { cls: FAMILY_CLASSES.positive, Icon: CheckCircle2 },
+    warn: { cls: FAMILY_CLASSES.warning, Icon: AlertTriangle },
+    bad:  { cls: FAMILY_CLASSES.critical, Icon: AlertTriangle },
     info: { cls: "border-border bg-muted/30 text-foreground/80", Icon: Sparkles },
   } as const;
   const { cls, Icon } = map[tone];
@@ -1479,10 +1479,10 @@ function CoverChip({
   label, value, tone = "default",
 }: { label: string; value: number | string; tone?: "default" | "good" | "warn" | "bad" | "muted" | "info" }) {
   const cls =
-    tone === "good" ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30" :
-    tone === "warn" ? "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30" :
-    tone === "bad"  ? "bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/30" :
-    tone === "info" ? "bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-500/30" :
+    tone === "good" ? FAMILY_CLASSES.positive :
+    tone === "warn" ? FAMILY_CLASSES.warning :
+    tone === "bad"  ? FAMILY_CLASSES.critical :
+    tone === "info" ? FAMILY_CLASSES.progress :
     tone === "muted" ? "bg-muted/50 text-muted-foreground border-border/50" :
     "bg-card text-foreground border-border/60";
   return (
@@ -1498,11 +1498,11 @@ function attendanceBadgeFor(
   clock: { clock_in: string | null; clock_out: string | null } | undefined,
 ): { label: string; cls: string } {
   if (clock?.clock_out) return { label: "Salió", cls: "bg-muted text-muted-foreground" };
-  if (clock?.clock_in) return { label: "Registrado", cls: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400" };
+  if (clock?.clock_in) return { label: "Registrado", cls: FAMILY_CLASSES.positive };
   switch ((attendanceStatus ?? "").toLowerCase()) {
-    case "present": return { label: "Presente", cls: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400" };
-    case "late":    return { label: "Tarde", cls: "bg-amber-500/15 text-amber-700 dark:text-amber-400" };
-    case "absent":  return { label: "Ausente", cls: "bg-rose-500/15 text-rose-700 dark:text-rose-400" };
+    case "present": return { label: "Presente", cls: FAMILY_CLASSES.positive };
+    case "late":    return { label: "Tarde", cls: FAMILY_CLASSES.warning };
+    case "absent":  return { label: "Ausente", cls: FAMILY_CLASSES.critical };
     case "excused": return { label: "Justificado", cls: "bg-muted text-muted-foreground" };
     case "needs_review": return { label: "Por revisar", cls: "bg-primary/15 text-primary" };
     default: return { label: "Sin iniciar", cls: "bg-muted text-muted-foreground" };
@@ -1513,7 +1513,7 @@ function roleBadgeFor(role: string | null, isShiftAdmin: boolean): { label: stri
   if (isShiftAdmin) return { label: "Admin del turno", cls: "bg-primary/15 text-primary border-primary/30" };
   if (!role) return null;
   const r = role.toLowerCase();
-  if (r === "captain") return { label: "Capitán", cls: "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30" };
+  if (r === "captain") return { label: "Capitán", cls: FAMILY_CLASSES.warning };
   if (r === "lead" || r === "admin") return { label: "Líder", cls: "bg-primary/15 text-primary border-primary/30" };
   if (r === "staff" || r === "worker") return null;
   return { label: role, cls: "bg-muted text-muted-foreground border-border" };
@@ -1666,10 +1666,10 @@ const WorkerRow = memo(function WorkerRow({
   if (!phone) chips.push({ label: "Sin tel.", tone: "warn" });
 
   const chipToneCls = (tone: Chip["tone"]) =>
-    tone === "good" ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400" :
-    tone === "warn" ? "bg-amber-500/15 text-amber-700 dark:text-amber-400" :
-    tone === "bad"  ? "bg-rose-500/15 text-rose-700 dark:text-rose-400" :
-    tone === "info" ? "bg-sky-500/15 text-sky-700 dark:text-sky-400" :
+    tone === "good" ? FAMILY_CLASSES.positive :
+    tone === "warn" ? FAMILY_CLASSES.warning :
+    tone === "bad"  ? FAMILY_CLASSES.critical :
+    tone === "info" ? FAMILY_CLASSES.progress :
                       "bg-muted text-muted-foreground";
 
   return (
@@ -1841,13 +1841,13 @@ function DetailRow({ icon: Icon, label, value, muted }: { icon: any; label: stri
 function StatusPill({ draft, published, understaffed }: { draft: boolean; published: boolean; understaffed: boolean }) {
   const base = "text-[11px] font-medium h-[22px] px-2 leading-none";
   if (draft) {
-    return <Badge variant="outline" className={cn(base, "border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10")}>Draft</Badge>;
+    return <Badge variant="outline" className={cn(base, FAMILY_CLASSES.warning)}>Draft</Badge>;
   }
   if (published && understaffed) {
-    return <Badge variant="outline" className={cn(base, "border-rose-500/40 text-rose-700 dark:text-rose-400 bg-rose-500/10")}>Unstaffed</Badge>;
+    return <Badge variant="outline" className={cn(base, FAMILY_CLASSES.critical)}>Unstaffed</Badge>;
   }
   if (published) {
-    return <Badge variant="outline" className={cn(base, "border-emerald-500/40 text-emerald-700 dark:text-emerald-400 bg-emerald-500/10")}>Published</Badge>;
+    return <Badge variant="outline" className={cn(base, FAMILY_CLASSES.positive)}>Published</Badge>;
   }
   return <Badge variant="outline" className={cn(base)}>Shift</Badge>;
 }
@@ -1858,16 +1858,16 @@ function PublicationBadge({
   const base = "h-[22px] px-2 text-[11px] font-semibold leading-none";
   const s = (status ?? "").toLowerCase();
   if (s === "cancelled" || s === "canceled") {
-    return <Badge variant="outline" aria-label="Publication status: cancelled" className={cn(base, "border-rose-500/40 text-rose-700 dark:text-rose-400 bg-rose-500/10")}>Cancelled</Badge>;
+    return <Badge variant="outline" aria-label="Publication status: cancelled" className={cn(base, FAMILY_CLASSES.critical)}>Cancelled</Badge>;
   }
   if (s === "archived") {
-    return <Badge variant="outline" aria-label="Publication status: archived" className={cn(base, "border-border/60 text-muted-foreground bg-muted/40")}>Archived</Badge>;
+    return <Badge variant="outline" aria-label="Publication status: archived" className={cn(base, FAMILY_CLASSES.neutral)}>Archived</Badge>;
   }
   if (draft) {
-    return <Badge variant="outline" aria-label="Publication status: draft — workers cannot see this shift yet" className={cn(base, "border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10")}>Draft</Badge>;
+    return <Badge variant="outline" aria-label="Publication status: draft — workers cannot see this shift yet" className={cn(base, FAMILY_CLASSES.warning)}>Draft</Badge>;
   }
   if (published) {
-    return <Badge variant="outline" aria-label="Publication status: published" className={cn(base, "border-emerald-500/40 text-emerald-700 dark:text-emerald-400 bg-emerald-500/10")}>Published</Badge>;
+    return <Badge variant="outline" aria-label="Publication status: published" className={cn(base, FAMILY_CLASSES.positive)}>Published</Badge>;
   }
   return <Badge variant="outline" aria-label="Publication status: shift" className={cn(base)}>Shift</Badge>;
 }

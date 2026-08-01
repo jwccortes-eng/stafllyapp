@@ -1,6 +1,7 @@
 import { RefreshCw, Loader2, AlertCircle, Settings2, MinusCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { MetricState } from "@/lib/ox/metric-state";
+import { MT, MT_EYEBROW, FOCUS_RING } from "@/lib/mobile/mobile-scale";
 
 interface KpiStateCardProps {
   label: string;

@@ -355,11 +355,11 @@ const BUCKET_META: Record<Bucket, {
 
 function toneToClass(tone: "good" | "info" | "warn" | "muted" | "bad"): string {
   switch (tone) {
-    case "good": return "border-emerald-500/40 text-emerald-700 dark:text-emerald-400 bg-emerald-500/10";
-    case "info": return "border-sky-500/40 text-sky-700 dark:text-sky-400 bg-sky-500/10";
-    case "warn": return "border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10";
-    case "bad": return "border-rose-500/40 text-rose-700 dark:text-rose-400 bg-rose-500/10";
-    default: return "border-border/60 text-muted-foreground bg-muted/40";
+    case "good": return FAMILY_CLASSES.positive;
+    case "info": return FAMILY_CLASSES.progress;
+    case "warn": return FAMILY_CLASSES.warning;
+    case "bad": return FAMILY_CLASSES.critical;
+    default: return FAMILY_CLASSES.neutral;
   }
 }
 
@@ -1020,23 +1020,23 @@ function WorkerRow({
   // Status pill — derived from existing bucketize logic; presentational only.
   const bucket = bucketize(assignment);
   const STATUS_PILL: Record<string, { label: string; cls: string }> = {
-    confirmed:          { label: "Confirmado", cls: "border-emerald-500/40 text-emerald-700 dark:text-emerald-400 bg-emerald-500/10" },
-    accepted:           { label: "Aceptado",   cls: "border-emerald-500/40 text-emerald-700 dark:text-emerald-400 bg-emerald-500/10" },
-    pending:            { label: "Pendiente",  cls: "border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10" },
-    rejected_by_worker: { label: "Rechazado",  cls: "border-rose-500/40 text-rose-700 dark:text-rose-400 bg-rose-500/10" },
-    removed:            { label: "Removido",   cls: "border-border/60 text-muted-foreground bg-muted/40" },
-    no_show:            { label: "No-show",    cls: "border-rose-500/40 text-rose-700 dark:text-rose-400 bg-rose-500/10" },
-    other:              { label: assignment.status || "Desconocido", cls: "border-border/60 text-muted-foreground bg-muted/40" },
+    confirmed:          { label: "Confirmado", cls: FAMILY_CLASSES.positive },
+    accepted:           { label: "Aceptado",   cls: FAMILY_CLASSES.positive },
+    pending:            { label: "Pendiente",  cls: FAMILY_CLASSES.warning },
+    rejected_by_worker: { label: "Rechazado",  cls: FAMILY_CLASSES.critical },
+    removed:            { label: "Removido",   cls: FAMILY_CLASSES.neutral },
+    no_show:            { label: "No-show",    cls: FAMILY_CLASSES.critical },
+    other:              { label: assignment.status || "Desconocido", cls: FAMILY_CLASSES.neutral },
   };
   const isImportedNotResponded =
     !!assignment.import_batch_id && !assignment.accepted_at && !assignment.responded_at &&
     (assignment.status === "accepted" || assignment.status === "assigned" || assignment.status === "confirmed");
   const importedPill = isImportedNotResponded
-    ? { label: "Asignado/importado", cls: "border-sky-500/40 text-sky-700 dark:text-sky-400 bg-sky-500/10" }
+    ? { label: "Asignado/importado", cls: FAMILY_CLASSES.progress }
     : null;
   const attendancePill =
     assignment.attendance_status === "present" || assignment.attendance_status === "checked_in"
-      ? { label: "En sitio", cls: "border-sky-500/40 text-sky-700 dark:text-sky-400 bg-sky-500/10" }
+      ? { label: "En sitio", cls: FAMILY_CLASSES.progress }
       : null;
   const statusPill = attendancePill ?? importedPill ?? STATUS_PILL[bucket];
 
@@ -1475,17 +1475,17 @@ const GROUP_META: Record<RecGroup, { label: string; helper: string; tone: string
   best: {
     label: "Mejor opción",
     helper: "Asignables, listos, sin alertas y con buen puntaje.",
-    tone: "border-emerald-500/40 text-emerald-700 dark:text-emerald-400 bg-emerald-500/10",
+    tone: FAMILY_CLASSES.positive,
   },
   good: {
     label: "Buenas opciones",
     helper: "Candidatos sólidos con período de gracia o historial aquí.",
-    tone: "border-sky-500/40 text-sky-700 dark:text-sky-400 bg-sky-500/10",
+    tone: FAMILY_CLASSES.progress,
   },
   caution: {
     label: "Usar con precaución",
     helper: "Puntaje bajo, alertas, conflicto u otro bloqueo.",
-    tone: "border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10",
+    tone: FAMILY_CLASSES.warning,
   },
 };
 
