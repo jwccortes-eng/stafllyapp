@@ -77,3 +77,55 @@ Sin escrituras a payroll, `time_entries` ni asistencia; sin `DELETE`; sin cruce 
 
 ## Veredicto
 **Listo para publicar en Desktop.** Móvil: crear PASS, editar sin superficie de conductores (brecha conocida, no bloqueante porque desktop cubre la edición). Recomendado siguiente sprint: `MultiDriverPicker` en `MobileShiftEditSheet` y `useTodayOperations` leyendo drivers desde `shift_assignments`.
+
+---
+
+# Cierre P0.3.1 — Misma verdad multi-driver en todas las superficies
+
+## 1. Editar conductores desde móvil — CERRADO
+`MobileShiftEditSheet.tsx` ya montaba `ShiftFormFields` (layout `stack`), que incluye
+`TransportationSection` → `MultiDriverPicker`. Faltaban las dos piezas que lo hacían inútil:
+- **Hidratación**: el formulario nacía con `driverIds` derivado sólo del campo legado. Ahora usa
+  `driverIdsFromAssignments(assignments, shift.id, driver_employee_id)` — misma función que desktop.
+- **Persistencia**: al guardar se llama a `syncShiftDriverRoles(shift.id, driverIds)`, exactamente
+  igual que `ShiftEditDialog`. Si sólo cambian los conductores (sin tocar columnas del turno) el
+  guardado ya no dice "Sin cambios": sincroniza roles y confirma.
+Fallo de sincronización → aviso `notifyWarning` ("El turno se guardó, pero los conductores no"),
+nunca silencioso. Cero `DELETE`, cero escrituras en horas/fichajes/payroll.
+
+## 2. `useTodayOperations` ya no asume un solo conductor — CERRADO
+- La consulta de asignaciones trae `assignment_role`.
+- `ShiftTransportInfo` expone `driver_ids: string[]` (verdad) y conserva `primary_driver_id`
+  sólo como compatibilidad.
+- Conductores = filas `assignment_role='driver'` + legado + conductores de `shift_rides`.
+- `capacity_total` sin rides pasó de `capacity` (1 vehículo) a `capacity × nº conductores`.
+  Con 5 conductores y 0 rides la capacidad ya no se subestima ni dispara `capacity_short` falso.
+
+## 3. Reparación histórica — EJECUTADA Y AUDITADA
+Tabla `legacy_driver_backfill_audit` (RLS por empresa) con el veredicto por turno.
+Universo real: 13 turnos vivos (los otros 10 del recuento inicial eran turnos borrados).
+
+| Resultado | Turnos | Criterio |
+|---|---|---|
+| `repaired` | 2 (QK-001524, QK-001536) | la persona no tenía **ninguna** ficha en el turno → se creó la ficha `driver` |
+| `manual_review` | 11 | ambiguo: no se tocó nada |
+
+Motivos de los 11 manuales:
+- 8 · la persona ya está en el equipo con **otro rol** (`staff`, `shift_admin`, `check_in_admin`,
+  o `removed`). Cambiar el rol es una decisión operativa, no una migración.
+- 3 · bloqueado por la regla de solapamiento (`prevent_overlapping_shift_assignments`):
+  QK-001387, QK-001504, QK-001522. Se respetó la regla; no se forzó.
+
+Garantías de la reparación:
+- Idempotente (índice único parcial sobre `repaired`, y sólo inserta si no existe fila).
+- Aviso al trabajador **silenciado** durante el backfill (`trg_notify_on_shift_assignment`
+  deshabilitado y rehabilitado en la misma transacción): son turnos pasados, nadie recibe
+  notificaciones falsas.
+- Fichas creadas en `pending` con `response_required=false`: no se inventa historial de aceptación.
+- Cero UPDATE/DELETE sobre asignaciones existentes. Cero escrituras en horas, fichajes,
+  asistencia o payroll.
+
+## Veredicto P0.3.1
+Desktop, creación móvil y **edición móvil** comparten ahora la misma fuente de verdad.
+La salud operativa del día cuenta conductores reales. El histórico quedó reparado donde era
+inequívoco y documentado, sin tocar nada, donde requería criterio humano.
