@@ -24,6 +24,7 @@ import {
   stripLeadingShiftCode,
 } from "./card-display";
 import {
+import { getShiftDisplayIdentity } from "@/lib/shifts/shift-identity";
   getShiftLocationStatus,
   type ShiftLocationInput,
   type ShiftLocationStatus,
@@ -44,6 +45,8 @@ export interface SmartWorkCardInput {
     id: string;
     title?: string | null;
     shift_code?: string | null;
+    /** P0 · referencia operativa canónica. */
+    shift_ref?: string | null;
     date: string;            // YYYY-MM-DD
     start_time: string;      // HH:MM[:SS]
     end_time: string;        // HH:MM[:SS]
@@ -256,7 +259,10 @@ export function getWorkIdentity(input: SmartWorkCardInput): WorkIdentity {
   return {
     title: cleanTitle,
     subtitleLine,
-    refLabel: formatShiftRef(input.shift.shift_code) || null,
+    refLabel: (() => {
+      const id = getShiftDisplayIdentity(input.shift);
+      return id.primaryRefKind === "none" ? null : id.primaryRef;
+    })(),
     clientName,
     category,
   };

@@ -24,6 +24,7 @@ import { CaptainNextActionCard } from "@/components/shifts/CaptainNextActionCard
 import { ShiftCloseoutSection } from "@/components/shifts/closeout/ShiftCloseoutSection";
 import type { Assignment, Employee } from "@/components/shifts/types";
 import { cn } from "@/lib/utils";
+import { getShiftDisplayIdentity } from "@/lib/shifts/shift-identity";
 
 interface ShiftRow {
   id: string;
@@ -34,6 +35,7 @@ interface ShiftRow {
   end_time: string;
   slots: number | null;
   shift_code: string | null;
+  shift_ref: string | null;
   shift_admin_id: string | null;
   status: string;
 }
@@ -81,7 +83,7 @@ export default function ShiftCaptainRoom() {
       const { data: s } = await supabase
         .from("scheduled_shifts")
         .select(
-          "id, company_id, title, date, start_time, end_time, slots, shift_code, shift_admin_id, status",
+          "id, company_id, title, date, start_time, end_time, slots, shift_code, shift_ref, shift_admin_id, status",
         )
         .eq("id", shiftId)
         .maybeSingle();
@@ -176,7 +178,7 @@ export default function ShiftCaptainRoom() {
       return shift.date;
     }
   })();
-  const code = (shift.shift_code ?? "").toString().padStart(4, "0");
+  const identity = getShiftDisplayIdentity(shift);
 
   return (
     <div className="min-h-screen bg-background pb-[calc(env(safe-area-inset-bottom,0px)+24px)]">
@@ -196,7 +198,7 @@ export default function ShiftCaptainRoom() {
             <div className="flex items-center gap-1.5">
               <ShieldCheck className="h-3.5 w-3.5 text-primary shrink-0" />
               <p className="text-[10.5px] font-bold uppercase tracking-widest text-primary">
-                Modo encargado · #{code}
+                Modo encargado · {identity.primaryRef}
               </p>
             </div>
             <p className="text-[14px] font-bold text-foreground truncate leading-tight mt-0.5">

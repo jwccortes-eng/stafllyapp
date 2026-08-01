@@ -109,7 +109,7 @@ function IdentityBlock({
             className="rounded-full border border-border/60 bg-muted/40 px-2 py-0.5 text-[10px] font-medium text-muted-foreground"
             title="Referencia operativa"
           >
-            Trabajo {identity.refLabel.replace(/^Ref\s*/i, "")}
+            {identity.refLabel}
           </span>
         )}
       </div>
