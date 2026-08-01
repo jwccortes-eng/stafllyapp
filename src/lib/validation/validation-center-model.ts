@@ -155,15 +155,29 @@ export interface ValidationItem {
   /** Id del registro real en su tabla de origen. */
   recordId: string;
   validationType: ValidationType;
+  /** Identidad visible: persona o turno. Nunca un código técnico. */
   title: string;
   subtitle: string | null;
+  /** Decisión pendiente en una frase legible en <3s. */
+  headline: string;
+  /** Persona sobre la que se decide, cuando aplica. */
+  person: ValidationPerson | null;
+  /** Turno · cliente · fecha. */
+  context: ValidationContext;
   relatedShiftId: string | null;
   relatedWorkerId: string | null;
   status: ValidationStatus;
   /** Clave del STATUS_REGISTRY. Nunca mapas cromáticos locales. */
   statusKey: StatusKey;
   priority: ValidationPriority;
+  /** Evidencia principal: la que sostiene la decisión. */
   evidence: ValidationEvidence[];
+  /** Evidencia de apoyo. Se muestra colapsada. */
+  secondaryEvidence: ValidationEvidence[];
+  /** Personas implicadas y última actualización. Sólo datos reales. */
+  humanContext: ValidationHumanNote[];
+  /** Comentarios ya registrados en el propio flujo. No es un chat nuevo. */
+  conversation: ValidationMessage[];
   /** Qué debe pasar para cerrar este item, en una frase. */
   requiredAction: string;
   assignedTo: string | null;
@@ -175,6 +189,7 @@ export interface ValidationItem {
   /** Acciones secundarias, van a menú contextual. */
   secondaryActions: ValidationAction[];
 }
+
 
 export interface ValidationSummary {
   total: number;
