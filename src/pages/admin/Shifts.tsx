@@ -20,6 +20,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 // Tabs removed — using custom view switcher
 import { toast } from "sonner";
+import { notifyActionRequired, notifyError, notifySuccess, notifyWarning } from "@/lib/feedback/notify";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction, AlertDialogCancel } from "@/components/ui/alert-dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
@@ -985,7 +986,18 @@ function DesktopShifts() {
         // no notifications, no readiness enforcement.
         is_draft_reservation: isDraft,
       }));
-      await supabase.from("shift_assignments").insert(assigns as any);
+      // OX-1 — el turno ya existe: si el equipo falla, el usuario DEBE saberlo.
+      // Sin CTA de reintento: repetir el insert podría duplicar asignaciones.
+      const { error: assignError } = await supabase.from("shift_assignments").insert(assigns as any);
+      if (assignError) {
+        notifyWarning({
+          key: "shift-create-assign",
+          title: "El turno se creó, pero sin equipo",
+          fact: `No pudimos asignar ${assigns.length} worker(s).`,
+          consequence: "Abre el turno y asigna el equipo manualmente para no duplicar asignaciones.",
+          cause: assignError,
+        });
+      }
     }
 
     if (shift) {
@@ -1502,7 +1514,14 @@ function DesktopShifts() {
       } else if (msg.toLowerCase().includes("overlap") || msg.includes("23P01")) {
         humanMsg = "Este trabajador tiene otro turno que se solapa con este horario.";
       }
-      toast.error(humanMsg);
+      // Sin reintento automático: un segundo intento puede duplicar la asignación.
+      notifyError({
+        key: "shift-assign",
+        title: "No pudimos asignar al worker",
+        fact: humanMsg,
+        consequence: "No se creó ninguna asignación. Resuelve el motivo y vuelve a intentarlo.",
+        cause: error,
+      });
       return;
     }
 
@@ -1591,19 +1610,63 @@ function DesktopShifts() {
       if (fromShiftId === targetShiftId) return;
 
       const existing = assignments.find(a => a.shift_id === targetShiftId && a.employee_id === employeeId);
-      if (existing) { toast.error("Ya está asignado a este turno"); return; }
+      if (existing) {
+        notifyWarning({
+          key: "shift-reassign",
+          title: "Ya está asignado a este turno",
+          fact: "No se movió a nadie.",
+          consequence: "Elige otro turno destino.",
+        });
+        return;
+      }
 
-      await supabase.from("shift_assignments").delete().eq("id", assignmentId);
-      await supabase.from("shift_assignments").insert({
+      const { error: delError } = await supabase.from("shift_assignments").delete().eq("id", assignmentId);
+      if (delError) {
+        notifyError({
+          key: "shift-reassign",
+          title: "No pudimos mover al worker",
+          fact: "Sigue asignado al turno original.",
+          consequence: "No se creó ninguna asignación duplicada.",
+          cause: delError,
+        });
+        return;
+      }
+      const { error: insError } = await supabase.from("shift_assignments").insert({
         company_id: selectedCompanyId!,
         shift_id: targetShiftId,
         employee_id: employeeId,
         status: "pending",
       } as any);
+      if (insError) {
+        // Estado parcial real: se quitó del origen pero no entró al destino.
+        // Es crítico y exige decisión humana, por eso no se auto-cierra.
+        notifyActionRequired({
+          key: "shift-reassign",
+          title: "El worker quedó sin turno",
+          fact: "Se retiró del turno original pero no se pudo asignar al destino.",
+          consequence: "Asígnalo manualmente al turno correcto antes de continuar.",
+          cause: insError,
+        });
+        loadData();
+        return;
+      }
 
-      toast.success("Empleado reasignado");
+      notifySuccess({
+        key: "shift-reassign",
+        title: "Worker reasignado",
+        fact: "Se movió al turno destino.",
+        consequence: "La cobertura de ambos turnos se actualizó.",
+      });
       loadData();
-    } catch { /* ignore invalid drag data */ }
+    } catch (e) {
+      notifyError({
+        key: "shift-reassign",
+        title: "No pudimos completar la reasignación",
+        fact: "No se realizaron cambios.",
+        consequence: "Vuelve a arrastrar al worker sobre el turno destino.",
+        cause: e,
+      });
+    }
   };
 
   const handleDuplicateToDay = async (shiftData: any, targetDate: string) => {
@@ -1726,7 +1789,16 @@ function DesktopShifts() {
             employee_id: a.employee_id,
             status: "pending",
           }));
-          await supabase.from("shift_assignments").insert(newAssigns as any);
+          const { error: copyAssignError } = await supabase.from("shift_assignments").insert(newAssigns as any);
+          if (copyAssignError) {
+            notifyWarning({
+              key: "shift-copy-assign",
+              title: "Se copió el turno, pero sin equipo",
+              fact: `No pudimos copiar ${newAssigns.length} asignación(es).`,
+              consequence: "Revisa el turno copiado y asigna el equipo manualmente.",
+              cause: copyAssignError,
+            });
+          }
         }
       }
       if (newShift) {
