@@ -100,7 +100,8 @@ export default function TopBar({ collapsed }: { collapsed: boolean }) {
 
       {/* Right: actions */}
       <div className="flex items-center gap-1.5">
-        <ContextSwitcher placement="header" />
+        {/* El cambio de contexto vive en el sidebar (fuente única en desktop). */}
+
         {/* Global Create — only in company mode */}
         {!isGlobalMode && (
           <DropdownMenu>
