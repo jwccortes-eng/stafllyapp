@@ -51,6 +51,9 @@ interface Props {
    *  unsaved-changes confirm dialog. Lets the parent drop the local autosave
    *  draft (S3) so a fresh reopen doesn't restore the discarded work. */
   onDiscard?: () => void;
+  /** P0.4 — "Guardar para después": cierra conservando la SESIÓN local de
+   *  creación. No crea ningún registro en base de datos. */
+  onKeepForLater?: () => void;
   /** Optional banner above the save button (e.g. "requires re-acceptance"). */
   footerBanner?: React.ReactNode;
   /** Form column content (left). */
@@ -87,6 +90,7 @@ export function ShiftFormShell({
   draftSaving,
   isDirty,
   onDiscard,
+  onKeepForLater,
   footerBanner,
   children,
   summary,
@@ -272,15 +276,30 @@ export function ShiftFormShell({
     <AlertDialog open={confirmCloseOpen} onOpenChange={setConfirmCloseOpen}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>¿Descartar cambios?</AlertDialogTitle>
+          <AlertDialogTitle>
+            {onKeepForLater ? "Hay una creación de turno en progreso" : "¿Descartar cambios?"}
+          </AlertDialogTitle>
           <AlertDialogDescription>
-            Tienes cambios sin guardar en este turno. Si cierras ahora se perderán.
-            {onSaveDraft && " Puedes guardarlo como borrador para retomarlo después."}
+            {onKeepForLater
+              ? "Puedes guardarla para después y retomarla tal como está. Todavía no existe ningún turno."
+              : "Tienes cambios sin guardar en este turno. Si cierras ahora se perderán."}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter className="gap-2">
           <AlertDialogCancel>Seguir editando</AlertDialogCancel>
-          {onSaveDraft && (
+          {onKeepForLater && (
+            <Button
+              variant="outline"
+              onClick={() => {
+                setConfirmCloseOpen(false);
+                onKeepForLater();
+                onOpenChange(false);
+              }}
+            >
+              Guardar para después
+            </Button>
+          )}
+          {!onKeepForLater && onSaveDraft && (
             <Button
               variant="outline"
               onClick={async () => {

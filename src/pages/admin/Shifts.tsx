@@ -58,8 +58,10 @@ import { QuickAddInviteWizard } from "@/components/employee/QuickAddInviteWizard
 import EmergencyWorkerDialog, { type EmergencyWorkerCreated } from "@/components/employee/EmergencyWorkerDialog";
 import { ShiftFormFields, useShiftFormSignals, type ShiftFormState } from "@/components/shifts/ShiftFormFields";
 import { ShiftFormShell } from "@/components/shifts/ShiftFormShell";
-import { ShiftDraftBanner, ShiftDraftStatusPill } from "@/components/shifts/ShiftDraftBanner";
-import { useShiftDraftAutosave, type DraftStatus } from "@/hooks/useShiftDraftAutosave";
+import { ShiftDraftStatusPill } from "@/components/shifts/ShiftDraftBanner";
+import type { DraftStatus } from "@/hooks/useShiftDraftAutosave";
+import { useCreateShiftSession } from "@/hooks/useCreateShiftSession";
+import { CreateSessionRecoveryBanner } from "@/components/shifts/CreateSessionRecoveryBanner";
 import { ShiftSummaryPanel } from "@/components/shifts/form/ShiftSummaryPanel";
 import { WorkspaceSummary } from "@/components/shifts/workspace/WorkspaceSummary";
 import { buildPrePublishReview } from "@/lib/shifts/build-pre-publish-review";
@@ -138,6 +140,8 @@ function CreateShiftDialogInline(props: {
   draftStatus?: DraftStatus;
   draftBanner?: React.ReactNode;
   onDiscard?: () => void;
+  /** P0.4 — cerrar conservando la sesión local de creación (sin tocar la BD). */
+  onKeepForLater?: () => void;
 }) {
   const v = props.formState;
   const signals = useShiftFormSignals({
@@ -229,6 +233,7 @@ function CreateShiftDialogInline(props: {
       draftSaving={props.draftSaving}
       isDirty={props.isDirty}
       onDiscard={props.onDiscard}
+      onKeepForLater={props.onKeepForLater}
       saveDisabled={!v.date}
       saveLabel="Publicar turno"
       draftLabel="Guardar borrador"
@@ -308,7 +313,7 @@ function DesktopShifts() {
   usePageView("Programación");
   const navigate = useNavigate();
   const { role, hasModuleAccess, user } = useAuth();
-  const { selectedCompanyId } = useCompany();
+  const { selectedCompanyId, selectedCompany } = useCompany();
   const { config: payrollConfig } = usePayrollConfig();
   const { config: shiftsConfig, updateConfig: updateShiftsConfig, loading: shiftsConfigLoading } = useShiftsConfig();
   const payrollWeekStart = payrollConfig.payroll_week_start_day as 0 | 1 | 2 | 3 | 4 | 5 | 6;
@@ -793,17 +798,34 @@ function DesktopShifts() {
     meetingPointLocationId, jobSiteLocationId, jobSiteAddress,
   ]);
 
-  const createAutosave = useShiftDraftAutosave({
+  /**
+   * P0.4 — CREATE SHIFT SESSION (desktop)
+   * "No estamos implementando persistencia. Estamos protegiendo el trabajo del
+   * usuario." Mismo motor que el wizard móvil: sesión local aislada por
+   * usuario + empresa. Ningún turno existe hasta pulsar "Crear turno".
+   */
+  const createSession = useCreateShiftSession<typeof createFormSnapshot>({
     enabled: createOpen,
-    companyId: selectedCompanyId,
     userId: user?.id ?? null,
-    mode: "create",
-    shiftId: null,
-    data: createFormSnapshot,
-    isEmpty: (d) => !d.title.trim() && !d.date && !d.notes.trim()
-      && !d.clientId && !d.locationId && d.selectedEmployees.length === 0
-      && !d.meetingPoint.trim() && !d.specialInstructions.trim()
-      && !d.shiftAdminId && !d.driverEmployeeId,
+    companyId: selectedCompanyId,
+    surface: "desktop",
+    draft: createFormSnapshot,
+    isMeaningful: (d) => Boolean(
+      d.title.trim() || d.date || d.notes.trim() || d.clientId || d.locationId ||
+      d.selectedEmployees.length > 0 || d.meetingPoint.trim() ||
+      d.specialInstructions.trim() || d.shiftAdminId || d.driverIds.length > 0,
+    ),
+    normalize: (raw) => {
+      if (!raw || typeof raw !== "object") return null;
+      const d = raw as Partial<typeof createFormSnapshot>;
+      if (typeof d.title !== "string" || typeof d.date !== "string") return null;
+      return {
+        ...createFormSnapshot,
+        ...d,
+        selectedEmployees: Array.isArray(d.selectedEmployees) ? d.selectedEmployees : [],
+        driverIds: Array.isArray(d.driverIds) ? d.driverIds : [],
+      } as typeof createFormSnapshot;
+    },
   });
 
   const restoreCreateDraft = (d: typeof createFormSnapshot) => {
@@ -1093,7 +1115,7 @@ function DesktopShifts() {
       const baseShift = await createSingleShift(date, /* skipNotifications */ true, /* forceDraft */ true, /* publishNow */ false);
       if (!baseShift) return;
       toast.success("Borrador guardado");
-      createAutosave.clear(); // S3 — DB draft saved → drop local autosave
+      createSession.endSession(); // P0.4 — borrador en BD guardado → sesión local limpia
       setCreateOpen(false);
       resetForm();
       loadData();
@@ -1137,7 +1159,7 @@ function DesktopShifts() {
       toast.success("Turno publicado");
     }
 
-    createAutosave.clear(); // S3 — published successfully → drop local autosave
+    createSession.endSession(); // P0.4 — turno creado → sesión, storage y timers limpios
     setSaving(false); setCreateOpen(false); resetForm(); loadData();
   };
 
@@ -2492,18 +2514,41 @@ function DesktopShifts() {
           setLocationId(id);
           if (address) setMeetingPoint(address);
         }}
-        draftStatus={createAutosave.status}
-        draftBanner={createAutosave.draftAvailable && (
-          <ShiftDraftBanner
-            savedAt={createAutosave.draftAvailable.savedAt}
-            onRestore={() => {
-              restoreCreateDraft(createAutosave.draftAvailable!.data as typeof createFormSnapshot);
-              createAutosave.dismissBanner();
+        draftBanner={createSession.recovered && (
+          <CreateSessionRecoveryBanner
+            companyName={selectedCompany?.name ?? null}
+            updatedAt={createSession.recovered.updatedAt}
+            onContinue={() => {
+              restoreCreateDraft(createSession.recovered!.draft);
+              createSession.acknowledgeRecovery();
             }}
-            onDiscard={() => createAutosave.clear()}
+            onDiscard={() => {
+              createSession.endSession();
+              resetForm();
+              notifySuccess({
+                title: "Creación descartada",
+                fact: "Borramos la sesión de creación de turno de este dispositivo.",
+                consequence: "No se creó ningún turno ni quedó nada guardado.",
+              });
+            }}
           />
         )}
-        onDiscard={() => createAutosave.clear()}
+        onKeepForLater={() => {
+          createSession.saveNow();
+          notifySuccess({
+            title: "Guardado para después",
+            fact: "Conservamos esta creación de turno tal como está.",
+            consequence: "Todavía no existe ningún turno: al volver puedes continuar donde ibas.",
+          });
+        }}
+        onDiscard={() => {
+          createSession.endSession();
+          notifySuccess({
+            title: "Creación descartada",
+            fact: "Borramos la sesión de creación de turno de este dispositivo.",
+            consequence: "No se creó ningún turno ni quedó nada guardado.",
+          });
+        }}
       />
 
 
