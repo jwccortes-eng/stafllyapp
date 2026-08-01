@@ -485,11 +485,14 @@ export function ShiftDetailDialog({
     onRequestAction?.();
   };
 
-  const handleConfirmRemove = () => {
-    if (!removeConfirm) return;
-    onRemoveAssignment(removeConfirm.assignmentId);
+  // P0 — El retiro lo ejecuta la RPC canónica desde RemoveWorkerFromShiftDialog.
+  // Aquí sólo se refresca la vista cuando la operación terminó.
+  const handleRemoved = () => {
+    const id = removeConfirm?.assignmentId;
     setRemoveConfirm(null);
+    if (id) onRemoveAssignment(id);
   };
+
 
   const statusLabel = shift.status === "published" ? "Publicado" : shift.status === "draft" ? "Borrador" : shift.status === "locked" ? "Bloqueado" : shift.status;
   const pendingRequests = requests.filter(r => r.status === "pending").length;
