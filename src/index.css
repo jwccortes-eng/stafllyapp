@@ -49,6 +49,33 @@
     --status-paid: 158 64% 48%;
     --status-overdue: 28 100% 54%;
 
+    /* OX-2 — familias semánticas de estado (única fuente de verdad) */
+    --status-success: 158 64% 34%;
+    --status-success-bg: 158 55% 94%;
+    --status-success-border: 158 45% 78%;
+
+    --status-warning: 32 90% 34%;
+    --status-warning-bg: 40 95% 93%;
+    --status-warning-border: 36 80% 76%;
+
+    --status-danger: 0 72% 44%;
+    --status-danger-bg: 0 85% 96%;
+    --status-danger-border: 0 65% 84%;
+
+    --status-info: 212 78% 40%;
+    --status-info-bg: 210 90% 96%;
+    --status-info-border: 210 70% 82%;
+
+    --status-neutral: 220 12% 38%;
+    --status-neutral-bg: 220 16% 95%;
+    --status-neutral-border: 220 14% 84%;
+
+    --status-progress: 268 60% 46%;
+    --status-progress-bg: 268 70% 96%;
+    --status-progress-border: 268 50% 84%;
+
+
+
     /* Pastel palette — scheduling module */
     --pastel-rose: 350 80% 92%;
     --pastel-rose-text: 350 60% 45%;
