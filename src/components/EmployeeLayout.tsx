@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ModeSwitcher } from "@/components/ModeSwitcher";
+import { ContextSwitcher } from "@/components/context/ContextSwitcher";
 import { saveIntendedRoute } from "@/lib/auth-session";
 import { Outlet, Navigate, useLocation } from "react-router-dom";
 import { User, Building2, ChevronDown, Check } from "lucide-react";
@@ -256,7 +256,7 @@ export default function EmployeeLayout() {
           </div>
           <div className="flex items-center gap-2">
             <ProductSwitcher />
-            <ModeSwitcher />
+            <ContextSwitcher placement="header" />
             <NotificationBell />
           </div>
         </div>

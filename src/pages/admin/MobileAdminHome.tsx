@@ -10,8 +10,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { isAdminLevelRole } from "@/lib/roles";
-import { AdminProductSwitcher } from "@/components/admin/AdminProductSwitcher";
-import { KpiStateCard } from "@/components/ox/KpiStateCard";
+import { ContextSwitcher } from "@/components/context/ContextSwitcher";
+import { KpiCard } from "@/components/ocs";
 import {
   type MetricState, loadingMetric, errorMetric, notApplicableMetric, countMetric,
 } from "@/lib/ox/metric-state";
@@ -214,7 +214,7 @@ export default function MobileAdminHome() {
             </p>
           </div>
           <div className="shrink-0 pt-0.5">
-            <AdminProductSwitcher compact />
+            <ContextSwitcher placement="header" collapsed />
           </div>
         </div>
       </div>
@@ -246,10 +246,37 @@ export default function MobileAdminHome() {
           Operación de hoy
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <KpiStateCard label="Turnos hoy" state={shiftsToday} onRetry={reload} onClick={() => navigate("/app/shifts")} />
-          <KpiStateCard label="Fichajes abiertos" state={clockedIn} onRetry={reload} onClick={() => navigate("/app/timeclock")} />
-          <KpiStateCard label="Horas por revisar" state={hoursToReview} onRetry={reload} onClick={() => navigate("/app/payroll-review-queue")} />
-          <KpiStateCard label="Sin responder" state={pendingResponses} onRetry={reload} onClick={() => navigate("/app/shifts")} />
+          <KpiCard
+            label="Turnos hoy"
+            state={shiftsToday}
+            variant="compact"
+            onRetry={reload}
+            onClick={() => navigate("/app/shifts")}
+          />
+          <KpiCard
+            label="Fichajes abiertos"
+            state={clockedIn}
+            variant="compact"
+            consequence="Sin clock-out no se pueden validar horas."
+            onRetry={reload}
+            onClick={() => navigate("/app/timeclock")}
+          />
+          <KpiCard
+            label="Horas por revisar"
+            state={hoursToReview}
+            variant="compact"
+            consequence="Bloquean el cierre del periodo de pago."
+            onRetry={reload}
+            onClick={() => navigate("/app/validation-center")}
+          />
+          <KpiCard
+            label="Sin responder"
+            state={pendingResponses}
+            variant="compact"
+            consequence="El turno puede quedarse sin cobertura."
+            onRetry={reload}
+            onClick={() => navigate("/app/shifts")}
+          />
         </div>
       </div>
 

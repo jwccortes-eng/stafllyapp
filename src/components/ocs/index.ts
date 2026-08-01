@@ -19,3 +19,5 @@ export type { InsightCardProps } from "./InsightCard";
 export { CoverageMeter } from "./CoverageMeter";
 export type { CoverageMeterProps } from "./CoverageMeter";
 export type { OcsVariant, OcsMode, OcsDensity } from "./tokens";
+export { TerminalCard } from "./TerminalCard";
+export type { TerminalCardProps } from "./TerminalCard";

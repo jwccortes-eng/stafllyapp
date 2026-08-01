@@ -17,9 +17,7 @@ import { ADMIN_NAV_ITEMS, ADMIN_DEFAULT_PINS, ADMIN_DEFAULT_PINS_MOBILE } from "
 import { useNavPreferences } from "@/hooks/useNavPreferences";
 import { supabase } from "@/integrations/supabase/client";
 import { NavItem } from "@/components/navigation/nav-items";
-import CompanySwitcher from "@/components/CompanySwitcher";
-import { ModeSwitcher } from "@/components/ModeSwitcher";
-import { AdminProductSwitcher } from "@/components/admin/AdminProductSwitcher";
+import { ContextSwitcher } from "@/components/context/ContextSwitcher";
 
 import { safeLocalStorage } from "@/lib/safe-storage";
 import { saveIntendedRoute } from "@/lib/auth-session";
@@ -284,11 +282,9 @@ export default function AdminLayout() {
                 badges colliding with the iOS status bar. */}
             <div className="flex items-center gap-0.5 shrink-0">
               <NotificationBell />
-              {companies.length > 1 && (
-                <div className="ml-0.5">
-                  <CompanySwitcher collapsed />
-                </div>
-              )}
+              <div className="ml-0.5">
+                <ContextSwitcher placement="header" collapsed />
+              </div>
             </div>
           </div>
         </header>

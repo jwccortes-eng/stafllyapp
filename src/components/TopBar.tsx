@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { ModeSwitcher } from "@/components/ModeSwitcher";
 import { useNavigate } from "react-router-dom";
 import { Plus, CalendarDays, Users, Building2, MapPin, Moon, Sun, Globe } from "lucide-react";
 import { useTheme } from "next-themes";
@@ -100,7 +99,8 @@ export default function TopBar({ collapsed }: { collapsed: boolean }) {
 
       {/* Right: actions */}
       <div className="flex items-center gap-1.5">
-        <ModeSwitcher />
+        {/* El cambio de contexto vive en el sidebar (fuente única en desktop). */}
+
         {/* Global Create — only in company mode */}
         {!isGlobalMode && (
           <DropdownMenu>

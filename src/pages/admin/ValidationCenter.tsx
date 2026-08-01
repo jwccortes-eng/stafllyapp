@@ -31,6 +31,8 @@ import { KpiCard } from "@/components/ocs/KpiCard";
 import { InsightCard } from "@/components/ocs/InsightCard";
 import { ValidationCard } from "@/components/ocs/ValidationCard";
 import type { OcsAction } from "@/components/ocs/OperationalCard";
+import { TerminalCard } from "@/components/ocs/TerminalCard";
+import type { TerminalState } from "@/lib/ox/terminal-state";
 
 import { MT } from "@/lib/mobile/mobile-scale";
 import { cn } from "@/lib/utils";
@@ -60,6 +62,7 @@ export default function ValidationCenter() {
   const { user } = useAuth();
   const { selectedCompanyId } = useCompany() as { selectedCompanyId: string | null };
   const { permissions, resolved, loading: permsLoading } = useTodayHubPermissions();
+  const [lastTerminal, setLastTerminal] = useState<TerminalState | null>(null);
 
   const focusShiftId = searchParams.get("shiftId");
   const { data, isLoading, error, refetch, isFetching } =
@@ -130,6 +133,14 @@ export default function ValidationCenter() {
         title: action.label,
         fact: result.fact,
         consequence: result.consequence,
+      });
+      // Estado terminal visible: la pantalla confirma qué quedó decidido.
+      setLastTerminal({
+        title: action.label,
+        facts: [item.title, result.fact].filter(Boolean) as string[],
+        consequence: result.consequence ?? "La decisión quedó registrada.",
+        next: "Ya no requiere acción en el Centro de Validación.",
+        statusKey: action.kind === "reject" ? "rejected" : "resolved",
       });
       setDecision(null);
       setReason("");
@@ -333,6 +344,14 @@ export default function ValidationCenter() {
             Actualizar
           </Button>
         </div>
+      ) : null}
+
+      {lastTerminal ? (
+        <TerminalCard
+          terminal={lastTerminal}
+          density={isMobile ? "mobile" : "desktop"}
+          action={{ label: "Entendido", onClick: () => setLastTerminal(null) }}
+        />
       ) : null}
 
       {model.risks.length > 0 ? (
