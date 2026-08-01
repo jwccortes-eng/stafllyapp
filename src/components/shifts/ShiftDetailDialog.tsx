@@ -398,7 +398,10 @@ export function ShiftDetailDialog({
   const clientIds = clients.map(c => c.id);
   const clientColor = getClientColor(shift.client_id, clientIds);
   const slotsNum = shift.slots ?? 1;
-  const fillPercent = Math.min(100, (shiftAssignments.length / slotsNum) * 100);
+  // P0 — cobertura = asignados activos / plazas (misma regla en todas las pantallas).
+  const staffing = getShiftStaffingMetrics(shiftAssignments as any[], slotsNum);
+  const fillPercent = Math.min(100, staffing.coverageRatio * 100);
+
 
   /** Map [employeeId → role_slot_id|null] for the next batch of assignments,
    *  using FIFO allocation against the current state of typed role slots. */
