@@ -791,12 +791,15 @@ export function ShiftDetailDialog({
             <div className="space-y-2">
               {/* ── Staffing command bar ── */}
               {(() => {
-                const confirmed = shiftAssignments.filter(a => a.status === "confirmed").length;
-                const pending = shiftAssignments.filter(a => a.status === "pending" || a.status === "review").length;
-                const rejected = shiftAssignments.filter(a => a.status === "rejected").length;
-                const active = shiftAssignments.filter(a => a.status !== "rejected").length;
-                const missing = Math.max(0, slotsNum - active);
+                // P0 — fuente única de cobertura/confirmación.
+                const metrics = getShiftStaffingMetrics(shiftAssignments as any[], slotsNum);
+                const confirmed = metrics.confirmed;
+                const pending = metrics.pendingResponse;
+                const rejected = metrics.rejected;
+                const active = metrics.assignedActive;
+                const missing = metrics.missing;
                 const over = active > slotsNum;
+
                 const requiresCar = !!(shift as any).transportation_required;
                 const hasDriver = shiftAssignments.some(a => {
                   const emp = employees.find(e => e.id === a.employee_id);
