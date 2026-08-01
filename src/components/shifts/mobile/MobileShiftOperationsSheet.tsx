@@ -49,13 +49,13 @@ import { LiveShiftBoard } from "@/components/shifts/LiveShiftBoard";
 import { AttendanceEvidenceCard } from "@/components/shifts/ops/AttendanceEvidenceCard";
 
 import {
-import { ADMIN_LEX } from "@/lib/ox/lexicon";
   TraceabilitySnapshot,
   type TraceRisk,
   type TraceTimelineEvent,
   type TraceLinkedRecord,
   type TraceSourceKind,
 } from "@/components/traceability/TraceabilitySnapshot";
+import { ADMIN_LEX } from "@/lib/ox/lexicon";
 
 /**
  * MobileShiftOperationsSheet — Mobile Shifts Phase 1.5

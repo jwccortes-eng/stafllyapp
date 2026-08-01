@@ -78,11 +78,11 @@ import { IdentityBadges } from "@/components/employee/IdentityBadges";
 import { GenerateBillingBlockButton } from "./GenerateBillingBlockButton";
 import { ExportConnecteamPreviewDialog } from "./integrations/ExportConnecteamPreviewDialog";
 import {
-import { ADMIN_LEX } from "@/lib/ox/lexicon";
   pickRoleSlotsForNewAssignments,
   type ShiftRoleSlot,
   type ActiveAssignment,
 } from "@/lib/service-requests/role-slot-utils";
+import { ADMIN_LEX } from "@/lib/ox/lexicon";
 
 interface ShiftDetailDialogProps {
   shift: Shift | null;

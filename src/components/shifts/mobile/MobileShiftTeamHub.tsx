@@ -69,11 +69,11 @@ import { TeamCard, KpiCard, InsightCard, ValidationCard, type TeamMemberSummary 
 import { TeamHubWorkerCard } from "@/components/shifts/team/TeamHubWorkerCard";
 import { TeamConversationCard } from "@/components/shifts/team/TeamConversationCard";
 import {
-import { ADMIN_LEX } from "@/lib/ox/lexicon";
   summarizeTeam, detectTeamRisks, teamSectionOf, teamPrimaryIntent,
   TEAM_SECTION_META, TEAM_SECTION_ORDER,
   type TeamSection, type TeamSummary, type TeamRisk,
 } from "@/lib/shifts/team-hub-model";
+import { ADMIN_LEX } from "@/lib/ox/lexicon";
 
 function formatRelative(iso: string): string {
   try { return formatDistanceToNowStrict(new Date(iso), { addSuffix: true }); }

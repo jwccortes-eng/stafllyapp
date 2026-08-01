@@ -16,10 +16,10 @@ import {
   type MetricState, loadingMetric, errorMetric, notApplicableMetric, countMetric,
 } from "@/lib/ox/metric-state";
 import {
-import { ADMIN_LEX } from "@/lib/ox/lexicon";
   OX9_X, OX9_STACK, OX9_QUIET, OX9_LIST, OX9_ROW,
   OX9_EYEBROW, OX9_BLOCK_TITLE, OX9_ICON, OX9_ICON_TILE,
 } from "@/lib/ox/continuity";
+import { ADMIN_LEX } from "@/lib/ox/lexicon";
 
 /**
  * OX-5 — Mobile Presence Compression.
