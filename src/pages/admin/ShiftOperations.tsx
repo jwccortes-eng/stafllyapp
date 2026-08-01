@@ -35,6 +35,7 @@ import {
   getRecommendedNextActions, normalizeArea,
 } from "@/lib/shifts/shift-operations-intelligence";
 import { getShiftPhase, phaseChipClasses } from "@/lib/shifts/shift-phase";
+import { displayShiftRef } from "@/lib/shifts/shift-ref";
 import {
   deriveCloseoutReviewStatus, presentCloseoutReviewStatus, closeoutBadgeClasses,
 } from "@/lib/shifts/closeout-review-status";
