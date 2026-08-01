@@ -531,19 +531,51 @@ export function MobileQuickCreateShiftSheet({
   const isTeamStep = step === "equipo";
   const canRetryAssignments = retryableOutcomes(outcomes).length > 0;
 
-  /* ── Pantalla de resultado por persona (sólo si algo falló) ── */
+  /* ── Pantalla de confirmación + resultado por persona ── */
   const resultView = result ? (
     <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-      <div className="rounded-2xl border border-status-warning/40 bg-status-warning/5 p-4">
-        <p className="flex items-center gap-2 text-[15px] font-semibold">
-          <AlertTriangle className="h-4 w-4 text-status-warning shrink-0" />
-          {result.title}
-        </p>
-        <p className="mt-1 text-[13px] text-muted-foreground">{result.fact}</p>
-        <p className="mt-1 text-[13px] text-muted-foreground">
-          El turno ya está publicado. Nada de esto afecta payroll.
-        </p>
-      </div>
+      {confirmation && (
+        <div className={cn(
+          "rounded-2xl border p-4",
+          confirmation.kind === "context_mismatch"
+            ? "border-status-warning/40 bg-status-warning/5"
+            : "border-status-success/40 bg-status-success/5",
+        )}>
+          <p className="flex items-center gap-2 text-[15px] font-semibold">
+            {confirmation.kind === "context_mismatch"
+              ? <AlertTriangle className="h-4 w-4 text-status-warning shrink-0" />
+              : <Check className="h-4 w-4 text-status-success shrink-0" />}
+            {confirmation.title}
+          </p>
+          <p className="mt-2 flex items-center gap-2 text-[20px] font-bold tracking-tight">
+            <Hash className="h-4 w-4 text-muted-foreground shrink-0" />
+            {confirmation.refLabel}
+          </p>
+          <p className="mt-1 flex items-center gap-2 text-[13px] font-medium">
+            <Building2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+            {confirmation.companyName}
+          </p>
+          <p className="mt-1 text-[13px] text-muted-foreground">{confirmation.scheduleLine}</p>
+          <p className="text-[13px] text-muted-foreground">{confirmation.teamLine}</p>
+          {confirmation.warning && (
+            <p className="mt-2 text-[13px] font-medium text-status-warning">{confirmation.warning}</p>
+          )}
+        </div>
+      )}
+
+      {result.kind === "created_partial" && (
+        <div className="rounded-2xl border border-status-warning/40 bg-status-warning/5 p-4">
+          <p className="flex items-center gap-2 text-[15px] font-semibold">
+            <AlertTriangle className="h-4 w-4 text-status-warning shrink-0" />
+            {result.title}
+          </p>
+          <p className="mt-1 text-[13px] text-muted-foreground">{result.fact}</p>
+          <p className="mt-1 text-[13px] text-muted-foreground">
+            El turno ya está publicado. Nada de esto afecta payroll.
+          </p>
+        </div>
+      )}
+
 
       <div className="rounded-2xl border border-border/60 bg-card overflow-hidden divide-y divide-border/40">
         {outcomes.map(o => (
