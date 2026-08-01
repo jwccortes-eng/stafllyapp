@@ -68,7 +68,10 @@ export interface ShiftFormState {
   transportRequired: boolean;
   carCapacity: string;
   transportNotes: string;
+  /** LEGADO: driver principal (`scheduled_shifts.driver_employee_id`). Se deriva de driverIds[0]. */
   driverEmployeeId: string;
+  /** P0.3 — todos los conductores del turno (modelo real: shift_assignments.assignment_role). */
+  driverIds: string[];
   // Selected workforce (only meaningful in CREATE)
   selectedEmployees: string[];
   // Premium structured locations
