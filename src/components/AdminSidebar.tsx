@@ -420,13 +420,22 @@ export default function AdminSidebar() {
         collapsed ? "w-[68px]" : "w-[256px]",
       )}
     >
-      {/* ── Brand + Company Switcher ── */}
+      {/* ── Marca Stafly + compañía activa (identidad única del shell) ── */}
       <div className={cn(
         "shrink-0 border-b border-sidebar-border/40",
-        collapsed ? "px-2 py-3.5 flex justify-center" : "px-3 py-3.5"
+        collapsed ? "px-2 py-3 flex flex-col items-center gap-2.5" : "px-3 pt-3.5 pb-3.5 space-y-2.5"
       )}>
+        <div className={cn("flex items-center", collapsed ? "justify-center" : "gap-2 px-1")}>
+          <StaflyMark size={collapsed ? 22 : 20} />
+          {!collapsed && (
+            <span className="text-[13px] font-bold tracking-tight text-sidebar-foreground">
+              Stafly
+            </span>
+          )}
+        </div>
         <ContextSwitcher placement="sidebar" collapsed={collapsed} />
       </div>
+
 
       {/* ── Global mode banner ── */}
       {isGlobalMode && !collapsed && (
