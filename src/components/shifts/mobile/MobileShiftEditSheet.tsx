@@ -32,6 +32,8 @@ import {
   type ShiftFormState,
   type LocationOption,
 } from "@/components/shifts/ShiftFormFields";
+import { syncShiftDriverRoles, driverIdsFromAssignments } from "@/lib/shifts/driver-sync";
+import { notifyWarning } from "@/lib/feedback/notify";
 import type { Shift, SelectOption, Employee, Assignment } from "@/components/shifts/types";
 
 interface Props {
@@ -73,18 +75,35 @@ export function MobileShiftEditSheet({
   const [saving, setSaving] = useState(false);
   const [confirmClose, setConfirmClose] = useState(false);
 
+  /**
+   * P0.3.1 — paridad multi-driver con desktop.
+   * Los conductores reales viven en `shift_assignments.assignment_role='driver'`;
+   * `driver_employee_id` sólo entra como compatibilidad legada.
+   */
+  const baseForm = useMemo<ShiftFormState | null>(() => {
+    if (!shift) return null;
+    return {
+      ...shiftToFormState(shift),
+      driverIds: driverIdsFromAssignments(
+        assignments as any[],
+        shift.id,
+        (shift as any).driver_employee_id,
+      ),
+    };
+  }, [shift, assignments]);
+
   useEffect(() => {
-    if (shift && open) {
-      setForm(shiftToFormState(shift));
+    if (shift && open && baseForm) {
+      setForm(baseForm);
       setOvernight(
         !!shift.start_time && !!shift.end_time &&
         minutes(hhmm(shift.end_time)) < minutes(hhmm(shift.start_time))
       );
       setSaving(false);
     }
-  }, [shift?.id, open]);
+  }, [shift?.id, open, baseForm]);
 
-  const initial = useMemo(() => (shift ? shiftToFormState(shift) : null), [shift]);
+  const initial = baseForm;
   const isDirty = useMemo(
     () => (initial ? JSON.stringify(initial) !== JSON.stringify(form) : false),
     [initial, form]
@@ -129,17 +148,42 @@ export function MobileShiftEditSheet({
       if (JSON.stringify(next[key]) !== JSON.stringify(prev[key])) updates[key] = next[key];
     }
 
-    if (Object.keys(updates).length === 0) { toast.info("Sin cambios"); onOpenChange(false); return; }
+    // Los conductores no viven en scheduled_shifts: se comparan aparte.
+    const wantedDrivers = [...new Set((form.driverIds ?? []).filter(Boolean))];
+    const currentDrivers = initial?.driverIds ?? [];
+    const driversChanged =
+      JSON.stringify([...wantedDrivers].sort()) !== JSON.stringify([...currentDrivers].sort());
+
+    if (Object.keys(updates).length === 0 && !driversChanged) {
+      toast.info("Sin cambios"); onOpenChange(false); return;
+    }
 
     setSaving(true);
     // UPDATE by existing id — never an INSERT, company_id/tenant untouched.
-    const { error } = await supabase
-      .from("scheduled_shifts")
-      .update(updates as any)
-      .eq("id", shift.id);
-    setSaving(false);
+    if (Object.keys(updates).length > 0) {
+      const { error } = await supabase
+        .from("scheduled_shifts")
+        .update(updates as any)
+        .eq("id", shift.id);
+      if (error) { setSaving(false); toast.error(error.message); return; }
+    }
 
-    if (error) { toast.error(error.message); return; }
+    // Roles de conductor: sólo `assignment_role` + el campo legado.
+    // Nunca fichajes, horas ni payroll; nunca borra asignaciones.
+    if (driversChanged) {
+      try {
+        await syncShiftDriverRoles(shift.id, wantedDrivers);
+      } catch (driverError) {
+        notifyWarning({
+          key: "shift-driver-sync-mobile",
+          title: "El turno se guardó, pero los conductores no",
+          fact: "No pudimos actualizar quién maneja en este turno.",
+          consequence: "El equipo verá los conductores anteriores hasta que lo reintentes.",
+          cause: driverError,
+        });
+      }
+    }
+    setSaving(false);
     toast.success("Turno actualizado");
     onSaved?.(updates);
     onOpenChange(false);

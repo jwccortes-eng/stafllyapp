@@ -20,17 +20,28 @@ import {
   ShiftOpsState,
   deriveShiftOpsState,
 } from "@/lib/operations/derive-shift-ops-state";
+import { driverIdsFromAssignments } from "@/lib/shifts/driver-sync";
 
+/**
+ * P0.3.1 — CONTRATO MULTI-DRIVER
+ * La fuente de verdad es `shift_assignments.assignment_role = 'driver'`.
+ * `scheduled_shifts.driver_employee_id` sólo se usa como compatibilidad legada
+ * (se añade al conjunto cuando no existe una fila de asignación equivalente).
+ */
 export interface ShiftTransportInfo {
   required: boolean;
   car_capacity: number;
+  /** Colección completa de conductores del turno (verdad multi-driver). */
+  driver_ids: string[];
+  /** LEGADO/compatibilidad: primer conductor. Nunca sustituye a `driver_ids`. */
   primary_driver_id: string | null;
   rides_count: number;
-  drivers_assigned: number;          // unique drivers across rides + primary driver
-  capacity_total: number;            // car_capacity * rides_count (or car_capacity if no rides but primary)
+  drivers_assigned: number;          // conductores únicos (asignaciones + rides)
+  capacity_total: number;            // car_capacity * (rides o conductores)
   missing_driver: boolean;           // required && drivers_assigned === 0
   capacity_short: boolean;           // required && slots > capacity_total
 }
+
 
 export interface TodayOpsShift {
   id: string;
@@ -144,7 +155,7 @@ export function useTodayOperations(
         todayShiftIds.length
           ? supabase
               .from("shift_assignments")
-              .select("id, shift_id, employee_id, status")
+              .select("id, shift_id, employee_id, status, assignment_role")
               .in("shift_id", todayShiftIds)
           : Promise.resolve({ data: [], error: null } as any),
         todayShiftIds.length
@@ -234,23 +245,34 @@ export function useTodayOperations(
       const ops = deriveShiftOpsState(shiftLite, allAssignments, allEntries, now);
 
       const rides = ridesByShift.get(s.id) ?? [];
-      const driverIds = new Set<string>(rides.map((r) => r.driver_id));
-      if (s.driver_employee_id) driverIds.add(s.driver_employee_id);
+      // P0.3.1 — conductores reales del turno: filas de asignación con rol
+      // 'driver' + el campo legado (sólo si no está ya representado) + los
+      // conductores declarados en los rides.
+      const assignedDriverIds = driverIdsFromAssignments(
+        allAssignments as any[],
+        s.id,
+        s.driver_employee_id ?? null,
+      );
+      const driverIds = new Set<string>(assignedDriverIds);
+      for (const r of rides) if (r.driver_id) driverIds.add(r.driver_id);
       const required = !!s.transportation_required;
       const capacity = Number(s.car_capacity ?? 4);
       const rideCount = rides.length;
-      const capacity_total = rideCount > 0 ? capacity * rideCount : (s.driver_employee_id ? capacity : 0);
+      // Sin rides, cada conductor aporta un vehículo: N conductores = N capacidades.
+      const capacity_total = rideCount > 0 ? capacity * rideCount : capacity * driverIds.size;
       const slots = s.slots ?? 1;
       const transport: ShiftTransportInfo = {
         required,
         car_capacity: capacity,
-        primary_driver_id: s.driver_employee_id ?? null,
+        driver_ids: [...driverIds],
+        primary_driver_id: assignedDriverIds[0] ?? s.driver_employee_id ?? null,
         rides_count: rideCount,
         drivers_assigned: driverIds.size,
         capacity_total,
         missing_driver: required && driverIds.size === 0,
         capacity_short: required && slots > capacity_total,
       };
+
 
       return {
         id: s.id,
