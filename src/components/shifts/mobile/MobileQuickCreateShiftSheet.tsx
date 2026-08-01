@@ -477,10 +477,48 @@ export function MobileQuickCreateShiftSheet({
 
   const current = STEPS[stepIndex];
   const isTeamStep = step === "equipo";
+  const canRetryAssignments = retryableOutcomes(outcomes).length > 0;
+
+  /* ── Pantalla de resultado por persona (sólo si algo falló) ── */
+  const resultView = result ? (
+    <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+      <div className="rounded-2xl border border-status-warning/40 bg-status-warning/5 p-4">
+        <p className="flex items-center gap-2 text-[15px] font-semibold">
+          <AlertTriangle className="h-4 w-4 text-status-warning shrink-0" />
+          {result.title}
+        </p>
+        <p className="mt-1 text-[13px] text-muted-foreground">{result.fact}</p>
+        <p className="mt-1 text-[13px] text-muted-foreground">
+          El turno ya está publicado. Nada de esto afecta payroll.
+        </p>
+      </div>
+
+      <div className="rounded-2xl border border-border/60 bg-card overflow-hidden divide-y divide-border/40">
+        {outcomes.map(o => (
+          <div key={o.employeeId} className="flex items-start gap-3 px-4 py-3">
+            <span className={cn(
+              "h-9 w-9 rounded-full inline-flex items-center justify-center text-xs font-bold shrink-0",
+              o.ok ? "bg-status-success/15 text-status-success" : "bg-status-warning/15 text-status-warning",
+            )}>
+              {o.ok ? <Check className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[15px] font-medium break-words">{o.name}</span>
+              <span className="block text-[13px] text-muted-foreground break-words">{o.reason}</span>
+              {!o.ok && (
+                <span className="mt-0.5 block text-[13px] font-medium break-words">{o.nextAction}</span>
+              )}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  ) : null;
 
   return (
     <>
-      <Sheet open={open} onOpenChange={onOpenChange}>
+      <Sheet open={open} onOpenChange={(v) => { if (v) onOpenChange(true); else requestClose(); }}>
+
         <SheetContent
           side="bottom"
           className="h-[95dvh] rounded-t-3xl p-0 flex flex-col overflow-hidden gap-0"
