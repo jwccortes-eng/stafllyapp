@@ -1,0 +1,195 @@
+/**
+ * OX-4.3 — Tests del modelo puro del Today Hub.
+ */
+import { describe, it, expect } from "vitest";
+import {
+  buildTodayHubModel,
+  type HubShiftLike,
+} from "@/lib/command-center/today-hub-model";
+
+const NOW = new Date("2026-08-01T10:00:00");
+
+function shift(over: Partial<HubShiftLike> & { id: string }): HubShiftLike {
+  return {
+    title: "Turno demo",
+    date: "2026-08-01",
+    start_time: "12:00:00",
+    end_time: "20:00:00",
+    slots: 4,
+    client_name: "Cliente A",
+    job_site_name: "Sede Norte",
+    pending_claims: 0,
+    transport: { required: false, missing_driver: false, capacity_short: false },
+    ...over,
+    ops: {
+      bucket: "staffed_not_started",
+      required: 4,
+      assigned_active: 4,
+      confirmed: 4,
+      clocked_in: 0,
+      open_clocks: 0,
+      missing_clock_outs: 0,
+      not_started: 0,
+      ...(over.ops ?? {}),
+    },
+  } as HubShiftLike;
+}
+
+describe("buildTodayHubModel", () => {
+  it("marca cobertura incompleta próxima a iniciar como critical y primero", () => {
+    const m = buildTodayHubModel({
+      now: NOW,
+      shifts: [
+        shift({ id: "ok" }),
+        shift({
+          id: "gap",
+          start_time: "10:30:00",
+          ops: { bucket: "needs_staff", required: 4, assigned_active: 1, confirmed: 1, clocked_in: 0, open_clocks: 0, missing_clock_outs: 0, not_started: 0 },
+        }),
+      ],
+    });
+    expect(m.attentionItems[0].priority).toBe("critical");
+    expect(m.attentionItems[0].shiftId).toBe("gap");
+    expect(m.attentionItems[0].action?.label).toBe("Completar equipo");
+  });
+
+  it("clasifica ausencias en turno en curso como critical", () => {
+    const m = buildTodayHubModel({
+      now: NOW,
+      shifts: [
+        shift({
+          id: "live",
+          start_time: "08:00:00",
+          ops: { bucket: "in_progress", required: 4, assigned_active: 4, confirmed: 4, clocked_in: 2, open_clocks: 2, missing_clock_outs: 0, not_started: 2 },
+        }),
+      ],
+    });
+    const item = m.attentionItems.find((i) => i.id === "live:no-show");
+    expect(item?.priority).toBe("critical");
+    expect(item?.status).toBe("no_show");
+  });
+
+  it("CTA de turno en curso cubierto es Operar turno", () => {
+    const m = buildTodayHubModel({
+      now: NOW,
+      shifts: [
+        shift({
+          id: "live",
+          start_time: "08:00:00",
+          ops: { bucket: "in_progress", required: 4, assigned_active: 4, confirmed: 4, clocked_in: 4, open_clocks: 4, missing_clock_outs: 0, not_started: 0 },
+        }),
+      ],
+    });
+    expect(m.activeOperations[0].action.label).toBe("Operar turno");
+  });
+
+  it("genera item de cierre con consecuencia y CTA Revisar cierre", () => {
+    const m = buildTodayHubModel({
+      now: NOW,
+      shifts: [
+        shift({
+          id: "close",
+          start_time: "02:00:00",
+          end_time: "08:00:00",
+          ops: { bucket: "needs_closeout", required: 4, assigned_active: 4, confirmed: 4, clocked_in: 4, open_clocks: 1, missing_clock_outs: 1, not_started: 0 },
+        }),
+      ],
+    });
+    expect(m.closeoutItems).toHaveLength(1);
+    expect(m.closeoutItems[0].decision.label).toBe("Revisar cierre");
+    expect(m.closeoutItems[0].consequence).toMatch(/no modifica payroll/i);
+  });
+
+  it("no produce ceros silenciosos en horas pendientes", () => {
+    const m = buildTodayHubModel({
+      now: NOW,
+      shifts: [shift({ id: "a" })],
+      counts: { pendingHours: 0 },
+    });
+    const kpi = m.attentionItems.find((i) => i.id === "counts:hours");
+    expect(kpi?.because).toBe("No hay horas pendientes de revisión.");
+    expect(kpi?.action).toBeUndefined();
+    expect(kpi?.priority).toBe("low");
+  });
+
+  it("horas pendientes >0 son accionables y de alta prioridad", () => {
+    const m = buildTodayHubModel({
+      now: NOW,
+      shifts: [shift({ id: "a" })],
+      counts: { pendingHours: 7 },
+    });
+    const kpi = m.attentionItems.find((i) => i.id === "counts:hours")!;
+    expect(kpi.priority).toBe("high");
+    expect(kpi.value).toBe("7 fichajes");
+    expect(kpi.action?.href).toBe("/app/payroll-review-queue");
+  });
+
+  it("estado calmado con próximo turno cuando no hay riesgos", () => {
+    const m = buildTodayHubModel({ now: NOW, shifts: [shift({ id: "a" })] });
+    expect(m.emptyState.calm).toBe(true);
+    expect(m.emptyState.headline).toBe("Todo bajo control");
+    expect(m.emptyState.nextShift?.shiftId).toBe("a");
+    expect(m.emptyState.nextShift?.startsInLabel).toBe("comienza en 2 h");
+  });
+
+  it("sin turnos devuelve estado explícito, no ceros", () => {
+    const m = buildTodayHubModel({ now: NOW, shifts: [] });
+    expect(m.emptyState.headline).toBe("Sin turnos hoy");
+    expect(m.activeOperations).toHaveLength(0);
+    expect(m.primaryAction).toBeNull();
+  });
+
+  it("respeta permisos: sin canAssign no ofrece completar equipo", () => {
+    const m = buildTodayHubModel({
+      now: NOW,
+      permissions: { canAssign: false },
+      shifts: [
+        shift({
+          id: "gap",
+          ops: { bucket: "needs_staff", required: 4, assigned_active: 1, confirmed: 1, clocked_in: 0, open_clocks: 0, missing_clock_outs: 0, not_started: 0 },
+        }),
+      ],
+    });
+    expect(m.attentionItems[0].action).toBeUndefined();
+    expect(m.activeOperations[0].action.label).toBe("Ver detalles");
+  });
+
+  it("fichajes sin salida generan deep link al reloj", () => {
+    const m = buildTodayHubModel({
+      now: NOW,
+      shifts: [
+        shift({
+          id: "s1",
+          start_time: "01:00:00",
+          end_time: "07:00:00",
+          ops: { bucket: "needs_closeout", required: 2, assigned_active: 2, confirmed: 2, clocked_in: 2, open_clocks: 2, missing_clock_outs: 2, not_started: 0 },
+        }),
+      ],
+    });
+    const item = m.attentionItems.find((i) => i.id === "s1:open-clock")!;
+    expect(item.action?.href).toBe("/app/timeclock?shiftId=s1");
+  });
+
+  it("solicitudes pendientes se modelan como validación", () => {
+    const m = buildTodayHubModel({
+      now: NOW,
+      shifts: [shift({ id: "s2", pending_claims: 3 })],
+    });
+    expect(m.validationItems[0].title).toBe("3 solicitudes por revisar");
+  });
+
+  it("primaryAction refleja el riesgo más urgente", () => {
+    const m = buildTodayHubModel({
+      now: NOW,
+      shifts: [
+        shift({
+          id: "gap",
+          start_time: "10:20:00",
+          ops: { bucket: "needs_staff", required: 3, assigned_active: 0, confirmed: 0, clocked_in: 0, open_clocks: 0, missing_clock_outs: 0, not_started: 0 },
+        }),
+      ],
+    });
+    expect(m.primaryAction?.href).toBe("/app/shift-ops?id=gap");
+    expect(m.primaryAction?.label).toBe("Completar equipo");
+  });
+});
