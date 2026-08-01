@@ -4,9 +4,7 @@
  * Siempre muestra cobertura y una acción para cerrar la brecha.
  */
 import * as React from "react";
-import { cn } from "@/lib/utils";
 import { Users } from "lucide-react";
-import { MT } from "@/lib/mobile/mobile-scale";
 import { OperationalCard, type OcsAction } from "./OperationalCard";
 import { CoverageMeter } from "./CoverageMeter";
 import { EmployeeAvatarGroup } from "@/components/ui/employee-avatar-group";
