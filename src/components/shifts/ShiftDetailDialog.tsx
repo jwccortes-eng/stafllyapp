@@ -1,4 +1,6 @@
 import { getShiftStaffingMetrics } from "@/lib/shifts/staffing-metrics";
+import { CalendarX2 } from "lucide-react";
+import { CancelShiftDialog } from "@/components/shifts/CancelShiftDialog";
 import { getShiftDisplayIdentity } from "@/lib/shifts/shift-identity";
 import { Sheet, SheetContent, SheetTitle, OpsSheetHeader, OpsSheetBody, OpsSheetFooter } from "@/components/ui/sheet";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction, AlertDialogCancel } from "@/components/ui/alert-dialog";
@@ -1547,14 +1549,14 @@ export function ShiftDetailDialog({
                     <Copy className="h-4 w-4 mr-2" /> Duplicar
                   </DropdownMenuItem>
                 )}
-                {onDelete && !isLocked && (
+                {onDelete && !isLocked && shift.status !== "cancelled" && (
                   <>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       onClick={() => setDeleteConfirm(true)}
                       className="text-destructive focus:text-destructive"
                     >
-                      <Trash2 className="h-4 w-4 mr-2" /> Eliminar turno
+                      <CalendarX2 className="h-4 w-4 mr-2" /> Cancelar turno
                     </DropdownMenuItem>
                   </>
                 )}
@@ -1611,30 +1613,23 @@ export function ShiftDetailDialog({
     />
 
 
-    {/* Delete shift confirmation */}
-    <AlertDialog open={deleteConfirm} onOpenChange={setDeleteConfirm}>
-      <AlertDialogContent className="rounded-2xl">
-        <AlertDialogHeader>
-          <AlertDialogTitle className="flex items-center gap-2 text-base">
-            <Trash2 className="h-4 w-4 text-destructive" /> Eliminar turno
-          </AlertDialogTitle>
-          <AlertDialogDescription>
-            ¿Estás seguro de que deseas eliminar el turno <strong>"{shift.title}"</strong> del{" "}
-            <strong>{format(parseISO(shift.date), "d 'de' MMMM", { locale: es })}</strong>?
-            Esta acción no se puede deshacer.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel className="rounded-full">Cancelar</AlertDialogCancel>
-          <AlertDialogAction
-            onClick={() => { onDelete?.(shift); setDeleteConfirm(false); onOpenChange(false); }}
-            className="bg-destructive hover:bg-destructive/90 text-destructive-foreground rounded-full"
-          >
-            Sí, eliminar
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    {/* P0 — Cancelar turno: operación canónica compartida con móvil. */}
+    <CancelShiftDialog
+      open={deleteConfirm}
+      onOpenChange={setDeleteConfirm}
+      shiftId={shift.id}
+      companyId={(shift as any).company_id ?? null}
+      shiftRef={(shift as any).shift_ref ?? shift.shift_code ?? shift.title}
+      clientLine={[client?.name, shift.title].filter(Boolean).join(" · ") || null}
+      whenLine={`${format(parseISO(shift.date), "d 'de' MMMM", { locale: es })} · ${String(shift.start_time).slice(0, 5)} – ${String(shift.end_time).slice(0, 5)}`}
+      requiredWorkers={slotsNum}
+      assignedActive={staffing.assignedActive}
+      confirmed={staffing.confirmed}
+      expectedStatus={shift.status}
+      source="desktop_shift_detail"
+      onCancelled={() => { setDeleteConfirm(false); onOpenChange(false); onDelete?.(shift); }}
+    />
+
 
     {notifyOpen && (
       <Suspense fallback={null}>

@@ -36,6 +36,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
 import { staffedAssignments } from "@/lib/shifts/assignment-coverage";
+import { CalendarX2 } from "lucide-react";
+import { CancelShiftDialog } from "@/components/shifts/CancelShiftDialog";
 import { canManageShifts } from "@/lib/shifts/shift-permissions";
 import { ShiftAttendancePanel } from "@/components/shifts/ShiftAttendancePanel";
 import { MobileShiftTeamHub } from "@/components/shifts/mobile/MobileShiftTeamHub";
@@ -251,6 +253,8 @@ export function MobileShiftOperationsSheet({
 
   const canValidate = canManageShifts({ allRoles, canAccessAdminForCompany, companyId: selectedCompanyId });
   const editLocked = ["locked", "archived", "cancelled"].includes(shift?.status ?? "");
+  // P0 — Cancelación segura del turno (misma operación canónica que desktop).
+  const [cancelOpen, setCancelOpen] = useState(false);
 
 
   const data = useMemo(() => {
@@ -1201,13 +1205,38 @@ export function MobileShiftOperationsSheet({
                     <FileEdit className="h-4 w-4" /> Editar turno
                   </DropdownMenuItem>
                 )}
+                {/* P0 — Cancelar detiene la operación futura, nunca borra la historia. */}
+                {canValidate && !editLocked && (
+                  <DropdownMenuItem
+                    className="gap-2 h-11 text-sm text-destructive focus:text-destructive"
+                    onClick={() => setCancelOpen(true)}
+                  >
+                    <CalendarX2 className="h-4 w-4" /> Cancelar turno
+                  </DropdownMenuItem>
+                )}
               </DropdownMenuContent>
+
             </DropdownMenu>
           </div>
         </div>
 
       </SheetContent>
     </Sheet>
+    <CancelShiftDialog
+      open={cancelOpen}
+      onOpenChange={setCancelOpen}
+      shiftId={shift?.id ?? null}
+      companyId={(shift as any)?.company_id ?? selectedCompanyId ?? null}
+      shiftRef={shift ? getShiftDisplayIdentity(shift).primaryRef : ""}
+      clientLine={shift?.title ?? null}
+      whenLine={shift ? `${shift.date} · ${String(shift.start_time).slice(0, 5)} – ${String(shift.end_time).slice(0, 5)}` : null}
+      requiredWorkers={data?.slots ?? null}
+      assignedActive={data?.assignedCount ?? null}
+      expectedStatus={shift?.status ?? null}
+      source="mobile_shift_operations"
+      onCancelled={() => { setCancelOpen(false); onOpenChange(false); }}
+    />
+
     <MobileShiftTeamHub
       open={hubOpen}
       onOpenChange={setHubOpen}
