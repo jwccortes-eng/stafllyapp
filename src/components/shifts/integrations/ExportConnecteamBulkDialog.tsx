@@ -18,6 +18,7 @@ import {
 } from "@/lib/integrations/connecteam-export";
 import { downloadCsv } from "@/lib/import-review/csv-export";
 import type { Shift, Assignment, Employee, SelectOption } from "@/components/shifts/types";
+import { ADMIN_LEX } from "@/lib/ox/lexicon";
 
 interface Props {
   open: boolean;
@@ -101,7 +102,7 @@ export function ExportConnecteamBulkDialog({
         <DialogHeader className="p-5 pb-3 border-b border-border/30">
           <DialogTitle className="text-base flex items-center gap-2">
             <Download className="h-4 w-4" />
-            Exportar Turnos → Connecteam (.csv)
+            Exportar {ADMIN_LEX.EntityPlural} → Connecteam (.csv)
           </DialogTitle>
           <DialogDescription className="text-xs">
             Exporta los turnos del rango/filtros actuales al formato oficial de importación de Connecteam.

@@ -73,6 +73,7 @@ import {
   TEAM_SECTION_META, TEAM_SECTION_ORDER,
   type TeamSection, type TeamSummary, type TeamRisk,
 } from "@/lib/shifts/team-hub-model";
+import { ADMIN_LEX } from "@/lib/ox/lexicon";
 
 function formatRelative(iso: string): string {
   try { return formatDistanceToNowStrict(new Date(iso), { addSuffix: true }); }
@@ -999,7 +1000,7 @@ function AssignedTab({
   onOpenWorker: (employeeId: string) => void;
 }) {
   return (
-    <section aria-label="Equipo del turno" className="space-y-4">
+    <section aria-label={ADMIN_LEX.team} className="space-y-4">
       <SectionTitle icon={ShieldCheck} helper={HUB_COPY.assignedHelper}>
         Equipo
         <span className="ml-1.5 text-xs font-normal text-muted-foreground normal-case tracking-normal">

@@ -36,6 +36,7 @@ import {
   type HubCounts,
   type HubDecisionItem,
 } from "@/lib/command-center/today-hub-model";
+import { ADMIN_LEX } from "@/lib/ox/lexicon";
 
 /* ── Contadores globales (sólo lectura, tenant-scoped) ───────────────── */
 
@@ -330,7 +331,7 @@ export default function TodayHubView() {
     <Section
       eyebrow="Hoy"
       title="Operaciones de hoy"
-      helper="Turnos activos y próximos, ordenados por urgencia."
+      helper={`${ADMIN_LEX.EntityPlural} activos y próximos, ordenados por urgencia.`}
       count={model.activeOperations.length}
     >
       {model.activeOperations.length === 0 ? (
@@ -342,10 +343,10 @@ export default function TodayHubView() {
               <CalendarClock className="h-4 w-4" />
             </span>
           }
-          title="No hay turnos activos hoy"
+          title={`No hay ${ADMIN_LEX.entityPlural} activos hoy`}
           primary={
             <p className={cn(MT.body)}>
-              Todos los turnos de hoy están cerrados o no hay programación.
+              Todos los {ADMIN_LEX.entityPlural} de hoy están cerrados o no hay programación.
             </p>
           }
           action={{ label: "Ver programación", onClick: () => go("/app/shifts") }}
@@ -427,7 +428,7 @@ export default function TodayHubView() {
           meaning="Estado de los cierres de la operación de hoy."
           status="approved"
           isEmpty
-          emptyLabel="Ningún turno de hoy espera revisión de cierre."
+          emptyLabel={`Ningún ${ADMIN_LEX.entity} de hoy espera revisión de cierre.`}
         />
       ) : (
         model.closeoutItems.map((item) => (

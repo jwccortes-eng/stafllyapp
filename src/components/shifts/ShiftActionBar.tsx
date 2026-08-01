@@ -18,6 +18,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { DuplicateShiftDialog } from "./DuplicateShiftDialog";
+import { ADMIN_LEX } from "@/lib/ox/lexicon";
 
 /**
  * ShiftActionBar — Phase 1 Quick Win #1.
@@ -158,7 +159,7 @@ export function ShiftActionBar({
         className="h-8 gap-1.5"
         onClick={onEdit}
         disabled={!!editBlockedReason}
-        title={editBlockedReason ?? editRestrictedReason ?? "Editar turno"}
+        title={editBlockedReason ?? editRestrictedReason ?? ADMIN_LEX.edit}
       >
         {editBlockedReason ? <Lock className="h-3.5 w-3.5" /> : <Pencil className="h-3.5 w-3.5" />}
         {editRestrictedReason ? "Editar (restringido)" : "Editar"}
@@ -231,7 +232,7 @@ export function ShiftActionBar({
                 disabled={isLocked || !onCancel}
                 className="text-destructive focus:text-destructive"
               >
-                <Ban className="h-3.5 w-3.5 mr-2" /> Cancelar turno…
+                <Ban className="h-3.5 w-3.5 mr-2" /> {ADMIN_LEX.cancel}…
               </DropdownMenuItem>
             </AlertDialogTrigger>
             <AlertDialogContent>
@@ -245,7 +246,7 @@ export function ShiftActionBar({
               <AlertDialogFooter>
                 <AlertDialogCancel>Volver</AlertDialogCancel>
                 <AlertDialogAction onClick={() => onCancel?.()} className="bg-destructive hover:bg-destructive/90">
-                  Cancelar turno
+                  {ADMIN_LEX.cancel}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>

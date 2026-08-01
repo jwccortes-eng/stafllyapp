@@ -55,6 +55,7 @@ import {
   type TraceLinkedRecord,
   type TraceSourceKind,
 } from "@/components/traceability/TraceabilitySnapshot";
+import { ADMIN_LEX } from "@/lib/ox/lexicon";
 
 /**
  * MobileShiftOperationsSheet — Mobile Shifts Phase 1.5
@@ -1202,7 +1203,7 @@ export function MobileShiftOperationsSheet({
                     className="gap-2 h-11 text-sm"
                     onClick={() => { onOpenChange(false); onEdit(shift); }}
                   >
-                    <FileEdit className="h-4 w-4" /> Editar turno
+                    <FileEdit className="h-4 w-4" /> {ADMIN_LEX.edit}
                   </DropdownMenuItem>
                 )}
                 {/* P0 — Cancelar detiene la operación futura, nunca borra la historia. */}
@@ -1211,7 +1212,7 @@ export function MobileShiftOperationsSheet({
                     className="gap-2 h-11 text-sm text-destructive focus:text-destructive"
                     onClick={() => setCancelOpen(true)}
                   >
-                    <CalendarX2 className="h-4 w-4" /> Cancelar turno
+                    <CalendarX2 className="h-4 w-4" /> {ADMIN_LEX.cancel}
                   </DropdownMenuItem>
                 )}
               </DropdownMenuContent>

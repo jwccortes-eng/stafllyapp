@@ -10,6 +10,7 @@ import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { formatDisplayText } from "@/lib/format-helpers";
 import type { SelectOption } from "./types";
+import { ADMIN_LEX } from "@/lib/ox/lexicon";
 
 const QUICK_SUGGESTIONS: ReadonlyArray<{ label: string; slots: number }> = [
   { label: "Meseros", slots: 4 },
@@ -141,7 +142,7 @@ export function QuickCreatePopover({
         {/* Header */}
         <div className="px-3 py-2.5 border-b border-border/20 bg-muted/20 rounded-t-xl">
           <p className="text-[11px] font-semibold capitalize">
-            Nuevo turno · {dateLabel}
+            {ADMIN_LEX.create} · {dateLabel}
           </p>
         </div>
 

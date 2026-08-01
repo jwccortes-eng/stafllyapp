@@ -41,6 +41,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { PayrollSourceGuardrailBanner } from "@/components/payroll/PayrollSourceGuardrailBanner";
 import Upcoming60Sheet from "@/components/ops/Upcoming60Sheet";
+import { ADMIN_LEX } from "@/lib/ox/lexicon";
 
 type CardTone = "ok" | "attention" | "urgent" | "info" | "muted";
 
@@ -295,7 +296,7 @@ export default function OpsHome() {
           >
             <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
               <OpsCard
-                title="Turnos de hoy"
+                title={`${ADMIN_LEX.EntityPlural} de hoy`}
                 count={t.shifts}
                 hint={`${t.assigned}/${t.required} slots`}
                 tone={t.shifts === 0 ? "muted" : t.assigned < t.required ? "attention" : "ok"}
@@ -305,7 +306,7 @@ export default function OpsHome() {
                 empty="Sin turnos hoy"
               />
               <OpsCard
-                title="Turnos de mañana"
+                title={`${ADMIN_LEX.EntityPlural} de mañana`}
                 count={tomorrowOps.totals.shifts}
                 hint={`${tomorrowOps.totals.assigned}/${tomorrowOps.totals.required} slots`}
                 tone={
@@ -446,7 +447,7 @@ export default function OpsHome() {
                 empty="Sin alertas"
               />
               <OpsCard
-                title="Turnos incompletos"
+                title={`${ADMIN_LEX.EntityPlural} incompletos`}
                 count={incompleteToday}
                 hint={
                   incompleteTomorrow > 0

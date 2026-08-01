@@ -82,6 +82,7 @@ import {
   type ShiftRoleSlot,
   type ActiveAssignment,
 } from "@/lib/service-requests/role-slot-utils";
+import { ADMIN_LEX } from "@/lib/ox/lexicon";
 
 interface ShiftDetailDialogProps {
   shift: Shift | null;
@@ -1497,7 +1498,7 @@ export function ShiftDetailDialog({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-52">
                 <DropdownMenuItem onClick={() => { onOpenChange(false); onEdit(shift); }}>
-                  <Pencil className="h-4 w-4 mr-2" /> Editar turno
+                  <Pencil className="h-4 w-4 mr-2" /> {ADMIN_LEX.edit}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => { const id = shift.id; onOpenChange(false); setTimeout(() => navigate(`/app/shift-ops?id=${id}`), 0); }}>
                   <Radar className="h-4 w-4 mr-2" /> Centro de operaciones
@@ -1556,7 +1557,7 @@ export function ShiftDetailDialog({
                       onClick={() => setDeleteConfirm(true)}
                       className="text-destructive focus:text-destructive"
                     >
-                      <CalendarX2 className="h-4 w-4 mr-2" /> Cancelar turno
+                      <CalendarX2 className="h-4 w-4 mr-2" /> {ADMIN_LEX.cancel}
                     </DropdownMenuItem>
                   </>
                 )}

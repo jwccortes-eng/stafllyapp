@@ -36,7 +36,7 @@ const es_app = {
   "topbar.companies_count": "{n} empresas",
   "topbar.demo": "Demo",
   "topbar.create": "Crear",
-  "topbar.create.shift": "Nuevo turno",
+  "topbar.create.shift": "Nuevo servicio",
   "topbar.create.worker": "Nuevo trabajador",
   "topbar.create.client": "Nuevo cliente",
   "topbar.create.location": "Nueva ubicación",
@@ -55,7 +55,7 @@ const es_app = {
   // ── Admin sidebar — link labels ──────────────────────────────────
   "sidebar.link.command_center": "Centro de operaciones",
   "sidebar.link.todays_operations": "Operación de hoy",
-  "sidebar.link.shifts": "Turnos",
+  "sidebar.link.shifts": "Servicios",
   "sidebar.link.attendance": "Asistencia",
   "sidebar.link.time_clock": "Reloj de tiempo",
   "sidebar.link.live_map": "Mapa en vivo",
@@ -230,7 +230,7 @@ const es_app = {
 
   // ── Admin mobile bottom nav ──────────────────────────────────────
   "admin.nav.ops": "Hoy",
-  "admin.nav.shifts": "Turnos",
+  "admin.nav.shifts": "Servicios",
   "admin.nav.time": "Reloj",
   "admin.nav.workers": "Equipo",
   "admin.nav.more": "Más",

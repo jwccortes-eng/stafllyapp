@@ -19,6 +19,7 @@ import {
   OX9_X, OX9_STACK, OX9_QUIET, OX9_LIST, OX9_ROW,
   OX9_EYEBROW, OX9_BLOCK_TITLE, OX9_ICON, OX9_ICON_TILE,
 } from "@/lib/ox/continuity";
+import { ADMIN_LEX } from "@/lib/ox/lexicon";
 
 /**
  * OX-5 — Mobile Presence Compression.
@@ -46,7 +47,7 @@ interface ActionDef {
 
 const ACTIONS: ActionDef[] = [
   { key: "workers", label: "Workers", to: "/app/employees", icon: Users, module: "employees", accent: "bg-primary/10 text-primary", primary: true, hint: "Tu gente" },
-  { key: "shifts", label: "Turnos", to: "/app/shifts", icon: CalendarDays, module: "shifts", badgeKey: "shift_requests", accent: "bg-status-warning-bg text-status-warning", primary: true, hint: "Hoy y próximos" },
+  { key: "shifts", label: ADMIN_LEX.EntityPlural, to: "/app/shifts", icon: CalendarDays, module: "shifts", badgeKey: "shift_requests", accent: "bg-status-warning-bg text-status-warning", primary: true, hint: "Hoy y próximos" },
   { key: "timeclock", label: "Fichajes", to: "/app/timeclock", icon: Clock, module: "shifts", accent: "bg-status-success-bg text-status-success", primary: true, hint: "Entradas y salidas" },
   { key: "payroll", label: "Payroll", to: "/app/periods", icon: DollarSign, module: "periods", accent: "bg-status-progress-bg text-status-progress", primary: true, hint: "Periodos y pagos" },
   { key: "tickets", label: "Solicitudes", to: "/app/requests", icon: Inbox, module: null, badgeKey: "tickets", accent: "bg-muted text-muted-foreground" },
@@ -142,7 +143,7 @@ export default function MobileAdminHome() {
           ? errorMetric("turnos")
           : countMetric(shiftsRes.count ?? 0, "turnos", {
               zero: "Aún no hay turnos programados para hoy.",
-              some: (n) => `${n === 1 ? "Turno programado" : "Turnos programados"} para hoy.`,
+              some: (n) => `${n === 1 ? `${ADMIN_LEX.Entity} programado` : `${ADMIN_LEX.EntityPlural} programados`} para hoy.`,
             }),
       );
       setClockedIn(

@@ -47,6 +47,7 @@ import {
 import type { Shift, Assignment, Employee, SelectOption } from "@/components/shifts/types";
 import { useCompany } from "@/hooks/useCompany";
 import { buildCreationConfirmation, type CreationConfirmation, type PersistedShiftFacts } from "@/lib/shifts/shift-ref";
+import { ADMIN_LEX } from "@/lib/ox/lexicon";
 
 
 /**
@@ -1330,7 +1331,7 @@ export function MobileQuickCreateShiftSheet({
                       ? <Loader2 className="h-5 w-5 animate-spin" />
                       : driverPlan.driverIds.length > 0
                         ? `Crear turno y confirmar ${driverPlan.driverIds.length} ${driverPlan.driverIds.length === 1 ? "driver" : "drivers"}`
-                        : "Crear turno"}
+                        : `Crear ${ADMIN_LEX.entity}`}
                   </Button>
                 ) : (
                   <Button
