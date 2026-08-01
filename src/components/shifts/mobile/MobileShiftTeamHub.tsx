@@ -1173,108 +1173,77 @@ function ClaimsTab({
           {claims.map((c) => {
             const e = empById.get(c.employee_id);
             const workerName = e ? fullName(e) : "este trabajador";
-            const tone =
-              c.status === "approved" ? "good" :
-              c.status === "rejected" ? "bad" : "warn";
             const isPending = c.status === "pending";
             const readiness = readinessFor(e, statusMap);
             const blocked = isPending && !readiness.canBeApproved;
-            const statusLabel =
+            const decidedLabel =
               c.status === "approved" ? "Aprobada" :
-              c.status === "rejected" ? "Rechazada" :
-              c.status === "pending" ? "Pendiente" : (c.status ?? "");
+              c.status === "rejected" ? "Rechazada" : "Pendiente";
             return (
-              <li key={c.id} className="rounded-2xl border border-border/50 bg-card p-3">
-                <div className="flex items-start gap-2.5">
-                  <Avatar className="h-8 w-8 shrink-0">
-                    {e?.avatar_url ? <AvatarImage src={e.avatar_url} alt="" /> : null}
-                    <AvatarFallback className="text-[12px] font-semibold">
-                      {initialsOf(e)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="text-sm font-semibold leading-tight truncate">
-                        {e ? fullName(e) : "Solicitud pendiente"}
-                      </p>
-                      <Badge
-                        variant="outline"
-                        className={cn("h-[18px] px-1.5 text-[12px] font-semibold", toneToClass(tone))}
-                      >
-                        {statusLabel}
-                      </Badge>
-                    </div>
-                    {readiness.state !== "ready" && (
-                      <div className="mt-1 flex items-center gap-1.5 flex-wrap">
-                        <ReadinessChip readiness={readiness} />
-                      </div>
-                    )}
-                    {c.message && (
-                      <p className="mt-1 text-[12px] text-muted-foreground line-clamp-3">
-                        "{c.message}"
-                      </p>
-                    )}
-                    <p className="mt-1 text-[12px] text-muted-foreground">
-                      {c.created_at ? new Date(c.created_at).toLocaleString() : ""}
-                      {c.reviewed_at ? ` · revisada ${new Date(c.reviewed_at).toLocaleString()}` : ""}
-                    </p>
-
-                    {blocked && (
-                      <p className="mt-1.5 text-[12px] text-amber-700 dark:text-amber-400 leading-snug">
-                        {readiness.helper}
-                      </p>
-                    )}
-
-                    {isPending && canManage && (
-                      <div className="mt-2 flex items-center gap-1.5 flex-wrap">
-                        <button
-                          type="button"
-                          disabled={blocked}
-                          onClick={() => onClaimAction(c.id, "approved", workerName, c.employee_id)}
-                          aria-disabled={blocked}
-                          title={blocked ? readiness.helper : undefined}
-                          className={cn(
-                            "inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[12px] font-semibold transition-colors",
-                            blocked
-                              ? "bg-muted text-muted-foreground cursor-not-allowed"
-                              : "bg-emerald-600 text-white hover:bg-emerald-700",
-                          )}
-                        >
-                          <Check className="h-3 w-3" />
-                          Aprobar
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => onClaimAction(c.id, "rejected", workerName, c.employee_id)}
-                          className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-muted hover:bg-muted/80 text-foreground text-[12px] font-semibold transition-colors"
-                        >
-                          <XCircle className="h-3 w-3" />
-                          Rechazar
-                        </button>
-                        {blocked && e && (
-                          <>
-                            <button
-                              type="button"
-                              onClick={() => onViewWorker(e.id)}
-                              className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-muted/60 hover:bg-muted text-foreground text-[12px] font-semibold transition-colors"
-                            >
-                              <UserCog className="h-3 w-3" />
-                              Ver perfil
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => onCopyReminder(workerName)}
-                              className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-muted/60 hover:bg-muted text-foreground text-[12px] font-semibold transition-colors"
-                            >
-                              <Copy className="h-3 w-3" />
-                              Copiar recordatorio
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
+              <li key={c.id}>
+                <ValidationCard
+                  title={e ? fullName(e) : "Solicitud pendiente"}
+                  subtitle={c.message ? `"${c.message}"` : "Solicita entrar a este turno"}
+                  status={
+                    c.status === "approved" ? "approved" :
+                    c.status === "rejected" ? "rejected" : "needs_review"
+                  }
+                  statusLabel={decidedLabel}
+                  evidence={[
+                    { label: "Solicitó", value: c.created_at ? formatRelative(c.created_at) : "—" },
+                    {
+                      label: "Estado del perfil",
+                      value: readiness.label,
+                      attention: readiness.state !== "ready",
+                    },
+                    ...(c.reviewed_at
+                      ? [{ label: "Revisada", value: formatRelative(c.reviewed_at) }]
+                      : []),
+                  ]}
+                  consequence={
+                    blocked
+                      ? readiness.helper
+                      : isPending
+                        ? "Aprobar agrega a la persona al turno. No afecta nómina ni tiempo trabajado."
+                        : "Esta solicitud ya fue decidida. No afecta nómina."
+                  }
+                  decision={{
+                    label: "Aprobar",
+                    icon: Check,
+                    disabled: !isPending || !canManage || blocked,
+                    onClick: () => onClaimAction(c.id, "approved", workerName, c.employee_id),
+                    "aria-label": `Aprobar la solicitud de ${workerName}`,
+                  }}
+                  alternatives={
+                    isPending && canManage
+                      ? [
+                          {
+                            label: "Rechazar",
+                            icon: XCircle,
+                            tone: "danger" as const,
+                            onClick: () => onClaimAction(c.id, "rejected", workerName, c.employee_id),
+                          },
+                          ...(blocked && e
+                            ? [
+                                {
+                                  label: "Ver perfil",
+                                  icon: UserCog,
+                                  tone: "quiet" as const,
+                                  onClick: () => onViewWorker(e.id),
+                                },
+                                {
+                                  label: "Copiar recordatorio",
+                                  icon: Copy,
+                                  tone: "quiet" as const,
+                                  onClick: () => onCopyReminder(workerName),
+                                },
+                              ]
+                            : []),
+                        ]
+                      : undefined
+                  }
+                  mode="readonly"
+                />
               </li>
             );
           })}
