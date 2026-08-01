@@ -1456,7 +1456,7 @@ export default function PayrollReviewQueue() {
                   <HoursApprovalPanel
                     companyId={selectedCompanyId}
                     shiftId={row.shiftId}
-                    onChanged={() => void loadQueue()}
+                    onChanged={() => void dataQ.refetch()}
                   />
                 ) : (
                   <p className="text-[10px] text-muted-foreground/80 leading-relaxed">
