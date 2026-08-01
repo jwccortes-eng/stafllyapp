@@ -25,7 +25,7 @@ import {
   Collapsible, CollapsibleContent, CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { StaflyMark } from "@/components/brand/StaflyBrand";
-import CompanySwitcher from "@/components/CompanySwitcher";
+import { ContextSwitcher } from "@/components/context/ContextSwitcher";
 import { useT } from "@/i18n";
 import { LanguageSwitcher } from "@/components/i18n/LanguageSwitcher";
 
@@ -425,7 +425,7 @@ export default function AdminSidebar() {
         "shrink-0 border-b border-sidebar-border/40",
         collapsed ? "px-2 py-3.5 flex justify-center" : "px-3 py-3.5"
       )}>
-        <CompanySwitcher collapsed={collapsed} />
+        <ContextSwitcher placement="sidebar" collapsed={collapsed} />
       </div>
 
       {/* ── Global mode banner ── */}

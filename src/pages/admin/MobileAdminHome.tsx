@@ -10,7 +10,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { isAdminLevelRole } from "@/lib/roles";
-import { AdminProductSwitcher } from "@/components/admin/AdminProductSwitcher";
+import { ContextSwitcher } from "@/components/context/ContextSwitcher";
 import { KpiCard } from "@/components/ocs";
 import {
   type MetricState, loadingMetric, errorMetric, notApplicableMetric, countMetric,
@@ -214,7 +214,7 @@ export default function MobileAdminHome() {
             </p>
           </div>
           <div className="shrink-0 pt-0.5">
-            <AdminProductSwitcher compact />
+            <ContextSwitcher placement="header" collapsed />
           </div>
         </div>
       </div>

@@ -1,7 +1,7 @@
 import { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { STAFLY_BOTTOM_NAV_CLEARANCE } from "@/components/stafly-ui/tokens";
-import { AdminProductSwitcher } from "@/components/admin/AdminProductSwitcher";
+import { ContextSwitcher } from "@/components/context/ContextSwitcher";
 
 interface MobileAdminModuleShellProps {
   /** MobileAdminHeader */
@@ -43,7 +43,7 @@ export function MobileAdminModuleShell({
         className="absolute right-3 z-20"
         style={{ top: "max(env(safe-area-inset-top, 0px) + 0.25rem, 0.75rem)" }}
       >
-        <AdminProductSwitcher compact />
+        <ContextSwitcher placement="header" collapsed />
       </div>
       {header}
       {tabs}
