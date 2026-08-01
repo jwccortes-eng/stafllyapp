@@ -67,7 +67,13 @@ export interface ShiftRouteHeaderAction {
 export interface ShiftRouteHeaderProps {
   title: string;
   clientName?: string | null;
+  /** @deprecated código legado. Usa `shiftRef` (referencia por empresa). */
   shiftCode?: string | null;
+  /**
+   * P0.2 — identidad operativa: etiqueta ya formateada (`QK-001573`).
+   * Tiene prioridad sobre `shiftCode`. Los UUID/IDs internos nunca se muestran.
+   */
+  shiftRef?: string | null;
   date: string;
   startTime: string;
   endTime?: string | null;
