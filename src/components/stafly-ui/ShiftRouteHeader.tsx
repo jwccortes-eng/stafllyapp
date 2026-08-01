@@ -154,6 +154,8 @@ export function ShiftRouteHeader({
   const start = trimTime(startTime);
   const end = trimTime(endTime);
   const isWorker = variant === "worker";
+  /** Referencia operativa visible: shift_ref si existe, si no el código legado. */
+  const refLabel = (shiftRef ?? "").trim() || (shiftCode ? `#${shiftCode}` : null);
 
   // ── Compact density (DS3a pilot target) ──────────────────────────────────
   const compactBody = (
