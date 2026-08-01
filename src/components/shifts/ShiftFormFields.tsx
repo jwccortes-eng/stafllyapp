@@ -413,7 +413,7 @@ export function ShiftFormFields({
       transportRequired={v.transportRequired}
       carCapacity={v.carCapacity}
       transportNotes={v.transportNotes}
-      driverEmployeeId={v.driverEmployeeId}
+      driverIds={v.driverIds ?? []}
       ridesNeeded={signals.ridesNeeded}
       driversInTeam={signals.driversInTeam}
       assignedCount={signals.assignedCount}
