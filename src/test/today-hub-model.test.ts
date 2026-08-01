@@ -66,9 +66,11 @@ describe("buildTodayHubModel", () => {
         }),
       ],
     });
-    const item = m.attentionItems.find((i) => i.id === "live:no-show");
-    expect(item?.priority).toBe("critical");
-    expect(item?.status).toBe("no_show");
+    const item = m.attentionItems.find((i) => i.id === "live:attendance");
+    expect(item?.priority).toBe("high");
+    expect(item?.status).toBe("attendance");
+    expect(item?.headline).not.toMatch(/no-?show/i);
+
   });
 
   it("CTA de turno en curso cubierto es Operar turno", () => {
