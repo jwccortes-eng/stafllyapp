@@ -25,6 +25,8 @@ interface Company {
   is_demo?: boolean | null;
 }
 
+export type TenantSwitchState = "idle" | "switching" | "error";
+
 interface CompanyContextType {
   companies: Company[];
   selectedCompanyId: string | null;
@@ -40,6 +42,14 @@ interface CompanyContextType {
   isGlobalMode: boolean;
   /** Whether user CAN enter global mode */
   canUseGlobalMode: boolean;
+  /** P0 OX — the company list itself failed to load. */
+  loadError: string | null;
+  /** P0 OX — explicit tenant-switch lifecycle. Never fails silently. */
+  switchState: TenantSwitchState;
+  switchError: string | null;
+  /** Retry the last failed switch (or the company list load). */
+  retrySwitch: () => void;
+  clearSwitchError: () => void;
 }
 
 const CompanyContext = createContext<CompanyContextType>({
@@ -54,7 +64,13 @@ const CompanyContext = createContext<CompanyContextType>({
   isModuleActive: () => true,
   isGlobalMode: false,
   canUseGlobalMode: false,
+  loadError: null,
+  switchState: "idle",
+  switchError: null,
+  retrySwitch: () => {},
+  clearSwitchError: () => {},
 });
+
 
 const GLOBAL_MODE_ROLES = new Set(["developer", "owner"]);
 
