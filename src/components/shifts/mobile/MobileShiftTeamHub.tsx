@@ -331,39 +331,6 @@ interface Props {
   onMutated?: () => void;
 }
 
-type Bucket =
-  | "confirmed"
-  | "accepted"
-  | "pending"
-  | "rejected_by_worker"
-  | "removed"
-  | "no_show"
-  | "other";
-
-function bucketize(a: HubAssignment): Bucket {
-  // Attendance signal takes precedence for past/in-progress shifts.
-  if (a.attendance_status === "absent") return "no_show";
-  if (a.status === "removed") return "removed";
-  if (a.response_status === "rejected" || a.status === "rejected") return "rejected_by_worker";
-  if (a.status === "confirmed") return "confirmed";
-  if (a.status === "accepted") return "accepted";
-  if (a.status === "pending" || a.response_status === "pending") return "pending";
-  return "other";
-}
-
-const BUCKET_META: Record<Bucket, {
-  label: string; icon: React.ComponentType<{ className?: string }>;
-  tone: "good" | "info" | "warn" | "muted" | "bad";
-}> = {
-  confirmed: { label: "Confirmados", icon: ShieldCheck, tone: "good" },
-  accepted: { label: "Aceptados", icon: CheckCircle2, tone: "info" },
-  pending: { label: "Pendientes", icon: Clock, tone: "warn" },
-  rejected_by_worker: { label: "Rechazados", icon: UserX, tone: "bad" },
-  removed: { label: "Removidos", icon: UserMinus, tone: "muted" },
-  no_show: { label: "No-show / Ausente", icon: AlertTriangle, tone: "bad" },
-  other: { label: "Otros", icon: AlertCircle, tone: "muted" },
-};
-
 function toneToClass(tone: "good" | "info" | "warn" | "muted" | "bad"): string {
   switch (tone) {
     case "good": return FAMILY_CLASSES.positive;
@@ -511,15 +478,6 @@ function MobileShiftTeamHubImpl({
   const employeeIds = useMemo(() => employees.map(e => e.id), [employees]);
   const { statusById } = useAssignmentStatuses(employeeIds, companyId);
 
-  const grouped = useMemo(() => {
-    const buckets: Record<Bucket, HubAssignment[]> = {
-      confirmed: [], accepted: [], pending: [],
-      rejected_by_worker: [], removed: [], no_show: [], other: [],
-    };
-    for (const a of assignments) buckets[bucketize(a)].push(a);
-    return buckets;
-  }, [assignments]);
-
   const hasPhoneOf = useMemo(() => {
     return (employeeId: string) => normalizePhone(empById.get(employeeId)?.phone_number).length >= 10;
   }, [empById]);
@@ -536,10 +494,6 @@ function MobileShiftTeamHubImpl({
   }, [assignments, hasPhoneOf]);
 
   const slots = shift.slots ?? 0;
-  // Staffed = anything not rejected/removed (matches assignment-coverage).
-  const staffedCount =
-    grouped.confirmed.length + grouped.accepted.length + grouped.pending.length + grouped.no_show.length + grouped.other.length;
-  const openSpots = Math.max(slots - staffedCount, 0);
   const claimsPending = claims.filter(c => c.status === "pending").length;
 
   const summary = useMemo(
@@ -568,11 +522,6 @@ function MobileShiftTeamHubImpl({
     }),
     [summary, claimsPending, shift.location_id, hasMeetingPointLocation, meetingPoint],
   );
-
-  const order: Bucket[] = [
-    "confirmed", "accepted", "pending",
-    "no_show", "rejected_by_worker", "removed", "other",
-  ];
 
   const TABS: { key: TabKey; label: string; badge?: number }[] = [
     { key: "overview", label: "Resumen" },
@@ -622,7 +571,7 @@ function MobileShiftTeamHubImpl({
                 <span className="text-[12px] text-muted-foreground/80">· termina aprox. <span className="font-mono tabular-nums">{formatTimeShort(shift.end_time)}</span></span>
                 <span className="text-[12px] text-muted-foreground/60">·</span>
                 <span className="text-[12px] font-semibold text-foreground/85 tabular-nums">
-                  {staffedCount}/{slots || "—"}{openSpots > 0 ? ` · faltan ${openSpots}` : ""}
+                  {summary.assigned}/{slots || "—"}{summary.missing > 0 ? ` · faltan ${summary.missing}` : ""}
                 </span>
               </div>
               {(meetingPoint || hasMeetingPointLocation) && (
@@ -1064,28 +1013,6 @@ function AssignedTab({
   );
 }
 
-
-function ContactBtn({
-  href, icon: Icon, label, external,
-}: {
-  href: string;
-  icon: React.ComponentType<{ className?: string }>;
-  label: string;
-  external?: boolean;
-}) {
-  return (
-    <a
-      href={href}
-      target={external ? "_blank" : undefined}
-      rel={external ? "noopener noreferrer" : undefined}
-      className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-muted/60 hover:bg-muted text-[12px] font-medium text-foreground"
-      aria-label={label}
-    >
-      <Icon className="h-3 w-3" />
-      {label}
-    </a>
-  );
-}
 
 function ClaimsTab({
   loading, error, claims, empById, canManage, companyId, onClaimAction, onOpenDesktop,
@@ -1933,31 +1860,6 @@ function SectionTitle({
       {helper ? (
         <p className="mt-1 text-[12px] text-muted-foreground leading-snug">{helper}</p>
       ) : null}
-    </div>
-  );
-}
-
-function StatTile({
-  label, value, accent = "muted",
-}: {
-  label: string;
-  value: number | string;
-  accent?: "good" | "warn" | "info" | "muted" | "bad";
-}) {
-  const accentCls =
-    accent === "good"
-      ? "text-emerald-700 dark:text-emerald-400"
-      : accent === "warn"
-        ? "text-amber-700 dark:text-amber-400"
-        : accent === "info"
-          ? "text-sky-700 dark:text-sky-400"
-          : accent === "bad"
-            ? "text-rose-700 dark:text-rose-400"
-            : "text-foreground";
-  return (
-    <div className="rounded-xl border border-border/50 bg-card px-3 py-2">
-      <p className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
-      <p className={cn("mt-0.5 text-lg font-bold tabular-nums leading-tight", accentCls)}>{value}</p>
     </div>
   );
 }
