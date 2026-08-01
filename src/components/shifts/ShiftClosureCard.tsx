@@ -17,6 +17,8 @@ import {
   closeShift, evaluateShiftClosure, isShiftClosed, type ClosureReadiness,
 } from "@/lib/shifts/shift-closure";
 import { ValidationDeepLink } from "@/components/validation/ValidationDeepLink";
+import { TerminalCard } from "@/components/ocs";
+import { shiftClosedTerminal } from "@/lib/ox/terminal-state";
 
 interface ShiftClosureCardProps {
   companyId: string;
@@ -46,6 +48,9 @@ export function ShiftClosureCard({
   const [dialogOpen, setDialogOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [closedByName, setClosedByName] = useState<string | null>(null);
+  /** Horas realmente fichadas (clock_in + clock_out). Nunca programadas. */
+  const [realHours, setRealHours] = useState(0);
+  const [closedWorkers, setClosedWorkers] = useState(0);
 
   const load = useCallback(async () => {
     if (!companyId || !shiftId) return;
@@ -61,6 +66,17 @@ export function ShiftClosureCard({
         getShiftCloseout(shiftId),
       ]);
       if (teRes.error) throw teRes.error;
+      const entries = (teRes.data ?? []) as { clock_in: string | null; clock_out: string | null }[];
+      const completed = entries.filter((e) => e.clock_in && e.clock_out);
+      setClosedWorkers(completed.length);
+      setRealHours(
+        completed.reduce((acc, e) => {
+          const ms =
+            new Date(e.clock_out as string).getTime() -
+            new Date(e.clock_in as string).getTime();
+          return acc + (ms > 0 ? ms / 3_600_000 : 0);
+        }, 0),
+      );
       setCloseout(co);
       setReadiness(
         evaluateShiftClosure({
@@ -153,30 +169,30 @@ export function ShiftClosureCard({
     );
   }
 
-  // Terminal state
+  // Estado terminal: la pantalla cambia y declara qué sigue.
   if (isShiftClosed(closeout)) {
     const when = closeout?.reviewed_at ? new Date(closeout.reviewed_at) : null;
+    const terminal = shiftClosedTerminal({
+      workers: closedWorkers,
+      realHours,
+      openIncidents: closeout?.incident_count ?? 0,
+    });
     return (
-      <div className={cn("rounded-2xl border border-earning/25 bg-earning/[0.05] p-4", className)}>
-        <div className="flex items-center gap-2">
-          <CheckCircle2 className="h-4 w-4 text-earning" />
-          <h2 className={MT.title}>Turno cerrado</h2>
-        </div>
-        <p className={cn(MT.body, "text-muted-foreground mt-1.5 leading-relaxed")}>
-          Turno cerrado por {closedByName ?? "un administrador"}
-          {when ? ` a las ${when.toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" })} del ${when.toLocaleDateString("es")}` : ""}.
-        </p>
-        <Link
-          to={`/app/payroll-review-queue?shiftId=${encodeURIComponent(shiftId)}`}
-          className={cn(
-            "inline-flex items-center gap-1.5 mt-2.5 min-h-[44px] font-semibold text-primary rounded-lg",
-            MT.body,
-            FOCUS_RING,
-          )}
-        >
-          <ClipboardCheck className="h-4 w-4" /> Ver en Centro de Validación
-        </Link>
-      </div>
+      <TerminalCard
+        className={className}
+        terminal={terminal}
+        subtitle={`Cerrado por ${closedByName ?? "un administrador"}${
+          when
+            ? ` · ${when.toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" })} del ${when.toLocaleDateString("es")}`
+            : ""
+        }`}
+        action={{
+          label: "Ver en Centro de Validación",
+          icon: ClipboardCheck,
+          onClick: () =>
+            navigate(`/app/validation-center?shiftId=${encodeURIComponent(shiftId)}`),
+        }}
+      />
     );
   }
 
