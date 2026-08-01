@@ -582,15 +582,16 @@ export default function ShiftOperations() {
         );
 
         // P0 OX — terminal closure action (evaluates real time entries, never touches payroll).
-        const closeoutCard = shift.company_id ? (
+        const closeoutCard = selectedCompanyId ? (
           <ShiftClosureCard
-            companyId={shift.company_id}
+            companyId={selectedCompanyId}
             shiftId={shift.id}
             shiftEnded={phase === "after" || phase === "closed"}
             assignedCount={assignments.length}
             onClosed={loadAll}
           />
         ) : null;
+
 
 
         const recentValidationsBanner = recentValidations.length > 0 && (phase === "in_progress" || phase === "after" || phase === "closed") ? (
