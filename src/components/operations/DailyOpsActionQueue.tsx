@@ -199,8 +199,11 @@ export function DailyOpsActionQueue({ items, onOperate, compact }: Props) {
                   }
                 />
               )}
-              {drawerItem.shift.shift_code && (
-                <MetaCell label="Código" value={drawerItem.shift.shift_code} />
+              {getShiftDisplayIdentity(drawerItem.shift).primaryRefKind !== "none" && (
+                <MetaCell label="Referencia" value={getShiftDisplayIdentity(drawerItem.shift).primaryRef} />
+              )}
+              {getShiftDisplayIdentity(drawerItem.shift).legacyRef && (
+                <MetaCell label="Referencia anterior" value={getShiftDisplayIdentity(drawerItem.shift).legacyRef!} />
               )}
             </div>
 

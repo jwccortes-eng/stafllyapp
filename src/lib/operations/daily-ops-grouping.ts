@@ -54,8 +54,8 @@ function ctx(s: TodayOpsShift): string {
 }
 
 function titleOf(s: TodayOpsShift): string {
-  const code = s.shift_code ? `#${s.shift_code} ` : "";
-  return `${code}${s.title || "Turno"}`.trim();
+  // P0 · identidad: el título es humano; la referencia vive en su propio slot.
+  return (s.title || "Turno").trim();
 }
 
 export function buildActionQueue(shifts: TodayOpsShift[]): ActionItem[] {

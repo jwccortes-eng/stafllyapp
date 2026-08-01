@@ -536,7 +536,7 @@ export function buildTodayHubModel(input: TodayHubInput): TodayHubModel {
         clientName: shift.client_name ?? null,
         locationName: where,
         timeRange: range,
-        reference: (shift.shift_ref ?? "").trim() || (shift.shift_code ? `#${shift.shift_code}` : null),
+        reference: getShiftDisplayIdentity(shift).primaryRefKind === "none" ? null : getShiftDisplayIdentity(shift).primaryRef,
         status,
         statusLabel,
         required,
