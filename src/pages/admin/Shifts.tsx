@@ -1293,9 +1293,10 @@ function DesktopShifts() {
     }
 
     toast.success("Turno actualizado");
-    // Update selected shift in detail dialog
-    setSelectedShift(prev => prev?.id === shiftId ? { ...prev, ...updates } as Shift : prev);
+    // Reflejamos la fila releída del backend, no lo que creíamos haber enviado.
+    setSelectedShift(prev => prev?.id === shiftId ? { ...prev, ...savedShift } as Shift : prev);
     loadData();
+
   };
 
   // Phase 4.2 — gate single-shift publish behind PrePublishDialog so the
