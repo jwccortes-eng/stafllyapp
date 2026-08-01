@@ -61,12 +61,74 @@ export interface HubCounts {
 
 export type HubRole = "manager" | "dispatcher" | "captain" | "payroll";
 
+/**
+ * OX-4.3.1 — Capacidades explícitas del Today Hub.
+ * Default fail-closed: si una capacidad no viene, es `false`.
+ */
 export interface HubPermissions {
+  /** Completar equipo / asignar workers. */
   canAssign?: boolean;
+  /** Confirmar equipo (contactar / confirmar asistencia comprometida). */
+  canConfirmTeam?: boolean;
+  /** Operar turno (Shift Ops). */
   canOperate?: boolean;
+  /** Cerrar turno. */
   canClose?: boolean;
+  /** Revisar cierre operacional. */
+  canReviewCloseout?: boolean;
+  /** Aprobar horas antes de payroll. */
   canApproveHours?: boolean;
+  /** Acceder al Centro de Validación. */
+  canAccessValidations?: boolean;
+  /** Gestionar workers (documentos, elegibilidad). */
+  canManageWorkers?: boolean;
+  /** Gestionar asistencia / fichajes. */
+  canManageAttendance?: boolean;
 }
+
+export type ResolvedHubPermissions = Required<HubPermissions>;
+
+/** Fail-closed: ninguna acción privilegiada disponible. */
+export const NO_HUB_PERMISSIONS: ResolvedHubPermissions = {
+  canAssign: false,
+  canConfirmTeam: false,
+  canOperate: false,
+  canClose: false,
+  canReviewCloseout: false,
+  canApproveHours: false,
+  canAccessValidations: false,
+  canManageWorkers: false,
+  canManageAttendance: false,
+};
+
+/** Sólo para tests / superficies con permisos ya validados. */
+export const FULL_HUB_PERMISSIONS: ResolvedHubPermissions = {
+  canAssign: true,
+  canConfirmTeam: true,
+  canOperate: true,
+  canClose: true,
+  canReviewCloseout: true,
+  canApproveHours: true,
+  canAccessValidations: true,
+  canManageWorkers: true,
+  canManageAttendance: true,
+};
+
+function resolvePermissions(p: HubPermissions | undefined): ResolvedHubPermissions {
+  // Fail-closed por diseño: ausente/undefined ⇒ sin acceso.
+  return {
+    canAssign: p?.canAssign === true,
+    canConfirmTeam: p?.canConfirmTeam === true,
+    canOperate: p?.canOperate === true,
+    canClose: p?.canClose === true,
+    canReviewCloseout: p?.canReviewCloseout === true,
+    canApproveHours: p?.canApproveHours === true,
+    canAccessValidations: p?.canAccessValidations === true,
+    canManageWorkers: p?.canManageWorkers === true,
+    canManageAttendance: p?.canManageAttendance === true,
+  };
+}
+
 
 export interface TodayHubInput {
   shifts: HubShiftLike[];
