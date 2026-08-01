@@ -17,6 +17,7 @@ import {
   MinusCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { FAMILY_CLASSES } from "@/lib/status/status-registry";
 
 export type WorkerStatusTone =
   | "approved"
