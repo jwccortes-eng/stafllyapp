@@ -67,122 +67,86 @@ function DesktopTimeClockView() {
   const navigate = useNavigate();
 
   return (
-    <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <PageHeader
-          variant="3"
-          title="Reloj de tiempo"
-          subtitle="Controla fichajes abiertos, alertas y registros que necesitan revisión."
-        />
-        <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            className="h-9 text-xs gap-1.5 hidden sm:flex"
-            onClick={() => navigate("/app/daily-ops")}
-          >
-            <Monitor className="h-3.5 w-3.5" />
-            Abrir en operación diaria
-          </Button>
-          <TooltipProvider delayDuration={300}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-9 text-xs gap-1.5 hidden sm:flex"
-                  onClick={() => navigate("/app/discrepancies")}
-                >
-                  <AlertTriangle className="h-3.5 w-3.5" />
+    <div className={cn(OX_STACK, OX_ENTER)}>
+      <OperationalScreenHeader
+        title="Fichajes"
+        context="Actividad real de hoy. Payroll se calcula con fichajes reales o validaciones aprobadas."
+        action={
+          <>
+            <Button size="sm" className="h-9 gap-1.5" onClick={() => navigate("/app/daily-ops")}>
+              <Monitor className="h-4 w-4" />
+              Operar el día
+            </Button>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon" className="h-9 w-9">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel className="text-[12px] font-normal text-muted-foreground">
+                  Revisar
+                </DropdownMenuLabel>
+                <DropdownMenuItem onClick={() => navigate("/app/discrepancies")} className="gap-2 text-sm">
+                  <AlertTriangle className="h-4 w-4" />
                   Discrepancias
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Detectar ausencias, tardanzas y horas extra</TooltipContent>
-            </Tooltip>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/app/comparison")} className="gap-2 text-sm">
+                  <GitCompareArrows className="h-4 w-4" />
+                  Programado vs real
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/app/reports")} className="gap-2 text-sm">
+                  <List className="h-4 w-4" />
+                  Timesheets y reportes
+                </DropdownMenuItem>
 
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-9 text-xs gap-1.5 hidden sm:flex"
-                  onClick={() => navigate("/app/comparison")}
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel className="text-[12px] font-normal text-muted-foreground">
+                  Importar
+                </DropdownMenuLabel>
+                <DropdownMenuItem onClick={() => navigate("/app/import-timeclock")} className="gap-2 text-sm">
+                  <Upload className="h-4 w-4" />
+                  Importar horas (Connecteam)
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/app/import-schedule")} className="gap-2 text-sm">
+                  <CalendarRange className="h-4 w-4" />
+                  Importar programación
+                </DropdownMenuItem>
+
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel className="text-[12px] font-normal text-muted-foreground">
+                  Configuración
+                </DropdownMenuLabel>
+                <DropdownMenuItem onClick={() => setClockSettingsOpen(true)} className="gap-2 text-sm">
+                  <Clock className="h-4 w-4" />
+                  Reglas de fichaje
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/app/payroll-settings")} className="gap-2 text-sm">
+                  <Settings className="h-4 w-4" />
+                  Configuración de nómina
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/app/kiosk")} className="gap-2 text-sm">
+                  <Monitor className="h-4 w-4" />
+                  Terminales kiosk
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    const url = `${APP_BASE_URL}/kiosk`;
+                    navigator.clipboard.writeText(url);
+                    toast.success("URL del kiosk copiada", { description: url });
+                  }}
+                  className="gap-2 text-sm"
                 >
-                  <GitCompareArrows className="h-3.5 w-3.5" />
-                  Comparar
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Programación vs ejecución real</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+                  <Copy className="h-4 w-4" />
+                  Copiar URL kiosk
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </>
+        }
+      />
 
-          <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => setClockSettingsOpen(true)}>
-            <Settings className="h-4 w-4" />
-          </Button>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="icon" className="h-9 w-9">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground font-normal">
-                Importar
-              </DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => navigate("/app/import-timeclock")} className="gap-2 text-sm">
-                <Upload className="h-4 w-4" />
-                Importar horas (Connecteam)
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate("/app/import-schedule")} className="gap-2 text-sm">
-                <CalendarRange className="h-4 w-4" />
-                Importar programación
-              </DropdownMenuItem>
-
-              <DropdownMenuSeparator />
-              <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground font-normal">
-                Reportes
-              </DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => navigate("/app/discrepancies")} className="gap-2 text-sm sm:hidden">
-                <AlertTriangle className="h-4 w-4" />
-                Reporte de discrepancias
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate("/app/comparison")} className="gap-2 text-sm sm:hidden">
-                <GitCompareArrows className="h-4 w-4" />
-                Comparación prog. vs real
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate("/app/reports")} className="gap-2 text-sm">
-                <List className="h-4 w-4" />
-                Timesheets &amp; reportes
-              </DropdownMenuItem>
-
-              <DropdownMenuSeparator />
-              <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground font-normal">
-                Configuración
-              </DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => navigate("/app/payroll-settings")} className="gap-2 text-sm">
-                <Settings className="h-4 w-4" />
-                Config. de nómina
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate("/app/kiosk")} className="gap-2 text-sm">
-                <Monitor className="h-4 w-4" />
-                Terminales kiosk
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => {
-                const url = `${APP_BASE_URL}/kiosk`;
-                navigator.clipboard.writeText(url);
-                toast.success("URL del kiosk copiada", { description: url });
-              }} className="gap-2 text-sm">
-                <Copy className="h-4 w-4" />
-                Copiar URL kiosk
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
-
-      <p className="text-[11px] text-muted-foreground -mt-2">
-        El reloj muestra actividad real. Las horas programadas son referencia operativa; payroll se calcula con fichajes reales o validaciones aprobadas.
-      </p>
 
       <TimeClockCommandView />
 
