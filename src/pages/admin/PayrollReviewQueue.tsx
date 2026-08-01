@@ -1450,9 +1450,24 @@ export default function PayrollReviewQueue() {
                 <div className="rounded-lg border bg-background px-3 py-2.5 text-[11px] text-muted-foreground leading-relaxed">
                   {bucket.description}
                 </div>
+
+                {/* P0 OX — el Centro de Validación ahora resuelve, no solo observa. */}
+                {row.shiftId && selectedCompanyId ? (
+                  <HoursApprovalPanel
+                    companyId={selectedCompanyId}
+                    shiftId={row.shiftId}
+                    onChanged={() => void loadQueue()}
+                  />
+                ) : (
+                  <p className="text-[10px] text-muted-foreground/80 leading-relaxed">
+                    Este hallazgo no está ligado a un turno concreto, así que debe resolverse desde su pantalla de origen.
+                  </p>
+                )}
+
                 <p className="text-[10px] text-muted-foreground/80 leading-relaxed">
-                  Solo lectura. Payroll real sigue basado en Connecteam y reconciliación. No se modifican fichajes ni periodos desde este detalle.
+                  Aprobar o devolver horas actualiza los fichajes con auditoría. No recalcula ni cierra payroll.
                 </p>
+
               </MobileQueueDrawer>
             );
           })()}
