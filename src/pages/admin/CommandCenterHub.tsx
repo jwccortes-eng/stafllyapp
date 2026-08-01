@@ -48,7 +48,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
 
 const TodayHubView = lazy(() => import("@/components/command-center/TodayHubView"));
-const DailyOps = lazy(() => import("./DailyOps"));
 
 const NeedsAttention = lazy(() => import("./NeedsAttention"));
 const OperationsCommandCenter = lazy(() => import("./OperationsCommandCenter"));
@@ -83,165 +82,11 @@ function TabFallback() {
   );
 }
 
-/* ── KPI strip ───────────────────────────────────────────────────────── */
-
-interface KpiCounts {
-  todayShifts: number;
-  pendingAssignments: number;
-  openClocks: number;
-  periodsInReview: number;
-  docsPending: number;
-}
-
-const KPI_DEFAULTS: KpiCounts = {
-  todayShifts: 0,
-  pendingAssignments: 0,
-  openClocks: 0,
-  periodsInReview: 0,
-  docsPending: 0,
-};
-
-function useCommandCenterKpis(companyId: string | null) {
-  const [counts, setCounts] = useState<KpiCounts>(KPI_DEFAULTS);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (!companyId) {
-      setCounts(KPI_DEFAULTS);
-      return;
-    }
-    let cancelled = false;
-    setLoading(true);
-    (async () => {
-      try {
-        const sb: any = supabase;
-        const todayIso = new Date().toISOString().slice(0, 10);
-
-        // Always chain .eq("company_id", …) FIRST — tenant-scope guardrail.
-        const todayShiftsQ = sb
-          .from("scheduled_shifts")
-          .select("id", { count: "exact", head: true })
-          .eq("company_id", companyId)
-          .eq("date", todayIso);
-
-        const pendingAssignmentsQ = sb
-          .from("shift_assignments")
-          .select("id", { count: "exact", head: true })
-          .eq("company_id", companyId)
-          .eq("status", "pending");
-
-        const openClocksQ = sb
-          .from("time_entries")
-          .select("id", { count: "exact", head: true })
-          .eq("company_id", companyId)
-          .is("clock_out", null);
-
-        const periodsInReviewQ = sb
-          .from("pay_periods")
-          .select("id", { count: "exact", head: true })
-          .eq("company_id", companyId)
-          .eq("status", "open");
-
-        const docsPendingQ = sb
-          .from("employee_documents")
-          .select("id", { count: "exact", head: true })
-          .eq("company_id", companyId)
-          .eq("review_status", "pending");
-
-        const [t, a, o, p, d] = await Promise.all([
-          todayShiftsQ, pendingAssignmentsQ, openClocksQ, periodsInReviewQ, docsPendingQ,
-        ]);
-        if (cancelled) return;
-        setCounts({
-          todayShifts: t?.count ?? 0,
-          pendingAssignments: a?.count ?? 0,
-          openClocks: o?.count ?? 0,
-          periodsInReview: p?.count ?? 0,
-          docsPending: d?.count ?? 0,
-        });
-      } catch {
-        // Silent — leave defaults visible.
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [companyId]);
-
-  return { counts, loading };
-}
-
-interface KpiCardDef {
-  label: string;
-  value: number;
-  icon: React.ComponentType<{ className?: string }>;
-  tone: "neutral" | "warn" | "danger" | "info";
-  to: string;
-  hint?: string;
-}
-
-const TONE_CLASSES: Record<KpiCardDef["tone"], string> = {
-  neutral: "text-foreground",
-  info:    "text-sky-700 dark:text-sky-300",
-  warn:    "text-amber-700 dark:text-amber-400",
-  danger:  "text-red-700 dark:text-red-400",
-};
-
-function KpiStrip({ counts, loading }: { counts: KpiCounts; loading: boolean }) {
-  // S4 deep links: KPI → contexto correcto en máximo 1 tap más.
-  //  - "Periodos abiertos" lleva directo a Centro de Validación.
-  //  - "Relojes abiertos" deep-linkea al bucket fichajes-abiertos.
-  const items: KpiCardDef[] = [
-    { label: "Turnos hoy",       value: counts.todayShifts,        icon: CalendarDays, tone: "neutral", to: "/app/command-center?tab=today",     hint: "Hoy" },
-    { label: "Respuestas pend.", value: counts.pendingAssignments, icon: Users,        tone: counts.pendingAssignments > 0 ? "warn" : "neutral", to: "/app/command-center?tab=attention", hint: "Asignaciones" },
-    { label: "Relojes abiertos", value: counts.openClocks,         icon: Clock,        tone: counts.openClocks > 0 ? "warn" : "neutral",         to: "/app/payroll-review-queue?bucket=fichajes-abiertos", hint: "Time entries" },
-    { label: "Periodos abiertos", value: counts.periodsInReview,    icon: ScanEye,      tone: counts.periodsInReview > 0 ? "info" : "neutral",    to: "/app/payroll-review-queue",         hint: "Periodos" },
-    { label: "Docs pendientes",  value: counts.docsPending,        icon: FileWarning,  tone: counts.docsPending > 0 ? "warn" : "neutral",        to: "/app/documents",                    hint: "Revisión" },
-  ];
-
-  return (
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-5">
-      {items.map((k) => {
-        const Icon = k.icon;
-        return (
-          <Link
-            key={k.label}
-            to={k.to}
-            className={cn(
-              "group relative flex items-center gap-2.5 rounded-xl border border-border/60 bg-card",
-              "px-3 py-2.5 hover:border-border hover:shadow-sm transition-all min-w-0",
-            )}
-          >
-            <Icon className={cn("h-4 w-4 shrink-0", TONE_CLASSES[k.tone])} />
-            <div className="flex-1 min-w-0">
-              <div className="flex items-baseline gap-1.5">
-                {loading ? (
-                  <Skeleton className="h-4 w-6" />
-                ) : (
-                  <span className={cn("text-base font-semibold tabular-nums leading-none", TONE_CLASSES[k.tone])}>
-                    {k.value}
-                  </span>
-                )}
-                <span className="text-[10px] uppercase tracking-wide text-muted-foreground truncate">
-                  {k.hint}
-                </span>
-              </div>
-              <div className="text-[11px] text-muted-foreground truncate">{k.label}</div>
-            </div>
-          </Link>
-        );
-      })}
-    </div>
-  );
-}
-
 /* ── Hub ─────────────────────────────────────────────────────────────── */
 
 export default function CommandCenterHub() {
   const [params, setParams] = useSearchParams();
   const isMobile = useIsMobile();
-  const { selectedCompanyId } = useCompany();
-  const { counts, loading } = useCommandCenterKpis(selectedCompanyId);
 
   const raw = params.get("tab") as TabKey | null;
   const active: TabKey = useMemo(
@@ -268,10 +113,6 @@ export default function CommandCenterHub() {
           Una sola pantalla operativa: hoy, atención, en vivo, cierre y validación previa a payroll.
         </p>
       </header>
-
-      <div className="px-3 md:px-6">
-        <KpiStrip counts={counts} loading={loading} />
-      </div>
 
       <Tabs value={active} onValueChange={setActive} className="w-full">
         {/* Mobile: horizontal scroll pill strip. Desktop: standard inline tabs. */}
