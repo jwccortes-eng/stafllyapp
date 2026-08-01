@@ -39,13 +39,14 @@ interface ActionDef {
 }
 
 const ACTIONS: ActionDef[] = [
-  { key: "workers", label: "Workers", hint: "Roster & profiles", to: "/app/employees", icon: Users, module: "employees", accent: "bg-primary/10 text-primary" },
-  { key: "shifts", label: "Shifts", hint: "Schedule & assign", to: "/app/shifts", icon: CalendarDays, module: "shifts", badgeKey: "shift_requests", accent: "bg-amber-500/10 text-amber-600 dark:text-amber-400" },
-  { key: "timeclock", label: "Time Clock", hint: "Live attendance", to: "/app/timeclock", icon: Clock, module: "shifts", accent: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" },
-  { key: "payroll", label: "Payroll", hint: "Periods & reports", to: "/app/periods", icon: DollarSign, module: "periods", accent: "bg-violet-500/10 text-violet-600 dark:text-violet-400" },
-  { key: "tickets", label: "Requests", hint: "Tickets & inbox", to: "/app/requests", icon: Inbox, module: null, badgeKey: "tickets", accent: "bg-sky-500/10 text-sky-600 dark:text-sky-400" },
-  { key: "clients", label: "Clients", hint: "Accounts & sites", to: "/app/clients", icon: Building2, module: "clients", accent: "bg-rose-500/10 text-rose-600 dark:text-rose-400" },
+  { key: "workers", label: "Workers", hint: "Equipo y perfiles", to: "/app/employees", icon: Users, module: "employees", accent: "bg-primary/10 text-primary" },
+  { key: "shifts", label: "Turnos", hint: "Programación y asignación", to: "/app/shifts", icon: CalendarDays, module: "shifts", badgeKey: "shift_requests", accent: "bg-status-warning-bg text-status-warning" },
+  { key: "timeclock", label: "Fichajes", hint: "Asistencia en vivo", to: "/app/timeclock", icon: Clock, module: "shifts", accent: "bg-status-success-bg text-status-success" },
+  { key: "payroll", label: "Payroll", hint: "Periodos y reportes", to: "/app/periods", icon: DollarSign, module: "periods", accent: "bg-status-progress-bg text-status-progress" },
+  { key: "tickets", label: "Solicitudes", hint: "Tickets y bandeja", to: "/app/requests", icon: Inbox, module: null, badgeKey: "tickets", accent: "bg-muted text-muted-foreground" },
+  { key: "clients", label: "Clientes", hint: "Cuentas y sedes", to: "/app/clients", icon: Building2, module: "clients", accent: "bg-status-neutral-bg text-status-neutral" },
 ];
+
 
 type BadgeState = { kind: "loading" | "error" | "ready"; value: number };
 
