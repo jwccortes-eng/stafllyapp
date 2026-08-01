@@ -89,7 +89,6 @@ function WeekByJobViewImpl({ weekDays, shifts, assignments, locations, clients, 
 
     // P0 — fuente única: cobertura = asignados activos / plazas.
     const metrics = getShiftStaffingMetrics(shiftAssignments as any[], totalSlots);
-    const rejected = metrics.rejected;
 
 
     return (
