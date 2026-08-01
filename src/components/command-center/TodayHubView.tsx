@@ -213,17 +213,36 @@ export default function TodayHubView() {
     selectedCompanyId ?? null,
     today,
   );
+  const {
+    permissions,
+    resolved: permsResolved,
+    loading: permsLoading,
+    reason: permsReason,
+  } = useTodayHubPermissions();
   const { counts, error: countsError, refresh: refreshCounts } = useHubCounts(
     selectedCompanyId ?? null,
   );
 
+  /* OX-4.3.1 — feedback OX-1 cuando el resolver falla (no cuando carga). */
+  useEffect(() => {
+    if (permsReason === "resolver_error" || permsReason === "role_unresolved_for_tenant") {
+      notifyError({
+        title: "Permisos no verificados",
+        fact: "No pudimos confirmar tus permisos en esta compañía.",
+        consequence: "Las acciones que modifican la operación quedan ocultas.",
+        key: `today-hub-perms:${permsReason}`,
+      });
+    }
+  }, [permsReason]);
+
   const model = useMemo(
-    () => buildTodayHubModel({ shifts: shifts as any, counts }),
-    [shifts, counts],
+    () => buildTodayHubModel({ shifts: shifts as any, counts, permissions }),
+    [shifts, counts, permissions],
   );
 
   const go = (href: string) => navigate(href);
   const retryAll = () => { refresh(); refreshCounts(); };
+
 
   if (loading && shifts.length === 0) {
     return (
