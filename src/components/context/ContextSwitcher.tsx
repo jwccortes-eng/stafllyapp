@@ -736,7 +736,7 @@ export const ContextSwitcher = forwardRef<HTMLDivElement, ContextSwitcherProps>(
         <CompanySwitchPinDialog
           open={pinDialogOpen}
           onOpenChange={setPinDialogOpen}
-          company={pendingCompany}
+          targetCompany={pendingCompany}
           onConfirm={(companyId: string) => {
             performSwitch(companyId);
             setPendingCompany(null);
