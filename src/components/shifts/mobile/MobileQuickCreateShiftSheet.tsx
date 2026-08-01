@@ -323,64 +323,98 @@ export function MobileQuickCreateShiftSheet({
     return parts.join(" · ");
   }, [serviceType, client]);
 
+  /**
+   * Ejecuta las asignaciones de forma secuencial y devuelve el resultado
+   * por persona. La RPC es la única autoridad (compliance/permisos).
+   */
+  const runAssignments = async (shiftId: string, ids: string[]): Promise<AssignOutcome[]> => {
+    const out: AssignOutcome[] = [];
+    for (const employeeId of ids) {
+      const person = employees.find(x => x.id === employeeId);
+      const name = person ? fullName(person) : "Trabajador";
+      try {
+        await assignWorkerToShift({ shiftId, employeeId, source: "mobile_create_shift" });
+        out.push(buildAssignOutcome(employeeId, name, null));
+      } catch (e) {
+        out.push(buildAssignOutcome(employeeId, name, e));
+      }
+    }
+    return out;
+  };
+
   const handleCreate = async () => {
-    if (!companyId || saving || stepBlocker) return;
+    if (!companyId || submitLockRef.current || stepBlocker) return;
+    submitLockRef.current = true;
     setSaving(true);
     try {
-      const insertData: any = {
-        company_id: companyId,
-        title: shiftTitle,
-        date,
-        start_time: startTime,
-        end_time: endTime,
-        slots,
-        client_id: clientId || null,
-        job_site_address: jobSiteAddress.trim() || null,
-        job_site_location_id: jobSiteLocationId || null,
-        meeting_point: meetingPoint.trim() || null,
-        meeting_point_location_id: meetingPointLocationId || null,
-        notes: notes.trim() || null,
-        created_by: user?.id ?? null,
-        status: "published",
-        publication_status: "published",
-        published_at: new Date().toISOString(),
-        published_by: user?.id ?? null,
-        claimable: false,
-      };
+      // Idempotencia: si el turno ya existe (reintento tras fallo parcial),
+      // NO se vuelve a insertar.
+      let shiftId = createdShiftIdRef.current;
 
-      const { data, error } = await supabase
-        .from("scheduled_shifts")
-        .insert(insertData)
-        .select("id")
-        .single();
-      if (error) throw error;
-      const shiftId = data!.id as string;
+      if (!shiftId) {
+        const insertData: any = {
+          company_id: companyId,
+          title: shiftTitle,
+          date,
+          start_time: startTime,
+          end_time: endTime,
+          slots,
+          client_id: clientId || null,
+          job_site_address: jobSiteAddress.trim() || null,
+          job_site_location_id: jobSiteLocationId || null,
+          meeting_point: meetingPoint.trim() || null,
+          meeting_point_location_id: meetingPointLocationId || null,
+          notes: notes.trim() || null,
+          created_by: user?.id ?? null,
+          status: "published",
+          publication_status: "published",
+          published_at: new Date().toISOString(),
+          published_by: user?.id ?? null,
+          claimable: false,
+        };
 
-      // Equipo: se asigna con la RPC existente (compliance y permisos server-side).
-      let assigned = 0;
-      const failed: string[] = [];
-      for (const employeeId of team) {
-        try {
-          await assignWorkerToShift({
-            shiftId,
-            employeeId,
-            source: "mobile_create_shift",
-          });
-          assigned += 1;
-        } catch (e) {
-          const person = employees.find(x => x.id === employeeId);
-          failed.push(person ? fullName(person) : "Trabajador");
-          console.error("[CreateShift] assign error", e);
-        }
+        const { data, error } = await supabase
+          .from("scheduled_shifts")
+          .insert(insertData)
+          .select("id")
+          .single();
+        if (error) throw error;
+        shiftId = data!.id as string;
+        createdShiftIdRef.current = shiftId;
       }
 
+      // Sólo se intentan las personas que aún no están resueltas: evita duplicar.
+      const pendingIds = outcomes.length > 0
+        ? retryableOutcomes(outcomes).map(o => o.employeeId)
+        : team;
+
+      const fresh = await runAssignments(shiftId, pendingIds);
+      const merged: AssignOutcome[] = [
+        ...outcomes.filter(o => !pendingIds.includes(o.employeeId)),
+        ...fresh,
+      ];
+      const ordered = team
+        .map(id => merged.find(o => o.employeeId === id))
+        .filter(Boolean) as AssignOutcome[];
+
+      setOutcomes(ordered);
+      const summary = summarizeCreateResult(ordered, team.length);
+      setResult(summary);
+
+      // Auditoría: siempre refleja el resultado real, incluidos los fallos.
       try {
         await supabase.rpc("log_activity_detailed", {
           _action: "publicar_turno",
           _entity_type: "scheduled_shift",
           _entity_id: shiftId,
           _company_id: companyId,
-          _details: { source: "mobile_create_shift_flow", assigned },
+          _details: {
+            source: "mobile_create_shift_flow",
+            result: summary.kind,
+            requested: team.length,
+            assigned: summary.okCount,
+            failed: ordered.filter(o => !o.ok).map(o => ({ employee_id: o.employeeId, code: o.code })),
+          },
           _old_data: null,
           _new_data: {
             title: shiftTitle, date, start_time: startTime, end_time: endTime,
@@ -389,39 +423,43 @@ export function MobileQuickCreateShiftSheet({
         } as any);
       } catch { /* no bloqueante */ }
 
-      if (failed.length > 0) {
+      onCreated(shiftId);
+
+      if (summary.kind === "created_partial") {
         notifyWarning({
-          title: "Turno creado con equipo incompleto",
-          fact: `Se asignaron ${assigned} de ${team.length} personas. No se pudo asignar a ${failed.join(", ")}.`,
-          consequence: "El turno ya está publicado; completa el equipo desde el turno.",
+          title: summary.title,
+          fact: summary.fact,
+          consequence: "El turno ya está publicado; revisa quién quedó fuera.",
           key: "create-shift",
         });
+        // Se queda abierto en la pantalla de resultado por persona.
       } else {
         notifySuccess({
-          title: "Turno creado",
+          title: summary.title,
           fact: `${shiftTitle} · ${shortDate(date)} ${startTime}–${endTime}.`,
-          consequence: assigned > 0
-            ? `${assigned} ${assigned === 1 ? "persona asignada" : "personas asignadas"}; deben confirmar su asistencia.`
-            : "Aún no tiene equipo asignado.",
+          consequence: summary.fact,
           key: "create-shift",
         });
+        onOpenChange(false);
       }
-
-      onCreated(shiftId);
-      onOpenChange(false);
     } catch (e: any) {
+      const created = !!createdShiftIdRef.current;
       notifyError({
-        title: "No se pudo crear el turno",
-        fact: "El turno no se guardó y no se asignó a nadie.",
-        consequence: "Puedes reintentar sin duplicar información.",
+        title: created ? "El turno se creó, pero el equipo no" : "No se pudo crear el turno",
+        fact: created
+          ? "El turno está publicado; las asignaciones quedaron pendientes."
+          : "El turno no se guardó y no se asignó a nadie.",
+        consequence: "Reintentar no crea un turno duplicado.",
         action: { label: "Reintentar", onClick: () => { void handleCreate(); } },
         cause: e,
         key: "create-shift",
       });
     } finally {
+      submitLockRef.current = false;
       setSaving(false);
     }
   };
+
 
   const current = STEPS[stepIndex];
   const isTeamStep = step === "equipo";
