@@ -1,11 +1,15 @@
 import { supabase } from "@/integrations/supabase/client";
 import { evaluateOperationalSignal } from "./engine";
-import { isKillSwitchEngaged, isShadowModeEnabled, isShadowPersistenceEnabled } from "./flags";
+import { isKillSwitchEngaged, isShadowModeEnabled } from "./flags";
+import { isPersistenceEnabledForCompany } from "./company-config";
+import { recordObserved, recordPersistAttempt, recordSkipped } from "./health";
 import type { OperationalSignalEvent, SignalContext, SignalDecision } from "./types";
 
 /**
  * Records a shadow decision. NEVER blocks or delays the primary event:
- * fire-and-forget, all errors swallowed.
+ * fire-and-forget, all errors swallowed (and logged to sink telemetry).
+ *
+ * F1.1: persistence is gated per company by `operational_signal_shadow_config`.
  */
 export function observeOperationalEvent(
   event: OperationalSignalEvent,
@@ -20,9 +24,14 @@ export function observeOperationalEvent(
     return null;
   }
 
-  if (isShadowPersistenceEnabled()) {
+  recordObserved();
+
+  if (isPersistenceEnabledForCompany(event.companyId)) {
     // Deferred so the shadow layer never sits in the critical path.
     const persist = () => {
+      // Re-check: the kill switch must stop new writes immediately.
+      if (isKillSwitchEngaged()) return;
+      const startedAt = Date.now();
       void supabase
         .from("operational_signal_shadow_decisions")
         .insert([{
@@ -65,12 +74,30 @@ export function observeOperationalEvent(
           decision_version: decision.decisionVersion,
         }])
         .then(
-          () => undefined,
-          () => undefined,
+          ({ error }) => {
+            recordPersistAttempt({
+              at: Date.now(),
+              companyId: event.companyId,
+              ok: !error,
+              latencyMs: Date.now() - startedAt,
+              error: error?.message,
+            });
+          },
+          (err: unknown) => {
+            recordPersistAttempt({
+              at: Date.now(),
+              companyId: event.companyId,
+              ok: false,
+              latencyMs: Date.now() - startedAt,
+              error: err instanceof Error ? err.message : "unknown",
+            });
+          },
         );
     };
     if (typeof queueMicrotask === "function") queueMicrotask(persist);
     else setTimeout(persist, 0);
+  } else {
+    recordSkipped();
   }
 
   return decision;
