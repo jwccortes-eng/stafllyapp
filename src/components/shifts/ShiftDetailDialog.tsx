@@ -15,13 +15,14 @@ import { EmployeeCombobox } from "./EmployeeCombobox";
 import { OpsStatusChip, type OpsStatusTone } from "@/components/operations/OpsStatusChip";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import {
-  Clock, MapPin, Users, Trash2, UserPlus, Send, Save, Globe, Loader2,
+  Clock, MapPin, Users, Trash2, UserPlus, UserMinus, Send, Save, Globe, Loader2,
   CheckCircle2, XCircle, ShieldCheck, ShieldX, ShieldQuestion, Megaphone,
   MessageSquare, Bell, Smartphone, Lock, Unlock, ClipboardCheck, Car, Pencil, X,
   CalendarDays, Building2, StickyNote, UsersRound, Sparkles, Phone, MessageCircleIcon, Copy, FileText, Radar,
   AlertTriangle, Compass, History, MoreVertical, Map as MapIcon,
 } from "lucide-react";
 import { ShiftReviewButton } from "@/components/reviews/ShiftReviewButton";
+import { RemoveWorkerFromShiftDialog } from "@/components/shifts/RemoveWorkerFromShiftDialog";
 import { ShiftPostReviewsSection } from "@/components/reviews/ShiftPostReviewsSection";
 // Heavy panels — lazy-loaded so the drawer opens fast and only pays for the
 // JS chunks the user actually navigates to. Keeps realtime/queries intact;
