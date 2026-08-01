@@ -68,8 +68,11 @@ export function teamSectionOf(
   if (a.attendance_status === "late") return "attention";
   if (opts.hasPhone === false) return "attention";
   if (a.attendance_status === "present" || a.attendance_status === "checked_in") return "ready";
+  // P0 — un cambio material invalida la aceptación previa: vuelve a pendiente.
+  if (a.response_status === "needs_reacceptance") return "pending";
   if (a.status === "confirmed") return "ready";
   if (a.status === "accepted" && !a.import_batch_id) return "ready";
+
   return "pending";
 }
 
@@ -129,8 +132,10 @@ export function summarizeTeam(
     if (a.response_status === "rejected" || a.status === "rejected") { rejected += 1; continue; }
     assigned += 1;
     if (!phone) withoutPhone += 1;
-    if (a.status === "confirmed" || (a.status === "accepted" && !a.import_batch_id)) confirmed += 1;
+    if (a.response_status === "needs_reacceptance") pending += 1;
+    else if (a.status === "confirmed" || (a.status === "accepted" && !a.import_batch_id)) confirmed += 1;
     else pending += 1;
+
   }
 
   const missing = Math.max(0, slots - assigned);

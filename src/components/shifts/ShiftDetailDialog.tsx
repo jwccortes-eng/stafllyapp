@@ -1,3 +1,4 @@
+import { getShiftStaffingMetrics } from "@/lib/shifts/staffing-metrics";
 import { getShiftDisplayIdentity } from "@/lib/shifts/shift-identity";
 import { Sheet, SheetContent, SheetTitle, OpsSheetHeader, OpsSheetBody, OpsSheetFooter } from "@/components/ui/sheet";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction, AlertDialogCancel } from "@/components/ui/alert-dialog";
@@ -397,7 +398,10 @@ export function ShiftDetailDialog({
   const clientIds = clients.map(c => c.id);
   const clientColor = getClientColor(shift.client_id, clientIds);
   const slotsNum = shift.slots ?? 1;
-  const fillPercent = Math.min(100, (shiftAssignments.length / slotsNum) * 100);
+  // P0 — cobertura = asignados activos / plazas (misma regla en todas las pantallas).
+  const staffing = getShiftStaffingMetrics(shiftAssignments as any[], slotsNum);
+  const fillPercent = Math.min(100, staffing.coverageRatio * 100);
+
 
   /** Map [employeeId → role_slot_id|null] for the next batch of assignments,
    *  using FIFO allocation against the current state of typed role slots. */
@@ -584,7 +588,7 @@ export function ShiftDetailDialog({
             </div>
             <span className="text-[10.5px] font-semibold tabular-nums text-foreground whitespace-nowrap">
               <Users className="h-3 w-3 inline mr-0.5 -mt-0.5" />
-              {shiftAssignments.length}/{slotsNum}
+              {staffing.assignedActive}/{slotsNum}
             </span>
           </div>
         </div>
@@ -720,7 +724,7 @@ export function ShiftDetailDialog({
                   {(shift as any).meeting_point && (
                     <InfoRow icon={Compass} label="Dirección / Punto de encuentro" value={(shift as any).meeting_point} />
                   )}
-                  <InfoRow icon={Users} label="Plazas" value={`${shiftAssignments.length} / ${slotsNum} asignados`} />
+                  <InfoRow icon={Users} label="Plazas" value={`${staffing.assignedActive} de ${slotsNum} cubiertos · ${staffing.confirmed} confirmó`} />
                 </div>
 
                 {allowClaims && shift.claimable && (
@@ -791,12 +795,15 @@ export function ShiftDetailDialog({
             <div className="space-y-2">
               {/* ── Staffing command bar ── */}
               {(() => {
-                const confirmed = shiftAssignments.filter(a => a.status === "confirmed").length;
-                const pending = shiftAssignments.filter(a => a.status === "pending" || a.status === "review").length;
-                const rejected = shiftAssignments.filter(a => a.status === "rejected").length;
-                const active = shiftAssignments.filter(a => a.status !== "rejected").length;
-                const missing = Math.max(0, slotsNum - active);
+                // P0 — fuente única de cobertura/confirmación.
+                const metrics = getShiftStaffingMetrics(shiftAssignments as any[], slotsNum);
+                const confirmed = metrics.confirmed;
+                const pending = metrics.pendingResponse;
+                const rejected = metrics.rejected;
+                const active = metrics.assignedActive;
+                const missing = metrics.missing;
                 const over = active > slotsNum;
+
                 const requiresCar = !!(shift as any).transportation_required;
                 const hasDriver = shiftAssignments.some(a => {
                   const emp = employees.find(e => e.id === a.employee_id);

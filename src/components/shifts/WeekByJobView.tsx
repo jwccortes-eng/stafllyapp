@@ -6,6 +6,8 @@ import { Clock, Users, ChevronDown, ChevronUp, Timer, CalendarDays, Lock } from 
 import { useState, memo, useMemo, useCallback } from "react";
 import { getClientColor, formatShiftCode } from "./types";
 import { displayShiftRef } from "@/lib/shifts/shift-ref";
+import { getShiftStaffingMetrics } from "@/lib/shifts/staffing-metrics";
+
 import type { Shift, Assignment, SelectOption, Employee } from "./types";
 
 interface WeekByJobViewProps {
@@ -85,10 +87,9 @@ function WeekByJobViewImpl({ weekDays, shifts, assignments, locations, clients, 
     const isLocked = shift.status === "locked";
     const totalSlots = shift.slots ?? 1;
 
-    const accepted = shiftAssignments.filter(a => a.status === "accepted" || a.status === "confirmed").length;
-    const pending = shiftAssignments.filter(a => a.status === "pending").length;
-    const rejected = shiftAssignments.filter(a => a.status === "rejected").length;
-    const allAccepted = assignCount > 0 && accepted === assignCount;
+    // P0 — fuente única: cobertura = asignados activos / plazas.
+    const metrics = getShiftStaffingMetrics(shiftAssignments as any[], totalSlots);
+
 
     return (
       <div
@@ -136,26 +137,27 @@ function WeekByJobViewImpl({ weekDays, shifts, assignments, locations, clients, 
           </div>
         )}
 
-        {/* Status bar */}
+        {/* Cobertura (asignados/plazas) + confirmación como dato secundario */}
         <div className="flex items-center gap-1 mt-1.5">
           <div className="flex-1 h-1 bg-muted/30 rounded-full overflow-hidden flex">
-            {accepted > 0 && (
-              <div className="h-full bg-emerald-400 transition-all" style={{ width: `${Math.round((accepted / totalSlots) * 100)}%` }} />
+            {metrics.confirmed > 0 && (
+              <div className="h-full bg-emerald-400 transition-all" style={{ width: `${Math.round((metrics.confirmed / (totalSlots || 1)) * 100)}%` }} />
             )}
-            {pending > 0 && (
-              <div className="h-full bg-amber-400 transition-all" style={{ width: `${Math.round((pending / totalSlots) * 100)}%` }} />
-            )}
-            {rejected > 0 && (
-              <div className="h-full bg-rose-400 transition-all" style={{ width: `${Math.round((rejected / totalSlots) * 100)}%` }} />
+            {metrics.pendingResponse > 0 && (
+              <div className="h-full bg-amber-400 transition-all" style={{ width: `${Math.round((metrics.pendingResponse / (totalSlots || 1)) * 100)}%` }} />
             )}
           </div>
-          <span className={cn(
-            "text-[8px] tabular-nums font-semibold shrink-0",
-            allAccepted ? "text-emerald-500" : rejected > 0 ? "text-rose-500" : pending > 0 ? "text-amber-500" : "text-muted-foreground/40"
-          )}>
-            {accepted}/{totalSlots}
+          <span
+            title={`${metrics.coverageLabel}${metrics.confirmationLabel ? ` · ${metrics.confirmationLabel}` : ""}`}
+            className={cn(
+              "text-[8px] tabular-nums font-semibold shrink-0",
+              metrics.isFullyCovered ? "text-emerald-500" : metrics.assignedActive > 0 ? "text-amber-500" : "text-muted-foreground/40"
+            )}
+          >
+            {metrics.assignedActive}/{totalSlots}
           </span>
         </div>
+
       </div>
     );
   };
