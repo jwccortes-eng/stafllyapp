@@ -53,6 +53,7 @@ import { useDebugMode } from "@/hooks/useDebugMode";
 import { toast } from "sonner";
 import type { Shift, Assignment, Employee, SelectOption } from "./types";
 import { formatShiftCode, getClientColor, isEmployeeDriver } from "./types";
+import { displayShiftRef } from "@/lib/shifts/shift-ref";
 
 const SendNotificationDialog = lazy(() =>
   import("./SendNotificationDialog").then(m => ({ default: m.SendNotificationDialog })),
@@ -507,9 +508,9 @@ export function ShiftDetailDialog({
           title={
             <div className="flex items-center gap-2 min-w-0">
               <span className="truncate">{shift.title || "Turno"}</span>
-              {shift.shift_code && (
+              {displayShiftRef(shift) !== "—" && (
                 <span className="text-[9.5px] font-mono font-semibold text-muted-foreground bg-muted/60 rounded px-1.5 py-px shrink-0">
-                  #{formatShiftCode(shift.shift_code)}
+                  {displayShiftRef(shift)}
                 </span>
               )}
             </div>

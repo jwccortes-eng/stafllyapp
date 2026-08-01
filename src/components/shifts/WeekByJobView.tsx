@@ -5,6 +5,7 @@ import { formatDisplayText } from "@/lib/format-helpers";
 import { Clock, Users, ChevronDown, ChevronUp, Timer, CalendarDays, Lock } from "lucide-react";
 import { useState, memo, useMemo, useCallback } from "react";
 import { getClientColor, formatShiftCode } from "./types";
+import { displayShiftRef } from "@/lib/shifts/shift-ref";
 import type { Shift, Assignment, SelectOption, Employee } from "./types";
 
 interface WeekByJobViewProps {
@@ -109,7 +110,7 @@ function WeekByJobViewImpl({ weekDays, shifts, assignments, locations, clients, 
       >
         {/* Title */}
         <div className="font-bold truncate text-[10px] leading-snug text-foreground/85">
-          {shift.shift_code && <span className="text-foreground/40">#{formatShiftCode(shift.shift_code)}</span>}{" "}
+          {displayShiftRef(shift) !== "—" && <span className="text-foreground/40">{displayShiftRef(shift)}</span>}{" "}
           <span className="uppercase">{shift.title}</span>
           {totalSlots > 1 && <span className="text-foreground/40 ml-0.5">({totalSlots})</span>}
         </div>
