@@ -132,7 +132,10 @@ export function summarizeTeam(
     if (a.response_status === "rejected" || a.status === "rejected") { rejected += 1; continue; }
     assigned += 1;
     if (!phone) withoutPhone += 1;
-    if (a.status === "confirmed" || (a.status === "accepted" && !a.import_batch_id)) confirmed += 1;
+    if (a.response_status === "needs_reacceptance") pending += 1;
+    else if (a.status === "confirmed" || (a.status === "accepted" && !a.import_batch_id)) confirmed += 1;
+    else pending += 1;
+
     else pending += 1;
   }
 
