@@ -22,6 +22,7 @@
  *  - Worker portal unaffected. Desktop unaffected. Payroll/RLS untouched.
  */
 
+import { getShiftDisplayIdentity } from "@/lib/shifts/shift-identity";
 import { createContext, memo, useContext, useEffect, useMemo, useState } from "react";
 import {
   X, Users, ShieldCheck, Clock, ExternalLink, Inbox,
@@ -548,9 +549,9 @@ function MobileShiftTeamHubImpl({
                 <span className="text-[12px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
                   Gestionar equipo
                 </span>
-                {shift.shift_code && (
+                {getShiftDisplayIdentity(shift).primaryRefKind !== "none" && (
                   <span className="text-[12px] font-mono font-semibold text-muted-foreground/80 truncate">
-                    #{formatShiftCode(shift.shift_code)}
+                    {getShiftDisplayIdentity(shift).primaryRef}
                   </span>
                 )}
                 {shift.publication_status && shift.publication_status !== "published" && (

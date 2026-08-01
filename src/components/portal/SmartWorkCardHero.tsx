@@ -39,6 +39,7 @@ export interface SmartWorkCardHeroAssignmentLike {
     status: string;
     slots: number | null;
     shift_code?: string | null;
+    shift_ref?: string | null;
     meeting_point?: string | null;
     meeting_time?: string | null;
     special_instructions?: string | null;
@@ -92,6 +93,7 @@ function buildInput(
       id: s.id,
       title: s.title,
       shift_code: s.shift_code ?? null,
+      shift_ref: s.shift_ref ?? null,
       date: s.date,
       start_time: s.start_time,
       end_time: s.end_time,

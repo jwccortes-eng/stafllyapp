@@ -52,6 +52,7 @@ interface ShiftAssignment {
     status: string;
     slots: number | null;
     shift_code?: string | null;
+    shift_ref?: string | null;
     meeting_point?: string | null;
     meeting_time?: string | null;
     special_instructions?: string | null;
@@ -130,7 +131,7 @@ export default function MyShifts() {
     // selection or upstream bug can never leak cross-tenant assignments.
     const { data: assignData } = await supabase
       .from("shift_assignments")
-      .select(`id, status, response_status, accepted_shift_version, scheduled_shifts!inner (id, title, date, start_time, end_time, notes, status, slots, shift_code, meeting_point, meeting_time, special_instructions, company_id, operational_version, locations (name), clients (name))`)
+      .select(`id, status, response_status, accepted_shift_version, scheduled_shifts!inner (id, title, date, start_time, end_time, notes, status, slots, shift_code, shift_ref, meeting_point, meeting_time, special_instructions, company_id, operational_version, locations (name), clients (name))`)
       .eq("employee_id", employeeId)
       .eq("company_id", emp.company_id)
       .eq("is_draft_reservation", false)
@@ -150,7 +151,7 @@ export default function MyShifts() {
         date: a.scheduled_shifts.date, start_time: a.scheduled_shifts.start_time,
         end_time: a.scheduled_shifts.end_time, notes: a.scheduled_shifts.notes,
         status: a.scheduled_shifts.status, slots: a.scheduled_shifts.slots,
-        shift_code: a.scheduled_shifts.shift_code, meeting_point: a.scheduled_shifts.meeting_point,
+        shift_code: a.scheduled_shifts.shift_code, shift_ref: (a.scheduled_shifts as any).shift_ref ?? null, meeting_point: a.scheduled_shifts.meeting_point,
         meeting_time: a.scheduled_shifts.meeting_time,
         special_instructions: a.scheduled_shifts.special_instructions,
         company_id: a.scheduled_shifts.company_id,

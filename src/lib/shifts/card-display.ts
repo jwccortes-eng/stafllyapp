@@ -57,7 +57,10 @@ export function buildShiftCardTitle(input: DisplayTitleInput): string {
   return "Turno sin título";
 }
 
-/** Short reference label for the legacy code, rendered small/secondary. */
+/**
+ * @deprecated P0 · SHIFT IDENTITY: el número visible es `shift_ref`.
+ * Usa `getShiftDisplayIdentity`. Este helper sólo sobrevive para trazas de import.
+ */
 export function formatShiftRef(code: string | null | undefined): string | null {
   if (!code) return null;
   const padded = String(code).padStart(4, "0");

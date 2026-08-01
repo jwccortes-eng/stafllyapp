@@ -1,3 +1,4 @@
+import { getShiftDisplayIdentity } from "@/lib/shifts/shift-identity";
 import { Sheet, SheetContent, SheetTitle, OpsSheetHeader, OpsSheetBody, OpsSheetFooter } from "@/components/ui/sheet";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction, AlertDialogCancel } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
@@ -508,9 +509,12 @@ export function ShiftDetailDialog({
           title={
             <div className="flex items-center gap-2 min-w-0">
               <span className="truncate">{shift.title || "Turno"}</span>
-              {displayShiftRef(shift) !== "—" && (
-                <span className="text-[9.5px] font-mono font-semibold text-muted-foreground bg-muted/60 rounded px-1.5 py-px shrink-0">
-                  {displayShiftRef(shift)}
+              {getShiftDisplayIdentity(shift).primaryRefKind !== "none" && (
+                <span
+                  className="text-[9.5px] font-mono font-semibold text-muted-foreground bg-muted/60 rounded px-1.5 py-px shrink-0"
+                  title={getShiftDisplayIdentity(shift).legacyLabel ?? undefined}
+                >
+                  {getShiftDisplayIdentity(shift).primaryRef}
                 </span>
               )}
             </div>

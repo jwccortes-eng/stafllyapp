@@ -1,3 +1,4 @@
+import { getShiftDisplayIdentity } from "@/lib/shifts/shift-identity";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,6 +32,7 @@ interface ShiftInfo {
   status: string;
   slots: number | null;
   shift_code?: string | null;
+  shift_ref?: string | null;
   meeting_point?: string | null;
   meeting_time?: string | null;
   special_instructions?: string | null;
@@ -201,9 +203,9 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, responseStatu
               <span className={cn(!shift.client?.name && "italic text-muted-foreground/65")}>
                 {shift.client?.name ?? "Cliente por confirmar"}
               </span>
-              {shift.shift_code && (
+              {getShiftDisplayIdentity(shift).primaryRefKind !== "none" && (
                 <span className="ml-1 text-[10px] font-mono text-muted-foreground/55 tabular-nums">
-                  · #{shift.shift_code.padStart(4, "0")}
+                  · {getShiftDisplayIdentity(shift).primaryRef}
                 </span>
               )}
             </p>

@@ -1,3 +1,4 @@
+import { getShiftDisplayIdentity } from "@/lib/shifts/shift-identity";
 import { useEffect, useMemo, useState, memo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -396,7 +397,8 @@ export function MobileShiftOperationsSheet({
 
   // ── Actions
   const summaryText = (() => {
-    const code = shift.shift_code ? `Shift #${formatShiftCode(shift.shift_code)} · ` : "";
+    const identity = getShiftDisplayIdentity(shift);
+    const code = identity.primaryRefKind !== "none" ? `Turno ${identity.primaryRef} · ` : "";
     const placeBits = [locationName, clientName && clientName !== "—" ? clientName : null].filter(Boolean).join(" · ");
     const dateBit = (() => {
       try { return format(parseISO(shift.date), "MMM d", { locale: es }); } catch { return shift.date; }
@@ -489,10 +491,11 @@ export function MobileShiftOperationsSheet({
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5 mb-0.5">
-                    {shift.shift_code && (
+                    {/* P0 · una sola referencia visible por turno. */}
+                    {getShiftDisplayIdentity(shift).primaryRefKind !== "none" && (
                       <span className="inline-flex items-center gap-0.5 text-[12px] font-mono font-semibold text-muted-foreground/80">
                         <Hash className="h-3 w-3" />
-                        {formatShiftCode(shift.shift_code)}
+                        {getShiftDisplayIdentity(shift).primaryRef}
                       </span>
                     )}
                     <span className="text-[12px] font-medium uppercase tracking-wider text-muted-foreground truncate">
@@ -1283,7 +1286,7 @@ export function MobileShiftOperationsSheet({
     <LocationReportDialog
       open={locationReportOpen}
       onOpenChange={setLocationReportOpen}
-      shiftCode={shift.shift_code ? formatShiftCode(shift.shift_code) : null}
+      shiftCode={getShiftDisplayIdentity(shift).primaryRefKind !== "none" ? getShiftDisplayIdentity(shift).primaryRef : null}
       clientName={clientName}
       jobSiteName={locationName}
       meetingPoint={shiftMeeting.point ?? meetingPoint ?? null}
@@ -1911,8 +1914,9 @@ function buildShiftLinked(args: {
   const { shift, clientName, locationName, assignedCount, slots } = args;
   const open = slots > 0 ? Math.max(0, slots - assignedCount) : 0;
   return [
-    { label: "Shift ID", value: shift.id.slice(0, 8) + "…", hint: shift.id },
-    { label: "Shift code", value: shift.shift_code ? formatShiftCode(shift.shift_code) : null },
+    { label: "Referencia", value: getShiftDisplayIdentity(shift).primaryRef },
+    { label: "Referencia anterior", value: getShiftDisplayIdentity(shift).legacyRef },
+    { label: "ID interno", value: shift.id.slice(0, 8) + "…", hint: shift.id },
     { label: "Client", value: clientName && clientName !== "—" ? clientName : null },
     { label: "Job site", value: locationName || null },
     { label: "Assignments", value: String(assignedCount) },
@@ -2042,7 +2046,7 @@ function LocationReportDialog({
     }
     setSaving(true);
     const payload = [
-      `Reporte de ubicación${shiftCode ? ` — Turno #${shiftCode}` : ""}`,
+      `Reporte de ubicación${shiftCode ? ` — Turno ${shiftCode}` : ""}`,
       `Cliente: ${clientName || "—"}`,
       `Trabajo: ${jobSiteName || "(falta)"}`,
       `Encuentro: ${meetingPoint || "(falta)"}`,
@@ -2073,7 +2077,7 @@ function LocationReportDialog({
         </DialogHeader>
         <div className="space-y-2 text-[12.5px]">
           <div className="rounded-lg border border-border/60 bg-muted/30 p-2.5 space-y-1">
-            {shiftCode && <div><span className="text-muted-foreground">Turno: </span><span className="font-semibold">#{shiftCode}</span></div>}
+            {shiftCode && <div><span className="text-muted-foreground">Turno: </span><span className="font-semibold">{shiftCode}</span></div>}
             <div><span className="text-muted-foreground">Cliente: </span>{clientName || "—"}</div>
             <div><span className="text-muted-foreground">Trabajo: </span>{jobSiteName || <span className="text-amber-700 dark:text-amber-400">(falta)</span>}</div>
             <div><span className="text-muted-foreground">Encuentro: </span>{meetingPoint || <span className="text-muted-foreground">—</span>}</div>

@@ -6,7 +6,8 @@ import { EmployeeAvatarGroup } from "@/components/ui/employee-avatar-group";
 import { OpsStatusChip, type OpsStatusTone } from "@/components/operations/OpsStatusChip";
 import type { Shift } from "./types";
 import { getClientColor, isDraftShift } from "./types";
-import { buildShiftCardTitle, formatShiftRef } from "@/lib/shifts/card-display";
+import { buildShiftCardTitle } from "@/lib/shifts/card-display";
+import { getShiftDisplayIdentity } from "@/lib/shifts/shift-identity";
 import { UnstaffedAlert } from "./UnstaffedAlert";
 
 export interface AssignedEmployee {
@@ -92,6 +93,8 @@ export function ShiftCard({
 }: ShiftCardProps) {
   const color = getClientColor(shift.client_id, clientIds);
   const primary = getShiftTone(shift, assignmentCount);
+  // P0 · SHIFT IDENTITY: única referencia visible del turno.
+  const identity = getShiftDisplayIdentity(shift);
   const overnight = isOvernight(shift.start_time, shift.end_time);
   const isLocked = shift.status === "locked";
   const totalSlots = shift.slots ?? 1;
@@ -166,7 +169,7 @@ export function ShiftCard({
               "font-semibold text-foreground truncate flex-1 leading-tight",
               compact ? "text-[12px]" : "text-[13px]",
             )}
-            title={shift.shift_code ? `${shift.title ?? ""} · Ref #${String(shift.shift_code).padStart(4, "0")}` : shift.title ?? undefined}
+            title={identity.primaryRefKind !== "none" ? `${shift.title ?? ""} · ${identity.primaryRef}` : shift.title ?? undefined}
           >
             {buildShiftCardTitle({
               title: shift.title,
@@ -233,12 +236,13 @@ export function ShiftCard({
             {isLocked && (
               <Lock className="h-3 w-3 text-muted-foreground/55" aria-label="Locked" />
             )}
-            {shift.shift_code && (
+            {/* P0 · una sola referencia visible: shift_ref (o fallback etiquetado). */}
+            {identity.primaryRefKind !== "none" && (
               <span
                 className="font-mono tabular-nums text-[9px] text-muted-foreground/45 ml-0.5"
-                title={formatShiftRef(shift.shift_code) ?? undefined}
+                title={identity.primaryRefNote ? `${identity.primaryRefNote}: ${identity.primaryRef}` : identity.primaryRef}
               >
-                {formatShiftRef(shift.shift_code)}
+                {identity.primaryRef}
               </span>
             )}
           </div>

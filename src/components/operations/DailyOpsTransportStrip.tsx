@@ -78,7 +78,6 @@ export function DailyOpsTransportStrip({ shifts, onOperate }: Props) {
                 />
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-semibold truncate">
-                    {s.shift_code ? `#${s.shift_code} ` : ""}
                     {s.title}
                   </p>
                   <p className="text-[10.5px] text-muted-foreground truncate">
