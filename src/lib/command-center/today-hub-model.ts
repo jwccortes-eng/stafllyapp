@@ -582,7 +582,10 @@ export function buildTodayHubModel(input: TodayHubInput): TodayHubModel {
 
   /* — Contadores globales como KPIs accionables (nunca ceros mudos) — */
   const counts = input.counts ?? {};
-  if (perms.canApproveHours && typeof counts.pendingHours === "number") {
+  if (
+    (perms.canApproveHours || perms.canAccessValidations) &&
+    typeof counts.pendingHours === "number"
+  ) {
     attention.push({
       id: "counts:hours",
       kind: "kpi",
@@ -598,13 +601,17 @@ export function buildTodayHubModel(input: TodayHubInput): TodayHubModel {
           ? `${counts.pendingHours} fichajes esperan revisión antes de payroll.`
           : "No hay horas pendientes de revisión.",
       action:
-        counts.pendingHours > 0
+        counts.pendingHours > 0 && perms.canAccessValidations
           ? { label: "Revisar horas", href: ROUTES.hours() }
           : undefined,
       _boost: roleBoost(role, "hours"),
     } as HubAttentionItem & { _boost: number });
   }
-  if (typeof counts.docsPending === "number" && counts.docsPending > 0) {
+  if (
+    perms.canManageWorkers &&
+    typeof counts.docsPending === "number" &&
+    counts.docsPending > 0
+  ) {
     attention.push({
       id: "counts:docs",
       kind: "kpi",
@@ -617,6 +624,7 @@ export function buildTodayHubModel(input: TodayHubInput): TodayHubModel {
       _boost: 0,
     } as HubAttentionItem & { _boost: number });
   }
+
 
   const attentionItems = attention
     .sort(
