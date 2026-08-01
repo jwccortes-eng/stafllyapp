@@ -526,23 +526,27 @@ export function MobileQuickCreateShiftSheet({
           {/* Cabecera: misión, no formulario */}
           <div className="shrink-0 px-4 pt-3 pb-3 border-b border-border/40">
             <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={goBack}
-                aria-label="Volver"
-                className="h-11 w-11 -ml-2 rounded-full inline-flex items-center justify-center active:bg-muted"
-              >
-                <ChevronLeft className="h-5 w-5" />
-              </button>
+              {!result ? (
+                <button
+                  type="button"
+                  onClick={goBack}
+                  aria-label="Volver"
+                  className="h-11 w-11 -ml-2 rounded-full inline-flex items-center justify-center active:bg-muted"
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                </button>
+              ) : <span className="h-11 w-11 -ml-2" />}
               <div className="flex-1 min-w-0">
                 <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold">
-                  Paso {stepIndex + 1} de {STEPS.length} · {current.label}
+                  {result ? "Resultado" : `Paso ${stepIndex + 1} de ${STEPS.length} · ${current.label}`}
                 </p>
-                <h2 className="text-[17px] font-bold leading-tight truncate">{current.question}</h2>
+                <h2 className="text-[17px] font-bold leading-tight truncate">
+                  {result ? "Qué pasó con cada persona" : current.question}
+                </h2>
               </div>
               <button
                 type="button"
-                onClick={() => onOpenChange(false)}
+                onClick={requestClose}
                 aria-label="Cerrar"
                 className="h-11 w-11 -mr-2 rounded-full inline-flex items-center justify-center active:bg-muted"
               >
@@ -556,14 +560,16 @@ export function MobileQuickCreateShiftSheet({
                   key={s.key}
                   className={cn(
                     "h-1 flex-1 rounded-full transition-colors",
-                    i <= stepIndex ? "bg-primary" : "bg-muted",
+                    result || i <= stepIndex ? "bg-primary" : "bg-muted",
                   )}
                 />
               ))}
             </div>
           </div>
 
+          {result ? resultView : (
           <div className={cn("flex-1 overflow-y-auto", isTeamStep ? "px-0 py-0" : "px-4 py-4 space-y-5")}>
+
             {/* ── PASO 1 · ¿Qué operación? ── */}
             {step === "operacion" && (
               <>
