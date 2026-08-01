@@ -252,28 +252,26 @@ export default function MobileAdminHome() {
   return (
     <div className="min-h-full pb-[calc(env(safe-area-inset-bottom,0px)+72px)]">
       {/* Anfitriona: la empresa encabeza, Stafly acompaña */}
-      <div className="px-5 pt-5 pb-4">
-        <div className="flex items-center gap-2">
-          <p className="min-w-0 flex-1 text-[11px] uppercase tracking-[0.16em] text-muted-foreground/80 truncate">
-            {companyLabel}
-          </p>
+      <div className="px-5 pt-4 pb-4">
+        <div className="flex items-stretch gap-2">
+          <div className="min-w-0 flex-1">
+            <ContextSwitcher placement="hero" />
+          </div>
           <button
             type="button"
             onClick={openCommandPalette}
             aria-label="Buscar"
-            className="h-11 w-11 shrink-0 rounded-xl border border-border/50 bg-card flex items-center justify-center active:scale-[0.96] transition-transform"
+            className="w-14 shrink-0 rounded-2xl border border-border/50 bg-card flex items-center justify-center active:scale-[0.96] transition-transform"
           >
             <Search className="h-[18px] w-[18px] text-muted-foreground" />
           </button>
-          <div className="shrink-0 w-11">
-            <ContextSwitcher placement="header" collapsed />
-          </div>
         </div>
-        <h1 className="text-[22px] font-semibold tracking-tight leading-tight mt-2">
+        <h1 className="text-[22px] font-semibold tracking-tight leading-tight mt-4">
           {greeting}, <span className="text-primary">{firstName}</span>
         </h1>
         <p className="text-sm text-muted-foreground mt-1">{headline}</p>
       </div>
+
 
       {/* Primer scroll: sólo lo que exige decisión — o la confirmación de calma */}
       <div className="px-5 mb-5">
