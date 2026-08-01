@@ -246,14 +246,9 @@ export default function MobileAdminHome() {
       {/* Anfitriona: la empresa encabeza, Stafly acompaña */}
       <div className="px-5 pt-5 pb-4">
         <div className="flex items-center gap-2">
-          <div className="min-w-0 flex-1">
-            <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground/80 truncate">
-              {companyLabel}
-            </p>
-            <h1 className="text-[22px] font-semibold tracking-tight leading-tight mt-0.5 truncate">
-              {greeting}, <span className="text-primary">{firstName}</span>
-            </h1>
-          </div>
+          <p className="min-w-0 flex-1 text-[11px] uppercase tracking-[0.16em] text-muted-foreground/80 truncate">
+            {companyLabel}
+          </p>
           <button
             type="button"
             onClick={openCommandPalette}
@@ -266,7 +261,10 @@ export default function MobileAdminHome() {
             <ContextSwitcher placement="header" collapsed />
           </div>
         </div>
-        <p className="text-sm text-muted-foreground mt-2">{headline}</p>
+        <h1 className="text-[22px] font-semibold tracking-tight leading-tight mt-2">
+          {greeting}, <span className="text-primary">{firstName}</span>
+        </h1>
+        <p className="text-sm text-muted-foreground mt-1">{headline}</p>
       </div>
 
       {/* Primer scroll: sólo lo que exige decisión — o la confirmación de calma */}
