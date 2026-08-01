@@ -36,6 +36,8 @@ export interface WorkerCardProps {
   recommendation?: string | null;
   action?: OcsAction;
   actions?: OcsAction[];
+  /** Sustituye el bloque de skills como información principal. */
+  primary?: React.ReactNode;
   /** Slot junto al estado (menús contextuales, referencias). */
   aside?: React.ReactNode;
   /** Pie opcional (detalle expandible "¿por qué?"). */
@@ -70,6 +72,7 @@ export function WorkerCard({
   recommendation,
   action,
   actions,
+  primary,
   aside,
   footer,
   onClick,
@@ -121,7 +124,7 @@ export function WorkerCard({
         </>
       }
       primary={
-        skills.length > 0 ? (
+        primary ?? (skills.length > 0 ? (
           <div className="flex flex-wrap gap-1.5">
             {skills.slice(0, 4).map((s) => (
               <span
@@ -141,7 +144,7 @@ export function WorkerCard({
               </span>
             )}
           </div>
-        ) : undefined
+        ) : undefined)
       }
       secondary={
         blocker ? (
