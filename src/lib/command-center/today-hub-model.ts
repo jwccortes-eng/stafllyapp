@@ -193,7 +193,8 @@ export interface HubOperation {
   need: string;
   note?: string;
   priority: HubPriority;
-  action: HubLink;
+  /** Ausente ⇒ el usuario no tiene permiso para actuar (fail-closed). */
+  action?: HubLink;
   secondary: HubLink[];
 }
 
@@ -206,7 +207,9 @@ export interface HubTeamSummary {
   confirmed: number;
   present: number;
   priority: HubPriority;
-  action: HubLink;
+  /** Lectura de asistencia (OX-4.3.1): nunca asume no-show. */
+  attendanceLabel?: string;
+  action?: HubLink;
 }
 
 export interface HubDecisionItem {
@@ -217,10 +220,11 @@ export interface HubDecisionItem {
   status: string;
   evidence: Array<{ label: string; value: string; attention?: boolean }>;
   consequence: string;
-  decision: HubLink;
+  decision?: HubLink;
   alternatives: HubLink[];
   priority: HubPriority;
 }
+
 
 export interface HubEmptyState {
   calm: boolean;
