@@ -316,8 +316,10 @@ export function ShiftDetailDialog({
   // React's Rules of Hooks. `shift` may be null while the drawer is closing —
   // we guard each memo body instead of returning early above them.
   const shiftId = shift?.id ?? null;
+  // P0 — Una asignación retirada conserva su historia en la base, pero ya no
+  // ocupa cupo ni aparece en el equipo del turno.
   const shiftAssignments = useMemo(
-    () => (shiftId ? assignments.filter(a => a.shift_id === shiftId) : []),
+    () => (shiftId ? assignments.filter(a => a.shift_id === shiftId && a.status !== "removed") : []),
     [assignments, shiftId]
   );
   const assignedIds = useMemo(
