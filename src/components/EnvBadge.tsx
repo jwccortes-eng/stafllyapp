@@ -39,7 +39,3 @@ export function EnvBadge() {
     </div>
   );
 }
-
-    </div>
-  );
-}
