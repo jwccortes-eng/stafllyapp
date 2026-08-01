@@ -47,6 +47,16 @@ import {
   ExternalLink, Info, ClipboardList, ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+/** OX-8.1 — voz visible en español. No renombra enums ni contratos internos. */
+const PERIOD_STATUS_ES: Record<string, string> = {
+  open: "Abierto",
+  closed: "Cerrado",
+  processing: "En proceso",
+  paid: "Pagado",
+  draft: "Borrador",
+  locked: "Bloqueado",
+};
 import { REVIEW_COPY, REVIEW_REASON_LABELS, reviewReasonLabel } from "@/utils/reviewNavigationCopy";
 
 // ── Types ─────────────────────────────────────────────────────────────────
