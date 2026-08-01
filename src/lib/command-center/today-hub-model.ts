@@ -300,12 +300,8 @@ function roleBoost(role: HubRole | undefined, kind: string): number {
 export function buildTodayHubModel(input: TodayHubInput): TodayHubModel {
   const now = input.now ?? new Date();
   const role = input.role;
-  const perms: Required<HubPermissions> = {
-    canAssign: input.permissions?.canAssign ?? true,
-    canOperate: input.permissions?.canOperate ?? true,
-    canClose: input.permissions?.canClose ?? true,
-    canApproveHours: input.permissions?.canApproveHours ?? true,
-  };
+  const perms = resolvePermissions(input.permissions);
+
 
   const attention: Array<HubAttentionItem & { _boost: number }> = [];
   const operations: HubOperation[] = [];
