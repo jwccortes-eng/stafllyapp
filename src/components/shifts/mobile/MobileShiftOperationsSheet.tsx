@@ -36,6 +36,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
 import { staffedAssignments } from "@/lib/shifts/assignment-coverage";
+import { CalendarX2 } from "lucide-react";
+import { CancelShiftDialog } from "@/components/shifts/CancelShiftDialog";
 import { canManageShifts } from "@/lib/shifts/shift-permissions";
 import { ShiftAttendancePanel } from "@/components/shifts/ShiftAttendancePanel";
 import { MobileShiftTeamHub } from "@/components/shifts/mobile/MobileShiftTeamHub";
