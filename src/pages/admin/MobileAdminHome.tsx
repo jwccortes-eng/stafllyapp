@@ -34,16 +34,21 @@ interface ActionDef {
   module: string | null;
   badgeKey?: "tickets" | "shift_requests";
   accent: string; // tailwind class for icon tile bg
+  /** Operación diaria: siempre visible y con protagonismo. */
+  primary?: boolean;
+  /** Qué resuelve, sólo para las anclas diarias. */
+  hint?: string;
 }
 
 const ACTIONS: ActionDef[] = [
-  { key: "workers", label: "Workers", to: "/app/employees", icon: Users, module: "employees", accent: "bg-primary/10 text-primary" },
-  { key: "shifts", label: "Turnos", to: "/app/shifts", icon: CalendarDays, module: "shifts", badgeKey: "shift_requests", accent: "bg-status-warning-bg text-status-warning" },
-  { key: "timeclock", label: "Fichajes", to: "/app/timeclock", icon: Clock, module: "shifts", accent: "bg-status-success-bg text-status-success" },
-  { key: "payroll", label: "Payroll", to: "/app/periods", icon: DollarSign, module: "periods", accent: "bg-status-progress-bg text-status-progress" },
+  { key: "workers", label: "Workers", to: "/app/employees", icon: Users, module: "employees", accent: "bg-primary/10 text-primary", primary: true, hint: "Tu gente" },
+  { key: "shifts", label: "Turnos", to: "/app/shifts", icon: CalendarDays, module: "shifts", badgeKey: "shift_requests", accent: "bg-status-warning-bg text-status-warning", primary: true, hint: "Hoy y próximos" },
+  { key: "timeclock", label: "Fichajes", to: "/app/timeclock", icon: Clock, module: "shifts", accent: "bg-status-success-bg text-status-success", primary: true, hint: "Entradas y salidas" },
+  { key: "payroll", label: "Payroll", to: "/app/periods", icon: DollarSign, module: "periods", accent: "bg-status-progress-bg text-status-progress", primary: true, hint: "Periodos y pagos" },
   { key: "tickets", label: "Solicitudes", to: "/app/requests", icon: Inbox, module: null, badgeKey: "tickets", accent: "bg-muted text-muted-foreground" },
   { key: "clients", label: "Clientes", to: "/app/clients", icon: Building2, module: "clients", accent: "bg-status-neutral-bg text-status-neutral" },
 ];
+
 
 type BadgeState = { kind: "loading" | "error" | "ready"; value: number };
 
