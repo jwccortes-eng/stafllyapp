@@ -668,8 +668,12 @@ export const ContextSwitcher = forwardRef<HTMLDivElement, ContextSwitcherProps>(
       isMobile ? TAP : "min-h-[56px]",
       collapsed ? "justify-center p-1.5 min-h-[48px] rounded-xl" : "px-3 py-2.5",
       placement === "header" && !isMobile && "w-auto min-h-[44px] px-2.5 py-2 rounded-xl",
+      placement === "hero" &&
+        !collapsed &&
+        "min-h-[64px] px-4 py-3 rounded-2xl bg-card border-border/60 shadow-2xs active:scale-[0.995]",
       className,
     );
+
 
 
     const trigger = (
