@@ -6,6 +6,8 @@ import { useEffectiveEmployee } from "@/hooks/useEffectiveEmployee";
 import { useSoundContext } from "@/hooks/useSound";
 import { toast } from "sonner";
 import { observeOperationalEvent } from "@/lib/operational-signals/sink";
+import { loadShadowCompanyConfig } from "@/lib/operational-signals/company-config";
+
 import {
   BurstWindow,
   burstToastMessage,
