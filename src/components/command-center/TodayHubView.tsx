@@ -1,0 +1,475 @@
+/**
+ * OX-4.3 — Today Hub / Command Center sobre Operational Card System.
+ *
+ * Superficie operacional única (mobile + desktop) construida exclusivamente
+ * con OCS: OcsShiftCard, TeamCard, KpiCard, InsightCard, ValidationCard.
+ *
+ * Toda la verdad operacional viene de `buildTodayHubModel` (capa pura).
+ * Este componente sólo decide layout. No hay lógica de negocio aquí, no hay
+ * escrituras, no se toca payroll ni RLS.
+ */
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { AlertTriangle, CalendarClock, CheckCircle2, ChevronDown, RefreshCw } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { MT, MT_EYEBROW, TAP } from "@/lib/mobile/mobile-scale";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { useCompany } from "@/hooks/useCompany";
+import { useTodayOperations } from "@/hooks/useTodayOperations";
+import { supabase } from "@/integrations/supabase/client";
+import { notifyError } from "@/lib/feedback/notify";
+import {
+  InsightCard,
+  KpiCard,
+  OcsShiftCard,
+  OperationalCard,
+  TeamCard,
+  ValidationCard,
+} from "@/components/ocs";
+import {
+  buildTodayHubModel,
+  type HubAttentionItem,
+  type HubCounts,
+  type HubDecisionItem,
+} from "@/lib/command-center/today-hub-model";
+
+/* ── Contadores globales (sólo lectura, tenant-scoped) ───────────────── */
+
+function useHubCounts(companyId: string | null) {
+  const [counts, setCounts] = useState<HubCounts>({});
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [tick, setTick] = useState(0);
+
+  useEffect(() => {
+    if (!companyId) {
+      setCounts({});
+      return;
+    }
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    (async () => {
+      const sb: any = supabase;
+      const [hours, docs, periods] = await Promise.all([
+        sb.from("time_entries").select("id", { count: "exact", head: true })
+          .eq("company_id", companyId).is("clock_out", null),
+        sb.from("employee_documents").select("id", { count: "exact", head: true })
+          .eq("company_id", companyId).eq("review_status", "pending"),
+        sb.from("pay_periods").select("id", { count: "exact", head: true })
+          .eq("company_id", companyId).eq("status", "open"),
+      ]);
+      if (cancelled) return;
+      const firstErr = hours?.error || docs?.error || periods?.error;
+      if (firstErr) {
+        setError("No pudimos cargar los contadores operativos.");
+        setCounts({});
+        notifyError({
+          title: "Contadores no disponibles",
+          fact: "No se pudieron leer horas, documentos ni periodos abiertos.",
+          consequence: "El Today Hub muestra sólo los turnos de hoy.",
+          key: "today-hub-counts",
+          cause: firstErr,
+        });
+      } else {
+        setCounts({
+          pendingHours: hours?.count ?? 0,
+          docsPending: docs?.count ?? 0,
+          openPeriods: periods?.count ?? 0,
+        });
+      }
+      setLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, [companyId, tick]);
+
+  return { counts, loading, error, refresh: () => setTick((t) => t + 1) };
+}
+
+/* ── Sección ─────────────────────────────────────────────────────────── */
+
+function Section({
+  eyebrow,
+  title,
+  helper,
+  count,
+  collapsible,
+  defaultOpen = true,
+  children,
+}: {
+  eyebrow?: string;
+  title: string;
+  helper?: string;
+  count?: number;
+  collapsible?: boolean;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <section className="space-y-2.5">
+      <button
+        type="button"
+        onClick={() => collapsible && setOpen((o) => !o)}
+        className={cn(
+          "flex w-full items-center justify-between gap-2 text-left",
+          collapsible ? cn(TAP, "px-0") : "cursor-default",
+        )}
+        aria-expanded={collapsible ? open : undefined}
+      >
+        <div className="min-w-0">
+          {eyebrow && <p className={cn(MT_EYEBROW, "text-muted-foreground")}>{eyebrow}</p>}
+          <h2 className={cn(MT.section, "truncate")}>
+            {title}
+            {typeof count === "number" && count > 0 && (
+              <span className="ml-2 text-muted-foreground tabular-nums">{count}</span>
+            )}
+          </h2>
+          {helper && <p className={cn(MT.caption, "text-muted-foreground")}>{helper}</p>}
+        </div>
+        {collapsible && (
+          <ChevronDown className={cn("h-5 w-5 shrink-0 transition-transform", open && "rotate-180")} />
+        )}
+      </button>
+      {(!collapsible || open) && <div className="space-y-2.5">{children}</div>}
+    </section>
+  );
+}
+
+/* ── Renderers OCS ───────────────────────────────────────────────────── */
+
+function AttentionEntry({
+  item,
+  go,
+}: {
+  item: HubAttentionItem;
+  go: (href: string) => void;
+}) {
+  const action = item.action
+    ? { label: item.action.label, onClick: () => go(item.action!.href) }
+    : undefined;
+
+  if (item.kind === "kpi") {
+    return (
+      <KpiCard
+        label={item.headline}
+        value={item.value}
+        meaning={item.because}
+        status={item.status}
+        isEmpty={!item.action}
+        emptyLabel="Sin pendientes"
+        action={action}
+      />
+    );
+  }
+  return (
+    <InsightCard
+      recommendation={item.headline}
+      because={item.because}
+      impact={item.impact}
+      status={item.status}
+      statusLabel={item.priority === "critical" ? "Crítico" : "Requiere acción"}
+      action={action}
+    />
+  );
+}
+
+function DecisionEntry({ item, go }: { item: HubDecisionItem; go: (href: string) => void }) {
+  return (
+    <ValidationCard
+      title={item.title}
+      subtitle={item.subtitle}
+      status={item.status}
+      evidence={item.evidence}
+      consequence={item.consequence}
+      decision={{ label: item.decision.label, onClick: () => go(item.decision.href) }}
+      alternatives={item.alternatives.map((a) => ({
+        label: a.label,
+        onClick: () => go(a.href),
+      }))}
+    />
+  );
+}
+
+/* ── Vista ───────────────────────────────────────────────────────────── */
+
+export default function TodayHubView() {
+  const navigate = useNavigate();
+  const isMobile = useIsMobile();
+  const { selectedCompanyId } = useCompany();
+  const today = useMemo(() => new Date(), []);
+  const { loading, error, shifts, refresh } = useTodayOperations(
+    selectedCompanyId ?? null,
+    today,
+  );
+  const { counts, error: countsError, refresh: refreshCounts } = useHubCounts(
+    selectedCompanyId ?? null,
+  );
+
+  const model = useMemo(
+    () => buildTodayHubModel({ shifts: shifts as any, counts }),
+    [shifts, counts],
+  );
+
+  const go = (href: string) => navigate(href);
+  const retryAll = () => { refresh(); refreshCounts(); };
+
+  if (loading && shifts.length === 0) {
+    return (
+      <div className="space-y-3 p-3 md:p-6" aria-busy="true">
+        <Skeleton className="h-24 w-full rounded-2xl" />
+        <Skeleton className="h-32 w-full rounded-2xl" />
+        <Skeleton className="h-32 w-full rounded-2xl" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-3 md:p-6">
+        <OperationalCard
+          status="failed"
+          statusLabel="Error de carga"
+          title="No pudimos cargar la operación de hoy"
+          primary={
+            <p className={cn(MT.body)}>
+              No se muestran datos parciales para evitar decisiones sobre información
+              incompleta.
+            </p>
+          }
+          secondary="Reintentar es seguro: esta pantalla sólo lee información."
+          action={{ label: "Reintentar", onClick: retryAll, icon: RefreshCw }}
+        />
+      </div>
+    );
+  }
+
+  const attention = model.attentionItems.filter(
+    (i) => i.priority === "critical" || i.priority === "high",
+  );
+  const secondaryKpis = model.attentionItems.filter(
+    (i) => i.priority === "medium" || i.priority === "low",
+  );
+
+  /* Bloque 1 — Atención */
+  const attentionBlock =
+    attention.length > 0 ? (
+      <Section
+        eyebrow="Prioridad"
+        title="Atención"
+        helper="Sólo lo que requiere una decisión ahora."
+        count={attention.length}
+      >
+        {attention.map((item) => (
+          <AttentionEntry key={item.id} item={item} go={go} />
+        ))}
+      </Section>
+    ) : (
+      <Section eyebrow="Estado" title={model.emptyState.headline}>
+        <OperationalCard
+          status="ready"
+          statusLabel="Sin riesgos activos"
+          leading={
+            <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-status-success-bg text-status-success">
+              <CheckCircle2 className="h-4 w-4" />
+            </span>
+          }
+          title={model.emptyState.headline}
+          primary={<p className={cn(MT.body)}>{model.emptyState.message}</p>}
+          secondary={
+            model.emptyState.nextShift
+              ? `Próximo: ${model.emptyState.nextShift.title} · ${model.emptyState.nextShift.timeRange} — ${model.emptyState.nextShift.startsInLabel}.`
+              : undefined
+          }
+          action={
+            model.emptyState.nextShift
+              ? {
+                  label: model.emptyState.nextShift.action.label,
+                  onClick: () => go(model.emptyState.nextShift!.action.href),
+                }
+              : undefined
+          }
+        />
+      </Section>
+    );
+
+  /* Bloque 2 — Operaciones de hoy */
+  const operationsBlock = (
+    <Section
+      eyebrow="Hoy"
+      title="Operaciones de hoy"
+      helper="Turnos activos y próximos, ordenados por urgencia."
+      count={model.activeOperations.length}
+    >
+      {model.activeOperations.length === 0 ? (
+        <OperationalCard
+          status="informational"
+          statusLabel="Sin operaciones activas"
+          leading={
+            <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-muted text-muted-foreground">
+              <CalendarClock className="h-4 w-4" />
+            </span>
+          }
+          title="No hay turnos activos hoy"
+          primary={
+            <p className={cn(MT.body)}>
+              Todos los turnos de hoy están cerrados o no hay programación.
+            </p>
+          }
+          action={{ label: "Ver programación", onClick: () => go("/app/shifts") }}
+        />
+      ) : (
+        model.activeOperations.map((op) => (
+          <OcsShiftCard
+            key={op.shiftId}
+            title={op.title}
+            clientName={op.clientName}
+            locationName={op.locationName}
+            timeRange={op.timeRange}
+            reference={op.reference}
+            status={op.status}
+            statusLabel={op.statusLabel}
+            assigned={op.assigned}
+            slots={op.required}
+            need={op.need}
+            note={op.note}
+            action={{ label: op.action.label, onClick: () => go(op.action.href) }}
+            actions={op.secondary.map((s) => ({
+              label: s.label,
+              onClick: () => go(s.href),
+            }))}
+          />
+        ))
+      )}
+    </Section>
+  );
+
+  /* Bloque 3 — Equipos en riesgo */
+  const teamsBlock = model.teamSummaries.length > 0 && (
+    <Section
+      eyebrow="Personas"
+      title="Equipos en riesgo"
+      helper="Dónde falta gente, confirmación o presencia."
+      count={model.teamSummaries.length}
+      collapsible={isMobile}
+      defaultOpen={!isMobile}
+    >
+      {model.teamSummaries.map((t) => (
+        <TeamCard
+          key={t.shiftId}
+          title={t.title}
+          subtitle={t.subtitle}
+          assigned={t.assigned}
+          slots={t.required}
+          confirmed={t.confirmed}
+          present={t.present}
+          action={{ label: t.action.label, onClick: () => go(t.action.href) }}
+        />
+      ))}
+    </Section>
+  );
+
+  /* Bloque 4 — Listo para cerrar */
+  const closeoutBlock = (
+    <Section
+      eyebrow="Cierre"
+      title="Listo para cerrar"
+      helper="Sólo la decisión siguiente. Payroll no se toca aquí."
+      count={model.closeoutItems.length}
+      collapsible={isMobile}
+      defaultOpen={model.closeoutItems.length > 0}
+    >
+      {model.closeoutItems.length === 0 ? (
+        <KpiCard
+          label="Cierres pendientes"
+          meaning="Estado de los cierres de la operación de hoy."
+          status="approved"
+          isEmpty
+          emptyLabel="Ningún turno de hoy espera revisión de cierre."
+        />
+      ) : (
+        model.closeoutItems.map((item) => (
+          <DecisionEntry key={item.id} item={item} go={go} />
+        ))
+      )}
+      {secondaryKpis.map((item) => (
+        <AttentionEntry key={item.id} item={item} go={go} />
+      ))}
+    </Section>
+  );
+
+  /* Bloque 5 — Validaciones */
+  const validationBlock = model.validationItems.length > 0 && (
+    <Section
+      eyebrow="Decisiones"
+      title="Validaciones pendientes"
+      count={model.validationItems.length}
+      collapsible={isMobile}
+      defaultOpen={!isMobile}
+    >
+      {model.validationItems.map((item) => (
+        <DecisionEntry key={item.id} item={item} go={go} />
+      ))}
+    </Section>
+  );
+
+  const countsBanner = countsError && (
+    <OperationalCard
+      status="warning"
+      statusLabel="Datos incompletos"
+      leading={
+        <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-status-warning-bg text-status-warning">
+          <AlertTriangle className="h-4 w-4" />
+        </span>
+      }
+      title="Contadores no disponibles"
+      primary={<p className={cn(MT.body)}>{countsError}</p>}
+      secondary="No se muestran ceros: el dato falta, no vale cero."
+      action={{ label: "Reintentar", onClick: refreshCounts, icon: RefreshCw }}
+    />
+  );
+
+  if (isMobile) {
+    return (
+      <div className="space-y-5 px-3 pb-[calc(env(safe-area-inset-bottom)+84px)] pt-1">
+        {countsBanner}
+        {attentionBlock}
+        {operationsBlock}
+        {teamsBlock}
+        {closeoutBlock}
+        {validationBlock}
+
+        {model.primaryAction && (
+          <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border/60 bg-background/95 px-3 pb-[calc(env(safe-area-inset-bottom)+8px)] pt-2 backdrop-blur">
+            <p className={cn(MT.caption, "mb-1 truncate text-muted-foreground")}>
+              {model.primaryAction.reason}
+            </p>
+            <Button
+              className={cn(TAP, "w-full")}
+              onClick={() => go(model.primaryAction!.href)}
+            >
+              {model.primaryAction.label}
+            </Button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 gap-5 px-6 pb-8 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+      <div className="space-y-6">
+        {countsBanner}
+        {attentionBlock}
+        {operationsBlock}
+        {teamsBlock}
+      </div>
+      <div className="space-y-6">
+        {closeoutBlock}
+        {validationBlock}
+      </div>
+    </div>
+  );
+}
