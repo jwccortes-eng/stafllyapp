@@ -45,6 +45,7 @@ interface ShiftDetail {
   claimable: boolean;
   status: string;
   shift_code: string | null;
+  shift_ref: string | null;
   location: { name: string; address?: string | null } | null;
   client: { name: string } | null;
   assignedCount: number;
@@ -66,7 +67,7 @@ export default function PortalShiftDetail() {
     const { data: s } = await supabase
       .from("scheduled_shifts")
       .select(`id, title, date, start_time, end_time, notes, meeting_point, meeting_time, special_instructions,
-               slots, claimable, status, shift_code, deleted_at, publication_status,
+               slots, claimable, status, shift_code, shift_ref, deleted_at, publication_status,
                locations (name, address), clients (name),
                shift_assignments (id, employee_id, status, is_draft_reservation)`)
       .eq("id", shiftId)
@@ -107,6 +108,7 @@ export default function PortalShiftDetail() {
       claimable: (s as any).claimable ?? false,
       status: s.status,
       shift_code: (s as any).shift_code ?? null,
+      shift_ref: (s as any).shift_ref ?? null,
       location: (s as any).locations ?? null,
       client: (s as any).clients ?? null,
       assignedCount: activeAssignments.length,

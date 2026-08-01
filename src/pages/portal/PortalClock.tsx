@@ -65,6 +65,7 @@ interface TodayShift {
   start_time: string;
   end_time: string;
   shift_code: string | null;
+  shift_ref: string | null;
   location_name?: string;
   client_name?: string;
   pay_type?: string;
@@ -248,7 +249,7 @@ export default function PortalClock() {
       // Hide drafts and draft reservations (see src/lib/shifts/shift-guards.ts):
       // a draft must NEVER allow clock-in or generate time_entries.
       supabase.from("shift_assignments")
-        .select("shift_id, status, scheduled_shifts!inner(id, title, start_time, end_time, shift_code, date, pay_type, attendance_mode, qr_attendance_mode, qr_token, locations(name), clients(name))")
+        .select("shift_id, status, scheduled_shifts!inner(id, title, start_time, end_time, shift_code, shift_ref, date, pay_type, attendance_mode, qr_attendance_mode, qr_token, locations(name), clients(name))")
         .eq("employee_id", employeeId).eq("scheduled_shifts.date", todayStr)
         .eq("is_draft_reservation", false)
         .is("scheduled_shifts.deleted_at", null)
@@ -272,6 +273,7 @@ export default function PortalClock() {
         id: ss.id, title: ss.title,
         start_time: ss.start_time, end_time: ss.end_time,
         shift_code: ss.shift_code,
+        shift_ref: (ss as any).shift_ref ?? null,
         location_name: ss.locations?.name,
         client_name: ss.clients?.name,
         pay_type: ss.pay_type,
@@ -298,7 +300,7 @@ export default function PortalClock() {
       if (anyOpen.shift_id) {
         const { data: ssRow } = await supabase
           .from("scheduled_shifts")
-          .select("id, title, start_time, end_time, shift_code, pay_type, attendance_mode, locations(name), clients(name)")
+          .select("id, title, start_time, end_time, shift_code, shift_ref, pay_type, attendance_mode, locations(name), clients(name)")
           .eq("id", anyOpen.shift_id)
           .maybeSingle();
         if (ssRow) {
@@ -307,6 +309,7 @@ export default function PortalClock() {
             id: ss.id, title: ss.title,
             start_time: ss.start_time, end_time: ss.end_time,
             shift_code: ss.shift_code,
+            shift_ref: (ss as any).shift_ref ?? null,
             location_name: ss.locations?.name,
             client_name: ss.clients?.name,
             pay_type: ss.pay_type,
