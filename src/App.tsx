@@ -23,6 +23,8 @@ import ModuleGate from "./components/ModuleGate";
 import { CompanyRequiredGuard } from "./components/CompanyRequiredGuard";
 import { PortalModuleGuard } from "./components/portal/PortalModuleGuard";
 import AdminDashboard from "./pages/admin/Dashboard";
+import AdminHome from "./pages/admin/Home";
+
 import Employees from "./pages/admin/Employees";
 import Shifts from "./pages/admin/Shifts";
 import PayrollReconciliation from "./pages/admin/PayrollReconciliation";
@@ -309,7 +311,9 @@ function App() {
               </Route>
               {/* Admin routes */}
               <Route path="/app" element={<AdminLayout />}>
-                <Route index element={<AdminDashboard />} />
+                <Route index element={<AdminHome />} />
+                <Route path="dashboard-classic" element={<AdminDashboard />} />
+
                 <Route path="needs-attention" element={<NeedsAttention />} />
                 <Route path="daily-close" element={<CompanyRequiredGuard><DailyClose /></CompanyRequiredGuard>} />
                 <Route path="today" element={<Today />} />

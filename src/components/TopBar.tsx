@@ -59,9 +59,9 @@ export default function TopBar({ collapsed }: { collapsed: boolean }) {
         collapsed ? "ms-[68px]" : "ms-[256px]"
       )}
     >
-      {/* Left: Context badge + Search */}
+      {/* Izquierda: identidad sólo cuando el sidebar está colapsado (fuente única) + búsqueda */}
       <div className="flex items-center gap-3 flex-1 max-w-lg">
-        {isGlobalMode ? (
+        {collapsed && isGlobalMode ? (
           <div className="flex items-center gap-2.5 shrink-0 pe-3 border-e border-border/30">
             <div className="h-8 w-8 rounded-lg bg-accent flex items-center justify-center shrink-0">
               <Globe className="h-4 w-4 text-accent-foreground" />
@@ -71,7 +71,7 @@ export default function TopBar({ collapsed }: { collapsed: boolean }) {
               <span className="text-[10px] text-muted-foreground/60 leading-tight">{t("topbar.companies_count", { n: companies.length })}</span>
             </div>
           </div>
-        ) : selectedCompany ? (
+        ) : collapsed && selectedCompany ? (
           <div className="flex items-center gap-2.5 shrink-0 pe-3 border-e border-border/30">
             <CompanyLogo
               name={selectedCompany.name}
@@ -96,6 +96,7 @@ export default function TopBar({ collapsed }: { collapsed: boolean }) {
         ) : null}
         <CommandPaletteTrigger collapsed={false} />
       </div>
+
 
       {/* Right: actions */}
       <div className="flex items-center gap-1.5">

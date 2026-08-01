@@ -77,7 +77,12 @@ function TriggerContent({
   return (
     <>
       {model.isGlobalMode ? (
-        <span className="h-8 w-8 rounded-lg bg-accent flex items-center justify-center shrink-0">
+        <span
+          className={cn(
+            "rounded-xl bg-accent flex items-center justify-center shrink-0",
+            collapsed || compact ? "h-8 w-8" : "h-10 w-10",
+          )}
+        >
           <Globe className="h-4 w-4 text-accent-foreground" aria-hidden />
         </span>
       ) : (
@@ -85,7 +90,7 @@ function TriggerContent({
           name={model.companyLabel}
           logoUrl={model.logoUrl}
           brandColor={model.brandColor}
-          size="sm"
+          size={collapsed || compact ? "sm" : "md"}
           active
           glow
         />
@@ -95,8 +100,8 @@ function TriggerContent({
           <span className="flex-1 min-w-0 text-left">
             <span
               className={cn(
-                "block truncate font-semibold leading-tight",
-                compact ? "text-[13px]" : MT.body,
+                "block truncate font-semibold leading-tight tracking-tight",
+                compact ? "text-[13px]" : "text-[14px]",
               )}
             >
               {model.companyLabel}
@@ -104,10 +109,18 @@ function TriggerContent({
             <span
               className={cn(
                 MT.caption,
-                "block truncate text-muted-foreground leading-tight",
+                "flex items-center gap-1.5 truncate text-muted-foreground leading-tight",
               )}
             >
-              {busy ? model.transition.message : `Modo ${model.modeLabel}`}
+              {!busy && (
+                <span
+                  className="h-1.5 w-1.5 rounded-full bg-status-success shrink-0"
+                  aria-hidden
+                />
+              )}
+              <span className="truncate">
+                {busy ? model.transition.message : `Modo ${model.modeLabel}`}
+              </span>
             </span>
           </span>
           {busy ? (
@@ -117,7 +130,7 @@ function TriggerContent({
             />
           ) : (
             <ChevronsUpDown
-              className="h-4 w-4 shrink-0 text-muted-foreground/50"
+              className="h-4 w-4 shrink-0 text-muted-foreground/60"
               aria-hidden
             />
           )}
@@ -126,6 +139,7 @@ function TriggerContent({
     </>
   );
 }
+
 
 /* ------------------------------------------------------------------ */
 /* Panel                                                               */
@@ -645,13 +659,15 @@ export const ContextSwitcher = forwardRef<HTMLDivElement, ContextSwitcherProps>(
     if (companies.length === 0 && !canUseGlobalMode) return null;
 
     const triggerClass = cn(
-      "flex items-center gap-2.5 rounded-xl w-full transition-colors hover:bg-accent/40",
+      "flex items-center gap-3 rounded-2xl w-full transition-colors",
+      "border border-border/50 bg-card/60 hover:bg-accent/40 hover:border-border",
       FOCUS_RING,
-      isMobile ? TAP : "min-h-[44px]",
-      collapsed ? "justify-center p-1.5" : "px-2.5 py-2",
-      placement === "header" && !isMobile && "w-auto",
+      isMobile ? TAP : "min-h-[56px]",
+      collapsed ? "justify-center p-1.5 min-h-[48px] rounded-xl" : "px-3 py-2.5",
+      placement === "header" && !isMobile && "w-auto min-h-[44px] px-2.5 py-2 rounded-xl",
       className,
     );
+
 
     const trigger = (
       <button

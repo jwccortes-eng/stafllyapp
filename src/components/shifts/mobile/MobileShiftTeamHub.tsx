@@ -48,7 +48,7 @@ import { FAMILY_CLASSES } from "@/lib/status/status-registry";
 import { MT } from "@/lib/mobile/mobile-scale";
 import { supabase } from "@/integrations/supabase/client";
 import { normalizePhone, buildWhatsAppTargets } from "@/lib/phone";
-import { useToast } from "@/hooks/use-toast";
+import { notifySuccess, notifyError, notifyWarning } from "@/lib/feedback/notify";
 import { allowedNextStatusesFor, type AssignmentNextStatus, type ClaimDecision } from "@/lib/shifts/team-actions";
 import { MobileTeamActionDialog } from "@/components/shifts/mobile/MobileTeamActionDialog";
 import {
@@ -371,7 +371,6 @@ function MobileShiftTeamHubImpl({
   shiftAdminId, companyId, onMutated,
 }: Props) {
   const navigate = useNavigate();
-  const { toast } = useToast();
   const [tab, setTab] = useState<TabKey>("overview");
 
   // ── Phase 2 + Phase 3: safe action dialog state.
@@ -392,10 +391,11 @@ function MobileShiftTeamHubImpl({
     if (decision === "approved" && employeeId) {
       const r = readinessFor(empById.get(employeeId), statusById);
       if (!r.canBeApproved) {
-        toast({
-          title: "Worker not ready to be approved",
-          description: r.helper,
-          variant: "destructive",
+        notifyWarning({
+          title: "Este worker aún no puede aprobarse",
+          fact: r.helper,
+          consequence: "La aprobación queda bloqueada hasta resolverlo.",
+          key: "team-hub:claim-not-ready",
         });
         return;
       }
@@ -406,10 +406,11 @@ function MobileShiftTeamHubImpl({
   const openAssignWorkerAction = (employeeId: string, workerName: string) => {
     const r = readinessFor(empById.get(employeeId), statusById);
     if (!r.canBeApproved) {
-      toast({
-        title: "Worker not ready to be assigned",
-        description: r.helper,
-        variant: "destructive",
+      notifyWarning({
+        title: "Este worker aún no puede asignarse",
+        fact: r.helper,
+        consequence: "El turno sigue sin cubrir esa plaza.",
+        key: "team-hub:assign-not-ready",
       });
       return;
     }
@@ -673,7 +674,11 @@ function MobileShiftTeamHubImpl({
               }}
               onCopyPhone={(p) => {
                 navigator.clipboard?.writeText(p).catch(() => {});
-                toast({ title: "Phone copied" });
+                notifySuccess({
+                  title: "Teléfono copiado",
+                  fact: "Ya puedes pegarlo donde lo necesites.",
+                  key: "team-hub:copy-phone",
+                });
               }}
               onAssignmentAction={openAssignmentAction}
               onPhoneSaved={handleMutated}
@@ -699,7 +704,11 @@ function MobileShiftTeamHubImpl({
               }}
               onCopyReminder={(workerName) => {
                 navigator.clipboard?.writeText(buildReminderText(workerName)).catch(() => {});
-                toast({ title: "Reminder copied", description: "Paste into WhatsApp or SMS." });
+                notifySuccess({
+                  title: "Recordatorio copiado",
+                  fact: "Pégalo en WhatsApp o SMS para enviarlo.",
+                  key: "team-hub:copy-reminder",
+                });
               }}
             />
           )}
@@ -1301,7 +1310,6 @@ function RecommendedTab({
   const [signals, setSignals] = useState<RecommendationSignals>(EMPTY_SIGNALS);
   const [signalsLoading, setSignalsLoading] = useState(false);
   const [prefRefreshKey, setPrefRefreshKey] = useState(0);
-  const { toast: hubToast } = useToast();
 
   const handleSetPreference = async (
     employeeId: string,
@@ -1309,10 +1317,11 @@ function RecommendedTab({
     preferenceType: WorkerPreferenceType,
   ) => {
     if (!shift.client_id && !shift.location_id) {
-      hubToast({
-        title: "Can't save preference",
-        description: "This shift has no client or location set.",
-        variant: "destructive",
+      notifyWarning({
+        title: "No se puede guardar la preferencia",
+        fact: "Este turno no tiene cliente ni sede asignada.",
+        consequence: "La preferencia no quedaría vinculada a nada.",
+        key: "team-hub:pref-no-context",
       });
       return;
     }
@@ -1326,16 +1335,20 @@ function RecommendedTab({
         p_notes: null,
       });
       if (error) throw error;
-      hubToast({
-        title: "Preference saved",
-        description: `${workerName} marked as ${preferenceType.replace("_", " ")} for this ${shift.client_id ? "client" : "location"}.`,
+      notifySuccess({
+        title: "Preferencia guardada",
+        fact: `${workerName} quedó marcado para este ${shift.client_id ? "cliente" : "lugar"}.`,
+        consequence: "Se tendrá en cuenta en las próximas recomendaciones.",
+        key: "team-hub:pref-saved",
       });
       setPrefRefreshKey(k => k + 1);
     } catch (e: any) {
-      hubToast({
-        title: "Couldn't save preference",
-        description: e?.message ?? "Try again.",
-        variant: "destructive",
+      notifyError({
+        title: "No pudimos guardar la preferencia",
+        fact: "El cambio no se registró.",
+        consequence: "Las recomendaciones siguen igual que antes.",
+        key: "team-hub:pref-save-failed",
+        cause: e,
       });
     }
   };
@@ -1352,16 +1365,20 @@ function RecommendedTab({
       );
       const failed = results.find(r => r.error);
       if (failed?.error) throw failed.error;
-      hubToast({
-        title: "Preference cleared",
-        description: `${workerName}'s preferences for this ${shift.client_id ? "client" : "location"} were cleared.`,
+      notifySuccess({
+        title: "Preferencia eliminada",
+        fact: `Se quitaron las preferencias de ${workerName} para este ${shift.client_id ? "cliente" : "lugar"}.`,
+        consequence: "Volverá a aparecer con las reglas generales.",
+        key: "team-hub:pref-cleared",
       });
       setPrefRefreshKey(k => k + 1);
     } catch (e: any) {
-      hubToast({
-        title: "Couldn't clear preference",
-        description: e?.message ?? "Try again.",
-        variant: "destructive",
+      notifyError({
+        title: "No pudimos eliminar la preferencia",
+        fact: "El cambio no se registró.",
+        consequence: "La preferencia anterior sigue activa.",
+        key: "team-hub:pref-clear-failed",
+        cause: e,
       });
     }
   };
