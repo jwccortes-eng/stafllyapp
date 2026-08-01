@@ -41,7 +41,7 @@ const en_app = {
   "topbar.companies_count": "{n} companies",
   "topbar.demo": "Demo",
   "topbar.create": "Create",
-  "topbar.create.shift": "New Shift",
+  "topbar.create.shift": "New Service",
   "topbar.create.worker": "New Worker",
   "topbar.create.client": "New Client",
   "topbar.create.location": "New Location",
@@ -60,7 +60,7 @@ const en_app = {
   // ── Admin sidebar — link labels ──────────────────────────────────
   "sidebar.link.command_center": "Command Center",
   "sidebar.link.todays_operations": "Today's Operations",
-  "sidebar.link.shifts": "Shifts",
+  "sidebar.link.shifts": "Services",
   "sidebar.link.attendance": "Attendance",
   "sidebar.link.time_clock": "Time Clock",
   "sidebar.link.live_map": "Live Map",
@@ -237,7 +237,7 @@ const en_app = {
 
   // ── Admin mobile bottom nav ──────────────────────────────────────
   "admin.nav.ops": "Ops",
-  "admin.nav.shifts": "Shifts",
+  "admin.nav.shifts": "Services",
   "admin.nav.time": "Time",
   "admin.nav.workers": "Workers",
   "admin.nav.more": "More",
