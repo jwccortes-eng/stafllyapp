@@ -21,16 +21,26 @@ import {
   deriveShiftOpsState,
 } from "@/lib/operations/derive-shift-ops-state";
 
+/**
+ * P0.3.1 — CONTRATO MULTI-DRIVER
+ * La fuente de verdad es `shift_assignments.assignment_role = 'driver'`.
+ * `scheduled_shifts.driver_employee_id` sólo se usa como compatibilidad legada
+ * (se añade al conjunto cuando no existe una fila de asignación equivalente).
+ */
 export interface ShiftTransportInfo {
   required: boolean;
   car_capacity: number;
+  /** Colección completa de conductores del turno (verdad multi-driver). */
+  driver_ids: string[];
+  /** LEGADO/compatibilidad: primer conductor. Nunca sustituye a `driver_ids`. */
   primary_driver_id: string | null;
   rides_count: number;
-  drivers_assigned: number;          // unique drivers across rides + primary driver
-  capacity_total: number;            // car_capacity * rides_count (or car_capacity if no rides but primary)
+  drivers_assigned: number;          // conductores únicos (asignaciones + rides)
+  capacity_total: number;            // car_capacity * (rides o conductores)
   missing_driver: boolean;           // required && drivers_assigned === 0
   capacity_short: boolean;           // required && slots > capacity_total
 }
+
 
 export interface TodayOpsShift {
   id: string;
