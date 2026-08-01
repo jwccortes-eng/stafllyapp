@@ -521,9 +521,11 @@ export default function MobileShiftsView() {
       {/* Pulso de la vista: una sola línea, no cuatro tarjetas */}
       {!loading && !error && tab !== "requests" && summary.shifts > 0 && (
         <div className="px-4 pt-3">
-          <p className="text-xs text-muted-foreground">
-            <span className="font-semibold text-foreground tabular-nums">{summary.shifts}</span> turnos ·{" "}
-            <span className="font-semibold text-foreground tabular-nums">{summary.workers}</span> personas ·{" "}
+          <p className="text-[13px] text-muted-foreground">
+            <span className="font-semibold text-foreground tabular-nums">{summary.shifts}</span>{" "}
+            {summary.shifts === 1 ? "turno" : "turnos"} ·{" "}
+            <span className="font-semibold text-foreground tabular-nums">{summary.workers}</span>{" "}
+            {summary.workers === 1 ? "persona" : "personas"} ·{" "}
             <span className={cn(
               "font-semibold tabular-nums",
               summary.coverage >= 90 ? "text-status-success" : summary.coverage >= 60 ? "text-status-warning" : "text-status-danger"
@@ -534,6 +536,7 @@ export default function MobileShiftsView() {
           </p>
         </div>
       )}
+
 
       {/* List */}
       <div className="px-4 pt-4">
