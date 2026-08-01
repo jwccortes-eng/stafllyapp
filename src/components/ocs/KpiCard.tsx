@@ -24,8 +24,8 @@ export interface KpiCardProps {
   value?: React.ReactNode;
   /** Unidad del valor: "turnos", "horas", "workers". */
   unit?: string;
-  /** Qué significa el número para la operación. Obligatorio. */
-  meaning: string;
+  /** Qué significa el número para la operación. Obligatorio salvo con `state`. */
+  meaning?: string;
   /** Qué pasa si no se atiende. Se muestra bajo el significado. */
   consequence?: string | null;
   /**
@@ -95,7 +95,7 @@ export function KpiCard({
   const rError = p ? p.error : error ?? null;
   const rEmpty = p ? p.isEmpty : !!isEmpty;
   const rEmptyLabel = p ? p.emptyLabel : emptyLabel;
-  const rMeaning = p ? p.meaning : meaning;
+  const rMeaning = p ? p.meaning : meaning ?? "";
   const rConsequence = p ? p.consequence : consequence ?? null;
   const rStatus = p ? p.statusKey : status;
   const rStatusLabel = p ? p.statusLabel : statusLabel;
