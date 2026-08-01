@@ -182,6 +182,9 @@ export default function MobileAdminHome() {
   };
 
   const visibleActions = useMemo(() => ACTIONS.filter(isVisible), [role, selectedCompanyId, isGlobalMode]);
+  const dailyActions = visibleActions.filter((a) => a.primary);
+  const otherActions = visibleActions.filter((a) => !a.primary);
+
 
   const greeting = useMemo(() => {
     const h = new Date().getHours();
