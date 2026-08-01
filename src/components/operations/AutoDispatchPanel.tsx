@@ -102,6 +102,9 @@ export function AutoDispatchPanel({
   const isFullAuto = autoCfg.level === "full_auto";
 
   // ─── Load + persist + (optional) auto-execute ─────────────────────────
+  // OX-1 — permite ofrecer "Reintentar" dentro del propio toast de error.
+  const refreshRef = useRef<(() => Promise<void>) | null>(null);
+
   const refresh = useCallback(async () => {
     if (!companyId || isOff) {
       setSuggestions([]);
@@ -173,6 +176,8 @@ export function AutoDispatchPanel({
       setLoading(false);
     }
   }, [companyId, isOff, isFullAuto]);
+
+  useEffect(() => { refreshRef.current = refresh; }, [refresh]);
 
   useEffect(() => {
     if (!companyId) return;

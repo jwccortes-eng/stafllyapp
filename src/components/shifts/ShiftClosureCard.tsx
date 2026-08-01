@@ -89,6 +89,9 @@ export function ShiftClosureCard({
 
   useEffect(() => { void load(); }, [load]);
 
+  // OX-1 — referencia estable para el CTA "Reintentar" del toast.
+  const doCloseRef = useRef<(() => Promise<void>) | null>(null);
+
   const doClose = async () => {
     if (submitting || !user) return;
     setSubmitting(true);
@@ -122,6 +125,8 @@ export function ShiftClosureCard({
       setSubmitting(false);
     }
   };
+
+  doCloseRef.current = doClose;
 
   if (!canClose) return null;
 

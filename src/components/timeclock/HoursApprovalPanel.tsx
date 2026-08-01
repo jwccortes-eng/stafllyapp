@@ -89,6 +89,10 @@ export function HoursApprovalPanel({ companyId, shiftId, onChanged }: HoursAppro
     });
   };
 
+  // OX-1 — referencias estables para los CTA "Reintentar" de los toasts.
+  const runApproveRef = useRef<(() => Promise<void>) | null>(null);
+  const runReturnRef = useRef<(() => Promise<void>) | null>(null);
+
   const runApprove = async () => {
     if (busy || selected.size === 0 || !user) return;
     setBusy(true);
@@ -159,6 +163,9 @@ export function HoursApprovalPanel({ companyId, shiftId, onChanged }: HoursAppro
       setBusy(false);
     }
   };
+
+  runApproveRef.current = runApprove;
+  runReturnRef.current = runReturn;
 
   if (loadError) {
     return (
