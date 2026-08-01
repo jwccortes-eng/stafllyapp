@@ -1149,7 +1149,7 @@ export function ShiftDetailDialog({
                             onClick={() => setRemoveConfirm({
                               assignmentId: a.id,
                               employeeName: `${emp.first_name} ${emp.last_name}`,
-                              roleLabel: a.assignment_role === "driver" ? "Conductor" : null,
+                              roleLabel: (a as any).assignment_role === "driver" ? "Conductor" : null,
                               statusLine: a.status === "confirmed"
                                 ? "Esta persona ya confirmó el turno. Se le notificará."
                                 : "Esta persona está asignada pero aún no ha fichado.",
