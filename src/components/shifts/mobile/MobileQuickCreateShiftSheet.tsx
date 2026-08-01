@@ -232,6 +232,19 @@ export function MobileQuickCreateShiftSheet({
   const [outcomes, setOutcomes] = useState<AssignOutcome[]>([]);
   const [result, setResult] = useState<CreateResultSummary | null>(null);
   const [confirmClose, setConfirmClose] = useState(false);
+  /** Confirmación basada en lo REALMENTE persistido (empresa incluida). */
+  const [confirmation, setConfirmation] = useState<CreationConfirmation | null>(null);
+  /** Empresa con la que se abrió el wizard: si cambia a mitad, se bloquea. */
+  const lockedCompanyIdRef = useRef<string | null>(null);
+  const [companyChanged, setCompanyChanged] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    if (lockedCompanyIdRef.current && companyId && companyId !== lockedCompanyIdRef.current) {
+      setCompanyChanged(true);
+    }
+  }, [companyId, open]);
+
 
   useEffect(() => {
     if (!open) return;
