@@ -3,7 +3,8 @@ import { Building2, ArrowRightLeft, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
 import { Button } from "@/components/ui/button";
-import { isExactShiftCodeQuery } from "@/lib/shifts/shift-ref";
+import { isExactShiftCodeQuery, normalizeShiftQuery } from "@/lib/shifts/shift-ref";
+import { getShiftDisplayIdentity } from "@/lib/shifts/shift-identity";
 import { notifyError } from "@/lib/feedback/notify";
 
 /**
