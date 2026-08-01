@@ -129,6 +129,7 @@ export function ShiftRouteHeader({
   title,
   clientName,
   shiftCode,
+  shiftRef,
   date,
   startTime,
   endTime,
