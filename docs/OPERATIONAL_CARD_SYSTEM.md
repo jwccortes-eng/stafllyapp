@@ -82,3 +82,11 @@ Un solo componente por tipo. Nunca duplicar.
 3. Toda información numérica debe venir acompañada de significado.
 4. Toda card que exija decisión debe llevar la acción dentro de la propia card.
 5. Los legacy (`shifts/ShiftCard`, `admin/mobile/MobileEntityCard`, `stafly-ui/StaflyCard`) se migran de forma incremental; no se permiten nuevos usos en superficies nuevas.
+
+## Superficies migradas
+
+| Superficie | Cards | Notas |
+| --- | --- | --- |
+| Assign Workers / Recomendados | `WorkerCard` | OX-4.1 |
+| Team Hub (`MobileShiftTeamHub`) | `TeamCard`, `KpiCard`, `InsightCard`, `ValidationCard`, `WorkerCard` | OX-4.2. Modelo puro en `src/lib/shifts/team-hub-model.ts`: secciones (Listo · Pendiente · Atención · Reemplazos · Removidos), resumen de cobertura, riesgos y una única acción principal por persona. |
+

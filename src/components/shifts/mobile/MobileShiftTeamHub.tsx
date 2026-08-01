@@ -63,6 +63,14 @@ import {
   type RecommendationSignals, type ReviewSignal, type RankedCandidate,
   type WorkerPreferenceRow, type WorkerPreferenceType,
 } from "@/lib/shifts/worker-recommendation";
+import { TeamCard, KpiCard, InsightCard, ValidationCard, type TeamMemberSummary } from "@/components/ocs";
+import { TeamHubWorkerCard } from "@/components/shifts/team/TeamHubWorkerCard";
+import { TeamConversationCard } from "@/components/shifts/team/TeamConversationCard";
+import {
+  summarizeTeam, detectTeamRisks, teamSectionOf, teamPrimaryIntent,
+  TEAM_SECTION_META, TEAM_SECTION_ORDER,
+  type TeamSection, type TeamSummary, type TeamRisk,
+} from "@/lib/shifts/team-hub-model";
 
 function formatRelative(iso: string): string {
   try { return formatDistanceToNowStrict(new Date(iso), { addSuffix: true }); }
@@ -323,39 +331,6 @@ interface Props {
   onMutated?: () => void;
 }
 
-type Bucket =
-  | "confirmed"
-  | "accepted"
-  | "pending"
-  | "rejected_by_worker"
-  | "removed"
-  | "no_show"
-  | "other";
-
-function bucketize(a: HubAssignment): Bucket {
-  // Attendance signal takes precedence for past/in-progress shifts.
-  if (a.attendance_status === "absent") return "no_show";
-  if (a.status === "removed") return "removed";
-  if (a.response_status === "rejected" || a.status === "rejected") return "rejected_by_worker";
-  if (a.status === "confirmed") return "confirmed";
-  if (a.status === "accepted") return "accepted";
-  if (a.status === "pending" || a.response_status === "pending") return "pending";
-  return "other";
-}
-
-const BUCKET_META: Record<Bucket, {
-  label: string; icon: React.ComponentType<{ className?: string }>;
-  tone: "good" | "info" | "warn" | "muted" | "bad";
-}> = {
-  confirmed: { label: "Confirmados", icon: ShieldCheck, tone: "good" },
-  accepted: { label: "Aceptados", icon: CheckCircle2, tone: "info" },
-  pending: { label: "Pendientes", icon: Clock, tone: "warn" },
-  rejected_by_worker: { label: "Rechazados", icon: UserX, tone: "bad" },
-  removed: { label: "Removidos", icon: UserMinus, tone: "muted" },
-  no_show: { label: "No-show / Ausente", icon: AlertTriangle, tone: "bad" },
-  other: { label: "Otros", icon: AlertCircle, tone: "muted" },
-};
-
 function toneToClass(tone: "good" | "info" | "warn" | "muted" | "bad"): string {
   switch (tone) {
     case "good": return FAMILY_CLASSES.positive;
@@ -503,136 +478,56 @@ function MobileShiftTeamHubImpl({
   const employeeIds = useMemo(() => employees.map(e => e.id), [employees]);
   const { statusById } = useAssignmentStatuses(employeeIds, companyId);
 
-  const grouped = useMemo(() => {
-    const buckets: Record<Bucket, HubAssignment[]> = {
-      confirmed: [], accepted: [], pending: [],
-      rejected_by_worker: [], removed: [], no_show: [], other: [],
+  const hasPhoneOf = useMemo(() => {
+    return (employeeId: string) => normalizePhone(empById.get(employeeId)?.phone_number).length >= 10;
+  }, [empById]);
+
+  /** OX-4.2 — secciones operativas (Listo, Pendiente, Atención, Reemplazos, Removidos). */
+  const sections = useMemo(() => {
+    const acc: Record<TeamSection, HubAssignment[]> = {
+      ready: [], pending: [], attention: [], replacement: [], removed: [],
     };
-    for (const a of assignments) buckets[bucketize(a)].push(a);
-    return buckets;
-  }, [assignments]);
+    for (const a of assignments) {
+      acc[teamSectionOf(a, { hasPhone: hasPhoneOf(a.employee_id) })].push(a);
+    }
+    return acc;
+  }, [assignments, hasPhoneOf]);
 
   const slots = shift.slots ?? 0;
-  // Staffed = anything not rejected/removed (matches assignment-coverage).
-  const staffedCount =
-    grouped.confirmed.length + grouped.accepted.length + grouped.pending.length + grouped.no_show.length + grouped.other.length;
-  const openSpots = Math.max(slots - staffedCount, 0);
   const claimsPending = claims.filter(c => c.status === "pending").length;
 
-  // ── Issues derived from already-loaded data only.
-  const issues = useMemo(() => {
-    const items: Array<{ key: string; tone: "warn" | "bad" | "info"; icon: React.ComponentType<{ className?: string }>; title: string; helper?: string }> = [];
-    if (openSpots > 0) {
-      items.push({
-        key: "open-spots",
-        tone: "warn", icon: Users,
-        title: `Faltan ${openSpots} ${openSpots === 1 ? "cupo" : "cupos"}`,
-        helper: "Completa el equipo requerido para este turno.",
-      });
-    }
-    if (grouped.no_show.length > 0) {
-      items.push({
-        key: "no-show",
-        tone: "bad", icon: AlertTriangle,
-        title: `${grouped.no_show.length} marcados como ausentes / no-show`,
-      });
-    }
-    if (grouped.pending.length > 0) {
-      items.push({
-        key: "pending",
-        tone: "warn", icon: Clock,
-        title: `${grouped.pending.length} ${grouped.pending.length === 1 ? "respuesta pendiente" : "respuestas pendientes"}`,
-        helper: "Trabajadores que aún no aceptan.",
-      });
-    }
-    if (grouped.rejected_by_worker.length > 0) {
-      items.push({
-        key: "rejected",
-        tone: "bad", icon: UserX,
-        title: `${grouped.rejected_by_worker.length} rechazados`,
-      });
-    }
-    // Missing phone on staffed workers.
-    const staffed = [
-      ...grouped.confirmed, ...grouped.accepted, ...grouped.pending, ...grouped.no_show,
-    ];
-    const missingPhone = staffed.filter(a => !normalizePhone(empById.get(a.employee_id)?.phone_number));
-    if (missingPhone.length > 0) {
-      items.push({
-        key: "missing-phone",
-        tone: "warn", icon: Phone,
-        title: `${missingPhone.length} ${missingPhone.length === 1 ? "trabajador sin teléfono" : "trabajadores sin teléfono"}`,
-        helper: "No podrás llamarlos, enviar SMS o WhatsApp desde móvil.",
-      });
-    }
-    if (!shift.location_id) {
-      const hasMP = !!hasMeetingPointLocation || !!(meetingPoint && meetingPoint.trim());
-      items.push({
-        key: "no-location",
-        tone: "warn", icon: MapPin,
-        title: hasMP ? "Falta ubicación del trabajo" : "Sin ubicación ni punto de encuentro",
-        helper: hasMP
-          ? "Hay punto de encuentro, pero falta el lugar donde se realiza el trabajo."
-          : "Es posible que los trabajadores no sepan dónde ir.",
-      });
-    }
-    if (!shift.client_id) {
-      items.push({
-        key: "no-client",
-        tone: "info", icon: Briefcase,
-        title: "Sin cliente vinculado",
-      });
-    }
-    if (claimsPending > 0) {
-      items.push({
-        key: "claims",
-        tone: "info", icon: Inbox,
-        title: `${claimsPending} ${claimsPending === 1 ? "solicitud pendiente" : "solicitudes pendientes"}`,
-        helper: "Revísalas para aprobar o rechazar.",
-      });
-    }
-    // Daily close (Phase 17C). Only flag for today/past shifts.
-    try {
-      const today = new Date(); today.setHours(0,0,0,0);
-      const sd = shift.date ? new Date(`${shift.date}T00:00:00`) : null;
-      const isPastOrToday = sd ? sd.getTime() <= today.getTime() : false;
-      const isPublished = (shift.publication_status ?? "published") === "published";
-      if (isPastOrToday && isPublished) {
-        if (!closeout) {
-          items.push({
-            key: "closeout-missing",
-            tone: "warn", icon: ClipboardCheck,
-            title: "Falta el cierre diario",
-            helper: "El capitán o admin del turno aún no lo ha enviado.",
-          });
-        } else if (closeout.status === "submitted") {
-          items.push({
-            key: "closeout-pending-review",
-            tone: "info", icon: ClipboardCheck,
-            title: "Cierre pendiente de revisión",
-          });
-        } else if (closeout.status === "reviewed" && (closeout.incident_count ?? 0) > 0) {
-          items.push({
-            key: "closeout-incidents",
-            tone: "bad", icon: AlertTriangle,
-            title: `${closeout.incident_count} ${closeout.incident_count === 1 ? "incidente reportado" : "incidentes reportados"}`,
-          });
-        }
-      }
-    } catch { /* best-effort */ }
-    return items;
-  }, [grouped, openSpots, empById, shift.location_id, shift.client_id, shift.date, shift.publication_status, claimsPending, hasMeetingPointLocation, meetingPoint, closeout]);
+  const summary = useMemo(
+    () => summarizeTeam(assignments, slots, hasPhoneOf),
+    [assignments, slots, hasPhoneOf],
+  );
 
-  const order: Bucket[] = [
-    "confirmed", "accepted", "pending",
-    "no_show", "rejected_by_worker", "removed", "other",
-  ];
+  const teamMembers = useMemo<TeamMemberSummary[]>(() => {
+    return [...sections.ready, ...sections.pending, ...sections.attention]
+      .map((a) => empById.get(a.employee_id))
+      .filter((e): e is Employee => !!e)
+      .map((e) => ({
+        firstName: e.first_name ?? "",
+        lastName: e.last_name ?? "",
+        avatarUrl: e.avatar_url ?? null,
+        gender: (e as { gender?: string | null }).gender ?? null,
+      }));
+  }, [sections, empById]);
+
+  const risks = useMemo(
+    () => detectTeamRisks({
+      summary,
+      claimsPending,
+      hasLocation: !!shift.location_id,
+      hasMeetingPoint: !!hasMeetingPointLocation || !!(meetingPoint && meetingPoint.trim()),
+    }),
+    [summary, claimsPending, shift.location_id, hasMeetingPointLocation, meetingPoint],
+  );
 
   const TABS: { key: TabKey; label: string; badge?: number }[] = [
     { key: "overview", label: "Resumen" },
     { key: "assigned", label: "Asignados", badge: assignments.length || undefined },
     { key: "claims", label: "Solicitudes", badge: claimsPending || undefined },
-    { key: "issues", label: "Alertas", badge: issues.length || undefined },
+    { key: "issues", label: "Alertas", badge: risks.length || undefined },
     { key: "recommended", label: "Recomendados" },
   ];
 
@@ -676,7 +571,7 @@ function MobileShiftTeamHubImpl({
                 <span className="text-[12px] text-muted-foreground/80">· termina aprox. <span className="font-mono tabular-nums">{formatTimeShort(shift.end_time)}</span></span>
                 <span className="text-[12px] text-muted-foreground/60">·</span>
                 <span className="text-[12px] font-semibold text-foreground/85 tabular-nums">
-                  {staffedCount}/{slots || "—"}{openSpots > 0 ? ` · faltan ${openSpots}` : ""}
+                  {summary.assigned}/{slots || "—"}{summary.missing > 0 ? ` · faltan ${summary.missing}` : ""}
                 </span>
               </div>
               {(meetingPoint || hasMeetingPointLocation) && (
@@ -749,23 +644,33 @@ function MobileShiftTeamHubImpl({
 
           {tab === "overview" && (
             <OverviewTab
-              slots={slots}
-              staffedCount={staffedCount}
-              openSpots={openSpots}
-              grouped={grouped}
+              shift={shift}
+              summary={summary}
+              risks={risks}
+              members={teamMembers}
               claimsPending={claimsPending}
+              canManage={canManage}
+              onGoTo={setTab}
+              onOpenChannel={() => {
+                onOpenChange(false);
+                navigate("/app/chat");
+              }}
+              onBroadcast={() => setTab("assigned")}
             />
           )}
 
           {tab === "assigned" && (
             <AssignedTab
               assignments={assignments}
-              grouped={grouped}
-              order={order}
+              sections={sections}
               empById={empById}
               shiftAdminId={shiftAdminId ?? null}
               canManage={canManage}
-              companyId={companyId ?? null}
+              onReplace={() => setTab("recommended")}
+              onOpenWorker={(employeeId) => {
+                onOpenChange(false);
+                navigate(`/app/workers/${employeeId}`);
+              }}
               onCopyPhone={(p) => {
                 navigator.clipboard?.writeText(p).catch(() => {});
                 toast({ title: "Phone copied" });
@@ -800,7 +705,7 @@ function MobileShiftTeamHubImpl({
           )}
 
           {tab === "issues" && (
-            <IssuesTab issues={issues} />
+            <IssuesTab risks={risks} canManage={canManage} onGoTo={setTab} />
           )}
 
           {tab === "recommended" && (
@@ -853,53 +758,206 @@ export const MobileShiftTeamHub = memo(MobileShiftTeamHubImpl);
 /* ─── Tabs ─── */
 
 function OverviewTab({
-  slots, staffedCount, openSpots, grouped, claimsPending,
+  shift, summary, risks, members, claimsPending, canManage,
+  onGoTo, onOpenChannel, onBroadcast,
 }: {
-  slots: number;
-  staffedCount: number;
-  openSpots: number;
-  grouped: Record<Bucket, HubAssignment[]>;
+  shift: Shift;
+  summary: TeamSummary;
+  risks: TeamRisk[];
+  members: TeamMemberSummary[];
   claimsPending: number;
+  canManage: boolean;
+  onGoTo: (tab: TabKey) => void;
+  onOpenChannel: () => void;
+  onBroadcast?: () => void;
 }) {
+  const intent = teamPrimaryIntent(summary);
+  const topRisks = risks.slice(0, 3);
+
   return (
-    <section aria-label="Operational overview">
-      <SectionTitle icon={Users} helper={HUB_COPY.overviewHelper}>
-        Resumen
-      </SectionTitle>
-      <div className="grid grid-cols-3 gap-2">
-        <StatTile label="Requeridos" value={slots || "—"} />
-        <StatTile label="Asignados" value={staffedCount} />
-        <StatTile label="Faltan" value={openSpots} accent={openSpots > 0 ? "warn" : "good"} />
-        <StatTile label="Confirmados" value={grouped.confirmed.length} accent="good" />
-        <StatTile label="Aceptados" value={grouped.accepted.length} accent="info" />
-        <StatTile label="Pendientes" value={grouped.pending.length} accent="warn" />
-        <StatTile label="Rechazados" value={grouped.rejected_by_worker.length} accent={grouped.rejected_by_worker.length ? "bad" : "muted"} />
-        <StatTile label="Removidos" value={grouped.removed.length} />
-        <StatTile label="No-show" value={grouped.no_show.length} accent={grouped.no_show.length ? "bad" : "muted"} />
-        <StatTile label="Solicitudes" value={claimsPending} accent={claimsPending ? "info" : "muted"} />
+    <section aria-label="Estado del equipo" className="space-y-3">
+      <TeamCard
+        title={shift.title || "Equipo del turno"}
+        subtitle={intent.meaning}
+        assigned={summary.assigned}
+        slots={summary.slots}
+        confirmed={summary.confirmed}
+        present={summary.present}
+        members={members}
+        mode="readonly"
+        action={
+          canManage
+            ? {
+                label: intent.label,
+                icon: intent.kind === "operate" ? ShieldCheck : UserPlus,
+                onClick: () =>
+                  onGoTo(
+                    intent.kind === "complete"
+                      ? "recommended"
+                      : intent.kind === "confirm"
+                        ? "assigned"
+                        : "assigned",
+                  ),
+              }
+            : undefined
+        }
+      />
+
+      <div className="grid grid-cols-2 gap-2">
+        <KpiCard
+          variant="compact"
+          label="Confirmados"
+          value={`${summary.confirmed}/${summary.assigned || 0}`}
+          meaning={
+            summary.pending > 0
+              ? `${summary.pending} sin responder todavía.`
+              : "Todo el equipo asignado ya respondió."
+          }
+          status={summary.pending > 0 ? "pending" : "confirmed"}
+          isEmpty={summary.assigned === 0}
+          emptyLabel="Aún no hay nadie asignado"
+          mode="readonly"
+        />
+        <KpiCard
+          variant="compact"
+          label="En sitio"
+          value={summary.present}
+          meaning={
+            summary.late > 0
+              ? `${summary.late} ${summary.late === 1 ? "llegó" : "llegaron"} tarde.`
+              : "Llegadas registradas por reloj."
+          }
+          status={summary.late > 0 ? "late" : summary.present > 0 ? "in_progress" : "not_started"}
+          isEmpty={summary.assigned === 0}
+          emptyLabel="Sin equipo asignado"
+          mode="readonly"
+        />
+        <KpiCard
+          variant="compact"
+          label="No-show"
+          value={summary.noShow}
+          meaning={
+            summary.noShow > 0
+              ? "Cupos que hay que cubrir ahora."
+              : "Nadie marcado como ausente."
+          }
+          status={summary.noShow > 0 ? "no_show" : "confirmed"}
+          mode="readonly"
+        />
+        <KpiCard
+          variant="compact"
+          label="Solicitudes"
+          value={claimsPending}
+          meaning={
+            claimsPending > 0
+              ? "Trabajadores esperando tu decisión."
+              : "Sin solicitudes por decidir."
+          }
+          status={claimsPending > 0 ? "needs_review" : "confirmed"}
+          action={
+            claimsPending > 0
+              ? { label: "Decidir", icon: Inbox, onClick: () => onGoTo("claims") }
+              : undefined
+          }
+          mode="readonly"
+        />
       </div>
+
+      {topRisks.length > 0 && (
+        <div className="space-y-2">
+          <SectionTitle icon={AlertTriangle} helper={HUB_COPY.issuesHelper}>
+            Riesgos
+          </SectionTitle>
+          {topRisks.map((r) => (
+            <TeamRiskCard key={r.key} risk={r} canManage={canManage} onGoTo={onGoTo} />
+          ))}
+          {risks.length > topRisks.length && (
+            <button
+              type="button"
+              onClick={() => onGoTo("issues")}
+              className={cn(MT.caption, "font-semibold text-primary px-1")}
+            >
+              Ver las {risks.length} alertas
+            </button>
+          )}
+        </div>
+      )}
+
+      <TeamConversationCard
+        reachable={Math.max(0, summary.assigned - summary.withoutPhone)}
+        unreachable={summary.withoutPhone}
+        onOpenChannel={onOpenChannel}
+        onBroadcast={onBroadcast}
+      />
     </section>
   );
 }
 
+const RISK_TARGET: Record<string, TabKey> = {
+  open_spots: "recommended",
+  no_show: "recommended",
+  rejected: "recommended",
+  unconfirmed: "assigned",
+  missing_phone: "assigned",
+  claims_pending: "claims",
+  no_location: "issues",
+};
+
+function TeamRiskCard({
+  risk, canManage, onGoTo,
+}: {
+  risk: TeamRisk;
+  canManage: boolean;
+  onGoTo: (tab: TabKey) => void;
+}) {
+  return (
+    <InsightCard
+      recommendation={risk.recommendation}
+      because={risk.because}
+      impact={risk.impact}
+      status={
+        risk.severity === "critical"
+          ? "blocked"
+          : risk.severity === "warning"
+            ? "warning"
+            : "informational"
+      }
+      statusLabel={
+        risk.severity === "critical"
+          ? "Riesgo crítico"
+          : risk.severity === "warning"
+            ? "Riesgo"
+            : "Aviso"
+      }
+      mode="readonly"
+      action={
+        canManage && risk.actionLabel && RISK_TARGET[risk.key]
+          ? { label: risk.actionLabel, onClick: () => onGoTo(RISK_TARGET[risk.key]) }
+          : undefined
+      }
+    />
+  );
+}
+
 function AssignedTab({
-  assignments, grouped, order, empById, shiftAdminId, canManage, companyId, onCopyPhone, onAssignmentAction, onPhoneSaved,
+  assignments, sections, empById, shiftAdminId, canManage,
+  onCopyPhone, onAssignmentAction, onPhoneSaved, onReplace, onOpenWorker,
 }: {
   assignments: HubAssignment[];
-  grouped: Record<Bucket, HubAssignment[]>;
-  order: Bucket[];
+  sections: Record<TeamSection, HubAssignment[]>;
   empById: Map<string, Employee>;
   shiftAdminId: string | null;
   canManage: boolean;
-  companyId: string | null;
   onCopyPhone: (p: string) => void;
   onAssignmentAction: (assignmentId: string, nextStatus: AssignmentNextStatus, workerName: string) => void;
   onPhoneSaved?: () => void;
+  onReplace: () => void;
+  onOpenWorker: (employeeId: string) => void;
 }) {
   return (
-    <section aria-label="Trabajadores asignados">
+    <section aria-label="Equipo del turno" className="space-y-4">
       <SectionTitle icon={ShieldCheck} helper={HUB_COPY.assignedHelper}>
-        Asignados
+        Equipo
         <span className="ml-1.5 text-xs font-normal text-muted-foreground normal-case tracking-normal">
           ({assignments.length})
         </span>
@@ -908,328 +966,53 @@ function AssignedTab({
       {assignments.length === 0 ? (
         <EmptyBlock title={HUB_COPY.emptyAssignedTitle} helper={HUB_COPY.emptyAssignedHelper} />
       ) : (
-        <div className="space-y-3">
-          {order.map((b) => {
-            const list = grouped[b];
-            if (!list || list.length === 0) return null;
-            const meta = BUCKET_META[b];
-            const Icon = meta.icon;
-            return (
-              <div key={b} className="rounded-2xl border border-border/50 bg-card overflow-hidden">
-                <div className="flex items-center justify-between px-3 py-2 border-b border-border/40 bg-muted/30">
-                  <div className="flex items-center gap-1.5">
-                    <Icon className="h-3.5 w-3.5 text-muted-foreground" />
-                    <span className="text-[12px] font-bold uppercase tracking-wider text-muted-foreground">
-                      {meta.label}
-                    </span>
-                  </div>
-                  <Badge
-                    variant="outline"
-                    className={cn("h-[20px] px-1.5 text-[12px] font-semibold", toneToClass(meta.tone))}
-                  >
+        TEAM_SECTION_ORDER.map((key) => {
+          const list = sections[key];
+          if (!list || list.length === 0) return null;
+          const meta = TEAM_SECTION_META[key];
+          return (
+            <div key={key} className="space-y-2">
+              <div className="flex items-baseline justify-between gap-2 px-0.5">
+                <h4 className={cn(MT.body, "font-semibold")}>
+                  {meta.label}
+                  <span className="ml-1.5 text-muted-foreground tabular-nums font-normal">
                     {list.length}
-                  </Badge>
-                </div>
-                <ul className="divide-y divide-border/30">
-                  {list.map((a) => (
-                    <WorkerRow
+                  </span>
+                </h4>
+              </div>
+              <p className={cn(MT.caption, "text-muted-foreground px-0.5 -mt-1")}>{meta.helper}</p>
+              <div className="space-y-2">
+                {list.map((a) => {
+                  const e = empById.get(a.employee_id);
+                  const responseTs = a.accepted_at || a.rejected_at || a.responded_at || null;
+                  const responseLabel = responseTs
+                    ? (a.accepted_at ? "Aceptó " : a.rejected_at ? "Rechazó " : "Respondió ") + formatRelative(responseTs)
+                    : null;
+                  return (
+                    <TeamHubWorkerCard
                       key={a.id}
                       assignment={a}
-                      employee={empById.get(a.employee_id)}
+                      employee={e}
                       isCaptain={!!shiftAdminId && a.employee_id === shiftAdminId}
                       canManage={canManage}
-                      companyId={companyId}
-                      onCopyPhone={onCopyPhone}
+                      responseLabel={responseLabel}
                       onAssignmentAction={onAssignmentAction}
+                      onReplace={onReplace}
+                      onCopyPhone={onCopyPhone}
                       onPhoneSaved={onPhoneSaved}
+                      onOpenWorker={onOpenWorker}
                     />
-                  ))}
-                </ul>
+                  );
+                })}
               </div>
-            );
-          })}
-        </div>
+            </div>
+          );
+        })
       )}
     </section>
   );
 }
 
-const ASSIGN_ACTION_LABEL: Record<AssignmentNextStatus, string> = {
-  confirmed: "Confirmar",
-  rejected: "Marcar como rechazado",
-  removed: "Remover del turno",
-};
-const ASSIGN_ACTION_ICON: Record<AssignmentNextStatus, React.ComponentType<{ className?: string }>> = {
-  confirmed: Check,
-  rejected: XCircle,
-  removed: UserMinus,
-};
-
-function WorkerRow({
-  assignment, employee, isCaptain, canManage, companyId, onCopyPhone, onAssignmentAction, onPhoneSaved,
-}: {
-  assignment: HubAssignment;
-  employee: Employee | undefined;
-  isCaptain: boolean;
-  canManage: boolean;
-  companyId: string | null;
-  onCopyPhone: (p: string) => void;
-  onAssignmentAction: (assignmentId: string, nextStatus: AssignmentNextStatus, workerName: string) => void;
-  onPhoneSaved?: () => void;
-}) {
-  const { toast } = useToast();
-  const name = fullName(employee);
-  const phoneDigits = normalizePhone(employee?.phone_number);
-  const hasPhone = phoneDigits.length >= 10;
-  const wa = hasPhone ? buildWhatsAppTargets(phoneDigits, "") : null;
-  const allowedActions = allowedNextStatusesFor(assignment.status);
-  const showMenu = canManage && allowedActions.length > 0;
-  const statusMap = useStatusMap();
-  const readiness = readinessFor(employee, statusMap);
-  const [phoneDialogOpen, setPhoneDialogOpen] = useState(false);
-  const [phoneInput, setPhoneInput] = useState("");
-  const [savingPhone, setSavingPhone] = useState(false);
-
-  const submitPhone = async () => {
-    if (!employee) return;
-    const digits = normalizePhone(phoneInput);
-    if (digits.length < 10) {
-      toast({ title: "Número inválido", description: "Debe tener 10 dígitos.", variant: "destructive" });
-      return;
-    }
-    setSavingPhone(true);
-    try {
-      const { error } = await supabase
-        .from("employees")
-        .update({ phone_number: digits })
-        .eq("id", employee.id);
-      if (error) throw error;
-      toast({ title: "Teléfono guardado" });
-      setPhoneDialogOpen(false);
-      onPhoneSaved?.();
-    } catch (e: any) {
-      toast({ title: "No se pudo guardar el teléfono", description: e?.message, variant: "destructive" });
-    } finally {
-      setSavingPhone(false);
-    }
-  };
-
-  const subBits: string[] = [];
-  if (assignment.assignment_role) subBits.push(assignment.assignment_role);
-  if (assignment.attendance_status && assignment.attendance_status !== "pending") {
-    subBits.push(assignment.attendance_status);
-  }
-  const responseTs = assignment.accepted_at || assignment.rejected_at || assignment.responded_at || null;
-  const responseLabel = responseTs
-    ? (assignment.accepted_at ? "Aceptó " : assignment.rejected_at ? "Rechazó " : "Respondió ") + formatRelative(responseTs)
-    : null;
-
-  // Status pill — derived from existing bucketize logic; presentational only.
-  const bucket = bucketize(assignment);
-  const STATUS_PILL: Record<string, { label: string; cls: string }> = {
-    confirmed:          { label: "Confirmado", cls: FAMILY_CLASSES.positive },
-    accepted:           { label: "Aceptado",   cls: FAMILY_CLASSES.positive },
-    pending:            { label: "Pendiente",  cls: FAMILY_CLASSES.warning },
-    rejected_by_worker: { label: "Rechazado",  cls: FAMILY_CLASSES.critical },
-    removed:            { label: "Removido",   cls: FAMILY_CLASSES.neutral },
-    no_show:            { label: "No-show",    cls: FAMILY_CLASSES.critical },
-    other:              { label: assignment.status || "Desconocido", cls: FAMILY_CLASSES.neutral },
-  };
-  const isImportedNotResponded =
-    !!assignment.import_batch_id && !assignment.accepted_at && !assignment.responded_at &&
-    (assignment.status === "accepted" || assignment.status === "assigned" || assignment.status === "confirmed");
-  const importedPill = isImportedNotResponded
-    ? { label: "Asignado/importado", cls: FAMILY_CLASSES.progress }
-    : null;
-  const attendancePill =
-    assignment.attendance_status === "present" || assignment.attendance_status === "checked_in"
-      ? { label: "En sitio", cls: FAMILY_CLASSES.progress }
-      : null;
-  const statusPill = attendancePill ?? importedPill ?? STATUS_PILL[bucket];
-
-  return (
-    <li className="px-2.5 py-1.5">
-      <div className="flex items-center gap-2">
-        <Avatar className="h-8 w-8 shrink-0">
-          {employee?.avatar_url ? <AvatarImage src={employee.avatar_url} alt="" /> : null}
-          <AvatarFallback className="text-[12px] font-semibold">
-            {initialsOf(employee)}
-          </AvatarFallback>
-        </Avatar>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1 min-w-0">
-            <p className="text-[13px] font-semibold leading-tight truncate">{name}</p>
-            {isCaptain && <Star className="h-3 w-3 text-amber-600 shrink-0" />}
-          </div>
-          <div className="flex items-center gap-1 mt-0.5 flex-wrap">
-            {statusPill && (
-              <span
-                className={cn(
-                  "inline-flex items-center h-[15px] px-1.5 rounded-full text-[12px] font-bold uppercase tracking-wide border whitespace-nowrap",
-                  statusPill.cls,
-                )}
-                title={isImportedNotResponded ? "Importado desde Connecteam. Aún no confirmado en Stafly." : undefined}
-              >
-                {statusPill.label}
-              </span>
-            )}
-            {assignment.assignment_role && (
-              <span className="inline-flex items-center h-[15px] px-1 rounded-full bg-muted text-muted-foreground text-[12px] font-bold uppercase tracking-wide">
-                {assignment.assignment_role}
-              </span>
-            )}
-            {!hasPhone && (
-              <span className="inline-flex items-center h-[15px] px-1.5 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-400 text-[12px] font-bold uppercase tracking-wide">
-                Sin tel.
-              </span>
-            )}
-            {readiness.state !== "ready" && readiness.state !== "missing_phone" && (
-              <ReadinessChip readiness={readiness} />
-            )}
-          </div>
-        </div>
-
-        {/* Right-side compact contact icons */}
-        <div className="flex items-center gap-0.5 shrink-0">
-          {hasPhone ? (
-            <>
-              <a
-                href={`tel:${phoneDigits}`}
-                className="h-7 w-7 inline-flex items-center justify-center rounded-full bg-primary/10 text-primary"
-                aria-label={`Llamar a ${name}`}
-              >
-                <Phone className="h-3.5 w-3.5" />
-              </a>
-              {wa?.waMeUrl && (
-                <a
-                  href={wa.waMeUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="h-7 w-7 inline-flex items-center justify-center rounded-full bg-status-success-bg text-status-success"
-                  aria-label="WhatsApp"
-                >
-                  <MessageSquare className="h-3.5 w-3.5" />
-                </a>
-              )}
-            </>
-          ) : canManage ? (
-            <button
-              type="button"
-              onClick={() => setPhoneDialogOpen(true)}
-              className="h-7 px-2 inline-flex items-center gap-1 rounded-full bg-primary text-primary-foreground text-[12px] font-semibold"
-              aria-label={`Agregar teléfono de ${name}`}
-            >
-              <Phone className="h-3 w-3" /> Tel
-            </button>
-          ) : null}
-          {showMenu && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
-                  className="h-7 w-7 rounded-full grid place-items-center text-muted-foreground hover:text-foreground hover:bg-muted"
-                  aria-label={`Cambiar estado de ${name}`}
-                >
-                  <MoreVertical className="h-4 w-4" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel className="text-[12px] uppercase tracking-wider text-muted-foreground font-semibold">
-                  Acción registrada
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                {hasPhone && (
-                  <>
-                    <DropdownMenuItem onClick={() => onCopyPhone(phoneDigits)}>
-                      <Copy className="h-4 w-4 mr-2" /> Copiar teléfono
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <a href={`sms:${phoneDigits}`}>
-                        <MessageSquare className="h-4 w-4 mr-2" /> Enviar SMS
-                      </a>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                  </>
-                )}
-                {allowedActions.map((next) => {
-                  const Icon = ASSIGN_ACTION_ICON[next];
-                  return (
-                    <DropdownMenuItem
-                      key={next}
-                      onClick={() => onAssignmentAction(assignment.id, next, name)}
-                      className={next === "removed" || next === "rejected" ? "text-destructive focus:text-destructive" : undefined}
-                    >
-                      <Icon className="h-4 w-4 mr-2" />
-                      {ASSIGN_ACTION_LABEL[next]}
-                    </DropdownMenuItem>
-                  );
-                })}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-        </div>
-      </div>
-      {(responseLabel || isImportedNotResponded) && (
-        <div className="ml-10 mt-0.5 text-[12px] text-muted-foreground leading-snug">
-          {isImportedNotResponded
-            ? "Importado desde Connecteam. Aún no confirmado en Stafly."
-            : responseLabel}
-        </div>
-      )}
-      <Dialog open={phoneDialogOpen} onOpenChange={setPhoneDialogOpen}>
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Agregar teléfono</DialogTitle>
-            <DialogDescription>{name} · 10 dígitos. Solo actualiza este perfil.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-2">
-            <Label htmlFor={`hub-phone-${assignment.id}`}>Número de teléfono</Label>
-            <Input
-              id={`hub-phone-${assignment.id}`}
-              inputMode="tel"
-              autoFocus
-              placeholder="(555) 123-4567"
-              value={phoneInput}
-              onChange={(e) => setPhoneInput(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") submitPhone(); }}
-            />
-            <p className="text-[12px] text-muted-foreground">
-              No se envían notificaciones. No se modifican registros duplicados.
-            </p>
-          </div>
-          <DialogFooter className="gap-2 sm:gap-2">
-            <Button variant="ghost" onClick={() => setPhoneDialogOpen(false)} disabled={savingPhone}>Cancelar</Button>
-            <Button onClick={submitPhone} disabled={savingPhone}>
-              {savingPhone ? "Guardando…" : "Guardar"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </li>
-  );
-}
-
-function ContactBtn({
-  href, icon: Icon, label, external,
-}: {
-  href: string;
-  icon: React.ComponentType<{ className?: string }>;
-  label: string;
-  external?: boolean;
-}) {
-  return (
-    <a
-      href={href}
-      target={external ? "_blank" : undefined}
-      rel={external ? "noopener noreferrer" : undefined}
-      className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-muted/60 hover:bg-muted text-[12px] font-medium text-foreground"
-      aria-label={label}
-    >
-      <Icon className="h-3 w-3" />
-      {label}
-    </a>
-  );
-}
 
 function ClaimsTab({
   loading, error, claims, empById, canManage, companyId, onClaimAction, onOpenDesktop,
@@ -1273,108 +1056,77 @@ function ClaimsTab({
           {claims.map((c) => {
             const e = empById.get(c.employee_id);
             const workerName = e ? fullName(e) : "este trabajador";
-            const tone =
-              c.status === "approved" ? "good" :
-              c.status === "rejected" ? "bad" : "warn";
             const isPending = c.status === "pending";
             const readiness = readinessFor(e, statusMap);
             const blocked = isPending && !readiness.canBeApproved;
-            const statusLabel =
+            const decidedLabel =
               c.status === "approved" ? "Aprobada" :
-              c.status === "rejected" ? "Rechazada" :
-              c.status === "pending" ? "Pendiente" : (c.status ?? "");
+              c.status === "rejected" ? "Rechazada" : "Pendiente";
             return (
-              <li key={c.id} className="rounded-2xl border border-border/50 bg-card p-3">
-                <div className="flex items-start gap-2.5">
-                  <Avatar className="h-8 w-8 shrink-0">
-                    {e?.avatar_url ? <AvatarImage src={e.avatar_url} alt="" /> : null}
-                    <AvatarFallback className="text-[12px] font-semibold">
-                      {initialsOf(e)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="text-sm font-semibold leading-tight truncate">
-                        {e ? fullName(e) : "Solicitud pendiente"}
-                      </p>
-                      <Badge
-                        variant="outline"
-                        className={cn("h-[18px] px-1.5 text-[12px] font-semibold", toneToClass(tone))}
-                      >
-                        {statusLabel}
-                      </Badge>
-                    </div>
-                    {readiness.state !== "ready" && (
-                      <div className="mt-1 flex items-center gap-1.5 flex-wrap">
-                        <ReadinessChip readiness={readiness} />
-                      </div>
-                    )}
-                    {c.message && (
-                      <p className="mt-1 text-[12px] text-muted-foreground line-clamp-3">
-                        "{c.message}"
-                      </p>
-                    )}
-                    <p className="mt-1 text-[12px] text-muted-foreground">
-                      {c.created_at ? new Date(c.created_at).toLocaleString() : ""}
-                      {c.reviewed_at ? ` · revisada ${new Date(c.reviewed_at).toLocaleString()}` : ""}
-                    </p>
-
-                    {blocked && (
-                      <p className="mt-1.5 text-[12px] text-amber-700 dark:text-amber-400 leading-snug">
-                        {readiness.helper}
-                      </p>
-                    )}
-
-                    {isPending && canManage && (
-                      <div className="mt-2 flex items-center gap-1.5 flex-wrap">
-                        <button
-                          type="button"
-                          disabled={blocked}
-                          onClick={() => onClaimAction(c.id, "approved", workerName, c.employee_id)}
-                          aria-disabled={blocked}
-                          title={blocked ? readiness.helper : undefined}
-                          className={cn(
-                            "inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[12px] font-semibold transition-colors",
-                            blocked
-                              ? "bg-muted text-muted-foreground cursor-not-allowed"
-                              : "bg-emerald-600 text-white hover:bg-emerald-700",
-                          )}
-                        >
-                          <Check className="h-3 w-3" />
-                          Aprobar
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => onClaimAction(c.id, "rejected", workerName, c.employee_id)}
-                          className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-muted hover:bg-muted/80 text-foreground text-[12px] font-semibold transition-colors"
-                        >
-                          <XCircle className="h-3 w-3" />
-                          Rechazar
-                        </button>
-                        {blocked && e && (
-                          <>
-                            <button
-                              type="button"
-                              onClick={() => onViewWorker(e.id)}
-                              className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-muted/60 hover:bg-muted text-foreground text-[12px] font-semibold transition-colors"
-                            >
-                              <UserCog className="h-3 w-3" />
-                              Ver perfil
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => onCopyReminder(workerName)}
-                              className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-muted/60 hover:bg-muted text-foreground text-[12px] font-semibold transition-colors"
-                            >
-                              <Copy className="h-3 w-3" />
-                              Copiar recordatorio
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
+              <li key={c.id}>
+                <ValidationCard
+                  title={e ? fullName(e) : "Solicitud pendiente"}
+                  subtitle={c.message ? `"${c.message}"` : "Solicita entrar a este turno"}
+                  status={
+                    c.status === "approved" ? "approved" :
+                    c.status === "rejected" ? "rejected" : "needs_review"
+                  }
+                  statusLabel={decidedLabel}
+                  evidence={[
+                    { label: "Solicitó", value: c.created_at ? formatRelative(c.created_at) : "—" },
+                    {
+                      label: "Estado del perfil",
+                      value: readiness.label,
+                      attention: readiness.state !== "ready",
+                    },
+                    ...(c.reviewed_at
+                      ? [{ label: "Revisada", value: formatRelative(c.reviewed_at) }]
+                      : []),
+                  ]}
+                  consequence={
+                    blocked
+                      ? readiness.helper
+                      : isPending
+                        ? "Aprobar agrega a la persona al turno. No afecta nómina ni tiempo trabajado."
+                        : "Esta solicitud ya fue decidida. No afecta nómina."
+                  }
+                  decision={{
+                    label: "Aprobar",
+                    icon: Check,
+                    disabled: !isPending || !canManage || blocked,
+                    onClick: () => onClaimAction(c.id, "approved", workerName, c.employee_id),
+                    "aria-label": `Aprobar la solicitud de ${workerName}`,
+                  }}
+                  alternatives={
+                    isPending && canManage
+                      ? [
+                          {
+                            label: "Rechazar",
+                            icon: XCircle,
+                            tone: "danger" as const,
+                            onClick: () => onClaimAction(c.id, "rejected", workerName, c.employee_id),
+                          },
+                          ...(blocked && e
+                            ? [
+                                {
+                                  label: "Ver perfil",
+                                  icon: UserCog,
+                                  tone: "quiet" as const,
+                                  onClick: () => onViewWorker(e.id),
+                                },
+                                {
+                                  label: "Copiar recordatorio",
+                                  icon: Copy,
+                                  tone: "quiet" as const,
+                                  onClick: () => onCopyReminder(workerName),
+                                },
+                              ]
+                            : []),
+                        ]
+                      : undefined
+                  }
+                  mode="readonly"
+                />
               </li>
             );
           })}
@@ -1400,45 +1152,28 @@ function ClaimsTab({
 }
 
 function IssuesTab({
-  issues,
+  risks, canManage, onGoTo,
 }: {
-  issues: Array<{ key: string; tone: "warn" | "bad" | "info"; icon: React.ComponentType<{ className?: string }>; title: string; helper?: string }>;
+  risks: TeamRisk[];
+  canManage: boolean;
+  onGoTo: (tab: TabKey) => void;
 }) {
   return (
-    <section aria-label="Alertas que requieren atención">
+    <section aria-label="Alertas que requieren atención" className="space-y-2">
       <SectionTitle icon={AlertTriangle} helper={HUB_COPY.issuesHelper}>
         Alertas
-        {issues.length > 0 && (
+        {risks.length > 0 && (
           <span className="ml-1.5 text-xs font-normal text-muted-foreground normal-case tracking-normal">
-            ({issues.length})
+            ({risks.length})
           </span>
         )}
       </SectionTitle>
-      {issues.length === 0 ? (
+      {risks.length === 0 ? (
         <EmptyBlock title={HUB_COPY.emptyIssuesTitle} helper={HUB_COPY.emptyIssuesHelper} />
       ) : (
-        <ul className="space-y-2">
-          {issues.map((i) => {
-            const Icon = i.icon;
-            return (
-              <li
-                key={i.key}
-                className={cn(
-                  "rounded-2xl border px-3 py-2.5 flex items-start gap-2.5",
-                  toneToClass(i.tone),
-                )}
-              >
-                <Icon className="h-4 w-4 mt-0.5 shrink-0" />
-                <div className="min-w-0 flex-1">
-                  <p className="text-[13px] font-semibold leading-tight">{i.title}</p>
-                  {i.helper && (
-                    <p className="mt-0.5 text-[12px] opacity-80 leading-snug">{i.helper}</p>
-                  )}
-                </div>
-              </li>
-            );
-          })}
-        </ul>
+        risks.map((r) => (
+          <TeamRiskCard key={r.key} risk={r} canManage={canManage} onGoTo={onGoTo} />
+        ))
       )}
     </section>
   );
@@ -2125,31 +1860,6 @@ function SectionTitle({
       {helper ? (
         <p className="mt-1 text-[12px] text-muted-foreground leading-snug">{helper}</p>
       ) : null}
-    </div>
-  );
-}
-
-function StatTile({
-  label, value, accent = "muted",
-}: {
-  label: string;
-  value: number | string;
-  accent?: "good" | "warn" | "info" | "muted" | "bad";
-}) {
-  const accentCls =
-    accent === "good"
-      ? "text-emerald-700 dark:text-emerald-400"
-      : accent === "warn"
-        ? "text-amber-700 dark:text-amber-400"
-        : accent === "info"
-          ? "text-sky-700 dark:text-sky-400"
-          : accent === "bad"
-            ? "text-rose-700 dark:text-rose-400"
-            : "text-foreground";
-  return (
-    <div className="rounded-xl border border-border/50 bg-card px-3 py-2">
-      <p className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
-      <p className={cn("mt-0.5 text-lg font-bold tabular-nums leading-tight", accentCls)}>{value}</p>
     </div>
   );
 }
