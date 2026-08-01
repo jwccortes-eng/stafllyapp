@@ -1,5 +1,11 @@
 import { cn } from "@/lib/utils";
 import type { ReactNode } from "react";
+import {
+  FAMILY_CLASSES,
+  FAMILY_DOT_CLASSES,
+  type StatusFamily,
+} from "@/lib/status/status-registry";
+
 
 export type OpsStatusTone =
   | "neutral"
