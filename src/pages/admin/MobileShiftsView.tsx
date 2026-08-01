@@ -461,8 +461,8 @@ export default function MobileShiftsView() {
         </div>
 
 
-        {/* Tabs (pills) */}
-        <div className="flex items-center gap-1.5 overflow-x-auto -mx-4 px-4 scrollbar-none">
+        {/* Dos anclas principales: Hoy y Próximos */}
+        <div className="grid grid-cols-2 gap-1.5 p-1 rounded-2xl bg-muted/50">
           {TABS.map(t => {
             const count = tabCounts[t.key];
             const active = tab === t.key;
@@ -471,36 +471,65 @@ export default function MobileShiftsView() {
                 key={t.key}
                 onClick={() => setTab(t.key)}
                 className={cn(
-                  "shrink-0 inline-flex items-center gap-1.5 px-3.5 h-9 rounded-full text-sm font-medium transition-all",
+                  "h-11 rounded-xl text-sm font-semibold transition-all inline-flex items-center justify-center gap-1.5",
                   active
-                    ? "bg-primary text-primary-foreground shadow-sm"
-                    : "bg-muted/60 text-muted-foreground hover:bg-muted active:scale-[0.97]"
+                    ? "bg-card text-foreground shadow-sm"
+                    : "text-muted-foreground active:scale-[0.97]"
                 )}
               >
                 <span>{t.label}</span>
-                {count > 0 && (
-                  <span className={cn(
-                    "h-[18px] min-w-[18px] px-1 inline-flex items-center justify-center rounded-full text-[10px] font-bold leading-none",
-                    active ? "bg-primary-foreground/20 text-primary-foreground" : "bg-background text-foreground"
-                  )}>
-                    {count}
-                  </span>
+                <span className={cn(
+                  "tabular-nums text-xs font-semibold",
+                  active ? "text-primary" : "text-muted-foreground/70"
+                )}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Secundarias: sólo aparecen cuando hay algo que atender */}
+        <div className="flex items-center gap-2 mt-2">
+          {SECONDARY_TABS.map(t => {
+            const count = tabCounts[t.key];
+            const active = tab === t.key;
+            if (count === 0 && !active) return null;
+            return (
+              <button
+                key={t.key}
+                onClick={() => setTab(t.key)}
+                className={cn(
+                  "inline-flex items-center gap-1.5 h-9 px-3 rounded-full text-xs font-medium transition-all border",
+                  active
+                    ? "border-primary/40 bg-primary/10 text-primary"
+                    : "border-border/50 text-muted-foreground active:scale-[0.97]"
                 )}
+              >
+                {t.label}
+                <span className="tabular-nums font-semibold">{count}</span>
               </button>
             );
           })}
         </div>
       </div>
 
-      {/* Summary strip */}
-      <div className="px-4 pt-3">
-        <div className="grid grid-cols-4 gap-2">
-          <SummaryCard label="Shifts" value={summary.shifts} />
-          <SummaryCard label="Hours" value={summary.hours} />
-          <SummaryCard label="Workers" value={summary.workers} />
-          <SummaryCard label="Coverage" value={`${summary.coverage}%`} accent={summary.coverage >= 90 ? "good" : summary.coverage >= 60 ? "warn" : "bad"} />
+      {/* Pulso de la vista: una sola línea, no cuatro tarjetas */}
+      {!loading && !error && tab !== "requests" && summary.shifts > 0 && (
+        <div className="px-4 pt-3">
+          <p className="text-xs text-muted-foreground">
+            <span className="font-semibold text-foreground tabular-nums">{summary.shifts}</span> turnos ·{" "}
+            <span className="font-semibold text-foreground tabular-nums">{summary.workers}</span> personas ·{" "}
+            <span className={cn(
+              "font-semibold tabular-nums",
+              summary.coverage >= 90 ? "text-status-success" : summary.coverage >= 60 ? "text-status-warning" : "text-status-danger"
+            )}>
+              {summary.coverage}%
+            </span>{" "}
+            de cobertura
+          </p>
         </div>
-      </div>
+      )}
 
       {/* List */}
       <div className="px-4 pt-4">
