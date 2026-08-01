@@ -17,6 +17,7 @@ import {
   MinusCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { FAMILY_CLASSES } from "@/lib/status/status-registry";
 
 export type WorkerStatusTone =
   | "approved"
@@ -30,60 +31,21 @@ export type WorkerStatusTone =
   | "expired"
   | "not_applicable";
 
+// OX-2 — color siempre desde las familias semánticas canónicas.
 const CONFIG: Record<
   WorkerStatusTone,
   { label: string; Icon: typeof CheckCircle2; className: string }
 > = {
-  approved: {
-    label: "Aprobado",
-    Icon: CheckCircle2,
-    className: "bg-earning/12 text-earning border-earning/25",
-  },
-  verified: {
-    label: "Verificada",
-    Icon: ShieldCheck,
-    className: "bg-earning/12 text-earning border-earning/25",
-  },
-  pending: {
-    label: "Pendiente",
-    Icon: AlertTriangle,
-    className: "bg-warning/12 text-warning border-warning/25",
-  },
-  in_review: {
-    label: "En revisión",
-    Icon: Clock,
-    className: "bg-info/12 text-info border-info/25",
-  },
-  rejected: {
-    label: "Rechazado",
-    Icon: XCircle,
-    className: "bg-deduction/12 text-deduction border-deduction/25",
-  },
-  needs_confirmation: {
-    label: "Necesita confirmar",
-    Icon: HelpCircle,
-    className: "bg-warning/10 text-warning border-warning/20",
-  },
-  imported: {
-    label: "Importado",
-    Icon: Download,
-    className: "bg-muted text-muted-foreground border-border",
-  },
-  unverified: {
-    label: "Sin verificar",
-    Icon: ShieldAlert,
-    className: "bg-warning/10 text-warning border-warning/20",
-  },
-  expired: {
-    label: "Expirado",
-    Icon: CalendarX,
-    className: "bg-deduction/12 text-deduction border-deduction/25",
-  },
-  not_applicable: {
-    label: "No aplica",
-    Icon: MinusCircle,
-    className: "bg-muted/60 text-muted-foreground border-border/60",
-  },
+  approved: { label: "Aprobado", Icon: CheckCircle2, className: FAMILY_CLASSES.positive },
+  verified: { label: "Verificada", Icon: ShieldCheck, className: FAMILY_CLASSES.positive },
+  pending: { label: "Pendiente", Icon: AlertTriangle, className: FAMILY_CLASSES.warning },
+  in_review: { label: "En revisión", Icon: Clock, className: FAMILY_CLASSES.progress },
+  rejected: { label: "Rechazado", Icon: XCircle, className: FAMILY_CLASSES.critical },
+  needs_confirmation: { label: "Necesita confirmar", Icon: HelpCircle, className: FAMILY_CLASSES.warning },
+  imported: { label: "Importado", Icon: Download, className: FAMILY_CLASSES.neutral },
+  unverified: { label: "Sin verificar", Icon: ShieldAlert, className: FAMILY_CLASSES.warning },
+  expired: { label: "Expirado", Icon: CalendarX, className: FAMILY_CLASSES.critical },
+  not_applicable: { label: "No aplica", Icon: MinusCircle, className: FAMILY_CLASSES.neutral },
 };
 
 interface Props {

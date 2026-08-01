@@ -5,29 +5,15 @@
 import { memo } from "react";
 import { AlertCircle, AlertTriangle, Info, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { FAMILY_CLASSES } from "@/lib/status/status-registry";
 import type { PendingFlag, PendingTone } from "@/lib/shifts/pending-flags";
 
+// OX-2 — el color proviene de la familia semántica canónica.
 const TONE_STYLES: Record<PendingTone, { className: string; Icon: any }> = {
-  urgent: {
-    className:
-      "bg-destructive/10 text-destructive border-destructive/30",
-    Icon: AlertCircle,
-  },
-  warn: {
-    className:
-      "bg-[hsl(var(--status-pending)/0.1)] text-[hsl(var(--status-pending))] border-[hsl(var(--status-pending)/0.3)]",
-    Icon: AlertTriangle,
-  },
-  info: {
-    className:
-      "bg-primary/10 text-primary border-primary/30",
-    Icon: Info,
-  },
-  ready: {
-    className:
-      "bg-[hsl(142_76%_36%/0.1)] text-[hsl(142_76%_36%)] border-[hsl(142_76%_36%/0.3)]",
-    Icon: CheckCircle2,
-  },
+  urgent: { className: FAMILY_CLASSES.critical, Icon: AlertCircle },
+  warn: { className: FAMILY_CLASSES.warning, Icon: AlertTriangle },
+  info: { className: FAMILY_CLASSES.progress, Icon: Info },
+  ready: { className: FAMILY_CLASSES.positive, Icon: CheckCircle2 },
 };
 
 interface Props {

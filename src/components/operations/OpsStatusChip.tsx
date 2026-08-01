@@ -1,5 +1,11 @@
 import { cn } from "@/lib/utils";
 import type { ReactNode } from "react";
+import {
+  FAMILY_CLASSES,
+  FAMILY_DOT_CLASSES,
+  type StatusFamily,
+} from "@/lib/status/status-registry";
+
 
 export type OpsStatusTone =
   | "neutral"
@@ -22,27 +28,17 @@ interface OpsStatusChipProps {
   size?: "sm" | "md" | "lg";
 }
 
-// Sober, enterprise-grade tones — low chroma surfaces, strong-contrast text.
-// Uses ~6% surface fill + 15% border + full text colour for a flat, premium feel.
-const toneClasses: Record<OpsStatusTone, string> = {
-  neutral: "bg-muted/60 text-foreground/80 border-border/60",
-  primary: "bg-primary/[0.08] text-primary border-primary/15",
-  success: "bg-earning/[0.08] text-earning border-earning/20",
-  warning: "bg-warning/[0.08] text-warning border-warning/20",
-  critical: "bg-destructive/[0.08] text-destructive border-destructive/20",
-  info: "bg-info/[0.08] text-info border-info/20",
-  muted: "bg-muted/40 text-muted-foreground border-border/40",
+// OX-2 — sin mapas cromáticos propios: delega en las familias semánticas canónicas.
+const TONE_FAMILY: Record<OpsStatusTone, StatusFamily> = {
+  neutral: "neutral",
+  primary: "progress",
+  success: "positive",
+  warning: "warning",
+  critical: "critical",
+  info: "progress",
+  muted: "neutral",
 };
 
-const dotTone: Record<OpsStatusTone, string> = {
-  neutral: "bg-foreground/50",
-  primary: "bg-primary",
-  success: "bg-earning",
-  warning: "bg-warning",
-  critical: "bg-destructive",
-  info: "bg-info",
-  muted: "bg-muted-foreground/50",
-};
 
 // Slightly tighter type — premium, less shouty.
 const sizeClasses = {
@@ -71,7 +67,7 @@ export function OpsStatusChip({
       className={cn(
         // Premium pill: flat surface, 1px hairline border, medium-weight non-uppercase label.
         "inline-flex items-center rounded-full border font-medium whitespace-nowrap",
-        toneClasses[tone],
+        FAMILY_CLASSES[TONE_FAMILY[tone]],
         sizeClasses[size],
         className,
       )}
@@ -80,7 +76,7 @@ export function OpsStatusChip({
         <span
           className={cn(
             "h-1.5 w-1.5 rounded-full",
-            dotTone[tone],
+            FAMILY_DOT_CLASSES[TONE_FAMILY[tone]],
             pulse && "animate-pulse",
           )}
         />

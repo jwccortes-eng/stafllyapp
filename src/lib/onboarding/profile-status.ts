@@ -7,6 +7,7 @@
  */
 
 import type { Database } from "@/integrations/supabase/types";
+import { FAMILY_CLASSES } from "@/lib/status/status-registry";
 
 export type ProfileStatus = Database["public"]["Enums"]["employee_profile_status"];
 
@@ -17,12 +18,12 @@ export const PROFILE_STATUS_LABELS: Record<ProfileStatus, string> = {
   active: "Active",
 };
 
-/** Tailwind classes — uses semantic tokens from the design system, no hardcoded colors. */
+/** OX-2 — familias semánticas canónicas, sin paleta propia. */
 export const PROFILE_STATUS_TONES: Record<ProfileStatus, string> = {
-  incomplete:        "bg-deduction/10 text-deduction border-deduction/20",
-  pending_documents: "bg-warning/10 text-warning border-warning/20",
-  ready:             "bg-primary/10 text-primary border-primary/20",
-  active:            "bg-earning/10 text-earning border-earning/20",
+  incomplete:        FAMILY_CLASSES.critical,
+  pending_documents: FAMILY_CLASSES.warning,
+  ready:             FAMILY_CLASSES.progress,
+  active:            FAMILY_CLASSES.positive,
 };
 
 export function isReadyForShifts(status: ProfileStatus): boolean {
