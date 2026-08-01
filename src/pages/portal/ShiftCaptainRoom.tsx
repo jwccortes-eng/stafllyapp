@@ -9,6 +9,7 @@
  * ShiftCloseoutSection). No payroll / time_entries / attendance / RLS /
  * schema writes here. Closeout uses the single existing form.
  */
+import { getShiftDisplayIdentity } from "@/lib/shifts/shift-identity";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { format, parseISO } from "date-fns";
@@ -24,7 +25,6 @@ import { CaptainNextActionCard } from "@/components/shifts/CaptainNextActionCard
 import { ShiftCloseoutSection } from "@/components/shifts/closeout/ShiftCloseoutSection";
 import type { Assignment, Employee } from "@/components/shifts/types";
 import { cn } from "@/lib/utils";
-import { getShiftDisplayIdentity } from "@/lib/shifts/shift-identity";
 
 interface ShiftRow {
   id: string;

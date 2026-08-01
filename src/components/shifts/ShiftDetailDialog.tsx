@@ -1,3 +1,4 @@
+import { getShiftDisplayIdentity } from "@/lib/shifts/shift-identity";
 import { Sheet, SheetContent, SheetTitle, OpsSheetHeader, OpsSheetBody, OpsSheetFooter } from "@/components/ui/sheet";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction, AlertDialogCancel } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
@@ -73,7 +74,6 @@ import { IdentityBadges } from "@/components/employee/IdentityBadges";
 import { GenerateBillingBlockButton } from "./GenerateBillingBlockButton";
 import { ExportConnecteamPreviewDialog } from "./integrations/ExportConnecteamPreviewDialog";
 import {
-import { getShiftDisplayIdentity } from "@/lib/shifts/shift-identity";
   pickRoleSlotsForNewAssignments,
   type ShiftRoleSlot,
   type ActiveAssignment,

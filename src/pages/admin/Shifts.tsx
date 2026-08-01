@@ -1,3 +1,4 @@
+import { getShiftDisplayIdentity } from "@/lib/shifts/shift-identity";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { usePageView } from "@/hooks/useAuditLog";
@@ -68,7 +69,6 @@ import { ExportConnecteamBulkDialog } from "@/components/shifts/integrations/Exp
 import type { Shift, Assignment, SelectOption, Employee, ViewMode } from "@/components/shifts/types";
 import { formatShiftCode } from "@/components/shifts/types";
 import { isDraftShift, isPublishedShift } from "@/lib/shifts/shift-guards";
-import { getShiftDisplayIdentity } from "@/lib/shifts/shift-identity";
 
 // Fields that affect ALL assigned employees (broadcast notification)
 const BROADCAST_FIELDS = ["date", "start_time", "end_time", "location_id", "client_id"];

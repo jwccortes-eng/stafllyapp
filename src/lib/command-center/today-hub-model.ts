@@ -16,8 +16,8 @@
 
 /* ── Entradas ────────────────────────────────────────────────────────── */
 
-import { readAttendance } from "./attendance-semantics";
 import { getShiftDisplayIdentity } from "@/lib/shifts/shift-identity";
+import { readAttendance } from "./attendance-semantics";
 
 export interface HubShiftOpsLike {
   bucket: string;

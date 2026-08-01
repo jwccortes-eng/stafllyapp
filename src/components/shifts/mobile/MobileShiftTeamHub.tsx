@@ -22,6 +22,7 @@
  *  - Worker portal unaffected. Desktop unaffected. Payroll/RLS untouched.
  */
 
+import { getShiftDisplayIdentity } from "@/lib/shifts/shift-identity";
 import { createContext, memo, useContext, useEffect, useMemo, useState } from "react";
 import {
   X, Users, ShieldCheck, Clock, ExternalLink, Inbox,
@@ -67,7 +68,6 @@ import { TeamCard, KpiCard, InsightCard, ValidationCard, type TeamMemberSummary 
 import { TeamHubWorkerCard } from "@/components/shifts/team/TeamHubWorkerCard";
 import { TeamConversationCard } from "@/components/shifts/team/TeamConversationCard";
 import {
-import { getShiftDisplayIdentity } from "@/lib/shifts/shift-identity";
   summarizeTeam, detectTeamRisks, teamSectionOf, teamPrimaryIntent,
   TEAM_SECTION_META, TEAM_SECTION_ORDER,
   type TeamSection, type TeamSummary, type TeamRisk,

@@ -18,13 +18,13 @@
  * y docs/SMART_WORK_CARD_VIEWMODEL_V1.md.
  */
 
+import { getShiftDisplayIdentity } from "@/lib/shifts/shift-identity";
 import {
   buildShiftCardTitle,
   formatShiftRef,
   stripLeadingShiftCode,
 } from "./card-display";
 import {
-import { getShiftDisplayIdentity } from "@/lib/shifts/shift-identity";
   getShiftLocationStatus,
   type ShiftLocationInput,
   type ShiftLocationStatus,

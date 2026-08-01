@@ -1,3 +1,4 @@
+import { getShiftDisplayIdentity } from "@/lib/shifts/shift-identity";
 import { useEffect, useMemo, useState, memo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -41,7 +42,6 @@ import { LiveShiftBoard } from "@/components/shifts/LiveShiftBoard";
 import { AttendanceEvidenceCard } from "@/components/shifts/ops/AttendanceEvidenceCard";
 
 import {
-import { getShiftDisplayIdentity } from "@/lib/shifts/shift-identity";
   TraceabilitySnapshot,
   type TraceRisk,
   type TraceTimelineEvent,

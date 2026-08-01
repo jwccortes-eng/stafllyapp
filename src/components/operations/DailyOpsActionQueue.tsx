@@ -6,6 +6,7 @@
  * (Mobile Action Queue pattern) with full context + the existing Operar CTA.
  * Desktop: unchanged grid of cards with inline Operar button.
  */
+import { getShiftDisplayIdentity } from "@/lib/shifts/shift-identity";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -24,7 +25,6 @@ import {
 import { cn } from "@/lib/utils";
 import type { ActionItem, ActionKind } from "@/lib/operations/daily-ops-grouping";
 import { ACTION_KIND_LABEL } from "@/lib/operations/daily-ops-grouping";
-import { getShiftDisplayIdentity } from "@/lib/shifts/shift-identity";
 
 const ICON: Record<ActionKind, React.ReactNode> = {
   missing_driver: <Car className="h-4 w-4" />,
