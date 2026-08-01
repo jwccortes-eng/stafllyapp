@@ -34,8 +34,7 @@ import {
   Settings2, ShieldCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { toast } from "sonner";
-import { notifyError, notifyWarning } from "@/lib/feedback/notify";
+import { notifyError, notifySuccess, notifyWarning } from "@/lib/feedback/notify";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompanyConfig } from "@/hooks/useCompanyConfig";
@@ -131,14 +130,16 @@ export function AutoDispatchPanel({
           if (executed.length > 0) {
             setLogRefreshKey(k => k + 1);
             executed.forEach(r => {
-              toast.success(
-                r.action === "auto_assign" ? "⚡ Auto-asignación" : "⚡ Auto-broadcast",
-                {
-                  description: r.action === "auto_assign"
-                    ? `Asignado a "${r.suggestion.shiftTitle}"`
-                    : `Broadcast enviado a ${r.notifiedEmployeeIds?.length ?? 0} workers`,
-                },
-              );
+              notifySuccess({
+                key: `auto-dispatch-${r.suggestion.id}`,
+                title: r.action === "auto_assign" ? "Auto-asignación ejecutada" : "Auto-broadcast enviado",
+                fact: r.action === "auto_assign"
+                  ? `Se asignó cobertura a "${r.suggestion.shiftTitle}".`
+                  : `Se notificó a ${r.notifiedEmployeeIds?.length ?? 0} workers.`,
+                consequence: r.action === "auto_assign"
+                  ? "El turno ya no figura sin cobertura."
+                  : "Las respuestas llegarán al panel de despacho.",
+              });
             });
           }
         } catch (err) {
@@ -239,8 +240,13 @@ export function AutoDispatchPanel({
 
     // Drop from local list — refresh will rebuild if still relevant
     setSuggestions(prev => prev.filter(x => x.id !== s.id));
-    toast.success("Acción enviada", {
-      description: s.type === "REPLACE_WORKERS" ? "Revisa y confirma los reemplazos" : "Revisa la lista y envía el broadcast",
+    notifySuccess({
+      key: "auto-dispatch-action",
+      title: "Acción enviada a ejecución",
+      fact: s.type === "REPLACE_WORKERS"
+        ? "Se abrió el flujo de reemplazos."
+        : "Se abrió el flujo de broadcast.",
+      consequence: "La asignación se confirma en el siguiente paso.",
     });
   };
 
