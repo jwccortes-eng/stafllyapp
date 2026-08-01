@@ -352,7 +352,7 @@ export default function PayrollReviewQueue() {
       // 6) scheduled_shifts in period
       const { data: shifts } = await supabase
         .from("scheduled_shifts")
-        .select("id, date, title, pay_type, day_type, shift_code")
+        .select("id, date, title, pay_type, day_type, shift_code, shift_ref")
         .eq("company_id", cid)
         .gte("date", period.start_date)
         .lte("date", period.end_date);
@@ -543,7 +543,7 @@ export default function PayrollReviewQueue() {
           primary: empName(a.employee_id),
           employeeId: a.employee_id,
           shiftId: a.shift_id,
-          secondary: s ? `${s.shift_code ?? s.title ?? "Shift"} · ${s.date}` : "Shift",
+          secondary: s ? `${displayShiftRef(s as any) !== "—" ? displayShiftRef(s as any) : (s.title ?? "Turno")} · ${s.date}` : "Turno",
           link: { to: `/app/shifts`, label: "Open shift" },
         };
       });
@@ -1100,7 +1100,7 @@ export default function PayrollReviewQueue() {
               <div className="inline-flex items-center gap-1.5 rounded-full border border-primary/40 bg-background pl-2.5 pr-2 py-0.5 text-[11px] text-primary max-w-full">
                 <span className="font-semibold shrink-0">Turno enfocado</span>
                 <span className="text-muted-foreground truncate max-w-[280px]">
-                  · {focusedShift?.title ?? focusedShift?.shift_code ?? (shiftFocusQ.isLoading ? "cargando…" : `Shift ${shiftIdParam.slice(0, 8)}`)}
+                  · {focusedShift ? `${displayShiftRef(focusedShift as any) !== "—" ? `${displayShiftRef(focusedShift as any)} · ` : ""}${focusedShift.title ?? "Turno"}` : (shiftFocusQ.isLoading ? "cargando…" : "Turno")}
                   {focusedShift?.date ? ` · ${focusedShift.date}` : ""}
                   {` · ${shiftFocusWorkerCount} worker${shiftFocusWorkerCount === 1 ? "" : "s"}`}
                 </span>
