@@ -93,6 +93,8 @@ export function ShiftCard({
 }: ShiftCardProps) {
   const color = getClientColor(shift.client_id, clientIds);
   const primary = getShiftTone(shift, assignmentCount);
+  // P0 · SHIFT IDENTITY: única referencia visible del turno.
+  const identity = getShiftDisplayIdentity(shift);
   const overnight = isOvernight(shift.start_time, shift.end_time);
   const isLocked = shift.status === "locked";
   const totalSlots = shift.slots ?? 1;
