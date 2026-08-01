@@ -6,6 +6,8 @@ import { Clock, Users, ChevronDown, ChevronUp, Timer, CalendarDays, Lock } from 
 import { useState, memo, useMemo, useCallback } from "react";
 import { getClientColor, formatShiftCode } from "./types";
 import { displayShiftRef } from "@/lib/shifts/shift-ref";
+import { getShiftStaffingMetrics } from "@/lib/shifts/staffing-metrics";
+
 import type { Shift, Assignment, SelectOption, Employee } from "./types";
 
 interface WeekByJobViewProps {
