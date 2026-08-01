@@ -770,6 +770,19 @@ function MobileShiftTeamHubImpl({
           }
           onSuccess={handleMutated}
         />
+
+        <RemoveWorkerFromShiftDialog
+          open={!!removeTarget}
+          onOpenChange={(o) => { if (!o) setRemoveTarget(null); }}
+          assignmentId={removeTarget?.assignmentId ?? null}
+          workerName={removeTarget?.workerName ?? ""}
+          contextLine={[removeTarget?.roleLabel, (shift as any)?.shift_ref ?? (shift as any)?.shift_code]
+            .filter(Boolean).join(" · ") || null}
+          statusLine={removeTarget?.statusLine ?? null}
+          source="mobile_team_hub"
+          onRemoved={() => { setRemoveTarget(null); handleMutated(); }}
+        />
+
       </SheetContent>
     </Sheet>
     </AssignmentStatusContext.Provider>

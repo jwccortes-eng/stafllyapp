@@ -181,11 +181,11 @@ export function TeamHubWorkerCard({
   }
   if (canManage && section !== "replacement" && allowed.includes("removed")) {
     secondary.push({
-      label: "Remover",
+      label: "Retirar del turno",
       icon: UserMinus,
       tone: "danger",
       onClick: () => onAssignmentAction(assignment.id, "removed", name),
-      "aria-label": `Remover a ${name} del turno`,
+      "aria-label": `Retirar a ${name} del turno`,
     });
   }
   if (canManage && allowed.includes("rejected") && section === "pending") {
