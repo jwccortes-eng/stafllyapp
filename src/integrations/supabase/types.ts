@@ -13553,6 +13553,9 @@ export type Database = {
       scheduled_shifts: {
         Row: {
           attendance_mode: string
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
           car_capacity: number
           category_id: string | null
           claimable: boolean
@@ -13600,6 +13603,9 @@ export type Database = {
         }
         Insert: {
           attendance_mode?: string
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
           car_capacity?: number
           category_id?: string | null
           claimable?: boolean
@@ -13647,6 +13653,9 @@ export type Database = {
         }
         Update: {
           attendance_mode?: string
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
           car_capacity?: number
           category_id?: string | null
           claimable?: boolean
@@ -17373,6 +17382,19 @@ export type Database = {
       can_request_shift_correction: {
         Args: { _company_id: string; _shift_id: string }
         Returns: boolean
+      }
+      cancel_shift: {
+        Args: {
+          p_acknowledge_activity?: boolean
+          p_cancellation_scope?: string
+          p_company_id?: string
+          p_expected_status?: string
+          p_idempotency_key?: string
+          p_reason: string
+          p_shift_id: string
+          p_source?: string
+        }
+        Returns: Json
       }
       ci_can_read_observations: { Args: { _user_id: string }; Returns: boolean }
       ci_delete_company_observations: {
