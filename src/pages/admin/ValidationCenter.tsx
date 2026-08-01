@@ -81,6 +81,15 @@ export default function ValidationCenter() {
     [data, permissions, resolved, focusShiftId],
   );
 
+  /** Item al que apunta la acción sugerida del centro. */
+  const nextItem = useMemo(() => {
+    const id = model.primaryAction?.itemId;
+    if (!id) return null;
+    return (
+      [...model.urgentItems, ...model.pendingItems].find((i) => i.id === id) ?? null
+    );
+  }, [model]);
+
   function runAction(item: ValidationItem, action: ValidationAction) {
     if (action.kind === "open_shift") {
       if (item.relatedShiftId) navigate(`/app/shift-ops?shiftId=${item.relatedShiftId}`);
