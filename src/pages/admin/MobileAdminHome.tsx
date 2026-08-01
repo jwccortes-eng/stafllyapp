@@ -2,19 +2,20 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Users, CalendarDays, Clock, DollarSign, Inbox, Building2,
-  Search, ArrowRight, Sparkles,
+  Search, ArrowRight, CheckCircle2,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
 import { useAuth } from "@/hooks/useAuth";
-import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { cn } from "@/lib/utils";
 import { isAdminLevelRole } from "@/lib/roles";
 import { ContextSwitcher } from "@/components/context/ContextSwitcher";
-import { KpiCard } from "@/components/ocs";
+import { KpiCard, OperationalCard } from "@/components/ocs";
 import {
   type MetricState, loadingMetric, errorMetric, notApplicableMetric, countMetric,
 } from "@/lib/ox/metric-state";
+
 
 
 /**
