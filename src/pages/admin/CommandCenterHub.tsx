@@ -22,7 +22,7 @@
  *   - No RLS / auth / tenant governance changes.
  *   - Legacy routes remain mounted independently.
  */
-import { Suspense, lazy, useEffect, useMemo, useState } from "react";
+import { Suspense, lazy, useMemo } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
@@ -37,15 +37,9 @@ import {
   ScanEye,
   MapIcon,
   ShieldAlert,
-  Clock,
-  Users,
-  FileWarning,
-  CalendarDays,
 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
-import { supabase } from "@/integrations/supabase/client";
-import { useCompany } from "@/hooks/useCompany";
 
 const TodayHubView = lazy(() => import("@/components/command-center/TodayHubView"));
 
