@@ -6,7 +6,12 @@ import {
   CheckCircle2, CalendarDays, Sparkles, UserPlus, Share2, ClipboardList,
   ExternalLink, Copy, StickyNote, Hash, Tag, Workflow, ChevronDown,
   ShieldCheck, MessageCircle, MessageSquare, Crown, Loader2, Bell, Download,
+  MoreHorizontal, UserCog,
 } from "lucide-react";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
 import { SendNotificationDialog } from "@/components/shifts/SendNotificationDialog";
 import { ExportConnecteamPreviewDialog } from "@/components/shifts/integrations/ExportConnecteamPreviewDialog";
 import { buildWhatsAppTargets, normalizePhone } from "@/lib/phone";
