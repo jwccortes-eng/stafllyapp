@@ -2320,7 +2320,7 @@ function DesktopShifts() {
           <span>
             <span className="font-semibold text-foreground">Consejo:</span>{" "}
             haz click en <span className="font-mono bg-muted/60 px-1 rounded">+</span> sobre una fecha del calendario
-            para crear un turno rápido con plantilla.
+            para crear un {ADMIN_LEX.entity} rápido con plantilla.
           </span>
         </div>
       )}

@@ -18,6 +18,7 @@
 
 import { getShiftDisplayIdentity } from "@/lib/shifts/shift-identity";
 import { readAttendance } from "./attendance-semantics";
+import { ADMIN_LEX } from "@/lib/ox/lexicon";
 
 export interface HubShiftOpsLike {
   bucket: string;
@@ -661,7 +662,7 @@ export function buildTodayHubModel(input: TodayHubInput): TodayHubModel {
     message:
       input.shifts.length === 0
         ? "No hay operaciones programadas para hoy. Programa un turno o revisa mañana."
-        : "Los turnos de hoy están cubiertos y no hay acciones urgentes.",
+        : `Los ${ADMIN_LEX.entityPlural} de hoy están cubiertos y no hay acciones urgentes.`,
     nextShift:
       upcoming && perms.canOperate
         ? {
