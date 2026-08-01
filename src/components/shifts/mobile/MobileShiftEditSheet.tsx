@@ -159,13 +159,25 @@ export function MobileShiftEditSheet({
     }
 
     setSaving(true);
-    // UPDATE by existing id — never an INSERT, company_id/tenant untouched.
+    // UPDATE verificado por id — nunca un INSERT, company_id/tenant intactos.
+    let savedRow: Record<string, any> | null = null;
     if (Object.keys(updates).length > 0) {
-      const { error } = await supabase
-        .from("scheduled_shifts")
-        .update(updates as any)
-        .eq("id", shift.id);
-      if (error) { setSaving(false); toast.error(error.message); return; }
+      const result = await updateShiftVerified(
+        shift.id,
+        updates,
+        companyId ?? (shift as any).company_id ?? null,
+      );
+      if (!result.ok) {
+        setSaving(false);
+        notifyError({
+          key: "shift-update-mobile",
+          title: "No pudimos guardar el turno",
+          fact: result.message,
+          consequence: "Tus cambios siguen aquí, sin aplicarse al turno.",
+        });
+        return; // mantenemos la hoja abierta con los cambios del operador
+      }
+      savedRow = result.row;
     }
 
     // Roles de conductor: sólo `assignment_role` + el campo legado.
@@ -185,9 +197,11 @@ export function MobileShiftEditSheet({
     }
     setSaving(false);
     toast.success("Turno actualizado");
-    onSaved?.(updates);
+    // Devolvemos la fila releída del backend, no lo que creíamos haber enviado.
+    onSaved?.(savedRow ?? updates);
     onOpenChange(false);
   };
+
 
   return (
     <>
