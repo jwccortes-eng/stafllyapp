@@ -438,6 +438,12 @@
     @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold bg-primary/15 text-primary;
   }
 
+  /* OX-1 — feedback crítico: no se auto-cierra y se distingue del error normal. */
+  .stafly-toast--critical {
+    @apply border-l-4 border-l-critical;
+  }
+
+
   /* ── Pastel pills — scheduling module ── */
   .pastel-pill {
     @apply inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-medium transition-all cursor-pointer;
