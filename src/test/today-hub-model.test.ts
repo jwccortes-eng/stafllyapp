@@ -37,7 +37,7 @@ function shift(over: Partial<HubShiftLike> & { id: string }): HubShiftLike {
 
 describe("buildTodayHubModel", () => {
   it("marca cobertura incompleta próxima a iniciar como critical y primero", () => {
-    const m = buildTodayHubModel({
+    const m = buildTodayHubModel({ permissions: FULL_HUB_PERMISSIONS,
       now: NOW,
       shifts: [
         shift({ id: "ok" }),
@@ -54,7 +54,7 @@ describe("buildTodayHubModel", () => {
   });
 
   it("clasifica ausencias en turno en curso como critical", () => {
-    const m = buildTodayHubModel({
+    const m = buildTodayHubModel({ permissions: FULL_HUB_PERMISSIONS,
       now: NOW,
       shifts: [
         shift({
@@ -70,7 +70,7 @@ describe("buildTodayHubModel", () => {
   });
 
   it("CTA de turno en curso cubierto es Operar turno", () => {
-    const m = buildTodayHubModel({
+    const m = buildTodayHubModel({ permissions: FULL_HUB_PERMISSIONS,
       now: NOW,
       shifts: [
         shift({
@@ -84,7 +84,7 @@ describe("buildTodayHubModel", () => {
   });
 
   it("genera item de cierre con consecuencia y CTA Revisar cierre", () => {
-    const m = buildTodayHubModel({
+    const m = buildTodayHubModel({ permissions: FULL_HUB_PERMISSIONS,
       now: NOW,
       shifts: [
         shift({
@@ -101,7 +101,7 @@ describe("buildTodayHubModel", () => {
   });
 
   it("no produce ceros silenciosos en horas pendientes", () => {
-    const m = buildTodayHubModel({
+    const m = buildTodayHubModel({ permissions: FULL_HUB_PERMISSIONS,
       now: NOW,
       shifts: [shift({ id: "a" })],
       counts: { pendingHours: 0 },
@@ -113,7 +113,7 @@ describe("buildTodayHubModel", () => {
   });
 
   it("horas pendientes >0 son accionables y de alta prioridad", () => {
-    const m = buildTodayHubModel({
+    const m = buildTodayHubModel({ permissions: FULL_HUB_PERMISSIONS,
       now: NOW,
       shifts: [shift({ id: "a" })],
       counts: { pendingHours: 7 },
@@ -125,7 +125,7 @@ describe("buildTodayHubModel", () => {
   });
 
   it("estado calmado con próximo turno cuando no hay riesgos", () => {
-    const m = buildTodayHubModel({ now: NOW, shifts: [shift({ id: "a" })] });
+    const m = buildTodayHubModel({ permissions: FULL_HUB_PERMISSIONS, now: NOW, shifts: [shift({ id: "a" })] });
     expect(m.emptyState.calm).toBe(true);
     expect(m.emptyState.headline).toBe("Todo bajo control");
     expect(m.emptyState.nextShift?.shiftId).toBe("a");
@@ -133,14 +133,14 @@ describe("buildTodayHubModel", () => {
   });
 
   it("sin turnos devuelve estado explícito, no ceros", () => {
-    const m = buildTodayHubModel({ now: NOW, shifts: [] });
+    const m = buildTodayHubModel({ permissions: FULL_HUB_PERMISSIONS, now: NOW, shifts: [] });
     expect(m.emptyState.headline).toBe("Sin turnos hoy");
     expect(m.activeOperations).toHaveLength(0);
     expect(m.primaryAction).toBeNull();
   });
 
   it("respeta permisos: sin canAssign no ofrece completar equipo", () => {
-    const m = buildTodayHubModel({
+    const m = buildTodayHubModel({ permissions: FULL_HUB_PERMISSIONS,
       now: NOW,
       permissions: { canAssign: false },
       shifts: [
@@ -155,7 +155,7 @@ describe("buildTodayHubModel", () => {
   });
 
   it("fichajes sin salida generan deep link al reloj", () => {
-    const m = buildTodayHubModel({
+    const m = buildTodayHubModel({ permissions: FULL_HUB_PERMISSIONS,
       now: NOW,
       shifts: [
         shift({
@@ -171,7 +171,7 @@ describe("buildTodayHubModel", () => {
   });
 
   it("solicitudes pendientes se modelan como validación", () => {
-    const m = buildTodayHubModel({
+    const m = buildTodayHubModel({ permissions: FULL_HUB_PERMISSIONS,
       now: NOW,
       shifts: [shift({ id: "s2", pending_claims: 3 })],
     });
@@ -179,7 +179,7 @@ describe("buildTodayHubModel", () => {
   });
 
   it("primaryAction refleja el riesgo más urgente", () => {
-    const m = buildTodayHubModel({
+    const m = buildTodayHubModel({ permissions: FULL_HUB_PERMISSIONS,
       now: NOW,
       shifts: [
         shift({
