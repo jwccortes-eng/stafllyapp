@@ -115,6 +115,8 @@ export default function Workforce() {
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [filtersOpen, setFiltersOpen] = useState(false);
+
   const [statusFilter, setStatusFilter] = useState<"all" | ProfileStatus>("all");
   const [workerFilter, setWorkerFilter] = useState<string>("all");
   const [qualityFilter, setQualityFilter] = useState<QualityFilter>("any");
