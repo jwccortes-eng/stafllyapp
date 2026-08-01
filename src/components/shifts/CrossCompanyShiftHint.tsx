@@ -126,7 +126,8 @@ export function CrossCompanyShiftHint({ query, noLocalResults, onSwitch }: Props
             Cambiar de empresa y abrir
           </Button>
         </div>
-      ))}
+        );
+      })}
       <p className="text-[12px] text-muted-foreground">
         Sólo se muestran empresas a las que ya tienes acceso.
       </p>
