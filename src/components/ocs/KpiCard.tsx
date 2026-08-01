@@ -65,7 +65,10 @@ const TREND_ICON = {
 export function KpiCard({
   label,
   value,
+  unit,
   meaning,
+  consequence,
+  state,
   trendLabel,
   trend = "flat",
   trendIsPositive = true,
@@ -85,14 +88,28 @@ export function KpiCard({
 }: KpiCardProps) {
   const TrendIcon = TREND_ICON[trend];
 
-  const body = loading ? (
+  // El estado semántico manda: resuelve valor, unidad, estado y consecuencia.
+  const p = state ? presentMetric(state, { consequence }) : null;
+
+  const rLoading = p ? p.loading : !!loading;
+  const rError = p ? p.error : error ?? null;
+  const rEmpty = p ? p.isEmpty : !!isEmpty;
+  const rEmptyLabel = p ? p.emptyLabel : emptyLabel;
+  const rMeaning = p ? p.meaning : meaning;
+  const rConsequence = p ? p.consequence : consequence ?? null;
+  const rStatus = p ? p.statusKey : status;
+  const rStatusLabel = p ? p.statusLabel : statusLabel;
+  const rValue = p ? p.displayValue : value;
+  const rUnit = p ? null : unit;
+
+  const body = rLoading ? (
     <div className="space-y-2" aria-busy="true">
       <Skeleton className="h-7 w-24" />
       <Skeleton className="h-3 w-40" />
     </div>
-  ) : error ? (
+  ) : rError ? (
     <div className="space-y-2">
-      <p className={cn(MT.body, "text-status-danger")}>{error}</p>
+      <p className={cn(MT.body, "text-status-danger")}>{rError}</p>
       {onRetry && (
         <Button
           type="button"
@@ -109,11 +126,14 @@ export function KpiCard({
         </Button>
       )}
     </div>
-  ) : isEmpty ? (
-    <p className={cn(MT.body, "text-muted-foreground")}>{emptyLabel}</p>
+  ) : rEmpty ? (
+    <p className={cn(MT.body, "text-muted-foreground")}>{rEmptyLabel}</p>
   ) : (
     <div className="flex items-baseline gap-2 flex-wrap">
-      <span className={MT.metric}>{value}</span>
+      <span className={MT.metric}>{rValue}</span>
+      {rUnit && (
+        <span className={cn(MT.caption, "text-muted-foreground")}>{rUnit}</span>
+      )}
       {trendLabel && (
         <span
           className={cn(
@@ -133,13 +153,23 @@ export function KpiCard({
     </div>
   );
 
+  const meaningBlock =
+    rLoading || rError ? undefined : (
+      <span className="block space-y-0.5">
+        <span className="block">{rMeaning}</span>
+        {rConsequence && (
+          <span className="block text-status-warning">{rConsequence}</span>
+        )}
+      </span>
+    );
+
   return (
     <OperationalCard
-      status={error ? "failed" : status}
-      statusLabel={error ? "Error de carga" : statusLabel}
+      status={rStatus}
+      statusLabel={rStatusLabel}
       title={label}
       primary={body}
-      secondary={loading || error ? undefined : meaning}
+      secondary={meaningBlock}
       action={action}
       onClick={onClick}
       variant={variant}
@@ -150,3 +180,4 @@ export function KpiCard({
     />
   );
 }
+
