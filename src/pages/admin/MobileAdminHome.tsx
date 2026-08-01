@@ -34,16 +34,21 @@ interface ActionDef {
   module: string | null;
   badgeKey?: "tickets" | "shift_requests";
   accent: string; // tailwind class for icon tile bg
+  /** Operación diaria: siempre visible y con protagonismo. */
+  primary?: boolean;
+  /** Qué resuelve, sólo para las anclas diarias. */
+  hint?: string;
 }
 
 const ACTIONS: ActionDef[] = [
-  { key: "workers", label: "Workers", to: "/app/employees", icon: Users, module: "employees", accent: "bg-primary/10 text-primary" },
-  { key: "shifts", label: "Turnos", to: "/app/shifts", icon: CalendarDays, module: "shifts", badgeKey: "shift_requests", accent: "bg-status-warning-bg text-status-warning" },
-  { key: "timeclock", label: "Fichajes", to: "/app/timeclock", icon: Clock, module: "shifts", accent: "bg-status-success-bg text-status-success" },
-  { key: "payroll", label: "Payroll", to: "/app/periods", icon: DollarSign, module: "periods", accent: "bg-status-progress-bg text-status-progress" },
+  { key: "workers", label: "Workers", to: "/app/employees", icon: Users, module: "employees", accent: "bg-primary/10 text-primary", primary: true, hint: "Tu gente" },
+  { key: "shifts", label: "Turnos", to: "/app/shifts", icon: CalendarDays, module: "shifts", badgeKey: "shift_requests", accent: "bg-status-warning-bg text-status-warning", primary: true, hint: "Hoy y próximos" },
+  { key: "timeclock", label: "Fichajes", to: "/app/timeclock", icon: Clock, module: "shifts", accent: "bg-status-success-bg text-status-success", primary: true, hint: "Entradas y salidas" },
+  { key: "payroll", label: "Payroll", to: "/app/periods", icon: DollarSign, module: "periods", accent: "bg-status-progress-bg text-status-progress", primary: true, hint: "Periodos y pagos" },
   { key: "tickets", label: "Solicitudes", to: "/app/requests", icon: Inbox, module: null, badgeKey: "tickets", accent: "bg-muted text-muted-foreground" },
   { key: "clients", label: "Clientes", to: "/app/clients", icon: Building2, module: "clients", accent: "bg-status-neutral-bg text-status-neutral" },
 ];
+
 
 type BadgeState = { kind: "loading" | "error" | "ready"; value: number };
 
@@ -53,6 +58,9 @@ export default function MobileAdminHome() {
   const { role: globalRole, hasModuleAccess, fullName, getRoleForCompany } = useAuth();
   const role = isGlobalMode ? globalRole : getRoleForCompany(selectedCompanyId);
   const isAdminRole = isAdminLevelRole(role);
+  const [moreOpen, setMoreOpen] = useState(false);
+
+
 
   const [badges, setBadges] = useState<{ tickets: BadgeState; shift_requests: BadgeState }>({
     tickets: { kind: "loading", value: 0 },
@@ -177,6 +185,9 @@ export default function MobileAdminHome() {
   };
 
   const visibleActions = useMemo(() => ACTIONS.filter(isVisible), [role, selectedCompanyId, isGlobalMode]);
+  const dailyActions = visibleActions.filter((a) => a.primary);
+  const otherActions = visibleActions.filter((a) => !a.primary);
+
 
   const greeting = useMemo(() => {
     const h = new Date().getHours();
@@ -244,28 +255,26 @@ export default function MobileAdminHome() {
   return (
     <div className="min-h-full pb-[calc(env(safe-area-inset-bottom,0px)+72px)]">
       {/* Anfitriona: la empresa encabeza, Stafly acompaña */}
-      <div className="px-5 pt-5 pb-4">
-        <div className="flex items-center gap-2">
-          <p className="min-w-0 flex-1 text-[11px] uppercase tracking-[0.16em] text-muted-foreground/80 truncate">
-            {companyLabel}
-          </p>
+      <div className="px-5 pt-4 pb-4">
+        <div className="flex items-stretch gap-2">
+          <div className="min-w-0 flex-1">
+            <ContextSwitcher placement="hero" />
+          </div>
           <button
             type="button"
             onClick={openCommandPalette}
             aria-label="Buscar"
-            className="h-11 w-11 shrink-0 rounded-xl border border-border/50 bg-card flex items-center justify-center active:scale-[0.96] transition-transform"
+            className="w-14 shrink-0 rounded-2xl border border-border/50 bg-card flex items-center justify-center active:scale-[0.96] transition-transform"
           >
             <Search className="h-[18px] w-[18px] text-muted-foreground" />
           </button>
-          <div className="shrink-0 w-11">
-            <ContextSwitcher placement="header" collapsed />
-          </div>
         </div>
-        <h1 className="text-[22px] font-semibold tracking-tight leading-tight mt-2">
+        <h1 className="text-[22px] font-semibold tracking-tight leading-tight mt-4">
           {greeting}, <span className="text-primary">{firstName}</span>
         </h1>
         <p className="text-sm text-muted-foreground mt-1">{headline}</p>
       </div>
+
 
       {/* Primer scroll: sólo lo que exige decisión — o la confirmación de calma */}
       <div className="px-5 mb-5">
@@ -349,10 +358,10 @@ export default function MobileAdminHome() {
         </button>
       </div>
 
-      {/* Accesos de operación — icono + nombre, sin texto de apoyo */}
+      {/* Operación diaria — las cuatro anclas que se usan todos los días */}
       <div className="px-5">
-        <div className="grid grid-cols-3 gap-2.5">
-          {visibleActions.map((a) => {
+        <div className="grid grid-cols-2 gap-2.5">
+          {dailyActions.map((a) => {
             const Icon = a.icon;
             const badge: BadgeState = a.badgeKey ? badges[a.badgeKey] : { kind: "ready", value: 0 };
             const count = badge.value;
@@ -363,18 +372,23 @@ export default function MobileAdminHome() {
                 onClick={() => navigate(a.to)}
                 className={cn(
                   "relative flex flex-col items-start text-left",
-                  "rounded-2xl border border-border/50 bg-card p-3 min-h-[76px]",
+                  "rounded-2xl border border-border/50 bg-card p-3.5 min-h-[92px]",
                   "active:scale-[0.97] transition-all",
                 )}
               >
-                <div className={cn("h-8 w-8 rounded-lg flex items-center justify-center mb-2", a.accent)}>
-                  <Icon className="h-[17px] w-[17px]" />
+                <div className={cn("h-9 w-9 rounded-xl flex items-center justify-center mb-2.5", a.accent)}>
+                  <Icon className="h-[18px] w-[18px]" />
                 </div>
-                <span className="text-[12.5px] font-semibold tracking-tight truncate w-full">
+                <span className="text-[14px] font-semibold tracking-tight truncate w-full">
                   {a.label}
                 </span>
+                {a.hint && (
+                  <span className="text-[11px] text-muted-foreground truncate w-full mt-0.5">
+                    {a.hint}
+                  </span>
+                )}
                 {badge.kind === "error" && (
-                  <StatusBadge status="failed" label="!" size="sm" className="absolute top-2 right-2" />
+                  <StatusBadge status="failed" label="!" size="sm" className="absolute top-2.5 right-2.5" />
                 )}
                 {badge.kind === "ready" && count > 0 && (
                   <StatusBadge
@@ -382,7 +396,7 @@ export default function MobileAdminHome() {
                     label={count > 9 ? "9+" : String(count)}
                     size="sm"
                     indicator="dot"
-                    className="absolute top-2 right-2"
+                    className="absolute top-2.5 right-2.5"
                   />
                 )}
               </button>
@@ -391,14 +405,44 @@ export default function MobileAdminHome() {
         </div>
       </div>
 
-      {/* Accesos rápidos */}
-      <div className="px-5 mt-5">
-        <div className="rounded-2xl border border-border/50 bg-card divide-y divide-border/40 overflow-hidden">
-          <QuickLink label="Mapa en vivo" to="/app/live-map" onNav={navigate} />
-          <QuickLink label="Anuncios" to="/app/announcements" onNav={navigate} />
-          <QuickLink label="Reportes" to="/app/summary" onNav={navigate} />
-        </div>
+      {/* Todo lo demás pierde protagonismo, no acceso */}
+      <div className="px-5 mt-4">
+        <button
+          type="button"
+          onClick={() => setMoreOpen((v) => !v)}
+          aria-expanded={moreOpen}
+          className="w-full flex items-center justify-between rounded-2xl border border-border/50 bg-card px-4 py-3 min-h-[48px] active:bg-muted/40 transition-colors"
+        >
+          <span className="text-sm font-medium">Más herramientas</span>
+          <ChevronRight
+            className={cn(
+              "h-4 w-4 text-muted-foreground transition-transform",
+              moreOpen && "rotate-90",
+            )}
+          />
+        </button>
+
+        {moreOpen && (
+          <div className="mt-2.5 rounded-2xl border border-border/50 bg-card divide-y divide-border/40 overflow-hidden animate-fade-in">
+            {otherActions.map((a) => {
+              const badge: BadgeState = a.badgeKey ? badges[a.badgeKey] : { kind: "ready", value: 0 };
+              return (
+                <QuickLink
+                  key={a.key}
+                  label={a.label}
+                  to={a.to}
+                  onNav={navigate}
+                  badge={badge.kind === "ready" && badge.value > 0 ? badge.value : undefined}
+                />
+              );
+            })}
+            <QuickLink label="Mapa en vivo" to="/app/live-map" onNav={navigate} />
+            <QuickLink label="Anuncios" to="/app/announcements" onNav={navigate} />
+            <QuickLink label="Reportes" to="/app/summary" onNav={navigate} />
+          </div>
+        )}
       </div>
+
     </div>
   );
 }
@@ -421,14 +465,35 @@ function Pulse({ label, state }: { label: string; state: MetricState }) {
   );
 }
 
-function QuickLink({ label, to, onNav }: { label: string; to: string; onNav: (to: string) => void }) {
+function QuickLink({
+  label,
+  to,
+  onNav,
+  badge,
+}: {
+  label: string;
+  to: string;
+  onNav: (to: string) => void;
+  badge?: number;
+}) {
   return (
     <button
       onClick={() => onNav(to)}
-      className="w-full flex items-center justify-between px-4 py-3.5 min-h-[48px] active:bg-muted/40 transition-colors"
+      className="w-full flex items-center justify-between gap-2 px-4 py-3.5 min-h-[48px] active:bg-muted/40 transition-colors"
     >
-      <span className="text-sm font-medium">{label}</span>
-      <ArrowRight className="h-4 w-4 text-muted-foreground" />
+      <span className="text-sm font-medium truncate">{label}</span>
+      <span className="flex items-center gap-2 shrink-0">
+        {badge !== undefined && (
+          <StatusBadge
+            status="pending"
+            label={badge > 9 ? "9+" : String(badge)}
+            size="sm"
+            indicator="dot"
+          />
+        )}
+        <ArrowRight className="h-4 w-4 text-muted-foreground" />
+      </span>
     </button>
   );
 }
+
