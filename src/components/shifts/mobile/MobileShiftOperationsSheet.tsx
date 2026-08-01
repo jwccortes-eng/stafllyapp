@@ -1222,6 +1222,21 @@ export function MobileShiftOperationsSheet({
 
       </SheetContent>
     </Sheet>
+    <CancelShiftDialog
+      open={cancelOpen}
+      onOpenChange={setCancelOpen}
+      shiftId={shift?.id ?? null}
+      companyId={(shift as any)?.company_id ?? selectedCompanyId ?? null}
+      shiftRef={shift ? getShiftDisplayIdentity(shift).primaryRef : ""}
+      clientLine={shift?.title ?? null}
+      whenLine={shift ? `${shift.date} · ${String(shift.start_time).slice(0, 5)} – ${String(shift.end_time).slice(0, 5)}` : null}
+      requiredWorkers={data?.slots ?? null}
+      assignedActive={data?.assignedCount ?? null}
+      expectedStatus={shift?.status ?? null}
+      source="mobile_shift_operations"
+      onCancelled={() => { setCancelOpen(false); onOpenChange(false); }}
+    />
+
     <MobileShiftTeamHub
       open={hubOpen}
       onOpenChange={setHubOpen}
