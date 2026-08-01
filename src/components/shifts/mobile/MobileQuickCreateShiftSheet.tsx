@@ -216,6 +216,17 @@ export function MobileQuickCreateShiftSheet({
 
   const [saving, setSaving] = useState(false);
 
+  /* ── FASE 4.1 · hardening transaccional ──
+   * submitLockRef: bloquea el doble tap (el estado `saving` es asíncrono).
+   * createdShiftIdRef: si el turno ya se insertó, un reintento NUNCA crea otro;
+   *   sólo reintenta las asignaciones que fallaron.
+   */
+  const submitLockRef = useRef(false);
+  const createdShiftIdRef = useRef<string | null>(null);
+  const [outcomes, setOutcomes] = useState<AssignOutcome[]>([]);
+  const [result, setResult] = useState<CreateResultSummary | null>(null);
+  const [confirmClose, setConfirmClose] = useState(false);
+
   useEffect(() => {
     if (!open) return;
     setStep("operacion");
@@ -233,7 +244,13 @@ export function MobileQuickCreateShiftSheet({
     setMeetingPointLocationId(null);
     setNotes("");
     setSaving(false);
+    setOutcomes([]);
+    setResult(null);
+    setConfirmClose(false);
+    submitLockRef.current = false;
+    createdShiftIdRef.current = null;
   }, [open, todayStr, defaultStartTime, defaultEndTime, defaultSlots]);
+
 
   const client = useMemo(() => clients.find(c => c.id === clientId) ?? null, [clients, clientId]);
   const hasJobSite = !!(jobSiteLocationId || jobSiteAddress.trim());
