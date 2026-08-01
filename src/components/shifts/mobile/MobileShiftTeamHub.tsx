@@ -67,6 +67,7 @@ import { TeamCard, KpiCard, InsightCard, ValidationCard, type TeamMemberSummary 
 import { TeamHubWorkerCard } from "@/components/shifts/team/TeamHubWorkerCard";
 import { TeamConversationCard } from "@/components/shifts/team/TeamConversationCard";
 import {
+import { getShiftDisplayIdentity } from "@/lib/shifts/shift-identity";
   summarizeTeam, detectTeamRisks, teamSectionOf, teamPrimaryIntent,
   TEAM_SECTION_META, TEAM_SECTION_ORDER,
   type TeamSection, type TeamSummary, type TeamRisk,
@@ -548,9 +549,9 @@ function MobileShiftTeamHubImpl({
                 <span className="text-[12px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
                   Gestionar equipo
                 </span>
-                {shift.shift_code && (
+                {getShiftDisplayIdentity(shift).primaryRefKind !== "none" && (
                   <span className="text-[12px] font-mono font-semibold text-muted-foreground/80 truncate">
-                    #{formatShiftCode(shift.shift_code)}
+                    {getShiftDisplayIdentity(shift).primaryRef}
                   </span>
                 )}
                 {shift.publication_status && shift.publication_status !== "published" && (
