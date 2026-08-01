@@ -153,16 +153,19 @@ export default function ValidationCenter() {
       <ValidationCard
         key={item.id}
         title={item.title}
-        subtitle={
-          [VALIDATION_TYPE_LABEL[item.validationType], item.subtitle]
-            .filter(Boolean)
-            .join(" · ") || null
-        }
+        subtitle={item.subtitle}
+        person={item.person}
+        headline={item.headline}
+        contextChips={[
+          VALIDATION_TYPE_LABEL[item.validationType],
+          item.priority === "urgent" ? "Urgente" : null,
+        ].filter((c): c is string => !!c)}
         status={item.statusKey}
         evidence={item.evidence}
-        consequence={
-          primary?.consequence ?? item.requiredAction
-        }
+        secondaryEvidence={item.secondaryEvidence}
+        humanContext={item.humanContext.map((n) => ({ label: n.label, value: n.value }))}
+        conversation={item.conversation}
+        consequence={primary?.consequence ?? item.requiredAction}
         decision={primary ? toOcsAction(item, primary) : undefined}
         alternatives={item.secondaryActions
           .filter((a) => !(model.readOnly && isTerminalAction(a.kind)))
@@ -172,6 +175,7 @@ export default function ValidationCenter() {
       />
     );
   }
+
 
   function renderSection(
     title: string,
