@@ -58,8 +58,8 @@ import { QuickAddInviteWizard } from "@/components/employee/QuickAddInviteWizard
 import EmergencyWorkerDialog, { type EmergencyWorkerCreated } from "@/components/employee/EmergencyWorkerDialog";
 import { ShiftFormFields, useShiftFormSignals, type ShiftFormState } from "@/components/shifts/ShiftFormFields";
 import { ShiftFormShell } from "@/components/shifts/ShiftFormShell";
-import { ShiftDraftBanner, ShiftDraftStatusPill } from "@/components/shifts/ShiftDraftBanner";
-import { useShiftDraftAutosave, type DraftStatus } from "@/hooks/useShiftDraftAutosave";
+import { ShiftDraftStatusPill } from "@/components/shifts/ShiftDraftBanner";
+import type { DraftStatus } from "@/hooks/useShiftDraftAutosave";
 import { useCreateShiftSession } from "@/hooks/useCreateShiftSession";
 import { CreateSessionRecoveryBanner } from "@/components/shifts/CreateSessionRecoveryBanner";
 import { ShiftSummaryPanel } from "@/components/shifts/form/ShiftSummaryPanel";
