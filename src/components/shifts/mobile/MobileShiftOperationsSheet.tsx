@@ -436,6 +436,29 @@ export function MobileShiftOperationsSheet({
     navigate(`/app/attendance?shift=${shift.id}`);
   };
 
+  /**
+   * OX-9.2 — una sola acción principal por pantalla.
+   * Cobertura pendiente → Completar equipo.
+   * Incidencias abiertas → Resolver atención.
+   * Todo en orden → Operar turno.
+   */
+  const primaryAction: { key: "team" | "attention" | "operate"; label: string; icon: any; onClick: () => void } =
+    canValidate && understaffed
+      ? { key: "team", label: "Completar equipo", icon: UserPlus, onClick: () => setHubOpen(true) }
+      : briefMessages.length > 0
+        ? {
+            key: "attention",
+            label: "Resolver atención",
+            icon: AlertTriangle,
+            onClick: () => {
+              if (noLocation) setLocationReportOpen(true);
+              else if (canValidate) setHubOpen(true);
+              else handleViewAttendance();
+            },
+          }
+        : { key: "operate", label: "Operar turno", icon: ClipboardList, onClick: handleViewAttendance };
+
+
   // Stafly Work Route — meeting point/time effective values.
   const mp = shiftMeeting.point ?? meetingPoint ?? null;
   const mt = shiftMeeting.time ? formatTimeShort(shiftMeeting.time) : null;
