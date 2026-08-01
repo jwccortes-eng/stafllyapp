@@ -92,7 +92,7 @@ export function AssignWorkerCard({
   onContact,
   onReplace,
   assigning,
-  chips = [],
+  chips: chipsProp = [],
   recommendation,
   aside,
   footer,
@@ -147,6 +147,7 @@ export function AssignWorkerCard({
     });
 
   // Los chips ya resumen historial; evitamos repetir el mismo dato en texto.
+  let chips = chipsProp.filter((ch) => ch.label.trim().toLowerCase() !== statusInfo.label.trim().toLowerCase());
   const chipText = chips.map((ch) => ch.label.toLowerCase()).join(" | ");
   const hasClientChip = /cliente/.test(chipText);
   const hasLocationChip = /aqu[ií]/.test(chipText);
