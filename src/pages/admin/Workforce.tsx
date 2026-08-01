@@ -329,14 +329,17 @@ export default function Workforce() {
         }
       />
 
-      <LegacyDeprecationBanner
-        replacementHref="/app/employees"
-        replacementLabel="Centro de personas"
-        description="El Centro de personas reúne el estado de cada persona, su perfil y su operación. Esta vista sigue disponible durante la transición."
-      />
+      {/* OX-9.2 — en móvil: primero búsqueda y personas. Nada de métricas antes de la gente. */}
+      <div className="hidden md:block">
+        <LegacyDeprecationBanner
+          replacementHref="/app/employees"
+          replacementLabel="Centro de personas"
+          description="El Centro de personas reúne el estado de cada persona, su perfil y su operación. Esta vista sigue disponible durante la transición."
+        />
+      </div>
 
-      {/* KPI strip */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+      {/* KPI strip — sólo escritorio */}
+      <div className="hidden md:grid grid-cols-2 md:grid-cols-5 gap-2">
         <KpiTile label="Personas" value={counts.total} tone="muted" />
         <KpiTile label="Operando" value={counts.active} tone="earning" />
         <KpiTile label="Listas para operar" value={counts.ready} tone="primary" />
@@ -344,7 +347,7 @@ export default function Workforce() {
         <KpiTile label="Perfil incompleto" value={counts.incomplete} tone="deduction" />
       </div>
 
-      {/* Filters */}
+      {/* Búsqueda — primer control de la pantalla en móvil */}
       <div className="rounded-2xl border bg-card p-3 flex flex-col md:flex-row md:items-center gap-2">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -352,55 +355,67 @@ export default function Workforce() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Buscar por nombre, teléfono o email…"
-            className="pl-9 h-10"
+            className="pl-9 h-11"
           />
           {search && (
             <button
               onClick={() => setSearch("")}
-              className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 rounded-md hover:bg-muted flex items-center justify-center"
+              className="absolute right-2 top-1/2 -translate-y-1/2 h-9 w-9 rounded-md hover:bg-muted flex items-center justify-center"
               aria-label="Limpiar búsqueda"
             >
-              <X className="h-3.5 w-3.5" />
+              <X className="h-4 w-4" />
             </button>
           )}
         </div>
-        <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
-          <SelectTrigger className="md:w-[200px] h-10">
-            <Filter className="h-3.5 w-3.5 mr-1.5" />
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {STATUS_FILTERS.map((s) => (
-              <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={workerFilter} onValueChange={setWorkerFilter}>
-          <SelectTrigger className="md:w-[170px] h-10"><SelectValue placeholder="Tipo de persona" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos los tipos</SelectItem>
-            {WORKER_TYPES.map((w) => (
-              <SelectItem key={w.value} value={w.value}>{w.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={qualityFilter} onValueChange={(v) => setQualityFilter(v as QualityFilter)}>
-          <SelectTrigger className="md:w-[180px] h-10"><SelectValue placeholder="Desempeño" /></SelectTrigger>
-          <SelectContent>
-            {QUALITY_FILTERS.map((q) => (
-              <SelectItem key={q.value} value={q.value}>{q.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={sortKey} onValueChange={(v) => setSortKey(v as SortKey)}>
-          <SelectTrigger className="md:w-[180px] h-10"><SelectValue placeholder="Ordenar por" /></SelectTrigger>
-          <SelectContent>
-            {SORT_OPTIONS.map((s) => (
-              <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <button
+          type="button"
+          onClick={() => setFiltersOpen((v) => !v)}
+          aria-expanded={filtersOpen}
+          className="md:hidden inline-flex items-center justify-center gap-1.5 h-11 rounded-xl border border-border/60 text-sm font-semibold text-foreground"
+        >
+          <Filter className="h-4 w-4" />
+          {filtersOpen ? "Ocultar filtros" : "Filtros"}
+        </button>
+        <div className={cn("flex-col md:flex-row md:flex gap-2", filtersOpen ? "flex" : "hidden")}>
+          <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
+            <SelectTrigger className="md:w-[200px] h-11">
+              <Filter className="h-3.5 w-3.5 mr-1.5" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {STATUS_FILTERS.map((s) => (
+                <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={workerFilter} onValueChange={setWorkerFilter}>
+            <SelectTrigger className="md:w-[170px] h-11"><SelectValue placeholder="Tipo de persona" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos los tipos</SelectItem>
+              {WORKER_TYPES.map((w) => (
+                <SelectItem key={w.value} value={w.value}>{w.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={qualityFilter} onValueChange={(v) => setQualityFilter(v as QualityFilter)}>
+            <SelectTrigger className="md:w-[180px] h-11"><SelectValue placeholder="Desempeño" /></SelectTrigger>
+            <SelectContent>
+              {QUALITY_FILTERS.map((q) => (
+                <SelectItem key={q.value} value={q.value}>{q.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={sortKey} onValueChange={(v) => setSortKey(v as SortKey)}>
+            <SelectTrigger className="md:w-[180px] h-11"><SelectValue placeholder="Ordenar por" /></SelectTrigger>
+            <SelectContent>
+              {SORT_OPTIONS.map((s) => (
+                <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
+
 
       {/* Bulk action bar */}
       {selected.size > 0 && (
