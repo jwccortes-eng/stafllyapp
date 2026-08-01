@@ -384,6 +384,8 @@ export function MobileQuickCreateShiftSheet({
 
   const handleCreate = async () => {
     if (!companyId || submitLockRef.current || stepBlocker) return;
+    // Nunca se crea con una empresa distinta a la que abrió el wizard.
+    if (companyChanged && !createdShiftIdRef.current) return;
     submitLockRef.current = true;
     setSaving(true);
     try {
