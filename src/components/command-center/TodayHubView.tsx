@@ -471,6 +471,33 @@ export default function TodayHubView() {
     />
   );
 
+  /* OX-4.3.1 — banner fail-closed cuando los permisos no están verificados. */
+  const permissionsBanner = !permsResolved && (
+    <OperationalCard
+      status={permsLoading ? "informational" : "warning"}
+      statusLabel={permsLoading ? "Verificando permisos" : "Permisos no verificados"}
+      leading={
+        <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-status-warning-bg text-status-warning">
+          <AlertTriangle className="h-4 w-4" />
+        </span>
+      }
+      title={
+        permsLoading
+          ? "Comprobando qué puedes hacer aquí"
+          : "No pudimos confirmar tus permisos"
+      }
+      primary={
+        <p className={cn(MT.body)}>
+          {permsLoading
+            ? "Mientras tanto sólo se muestra información: las acciones que cambian la operación están ocultas."
+            : "Para evitar acciones no autorizadas, esta vista queda en modo lectura."}
+        </p>
+      }
+      secondary="La información mostrada corresponde únicamente a la compañía seleccionada."
+    />
+  );
+
+
   if (isMobile) {
     return (
       <div className="space-y-5 px-3 pb-[calc(env(safe-area-inset-bottom)+84px)] pt-1">
