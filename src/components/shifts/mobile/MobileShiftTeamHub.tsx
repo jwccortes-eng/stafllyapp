@@ -63,6 +63,14 @@ import {
   type RecommendationSignals, type ReviewSignal, type RankedCandidate,
   type WorkerPreferenceRow, type WorkerPreferenceType,
 } from "@/lib/shifts/worker-recommendation";
+import { TeamCard, KpiCard, InsightCard, ValidationCard, type TeamMemberSummary } from "@/components/ocs";
+import { TeamHubWorkerCard } from "@/components/shifts/team/TeamHubWorkerCard";
+import { TeamConversationCard } from "@/components/shifts/team/TeamConversationCard";
+import {
+  summarizeTeam, detectTeamRisks, teamSectionOf, teamPrimaryIntent,
+  TEAM_SECTION_META, TEAM_SECTION_ORDER,
+  type TeamSection, type TeamSummary, type TeamRisk,
+} from "@/lib/shifts/team-hub-model";
 
 function formatRelative(iso: string): string {
   try { return formatDistanceToNowStrict(new Date(iso), { addSuffix: true }); }
@@ -512,12 +520,54 @@ function MobileShiftTeamHubImpl({
     return buckets;
   }, [assignments]);
 
+  const hasPhoneOf = useMemo(() => {
+    return (employeeId: string) => normalizePhone(empById.get(employeeId)?.phone_number).length >= 10;
+  }, [empById]);
+
+  /** OX-4.2 — secciones operativas (Listo, Pendiente, Atención, Reemplazos, Removidos). */
+  const sections = useMemo(() => {
+    const acc: Record<TeamSection, HubAssignment[]> = {
+      ready: [], pending: [], attention: [], replacement: [], removed: [],
+    };
+    for (const a of assignments) {
+      acc[teamSectionOf(a, { hasPhone: hasPhoneOf(a.employee_id) })].push(a);
+    }
+    return acc;
+  }, [assignments, hasPhoneOf]);
+
   const slots = shift.slots ?? 0;
   // Staffed = anything not rejected/removed (matches assignment-coverage).
   const staffedCount =
     grouped.confirmed.length + grouped.accepted.length + grouped.pending.length + grouped.no_show.length + grouped.other.length;
   const openSpots = Math.max(slots - staffedCount, 0);
   const claimsPending = claims.filter(c => c.status === "pending").length;
+
+  const summary = useMemo(
+    () => summarizeTeam(assignments, slots, hasPhoneOf),
+    [assignments, slots, hasPhoneOf],
+  );
+
+  const teamMembers = useMemo<TeamMemberSummary[]>(() => {
+    return [...sections.ready, ...sections.pending, ...sections.attention]
+      .map((a) => empById.get(a.employee_id))
+      .filter((e): e is Employee => !!e)
+      .map((e) => ({
+        firstName: e.first_name ?? "",
+        lastName: e.last_name ?? "",
+        avatarUrl: e.avatar_url ?? null,
+        gender: (e as { gender?: string | null }).gender ?? null,
+      }));
+  }, [sections, empById]);
+
+  const risks = useMemo(
+    () => detectTeamRisks({
+      summary,
+      claimsPending,
+      hasLocation: !!shift.location_id,
+      hasMeetingPoint: !!hasMeetingPointLocation || !!(meetingPoint && meetingPoint.trim()),
+    }),
+    [summary, claimsPending, shift.location_id, hasMeetingPointLocation, meetingPoint],
+  );
 
   // ── Issues derived from already-loaded data only.
   const issues = useMemo(() => {
