@@ -26,6 +26,16 @@ import {
   type AssignOutcome,
   type CreateResultSummary,
 } from "@/lib/shifts/assign-outcome";
+import {
+  EMPTY_DRIVER_PLAN,
+  reconcileDriverPlan,
+  toggleDriver,
+  describeDriverPlan,
+  assignmentRoleFor,
+  primaryDriverId,
+  driverSummaryLine,
+  type DriverPlan,
+} from "@/lib/shifts/driver-plan";
 import type { Shift, Assignment, Employee, SelectOption } from "@/components/shifts/types";
 import { useCompany } from "@/hooks/useCompany";
 import { buildCreationConfirmation, type CreationConfirmation, type PersistedShiftFacts } from "@/lib/shifts/shift-ref";
@@ -215,6 +225,9 @@ export function MobileQuickCreateShiftSheet({
   const [slots, setSlots] = useState<number>(Math.max(1, defaultSlots));
   const [team, setTeam] = useState<string[]>([]);
   const [teamQuery, setTeamQuery] = useState("");
+  /* P0.2 — multi-driver: el backend soporta N drivers (una fila por persona en
+   * shift_assignments con assignment_role='driver'). Aquí sólo se expone. */
+  const [driverPlan, setDriverPlan] = useState<DriverPlan>(EMPTY_DRIVER_PLAN);
 
   const [meetingPoint, setMeetingPoint] = useState("");
   const [meetingPointLocationId, setMeetingPointLocationId] = useState<string | null>(null);
@@ -260,6 +273,7 @@ export function MobileQuickCreateShiftSheet({
     setSlots(Math.max(1, defaultSlots));
     setTeam([]);
     setTeamQuery("");
+    setDriverPlan(EMPTY_DRIVER_PLAN);
     setMeetingPoint("");
     setMeetingPointLocationId(null);
     setNotes("");
@@ -355,8 +369,18 @@ export function MobileQuickCreateShiftSheet({
 
 
   const toggleWorker = (id: string) => {
-    setTeam(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+    setTeam(prev => {
+      const next = prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id];
+      setDriverPlan(p => reconcileDriverPlan(p, next));
+      return next;
+    });
   };
+
+  const toggleDriverFor = (id: string) => {
+    setDriverPlan(p => toggleDriver(p, id, team));
+  };
+
+  const driverStatus = describeDriverPlan(driverPlan);
 
   const shiftTitle = useMemo(() => {
     const parts = [serviceType || "Turno", client?.name].filter(Boolean);
@@ -373,7 +397,12 @@ export function MobileQuickCreateShiftSheet({
       const person = employees.find(x => x.id === employeeId);
       const name = person ? fullName(person) : "Trabajador";
       try {
-        await assignWorkerToShift({ shiftId, employeeId, source: "mobile_create_shift" });
+        await assignWorkerToShift({
+          shiftId,
+          employeeId,
+          assignmentRole: assignmentRoleFor(driverPlan, employeeId),
+          source: "mobile_create_shift",
+        });
         out.push(buildAssignOutcome(employeeId, name, null));
       } catch (e) {
         out.push(buildAssignOutcome(employeeId, name, e));
@@ -413,6 +442,10 @@ export function MobileQuickCreateShiftSheet({
           published_at: new Date().toISOString(),
           published_by: user?.id ?? null,
           claimable: false,
+          // Transporte: driver_employee_id es sólo el driver PRINCIPAL (legado).
+          // Los demás drivers viven en shift_assignments con role='driver'.
+          transportation_required: driverPlan.transportRequired,
+          driver_employee_id: primaryDriverId(driverPlan),
         };
 
         const { data, error } = await supabase
@@ -479,6 +512,9 @@ export function MobileQuickCreateShiftSheet({
             result: summary.kind,
             requested: team.length,
             assigned: summary.okCount,
+            drivers_required: driverPlan.driversRequired,
+            drivers_selected: driverPlan.driverIds.length,
+            drivers_assigned: ordered.filter(o => o.ok && driverPlan.driverIds.includes(o.employeeId)).length,
             shift_ref: persisted?.shiftRef ?? null,
             persisted_company_id: persisted?.companyId ?? null,
             failed: ordered.filter(o => !o.ok).map(o => ({ employee_id: o.employeeId, code: o.code })),
@@ -590,7 +626,14 @@ export function MobileQuickCreateShiftSheet({
               {o.ok ? <Check className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-[15px] font-medium break-words">{o.name}</span>
+              <span className="block text-[15px] font-medium break-words">
+                {o.name}
+                {driverPlan.driverIds.includes(o.employeeId) && (
+                  <span className="ml-2 align-middle rounded-full border border-border/60 px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
+                    Driver
+                  </span>
+                )}
+              </span>
               <span className="block text-[13px] text-muted-foreground break-words">{o.reason}</span>
               {!o.ok && (
                 <span className="mt-0.5 block text-[13px] font-medium break-words">{o.nextAction}</span>
@@ -871,7 +914,52 @@ export function MobileQuickCreateShiftSheet({
                       className="h-12 pl-9 text-base"
                     />
                   </div>
+
+                  {/* P0.2 · Transporte y drivers (varios drivers permitidos) */}
+                  <div className="rounded-2xl border border-border/60 bg-card px-3 py-2.5">
+                    <div className="flex items-center gap-3">
+                      <span className="flex-1 min-w-0">
+                        <span className="block text-[13px] font-semibold">Drivers necesarios</span>
+                        <span className={cn(
+                          "block text-[12px]",
+                          driverStatus.tone === "warning" ? "text-status-warning"
+                            : driverStatus.tone === "success" ? "text-status-success"
+                              : "text-muted-foreground",
+                        )}>
+                          {driverStatus.counterLabel}
+                        </span>
+                      </span>
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          aria-label="Menos drivers"
+                          onClick={() => setDriverPlan(p => {
+                            const next = Math.max(0, p.driversRequired - 1);
+                            return { ...p, driversRequired: next, transportRequired: next > 0 || p.driverIds.length > 0 };
+                          })}
+                          className="h-11 w-11 rounded-xl border border-border/60 inline-flex items-center justify-center active:bg-muted"
+                        >
+                          <Minus className="h-4 w-4" />
+                        </button>
+                        <span className="w-8 text-center text-base font-bold tabular-nums">{driverPlan.driversRequired}</span>
+                        <button
+                          type="button"
+                          aria-label="Más drivers"
+                          onClick={() => setDriverPlan(p => ({ ...p, driversRequired: p.driversRequired + 1, transportRequired: true }))}
+                          className="h-11 w-11 rounded-xl border border-border/60 inline-flex items-center justify-center active:bg-muted"
+                        >
+                          <Plus className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                    {driverPlan.driversRequired > 0 && (
+                      <p className="mt-1 text-[12px] text-muted-foreground">
+                        {driverStatus.hint} Marca “Driver” en cada persona que conduce.
+                      </p>
+                    )}
+                  </div>
                 </div>
+
 
                 <div className="flex-1 overflow-y-auto px-2 py-2">
                   {roster.length === 0 ? (
@@ -887,32 +975,54 @@ export function MobileQuickCreateShiftSheet({
                     const name = fullName(e);
                     const selected = team.includes(e.id);
                     const busy = busyIds.has(e.id);
+                    const isDriver = driverPlan.driverIds.includes(e.id);
                     return (
-                      <button
+                      <div
                         key={e.id}
-                        type="button"
-                        onClick={() => toggleWorker(e.id)}
                         className={cn(
-                          "w-full min-h-[60px] flex items-center gap-3 px-3 rounded-2xl text-left transition-colors active:bg-muted/60",
+                          "w-full min-h-[60px] flex items-center gap-2 pr-2 rounded-2xl transition-colors",
                           selected && "bg-primary/5",
                         )}
                       >
-                        <span className={cn(
-                          "h-10 w-10 rounded-full inline-flex items-center justify-center text-xs font-bold shrink-0",
-                          selected ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground",
-                        )}>
-                          {selected ? <Check className="h-4 w-4" /> : initials(name)}
-                        </span>
-                        <span className="flex-1 min-w-0">
-                          <span className="block text-[15px] font-medium truncate">{name}</span>
+                        <button
+                          type="button"
+                          onClick={() => toggleWorker(e.id)}
+                          className="flex-1 min-w-0 min-h-[60px] flex items-center gap-3 px-3 text-left rounded-2xl active:bg-muted/60"
+                        >
                           <span className={cn(
-                            "block text-[12px]",
-                            busy ? "text-status-warning" : "text-muted-foreground",
+                            "h-10 w-10 rounded-full inline-flex items-center justify-center text-xs font-bold shrink-0",
+                            selected ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground",
                           )}>
-                            {busy ? "Ya tiene turno ese día" : "Disponible"}
+                            {selected ? <Check className="h-4 w-4" /> : initials(name)}
                           </span>
-                        </span>
-                      </button>
+                          <span className="flex-1 min-w-0">
+                            <span className="block text-[15px] font-medium truncate">{name}</span>
+                            <span className={cn(
+                              "block text-[12px]",
+                              busy ? "text-status-warning" : "text-muted-foreground",
+                            )}>
+                              {busy ? "Ya tiene turno ese día" : "Disponible"}
+                              {isDriver && " · conduce"}
+                            </span>
+                          </span>
+                        </button>
+                        {selected && (
+                          <button
+                            type="button"
+                            aria-pressed={isDriver}
+                            aria-label={isDriver ? `Quitar driver a ${name}` : `Marcar a ${name} como driver`}
+                            onClick={() => toggleDriverFor(e.id)}
+                            className={cn(
+                              "shrink-0 h-11 min-w-[64px] px-3 rounded-xl border text-[12px] font-semibold inline-flex items-center justify-center active:bg-muted",
+                              isDriver
+                                ? "border-primary bg-primary text-primary-foreground"
+                                : "border-border/60 text-muted-foreground",
+                            )}
+                          >
+                            Driver
+                          </button>
+                        )}
+                      </div>
                     );
                   })}
                 </div>
@@ -984,8 +1094,19 @@ export function MobileQuickCreateShiftSheet({
                   hint={`Cobertura ${coverage}% de ${slots}`}
                   tone={team.length >= slots ? "success" : "warning"}
                   onEdit={() => setStep("equipo")}
+                />
+                <SummaryRow
+                  icon={<Users className="h-4 w-4" />}
+                  label="Transporte"
+                  value={driverSummaryLine(driverPlan)}
+                  hint={driverPlan.driversRequired > 0 ? driverStatus.hint : undefined}
+                  tone={driverPlan.driversRequired === 0
+                    ? undefined
+                    : driverStatus.incomplete ? "warning" : "success"}
+                  onEdit={() => setStep("equipo")}
                   last
                 />
+
               </div>
             )}
           </div>
@@ -1059,7 +1180,11 @@ export function MobileQuickCreateShiftSheet({
                     disabled={saving || !!stepBlocker}
                     onClick={handleCreate}
                   >
-                    {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : "Crear turno"}
+                    {saving
+                      ? <Loader2 className="h-5 w-5 animate-spin" />
+                      : driverPlan.driverIds.length > 0
+                        ? `Crear turno y confirmar ${driverPlan.driverIds.length} ${driverPlan.driverIds.length === 1 ? "driver" : "drivers"}`
+                        : "Crear turno"}
                   </Button>
                 ) : (
                   <Button

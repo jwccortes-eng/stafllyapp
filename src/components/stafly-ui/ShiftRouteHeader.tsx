@@ -67,7 +67,13 @@ export interface ShiftRouteHeaderAction {
 export interface ShiftRouteHeaderProps {
   title: string;
   clientName?: string | null;
+  /** @deprecated código legado. Usa `shiftRef` (referencia por empresa). */
   shiftCode?: string | null;
+  /**
+   * P0.2 — identidad operativa: etiqueta ya formateada (`QK-001573`).
+   * Tiene prioridad sobre `shiftCode`. Los UUID/IDs internos nunca se muestran.
+   */
+  shiftRef?: string | null;
   date: string;
   startTime: string;
   endTime?: string | null;
@@ -123,6 +129,7 @@ export function ShiftRouteHeader({
   title,
   clientName,
   shiftCode,
+  shiftRef,
   date,
   startTime,
   endTime,
@@ -147,6 +154,8 @@ export function ShiftRouteHeader({
   const start = trimTime(startTime);
   const end = trimTime(endTime);
   const isWorker = variant === "worker";
+  /** Referencia operativa visible: shift_ref si existe, si no el código legado. */
+  const refLabel = (shiftRef ?? "").trim() || (shiftCode ? `#${shiftCode}` : null);
 
   // ── Compact density (DS3a pilot target) ──────────────────────────────────
   const compactBody = (
@@ -168,9 +177,9 @@ export function ShiftRouteHeader({
               {day.label}
             </span>
           )}
-          {shiftCode && variant === "admin" && (
+          {refLabel && variant === "admin" && (
             <span className="text-[10px] font-mono text-muted-foreground/70">
-              #{shiftCode}
+              {refLabel}
             </span>
           )}
           {statusLabel && (
@@ -286,9 +295,9 @@ export function ShiftRouteHeader({
   // ── List density (one-line summary) ─────────────────────────────────────
   const listBody = (
     <div className="flex items-center gap-2 min-w-0 w-full">
-      {shiftCode && (
+      {refLabel && (
         <span className="text-[10px] font-mono text-muted-foreground/70 shrink-0">
-          #{shiftCode}
+          {refLabel}
         </span>
       )}
       <span className="text-[13px] font-semibold text-foreground truncate flex-1">

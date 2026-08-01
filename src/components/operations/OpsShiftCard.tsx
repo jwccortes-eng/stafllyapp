@@ -8,6 +8,7 @@
  * them for the canonical OpsCoverageBar/OpsClockChip/OpsAlertChip.
  */
 import { ShiftRouteHeader } from "@/components/stafly-ui";
+import { displayShiftRef } from "@/lib/shifts/shift-ref";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Users, Clock, AlertTriangle, ChevronRight, Inbox } from "lucide-react";
@@ -53,7 +54,7 @@ export function OpsShiftCard({ shift, onOperate }: Props) {
         variant="admin"
         density="compact"
         title={shift.title || "Untitled shift"}
-        shiftCode={shift.shift_code}
+        shiftRef={displayShiftRef(shift)}
         clientName={shift.client_name}
         jobSiteName={shift.job_site_name}
         meetingPoint={shift.meeting_point}

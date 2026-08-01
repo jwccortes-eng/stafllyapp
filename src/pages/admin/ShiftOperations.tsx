@@ -35,6 +35,7 @@ import {
   getRecommendedNextActions, normalizeArea,
 } from "@/lib/shifts/shift-operations-intelligence";
 import { getShiftPhase, phaseChipClasses } from "@/lib/shifts/shift-phase";
+import { displayShiftRef } from "@/lib/shifts/shift-ref";
 import {
   deriveCloseoutReviewStatus, presentCloseoutReviewStatus, closeoutBadgeClasses,
 } from "@/lib/shifts/closeout-review-status";
@@ -65,6 +66,7 @@ interface ShiftDetail {
   shift_admin_id: string | null;
   driver_employee_id: string | null;
   shift_code: string | null;
+  shift_ref?: string | null;
   publication_status?: string | null;
 }
 
@@ -425,6 +427,9 @@ export default function ShiftOperations() {
         <div className="flex-1">
           <div className="flex items-center gap-2 flex-wrap">
             <h1 className="text-lg font-bold font-heading">{shift.title}</h1>
+            {displayShiftRef(shift as any) !== "—" && (
+              <span className="font-mono text-[11px] text-muted-foreground">{displayShiftRef(shift as any)}</span>
+            )}
             <Badge variant={shift.status === "published" ? "default" : shift.status === "locked" ? "secondary" : "outline"} className="text-[10px]">
               {shift.status}
             </Badge>

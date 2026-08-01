@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatPersonName } from "@/lib/format-helpers";
+import { displayShiftRef } from "@/lib/shifts/shift-ref";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
 import { Button } from "@/components/ui/button";
@@ -34,6 +35,7 @@ interface TimeEntry {
   scheduled_shifts?: {
     id: string;
     shift_code: string | null;
+    shift_ref?: string | null;
     title: string;
     start_time: string;
     end_time: string;
@@ -83,7 +85,7 @@ export function DayDetailView() {
     const endOfDay = `${dateStr}T23:59:59`;
     const [entriesRes, empsRes] = await Promise.all([
       supabase.from("time_entries")
-        .select("*, scheduled_shifts(id, shift_code, title, start_time, end_time, clients(name), locations(name))")
+        .select("*, scheduled_shifts(id, shift_code, shift_ref, title, start_time, end_time, clients(name), locations(name))")
         .eq("company_id", selectedCompanyId)
         .gte("clock_in", startOfDay).lte("clock_in", endOfDay)
         .order("clock_in", { ascending: true }),
@@ -347,7 +349,7 @@ export function DayDetailView() {
                           className="inline-flex items-center gap-1.5 rounded-full border border-border/50 bg-muted/40 px-2 py-0.5 text-[11px] font-medium text-foreground/85 truncate max-w-[150px]"
                           style={{ borderLeftColor: `hsl(${jobHue(jobTitle)} 55% 55%)`, borderLeftWidth: 2 }}
                         >
-                          {shift?.shift_code && <span className="text-muted-foreground/60 font-mono text-[10px]">{shift.shift_code}</span>}
+                          {shift && displayShiftRef(shift as any) !== "—" && <span className="text-muted-foreground/60 font-mono text-[10px]">{displayShiftRef(shift as any)}</span>}
                           <span className="truncate">{jobTitle}</span>
                         </span>
                       ) : (

@@ -42,6 +42,8 @@ export interface TodayOpsShift {
   publication_status: string | null;
   slots: number;
   shift_code: string | null;
+  /** P0.2 — referencia operativa visible por empresa (`QK-001573`). */
+  shift_ref: string | null;
   client_id: string | null;
   client_name: string | null;
   location_id: string | null;
@@ -123,7 +125,7 @@ export function useTodayOperations(
     const shiftsRes = await supabase
       .from("scheduled_shifts")
       .select(
-        "id, title, date, start_time, end_time, status, publication_status, slots, shift_code, client_id, location_id, meeting_point, meeting_point_location_id, meeting_time, shift_admin_id, transportation_required, car_capacity, driver_employee_id",
+        "id, title, date, start_time, end_time, status, publication_status, slots, shift_code, shift_ref, client_id, location_id, meeting_point, meeting_point_location_id, meeting_time, shift_admin_id, transportation_required, car_capacity, driver_employee_id",
       )
       .eq("company_id", companyId)
       .eq("date", dateStr)
@@ -260,6 +262,7 @@ export function useTodayOperations(
         publication_status: s.publication_status ?? null,
         slots,
         shift_code: s.shift_code ?? null,
+        shift_ref: (s as any).shift_ref ?? null,
         client_id: s.client_id ?? null,
         client_name: s.client_id ? (clientMap.get(s.client_id) ?? null) : null,
         location_id: s.location_id ?? null,

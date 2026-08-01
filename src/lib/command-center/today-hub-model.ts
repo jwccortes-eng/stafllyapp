@@ -42,6 +42,7 @@ export interface HubShiftLike {
   end_time: string;
   slots?: number | null;
   shift_code?: string | null;
+  shift_ref?: string | null;
   client_name?: string | null;
   job_site_name?: string | null;
   meeting_point?: string | null;
@@ -535,7 +536,7 @@ export function buildTodayHubModel(input: TodayHubInput): TodayHubModel {
         clientName: shift.client_name ?? null,
         locationName: where,
         timeRange: range,
-        reference: shift.shift_code ?? null,
+        reference: (shift.shift_ref ?? "").trim() || (shift.shift_code ? `#${shift.shift_code}` : null),
         status,
         statusLabel,
         required,
