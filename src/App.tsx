@@ -419,6 +419,7 @@ function App() {
                 <Route path="payroll-review-queue" element={<CompanyRequiredGuard><PayrollReviewQueue /></CompanyRequiredGuard>} />
                 <Route path="dev/change-intelligence" element={<ChangeIntelligenceObservation />} />
                 <Route path="dev/operational-authorization" element={<OperationalAuthorizationObservation />} />
+                <Route path="dev/operational-signals" element={<CompanyRequiredGuard><OperationalSignalsShadow /></CompanyRequiredGuard>} />
 
                 <Route path="weekly-payroll-reconciliation" element={<CompanyRequiredGuard><WeeklyPayrollReconciliation /></CompanyRequiredGuard>} />
                 <Route path="payroll-native-dry-run" element={<CompanyRequiredGuard><PayrollNativeDryRun /></CompanyRequiredGuard>} />
