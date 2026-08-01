@@ -1,24 +1,21 @@
 import { type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ReactNode } from "react";
+import { OperationalScreenHeader } from "@/components/stafly-ui/OperationalScreenHeader";
+import { OX_MOTION, OX_SURFACE_SOFT } from "@/lib/ox/continuity";
 
 /**
- * PremiumPageHeader — premium-gold module header.
+ * OX-8 — ONE STAFLY.
  *
- * Pieces (all optional):
- *  - eyebrow            : tiny uppercase label above the title
- *  - breadcrumb         : slot for breadcrumb / context badges (left aligned, above title)
- *  - icon + title       : main identity
- *  - subtitle           : one-line context
- *  - rightSlot          : primary action(s) on the right
- *  - kpis               : optional KPI strip rendered below the header
+ * `PremiumPageHeader` dejó de ser una cabecera distinta a `PageHeader`:
+ * ambas renderizan la misma cabecera canónica. Aquí sólo sobrevive el
+ * extra real (tira de métricas), con el ritmo y la profundidad únicos
+ * del producto.
  */
-
 export interface PremiumPageHeaderKpi {
   label: string;
   value: ReactNode;
   hint?: ReactNode;
-  /** Optional accent for the value (semantic class string). */
   accent?: "default" | "primary" | "success" | "warning" | "destructive";
   onClick?: () => void;
   active?: boolean;
@@ -27,7 +24,9 @@ export interface PremiumPageHeaderKpi {
 interface PremiumPageHeaderProps {
   title: string;
   subtitle?: ReactNode;
+  /** @deprecated OX-8: la identidad la da la empresa, no un icono de módulo. */
   icon?: LucideIcon;
+  /** @deprecated OX-8. */
   eyebrow?: string;
   breadcrumb?: ReactNode;
   rightSlot?: ReactNode;
@@ -38,16 +37,14 @@ interface PremiumPageHeaderProps {
 const ACCENT_MAP: Record<NonNullable<PremiumPageHeaderKpi["accent"]>, string> = {
   default: "text-foreground",
   primary: "text-primary",
-  success: "text-emerald-600 dark:text-emerald-400",
-  warning: "text-amber-600 dark:text-amber-400",
+  success: "text-success",
+  warning: "text-warning",
   destructive: "text-destructive",
 };
 
 export function PremiumPageHeader({
   title,
   subtitle,
-  icon: Icon,
-  eyebrow,
   breadcrumb,
   rightSlot,
   kpis,
@@ -55,39 +52,16 @@ export function PremiumPageHeader({
 }: PremiumPageHeaderProps) {
   return (
     <div className={cn("mb-4", className)}>
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div className="min-w-0 flex-1">
-          {breadcrumb && <div className="mb-2">{breadcrumb}</div>}
-          {eyebrow && (
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary mb-1.5">
-              {eyebrow}
-            </p>
-          )}
-          <div className="flex items-center gap-2.5">
-            {Icon && (
-              <div className="h-9 w-9 md:h-10 md:w-10 rounded-xl flex items-center justify-center shrink-0 bg-primary/[0.08]">
-                <Icon className="h-[18px] w-[18px] md:h-5 md:w-5 text-primary" strokeWidth={2} />
-              </div>
-            )}
-            <div className="min-w-0">
-              <h1 className="text-xl md:text-2xl font-bold font-heading tracking-tight text-foreground leading-tight">
-                {title}
-              </h1>
-              {subtitle && (
-                <div className="text-xs md:text-sm text-muted-foreground mt-0.5 leading-relaxed">
-                  {subtitle}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-        {rightSlot && (
-          <div className="flex items-center gap-1.5 shrink-0 flex-wrap">{rightSlot}</div>
-        )}
-      </div>
+      {breadcrumb && <div className="mb-2">{breadcrumb}</div>}
+
+      <OperationalScreenHeader
+        title={title}
+        context={subtitle}
+        action={rightSlot}
+      />
 
       {kpis && kpis.length > 0 && (
-        <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+        <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
           {kpis.map((k, i) => {
             const interactive = !!k.onClick;
             return (
@@ -97,28 +71,30 @@ export function PremiumPageHeader({
                 onClick={k.onClick}
                 disabled={!interactive}
                 className={cn(
-                  "text-left rounded-xl border bg-card/60 px-3 py-2.5 transition-all",
+                  OX_SURFACE_SOFT,
+                  OX_MOTION,
+                  "px-3 py-2.5 text-left",
                   interactive
-                    ? "hover:border-primary/40 hover:shadow-sm cursor-pointer"
+                    ? "cursor-pointer hover:border-primary/40"
                     : "cursor-default",
-                  k.active
-                    ? "border-primary/50 bg-primary/[0.04] shadow-sm"
-                    : "border-border/50",
+                  k.active && "border-primary/50 bg-primary/[0.05]",
                 )}
               >
-                <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                <div className="text-[12px] font-medium leading-4 text-muted-foreground">
                   {k.label}
                 </div>
                 <div
                   className={cn(
-                    "mt-0.5 text-xl font-bold tabular-nums leading-none",
+                    "mt-0.5 text-[24px] font-bold leading-7 tabular-nums tracking-tight",
                     ACCENT_MAP[k.accent ?? "default"],
                   )}
                 >
                   {k.value}
                 </div>
                 {k.hint && (
-                  <div className="mt-1 text-[10px] text-muted-foreground/80 truncate">{k.hint}</div>
+                  <div className="mt-1 truncate text-[12px] leading-4 text-muted-foreground/80">
+                    {k.hint}
+                  </div>
                 )}
               </button>
             );
