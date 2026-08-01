@@ -28,7 +28,7 @@ import {
 } from "@/lib/shifts/assign-outcome";
 import type { Shift, Assignment, Employee, SelectOption } from "@/components/shifts/types";
 import { useCompany } from "@/hooks/useCompany";
-import { buildCreationConfirmation, type CreationConfirmation } from "@/lib/shifts/shift-ref";
+import { buildCreationConfirmation, type CreationConfirmation, type PersistedShiftFacts } from "@/lib/shifts/shift-ref";
 
 
 /**
