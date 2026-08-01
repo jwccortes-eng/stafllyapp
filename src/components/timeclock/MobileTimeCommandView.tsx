@@ -28,6 +28,8 @@ import { enUS } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useTimeClockFocus } from "@/hooks/useTimeClockFocus";
 import { REVIEW_COPY } from "@/utils/reviewNavigationCopy";
+import { MT, MT_EYEBROW, TAP_ICON, TAP_CHIP, FOCUS_RING } from "@/lib/mobile/mobile-scale";
+import { StatusBadge } from "@/components/ui/status-badge";
 
 const OPEN_ENTRY_WARN_HOURS = 12;
 const OPEN_ENTRY_STALE_HOURS = 24;
@@ -319,7 +321,7 @@ export default function MobileTimeCommandView() {
         <div
           role="status"
           className={cn(
-            "rounded-xl border px-3 py-2 text-[11px] flex items-start gap-2",
+            "rounded-xl border px-3 py-2 text-[12px] flex items-start gap-2",
             missingEntry
               ? "border-amber-500/40 bg-amber-500/5 text-amber-700 dark:text-amber-400"
               : "border-primary/40 bg-primary/5 text-primary",
@@ -350,7 +352,7 @@ export default function MobileTimeCommandView() {
         <div
           role="status"
           className={cn(
-            "rounded-xl border px-3 py-2 text-[11px] flex items-start gap-2",
+            "rounded-xl border px-3 py-2 text-[12px] flex items-start gap-2",
             entryPresent || (!focusEntryId && !isToday)
               ? "border-primary/40 bg-primary/5 text-primary"
               : focusEntryId && !entryPresent
@@ -375,12 +377,12 @@ export default function MobileTimeCommandView() {
               {focusEntryId && <> · <code className="font-mono">{focusEntryId.slice(0, 8)}</code></>}
               {focusShiftId && <> · turno <code className="font-mono">{focusShiftId.slice(0, 8)}</code></>}
             </div>
-            <div className="text-[10px] opacity-70 mt-0.5">{REVIEW_COPY.readOnlyNote}</div>
+            <div className="text-[12px] opacity-70 mt-0.5">{REVIEW_COPY.readOnlyNote}</div>
           </div>
           {!isToday && (
             <button
               type="button"
-              className="text-[11px] font-semibold underline shrink-0"
+              className="text-[12px] font-semibold underline shrink-0"
               onClick={() => {
                 const next = new URLSearchParams(searchParams);
                 next.delete("date");
@@ -407,20 +409,28 @@ export default function MobileTimeCommandView() {
       <div className="flex gap-1.5">
         <ModePill active={mode === "today"} onClick={() => setMode("today")} label="Hoy / En vivo" />
         <ModePill active={mode === "week"} onClick={() => setMode("week")} label="Semana" />
-        <Button variant="ghost" size="icon" className="h-9 w-9 ml-auto" onClick={load} aria-label="Actualizar">
+        <Button variant="ghost" size="icon" className={cn("h-11 w-11 ml-auto", FOCUS_RING)} onClick={load} aria-label="Actualizar">
           <RefreshCw className="h-4 w-4" />
         </Button>
       </div>
 
-      {/* Alerts (compact) */}
+      {/* Alerts — primary action for this screen when present */}
       {alerts.length > 0 && (
         <Card className="rounded-2xl border border-amber-500/30 bg-amber-500/5">
-          <div className="px-3.5 py-2.5 flex items-center gap-2 border-b border-amber-500/20">
-            <AlertTriangle className="h-4 w-4 text-amber-600" />
-            <span className="text-sm font-semibold text-amber-700 dark:text-amber-400">
-              {alerts.length} {alerts.length === 1 ? "alerta" : "alertas"}
+          <button
+            type="button"
+            onClick={() => setAlertDetail(alerts[0])}
+            className={cn(
+              "w-full flex items-center gap-2 px-3.5 py-3 min-h-[44px] border-b border-amber-500/20 text-left active:bg-amber-500/10",
+              FOCUS_RING,
+            )}
+          >
+            <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" aria-hidden="true" />
+            <span className={cn(MT.bodyStrong, "text-amber-700 dark:text-amber-400 flex-1")}>
+              {alerts.length} {alerts.length === 1 ? "alerta pendiente" : "alertas pendientes"} — revisar evidencia
             </span>
-          </div>
+            <ChevronRight className="h-4 w-4 text-amber-600 shrink-0" aria-hidden="true" />
+          </button>
           <ul className="divide-y divide-border/40">
             {alerts.slice(0, 5).map(a => (
               <AlertRow key={`${a.type}-${a.entry.id}`} item={a} focused={focusEntryId === a.entry.id} onOpen={() => setAlertDetail(a)} />
@@ -439,7 +449,7 @@ export default function MobileTimeCommandView() {
         <WeekView rollup={weekRollup} />
       )}
 
-      <p className="text-[10px] text-muted-foreground text-center">
+      <p className="text-[12px] text-muted-foreground text-center">
         Solo lectura · Las horas programadas son contexto operativo — la nómina se calcula con fichajes reales.
       </p>
 
@@ -486,7 +496,7 @@ function TodayView({ live, missing, closedToday }: {
                   <div className="text-sm font-semibold truncate">
                     {r.employee.first_name} {r.employee.last_name}
                   </div>
-                  <div className="text-[11px] text-muted-foreground truncate">
+                  <div className="text-[12px] text-muted-foreground truncate">
                     Desde {format(new Date(r.entry.clock_in), "p", { locale: enUS })}
                     {r.entry.scheduled_shifts && (
                       <> · <MapPin className="inline h-3 w-3" /> {r.entry.scheduled_shifts.title}</>
@@ -513,7 +523,7 @@ function TodayView({ live, missing, closedToday }: {
                 <EmployeeAvatar avatarUrl={e.avatar_url} firstName={e.first_name} lastName={e.last_name} size="sm" />
                 <div className="min-w-0 flex-1">
                   <div className="text-sm font-semibold truncate">{e.first_name} {e.last_name}</div>
-                  <div className="text-[11px] text-muted-foreground">Programado hoy · sin fichaje</div>
+                  <div className="text-[12px] text-muted-foreground">Programado hoy · sin fichaje</div>
                 </div>
                 <ContactButtons phone={e.phone_number} />
               </li>
@@ -541,14 +551,14 @@ function WeekView({ rollup }: { rollup: { employee: Employee; trackedMin: number
             <EmployeeAvatar avatarUrl={r.employee.avatar_url} firstName={r.employee.first_name} lastName={r.employee.last_name} size="sm" />
             <div className="min-w-0 flex-1">
               <div className="text-sm font-semibold truncate">{r.employee.first_name} {r.employee.last_name}</div>
-              <div className="text-[11px] text-muted-foreground">
+              <div className="text-[12px] text-muted-foreground">
                 {r.entries} {r.entries === 1 ? "fichaje" : "fichajes"}
                 {r.openCount > 0 && <span className="text-amber-700 font-semibold"> · {r.openCount} {r.openCount === 1 ? "abierto" : "abiertos"}</span>}
               </div>
             </div>
             <div className="text-right">
               <div className="text-sm font-bold tabular-nums">{formatDuration(Math.max(0, r.trackedMin))}</div>
-              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">esta semana</div>
+              <div className="text-[12px] uppercase tracking-wider text-muted-foreground">esta semana</div>
             </div>
           </li>
         ))}
@@ -571,7 +581,7 @@ function Section({ title, count, icon: Icon, tone, children }: {
           <Icon className="h-3.5 w-3.5" />
         </div>
         <div className="text-sm font-semibold">{title}</div>
-        <Badge variant="outline" className="ml-auto text-[10px]">{count}</Badge>
+        <Badge variant="outline" className="ml-auto text-[12px]">{count}</Badge>
       </div>
       {children}
     </Card>
@@ -585,10 +595,10 @@ function ContactButtons({ phone }: { phone: string | null }) {
   return (
     <div className="flex items-center gap-1 shrink-0">
       <a href={`tel:${raw}`} onClick={(e) => e.stopPropagation()}
-        className="h-9 w-9 inline-flex items-center justify-center rounded-lg bg-primary/10 text-primary active:scale-95"
+        className={cn("h-11 w-11 inline-flex items-center justify-center rounded-lg bg-primary/10 text-primary active:scale-95", FOCUS_RING)}
         aria-label="Llamar"><Phone className="h-4 w-4" /></a>
       <a href={`https://wa.me/${wa}`} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}
-        className="h-9 w-9 inline-flex items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 active:scale-95"
+        className={cn("h-11 w-11 inline-flex items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 active:scale-95", FOCUS_RING)}
         aria-label="WhatsApp"><MessageCircle className="h-4 w-4" /></a>
     </div>
   );
@@ -608,7 +618,7 @@ function ModePill({ active, onClick, label }: { active: boolean; onClick: () => 
     <button
       onClick={onClick}
       className={cn(
-        "px-3.5 h-9 rounded-full text-sm font-medium transition-all",
+        "px-3.5 min-h-11 rounded-full text-sm font-medium transition-all", FOCUS_RING,
         active ? "bg-primary text-primary-foreground shadow-sm" : "bg-muted/60 text-muted-foreground"
       )}
     >
@@ -623,19 +633,18 @@ function Kpi({ label, value, tone = "muted" }: { label: string; value: number | 
     : tone === "danger" ? "text-rose-600"
     : "text-foreground";
   return (
-    <div className="rounded-xl border border-border/50 bg-card px-1.5 py-2 text-center">
+    <div className="rounded-xl border border-border/50 bg-card px-1.5 py-2 min-h-[44px] flex flex-col items-center justify-center text-center">
       <div className={cn("text-base font-bold tabular-nums leading-tight", toneCls)}>{value}</div>
-      <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold leading-tight mt-0.5">{label}</div>
+      <div className="text-[12px] uppercase tracking-wider text-muted-foreground font-semibold leading-tight mt-0.5">{label}</div>
     </div>
   );
 }
 
 function AlertRow({ item, onOpen, focused = false }: { item: AlertItem; onOpen: () => void; focused?: boolean }) {
-  const toneCls =
-    item.type === "stale_open" ? "bg-rose-500/10 text-rose-700 border-rose-500/30"
-    : item.type === "long_open" || item.type === "very_long" ? "bg-amber-500/10 text-amber-700 border-amber-500/30"
-    : item.type === "needs_review" ? "bg-violet-500/10 text-violet-700 border-violet-500/30"
-    : "bg-sky-500/10 text-sky-700 border-sky-500/30";
+  const statusKey =
+    item.type === "stale_open" ? "expired"
+    : item.type === "long_open" || item.type === "very_long" ? "late"
+    : item.type === "needs_review" ? "needs_review" : "missing";
   const label =
     item.type === "stale_open" ? "Vencido" :
     item.type === "long_open" ? "Largo" :
@@ -644,22 +653,25 @@ function AlertRow({ item, onOpen, focused = false }: { item: AlertItem; onOpen: 
   return (
     <li
       data-entry-id={item.entry.id}
+      role="button"
+      tabIndex={0}
+      aria-label={`${item.employee.first_name} ${item.employee.last_name} — ${label}. Ver detalle`}
       className={cn(
-        "flex items-center gap-3 px-3.5 py-2.5 active:bg-muted/40 cursor-pointer",
+        "flex items-center gap-3 px-3.5 py-2.5 min-h-[56px] active:bg-muted/40 cursor-pointer",
+        FOCUS_RING,
         focused && "bg-primary/5 border-l-2 border-primary scroll-mt-24",
       )}
       onClick={onOpen}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(); } }}
     >
       <EmployeeAvatar avatarUrl={item.employee.avatar_url} firstName={item.employee.first_name} lastName={item.employee.last_name} size="sm" />
       <div className="min-w-0 flex-1">
-        <div className="text-sm font-semibold truncate">{item.employee.first_name} {item.employee.last_name}</div>
-        <div className="text-[11px] text-muted-foreground truncate">{item.reason}</div>
+        <div className={cn(MT.body, "font-semibold truncate")}>{item.employee.first_name} {item.employee.last_name}</div>
+        <div className="text-[12px] text-muted-foreground truncate">{item.reason}</div>
       </div>
-      {focused && (
-        <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-wider bg-primary/10 text-primary border-primary/40">foco</Badge>
-      )}
-      <Badge variant="outline" className={cn("text-[10px] font-semibold uppercase tracking-wider", toneCls)}>{label}</Badge>
-      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+      {focused && <StatusBadge status="informational" label="Foco" size="sm" />}
+      <StatusBadge status={statusKey} label={label} size="sm" />
+      <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden="true" />
     </li>
   );
 }
@@ -683,19 +695,14 @@ function AlertDetailSheet({ item, onClose, onOpenWorker, onReviewInTime }: {
   const waPhone = phoneRaw.replace(/^\+/, "");
   const isCritical = item?.type === "stale_open" || item?.type === "very_long";
   const severityLabel = isCritical ? "Crítico" : "Revisión requerida";
-  const severityCls = isCritical
-    ? "bg-destructive/15 text-destructive border-destructive/30"
-    : "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30";
   return (
     <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
       <SheetContent side="bottom" className="rounded-t-3xl p-0 max-h-[92vh] flex flex-col">
         <SheetHeader className="px-5 pt-5 pb-3 text-left border-b border-border/50">
           <div className="flex items-center gap-2 mb-1.5">
-            <Badge variant="outline" className={cn("text-[10px] font-bold uppercase tracking-wider px-2 py-0.5", severityCls)}>
-              <AlertTriangle className="h-3 w-3 mr-1" /> {severityLabel}
-            </Badge>
+            <StatusBadge status={isCritical ? "blocked" : "needs_review"} label={severityLabel} size="md" />
             {item && !item.entry.clock_out && (
-              <span className="inline-flex items-center gap-1 text-[10px] font-medium text-muted-foreground">
+              <span className="inline-flex items-center gap-1 text-[12px] font-medium text-muted-foreground">
                 <span className="h-1.5 w-1.5 rounded-full bg-destructive animate-pulse" />
                 En vivo
               </span>
@@ -713,9 +720,9 @@ function AlertDetailSheet({ item, onClose, onOpenWorker, onReviewInTime }: {
                 <div className="text-sm font-semibold truncate">{item.employee.first_name} {item.employee.last_name}</div>
                 <div className="flex items-center gap-2 mt-0.5">
                   {item.employee.employer_identification != null && (
-                    <span className="text-[11px] font-mono text-muted-foreground">#{item.employee.employer_identification}</span>
+                    <span className="text-[12px] font-mono text-muted-foreground">#{item.employee.employer_identification}</span>
                   )}
-                  <span className="text-[11px] text-muted-foreground truncate">{item.reason}</span>
+                  <span className="text-[12px] text-muted-foreground truncate">{item.reason}</span>
                 </div>
               </div>
             </div>
@@ -724,7 +731,7 @@ function AlertDetailSheet({ item, onClose, onOpenWorker, onReviewInTime }: {
               "rounded-2xl border p-4 text-center",
               isCritical ? "border-destructive/30 bg-destructive/5" : "border-amber-500/30 bg-amber-500/5"
             )}>
-              <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold flex items-center justify-center gap-1">
+              <div className="text-[12px] uppercase tracking-wider text-muted-foreground font-semibold flex items-center justify-center gap-1">
                 <Clock className="h-3 w-3" /> Tiempo transcurrido
               </div>
               <div className={cn(
@@ -733,18 +740,18 @@ function AlertDetailSheet({ item, onClose, onOpenWorker, onReviewInTime }: {
               )}>
                 {formatDuration(item.minutes)}
               </div>
-              <div className="text-[11px] text-muted-foreground mt-1">
+              <div className="text-[12px] text-muted-foreground mt-1">
                 desde {format(new Date(item.entry.clock_in), "PPp", { locale: enUS })}
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-2">
               <div className="rounded-xl border border-border bg-card px-3 py-2">
-                <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Estado</div>
-                <div className="text-sm font-semibold">{item.entry.clock_out ? "Cerrado" : "Abierto"}</div>
+                <div className="text-[12px] uppercase tracking-wider text-muted-foreground">Estado</div>
+                <div className="mt-0.5"><StatusBadge status={item.entry.clock_out ? "closed" : "active"} label={item.entry.clock_out ? "Cerrado" : "Abierto"} size="sm" /></div>
               </div>
               <div className="rounded-xl border border-border bg-card px-3 py-2 min-w-0">
-                <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Turno</div>
+                <div className="text-[12px] uppercase tracking-wider text-muted-foreground">Turno</div>
                 <div className="text-sm font-semibold truncate">{item.entry.scheduled_shifts?.title ?? "Sin turno"}</div>
               </div>
             </div>
@@ -781,7 +788,7 @@ function AlertDetailSheet({ item, onClose, onOpenWorker, onReviewInTime }: {
           <div className="border-t border-border/50 bg-background/95 backdrop-blur-md px-5 py-3 space-y-2 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
             <div className="grid grid-cols-2 gap-2">
               {phoneRaw ? (
-                <a href={`tel:${phoneRaw}`} onClick={() => setTimeout(onClose, 50)} className="inline-flex items-center justify-center gap-1.5 h-11 rounded-xl bg-primary/10 text-primary text-sm font-semibold active:scale-[0.98]">
+                <a href={`tel:${phoneRaw}`} onClick={() => setTimeout(onClose, 50)} className={cn("inline-flex items-center justify-center gap-1.5 h-11 rounded-xl bg-primary/10 text-primary text-sm font-semibold active:scale-[0.98]", FOCUS_RING)}>
                   <Phone className="h-4 w-4" /> Llamar
                 </a>
               ) : (
@@ -790,7 +797,7 @@ function AlertDetailSheet({ item, onClose, onOpenWorker, onReviewInTime }: {
                 </span>
               )}
               {waPhone ? (
-                <a href={`https://wa.me/${waPhone}`} target="_blank" rel="noopener noreferrer" onClick={() => setTimeout(onClose, 50)} className="inline-flex items-center justify-center gap-1.5 h-11 rounded-xl bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-sm font-semibold active:scale-[0.98]">
+                <a href={`https://wa.me/${waPhone}`} target="_blank" rel="noopener noreferrer" onClick={() => setTimeout(onClose, 50)} className={cn("inline-flex items-center justify-center gap-1.5 h-11 rounded-xl bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-sm font-semibold active:scale-[0.98]", FOCUS_RING)}>
                   <MessageCircle className="h-4 w-4" /> WhatsApp
                 </a>
               ) : (
@@ -805,9 +812,12 @@ function AlertDetailSheet({ item, onClose, onOpenWorker, onReviewInTime }: {
             <button
               type="button"
               onClick={() => onOpenWorker(item.employee.id)}
-              className="w-full h-9 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-muted/50 inline-flex items-center justify-center gap-1.5 transition"
+              className={cn(
+                "w-full min-h-[44px] rounded-lg text-[12px] text-muted-foreground hover:text-foreground hover:bg-muted/50 inline-flex items-center justify-center gap-1.5 transition",
+                FOCUS_RING,
+              )}
             >
-              <Users className="h-3.5 w-3.5" /> Ver perfil del worker
+              <Users className="h-3.5 w-3.5" aria-hidden="true" /> Ver perfil del worker
             </button>
           </div>
         )}

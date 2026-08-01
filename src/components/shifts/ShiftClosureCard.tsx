@@ -11,6 +11,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { MT, FOCUS_RING } from "@/lib/mobile/mobile-scale";
 import { getShiftCloseout, type ShiftCloseout } from "@/lib/shifts/closeout";
 import {
   closeShift, evaluateShiftClosure, isShiftClosed, type ClosureReadiness,
@@ -132,9 +133,9 @@ export function ShiftClosureCard({
   if (loadError) {
     return (
       <div className={cn("rounded-2xl border border-destructive/25 bg-destructive/[0.04] p-4", className)}>
-        <p className="text-sm font-medium text-destructive">No pudimos evaluar el cierre de este turno.</p>
-        <Button variant="outline" size="sm" onClick={load} className="mt-2 min-h-[44px]">
-          <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Reintentar
+        <p className={cn(MT.bodyStrong, "text-destructive")}>No pudimos evaluar el cierre de este turno.</p>
+        <Button variant="outline" onClick={load} className={cn("mt-2 min-h-[44px]", MT.body)}>
+          <RefreshCw className="h-4 w-4 mr-1.5" /> Reintentar
         </Button>
       </div>
     );
@@ -142,9 +143,12 @@ export function ShiftClosureCard({
 
   if (!readiness) {
     return (
-      <div className={cn("rounded-2xl border border-border/50 bg-card p-4 flex items-center gap-2", className)}>
+      <div
+        className={cn("rounded-2xl border border-border/50 bg-card p-4 flex items-center gap-2", className)}
+        aria-busy="true"
+      >
         <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-        <span className="text-sm text-muted-foreground">Evaluando cierre del turno…</span>
+        <span className={cn(MT.body, "text-muted-foreground")}>Evaluando cierre del turno…</span>
       </div>
     );
   }
@@ -156,17 +160,21 @@ export function ShiftClosureCard({
       <div className={cn("rounded-2xl border border-earning/25 bg-earning/[0.05] p-4", className)}>
         <div className="flex items-center gap-2">
           <CheckCircle2 className="h-4 w-4 text-earning" />
-          <h2 className="text-sm font-bold">Turno cerrado</h2>
+          <h2 className={MT.title}>Turno cerrado</h2>
         </div>
-        <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
+        <p className={cn(MT.body, "text-muted-foreground mt-1.5 leading-relaxed")}>
           Turno cerrado por {closedByName ?? "un administrador"}
           {when ? ` a las ${when.toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" })} del ${when.toLocaleDateString("es")}` : ""}.
         </p>
         <Link
           to={`/app/payroll-review-queue?shiftId=${encodeURIComponent(shiftId)}`}
-          className="inline-flex items-center gap-1.5 mt-2.5 min-h-[44px] text-xs font-semibold text-primary"
+          className={cn(
+            "inline-flex items-center gap-1.5 mt-2.5 min-h-[44px] font-semibold text-primary rounded-lg",
+            MT.body,
+            FOCUS_RING,
+          )}
         >
-          <ClipboardCheck className="h-3.5 w-3.5" /> Ver en Centro de Validación
+          <ClipboardCheck className="h-4 w-4" /> Ver en Centro de Validación
         </Link>
       </div>
     );
@@ -177,10 +185,10 @@ export function ShiftClosureCard({
       <div className={cn("rounded-2xl border border-primary/25 bg-primary/[0.04] p-4 space-y-3", className)}>
         <div className="flex items-center gap-2">
           <ClipboardCheck className="h-4 w-4 text-primary" />
-          <h2 className="text-sm font-bold">Cierre del turno</h2>
+          <h2 className={MT.title}>Cierre del turno</h2>
         </div>
 
-        <ul className="space-y-1.5">
+        <ul className="space-y-2">
           {readiness.items.map((item) => {
             const Icon = item.kind === "blocker" ? AlertTriangle : item.kind === "warning" ? Info : CheckCircle2;
             const tone =
@@ -189,16 +197,20 @@ export function ShiftClosureCard({
                   : "text-earning";
             return (
               <li key={item.id} className="flex items-start gap-2">
-                <Icon className={cn("h-3.5 w-3.5 mt-0.5 shrink-0", tone)} />
+                <Icon className={cn("h-4 w-4 mt-0.5 shrink-0", tone)} />
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs font-semibold leading-snug">{item.label}</p>
+                  <p className={cn(MT.bodyStrong, "leading-snug")}>{item.label}</p>
                   {item.detail && (
-                    <p className="text-[11px] text-muted-foreground leading-snug mt-0.5">{item.detail}</p>
+                    <p className={cn(MT.caption, "text-muted-foreground leading-snug mt-0.5")}>{item.detail}</p>
                   )}
                   {item.action && (
                     <Link
                       to={item.action.to}
-                      className="inline-flex items-center min-h-[44px] text-[11px] font-semibold text-primary"
+                      className={cn(
+                        "inline-flex items-center min-h-[44px] font-semibold text-primary rounded-lg",
+                        MT.body,
+                        FOCUS_RING,
+                      )}
                     >
                       {item.action.label} →
                     </Link>
@@ -212,15 +224,16 @@ export function ShiftClosureCard({
         <Button
           onClick={() => setDialogOpen(true)}
           disabled={submitting || !readiness.canClose && readiness.blockers.some(b => b.id === "not-ended")}
-          className="w-full min-h-[44px]"
+          className={cn("w-full min-h-[48px]", MT.bodyStrong)}
         >
           {readiness.blockers.some(b => b.id === "not-ended") && <Lock className="h-4 w-4 mr-1.5" />}
           {readiness.ctaLabel}
         </Button>
-        <p className="text-[11px] text-muted-foreground leading-relaxed">
+        <p className={cn(MT.caption, "text-muted-foreground leading-relaxed")}>
           Cerrar el turno no calcula ni modifica payroll. Payroll sigue usando las horas reales de fichaje.
         </p>
       </div>
+
 
       <Dialog open={dialogOpen} onOpenChange={(o) => !submitting && setDialogOpen(o)}>
         <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">

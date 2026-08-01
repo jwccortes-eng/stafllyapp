@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog";
 import { NavItem } from "./nav-items";
 import { useT } from "@/i18n";
+import { MT, MT_EYEBROW, FOCUS_RING } from "@/lib/mobile/mobile-scale";
+import { FAMILY_CLASSES } from "@/lib/status/status-registry";
 
 /**
  * MoreSheet — Premium grouped bottom sheet for the admin mobile shell.
@@ -135,15 +137,16 @@ export function MoreSheet({
 
         <SheetHeader className="px-5 pt-2 pb-3 flex-row items-center justify-between space-y-0 shrink-0">
           <div className="text-left">
-            <SheetTitle className="text-base font-bold font-heading text-foreground">{t("launcher.title")}</SheetTitle>
-            <p className="text-[11px] text-muted-foreground mt-0.5">
+            <SheetTitle className={cn(MT.section, "font-heading text-foreground")}>{t("launcher.title")}</SheetTitle>
+            <p className={cn(MT.caption, "text-muted-foreground mt-0.5")}>
               {t("launcher.pin_hint")} ({pinnedIds.length}/{maxPins})
             </p>
           </div>
-          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl" onClick={onClose} aria-label={t("common.close")}>
-            <X className="h-4 w-4" />
+          <Button variant="ghost" size="icon" className="h-11 w-11 rounded-xl" onClick={onClose} aria-label={t("common.close")}>
+            <X className="h-5 w-5" />
           </Button>
         </SheetHeader>
+
 
         <div className="flex-1 overflow-y-auto px-5 pb-6 space-y-6">
           {/* Pinned shortcuts */}
@@ -189,32 +192,44 @@ export function MoreSheet({
               <Monitor className="h-4 w-4 text-muted-foreground" />
             </div>
             <div className="min-w-0">
-              <p className="text-[13px] font-semibold text-foreground leading-tight">
+              <p className={cn(MT.bodyStrong, "text-foreground leading-tight")}>
                 {t("launcher.more_desktop_tools.title")}
               </p>
-              <p className="text-[11px] text-muted-foreground mt-1 leading-snug">
+              <p className={cn(MT.body, "text-muted-foreground mt-1 leading-snug")}>
                 {t("launcher.more_desktop_tools.subtitle")}
               </p>
+
             </div>
           </div>
         </div>
 
         {/* Footer actions */}
-        <div className="flex items-center justify-between px-5 py-3 border-t border-border/30 shrink-0 pb-[max(env(safe-area-inset-bottom,12px),12px)]">
+        <div className="flex items-center justify-between gap-2 px-5 py-2 border-t border-border/30 shrink-0 pb-[max(env(safe-area-inset-bottom,12px),12px)]">
           <button
+            type="button"
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-1.5 rounded-lg hover:bg-muted/30"
+            className={cn(
+              "flex items-center gap-2 min-h-[44px] px-3 rounded-xl transition-colors text-muted-foreground hover:text-foreground hover:bg-muted/30",
+              MT.body, FOCUS_RING,
+            )}
           >
-            {theme === "dark" ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
+            {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             {theme === "dark" ? t("launcher.theme.light") : t("launcher.theme.dark")}
           </button>
           <LogoutConfirmDialog onConfirm={() => { onSignOut(); onClose(); }}>
-            <button className="flex items-center gap-2 text-xs text-destructive/70 hover:text-destructive transition-colors px-2 py-1.5 rounded-lg hover:bg-destructive/[0.08]">
-              <LogOut className="h-3.5 w-3.5" />
+            <button
+              type="button"
+              className={cn(
+                "flex items-center gap-2 min-h-[44px] px-3 rounded-xl transition-colors text-destructive hover:bg-destructive/[0.08]",
+                MT.body, FOCUS_RING,
+              )}
+            >
+              <LogOut className="h-4 w-4" />
               {t("launcher.sign_out")}
             </button>
           </LogoutConfirmDialog>
         </div>
+
       </SheetContent>
     </Sheet>
   );
@@ -236,10 +251,10 @@ function SectionGrid({
 }: SectionGridProps) {
   return (
     <div>
-      <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-2">
+      <p className={cn(MT_EYEBROW, "text-muted-foreground mb-2")}>
         {label}
       </p>
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-3 gap-2">
         {items.map(item => {
           const active = isActive(item);
           const isPinned = pinnedIds.includes(item.id);
@@ -247,12 +262,13 @@ function SectionGrid({
           const count = item.badge ? badgeCounts[item.badge] ?? 0 : 0;
 
           return (
-            <div key={item.id} className="relative group">
+            <div key={item.id} className="relative">
               <NavLink
                 to={item.to}
                 onClick={onClose}
                 className={cn(
-                  "flex flex-col items-center gap-1.5 py-3 px-1 rounded-xl transition-all duration-200 active:scale-95",
+                  "flex flex-col items-center gap-1.5 py-3 px-2 min-h-[92px] rounded-xl transition-all duration-200 active:scale-95",
+                  FOCUS_RING,
                   active ? "bg-primary/10 text-primary" : "text-foreground hover:bg-muted"
                 )}
               >
@@ -264,33 +280,42 @@ function SectionGrid({
                   {count > 0 && (
                     <Badge
                       variant="secondary"
-                      className="absolute -top-1.5 -right-1.5 h-4 min-w-4 px-1 text-[9px] font-semibold leading-none flex items-center justify-center rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/20"
+                      className={cn(
+                        "absolute -top-1.5 -right-1.5 h-5 min-w-5 px-1 text-[12px] font-semibold leading-none flex items-center justify-center rounded-full border",
+                        FAMILY_CLASSES.warning,
+                      )}
                     >
                       {count > 9 ? "9+" : count}
                     </Badge>
                   )}
                 </div>
                 <span className={cn(
-                  "text-[10px] font-medium leading-tight text-center truncate w-full",
-                  active && "font-bold"
+                  MT.label,
+                  "leading-tight text-center line-clamp-2 w-full",
+                  active && "font-semibold"
                 )}>
                   {item.label}
                 </span>
               </NavLink>
 
               <button
+                type="button"
                 onClick={(e) => { e.stopPropagation(); if (canPin) onTogglePin(item.id); }}
+                disabled={!canPin}
                 className={cn(
-                  "absolute top-1 right-1 h-5 w-5 rounded-full flex items-center justify-center transition-all",
-                  isPinned
-                    ? "bg-primary text-primary-foreground opacity-100"
-                    : canPin
-                    ? "bg-muted/60 text-muted-foreground opacity-0 group-hover:opacity-100"
-                    : "bg-muted/30 text-muted-foreground/30 cursor-not-allowed opacity-0"
+                  "absolute -top-1 -right-1 h-11 w-11 rounded-full flex items-center justify-center transition-all",
+                  FOCUS_RING,
+                  canPin ? "text-muted-foreground" : "text-muted-foreground/30 cursor-not-allowed",
                 )}
-                aria-label={isPinned ? "Unpin" : "Pin"}
+                aria-label={isPinned ? `Quitar ${item.label} de los fijados` : `Fijar ${item.label}`}
+                aria-pressed={isPinned}
               >
-                <Pin className="h-2.5 w-2.5" />
+                <span className={cn(
+                  "h-6 w-6 rounded-full flex items-center justify-center",
+                  isPinned ? "bg-primary text-primary-foreground" : "bg-muted/70",
+                )}>
+                  <Pin className="h-3 w-3" />
+                </span>
               </button>
             </div>
           );
@@ -299,3 +324,4 @@ function SectionGrid({
     </div>
   );
 }
+

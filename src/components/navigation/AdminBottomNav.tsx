@@ -2,6 +2,7 @@ import { NavLink, useLocation } from "react-router-dom";
 import { LayoutDashboard, CalendarDays, Clock, Users, MoreHorizontal, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useT } from "@/i18n";
+import { FOCUS_RING } from "@/lib/mobile/mobile-scale";
 
 /**
  * Admin Bottom Nav — Premium 5-tab pattern (Phase A).
@@ -66,27 +67,32 @@ export function AdminBottomNav({ onOpenMore, moreOpen = false }: AdminBottomNavP
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 px-3 pb-[max(env(safe-area-inset-bottom,8px),8px)] pt-2">
       <div className="mx-auto max-w-md bg-card/95 backdrop-blur-2xl border border-border/30 rounded-[20px] shadow-[0_-4px_24px_-10px_rgba(0,0,0,0.1)]">
-        <div className="flex items-center justify-around h-[54px] px-1">
+        <div className="flex items-center justify-around h-[60px] px-1">
           {TABS.map(tab => {
             const active = isTabActive(tab);
             const inner = (
               <>
                 <div className={cn(
                   "flex items-center justify-center transition-all duration-200",
-                  active ? "text-primary" : "text-muted-foreground/55"
+                  active ? "text-primary" : "text-muted-foreground/70"
                 )}>
-                  <tab.icon className="h-[19px] w-[19px]" strokeWidth={active ? 2.5 : 1.75} />
+                  <tab.icon className="h-[21px] w-[21px]" strokeWidth={active ? 2.5 : 1.9} />
                 </div>
                 <span className={cn(
-                  "text-[9.5px] leading-none transition-colors mt-1",
-                  active ? "text-primary font-bold" : "text-muted-foreground/60 font-semibold"
+                  "text-[12px] leading-none transition-colors mt-1",
+                  active ? "text-primary font-bold" : "text-muted-foreground font-medium"
                 )}>
                   {t(tab.labelKey)}
                 </span>
               </>
             );
 
-            const baseClass = "relative flex flex-col items-center justify-center flex-1 h-full active:scale-[0.92] transition-transform duration-150";
+            const baseClass = cn(
+              "relative flex flex-col items-center justify-center flex-1 h-full min-h-[44px] rounded-2xl",
+              "active:scale-[0.92] transition-transform duration-150",
+              FOCUS_RING,
+            );
+
             const indicator = active && <span className="absolute top-0 h-0.5 w-7 rounded-full bg-primary" />;
 
             if (tab.id === "more") {
