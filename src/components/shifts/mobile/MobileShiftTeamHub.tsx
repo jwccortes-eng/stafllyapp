@@ -43,6 +43,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { formatShiftCode, type Shift, type Employee } from "@/components/shifts/types";
+import { AssignWorkerCard } from "@/components/shifts/assign/AssignWorkerCard";
 import { FAMILY_CLASSES } from "@/lib/status/status-registry";
 import { MT } from "@/lib/mobile/mobile-scale";
 import { supabase } from "@/integrations/supabase/client";
