@@ -397,7 +397,12 @@ export function MobileQuickCreateShiftSheet({
       const person = employees.find(x => x.id === employeeId);
       const name = person ? fullName(person) : "Trabajador";
       try {
-        await assignWorkerToShift({ shiftId, employeeId, source: "mobile_create_shift" });
+        await assignWorkerToShift({
+          shiftId,
+          employeeId,
+          assignmentRole: assignmentRoleFor(driverPlan, employeeId),
+          source: "mobile_create_shift",
+        });
         out.push(buildAssignOutcome(employeeId, name, null));
       } catch (e) {
         out.push(buildAssignOutcome(employeeId, name, e));
@@ -437,6 +442,10 @@ export function MobileQuickCreateShiftSheet({
           published_at: new Date().toISOString(),
           published_by: user?.id ?? null,
           claimable: false,
+          // Transporte: driver_employee_id es sólo el driver PRINCIPAL (legado).
+          // Los demás drivers viven en shift_assignments con role='driver'.
+          transportation_required: driverPlan.transportRequired,
+          driver_employee_id: primaryDriverId(driverPlan),
         };
 
         const { data, error } = await supabase
