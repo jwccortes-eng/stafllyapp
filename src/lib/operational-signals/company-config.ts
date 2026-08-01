@@ -6,7 +6,7 @@
  * and cached in memory per company. The kill switch always wins.
  */
 import { supabase } from "@/integrations/supabase/client";
-import { isKillSwitchEngaged } from "./flags";
+import { isKillSwitchEngaged, isLocalPersistencePaused } from "./flags";
 
 export interface ShadowCompanyConfig {
   companyId: string;
