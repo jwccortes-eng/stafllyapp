@@ -18,6 +18,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useCompany } from "@/hooks/useCompany";
 import { useTodayOperations } from "@/hooks/useTodayOperations";
+import { useTodayHubPermissions } from "@/hooks/useTodayHubPermissions";
+
 import { supabase } from "@/integrations/supabase/client";
 import { notifyError } from "@/lib/feedback/notify";
 import {
@@ -183,8 +185,16 @@ function DecisionEntry({ item, go }: { item: HubDecisionItem; go: (href: string)
       subtitle={item.subtitle}
       status={item.status}
       evidence={item.evidence}
-      consequence={item.consequence}
-      decision={{ label: item.decision.label, onClick: () => go(item.decision.href) }}
+      consequence={
+        item.decision
+          ? item.consequence
+          : `${item.consequence} No tienes permiso para decidir sobre este ítem.`
+      }
+      decision={
+        item.decision
+          ? { label: item.decision.label, onClick: () => go(item.decision!.href) }
+          : undefined
+      }
       alternatives={item.alternatives.map((a) => ({
         label: a.label,
         onClick: () => go(a.href),
@@ -192,6 +202,7 @@ function DecisionEntry({ item, go }: { item: HubDecisionItem; go: (href: string)
     />
   );
 }
+
 
 /* ── Vista ───────────────────────────────────────────────────────────── */
 
@@ -204,17 +215,36 @@ export default function TodayHubView() {
     selectedCompanyId ?? null,
     today,
   );
+  const {
+    permissions,
+    resolved: permsResolved,
+    loading: permsLoading,
+    reason: permsReason,
+  } = useTodayHubPermissions();
   const { counts, error: countsError, refresh: refreshCounts } = useHubCounts(
     selectedCompanyId ?? null,
   );
 
+  /* OX-4.3.1 — feedback OX-1 cuando el resolver falla (no cuando carga). */
+  useEffect(() => {
+    if (permsReason === "resolver_error" || permsReason === "role_unresolved_for_tenant") {
+      notifyError({
+        title: "Permisos no verificados",
+        fact: "No pudimos confirmar tus permisos en esta compañía.",
+        consequence: "Las acciones que modifican la operación quedan ocultas.",
+        key: `today-hub-perms:${permsReason}`,
+      });
+    }
+  }, [permsReason]);
+
   const model = useMemo(
-    () => buildTodayHubModel({ shifts: shifts as any, counts }),
-    [shifts, counts],
+    () => buildTodayHubModel({ shifts: shifts as any, counts, permissions }),
+    [shifts, counts, permissions],
   );
 
   const go = (href: string) => navigate(href);
   const retryAll = () => { refresh(); refreshCounts(); };
+
 
   if (loading && shifts.length === 0) {
     return (
@@ -335,7 +365,12 @@ export default function TodayHubView() {
             slots={op.required}
             need={op.need}
             note={op.note}
-            action={{ label: op.action.label, onClick: () => go(op.action.href) }}
+            action={
+              op.action
+                ? { label: op.action.label, onClick: () => go(op.action!.href) }
+                : undefined
+            }
+
             actions={op.secondary.map((s) => ({
               label: s.label,
               onClick: () => go(s.href),
@@ -360,12 +395,17 @@ export default function TodayHubView() {
         <TeamCard
           key={t.shiftId}
           title={t.title}
-          subtitle={t.subtitle}
+          subtitle={t.attendanceLabel ? `${t.subtitle} · ${t.attendanceLabel}` : t.subtitle}
           assigned={t.assigned}
           slots={t.required}
           confirmed={t.confirmed}
           present={t.present}
-          action={{ label: t.action.label, onClick: () => go(t.action.href) }}
+          action={
+            t.action
+              ? { label: t.action.label, onClick: () => go(t.action!.href) }
+              : undefined
+          }
+
         />
       ))}
     </Section>
@@ -431,9 +471,37 @@ export default function TodayHubView() {
     />
   );
 
+  /* OX-4.3.1 — banner fail-closed cuando los permisos no están verificados. */
+  const permissionsBanner = !permsResolved && (
+    <OperationalCard
+      status={permsLoading ? "informational" : "warning"}
+      statusLabel={permsLoading ? "Verificando permisos" : "Permisos no verificados"}
+      leading={
+        <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-status-warning-bg text-status-warning">
+          <AlertTriangle className="h-4 w-4" />
+        </span>
+      }
+      title={
+        permsLoading
+          ? "Comprobando qué puedes hacer aquí"
+          : "No pudimos confirmar tus permisos"
+      }
+      primary={
+        <p className={cn(MT.body)}>
+          {permsLoading
+            ? "Mientras tanto sólo se muestra información: las acciones que cambian la operación están ocultas."
+            : "Para evitar acciones no autorizadas, esta vista queda en modo lectura."}
+        </p>
+      }
+      secondary="La información mostrada corresponde únicamente a la compañía seleccionada."
+    />
+  );
+
+
   if (isMobile) {
     return (
       <div className="space-y-5 px-3 pb-[calc(env(safe-area-inset-bottom)+84px)] pt-1">
+        {permissionsBanner}
         {countsBanner}
         {attentionBlock}
         {operationsBlock}
@@ -461,6 +529,7 @@ export default function TodayHubView() {
   return (
     <div className="grid grid-cols-1 gap-5 px-6 pb-8 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
       <div className="space-y-6">
+        {permissionsBanner}
         {countsBanner}
         {attentionBlock}
         {operationsBlock}

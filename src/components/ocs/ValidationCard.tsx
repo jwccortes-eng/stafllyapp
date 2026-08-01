@@ -31,7 +31,7 @@ export interface ValidationCardProps {
   /** Consecuencia de aprobar o rechazar. Obligatoria para decidir informado. */
   consequence: string;
   /** Decisión afirmativa. Obligatoria. */
-  decision: OcsAction;
+  decision?: OcsAction;
   /** Decisiones alternativas (rechazar, ajustar, escalar). */
   alternatives?: OcsAction[];
   onClick?: () => void;

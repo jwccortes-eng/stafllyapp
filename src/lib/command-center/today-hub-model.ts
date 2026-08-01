@@ -16,6 +16,8 @@
 
 /* ── Entradas ────────────────────────────────────────────────────────── */
 
+import { readAttendance } from "./attendance-semantics";
+
 export interface HubShiftOpsLike {
   bucket: string;
   alert_level?: string;
@@ -25,8 +27,12 @@ export interface HubShiftOpsLike {
   clocked_in: number;
   open_clocks: number;
   missing_clock_outs: number;
+  /** Sin fichaje de entrada. NO equivale a no-show (OX-4.3.1). */
   not_started: number;
+  /** Evidencia explícita de no-show. Hoy no la produce ninguna fuente. */
+  confirmed_no_shows?: number | null;
 }
+
 
 export interface HubShiftLike {
   id: string;
@@ -61,12 +67,74 @@ export interface HubCounts {
 
 export type HubRole = "manager" | "dispatcher" | "captain" | "payroll";
 
+/**
+ * OX-4.3.1 — Capacidades explícitas del Today Hub.
+ * Default fail-closed: si una capacidad no viene, es `false`.
+ */
 export interface HubPermissions {
+  /** Completar equipo / asignar workers. */
   canAssign?: boolean;
+  /** Confirmar equipo (contactar / confirmar asistencia comprometida). */
+  canConfirmTeam?: boolean;
+  /** Operar turno (Shift Ops). */
   canOperate?: boolean;
+  /** Cerrar turno. */
   canClose?: boolean;
+  /** Revisar cierre operacional. */
+  canReviewCloseout?: boolean;
+  /** Aprobar horas antes de payroll. */
   canApproveHours?: boolean;
+  /** Acceder al Centro de Validación. */
+  canAccessValidations?: boolean;
+  /** Gestionar workers (documentos, elegibilidad). */
+  canManageWorkers?: boolean;
+  /** Gestionar asistencia / fichajes. */
+  canManageAttendance?: boolean;
 }
+
+export type ResolvedHubPermissions = Required<HubPermissions>;
+
+/** Fail-closed: ninguna acción privilegiada disponible. */
+export const NO_HUB_PERMISSIONS: ResolvedHubPermissions = {
+  canAssign: false,
+  canConfirmTeam: false,
+  canOperate: false,
+  canClose: false,
+  canReviewCloseout: false,
+  canApproveHours: false,
+  canAccessValidations: false,
+  canManageWorkers: false,
+  canManageAttendance: false,
+};
+
+/** Sólo para tests / superficies con permisos ya validados. */
+export const FULL_HUB_PERMISSIONS: ResolvedHubPermissions = {
+  canAssign: true,
+  canConfirmTeam: true,
+  canOperate: true,
+  canClose: true,
+  canReviewCloseout: true,
+  canApproveHours: true,
+  canAccessValidations: true,
+  canManageWorkers: true,
+  canManageAttendance: true,
+};
+
+function resolvePermissions(p: HubPermissions | undefined): ResolvedHubPermissions {
+  // Fail-closed por diseño: ausente/undefined ⇒ sin acceso.
+  return {
+    canAssign: p?.canAssign === true,
+    canConfirmTeam: p?.canConfirmTeam === true,
+    canOperate: p?.canOperate === true,
+    canClose: p?.canClose === true,
+    canReviewCloseout: p?.canReviewCloseout === true,
+    canApproveHours: p?.canApproveHours === true,
+    canAccessValidations: p?.canAccessValidations === true,
+    canManageWorkers: p?.canManageWorkers === true,
+    canManageAttendance: p?.canManageAttendance === true,
+  };
+}
+
 
 export interface TodayHubInput {
   shifts: HubShiftLike[];
@@ -125,7 +193,8 @@ export interface HubOperation {
   need: string;
   note?: string;
   priority: HubPriority;
-  action: HubLink;
+  /** Ausente ⇒ el usuario no tiene permiso para actuar (fail-closed). */
+  action?: HubLink;
   secondary: HubLink[];
 }
 
@@ -138,7 +207,9 @@ export interface HubTeamSummary {
   confirmed: number;
   present: number;
   priority: HubPriority;
-  action: HubLink;
+  /** Lectura de asistencia (OX-4.3.1): nunca asume no-show. */
+  attendanceLabel?: string;
+  action?: HubLink;
 }
 
 export interface HubDecisionItem {
@@ -149,10 +220,11 @@ export interface HubDecisionItem {
   status: string;
   evidence: Array<{ label: string; value: string; attention?: boolean }>;
   consequence: string;
-  decision: HubLink;
+  decision?: HubLink;
   alternatives: HubLink[];
   priority: HubPriority;
 }
+
 
 export interface HubEmptyState {
   calm: boolean;
@@ -238,12 +310,8 @@ function roleBoost(role: HubRole | undefined, kind: string): number {
 export function buildTodayHubModel(input: TodayHubInput): TodayHubModel {
   const now = input.now ?? new Date();
   const role = input.role;
-  const perms: Required<HubPermissions> = {
-    canAssign: input.permissions?.canAssign ?? true,
-    canOperate: input.permissions?.canOperate ?? true,
-    canClose: input.permissions?.canClose ?? true,
-    canApproveHours: input.permissions?.canApproveHours ?? true,
-  };
+  const perms = resolvePermissions(input.permissions);
+
 
   const attention: Array<HubAttentionItem & { _boost: number }> = [];
   const operations: HubOperation[] = [];
@@ -269,25 +337,42 @@ export function buildTodayHubModel(input: TodayHubInput): TodayHubModel {
       boostKind: string,
     ) => attention.push({ ...item, _boost: roleBoost(role, boostKind) });
 
-    /* — Critical: gente sin registrar entrada en turno en curso — */
-    if (ops.bucket === "in_progress" && ops.not_started > 0) {
+    /* — Asistencia: NUNCA se asume no-show (OX-4.3.1) — */
+    const attendance = readAttendance({
+      bucket: ops.bucket,
+      assigned,
+      clockedIn: ops.clocked_in,
+      notStarted: ops.not_started,
+      minutesUntilStart: mins,
+      confirmedNoShows: ops.confirmed_no_shows ?? null,
+    });
+    if (
+      attendance &&
+      (attendance.state === "no_show_confirmed" ||
+        attendance.state === "missing_checkin" ||
+        attendance.state === "awaiting_checkin")
+    ) {
       push(
         {
-          id: `${shift.id}:no-show`,
+          id: `${shift.id}:attendance`,
           kind: "risk",
-          priority: "critical",
-          status: "no_show",
-          headline: `${ops.not_started} sin registrar entrada en ${shift.title}`,
-          because: `El turno está en curso (${range}) y ${ops.not_started} de ${assigned} asignados no tienen fichaje.`,
-          impact: "Cobertura real menor a la comprometida con el cliente.",
-          action: perms.canOperate
-            ? { label: "Operar turno", href: ROUTES.shiftOps(shift.id) }
+          priority: attendance.priority,
+          status: attendance.status,
+          headline: `${attendance.label} — ${attendance.count} en ${shift.title}`,
+          because: `${attendance.detail} Turno ${range}.`,
+          impact:
+            attendance.state === "no_show_confirmed"
+              ? "Cobertura real menor a la comprometida con el cliente."
+              : "La cobertura real aún no está confirmada en sitio.",
+          action: perms.canManageAttendance
+            ? { label: "Revisar asistencia", href: ROUTES.shiftOps(shift.id) }
             : undefined,
           shiftId: shift.id,
         },
-        "no_show",
+        attendance.state === "no_show_confirmed" ? "no_show" : "attendance",
       );
     }
+
 
     /* — Cobertura incompleta — */
     if (missing > 0 && ops.bucket !== "closed") {
@@ -322,9 +407,10 @@ export function buildTodayHubModel(input: TodayHubInput): TodayHubModel {
           headline: `${unconfirmed} sin confirmar en ${shift.title}`,
           because: `El turno ${startsInLabel(mins)} y aún no responden.`,
           impact: "Riesgo de arrancar sin equipo completo.",
-          action: perms.canOperate
+          action: perms.canConfirmTeam
             ? { label: "Contactar pendientes", href: ROUTES.shiftOps(shift.id) }
             : undefined,
+
           shiftId: shift.id,
         },
         "unconfirmed",
@@ -362,7 +448,9 @@ export function buildTodayHubModel(input: TodayHubInput): TodayHubModel {
           headline: `${ops.missing_clock_outs} fichajes sin salida en ${shift.title}`,
           because: "El turno terminó y los relojes siguen abiertos.",
           impact: "Las horas no pueden revisarse hasta cerrarlos.",
-          action: { label: "Cerrar clock-out", href: ROUTES.timeclock(shift.id) },
+          action: perms.canManageAttendance
+            ? { label: "Cerrar clock-out", href: ROUTES.timeclock(shift.id) }
+            : undefined,
           shiftId: shift.id,
         },
         "open_clock",
@@ -382,7 +470,9 @@ export function buildTodayHubModel(input: TodayHubInput): TodayHubModel {
           { label: "Solicitudes", value: String(shift.pending_claims), attention: true },
         ],
         consequence: "Aceptar una solicitud ocupa un cupo del turno.",
-        decision: { label: "Revisar solicitudes", href: ROUTES.shiftOps(shift.id) },
+        decision: perms.canAssign
+          ? { label: "Revisar solicitudes", href: ROUTES.shiftOps(shift.id) }
+          : undefined,
         alternatives: [],
         priority: missing > 0 ? "high" : "medium",
       });
@@ -409,15 +499,20 @@ export function buildTodayHubModel(input: TodayHubInput): TodayHubModel {
         ],
         consequence:
           "Revisar el cierre no modifica payroll. La validación final se hace en Centro de Validación.",
-        decision: perms.canClose
-          ? { label: "Revisar cierre", href: ROUTES.closeout }
-          : { label: "Ver detalles", href: ROUTES.shiftOps(shift.id) },
-        alternatives: perms.canApproveHours
-          ? [{ label: "Revisar horas", href: ROUTES.hours(shift.id) }]
-          : [],
+        decision:
+          perms.canReviewCloseout || perms.canClose
+            ? { label: "Revisar cierre", href: ROUTES.closeout }
+            : perms.canOperate
+              ? { label: "Ver detalles", href: ROUTES.shiftOps(shift.id) }
+              : undefined,
+        alternatives:
+          perms.canApproveHours || perms.canAccessValidations
+            ? [{ label: "Revisar horas", href: ROUTES.hours(shift.id) }]
+            : [],
         priority: ops.missing_clock_outs > 0 ? "high" : "medium",
       });
     }
+
 
     /* — Operaciones de hoy — */
     if (ops.bucket !== "closed") {
@@ -446,12 +541,29 @@ export function buildTodayHubModel(input: TodayHubInput): TodayHubModel {
             : undefined,
         priority,
         action,
-        secondary: [{ label: "Ver detalles", href: ROUTES.shiftOps(shift.id) }],
+        secondary: perms.canOperate
+          ? [{ label: "Ver detalles", href: ROUTES.shiftOps(shift.id) }]
+          : [],
       });
     }
 
     /* — Equipos en riesgo — */
     if (missing > 0 || unconfirmed > 0 || ops.not_started > 0) {
+      const teamAction: HubLink | undefined =
+        missing > 0
+          ? perms.canAssign
+            ? { label: "Completar equipo", href: ROUTES.shiftOps(shift.id) }
+            : undefined
+          : attendance &&
+              (attendance.state === "missing_checkin" ||
+                attendance.state === "no_show_confirmed" ||
+                attendance.state === "awaiting_checkin")
+            ? perms.canManageAttendance
+              ? { label: "Revisar asistencia", href: ROUTES.shiftOps(shift.id) }
+              : undefined
+            : perms.canConfirmTeam
+              ? { label: "Contactar pendientes", href: ROUTES.shiftOps(shift.id) }
+              : undefined;
       teams.push({
         shiftId: shift.id,
         title: `Equipo — ${shift.title}`,
@@ -461,19 +573,19 @@ export function buildTodayHubModel(input: TodayHubInput): TodayHubModel {
         confirmed: ops.confirmed,
         present: ops.clocked_in,
         priority: missing > 0 ? (mins <= 60 ? "critical" : "high") : "high",
-        action:
-          missing > 0
-            ? { label: "Completar equipo", href: ROUTES.shiftOps(shift.id) }
-            : ops.not_started > 0 && ops.bucket === "in_progress"
-              ? { label: "Resolver no-show", href: ROUTES.shiftOps(shift.id) }
-              : { label: "Contactar pendientes", href: ROUTES.shiftOps(shift.id) },
+        attendanceLabel: attendance?.label,
+        action: teamAction,
       });
+
     }
   }
 
   /* — Contadores globales como KPIs accionables (nunca ceros mudos) — */
   const counts = input.counts ?? {};
-  if (perms.canApproveHours && typeof counts.pendingHours === "number") {
+  if (
+    (perms.canApproveHours || perms.canAccessValidations) &&
+    typeof counts.pendingHours === "number"
+  ) {
     attention.push({
       id: "counts:hours",
       kind: "kpi",
@@ -489,13 +601,17 @@ export function buildTodayHubModel(input: TodayHubInput): TodayHubModel {
           ? `${counts.pendingHours} fichajes esperan revisión antes de payroll.`
           : "No hay horas pendientes de revisión.",
       action:
-        counts.pendingHours > 0
+        counts.pendingHours > 0 && perms.canAccessValidations
           ? { label: "Revisar horas", href: ROUTES.hours() }
           : undefined,
       _boost: roleBoost(role, "hours"),
     } as HubAttentionItem & { _boost: number });
   }
-  if (typeof counts.docsPending === "number" && counts.docsPending > 0) {
+  if (
+    perms.canManageWorkers &&
+    typeof counts.docsPending === "number" &&
+    counts.docsPending > 0
+  ) {
     attention.push({
       id: "counts:docs",
       kind: "kpi",
@@ -508,6 +624,7 @@ export function buildTodayHubModel(input: TodayHubInput): TodayHubModel {
       _boost: 0,
     } as HubAttentionItem & { _boost: number });
   }
+
 
   const attentionItems = attention
     .sort(
@@ -537,27 +654,29 @@ export function buildTodayHubModel(input: TodayHubInput): TodayHubModel {
       input.shifts.length === 0
         ? "No hay operaciones programadas para hoy. Programa un turno o revisa mañana."
         : "Los turnos de hoy están cubiertos y no hay acciones urgentes.",
-    nextShift: upcoming
-      ? {
-          shiftId: upcoming.id,
-          title: upcoming.title,
-          timeRange: timeRangeLabel(upcoming),
-          startsInLabel: startsInLabel(minutesUntilStart(upcoming, now)),
-          action: { label: "Ver turno", href: ROUTES.shiftOps(upcoming.id) },
-        }
-      : undefined,
+    nextShift:
+      upcoming && perms.canOperate
+        ? {
+            shiftId: upcoming.id,
+            title: upcoming.title,
+            timeRange: timeRangeLabel(upcoming),
+            startsInLabel: startsInLabel(minutesUntilStart(upcoming, now)),
+            action: { label: "Ver turno", href: ROUTES.shiftOps(upcoming.id) },
+          }
+        : undefined,
   };
 
   const top = attentionItems.find((i) => i.action);
   const primaryAction = top?.action
     ? { ...top.action, reason: top.headline }
-    : upcoming
+    : upcoming && perms.canOperate
       ? {
           label: "Ver próximo turno",
           href: ROUTES.shiftOps(upcoming.id),
           reason: `${upcoming.title} ${startsInLabel(minutesUntilStart(upcoming, now))}`,
         }
       : null;
+
 
   return {
     attentionItems,
@@ -575,16 +694,19 @@ function operationState(
   missing: number,
   unconfirmed: number,
   mins: number,
-  perms: Required<HubPermissions>,
+  perms: ResolvedHubPermissions,
 ): {
   status: string;
   statusLabel: string;
   need: string;
-  action: HubLink;
+  action?: HubLink;
   priority: HubPriority;
 } {
   const ops = shift.ops;
   const href = ROUTES.shiftOps(shift.id);
+  const viewLink: HubLink | undefined = perms.canOperate
+    ? { label: "Ver detalles", href }
+    : undefined;
 
   if (ops.bucket === "needs_closeout") {
     return {
@@ -594,22 +716,37 @@ function operationState(
         ops.missing_clock_outs > 0
           ? `${ops.missing_clock_outs} fichajes sin salida antes de cerrar.`
           : "El turno terminó: falta revisar el cierre.",
-      action: perms.canClose
-        ? { label: "Revisar cierre", href: ROUTES.closeout }
-        : { label: "Ver detalles", href },
+      action:
+        perms.canClose || perms.canReviewCloseout
+          ? { label: "Revisar cierre", href: ROUTES.closeout }
+          : viewLink,
       priority: "medium",
     };
   }
   if (ops.bucket === "in_progress") {
+    const attendance = readAttendance({
+      bucket: ops.bucket,
+      assigned: ops.assigned_active,
+      clockedIn: ops.clocked_in,
+      notStarted: ops.not_started,
+      minutesUntilStart: mins,
+      confirmedNoShows: ops.confirmed_no_shows ?? null,
+    });
     return {
       status: "in_progress",
       statusLabel: "En curso",
-      need:
-        ops.not_started > 0
-          ? `${ops.not_started} sin registrar entrada.`
-          : `${ops.clocked_in} de ${ops.assigned_active} en sitio.`,
-      action: { label: "Operar turno", href },
-      priority: ops.not_started > 0 ? "critical" : "medium",
+      need: attendance
+        ? attendance.detail
+        : `${ops.clocked_in} de ${ops.assigned_active} en sitio.`,
+      action: perms.canOperate
+        ? { label: "Operar turno", href }
+        : undefined,
+      priority:
+        attendance?.state === "no_show_confirmed"
+          ? "critical"
+          : attendance?.state === "missing_checkin"
+            ? "high"
+            : "medium",
     };
   }
   if (missing > 0) {
@@ -619,7 +756,7 @@ function operationState(
       need: `Cubrir ${missing} cupo(s) antes de ${hhmm(shift.start_time)}.`,
       action: perms.canAssign
         ? { label: "Completar equipo", href }
-        : { label: "Ver detalles", href },
+        : viewLink,
       priority: mins <= 60 ? "critical" : "high",
     };
   }
@@ -628,7 +765,9 @@ function operationState(
       status: "pending",
       statusLabel: `${unconfirmed} sin confirmar`,
       need: `${unconfirmed} de ${ops.assigned_active} aún no confirman.`,
-      action: { label: "Confirmar equipo", href },
+      action: perms.canConfirmTeam
+        ? { label: "Confirmar equipo", href }
+        : viewLink,
       priority: mins <= 12 * 60 ? "high" : "medium",
     };
   }
@@ -636,7 +775,8 @@ function operationState(
     status: "ready",
     statusLabel: "Equipo completo",
     need: "Sin acciones pendientes. Listo para operar.",
-    action: { label: "Operar turno", href },
+    action: perms.canOperate ? { label: "Operar turno", href } : undefined,
     priority: "low",
   };
 }
+

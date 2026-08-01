@@ -5,6 +5,8 @@ import { describe, it, expect } from "vitest";
 import {
   buildTodayHubModel,
   type HubShiftLike,
+  FULL_HUB_PERMISSIONS,
+  NO_HUB_PERMISSIONS,
 } from "@/lib/command-center/today-hub-model";
 
 const NOW = new Date("2026-08-01T10:00:00");
@@ -37,7 +39,7 @@ function shift(over: Partial<HubShiftLike> & { id: string }): HubShiftLike {
 
 describe("buildTodayHubModel", () => {
   it("marca cobertura incompleta próxima a iniciar como critical y primero", () => {
-    const m = buildTodayHubModel({
+    const m = buildTodayHubModel({ permissions: FULL_HUB_PERMISSIONS,
       now: NOW,
       shifts: [
         shift({ id: "ok" }),
@@ -54,7 +56,7 @@ describe("buildTodayHubModel", () => {
   });
 
   it("clasifica ausencias en turno en curso como critical", () => {
-    const m = buildTodayHubModel({
+    const m = buildTodayHubModel({ permissions: FULL_HUB_PERMISSIONS,
       now: NOW,
       shifts: [
         shift({
@@ -64,13 +66,15 @@ describe("buildTodayHubModel", () => {
         }),
       ],
     });
-    const item = m.attentionItems.find((i) => i.id === "live:no-show");
-    expect(item?.priority).toBe("critical");
-    expect(item?.status).toBe("no_show");
+    const item = m.attentionItems.find((i) => i.id === "live:attendance");
+    expect(item?.priority).toBe("high");
+    expect(item?.status).toBe("late");
+    expect(item?.headline).not.toMatch(/no-?show/i);
+
   });
 
   it("CTA de turno en curso cubierto es Operar turno", () => {
-    const m = buildTodayHubModel({
+    const m = buildTodayHubModel({ permissions: FULL_HUB_PERMISSIONS,
       now: NOW,
       shifts: [
         shift({
@@ -84,7 +88,7 @@ describe("buildTodayHubModel", () => {
   });
 
   it("genera item de cierre con consecuencia y CTA Revisar cierre", () => {
-    const m = buildTodayHubModel({
+    const m = buildTodayHubModel({ permissions: FULL_HUB_PERMISSIONS,
       now: NOW,
       shifts: [
         shift({
@@ -101,7 +105,7 @@ describe("buildTodayHubModel", () => {
   });
 
   it("no produce ceros silenciosos en horas pendientes", () => {
-    const m = buildTodayHubModel({
+    const m = buildTodayHubModel({ permissions: FULL_HUB_PERMISSIONS,
       now: NOW,
       shifts: [shift({ id: "a" })],
       counts: { pendingHours: 0 },
@@ -113,7 +117,7 @@ describe("buildTodayHubModel", () => {
   });
 
   it("horas pendientes >0 son accionables y de alta prioridad", () => {
-    const m = buildTodayHubModel({
+    const m = buildTodayHubModel({ permissions: FULL_HUB_PERMISSIONS,
       now: NOW,
       shifts: [shift({ id: "a" })],
       counts: { pendingHours: 7 },
@@ -125,7 +129,7 @@ describe("buildTodayHubModel", () => {
   });
 
   it("estado calmado con próximo turno cuando no hay riesgos", () => {
-    const m = buildTodayHubModel({ now: NOW, shifts: [shift({ id: "a" })] });
+    const m = buildTodayHubModel({ permissions: FULL_HUB_PERMISSIONS, now: NOW, shifts: [shift({ id: "a" })] });
     expect(m.emptyState.calm).toBe(true);
     expect(m.emptyState.headline).toBe("Todo bajo control");
     expect(m.emptyState.nextShift?.shiftId).toBe("a");
@@ -133,7 +137,7 @@ describe("buildTodayHubModel", () => {
   });
 
   it("sin turnos devuelve estado explícito, no ceros", () => {
-    const m = buildTodayHubModel({ now: NOW, shifts: [] });
+    const m = buildTodayHubModel({ permissions: FULL_HUB_PERMISSIONS, now: NOW, shifts: [] });
     expect(m.emptyState.headline).toBe("Sin turnos hoy");
     expect(m.activeOperations).toHaveLength(0);
     expect(m.primaryAction).toBeNull();
@@ -142,7 +146,7 @@ describe("buildTodayHubModel", () => {
   it("respeta permisos: sin canAssign no ofrece completar equipo", () => {
     const m = buildTodayHubModel({
       now: NOW,
-      permissions: { canAssign: false },
+      permissions: { ...FULL_HUB_PERMISSIONS, canAssign: false },
       shifts: [
         shift({
           id: "gap",
@@ -151,11 +155,12 @@ describe("buildTodayHubModel", () => {
       ],
     });
     expect(m.attentionItems[0].action).toBeUndefined();
-    expect(m.activeOperations[0].action.label).toBe("Ver detalles");
+    expect(m.activeOperations[0].action?.label).toBe("Ver detalles");
   });
 
+
   it("fichajes sin salida generan deep link al reloj", () => {
-    const m = buildTodayHubModel({
+    const m = buildTodayHubModel({ permissions: FULL_HUB_PERMISSIONS,
       now: NOW,
       shifts: [
         shift({
@@ -171,7 +176,7 @@ describe("buildTodayHubModel", () => {
   });
 
   it("solicitudes pendientes se modelan como validación", () => {
-    const m = buildTodayHubModel({
+    const m = buildTodayHubModel({ permissions: FULL_HUB_PERMISSIONS,
       now: NOW,
       shifts: [shift({ id: "s2", pending_claims: 3 })],
     });
@@ -179,7 +184,7 @@ describe("buildTodayHubModel", () => {
   });
 
   it("primaryAction refleja el riesgo más urgente", () => {
-    const m = buildTodayHubModel({
+    const m = buildTodayHubModel({ permissions: FULL_HUB_PERMISSIONS,
       now: NOW,
       shifts: [
         shift({
@@ -191,5 +196,43 @@ describe("buildTodayHubModel", () => {
     });
     expect(m.primaryAction?.href).toBe("/app/shift-ops?id=gap");
     expect(m.primaryAction?.label).toBe("Completar equipo");
+  });
+});
+
+/* ── OX-4.3.1 — Permisos fail-closed y semántica de asistencia ───────── */
+
+describe("OX-4.3.1 — permisos fail-closed", () => {
+  it("sin permisos no expone ninguna acción", () => {
+    const m = buildTodayHubModel({
+      permissions: NO_HUB_PERMISSIONS,
+      now: NOW,
+      shifts: [shift({ id: "a" })],
+      counts: { pendingHours: 5, docsPending: 3 },
+    });
+    expect(m.primaryAction).toBeNull();
+    expect(m.activeOperations.every((o) => !o.action)).toBe(true);
+    expect(m.teamSummaries.every((t) => !t.action)).toBe(true);
+    expect(m.closeoutItems.every((c) => !c.decision)).toBe(true);
+    expect(m.validationItems.every((v) => !v.decision)).toBe(true);
+    expect(m.attentionItems.every((i) => !i.action)).toBe(true);
+    expect(m.emptyState.nextShift).toBeUndefined();
+  });
+
+  it("permisos omitidos equivalen a sin permisos", () => {
+    const m = buildTodayHubModel({ now: NOW, shifts: [shift({ id: "a" })] });
+    expect(m.primaryAction).toBeNull();
+  });
+});
+
+describe("OX-4.3.1 — asistencia sin no-show implícito", () => {
+  it("no llama no-show a un turno que aún no empieza", () => {
+    const m = buildTodayHubModel({
+      permissions: FULL_HUB_PERMISSIONS,
+      now: NOW,
+      shifts: [shift({ id: "a" })],
+    });
+    const text = JSON.stringify(m).toLowerCase();
+    expect(text).not.toContain("no-show");
+    expect(text).not.toContain("no show");
   });
 });
