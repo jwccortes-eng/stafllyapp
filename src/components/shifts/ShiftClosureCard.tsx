@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { notifyError, notifySuccess } from "@/lib/feedback/notify";
 import {
   ClipboardCheck, CheckCircle2, AlertTriangle, Loader2, Info, Lock, RefreshCw,
@@ -39,6 +39,7 @@ interface ShiftClosureCardProps {
 export function ShiftClosureCard({
   companyId, shiftId, shiftEnded, assignedCount, onClosed, className,
 }: ShiftClosureCardProps) {
+  const navigate = useNavigate();
   const { user, canAccessAdminForCompany } = useAuth();
   const canClose = canAccessAdminForCompany(companyId);
 
