@@ -136,7 +136,6 @@ export function summarizeTeam(
     else if (a.status === "confirmed" || (a.status === "accepted" && !a.import_batch_id)) confirmed += 1;
     else pending += 1;
 
-    else pending += 1;
   }
 
   const missing = Math.max(0, slots - assigned);
