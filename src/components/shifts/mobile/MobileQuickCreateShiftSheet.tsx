@@ -215,6 +215,9 @@ export function MobileQuickCreateShiftSheet({
   const [slots, setSlots] = useState<number>(Math.max(1, defaultSlots));
   const [team, setTeam] = useState<string[]>([]);
   const [teamQuery, setTeamQuery] = useState("");
+  /* P0.2 — multi-driver: el backend soporta N drivers (una fila por persona en
+   * shift_assignments con assignment_role='driver'). Aquí sólo se expone. */
+  const [driverPlan, setDriverPlan] = useState<DriverPlan>(EMPTY_DRIVER_PLAN);
 
   const [meetingPoint, setMeetingPoint] = useState("");
   const [meetingPointLocationId, setMeetingPointLocationId] = useState<string | null>(null);
@@ -260,6 +263,7 @@ export function MobileQuickCreateShiftSheet({
     setSlots(Math.max(1, defaultSlots));
     setTeam([]);
     setTeamQuery("");
+    setDriverPlan(EMPTY_DRIVER_PLAN);
     setMeetingPoint("");
     setMeetingPointLocationId(null);
     setNotes("");
@@ -355,8 +359,18 @@ export function MobileQuickCreateShiftSheet({
 
 
   const toggleWorker = (id: string) => {
-    setTeam(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+    setTeam(prev => {
+      const next = prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id];
+      setDriverPlan(p => reconcileDriverPlan(p, next));
+      return next;
+    });
   };
+
+  const toggleDriverFor = (id: string) => {
+    setDriverPlan(p => toggleDriver(p, id, team));
+  };
+
+  const driverStatus = describeDriverPlan(driverPlan);
 
   const shiftTitle = useMemo(() => {
     const parts = [serviceType || "Turno", client?.name].filter(Boolean);
