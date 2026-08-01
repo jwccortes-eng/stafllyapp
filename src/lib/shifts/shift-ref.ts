@@ -16,20 +16,21 @@
  * Este módulo es puro: sin React, sin red.
  */
 
+import { getShiftDisplayIdentity } from "./shift-identity";
+
 export interface ShiftRefSource {
   shift_ref?: string | null;
   shift_number?: number | null;
   shift_code?: string | null;
 }
 
-/** Número operativo visible. Prefiere la referencia por empresa. */
+/**
+ * Número operativo visible.
+ * @deprecated P0 · SHIFT IDENTITY: usa `getShiftDisplayIdentity` directamente.
+ * Se mantiene como atajo y delega en la fuente única de presentación.
+ */
 export function displayShiftRef(s: ShiftRefSource | null | undefined): string {
-  if (!s) return "—";
-  const ref = (s.shift_ref ?? "").trim();
-  if (ref) return ref;
-  const legacy = (s.shift_code ?? "").trim();
-  if (legacy) return `#${legacy}`;
-  return "—";
+  return getShiftDisplayIdentity(s).primaryRef;
 }
 
 /** Referencia legada, sólo para trazabilidad/imports. Nunca es el número oficial. */
