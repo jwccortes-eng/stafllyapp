@@ -153,29 +153,34 @@ export function AttendanceEvidenceCard({ shift, assignments, companyId, userId }
 
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [shift.id, companyId]);
 
+  // Evidence is indexed ONLY for workers on this shift's active roster.
+  // Rows belonging to replaced/removed workers stay in the DB (history) but
+  // never render as active team evidence.
   const entriesByEmployee = useMemo(() => {
     const m = new Map<string, ClockEntry[]>();
     for (const e of entries) {
+      if (!rosterEmployeeIds.has(e.employee_id)) continue;
       const arr = m.get(e.employee_id) ?? [];
       arr.push(e);
       m.set(e.employee_id, arr);
     }
     return m;
-  }, [entries]);
+  }, [entries, rosterEmployeeIds]);
 
   const validationsByEmployee = useMemo(() => {
     const m = new Map<string, AdminValidation[]>();
     for (const v of validations) {
+      if (!rosterEmployeeIds.has(v.employee_id)) continue;
       const arr = m.get(v.employee_id) ?? [];
       arr.push(v);
       m.set(v.employee_id, arr);
     }
     return m;
-  }, [validations]);
+  }, [validations, rosterEmployeeIds]);
 
   const summary = useMemo(
-    () => getShiftOperationalSummary(shift, assignments as any, entriesByEmployee, validationsByEmployee, nowIso),
-    [shift, assignments, entriesByEmployee, validationsByEmployee, nowIso],
+    () => getShiftOperationalSummary(shift, active as any, entriesByEmployee, validationsByEmployee, nowIso),
+    [shift, active, entriesByEmployee, validationsByEmployee, nowIso],
   );
 
   // Dialog state
