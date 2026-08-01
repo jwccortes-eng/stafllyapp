@@ -146,18 +146,27 @@ export function AssignWorkerCard({
       "aria-label": `Usar a ${c.name} como reemplazo`,
     });
 
+  // Los chips ya resumen historial; evitamos repetir el mismo dato en texto.
+  const chipText = chips.map((ch) => ch.label.toLowerCase()).join(" | ");
+  const hasClientChip = /cliente/.test(chipText);
+  const hasLocationChip = /aqu[ií]/.test(chipText);
+
   const history: string[] = [];
-  if (c.clientHistoryCount > 0)
+  if (c.clientHistoryCount > 0 && !hasClientChip)
     history.push(
       `Trabajó con este cliente ${c.clientHistoryCount} ${c.clientHistoryCount === 1 ? "vez" : "veces"}`,
     );
-  if (c.locationHistoryCount > 0)
+  if (c.locationHistoryCount > 0 && !hasLocationChip)
     history.push(
       `Trabajó aquí ${c.locationHistoryCount} ${c.locationHistoryCount === 1 ? "vez" : "veces"}`,
     );
-  if (c.availabilitySignal === "available") history.push("Disponible esta fecha");
-  else if (c.availabilitySignal === "unavailable") history.push("Marcado como no disponible");
-  history.push(c.phone ? c.phone : "Sin teléfono registrado");
+  if (c.availabilitySignal === "unavailable") history.push("Marcado como no disponible");
+  if (!c.phone) history.push("Sin teléfono registrado");
+
+  const recoText = warning ?? recommendation ?? undefined;
+  const recoDuplicated =
+    !!recoText && chipText.includes(recoText.trim().toLowerCase());
+
 
   return (
     <WorkerCard
