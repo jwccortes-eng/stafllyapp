@@ -355,10 +355,10 @@ export default function MobileAdminHome() {
         </button>
       </div>
 
-      {/* Accesos de operación — icono + nombre, sin texto de apoyo */}
+      {/* Operación diaria — las cuatro anclas que se usan todos los días */}
       <div className="px-5">
-        <div className="grid grid-cols-3 gap-2.5">
-          {visibleActions.map((a) => {
+        <div className="grid grid-cols-2 gap-2.5">
+          {dailyActions.map((a) => {
             const Icon = a.icon;
             const badge: BadgeState = a.badgeKey ? badges[a.badgeKey] : { kind: "ready", value: 0 };
             const count = badge.value;
@@ -369,18 +369,23 @@ export default function MobileAdminHome() {
                 onClick={() => navigate(a.to)}
                 className={cn(
                   "relative flex flex-col items-start text-left",
-                  "rounded-2xl border border-border/50 bg-card p-3 min-h-[76px]",
+                  "rounded-2xl border border-border/50 bg-card p-3.5 min-h-[92px]",
                   "active:scale-[0.97] transition-all",
                 )}
               >
-                <div className={cn("h-8 w-8 rounded-lg flex items-center justify-center mb-2", a.accent)}>
-                  <Icon className="h-[17px] w-[17px]" />
+                <div className={cn("h-9 w-9 rounded-xl flex items-center justify-center mb-2.5", a.accent)}>
+                  <Icon className="h-[18px] w-[18px]" />
                 </div>
-                <span className="text-[12.5px] font-semibold tracking-tight truncate w-full">
+                <span className="text-[14px] font-semibold tracking-tight truncate w-full">
                   {a.label}
                 </span>
+                {a.hint && (
+                  <span className="text-[11px] text-muted-foreground truncate w-full mt-0.5">
+                    {a.hint}
+                  </span>
+                )}
                 {badge.kind === "error" && (
-                  <StatusBadge status="failed" label="!" size="sm" className="absolute top-2 right-2" />
+                  <StatusBadge status="failed" label="!" size="sm" className="absolute top-2.5 right-2.5" />
                 )}
                 {badge.kind === "ready" && count > 0 && (
                   <StatusBadge
@@ -388,7 +393,7 @@ export default function MobileAdminHome() {
                     label={count > 9 ? "9+" : String(count)}
                     size="sm"
                     indicator="dot"
-                    className="absolute top-2 right-2"
+                    className="absolute top-2.5 right-2.5"
                   />
                 )}
               </button>
@@ -397,14 +402,44 @@ export default function MobileAdminHome() {
         </div>
       </div>
 
-      {/* Accesos rápidos */}
-      <div className="px-5 mt-5">
-        <div className="rounded-2xl border border-border/50 bg-card divide-y divide-border/40 overflow-hidden">
-          <QuickLink label="Mapa en vivo" to="/app/live-map" onNav={navigate} />
-          <QuickLink label="Anuncios" to="/app/announcements" onNav={navigate} />
-          <QuickLink label="Reportes" to="/app/summary" onNav={navigate} />
-        </div>
+      {/* Todo lo demás pierde protagonismo, no acceso */}
+      <div className="px-5 mt-4">
+        <button
+          type="button"
+          onClick={() => setMoreOpen((v) => !v)}
+          aria-expanded={moreOpen}
+          className="w-full flex items-center justify-between rounded-2xl border border-border/50 bg-card px-4 py-3 min-h-[48px] active:bg-muted/40 transition-colors"
+        >
+          <span className="text-sm font-medium">Más herramientas</span>
+          <ChevronRight
+            className={cn(
+              "h-4 w-4 text-muted-foreground transition-transform",
+              moreOpen && "rotate-90",
+            )}
+          />
+        </button>
+
+        {moreOpen && (
+          <div className="mt-2.5 rounded-2xl border border-border/50 bg-card divide-y divide-border/40 overflow-hidden animate-fade-in">
+            {otherActions.map((a) => {
+              const badge: BadgeState = a.badgeKey ? badges[a.badgeKey] : { kind: "ready", value: 0 };
+              return (
+                <QuickLink
+                  key={a.key}
+                  label={a.label}
+                  to={a.to}
+                  onNav={navigate}
+                  badge={badge.kind === "ready" && badge.value > 0 ? badge.value : undefined}
+                />
+              );
+            })}
+            <QuickLink label="Mapa en vivo" to="/app/live-map" onNav={navigate} />
+            <QuickLink label="Anuncios" to="/app/announcements" onNav={navigate} />
+            <QuickLink label="Reportes" to="/app/summary" onNav={navigate} />
+          </div>
+        )}
       </div>
+
     </div>
   );
 }
