@@ -500,6 +500,8 @@ function DesktopShifts() {
   const [carCapacity, setCarCapacity] = useState("5");
   const [transportNotes, setTransportNotes] = useState("");
   const [driverEmployeeId, setDriverEmployeeId] = useState("");
+  // P0.3 — varios conductores por turno. El campo legado guarda el primero.
+  const [driverIds, setDriverIds] = useState<string[]>([]);
   const [clockMethod, setClockMethod] = useState<"mobile" | "kiosk" | "both">("both");
   const [attendanceMode, setAttendanceMode] = useState<"clock" | "arrival" | "hybrid">("clock");
   const [meetingTime, setMeetingTime] = useState<string>("");
@@ -968,7 +970,7 @@ function DesktopShifts() {
       transportation_required: transportRequired,
       car_capacity: parseInt(carCapacity) || 5,
       transportation_notes: transportNotes.trim() || null,
-      driver_employee_id: driverEmployeeId || null,
+      driver_employee_id: driverIds[0] || driverEmployeeId || null,
       clock_method: clockMethod,
       status: initialStatus,
       meeting_point_location_id: meetingPointLocationId || null,
@@ -986,6 +988,8 @@ function DesktopShifts() {
     if (selectedEmployees.length > 0 && shift) {
       const assigns = selectedEmployees.map(eid => ({
         company_id: selectedCompanyId, shift_id: shift.id, employee_id: eid, status: "pending",
+        // P0.3 — multi-driver: el rol vive en la asignación, no en el turno.
+        assignment_role: driverIds.includes(eid) ? "driver" : "worker",
         // Tentative reservations on drafts: visible to admins, invisible to workers,
         // no notifications, no readiness enforcement.
         is_draft_reservation: isDraft,
@@ -1053,7 +1057,7 @@ function DesktopShifts() {
     if (shiftsConfig.require_client && !clientId) missing.push("Cliente");
     if (shiftsConfig.require_location && !locationId) missing.push("Ubicación");
     if (shiftsConfig.require_shift_admin && !shiftAdminId) missing.push("Shift admin");
-    if (transportRequired && !driverEmployeeId) missing.push("Conductor (transporte requerido)");
+    if (transportRequired && driverIds.length === 0 && !driverEmployeeId) missing.push("Conductor (transporte requerido)");
     if (selectedEmployees.length === 0 && !claimable) missing.push("Al menos 1 worker o marcar como reclamable");
     if (startTime && endTime) {
       const [sh, sm] = startTime.split(":").map(Number);
@@ -2442,7 +2446,7 @@ function DesktopShifts() {
           meetingPoint, specialInstructions,
           payType, dayType, payOverride, shiftAdminId, clockMethod,
           attendanceMode, meetingTime,
-          transportRequired, carCapacity, transportNotes, driverEmployeeId,
+          transportRequired, carCapacity, transportNotes, driverEmployeeId, driverIds,
           selectedEmployees,
           meetingPointLocationId, jobSiteLocationId, jobSiteAddress,
         }}
@@ -2469,6 +2473,7 @@ function DesktopShifts() {
           if (patch.carCapacity !== undefined) setCarCapacity(patch.carCapacity);
           if (patch.transportNotes !== undefined) setTransportNotes(patch.transportNotes);
           if (patch.driverEmployeeId !== undefined) setDriverEmployeeId(patch.driverEmployeeId);
+          if (patch.driverIds !== undefined) setDriverIds(patch.driverIds);
           if (patch.selectedEmployees !== undefined) setSelectedEmployees(patch.selectedEmployees);
           if (patch.meetingPointLocationId !== undefined) setMeetingPointLocationId(patch.meetingPointLocationId);
           if (patch.jobSiteLocationId !== undefined) setJobSiteLocationId(patch.jobSiteLocationId);
@@ -2584,7 +2589,7 @@ function DesktopShifts() {
                   } else if (locStatus.status === "meeting_only") {
                     infos.push("Solo hay punto de encuentro · agrega la dirección del trabajo cuando puedas.");
                   }
-                  if (transportRequired && !driverEmployeeId) errors.push("🚗 Transporte requerido pero no se asignó un conductor.");
+                  if (transportRequired && driverIds.length === 0 && !driverEmployeeId) errors.push("🚗 Transporte requerido pero no se asignó ningún conductor.");
                   if (!shiftAdminId) errors.push("🛡️ No se asignó un admin/líder del turno.");
                   const slotsNum = parseInt(slots) || 1;
                   if (selectedEmployees.length > slotsNum) errors.push(`Se asignaron ${selectedEmployees.length} empleados pero solo hay ${slotsNum} plaza(s).`);
