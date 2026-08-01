@@ -81,6 +81,15 @@ export default function ValidationCenter() {
     [data, permissions, resolved, focusShiftId],
   );
 
+  /** Item al que apunta la acción sugerida del centro. */
+  const nextItem = useMemo(() => {
+    const id = model.primaryAction?.itemId;
+    if (!id) return null;
+    return (
+      [...model.urgentItems, ...model.pendingItems].find((i) => i.id === id) ?? null
+    );
+  }, [model]);
+
   function runAction(item: ValidationItem, action: ValidationAction) {
     if (action.kind === "open_shift") {
       if (item.relatedShiftId) navigate(`/app/shift-ops?shiftId=${item.relatedShiftId}`);
@@ -153,16 +162,19 @@ export default function ValidationCenter() {
       <ValidationCard
         key={item.id}
         title={item.title}
-        subtitle={
-          [VALIDATION_TYPE_LABEL[item.validationType], item.subtitle]
-            .filter(Boolean)
-            .join(" · ") || null
-        }
+        subtitle={item.subtitle}
+        person={item.person}
+        headline={item.headline}
+        contextChips={[
+          VALIDATION_TYPE_LABEL[item.validationType],
+          item.priority === "urgent" ? "Urgente" : null,
+        ].filter((c): c is string => !!c)}
         status={item.statusKey}
         evidence={item.evidence}
-        consequence={
-          primary?.consequence ?? item.requiredAction
-        }
+        secondaryEvidence={item.secondaryEvidence}
+        humanContext={item.humanContext.map((n) => ({ label: n.label, value: n.value }))}
+        conversation={item.conversation}
+        consequence={primary?.consequence ?? item.requiredAction}
         decision={primary ? toOcsAction(item, primary) : undefined}
         alternatives={item.secondaryActions
           .filter((a) => !(model.readOnly && isTerminalAction(a.kind)))
@@ -172,6 +184,7 @@ export default function ValidationCenter() {
       />
     );
   }
+
 
   function renderSection(
     title: string,
@@ -294,10 +307,17 @@ export default function ValidationCenter() {
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4">
           <div className="min-w-0">
             <p className={MT.label}>Siguiente decisión</p>
+            {nextItem ? (
+              <p className={cn(MT.body, "truncate")}>
+                {nextItem.title}
+                {nextItem.subtitle ? ` · ${nextItem.subtitle}` : ""} — {nextItem.headline}
+              </p>
+            ) : null}
             <p className={cn(MT.caption, "text-muted-foreground")}>
               {model.primaryAction.reason}
             </p>
           </div>
+
           <Button
             variant="outline"
             size="sm"
@@ -379,23 +399,43 @@ export default function ValidationCenter() {
           <DialogHeader>
             <DialogTitle>{decision?.action.label}</DialogTitle>
             <DialogDescription>
-              {decision?.item.title}
-              {decision?.action.consequence ? ` — ${decision.action.consequence}` : ""}
+              {decision
+                ? [decision.item.title, decision.item.subtitle].filter(Boolean).join(" · ")
+                : ""}
             </DialogDescription>
           </DialogHeader>
 
           {decision ? (
             <div className="space-y-3">
+              <p className={cn(MT.bodyStrong)}>{decision.item.headline}</p>
+              {decision.action.consequence ? (
+                <p className={cn(MT.body, "text-muted-foreground")}>
+                  {decision.action.consequence}
+                </p>
+              ) : null}
               <dl className="grid grid-cols-2 gap-2">
                 {decision.item.evidence.map((e) => (
                   <div key={e.label}>
                     <dt className={cn(MT.caption, "text-muted-foreground")}>{e.label}</dt>
-                    <dd className={cn(MT.body, e.attention && "text-amber-600 font-medium")}>
+                    <dd className={cn(MT.body, e.attention && "text-status-warning font-medium")}>
                       {e.value}
                     </dd>
                   </div>
                 ))}
               </dl>
+              {decision.item.conversation.length > 0 ? (
+                <div className="rounded-xl border border-border/60 bg-muted/30 p-2.5 space-y-2">
+                  {decision.item.conversation.map((m) => (
+                    <div key={m.id}>
+                      <p className={cn(MT.caption, "text-muted-foreground")}>
+                        {m.author} · {m.authorRole}
+                      </p>
+                      <p className={MT.body}>{m.body}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+
               <p className={cn(MT.caption, "text-muted-foreground")}>
                 Prioridad {PRIORITY_LABEL[decision.item.priority]} · {decision.item.auditSummary}
               </p>

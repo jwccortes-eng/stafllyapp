@@ -71,6 +71,52 @@ export interface ValidationEvidence {
   attention?: boolean;
 }
 
+/* ── OX-4.4.1 — Capa humana ──────────────────────────────────────────── */
+
+/** Persona sobre la que se decide. Null cuando la decisión es del turno. */
+export interface ValidationPerson {
+  name: string;
+  avatarUrl: string | null;
+  role: string | null;
+}
+
+/** Contexto operativo reconocible: turno, cliente, cuándo. */
+export interface ValidationContext {
+  shiftTitle: string | null;
+  clientName: string | null;
+  /** Ya formateada: "31 de julio". */
+  dateLabel: string | null;
+  /** Ya formateado: "08:00–16:00". */
+  timeRange: string | null;
+}
+
+export type ValidationHumanRole =
+  | "created_by"
+  | "supervised_by"
+  | "requested_correction"
+  | "awaiting"
+  | "updated";
+
+/** Dato humano real. Nunca se inventa: si no hay dato, no hay entrada. */
+export interface ValidationHumanNote {
+  kind: ValidationHumanRole;
+  label: string;
+  value: string;
+  at?: string | null;
+}
+
+/** Mensaje real ya existente en el registro. No es un chat nuevo. */
+export interface ValidationMessage {
+  id: string;
+  author: string;
+  /** Papel de quien habla, en lenguaje operativo. */
+  authorRole: string;
+  body: string;
+  at: string | null;
+  tone: "worker" | "supervisor" | "client" | "system";
+}
+
+
 export interface ValidationItemPermissions {
   canApprove: boolean;
   canReject: boolean;
@@ -109,15 +155,29 @@ export interface ValidationItem {
   /** Id del registro real en su tabla de origen. */
   recordId: string;
   validationType: ValidationType;
+  /** Identidad visible: persona o turno. Nunca un código técnico. */
   title: string;
   subtitle: string | null;
+  /** Decisión pendiente en una frase legible en <3s. */
+  headline: string;
+  /** Persona sobre la que se decide, cuando aplica. */
+  person: ValidationPerson | null;
+  /** Turno · cliente · fecha. */
+  context: ValidationContext;
   relatedShiftId: string | null;
   relatedWorkerId: string | null;
   status: ValidationStatus;
   /** Clave del STATUS_REGISTRY. Nunca mapas cromáticos locales. */
   statusKey: StatusKey;
   priority: ValidationPriority;
+  /** Evidencia principal: la que sostiene la decisión. */
   evidence: ValidationEvidence[];
+  /** Evidencia de apoyo. Se muestra colapsada. */
+  secondaryEvidence: ValidationEvidence[];
+  /** Personas implicadas y última actualización. Sólo datos reales. */
+  humanContext: ValidationHumanNote[];
+  /** Comentarios ya registrados en el propio flujo. No es un chat nuevo. */
+  conversation: ValidationMessage[];
   /** Qué debe pasar para cerrar este item, en una frase. */
   requiredAction: string;
   assignedTo: string | null;
@@ -129,6 +189,18 @@ export interface ValidationItem {
   /** Acciones secundarias, van a menú contextual. */
   secondaryActions: ValidationAction[];
 }
+
+/**
+ * Item antes de la capa humana OX-4.4.1. Los constructores por tipo producen
+ * la decisión; el enriquecedor añade identidad, contexto y conversación.
+ */
+export type ValidationItemDraft = Omit<
+  ValidationItem,
+  "headline" | "person" | "context" | "secondaryEvidence" | "humanContext" | "conversation"
+>;
+
+
+
 
 export interface ValidationSummary {
   total: number;
@@ -173,10 +245,22 @@ export interface ValidationCenterModel {
 
 /* ── Entradas ────────────────────────────────────────────────────────── */
 
-export interface HoursEntryInput {
+/** Contexto operativo compartido por ambas fuentes. Todo opcional y real. */
+export interface ShiftContextInput {
+  shift_title?: string | null;
+  client_name?: string | null;
+  /** Fecha ISO (YYYY-MM-DD) del turno. */
+  shift_date?: string | null;
+  shift_start_time?: string | null;
+  shift_end_time?: string | null;
+}
+
+export interface HoursEntryInput extends ShiftContextInput {
   id: string;
   employee_id: string | null;
   worker_name: string | null;
+  worker_avatar_url?: string | null;
+  worker_role?: string | null;
   shift_id: string | null;
   shift_label?: string | null;
   clock_in: string | null;
@@ -185,9 +269,16 @@ export interface HoursEntryInput {
   /** pending | approved | rejected (estado de revisión, nunca valor de hora). */
   status: string | null;
   approved_at?: string | null;
+  approved_by_name?: string | null;
+  /** Comentario real del fichaje (worker o quien lo registró). */
+  notes?: string | null;
+  /** manual | qr | kiosk … origen del fichaje. */
+  entry_source?: string | null;
+  /** Responsable operativo del turno, si está definido. */
+  shift_admin_name?: string | null;
 }
 
-export interface CloseoutInput {
+export interface CloseoutInput extends ShiftContextInput {
   id: string;
   shift_id: string | null;
   shift_label?: string | null;
@@ -202,6 +293,19 @@ export interface CloseoutInput {
   submitted_at: string | null;
   reviewed_at?: string | null;
   reviewer_name?: string | null;
+  /** Quién envió el cierre (capitán / supervisor). */
+  submitted_by_name?: string | null;
+  /** Rol declarado de quien cerró. */
+  submitted_role?: string | null;
+  submitted_avatar_url?: string | null;
+  review_notes?: string | null;
+  client_feedback?: string | null;
+  final_approval_notes?: string | null;
+  final_approved_by_name?: string | null;
+  final_approved_at?: string | null;
+  uniform_ok?: boolean | null;
+  updated_at?: string | null;
+
 }
 
 export interface ValidationCenterInput {
@@ -300,7 +404,7 @@ function buildHoursItem(
   e: HoursEntryInput,
   p: ResolvedHubPermissions,
   now: Date,
-): ValidationItem {
+): ValidationItemDraft {
   const raw = (e.status ?? "pending").toLowerCase();
   const hours = realHours(e);
   const missingClockOut = !!e.clock_in && !e.clock_out;
@@ -455,7 +559,7 @@ function buildCloseoutItem(
   c: CloseoutInput,
   p: ResolvedHubPermissions,
   now: Date,
-): ValidationItem | null {
+): ValidationItemDraft | null {
   const status = (c.status ?? "draft").toLowerCase();
   if (status === "draft") return null; // aún no es una decisión
 
@@ -600,6 +704,234 @@ function buildCloseoutItem(
   };
 }
 
+/* ── OX-4.4.1 — Capa humana ──────────────────────────────────────────── */
+
+const MONTHS_ES = [
+  "enero", "febrero", "marzo", "abril", "mayo", "junio",
+  "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
+];
+
+/** "31 de julio". Devuelve null si no hay fecha real. */
+function humanDate(isoDate: string | null | undefined): string | null {
+  if (!isoDate) return null;
+  const d = new Date(`${String(isoDate).slice(0, 10)}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return null;
+  return `${d.getDate()} de ${MONTHS_ES[d.getMonth()]}`;
+}
+
+/** "08:00–16:00". Null si falta cualquiera de los extremos. */
+function humanRange(start?: string | null, end?: string | null): string | null {
+  const s = start ? String(start).slice(0, 5) : null;
+  const e = end ? String(end).slice(0, 5) : null;
+  if (!s && !e) return null;
+  return s && e ? `${s}–${e}` : (s ?? e);
+}
+
+function contextOf(src: ShiftContextInput, fallbackTitle: string | null): ValidationContext {
+  return {
+    shiftTitle: (src.shift_title ?? "").trim() || fallbackTitle,
+    clientName: (src.client_name ?? "").trim() || null,
+    dateLabel: humanDate(src.shift_date),
+    timeRange: humanRange(src.shift_start_time, src.shift_end_time),
+  };
+}
+
+/** Segunda línea humana: "Marriott · 31 de julio · 08:00–16:00". */
+function contextLine(ctx: ValidationContext): string | null {
+  return [ctx.clientName, ctx.dateLabel, ctx.timeRange].filter(Boolean).join(" · ") || null;
+}
+
+function clean(text: string | null | undefined): string | null {
+  const t = (text ?? "").trim();
+  return t.length > 0 ? t : null;
+}
+
+/** Añade una nota humana sólo si el dato existe de verdad. */
+function pushNote(
+  notes: ValidationHumanNote[],
+  kind: ValidationHumanRole,
+  label: string,
+  value: string | null | undefined,
+  at?: string | null,
+) {
+  const v = clean(value);
+  if (!v) return;
+  notes.push({ kind, label, value: v, at: at ?? null });
+}
+
+function pushMessage(
+  thread: ValidationMessage[],
+  id: string,
+  author: string | null | undefined,
+  authorRole: string,
+  body: string | null | undefined,
+  at: string | null | undefined,
+  tone: ValidationMessage["tone"],
+) {
+  const text = clean(body);
+  if (!text) return;
+  thread.push({
+    id,
+    author: clean(author) ?? "Sin identificar",
+    authorRole,
+    body: text,
+    at: at ?? null,
+    tone,
+  });
+}
+
+/** Frase de decisión legible en menos de 3 segundos. */
+function headlineFor(draft: ValidationItemDraft, hours: number | null, openFor: number | null): string {
+  switch (draft.validationType) {
+    case "hours_approval":
+      return hours === null
+        ? "Horas pendientes de aprobación"
+        : `${hours} horas pendientes de aprobación`;
+    case "evidence_review":
+      return openFor !== null && openFor > 0
+        ? `Sin salida registrada · abierto hace ${Math.round(openFor)} h`
+        : "Sin salida registrada";
+    case "correction_requested":
+      return draft.source === "time_entries"
+        ? "Corrección solicitada · fuera de payroll"
+        : "Cierre devuelto al capitán";
+    case "ready_for_payroll":
+      return draft.source === "time_entries" && hours !== null
+        ? `${hours} horas aprobadas · listas para payroll`
+        : "Listo para payroll";
+    case "incident_review":
+      return "Incidencia reportada en el cierre";
+    case "exception_review":
+      return "Excepción de cierre sin resolver";
+    case "shift_closeout":
+    default:
+      return "Cierre de turno pendiente de revisión";
+  }
+}
+
+function enrichHours(draft: ValidationItemDraft, e: HoursEntryInput, now: Date): ValidationItem {
+  const hours = realHours(e);
+  const openFor = !e.clock_out ? hoursSinceIso(e.clock_in, now) : null;
+  const person: ValidationPerson = {
+    name: workerLabel(e.worker_name),
+    avatarUrl: clean(e.worker_avatar_url),
+    role: clean(e.worker_role),
+  };
+  const ctx = contextOf(e, shiftLabel(e));
+
+  const secondaryEvidence: ValidationEvidence[] = [];
+  if (e.clock_in) {
+    secondaryEvidence.push({
+      label: "Entrada registrada",
+      value: new Date(e.clock_in).toLocaleString("es"),
+    });
+  }
+  if (e.clock_out) {
+    secondaryEvidence.push({
+      label: "Salida registrada",
+      value: new Date(e.clock_out).toLocaleString("es"),
+    });
+  }
+  secondaryEvidence.push({ label: "Descanso", value: `${e.break_minutes ?? 0} min` });
+  if (clean(e.entry_source)) {
+    secondaryEvidence.push({ label: "Origen del fichaje", value: clean(e.entry_source)! });
+  }
+  if (clean(e.approved_by_name)) {
+    secondaryEvidence.push({ label: "Aprobado por", value: clean(e.approved_by_name)! });
+  }
+
+  const humanContext: ValidationHumanNote[] = [];
+  pushNote(humanContext, "created_by", "Fichaje de", person.name, e.clock_in);
+  pushNote(humanContext, "supervised_by", "Responsable del turno", e.shift_admin_name);
+  if (draft.status === "correction_requested") {
+    pushNote(humanContext, "awaiting", "Esperando a", person.name);
+  }
+  pushNote(humanContext, "updated", "Última actualización", 
+    e.approved_at ? new Date(e.approved_at).toLocaleString("es") : null, e.approved_at);
+
+  const conversation: ValidationMessage[] = [];
+  pushMessage(conversation, `${draft.id}:note`, person.name, "Worker", e.notes, e.clock_out ?? e.clock_in, "worker");
+
+  return {
+    ...draft,
+    title: person.name,
+    subtitle: contextLine(ctx) ?? shiftLabel(e),
+    headline: headlineFor(draft, hours, openFor),
+    person,
+    context: ctx,
+    secondaryEvidence,
+    humanContext,
+    conversation,
+  };
+}
+
+function enrichCloseout(draft: ValidationItemDraft, c: CloseoutInput): ValidationItem {
+  const ctx = contextOf(c, shiftLabel(c));
+  const submitter = clean(c.submitted_by_name);
+  const person: ValidationPerson | null = submitter
+    ? {
+        name: submitter,
+        avatarUrl: clean(c.submitted_avatar_url),
+        role: clean(c.submitted_role) ?? "Cerró el turno",
+      }
+    : null;
+
+  const secondaryEvidence: ValidationEvidence[] = [];
+  if (c.submitted_at) {
+    secondaryEvidence.push({
+      label: "Cierre enviado",
+      value: new Date(c.submitted_at).toLocaleString("es"),
+    });
+  }
+  if (typeof c.uniform_ok === "boolean") {
+    secondaryEvidence.push({
+      label: "Uniforme",
+      value: c.uniform_ok ? "Correcto" : "Con observaciones",
+      attention: !c.uniform_ok,
+    });
+  }
+  if (c.reviewed_at) {
+    secondaryEvidence.push({
+      label: "Revisado",
+      value: new Date(c.reviewed_at).toLocaleString("es"),
+    });
+  }
+  if (clean(c.final_approved_by_name)) {
+    secondaryEvidence.push({ label: "Firma final", value: clean(c.final_approved_by_name)! });
+  }
+
+  const humanContext: ValidationHumanNote[] = [];
+  pushNote(humanContext, "created_by", "Cierre enviado por", submitter, c.submitted_at);
+  pushNote(humanContext, "supervised_by", "Revisado por", c.reviewer_name, c.reviewed_at);
+  if (draft.status === "rejected" || draft.status === "correction_requested") {
+    pushNote(humanContext, "requested_correction", "Devuelto por", c.reviewer_name, c.reviewed_at);
+    pushNote(humanContext, "awaiting", "Esperando a", submitter ?? "el capitán");
+  }
+  const lastUpdate = c.updated_at ?? c.reviewed_at ?? c.submitted_at;
+  pushNote(humanContext, "updated", "Última actualización",
+    lastUpdate ? new Date(lastUpdate).toLocaleString("es") : null, lastUpdate);
+
+  const conversation: ValidationMessage[] = [];
+  pushMessage(conversation, `${draft.id}:notes`, submitter, clean(c.submitted_role) ?? "Capitán", c.notes, c.submitted_at, "worker");
+  pushMessage(conversation, `${draft.id}:review`, c.reviewer_name, "Supervisión", c.review_notes, c.reviewed_at, "supervisor");
+  pushMessage(conversation, `${draft.id}:client`, ctx.clientName ?? "Cliente", "Cliente", c.client_feedback, c.submitted_at, "client");
+  pushMessage(conversation, `${draft.id}:final`, c.final_approved_by_name, "Aprobación final", c.final_approval_notes, c.final_approved_at, "system");
+
+  const title = ctx.shiftTitle ?? "Turno";
+  return {
+    ...draft,
+    title,
+    subtitle: contextLine(ctx),
+    headline: headlineFor(draft, null, null),
+    person,
+    context: ctx,
+    secondaryEvidence,
+    humanContext,
+    conversation,
+  };
+}
+
+
 /* ── Modelo ──────────────────────────────────────────────────────────── */
 
 function sortItems(a: ValidationItem, b: ValidationItem): number {
@@ -627,12 +959,12 @@ export function buildValidationCenterModel(
 
   for (const e of input.hours) {
     if (!inFocus(e.shift_id)) continue;
-    items.push(buildHoursItem(e, perms, now));
+    items.push(enrichHours(buildHoursItem(e, perms, now), e, now));
   }
   for (const c of input.closeouts) {
     if (!inFocus(c.shift_id)) continue;
-    const item = buildCloseoutItem(c, perms, now);
-    if (item) items.push(item);
+    const draft = buildCloseoutItem(c, perms, now);
+    if (draft) items.push(enrichCloseout(draft, c));
   }
 
   const actionable = items.filter((i) => ACTIONABLE.includes(i.status));
