@@ -1173,7 +1173,11 @@ export function MobileQuickCreateShiftSheet({
                     disabled={saving || !!stepBlocker}
                     onClick={handleCreate}
                   >
-                    {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : "Crear turno"}
+                    {saving
+                      ? <Loader2 className="h-5 w-5 animate-spin" />
+                      : driverPlan.driverIds.length > 0
+                        ? `Crear turno y confirmar ${driverPlan.driverIds.length} ${driverPlan.driverIds.length === 1 ? "driver" : "drivers"}`
+                        : "Crear turno"}
                   </Button>
                 ) : (
                   <Button
