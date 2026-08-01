@@ -4,8 +4,9 @@ import { es } from "date-fns/locale";
 import {
   Loader2, Check, Search, Users, X, ChevronLeft, ChevronRight,
   Building2, Clock, UserPlus, Plus, Minus, MapPin, ClipboardList,
-  AlertTriangle, RotateCw,
+  AlertTriangle, RotateCw, ArrowRightLeft, Hash,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
