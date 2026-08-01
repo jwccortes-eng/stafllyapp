@@ -5,6 +5,7 @@ import { useCompany } from "@/hooks/useCompany";
 import { useEffectiveEmployee } from "@/hooks/useEffectiveEmployee";
 import { useSoundContext } from "@/hooks/useSound";
 import { toast } from "sonner";
+import { observeOperationalEvent } from "@/lib/operational-signals/sink";
 import {
   BurstWindow,
   burstToastMessage,
@@ -194,6 +195,26 @@ export function useNotifications() {
         activeCompany,
       });
       return;
+    }
+
+    // F1 — Operational Signal Engine (SHADOW MODE). Observa y registra la
+    // decisión recomendada. No altera el envío ni la experiencia actual.
+    try {
+      const meta = (newNotif as unknown as { data?: Record<string, unknown> }).data ?? {};
+      observeOperationalEvent({
+        eventId: newNotif.id,
+        eventType: newNotif.type,
+        companyId: activeCompany,
+        shiftId: typeof meta.shift_id === "string" ? meta.shift_id : null,
+        subjectUserId: (newNotif as unknown as { recipient_id?: string }).recipient_id ?? null,
+        eventPayload: meta,
+        occurredAt: newNotif.created_at,
+        sourceSystem: "notifications_realtime",
+        currentSystemAction: "notification_inserted",
+        actualRecipientsCount: 1,
+      });
+    } catch {
+      /* la capa sombra nunca puede afectar el flujo real */
     }
 
     setNotifications(prev => {

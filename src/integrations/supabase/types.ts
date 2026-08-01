@@ -9267,6 +9267,108 @@ export type Database = {
           },
         ]
       }
+      operational_signal_shadow_decisions: {
+        Row: {
+          acknowledgement_deadline_seconds: number | null
+          actor_id: string | null
+          actual_recipients_count: number
+          company_id: string
+          correlation_id: string | null
+          created_at: string
+          current_system_action: string | null
+          decision_payload: Json
+          decision_version: string
+          dedupe_key: string
+          estimated_noise_reduction: number
+          event_id: string
+          event_type: string
+          excluded_audience: Json
+          group_window_seconds: number
+          id: string
+          notification_family: string
+          occurred_at: string
+          priority: string
+          recommended_audience: Json
+          recommended_channel: string[]
+          recommended_recipients_count: number
+          recommended_send_time: string | null
+          requires_acknowledgement: boolean
+          risk_detected: string[]
+          shift_id: string | null
+          should_group: boolean
+          source_system: string
+          subject_user_id: string | null
+          suppress_reason: string | null
+          urgency_reason: string | null
+        }
+        Insert: {
+          acknowledgement_deadline_seconds?: number | null
+          actor_id?: string | null
+          actual_recipients_count?: number
+          company_id: string
+          correlation_id?: string | null
+          created_at?: string
+          current_system_action?: string | null
+          decision_payload?: Json
+          decision_version: string
+          dedupe_key: string
+          estimated_noise_reduction?: number
+          event_id: string
+          event_type: string
+          excluded_audience?: Json
+          group_window_seconds?: number
+          id?: string
+          notification_family: string
+          occurred_at?: string
+          priority: string
+          recommended_audience?: Json
+          recommended_channel?: string[]
+          recommended_recipients_count?: number
+          recommended_send_time?: string | null
+          requires_acknowledgement?: boolean
+          risk_detected?: string[]
+          shift_id?: string | null
+          should_group?: boolean
+          source_system?: string
+          subject_user_id?: string | null
+          suppress_reason?: string | null
+          urgency_reason?: string | null
+        }
+        Update: {
+          acknowledgement_deadline_seconds?: number | null
+          actor_id?: string | null
+          actual_recipients_count?: number
+          company_id?: string
+          correlation_id?: string | null
+          created_at?: string
+          current_system_action?: string | null
+          decision_payload?: Json
+          decision_version?: string
+          dedupe_key?: string
+          estimated_noise_reduction?: number
+          event_id?: string
+          event_type?: string
+          excluded_audience?: Json
+          group_window_seconds?: number
+          id?: string
+          notification_family?: string
+          occurred_at?: string
+          priority?: string
+          recommended_audience?: Json
+          recommended_channel?: string[]
+          recommended_recipients_count?: number
+          recommended_send_time?: string | null
+          requires_acknowledgement?: boolean
+          risk_detected?: string[]
+          shift_id?: string | null
+          should_group?: boolean
+          source_system?: string
+          subject_user_id?: string | null
+          suppress_reason?: string | null
+          urgency_reason?: string | null
+        }
+        Relationships: []
+      }
       parceros_event_queue: {
         Row: {
           created_at: string

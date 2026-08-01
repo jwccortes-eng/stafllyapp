@@ -88,6 +88,7 @@ const PayrollSettings = lazy(() => import("./pages/admin/PayrollSettings"));
 const PayrollReviewQueue = lazy(() => import("./pages/admin/PayrollReviewQueue"));
 const ChangeIntelligenceObservation = lazy(() => import("./pages/admin/dev/ChangeIntelligenceObservation"));
 const OperationalAuthorizationObservation = lazy(() => import("./pages/admin/dev/OperationalAuthorizationObservation"));
+const OperationalSignalsShadow = lazy(() => import("./pages/admin/dev/OperationalSignalsShadow"));
 
 const MonetizationReport = lazy(() => import("./pages/admin/MonetizationReport"));
 const Pricing = lazy(() => import("./pages/admin/Pricing"));
@@ -418,6 +419,7 @@ function App() {
                 <Route path="payroll-review-queue" element={<CompanyRequiredGuard><PayrollReviewQueue /></CompanyRequiredGuard>} />
                 <Route path="dev/change-intelligence" element={<ChangeIntelligenceObservation />} />
                 <Route path="dev/operational-authorization" element={<OperationalAuthorizationObservation />} />
+                <Route path="dev/operational-signals" element={<CompanyRequiredGuard><OperationalSignalsShadow /></CompanyRequiredGuard>} />
 
                 <Route path="weekly-payroll-reconciliation" element={<CompanyRequiredGuard><WeeklyPayrollReconciliation /></CompanyRequiredGuard>} />
                 <Route path="payroll-native-dry-run" element={<CompanyRequiredGuard><PayrollNativeDryRun /></CompanyRequiredGuard>} />
