@@ -271,12 +271,57 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
     logPostLoginDebug("company-provider-resolved", list, resolvedSelection, false);
   }, [authLoading, authState, user, role, canUseGlobalMode, manuallySelected, selectedCompanyId, logPostLoginDebug]);
 
-  /** Switch company: update state + invalidate all cached queries */
+  /**
+   * P0 OX — tenant switch with explicit states.
+   * 1) "switching" while the previous tenant's cache is dropped
+   * 2) success confirmation
+   * 3) visible, retryable failure that KEEPS the previous tenant active
+   * 4) explicit "no access" when the target isn't in the user's list
+   */
   const switchCompany = useCallback((id: string | null) => {
     if (id === selectedCompanyId) return;
-    setSelectedCompanyId(id);
-    queryClient.invalidateQueries();
-  }, [selectedCompanyId, setSelectedCompanyId]);
+    setSwitchError(null);
+
+    if (id !== null && !companies.some((c) => c.id === id)) {
+      setPendingSwitchId(id);
+      setSwitchState("error");
+      setSwitchError("No tienes acceso a esta compañía.");
+      return;
+    }
+
+    setPendingSwitchId(id);
+    setSwitchState("switching");
+
+    try {
+      // Drop everything scoped to the previous tenant BEFORE switching context,
+      // so no hybrid state can ever render.
+      queryClient.clear();
+      setSelectedCompanyId(id);
+      queryClient.invalidateQueries();
+      setSwitchState("idle");
+      setPendingSwitchId(null);
+    } catch (err) {
+      console.error("[useCompany] switchCompany failed:", err);
+      setSwitchState("error");
+      setSwitchError("No pudimos cambiar de compañía. Sigues en la compañía anterior.");
+    }
+  }, [selectedCompanyId, setSelectedCompanyId, companies]);
+
+  const clearSwitchError = useCallback(() => {
+    setSwitchState("idle");
+    setSwitchError(null);
+    setPendingSwitchId(null);
+  }, []);
+
+  const retrySwitch = useCallback(() => {
+    const target = pendingSwitchId;
+    setSwitchState("idle");
+    setSwitchError(null);
+    void fetchCompanies().then(() => {
+      if (target) switchCompany(target);
+    });
+  }, [pendingSwitchId, fetchCompanies, switchCompany]);
+
 
   useEffect(() => {
     void fetchCompanies();
