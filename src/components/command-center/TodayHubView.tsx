@@ -159,7 +159,7 @@ function AttentionEntry({
         meaning={item.because}
         status={item.status}
         isEmpty={!item.action}
-        emptyLabel={item.because}
+        emptyLabel="Sin pendientes"
         action={action}
       />
     );
@@ -384,7 +384,7 @@ export default function TodayHubView() {
       {model.closeoutItems.length === 0 ? (
         <KpiCard
           label="Cierres pendientes"
-          meaning="Ningún turno de hoy espera revisión de cierre."
+          meaning="Estado de los cierres de la operación de hoy."
           status="approved"
           isEmpty
           emptyLabel="Ningún turno de hoy espera revisión de cierre."
