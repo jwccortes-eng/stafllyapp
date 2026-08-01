@@ -38,6 +38,8 @@ import {
   Accordion, AccordionContent, AccordionItem, AccordionTrigger,
 } from "@/components/ui/accordion";
 import { MobileQueueRow, MobileQueueDrawer } from "@/components/admin/mobile";
+import { HoursApprovalPanel } from "@/components/timeclock/HoursApprovalPanel";
+
 import {
   Loader2, ShieldCheck, AlertTriangle, AlertCircle, CheckCircle2,
   Users, Clock, CalendarX, Car, FileWarning, ScanEye, Lock,
