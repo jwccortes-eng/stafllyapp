@@ -54,7 +54,7 @@ function MultiDriverPickerImpl({ employees, driverIds, onChange, driversRequired
                   size="xs"
                 />
                 <span className="text-[11px] font-medium">
-                  {formatPersonName(emp.first_name, emp.last_name)}
+                  {formatPersonName(`${emp.first_name ?? ""} ${emp.last_name ?? ""}`)}
                 </span>
                 <Button
                   type="button"
