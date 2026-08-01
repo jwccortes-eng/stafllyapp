@@ -151,7 +151,7 @@ export default function MobileShiftsView() {
       try {
         const [shiftsRes, clientsRes, locsRes, empsRes] = await Promise.all([
          supabase.from("scheduled_shifts")
-           .select("id,title,date,start_time,end_time,status,publication_status,slots,client_id,location_id,notes,claimable,shift_code,created_at,updated_at,published_at,published_by,created_by,import_batch_id,reconciliation_hash")
+           .select("id,title,date,start_time,end_time,status,publication_status,slots,client_id,location_id,notes,claimable,shift_code,shift_ref,shift_number,created_at,updated_at,published_at,published_by,created_by,import_batch_id,reconciliation_hash")
             .eq("company_id", selectedCompanyId!)
             .is("deleted_at", null)
             .gte("date", dateRange.start)
@@ -319,7 +319,7 @@ export default function MobileShiftsView() {
       if (search) {
         const clientName = (s.client_id ? clientById.get(s.client_id) : "") ?? "";
         const locName = (s.location_id ? locationById.get(s.location_id) : "") ?? "";
-        const hay = `${s.title} ${clientName} ${locName} ${s.shift_code ?? ""}`.toLowerCase();
+        const hay = `${s.title} ${clientName} ${locName} ${s.shift_code ?? ""} ${s.shift_ref ?? ""}`.toLowerCase();
         if (!hay.includes(search)) return false;
       }
       return true;

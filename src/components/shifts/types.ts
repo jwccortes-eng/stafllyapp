@@ -15,7 +15,12 @@ export interface Shift {
   location_id: string | null;
   notes: string | null;
   claimable: boolean;
+  /** @deprecated código legado (texto libre, no único). Usa `shift_ref`. */
   shift_code?: string | null;
+  /** Consecutivo operativo dentro de la empresa (único por company_id). */
+  shift_number?: number | null;
+  /** Número visible por empresa, p. ej. `QK-001573`. */
+  shift_ref?: string | null;
   // ── Optional traceability fields (read-only).
   // Present in scheduled_shifts schema. Loaded by views that need lineage
   // (e.g. MobileShiftOperationsSheet). Safe to omit elsewhere.

@@ -4,8 +4,9 @@ import { es } from "date-fns/locale";
 import {
   Loader2, Check, Search, Users, X, ChevronLeft, ChevronRight,
   Building2, Clock, UserPlus, Plus, Minus, MapPin, ClipboardList,
-  AlertTriangle, RotateCw,
+  AlertTriangle, RotateCw, ArrowRightLeft, Hash,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +27,8 @@ import {
   type CreateResultSummary,
 } from "@/lib/shifts/assign-outcome";
 import type { Shift, Assignment, Employee, SelectOption } from "@/components/shifts/types";
+import { useCompany } from "@/hooks/useCompany";
+import { buildCreationConfirmation, type CreationConfirmation, type PersistedShiftFacts } from "@/lib/shifts/shift-ref";
 
 
 /**
@@ -192,6 +195,9 @@ export function MobileQuickCreateShiftSheet({
 }: Props) {
   const { user, role, hasModuleAccess } = useAuth();
   const canCreate = role === "owner" || role === "admin" || hasModuleAccess("shifts", "edit");
+  const navigate = useNavigate();
+  const { companies, setSelectedCompanyId } = useCompany();
+  const companyName = companies.find(c => c.id === companyId)?.name ?? "Empresa sin nombre";
 
   const todayStr = useMemo(() => format(new Date(), "yyyy-MM-dd"), []);
 
@@ -223,9 +229,23 @@ export function MobileQuickCreateShiftSheet({
    */
   const submitLockRef = useRef(false);
   const createdShiftIdRef = useRef<string | null>(null);
+  const persistedRef = useRef<PersistedShiftFacts | null>(null);
   const [outcomes, setOutcomes] = useState<AssignOutcome[]>([]);
   const [result, setResult] = useState<CreateResultSummary | null>(null);
   const [confirmClose, setConfirmClose] = useState(false);
+  /** Confirmación basada en lo REALMENTE persistido (empresa incluida). */
+  const [confirmation, setConfirmation] = useState<CreationConfirmation | null>(null);
+  /** Empresa con la que se abrió el wizard: si cambia a mitad, se bloquea. */
+  const lockedCompanyIdRef = useRef<string | null>(null);
+  const [companyChanged, setCompanyChanged] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    if (lockedCompanyIdRef.current && companyId && companyId !== lockedCompanyIdRef.current) {
+      setCompanyChanged(true);
+    }
+  }, [companyId, open]);
+
 
   useEffect(() => {
     if (!open) return;
@@ -247,8 +267,14 @@ export function MobileQuickCreateShiftSheet({
     setOutcomes([]);
     setResult(null);
     setConfirmClose(false);
+    setConfirmation(null);
+    setCompanyChanged(false);
+    lockedCompanyIdRef.current = companyId;
     submitLockRef.current = false;
     createdShiftIdRef.current = null;
+    // `companyId` queda fuera de deps a propósito: se fija al abrir y un cambio
+    // posterior debe BLOQUEAR el wizard, no reiniciarlo en silencio.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, todayStr, defaultStartTime, defaultEndTime, defaultSlots]);
 
 
@@ -358,6 +384,8 @@ export function MobileQuickCreateShiftSheet({
 
   const handleCreate = async () => {
     if (!companyId || submitLockRef.current || stepBlocker) return;
+    // Nunca se crea con una empresa distinta a la que abrió el wizard.
+    if (companyChanged && !createdShiftIdRef.current) return;
     submitLockRef.current = true;
     setSaving(true);
     try {
@@ -390,9 +418,20 @@ export function MobileQuickCreateShiftSheet({
         const { data, error } = await supabase
           .from("scheduled_shifts")
           .insert(insertData)
-          .select("id")
+          .select("id, company_id, shift_ref, title, date, start_time, end_time, slots")
           .single();
         if (error) throw error;
+        const row: any = data;
+        persistedRef.current = {
+          shiftId: row.id as string,
+          companyId: row.company_id as string,
+          shiftRef: (row.shift_ref ?? null) as string | null,
+          title: row.title as string,
+          date: row.date as string,
+          startTime: row.start_time as string,
+          endTime: row.end_time as string,
+          slots: Number(row.slots ?? slots),
+        };
         shiftId = data!.id as string;
         createdShiftIdRef.current = shiftId;
       }
@@ -415,6 +454,19 @@ export function MobileQuickCreateShiftSheet({
       const summary = summarizeCreateResult(ordered, team.length);
       setResult(summary);
 
+      // Confirmación con la empresa REALMENTE persistida, nunca la asumida.
+      const persisted = persistedRef.current;
+      const conf = persisted
+        ? buildCreationConfirmation({
+            persisted,
+            expectedCompanyId: lockedCompanyIdRef.current ?? companyId,
+            companyNameById: (id) => companies.find(c => c.id === id)?.name ?? null,
+            assignedCount: summary.okCount,
+            requestedCount: team.length,
+          })
+        : null;
+      setConfirmation(conf);
+
       // Auditoría: siempre refleja el resultado real, incluidos los fallos.
       try {
         await supabase.rpc("log_activity_detailed", {
@@ -427,6 +479,8 @@ export function MobileQuickCreateShiftSheet({
             result: summary.kind,
             requested: team.length,
             assigned: summary.okCount,
+            shift_ref: persisted?.shiftRef ?? null,
+            persisted_company_id: persisted?.companyId ?? null,
             failed: ordered.filter(o => !o.ok).map(o => ({ employee_id: o.employeeId, code: o.code })),
           },
           _old_data: null,
@@ -446,16 +500,16 @@ export function MobileQuickCreateShiftSheet({
           consequence: "El turno ya está publicado; revisa quién quedó fuera.",
           key: "create-shift",
         });
-        // Se queda abierto en la pantalla de resultado por persona.
       } else {
         notifySuccess({
-          title: summary.title,
-          fact: `${shiftTitle} · ${shortDate(date)} ${startTime}–${endTime}.`,
-          consequence: summary.fact,
+          title: conf?.title ?? summary.title,
+          fact: `${conf?.refLabel ?? ""} · ${shiftTitle} · ${shortDate(date)} ${startTime}–${endTime}.`.replace(/^ · /, ""),
+          consequence: conf ? `Quedó en ${conf.companyName}. ${summary.fact}` : summary.fact,
           key: "create-shift",
         });
-        onOpenChange(false);
       }
+      // El sheet permanece abierto en la pantalla de confirmación: el operador
+      // ve el número del turno y la empresa antes de salir.
     } catch (e: any) {
       const created = !!createdShiftIdRef.current;
       notifyError({
@@ -479,20 +533,53 @@ export function MobileQuickCreateShiftSheet({
   const isTeamStep = step === "equipo";
   const canRetryAssignments = retryableOutcomes(outcomes).length > 0;
 
-  /* ── Pantalla de resultado por persona (sólo si algo falló) ── */
+  /* ── Pantalla de confirmación + resultado por persona ── */
   const resultView = result ? (
     <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-      <div className="rounded-2xl border border-status-warning/40 bg-status-warning/5 p-4">
-        <p className="flex items-center gap-2 text-[15px] font-semibold">
-          <AlertTriangle className="h-4 w-4 text-status-warning shrink-0" />
-          {result.title}
-        </p>
-        <p className="mt-1 text-[13px] text-muted-foreground">{result.fact}</p>
-        <p className="mt-1 text-[13px] text-muted-foreground">
-          El turno ya está publicado. Nada de esto afecta payroll.
-        </p>
-      </div>
+      {confirmation && (
+        <div className={cn(
+          "rounded-2xl border p-4",
+          confirmation.kind === "context_mismatch"
+            ? "border-status-warning/40 bg-status-warning/5"
+            : "border-status-success/40 bg-status-success/5",
+        )}>
+          <p className="flex items-center gap-2 text-[15px] font-semibold">
+            {confirmation.kind === "context_mismatch"
+              ? <AlertTriangle className="h-4 w-4 text-status-warning shrink-0" />
+              : <Check className="h-4 w-4 text-status-success shrink-0" />}
+            {confirmation.title}
+          </p>
+          <p className="mt-2 flex items-center gap-2 text-[20px] font-bold tracking-tight">
+            <Hash className="h-4 w-4 text-muted-foreground shrink-0" />
+            {confirmation.refLabel}
+          </p>
+          <p className="mt-1 flex items-center gap-2 text-[13px] font-medium">
+            <Building2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+            {confirmation.companyName}
+          </p>
+          <p className="mt-1 text-[13px] text-muted-foreground">{confirmation.scheduleLine}</p>
+          <p className="text-[13px] text-muted-foreground">{confirmation.teamLine}</p>
+          {confirmation.warning && (
+            <p className="mt-2 text-[13px] font-medium text-status-warning">{confirmation.warning}</p>
+          )}
+        </div>
+      )}
 
+      {result.kind === "created_partial" && (
+        <div className="rounded-2xl border border-status-warning/40 bg-status-warning/5 p-4">
+          <p className="flex items-center gap-2 text-[15px] font-semibold">
+            <AlertTriangle className="h-4 w-4 text-status-warning shrink-0" />
+            {result.title}
+          </p>
+          <p className="mt-1 text-[13px] text-muted-foreground">{result.fact}</p>
+          <p className="mt-1 text-[13px] text-muted-foreground">
+            El turno ya está publicado. Nada de esto afecta payroll.
+          </p>
+        </div>
+      )}
+
+
+      {outcomes.length > 0 && (
       <div className="rounded-2xl border border-border/60 bg-card overflow-hidden divide-y divide-border/40">
         {outcomes.map(o => (
           <div key={o.employeeId} className="flex items-start gap-3 px-4 py-3">
@@ -512,6 +599,7 @@ export function MobileQuickCreateShiftSheet({
           </div>
         ))}
       </div>
+      )}
     </div>
   ) : null;
 
@@ -537,11 +625,15 @@ export function MobileQuickCreateShiftSheet({
                 </button>
               ) : <span className="h-11 w-11 -ml-2" />}
               <div className="flex-1 min-w-0">
-                <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold">
-                  {result ? "Resultado" : `Paso ${stepIndex + 1} de ${STEPS.length} · ${current.label}`}
+                <p className="flex items-center gap-1 text-[11px] uppercase tracking-wide text-muted-foreground font-semibold truncate">
+                  <Building2 className="h-3 w-3 shrink-0" />
+                  <span className="truncate">{companyName}</span>
+                  <span className="shrink-0">· {result ? "Resultado" : `Paso ${stepIndex + 1}/${STEPS.length}`}</span>
                 </p>
                 <h2 className="text-[17px] font-bold leading-tight truncate">
-                  {result ? "Qué pasó con cada persona" : current.question}
+                  {result
+                    ? (confirmation?.kind === "context_mismatch" ? "Revisa dónde quedó el turno" : "Turno creado")
+                    : current.question}
                 </h2>
               </div>
               <button
@@ -918,12 +1010,42 @@ export function MobileQuickCreateShiftSheet({
                       : <><RotateCw className="h-4 w-4 mr-2" />Reintentar los que fallaron</>}
                   </Button>
                 )}
+                {confirmation?.kind === "context_mismatch" && (
+                  <Button
+                    variant="outline"
+                    className="w-full h-12 text-base font-semibold rounded-2xl"
+                    onClick={() => {
+                      setSelectedCompanyId(confirmation.companyId);
+                      onOpenChange(false);
+                    }}
+                  >
+                    <ArrowRightLeft className="h-4 w-4 mr-2" />
+                    Cambiar a {confirmation.companyName}
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  className="w-full h-12 text-base font-semibold rounded-2xl"
+                  disabled={saving}
+                  onClick={() => {
+                    const id = createdShiftIdRef.current;
+                    onOpenChange(false);
+                    if (id) navigate(`/app/shifts?shift=${id}&manageTeam=1`);
+                  }}
+                >
+                  <Users className="h-4 w-4 mr-2" />
+                  Operar equipo
+                </Button>
                 <Button
                   className="w-full h-14 text-base font-semibold rounded-2xl"
                   disabled={saving}
-                  onClick={() => onOpenChange(false)}
+                  onClick={() => {
+                    const id = createdShiftIdRef.current;
+                    onOpenChange(false);
+                    if (id) navigate(`/app/shifts?shift=${id}`);
+                  }}
                 >
-                  Ir al turno
+                  Ver turno
                 </Button>
               </div>
             ) : (
@@ -954,6 +1076,31 @@ export function MobileQuickCreateShiftSheet({
           </div>
 
           {/* Confirmación de cierre con cambios sin guardar */}
+          {/* Cambio de empresa a mitad del wizard: se bloquea, nunca silencioso */}
+          {companyChanged && !result && (
+            <div className="absolute inset-0 z-50 bg-background/90 backdrop-blur-sm flex items-end">
+              <div
+                className="w-full rounded-t-3xl border-t border-border/60 bg-card p-5 space-y-3"
+                style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 16px)" }}
+              >
+                <p className="flex items-center gap-2 text-[17px] font-bold">
+                  <ArrowRightLeft className="h-4 w-4 text-status-warning shrink-0" />
+                  Cambió la empresa activa
+                </p>
+                <p className="text-[13px] text-muted-foreground">
+                  Este turno se estaba armando para otra empresa. No se creó nada.
+                  Para evitar crearlo en el lugar equivocado, cierra y empieza de nuevo.
+                </p>
+                <Button
+                  className="w-full h-12 rounded-2xl"
+                  onClick={() => { setCompanyChanged(false); onOpenChange(false); }}
+                >
+                  Cerrar y empezar de nuevo
+                </Button>
+              </div>
+            </div>
+          )}
+
           {confirmClose && (
             <div className="absolute inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-end">
               <div

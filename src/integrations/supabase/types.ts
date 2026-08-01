@@ -1889,6 +1889,7 @@ export type Database = {
           plan_activated_by: string | null
           plan_code: string
           plan_status: string
+          shift_ref_prefix: string | null
           slug: string
           source: string | null
           status: string
@@ -1922,6 +1923,7 @@ export type Database = {
           plan_activated_by?: string | null
           plan_code?: string
           plan_status?: string
+          shift_ref_prefix?: string | null
           slug: string
           source?: string | null
           status?: string
@@ -1955,6 +1957,7 @@ export type Database = {
           plan_activated_by?: string | null
           plan_code?: string
           plan_status?: string
+          shift_ref_prefix?: string | null
           slug?: string
           source?: string | null
           status?: string
@@ -2258,6 +2261,42 @@ export type Database = {
             foreignKeyName: "company_settings_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
+            referencedRelation: "companies_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_shift_counters: {
+        Row: {
+          company_id: string
+          created_at: string
+          last_number: number
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          last_number?: number
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          last_number?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_shift_counters_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_shift_counters_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
             referencedRelation: "companies_public"
             referencedColumns: ["id"]
           },
@@ -13509,6 +13548,8 @@ export type Database = {
           shift_admin_id: string | null
           shift_code: string | null
           shift_link_token: string | null
+          shift_number: number | null
+          shift_ref: string | null
           slots: number | null
           special_instructions: string | null
           start_time: string
@@ -13554,6 +13595,8 @@ export type Database = {
           shift_admin_id?: string | null
           shift_code?: string | null
           shift_link_token?: string | null
+          shift_number?: number | null
+          shift_ref?: string | null
           slots?: number | null
           special_instructions?: string | null
           start_time: string
@@ -13599,6 +13642,8 @@ export type Database = {
           shift_admin_id?: string | null
           shift_code?: string | null
           shift_link_token?: string | null
+          shift_number?: number | null
+          shift_ref?: string | null
           slots?: number | null
           special_instructions?: string | null
           start_time?: string
@@ -17383,6 +17428,23 @@ export type Database = {
           slug: string
         }[]
       }
+      find_shift_across_my_companies: {
+        Args: { p_query: string }
+        Returns: {
+          company_id: string
+          company_name: string
+          date: string
+          end_time: string
+          publication_status: Database["public"]["Enums"]["shift_publication_status"]
+          shift_id: string
+          shift_number: number
+          shift_ref: string
+          slots: number
+          start_time: string
+          status: string
+          title: string
+        }[]
+      }
       generate_shift_link_token: { Args: never; Returns: string }
       generate_shift_review_requests: {
         Args: { _shift_id: string }
@@ -17623,6 +17685,10 @@ export type Database = {
           payload: Json
           source_queue: string
         }
+        Returns: number
+      }
+      next_company_shift_number: {
+        Args: { _company_id: string }
         Returns: number
       }
       oai_can_read_observations: { Args: never; Returns: boolean }
