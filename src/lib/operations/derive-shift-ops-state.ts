@@ -102,9 +102,13 @@ export function deriveShiftOpsState(
   const active = assignments.filter(
     (a) => a.shift_id === shift.id && !["rejected", "removed"].includes(a.status),
   );
-  const confirmedAssignments = active.filter((a) =>
-    ["confirmed", "accepted"].includes(a.status),
+  // P0 — misma regla que `getShiftStaffingMetrics`: `needs_reacceptance` no confirma.
+  const confirmedAssignments = active.filter(
+    (a) =>
+      (a as any).response_status !== "needs_reacceptance" &&
+      ["confirmed", "accepted"].includes(a.status),
   );
+
 
   const linked = entries.filter((e) => e.shift_id === shift.id);
 
