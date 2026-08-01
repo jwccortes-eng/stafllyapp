@@ -683,16 +683,19 @@ function operationState(
   missing: number,
   unconfirmed: number,
   mins: number,
-  perms: Required<HubPermissions>,
+  perms: ResolvedHubPermissions,
 ): {
   status: string;
   statusLabel: string;
   need: string;
-  action: HubLink;
+  action?: HubLink;
   priority: HubPriority;
 } {
   const ops = shift.ops;
   const href = ROUTES.shiftOps(shift.id);
+  const viewLink: HubLink | undefined = perms.canOperate
+    ? { label: "Ver detalles", href }
+    : undefined;
 
   if (ops.bucket === "needs_closeout") {
     return {
@@ -702,22 +705,37 @@ function operationState(
         ops.missing_clock_outs > 0
           ? `${ops.missing_clock_outs} fichajes sin salida antes de cerrar.`
           : "El turno terminó: falta revisar el cierre.",
-      action: perms.canClose
-        ? { label: "Revisar cierre", href: ROUTES.closeout }
-        : { label: "Ver detalles", href },
+      action:
+        perms.canClose || perms.canReviewCloseout
+          ? { label: "Revisar cierre", href: ROUTES.closeout }
+          : viewLink,
       priority: "medium",
     };
   }
   if (ops.bucket === "in_progress") {
+    const attendance = readAttendance({
+      bucket: ops.bucket,
+      assigned: ops.assigned_active,
+      clockedIn: ops.clocked_in,
+      notStarted: ops.not_started,
+      minutesUntilStart: mins,
+      confirmedNoShows: ops.confirmed_no_shows ?? null,
+    });
     return {
       status: "in_progress",
       statusLabel: "En curso",
-      need:
-        ops.not_started > 0
-          ? `${ops.not_started} sin registrar entrada.`
-          : `${ops.clocked_in} de ${ops.assigned_active} en sitio.`,
-      action: { label: "Operar turno", href },
-      priority: ops.not_started > 0 ? "critical" : "medium",
+      need: attendance
+        ? attendance.detail
+        : `${ops.clocked_in} de ${ops.assigned_active} en sitio.`,
+      action: perms.canOperate
+        ? { label: "Operar turno", href }
+        : undefined,
+      priority:
+        attendance?.state === "no_show_confirmed"
+          ? "critical"
+          : attendance?.state === "missing_checkin"
+            ? "high"
+            : "medium",
     };
   }
   if (missing > 0) {
@@ -727,7 +745,7 @@ function operationState(
       need: `Cubrir ${missing} cupo(s) antes de ${hhmm(shift.start_time)}.`,
       action: perms.canAssign
         ? { label: "Completar equipo", href }
-        : { label: "Ver detalles", href },
+        : viewLink,
       priority: mins <= 60 ? "critical" : "high",
     };
   }
@@ -736,7 +754,9 @@ function operationState(
       status: "pending",
       statusLabel: `${unconfirmed} sin confirmar`,
       need: `${unconfirmed} de ${ops.assigned_active} aún no confirman.`,
-      action: { label: "Confirmar equipo", href },
+      action: perms.canConfirmTeam
+        ? { label: "Confirmar equipo", href }
+        : viewLink,
       priority: mins <= 12 * 60 ? "high" : "medium",
     };
   }
@@ -744,7 +764,8 @@ function operationState(
     status: "ready",
     statusLabel: "Equipo completo",
     need: "Sin acciones pendientes. Listo para operar.",
-    action: { label: "Operar turno", href },
+    action: perms.canOperate ? { label: "Operar turno", href } : undefined,
     priority: "low",
   };
 }
+
