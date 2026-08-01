@@ -356,7 +356,9 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
       companies, selectedCompanyId, selectedCompany, setSelectedCompanyId,
       switchCompany, loading, refetch: fetchCompanies, activeModules, isModuleActive,
       isGlobalMode, canUseGlobalMode,
+      loadError, switchState, switchError, retrySwitch, clearSwitchError,
     }}>
+
       {children}
     </CompanyContext.Provider>
   );
