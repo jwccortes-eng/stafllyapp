@@ -2,6 +2,7 @@ import { NavLink, useLocation } from "react-router-dom";
 import { LayoutDashboard, CalendarDays, Clock, Users, MoreHorizontal, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useT } from "@/i18n";
+import { FOCUS_RING } from "@/lib/mobile/mobile-scale";
 
 /**
  * Admin Bottom Nav — Premium 5-tab pattern (Phase A).

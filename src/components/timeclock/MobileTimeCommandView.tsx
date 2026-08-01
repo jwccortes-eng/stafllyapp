@@ -414,15 +414,23 @@ export default function MobileTimeCommandView() {
         </Button>
       </div>
 
-      {/* Alerts (compact) */}
+      {/* Alerts — primary action for this screen when present */}
       {alerts.length > 0 && (
         <Card className="rounded-2xl border border-amber-500/30 bg-amber-500/5">
-          <div className="px-3.5 py-2.5 flex items-center gap-2 border-b border-amber-500/20">
-            <AlertTriangle className="h-4 w-4 text-amber-600" />
-            <span className="text-sm font-semibold text-amber-700 dark:text-amber-400">
-              {alerts.length} {alerts.length === 1 ? "alerta" : "alertas"}
+          <button
+            type="button"
+            onClick={() => setAlertDetail(alerts[0])}
+            className={cn(
+              "w-full flex items-center gap-2 px-3.5 py-3 min-h-[44px] border-b border-amber-500/20 text-left active:bg-amber-500/10",
+              FOCUS_RING,
+            )}
+          >
+            <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" aria-hidden="true" />
+            <span className={cn(MT.bodyStrong, "text-amber-700 dark:text-amber-400 flex-1")}>
+              {alerts.length} {alerts.length === 1 ? "alerta pendiente" : "alertas pendientes"} — revisar evidencia
             </span>
-          </div>
+            <ChevronRight className="h-4 w-4 text-amber-600 shrink-0" aria-hidden="true" />
+          </button>
           <ul className="divide-y divide-border/40">
             {alerts.slice(0, 5).map(a => (
               <AlertRow key={`${a.type}-${a.entry.id}`} item={a} focused={focusEntryId === a.entry.id} onOpen={() => setAlertDetail(a)} />
