@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog";
 import { NavItem } from "./nav-items";
 import { useT } from "@/i18n";
+import { MT, MT_EYEBROW, FOCUS_RING } from "@/lib/mobile/mobile-scale";
+import { FAMILY_CLASSES } from "@/lib/status/status-registry";
 
 /**
  * MoreSheet — Premium grouped bottom sheet for the admin mobile shell.
