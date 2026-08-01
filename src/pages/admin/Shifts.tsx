@@ -2686,7 +2686,7 @@ function DesktopShifts() {
         allShifts={shifts}
         canEdit={canEdit}
         onAddEmployees={handleAddEmployees}
-        onRemoveAssignment={handleRemoveAssignment}
+        onRemoveAssignment={handleAssignmentRemoved}
         onEdit={(s) => { setEditShift(s); setEditOpen(true); }}
         onPublish={handlePublishShift}
         onSave={handleEditShift}
