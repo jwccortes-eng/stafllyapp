@@ -51,8 +51,11 @@ import {
 } from "@/lib/ox/terminal-state";
 
 export interface ContextSwitcherProps {
-  /** `sidebar` y `header` son desktop; en mobile siempre se usa bottom sheet. */
-  placement?: "sidebar" | "header";
+  /**
+   * `sidebar` y `header` son desktop; en mobile siempre se usa bottom sheet.
+   * `hero` es el bloque de identidad de la empresa (anfitriona) en Home.
+   */
+  placement?: "sidebar" | "header" | "hero";
   collapsed?: boolean;
   className?: string;
 }
