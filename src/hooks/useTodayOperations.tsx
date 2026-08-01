@@ -20,6 +20,7 @@ import {
   ShiftOpsState,
   deriveShiftOpsState,
 } from "@/lib/operations/derive-shift-ops-state";
+import { driverIdsFromAssignments } from "@/lib/shifts/driver-sync";
 
 /**
  * P0.3.1 — CONTRATO MULTI-DRIVER
@@ -154,7 +155,7 @@ export function useTodayOperations(
         todayShiftIds.length
           ? supabase
               .from("shift_assignments")
-              .select("id, shift_id, employee_id, status")
+              .select("id, shift_id, employee_id, status, assignment_role")
               .in("shift_id", todayShiftIds)
           : Promise.resolve({ data: [], error: null } as any),
         todayShiftIds.length
