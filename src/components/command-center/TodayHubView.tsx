@@ -18,6 +18,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useCompany } from "@/hooks/useCompany";
 import { useTodayOperations } from "@/hooks/useTodayOperations";
+import { useTodayHubPermissions } from "@/hooks/useTodayHubPermissions";
+
 import { supabase } from "@/integrations/supabase/client";
 import { notifyError } from "@/lib/feedback/notify";
 import {
