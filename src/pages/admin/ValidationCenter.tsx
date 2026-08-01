@@ -298,10 +298,17 @@ export default function ValidationCenter() {
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4">
           <div className="min-w-0">
             <p className={MT.label}>Siguiente decisión</p>
+            {nextItem ? (
+              <p className={cn(MT.body, "truncate")}>
+                {nextItem.title}
+                {nextItem.subtitle ? ` · ${nextItem.subtitle}` : ""} — {nextItem.headline}
+              </p>
+            ) : null}
             <p className={cn(MT.caption, "text-muted-foreground")}>
               {model.primaryAction.reason}
             </p>
           </div>
+
           <Button
             variant="outline"
             size="sm"
