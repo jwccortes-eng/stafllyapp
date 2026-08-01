@@ -1191,7 +1191,7 @@ export default function PayrollReviewQueue() {
                     <span className="inline-flex items-center gap-2">
                       <span className="font-mono text-xs text-muted-foreground">#{p.sequence_number ?? "—"}</span>
                       <span>{format(parseISO(p.start_date), "MMM d")} – {format(parseISO(p.end_date), "MMM d, yyyy")}</span>
-                      <Badge variant="outline" className="text-[10px] py-0 px-1.5 capitalize">{p.status ?? "—"}</Badge>
+                      <Badge variant="outline" className="text-[10px] py-0 px-1.5">{PERIOD_STATUS_ES[p.status ?? ""] ?? p.status ?? "—"}</Badge>
                       {future && <Badge variant="outline" className="text-[10px] py-0 px-1.5 border-warning/40 text-warning">futuro</Badge>}
                       {pbp > 0 && <Badge variant="outline" className="text-[10px] py-0 px-1.5 border-earning/40 text-earning">{pbp} filas</Badge>}
                     </span>
