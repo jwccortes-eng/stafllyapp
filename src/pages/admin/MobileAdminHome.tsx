@@ -278,11 +278,17 @@ export default function MobileAdminHome() {
                 </div>
                 <div className="flex items-center gap-2 w-full">
                   <span className="text-[13px] font-semibold tracking-tight truncate">{a.label}</span>
-                  {count > 0 && (
+                  {badge.kind === "error" && (
+                    <Badge variant="secondary" className="h-4 px-1 text-[10px] font-semibold ml-auto bg-destructive/15 text-destructive border border-destructive/20">
+                      Error
+                    </Badge>
+                  )}
+                  {badge.kind === "ready" && count > 0 && (
                     <Badge variant="secondary" className="h-4 px-1 text-[10px] font-semibold ml-auto bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/20">
                       {count > 9 ? "9+" : count}
                     </Badge>
                   )}
+
                 </div>
                 <span className="text-[10.5px] text-muted-foreground mt-0.5 leading-tight truncate w-full">
                   {a.hint}
