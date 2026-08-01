@@ -501,6 +501,7 @@ export default function TodayHubView() {
   if (isMobile) {
     return (
       <div className="space-y-5 px-3 pb-[calc(env(safe-area-inset-bottom)+84px)] pt-1">
+        {permissionsBanner}
         {countsBanner}
         {attentionBlock}
         {operationsBlock}
@@ -528,6 +529,7 @@ export default function TodayHubView() {
   return (
     <div className="grid grid-cols-1 gap-5 px-6 pb-8 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
       <div className="space-y-6">
+        {permissionsBanner}
         {countsBanner}
         {attentionBlock}
         {operationsBlock}
