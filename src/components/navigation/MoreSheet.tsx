@@ -192,12 +192,13 @@ export function MoreSheet({
               <Monitor className="h-4 w-4 text-muted-foreground" />
             </div>
             <div className="min-w-0">
-              <p className="text-[13px] font-semibold text-foreground leading-tight">
+              <p className={cn(MT.bodyStrong, "text-foreground leading-tight")}>
                 {t("launcher.more_desktop_tools.title")}
               </p>
-              <p className="text-[11px] text-muted-foreground mt-1 leading-snug">
+              <p className={cn(MT.body, "text-muted-foreground mt-1 leading-snug")}>
                 {t("launcher.more_desktop_tools.subtitle")}
               </p>
+
             </div>
           </div>
         </div>

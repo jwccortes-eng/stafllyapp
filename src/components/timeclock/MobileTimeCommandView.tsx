@@ -687,17 +687,12 @@ function AlertDetailSheet({ item, onClose, onOpenWorker, onReviewInTime }: {
   const waPhone = phoneRaw.replace(/^\+/, "");
   const isCritical = item?.type === "stale_open" || item?.type === "very_long";
   const severityLabel = isCritical ? "Crítico" : "Revisión requerida";
-  const severityCls = isCritical
-    ? "bg-destructive/15 text-destructive border-destructive/30"
-    : "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30";
   return (
     <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
       <SheetContent side="bottom" className="rounded-t-3xl p-0 max-h-[92vh] flex flex-col">
         <SheetHeader className="px-5 pt-5 pb-3 text-left border-b border-border/50">
           <div className="flex items-center gap-2 mb-1.5">
-            <Badge variant="outline" className={cn("text-[12px] font-bold uppercase tracking-wider px-2 py-0.5", severityCls)}>
-              <AlertTriangle className="h-3 w-3 mr-1" /> {severityLabel}
-            </Badge>
+            <StatusBadge status={isCritical ? "blocked" : "needs_review"} label={severityLabel} size="md" />
             {item && !item.entry.clock_out && (
               <span className="inline-flex items-center gap-1 text-[12px] font-medium text-muted-foreground">
                 <span className="h-1.5 w-1.5 rounded-full bg-destructive animate-pulse" />
@@ -745,7 +740,7 @@ function AlertDetailSheet({ item, onClose, onOpenWorker, onReviewInTime }: {
             <div className="grid grid-cols-2 gap-2">
               <div className="rounded-xl border border-border bg-card px-3 py-2">
                 <div className="text-[12px] uppercase tracking-wider text-muted-foreground">Estado</div>
-                <div className="text-sm font-semibold">{item.entry.clock_out ? "Cerrado" : "Abierto"}</div>
+                <div className="mt-0.5"><StatusBadge status={item.entry.clock_out ? "closed" : "active"} label={item.entry.clock_out ? "Cerrado" : "Abierto"} size="sm" /></div>
               </div>
               <div className="rounded-xl border border-border bg-card px-3 py-2 min-w-0">
                 <div className="text-[12px] uppercase tracking-wider text-muted-foreground">Turno</div>
