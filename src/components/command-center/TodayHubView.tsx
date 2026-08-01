@@ -400,7 +400,12 @@ export default function TodayHubView() {
           slots={t.required}
           confirmed={t.confirmed}
           present={t.present}
-          action={{ label: t.action.label, onClick: () => go(t.action.href) }}
+          action={
+            t.action
+              ? { label: t.action.label, onClick: () => go(t.action!.href) }
+              : undefined
+          }
+
         />
       ))}
     </Section>
