@@ -14,8 +14,9 @@
 import { supabase } from "@/integrations/supabase/client";
 
 export type ShiftUpdateResult =
-  | { ok: true; row: Record<string, any>; mismatched: string[] }
-  | { ok: false; reason: "error" | "no_rows" | "mismatch"; message: string; mismatched?: string[] };
+  | { ok: true; row: Record<string, any>; mismatched: string[]; message?: string; reason?: undefined }
+  | { ok: false; reason: "error" | "no_rows" | "mismatch"; message: string; mismatched?: string[]; row?: undefined };
+
 
 function sameValue(a: any, b: any): boolean {
   if (a === b) return true;
