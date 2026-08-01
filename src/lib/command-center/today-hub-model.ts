@@ -443,7 +443,9 @@ export function buildTodayHubModel(input: TodayHubInput): TodayHubModel {
           headline: `${ops.missing_clock_outs} fichajes sin salida en ${shift.title}`,
           because: "El turno terminó y los relojes siguen abiertos.",
           impact: "Las horas no pueden revisarse hasta cerrarlos.",
-          action: { label: "Cerrar clock-out", href: ROUTES.timeclock(shift.id) },
+          action: perms.canManageAttendance
+            ? { label: "Cerrar clock-out", href: ROUTES.timeclock(shift.id) }
+            : undefined,
           shiftId: shift.id,
         },
         "open_clock",
@@ -463,7 +465,9 @@ export function buildTodayHubModel(input: TodayHubInput): TodayHubModel {
           { label: "Solicitudes", value: String(shift.pending_claims), attention: true },
         ],
         consequence: "Aceptar una solicitud ocupa un cupo del turno.",
-        decision: { label: "Revisar solicitudes", href: ROUTES.shiftOps(shift.id) },
+        decision: perms.canAssign
+          ? { label: "Revisar solicitudes", href: ROUTES.shiftOps(shift.id) }
+          : undefined,
         alternatives: [],
         priority: missing > 0 ? "high" : "medium",
       });
@@ -490,15 +494,20 @@ export function buildTodayHubModel(input: TodayHubInput): TodayHubModel {
         ],
         consequence:
           "Revisar el cierre no modifica payroll. La validación final se hace en Centro de Validación.",
-        decision: perms.canClose
-          ? { label: "Revisar cierre", href: ROUTES.closeout }
-          : { label: "Ver detalles", href: ROUTES.shiftOps(shift.id) },
-        alternatives: perms.canApproveHours
-          ? [{ label: "Revisar horas", href: ROUTES.hours(shift.id) }]
-          : [],
+        decision:
+          perms.canReviewCloseout || perms.canClose
+            ? { label: "Revisar cierre", href: ROUTES.closeout }
+            : perms.canOperate
+              ? { label: "Ver detalles", href: ROUTES.shiftOps(shift.id) }
+              : undefined,
+        alternatives:
+          perms.canApproveHours || perms.canAccessValidations
+            ? [{ label: "Revisar horas", href: ROUTES.hours(shift.id) }]
+            : [],
         priority: ops.missing_clock_outs > 0 ? "high" : "medium",
       });
     }
+
 
     /* — Operaciones de hoy — */
     if (ops.bucket !== "closed") {
