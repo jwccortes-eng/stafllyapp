@@ -183,8 +183,16 @@ function DecisionEntry({ item, go }: { item: HubDecisionItem; go: (href: string)
       subtitle={item.subtitle}
       status={item.status}
       evidence={item.evidence}
-      consequence={item.consequence}
-      decision={{ label: item.decision.label, onClick: () => go(item.decision.href) }}
+      consequence={
+        item.decision
+          ? item.consequence
+          : `${item.consequence} No tienes permiso para decidir sobre este ítem.`
+      }
+      decision={
+        item.decision
+          ? { label: item.decision.label, onClick: () => go(item.decision!.href) }
+          : undefined
+      }
       alternatives={item.alternatives.map((a) => ({
         label: a.label,
         onClick: () => go(a.href),
@@ -192,6 +200,7 @@ function DecisionEntry({ item, go }: { item: HubDecisionItem; go: (href: string)
     />
   );
 }
+
 
 /* ── Vista ───────────────────────────────────────────────────────────── */
 
