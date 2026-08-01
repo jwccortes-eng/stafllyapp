@@ -16,6 +16,7 @@
  */
 
 import { supabase } from "@/integrations/supabase/client";
+import { ADMIN_LEX } from "@/lib/ox/lexicon";
 
 export type CancelShiftReason =
   | "cancelled"
@@ -107,38 +108,38 @@ export function cancelBlockedCopy(
   switch (result.reason) {
     case "payroll_locked":
       return {
-        title: "Este turno ya tiene actividad de pago",
+        title: `Este ${ADMIN_LEX.entity} ya tiene actividad de pago`,
         fact: `${shiftRef} tiene horas aprobadas, ajustes de pago o cierre aprobado.`,
         consequence: "No puede cancelarse sin revisión administrativa. No se guardaron cambios.",
       };
     case "requires_activity_acknowledgement":
       return {
-        title: "Este turno ya tiene actividad real",
+        title: `Este ${ADMIN_LEX.entity} ya tiene actividad real`,
         fact: "Hay fichajes u horas registradas.",
         consequence: "Las horas se conservarán intactas. Confirma para cancelar durante la operación.",
       };
     case "requires_started_acknowledgement":
       return {
-        title: "Este turno ya comenzó",
+        title: `Este ${ADMIN_LEX.entity} ya comenzó`,
         fact: "La hora de inicio ya pasó.",
         consequence: "Confirma para cancelarlo igualmente; el historial se conserva.",
       };
     case "forbidden":
       return {
-        title: "No tienes permiso para cancelar turnos",
+        title: `No tienes permiso para cancelar ${ADMIN_LEX.entityPlural}`,
         fact: "No se guardaron cambios.",
         consequence: "Pide acceso de administrador o supervisor de esta empresa.",
       };
     case "tenant_mismatch":
     case "shift_not_found":
       return {
-        title: "No encontramos este turno",
-        fact: "El turno cambió de estado o pertenece a otra empresa.",
+        title: `No encontramos ${ADMIN_LEX.thisEntity}`,
+        fact: `${ADMIN_LEX.Entity} cambió de estado o pertenece a otra empresa.`,
         consequence: "Recarga para ver el estado actual.",
       };
     case "status_conflict":
       return {
-        title: "El turno cambió mientras trabajabas",
+        title: `${ADMIN_LEX.Entity} modificado mientras trabajabas`,
         fact: `Ahora está en estado "${result.final_status ?? "desconocido"}".`,
         consequence: "No se guardaron cambios. Recarga y vuelve a intentarlo.",
       };
@@ -150,15 +151,15 @@ export function cancelBlockedCopy(
       };
     case "scope_not_supported":
       return {
-        title: "Sólo puede cancelarse este turno",
-        fact: "Este turno no pertenece a una serie recurrente gestionable.",
+        title: `Sólo puede cancelarse ${ADMIN_LEX.thisEntity}`,
+        fact: `${ADMIN_LEX.Entity} sin serie recurrente gestionable.`,
         consequence: "Cancela cada turno por separado.",
       };
     default:
       return {
-        title: "No pudimos cancelar el turno",
+        title: `No pudimos cancelar ${ADMIN_LEX.theEntity}`,
         fact: "No se guardaron cambios.",
-        consequence: "El turno quedó exactamente como estaba.",
+        consequence: `${ADMIN_LEX.Entity} sin cambios.`,
       };
   }
 }
@@ -170,7 +171,7 @@ export function cancelSuccessCopy(
 ): { title: string; fact: string; consequence: string } {
   if (result.reason === "already_cancelled") {
     return {
-      title: "Este turno ya estaba cancelado",
+      title: `Este ${ADMIN_LEX.entity} ya estaba cancelado`,
       fact: `${shiftRef} no cambió con esta acción.`,
       consequence: "El historial se mantiene intacto.",
     };
@@ -180,7 +181,7 @@ export function cancelSuccessCopy(
     ? " Las horas reales registradas se conservaron."
     : "";
   return {
-    title: "Turno cancelado",
+    title: `${ADMIN_LEX.Entity} cancelado`,
     fact: `${shiftRef} quedó cancelado.`,
     consequence: `${people} ${people === 1 ? "persona fue retirada" : "personas fueron retiradas"} de la operación activa y su historial fue conservado.${hours}`,
   };

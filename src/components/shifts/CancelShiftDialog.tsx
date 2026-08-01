@@ -22,6 +22,7 @@ import {
 } from "@/lib/shifts/cancel-shift";
 import { MT, TAP } from "@/lib/mobile/mobile-scale";
 import { cn } from "@/lib/utils";
+import { ADMIN_LEX } from "@/lib/ox/lexicon";
 
 export interface CancelShiftDialogProps {
   open: boolean;
@@ -146,7 +147,7 @@ export function CancelShiftDialog({
             {whenLine ? <span className="block">{whenLine}</span> : null}
             {people ? <span className="block">{people}</span> : null}
             <span className="block pt-1">
-              Esta acción cancelará el turno y notificará al equipo.
+              Esta acción cancelará {ADMIN_LEX.theEntity} y notificará al equipo.
             </span>
             <span className="block">
               La historia y cualquier hora real se conservarán.
@@ -191,7 +192,7 @@ export function CancelShiftDialog({
           >
             {submitting
               ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-              : acknowledge ? "Cancelar de todos modos" : "Cancelar turno"}
+              : acknowledge ? "Cancelar de todos modos" : ADMIN_LEX.cancel}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
