@@ -452,6 +452,19 @@ export function MobileQuickCreateShiftSheet({
       const summary = summarizeCreateResult(ordered, team.length);
       setResult(summary);
 
+      // Confirmación con la empresa REALMENTE persistida, nunca la asumida.
+      const persisted = persistedRef.current;
+      const conf = persisted
+        ? buildCreationConfirmation({
+            persisted,
+            expectedCompanyId: lockedCompanyIdRef.current ?? companyId,
+            companyNameById: (id) => companies.find(c => c.id === id)?.name ?? null,
+            assignedCount: summary.okCount,
+            requestedCount: team.length,
+          })
+        : null;
+      setConfirmation(conf);
+
       // Auditoría: siempre refleja el resultado real, incluidos los fallos.
       try {
         await supabase.rpc("log_activity_detailed", {
@@ -464,6 +477,8 @@ export function MobileQuickCreateShiftSheet({
             result: summary.kind,
             requested: team.length,
             assigned: summary.okCount,
+            shift_ref: persisted?.shiftRef ?? null,
+            persisted_company_id: persisted?.companyId ?? null,
             failed: ordered.filter(o => !o.ok).map(o => ({ employee_id: o.employeeId, code: o.code })),
           },
           _old_data: null,
@@ -483,16 +498,16 @@ export function MobileQuickCreateShiftSheet({
           consequence: "El turno ya está publicado; revisa quién quedó fuera.",
           key: "create-shift",
         });
-        // Se queda abierto en la pantalla de resultado por persona.
       } else {
         notifySuccess({
-          title: summary.title,
-          fact: `${shiftTitle} · ${shortDate(date)} ${startTime}–${endTime}.`,
-          consequence: summary.fact,
+          title: conf?.title ?? summary.title,
+          fact: `${conf?.refLabel ?? ""} · ${shiftTitle} · ${shortDate(date)} ${startTime}–${endTime}.`.replace(/^ · /, ""),
+          consequence: conf ? `Quedó en ${conf.companyName}. ${summary.fact}` : summary.fact,
           key: "create-shift",
         });
-        onOpenChange(false);
       }
+      // El sheet permanece abierto en la pantalla de confirmación: el operador
+      // ve el número del turno y la empresa antes de salir.
     } catch (e: any) {
       const created = !!createdShiftIdRef.current;
       notifyError({
