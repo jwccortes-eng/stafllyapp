@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   CalendarDays, SlidersHorizontal, ChevronRight,
-  Users, AlertTriangle, Building2, Eye, Plus,
+  Users, AlertTriangle, Building2, Plus,
 } from "lucide-react";
 import { ShiftRouteHeader, type ShiftRouteHeaderTone } from "@/components/stafly-ui";
 import { format, parseISO, isToday, isTomorrow, addDays } from "date-fns";
