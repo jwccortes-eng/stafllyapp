@@ -33,7 +33,9 @@ import {
   type LocationOption,
 } from "@/components/shifts/ShiftFormFields";
 import { syncShiftDriverRoles, driverIdsFromAssignments } from "@/lib/shifts/driver-sync";
-import { notifyWarning } from "@/lib/feedback/notify";
+import { notifyWarning, notifyError } from "@/lib/feedback/notify";
+import { updateShiftVerified } from "@/lib/shifts/update-shift";
+
 import type { Shift, SelectOption, Employee, Assignment } from "@/components/shifts/types";
 
 interface Props {
