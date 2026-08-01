@@ -17135,6 +17135,10 @@ export type Database = {
         Args: { _company_id: string }
         Returns: boolean
       }
+      can_read_shift_chat: {
+        Args: { _company_id: string; _shift_id: string; _user_id: string }
+        Returns: boolean
+      }
       can_request_shift_correction: {
         Args: { _company_id: string; _shift_id: string }
         Returns: boolean

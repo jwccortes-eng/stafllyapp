@@ -5,6 +5,13 @@ import { useCompany } from "@/hooks/useCompany";
 import { useEffectiveEmployee } from "@/hooks/useEffectiveEmployee";
 import { useSoundContext } from "@/hooks/useSound";
 import { toast } from "sonner";
+import {
+  BurstWindow,
+  burstToastMessage,
+  evaluateBurst,
+  isCriticalNotification,
+  sortByPriorityThenDate,
+} from "@/lib/notifications/priority";
 
 export interface AppNotification {
   id: string;
@@ -17,6 +24,8 @@ export interface AppNotification {
   company_id: string;
 }
 
+const BURST_TOAST_ID = "stafly-notification-burst";
+
 export function useNotifications() {
   const { user, role } = useAuth();
   const { selectedCompanyId } = useCompany();
@@ -26,6 +35,10 @@ export function useNotifications() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const notifPermissionRef = useRef<NotificationPermission>("default");
+  const burstRef = useRef<BurstWindow>({ start: 0, count: 0 });
+  // Kept in a ref so realtime handlers always compare against the ACTIVE company.
+  const activeCompanyRef = useRef<string | null>(selectedCompanyId ?? null);
+  activeCompanyRef.current = selectedCompanyId ?? null;
 
   // Request browser notification permission
   useEffect(() => {
@@ -42,16 +55,25 @@ export function useNotifications() {
   const fetchNotifications = useCallback(async () => {
     if (!user) return;
 
-    // Admins/owners: show notifications targeted to them (user) AND recent company notifications
+    // F0 — MULTI-TENANT ISOLATION:
+    // every notification query is scoped to the ACTIVE company_id.
+    // Never load notifications by user.id alone.
+    if (!selectedCompanyId) {
+      setNotifications([]);
+      setUnreadCount(0);
+      setLoading(false);
+      return;
+    }
+
     const isAdmin = role === "developer" || role === "owner" || role === "admin" || role === "manager";
 
-    if (isAdmin && selectedCompanyId) {
-      // Fetch both: user-targeted + company-wide (for the bell)
+    if (isAdmin) {
       const [userResult, companyResult] = await Promise.all([
         supabase
           .from("notifications")
           .select("id, title, body, type, read_at, created_at, metadata, company_id")
           .eq("recipient_id", user.id)
+          .eq("company_id", selectedCompanyId)
           .order("created_at", { ascending: false })
           .limit(30),
         supabase
@@ -63,28 +85,30 @@ export function useNotifications() {
           .limit(20),
       ]);
 
-      const all = [...(userResult.data ?? []), ...(companyResult.data ?? [])];
-      // Deduplicate and sort
-      const unique = Array.from(new Map(all.map(n => [n.id, n])).values())
-        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-        .slice(0, 30) as AppNotification[];
+      const all = [...(userResult.data ?? []), ...(companyResult.data ?? [])]
+        .filter((n) => n.company_id === selectedCompanyId);
+      const unique = Array.from(new Map(all.map((n) => [n.id, n])).values()) as AppNotification[];
+      const ordered = sortByPriorityThenDate(unique).slice(0, 30);
 
-      setNotifications(unique);
-      setUnreadCount(unique.filter(n => !n.read_at).length);
+      setNotifications(ordered);
+      setUnreadCount(ordered.filter((n) => !n.read_at).length);
     } else {
-      // Employee portal: use effectiveEmployeeId (company-scoped) instead of first employee found
       const recipientIds = [user.id, ...(effectiveEmployeeId ? [effectiveEmployeeId] : [])];
 
       const { data, error } = await supabase
         .from("notifications")
         .select("id, title, body, type, read_at, created_at, metadata, company_id")
         .in("recipient_id", recipientIds)
+        .eq("company_id", selectedCompanyId)
         .order("created_at", { ascending: false })
         .limit(30);
 
       if (!error && data) {
-        setNotifications(data as AppNotification[]);
-        setUnreadCount(data.filter((n: any) => !n.read_at).length);
+        const ordered = sortByPriorityThenDate(
+          (data as AppNotification[]).filter((n) => n.company_id === selectedCompanyId)
+        );
+        setNotifications(ordered);
+        setUnreadCount(ordered.filter((n) => !n.read_at).length);
       }
     }
     setLoading(false);
@@ -92,7 +116,7 @@ export function useNotifications() {
 
   // Determine sound type based on notification type
   const getSoundType = useCallback((notifType: string): "notification" | "chat" | "alert" => {
-    if (["no_clockin_alert", "no_show_alert", "critical_alert"].includes(notifType)) return "alert";
+    if (isCriticalNotification(notifType)) return "alert";
     if (["shift_chat", "chat_message"].includes(notifType)) return "chat";
     return "notification";
   }, []);
@@ -109,7 +133,6 @@ export function useNotifications() {
           requireInteraction: false,
         };
         const notif = new Notification(title, options);
-        // Auto-close after 6 seconds
         setTimeout(() => notif.close(), 6000);
       }
     } catch {
@@ -118,76 +141,116 @@ export function useNotifications() {
   }, []);
 
   const markAsRead = useCallback(async (id: string) => {
+    if (!selectedCompanyId) return;
     await supabase
       .from("notifications")
       .update({ read_at: new Date().toISOString() })
-      .eq("id", id);
+      .eq("id", id)
+      .eq("company_id", selectedCompanyId);
 
     setNotifications(prev =>
       prev.map(n => n.id === id ? { ...n, read_at: new Date().toISOString() } : n)
     );
     setUnreadCount(prev => Math.max(0, prev - 1));
-  }, []);
+  }, [selectedCompanyId]);
 
   const markAllAsRead = useCallback(async () => {
-    if (!user) return;
+    if (!user || !selectedCompanyId) return;
     const unreadIds = notifications.filter(n => !n.read_at).map(n => n.id);
     if (unreadIds.length === 0) return;
 
     await supabase
       .from("notifications")
       .update({ read_at: new Date().toISOString() })
-      .in("id", unreadIds);
+      .in("id", unreadIds)
+      .eq("company_id", selectedCompanyId);
 
     setNotifications(prev => prev.map(n => ({ ...n, read_at: n.read_at || new Date().toISOString() })));
     setUnreadCount(0);
-  }, [user, notifications]);
+  }, [user, notifications, selectedCompanyId]);
 
   useEffect(() => {
     fetchNotifications();
   }, [fetchNotifications]);
 
-  // Realtime subscription — listen for both user.id and effectiveEmployeeId recipients
+  // Reset burst window when the active company changes
   useEffect(() => {
-    if (!user) return;
+    burstRef.current = { start: 0, count: 0 };
+  }, [selectedCompanyId]);
+
+  /**
+   * Handle an incoming realtime notification:
+   *  1. drop anything outside the ACTIVE company (multi-tenant isolation)
+   *  2. always persist it in the bell (no traceability loss)
+   *  3. coalesce bursts (3+ in 10s -> one grouped toast, no repeated sound)
+   *  4. never coalesce or silence critical alerts
+   */
+  const handleIncoming = useCallback((newNotif: AppNotification) => {
+    const activeCompany = activeCompanyRef.current;
+    if (!activeCompany || newNotif.company_id !== activeCompany) {
+      console.info("[notifications] dropped cross-company realtime event", {
+        notificationId: newNotif.id,
+        notificationCompany: newNotif.company_id,
+        activeCompany,
+      });
+      return;
+    }
+
+    setNotifications(prev => {
+      if (prev.some(n => n.id === newNotif.id)) return prev;
+      return sortByPriorityThenDate([newNotif, ...prev]).slice(0, 30);
+    });
+    setUnreadCount(prev => prev + 1);
+
+    const { window: nextWindow, decision, playSound } = evaluateBurst(
+      burstRef.current,
+      newNotif.type,
+      Date.now()
+    );
+    burstRef.current = nextWindow;
+
+    if (playSound) void play(getSoundType(newNotif.type));
+
+    if (decision.mode === "grouped") {
+      toast(burstToastMessage(decision.count), {
+        id: BURST_TOAST_ID,
+        description: "Abre la campana para revisarlas.",
+        duration: 6000,
+      });
+      return;
+    }
+
+    showSystemNotification(newNotif.title, newNotif.body);
+    if (isCriticalNotification(newNotif.type)) {
+      toast.error(newNotif.title, { description: newNotif.body, duration: 12000 });
+    } else {
+      toast(newNotif.title, { description: newNotif.body, duration: 5000 });
+    }
+  }, [play, getSoundType, showSystemNotification]);
+
+  // Realtime subscription — scoped per active company
+  useEffect(() => {
+    if (!user || !selectedCompanyId) return;
 
     const channels: ReturnType<typeof supabase.channel>[] = [];
 
-    // Channel for user-targeted notifications
     const userChannel = supabase
-      .channel("user-notifications")
+      .channel(`user-notifications-${selectedCompanyId}`)
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "notifications", filter: `recipient_id=eq.${user.id}` },
-        (payload) => {
-          const newNotif = payload.new as AppNotification;
-            console.info("[notifications] realtime insert", { notificationId: newNotif.id, type: newNotif.type, recipient: user.id });
-          setNotifications(prev => [newNotif, ...prev].slice(0, 30));
-          setUnreadCount(prev => prev + 1);
-            void play(getSoundType(newNotif.type));
-          showSystemNotification(newNotif.title, newNotif.body);
-          toast(newNotif.title, { description: newNotif.body, duration: 5000 });
-        }
+        (payload) => handleIncoming(payload.new as AppNotification)
       )
       .subscribe();
     channels.push(userChannel);
 
-    // Channel for employee-targeted notifications (uses effectiveEmployeeId for company isolation)
     if (effectiveEmployeeId && effectiveEmployeeId !== user.id) {
       const empChannel = supabase
-        .channel("employee-notifications")
+        .channel(`employee-notifications-${selectedCompanyId}`)
         .on(
           "postgres_changes",
           { event: "INSERT", schema: "public", table: "notifications", filter: `recipient_id=eq.${effectiveEmployeeId}` },
-          (payload) => {
-            const newNotif = payload.new as AppNotification;
-            console.info("[notifications] realtime insert", { notificationId: newNotif.id, type: newNotif.type, recipient: effectiveEmployeeId });
-            setNotifications(prev => [newNotif, ...prev].slice(0, 30));
-            setUnreadCount(prev => prev + 1);
-            void play(getSoundType(newNotif.type));
-            showSystemNotification(newNotif.title, newNotif.body);
-            toast(newNotif.title, { description: newNotif.body, duration: 5000 });
-          }
+          (payload) => handleIncoming(payload.new as AppNotification)
         )
         .subscribe();
       channels.push(empChannel);
@@ -196,7 +259,7 @@ export function useNotifications() {
     return () => {
       channels.forEach(ch => supabase.removeChannel(ch));
     };
-  }, [user, effectiveEmployeeId, play, getSoundType, showSystemNotification]);
+  }, [user, effectiveEmployeeId, selectedCompanyId, handleIncoming]);
 
   return {
     notifications,
