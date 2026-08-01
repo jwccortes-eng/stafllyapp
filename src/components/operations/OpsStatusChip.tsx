@@ -76,7 +76,7 @@ export function OpsStatusChip({
         <span
           className={cn(
             "h-1.5 w-1.5 rounded-full",
-            dotTone[tone],
+            FAMILY_DOT_CLASSES[TONE_FAMILY[tone]],
             pulse && "animate-pulse",
           )}
         />
