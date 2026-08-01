@@ -58,6 +58,9 @@ export default function MobileAdminHome() {
   const { role: globalRole, hasModuleAccess, fullName, getRoleForCompany } = useAuth();
   const role = isGlobalMode ? globalRole : getRoleForCompany(selectedCompanyId);
   const isAdminRole = isAdminLevelRole(role);
+  const [moreOpen, setMoreOpen] = useState(false);
+
+
 
   const [badges, setBadges] = useState<{ tickets: BadgeState; shift_requests: BadgeState }>({
     tickets: { kind: "loading", value: 0 },
