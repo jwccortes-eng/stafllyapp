@@ -29,13 +29,8 @@ interface HoursApprovalPanelProps {
   onChanged?: () => void;
 }
 
-const STATE_TONE: Record<string, string> = {
-  pending: "bg-warning/10 text-warning border-warning/20",
-  needs_review: "bg-destructive/10 text-destructive border-destructive/20",
-  approved: "bg-earning/10 text-earning border-earning/20",
-  ready_for_payroll: "bg-earning/10 text-earning border-earning/20",
-  rejected: "bg-destructive/10 text-destructive border-destructive/20",
-};
+// OX-2/OX-3: el color de estado lo resuelve StatusBadge; sin mapas cromáticos locales.
+
 
 /**
  * P0 OX — terminal "Aprobar horas" surface, scoped to one shift.
