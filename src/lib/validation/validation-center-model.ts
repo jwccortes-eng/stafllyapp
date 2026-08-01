@@ -190,6 +190,17 @@ export interface ValidationItem {
   secondaryActions: ValidationAction[];
 }
 
+/**
+ * Item antes de la capa humana OX-4.4.1. Los constructores por tipo producen
+ * la decisión; el enriquecedor añade identidad, contexto y conversación.
+ */
+export type ValidationItemDraft = Omit<
+  ValidationItem,
+  "headline" | "person" | "context" | "secondaryEvidence" | "humanContext" | "conversation"
+>;
+
+
+
 
 export interface ValidationSummary {
   total: number;
