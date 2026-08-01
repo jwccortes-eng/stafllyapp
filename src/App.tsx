@@ -311,7 +311,9 @@ function App() {
               </Route>
               {/* Admin routes */}
               <Route path="/app" element={<AdminLayout />}>
-                <Route index element={<AdminDashboard />} />
+                <Route index element={<AdminHome />} />
+                <Route path="dashboard-classic" element={<AdminDashboard />} />
+
                 <Route path="needs-attention" element={<NeedsAttention />} />
                 <Route path="daily-close" element={<CompanyRequiredGuard><DailyClose /></CompanyRequiredGuard>} />
                 <Route path="today" element={<Today />} />
