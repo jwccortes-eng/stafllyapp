@@ -124,6 +124,7 @@ export function OperationalCard({
   secondary,
   action,
   actions,
+  footer,
   variant = "standard",
   mode = "interactive",
   density = "auto",
@@ -265,6 +266,9 @@ export function OperationalCard({
             )}
           </div>
         )}
+
+        {/* 8 — Pie opcional */}
+        {footer}
       </div>
     </Comp>
   );
