@@ -229,7 +229,7 @@ export function useShiftFormSignals({
   const capacityCovered = v.transportRequired && slotsNum > 0 && !capacityShortage;
   const adminMissing = assignedCount > 0 && !v.shiftAdminId;
   const adminInvalid = !!v.shiftAdminId && assignedCount > 0 && !shiftAssignedIds.includes(v.shiftAdminId);
-  const driverMissing = v.transportRequired && !v.driverEmployeeId;
+  const driverMissing = v.transportRequired && (v.driverIds?.length ?? 0) === 0 && !v.driverEmployeeId;
   const noLocation =
     !v.locationId &&
     !v.meetingPoint.trim() &&
@@ -361,7 +361,12 @@ export function ShiftFormFields({
   // equality across re-renders so memoized children only re-render when
   // their own slice of the state changes.
   const handlePatch = useCallback(
-    (patch: Partial<ShiftFormState>) => onChange(patch),
+    (patch: Partial<ShiftFormState>) =>
+      onChange(
+        patch.driverIds
+          ? { ...patch, driverEmployeeId: patch.driverIds[0] ?? "" }
+          : patch,
+      ),
     [onChange],
   );
 
@@ -628,6 +633,7 @@ export const EMPTY_SHIFT_FORM_STATE: ShiftFormState = {
   carCapacity: "5",
   transportNotes: "",
   driverEmployeeId: "",
+  driverIds: [],
   selectedEmployees: [],
   meetingPointLocationId: null,
   jobSiteLocationId: null,
@@ -663,6 +669,7 @@ export function shiftToFormState(shift: Shift): ShiftFormState {
     carCapacity: String(s.car_capacity ?? 5),
     transportNotes: s.transportation_notes ?? "",
     driverEmployeeId: s.driver_employee_id ?? "",
+    driverIds: s.driver_employee_id ? [s.driver_employee_id] : [],
     selectedEmployees: [],
     meetingPointLocationId: s.meeting_point_location_id ?? null,
     jobSiteLocationId: s.job_site_location_id ?? null,
@@ -693,7 +700,8 @@ export function formStateToShiftPayload(s: ShiftFormState, allowClaims: boolean)
     transportation_required: s.transportRequired,
     car_capacity: parseInt(s.carCapacity) || 5,
     transportation_notes: s.transportNotes.trim() || null,
-    driver_employee_id: s.driverEmployeeId || null,
+    // LEGADO: primer driver. El resto vive en shift_assignments.assignment_role.
+    driver_employee_id: (s.driverIds?.[0] ?? s.driverEmployeeId) || null,
     meeting_point_location_id: s.meetingPointLocationId || null,
     job_site_location_id: s.jobSiteLocationId || null,
     job_site_address: s.jobSiteAddress.trim() || null,
