@@ -176,7 +176,7 @@ export function AssignWorkerCard({
       status={statusInfo.status}
       statusLabel={statusInfo.label}
       blocker={blocker}
-      recommendation={warning ?? recommendation ?? undefined}
+      recommendation={recoDuplicated ? undefined : recoText}
       action={action}
       actions={actions}
       aside={aside}
