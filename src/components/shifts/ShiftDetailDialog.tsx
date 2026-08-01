@@ -1145,11 +1145,21 @@ export function ShiftDetailDialog({
                         {/* Per-row evaluate button removed — consolidated below in ShiftPostReviewsSection */}
                         {effectiveCanEdit && (
                           <button
-                            onClick={() => setRemoveConfirm({ assignmentId: a.id, employeeName: `${emp.first_name} ${emp.last_name}` })}
+                            onClick={() => setRemoveConfirm({
+                              assignmentId: a.id,
+                              employeeName: `${emp.first_name} ${emp.last_name}`,
+                              roleLabel: a.assignment_role === "driver" ? "Conductor" : null,
+                              statusLine: a.status === "confirmed"
+                                ? "Esta persona ya confirmó el turno. Se le notificará."
+                                : "Esta persona está asignada pero aún no ha fichado.",
+                            })}
+                            title="Retirar del turno"
+                            aria-label={`Retirar a ${emp.first_name} ${emp.last_name} del turno`}
                             className="text-muted-foreground/20 hover:text-destructive transition-colors p-0.5 rounded hover:bg-destructive/10 opacity-0 group-hover:opacity-100"
                           >
-                            <Trash2 className="h-3 w-3" />
+                            <UserMinus className="h-3 w-3" />
                           </button>
+
                         )}
                       </div>
                     );
