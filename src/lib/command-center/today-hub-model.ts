@@ -16,6 +16,8 @@
 
 /* ── Entradas ────────────────────────────────────────────────────────── */
 
+import { readAttendance } from "./attendance-semantics";
+
 export interface HubShiftOpsLike {
   bucket: string;
   alert_level?: string;
@@ -25,8 +27,12 @@ export interface HubShiftOpsLike {
   clocked_in: number;
   open_clocks: number;
   missing_clock_outs: number;
+  /** Sin fichaje de entrada. NO equivale a no-show (OX-4.3.1). */
   not_started: number;
+  /** Evidencia explícita de no-show. Hoy no la produce ninguna fuente. */
+  confirmed_no_shows?: number | null;
 }
+
 
 export interface HubShiftLike {
   id: string;
