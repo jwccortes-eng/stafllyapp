@@ -597,6 +597,7 @@ export function MobileQuickCreateShiftSheet({
           </div>
         ))}
       </div>
+      )}
     </div>
   ) : null;
 
