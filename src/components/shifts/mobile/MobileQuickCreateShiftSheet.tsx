@@ -7,6 +7,14 @@ import {
   AlertTriangle, RotateCw, ArrowRightLeft, Hash,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import {
+  type CreateShiftDraftSnapshot,
+  clearSession,
+  isMeaningfulDraft,
+  newSessionId,
+  readSession,
+  writeSession,
+} from "@/lib/shifts/create-shift-session";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -252,6 +260,16 @@ export function MobileQuickCreateShiftSheet({
   const lockedCompanyIdRef = useRef<string | null>(null);
   const [companyChanged, setCompanyChanged] = useState(false);
 
+  /* ── P0 · SESIÓN DE TRABAJO ──
+   * El wizard es un documento abierto, no un formulario desechable. El estado
+   * vive en `sessionStorage` (aislado por pestaña, usuario y empresa). No se
+   * crea ninguna entidad de negocio hasta pulsar "Crear turno".
+   */
+  const sessionIdRef = useRef<string>(newSessionId());
+  /** Evita autoguardar antes de haber intentado restaurar (no pisar el borrador). */
+  const sessionReadyRef = useRef(false);
+  const [restoredAt, setRestoredAt] = useState<number | null>(null);
+
   useEffect(() => {
     if (!open) return;
     if (lockedCompanyIdRef.current && companyId && companyId !== lockedCompanyIdRef.current) {
@@ -262,21 +280,28 @@ export function MobileQuickCreateShiftSheet({
 
   useEffect(() => {
     if (!open) return;
-    setStep("operacion");
-    setClientId("");
-    setServiceType("");
-    setJobSiteAddress("");
-    setJobSiteLocationId(null);
-    setDate(todayStr);
-    setStartTime(defaultStartTime);
-    setEndTime(defaultEndTime);
-    setSlots(Math.max(1, defaultSlots));
-    setTeam([]);
+    sessionReadyRef.current = false;
+
+    // Estado base de una sesión nueva.
+    const applyFresh = () => {
+      setStep("operacion");
+      setClientId("");
+      setServiceType("");
+      setJobSiteAddress("");
+      setJobSiteLocationId(null);
+      setDate(todayStr);
+      setStartTime(defaultStartTime);
+      setEndTime(defaultEndTime);
+      setSlots(Math.max(1, defaultSlots));
+      setTeam([]);
+      setDriverPlan(EMPTY_DRIVER_PLAN);
+      setMeetingPoint("");
+      setMeetingPointLocationId(null);
+      setNotes("");
+      setRestoredAt(null);
+    };
+
     setTeamQuery("");
-    setDriverPlan(EMPTY_DRIVER_PLAN);
-    setMeetingPoint("");
-    setMeetingPointLocationId(null);
-    setNotes("");
     setSaving(false);
     setOutcomes([]);
     setResult(null);
@@ -286,10 +311,104 @@ export function MobileQuickCreateShiftSheet({
     lockedCompanyIdRef.current = companyId;
     submitLockRef.current = false;
     createdShiftIdRef.current = null;
+
+    const baseline = {
+      date: todayStr,
+      startTime: defaultStartTime,
+      endTime: defaultEndTime,
+      slots: Math.max(1, defaultSlots),
+    };
+    const saved = readSession(user?.id, companyId);
+
+    if (saved && isMeaningfulDraft(saved.draft, baseline)) {
+      // Restauración automática: mismo usuario, misma empresa, misma pestaña.
+      sessionIdRef.current = saved.sessionId;
+      const d = saved.draft;
+      setStep((STEPS.some(x => x.key === d.step) ? d.step : "operacion") as StepKey);
+      setClientId(d.clientId);
+      setServiceType(d.serviceType);
+      setJobSiteAddress(d.jobSiteAddress);
+      setJobSiteLocationId(d.jobSiteLocationId);
+      setDate(d.date || todayStr);
+      setStartTime(d.startTime || defaultStartTime);
+      setEndTime(d.endTime || defaultEndTime);
+      setSlots(Math.max(1, d.slots || 1));
+      setTeam(d.team);
+      setDriverPlan({
+        transportRequired: d.transportRequired,
+        driversRequired: d.driversRequired,
+        driverIds: d.driverIds.filter(id => d.team.includes(id)),
+      });
+      setMeetingPoint(d.meetingPoint);
+      setMeetingPointLocationId(d.meetingPointLocationId);
+      setNotes(d.notes);
+      setRestoredAt(saved.updatedAt);
+    } else {
+      sessionIdRef.current = newSessionId();
+      applyFresh();
+    }
+
+    sessionReadyRef.current = true;
     // `companyId` queda fuera de deps a propósito: se fija al abrir y un cambio
     // posterior debe BLOQUEAR el wizard, no reiniciarlo en silencio.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, todayStr, defaultStartTime, defaultEndTime, defaultSlots]);
+
+  /** Foto actual del documento. */
+  const draftSnapshot: CreateShiftDraftSnapshot = useMemo(() => ({
+    step,
+    clientId,
+    serviceType,
+    jobSiteAddress,
+    jobSiteLocationId,
+    date,
+    startTime,
+    endTime,
+    slots,
+    team,
+    driverIds: driverPlan.driverIds,
+    transportRequired: driverPlan.transportRequired,
+    driversRequired: driverPlan.driversRequired,
+    meetingPoint,
+    meetingPointLocationId,
+    notes,
+  }), [
+    step, clientId, serviceType, jobSiteAddress, jobSiteLocationId,
+    date, startTime, endTime, slots, team, driverPlan,
+    meetingPoint, meetingPointLocationId, notes,
+  ]);
+
+  /* Autoguardado local. Nunca escribe en base de datos. */
+  useEffect(() => {
+    if (!open || !sessionReadyRef.current) return;
+    if (result || saving) return; // ya no es un documento en edición
+    if (companyChanged) return;   // empresa distinta: no contaminar el borrador
+    const baseline = {
+      date: todayStr,
+      startTime: defaultStartTime,
+      endTime: defaultEndTime,
+      slots: Math.max(1, defaultSlots),
+    };
+    // Un documento en blanco no se guarda: no queremos "restaurar" la nada.
+    if (!isMeaningfulDraft(draftSnapshot, baseline)) {
+      clearSession(user?.id, lockedCompanyIdRef.current ?? companyId);
+      return;
+    }
+    writeSession({
+      sessionId: sessionIdRef.current,
+      userId: user?.id,
+      companyId: lockedCompanyIdRef.current ?? companyId,
+      draft: draftSnapshot,
+    });
+  }, [open, draftSnapshot, result, saving, companyChanged, user?.id, companyId, todayStr, defaultStartTime, defaultEndTime, defaultSlots]);
+
+  /** Limpieza total de la sesión local (crear o descartar). */
+  const endSession = () => {
+    clearSession(user?.id, lockedCompanyIdRef.current ?? companyId);
+    sessionReadyRef.current = false;
+    sessionIdRef.current = newSessionId();
+    setRestoredAt(null);
+  };
 
 
   const client = useMemo(() => clients.find(c => c.id === clientId) ?? null, [clients, clientId]);
@@ -486,6 +605,8 @@ export function MobileQuickCreateShiftSheet({
       setOutcomes(ordered);
       const summary = summarizeCreateResult(ordered, team.length);
       setResult(summary);
+      // El documento dejó de existir: el turno ya es real. Limpieza inmediata.
+      endSession();
 
       // Confirmación con la empresa REALMENTE persistida, nunca la asumida.
       const persisted = persistedRef.current;
@@ -704,6 +825,31 @@ export function MobileQuickCreateShiftSheet({
 
           {result ? resultView : (
           <div className={cn("flex-1 overflow-y-auto", isTeamStep ? "px-0 py-0" : "px-4 py-4 space-y-5")}>
+
+            {/* P0 · sesión restaurada: el operador vuelve a su documento, no a un formulario vacío. */}
+            {restoredAt && (
+              <div className={cn(
+                "flex items-start gap-2 rounded-2xl border border-primary/30 bg-primary/5 px-3.5 py-3",
+                isTeamStep && "mx-4 mt-4",
+              )}>
+                <RotateCw className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-[13px] font-semibold">Seguimos donde lo dejaste</p>
+                  <p className="text-[12px] text-muted-foreground">
+                    Nada se ha creado todavía. Se guarda en esta pestaña hasta que pulses "Crear turno".
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setConfirmClose(true)}
+                  className="shrink-0 h-11 px-3 -my-1 text-[12px] font-semibold text-muted-foreground active:text-foreground"
+                >
+                  Descartar
+                </button>
+              </div>
+            )}
+
+
 
             {/* ── PASO 1 · ¿Qué operación? ── */}
             {step === "operacion" && (
@@ -1232,9 +1378,10 @@ export function MobileQuickCreateShiftSheet({
                 className="w-full rounded-t-3xl border-t border-border/60 bg-card p-5 space-y-3"
                 style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 16px)" }}
               >
-                <p className="text-[17px] font-bold">¿Descartar este turno?</p>
+                <p className="text-[17px] font-bold">¿Salir de este turno?</p>
                 <p className="text-[13px] text-muted-foreground">
-                  Todavía no se ha creado nada. Si sales, se pierde lo que llevas escrito.
+                  Todavía no se ha creado nada. Puedes salir y volver: lo que llevas escrito
+                  te espera en esta pestaña. Si lo descartas, se borra.
                 </p>
                 <Button
                   variant="outline"
@@ -1244,11 +1391,17 @@ export function MobileQuickCreateShiftSheet({
                   Seguir editando
                 </Button>
                 <Button
-                  variant="destructive"
                   className="w-full h-12 rounded-2xl"
                   onClick={() => { setConfirmClose(false); onOpenChange(false); }}
                 >
-                  Descartar
+                  Salir y guardar para después
+                </Button>
+                <Button
+                  variant="destructive"
+                  className="w-full h-12 rounded-2xl"
+                  onClick={() => { endSession(); setConfirmClose(false); onOpenChange(false); }}
+                >
+                  Descartar el turno
                 </Button>
               </div>
             </div>
