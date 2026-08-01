@@ -566,16 +566,13 @@ function MobileShiftTeamHubImpl({
               <p className="text-[12px] text-muted-foreground truncate">
                 {dateLabel(shift.date)} · <span className="text-foreground/85 font-semibold">{locationName || "Falta ubicación"}</span>
               </p>
-              {/* Stafly Work Route — Entrada + termina aprox. + coverage en una línea compacta. */}
+              {/* Stafly Work Route — horario. OX-9.2: la cobertura vive sólo en TeamCard. */}
               <div className="mt-1 flex items-baseline gap-1.5 flex-wrap">
                 <span className="text-[12px] font-bold uppercase tracking-[0.14em] text-muted-foreground/70">Entrada</span>
                 <span className="text-[15px] font-bold font-mono tabular-nums text-foreground leading-none">{formatTimeShort(shift.start_time)}</span>
                 <span className="text-[12px] text-muted-foreground/80">· termina aprox. <span className="font-mono tabular-nums">{formatTimeShort(shift.end_time)}</span></span>
-                <span className="text-[12px] text-muted-foreground/60">·</span>
-                <span className="text-[12px] font-semibold text-foreground/85 tabular-nums">
-                  {summary.assigned}/{slots || "—"}{summary.missing > 0 ? ` · faltan ${summary.missing}` : ""}
-                </span>
               </div>
+
               {(meetingPoint || hasMeetingPointLocation) && (
                 <p className="text-[12px] text-muted-foreground mt-0.5 truncate flex items-center gap-1">
                   <MapPin className="h-3 w-3 shrink-0 opacity-70" />
@@ -787,9 +784,9 @@ function OverviewTab({
   return (
     <section aria-label="Estado del equipo" className="space-y-3">
       <TeamCard
-        title={shift.title || "Equipo del turno"}
-        subtitle={intent.meaning}
+        title="Equipo"
         assigned={summary.assigned}
+
         slots={summary.slots}
         confirmed={summary.confirmed}
         present={summary.present}
@@ -813,6 +810,11 @@ function OverviewTab({
         }
       />
 
+      {/*
+        OX-9.2 — cada card consume su propio estado real.
+        Nunca se hereda el estado del turno padre, y una card en cero no se
+        pinta de verde: sólo aparece cuando tiene algo que decir.
+      */}
       <div className="grid grid-cols-2 gap-2">
         <KpiCard
           variant="compact"
@@ -821,9 +823,17 @@ function OverviewTab({
           meaning={
             summary.pending > 0
               ? `${summary.pending} sin responder todavía.`
-              : "Todo el equipo asignado ya respondió."
+              : summary.confirmed > 0
+                ? "Todo el equipo asignado ya respondió."
+                : "Nadie ha confirmado todavía."
           }
-          status={summary.pending > 0 ? "pending" : "confirmed"}
+          status={
+            summary.pending > 0
+              ? "pending"
+              : summary.confirmed > 0
+                ? "confirmed"
+                : "not_started"
+          }
           isEmpty={summary.assigned === 0}
           emptyLabel="Aún no hay nadie asignado"
           mode="readonly"
@@ -842,36 +852,29 @@ function OverviewTab({
           emptyLabel="Sin equipo asignado"
           mode="readonly"
         />
-        <KpiCard
-          variant="compact"
-          label="No-show"
-          value={summary.noShow}
-          meaning={
-            summary.noShow > 0
-              ? "Cupos que hay que cubrir ahora."
-              : "Nadie marcado como ausente."
-          }
-          status={summary.noShow > 0 ? "no_show" : "confirmed"}
-          mode="readonly"
-        />
-        <KpiCard
-          variant="compact"
-          label="Solicitudes"
-          value={claimsPending}
-          meaning={
-            claimsPending > 0
-              ? "Trabajadores esperando tu decisión."
-              : "Sin solicitudes por decidir."
-          }
-          status={claimsPending > 0 ? "needs_review" : "confirmed"}
-          action={
-            claimsPending > 0
-              ? { label: "Decidir", icon: Inbox, onClick: () => onGoTo("claims") }
-              : undefined
-          }
-          mode="readonly"
-        />
+        {summary.noShow > 0 && (
+          <KpiCard
+            variant="compact"
+            label="No-show"
+            value={summary.noShow}
+            meaning="Cupos que hay que cubrir ahora."
+            status="no_show"
+            mode="readonly"
+          />
+        )}
+        {claimsPending > 0 && (
+          <KpiCard
+            variant="compact"
+            label="Solicitudes"
+            value={claimsPending}
+            meaning="Trabajadores esperando tu decisión."
+            status="needs_review"
+            action={{ label: "Decidir", icon: Inbox, onClick: () => onGoTo("claims") }}
+            mode="readonly"
+          />
+        )}
       </div>
+
 
       {topRisks.length > 0 && (
         <div className="space-y-2">

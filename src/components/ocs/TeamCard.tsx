@@ -4,9 +4,7 @@
  * Siempre muestra cobertura y una acción para cerrar la brecha.
  */
 import * as React from "react";
-import { cn } from "@/lib/utils";
 import { Users } from "lucide-react";
-import { MT } from "@/lib/mobile/mobile-scale";
 import { OperationalCard, type OcsAction } from "./OperationalCard";
 import { CoverageMeter } from "./CoverageMeter";
 import { EmployeeAvatarGroup } from "@/components/ui/employee-avatar-group";
@@ -63,10 +61,11 @@ export function TeamCard({
   const missing = Math.max(0, slots - assigned);
   const resolvedStatus =
     status ?? (missing > 0 ? (assigned === 0 ? "blocked" : "pending") : "ready");
+  // OX-9.2 — una sola declaración de carencia, en lenguaje de personas.
   const resolvedLabel =
     statusLabel ??
     (missing > 0
-      ? `Faltan ${missing} de ${slots}`
+      ? `${missing === 1 ? "Falta" : "Faltan"} ${missing} ${missing === 1 ? "persona" : "personas"}`
       : "Equipo completo");
 
   return (
@@ -85,6 +84,7 @@ export function TeamCard({
       subtitle={subtitle ?? undefined}
       context={
         <>
+          {slots > 0 && <span>{assigned} de {slots} cubiertos</span>}
           {typeof confirmed === "number" && (
             <span>{confirmed} confirmados</span>
           )}
@@ -107,13 +107,6 @@ export function TeamCard({
             />
           )}
         </div>
-      }
-      secondary={
-        missing > 0 ? (
-          <span className={cn(MT.caption)}>
-            El turno no puede considerarse listo hasta cubrir las vacantes.
-          </span>
-        ) : undefined
       }
       action={action}
       actions={actions}

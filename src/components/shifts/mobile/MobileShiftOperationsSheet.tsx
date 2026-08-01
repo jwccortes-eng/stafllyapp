@@ -6,7 +6,12 @@ import {
   CheckCircle2, CalendarDays, Sparkles, UserPlus, Share2, ClipboardList,
   ExternalLink, Copy, StickyNote, Hash, Tag, Workflow, ChevronDown,
   ShieldCheck, MessageCircle, MessageSquare, Crown, Loader2, Bell, Download,
+  MoreHorizontal, UserCog,
 } from "lucide-react";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
 import { SendNotificationDialog } from "@/components/shifts/SendNotificationDialog";
 import { ExportConnecteamPreviewDialog } from "@/components/shifts/integrations/ExportConnecteamPreviewDialog";
 import { buildWhatsAppTargets, normalizePhone } from "@/lib/phone";
@@ -360,12 +365,8 @@ export function MobileShiftOperationsSheet({
   if (!shift || !data) return null;
 
   // ── Smart brief (deterministic) — only actionable issues, ordered by urgency.
+  // OX-9.2: la cobertura NO se repite aquí. Vive en un solo bloque de equipo.
   const briefMessages: { tone: "good" | "warn" | "bad" | "info"; text: string }[] = [];
-  if (published && understaffed) {
-    const missing = slots - assignedCount;
-    briefMessages.push({ tone: "bad", text: `Faltan ${missing} trabajador${missing === 1 ? "" : "es"}` });
-  }
-  if (assignedCount === 0) briefMessages.push({ tone: "bad", text: "Sin trabajadores asignados" });
   if (noLocation) briefMessages.push({ tone: "warn", text: meetingPoint ? "Falta ubicación del trabajo (hay punto de encuentro)" : "Falta ubicación del trabajo" });
   if (!(shiftMeeting.point ?? meetingPoint)) briefMessages.push({ tone: "warn", text: "Falta punto de encuentro" });
   if (noClient) briefMessages.push({ tone: "warn", text: "Falta cliente" });
@@ -378,6 +379,7 @@ export function MobileShiftOperationsSheet({
   ) {
     briefMessages.push({ tone: "warn", text: "Sin actividad de reloj" });
   }
+
 
   // ── Snapshot text
   const snapshot = (() => {
@@ -434,6 +436,29 @@ export function MobileShiftOperationsSheet({
     navigate(`/app/attendance?shift=${shift.id}`);
   };
 
+  /**
+   * OX-9.2 — una sola acción principal por pantalla.
+   * Cobertura pendiente → Completar equipo.
+   * Incidencias abiertas → Resolver atención.
+   * Todo en orden → Operar turno.
+   */
+  const primaryAction: { key: "team" | "attention" | "operate"; label: string; icon: any; onClick: () => void } =
+    canValidate && understaffed
+      ? { key: "team", label: "Completar equipo", icon: UserPlus, onClick: () => setHubOpen(true) }
+      : briefMessages.length > 0
+        ? {
+            key: "attention",
+            label: "Resolver atención",
+            icon: AlertTriangle,
+            onClick: () => {
+              if (noLocation) setLocationReportOpen(true);
+              else if (canValidate) setHubOpen(true);
+              else handleViewAttendance();
+            },
+          }
+        : { key: "operate", label: "Operar turno", icon: ClipboardList, onClick: handleViewAttendance };
+
+
   // Stafly Work Route — meeting point/time effective values.
   const mp = shiftMeeting.point ?? meetingPoint ?? null;
   const mt = shiftMeeting.time ? formatTimeShort(shiftMeeting.time) : null;
@@ -448,33 +473,29 @@ export function MobileShiftOperationsSheet({
         hideClose
         className="h-[92vh] p-0 rounded-t-3xl flex flex-col overflow-hidden bg-background"
       >
-        {/* Sticky Context Header — DS4.1: explicit operational summary. */}
+        {/* Sticky Context Header — OX-9.2: identidad y horario. La cobertura NO vive aquí. */}
         {(() => {
-          const missing = slots > 0 ? Math.max(0, slots - assignedCount) : 0;
-          // Single priority status pill: Unstaffed > Missing job site > No client > Draft > Complete > Published.
+          // Single priority status pill. La cobertura se declara una sola vez,
+          // en el bloque de equipo — el header nunca la repite.
           const pill: { label: string; cls: string } | null =
-            published && understaffed
-              ? { label: `Faltan ${missing}`, cls: FAMILY_CLASSES.critical }
-              : noLocation
-                ? { label: "Falta ubicación", cls: FAMILY_CLASSES.warning }
-                : noClient
-                  ? { label: "Falta cliente", cls: FAMILY_CLASSES.warning }
-                  : draft
-                    ? { label: "Borrador", cls: FAMILY_CLASSES.neutral }
-                    : published && fullyStaffed
-                      ? { label: "Completo", cls: FAMILY_CLASSES.positive }
-                      : published
-                        ? { label: "Publicado", cls: "border-primary/30 text-primary bg-primary/5" }
-                        : null;
+            noLocation
+              ? { label: "Falta ubicación", cls: FAMILY_CLASSES.warning }
+              : noClient
+                ? { label: "Falta cliente", cls: FAMILY_CLASSES.warning }
+                : draft
+                  ? { label: "Borrador", cls: FAMILY_CLASSES.neutral }
+                  : published && fullyStaffed
+                    ? { label: "Completo", cls: FAMILY_CLASSES.positive }
+                    : published
+                      ? { label: "Publicado", cls: "border-primary/30 text-primary bg-primary/5" }
+                      : null;
 
-          // Status text line (under title)
-          const statusText: string = draft
+          // Status text line (under title) — sin contadores de cobertura.
+          const statusText: string | null = draft
             ? "No visible para trabajadores"
-            : slots > 0
-              ? understaffed
-                ? `${assignedCount}/${slots} asignados · faltan ${missing}`
-                : `${assignedCount}/${slots} asignados`
-              : `${assignedCount} asignados`;
+            : null;
+
+
 
           // Header title + subtitle
           const headerTitle = (clientName && clientName !== "—") ? clientName : (shift.title || "Turno");
@@ -511,14 +532,12 @@ export function MobileShiftOperationsSheet({
                     </p>
                   )}
                   {/* Status line */}
-                  <p className={cn(
-                    "text-xs mt-1.5 font-semibold tabular-nums",
-                    published && understaffed ? "text-rose-700 dark:text-rose-400"
-                      : draft ? "text-muted-foreground"
-                      : "text-foreground/85"
-                  )}>
-                    {statusText}
-                  </p>
+                  {statusText && (
+                    <p className="text-xs mt-1.5 font-semibold text-muted-foreground">
+                      {statusText}
+                    </p>
+                  )}
+
                   {/* Schedule line */}
                   <div className="mt-1.5 flex items-baseline gap-2">
                     <span className="text-[12px] font-bold uppercase tracking-[0.14em] text-muted-foreground/70">Entrada</span>
@@ -587,79 +606,34 @@ export function MobileShiftOperationsSheet({
             </section>
           )}
 
-          {/* 2. Siguiente paso recomendado — primary recommended action */}
-          {(() => {
-            // Decide the single most urgent recommendation.
-            const missing = slots > 0 ? Math.max(0, slots - assignedCount) : 0;
-            let title = "Listo para operar";
-            let text = "El turno está cubierto y publicado.";
-            let primary: { label: string; onClick: () => void; icon: any } | null = null;
-            let secondary: { label: string; onClick: () => void; icon: any } | null = null;
-            let helper: string | null = null;
+          {/* 2. Equipo — única declaración de cobertura de la pantalla. Sin barra, sin CTA duplicada. */}
+          <section>
+            <div className="rounded-2xl border border-border/60 bg-card p-4">
+              <div className="flex items-center gap-1.5">
+                <Users className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-bold text-foreground">Equipo</span>
+              </div>
+              <p className="mt-1 text-[15px] font-semibold tabular-nums text-foreground">
+                {slots > 0
+                  ? `${assignedCount} de ${slots} cubiertos`
+                  : `${assignedCount} ${assignedCount === 1 ? "persona asignada" : "personas asignadas"}`}
+              </p>
+              <p
+                className={cn(
+                  "mt-0.5 text-[13px] leading-snug",
+                  understaffed ? "text-critical font-semibold" : "text-muted-foreground",
+                )}
+              >
+                {understaffed
+                  ? `Falta ${slots - assignedCount} ${slots - assignedCount === 1 ? "persona" : "personas"}`
+                  : slots > 0
+                    ? "Equipo completo"
+                    : "Este turno no define cupos"}
+              </p>
+            </div>
+          </section>
 
-            if (published && understaffed && canValidate) {
-              title = "Siguiente paso recomendado";
-              text = `Faltan ${missing} trabajador${missing === 1 ? "" : "es"} para completar este turno.`;
-              primary = { label: "Gestionar equipo", onClick: () => setHubOpen(true), icon: Users };
-            } else if (noLocation) {
-              title = "Siguiente paso recomendado";
-              text = "Falta la ubicación del trabajo. Repórtala desde móvil o edítala en escritorio para fijarla en el sistema.";
-              primary = { label: "Reportar ubicación", onClick: () => setLocationReportOpen(true), icon: MapPin };
-            } else if (!mp) {
-              title = "Siguiente paso recomendado";
-              text = "Falta punto de encuentro para los trabajadores.";
-              if (canValidate) {
-                primary = { label: "Notificar equipo", onClick: () => setNotifyOpen(true), icon: Bell };
-              } else {
-                helper = "Agrega el punto de encuentro desde escritorio.";
-              }
-            } else if (draft && canValidate) {
-              title = "Siguiente paso recomendado";
-              text = "Borrador — los trabajadores aún no lo ven. Revisa el equipo y publica desde escritorio.";
-              primary = { label: "Gestionar equipo", onClick: () => setHubOpen(true), icon: Users };
-            } else if (canValidate) {
-              primary = { label: "Gestionar equipo", onClick: () => setHubOpen(true), icon: Users };
-              secondary = { label: "Asistencia", onClick: handleViewAttendance, icon: ClipboardList };
-            } else {
-              return null;
-            }
 
-            return (
-              <section>
-                <div className="rounded-2xl border border-primary/30 bg-primary/[0.04] p-4">
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <Sparkles className="h-4 w-4 text-primary" />
-                    <span className="text-sm font-bold text-foreground">{title}</span>
-                  </div>
-                  <p className="text-[13px] text-foreground/85 leading-snug mb-3">{text}</p>
-                  {primary && (
-                    <div className="flex flex-col gap-2">
-                      <Button
-                        className="w-full h-12 rounded-xl text-sm font-bold gap-2"
-                        onClick={primary.onClick}
-                      >
-                        <primary.icon className="h-4 w-4" />
-                        {primary.label}
-                      </Button>
-                      {secondary && (
-                        <Button
-                          variant="outline"
-                          className="w-full h-10 rounded-xl text-sm font-semibold gap-2"
-                          onClick={secondary.onClick}
-                        >
-                          <secondary.icon className="h-4 w-4" />
-                          {secondary.label}
-                        </Button>
-                      )}
-                    </div>
-                  )}
-                  {helper && !primary && (
-                    <p className="text-[12px] text-muted-foreground italic">{helper}</p>
-                  )}
-                </div>
-              </section>
-            );
-          })()}
 
 
           {/* 3. Equipo asignado */}
@@ -769,16 +743,8 @@ export function MobileShiftOperationsSheet({
               </>
             )}
 
-            {understaffed && (
-              <div className="mt-2.5 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-3.5">
-                <div className="text-sm font-semibold text-amber-800 dark:text-amber-300">
-                  Faltan {slots - assignedCount} cupo{slots - assignedCount === 1 ? "" : "s"}
-                </div>
-                <div className="text-xs text-amber-700/80 dark:text-amber-300/80 mt-1 leading-relaxed">
-                  Puedes revisar, contactar y asignar trabajadores desde móvil con Gestionar equipo. Cambios avanzados siguen en escritorio.
-                </div>
-              </div>
-            )}
+            {/* OX-9.2: la carencia de cobertura ya se declara una sola vez arriba. */}
+
           </section>
 
           {/* 4. Asistencia */}
@@ -1194,53 +1160,52 @@ export function MobileShiftOperationsSheet({
           </section>
         </div>
 
-        {/* Sticky footer — Phase 1A: primary = Manage team (operational), secondary = Attendance. */}
+        {/* Sticky footer — OX-9.2: UNA sola acción principal. El resto vive en overflow. */}
         <div className="px-5 pt-3 pb-[max(env(safe-area-inset-bottom,0px),12px)] border-t border-border/40 bg-background/95 backdrop-blur-sm">
-          {canValidate ? (
-            <div className="flex items-center gap-2">
-              <Button
-                className="flex-1 h-12 rounded-xl text-sm font-semibold gap-2"
-                onClick={() => setHubOpen(true)}
-                aria-label="Abrir gestión de equipo de este turno"
-              >
-                <Users className="h-4 w-4" />
-                Gestionar equipo
-              </Button>
-              <Button
-                variant="outline"
-                className="h-12 px-4 rounded-xl text-sm font-semibold gap-2"
-                onClick={handleViewAttendance}
-                aria-label="Ver asistencia"
-              >
-                <ClipboardList className="h-4 w-4" />
-                Asistencia
-              </Button>
-            </div>
-          ) : (
+          <div className="flex items-center gap-2">
             <Button
-              className="w-full h-12 rounded-xl text-sm font-semibold gap-2"
-              onClick={handleViewAttendance}
+              className="flex-1 h-12 rounded-xl text-sm font-bold gap-2"
+              onClick={primaryAction.onClick}
+              aria-label={primaryAction.label}
             >
-              <ClipboardList className="h-4 w-4" />
-              Ver asistencia
+              <primaryAction.icon className="h-4 w-4" />
+              {primaryAction.label}
             </Button>
-          )}
-          {canValidate && onEdit && !editLocked && (
-            <Button
-              variant="outline"
-              className="w-full h-11 rounded-xl text-sm font-semibold gap-2 mt-2"
-              onClick={() => { onOpenChange(false); onEdit(shift); }}
-              aria-label="Editar fecha y horario de este turno"
-            >
-              <FileEdit className="h-4 w-4" />
-              Editar turno
-            </Button>
-          )}
-          <p className="mt-2 text-center text-[12px] text-muted-foreground">
-            Acciones seguras disponibles en móvil. Cambios avanzados siguen en escritorio.
-          </p>
-
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-12 w-12 rounded-xl shrink-0"
+                  aria-label="Más acciones del turno"
+                >
+                  <MoreHorizontal className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-60">
+                {canValidate && primaryAction.key !== "team" && (
+                  <DropdownMenuItem className="gap-2 h-11 text-sm" onClick={() => setHubOpen(true)}>
+                    <Users className="h-4 w-4" /> Gestionar equipo
+                  </DropdownMenuItem>
+                )}
+                {primaryAction.key !== "operate" && (
+                  <DropdownMenuItem className="gap-2 h-11 text-sm" onClick={handleViewAttendance}>
+                    <ClipboardList className="h-4 w-4" /> Asistencia
+                  </DropdownMenuItem>
+                )}
+                {canValidate && onEdit && !editLocked && (
+                  <DropdownMenuItem
+                    className="gap-2 h-11 text-sm"
+                    onClick={() => { onOpenChange(false); onEdit(shift); }}
+                  >
+                    <FileEdit className="h-4 w-4" /> Editar turno
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
+
       </SheetContent>
     </Sheet>
     <MobileShiftTeamHub
