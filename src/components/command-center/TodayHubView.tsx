@@ -365,7 +365,12 @@ export default function TodayHubView() {
             slots={op.required}
             need={op.need}
             note={op.note}
-            action={{ label: op.action.label, onClick: () => go(op.action.href) }}
+            action={
+              op.action
+                ? { label: op.action.label, onClick: () => go(op.action!.href) }
+                : undefined
+            }
+
             actions={op.secondary.map((s) => ({
               label: s.label,
               onClick: () => go(s.href),
