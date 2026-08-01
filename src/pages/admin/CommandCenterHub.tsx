@@ -315,9 +315,10 @@ export default function CommandCenterHub() {
             Fixes the double-gutter regression documented in S2. */}
         <TabsContent value="today" className="mt-2 md:mt-3">
           <Suspense fallback={<TabFallback />}>
-            <DailyOps />
+            <TodayHubView />
           </Suspense>
         </TabsContent>
+
 
         <TabsContent value="attention" className="mt-2 md:mt-3">
           <Suspense fallback={<TabFallback />}>
