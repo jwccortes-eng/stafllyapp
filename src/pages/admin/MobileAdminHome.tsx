@@ -11,6 +11,11 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { isAdminLevelRole } from "@/lib/roles";
 import { AdminProductSwitcher } from "@/components/admin/AdminProductSwitcher";
+import { KpiStateCard } from "@/components/ox/KpiStateCard";
+import {
+  type MetricState, loadingMetric, errorMetric, notApplicableMetric, countMetric,
+} from "@/lib/ox/metric-state";
+
 
 /**
  * Mobile-first Admin Home — Command Center style.
@@ -41,6 +46,8 @@ const ACTIONS: ActionDef[] = [
   { key: "clients", label: "Clients", hint: "Accounts & sites", to: "/app/clients", icon: Building2, module: "clients", accent: "bg-rose-500/10 text-rose-600 dark:text-rose-400" },
 ];
 
+type BadgeState = { kind: "loading" | "error" | "ready"; value: number };
+
 export default function MobileAdminHome() {
   const navigate = useNavigate();
   const { selectedCompanyId, selectedCompany, isModuleActive, isGlobalMode } = useCompany();
@@ -48,12 +55,26 @@ export default function MobileAdminHome() {
   const role = isGlobalMode ? globalRole : getRoleForCompany(selectedCompanyId);
   const isAdminRole = isAdminLevelRole(role);
 
-  const [badges, setBadges] = useState<{ tickets: number; shift_requests: number }>({ tickets: 0, shift_requests: 0 });
+  const [badges, setBadges] = useState<{ tickets: BadgeState; shift_requests: BadgeState }>({
+    tickets: { kind: "loading", value: 0 },
+    shift_requests: { kind: "loading", value: 0 },
+  });
+
+  // P0 OX — today's operation, with explicit states (never a silent zero).
+  const [shiftsToday, setShiftsToday] = useState<MetricState>(loadingMetric("turnos"));
+  const [clockedIn, setClockedIn] = useState<MetricState>(loadingMetric("workers"));
+  const [hoursToReview, setHoursToReview] = useState<MetricState>(loadingMetric("registros"));
+  const [pendingResponses, setPendingResponses] = useState<MetricState>(loadingMetric("respuestas"));
+  const [reloadKey, setReloadKey] = useState(0);
+  const reload = () => setReloadKey((k) => k + 1);
 
   // Reuse the same badge query as AdminSidebar (tickets + pending shift assignments)
   useEffect(() => {
     if (!selectedCompanyId) {
-      setBadges({ tickets: 0, shift_requests: 0 });
+      setBadges({
+        tickets: { kind: "ready", value: 0 },
+        shift_requests: { kind: "ready", value: 0 },
+      });
       return;
     }
     let alive = true;
@@ -66,14 +87,81 @@ export default function MobileAdminHome() {
       ]);
       if (!alive) return;
       setBadges({
-        tickets: ticketsRes.count ?? 0,
-        shift_requests: shiftReqRes.count ?? 0,
+        tickets: ticketsRes.error
+          ? { kind: "error", value: 0 }
+          : { kind: "ready", value: ticketsRes.count ?? 0 },
+        shift_requests: shiftReqRes.error
+          ? { kind: "error", value: 0 }
+          : { kind: "ready", value: shiftReqRes.count ?? 0 },
       });
     }
     fetchBadges();
     const id = setInterval(fetchBadges, 60000);
     return () => { alive = false; clearInterval(id); };
-  }, [selectedCompanyId]);
+  }, [selectedCompanyId, reloadKey]);
+
+  useEffect(() => {
+    if (!selectedCompanyId) {
+      const na = notApplicableMetric("", "Selecciona una compañía para ver su operación.");
+      setShiftsToday(na); setClockedIn(na); setHoursToReview(na); setPendingResponses(na);
+      return;
+    }
+    let alive = true;
+    setShiftsToday(loadingMetric("turnos"));
+    setClockedIn(loadingMetric("workers"));
+    setHoursToReview(loadingMetric("registros"));
+    setPendingResponses(loadingMetric("respuestas"));
+
+    (async () => {
+      const today = new Date().toISOString().split("T")[0];
+      const [shiftsRes, openRes, reviewRes, respRes] = await Promise.all([
+        supabase.from("scheduled_shifts").select("id", { count: "exact", head: true })
+          .eq("company_id", selectedCompanyId).eq("date", today).is("deleted_at", null),
+        supabase.from("time_entries").select("id", { count: "exact", head: true })
+          .eq("company_id", selectedCompanyId).is("clock_out", null),
+        supabase.from("time_entries").select("id", { count: "exact", head: true })
+          .eq("company_id", selectedCompanyId).eq("status", "pending"),
+        supabase.from("shift_assignments").select("id", { count: "exact", head: true })
+          .eq("company_id", selectedCompanyId).eq("status", "pending"),
+      ]);
+      if (!alive) return;
+
+      setShiftsToday(
+        shiftsRes.error
+          ? errorMetric("turnos")
+          : countMetric(shiftsRes.count ?? 0, "turnos", {
+              zero: "Aún no hay turnos programados para hoy.",
+              some: (n) => `${n === 1 ? "Turno programado" : "Turnos programados"} para hoy.`,
+            }),
+      );
+      setClockedIn(
+        openRes.error
+          ? errorMetric("workers")
+          : countMetric(openRes.count ?? 0, "workers", {
+              zero: "Nadie tiene el fichaje abierto ahora mismo.",
+              some: (n) => `${n === 1 ? "Worker sigue" : "Workers siguen"} con el fichaje abierto.`,
+            }),
+      );
+      setHoursToReview(
+        reviewRes.error
+          ? errorMetric("registros")
+          : countMetric(reviewRes.count ?? 0, "registros", {
+              zero: "No hay horas pendientes de revisión.",
+              some: (n) => `${n === 1 ? "Registro de horas espera" : "Registros de horas esperan"} tu aprobación.`,
+            }),
+      );
+      setPendingResponses(
+        respRes.error
+          ? errorMetric("respuestas")
+          : countMetric(respRes.count ?? 0, "respuestas", {
+              zero: "Todos los workers asignados ya respondieron.",
+              some: (n) => `${n === 1 ? "Worker asignado no ha" : "Workers asignados no han"} respondido.`,
+            }),
+      );
+    })();
+
+    return () => { alive = false; };
+  }, [selectedCompanyId, reloadKey]);
 
   // Permission filter mirrors AdminSidebar.isLinkVisible logic for module-gated items
   const isVisible = (a: ActionDef) => {
@@ -93,18 +181,19 @@ export default function MobileAdminHome() {
 
   const greeting = useMemo(() => {
     const h = new Date().getHours();
-    if (h < 12) return "Good morning";
-    if (h < 18) return "Good afternoon";
-    return "Good evening";
+    if (h < 12) return "Buenos días";
+    if (h < 18) return "Buenas tardes";
+    return "Buenas noches";
   }, []);
 
-  const firstName = (fullName || "").split(" ")[0] || "Operator";
-  const companyLabel = isGlobalMode ? "Global mode" : (selectedCompany?.name || "Stafly");
+  const firstName = (fullName || "").split(" ")[0] || "Operador";
+  const companyLabel = isGlobalMode ? "Vista global" : (selectedCompany?.name || "Stafly");
 
   const openCommandPalette = () => {
     // Reuse the existing CommandPalette ⌘K trigger (same pattern as nTrigger).
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true }));
   };
+
 
   return (
     <div className="min-h-full pb-[calc(env(safe-area-inset-bottom,0px)+72px)]">
@@ -151,12 +240,27 @@ export default function MobileAdminHome() {
         </button>
       </div>
 
+      {/* P0 OX — Operación de hoy: nunca un cero silencioso */}
+      <div className="px-5 mb-5">
+        <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground mb-2 px-1">
+          Operación de hoy
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <KpiStateCard label="Turnos hoy" state={shiftsToday} onRetry={reload} onClick={() => navigate("/app/shifts")} />
+          <KpiStateCard label="Fichajes abiertos" state={clockedIn} onRetry={reload} onClick={() => navigate("/app/timeclock")} />
+          <KpiStateCard label="Horas por revisar" state={hoursToReview} onRetry={reload} onClick={() => navigate("/app/payroll-review-queue")} />
+          <KpiStateCard label="Sin responder" state={pendingResponses} onRetry={reload} onClick={() => navigate("/app/shifts")} />
+        </div>
+      </div>
+
       {/* Action grid */}
       <div className="px-5">
         <div className="grid grid-cols-2 gap-3">
           {visibleActions.map((a) => {
             const Icon = a.icon;
-            const count = a.badgeKey ? badges[a.badgeKey] : 0;
+            const badge: BadgeState = a.badgeKey ? badges[a.badgeKey] : { kind: "ready", value: 0 };
+            const count = badge.value;
+
             return (
               <button
                 key={a.key}
@@ -174,11 +278,17 @@ export default function MobileAdminHome() {
                 </div>
                 <div className="flex items-center gap-2 w-full">
                   <span className="text-[13px] font-semibold tracking-tight truncate">{a.label}</span>
-                  {count > 0 && (
+                  {badge.kind === "error" && (
+                    <Badge variant="secondary" className="h-4 px-1 text-[10px] font-semibold ml-auto bg-destructive/15 text-destructive border border-destructive/20">
+                      Error
+                    </Badge>
+                  )}
+                  {badge.kind === "ready" && count > 0 && (
                     <Badge variant="secondary" className="h-4 px-1 text-[10px] font-semibold ml-auto bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/20">
                       {count > 9 ? "9+" : count}
                     </Badge>
                   )}
+
                 </div>
                 <span className="text-[10.5px] text-muted-foreground mt-0.5 leading-tight truncate w-full">
                   {a.hint}

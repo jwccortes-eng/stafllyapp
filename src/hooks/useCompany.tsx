@@ -3,6 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { queryClient } from "@/lib/query-client";
 import { logMount, logUnmount } from "@/lib/ctx001-forensics";
+import { TenantSwitchStatus } from "@/components/ox/TenantSwitchStatus";
+
 
 import {
   readSelectedCompanyForTab,
@@ -25,6 +27,8 @@ interface Company {
   is_demo?: boolean | null;
 }
 
+export type TenantSwitchState = "idle" | "switching" | "error";
+
 interface CompanyContextType {
   companies: Company[];
   selectedCompanyId: string | null;
@@ -40,6 +44,14 @@ interface CompanyContextType {
   isGlobalMode: boolean;
   /** Whether user CAN enter global mode */
   canUseGlobalMode: boolean;
+  /** P0 OX — the company list itself failed to load. */
+  loadError: string | null;
+  /** P0 OX — explicit tenant-switch lifecycle. Never fails silently. */
+  switchState: TenantSwitchState;
+  switchError: string | null;
+  /** Retry the last failed switch (or the company list load). */
+  retrySwitch: () => void;
+  clearSwitchError: () => void;
 }
 
 const CompanyContext = createContext<CompanyContextType>({
@@ -54,7 +66,13 @@ const CompanyContext = createContext<CompanyContextType>({
   isModuleActive: () => true,
   isGlobalMode: false,
   canUseGlobalMode: false,
+  loadError: null,
+  switchState: "idle",
+  switchError: null,
+  retrySwitch: () => {},
+  clearSwitchError: () => {},
 });
+
 
 const GLOBAL_MODE_ROLES = new Set(["developer", "owner"]);
 
@@ -77,6 +95,12 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
   const [activeModules, setActiveModules] = useState<Set<string>>(new Set());
   /** Tracks whether the user has manually switched company in this session */
   const [manuallySelected, setManuallySelected] = useState(false);
+  // P0 OX — explicit, never-silent tenant lifecycle.
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [switchState, setSwitchState] = useState<TenantSwitchState>("idle");
+  const [switchError, setSwitchError] = useState<string | null>(null);
+  const [pendingSwitchId, setPendingSwitchId] = useState<string | null>(null);
+
 
   useEffect(() => {
     const id = logMount("CompanyProvider");
@@ -174,13 +198,15 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
           .sort((a, b) => a.name.localeCompare(b.name));
       }
     } catch (err) {
-      // Don't blow up the UI on transient/permission errors — leave the
-      // user with whatever they had cached and let the consumer decide.
+      // P0 OX — never fail silently: surface it and let the UI offer a retry.
       console.error("[useCompany] fetchCompanies failed:", err);
+      setLoadError("No pudimos cargar tus compañías.");
       list = [];
     }
 
+    if (list.length > 0) setLoadError(null);
     setCompanies(list);
+
 
     // Per-tab source of truth for the active company. On first load for this
     // user in this tab, migrate the legacy global localStorage key ONCE so
@@ -247,12 +273,57 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
     logPostLoginDebug("company-provider-resolved", list, resolvedSelection, false);
   }, [authLoading, authState, user, role, canUseGlobalMode, manuallySelected, selectedCompanyId, logPostLoginDebug]);
 
-  /** Switch company: update state + invalidate all cached queries */
+  /**
+   * P0 OX — tenant switch with explicit states.
+   * 1) "switching" while the previous tenant's cache is dropped
+   * 2) success confirmation
+   * 3) visible, retryable failure that KEEPS the previous tenant active
+   * 4) explicit "no access" when the target isn't in the user's list
+   */
   const switchCompany = useCallback((id: string | null) => {
     if (id === selectedCompanyId) return;
-    setSelectedCompanyId(id);
-    queryClient.invalidateQueries();
-  }, [selectedCompanyId, setSelectedCompanyId]);
+    setSwitchError(null);
+
+    if (id !== null && !companies.some((c) => c.id === id)) {
+      setPendingSwitchId(id);
+      setSwitchState("error");
+      setSwitchError("No tienes acceso a esta compañía.");
+      return;
+    }
+
+    setPendingSwitchId(id);
+    setSwitchState("switching");
+
+    try {
+      // Drop everything scoped to the previous tenant BEFORE switching context,
+      // so no hybrid state can ever render.
+      queryClient.clear();
+      setSelectedCompanyId(id);
+      queryClient.invalidateQueries();
+      setSwitchState("idle");
+      setPendingSwitchId(null);
+    } catch (err) {
+      console.error("[useCompany] switchCompany failed:", err);
+      setSwitchState("error");
+      setSwitchError("No pudimos cambiar de compañía. Sigues en la compañía anterior.");
+    }
+  }, [selectedCompanyId, setSelectedCompanyId, companies]);
+
+  const clearSwitchError = useCallback(() => {
+    setSwitchState("idle");
+    setSwitchError(null);
+    setPendingSwitchId(null);
+  }, []);
+
+  const retrySwitch = useCallback(() => {
+    const target = pendingSwitchId;
+    setSwitchState("idle");
+    setSwitchError(null);
+    void fetchCompanies().then(() => {
+      if (target) switchCompany(target);
+    });
+  }, [pendingSwitchId, fetchCompanies, switchCompany]);
+
 
   useEffect(() => {
     void fetchCompanies();
@@ -287,9 +358,13 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
       companies, selectedCompanyId, selectedCompany, setSelectedCompanyId,
       switchCompany, loading, refetch: fetchCompanies, activeModules, isModuleActive,
       isGlobalMode, canUseGlobalMode,
+      loadError, switchState, switchError, retrySwitch, clearSwitchError,
     }}>
+
       {children}
+      <TenantSwitchStatus />
     </CompanyContext.Provider>
+
   );
 }
 

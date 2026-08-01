@@ -38,6 +38,8 @@ import { getShiftPhase, phaseChipClasses } from "@/lib/shifts/shift-phase";
 import {
   deriveCloseoutReviewStatus, presentCloseoutReviewStatus, closeoutBadgeClasses,
 } from "@/lib/shifts/closeout-review-status";
+import { ShiftClosureCard } from "@/components/shifts/ShiftClosureCard";
+
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronDown, ClipboardCheck, Timer } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -581,32 +583,18 @@ export default function ShiftOperations() {
           </div>
         );
 
-        // Sprint 40 — "Preparar cierre" card (deep-links only, zero writes).
-        const closeoutCard = (
-          <div className="rounded-2xl border border-primary/25 bg-primary/[0.04] p-4 space-y-3">
-            <div className="flex items-center gap-2">
-              <ClipboardCheck className="h-4 w-4 text-primary" />
-              <h2 className="text-sm font-bold">Preparar cierre</h2>
-            </div>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              Revisa fichajes abiertos y evidencia antes de mandar el turno a validación de horas.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-2">
-              <Link
-                to={`/app/timeclock?shiftId=${encodeURIComponent(shift.id)}`}
-                className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-border/50 bg-card px-3 py-2 text-[11px] font-semibold hover:bg-muted/40 transition"
-              >
-                <Clock className="h-3.5 w-3.5" /> Abrir Time Clock
-              </Link>
-              <Link
-                to={`/app/payroll-review-queue?shiftId=${encodeURIComponent(shift.id)}`}
-                className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-[11px] font-semibold text-primary-foreground hover:bg-primary/90 transition"
-              >
-                <ClipboardCheck className="h-3.5 w-3.5" /> Revisar horas
-              </Link>
-            </div>
-          </div>
-        );
+        // P0 OX — terminal closure action (evaluates real time entries, never touches payroll).
+        const closeoutCard = selectedCompanyId ? (
+          <ShiftClosureCard
+            companyId={selectedCompanyId}
+            shiftId={shift.id}
+            shiftEnded={phase === "after" || phase === "closed"}
+            assignedCount={assignments.length}
+            onClosed={loadAll}
+          />
+        ) : null;
+
+
 
         const recentValidationsBanner = recentValidations.length > 0 && (phase === "in_progress" || phase === "after" || phase === "closed") ? (
           <div className="rounded-xl border border-info/25 bg-info/[0.05] px-4 py-2.5 flex items-start gap-2.5">
