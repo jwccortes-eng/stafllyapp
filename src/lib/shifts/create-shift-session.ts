@@ -64,9 +64,21 @@ export function newSessionId(): string {
   return `cs_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
 }
 
-/** Clave aislada por usuario + empresa. Nunca global. */
-export function sessionKey(userId: string, companyId: string): string {
-  return `${KEY_PREFIX}:v${CREATE_SHIFT_SESSION_VERSION}:${userId}:${companyId}`;
+/**
+ * Superficie del wizard. Móvil y desktop capturan campos distintos, así que
+ * cada una guarda su propia foto — pero AMBAS usan este mismo motor.
+ */
+export type CreateShiftSurface = "mobile" | "desktop";
+
+/** Clave aislada por usuario + empresa (+ superficie). Nunca global. */
+export function sessionKey(
+  userId: string,
+  companyId: string,
+  surface: CreateShiftSurface = "mobile",
+): string {
+  const base = `${KEY_PREFIX}:v${CREATE_SHIFT_SESSION_VERSION}:${userId}:${companyId}`;
+  // La clave móvil se mantiene intacta: las sesiones ya abiertas no se pierden.
+  return surface === "mobile" ? base : `${base}:${surface}`;
 }
 
 /**
@@ -94,8 +106,54 @@ export function isMeaningfulDraft(
   );
 }
 
-export function isExpired(record: CreateShiftSessionRecord, now = Date.now()): boolean {
+export function isExpired(record: { updatedAt: number }, now = Date.now()): boolean {
   return now - record.updatedAt > CREATE_SHIFT_SESSION_TTL_MS;
+}
+
+/** Mismo sobre, cualquier foto: móvil y desktop comparten envoltura. */
+export interface CreateShiftSessionRecordOf<T> {
+  version: number;
+  sessionId: string;
+  userId: string;
+  companyId: string;
+  updatedAt: number;
+  draft: T;
+}
+
+/**
+ * Motor genérico de validación. Una sesión de otro usuario, otra empresa, otra
+ * versión o vencida se considera inexistente: nunca se mezcla, nunca se hereda.
+ */
+export function parseRecordWith<T>(
+  raw: string | null,
+  expect: { userId: string; companyId: string },
+  normalize: (draft: unknown) => T | null,
+  now = Date.now(),
+): CreateShiftSessionRecordOf<T> | null {
+  if (!raw) return null;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return null;
+  }
+  if (!parsed || typeof parsed !== "object") return null;
+  const rec = parsed as Partial<CreateShiftSessionRecordOf<T>>;
+  if (rec.version !== CREATE_SHIFT_SESSION_VERSION) return null;
+  if (typeof rec.sessionId !== "string" || !rec.sessionId) return null;
+  if (rec.userId !== expect.userId || rec.companyId !== expect.companyId) return null;
+  if (typeof rec.updatedAt !== "number") return null;
+  if (isExpired({ updatedAt: rec.updatedAt }, now)) return null;
+  const draft = normalize(rec.draft);
+  if (draft === null) return null;
+  return {
+    version: rec.version,
+    sessionId: rec.sessionId,
+    userId: rec.userId,
+    companyId: rec.companyId,
+    updatedAt: rec.updatedAt,
+    draft,
+  };
 }
 
 /**
@@ -145,9 +203,16 @@ export function parseSessionRecord(
   };
   return full;
 }
-
 /* ────────────────────────────────────────────────────────────────
- * Acceso a storage (tolerante a entornos sin `sessionStorage`)
+ * Acceso a storage — motor único para móvil y desktop
+ *
+ * Dos capas, un mismo contrato:
+ *   · `sessionStorage`: la sesión viva de ESTA pestaña (aislamiento natural);
+ *   · `localStorage`: copia durable SÓLO para recuperar tras cerrar el
+ *     navegador. Nunca se rehidrata en silencio: alimenta el aviso
+ *     "Recuperamos una creación de turno sin finalizar".
+ * En ninguna capa existe una entidad de negocio: el turno no existe hasta
+ * que el operador pulsa "Crear turno".
  * ──────────────────────────────────────────────────────────────── */
 
 function store(): Storage | null {
@@ -159,18 +224,141 @@ function store(): Storage | null {
   }
 }
 
+function durableStore(): Storage | null {
+  try {
+    if (typeof window === "undefined" || !window.localStorage) return null;
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
+
+const DURABLE_PREFIX = "stafly:create-shift-session-durable";
+
+function durableKey(userId: string, companyId: string, surface: CreateShiftSurface): string {
+  return sessionKey(userId, companyId, surface).replace(KEY_PREFIX, DURABLE_PREFIX);
+}
+
+export interface SessionIO<T> {
+  userId: string | null | undefined;
+  companyId: string | null | undefined;
+  surface?: CreateShiftSurface;
+  normalize: (draft: unknown) => T | null;
+}
+
+/** ¿De dónde vino la sesión recuperada? La UI lo usa para elegir el copy. */
+export type RecoverySource = "tab" | "durable";
+
+export interface RecoveredSession<T> extends CreateShiftSessionRecordOf<T> {
+  source: RecoverySource;
+}
+
+/** Lee la sesión de esta pestaña; si no hay, ofrece la copia durable. */
+export function readSessionWith<T>(io: SessionIO<T>): RecoveredSession<T> | null {
+  const { userId, companyId, normalize } = io;
+  const surface = io.surface ?? "mobile";
+  if (!userId || !companyId) return null;
+  const expect = { userId, companyId };
+  try {
+    const live = store()?.getItem(sessionKey(userId, companyId, surface)) ?? null;
+    const parsedLive = parseRecordWith(live, expect, normalize);
+    if (parsedLive) return { ...parsedLive, source: "tab" };
+  } catch {
+    /* storage bloqueado: caemos a la copia durable */
+  }
+  try {
+    const durable = durableStore()?.getItem(durableKey(userId, companyId, surface)) ?? null;
+    const parsedDurable = parseRecordWith(durable, expect, normalize);
+    if (parsedDurable) return { ...parsedDurable, source: "durable" };
+  } catch {
+    /* nada recuperable */
+  }
+  // TTL vencido o basura: limpieza automática, sin dejar restos.
+  clearSessionWith({ userId, companyId, surface });
+  return null;
+}
+
+export function writeSessionWith<T>(params: {
+  sessionId: string;
+  userId: string | null | undefined;
+  companyId: string | null | undefined;
+  surface?: CreateShiftSurface;
+  draft: T;
+}): void {
+  const { sessionId, userId, companyId, draft } = params;
+  const surface = params.surface ?? "mobile";
+  if (!userId || !companyId) return;
+  const record: CreateShiftSessionRecordOf<T> = {
+    version: CREATE_SHIFT_SESSION_VERSION,
+    sessionId,
+    userId,
+    companyId,
+    updatedAt: Date.now(),
+    draft,
+  };
+  const payload = JSON.stringify(record);
+  try {
+    store()?.setItem(sessionKey(userId, companyId, surface), payload);
+  } catch {
+    /* cuota llena o storage bloqueado: la sesión sigue viva en memoria */
+  }
+  try {
+    durableStore()?.setItem(durableKey(userId, companyId, surface), payload);
+  } catch {
+    /* sin copia durable: la pestaña actual sigue protegida */
+  }
+}
+
+/** Borra TODO rastro: pestaña y copia durable. Nunca deja basura. */
+export function clearSessionWith(params: {
+  userId: string | null | undefined;
+  companyId: string | null | undefined;
+  surface?: CreateShiftSurface;
+}): void {
+  const { userId, companyId } = params;
+  const surface = params.surface ?? "mobile";
+  if (!userId || !companyId) return;
+  try {
+    store()?.removeItem(sessionKey(userId, companyId, surface));
+  } catch {
+    /* nada que limpiar */
+  }
+  try {
+    durableStore()?.removeItem(durableKey(userId, companyId, surface));
+  } catch {
+    /* nada que limpiar */
+  }
+}
+
+/* ────────────────────────────────────────────────────────────────
+ * API móvil (compatibilidad): mismos motores, foto tipada del wizard.
+ * ──────────────────────────────────────────────────────────────── */
+
+const normalizeMobileDraft = (draft: unknown): CreateShiftDraftSnapshot | null => {
+  const wrapped = parseSessionRecord(
+    JSON.stringify({
+      version: CREATE_SHIFT_SESSION_VERSION,
+      sessionId: "probe",
+      userId: "u",
+      companyId: "c",
+      updatedAt: Date.now(),
+      draft,
+    }),
+    { userId: "u", companyId: "c" },
+  );
+  return wrapped ? wrapped.draft : null;
+};
+
 export function readSession(
   userId: string | null | undefined,
   companyId: string | null | undefined,
 ): CreateShiftSessionRecord | null {
-  if (!userId || !companyId) return null;
-  const s = store();
-  if (!s) return null;
-  try {
-    return parseSessionRecord(s.getItem(sessionKey(userId, companyId)), { userId, companyId });
-  } catch {
-    return null;
-  }
+  return readSessionWith<CreateShiftDraftSnapshot>({
+    userId,
+    companyId,
+    surface: "mobile",
+    normalize: normalizeMobileDraft,
+  });
 }
 
 export function writeSession(params: {
@@ -179,35 +367,12 @@ export function writeSession(params: {
   companyId: string | null | undefined;
   draft: CreateShiftDraftSnapshot;
 }): void {
-  const { sessionId, userId, companyId, draft } = params;
-  if (!userId || !companyId) return;
-  const s = store();
-  if (!s) return;
-  const record: CreateShiftSessionRecord = {
-    version: CREATE_SHIFT_SESSION_VERSION,
-    sessionId,
-    userId,
-    companyId,
-    updatedAt: Date.now(),
-    draft,
-  };
-  try {
-    s.setItem(sessionKey(userId, companyId), JSON.stringify(record));
-  } catch {
-    /* cuota llena o storage bloqueado: la sesión sigue viva en memoria */
-  }
+  writeSessionWith({ ...params, surface: "mobile" });
 }
 
 export function clearSession(
   userId: string | null | undefined,
   companyId: string | null | undefined,
 ): void {
-  if (!userId || !companyId) return;
-  const s = store();
-  if (!s) return;
-  try {
-    s.removeItem(sessionKey(userId, companyId));
-  } catch {
-    /* nada que limpiar */
-  }
+  clearSessionWith({ userId, companyId, surface: "mobile" });
 }
