@@ -106,17 +106,40 @@ export function AttendanceEvidenceCard({ shift, assignments, companyId, userId }
     return () => clearInterval(t);
   }, []);
 
+  /**
+   * Canonical shift roster: assignments that belong to THIS shift and still
+   * represent an active team member. Replacements / removals / rejections are
+   * excluded from attendance + evidence, but their history stays in the DB.
+   */
+  const active = useMemo(
+    () =>
+      assignments.filter(
+        a =>
+          (a.shift_id == null || a.shift_id === shift.id) &&
+          a.status !== "rejected" &&
+          a.status !== "removed",
+      ),
+    [assignments, shift.id],
+  );
+
+  const rosterEmployeeIds = useMemo(
+    () => new Set(active.map(a => a.employee_id)),
+    [active],
+  );
+
   const load = async () => {
     setLoading(true);
     const [teRes, snRes] = await Promise.all([
       supabase
         .from("time_entries")
         .select("id, employee_id, clock_in, clock_out")
-        .eq("shift_id", shift.id),
+        .eq("shift_id", shift.id)
+        .eq("company_id", companyId),
       supabase
         .from("shift_notes")
         .select("id, note_type, content, linked_employee_id, created_at")
         .eq("shift_id", shift.id)
+        .eq("company_id", companyId)
         .eq("note_type", "attendance_validation")
         .order("created_at", { ascending: false }),
     ]);
@@ -128,7 +151,7 @@ export function AttendanceEvidenceCard({ shift, assignments, companyId, userId }
     setLoading(false);
   };
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [shift.id]);
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, [shift.id, companyId]);
 
   const entriesByEmployee = useMemo(() => {
     const m = new Map<string, ClockEntry[]>();
