@@ -8,7 +8,10 @@ import {
   AlertTriangle, GitCompareArrows, Settings,
   Monitor, Copy, List,
 } from "lucide-react";
-import { PageHeader } from "@/components/ui/page-header";
+import { cn } from "@/lib/utils";
+import { OX_ENTER, OX_STACK } from "@/lib/ox/continuity";
+import { OperationalScreenHeader } from "@/components/stafly-ui/OperationalScreenHeader";
+
 import { toast } from "sonner";
 import { APP_BASE_URL } from "@/lib/app-url";
 import { Button } from "@/components/ui/button";
