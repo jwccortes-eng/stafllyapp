@@ -784,9 +784,9 @@ function OverviewTab({
   return (
     <section aria-label="Estado del equipo" className="space-y-3">
       <TeamCard
-        title={shift.title || "Equipo del turno"}
-        subtitle={intent.meaning}
+        title="Equipo"
         assigned={summary.assigned}
+
         slots={summary.slots}
         confirmed={summary.confirmed}
         present={summary.present}
