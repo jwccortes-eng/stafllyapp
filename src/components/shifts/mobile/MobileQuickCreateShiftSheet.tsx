@@ -968,32 +968,54 @@ export function MobileQuickCreateShiftSheet({
                     const name = fullName(e);
                     const selected = team.includes(e.id);
                     const busy = busyIds.has(e.id);
+                    const isDriver = driverPlan.driverIds.includes(e.id);
                     return (
-                      <button
+                      <div
                         key={e.id}
-                        type="button"
-                        onClick={() => toggleWorker(e.id)}
                         className={cn(
-                          "w-full min-h-[60px] flex items-center gap-3 px-3 rounded-2xl text-left transition-colors active:bg-muted/60",
+                          "w-full min-h-[60px] flex items-center gap-2 pr-2 rounded-2xl transition-colors",
                           selected && "bg-primary/5",
                         )}
                       >
-                        <span className={cn(
-                          "h-10 w-10 rounded-full inline-flex items-center justify-center text-xs font-bold shrink-0",
-                          selected ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground",
-                        )}>
-                          {selected ? <Check className="h-4 w-4" /> : initials(name)}
-                        </span>
-                        <span className="flex-1 min-w-0">
-                          <span className="block text-[15px] font-medium truncate">{name}</span>
+                        <button
+                          type="button"
+                          onClick={() => toggleWorker(e.id)}
+                          className="flex-1 min-w-0 min-h-[60px] flex items-center gap-3 px-3 text-left rounded-2xl active:bg-muted/60"
+                        >
                           <span className={cn(
-                            "block text-[12px]",
-                            busy ? "text-status-warning" : "text-muted-foreground",
+                            "h-10 w-10 rounded-full inline-flex items-center justify-center text-xs font-bold shrink-0",
+                            selected ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground",
                           )}>
-                            {busy ? "Ya tiene turno ese día" : "Disponible"}
+                            {selected ? <Check className="h-4 w-4" /> : initials(name)}
                           </span>
-                        </span>
-                      </button>
+                          <span className="flex-1 min-w-0">
+                            <span className="block text-[15px] font-medium truncate">{name}</span>
+                            <span className={cn(
+                              "block text-[12px]",
+                              busy ? "text-status-warning" : "text-muted-foreground",
+                            )}>
+                              {busy ? "Ya tiene turno ese día" : "Disponible"}
+                              {isDriver && " · conduce"}
+                            </span>
+                          </span>
+                        </button>
+                        {selected && (
+                          <button
+                            type="button"
+                            aria-pressed={isDriver}
+                            aria-label={isDriver ? `Quitar driver a ${name}` : `Marcar a ${name} como driver`}
+                            onClick={() => toggleDriverFor(e.id)}
+                            className={cn(
+                              "shrink-0 h-11 min-w-[64px] px-3 rounded-xl border text-[12px] font-semibold inline-flex items-center justify-center active:bg-muted",
+                              isDriver
+                                ? "border-primary bg-primary text-primary-foreground"
+                                : "border-border/60 text-muted-foreground",
+                            )}
+                          >
+                            Driver
+                          </button>
+                        )}
+                      </div>
                     );
                   })}
                 </div>
