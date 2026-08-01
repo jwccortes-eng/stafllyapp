@@ -548,7 +548,7 @@ function buildCloseoutItem(
   c: CloseoutInput,
   p: ResolvedHubPermissions,
   now: Date,
-): ValidationItem | null {
+): ValidationItemDraft | null {
   const status = (c.status ?? "draft").toLowerCase();
   if (status === "draft") return null; // aún no es una decisión
 
