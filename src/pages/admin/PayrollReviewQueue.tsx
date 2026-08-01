@@ -1005,22 +1005,23 @@ export default function PayrollReviewQueue() {
 
   return (
     <div className="space-y-5">
-      {/* Header */}
-      <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-        <PageHeader
-          variant="3"
-          title="Centro de Validación"
-          subtitle={`${selectedCompany?.name ?? "Empresa"} · revisa cierres, horas y aprobaciones antes del proceso de pago`}
-        />
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge variant="outline" className="gap-1.5 border-primary/30 text-primary">
-            <ShieldCheck className="h-3 w-3" /> Evidencia operativa
-          </Badge>
-          <Badge variant="outline" className="gap-1.5 border-muted-foreground/30 text-muted-foreground">
-            <Lock className="h-3 w-3" /> Solo lectura
-          </Badge>
-        </div>
-      </div>
+      {/* OX-8.1 — cabecera única: la empresa la pone OperationalScreenHeader.
+          El título ya no duplica el del Centro de Validación ni repite la empresa. */}
+      <PageHeader
+        title="Revisión de payroll"
+        subtitle="Cierres, horas y aprobaciones antes del proceso de pago. Aquí se observa; las decisiones se toman en el Centro de Validación."
+        rightSlot={
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant="outline" className="gap-1.5 border-primary/30 text-primary">
+              <ShieldCheck className="h-3 w-3" /> Evidencia operativa
+            </Badge>
+            <Badge variant="outline" className="gap-1.5 border-muted-foreground/30 text-muted-foreground">
+              <Lock className="h-3 w-3" /> Solo lectura
+            </Badge>
+          </div>
+        }
+      />
+
 
       <PayrollSourceGuardrailBanner />
 
