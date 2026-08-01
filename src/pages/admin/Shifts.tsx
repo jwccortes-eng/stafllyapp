@@ -68,6 +68,7 @@ import { ExportConnecteamBulkDialog } from "@/components/shifts/integrations/Exp
 import type { Shift, Assignment, SelectOption, Employee, ViewMode } from "@/components/shifts/types";
 import { formatShiftCode } from "@/components/shifts/types";
 import { isDraftShift, isPublishedShift } from "@/lib/shifts/shift-guards";
+import { getShiftDisplayIdentity } from "@/lib/shifts/shift-identity";
 
 // Fields that affect ALL assigned employees (broadcast notification)
 const BROADCAST_FIELDS = ["date", "start_time", "end_time", "location_id", "client_id"];
@@ -1446,7 +1447,7 @@ function DesktopShifts() {
       // Compact, actionable summary. Each entry: "#code — reason".
       const details = failed
         .slice(0, 5)
-        .map(f => `#${formatShiftCode(f.shift.shift_code) ?? f.shift.id.slice(0, 6)}: ${f.reason}`)
+        .map(f => `${getShiftDisplayIdentity(f.shift).primaryRef}: ${f.reason}`)
         .join("\n");
       const more = failed.length > 5 ? `\n…y ${failed.length - 5} más` : "";
       toast.error(`${failed.length} turno(s) no se publicaron`, { description: details + more });
@@ -1779,15 +1780,11 @@ function DesktopShifts() {
         // Assignments handled separately below, gated by shifts_config.copy_week_assignments
         status: "draft",
         created_by: user?.id,
-      } as any).select("id, shift_code").single();
+      } as any).select("id, shift_ref").single();
       if (error) continue;
-      if (newShift?.shift_code) {
-        const originalTitle = s.title.replace(/^#\d{4}\s*/, "");
-        const code = String(newShift.shift_code).padStart(4, "0");
-        await supabase.from("scheduled_shifts")
-          .update({ title: `#${code} ${originalTitle}` } as any)
-          .eq("id", newShift.id);
-      }
+      /* P0 · SHIFT IDENTITY: el título NO lleva número. La referencia visible
+       * (`shift_ref`) la emite la secuencia por empresa; prefijar el título
+       * creaba un segundo número compitiendo en cabeceras. */
       // Copy assignments (respects shifts_config.copy_week_assignments)
       if (shiftsConfig.copy_week_assignments && newShift) {
         const shiftAssigns = assignments.filter(a => a.shift_id === s.id);
