@@ -720,20 +720,35 @@ export const ContextSwitcher = forwardRef<HTMLDivElement, ContextSwitcherProps>(
             >
               <SheetContent
                 side="bottom"
-                className="p-0 rounded-t-2xl max-h-[85vh]"
+                className="p-0 rounded-t-3xl max-h-[88vh] pb-[env(safe-area-inset-bottom,0px)]"
                 aria-label="Cambiar compañía y modo"
               >
-                <div className="pt-3 pb-2">
+                <div className="pt-3 pb-3 px-4 border-b border-border/40">
                   <div
                     className="mx-auto h-1 w-10 rounded-full bg-muted-foreground/30"
                     aria-hidden
                   />
-                  <p className={cn(MT.body, "text-center font-semibold pt-2")}>
-                    Cambiar contexto
-                  </p>
+                  <div className="flex items-center gap-3 pt-3">
+                    <CompanyLogo
+                      name={model.companyLabel}
+                      logoUrl={model.logoUrl}
+                      brandColor={model.brandColor}
+                      size="md"
+                      active
+                    />
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[15px] font-semibold tracking-tight truncate">
+                        {model.companyLabel}
+                      </span>
+                      <span className={cn(MT.caption, "block text-muted-foreground truncate")}>
+                        Modo {model.modeLabel} · toca otra empresa para cambiar
+                      </span>
+                    </span>
+                  </div>
                 </div>
                 {panel}
               </SheetContent>
+
             </Sheet>
           </>
         ) : (
