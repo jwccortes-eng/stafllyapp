@@ -3,6 +3,12 @@
  * Each employee/entity gets a stable color based on index.
  * Uses CSS custom properties defined in index.css.
  */
+import {
+  FAMILY_CLASSES,
+  FAMILY_DOT_CLASSES,
+  type StatusFamily,
+} from "@/lib/status/status-registry";
+
 
 export const PASTEL_PILL_CLASSES = [
   "pastel-pill-rose",
