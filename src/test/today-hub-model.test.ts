@@ -5,6 +5,8 @@ import { describe, it, expect } from "vitest";
 import {
   buildTodayHubModel,
   type HubShiftLike,
+  FULL_HUB_PERMISSIONS,
+  NO_HUB_PERMISSIONS,
 } from "@/lib/command-center/today-hub-model";
 
 const NOW = new Date("2026-08-01T10:00:00");
