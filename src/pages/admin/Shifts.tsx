@@ -1620,31 +1620,15 @@ function DesktopShifts() {
     loadData();
   };
 
-  const handleRemoveAssignment = async (assignmentId: string) => {
-    const assignment = assignments.find(a => a.id === assignmentId);
-    const { error } = await supabase.from("shift_assignments").delete().eq("id", assignmentId);
-    if (error) { toast.error(error.message); return; }
-
-    if (assignment) {
-      const shift = shifts.find(s => s.id === assignment.shift_id);
-      await logShiftActivity("remover_empleado", assignment.shift_id,
-        { employee_id: assignment.employee_id }, null
-      );
-      if (shift) {
-        await sendShiftNotifications(
-          assignment.shift_id,
-          shift.title,
-          "shift_unassigned",
-          `Removido del turno: ${shift.title}`,
-          `Has sido removido del turno "${shift.title}" del ${shift.date}.`,
-          [assignment.employee_id]
-        );
-      }
-    }
-
-    toast.success("Empleado removido del turno");
+  /**
+   * P0 — El retiro ya lo ejecutó la RPC canónica `remove_worker_from_shift`
+   * (auditada, con notificación al worker y sin borrar la fila). Aquí sólo
+   * se refresca la vista: nunca se borra ni se vuelve a notificar.
+   */
+  const handleAssignmentRemoved = async (_assignmentId: string) => {
     loadData();
   };
+
 
   const handleDropOnShift = async (targetShiftId: string, dataStr: string) => {
     if (!canEdit) return;
@@ -2702,7 +2686,7 @@ function DesktopShifts() {
         allShifts={shifts}
         canEdit={canEdit}
         onAddEmployees={handleAddEmployees}
-        onRemoveAssignment={handleRemoveAssignment}
+        onRemoveAssignment={handleAssignmentRemoved}
         onEdit={(s) => { setEditShift(s); setEditOpen(true); }}
         onPublish={handlePublishShift}
         onSave={handleEditShift}

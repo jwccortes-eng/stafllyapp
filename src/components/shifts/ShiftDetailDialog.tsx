@@ -15,13 +15,14 @@ import { EmployeeCombobox } from "./EmployeeCombobox";
 import { OpsStatusChip, type OpsStatusTone } from "@/components/operations/OpsStatusChip";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import {
-  Clock, MapPin, Users, Trash2, UserPlus, Send, Save, Globe, Loader2,
+  Clock, MapPin, Users, Trash2, UserPlus, UserMinus, Send, Save, Globe, Loader2,
   CheckCircle2, XCircle, ShieldCheck, ShieldX, ShieldQuestion, Megaphone,
   MessageSquare, Bell, Smartphone, Lock, Unlock, ClipboardCheck, Car, Pencil, X,
   CalendarDays, Building2, StickyNote, UsersRound, Sparkles, Phone, MessageCircleIcon, Copy, FileText, Radar,
   AlertTriangle, Compass, History, MoreVertical, Map as MapIcon,
 } from "lucide-react";
 import { ShiftReviewButton } from "@/components/reviews/ShiftReviewButton";
+import { RemoveWorkerFromShiftDialog } from "@/components/shifts/RemoveWorkerFromShiftDialog";
 import { ShiftPostReviewsSection } from "@/components/reviews/ShiftPostReviewsSection";
 // Heavy panels — lazy-loaded so the drawer opens fast and only pays for the
 // JS chunks the user actually navigates to. Keeps realtime/queries intact;
@@ -200,7 +201,9 @@ export function ShiftDetailDialog({
   const [processingReqId, setProcessingReqId] = useState<string | null>(null);
   const [rejectReqId, setRejectReqId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
-  const [removeConfirm, setRemoveConfirm] = useState<{ assignmentId: string; employeeName: string } | null>(null);
+  const [removeConfirm, setRemoveConfirm] = useState<{
+    assignmentId: string; employeeName: string; roleLabel?: string | null; statusLine?: string | null;
+  } | null>(null);
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
   const [notifyOpen, setNotifyOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
@@ -316,8 +319,10 @@ export function ShiftDetailDialog({
   // React's Rules of Hooks. `shift` may be null while the drawer is closing —
   // we guard each memo body instead of returning early above them.
   const shiftId = shift?.id ?? null;
+  // P0 — Una asignación retirada conserva su historia en la base, pero ya no
+  // ocupa cupo ni aparece en el equipo del turno.
   const shiftAssignments = useMemo(
-    () => (shiftId ? assignments.filter(a => a.shift_id === shiftId) : []),
+    () => (shiftId ? assignments.filter(a => a.shift_id === shiftId && a.status !== "removed") : []),
     [assignments, shiftId]
   );
   const assignedIds = useMemo(
@@ -483,11 +488,14 @@ export function ShiftDetailDialog({
     onRequestAction?.();
   };
 
-  const handleConfirmRemove = () => {
-    if (!removeConfirm) return;
-    onRemoveAssignment(removeConfirm.assignmentId);
+  // P0 — El retiro lo ejecuta la RPC canónica desde RemoveWorkerFromShiftDialog.
+  // Aquí sólo se refresca la vista cuando la operación terminó.
+  const handleRemoved = () => {
+    const id = removeConfirm?.assignmentId;
     setRemoveConfirm(null);
+    if (id) onRemoveAssignment(id);
   };
+
 
   const statusLabel = shift.status === "published" ? "Publicado" : shift.status === "draft" ? "Borrador" : shift.status === "locked" ? "Bloqueado" : shift.status;
   const pendingRequests = requests.filter(r => r.status === "pending").length;
@@ -1138,11 +1146,21 @@ export function ShiftDetailDialog({
                         {/* Per-row evaluate button removed — consolidated below in ShiftPostReviewsSection */}
                         {effectiveCanEdit && (
                           <button
-                            onClick={() => setRemoveConfirm({ assignmentId: a.id, employeeName: `${emp.first_name} ${emp.last_name}` })}
+                            onClick={() => setRemoveConfirm({
+                              assignmentId: a.id,
+                              employeeName: `${emp.first_name} ${emp.last_name}`,
+                              roleLabel: (a as any).assignment_role === "driver" ? "Conductor" : null,
+                              statusLine: a.status === "confirmed"
+                                ? "Esta persona ya confirmó el turno. Se le notificará."
+                                : "Esta persona está asignada pero aún no ha fichado.",
+                            })}
+                            title="Retirar del turno"
+                            aria-label={`Retirar a ${emp.first_name} ${emp.last_name} del turno`}
                             className="text-muted-foreground/20 hover:text-destructive transition-colors p-0.5 rounded hover:bg-destructive/10 opacity-0 group-hover:opacity-100"
                           >
-                            <Trash2 className="h-3 w-3" />
+                            <UserMinus className="h-3 w-3" />
                           </button>
+
                         )}
                       </div>
                     );
@@ -1579,25 +1597,19 @@ export function ShiftDetailDialog({
       </SheetContent>
     </Sheet>
 
-    {/* Remove assignment confirmation */}
-    <AlertDialog open={!!removeConfirm} onOpenChange={(o) => { if (!o) setRemoveConfirm(null); }}>
-      <AlertDialogContent className="rounded-2xl">
-        <AlertDialogHeader>
-          <AlertDialogTitle className="flex items-center gap-2 text-base">
-            <Trash2 className="h-4 w-4 text-destructive" /> Confirmar eliminación
-          </AlertDialogTitle>
-          <AlertDialogDescription>
-            ¿Remover a <strong>{removeConfirm?.employeeName}</strong> de este turno?
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel className="rounded-full">Cancelar</AlertDialogCancel>
-          <AlertDialogAction onClick={handleConfirmRemove} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground rounded-full">
-            Sí, remover
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    {/* P0 — Retirar del turno: misma operación canónica que móvil. */}
+    <RemoveWorkerFromShiftDialog
+      open={!!removeConfirm}
+      onOpenChange={(o) => { if (!o) setRemoveConfirm(null); }}
+      assignmentId={removeConfirm?.assignmentId ?? null}
+      workerName={removeConfirm?.employeeName ?? ""}
+      contextLine={[removeConfirm?.roleLabel, (shift as any)?.shift_ref ?? shift?.shift_code]
+        .filter(Boolean).join(" · ") || null}
+      statusLine={removeConfirm?.statusLine ?? null}
+      source="desktop_shift_detail"
+      onRemoved={handleRemoved}
+    />
+
 
     {/* Delete shift confirmation */}
     <AlertDialog open={deleteConfirm} onOpenChange={setDeleteConfirm}>

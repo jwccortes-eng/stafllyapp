@@ -52,6 +52,7 @@ import { normalizePhone, buildWhatsAppTargets } from "@/lib/phone";
 import { notifySuccess, notifyError, notifyWarning } from "@/lib/feedback/notify";
 import { allowedNextStatusesFor, type AssignmentNextStatus, type ClaimDecision } from "@/lib/shifts/team-actions";
 import { MobileTeamActionDialog } from "@/components/shifts/mobile/MobileTeamActionDialog";
+import { RemoveWorkerFromShiftDialog } from "@/components/shifts/RemoveWorkerFromShiftDialog";
 import {
   describeAssignmentStatus, optimisticStatus,
   type AssignmentStatus, type ReadinessState,
@@ -384,7 +385,24 @@ function MobileShiftTeamHubImpl({
   >(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
+  // P0 — "Retirar del turno" tiene su propia operación canónica.
+  const [removeTarget, setRemoveTarget] = useState<
+    { assignmentId: string; workerName: string; roleLabel: string | null; statusLine: string | null } | null
+  >(null);
+
   const openAssignmentAction = (assignmentId: string, nextStatus: AssignmentNextStatus, workerName: string) => {
+    if (nextStatus === "removed") {
+      const a = assignments.find(x => x.id === assignmentId);
+      setRemoveTarget({
+        assignmentId,
+        workerName,
+        roleLabel: a?.assignment_role === "driver" ? "Conductor" : null,
+        statusLine: a?.status === "confirmed"
+          ? "Esta persona ya confirmó el turno. Se le notificará."
+          : "Esta persona está asignada pero aún no ha fichado.",
+      });
+      return;
+    }
     setActionMode({ kind: "assignment_state", assignmentId, nextStatus, workerName });
     setActionDialogOpen(true);
   };
@@ -753,6 +771,19 @@ function MobileShiftTeamHubImpl({
           }
           onSuccess={handleMutated}
         />
+
+        <RemoveWorkerFromShiftDialog
+          open={!!removeTarget}
+          onOpenChange={(o) => { if (!o) setRemoveTarget(null); }}
+          assignmentId={removeTarget?.assignmentId ?? null}
+          workerName={removeTarget?.workerName ?? ""}
+          contextLine={[removeTarget?.roleLabel, (shift as any)?.shift_ref ?? (shift as any)?.shift_code]
+            .filter(Boolean).join(" · ") || null}
+          statusLine={removeTarget?.statusLine ?? null}
+          source="mobile_team_hub"
+          onRemoved={() => { setRemoveTarget(null); handleMutated(); }}
+        />
+
       </SheetContent>
     </Sheet>
     </AssignmentStatusContext.Provider>
