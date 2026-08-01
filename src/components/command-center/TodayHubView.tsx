@@ -395,7 +395,7 @@ export default function TodayHubView() {
         <TeamCard
           key={t.shiftId}
           title={t.title}
-          subtitle={t.subtitle}
+          subtitle={t.attendanceLabel ? `${t.subtitle} · ${t.attendanceLabel}` : t.subtitle}
           assigned={t.assigned}
           slots={t.required}
           confirmed={t.confirmed}
