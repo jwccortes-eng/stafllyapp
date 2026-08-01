@@ -8,6 +8,7 @@
  * them for the canonical OpsCoverageBar/OpsClockChip/OpsAlertChip.
  */
 import { ShiftRouteHeader } from "@/components/stafly-ui";
+import { displayShiftRef } from "@/lib/shifts/shift-ref";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Users, Clock, AlertTriangle, ChevronRight, Inbox } from "lucide-react";
