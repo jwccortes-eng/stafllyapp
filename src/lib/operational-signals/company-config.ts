@@ -38,7 +38,8 @@ export function defaultShadowCompanyConfig(companyId: string): ShadowCompanyConf
 
 /** Synchronous gate used by the sink. Unknown company => never persists. */
 export function isPersistenceEnabledForCompany(companyId: string | null | undefined): boolean {
-  if (!companyId || isKillSwitchEngaged()) return false;
+  if (!companyId || isKillSwitchEngaged() || isLocalPersistencePaused()) return false;
+
   const entry = cache.get(companyId);
   if (!entry) return false;
   if (!entry.config.persistenceEnabled) return false;
