@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Helmet } from "react-helmet-async";
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, Layers, RefreshCw, ShieldAlert } from "lucide-react";
@@ -7,18 +7,26 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
+import { useAuth } from "@/hooks/useAuth";
 import {
   computeShadowMetrics,
   type ShadowDecisionRow,
 } from "@/lib/operational-signals/metrics";
 import {
   isKillSwitchEngaged,
-  isShadowPersistenceEnabled,
+  isLocalPersistencePaused,
   setKillSwitch,
-  setShadowPersistenceEnabled,
+  setLocalPersistencePaused,
 } from "@/lib/operational-signals/flags";
+import {
+  loadShadowCompanyConfig,
+  setShadowPersistenceForCompany,
+  type ShadowCompanyConfig,
+} from "@/lib/operational-signals/company-config";
+import { getSinkHealth, subscribeSinkHealth } from "@/lib/operational-signals/health";
 import { OSE_DECISION_VERSION } from "@/lib/operational-signals/version";
 
 const PRIORITY_VARIANT: Record<string, "destructive" | "default" | "secondary" | "outline"> = {
@@ -31,7 +39,28 @@ const PRIORITY_VARIANT: Record<string, "destructive" | "default" | "secondary" |
 
 export default function OperationalSignalsShadowPage() {
   const { selectedCompanyId } = useCompany();
+  const { user } = useAuth();
   const [, force] = useState(0);
+  const [config, setConfig] = useState<ShadowCompanyConfig | null>(null);
+  const [savingConfig, setSavingConfig] = useState(false);
+  const [health, setHealth] = useState(() => getSinkHealth());
+
+  useEffect(() => {
+    const unsubscribe = subscribeSinkHealth(() => setHealth(getSinkHealth()));
+    const interval = setInterval(() => setHealth(getSinkHealth()), 5000);
+    return () => {
+      unsubscribe();
+      clearInterval(interval);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!selectedCompanyId) {
+      setConfig(null);
+      return;
+    }
+    void loadShadowCompanyConfig(selectedCompanyId, { force: true }).then(setConfig);
+  }, [selectedCompanyId]);
 
   const { data, isLoading, refetch, isFetching } = useQuery({
     queryKey: ["ose-shadow-decisions", selectedCompanyId],
@@ -53,6 +82,28 @@ export default function OperationalSignalsShadowPage() {
   const rows = useMemo(() => data ?? [], [data]);
   const metrics = useMemo(() => computeShadowMetrics(rows), [rows]);
 
+  const familyBreakdown = useMemo(() => {
+    const map = new Map<string, number>();
+    rows.forEach((r) => map.set(r.notification_family, (map.get(r.notification_family) ?? 0) + 1));
+    return [...map.entries()].sort((a, b) => b[1] - a[1]);
+  }, [rows]);
+
+  const handleTogglePersistence = async (enabled: boolean) => {
+    if (!selectedCompanyId) return;
+    setSavingConfig(true);
+    const result = await setShadowPersistenceForCompany(selectedCompanyId, enabled, {
+      updatedBy: user?.id ?? null,
+    });
+    setSavingConfig(false);
+    if (!result.ok) {
+      toast.error("No se pudo actualizar la configuración", { description: result.error });
+      return;
+    }
+    const next = await loadShadowCompanyConfig(selectedCompanyId, { force: true });
+    setConfig(next);
+    toast.success(enabled ? "Registro sombra activado para esta compañía" : "Registro sombra desactivado");
+  };
+
   return (
     <div className="space-y-6 p-4 md:p-6">
       <Helmet>
@@ -63,14 +114,14 @@ export default function OperationalSignalsShadowPage() {
       <header className="space-y-2">
         <div className="flex flex-wrap items-center gap-2">
           <h1 className="text-xl font-semibold">Operational Signals — Shadow Mode</h1>
-          <Badge variant="secondary">F1</Badge>
+          <Badge variant="secondary">F1.1 Evidence Run</Badge>
           <Badge variant="outline">operational_signal_shadow_mode = true</Badge>
           <Badge variant="outline">{OSE_DECISION_VERSION}</Badge>
         </div>
         <p className="max-w-3xl text-sm text-muted-foreground">
           Esta capa solo observa. No envía notificaciones, no silencia las actuales, no cambia
-          push, email, SMS ni chat, y no altera preferencias. Compara lo que el sistema actual
-          hizo contra lo que el motor de señales habría recomendado.
+          push, email, SMS ni chat, y no altera preferencias. El registro se activa compañía por
+          compañía; nunca por un flag global.
         </p>
       </header>
 
@@ -82,13 +133,24 @@ export default function OperationalSignalsShadowPage() {
           <div className="flex items-center gap-2">
             <Switch
               id="ose-persist"
-              checked={isShadowPersistenceEnabled()}
+              disabled={!selectedCompanyId || savingConfig}
+              checked={!!config?.persistenceEnabled}
+              onCheckedChange={(v) => void handleTogglePersistence(v)}
+            />
+            <Label htmlFor="ose-persist">
+              Registrar decisiones sombra (solo esta compañía)
+            </Label>
+          </div>
+          <div className="flex items-center gap-2">
+            <Switch
+              id="ose-pause"
+              checked={isLocalPersistencePaused()}
               onCheckedChange={(v) => {
-                setShadowPersistenceEnabled(v);
+                setLocalPersistencePaused(v);
                 force((n) => n + 1);
               }}
             />
-            <Label htmlFor="ose-persist">Registrar decisiones sombra</Label>
+            <Label htmlFor="ose-pause">Pausar registro en este dispositivo</Label>
           </div>
           <div className="flex items-center gap-2">
             <Switch
@@ -104,29 +166,82 @@ export default function OperationalSignalsShadowPage() {
           <Button variant="outline" size="sm" onClick={() => void refetch()} disabled={isFetching}>
             <RefreshCw className="mr-2 h-4 w-4" /> Actualizar
           </Button>
+          {config?.updatedAt && (
+            <span className="text-xs text-muted-foreground">
+              Configuración actualizada {new Date(config.updatedAt).toLocaleString()}
+            </span>
+          )}
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <Metric label="Eventos observados" value={metrics.totalEvents} />
-        <Metric
-          label="Reducción de ruido estimada"
-          value={`${metrics.estimatedNotificationReductionPct}%`}
-        />
-        <Metric label="Agrupables" value={metrics.groupableEvents} icon={<Layers className="h-4 w-4" />} />
-        <Metric
-          label="Alertas críticas"
-          value={metrics.criticalAlerts}
-          icon={<ShieldAlert className="h-4 w-4" />}
-        />
-        <Metric label="Audiencia demasiado amplia" value={metrics.overBroadAudienceEvents} />
-        <Metric label="Requerirían confirmación" value={metrics.acknowledgementNeededEvents} />
-        <Metric label="Podrían ser silenciosos" value={metrics.silentCandidates} />
-        <Metric
-          label="Familia más ruidosa"
-          value={metrics.noisiestFamilies[0]?.family ?? "—"}
-        />
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Salud del sink (sesión actual)</CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          <Metric label="Eventos observados" value={health.observed} />
+          <Metric label="Escrituras intentadas" value={health.persistedAttempts} />
+          <Metric label="Errores de persistencia" value={`${health.persistedFailed} (${health.errorRatePct}%)`} />
+          <Metric label="Omitidos (sin persistencia)" value={health.skippedNotEnabled} />
+          <Metric label="Latencia promedio" value={`${health.avgLatencyMs} ms`} />
+          <Metric label="Latencia p95" value={`${health.p95LatencyMs} ms`} />
+          <Metric
+            label="Último error"
+            value={health.lastError ? new Date(health.lastError.at).toLocaleTimeString() : "—"}
+          />
+          <Metric label="Impacto en notificaciones" value="0 (aislado)" />
+        </CardContent>
+      </Card>
+
+      <div className="space-y-2">
+        <p className="text-xs text-muted-foreground">
+          Métricas <strong>estimadas</strong>: <code>actual_recipients_count</code> todavía se
+          observa desde el cliente (1 por evento recibido), por lo que la reducción de ruido es un
+          piso conservador. F2 moverá la observación al backend para medir la audiencia real.
+        </p>
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          <Metric label="Eventos registrados" value={metrics.totalEvents} />
+          <Metric
+            label="Reducción de ruido (estimada)"
+            value={`${metrics.estimatedNotificationReductionPct}%`}
+          />
+          <Metric label="Agrupables" value={metrics.groupableEvents} icon={<Layers className="h-4 w-4" />} />
+          <Metric
+            label="Alertas críticas"
+            value={metrics.criticalAlerts}
+            icon={<ShieldAlert className="h-4 w-4" />}
+          />
+          <Metric label="Audiencia demasiado amplia" value={metrics.overBroadAudienceEvents} />
+          <Metric label="Requerirían confirmación" value={metrics.acknowledgementNeededEvents} />
+          <Metric label="Podrían ser silenciosos" value={metrics.silentCandidates} />
+          <Metric label="Familia más ruidosa" value={metrics.noisiestFamilies[0]?.family ?? "—"} />
+        </div>
       </div>
+
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Distribución por familia y prioridad</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex flex-wrap gap-2">
+            {Object.entries(metrics.priorityBreakdown).map(([priority, count]) => (
+              <Badge key={priority} variant={PRIORITY_VARIANT[priority] ?? "outline"}>
+                {priority}: {count}
+              </Badge>
+            ))}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {familyBreakdown.length === 0 && (
+              <span className="text-sm text-muted-foreground">Sin datos aún.</span>
+            )}
+            {familyBreakdown.map(([family, count]) => (
+              <Badge key={family} variant="outline">
+                {family}: {count}
+              </Badge>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader className="pb-3">
