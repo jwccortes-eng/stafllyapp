@@ -6832,6 +6832,45 @@ export type Database = {
           },
         ]
       }
+      legacy_driver_backfill_audit: {
+        Row: {
+          assignment_id: string | null
+          company_id: string | null
+          created_at: string
+          employee_id: string
+          id: string
+          outcome: string
+          reason: string
+          shift_date: string | null
+          shift_id: string
+          shift_ref: string | null
+        }
+        Insert: {
+          assignment_id?: string | null
+          company_id?: string | null
+          created_at?: string
+          employee_id: string
+          id?: string
+          outcome: string
+          reason: string
+          shift_date?: string | null
+          shift_id: string
+          shift_ref?: string | null
+        }
+        Update: {
+          assignment_id?: string | null
+          company_id?: string | null
+          created_at?: string
+          employee_id?: string
+          id?: string
+          outcome?: string
+          reason?: string
+          shift_date?: string | null
+          shift_id?: string
+          shift_ref?: string | null
+        }
+        Relationships: []
+      }
       legacy_invoice_line_items: {
         Row: {
           category_id: string | null
