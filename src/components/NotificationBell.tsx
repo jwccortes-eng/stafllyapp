@@ -1,6 +1,7 @@
 import { forwardRef, useState } from "react";
-import { Bell, CheckCheck, ExternalLink, Briefcase, Megaphone, CreditCard, Clock, UserPlus, Star, Volume2, X } from "lucide-react";
+import { Bell, CheckCheck, ExternalLink, Briefcase, Megaphone, CreditCard, Clock, UserPlus, Star, Volume2, X, AlertTriangle } from "lucide-react";
 import { useNotifications } from "@/hooks/useNotifications";
+import { isCriticalNotification } from "@/lib/notifications/priority";
 import { useSoundContext } from "@/hooks/useSound";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -377,7 +378,8 @@ const NotificationBell = forwardRef<HTMLDivElement>(function NotificationBell(_p
                   </div>
                   <ExternalLink className="h-3.5 w-3.5 text-muted-foreground/20 shrink-0 mt-1" />
                 </button>
-              ))}
+                );
+              })}
             </div>
           )}
         </ScrollArea>
