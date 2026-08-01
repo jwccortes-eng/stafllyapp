@@ -20,6 +20,7 @@ import { useToast } from "@/hooks/use-toast";
 import { OpsStatusChip, type OpsStatusTone } from "@/components/operations/OpsStatusChip";
 import { HistoricalShiftWorkSummary } from "@/components/portal/HistoricalShiftWorkSummary";
 import type { WorkedShiftEntry } from "@/hooks/useWorkedShiftHistory";
+import { getShiftDisplayIdentity } from "@/lib/shifts/shift-identity";
 
 interface ShiftInfo {
   id: string;
