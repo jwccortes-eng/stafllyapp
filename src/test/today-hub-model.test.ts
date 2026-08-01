@@ -68,7 +68,7 @@ describe("buildTodayHubModel", () => {
     });
     const item = m.attentionItems.find((i) => i.id === "live:attendance");
     expect(item?.priority).toBe("high");
-    expect(item?.status).toBe("attendance");
+    expect(item?.status).toBe("late");
     expect(item?.headline).not.toMatch(/no-?show/i);
 
   });
