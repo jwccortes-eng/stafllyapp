@@ -11,6 +11,11 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { isAdminLevelRole } from "@/lib/roles";
 import { AdminProductSwitcher } from "@/components/admin/AdminProductSwitcher";
+import { KpiStateCard } from "@/components/ox/KpiStateCard";
+import {
+  type MetricState, loadingMetric, errorMetric, notApplicableMetric, countMetric,
+} from "@/lib/ox/metric-state";
+
 
 /**
  * Mobile-first Admin Home — Command Center style.
