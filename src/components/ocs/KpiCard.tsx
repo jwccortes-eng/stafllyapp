@@ -18,10 +18,19 @@ import type { StatusKey } from "@/lib/status/status-registry";
 export interface KpiCardProps {
   /** Nombre del indicador. */
   label: string;
-  /** Valor ya formateado. */
+  /** Valor ya formateado. Ignorado si se pasa `state`. */
   value?: React.ReactNode;
+  /** Unidad del valor: "turnos", "horas", "workers". */
+  unit?: string;
   /** Qué significa el número para la operación. Obligatorio. */
   meaning: string;
+  /** Qué pasa si no se atiende. Se muestra bajo el significado. */
+  consequence?: string | null;
+  /**
+   * OX-4.5 — Estado semántico de la métrica. Cuando se pasa, resuelve valor,
+   * unidad, contexto, estado y consecuencia. Elimina el cero silencioso.
+   */
+  state?: MetricState;
   /** Comparación: "+12% vs semana pasada". */
   trendLabel?: string | null;
   trend?: "up" | "down" | "flat";
@@ -43,6 +52,7 @@ export interface KpiCardProps {
   density?: OcsDensity;
   className?: string;
 }
+
 
 const TREND_ICON = {
   up: ArrowUpRight,
