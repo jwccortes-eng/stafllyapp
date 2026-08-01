@@ -177,9 +177,9 @@ export function ShiftRouteHeader({
               {day.label}
             </span>
           )}
-          {shiftCode && variant === "admin" && (
+          {refLabel && variant === "admin" && (
             <span className="text-[10px] font-mono text-muted-foreground/70">
-              #{shiftCode}
+              {refLabel}
             </span>
           )}
           {statusLabel && (
@@ -295,9 +295,9 @@ export function ShiftRouteHeader({
   // ── List density (one-line summary) ─────────────────────────────────────
   const listBody = (
     <div className="flex items-center gap-2 min-w-0 w-full">
-      {shiftCode && (
+      {refLabel && (
         <span className="text-[10px] font-mono text-muted-foreground/70 shrink-0">
-          #{shiftCode}
+          {refLabel}
         </span>
       )}
       <span className="text-[13px] font-semibold text-foreground truncate flex-1">
