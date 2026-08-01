@@ -67,6 +67,9 @@ export interface OperationalCardProps {
   action?: OcsAction;
   /** Acciones secundarias: máximo 3. */
   actions?: OcsAction[];
+  /** Pie opcional: detalle expandible o nota operativa. Siempre al final. */
+  footer?: React.ReactNode;
+
 
   variant?: OcsVariant;
   mode?: OcsMode;
@@ -121,6 +124,7 @@ export function OperationalCard({
   secondary,
   action,
   actions,
+  footer,
   variant = "standard",
   mode = "interactive",
   density = "auto",
@@ -262,6 +266,9 @@ export function OperationalCard({
             )}
           </div>
         )}
+
+        {/* 8 — Pie opcional */}
+        {footer}
       </div>
     </Comp>
   );

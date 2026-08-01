@@ -36,6 +36,12 @@ export interface WorkerCardProps {
   recommendation?: string | null;
   action?: OcsAction;
   actions?: OcsAction[];
+  /** Sustituye el bloque de skills como información principal. */
+  primary?: React.ReactNode;
+  /** Slot junto al estado (menús contextuales, referencias). */
+  aside?: React.ReactNode;
+  /** Pie opcional (detalle expandible "¿por qué?"). */
+  footer?: React.ReactNode;
   onClick?: () => void;
   variant?: OcsVariant;
   mode?: OcsMode;
@@ -66,6 +72,9 @@ export function WorkerCard({
   recommendation,
   action,
   actions,
+  primary,
+  aside,
+  footer,
   onClick,
   variant = "standard",
   mode = "interactive",
@@ -79,12 +88,17 @@ export function WorkerCard({
       status={status}
       statusLabel={statusLabel}
       statusAside={
-        typeof rating === "number" ? (
-          <span className="inline-flex items-center gap-1">
-            <Star className="h-3 w-3 fill-current" aria-hidden />
-            <span aria-label={`Reputación ${rating.toFixed(1)} de 5`}>
-              {rating.toFixed(1)}
-            </span>
+        typeof rating === "number" || aside ? (
+          <span className="inline-flex items-center gap-2">
+            {typeof rating === "number" && (
+              <span className="inline-flex items-center gap-1">
+                <Star className="h-3 w-3 fill-current" aria-hidden />
+                <span aria-label={`Reputación ${rating.toFixed(1)} de 5`}>
+                  {rating.toFixed(1)}
+                </span>
+              </span>
+            )}
+            {aside}
           </span>
         ) : undefined
       }
@@ -110,7 +124,7 @@ export function WorkerCard({
         </>
       }
       primary={
-        skills.length > 0 ? (
+        primary ?? (skills.length > 0 ? (
           <div className="flex flex-wrap gap-1.5">
             {skills.slice(0, 4).map((s) => (
               <span
@@ -130,7 +144,7 @@ export function WorkerCard({
               </span>
             )}
           </div>
-        ) : undefined
+        ) : undefined)
       }
       secondary={
         blocker ? (
@@ -144,6 +158,7 @@ export function WorkerCard({
       }
       action={action}
       actions={actions}
+      footer={footer}
       onClick={onClick}
       variant={variant}
       mode={mode}
