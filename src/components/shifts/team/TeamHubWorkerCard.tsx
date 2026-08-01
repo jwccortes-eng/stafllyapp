@@ -10,7 +10,7 @@
  */
 import * as React from "react";
 import { useState } from "react";
-import { Check, Copy, MessageSquare, Phone, Star, UserMinus, UserPlus, UserCog, XCircle } from "lucide-react";
+import { Check, Copy, MessageSquare, Phone, Star, UserMinus, UserPlus, XCircle } from "lucide-react";
 import { WorkerCard } from "@/components/ocs";
 import type { OcsAction } from "@/components/ocs";
 import { Button } from "@/components/ui/button";
@@ -277,5 +277,3 @@ export function TeamHubWorkerCard({
     </>
   );
 }
-
-export { UserCog };
