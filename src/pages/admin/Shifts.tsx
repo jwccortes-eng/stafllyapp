@@ -762,7 +762,7 @@ function DesktopShifts() {
     setClaimable(shiftsConfig.allow_claims ? false : false); setSelectedEmployees([]);
     setMeetingPoint(""); setSpecialInstructions(""); setPayType("hourly");
     setDayType("full_day"); setPayOverride(false); setShiftAdminId("");
-    setTransportRequired(false); setCarCapacity("5"); setTransportNotes(""); setDriverEmployeeId("");
+    setTransportRequired(false); setCarCapacity("5"); setTransportNotes(""); setDriverEmployeeId(""); setDriverIds([]);
     setClockMethod("both");
     setAttendanceMode("clock"); setMeetingTime("");
     setMeetingPointLocationId(null); setJobSiteLocationId(null); setJobSiteAddress("");
@@ -778,7 +778,7 @@ function DesktopShifts() {
     meetingPoint, specialInstructions,
     payType, dayType, payOverride, shiftAdminId, clockMethod,
     attendanceMode, meetingTime,
-    transportRequired, carCapacity, transportNotes, driverEmployeeId,
+    transportRequired, carCapacity, transportNotes, driverEmployeeId, driverIds,
     selectedEmployees,
     meetingPointLocationId, jobSiteLocationId, jobSiteAddress,
   }), [
@@ -787,7 +787,7 @@ function DesktopShifts() {
     meetingPoint, specialInstructions,
     payType, dayType, payOverride, shiftAdminId, clockMethod,
     attendanceMode, meetingTime,
-    transportRequired, carCapacity, transportNotes, driverEmployeeId,
+    transportRequired, carCapacity, transportNotes, driverEmployeeId, driverIds,
     selectedEmployees,
     meetingPointLocationId, jobSiteLocationId, jobSiteAddress,
   ]);
@@ -816,6 +816,7 @@ function DesktopShifts() {
     setAttendanceMode(d.attendanceMode); setMeetingTime(d.meetingTime);
     setTransportRequired(d.transportRequired); setCarCapacity(d.carCapacity);
     setTransportNotes(d.transportNotes); setDriverEmployeeId(d.driverEmployeeId);
+    setDriverIds(d.driverIds ?? (d.driverEmployeeId ? [d.driverEmployeeId] : []));
     setSelectedEmployees(d.selectedEmployees);
     setMeetingPointLocationId(d.meetingPointLocationId);
     setJobSiteLocationId(d.jobSiteLocationId);
