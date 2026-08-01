@@ -14,6 +14,8 @@ import { ShiftFormShell } from "./ShiftFormShell";
 import { WorkspaceSummary } from "./workspace/WorkspaceSummary";
 import { ShiftDraftBanner, ShiftDraftStatusPill } from "./ShiftDraftBanner";
 import { useShiftDraftAutosave } from "@/hooks/useShiftDraftAutosave";
+import { syncShiftDriverRoles, driverIdsFromAssignments } from "@/lib/shifts/driver-sync";
+import { notifyWarning } from "@/lib/feedback/notify";
 import { useAuth } from "@/hooks/useAuth";
 import type { Shift, SelectOption, Employee, Assignment } from "./types";
 
@@ -54,13 +56,23 @@ export function ShiftEditDialog({
 
   useEffect(() => {
     if (shift && open) {
-      setForm(shiftToFormState(shift));
+      const base = shiftToFormState(shift);
+      // P0.3 — los drivers reales viven en shift_assignments.assignment_role.
+      setForm({
+        ...base,
+        driverIds: driverIdsFromAssignments(
+          assignments as any[],
+          shift.id,
+          (shift as any).driver_employee_id,
+        ),
+      });
       const s = shift as any;
       setQrAttendanceMode(s.qr_attendance_mode || "disabled");
       setQrToken(s.qr_token || null);
       setTouched(false); // S4-FIX1 — fresh open = clean slate
     }
-  }, [shift, open]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shift, open, assignments]);
 
   // S3 — Local autosave (no DB writes). Snapshot only fields the operator edits.
   const autosaveData = useMemo(() => ({ form, qrAttendanceMode }), [form, qrAttendanceMode]);
@@ -157,6 +169,18 @@ export function ShiftEditDialog({
     try {
       const payload = formStateToShiftPayload(form, allowClaims);
       await onSave(shift.id, { ...payload, qr_attendance_mode: qrAttendanceMode }, shift);
+      // Roles de conductor: sólo assignment_role + el campo legado. Nunca horas ni payroll.
+      try {
+        await syncShiftDriverRoles(shift.id, form.driverIds ?? []);
+      } catch (driverError) {
+        notifyWarning({
+          key: "shift-driver-sync",
+          title: "El turno se guardó, pero los conductores no",
+          fact: "No pudimos actualizar quién maneja en este turno.",
+          consequence: "El equipo verá los conductores anteriores hasta que lo reintentes.",
+          cause: driverError,
+        });
+      }
       autosave.clear(); // S3 — successful save → drop local draft
       setTouched(false); // S4-FIX1 — saved → no longer dirty
       onOpenChange(false);

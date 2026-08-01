@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { SectionCard } from "./section-card";
-import { SingleEmployeePicker } from "../SingleEmployeePicker";
+import { MultiDriverPicker } from "./MultiDriverPicker";
 import type { Employee } from "../types";
 
 interface Props {
@@ -22,7 +22,8 @@ interface Props {
   transportRequired: boolean;
   carCapacity: string;
   transportNotes: string;
-  driverEmployeeId: string;
+  /** P0.3 — varios conductores por turno (modelo real: shift_assignments.assignment_role). */
+  driverIds: string[];
   /** Computed by parent so we don't repeat the math */
   ridesNeeded: number;
   driversInTeam: number;
@@ -36,7 +37,7 @@ interface Props {
     transportRequired?: boolean;
     carCapacity?: string;
     transportNotes?: string;
-    driverEmployeeId?: string;
+    driverIds?: string[];
   }) => void;
 }
 
@@ -45,7 +46,7 @@ function TransportationSectionImpl({
   transportRequired,
   carCapacity,
   transportNotes,
-  driverEmployeeId,
+  driverIds,
   ridesNeeded,
   driversInTeam,
   assignedCount,
@@ -140,15 +141,16 @@ function TransportationSectionImpl({
           )}
 
           <div>
-            <Label className="text-[11px] text-muted-foreground font-medium">Conductor asignado</Label>
-            <div className="mt-1">
-              <SingleEmployeePicker
+            <Label className="text-[11px] text-muted-foreground font-medium">Conductores asignados</Label>
+            <p className="text-[10.5px] text-muted-foreground/80 mt-0.5">
+              Los vehículos se calculan por capacidad; los conductores los eliges tú. Un conductor puede cubrir varios viajes.
+            </p>
+            <div className="mt-1.5">
+              <MultiDriverPicker
                 employees={employees}
-                value={driverEmployeeId || null}
-                onChange={(id) => onChange({ driverEmployeeId: id ?? "" })}
-                placeholder="Buscar conductor…"
-                emptyLabel="Sin asignar"
-                highlightDrivers
+                driverIds={driverIds}
+                driversRequired={ridesNeeded}
+                onChange={(ids) => onChange({ driverIds: ids })}
               />
             </div>
           </div>
