@@ -222,7 +222,7 @@ export function useNotifications() {
 
     showSystemNotification(newNotif.title, newNotif.body);
     if (isCriticalNotification(newNotif.type)) {
-      toast.error(newNotif.title, { description: newNotif.body, duration: 12000, important: true });
+      toast.error(newNotif.title, { description: newNotif.body, duration: 12000 });
     } else {
       toast(newNotif.title, { description: newNotif.body, duration: 5000 });
     }

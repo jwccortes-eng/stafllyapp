@@ -323,13 +323,16 @@ const NotificationBell = forwardRef<HTMLDivElement>(function NotificationBell(_p
             </div>
           ) : (
             <div className="divide-y divide-border/20">
-              {filtered.map((n) => (
+              {filtered.map((n) => {
+                const critical = isCriticalNotification(n.type) && !n.read_at;
+                return (
                 <button
                   key={n.id}
                   onClick={() => handleClick(n)}
                   className={cn(
                     "w-full text-left px-4 py-3 hover:bg-muted/30 transition-colors flex gap-3 items-start",
-                    !n.read_at && "bg-primary/[0.03]"
+                    !n.read_at && "bg-primary/[0.03]",
+                    critical && "bg-destructive/[0.06] border-l-2 border-l-destructive"
                   )}
                 >
                   <div className={cn(
@@ -340,10 +343,18 @@ const NotificationBell = forwardRef<HTMLDivElement>(function NotificationBell(_p
                     <div className="flex items-center gap-2 mb-0.5">
                       <span className={cn(
                         "text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded",
-                        !n.read_at ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+                        critical
+                          ? "bg-destructive/15 text-destructive"
+                          : !n.read_at ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
                       )}>
                         {TYPE_LABELS[n.type] || n.type}
                       </span>
+                      {critical && (
+                        <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider text-destructive">
+                          <AlertTriangle className="h-2.5 w-2.5" />
+                          Crítica
+                        </span>
+                      )}
                     </div>
                     <p className={cn(
                       "text-[13px] leading-snug",
