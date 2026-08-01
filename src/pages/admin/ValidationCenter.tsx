@@ -31,6 +31,8 @@ import { KpiCard } from "@/components/ocs/KpiCard";
 import { InsightCard } from "@/components/ocs/InsightCard";
 import { ValidationCard } from "@/components/ocs/ValidationCard";
 import type { OcsAction } from "@/components/ocs/OperationalCard";
+import { TerminalCard } from "@/components/ocs/TerminalCard";
+import type { TerminalState } from "@/lib/ox/terminal-state";
 
 import { MT } from "@/lib/mobile/mobile-scale";
 import { cn } from "@/lib/utils";
