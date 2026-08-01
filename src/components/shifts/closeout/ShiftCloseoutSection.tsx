@@ -8,11 +8,10 @@ import {
   getShiftCloseout,
   getShiftEvidencePacket,
 } from "@/lib/shifts/closeout";
+import { ValidationDeepLink } from "@/components/validation/ValidationDeepLink";
 import { CloseoutSummaryCard } from "./CloseoutSummaryCard";
 import { CaptainCloseoutForm } from "./CaptainCloseoutForm";
-import { AdminCloseoutReview } from "./AdminCloseoutReview";
 import { EvidencePacketCard } from "./EvidencePacketCard";
-import { FinalApprovalCard } from "./FinalApprovalCard";
 import { CorrectionsReviewPanel } from "../corrections/CorrectionsReviewPanel";
 
 const PRIVILEGED_REVIEW_ROLES = new Set(["developer", "owner", "founder"]);
@@ -157,17 +156,18 @@ export function ShiftCloseoutSection({
             <CorrectionsReviewPanel shiftId={shiftId} />
           ) : null}
 
-          {showReview && closeout ? (
-            <AdminCloseoutReview
-              closeout={closeout}
-              onReviewed={(next) => setCloseout(next)}
-            />
-          ) : null}
-
-          {showFinal && closeout ? (
-            <FinalApprovalCard
-              closeout={closeout}
-              onFinalized={(next) => setCloseout(next)}
+          {/* OX-4.4 — la decisión terminal del cierre vive en el Centro de
+              Validación. Aquí queda el resumen y el acceso directo. */}
+          {(showReview || showFinal) && closeout ? (
+            <ValidationDeepLink
+              shiftId={shiftId}
+              summary={
+                showFinal
+                  ? "Aprobación final pendiente"
+                  : "Cierre enviado, pendiente de revisión"
+              }
+              progress={`${closeout.incident_count ?? 0} incidencia(s) · ${closeout.no_show_count ?? 0} no-show(s)`}
+              label={showFinal ? "Firmar en el Centro de Validación" : "Revisar en el Centro de Validación"}
             />
           ) : null}
 

@@ -38,7 +38,7 @@ import {
   Accordion, AccordionContent, AccordionItem, AccordionTrigger,
 } from "@/components/ui/accordion";
 import { MobileQueueRow, MobileQueueDrawer } from "@/components/admin/mobile";
-import { HoursApprovalPanel } from "@/components/timeclock/HoursApprovalPanel";
+import { ValidationDeepLink } from "@/components/validation/ValidationDeepLink";
 
 import {
   Loader2, ShieldCheck, AlertTriangle, AlertCircle, CheckCircle2,
@@ -1453,12 +1453,12 @@ export default function PayrollReviewQueue() {
                   {bucket.description}
                 </div>
 
-                {/* P0 OX — el Centro de Validación ahora resuelve, no solo observa. */}
+                {/* OX-4.4 — esta cola observa; el Centro de Validación decide. */}
                 {row.shiftId && selectedCompanyId ? (
-                  <HoursApprovalPanel
-                    companyId={selectedCompanyId}
+                  <ValidationDeepLink
                     shiftId={row.shiftId}
-                    onChanged={() => void dataQ.refetch()}
+                    summary="Hay horas o cierres por resolver en este turno"
+                    progress="Vista de revisión (sin decisiones aquí)"
                   />
                 ) : (
                   <p className="text-[10px] text-muted-foreground/80 leading-relaxed">

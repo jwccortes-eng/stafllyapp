@@ -16,7 +16,7 @@ import { getShiftCloseout, type ShiftCloseout } from "@/lib/shifts/closeout";
 import {
   closeShift, evaluateShiftClosure, isShiftClosed, type ClosureReadiness,
 } from "@/lib/shifts/shift-closure";
-import { HoursApprovalPanel } from "@/components/timeclock/HoursApprovalPanel";
+import { ValidationDeepLink } from "@/components/validation/ValidationDeepLink";
 
 interface ShiftClosureCardProps {
   companyId: string;
@@ -260,7 +260,12 @@ export function ShiftClosureCard({
           {readiness.pendingHours > 0 || readiness.openClockOuts > 0 ? (
             <div>
               <p className="text-xs font-semibold mb-2">Horas reales de este turno</p>
-              <HoursApprovalPanel companyId={companyId} shiftId={shiftId} onChanged={load} />
+              <ValidationDeepLink
+                shiftId={shiftId}
+                summary="Horas pendientes de aprobar"
+                progress={`${readiness.pendingHours} por aprobar · ${readiness.openClockOuts} sin salida`}
+                label="Aprobar en el Centro de Validación"
+              />
             </div>
           ) : null}
 

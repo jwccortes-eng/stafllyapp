@@ -148,6 +148,7 @@ const OpsHome = lazy(() => import("./pages/admin/OpsHome"));
 const PayrollNativeDryRun = lazy(() => import("./pages/admin/PayrollNativeDryRun"));
 const StagedReconciliation = lazy(() => import("./pages/admin/StagedReconciliation"));
 const CompensationValidation = lazy(() => import("./pages/admin/CompensationValidation"));
+const ValidationCenter = lazy(() => import("./pages/admin/ValidationCenter"));
 const PayrollPilotClose = lazy(() => import("./pages/admin/PayrollPilotClose"));
 const PayrollMappings = lazy(() => import("./pages/admin/PayrollMappings"));
 const CompensationAdoption = lazy(() => import("./pages/admin/CompensationAdoption"));
@@ -413,6 +414,7 @@ function App() {
                 <Route path="ops" element={<CompanyRequiredGuard><OpsHome /></CompanyRequiredGuard>} />
                 <Route path="front-desk-reports" element={<Navigate to="/app/front-desk" replace />} />
                 <Route path="front-desk" element={<CompanyRequiredGuard><FrontDeskHub /></CompanyRequiredGuard>} />
+                <Route path="validation-center" element={<CompanyRequiredGuard><ValidationCenter /></CompanyRequiredGuard>} />
                 <Route path="compensation-validation" element={<CompanyRequiredGuard><CompensationValidation /></CompanyRequiredGuard>} />
                 <Route path="payroll-pilot-close" element={<CompanyRequiredGuard><PayrollPilotClose /></CompanyRequiredGuard>} />
                 <Route path="payroll-mappings" element={<CompanyRequiredGuard><PayrollMappings /></CompanyRequiredGuard>} />

@@ -21,6 +21,8 @@ export type StatusKey =
   | "confirmed"
   | "verified"
   | "paid"
+  | "resolved"
+  | "ready_for_payroll"
   // Warning
   | "pending"
   | "waiting"
@@ -29,6 +31,7 @@ export type StatusKey =
   | "late"
   | "missing"
   | "warning"
+  | "correction_requested"
   // Critical
   | "blocked"
   | "failed"
@@ -78,6 +81,8 @@ export const STATUS_REGISTRY: Record<StatusKey, StatusDefinition> = {
   confirmed: { family: "positive", label: "Confirmado", icon: "check" },
   verified: { family: "positive", label: "Verificado", icon: "shield" },
   paid: { family: "positive", label: "Pagado", icon: "check" },
+  resolved: { family: "positive", label: "Resuelto", icon: "check" },
+  ready_for_payroll: { family: "positive", label: "Listo para payroll", icon: "check" },
 
   // ── Warning ───────────────────────────────────────────────
   pending: { family: "warning", label: "Pendiente", icon: "clock" },
@@ -87,6 +92,7 @@ export const STATUS_REGISTRY: Record<StatusKey, StatusDefinition> = {
   late: { family: "warning", label: "Con retraso", icon: "clock" },
   missing: { family: "warning", label: "Faltan trabajadores", icon: "alert" },
   warning: { family: "warning", label: "Atención", icon: "alert" },
+  correction_requested: { family: "warning", label: "Corrección solicitada", icon: "alert" },
 
   // ── Critical ──────────────────────────────────────────────
   blocked: { family: "critical", label: "Bloqueado", icon: "ban" },
@@ -154,6 +160,10 @@ const ALIASES: Record<string, StatusKey> = {
   noshow: "no_show",
   archived: "inactive",
   none: "not_applicable",
+  needs_followup: "correction_requested",
+  escalated: "needs_review",
+  returned: "correction_requested",
+  ready: "ready",
 };
 
 export function resolveStatusKey(value: string | null | undefined): StatusKey {
