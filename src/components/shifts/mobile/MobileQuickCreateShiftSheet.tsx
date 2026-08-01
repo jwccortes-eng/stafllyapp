@@ -195,6 +195,9 @@ export function MobileQuickCreateShiftSheet({
 }: Props) {
   const { user, role, hasModuleAccess } = useAuth();
   const canCreate = role === "owner" || role === "admin" || hasModuleAccess("shifts", "edit");
+  const navigate = useNavigate();
+  const { companies, setSelectedCompanyId } = useCompany();
+  const companyName = companies.find(c => c.id === companyId)?.name ?? "Empresa sin nombre";
 
   const todayStr = useMemo(() => format(new Date(), "yyyy-MM-dd"), []);
 
