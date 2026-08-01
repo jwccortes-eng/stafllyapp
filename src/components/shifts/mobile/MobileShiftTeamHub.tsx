@@ -569,110 +569,6 @@ function MobileShiftTeamHubImpl({
     [summary, claimsPending, shift.location_id, hasMeetingPointLocation, meetingPoint],
   );
 
-  // ── Issues derived from already-loaded data only.
-  const issues = useMemo(() => {
-    const items: Array<{ key: string; tone: "warn" | "bad" | "info"; icon: React.ComponentType<{ className?: string }>; title: string; helper?: string }> = [];
-    if (openSpots > 0) {
-      items.push({
-        key: "open-spots",
-        tone: "warn", icon: Users,
-        title: `Faltan ${openSpots} ${openSpots === 1 ? "cupo" : "cupos"}`,
-        helper: "Completa el equipo requerido para este turno.",
-      });
-    }
-    if (grouped.no_show.length > 0) {
-      items.push({
-        key: "no-show",
-        tone: "bad", icon: AlertTriangle,
-        title: `${grouped.no_show.length} marcados como ausentes / no-show`,
-      });
-    }
-    if (grouped.pending.length > 0) {
-      items.push({
-        key: "pending",
-        tone: "warn", icon: Clock,
-        title: `${grouped.pending.length} ${grouped.pending.length === 1 ? "respuesta pendiente" : "respuestas pendientes"}`,
-        helper: "Trabajadores que aún no aceptan.",
-      });
-    }
-    if (grouped.rejected_by_worker.length > 0) {
-      items.push({
-        key: "rejected",
-        tone: "bad", icon: UserX,
-        title: `${grouped.rejected_by_worker.length} rechazados`,
-      });
-    }
-    // Missing phone on staffed workers.
-    const staffed = [
-      ...grouped.confirmed, ...grouped.accepted, ...grouped.pending, ...grouped.no_show,
-    ];
-    const missingPhone = staffed.filter(a => !normalizePhone(empById.get(a.employee_id)?.phone_number));
-    if (missingPhone.length > 0) {
-      items.push({
-        key: "missing-phone",
-        tone: "warn", icon: Phone,
-        title: `${missingPhone.length} ${missingPhone.length === 1 ? "trabajador sin teléfono" : "trabajadores sin teléfono"}`,
-        helper: "No podrás llamarlos, enviar SMS o WhatsApp desde móvil.",
-      });
-    }
-    if (!shift.location_id) {
-      const hasMP = !!hasMeetingPointLocation || !!(meetingPoint && meetingPoint.trim());
-      items.push({
-        key: "no-location",
-        tone: "warn", icon: MapPin,
-        title: hasMP ? "Falta ubicación del trabajo" : "Sin ubicación ni punto de encuentro",
-        helper: hasMP
-          ? "Hay punto de encuentro, pero falta el lugar donde se realiza el trabajo."
-          : "Es posible que los trabajadores no sepan dónde ir.",
-      });
-    }
-    if (!shift.client_id) {
-      items.push({
-        key: "no-client",
-        tone: "info", icon: Briefcase,
-        title: "Sin cliente vinculado",
-      });
-    }
-    if (claimsPending > 0) {
-      items.push({
-        key: "claims",
-        tone: "info", icon: Inbox,
-        title: `${claimsPending} ${claimsPending === 1 ? "solicitud pendiente" : "solicitudes pendientes"}`,
-        helper: "Revísalas para aprobar o rechazar.",
-      });
-    }
-    // Daily close (Phase 17C). Only flag for today/past shifts.
-    try {
-      const today = new Date(); today.setHours(0,0,0,0);
-      const sd = shift.date ? new Date(`${shift.date}T00:00:00`) : null;
-      const isPastOrToday = sd ? sd.getTime() <= today.getTime() : false;
-      const isPublished = (shift.publication_status ?? "published") === "published";
-      if (isPastOrToday && isPublished) {
-        if (!closeout) {
-          items.push({
-            key: "closeout-missing",
-            tone: "warn", icon: ClipboardCheck,
-            title: "Falta el cierre diario",
-            helper: "El capitán o admin del turno aún no lo ha enviado.",
-          });
-        } else if (closeout.status === "submitted") {
-          items.push({
-            key: "closeout-pending-review",
-            tone: "info", icon: ClipboardCheck,
-            title: "Cierre pendiente de revisión",
-          });
-        } else if (closeout.status === "reviewed" && (closeout.incident_count ?? 0) > 0) {
-          items.push({
-            key: "closeout-incidents",
-            tone: "bad", icon: AlertTriangle,
-            title: `${closeout.incident_count} ${closeout.incident_count === 1 ? "incidente reportado" : "incidentes reportados"}`,
-          });
-        }
-      }
-    } catch { /* best-effort */ }
-    return items;
-  }, [grouped, openSpots, empById, shift.location_id, shift.client_id, shift.date, shift.publication_status, claimsPending, hasMeetingPointLocation, meetingPoint, closeout]);
-
   const order: Bucket[] = [
     "confirmed", "accepted", "pending",
     "no_show", "rejected_by_worker", "removed", "other",
@@ -682,7 +578,7 @@ function MobileShiftTeamHubImpl({
     { key: "overview", label: "Resumen" },
     { key: "assigned", label: "Asignados", badge: assignments.length || undefined },
     { key: "claims", label: "Solicitudes", badge: claimsPending || undefined },
-    { key: "issues", label: "Alertas", badge: issues.length || undefined },
+    { key: "issues", label: "Alertas", badge: risks.length || undefined },
     { key: "recommended", label: "Recomendados" },
   ];
 
@@ -799,23 +695,33 @@ function MobileShiftTeamHubImpl({
 
           {tab === "overview" && (
             <OverviewTab
-              slots={slots}
-              staffedCount={staffedCount}
-              openSpots={openSpots}
-              grouped={grouped}
+              shift={shift}
+              summary={summary}
+              risks={risks}
+              members={teamMembers}
               claimsPending={claimsPending}
+              canManage={canManage}
+              onGoTo={setTab}
+              onOpenChannel={() => {
+                onOpenChange(false);
+                navigate("/app/chat");
+              }}
+              onBroadcast={() => setTab("assigned")}
             />
           )}
 
           {tab === "assigned" && (
             <AssignedTab
               assignments={assignments}
-              grouped={grouped}
-              order={order}
+              sections={sections}
               empById={empById}
               shiftAdminId={shiftAdminId ?? null}
               canManage={canManage}
-              companyId={companyId ?? null}
+              onReplace={() => setTab("recommended")}
+              onOpenWorker={(employeeId) => {
+                onOpenChange(false);
+                navigate(`/app/workers/${employeeId}`);
+              }}
               onCopyPhone={(p) => {
                 navigator.clipboard?.writeText(p).catch(() => {});
                 toast({ title: "Phone copied" });
@@ -850,7 +756,7 @@ function MobileShiftTeamHubImpl({
           )}
 
           {tab === "issues" && (
-            <IssuesTab issues={issues} />
+            <IssuesTab risks={risks} canManage={canManage} onGoTo={setTab} />
           )}
 
           {tab === "recommended" && (
