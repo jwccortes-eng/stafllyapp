@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { ContextSwitcher } from "@/components/context/ContextSwitcher";
 import { useNavigate } from "react-router-dom";
 import { Plus, CalendarDays, Users, Building2, MapPin, Moon, Sun, Globe } from "lucide-react";
 import { useTheme } from "next-themes";
