@@ -71,6 +71,52 @@ export interface ValidationEvidence {
   attention?: boolean;
 }
 
+/* ── OX-4.4.1 — Capa humana ──────────────────────────────────────────── */
+
+/** Persona sobre la que se decide. Null cuando la decisión es del turno. */
+export interface ValidationPerson {
+  name: string;
+  avatarUrl: string | null;
+  role: string | null;
+}
+
+/** Contexto operativo reconocible: turno, cliente, cuándo. */
+export interface ValidationContext {
+  shiftTitle: string | null;
+  clientName: string | null;
+  /** Ya formateada: "31 de julio". */
+  dateLabel: string | null;
+  /** Ya formateado: "08:00–16:00". */
+  timeRange: string | null;
+}
+
+export type ValidationHumanRole =
+  | "created_by"
+  | "supervised_by"
+  | "requested_correction"
+  | "awaiting"
+  | "updated";
+
+/** Dato humano real. Nunca se inventa: si no hay dato, no hay entrada. */
+export interface ValidationHumanNote {
+  kind: ValidationHumanRole;
+  label: string;
+  value: string;
+  at?: string | null;
+}
+
+/** Mensaje real ya existente en el registro. No es un chat nuevo. */
+export interface ValidationMessage {
+  id: string;
+  author: string;
+  /** Papel de quien habla, en lenguaje operativo. */
+  authorRole: string;
+  body: string;
+  at: string | null;
+  tone: "worker" | "supervisor" | "client" | "system";
+}
+
+
 export interface ValidationItemPermissions {
   canApprove: boolean;
   canReject: boolean;
