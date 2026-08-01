@@ -23,6 +23,8 @@ import ModuleGate from "./components/ModuleGate";
 import { CompanyRequiredGuard } from "./components/CompanyRequiredGuard";
 import { PortalModuleGuard } from "./components/portal/PortalModuleGuard";
 import AdminDashboard from "./pages/admin/Dashboard";
+import AdminHome from "./pages/admin/Home";
+
 import Employees from "./pages/admin/Employees";
 import Shifts from "./pages/admin/Shifts";
 import PayrollReconciliation from "./pages/admin/PayrollReconciliation";
