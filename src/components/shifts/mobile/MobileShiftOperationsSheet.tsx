@@ -504,14 +504,12 @@ export function MobileShiftOperationsSheet({
                     </p>
                   )}
                   {/* Status line */}
-                  <p className={cn(
-                    "text-xs mt-1.5 font-semibold tabular-nums",
-                    published && understaffed ? "text-rose-700 dark:text-rose-400"
-                      : draft ? "text-muted-foreground"
-                      : "text-foreground/85"
-                  )}>
-                    {statusText}
-                  </p>
+                  {statusText && (
+                    <p className="text-xs mt-1.5 font-semibold text-muted-foreground">
+                      {statusText}
+                    </p>
+                  )}
+
                   {/* Schedule line */}
                   <div className="mt-1.5 flex items-baseline gap-2">
                     <span className="text-[12px] font-bold uppercase tracking-[0.14em] text-muted-foreground/70">Entrada</span>
