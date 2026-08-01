@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { format, addDays, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import {
   Loader2, Check, Search, Users, X, ChevronLeft, ChevronRight,
   Building2, Clock, UserPlus, Plus, Minus, MapPin, ClipboardList,
+  AlertTriangle, RotateCw,
 } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -17,7 +18,15 @@ import { notifySuccess, notifyError, notifyWarning } from "@/lib/feedback/notify
 import { SmartLocationField } from "@/components/shifts/form/SmartLocationField";
 import { ClientAvatar } from "@/components/ui/client-avatar";
 import { assignWorkerToShift } from "@/lib/shifts/team-actions";
+import {
+  buildAssignOutcome,
+  summarizeCreateResult,
+  retryableOutcomes,
+  type AssignOutcome,
+  type CreateResultSummary,
+} from "@/lib/shifts/assign-outcome";
 import type { Shift, Assignment, Employee, SelectOption } from "@/components/shifts/types";
+
 
 /**
  * MobileQuickCreateShiftSheet — OX-7 Fase 4 · "Create Shift, Operation First".
