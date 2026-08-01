@@ -654,27 +654,29 @@ export function buildTodayHubModel(input: TodayHubInput): TodayHubModel {
       input.shifts.length === 0
         ? "No hay operaciones programadas para hoy. Programa un turno o revisa mañana."
         : "Los turnos de hoy están cubiertos y no hay acciones urgentes.",
-    nextShift: upcoming
-      ? {
-          shiftId: upcoming.id,
-          title: upcoming.title,
-          timeRange: timeRangeLabel(upcoming),
-          startsInLabel: startsInLabel(minutesUntilStart(upcoming, now)),
-          action: { label: "Ver turno", href: ROUTES.shiftOps(upcoming.id) },
-        }
-      : undefined,
+    nextShift:
+      upcoming && perms.canOperate
+        ? {
+            shiftId: upcoming.id,
+            title: upcoming.title,
+            timeRange: timeRangeLabel(upcoming),
+            startsInLabel: startsInLabel(minutesUntilStart(upcoming, now)),
+            action: { label: "Ver turno", href: ROUTES.shiftOps(upcoming.id) },
+          }
+        : undefined,
   };
 
   const top = attentionItems.find((i) => i.action);
   const primaryAction = top?.action
     ? { ...top.action, reason: top.headline }
-    : upcoming
+    : upcoming && perms.canOperate
       ? {
           label: "Ver próximo turno",
           href: ROUTES.shiftOps(upcoming.id),
           reason: `${upcoming.title} ${startsInLabel(minutesUntilStart(upcoming, now))}`,
         }
       : null;
+
 
   return {
     attentionItems,
