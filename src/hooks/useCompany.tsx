@@ -93,6 +93,12 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
   const [activeModules, setActiveModules] = useState<Set<string>>(new Set());
   /** Tracks whether the user has manually switched company in this session */
   const [manuallySelected, setManuallySelected] = useState(false);
+  // P0 OX — explicit, never-silent tenant lifecycle.
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [switchState, setSwitchState] = useState<TenantSwitchState>("idle");
+  const [switchError, setSwitchError] = useState<string | null>(null);
+  const [pendingSwitchId, setPendingSwitchId] = useState<string | null>(null);
+
 
   useEffect(() => {
     const id = logMount("CompanyProvider");
