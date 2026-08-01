@@ -705,20 +705,6 @@ export default function MobileShiftsView() {
 
 /* ───────────── Subcomponents ───────────── */
 
-function SummaryCard({ label, value, accent }: { label: string; value: number | string; accent?: "good" | "warn" | "bad" }) {
-  const accentClass =
-    accent === "good" ? "text-emerald-600 dark:text-emerald-400" :
-    accent === "warn" ? "text-amber-600 dark:text-amber-400" :
-    accent === "bad" ? "text-rose-600 dark:text-rose-400" :
-    "text-foreground";
-  return (
-    <div className="rounded-2xl border border-border/50 bg-card px-2.5 py-3 text-center shadow-sm">
-      <div className={cn("text-xl font-semibold tabular-nums leading-none", accentClass)}>{value}</div>
-      <div className="text-[11px] text-muted-foreground mt-1.5 font-medium">{label}</div>
-    </div>
-  );
-}
-
 interface ShiftCardProps {
   shift: Shift;
   clientName: string;
@@ -814,11 +800,6 @@ function ShiftCard({
               )}
           </span>
         </div>
-        {slots > 0 && (
-          <span className="text-xs font-mono tabular-nums text-muted-foreground shrink-0">
-            {assignedEmployees.length}/{slots}
-          </span>
-        )}
       </div>
 
       {/* Coverage bar */}
@@ -832,34 +813,21 @@ function ShiftCard({
       )}
 
       {/* Warnings */}
-      {(understaffed || noClient) && (
+      {noClient && (
         <div className="flex flex-wrap items-center gap-1.5 mt-2">
-          {understaffed && (
-            <Warning icon={Users} label="Falta personal" tone="bad" />
-          )}
-          {noClient && (
-            <Warning icon={Building2} label="Sin cliente" tone="warn" />
-          )}
+          <Warning icon={Building2} label="Sin cliente" tone="warn" />
         </div>
       )}
 
-      {/* Footer: explicit affordance + Operations button */}
+      {/* Una sola acción: entrar a operar el turno */}
       <div className="mt-3 pt-3 border-t border-border/40 flex items-center justify-between gap-2">
-        <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-          <Eye className="h-3.5 w-3.5" />
-          Ver operaciones
+        <span className="text-xs text-muted-foreground truncate">
+          {understaffed ? "Necesita gente" : "Equipo cubierto"}
         </span>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onOpen();
-          }}
-          className="inline-flex items-center gap-1 h-8 px-3 rounded-lg text-xs font-semibold bg-primary/10 text-primary hover:bg-primary/15 active:scale-95 transition"
-        >
-          Operaciones
+        <span className="inline-flex items-center gap-1 text-xs font-semibold text-primary">
+          Operar
           <ChevronRight className="h-3.5 w-3.5" />
-        </button>
+        </span>
       </div>
     </div>
   );
