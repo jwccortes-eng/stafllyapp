@@ -200,7 +200,9 @@ export function ShiftDetailDialog({
   const [processingReqId, setProcessingReqId] = useState<string | null>(null);
   const [rejectReqId, setRejectReqId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
-  const [removeConfirm, setRemoveConfirm] = useState<{ assignmentId: string; employeeName: string } | null>(null);
+  const [removeConfirm, setRemoveConfirm] = useState<{
+    assignmentId: string; employeeName: string; roleLabel?: string | null; statusLine?: string | null;
+  } | null>(null);
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
   const [notifyOpen, setNotifyOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
@@ -1584,25 +1586,19 @@ export function ShiftDetailDialog({
       </SheetContent>
     </Sheet>
 
-    {/* Remove assignment confirmation */}
-    <AlertDialog open={!!removeConfirm} onOpenChange={(o) => { if (!o) setRemoveConfirm(null); }}>
-      <AlertDialogContent className="rounded-2xl">
-        <AlertDialogHeader>
-          <AlertDialogTitle className="flex items-center gap-2 text-base">
-            <Trash2 className="h-4 w-4 text-destructive" /> Confirmar eliminación
-          </AlertDialogTitle>
-          <AlertDialogDescription>
-            ¿Remover a <strong>{removeConfirm?.employeeName}</strong> de este turno?
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel className="rounded-full">Cancelar</AlertDialogCancel>
-          <AlertDialogAction onClick={handleConfirmRemove} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground rounded-full">
-            Sí, remover
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    {/* P0 — Retirar del turno: misma operación canónica que móvil. */}
+    <RemoveWorkerFromShiftDialog
+      open={!!removeConfirm}
+      onOpenChange={(o) => { if (!o) setRemoveConfirm(null); }}
+      assignmentId={removeConfirm?.assignmentId ?? null}
+      workerName={removeConfirm?.employeeName ?? ""}
+      contextLine={[removeConfirm?.roleLabel, (shift as any)?.shift_ref ?? shift?.shift_code]
+        .filter(Boolean).join(" · ") || null}
+      statusLine={removeConfirm?.statusLine ?? null}
+      source="desktop_shift_detail"
+      onRemoved={handleRemoved}
+    />
+
 
     {/* Delete shift confirmation */}
     <AlertDialog open={deleteConfirm} onOpenChange={setDeleteConfirm}>
