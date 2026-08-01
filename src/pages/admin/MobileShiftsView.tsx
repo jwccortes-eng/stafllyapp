@@ -41,10 +41,13 @@ import { toast } from "sonner";
 type TabKey = "today" | "upcoming" | "needs" | "requests";
 
 const TABS: { key: TabKey; label: string }[] = [
-  { key: "today", label: "Today" },
-  { key: "upcoming", label: "Upcoming" },
-  { key: "needs", label: "Needs Staff" },
-  { key: "requests", label: "Requests" },
+  { key: "today", label: "Hoy" },
+  { key: "upcoming", label: "Próximos" },
+];
+
+const SECONDARY_TABS: { key: TabKey; label: string }[] = [
+  { key: "needs", label: "Necesitan gente" },
+  { key: "requests", label: "Solicitudes" },
 ];
 
 interface PendingRequest {
