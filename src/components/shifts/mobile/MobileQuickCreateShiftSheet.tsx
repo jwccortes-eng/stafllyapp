@@ -1074,6 +1074,31 @@ export function MobileQuickCreateShiftSheet({
           </div>
 
           {/* Confirmación de cierre con cambios sin guardar */}
+          {/* Cambio de empresa a mitad del wizard: se bloquea, nunca silencioso */}
+          {companyChanged && !result && (
+            <div className="absolute inset-0 z-50 bg-background/90 backdrop-blur-sm flex items-end">
+              <div
+                className="w-full rounded-t-3xl border-t border-border/60 bg-card p-5 space-y-3"
+                style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 16px)" }}
+              >
+                <p className="flex items-center gap-2 text-[17px] font-bold">
+                  <ArrowRightLeft className="h-4 w-4 text-status-warning shrink-0" />
+                  Cambió la empresa activa
+                </p>
+                <p className="text-[13px] text-muted-foreground">
+                  Este turno se estaba armando para otra empresa. No se creó nada.
+                  Para evitar crearlo en el lugar equivocado, cierra y empieza de nuevo.
+                </p>
+                <Button
+                  className="w-full h-12 rounded-2xl"
+                  onClick={() => { setCompanyChanged(false); onOpenChange(false); }}
+                >
+                  Cerrar y empezar de nuevo
+                </Button>
+              </div>
+            </div>
+          )}
+
           {confirmClose && (
             <div className="absolute inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-end">
               <div
