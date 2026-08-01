@@ -311,8 +311,22 @@ export function MobileQuickCreateShiftSheet({
   const goBack = () => {
     const prev = STEPS[stepIndex - 1];
     if (prev) setStep(prev.key);
-    else onOpenChange(false);
+    else requestClose();
   };
+
+  /** Hay trabajo del operador que se perdería al cerrar. */
+  const isDirty =
+    !!clientId || !!serviceType || !!jobSiteAddress.trim() || !!jobSiteLocationId ||
+    team.length > 0 || !!meetingPoint.trim() || !!notes.trim() ||
+    date !== todayStr || startTime !== defaultStartTime || endTime !== defaultEndTime;
+
+  function requestClose() {
+    if (saving) return;
+    if (result) { onOpenChange(false); return; }
+    if (isDirty) { setConfirmClose(true); return; }
+    onOpenChange(false);
+  }
+
 
   const toggleWorker = (id: string) => {
     setTeam(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
