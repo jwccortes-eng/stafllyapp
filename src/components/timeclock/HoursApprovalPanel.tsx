@@ -7,6 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { MT, FOCUS_RING, THUMB_BAR } from "@/lib/mobile/mobile-scale";
 import {
   approveHours,
   returnHoursForCorrection,
