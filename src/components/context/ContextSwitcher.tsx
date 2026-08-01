@@ -659,13 +659,15 @@ export const ContextSwitcher = forwardRef<HTMLDivElement, ContextSwitcherProps>(
     if (companies.length === 0 && !canUseGlobalMode) return null;
 
     const triggerClass = cn(
-      "flex items-center gap-2.5 rounded-xl w-full transition-colors hover:bg-accent/40",
+      "flex items-center gap-3 rounded-2xl w-full transition-colors",
+      "border border-border/50 bg-card/60 hover:bg-accent/40 hover:border-border",
       FOCUS_RING,
-      isMobile ? TAP : "min-h-[44px]",
-      collapsed ? "justify-center p-1.5" : "px-2.5 py-2",
-      placement === "header" && !isMobile && "w-auto",
+      isMobile ? TAP : "min-h-[56px]",
+      collapsed ? "justify-center p-1.5 min-h-[48px] rounded-xl" : "px-3 py-2.5",
+      placement === "header" && !isMobile && "w-auto min-h-[44px] px-2.5 py-2 rounded-xl",
       className,
     );
+
 
     const trigger = (
       <button
