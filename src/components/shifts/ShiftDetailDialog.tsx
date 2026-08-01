@@ -588,7 +588,7 @@ export function ShiftDetailDialog({
             </div>
             <span className="text-[10.5px] font-semibold tabular-nums text-foreground whitespace-nowrap">
               <Users className="h-3 w-3 inline mr-0.5 -mt-0.5" />
-              {shiftAssignments.length}/{slotsNum}
+              {staffing.assignedActive}/{slotsNum}
             </span>
           </div>
         </div>
@@ -724,7 +724,7 @@ export function ShiftDetailDialog({
                   {(shift as any).meeting_point && (
                     <InfoRow icon={Compass} label="Dirección / Punto de encuentro" value={(shift as any).meeting_point} />
                   )}
-                  <InfoRow icon={Users} label="Plazas" value={`${shiftAssignments.length} / ${slotsNum} asignados`} />
+                  <InfoRow icon={Users} label="Plazas" value={`${staffing.assignedActive} de ${slotsNum} cubiertos · ${staffing.confirmed} confirmó`} />
                 </div>
 
                 {allowClaims && shift.claimable && (
