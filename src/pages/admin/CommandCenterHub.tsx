@@ -47,7 +47,9 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
 
+const TodayHubView = lazy(() => import("@/components/command-center/TodayHubView"));
 const DailyOps = lazy(() => import("./DailyOps"));
+
 const NeedsAttention = lazy(() => import("./NeedsAttention"));
 const OperationsCommandCenter = lazy(() => import("./OperationsCommandCenter"));
 const DailyClose = lazy(() => import("./DailyClose"));
