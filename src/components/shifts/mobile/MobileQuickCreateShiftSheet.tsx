@@ -415,9 +415,20 @@ export function MobileQuickCreateShiftSheet({
         const { data, error } = await supabase
           .from("scheduled_shifts")
           .insert(insertData)
-          .select("id")
+          .select("id, company_id, shift_ref, title, date, start_time, end_time, slots")
           .single();
         if (error) throw error;
+        const row: any = data;
+        persistedRef.current = {
+          shiftId: row.id as string,
+          companyId: row.company_id as string,
+          shiftRef: (row.shift_ref ?? null) as string | null,
+          title: row.title as string,
+          date: row.date as string,
+          startTime: row.start_time as string,
+          endTime: row.end_time as string,
+          slots: Number(row.slots ?? slots),
+        };
         shiftId = data!.id as string;
         createdShiftIdRef.current = shiftId;
       }
