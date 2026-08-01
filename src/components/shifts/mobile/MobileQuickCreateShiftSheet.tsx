@@ -897,34 +897,90 @@ export function MobileQuickCreateShiftSheet({
               </div>
             )}
           </div>
+          )}
 
           {/* Footer: una sola acción */}
           <div
             className="shrink-0 border-t border-border/40 bg-background/95 backdrop-blur-sm px-4 pt-3"
             style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)" }}
           >
-            {stepBlocker && (
-              <p className="text-xs text-destructive mb-2">{stepBlocker}</p>
-            )}
-            {step === "confirmar" ? (
-              <Button
-                className="w-full h-14 text-base font-semibold rounded-2xl"
-                disabled={saving || !!stepBlocker}
-                onClick={handleCreate}
-              >
-                {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : "Crear turno"}
-              </Button>
+            {result ? (
+              <div className="space-y-2">
+                {canRetryAssignments && (
+                  <Button
+                    variant="outline"
+                    className="w-full h-12 text-base font-semibold rounded-2xl"
+                    disabled={saving}
+                    onClick={handleCreate}
+                  >
+                    {saving
+                      ? <Loader2 className="h-5 w-5 animate-spin" />
+                      : <><RotateCw className="h-4 w-4 mr-2" />Reintentar los que fallaron</>}
+                  </Button>
+                )}
+                <Button
+                  className="w-full h-14 text-base font-semibold rounded-2xl"
+                  disabled={saving}
+                  onClick={() => onOpenChange(false)}
+                >
+                  Ir al turno
+                </Button>
+              </div>
             ) : (
-              <Button
-                className="w-full h-14 text-base font-semibold rounded-2xl"
-                disabled={!!stepBlocker}
-                onClick={goNext}
-              >
-                {isTeamStep && team.length === 0 ? "Continuar sin equipo" : "Continuar"}
-                <ChevronRight className="h-5 w-5 ml-1" />
-              </Button>
+              <>
+                {stepBlocker && (
+                  <p className="text-xs text-destructive mb-2">{stepBlocker}</p>
+                )}
+                {step === "confirmar" ? (
+                  <Button
+                    className="w-full h-14 text-base font-semibold rounded-2xl"
+                    disabled={saving || !!stepBlocker}
+                    onClick={handleCreate}
+                  >
+                    {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : "Crear turno"}
+                  </Button>
+                ) : (
+                  <Button
+                    className="w-full h-14 text-base font-semibold rounded-2xl"
+                    disabled={!!stepBlocker}
+                    onClick={goNext}
+                  >
+                    {isTeamStep && team.length === 0 ? "Continuar sin equipo" : "Continuar"}
+                    <ChevronRight className="h-5 w-5 ml-1" />
+                  </Button>
+                )}
+              </>
             )}
           </div>
+
+          {/* Confirmación de cierre con cambios sin guardar */}
+          {confirmClose && (
+            <div className="absolute inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-end">
+              <div
+                className="w-full rounded-t-3xl border-t border-border/60 bg-card p-5 space-y-3"
+                style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 16px)" }}
+              >
+                <p className="text-[17px] font-bold">¿Descartar este turno?</p>
+                <p className="text-[13px] text-muted-foreground">
+                  Todavía no se ha creado nada. Si sales, se pierde lo que llevas escrito.
+                </p>
+                <Button
+                  variant="outline"
+                  className="w-full h-12 rounded-2xl"
+                  onClick={() => setConfirmClose(false)}
+                >
+                  Seguir editando
+                </Button>
+                <Button
+                  variant="destructive"
+                  className="w-full h-12 rounded-2xl"
+                  onClick={() => { setConfirmClose(false); onOpenChange(false); }}
+                >
+                  Descartar
+                </Button>
+              </div>
+            </div>
+          )}
         </SheetContent>
       </Sheet>
 
@@ -935,6 +991,7 @@ export function MobileQuickCreateShiftSheet({
         value={clientId}
         onChange={setClientId}
       />
+
     </>
   );
 }
