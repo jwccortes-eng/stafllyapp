@@ -1947,34 +1947,23 @@ function DesktopShifts() {
             {canEdit && (
               <Button
                 size="sm"
-                className="h-8 text-xs gap-1.5"
+                className="h-11 min-w-[44px] text-sm gap-1.5"
                 onClick={() => { resetForm(); setCreateOpen(true); }}
               >
-                <Plus className="h-3.5 w-3.5" />
+                <Plus className="h-4 w-4" />
                 Nuevo turno
-              </Button>
-            )}
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-8 text-xs gap-1.5 text-muted-foreground"
-              onClick={() => navigate("/app/daily-ops")}
-            >
-              <ScanEye className="h-3.5 w-3.5" />
-              Operaciones del día
-            </Button>
-            {canEdit && (
-              <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => setSettingsOpen(true)} title="Configuración de turnos">
-                <Settings2 className="h-4 w-4 text-muted-foreground" />
               </Button>
             )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button size="sm" variant="ghost" className="h-8 text-xs text-muted-foreground">
-                  <MoreHorizontal className="h-3.5 w-3.5 mr-1" /> Más
+                <Button size="sm" variant="ghost" className="h-11 w-11 p-0 text-muted-foreground" aria-label="Más opciones de turnos">
+                  <MoreHorizontal className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem onClick={() => navigate("/app/daily-ops")}>
+                  <ScanEye className="h-4 w-4 mr-2" /> Operaciones del día
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate("/app/today")}>
                   <ScanEye className="h-4 w-4 mr-2" /> Vista de hoy
                 </DropdownMenuItem>
@@ -1982,14 +1971,20 @@ function DesktopShifts() {
                   <MessageSquare className="h-4 w-4 mr-2" /> Solicitudes
                 </DropdownMenuItem>
                 {canEdit && (
-                  <DropdownMenuItem onClick={() => navigate("/app/import-schedule")}>
-                    <Upload className="h-4 w-4 mr-2" /> Importar horarios
-                  </DropdownMenuItem>
+                  <>
+                    <DropdownMenuItem onClick={() => navigate("/app/import-schedule")}>
+                      <Upload className="h-4 w-4 mr-2" /> Importar horarios
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setSettingsOpen(true)}>
+                      <Settings2 className="h-4 w-4 mr-2" /> Configuración de turnos
+                    </DropdownMenuItem>
+                  </>
                 )}
               </DropdownMenuContent>
             </DropdownMenu>
           </>
         }
+
       />
 
       {/* Sprint 3: active Ops-cockpit filter chip (only visible when arrived via deep-link) */}

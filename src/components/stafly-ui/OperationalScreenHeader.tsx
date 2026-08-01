@@ -50,7 +50,9 @@ export function OperationalScreenHeader({
   return (
     <header
       className={cn(
-        "flex items-start justify-between gap-3",
+        // Móvil: identidad completa arriba, acción debajo (nunca compiten por el ancho).
+        // Desktop: identidad a la izquierda, acción protagonista a la derecha.
+        "flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between",
         padded && OX_SCREEN_X,
         className,
       )}
@@ -68,9 +70,9 @@ export function OperationalScreenHeader({
           />
         ) : null}
 
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           {showHost && hostLabel ? (
-            <p className={OX_HEADER.host}>{hostLabel}</p>
+            <p className={cn(OX_HEADER.host, "truncate")}>{hostLabel}</p>
           ) : null}
           <h1 className={OX_HEADER.title}>{title}</h1>
           {context ? (
@@ -80,12 +82,13 @@ export function OperationalScreenHeader({
       </div>
 
       {action ? (
-        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+        <div className="flex w-full shrink-0 flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
           {action}
         </div>
       ) : null}
     </header>
   );
 }
+
 
 export default OperationalScreenHeader;
