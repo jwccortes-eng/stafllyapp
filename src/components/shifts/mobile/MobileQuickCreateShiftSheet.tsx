@@ -577,6 +577,7 @@ export function MobileQuickCreateShiftSheet({
       )}
 
 
+      {outcomes.length > 0 && (
       <div className="rounded-2xl border border-border/60 bg-card overflow-hidden divide-y divide-border/40">
         {outcomes.map(o => (
           <div key={o.employeeId} className="flex items-start gap-3 px-4 py-3">
