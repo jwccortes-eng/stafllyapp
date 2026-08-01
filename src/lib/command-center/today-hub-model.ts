@@ -120,6 +120,12 @@ export const FULL_HUB_PERMISSIONS: ResolvedHubPermissions = {
   canManageAttendance: true,
 };
 
+export function resolveHubPermissions(
+  p: HubPermissions | undefined,
+): ResolvedHubPermissions {
+  return resolvePermissions(p);
+}
+
 function resolvePermissions(p: HubPermissions | undefined): ResolvedHubPermissions {
   // Fail-closed por diseño: ausente/undefined ⇒ sin acceso.
   return {
