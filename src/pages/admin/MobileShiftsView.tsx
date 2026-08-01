@@ -769,8 +769,8 @@ function ShiftCard({
       onClick={onOpen}
       onKeyDown={handleKey}
       className={cn(
-        "group relative w-full text-left rounded-2xl border border-border/50 bg-card p-4 cursor-pointer select-none",
-        "active:scale-[0.98] hover:border-border transition-all shadow-sm hover:shadow-md",
+        "group relative w-full text-left rounded-3xl border border-border/40 bg-card p-4 cursor-pointer select-none",
+        "active:scale-[0.99] transition-transform",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
       )}
     >
@@ -787,58 +787,35 @@ function ShiftCard({
         jobSiteName={locationName || null}
         statusLabel={statusLabel}
         statusTone={statusTone}
-        coverageLabel={coverageLabel}
-        trailing={<ChevronRight className="h-4 w-4 text-muted-foreground/60 group-hover:text-muted-foreground transition-colors" />}
+        coverageLabel={null}
+        trailing={<ChevronRight className="h-4 w-4 text-muted-foreground/60" />}
         className="!bg-transparent !border-0 !shadow-none !p-0 !rounded-none"
       />
 
-      {/* Workers + coverage */}
-      <div className="flex items-center justify-between gap-3 mt-3 mb-2">
-        <div className="flex items-center gap-1.5 min-w-0">
-          <Users className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-          <span className="text-xs text-muted-foreground truncate">
-            {assignedEmployees.length === 0
-              ? slots > 0 ? `0 / ${slots} trabajadores` : "Sin asignar"
-              : (
-                <>
-                  {visibleNames.join(", ")}
-                  {more > 0 && <span className="font-medium"> +{more} más</span>}
-                </>
-              )}
-          </span>
-        </div>
-      </div>
-
-      {/* Coverage bar */}
-      {slots > 0 && (
-        <div className="h-1.5 rounded-full bg-muted/60 overflow-hidden mb-2">
-          <div
-            className={cn("h-full rounded-full transition-all", coverBarColor)}
-            style={{ width: `${Math.min(100, coverage)}%` }}
-          />
-        </div>
-      )}
-
-      {/* Warnings */}
-      {noClient && (
-        <div className="flex flex-wrap items-center gap-1.5 mt-2">
-          <Warning icon={Building2} label="Sin cliente" tone="warn" />
-        </div>
-      )}
-
-      {/* Una sola acción: entrar a operar el turno */}
-      <div className="mt-3 pt-3 border-t border-border/40 flex items-center justify-between gap-2">
-        <span className="text-xs text-muted-foreground truncate">
-          {understaffed ? "Necesita gente" : "Equipo cubierto"}
-        </span>
-        <span className="inline-flex items-center gap-1 text-xs font-semibold text-primary">
-          Operar
-          <ChevronRight className="h-3.5 w-3.5" />
+      {/* Las personas antes que los datos: una sola línea, sin barras ni chips */}
+      <div className="flex items-center gap-2 mt-3 min-w-0">
+        <Users className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+        <span className="text-[13px] text-muted-foreground truncate">
+          {assignedEmployees.length === 0
+            ? (slots > 0 ? `Nadie asignado · faltan ${slots}` : "Sin asignar")
+            : (
+              <>
+                {visibleNames.join(", ")}
+                {more > 0 && <span className="font-medium"> +{more}</span>}
+                {understaffed && (
+                  <span className="text-status-warning font-medium">
+                    {" "}· faltan {slots - assignedEmployees.length}
+                  </span>
+                )}
+              </>
+            )}
+          {noClient && <span className="text-muted-foreground/70"> · sin cliente</span>}
         </span>
       </div>
     </div>
   );
 }
+
 
 
 function Warning({ icon: Icon, label, tone }: { icon: any; label: string; tone: "bad" | "warn" }) {
