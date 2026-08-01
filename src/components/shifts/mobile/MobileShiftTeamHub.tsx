@@ -853,53 +853,206 @@ export const MobileShiftTeamHub = memo(MobileShiftTeamHubImpl);
 /* ─── Tabs ─── */
 
 function OverviewTab({
-  slots, staffedCount, openSpots, grouped, claimsPending,
+  shift, summary, risks, members, claimsPending, canManage,
+  onGoTo, onOpenChannel, onBroadcast,
 }: {
-  slots: number;
-  staffedCount: number;
-  openSpots: number;
-  grouped: Record<Bucket, HubAssignment[]>;
+  shift: Shift;
+  summary: TeamSummary;
+  risks: TeamRisk[];
+  members: TeamMemberSummary[];
   claimsPending: number;
+  canManage: boolean;
+  onGoTo: (tab: TabKey) => void;
+  onOpenChannel: () => void;
+  onBroadcast?: () => void;
 }) {
+  const intent = teamPrimaryIntent(summary);
+  const topRisks = risks.slice(0, 3);
+
   return (
-    <section aria-label="Operational overview">
-      <SectionTitle icon={Users} helper={HUB_COPY.overviewHelper}>
-        Resumen
-      </SectionTitle>
-      <div className="grid grid-cols-3 gap-2">
-        <StatTile label="Requeridos" value={slots || "—"} />
-        <StatTile label="Asignados" value={staffedCount} />
-        <StatTile label="Faltan" value={openSpots} accent={openSpots > 0 ? "warn" : "good"} />
-        <StatTile label="Confirmados" value={grouped.confirmed.length} accent="good" />
-        <StatTile label="Aceptados" value={grouped.accepted.length} accent="info" />
-        <StatTile label="Pendientes" value={grouped.pending.length} accent="warn" />
-        <StatTile label="Rechazados" value={grouped.rejected_by_worker.length} accent={grouped.rejected_by_worker.length ? "bad" : "muted"} />
-        <StatTile label="Removidos" value={grouped.removed.length} />
-        <StatTile label="No-show" value={grouped.no_show.length} accent={grouped.no_show.length ? "bad" : "muted"} />
-        <StatTile label="Solicitudes" value={claimsPending} accent={claimsPending ? "info" : "muted"} />
+    <section aria-label="Estado del equipo" className="space-y-3">
+      <TeamCard
+        title={shift.title || "Equipo del turno"}
+        subtitle={intent.meaning}
+        assigned={summary.assigned}
+        slots={summary.slots}
+        confirmed={summary.confirmed}
+        present={summary.present}
+        members={members}
+        mode="readonly"
+        action={
+          canManage
+            ? {
+                label: intent.label,
+                icon: intent.kind === "operate" ? ShieldCheck : UserPlus,
+                onClick: () =>
+                  onGoTo(
+                    intent.kind === "complete"
+                      ? "recommended"
+                      : intent.kind === "confirm"
+                        ? "assigned"
+                        : "assigned",
+                  ),
+              }
+            : undefined
+        }
+      />
+
+      <div className="grid grid-cols-2 gap-2">
+        <KpiCard
+          variant="compact"
+          label="Confirmados"
+          value={`${summary.confirmed}/${summary.assigned || 0}`}
+          meaning={
+            summary.pending > 0
+              ? `${summary.pending} sin responder todavía.`
+              : "Todo el equipo asignado ya respondió."
+          }
+          status={summary.pending > 0 ? "pending" : "confirmed"}
+          isEmpty={summary.assigned === 0}
+          emptyLabel="Aún no hay nadie asignado"
+          mode="readonly"
+        />
+        <KpiCard
+          variant="compact"
+          label="En sitio"
+          value={summary.present}
+          meaning={
+            summary.late > 0
+              ? `${summary.late} ${summary.late === 1 ? "llegó" : "llegaron"} tarde.`
+              : "Llegadas registradas por reloj."
+          }
+          status={summary.late > 0 ? "late" : summary.present > 0 ? "in_progress" : "not_started"}
+          isEmpty={summary.assigned === 0}
+          emptyLabel="Sin equipo asignado"
+          mode="readonly"
+        />
+        <KpiCard
+          variant="compact"
+          label="No-show"
+          value={summary.noShow}
+          meaning={
+            summary.noShow > 0
+              ? "Cupos que hay que cubrir ahora."
+              : "Nadie marcado como ausente."
+          }
+          status={summary.noShow > 0 ? "no_show" : "confirmed"}
+          mode="readonly"
+        />
+        <KpiCard
+          variant="compact"
+          label="Solicitudes"
+          value={claimsPending}
+          meaning={
+            claimsPending > 0
+              ? "Trabajadores esperando tu decisión."
+              : "Sin solicitudes por decidir."
+          }
+          status={claimsPending > 0 ? "needs_review" : "confirmed"}
+          action={
+            claimsPending > 0
+              ? { label: "Decidir", icon: Inbox, onClick: () => onGoTo("claims") }
+              : undefined
+          }
+          mode="readonly"
+        />
       </div>
+
+      {topRisks.length > 0 && (
+        <div className="space-y-2">
+          <SectionTitle icon={AlertTriangle} helper={HUB_COPY.issuesHelper}>
+            Riesgos
+          </SectionTitle>
+          {topRisks.map((r) => (
+            <TeamRiskCard key={r.key} risk={r} canManage={canManage} onGoTo={onGoTo} />
+          ))}
+          {risks.length > topRisks.length && (
+            <button
+              type="button"
+              onClick={() => onGoTo("issues")}
+              className={cn(MT.caption, "font-semibold text-primary px-1")}
+            >
+              Ver las {risks.length} alertas
+            </button>
+          )}
+        </div>
+      )}
+
+      <TeamConversationCard
+        reachable={Math.max(0, summary.assigned - summary.withoutPhone)}
+        unreachable={summary.withoutPhone}
+        onOpenChannel={onOpenChannel}
+        onBroadcast={onBroadcast}
+      />
     </section>
   );
 }
 
+const RISK_TARGET: Record<string, TabKey> = {
+  open_spots: "recommended",
+  no_show: "recommended",
+  rejected: "recommended",
+  unconfirmed: "assigned",
+  missing_phone: "assigned",
+  claims_pending: "claims",
+  no_location: "issues",
+};
+
+function TeamRiskCard({
+  risk, canManage, onGoTo,
+}: {
+  risk: TeamRisk;
+  canManage: boolean;
+  onGoTo: (tab: TabKey) => void;
+}) {
+  return (
+    <InsightCard
+      recommendation={risk.recommendation}
+      because={risk.because}
+      impact={risk.impact}
+      status={
+        risk.severity === "critical"
+          ? "blocked"
+          : risk.severity === "warning"
+            ? "warning"
+            : "informational"
+      }
+      statusLabel={
+        risk.severity === "critical"
+          ? "Riesgo crítico"
+          : risk.severity === "warning"
+            ? "Riesgo"
+            : "Aviso"
+      }
+      mode="readonly"
+      action={
+        canManage && risk.actionLabel && RISK_TARGET[risk.key]
+          ? { label: risk.actionLabel, onClick: () => onGoTo(RISK_TARGET[risk.key]) }
+          : undefined
+      }
+    />
+  );
+}
+
 function AssignedTab({
-  assignments, grouped, order, empById, shiftAdminId, canManage, companyId, onCopyPhone, onAssignmentAction, onPhoneSaved,
+  assignments, sections, empById, shiftAdminId, canManage,
+  onCopyPhone, onAssignmentAction, onPhoneSaved, onReplace, onOpenWorker,
 }: {
   assignments: HubAssignment[];
-  grouped: Record<Bucket, HubAssignment[]>;
-  order: Bucket[];
+  sections: Record<TeamSection, HubAssignment[]>;
   empById: Map<string, Employee>;
   shiftAdminId: string | null;
   canManage: boolean;
-  companyId: string | null;
   onCopyPhone: (p: string) => void;
   onAssignmentAction: (assignmentId: string, nextStatus: AssignmentNextStatus, workerName: string) => void;
   onPhoneSaved?: () => void;
+  onReplace: () => void;
+  onOpenWorker: (employeeId: string) => void;
 }) {
   return (
-    <section aria-label="Trabajadores asignados">
+    <section aria-label="Equipo del turno" className="space-y-4">
       <SectionTitle icon={ShieldCheck} helper={HUB_COPY.assignedHelper}>
-        Asignados
+        Equipo
         <span className="ml-1.5 text-xs font-normal text-muted-foreground normal-case tracking-normal">
           ({assignments.length})
         </span>
@@ -908,306 +1061,53 @@ function AssignedTab({
       {assignments.length === 0 ? (
         <EmptyBlock title={HUB_COPY.emptyAssignedTitle} helper={HUB_COPY.emptyAssignedHelper} />
       ) : (
-        <div className="space-y-3">
-          {order.map((b) => {
-            const list = grouped[b];
-            if (!list || list.length === 0) return null;
-            const meta = BUCKET_META[b];
-            const Icon = meta.icon;
-            return (
-              <div key={b} className="rounded-2xl border border-border/50 bg-card overflow-hidden">
-                <div className="flex items-center justify-between px-3 py-2 border-b border-border/40 bg-muted/30">
-                  <div className="flex items-center gap-1.5">
-                    <Icon className="h-3.5 w-3.5 text-muted-foreground" />
-                    <span className="text-[12px] font-bold uppercase tracking-wider text-muted-foreground">
-                      {meta.label}
-                    </span>
-                  </div>
-                  <Badge
-                    variant="outline"
-                    className={cn("h-[20px] px-1.5 text-[12px] font-semibold", toneToClass(meta.tone))}
-                  >
+        TEAM_SECTION_ORDER.map((key) => {
+          const list = sections[key];
+          if (!list || list.length === 0) return null;
+          const meta = TEAM_SECTION_META[key];
+          return (
+            <div key={key} className="space-y-2">
+              <div className="flex items-baseline justify-between gap-2 px-0.5">
+                <h4 className={cn(MT.body, "font-semibold")}>
+                  {meta.label}
+                  <span className="ml-1.5 text-muted-foreground tabular-nums font-normal">
                     {list.length}
-                  </Badge>
-                </div>
-                <ul className="divide-y divide-border/30">
-                  {list.map((a) => (
-                    <WorkerRow
+                  </span>
+                </h4>
+              </div>
+              <p className={cn(MT.caption, "text-muted-foreground px-0.5 -mt-1")}>{meta.helper}</p>
+              <div className="space-y-2">
+                {list.map((a) => {
+                  const e = empById.get(a.employee_id);
+                  const responseTs = a.accepted_at || a.rejected_at || a.responded_at || null;
+                  const responseLabel = responseTs
+                    ? (a.accepted_at ? "Aceptó " : a.rejected_at ? "Rechazó " : "Respondió ") + formatRelative(responseTs)
+                    : null;
+                  return (
+                    <TeamHubWorkerCard
                       key={a.id}
                       assignment={a}
-                      employee={empById.get(a.employee_id)}
+                      employee={e}
                       isCaptain={!!shiftAdminId && a.employee_id === shiftAdminId}
                       canManage={canManage}
-                      companyId={companyId}
-                      onCopyPhone={onCopyPhone}
+                      responseLabel={responseLabel}
                       onAssignmentAction={onAssignmentAction}
+                      onReplace={onReplace}
+                      onCopyPhone={onCopyPhone}
                       onPhoneSaved={onPhoneSaved}
+                      onOpenWorker={onOpenWorker}
                     />
-                  ))}
-                </ul>
+                  );
+                })}
               </div>
-            );
-          })}
-        </div>
+            </div>
+          );
+        })
       )}
     </section>
   );
 }
 
-const ASSIGN_ACTION_LABEL: Record<AssignmentNextStatus, string> = {
-  confirmed: "Confirmar",
-  rejected: "Marcar como rechazado",
-  removed: "Remover del turno",
-};
-const ASSIGN_ACTION_ICON: Record<AssignmentNextStatus, React.ComponentType<{ className?: string }>> = {
-  confirmed: Check,
-  rejected: XCircle,
-  removed: UserMinus,
-};
-
-function WorkerRow({
-  assignment, employee, isCaptain, canManage, companyId, onCopyPhone, onAssignmentAction, onPhoneSaved,
-}: {
-  assignment: HubAssignment;
-  employee: Employee | undefined;
-  isCaptain: boolean;
-  canManage: boolean;
-  companyId: string | null;
-  onCopyPhone: (p: string) => void;
-  onAssignmentAction: (assignmentId: string, nextStatus: AssignmentNextStatus, workerName: string) => void;
-  onPhoneSaved?: () => void;
-}) {
-  const { toast } = useToast();
-  const name = fullName(employee);
-  const phoneDigits = normalizePhone(employee?.phone_number);
-  const hasPhone = phoneDigits.length >= 10;
-  const wa = hasPhone ? buildWhatsAppTargets(phoneDigits, "") : null;
-  const allowedActions = allowedNextStatusesFor(assignment.status);
-  const showMenu = canManage && allowedActions.length > 0;
-  const statusMap = useStatusMap();
-  const readiness = readinessFor(employee, statusMap);
-  const [phoneDialogOpen, setPhoneDialogOpen] = useState(false);
-  const [phoneInput, setPhoneInput] = useState("");
-  const [savingPhone, setSavingPhone] = useState(false);
-
-  const submitPhone = async () => {
-    if (!employee) return;
-    const digits = normalizePhone(phoneInput);
-    if (digits.length < 10) {
-      toast({ title: "Número inválido", description: "Debe tener 10 dígitos.", variant: "destructive" });
-      return;
-    }
-    setSavingPhone(true);
-    try {
-      const { error } = await supabase
-        .from("employees")
-        .update({ phone_number: digits })
-        .eq("id", employee.id);
-      if (error) throw error;
-      toast({ title: "Teléfono guardado" });
-      setPhoneDialogOpen(false);
-      onPhoneSaved?.();
-    } catch (e: any) {
-      toast({ title: "No se pudo guardar el teléfono", description: e?.message, variant: "destructive" });
-    } finally {
-      setSavingPhone(false);
-    }
-  };
-
-  const subBits: string[] = [];
-  if (assignment.assignment_role) subBits.push(assignment.assignment_role);
-  if (assignment.attendance_status && assignment.attendance_status !== "pending") {
-    subBits.push(assignment.attendance_status);
-  }
-  const responseTs = assignment.accepted_at || assignment.rejected_at || assignment.responded_at || null;
-  const responseLabel = responseTs
-    ? (assignment.accepted_at ? "Aceptó " : assignment.rejected_at ? "Rechazó " : "Respondió ") + formatRelative(responseTs)
-    : null;
-
-  // Status pill — derived from existing bucketize logic; presentational only.
-  const bucket = bucketize(assignment);
-  const STATUS_PILL: Record<string, { label: string; cls: string }> = {
-    confirmed:          { label: "Confirmado", cls: FAMILY_CLASSES.positive },
-    accepted:           { label: "Aceptado",   cls: FAMILY_CLASSES.positive },
-    pending:            { label: "Pendiente",  cls: FAMILY_CLASSES.warning },
-    rejected_by_worker: { label: "Rechazado",  cls: FAMILY_CLASSES.critical },
-    removed:            { label: "Removido",   cls: FAMILY_CLASSES.neutral },
-    no_show:            { label: "No-show",    cls: FAMILY_CLASSES.critical },
-    other:              { label: assignment.status || "Desconocido", cls: FAMILY_CLASSES.neutral },
-  };
-  const isImportedNotResponded =
-    !!assignment.import_batch_id && !assignment.accepted_at && !assignment.responded_at &&
-    (assignment.status === "accepted" || assignment.status === "assigned" || assignment.status === "confirmed");
-  const importedPill = isImportedNotResponded
-    ? { label: "Asignado/importado", cls: FAMILY_CLASSES.progress }
-    : null;
-  const attendancePill =
-    assignment.attendance_status === "present" || assignment.attendance_status === "checked_in"
-      ? { label: "En sitio", cls: FAMILY_CLASSES.progress }
-      : null;
-  const statusPill = attendancePill ?? importedPill ?? STATUS_PILL[bucket];
-
-  return (
-    <li className="px-2.5 py-1.5">
-      <div className="flex items-center gap-2">
-        <Avatar className="h-8 w-8 shrink-0">
-          {employee?.avatar_url ? <AvatarImage src={employee.avatar_url} alt="" /> : null}
-          <AvatarFallback className="text-[12px] font-semibold">
-            {initialsOf(employee)}
-          </AvatarFallback>
-        </Avatar>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1 min-w-0">
-            <p className="text-[13px] font-semibold leading-tight truncate">{name}</p>
-            {isCaptain && <Star className="h-3 w-3 text-amber-600 shrink-0" />}
-          </div>
-          <div className="flex items-center gap-1 mt-0.5 flex-wrap">
-            {statusPill && (
-              <span
-                className={cn(
-                  "inline-flex items-center h-[15px] px-1.5 rounded-full text-[12px] font-bold uppercase tracking-wide border whitespace-nowrap",
-                  statusPill.cls,
-                )}
-                title={isImportedNotResponded ? "Importado desde Connecteam. Aún no confirmado en Stafly." : undefined}
-              >
-                {statusPill.label}
-              </span>
-            )}
-            {assignment.assignment_role && (
-              <span className="inline-flex items-center h-[15px] px-1 rounded-full bg-muted text-muted-foreground text-[12px] font-bold uppercase tracking-wide">
-                {assignment.assignment_role}
-              </span>
-            )}
-            {!hasPhone && (
-              <span className="inline-flex items-center h-[15px] px-1.5 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-400 text-[12px] font-bold uppercase tracking-wide">
-                Sin tel.
-              </span>
-            )}
-            {readiness.state !== "ready" && readiness.state !== "missing_phone" && (
-              <ReadinessChip readiness={readiness} />
-            )}
-          </div>
-        </div>
-
-        {/* Right-side compact contact icons */}
-        <div className="flex items-center gap-0.5 shrink-0">
-          {hasPhone ? (
-            <>
-              <a
-                href={`tel:${phoneDigits}`}
-                className="h-7 w-7 inline-flex items-center justify-center rounded-full bg-primary/10 text-primary"
-                aria-label={`Llamar a ${name}`}
-              >
-                <Phone className="h-3.5 w-3.5" />
-              </a>
-              {wa?.waMeUrl && (
-                <a
-                  href={wa.waMeUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="h-7 w-7 inline-flex items-center justify-center rounded-full bg-status-success-bg text-status-success"
-                  aria-label="WhatsApp"
-                >
-                  <MessageSquare className="h-3.5 w-3.5" />
-                </a>
-              )}
-            </>
-          ) : canManage ? (
-            <button
-              type="button"
-              onClick={() => setPhoneDialogOpen(true)}
-              className="h-7 px-2 inline-flex items-center gap-1 rounded-full bg-primary text-primary-foreground text-[12px] font-semibold"
-              aria-label={`Agregar teléfono de ${name}`}
-            >
-              <Phone className="h-3 w-3" /> Tel
-            </button>
-          ) : null}
-          {showMenu && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
-                  className="h-7 w-7 rounded-full grid place-items-center text-muted-foreground hover:text-foreground hover:bg-muted"
-                  aria-label={`Cambiar estado de ${name}`}
-                >
-                  <MoreVertical className="h-4 w-4" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel className="text-[12px] uppercase tracking-wider text-muted-foreground font-semibold">
-                  Acción registrada
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                {hasPhone && (
-                  <>
-                    <DropdownMenuItem onClick={() => onCopyPhone(phoneDigits)}>
-                      <Copy className="h-4 w-4 mr-2" /> Copiar teléfono
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <a href={`sms:${phoneDigits}`}>
-                        <MessageSquare className="h-4 w-4 mr-2" /> Enviar SMS
-                      </a>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                  </>
-                )}
-                {allowedActions.map((next) => {
-                  const Icon = ASSIGN_ACTION_ICON[next];
-                  return (
-                    <DropdownMenuItem
-                      key={next}
-                      onClick={() => onAssignmentAction(assignment.id, next, name)}
-                      className={next === "removed" || next === "rejected" ? "text-destructive focus:text-destructive" : undefined}
-                    >
-                      <Icon className="h-4 w-4 mr-2" />
-                      {ASSIGN_ACTION_LABEL[next]}
-                    </DropdownMenuItem>
-                  );
-                })}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-        </div>
-      </div>
-      {(responseLabel || isImportedNotResponded) && (
-        <div className="ml-10 mt-0.5 text-[12px] text-muted-foreground leading-snug">
-          {isImportedNotResponded
-            ? "Importado desde Connecteam. Aún no confirmado en Stafly."
-            : responseLabel}
-        </div>
-      )}
-      <Dialog open={phoneDialogOpen} onOpenChange={setPhoneDialogOpen}>
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Agregar teléfono</DialogTitle>
-            <DialogDescription>{name} · 10 dígitos. Solo actualiza este perfil.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-2">
-            <Label htmlFor={`hub-phone-${assignment.id}`}>Número de teléfono</Label>
-            <Input
-              id={`hub-phone-${assignment.id}`}
-              inputMode="tel"
-              autoFocus
-              placeholder="(555) 123-4567"
-              value={phoneInput}
-              onChange={(e) => setPhoneInput(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") submitPhone(); }}
-            />
-            <p className="text-[12px] text-muted-foreground">
-              No se envían notificaciones. No se modifican registros duplicados.
-            </p>
-          </div>
-          <DialogFooter className="gap-2 sm:gap-2">
-            <Button variant="ghost" onClick={() => setPhoneDialogOpen(false)} disabled={savingPhone}>Cancelar</Button>
-            <Button onClick={submitPhone} disabled={savingPhone}>
-              {savingPhone ? "Guardando…" : "Guardar"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </li>
-  );
-}
 
 function ContactBtn({
   href, icon: Icon, label, external,
@@ -1400,45 +1300,28 @@ function ClaimsTab({
 }
 
 function IssuesTab({
-  issues,
+  risks, canManage, onGoTo,
 }: {
-  issues: Array<{ key: string; tone: "warn" | "bad" | "info"; icon: React.ComponentType<{ className?: string }>; title: string; helper?: string }>;
+  risks: TeamRisk[];
+  canManage: boolean;
+  onGoTo: (tab: TabKey) => void;
 }) {
   return (
-    <section aria-label="Alertas que requieren atención">
+    <section aria-label="Alertas que requieren atención" className="space-y-2">
       <SectionTitle icon={AlertTriangle} helper={HUB_COPY.issuesHelper}>
         Alertas
-        {issues.length > 0 && (
+        {risks.length > 0 && (
           <span className="ml-1.5 text-xs font-normal text-muted-foreground normal-case tracking-normal">
-            ({issues.length})
+            ({risks.length})
           </span>
         )}
       </SectionTitle>
-      {issues.length === 0 ? (
+      {risks.length === 0 ? (
         <EmptyBlock title={HUB_COPY.emptyIssuesTitle} helper={HUB_COPY.emptyIssuesHelper} />
       ) : (
-        <ul className="space-y-2">
-          {issues.map((i) => {
-            const Icon = i.icon;
-            return (
-              <li
-                key={i.key}
-                className={cn(
-                  "rounded-2xl border px-3 py-2.5 flex items-start gap-2.5",
-                  toneToClass(i.tone),
-                )}
-              >
-                <Icon className="h-4 w-4 mt-0.5 shrink-0" />
-                <div className="min-w-0 flex-1">
-                  <p className="text-[13px] font-semibold leading-tight">{i.title}</p>
-                  {i.helper && (
-                    <p className="mt-0.5 text-[12px] opacity-80 leading-snug">{i.helper}</p>
-                  )}
-                </div>
-              </li>
-            );
-          })}
-        </ul>
+        risks.map((r) => (
+          <TeamRiskCard key={r.key} risk={r} canManage={canManage} onGoTo={onGoTo} />
+        ))
       )}
     </section>
   );
