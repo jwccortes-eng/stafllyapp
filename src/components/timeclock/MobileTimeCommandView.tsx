@@ -28,6 +28,8 @@ import { enUS } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useTimeClockFocus } from "@/hooks/useTimeClockFocus";
 import { REVIEW_COPY } from "@/utils/reviewNavigationCopy";
+import { MT, MT_EYEBROW, TAP_ICON, TAP_CHIP, FOCUS_RING } from "@/lib/mobile/mobile-scale";
+import { StatusBadge } from "@/components/ui/status-badge";
 
 const OPEN_ENTRY_WARN_HOURS = 12;
 const OPEN_ENTRY_STALE_HOURS = 24;

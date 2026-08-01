@@ -236,10 +236,10 @@ function SectionGrid({
 }: SectionGridProps) {
   return (
     <div>
-      <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-2">
+      <p className={cn(MT_EYEBROW, "text-muted-foreground mb-2")}>
         {label}
       </p>
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-3 gap-2">
         {items.map(item => {
           const active = isActive(item);
           const isPinned = pinnedIds.includes(item.id);
@@ -247,12 +247,13 @@ function SectionGrid({
           const count = item.badge ? badgeCounts[item.badge] ?? 0 : 0;
 
           return (
-            <div key={item.id} className="relative group">
+            <div key={item.id} className="relative">
               <NavLink
                 to={item.to}
                 onClick={onClose}
                 className={cn(
-                  "flex flex-col items-center gap-1.5 py-3 px-1 rounded-xl transition-all duration-200 active:scale-95",
+                  "flex flex-col items-center gap-1.5 py-3 px-2 min-h-[92px] rounded-xl transition-all duration-200 active:scale-95",
+                  FOCUS_RING,
                   active ? "bg-primary/10 text-primary" : "text-foreground hover:bg-muted"
                 )}
               >
@@ -264,33 +265,42 @@ function SectionGrid({
                   {count > 0 && (
                     <Badge
                       variant="secondary"
-                      className="absolute -top-1.5 -right-1.5 h-4 min-w-4 px-1 text-[9px] font-semibold leading-none flex items-center justify-center rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/20"
+                      className={cn(
+                        "absolute -top-1.5 -right-1.5 h-5 min-w-5 px-1 text-[12px] font-semibold leading-none flex items-center justify-center rounded-full border",
+                        FAMILY_CLASSES.warning,
+                      )}
                     >
                       {count > 9 ? "9+" : count}
                     </Badge>
                   )}
                 </div>
                 <span className={cn(
-                  "text-[10px] font-medium leading-tight text-center truncate w-full",
-                  active && "font-bold"
+                  MT.label,
+                  "leading-tight text-center line-clamp-2 w-full",
+                  active && "font-semibold"
                 )}>
                   {item.label}
                 </span>
               </NavLink>
 
               <button
+                type="button"
                 onClick={(e) => { e.stopPropagation(); if (canPin) onTogglePin(item.id); }}
+                disabled={!canPin}
                 className={cn(
-                  "absolute top-1 right-1 h-5 w-5 rounded-full flex items-center justify-center transition-all",
-                  isPinned
-                    ? "bg-primary text-primary-foreground opacity-100"
-                    : canPin
-                    ? "bg-muted/60 text-muted-foreground opacity-0 group-hover:opacity-100"
-                    : "bg-muted/30 text-muted-foreground/30 cursor-not-allowed opacity-0"
+                  "absolute -top-1 -right-1 h-11 w-11 rounded-full flex items-center justify-center transition-all",
+                  FOCUS_RING,
+                  canPin ? "text-muted-foreground" : "text-muted-foreground/30 cursor-not-allowed",
                 )}
-                aria-label={isPinned ? "Unpin" : "Pin"}
+                aria-label={isPinned ? `Quitar ${item.label} de los fijados` : `Fijar ${item.label}`}
+                aria-pressed={isPinned}
               >
-                <Pin className="h-2.5 w-2.5" />
+                <span className={cn(
+                  "h-6 w-6 rounded-full flex items-center justify-center",
+                  isPinned ? "bg-primary text-primary-foreground" : "bg-muted/70",
+                )}>
+                  <Pin className="h-3 w-3" />
+                </span>
               </button>
             </div>
           );
@@ -299,3 +309,4 @@ function SectionGrid({
     </div>
   );
 }
+
