@@ -266,8 +266,14 @@ export function MobileQuickCreateShiftSheet({
     setOutcomes([]);
     setResult(null);
     setConfirmClose(false);
+    setConfirmation(null);
+    setCompanyChanged(false);
+    lockedCompanyIdRef.current = companyId;
     submitLockRef.current = false;
     createdShiftIdRef.current = null;
+    // `companyId` queda fuera de deps a propósito: se fija al abrir y un cambio
+    // posterior debe BLOQUEAR el wizard, no reiniciarlo en silencio.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, todayStr, defaultStartTime, defaultEndTime, defaultSlots]);
 
 
