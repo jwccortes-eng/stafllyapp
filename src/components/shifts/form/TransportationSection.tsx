@@ -141,15 +141,16 @@ function TransportationSectionImpl({
           )}
 
           <div>
-            <Label className="text-[11px] text-muted-foreground font-medium">Conductor asignado</Label>
-            <div className="mt-1">
-              <SingleEmployeePicker
+            <Label className="text-[11px] text-muted-foreground font-medium">Conductores asignados</Label>
+            <p className="text-[10.5px] text-muted-foreground/80 mt-0.5">
+              Los vehículos se calculan por capacidad; los conductores los eliges tú. Un conductor puede cubrir varios viajes.
+            </p>
+            <div className="mt-1.5">
+              <MultiDriverPicker
                 employees={employees}
-                value={driverEmployeeId || null}
-                onChange={(id) => onChange({ driverEmployeeId: id ?? "" })}
-                placeholder="Buscar conductor…"
-                emptyLabel="Sin asignar"
-                highlightDrivers
+                driverIds={driverIds}
+                driversRequired={ridesNeeded}
+                onChange={(ids) => onChange({ driverIds: ids })}
               />
             </div>
           </div>
