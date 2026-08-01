@@ -240,12 +240,27 @@ export default function MobileAdminHome() {
         </button>
       </div>
 
+      {/* P0 OX — Operación de hoy: nunca un cero silencioso */}
+      <div className="px-5 mb-5">
+        <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground mb-2 px-1">
+          Operación de hoy
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <KpiStateCard label="Turnos hoy" state={shiftsToday} onRetry={reload} onClick={() => navigate("/app/shifts")} />
+          <KpiStateCard label="Fichajes abiertos" state={clockedIn} onRetry={reload} onClick={() => navigate("/app/timeclock")} />
+          <KpiStateCard label="Horas por revisar" state={hoursToReview} onRetry={reload} onClick={() => navigate("/app/payroll-review-queue")} />
+          <KpiStateCard label="Sin responder" state={pendingResponses} onRetry={reload} onClick={() => navigate("/app/shifts")} />
+        </div>
+      </div>
+
       {/* Action grid */}
       <div className="px-5">
         <div className="grid grid-cols-2 gap-3">
           {visibleActions.map((a) => {
             const Icon = a.icon;
-            const count = a.badgeKey ? badges[a.badgeKey] : 0;
+            const badge: BadgeState = a.badgeKey ? badges[a.badgeKey] : { kind: "ready", value: 0 };
+            const count = badge.value;
+
             return (
               <button
                 key={a.key}
