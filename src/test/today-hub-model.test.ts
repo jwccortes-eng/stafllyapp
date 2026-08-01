@@ -144,9 +144,9 @@ describe("buildTodayHubModel", () => {
   });
 
   it("respeta permisos: sin canAssign no ofrece completar equipo", () => {
-    const m = buildTodayHubModel({ permissions: FULL_HUB_PERMISSIONS,
+    const m = buildTodayHubModel({
       now: NOW,
-      permissions: { canAssign: false },
+      permissions: { ...FULL_HUB_PERMISSIONS, canAssign: false },
       shifts: [
         shift({
           id: "gap",
@@ -155,8 +155,9 @@ describe("buildTodayHubModel", () => {
       ],
     });
     expect(m.attentionItems[0].action).toBeUndefined();
-    expect(m.activeOperations[0].action.label).toBe("Ver detalles");
+    expect(m.activeOperations[0].action?.label).toBe("Ver detalles");
   });
+
 
   it("fichajes sin salida generan deep link al reloj", () => {
     const m = buildTodayHubModel({ permissions: FULL_HUB_PERMISSIONS,
