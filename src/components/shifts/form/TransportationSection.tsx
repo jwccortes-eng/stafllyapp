@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { SectionCard } from "./section-card";
-import { SingleEmployeePicker } from "../SingleEmployeePicker";
+import { MultiDriverPicker } from "./MultiDriverPicker";
 import type { Employee } from "../types";
 
 interface Props {
@@ -22,7 +22,8 @@ interface Props {
   transportRequired: boolean;
   carCapacity: string;
   transportNotes: string;
-  driverEmployeeId: string;
+  /** P0.3 — varios conductores por turno (modelo real: shift_assignments.assignment_role). */
+  driverIds: string[];
   /** Computed by parent so we don't repeat the math */
   ridesNeeded: number;
   driversInTeam: number;
@@ -36,7 +37,7 @@ interface Props {
     transportRequired?: boolean;
     carCapacity?: string;
     transportNotes?: string;
-    driverEmployeeId?: string;
+    driverIds?: string[];
   }) => void;
 }
 
