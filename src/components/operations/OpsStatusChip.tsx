@@ -67,7 +67,7 @@ export function OpsStatusChip({
       className={cn(
         // Premium pill: flat surface, 1px hairline border, medium-weight non-uppercase label.
         "inline-flex items-center rounded-full border font-medium whitespace-nowrap",
-        toneClasses[tone],
+        FAMILY_CLASSES[TONE_FAMILY[tone]],
         sizeClasses[size],
         className,
       )}
