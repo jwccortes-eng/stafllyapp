@@ -195,3 +195,41 @@ describe("buildTodayHubModel", () => {
     expect(m.primaryAction?.label).toBe("Completar equipo");
   });
 });
+
+/* ── OX-4.3.1 — Permisos fail-closed y semántica de asistencia ───────── */
+
+describe("OX-4.3.1 — permisos fail-closed", () => {
+  it("sin permisos no expone ninguna acción", () => {
+    const m = buildTodayHubModel({
+      permissions: NO_HUB_PERMISSIONS,
+      now: NOW,
+      shifts: [shift({ id: "a" })],
+      counts: { pendingHours: 5, docsPending: 3 },
+    });
+    expect(m.primaryAction).toBeNull();
+    expect(m.activeOperations.every((o) => !o.action)).toBe(true);
+    expect(m.teamSummaries.every((t) => !t.action)).toBe(true);
+    expect(m.closeoutItems.every((c) => !c.decision)).toBe(true);
+    expect(m.validationItems.every((v) => !v.decision)).toBe(true);
+    expect(m.attentionItems.every((i) => !i.action)).toBe(true);
+    expect(m.emptyState.nextShift).toBeUndefined();
+  });
+
+  it("permisos omitidos equivalen a sin permisos", () => {
+    const m = buildTodayHubModel({ now: NOW, shifts: [shift({ id: "a" })] });
+    expect(m.primaryAction).toBeNull();
+  });
+});
+
+describe("OX-4.3.1 — asistencia sin no-show implícito", () => {
+  it("no llama no-show a un turno que aún no empieza", () => {
+    const m = buildTodayHubModel({
+      permissions: FULL_HUB_PERMISSIONS,
+      now: NOW,
+      shifts: [shift({ id: "a" })],
+    });
+    const text = JSON.stringify(m).toLowerCase();
+    expect(text).not.toContain("no-show");
+    expect(text).not.toContain("no show");
+  });
+});
