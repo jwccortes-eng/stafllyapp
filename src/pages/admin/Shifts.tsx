@@ -47,6 +47,8 @@ import { ShiftDetailDialog } from "@/components/shifts/ShiftDetailDialog";
 import { ShiftEditDialog } from "@/components/shifts/ShiftEditDialog";
 import { DuplicateShiftDialog } from "@/components/shifts/DuplicateShiftDialog";
 import { ShiftFilters, EMPTY_FILTERS, type ShiftFilterState } from "@/components/shifts/ShiftFilters";
+import { matchesShiftQuery } from "@/lib/shifts/shift-ref";
+import { CrossCompanyShiftHint } from "@/components/shifts/CrossCompanyShiftHint";
 import { WeeklySummaryBar } from "@/components/shifts/WeeklySummaryBar";
 import { EmployeeCombobox } from "@/components/shifts/EmployeeCombobox";
 import { ShiftRepeatSection, DEFAULT_REPEAT, computeRepeatDates, type RepeatConfig } from "@/components/shifts/ShiftRepeatSection";
@@ -523,7 +525,9 @@ function DesktopShifts() {
     let result = shifts;
     if (filters.search) {
       const q = filters.search.toLowerCase();
-      result = result.filter(s => s.title.toLowerCase().includes(q));
+      result = result.filter(s =>
+        s.title.toLowerCase().includes(q) || matchesShiftQuery(s, filters.search),
+      );
     }
     if (filters.clientId) {
       result = result.filter(s => s.client_id === filters.clientId);
@@ -2199,8 +2203,12 @@ function DesktopShifts() {
 
       {/* ── FILTERS + CONTEXTUAL ACTIONS ── */}
       <div className="flex flex-col sm:flex-row gap-2 sm:items-start">
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 space-y-2">
           <ShiftFilters filters={filters} onChange={setFilters} clients={clients} locations={locations} allowClaims={shiftsConfig.allow_claims} />
+          <CrossCompanyShiftHint
+            query={filters.search ?? ""}
+            noLocalResults={filteredShifts.length === 0}
+          />
         </div>
         {canEdit && (
           <div className="flex items-center gap-1.5 shrink-0">

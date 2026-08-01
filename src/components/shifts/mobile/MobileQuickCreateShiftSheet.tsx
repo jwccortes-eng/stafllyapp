@@ -918,12 +918,42 @@ export function MobileQuickCreateShiftSheet({
                       : <><RotateCw className="h-4 w-4 mr-2" />Reintentar los que fallaron</>}
                   </Button>
                 )}
+                {confirmation?.kind === "context_mismatch" && (
+                  <Button
+                    variant="outline"
+                    className="w-full h-12 text-base font-semibold rounded-2xl"
+                    onClick={() => {
+                      setSelectedCompanyId(confirmation.companyId);
+                      onOpenChange(false);
+                    }}
+                  >
+                    <ArrowRightLeft className="h-4 w-4 mr-2" />
+                    Cambiar a {confirmation.companyName}
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  className="w-full h-12 text-base font-semibold rounded-2xl"
+                  disabled={saving}
+                  onClick={() => {
+                    const id = createdShiftIdRef.current;
+                    onOpenChange(false);
+                    if (id) navigate(`/app/shifts?shift=${id}&manageTeam=1`);
+                  }}
+                >
+                  <Users className="h-4 w-4 mr-2" />
+                  Operar equipo
+                </Button>
                 <Button
                   className="w-full h-14 text-base font-semibold rounded-2xl"
                   disabled={saving}
-                  onClick={() => onOpenChange(false)}
+                  onClick={() => {
+                    const id = createdShiftIdRef.current;
+                    onOpenChange(false);
+                    if (id) navigate(`/app/shifts?shift=${id}`);
+                  }}
                 >
-                  Ir al turno
+                  Ver turno
                 </Button>
               </div>
             ) : (
