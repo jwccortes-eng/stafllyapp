@@ -907,7 +907,52 @@ export function MobileQuickCreateShiftSheet({
                       className="h-12 pl-9 text-base"
                     />
                   </div>
+
+                  {/* P0.2 · Transporte y drivers (varios drivers permitidos) */}
+                  <div className="rounded-2xl border border-border/60 bg-card px-3 py-2.5">
+                    <div className="flex items-center gap-3">
+                      <span className="flex-1 min-w-0">
+                        <span className="block text-[13px] font-semibold">Drivers necesarios</span>
+                        <span className={cn(
+                          "block text-[12px]",
+                          driverStatus.tone === "warning" ? "text-status-warning"
+                            : driverStatus.tone === "success" ? "text-status-success"
+                              : "text-muted-foreground",
+                        )}>
+                          {driverStatus.counterLabel}
+                        </span>
+                      </span>
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          aria-label="Menos drivers"
+                          onClick={() => setDriverPlan(p => {
+                            const next = Math.max(0, p.driversRequired - 1);
+                            return { ...p, driversRequired: next, transportRequired: next > 0 || p.driverIds.length > 0 };
+                          })}
+                          className="h-11 w-11 rounded-xl border border-border/60 inline-flex items-center justify-center active:bg-muted"
+                        >
+                          <Minus className="h-4 w-4" />
+                        </button>
+                        <span className="w-8 text-center text-base font-bold tabular-nums">{driverPlan.driversRequired}</span>
+                        <button
+                          type="button"
+                          aria-label="Más drivers"
+                          onClick={() => setDriverPlan(p => ({ ...p, driversRequired: p.driversRequired + 1, transportRequired: true }))}
+                          className="h-11 w-11 rounded-xl border border-border/60 inline-flex items-center justify-center active:bg-muted"
+                        >
+                          <Plus className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                    {driverPlan.driversRequired > 0 && (
+                      <p className="mt-1 text-[12px] text-muted-foreground">
+                        {driverStatus.hint} Marca “Driver” en cada persona que conduce.
+                      </p>
+                    )}
+                  </div>
                 </div>
+
 
                 <div className="flex-1 overflow-y-auto px-2 py-2">
                   {roster.length === 0 ? (
