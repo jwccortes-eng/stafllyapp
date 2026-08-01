@@ -256,25 +256,22 @@ export function AttendanceEvidenceCard({ shift, assignments, companyId, userId }
         <Kpi label="Ausente" value={summary.absent} tone="danger" />
       </div>
 
-      {/* Per-worker list */}
+      {/* Evidence empty state — scoped to THIS shift only. */}
+      {!loading && !hasEvidence && (
+        <div className="rounded-xl border border-dashed border-border/50 bg-muted/10 px-4 py-5 text-center">
+          <p className="text-[13px] font-medium text-foreground">Sin evidencia todavía.</p>
+          <p className="mt-1 text-[12px] text-muted-foreground leading-snug">
+            La evidencia de este turno aparecerá aquí cuando la operación comience.
+          </p>
+        </div>
+      )}
+
+      {/* Per-worker list — only active roster of this shift */}
       <div className="space-y-2">
         {active.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-border/50 bg-muted/10 px-4 py-6 text-center">
-            <p className="text-[13px] font-medium text-foreground">Sin evidencia todavía.</p>
-            <p className="mt-1 text-[12px] text-muted-foreground leading-snug">
-              La evidencia de este turno aparecerá aquí cuando la operación comience.
-            </p>
-          </div>
-        ) : !hasEvidence && !loading ? (
-          <>
-          <div className="rounded-xl border border-dashed border-border/50 bg-muted/10 px-4 py-5 text-center">
-            <p className="text-[13px] font-medium text-foreground">Sin evidencia todavía.</p>
-            <p className="mt-1 text-[12px] text-muted-foreground leading-snug">
-              La evidencia de este turno aparecerá aquí cuando la operación comience.
-            </p>
-          </div>
-          {renderRoster()}
-          </>
+          <p className="text-[13px] text-muted-foreground text-center py-4">
+            Sin workers activos asignados a este turno.
+          </p>
         ) : active.map(a => {
           const state = getAttendanceEvidenceState(
             shift,
