@@ -407,9 +407,10 @@ export function buildTodayHubModel(input: TodayHubInput): TodayHubModel {
           headline: `${unconfirmed} sin confirmar en ${shift.title}`,
           because: `El turno ${startsInLabel(mins)} y aún no responden.`,
           impact: "Riesgo de arrancar sin equipo completo.",
-          action: perms.canOperate
+          action: perms.canConfirmTeam
             ? { label: "Contactar pendientes", href: ROUTES.shiftOps(shift.id) }
             : undefined,
+
           shiftId: shift.id,
         },
         "unconfirmed",
