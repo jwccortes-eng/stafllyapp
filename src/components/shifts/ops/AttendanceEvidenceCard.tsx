@@ -259,7 +259,22 @@ export function AttendanceEvidenceCard({ shift, assignments, companyId, userId }
       {/* Per-worker list */}
       <div className="space-y-2">
         {active.length === 0 ? (
-          <p className="text-xs text-muted-foreground text-center py-4">Sin workers activos asignados.</p>
+          <div className="rounded-xl border border-dashed border-border/50 bg-muted/10 px-4 py-6 text-center">
+            <p className="text-[13px] font-medium text-foreground">Sin evidencia todavía.</p>
+            <p className="mt-1 text-[12px] text-muted-foreground leading-snug">
+              La evidencia de este turno aparecerá aquí cuando la operación comience.
+            </p>
+          </div>
+        ) : !hasEvidence && !loading ? (
+          <>
+          <div className="rounded-xl border border-dashed border-border/50 bg-muted/10 px-4 py-5 text-center">
+            <p className="text-[13px] font-medium text-foreground">Sin evidencia todavía.</p>
+            <p className="mt-1 text-[12px] text-muted-foreground leading-snug">
+              La evidencia de este turno aparecerá aquí cuando la operación comience.
+            </p>
+          </div>
+          {renderRoster()}
+          </>
         ) : active.map(a => {
           const state = getAttendanceEvidenceState(
             shift,
