@@ -175,10 +175,10 @@ export function AssignWorkerCard({
       density={density}
       mode="interactive"
       className={cn(!c.canAssign && "opacity-95", className)}
-      footer={
-        <>
+      primary={
+        <div className="space-y-1.5">
           {chips.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 pt-1">
+            <div className="flex flex-wrap gap-1.5">
               {chips.map((ch) => (
                 <span
                   key={ch.key}
@@ -198,13 +198,13 @@ export function AssignWorkerCard({
             </div>
           )}
           {history.length > 0 && (
-            <p className={cn(MT.caption, "text-muted-foreground pt-1 leading-snug")}>
+            <p className={cn(MT.caption, "text-muted-foreground leading-snug")}>
               {history.join(" · ")}
             </p>
           )}
-          {footer}
-        </>
+        </div>
       }
+      footer={footer}
     />
   );
 }
