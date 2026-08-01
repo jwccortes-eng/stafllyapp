@@ -276,7 +276,7 @@ export default function MobileAdminHome() {
             onClick={() => navigate("/app/shifts")}
           />
           <KpiCard
-            label="Fichajes abiertos"
+            label="Fichajes"
             state={clockedIn}
             variant="compact"
             consequence="Sin clock-out no se pueden validar horas."
@@ -284,7 +284,7 @@ export default function MobileAdminHome() {
             onClick={() => navigate("/app/timeclock")}
           />
           <KpiCard
-            label="Horas por revisar"
+            label="Por revisar"
             state={hoursToReview}
             variant="compact"
             consequence="Bloquean el cierre del periodo de pago."
