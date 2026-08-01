@@ -167,7 +167,7 @@ export default function ValidationCenter() {
         alternatives={item.secondaryActions
           .filter((a) => !(model.readOnly && isTerminalAction(a.kind)))
           .map((a) => toOcsAction(item, a))}
-        density={isMobile ? "comfortable" : "compact"}
+        density={isMobile ? "mobile" : "desktop"}
         mode="interactive"
       />
     );
@@ -211,7 +211,7 @@ export default function ValidationCenter() {
     <div className="space-y-6 pb-24">
       <PageHeader
         title="Centro de Validación"
-        description="Único lugar donde se aprueban horas reales y cierres de turno. No calcula ni ejecuta payroll."
+        subtitle="Único lugar donde se aprueban horas reales y cierres de turno. No calcula ni ejecuta payroll."
       />
 
       {focusShiftId ? (
@@ -323,8 +323,8 @@ export default function ValidationCenter() {
               recommendation={risk.title}
               because={risk.detail}
               status={risk.severity === "critical" ? "critical" : "warning"}
-              density={isMobile ? "comfortable" : "compact"}
-              mode="static"
+              density={isMobile ? "mobile" : "desktop"}
+              mode="readonly"
             />
           ))}
         </div>
