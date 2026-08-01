@@ -445,33 +445,29 @@ export function MobileShiftOperationsSheet({
         hideClose
         className="h-[92vh] p-0 rounded-t-3xl flex flex-col overflow-hidden bg-background"
       >
-        {/* Sticky Context Header — DS4.1: explicit operational summary. */}
+        {/* Sticky Context Header — OX-9.2: identidad y horario. La cobertura NO vive aquí. */}
         {(() => {
-          const missing = slots > 0 ? Math.max(0, slots - assignedCount) : 0;
-          // Single priority status pill: Unstaffed > Missing job site > No client > Draft > Complete > Published.
+          // Single priority status pill. La cobertura se declara una sola vez,
+          // en el bloque de equipo — el header nunca la repite.
           const pill: { label: string; cls: string } | null =
-            published && understaffed
-              ? { label: `Faltan ${missing}`, cls: FAMILY_CLASSES.critical }
-              : noLocation
-                ? { label: "Falta ubicación", cls: FAMILY_CLASSES.warning }
-                : noClient
-                  ? { label: "Falta cliente", cls: FAMILY_CLASSES.warning }
-                  : draft
-                    ? { label: "Borrador", cls: FAMILY_CLASSES.neutral }
-                    : published && fullyStaffed
-                      ? { label: "Completo", cls: FAMILY_CLASSES.positive }
-                      : published
-                        ? { label: "Publicado", cls: "border-primary/30 text-primary bg-primary/5" }
-                        : null;
+            noLocation
+              ? { label: "Falta ubicación", cls: FAMILY_CLASSES.warning }
+              : noClient
+                ? { label: "Falta cliente", cls: FAMILY_CLASSES.warning }
+                : draft
+                  ? { label: "Borrador", cls: FAMILY_CLASSES.neutral }
+                  : published && fullyStaffed
+                    ? { label: "Completo", cls: FAMILY_CLASSES.positive }
+                    : published
+                      ? { label: "Publicado", cls: "border-primary/30 text-primary bg-primary/5" }
+                      : null;
 
-          // Status text line (under title)
-          const statusText: string = draft
+          // Status text line (under title) — sin contadores de cobertura.
+          const statusText: string | null = draft
             ? "No visible para trabajadores"
-            : slots > 0
-              ? understaffed
-                ? `${assignedCount}/${slots} asignados · faltan ${missing}`
-                : `${assignedCount}/${slots} asignados`
-              : `${assignedCount} asignados`;
+            : null;
+
+
 
           // Header title + subtitle
           const headerTitle = (clientName && clientName !== "—") ? clientName : (shift.title || "Turno");
