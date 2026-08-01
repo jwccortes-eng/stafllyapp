@@ -536,12 +536,29 @@ export function buildTodayHubModel(input: TodayHubInput): TodayHubModel {
             : undefined,
         priority,
         action,
-        secondary: [{ label: "Ver detalles", href: ROUTES.shiftOps(shift.id) }],
+        secondary: perms.canOperate
+          ? [{ label: "Ver detalles", href: ROUTES.shiftOps(shift.id) }]
+          : [],
       });
     }
 
     /* — Equipos en riesgo — */
     if (missing > 0 || unconfirmed > 0 || ops.not_started > 0) {
+      const teamAction: HubLink | undefined =
+        missing > 0
+          ? perms.canAssign
+            ? { label: "Completar equipo", href: ROUTES.shiftOps(shift.id) }
+            : undefined
+          : attendance &&
+              (attendance.state === "missing_checkin" ||
+                attendance.state === "no_show_confirmed" ||
+                attendance.state === "awaiting_checkin")
+            ? perms.canManageAttendance
+              ? { label: "Revisar asistencia", href: ROUTES.shiftOps(shift.id) }
+              : undefined
+            : perms.canConfirmTeam
+              ? { label: "Contactar pendientes", href: ROUTES.shiftOps(shift.id) }
+              : undefined;
       teams.push({
         shiftId: shift.id,
         title: `Equipo — ${shift.title}`,
@@ -551,13 +568,10 @@ export function buildTodayHubModel(input: TodayHubInput): TodayHubModel {
         confirmed: ops.confirmed,
         present: ops.clocked_in,
         priority: missing > 0 ? (mins <= 60 ? "critical" : "high") : "high",
-        action:
-          missing > 0
-            ? { label: "Completar equipo", href: ROUTES.shiftOps(shift.id) }
-            : ops.not_started > 0 && ops.bucket === "in_progress"
-              ? { label: "Resolver no-show", href: ROUTES.shiftOps(shift.id) }
-              : { label: "Contactar pendientes", href: ROUTES.shiftOps(shift.id) },
+        attendanceLabel: attendance?.label,
+        action: teamAction,
       });
+
     }
   }
 
