@@ -11,6 +11,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { MT, FOCUS_RING } from "@/lib/mobile/mobile-scale";
 import { getShiftCloseout, type ShiftCloseout } from "@/lib/shifts/closeout";
 import {
   closeShift, evaluateShiftClosure, isShiftClosed, type ClosureReadiness,
