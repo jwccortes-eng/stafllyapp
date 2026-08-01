@@ -53,7 +53,7 @@ export function OpsShiftCard({ shift, onOperate }: Props) {
         variant="admin"
         density="compact"
         title={shift.title || "Untitled shift"}
-        shiftCode={shift.shift_code}
+        shiftRef={displayShiftRef(shift)}
         clientName={shift.client_name}
         jobSiteName={shift.job_site_name}
         meetingPoint={shift.meeting_point}
