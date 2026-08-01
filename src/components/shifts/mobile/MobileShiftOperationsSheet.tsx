@@ -360,12 +360,8 @@ export function MobileShiftOperationsSheet({
   if (!shift || !data) return null;
 
   // ── Smart brief (deterministic) — only actionable issues, ordered by urgency.
+  // OX-9.2: la cobertura NO se repite aquí. Vive en un solo bloque de equipo.
   const briefMessages: { tone: "good" | "warn" | "bad" | "info"; text: string }[] = [];
-  if (published && understaffed) {
-    const missing = slots - assignedCount;
-    briefMessages.push({ tone: "bad", text: `Faltan ${missing} trabajador${missing === 1 ? "" : "es"}` });
-  }
-  if (assignedCount === 0) briefMessages.push({ tone: "bad", text: "Sin trabajadores asignados" });
   if (noLocation) briefMessages.push({ tone: "warn", text: meetingPoint ? "Falta ubicación del trabajo (hay punto de encuentro)" : "Falta ubicación del trabajo" });
   if (!(shiftMeeting.point ?? meetingPoint)) briefMessages.push({ tone: "warn", text: "Falta punto de encuentro" });
   if (noClient) briefMessages.push({ tone: "warn", text: "Falta cliente" });
@@ -378,6 +374,7 @@ export function MobileShiftOperationsSheet({
   ) {
     briefMessages.push({ tone: "warn", text: "Sin actividad de reloj" });
   }
+
 
   // ── Snapshot text
   const snapshot = (() => {
