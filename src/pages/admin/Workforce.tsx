@@ -23,7 +23,7 @@ import { useDebouncedValue } from "@/hooks/useFilters";
 import { formatDistanceToNow, parseISO } from "date-fns";
 import {
   Users, Search, MessageCircle, ArrowRight, Download, ShieldCheck, ChevronDown,
-  RefreshCw, Sparkles, Filter, X, FileText, ClipboardList, Send,
+  RefreshCw, Sparkles, Filter, X, FileText, Send,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -73,37 +73,37 @@ interface Row {
 }
 
 const WORKER_TYPES: { value: string; label: string }[] = [
-  { value: "employee", label: "Employee" },
-  { value: "contractor", label: "Contractor (1099)" },
-  { value: "intern", label: "Intern" },
+  { value: "employee", label: "Empleado" },
+  { value: "contractor", label: "Contratista (1099)" },
+  { value: "intern", label: "Practicante" },
   { value: "freelance", label: "Freelance" },
-  { value: "other", label: "Other" },
+  { value: "other", label: "Otro" },
 ];
 
 const STATUS_FILTERS: { value: "all" | ProfileStatus; label: string }[] = [
-  { value: "all", label: "All statuses" },
-  { value: "incomplete", label: "Incomplete" },
-  { value: "pending_documents", label: "Missing documents" },
-  { value: "ready", label: "Ready" },
-  { value: "active", label: "Active" },
+  { value: "all", label: "Todos los estados" },
+  { value: "incomplete", label: "Perfil incompleto" },
+  { value: "pending_documents", label: "Faltan documentos" },
+  { value: "ready", label: "Lista para operar" },
+  { value: "active", label: "Operando" },
 ];
 
 type SortKey = "recent" | "name" | "score" | "reviews" | "risk";
 const SORT_OPTIONS: { value: SortKey; label: string }[] = [
-  { value: "recent", label: "Most recent" },
-  { value: "name", label: "Name (A→Z)" },
-  { value: "score", label: "Highest review score" },
-  { value: "reviews", label: "Most reviews" },
-  { value: "risk", label: "Risk first" },
+  { value: "recent", label: "Más recientes" },
+  { value: "name", label: "Nombre (A→Z)" },
+  { value: "score", label: "Mejor evaluación" },
+  { value: "reviews", label: "Más evaluaciones" },
+  { value: "risk", label: "Necesita atención primero" },
 ];
 
 type QualityFilter = "any" | "with_reviews" | "no_reviews" | "at_risk" | "top_rated";
 const QUALITY_FILTERS: { value: QualityFilter; label: string }[] = [
-  { value: "any", label: "Any quality" },
-  { value: "with_reviews", label: "With reviews" },
-  { value: "no_reviews", label: "No reviews yet" },
-  { value: "at_risk", label: "At risk / watch" },
-  { value: "top_rated", label: "Top rated (≥4★, 3+)" },
+  { value: "any", label: "Cualquier desempeño" },
+  { value: "with_reviews", label: "Con evaluaciones" },
+  { value: "no_reviews", label: "Sin evaluaciones" },
+  { value: "at_risk", label: "Necesita atención" },
+  { value: "top_rated", label: "Mejor valoradas (≥4★, 3+)" },
 ];
 
 export default function Workforce() {
@@ -156,7 +156,7 @@ export default function Workforce() {
     ]);
 
     if (error) {
-      toast({ title: "Failed to load workforce", description: error.message, variant: "destructive" });
+      toast({ title: "No pudimos cargar el equipo", description: error.message, variant: "destructive" });
       setLoading(false);
       return;
     }
@@ -298,7 +298,7 @@ export default function Workforce() {
       toast({ title: "Nothing to export", variant: "destructive" });
       return;
     }
-    const header = ["First name", "Last name", "Phone", "Email", "Worker type", "Profile status", "Documents", "Last seen"];
+    const header = ["Nombre", "Apellido", "Teléfono", "Email", "Tipo de persona", "Estado de perfil", "Documentos", "Última actividad"];
     const lines = [header.join(",")];
     for (const r of target) {
       const last = r.last_seen_at ? new Date(r.last_seen_at).toISOString() : "";
@@ -313,39 +313,35 @@ export default function Workforce() {
     const a = document.createElement("a");
     a.href = url; a.download = `workforce-${new Date().toISOString().slice(0,10)}.csv`;
     document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
-    toast({ title: `Exported ${target.length} rows` });
+    toast({ title: `Exportadas ${target.length} personas` });
   };
 
   return (
     <div className="space-y-4 pb-24">
-      <LegacyDeprecationBanner
-        replacementHref="/app/employees"
-        replacementLabel="Worker Hub"
-        description="Worker Hub consolida readiness, perfil maestro y operación de personas. Esta vista permanece durante la transición."
-      />
       <PageHeader
         icon={Users}
-        title="Workforce control"
-        subtitle="Live readiness, documents and operational actions for every worker."
+        title="Equipo"
+        subtitle="Quién está listo para operar, quién necesita atención y qué falta por documentar."
         rightSlot={
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={load} className="gap-1.5">
-              <RefreshCw className="h-3.5 w-3.5" /> Refresh
-            </Button>
-            <Button size="sm" onClick={() => navigate("/app/employees")} className="gap-1.5">
-              <ClipboardList className="h-3.5 w-3.5" /> Legacy view
-            </Button>
-          </div>
+          <Button size="sm" onClick={load} className="h-11 gap-1.5 text-sm">
+            <RefreshCw className="h-4 w-4" /> Actualizar
+          </Button>
         }
+      />
+
+      <LegacyDeprecationBanner
+        replacementHref="/app/employees"
+        replacementLabel="Centro de personas"
+        description="El Centro de personas reúne el estado de cada persona, su perfil y su operación. Esta vista sigue disponible durante la transición."
       />
 
       {/* KPI strip */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-        <KpiTile label="Total" value={counts.total} tone="muted" />
-        <KpiTile label="Active" value={counts.active} tone="earning" />
-        <KpiTile label="Ready" value={counts.ready} tone="primary" />
-        <KpiTile label="Missing docs" value={counts.pending_documents} tone="warning" />
-        <KpiTile label="Incomplete" value={counts.incomplete} tone="deduction" />
+        <KpiTile label="Personas" value={counts.total} tone="muted" />
+        <KpiTile label="Operando" value={counts.active} tone="earning" />
+        <KpiTile label="Listas para operar" value={counts.ready} tone="primary" />
+        <KpiTile label="Faltan documentos" value={counts.pending_documents} tone="warning" />
+        <KpiTile label="Perfil incompleto" value={counts.incomplete} tone="deduction" />
       </div>
 
       {/* Filters */}
@@ -355,14 +351,14 @@ export default function Workforce() {
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search name, phone or email…"
+            placeholder="Buscar por nombre, teléfono o email…"
             className="pl-9 h-10"
           />
           {search && (
             <button
               onClick={() => setSearch("")}
               className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 rounded-md hover:bg-muted flex items-center justify-center"
-              aria-label="Clear"
+              aria-label="Limpiar búsqueda"
             >
               <X className="h-3.5 w-3.5" />
             </button>
@@ -380,16 +376,16 @@ export default function Workforce() {
           </SelectContent>
         </Select>
         <Select value={workerFilter} onValueChange={setWorkerFilter}>
-          <SelectTrigger className="md:w-[170px] h-10"><SelectValue placeholder="Worker type" /></SelectTrigger>
+          <SelectTrigger className="md:w-[170px] h-10"><SelectValue placeholder="Tipo de persona" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All worker types</SelectItem>
+            <SelectItem value="all">Todos los tipos</SelectItem>
             {WORKER_TYPES.map((w) => (
               <SelectItem key={w.value} value={w.value}>{w.label}</SelectItem>
             ))}
           </SelectContent>
         </Select>
         <Select value={qualityFilter} onValueChange={(v) => setQualityFilter(v as QualityFilter)}>
-          <SelectTrigger className="md:w-[180px] h-10"><SelectValue placeholder="Quality" /></SelectTrigger>
+          <SelectTrigger className="md:w-[180px] h-10"><SelectValue placeholder="Desempeño" /></SelectTrigger>
           <SelectContent>
             {QUALITY_FILTERS.map((q) => (
               <SelectItem key={q.value} value={q.value}>{q.label}</SelectItem>
@@ -397,7 +393,7 @@ export default function Workforce() {
           </SelectContent>
         </Select>
         <Select value={sortKey} onValueChange={(v) => setSortKey(v as SortKey)}>
-          <SelectTrigger className="md:w-[180px] h-10"><SelectValue placeholder="Sort by" /></SelectTrigger>
+          <SelectTrigger className="md:w-[180px] h-10"><SelectValue placeholder="Ordenar por" /></SelectTrigger>
           <SelectContent>
             {SORT_OPTIONS.map((s) => (
               <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
@@ -409,17 +405,17 @@ export default function Workforce() {
       {/* Bulk action bar */}
       {selected.size > 0 && (
         <div className="rounded-xl border-2 border-primary/30 bg-primary/[0.06] px-3 py-2 flex items-center gap-2 sticky top-2 z-10 backdrop-blur">
-          <span className="text-[12px] font-bold text-primary">{selected.size} selected</span>
-          <button onClick={clearSelection} className="text-[11px] text-muted-foreground hover:text-foreground">Clear</button>
+          <span className="text-[12px] font-bold text-primary">{selected.size} seleccionadas</span>
+          <button onClick={clearSelection} className="text-[11px] text-muted-foreground hover:text-foreground">Quitar selección</button>
           <div className="ml-auto flex items-center gap-1.5">
             <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setReminderOpen(true)}>
-              <Send className="h-3.5 w-3.5" /> Send reminders
+              <Send className="h-3.5 w-3.5" /> Enviar recordatorio
             </Button>
             <Button size="sm" variant="outline" className="gap-1.5" onClick={exportCSV}>
-              <Download className="h-3.5 w-3.5" /> Export CSV
+              <Download className="h-3.5 w-3.5" /> Exportar CSV
             </Button>
             <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setBulkRoleOpen(true)}>
-              <Sparkles className="h-3.5 w-3.5" /> Change worker type
+              <Sparkles className="h-3.5 w-3.5" /> Cambiar tipo de persona
             </Button>
           </div>
         </div>
@@ -431,8 +427,8 @@ export default function Workforce() {
       ) : filtered.length === 0 ? (
         <EmptyState
           icon={Users}
-          title="No workers match these filters"
-          description="Adjust the filters or invite new workers to get started."
+          title="Ninguna persona coincide con estos filtros"
+          description="Ajusta los filtros o suma personas nuevas al equipo."
         />
       ) : (
         <>
@@ -440,12 +436,12 @@ export default function Workforce() {
           <div className="hidden lg:block rounded-2xl border bg-card overflow-hidden">
             <div className="grid grid-cols-[36px_minmax(0,2fr)_140px_120px_140px_140px_60px] px-4 py-2.5 border-b bg-muted/30 text-[10px] uppercase tracking-wider font-bold text-muted-foreground">
               <div className="flex items-center"><Checkbox checked={allVisibleSelected} onCheckedChange={toggleAllVisible} /></div>
-              <div>Worker</div>
-              <div>Status</div>
-              <div>Worker type</div>
-              <div>Documents</div>
-              <div>Last activity</div>
-              <div className="text-right">Actions</div>
+              <div>Persona</div>
+              <div>Estado</div>
+              <div>Tipo</div>
+              <div>Documentos</div>
+              <div>Última actividad</div>
+              <div className="text-right">Acciones</div>
             </div>
             {filtered.map((r) => (
               <div
@@ -489,7 +485,7 @@ export default function Workforce() {
                 <div className="text-[11px] text-muted-foreground">
                   {r.last_seen_at
                     ? formatDistanceToNow(parseISO(r.last_seen_at), { addSuffix: true })
-                    : "Never"}
+                    : "Sin actividad"}
                 </div>
                 <div className="flex justify-end">
                   <RowActions row={r} onChanged={load} onOverride={() => setOverrideTarget(r)} />
@@ -612,7 +608,7 @@ function RowActions({ row, onChanged, onOverride }: { row: Row; onChanged: () =>
   const phone = (row.phone_number ?? "").replace(/\D/g, "");
   const fullPhone = phone.length === 10 ? `1${phone}` : phone;
   const waMessage = encodeURIComponent(
-    `Hi ${row.first_name}, please complete your worker profile to be assigned to shifts. Open the app to finish onboarding. Thanks!`,
+    `Hola ${row.first_name}, completa tu perfil para poder asignarte turnos. Abre la app y termina tu alta. ¡Gracias!`,
   );
   const waLink = phone ? `https://wa.me/${fullPhone}?text=${waMessage}` : null;
   return (
@@ -624,21 +620,21 @@ function RowActions({ row, onChanged, onOverride }: { row: Row; onChanged: () =>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-52">
         <DropdownMenuItem onClick={() => navigate(`/app/employees/${row.id}/onboarding`)}>
-          <ArrowRight className="h-3.5 w-3.5 mr-2" /> Complete onboarding
+          <ArrowRight className="h-3.5 w-3.5 mr-2" /> Completar alta
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => navigate(`/app/employees?id=${row.id}`)}>
-          <FileText className="h-3.5 w-3.5 mr-2" /> Open profile
+          <FileText className="h-3.5 w-3.5 mr-2" /> Abrir perfil
         </DropdownMenuItem>
         {waLink && (
           <DropdownMenuItem asChild>
             <a href={waLink} target="_blank" rel="noopener">
-              <MessageCircle className="h-3.5 w-3.5 mr-2 text-[#25D366]" /> Send WhatsApp
+              <MessageCircle className="h-3.5 w-3.5 mr-2 text-[#25D366]" /> Escribir por WhatsApp
             </a>
           </DropdownMenuItem>
         )}
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={onOverride}>
-          <ShieldCheck className="h-3.5 w-3.5 mr-2" /> Override status…
+          <ShieldCheck className="h-3.5 w-3.5 mr-2" /> Forzar estado…
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -666,7 +662,7 @@ function BulkReminderDialog({
       const phone = (r.phone_number ?? "").replace(/\D/g, "");
       const fullPhone = phone.length === 10 ? `1${phone}` : phone;
       const msg = encodeURIComponent(
-        `Hi ${r.first_name}, this is ${companyName || "your team"} — please complete your worker profile to be assigned to shifts. Thanks!`,
+        `Hola ${r.first_name}, te escribe ${companyName || "tu equipo"} — completa tu perfil para poder asignarte turnos. ¡Gracias!`,
       );
       // Open in new tabs (WhatsApp web/app handles the rest).
       window.open(`https://wa.me/${fullPhone}?text=${msg}`, "_blank", "noopener");
@@ -674,8 +670,8 @@ function BulkReminderDialog({
     }
     setSending(false);
     toast({
-      title: `Opened ${opened} WhatsApp ${opened === 1 ? "chat" : "chats"}`,
-      description: withoutPhone > 0 ? `${withoutPhone} workers had no phone number and were skipped.` : undefined,
+      title: `Abrimos ${opened} ${opened === 1 ? "chat" : "chats"} de WhatsApp`,
+      description: withoutPhone > 0 ? `${withoutPhone} personas no tienen teléfono y quedaron fuera.` : undefined,
     });
     onSent();
   };
@@ -684,23 +680,23 @@ function BulkReminderDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Send onboarding reminders</DialogTitle>
+          <DialogTitle>Enviar recordatorio de alta</DialogTitle>
           <DialogDescription>
-            Open a WhatsApp chat for each selected worker with a pre-filled message.
+            Abre un chat de WhatsApp por cada persona seleccionada con el mensaje ya escrito.
           </DialogDescription>
         </DialogHeader>
         <div className="rounded-lg bg-muted/30 p-3 text-sm">
-          <p><span className="font-bold">{withPhone.length}</span> with phone — will be opened.</p>
+          <p><span className="font-bold">{withPhone.length}</span> con teléfono — se abrirán.</p>
           {withoutPhone > 0 && (
             <p className="text-muted-foreground mt-1">
-              <span className="font-bold">{withoutPhone}</span> without phone — will be skipped.
+              <span className="font-bold">{withoutPhone}</span> sin teléfono — quedan fuera.
             </p>
           )}
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
           <Button onClick={handleSend} disabled={sending || withPhone.length === 0}>
-            <Send className="h-3.5 w-3.5 mr-1.5" /> Open chats
+            <Send className="h-3.5 w-3.5 mr-1.5" /> Abrir chats
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -731,7 +727,7 @@ function OverrideStatusDialog({
 
   const submit = async () => {
     if (!reason.trim()) {
-      toast({ title: "A reason is required", variant: "destructive" });
+      toast({ title: "Necesitamos un motivo", variant: "destructive" });
       return;
     }
     setSaving(true);
@@ -742,7 +738,7 @@ function OverrideStatusDialog({
       .eq("id", target.id);
 
     if (error) {
-      toast({ title: "Override failed", description: error.message, variant: "destructive" });
+      toast({ title: "No se pudo forzar el estado", description: error.message, variant: "destructive" });
       setSaving(false);
       return;
     }
@@ -756,7 +752,7 @@ function OverrideStatusDialog({
       details: { reason, role: actorRole, from: oldStatus, to: newStatus } as any,
     } as any);
 
-    toast({ title: "Status updated", description: `Now ${PROFILE_STATUS_LABELS[newStatus]}` });
+    toast({ title: "Estado actualizado", description: `Ahora: ${PROFILE_STATUS_LABELS[newStatus]}` });
     setSaving(false);
     onChanged();
     onClose();
@@ -766,10 +762,10 @@ function OverrideStatusDialog({
     <Dialog open={!!target} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Override profile status</DialogTitle>
+          <DialogTitle>Forzar estado del perfil</DialogTitle>
           <DialogDescription>
-            Forces {target.first_name}'s profile to a new status, bypassing the automatic checks.
-            This is logged to the activity log.
+            Cambia el estado de {target.first_name} sin pasar por las validaciones automáticas.
+            Queda registrado en el historial de actividad.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
@@ -779,31 +775,31 @@ function OverrideStatusDialog({
             <ProfileStatusBadge status={newStatus} />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs">New status</Label>
+            <Label className="text-xs">Nuevo estado</Label>
             <Select value={newStatus} onValueChange={(v) => setNewStatus(v as ProfileStatus)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="incomplete">Incomplete</SelectItem>
-                <SelectItem value="pending_documents">Missing documents</SelectItem>
-                <SelectItem value="ready">Ready</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="incomplete">Perfil incompleto</SelectItem>
+                <SelectItem value="pending_documents">Faltan documentos</SelectItem>
+                <SelectItem value="ready">Lista para operar</SelectItem>
+                <SelectItem value="active">Operando</SelectItem>
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs">Reason (required)</Label>
+            <Label className="text-xs">Motivo (obligatorio)</Label>
             <Textarea
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              placeholder="e.g. W-9 received offline; documents on file from previous engagement."
+              placeholder="Ej.: recibimos la W-9 en papel; documentos ya archivados."
               rows={3}
             />
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button variant="outline" onClick={onClose}>Cancelar</Button>
           <Button onClick={submit} disabled={!canOverride || saving || !reason.trim()}>
-            <ShieldCheck className="h-3.5 w-3.5 mr-1.5" /> Confirm override
+            <ShieldCheck className="h-3.5 w-3.5 mr-1.5" /> Confirmar cambio
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -831,10 +827,10 @@ function BulkWorkerTypeDialog({
       .in("id", ids);
     setSaving(false);
     if (error) {
-      toast({ title: "Update failed", description: error.message, variant: "destructive" });
+      toast({ title: "No se pudo actualizar", description: error.message, variant: "destructive" });
       return;
     }
-    toast({ title: `Updated ${ids.length} workers` });
+    toast({ title: `Actualizamos ${ids.length} personas` });
     onChanged();
   };
 
@@ -842,13 +838,13 @@ function BulkWorkerTypeDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Change worker type</DialogTitle>
+          <DialogTitle>Cambiar tipo de persona</DialogTitle>
           <DialogDescription>
-            Apply a new worker type to {ids.length} selected {ids.length === 1 ? "worker" : "workers"}.
+            Aplica un nuevo tipo a {ids.length} {ids.length === 1 ? "persona seleccionada" : "personas seleccionadas"}.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-1.5">
-          <Label className="text-xs">Worker type</Label>
+          <Label className="text-xs">Tipo de persona</Label>
           <Select value={type} onValueChange={setType}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
@@ -859,8 +855,8 @@ function BulkWorkerTypeDialog({
           </Select>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={submit} disabled={saving || ids.length === 0}>Apply</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button onClick={submit} disabled={saving || ids.length === 0}>Aplicar</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

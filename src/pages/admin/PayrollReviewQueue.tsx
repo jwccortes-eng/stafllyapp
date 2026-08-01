@@ -47,6 +47,16 @@ import {
   ExternalLink, Info, ClipboardList, ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+/** OX-8.1 — voz visible en español. No renombra enums ni contratos internos. */
+const PERIOD_STATUS_ES: Record<string, string> = {
+  open: "Abierto",
+  closed: "Cerrado",
+  processing: "En proceso",
+  paid: "Pagado",
+  draft: "Borrador",
+  locked: "Bloqueado",
+};
 import { REVIEW_COPY, REVIEW_REASON_LABELS, reviewReasonLabel } from "@/utils/reviewNavigationCopy";
 
 // ── Types ─────────────────────────────────────────────────────────────────
@@ -1005,22 +1015,23 @@ export default function PayrollReviewQueue() {
 
   return (
     <div className="space-y-5">
-      {/* Header */}
-      <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-        <PageHeader
-          variant="3"
-          title="Centro de Validación"
-          subtitle={`${selectedCompany?.name ?? "Empresa"} · revisa cierres, horas y aprobaciones antes del proceso de pago`}
-        />
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge variant="outline" className="gap-1.5 border-primary/30 text-primary">
-            <ShieldCheck className="h-3 w-3" /> Evidencia operativa
-          </Badge>
-          <Badge variant="outline" className="gap-1.5 border-muted-foreground/30 text-muted-foreground">
-            <Lock className="h-3 w-3" /> Solo lectura
-          </Badge>
-        </div>
-      </div>
+      {/* OX-8.1 — cabecera única: la empresa la pone OperationalScreenHeader.
+          El título ya no duplica el del Centro de Validación ni repite la empresa. */}
+      <PageHeader
+        title="Revisión de payroll"
+        subtitle="Cierres, horas y aprobaciones antes del proceso de pago. Aquí se observa; las decisiones se toman en el Centro de Validación."
+        rightSlot={
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant="outline" className="gap-1.5 border-primary/30 text-primary">
+              <ShieldCheck className="h-3 w-3" /> Evidencia operativa
+            </Badge>
+            <Badge variant="outline" className="gap-1.5 border-muted-foreground/30 text-muted-foreground">
+              <Lock className="h-3 w-3" /> Solo lectura
+            </Badge>
+          </div>
+        }
+      />
+
 
       <PayrollSourceGuardrailBanner />
 
@@ -1190,7 +1201,7 @@ export default function PayrollReviewQueue() {
                     <span className="inline-flex items-center gap-2">
                       <span className="font-mono text-xs text-muted-foreground">#{p.sequence_number ?? "—"}</span>
                       <span>{format(parseISO(p.start_date), "MMM d")} – {format(parseISO(p.end_date), "MMM d, yyyy")}</span>
-                      <Badge variant="outline" className="text-[10px] py-0 px-1.5 capitalize">{p.status ?? "—"}</Badge>
+                      <Badge variant="outline" className="text-[10px] py-0 px-1.5">{PERIOD_STATUS_ES[p.status ?? ""] ?? p.status ?? "—"}</Badge>
                       {future && <Badge variant="outline" className="text-[10px] py-0 px-1.5 border-warning/40 text-warning">futuro</Badge>}
                       {pbp > 0 && <Badge variant="outline" className="text-[10px] py-0 px-1.5 border-earning/40 text-earning">{pbp} filas</Badge>}
                     </span>

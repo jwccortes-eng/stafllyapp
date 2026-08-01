@@ -21,7 +21,7 @@ export function EnvBadge() {
   return (
     <div
       role="status"
-      aria-label={`${label} environment. Synthetic data only.`}
+      aria-label={`Entorno ${label}. Datos de prueba, no reales.`}
       className="fixed left-1/2 -translate-x-1/2 z-[100] pointer-events-none
                  bottom-3 sm:bottom-4 select-none"
     >
@@ -34,7 +34,7 @@ export function EnvBadge() {
         <AlertTriangle className="h-3 w-3" />
         <span>STAGING / {label === "STAGING" ? "DEMO" : "DEMO"}</span>
         <span className="hidden sm:inline text-[9.5px] font-medium normal-case tracking-normal opacity-80">
-          · Synthetic data only. No production data.
+          · Datos de prueba. No es información real.
         </span>
       </div>
     </div>

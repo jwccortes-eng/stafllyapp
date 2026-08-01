@@ -51,7 +51,8 @@ export function LegacyDeprecationBanner({
   return (
     <div
       className={cn(
-        "mb-4 rounded-xl border px-4 py-3 flex items-start gap-3",
+        "mb-4 rounded-xl border px-4 py-3",
+        "flex flex-col gap-3 sm:flex-row sm:items-start",
         "transition-colors",
         tone === "info" &&
           "border-primary/20 bg-primary/5 text-foreground",
@@ -60,33 +61,35 @@ export function LegacyDeprecationBanner({
       )}
       role="status"
     >
-      <div
-        className={cn(
-          "mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
-          tone === "info" && "bg-primary/10 text-primary",
-          tone === "warning" && "bg-warning/15 text-warning",
-        )}
-      >
-        <Sparkles className="h-4 w-4" />
+      <div className="flex min-w-0 flex-1 items-start gap-3">
+        <div
+          className={cn(
+            "mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
+            tone === "info" && "bg-primary/10 text-primary",
+            tone === "warning" && "bg-warning/15 text-warning",
+          )}
+        >
+          <Sparkles className="h-4 w-4" />
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-medium leading-tight">
+            Esta vista será reemplazada por{" "}
+            <span className="font-semibold">{replacementLabel}</span>.
+          </p>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            {description ??
+              "La nueva experiencia consolida la información y mejora la operación. Esta vista permanece disponible durante la transición."}
+          </p>
+        </div>
       </div>
 
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium leading-tight">
-          Esta vista será reemplazada por{" "}
-          <span className="font-semibold">{replacementLabel}</span>.
-        </p>
-        <p className="mt-0.5 text-xs text-muted-foreground">
-          {description ??
-            "La nueva experiencia consolida la información y mejora la operación. Esta vista permanece disponible durante la transición."}
-        </p>
-      </div>
-
-      <div className="flex items-center gap-1.5 shrink-0">
+      <div className="flex shrink-0 items-center gap-1.5">
         <Button
           asChild
           size="sm"
           variant="default"
-          className="h-8 gap-1.5 text-xs"
+          className="h-11 gap-1.5 text-sm sm:h-8 sm:text-xs"
         >
           <Link to={replacementHref}>
             Abrir {replacementLabel}
@@ -96,7 +99,7 @@ export function LegacyDeprecationBanner({
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8 text-muted-foreground hover:text-foreground"
+          className="h-11 w-11 shrink-0 text-muted-foreground hover:text-foreground sm:h-8 sm:w-8"
           onClick={handleDismiss}
           aria-label="Ocultar notificación"
         >
@@ -104,5 +107,6 @@ export function LegacyDeprecationBanner({
         </Button>
       </div>
     </div>
+
   );
 }

@@ -1131,12 +1131,12 @@ export default function Employees() {
       {!isMobile && (<>
       {/* ─── Premium Header + KPI strip ─── */}
       <PremiumPageHeader
-        title="Team"
+        title="Equipo"
         icon={Users}
         subtitle={
           <span className="inline-flex flex-col gap-1">
             <span className="inline-flex items-center gap-2 flex-wrap">
-              <span>Worker identity, availability, and operational readiness.</span>
+              <span>Identidad, disponibilidad y quién está listo para operar.</span>
               {selectedCompany && (
                 <span className="inline-flex items-center gap-1.5 rounded-md border border-border/50 bg-muted/40 px-2 py-0.5 text-[9px] font-mono text-muted-foreground">
                   <Building2 className="h-3 w-3" />
@@ -1145,7 +1145,7 @@ export default function Employees() {
               )}
             </span>
             <span className="text-[10px] text-muted-foreground/80">
-              Stafly ID connects profile, shifts, and payroll.
+              El ID de Stafly conecta perfil, turnos y pago.
             </span>
           </span>
         }
@@ -1157,7 +1157,7 @@ export default function Employees() {
             {isPrivileged && (
               <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => setCampaignOpen(true)}>
                 <Rocket className="h-3.5 w-3.5 mr-1.5" />
-                Activation Campaign
+                Campaña de activación
               </Button>
             )}
             {isPrivileged && (
@@ -1166,10 +1166,10 @@ export default function Employees() {
                 size="sm"
                 className="h-8 text-xs relative"
                 onClick={() => navigate("/app/workers/duplicates")}
-                title="Detect possible duplicate workers"
+                title="Detectar personas duplicadas"
               >
                 <UserSearch className="h-3.5 w-3.5 mr-1.5" />
-                Detect Duplicates
+                Ver duplicados
                 {strongDuplicateCount > 0 && (
                   <Badge
                     variant="outline"
@@ -1182,12 +1182,12 @@ export default function Employees() {
             )}
             <BulkRateAssignment />
             <Button variant="outline" size="sm" className="h-8 text-xs" onClick={handleExport} disabled={filtered.length === 0}>
-              <Download className="h-3.5 w-3.5 mr-1.5" />Export
+              <Download className="h-3.5 w-3.5 mr-1.5" />Exportar
             </Button>
             {/* Update Dialog */}
             <Dialog open={updateOpen} onOpenChange={(v) => { setUpdateOpen(v); if (!v) resetUpdate(); }}>
               <DialogTrigger asChild>
-                <Button variant="outline" size="sm" className="h-8 text-xs"><ArrowUpDown className="h-3.5 w-3.5 mr-1.5" />Refresh</Button>
+                <Button variant="outline" size="sm" className="h-8 text-xs"><ArrowUpDown className="h-3.5 w-3.5 mr-1.5" />Actualizar datos</Button>
               </DialogTrigger>
               <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
                 <DialogHeader>
@@ -1289,7 +1289,7 @@ export default function Employees() {
               <DropdownMenuContent align="end" className="w-60">
                 {isPrivileged && (
                   <DropdownMenuItem onClick={() => setCampaignOpen(true)} className="gap-2 text-sm">
-                    <Rocket className="h-4 w-4" /> Activation Campaign
+                    <Rocket className="h-4 w-4" /> Campaña de activación
                   </DropdownMenuItem>
                 )}
                 {isPrivileged && (
@@ -2542,7 +2542,7 @@ export default function Employees() {
         onSave={savePreferences}
       />
 
-      {/* Activation Campaign */}
+      {/* Campaña de activación */}
       <BulkActivationCampaignDialog
         open={campaignOpen}
         onOpenChange={setCampaignOpen}

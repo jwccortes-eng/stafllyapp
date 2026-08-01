@@ -12,6 +12,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
 import { useShiftsConfig } from "@/hooks/useShiftsConfig";
 import { Button } from "@/components/ui/button";
+import { OperationalScreenHeader } from "@/components/stafly-ui/OperationalScreenHeader";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
@@ -425,41 +426,43 @@ export default function MobileShiftsView() {
           status-bar-safe header on mobile; double-stickies caused overlap and
           status-bar collisions on iOS). */}
       <div className="px-4 pt-3 pb-3 bg-background border-b border-border/40">
-        <div className="flex items-center justify-between gap-2 mb-3">
-          <div className="min-w-0">
-            <h1 className="text-2xl font-semibold tracking-tight leading-tight">Turnos</h1>
-            <p className="text-xs text-muted-foreground truncate mt-0.5">
-              {selectedCompany?.name ?? "Todas las empresas"} · {format(new Date(), "EEE d MMM", { locale: es })}
-            </p>
-          </div>
-          <div className="flex items-center gap-1.5 shrink-0">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-9 w-9 rounded-xl relative"
-              onClick={() => setFiltersOpen(true)}
-              aria-label="Filtros"
-            >
-              <SlidersHorizontal className="h-4 w-4" />
-              {activeFiltersCount > 0 && (
-                <span className="absolute top-0.5 right-0.5 h-4 min-w-4 px-1 text-[10px] font-bold leading-none flex items-center justify-center rounded-full bg-primary text-primary-foreground">
-                  {activeFiltersCount}
-                </span>
-              )}
-            </Button>
-            {canEdit && (
+        {/* OX-8.1 — cabecera canónica: empresa anfitriona → título → contexto → acción. */}
+        <OperationalScreenHeader
+          padded={false}
+          title="Turnos"
+          context={format(new Date(), "EEE d MMM", { locale: es })}
+          className="mb-3"
+          action={
+            <>
               <Button
-                size="sm"
-                className="h-9 px-3 rounded-xl gap-1.5 font-semibold"
-                onClick={() => setCreateOpen(true)}
-                aria-label="Crear turno"
+                variant="ghost"
+                size="icon"
+                className="h-11 w-11 rounded-xl relative"
+                onClick={() => setFiltersOpen(true)}
+                aria-label="Filtros"
               >
-                <Plus className="h-4 w-4" />
-                Crear
+                <SlidersHorizontal className="h-4 w-4" />
+                {activeFiltersCount > 0 && (
+                  <span className="absolute top-1 right-1 h-4 min-w-4 px-1 text-[10px] font-bold leading-none flex items-center justify-center rounded-full bg-primary text-primary-foreground">
+                    {activeFiltersCount}
+                  </span>
+                )}
               </Button>
-            )}
-          </div>
-        </div>
+              {canEdit && (
+                <Button
+                  size="sm"
+                  className="h-11 px-4 rounded-xl gap-1.5 font-semibold"
+                  onClick={() => setCreateOpen(true)}
+                  aria-label="Crear turno"
+                >
+                  <Plus className="h-4 w-4" />
+                  Nuevo turno
+                </Button>
+              )}
+            </>
+          }
+        />
+
 
 
         {/* Dos anclas principales: Hoy y Próximos */}

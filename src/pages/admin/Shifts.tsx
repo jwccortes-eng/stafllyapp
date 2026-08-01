@@ -1947,34 +1947,23 @@ function DesktopShifts() {
             {canEdit && (
               <Button
                 size="sm"
-                className="h-8 text-xs gap-1.5"
+                className="h-11 min-w-[44px] text-sm gap-1.5"
                 onClick={() => { resetForm(); setCreateOpen(true); }}
               >
-                <Plus className="h-3.5 w-3.5" />
+                <Plus className="h-4 w-4" />
                 Nuevo turno
-              </Button>
-            )}
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-8 text-xs gap-1.5 text-muted-foreground"
-              onClick={() => navigate("/app/daily-ops")}
-            >
-              <ScanEye className="h-3.5 w-3.5" />
-              Operaciones del día
-            </Button>
-            {canEdit && (
-              <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => setSettingsOpen(true)} title="Configuración de turnos">
-                <Settings2 className="h-4 w-4 text-muted-foreground" />
               </Button>
             )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button size="sm" variant="ghost" className="h-8 text-xs text-muted-foreground">
-                  <MoreHorizontal className="h-3.5 w-3.5 mr-1" /> Más
+                <Button size="sm" variant="ghost" className="h-11 w-11 p-0 text-muted-foreground" aria-label="Más opciones de turnos">
+                  <MoreHorizontal className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem onClick={() => navigate("/app/daily-ops")}>
+                  <ScanEye className="h-4 w-4 mr-2" /> Operaciones del día
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate("/app/today")}>
                   <ScanEye className="h-4 w-4 mr-2" /> Vista de hoy
                 </DropdownMenuItem>
@@ -1982,14 +1971,20 @@ function DesktopShifts() {
                   <MessageSquare className="h-4 w-4 mr-2" /> Solicitudes
                 </DropdownMenuItem>
                 {canEdit && (
-                  <DropdownMenuItem onClick={() => navigate("/app/import-schedule")}>
-                    <Upload className="h-4 w-4 mr-2" /> Importar horarios
-                  </DropdownMenuItem>
+                  <>
+                    <DropdownMenuItem onClick={() => navigate("/app/import-schedule")}>
+                      <Upload className="h-4 w-4 mr-2" /> Importar horarios
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setSettingsOpen(true)}>
+                      <Settings2 className="h-4 w-4 mr-2" /> Configuración de turnos
+                    </DropdownMenuItem>
+                  </>
                 )}
               </DropdownMenuContent>
             </DropdownMenu>
           </>
         }
+
       />
 
       {/* Sprint 3: active Ops-cockpit filter chip (only visible when arrived via deep-link) */}
@@ -2424,18 +2419,8 @@ function DesktopShifts() {
       {/* Weekly Summary */}
       <WeeklySummaryBar shifts={filteredShifts} assignments={assignments} />
 
-      {/* ── FAB: Quick Create Shift ── */}
-      {canEdit && (
-        <button
-          onClick={() => { resetForm(); setCreateOpen(true); }}
-          title="Crear turno rápido con plantilla"
-          aria-label="Crear turno rápido con plantilla"
-          className="group fixed bottom-6 right-6 z-40 h-14 pl-4 pr-5 rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 hover:scale-[1.03] active:scale-95 transition-all duration-200 flex items-center gap-2"
-        >
-          <Plus className="h-5 w-5" />
-          <span className="text-sm font-semibold">Turno rápido</span>
-        </button>
-      )}
+      {/* OX-8.1 — FAB retirado: duplicaba la acción protagonista "Nuevo turno" de la cabecera. */}
+
 
       {/* ── Create Shift Dialog (full-screen shell) ── */}
       <CreateShiftDialogInline
