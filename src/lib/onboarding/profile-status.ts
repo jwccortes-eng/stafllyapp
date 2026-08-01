@@ -7,6 +7,7 @@
  */
 
 import type { Database } from "@/integrations/supabase/types";
+import { FAMILY_CLASSES } from "@/lib/status/status-registry";
 
 export type ProfileStatus = Database["public"]["Enums"]["employee_profile_status"];
 
