@@ -715,16 +715,8 @@ export function MobileShiftOperationsSheet({
               </>
             )}
 
-            {understaffed && (
-              <div className="mt-2.5 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-3.5">
-                <div className="text-sm font-semibold text-amber-800 dark:text-amber-300">
-                  Faltan {slots - assignedCount} cupo{slots - assignedCount === 1 ? "" : "s"}
-                </div>
-                <div className="text-xs text-amber-700/80 dark:text-amber-300/80 mt-1 leading-relaxed">
-                  Puedes revisar, contactar y asignar trabajadores desde móvil con Gestionar equipo. Cambios avanzados siguen en escritorio.
-                </div>
-              </div>
-            )}
+            {/* OX-9.2: la carencia de cobertura ya se declara una sola vez arriba. */}
+
           </section>
 
           {/* 4. Asistencia */}
