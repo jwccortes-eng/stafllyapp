@@ -228,12 +228,15 @@ export function OperationalCard({
           <div
             className={cn(
               "pt-1 flex gap-2",
-              isMobile ? "flex-col" : "flex-row-reverse items-center justify-start"
+              isMobile
+                ? "flex-col"
+                : "flex-row-reverse flex-wrap items-center justify-end"
             )}
           >
             {action && <ActionButton action={action} block={isMobile} />}
             {secondaryActions.length > 0 && (
-              <div className={cn("flex gap-2", isMobile ? "w-full" : "")}>
+              <div className={cn("flex flex-wrap gap-2", isMobile ? "w-full" : "")}>
+
                 {secondaryActions.map((a) => (
                   <Button
                     key={a.label}
