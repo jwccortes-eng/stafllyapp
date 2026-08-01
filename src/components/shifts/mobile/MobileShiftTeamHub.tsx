@@ -52,6 +52,7 @@ import { normalizePhone, buildWhatsAppTargets } from "@/lib/phone";
 import { notifySuccess, notifyError, notifyWarning } from "@/lib/feedback/notify";
 import { allowedNextStatusesFor, type AssignmentNextStatus, type ClaimDecision } from "@/lib/shifts/team-actions";
 import { MobileTeamActionDialog } from "@/components/shifts/mobile/MobileTeamActionDialog";
+import { RemoveWorkerFromShiftDialog } from "@/components/shifts/RemoveWorkerFromShiftDialog";
 import {
   describeAssignmentStatus, optimisticStatus,
   type AssignmentStatus, type ReadinessState,
