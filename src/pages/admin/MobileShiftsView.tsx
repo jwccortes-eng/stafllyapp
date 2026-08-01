@@ -579,9 +579,6 @@ export default function MobileShiftsView() {
                   <span className="text-sm font-semibold text-foreground">
                     {group.label}
                   </span>
-                  <span className="text-xs text-muted-foreground">
-                    · {group.shifts.length} turno{group.shifts.length === 1 ? "" : "s"}
-                  </span>
                 </div>
                 <div className="space-y-2.5">
                   {group.shifts.map(shift => {
@@ -792,16 +789,11 @@ function ShiftCard({
         <Users className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
         <span className="text-[13px] text-muted-foreground truncate">
           {assignedEmployees.length === 0
-            ? (slots > 0 ? `Nadie asignado · faltan ${slots}` : "Sin asignar")
+            ? "Nadie asignado todavía"
             : (
               <>
                 {visibleNames.join(", ")}
                 {more > 0 && <span className="font-medium"> +{more}</span>}
-                {understaffed && (
-                  <span className="text-status-warning font-medium">
-                    {" "}· faltan {slots - assignedEmployees.length}
-                  </span>
-                )}
               </>
             )}
           {noClient && <span className="text-muted-foreground/70"> · sin cliente</span>}

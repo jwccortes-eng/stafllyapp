@@ -260,8 +260,12 @@ export default function MobileAdminHome() {
   const pulseLine = anyLoading
     ? null
     : [
-        shiftsToday.kind === "error" ? null : `${shiftsToday.value ?? 0} turnos hoy`,
-        clockedIn.kind === "error" ? null : `${clockedIn.value ?? 0} trabajando ahora`,
+        shiftsToday.kind === "error"
+          ? null
+          : `${shiftsToday.value ?? 0} ${(shiftsToday.value ?? 0) === 1 ? "turno" : "turnos"} hoy`,
+        clockedIn.kind === "error" || (clockedIn.value ?? 0) === 0
+          ? null
+          : `${clockedIn.value} trabajando ahora`,
       ].filter(Boolean).join(" · ");
 
   return (
