@@ -650,6 +650,17 @@ export default function AdvanceLoanDetailDrawer({ recordId, open, onOpenChange, 
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <VersionConflictDialog
+        open={!!balanceConflict}
+        conflict={balanceConflict}
+        kind="money"
+        entityLabel="esta cuenta"
+        fieldLabels={{ balance_remaining: "Movimiento solicitado", status: "Estado" }}
+        busy={actionLoading}
+        onReload={() => { setBalanceConflict(null); fetchDetail(); }}
+        onCancel={() => setBalanceConflict(null)}
+      />
     </>
   );
 }
