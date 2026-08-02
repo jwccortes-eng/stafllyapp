@@ -18,8 +18,8 @@ import { CompensationHistoryDialog } from "@/components/compensation/Compensatio
 import CompensationEditDialog from "@/components/compensation/CompensationEditDialog";
 import CompensationReconciliation from "@/components/compensation/CompensationReconciliation";
 import { toast } from "sonner";
-import {
 import { rowVersion, versionedWrite } from "@/lib/data/versioned-write";
+import {
   Search, CheckCircle, AlertTriangle, ShieldAlert, Clock, DollarSign,
   Calculator, History, Pencil, Filter, ChevronDown, ChevronUp, Info, Wallet,
   Plus, Users, UserPlus, CalendarDays,
