@@ -129,48 +129,53 @@ export default function AdvanceLoanDetailDrawer({ recordId, open, onOpenChange, 
     setDialogAmount("");
     setDialogMethod("cash");
     setDialogNote("");
+    intentKeyRef.current = null;
   };
 
-  const addLedgerEntry = async (type: string, amount: number, note: string) => {
+  /** Una intención por diálogo: doble tap o reintento no duplican el movimiento. */
+  const ensureIntentKey = () => {
+    if (!intentKeyRef.current) intentKeyRef.current = crypto.randomUUID();
+    return intentKeyRef.current;
+  };
+
+  /**
+   * Carril 4 (SALDOS): el frontend nunca calcula el saldo nuevo.
+   * Envía el movimiento y el servidor aplica el delta de forma atómica,
+   * registra el libro y devuelve antes / delta / después.
+   */
+  const addLedgerEntry = async (type: AdvanceTransactionType, amount: number, note: string) => {
     if (!record || !user?.id) return 0;
-    const balBefore = Number(record.balance_remaining);
-    let balAfter = balBefore;
 
-    if (["payroll_deduction", "repayment_outside_payroll", "manual_adjustment_reduce"].includes(type)) {
-      balAfter = Math.max(0, Math.round((balBefore - Math.abs(amount)) * 100) / 100);
-    } else if (["manual_adjustment_add", "reversal"].includes(type)) {
-      balAfter = Math.round((balBefore + Math.abs(amount)) * 100) / 100;
-    } else if (type === "writeoff" || type === "manual_close") {
-      balAfter = 0;
-    }
-
-    await supabase.from("employee_financial_ledger").insert({
-      record_id: record.id,
-      company_id: record.company_id,
-      employee_id: record.employee_id,
-      transaction_type: type as any,
-      amount: Math.abs(amount),
-      balance_before: balBefore,
-      balance_after: balAfter,
-      note,
-      created_by: user.id,
+    const result = await applyAdvanceBalanceDelta({
+      recordId: record.id,
+      companyId: record.company_id,
+      type,
+      amount,
+      expectedVersion: rowVersion(record),
+      intentKey: ensureIntentKey(),
+      reason: note || null,
+      surface: "advances/detail_drawer",
     });
 
-    const statusMap: Record<string, string> = {
-      writeoff: "written_off",
-      manual_close: "closed_manually",
-      cancellation: "cancelled",
-    };
-    const newStatus = statusMap[type] ?? (balAfter === 0 ? "paid" : record.status);
+    if (result.status === "conflict") {
+      setBalanceConflict({
+        patch: { balance_remaining: `${type} · ${fmt(Math.abs(amount))}` },
+        serverRow: result.row ?? null,
+        actualVersion: result.actualVersion ?? null,
+        expectedVersion: result.expectedVersion ?? null,
+        updatedAt: result.updatedAt ?? null,
+      });
+      throw new Error("__conflict__");
+    }
 
-    await supabase.from("employee_financial_records").update({
-      balance_remaining: balAfter,
-      status: newStatus as any,
-      updated_by: user.id,
-    }).eq("id", record.id);
+    if (result.status === "error") {
+      toast.error(result.message);
+      throw new Error("__handled__");
+    }
 
-    return balAfter;
+    return result.afterBalance;
   };
+
 
   const handleApprove = async () => {
     if (!record || !user?.id) return;
