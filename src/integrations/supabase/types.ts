@@ -3769,7 +3769,10 @@ export type Database = {
           review_status: string
           reviewed_at: string | null
           reviewed_by: string | null
+          updated_at: string
+          updated_by: string | null
           uploaded_by: string | null
+          version: number
         }
         Insert: {
           category?: string
@@ -3786,7 +3789,10 @@ export type Database = {
           review_status?: string
           reviewed_at?: string | null
           reviewed_by?: string | null
+          updated_at?: string
+          updated_by?: string | null
           uploaded_by?: string | null
+          version?: number
         }
         Update: {
           category?: string
@@ -3803,7 +3809,10 @@ export type Database = {
           review_status?: string
           reviewed_at?: string | null
           reviewed_by?: string | null
+          updated_at?: string
+          updated_by?: string | null
           uploaded_by?: string | null
+          version?: number
         }
         Relationships: [
           {
@@ -4340,9 +4349,12 @@ export type Database = {
           id: string
           notes: string | null
           status: string
+          updated_at: string
+          updated_by: string | null
           uploaded_at: string
           verified_at: string | null
           verified_by: string | null
+          version: number
         }
         Insert: {
           company_id: string
@@ -4354,9 +4366,12 @@ export type Database = {
           id?: string
           notes?: string | null
           status?: string
+          updated_at?: string
+          updated_by?: string | null
           uploaded_at?: string
           verified_at?: string | null
           verified_by?: string | null
+          version?: number
         }
         Update: {
           company_id?: string
@@ -4368,9 +4383,12 @@ export type Database = {
           id?: string
           notes?: string | null
           status?: string
+          updated_at?: string
+          updated_by?: string | null
           uploaded_at?: string
           verified_at?: string | null
           verified_by?: string | null
+          version?: number
         }
         Relationships: [
           {
@@ -18023,6 +18041,18 @@ export type Database = {
         }
         Returns: Json
       }
+      review_employee_document: {
+        Args: {
+          p_company_id: string
+          p_decision: string
+          p_document_id: string
+          p_expected_version?: number
+          p_reason?: string
+          p_source: string
+          p_surface?: string
+        }
+        Returns: Json
+      }
       review_time_entry_correction: {
         Args: {
           p_decision: string
@@ -18170,6 +18200,17 @@ export type Database = {
           p_patch: Json
           p_surface?: string
           p_w9_id: string
+        }
+        Returns: Json
+      }
+      versioned_update_employee_document: {
+        Args: {
+          p_company_id: string
+          p_document_id: string
+          p_expected_version: number
+          p_intent_key?: string
+          p_patch: Json
+          p_surface?: string
         }
         Returns: Json
       }

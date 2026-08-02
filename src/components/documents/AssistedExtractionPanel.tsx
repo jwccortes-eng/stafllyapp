@@ -43,6 +43,8 @@ export interface AssistedExtractionTarget {
   name: string;
   category: string;
   current_expires_at: string | null;
+  /** VWC Fase 3B: versión observada del documento. */
+  version?: number | null;
 }
 
 interface Props {
@@ -119,6 +121,7 @@ export default function AssistedExtractionPanel({ target, onSaved }: Props) {
         company_id: target.company_id,
         name: target.name,
         category: target.category,
+        version: target.version ?? null,
       },
       expiration || null,
     );

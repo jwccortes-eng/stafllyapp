@@ -71,6 +71,9 @@ interface DocRow {
   file_url: string;
   file_type: string | null;
   status?: string | null;
+  review_status?: string | null;
+  /** VWC Fase 3B: versión observada del documento. */
+  version?: number | null;
   created_at: string;
 }
 
@@ -155,7 +158,7 @@ export default function EmployeeOnboarding() {
 
       const [{ data: docsData }, reqList] = await Promise.all([
         supabase.from("employee_documents")
-          .select("id, category, name, file_url, file_type, created_at")
+          .select("id, category, name, file_url, file_type, created_at, review_status, version")
           .eq("employee_id", row.id)
           .order("created_at", { ascending: false }),
         getRequiredDocumentsForCompany(row.company_id, { canDrive: !!row.can_drive }),
@@ -283,7 +286,7 @@ export default function EmployeeOnboarding() {
       return;
     }
     const { data: docsData } = await supabase.from("employee_documents")
-      .select("id, category, name, file_url, file_type, created_at")
+      .select("id, category, name, file_url, file_type, created_at, review_status, version")
       .eq("employee_id", employee.id)
       .order("created_at", { ascending: false });
     setDocs((docsData ?? []) as DocRow[]);
@@ -294,7 +297,23 @@ export default function EmployeeOnboarding() {
   };
 
   const handleDeleteDoc = async (doc: DocRow) => {
-    await supabase.from("employee_documents").delete().eq("id", doc.id);
+    // VWC Fase 3B: nunca borramos un documento que cambió (p. ej. ya revisado)
+    // desde que lo vimos. El borrado exige la versión observada.
+    let q = supabase.from("employee_documents").delete().eq("id", doc.id);
+    if (typeof doc.version === "number") q = q.eq("version", doc.version);
+    const { data: deleted, error: delErr } = await (q as any).select("id");
+    if (delErr) {
+      toast({ title: "No se pudo eliminar", description: delErr.message, variant: "destructive" });
+      return;
+    }
+    if (!deleted || deleted.length === 0) {
+      toast({
+        title: "El documento cambió",
+        description: "Otra persona lo actualizó o lo revisó. Recarga para ver el estado actual.",
+        variant: "destructive",
+      });
+      return;
+    }
     setDocs(d => d.filter(x => x.id !== doc.id));
     if (employee) {
       const { data: refreshed } = await supabase

@@ -50,6 +50,8 @@ export interface UnifiedDocumentRow {
   created_at: string | null;
   reviewed_at: string | null;
   rejection_reason: string | null;
+  /** VWC Fase 3B: versión observada, obligatoria para revisar o editar. */
+  version: number | null;
 }
 
 const ONBOARDING_LABEL: Record<string, string> = {
@@ -130,6 +132,7 @@ export function normalizeDocuments({
       created_at: d.created_at ?? null,
       reviewed_at: d.reviewed_at ?? null,
       rejection_reason: d.rejection_reason ?? null,
+      version: (d as any).version ?? null,
     });
   }
 
@@ -157,6 +160,7 @@ export function normalizeDocuments({
       bucket: "employee-onboarding-documents",
       file_name: d.file_name ?? null,
       created_at: d.created_at ?? d.uploaded_at ?? null,
+      version: (d as any).version ?? null,
       reviewed_at: d.verified_at ?? null,
       rejection_reason: (d as any).notes ?? null,
     });

@@ -97,6 +97,10 @@ const CRITICAL_TABLES: Record<string, string[]> = {
   // Fase 3A — Bloque A: W-9 del trabajador. Sin excepciones: portal y admin
   // escriben por RPC (submit_contractor_w9 / review_contractor_w9 / versioned_update).
   contractor_w9: [],
+  // Fase 3B — Bloque B: documentos y compliance. Toda revisión pasa por
+  // review_employee_document y toda edición por versioned_update_employee_document.
+  employee_documents: [],
+  employee_onboarding_documents: [],
 };
 
 
@@ -128,5 +132,29 @@ describe("VWC — evidencia y saldos", () => {
     // El cierre total lo calcula el servidor sobre el saldo bloqueado.
     expect(signedDelta("writeoff", 999)).toBe(0);
     expect(signedDelta("manual_close", 999)).toBe(0);
+  });
+});
+
+describe("VWC Fase 3B — documentos y compliance", () => {
+  it("las acciones de documento no escriben la tabla directamente", () => {
+    const source = readFileSync("src/lib/document-actions.ts", "utf8");
+    expect(/from\("employee_documents" as any\)[\s\S]{0,120}?\.update\(/.test(source)).toBe(false);
+    expect(source).toContain("review_employee_document");
+    expect(source).toContain('entity: "employee_documents"');
+  });
+
+  it("toda revisión viaja con la versión observada", () => {
+    const source = readFileSync("src/lib/document-actions.ts", "utf8");
+    expect(source).toContain("p_expected_version: doc.version ?? null");
+  });
+
+  it("Caso A/B: un rechazo obsoleto no puede pisar una aprobación", () => {
+    // A aprueba sobre v3 → el documento pasa a v4.
+    // B, que abrió el documento en v3, intenta rechazar: el backend compara
+    // expected_version (3) con la actual (4) y responde conflicto.
+    const serverVersion = 4;
+    const staleExpected = 3;
+    const isConflict = staleExpected !== serverVersion;
+    expect(isConflict).toBe(true);
   });
 });

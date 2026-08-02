@@ -31,6 +31,7 @@ import {
   type UnifiedDocument,
 } from "@/lib/document-actions";
 import { DocumentReasonDialog } from "@/components/documents/DocumentReasonDialog";
+import VersionConflictDialog, { type VersionConflictInfo } from "@/components/data-integrity/VersionConflictDialog";
 import { DocumentUploadDialog } from "@/components/documents/DocumentUploadDialog";
 import { toNumOrNull } from "@/lib/numeric-input";
 import { toast } from "sonner";
@@ -467,6 +468,8 @@ function DocumentsTab({ employee, companyId }: { employee: EmployeeRecord; compa
     action: "reject" | "replacement"; doc: UnifiedDocument;
   } | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  // VWC Fase 3B: conflicto al revisar documentos.
+  const [docConflict, setDocConflict] = useState<VersionConflictInfo | null>(null);
   const { toast } = useToast();
 
   const fetchDocs = useCallback(async () => {
@@ -484,8 +487,18 @@ function DocumentsTab({ employee, companyId }: { employee: EmployeeRecord; compa
 
   const handleApprove = async (doc: UnifiedDocument) => {
     setBusyId(doc.id);
-    const { error } = await approveDocument(doc);
+    const { error, conflict: c } = await approveDocument(doc);
     setBusyId(null);
+    if (c) {
+      setDocConflict({
+        patch: { review_status: "approved" },
+        serverRow: c.row,
+        actualVersion: c.actualVersion,
+        expectedVersion: c.expectedVersion,
+        updatedAt: c.updatedAt,
+      });
+      return;
+    }
     if (error) { toast({ title: "Error", description: error, variant: "destructive" }); return; }
     toast({ title: "Document approved" });
     fetchDocs();
@@ -496,9 +509,19 @@ function DocumentsTab({ employee, companyId }: { employee: EmployeeRecord; compa
     const { doc, action } = reasonDialog;
     setBusyId(doc.id);
     const fn = action === "reject" ? rejectDocument : requestReplacement;
-    const { error } = await fn(doc, reason);
+    const { error, conflict: c } = await fn(doc, reason);
     setBusyId(null);
     setReasonDialog(null);
+    if (c) {
+      setDocConflict({
+        patch: { review_status: action === "reject" ? "rejected" : "replacement_requested" },
+        serverRow: c.row,
+        actualVersion: c.actualVersion,
+        expectedVersion: c.expectedVersion,
+        updatedAt: c.updatedAt,
+      });
+      return;
+    }
     if (error) { toast({ title: "Error", description: error, variant: "destructive" }); return; }
     toast({ title: action === "reject" ? "Document rejected" : "Replacement requested" });
     fetchDocs();
@@ -670,7 +693,16 @@ function DocumentsTab({ employee, companyId }: { employee: EmployeeRecord; compa
           onConfirm={handleReasonConfirm}
         />
       )}
+      <VersionConflictDialog
+        open={!!docConflict}
+        conflict={docConflict}
+        entityLabel="este documento"
+        kind="service"
+        onReload={() => { setDocConflict(null); fetchDocs(); }}
+        onCancel={() => setDocConflict(null)}
+      />
     </div>
+
   );
 }
 
