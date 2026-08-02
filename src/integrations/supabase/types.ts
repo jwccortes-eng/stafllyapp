@@ -2573,6 +2573,7 @@ export type Database = {
           rate_source: Database["public"]["Enums"]["comp_rate_source"]
           updated_at: string
           updated_by: string | null
+          version: number
         }
         Insert: {
           bonus_transport_hourly_rate?: number | null
@@ -2605,6 +2606,7 @@ export type Database = {
           rate_source?: Database["public"]["Enums"]["comp_rate_source"]
           updated_at?: string
           updated_by?: string | null
+          version?: number
         }
         Update: {
           bonus_transport_hourly_rate?: number | null
@@ -2637,6 +2639,7 @@ export type Database = {
           rate_source?: Database["public"]["Enums"]["comp_rate_source"]
           updated_at?: string
           updated_by?: string | null
+          version?: number
         }
         Relationships: [
           {
@@ -4019,6 +4022,7 @@ export type Database = {
           status: Database["public"]["Enums"]["financial_record_status"]
           updated_at: string
           updated_by: string | null
+          version: number
         }
         Insert: {
           approval_note?: string | null
@@ -4062,6 +4066,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["financial_record_status"]
           updated_at?: string
           updated_by?: string | null
+          version?: number
         }
         Update: {
           approval_note?: string | null
@@ -4105,6 +4110,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["financial_record_status"]
           updated_at?: string
           updated_by?: string | null
+          version?: number
         }
         Relationships: [
           {
@@ -15944,6 +15950,9 @@ export type Database = {
           notes: string | null
           shift_id: string | null
           status: string
+          updated_at: string
+          updated_by: string | null
+          version: number
         }
         Insert: {
           approved_at?: string | null
@@ -15965,6 +15974,9 @@ export type Database = {
           notes?: string | null
           shift_id?: string | null
           status?: string
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
         }
         Update: {
           approved_at?: string | null
@@ -15986,6 +15998,9 @@ export type Database = {
           notes?: string | null
           shift_id?: string | null
           status?: string
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
         }
         Relationships: [
           {
@@ -16206,47 +16221,98 @@ export type Database = {
         Row: {
           actor_id: string | null
           actual_version: number | null
+          after_balance: number | null
+          after_values: Json | null
+          before_balance: number | null
+          before_values: Json | null
           company_id: string
           conflict_type: string | null
           created_at: string
+          currency: string | null
+          delta: number | null
           entity: string
           entity_id: string
           expected_version: number | null
           fields_attempted: string[]
           id: string
           intent_key: string | null
+          reason: string | null
           result: string
           surface: string | null
         }
         Insert: {
           actor_id?: string | null
           actual_version?: number | null
+          after_balance?: number | null
+          after_values?: Json | null
+          before_balance?: number | null
+          before_values?: Json | null
           company_id: string
           conflict_type?: string | null
           created_at?: string
+          currency?: string | null
+          delta?: number | null
           entity: string
           entity_id: string
           expected_version?: number | null
           fields_attempted?: string[]
           id?: string
           intent_key?: string | null
+          reason?: string | null
           result: string
           surface?: string | null
         }
         Update: {
           actor_id?: string | null
           actual_version?: number | null
+          after_balance?: number | null
+          after_values?: Json | null
+          before_balance?: number | null
+          before_values?: Json | null
           company_id?: string
           conflict_type?: string | null
           created_at?: string
+          currency?: string | null
+          delta?: number | null
           entity?: string
           entity_id?: string
           expected_version?: number | null
           fields_attempted?: string[]
           id?: string
           intent_key?: string | null
+          reason?: string | null
           result?: string
           surface?: string | null
+        }
+        Relationships: []
+      }
+      versioned_write_intents: {
+        Row: {
+          actor_id: string | null
+          company_id: string
+          created_at: string
+          entity: string
+          entity_id: string
+          intent_key: string
+          response: Json
+        }
+        Insert: {
+          actor_id?: string | null
+          company_id: string
+          created_at?: string
+          entity: string
+          entity_id: string
+          intent_key: string
+          response: Json
+        }
+        Update: {
+          actor_id?: string | null
+          company_id?: string
+          created_at?: string
+          entity?: string
+          entity_id?: string
+          intent_key?: string
+          response?: Json
         }
         Relationships: []
       }
@@ -17353,6 +17419,19 @@ export type Database = {
         Returns: boolean
       }
       application_exists: { Args: { _id: string }; Returns: boolean }
+      apply_advance_balance_delta: {
+        Args: {
+          p_company_id: string
+          p_delta: number
+          p_expected_version?: number
+          p_intent_key?: string
+          p_reason?: string
+          p_record_id: string
+          p_surface?: string
+          p_transaction_type: string
+        }
+        Returns: Json
+      }
       apply_role_template: {
         Args: {
           _company_id: string
@@ -18032,6 +18111,18 @@ export type Database = {
         Returns: boolean
       }
       verify_switch_pin: { Args: { _pin: string }; Returns: boolean }
+      versioned_update_compensation_profile: {
+        Args: {
+          p_company_id: string
+          p_expected_version: number
+          p_intent_key?: string
+          p_patch: Json
+          p_profile_id: string
+          p_reason?: string
+          p_surface?: string
+        }
+        Returns: Json
+      }
       versioned_update_shift: {
         Args: {
           p_company_id: string
@@ -18039,6 +18130,17 @@ export type Database = {
           p_intent_key?: string
           p_patch: Json
           p_shift_id: string
+          p_surface?: string
+        }
+        Returns: Json
+      }
+      versioned_update_time_entry: {
+        Args: {
+          p_company_id: string
+          p_entry_id: string
+          p_expected_version: number
+          p_intent_key?: string
+          p_patch: Json
           p_surface?: string
         }
         Returns: Json
