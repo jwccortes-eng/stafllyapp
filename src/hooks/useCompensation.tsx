@@ -194,10 +194,18 @@ export function useCompensationMutations() {
     if (existing) {
       // Archive old if effective_from changed
       if (updates.effective_from && updates.effective_from !== existing.effective_from) {
-        await supabase
-          .from("compensation_profiles")
-          .update({ is_active: false, effective_to: updates.effective_from, updated_by: user.id })
-          .eq("id", existing.id);
+        // Cierre del perfil vigente: PATCH versionado, nunca sobrescritura ciega.
+        const closeRes = await versionedWrite({
+          entity: "compensation_profiles",
+          id: existing.id,
+          companyId: selectedCompanyId,
+          patch: { is_active: false, effective_to: updates.effective_from },
+          expectedVersion: rowVersion(existing),
+          surface: "compensation/upsert_profile#archive",
+          reason: opts.reason ?? null,
+        });
+        if (closeRes.status === "conflict") throw new CompensationConflictError(closeRes);
+        if (closeRes.status === "error") throw new Error(closeRes.message);
 
         const { data: newP, error } = await supabase
           .from("compensation_profiles")
@@ -207,11 +215,24 @@ export function useCompensationMutations() {
         if (error) throw error;
         profileId = newP.id;
       } else {
-        const { error } = await supabase
-          .from("compensation_profiles")
-          .update({ ...profileData })
-          .eq("id", existing.id);
-        if (error) throw error;
+        // Sólo viajan los campos realmente modificados + la versión observada.
+        const patch = buildPatch(existing, profileData);
+        delete patch.company_id;
+        delete patch.employee_id;
+
+        if (Object.keys(patch).length > 0) {
+          const res = await versionedWrite({
+            entity: "compensation_profiles",
+            id: existing.id,
+            companyId: selectedCompanyId,
+            patch,
+            expectedVersion: rowVersion(existing),
+            surface: "compensation/upsert_profile",
+            reason: opts.reason ?? null,
+          });
+          if (res.status === "conflict") throw new CompensationConflictError(res);
+          if (res.status === "error") throw new Error(res.message);
+        }
         profileId = existing.id;
       }
     } else {
@@ -223,6 +244,7 @@ export function useCompensationMutations() {
       if (error) throw error;
       profileId = newP.id;
     }
+
 
     // Log changes
     const changedFields = opts.changedFields ?? [];
