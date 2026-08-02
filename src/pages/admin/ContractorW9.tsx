@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { formatPersonName } from "@/lib/format-helpers";
 import { FileText, Search, Plus, Eye, CheckCircle, Clock, AlertTriangle } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { buildPatch, versionedWrite } from "@/lib/data/versioned-write";
 
 interface W9Record {
   id: string;
