@@ -2819,6 +2819,29 @@ function DesktopShifts() {
         allowClaims={shiftsConfig.allow_claims}
       />
 
+      <VersionConflictDialog
+        open={!!serviceConflict}
+        conflict={serviceConflict?.info ?? null}
+        entityLabel="este servicio"
+        fieldLabels={SHIFT_FIELD_LABELS}
+        onKeepMine={() => {
+          if (!serviceConflict) return;
+          const { shiftId, updates, oldShift, info } = serviceConflict;
+          const serverRow = (info.serverRow ?? oldShift) as Shift;
+          setServiceConflict(null);
+          void handleEditShift(shiftId, updates, serverRow, info.actualVersion ?? null);
+        }}
+        onReload={async () => {
+          if (!serviceConflict) return;
+          const companyIdForRead = selectedCompanyId ?? (serviceConflict.oldShift as any).company_id ?? null;
+          await reconcileServiceAfterSave(queryClient, companyIdForRead, serviceConflict.shiftId);
+          setServiceConflict(null);
+          await loadData();
+        }}
+        onCancel={() => setServiceConflict(null)}
+      />
+
+
       {duplicateShift && selectedCompanyId && (
         <DuplicateShiftDialog
           key={`dup-${duplicateShift.id}-${duplicateSessionKey}`}
