@@ -16,6 +16,9 @@ import {
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
+import { rowVersion, versionedWrite } from "@/lib/data/versioned-write";
+import { VersionConflictDialog, type VersionConflictInfo } from "@/components/data-integrity/VersionConflictDialog";
+import { COMPENSATION_FIELD_LABELS } from "@/lib/shifts/field-labels";
 
 /* ── Constants ── */
 const MODE_LABELS: Record<string, string> = { hourly: "Por hora", daily: "Por día", mixed: "Mixto" };
@@ -550,6 +553,19 @@ export default function EmployeeCompensationTab({
 
       <CompensationHistoryDialog open={historyOpen} onOpenChange={setHistoryOpen} employeeId={employeeId} employeeName={employeeName} />
       <CompensationChangeForm open={changeOpen} onOpenChange={setChangeOpen} employeeId={employeeId} employeeName={employeeName} currentProfile={profile} />
+
+      <VersionConflictDialog
+        open={!!compConflict}
+        conflict={compConflict}
+        kind="money"
+        entityLabel="esta compensación"
+        fieldLabels={COMPENSATION_FIELD_LABELS}
+        onReload={() => {
+          setCompConflict(null);
+          qc.invalidateQueries({ queryKey: ["comp-profile-single", employeeId] });
+        }}
+        onCancel={() => setCompConflict(null)}
+      />
     </div>
   );
 }
