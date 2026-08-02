@@ -11,6 +11,12 @@ import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuditLog } from "@/hooks/useAuditLog";
+import { buildPatch, rowVersion, versionedWrite } from "@/lib/data/versioned-write";
+import {
+  VersionConflictDialog,
+  type VersionConflictInfo,
+} from "@/components/data-integrity/VersionConflictDialog";
+
 import {
   Drawer, DrawerContent, DrawerHeader, DrawerTitle,
 } from "@/components/ui/drawer";
