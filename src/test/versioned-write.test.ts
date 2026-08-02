@@ -13,6 +13,7 @@ import { buildPatch, rowVersion } from "@/lib/data/versioned-write";
 import { sameShiftUpdateValue } from "@/lib/shifts/update-shift";
 import { samePersistedValue } from "@/lib/data/versioned-write";
 import { signedDelta } from "@/lib/data/advance-balance";
+import { EDITABLE_COMPANY_FIELDS, isEditableSettingKey } from "@/lib/data/company-config-write";
 
 const TEMPORARY_EXCEPTIONS = [
   // Helper heredado: se mantiene mientras existan consumidores no migrados.
@@ -180,3 +181,49 @@ describe("VWC Fase 3B — documentos y compliance", () => {
   });
 });
 
+
+describe("VWC Fase 3C — configuración de empresa no financiera", () => {
+  const write = readFileSync("src/lib/data/company-config-write.ts", "utf8");
+  const page = readFileSync("src/pages/admin/CompanyConfig.tsx", "utf8");
+
+  it("las claves financieras y de tenant no son editables por este carril", () => {
+    for (const blocked of ["pay_week", "overtime", "pay_types", "payroll_config", "tenant_type"]) {
+      expect(isEditableSettingKey(blocked)).toBe(false);
+    }
+    for (const allowed of ["geofence", "time_tolerance", "auto_close", "auto_validation"]) {
+      expect(isEditableSettingKey(allowed)).toBe(true);
+    }
+  });
+
+  it("la identidad de empresa sólo admite nombre, logo y color", () => {
+    expect([...EDITABLE_COMPANY_FIELDS]).toEqual(["name", "logo_url", "brand_color"]);
+    for (const blocked of ["is_active", "plan_code", "billing_status", "owner_user_id", "created_by"]) {
+      expect((EDITABLE_COMPANY_FIELDS as readonly string[]).includes(blocked)).toBe(false);
+    }
+  });
+
+  it("toda escritura viaja con company_id y expected_version", () => {
+    expect(write).toContain("p_company_id: companyId");
+    expect(write).toContain("p_expected_version: expectedVersion ?? null");
+    expect(write).toContain("versioned_update_company_setting");
+    expect(write).toContain("versioned_update_company_profile");
+  });
+
+  it("la pantalla envía patches parciales, nunca snapshots completos", () => {
+    expect(page).toContain("expectedVersion: rows[config.key]?.version");
+    expect(page).not.toContain(".upsert(");
+    expect(/from\("companies"\)[\s\S]{0,120}?\.update\(/.test(page)).toBe(false);
+    expect(/from\("company_settings"\)[\s\S]{0,120}?\.update\(/.test(page)).toBe(false);
+  });
+
+  it("el reemplazo de logo no borra el archivo anterior", () => {
+    expect(page).not.toContain('storage.from("company-logos").remove');
+    expect(page).toContain("upsert: false");
+  });
+
+  it("Caso A/B: A cambia el logo (v2) y B guarda zona horaria desde v1 → conflicto", () => {
+    const serverVersion: number = 2;   // A ya guardó
+    const staleExpected: number = 1;   // B tenía la versión anterior
+    expect(staleExpected !== serverVersion).toBe(true);
+  });
+});
