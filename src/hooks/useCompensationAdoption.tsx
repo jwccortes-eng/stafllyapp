@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { rowVersion, versionedWrite } from "@/lib/data/versioned-write";
 
 export type ConfidenceLevel = "high" | "medium" | "review";
 export type AdoptionDecision = "accept" | "edit" | "skip" | null;

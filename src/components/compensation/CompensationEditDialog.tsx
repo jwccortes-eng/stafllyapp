@@ -13,6 +13,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Pencil, ShieldCheck, AlertTriangle } from "lucide-react";
+import { rowVersion, versionedWrite } from "@/lib/data/versioned-write";
+import { VersionConflictDialog, type VersionConflictInfo } from "@/components/data-integrity/VersionConflictDialog";
+import { COMPENSATION_FIELD_LABELS } from "@/lib/shifts/field-labels";
 
 type PayMode = "hourly" | "daily" | "mixed";
 
