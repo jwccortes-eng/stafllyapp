@@ -8,7 +8,7 @@
  *    row (category='w9', review_status='pending'). Raw TIN is then discarded.
  *  - `contractor_w9` stores ONLY `tin_last4` + `tax_id_type` + masked metadata.
  */
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, FileText, CheckCircle2, ShieldCheck, Eye } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
