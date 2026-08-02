@@ -340,6 +340,36 @@ export function MobileShiftEditSheet({
         </SheetContent>
       </Sheet>
 
+      <VersionConflictDialog
+        open={!!conflict}
+        conflict={conflict}
+        entityLabel="este servicio"
+        fieldLabels={SHIFT_FIELD_LABELS}
+        busy={saving}
+        onKeepMine={() => {
+          if (!conflict) return;
+          void commit(
+            conflict.patch,
+            conflict.actualVersion,
+            !!pendingDrivers,
+            pendingDrivers ?? [],
+          );
+        }}
+        onReload={async () => {
+          const canonical = await reconcileServiceAfterSave(
+            queryClient,
+            companyId ?? (shift as any)?.company_id ?? null,
+            shift!.id,
+          );
+          if (canonical) setForm(shiftToFormState(canonical as any));
+          setConflict(null);
+          setPendingDrivers(null);
+        }}
+        onCancel={() => { setConflict(null); setPendingDrivers(null); }}
+      />
+
+
+
       <AlertDialog open={confirmClose} onOpenChange={setConfirmClose}>
         <AlertDialogContent>
           <AlertDialogHeader>
