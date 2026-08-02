@@ -23,6 +23,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { notifyActionRequired, notifyError, notifySuccess, notifyWarning } from "@/lib/feedback/notify";
 import { updateShiftVerified } from "@/lib/shifts/update-shift";
+import { useQueryClient } from "@tanstack/react-query";
+import { reconcileServiceAfterSave, subscribeToServiceChanges } from "@/lib/shifts/service-state";
 
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction, AlertDialogCancel } from "@/components/ui/alert-dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -465,6 +467,7 @@ function DesktopShifts() {
   }, [viewMode, currentDay, weekStart, currentMonth]);
 
   // Detail dialog
+  const queryClient = useQueryClient();
   const [selectedShift, setSelectedShift] = useState<Shift | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailInitialTab, setDetailInitialTab] = useState<string | undefined>(undefined);
@@ -743,6 +746,24 @@ function DesktopShifts() {
   }, [shifts, searchParams, setSearchParams, loading]);
 
 
+
+  // P0 SINGLE SERVICE STATE — el turno abierto nunca se queda congelado:
+  // cuando la lista se refresca, el snapshot seleccionado se re-sincroniza.
+  useEffect(() => {
+    setSelectedShift(prev => {
+      if (!prev) return prev;
+      const fresh = shifts.find(s => s.id === prev.id);
+      return fresh ? { ...prev, ...fresh } : prev;
+    });
+  }, [shifts]);
+
+  // Cualquier reconciliación de servicio (desde otra superficie) refresca la lista
+  // sin desmontar la vista ni perder scroll.
+  useEffect(() => {
+    return subscribeToServiceChanges(({ companyId }) => {
+      if (companyId === selectedCompanyId) refreshShifts();
+    });
+  }, [selectedCompanyId, refreshShifts]);
 
   // Stable click handler — prevents child views from re-rendering on every parent render.
   const handleShiftClick = useCallback((s: Shift) => {
@@ -1295,10 +1316,16 @@ function DesktopShifts() {
       }
     }
 
+    // Fase 4 — reconciliamos la fuente canónica antes de declarar el cambio visible.
+    const canonical = await reconcileServiceAfterSave(
+      queryClient,
+      selectedCompanyId ?? (oldShift as any).company_id ?? null,
+      shiftId,
+      savedShift,
+    );
     toast.success("Turno actualizado");
-    // Reflejamos la fila releída del backend, no lo que creíamos haber enviado.
-    setSelectedShift(prev => prev?.id === shiftId ? { ...prev, ...savedShift } as Shift : prev);
-    loadData();
+    setSelectedShift(prev => prev?.id === shiftId ? { ...prev, ...(canonical ?? savedShift) } as Shift : prev);
+    await loadData();
 
   };
 

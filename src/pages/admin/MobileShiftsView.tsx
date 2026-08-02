@@ -680,6 +680,7 @@ export default function MobileShiftsView() {
         assignments={assignments}
 
         onSaved={(patch) => {
+          // `patch` ya viene reconciliado con la fila real del backend.
           setShifts((prev) => prev.map((s) => (editShift && s.id === editShift.id ? { ...s, ...patch } as Shift : s)));
           setDetailShift((prev) => (editShift && prev?.id === editShift.id ? { ...prev, ...patch } as Shift : prev));
           setReloadKey((k) => k + 1);
