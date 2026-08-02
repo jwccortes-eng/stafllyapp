@@ -52,6 +52,7 @@ export default function CompensationEditDialog({ open, onOpenChange, employeeId,
   const { selectedCompanyId } = useCompany();
   const qc = useQueryClient();
   const [saving, setSaving] = useState(false);
+  const [conflict, setConflict] = useState<VersionConflictInfo | null>(null);
 
   const initial: FormState = useMemo(() => ({
     payment_mode: (profile?.payment_mode as PayMode) ?? "hourly",
@@ -291,6 +292,16 @@ export default function CompensationEditDialog({ open, onOpenChange, employeeId,
           </Button>
         </DialogFooter>
       </DialogContent>
+
+      <VersionConflictDialog
+        open={!!conflict}
+        conflict={conflict}
+        kind="money"
+        entityLabel="esta compensación"
+        fieldLabels={COMPENSATION_FIELD_LABELS}
+        onReload={() => { setConflict(null); onOpenChange(false); }}
+        onCancel={() => setConflict(null)}
+      />
     </Dialog>
   );
 }
