@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { applyAdvanceBalanceDelta } from "@/lib/data/advance-balance";
 
 export interface DeductionProposal {
   recordId: string;
@@ -239,10 +240,11 @@ export async function applyDeductions(
   const errors: string[] = [];
 
   for (const p of toApply) {
-    // Re-fetch current balance to avoid race conditions
+    // Carril 4: el saldo se mueve con aritmética atómica en SQL. El frontend
+    // nunca lee el saldo, resta y escribe el resultado.
     const { data: current } = await supabase
       .from("employee_financial_records")
-      .select("balance_remaining, status")
+      .select("balance_remaining, status, version")
       .eq("id", p.recordId)
       .single();
 
@@ -251,36 +253,31 @@ export async function applyDeductions(
       continue;
     }
 
-    const balBefore = Number(current.balance_remaining);
-    const deduction = Math.min(p.proposedAmount, balBefore);
-    const balAfter = Math.round((balBefore - deduction) * 100) / 100;
-
-    // Create ledger entry
-    const { error: ledgerErr } = await supabase.from("employee_financial_ledger").insert({
-      record_id: p.recordId,
-      company_id: companyId,
-      employee_id: p.employeeId,
-      period_id: periodId,
-      transaction_type: "payroll_deduction" as any,
-      amount: deduction,
-      balance_before: balBefore,
-      balance_after: balAfter,
-      note: `Deducción nómina — periodo ${periodId}`,
-      created_by: userId,
-    });
-
-    if (ledgerErr) {
-      errors.push(`${p.referenceCode}: error en ledger — ${ledgerErr.message}`);
+    const deduction = Math.min(p.proposedAmount, Number(current.balance_remaining));
+    if (deduction <= 0) {
+      errors.push(`${p.referenceCode}: sin saldo pendiente por deducir`);
       continue;
     }
 
-    // Update balance
-    const newStatus = balAfter === 0 ? "paid" : current.status;
-    await supabase.from("employee_financial_records").update({
-      balance_remaining: balAfter,
-      status: newStatus as any,
-      updated_by: userId,
-    }).eq("id", p.recordId);
+    const res = await applyAdvanceBalanceDelta({
+      recordId: p.recordId,
+      companyId,
+      type: "payroll_deduction",
+      amount: deduction,
+      expectedVersion: (current as any).version ?? null,
+      intentKey: `payroll_deduction:${periodId}:${p.recordId}`,
+      reason: `Deducción nómina — periodo ${periodId}`,
+      surface: "payroll/advance_deduction_engine",
+    });
+
+    if (res.status === "conflict") {
+      errors.push(`${p.referenceCode}: otra persona movió este saldo, recarga y reintenta`);
+      continue;
+    }
+    if (res.status === "error") {
+      errors.push(`${p.referenceCode}: ${res.message}`);
+      continue;
+    }
 
     applied++;
   }
