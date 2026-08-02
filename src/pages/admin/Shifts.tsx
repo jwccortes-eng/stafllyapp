@@ -1244,23 +1244,61 @@ function DesktopShifts() {
     setCreateOpen(true);
   };
 
-  const handleEditShift = async (shiftId: string, updates: Partial<Shift>, oldShift: Shift) => {
+  const handleEditShift = async (
+    shiftId: string,
+    updates: Partial<Shift>,
+    oldShift: Shift,
+    overrideVersion?: number | null,
+  ) => {
     if (oldShift.status === "locked") { toast.error("Este turno está bloqueado y no se puede editar"); return; }
     const changes = getChangedFields(oldShift, updates);
     if (changes.length === 0) { toast.info("Sin cambios"); return; }
 
-    // P0 — guardado verificado: sin fila devuelta no hay éxito que anunciar.
-    const saveResult = await updateShiftVerified(shiftId, updates as any, selectedCompanyId ?? (oldShift as any).company_id ?? null);
-    if (!saveResult.ok) {
+    const companyIdForWrite = selectedCompanyId ?? (oldShift as any).company_id ?? null;
+    // VWC — PATCH parcial: sólo los campos que realmente cambiaron.
+    const patch: Record<string, any> = {};
+    changes.forEach((c) => { patch[c.field] = (updates as any)[c.field]; });
+
+    const canonical = readServiceRow(queryClient, companyIdForWrite, shiftId);
+    const expectedVersion =
+      overrideVersion ?? rowVersion(canonical) ?? rowVersion(oldShift as any);
+
+    const saveResult = await versionedWrite({
+      entity: "scheduled_shifts",
+      id: shiftId,
+      companyId: companyIdForWrite,
+      patch,
+      expectedVersion,
+      surface: "desktop_shift_detail_dialog",
+    });
+
+    if (saveResult.status === "conflict") {
+      setServiceConflict({
+        info: {
+          patch,
+          serverRow: saveResult.row,
+          actualVersion: saveResult.actualVersion,
+          expectedVersion: saveResult.expectedVersion,
+          updatedAt: saveResult.updatedAt,
+        },
+        shiftId,
+        updates,
+        oldShift,
+      });
+      return;
+    }
+    if (saveResult.status !== "applied") {
       notifyError({
         key: "shift-update-desktop",
         title: "No pudimos guardar el turno",
-        fact: saveResult.message,
+        fact: saveResult.status === "noop" ? "No había cambios que aplicar." : saveResult.message,
         consequence: "El turno sigue como estaba. Revisa e inténtalo de nuevo.",
       });
       return;
     }
+    setServiceConflict(null);
     const savedShift = saveResult.row;
+
 
 
     // Log audit
