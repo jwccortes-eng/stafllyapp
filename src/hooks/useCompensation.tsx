@@ -4,6 +4,34 @@ import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { buildPatch, rowVersion, versionedWrite } from "@/lib/data/versioned-write";
+import type { VersionConflictInfo } from "@/components/data-integrity/VersionConflictDialog";
+
+/**
+ * Conflicto de compensación: se propaga al formulario para que muestre la UI
+ * única de conflicto. Dinero nunca se guarda "de todas formas".
+ */
+export class CompensationConflictError extends Error {
+  readonly conflict: VersionConflictInfo;
+  constructor(res: {
+    row?: Record<string, any> | null;
+    actualVersion?: number | null;
+    expectedVersion?: number | null;
+    updatedAt?: string | null;
+  }) {
+    super("La compensación cambió mientras la editabas");
+    this.name = "CompensationConflictError";
+    this.conflict = {
+      patch: {},
+      serverRow: res.row ?? null,
+      actualVersion: res.actualVersion ?? null,
+      expectedVersion: res.expectedVersion ?? null,
+      updatedAt: res.updatedAt ?? null,
+    };
+  }
+}
+
+
 
 /* ── Types ── */
 export type PaymentMode = "hourly" | "daily" | "mixed";
@@ -194,10 +222,18 @@ export function useCompensationMutations() {
     if (existing) {
       // Archive old if effective_from changed
       if (updates.effective_from && updates.effective_from !== existing.effective_from) {
-        await supabase
-          .from("compensation_profiles")
-          .update({ is_active: false, effective_to: updates.effective_from, updated_by: user.id })
-          .eq("id", existing.id);
+        // Cierre del perfil vigente: PATCH versionado, nunca sobrescritura ciega.
+        const closeRes = await versionedWrite({
+          entity: "compensation_profiles",
+          id: existing.id,
+          companyId: selectedCompanyId,
+          patch: { is_active: false, effective_to: updates.effective_from },
+          expectedVersion: rowVersion(existing),
+          surface: "compensation/upsert_profile#archive",
+          reason: opts.reason ?? null,
+        });
+        if (closeRes.status === "conflict") throw new CompensationConflictError(closeRes);
+        if (closeRes.status === "error") throw new Error(closeRes.message);
 
         const { data: newP, error } = await supabase
           .from("compensation_profiles")
@@ -207,11 +243,24 @@ export function useCompensationMutations() {
         if (error) throw error;
         profileId = newP.id;
       } else {
-        const { error } = await supabase
-          .from("compensation_profiles")
-          .update({ ...profileData })
-          .eq("id", existing.id);
-        if (error) throw error;
+        // Sólo viajan los campos realmente modificados + la versión observada.
+        const patch = buildPatch(existing, profileData);
+        delete patch.company_id;
+        delete patch.employee_id;
+
+        if (Object.keys(patch).length > 0) {
+          const res = await versionedWrite({
+            entity: "compensation_profiles",
+            id: existing.id,
+            companyId: selectedCompanyId,
+            patch,
+            expectedVersion: rowVersion(existing),
+            surface: "compensation/upsert_profile",
+            reason: opts.reason ?? null,
+          });
+          if (res.status === "conflict") throw new CompensationConflictError(res);
+          if (res.status === "error") throw new Error(res.message);
+        }
         profileId = existing.id;
       }
     } else {
@@ -223,6 +272,7 @@ export function useCompensationMutations() {
       if (error) throw error;
       profileId = newP.id;
     }
+
 
     // Log changes
     const changedFields = opts.changedFields ?? [];

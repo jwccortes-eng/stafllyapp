@@ -16,6 +16,9 @@ import {
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
+import { rowVersion, versionedWrite } from "@/lib/data/versioned-write";
+import { VersionConflictDialog, type VersionConflictInfo } from "@/components/data-integrity/VersionConflictDialog";
+import { COMPENSATION_FIELD_LABELS } from "@/lib/shifts/field-labels";
 
 /* ── Constants ── */
 const MODE_LABELS: Record<string, string> = { hourly: "Por hora", daily: "Por día", mixed: "Mixto" };
@@ -90,6 +93,7 @@ export default function EmployeeCompensationTab({
   const [changeOpen, setChangeOpen] = useState(false);
   const [inferring, setInferring] = useState(false);
   const [initializing, setInitializing] = useState(false);
+  const [compConflict, setCompConflict] = useState<VersionConflictInfo | null>(null);
   const qc = useQueryClient();
 
   const { data: profile, isLoading } = useQuery({
@@ -184,17 +188,34 @@ export default function EmployeeCompensationTab({
         confidence,
       } as any);
 
-      // Update profile
-      await supabase
-        .from("compensation_profiles")
-        .update({
+      // Escritura versionada: la inferencia nunca pisa una tarifa más reciente.
+      const inferRes = await versionedWrite({
+        entity: "compensation_profiles",
+        id: profile.id,
+        companyId,
+        patch: {
           inferred_hourly_rate: rate,
           inferred_hourly_source: conceptName,
           inferred_hourly_confidence: confidence,
           hourly_rate_last_verified_at: null,
           hourly_rate_override_manual: false,
-        } as any)
-        .eq("id", profile.id);
+        },
+        expectedVersion: rowVersion(profile as any),
+        surface: "compensation/infer_hourly",
+        reason: `Inferido desde ${matchCount} movimientos tipo "${conceptName}"`,
+      });
+      if (inferRes.status === "conflict") {
+        setCompConflict({
+          patch: { inferred_hourly_rate: rate },
+          serverRow: inferRes.row ?? null,
+          actualVersion: inferRes.actualVersion ?? null,
+          expectedVersion: inferRes.expectedVersion ?? null,
+          updatedAt: inferRes.updatedAt ?? null,
+        });
+        setInferring(false);
+        return;
+      }
+      if (inferRes.status === "error") throw new Error(inferRes.message);
 
       // Log change
       await supabase.from("compensation_change_log").insert({
@@ -228,17 +249,33 @@ export default function EmployeeCompensationTab({
 
     const prevInferred = profile.inferred_hourly_rate;
 
-    await supabase
-      .from("compensation_profiles")
-      .update({
+    const confirmRes = await versionedWrite({
+      entity: "compensation_profiles",
+      id: profile.id,
+      companyId,
+      patch: {
         default_hourly_rate: rate,
         hourly_rate_override_manual: true,
         hourly_rate_last_verified_at: new Date().toISOString(),
         confirmed_by: user.id,
         confirmed_at: new Date().toISOString(),
         previous_inferred_rate: prevInferred,
-      } as any)
-      .eq("id", profile.id);
+      },
+      expectedVersion: rowVersion(profile as any),
+      surface: "compensation/confirm_hourly_manual",
+      reason: "Confirmación manual por admin",
+    });
+    if (confirmRes.status === "conflict") {
+      setCompConflict({
+        patch: { default_hourly_rate: rate },
+        serverRow: confirmRes.row ?? null,
+        actualVersion: confirmRes.actualVersion ?? null,
+        expectedVersion: confirmRes.expectedVersion ?? null,
+        updatedAt: confirmRes.updatedAt ?? null,
+      });
+      return;
+    }
+    if (confirmRes.status === "error") { toast.error(confirmRes.message); return; }
 
     await supabase.from("compensation_change_log").insert({
       company_id: companyId,
@@ -297,14 +334,33 @@ export default function EmployeeCompensationTab({
       const hr = (rates ?? []).find((r: any) => r.concepts?.name === "Hourly Rate")?.rate ?? null;
       const dr = (rates ?? []).find((r: any) => r.concepts?.name === "Daily Pay")?.rate ?? null;
       if (!hr && !dr) { toast.info("No se encontraron tarifas en datos existentes"); setInitializing(false); return; }
-      await supabase.from("compensation_profiles").update({
-        default_hourly_rate: hr ?? profile.default_hourly_rate,
-        default_daily_rate: dr ?? profile.default_daily_rate,
-        default_half_day_rate: dr ? Math.round(dr * 0.625 * 100) / 100 : profile.default_half_day_rate,
-        payment_mode: (hr && dr ? "mixed" : dr ? "daily" : "hourly") as any,
-        rate_source: "imported" as any,
-        updated_by: user.id,
-      }).eq("id", profile.id);
+      const seedRes = await versionedWrite({
+        entity: "compensation_profiles",
+        id: profile.id,
+        companyId,
+        patch: {
+          default_hourly_rate: hr ?? profile.default_hourly_rate,
+          default_daily_rate: dr ?? profile.default_daily_rate,
+          default_half_day_rate: dr ? Math.round(dr * 0.625 * 100) / 100 : profile.default_half_day_rate,
+          payment_mode: (hr && dr ? "mixed" : dr ? "daily" : "hourly") as any,
+          rate_source: "imported" as any,
+        },
+        expectedVersion: rowVersion(profile as any),
+        surface: "compensation/seed_from_concepts",
+        reason: "Siembra desde tarifas por concepto",
+      });
+      if (seedRes.status === "conflict") {
+        setCompConflict({
+          patch: { default_hourly_rate: hr ?? profile.default_hourly_rate },
+          serverRow: seedRes.row ?? null,
+          actualVersion: seedRes.actualVersion ?? null,
+          expectedVersion: seedRes.expectedVersion ?? null,
+          updatedAt: seedRes.updatedAt ?? null,
+        });
+        setInitializing(false);
+        return;
+      }
+      if (seedRes.status === "error") throw new Error(seedRes.message);
       qc.invalidateQueries({ queryKey: ["comp-profile-single", employeeId] });
       toast.success(`Tarifas actualizadas: hourly $${hr ?? "—"}, daily $${dr ?? "—"}`);
     } catch (e: any) {
@@ -516,6 +572,19 @@ export default function EmployeeCompensationTab({
 
       <CompensationHistoryDialog open={historyOpen} onOpenChange={setHistoryOpen} employeeId={employeeId} employeeName={employeeName} />
       <CompensationChangeForm open={changeOpen} onOpenChange={setChangeOpen} employeeId={employeeId} employeeName={employeeName} currentProfile={profile} />
+
+      <VersionConflictDialog
+        open={!!compConflict}
+        conflict={compConflict}
+        kind="money"
+        entityLabel="esta compensación"
+        fieldLabels={COMPENSATION_FIELD_LABELS}
+        onReload={() => {
+          setCompConflict(null);
+          qc.invalidateQueries({ queryKey: ["comp-profile-single", employeeId] });
+        }}
+        onCancel={() => setCompConflict(null)}
+      />
     </div>
   );
 }

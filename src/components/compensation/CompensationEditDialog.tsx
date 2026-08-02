@@ -13,6 +13,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Pencil, ShieldCheck, AlertTriangle } from "lucide-react";
+import { rowVersion, versionedWrite } from "@/lib/data/versioned-write";
+import { VersionConflictDialog, type VersionConflictInfo } from "@/components/data-integrity/VersionConflictDialog";
+import { COMPENSATION_FIELD_LABELS } from "@/lib/shifts/field-labels";
 
 type PayMode = "hourly" | "daily" | "mixed";
 
@@ -49,6 +52,7 @@ export default function CompensationEditDialog({ open, onOpenChange, employeeId,
   const { selectedCompanyId } = useCompany();
   const qc = useQueryClient();
   const [saving, setSaving] = useState(false);
+  const [conflict, setConflict] = useState<VersionConflictInfo | null>(null);
 
   const initial: FormState = useMemo(() => ({
     payment_mode: (profile?.payment_mode as PayMode) ?? "hourly",
@@ -116,11 +120,28 @@ export default function CompensationEditDialog({ open, onOpenChange, employeeId,
       };
 
       if (profile) {
-        const { error } = await supabase
-          .from("compensation_profiles")
-          .update(updates)
-          .eq("id", profile.id);
-        if (error) throw error;
+        const { updated_by: _ignored, ...patch } = updates;
+        const res = await versionedWrite({
+          entity: "compensation_profiles",
+          id: profile.id,
+          companyId: selectedCompanyId,
+          patch,
+          expectedVersion: rowVersion(profile as any),
+          surface: "compensation/edit_dialog",
+          reason: "Edición manual de compensación",
+        });
+        if (res.status === "conflict") {
+          setConflict({
+            patch,
+            serverRow: res.row ?? null,
+            actualVersion: res.actualVersion ?? null,
+            expectedVersion: res.expectedVersion ?? null,
+            updatedAt: res.updatedAt ?? null,
+          });
+          setSaving(false);
+          return;
+        }
+        if (res.status === "error") throw new Error(res.message);
       } else {
         const { error } = await supabase
           .from("compensation_profiles")
@@ -271,6 +292,16 @@ export default function CompensationEditDialog({ open, onOpenChange, employeeId,
           </Button>
         </DialogFooter>
       </DialogContent>
+
+      <VersionConflictDialog
+        open={!!conflict}
+        conflict={conflict}
+        kind="money"
+        entityLabel="esta compensación"
+        fieldLabels={COMPENSATION_FIELD_LABELS}
+        onReload={() => { setConflict(null); onOpenChange(false); }}
+        onCancel={() => setConflict(null)}
+      />
     </Dialog>
   );
 }

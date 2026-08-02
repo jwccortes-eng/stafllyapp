@@ -22,6 +22,9 @@ export interface VersionConflictInfo {
   updatedAt: string | null;
 }
 
+/** Tipo de dato en conflicto: adapta el copy y las acciones permitidas. */
+export type ConflictKind = "service" | "hours" | "money";
+
 interface Props {
   open: boolean;
   conflict: VersionConflictInfo | null;
@@ -29,12 +32,35 @@ interface Props {
   entityLabel?: string;
   fieldLabels?: Record<string, string>;
   busy?: boolean;
-  /** Reaplica mis cambios sobre la versión nueva (acción explícita). */
-  onKeepMine: () => void;
+  kind?: ConflictKind;
+  /**
+   * Reaplica mis cambios sobre la versión nueva (acción explícita).
+   * En horas y dinero NO se ofrece por defecto: requiere override autorizado.
+   */
+  onKeepMine?: () => void;
   /** Descarta mis cambios y recarga la versión actual para volver a editar. */
   onReload: () => void;
   onCancel: () => void;
 }
+
+const COPY: Record<ConflictKind, { title: (label: string) => string; body: (when: string | null) => string }> = {
+  service: {
+    title: (label) => `Cambió ${label} mientras lo editabas`,
+    body: (when) =>
+      `Otra persona guardó una versión más reciente${when ? ` ${when}` : ""}. No guardamos nada para no borrar su trabajo ni el tuyo.`,
+  },
+  hours: {
+    title: () => "Estas horas cambiaron mientras las revisabas",
+    body: (when) =>
+      `Otra persona actualizó el fichaje${when ? ` ${when}` : ""}. Ninguna hora fue sobrescrita: revisa los cambios y vuelve a editar.`,
+  },
+  money: {
+    title: (label) => `Cambió ${label} mientras la editabas`,
+    body: (when) =>
+      `Otra persona guardó una versión más reciente${when ? ` ${when}` : ""}. Ningún valor fue sobrescrito.`,
+  },
+};
+
 
 function relativeTime(iso: string | null): string | null {
   if (!iso) return null;
@@ -56,11 +82,14 @@ function display(value: any): string {
 
 export function VersionConflictDialog({
   open, conflict, entityLabel = "este servicio", fieldLabels = {},
-  busy, onKeepMine, onReload, onCancel,
+  busy, kind = "service", onKeepMine, onReload, onCancel,
 }: Props) {
   const [showDiff, setShowDiff] = useState(false);
   const fields = Object.keys(conflict?.patch ?? {});
   const when = relativeTime(conflict?.updatedAt ?? null);
+  const copy = COPY[kind];
+  // Horas y dinero nunca ofrecen "guardar de todas formas" por defecto.
+  const allowKeepMine = kind === "service" && typeof onKeepMine === "function";
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v && !busy) onCancel(); }}>
@@ -68,13 +97,13 @@ export function VersionConflictDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-base">
             <AlertTriangle className="h-4 w-4 text-amber-500" />
-            {`Cambió ${entityLabel} mientras lo editabas`}
+            {copy.title(entityLabel)}
           </DialogTitle>
           <DialogDescription className="text-sm leading-snug">
-            Otra persona guardó una versión más reciente{when ? ` ${when}` : ""}. No guardamos nada
-            para no borrar su trabajo ni el tuyo.
+            {copy.body(when)}
           </DialogDescription>
         </DialogHeader>
+
 
         {showDiff && fields.length > 0 && (
           <div className="rounded-xl border border-border/60 divide-y divide-border/50 text-[12px] max-h-56 overflow-y-auto">
@@ -104,14 +133,22 @@ export function VersionConflictDialog({
               {showDiff ? "Ocultar cambios" : "Ver cambios"}
             </Button>
           )}
-          <Button className="w-full h-11 rounded-xl gap-2" onClick={onKeepMine} disabled={busy}>
-            <Save className="h-4 w-4" />
-            Conservar mis cambios
-          </Button>
-          <Button variant="outline" className="w-full h-11 rounded-xl gap-2" onClick={onReload} disabled={busy}>
+          {allowKeepMine && (
+            <Button className="w-full h-11 rounded-xl gap-2" onClick={onKeepMine} disabled={busy}>
+              <Save className="h-4 w-4" />
+              Conservar mis cambios
+            </Button>
+          )}
+          <Button
+            variant={allowKeepMine ? "outline" : "default"}
+            className="w-full h-11 rounded-xl gap-2"
+            onClick={onReload}
+            disabled={busy}
+          >
             <RefreshCw className="h-4 w-4" />
             Volver a editar con la versión nueva
           </Button>
+
           <Button variant="ghost" className="w-full h-11 rounded-xl gap-2" onClick={onCancel} disabled={busy}>
             <X className="h-4 w-4" />
             Cancelar

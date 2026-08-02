@@ -16,7 +16,20 @@
 import { supabase } from "@/integrations/supabase/client";
 import { sameShiftUpdateValue } from "@/lib/shifts/update-shift";
 
-export type VersionedEntity = "scheduled_shifts";
+export type VersionedEntity = "scheduled_shifts" | "time_entries" | "compensation_profiles";
+
+/** RPC canónica por entidad. Ninguna superficie escribe la tabla directamente. */
+const ENTITY_RPC: Record<VersionedEntity, string> = {
+  scheduled_shifts: "versioned_update_shift",
+  time_entries: "versioned_update_time_entry",
+  compensation_profiles: "versioned_update_compensation_profile",
+};
+
+const ENTITY_ID_PARAM: Record<VersionedEntity, string> = {
+  scheduled_shifts: "p_shift_id",
+  time_entries: "p_entry_id",
+  compensation_profiles: "p_profile_id",
+};
 
 export interface VersionedWriteInput {
   entity: VersionedEntity;
@@ -30,7 +43,10 @@ export interface VersionedWriteInput {
   surface?: string;
   /** Idempotencia opcional para creación/reintentos. */
   intentKey?: string;
+  /** Motivo obligatorio para cambios sobre datos históricos (compensación). */
+  reason?: string;
 }
+
 
 export type VersionedWriteResult =
   | { status: "applied"; row: Record<string, any>; version: number | null }
@@ -58,7 +74,7 @@ export function buildPatch(
 ): Record<string, any> {
   const patch: Record<string, any> = {};
   for (const key of Object.keys(next)) {
-    if (!sameShiftUpdateValue(current?.[key], next[key])) patch[key] = next[key];
+    if (!samePersistedValue(current?.[key], next[key])) patch[key] = next[key];
   }
   return patch;
 }
@@ -69,10 +85,32 @@ export function rowVersion(row: Record<string, any> | null | undefined): number 
   return typeof v === "number" ? v : null;
 }
 
-export async function versionedWrite(input: VersionedWriteInput): Promise<VersionedWriteResult> {
-  const { entity, id, companyId, patch, expectedVersion, surface, intentKey } = input;
+/**
+ * Comparación de evidencia tras releer la fila: tolerante a formatos de hora
+ * (`17:00` ≡ `17:00:00`) y a normalización de marcas temporales por Postgres
+ * (`2026-08-02T09:00:00` ≡ `2026-08-02T09:00:00+00:00`).
+ */
+export function samePersistedValue(persisted: any, sent: any): boolean {
+  if (sameShiftUpdateValue(persisted, sent)) return true;
+  if (typeof persisted === "string" && typeof sent === "string") {
+    const a = Date.parse(persisted);
+    const b = Date.parse(sent);
+    if (!Number.isNaN(a) && !Number.isNaN(b) && a === b) return true;
+  }
+  if (typeof persisted === "number" || typeof sent === "number") {
+    const a = Number(persisted);
+    const b = Number(sent);
+    if (!Number.isNaN(a) && !Number.isNaN(b) && a === b) return true;
+  }
+  return false;
+}
 
-  if (entity !== "scheduled_shifts") {
+
+export async function versionedWrite(input: VersionedWriteInput): Promise<VersionedWriteResult> {
+  const { entity, id, companyId, patch, expectedVersion, surface, intentKey, reason } = input;
+
+  const rpc = ENTITY_RPC[entity];
+  if (!rpc) {
     return { status: "error", reason: "invalid", message: `Entidad no soportada: ${entity}` };
   }
   if (!companyId) {
@@ -85,14 +123,18 @@ export async function versionedWrite(input: VersionedWriteInput): Promise<Versio
   const fields = Object.keys(patch ?? {});
   if (fields.length === 0) return { status: "noop" };
 
-  const { data, error } = await supabase.rpc("versioned_update_shift", {
-    p_shift_id: id,
+  const params: Record<string, any> = {
+    [ENTITY_ID_PARAM[entity]]: id,
     p_company_id: companyId,
-    p_patch: patch as any,
+    p_patch: patch,
     p_expected_version: expectedVersion ?? null,
     p_surface: surface ?? null,
     p_intent_key: intentKey ?? null,
-  } as any);
+  };
+  if (entity === "compensation_profiles") params.p_reason = reason ?? null;
+
+  const { data, error } = await supabase.rpc(rpc as any, params as any);
+
 
   if (error) return { status: "error", reason: "error", message: error.message };
 
@@ -110,26 +152,27 @@ export async function versionedWrite(input: VersionedWriteInput): Promise<Versio
         fields,
       };
     case "not_found":
-      return { status: "error", reason: "not_found", message: result.message ?? "El servicio no existe en esta empresa." };
+      return { status: "error", reason: "not_found", message: result.message ?? "El registro no existe en esta empresa." };
     case "denied":
-      return { status: "error", reason: "denied", message: result.message ?? "No tienes permiso para editar este servicio." };
+      return { status: "error", reason: "denied", message: result.message ?? "No tienes permiso para editar este registro." };
     case "invalid":
       return { status: "error", reason: "invalid", message: result.message ?? "Cambio no permitido." };
     case "applied": {
       const row = (result.row as Record<string, any>) ?? null;
       if (!row) {
-        return { status: "error", reason: "error", message: "El servicio se guardó pero no pudimos releerlo." };
+        return { status: "error", reason: "error", message: "Se guardó pero no pudimos releer el registro." };
       }
       // Evidencia obligatoria: la fila persistida debe reflejar el patch.
-      const mismatched = fields.filter((key) => !sameShiftUpdateValue(row[key], patch[key]));
+      const mismatched = fields.filter((key) => !samePersistedValue(row[key], patch[key]));
       if (mismatched.length > 0) {
         return {
           status: "error",
           reason: "mismatch",
-          message: `El servicio se guardó parcialmente. Campos sin aplicar: ${mismatched.join(", ")}.`,
+          message: `Se guardó parcialmente. Campos sin aplicar: ${mismatched.join(", ")}.`,
           mismatched,
         };
       }
+
       return { status: "applied", row, version: rowVersion(row) };
     }
     default:

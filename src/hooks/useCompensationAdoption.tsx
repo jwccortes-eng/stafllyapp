@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { rowVersion, versionedWrite } from "@/lib/data/versioned-write";
 
 export type ConfidenceLevel = "high" | "medium" | "review";
 export type AdoptionDecision = "accept" | "edit" | "skip" | null;
@@ -207,7 +208,7 @@ export function useCompensationAdoption() {
 
         const { data: existing } = await supabase
           .from("compensation_profiles")
-          .select("id")
+          .select("id, version")
           .eq("company_id", selectedCompanyId)
           .eq("employee_id", p.employeeId)
           .eq("is_active", true)
@@ -232,14 +233,22 @@ export function useCompensationAdoption() {
 
         // Archive existing profile — never overwrite
         if (existing) {
-          await supabase
-            .from("compensation_profiles")
-            .update({
-              is_active: false,
-              effective_to: effectiveDate,
-              updated_by: user.id,
-            })
-            .eq("id", existing.id);
+          const archiveRes = await versionedWrite({
+            entity: "compensation_profiles",
+            id: existing.id,
+            companyId: selectedCompanyId,
+            patch: { is_active: false, effective_to: effectiveDate },
+            expectedVersion: rowVersion(existing as any),
+            surface: "compensation/adoption_archive",
+            reason: `Adoption review: ${p.reason}`,
+          });
+          if (archiveRes.status !== "applied") {
+            throw new Error(
+              archiveRes.status === "conflict"
+                ? "Otra persona actualizó esta compensación. Recarga y reintenta."
+                : archiveRes.message,
+            );
+          }
         }
 
         // Always create new profile record

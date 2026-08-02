@@ -11,6 +11,8 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { buildPatch, rowVersion } from "@/lib/data/versioned-write";
 import { sameShiftUpdateValue } from "@/lib/shifts/update-shift";
+import { samePersistedValue } from "@/lib/data/versioned-write";
+import { signedDelta } from "@/lib/data/advance-balance";
 
 const TEMPORARY_EXCEPTIONS = [
   // Helper heredado: se mantiene mientras existan consumidores no migrados.
@@ -69,5 +71,58 @@ describe("VWC — carril único de escritura de servicios", () => {
       .filter((f) => !TEMPORARY_EXCEPTIONS.includes(f));
 
     expect(offenders).toEqual([]);
+  });
+});
+
+/** Fase 2: horas, compensación y saldos entran al mismo carril. */
+const CRITICAL_TABLES: Record<string, string[]> = {
+  time_entries: [
+    // Aprobación masiva y flujos de fichaje del trabajador: transiciones (Clase C).
+    "src/components/timeclock/DayDetailView.tsx",
+    "src/lib/timeclock/hours-approval.ts",
+    "src/pages/admin/ImportTimeClock.tsx",
+    "src/pages/admin/ImportWizard.tsx",
+    // Aprobación/rechazo por lote: compare-and-set sobre `status = pending`
+    // (Clase C). No edita horas, sólo la transición de estado.
+    "src/components/timeclock/TimesheetView.tsx",
+    // Fichaje del propio trabajador: creación y cierre de su entrada activa
+    // (Clase A/C). No es edición administrativa de horas.
+    "src/pages/portal/PortalClock.tsx",
+  ],
+  compensation_profiles: [],
+  employee_financial_records: [
+    // Aprobación, pausa y cancelación: transiciones de estado, no saldos.
+    "src/components/advances/AdvanceLoanDetailDrawer.tsx",
+  ],
+};
+
+describe("VWC — carriles críticos de Fase 2", () => {
+  for (const [table, allowed] of Object.entries(CRITICAL_TABLES)) {
+    it(`no hay .update() directos nuevos sobre ${table}`, () => {
+      const pattern = new RegExp(`from\\("${table}"\\)[\\s\\S]{0,120}?\\.update\\(`);
+      const offenders = walk("src")
+        .filter((file) => pattern.test(readFileSync(file, "utf8")))
+        .map((f) => f.replace(/\\/g, "/"))
+        .filter((f) => !allowed.includes(f) && !f.startsWith("src/test/"));
+
+      expect(offenders).toEqual([]);
+    });
+  }
+});
+
+describe("VWC — evidencia y saldos", () => {
+  it("tolera la normalización de marcas temporales de Postgres", () => {
+    expect(samePersistedValue("2026-08-02T09:00:00+00:00", "2026-08-02T09:00:00Z")).toBe(true);
+    expect(samePersistedValue("2026-08-02T09:00:00+00:00", "2026-08-02T10:00:00Z")).toBe(false);
+  });
+
+  it("el signo del movimiento lo decide el tipo, no el frontend", () => {
+    expect(signedDelta("repayment_outside_payroll", 50)).toBe(-50);
+    expect(signedDelta("manual_adjustment_reduce", -50)).toBe(-50);
+    expect(signedDelta("manual_adjustment_add", 50)).toBe(50);
+    expect(signedDelta("reversal", 50)).toBe(50);
+    // El cierre total lo calcula el servidor sobre el saldo bloqueado.
+    expect(signedDelta("writeoff", 999)).toBe(0);
+    expect(signedDelta("manual_close", 999)).toBe(0);
   });
 });
