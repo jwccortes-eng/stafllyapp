@@ -83,6 +83,9 @@ export function MobileShiftEditSheet({
   const [saving, setSaving] = useState(false);
   const queryClient = useQueryClient();
   const [confirmClose, setConfirmClose] = useState(false);
+  const [conflict, setConflict] = useState<VersionConflictInfo | null>(null);
+  const [pendingDrivers, setPendingDrivers] = useState<string[] | null>(null);
+
 
   /**
    * P0.3.1 — paridad multi-driver con desktop.
