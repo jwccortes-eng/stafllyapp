@@ -156,4 +156,6 @@ describe("VWC Fase 3B — documentos y compliance", () => {
     const staleExpected: number = 3;
     const isConflict = staleExpected !== serverVersion;
     expect(isConflict).toBe(true);
+  });
 });
+
