@@ -11,6 +11,7 @@ Tres defectos concretos, todos verificados en código:
 1. **Snapshot congelado en desktop.** `src/pages/admin/Shifts.tsx` guardaba `selectedShift` como una **copia** del objeto al hacer clic (`handleShiftClick` → `setSelectedShift(s)`). `loadData()` refrescaba el array `shifts` pero **nunca re-sincronizaba `selectedShift`**. El detalle seguía renderizando la versión del clic hasta cerrar y reabrir (y aun así podía perder campos, ver punto 3).
 2. **`select()` parcial en móvil.** `src/pages/admin/MobileShiftsView.tsx` cargaba una lista de columnas explícita que **omite** `meeting_point`, ubicación operativa, transporte, `shift_admin_id`, etc. Esa fila incompleta se pasaba como prop al detalle **y al editor**. Guardabas meeting point, la DB quedaba correcta, y al reabrir la hoja el campo volvía vacío/antiguo porque la fuente ya no lo contenía.
 3. **Sin reconciliación tras guardar.** Ambos editores hacían `updateShiftVerified` → `toast.success` → cerrar → refetch en segundo plano. El cierre ocurría **antes** de que el estado visible coincidiera con la DB, y cada superficie invalidaba lo suyo a mano (o nada).
+4. **Las rutas de creación quedaron fuera del contrato.** El barrido inicial cubrió edición, pero `handleQuickCreate`, `createSingleShift` y `MobileQuickCreateShiftSheet` seguían haciendo `insert` directo. Después del `INSERT`, cerraban o confirmaban usando solo `loadData()`/`reloadKey`: no sembraban `service-state`, no invalidaban derivadas y no emitían `service-state:changed`. En móvil, además, el callback enviaba siempre a **Hoy**, incluso si el servicio recién creado era futuro; el registro existía pero desaparecía de la vista.
 
 Consecuencia: `scheduled_shifts` correcta, UI mostrando una de N versiones distintas del mismo servicio.
 
@@ -74,6 +75,7 @@ Auditado `useTodayOperations` (`daily-ops-shifts-${companyId}`, filtro `company_
 
 - `MobileShiftEditSheet`: en error **no cierra**, no muestra éxito y conserva los cambios locales; en éxito reconcilia con el backend y solo entonces cierra y notifica (OX-1).
 - `ShiftDetailDialog` y la hoja móvil ya no mantienen estado de edición propio: delegan al editor canónico y renderizan la versión canónica.
+- Las tres rutas de creación (`quick create`, formulario completo y wizard móvil) llaman `reconcileServiceAfterSave` antes de cerrar o anunciar el resultado. El wizard móvil conserva la fecha creada y abre **Hoy** o **Próximos** según corresponda.
 
 ## 8. Continuidad de carga
 
@@ -93,6 +95,9 @@ Auditado `useTodayOperations` (`daily-ops-shifts-${companyId}`, filtro `company_
 | 8 — Guardado exitoso | Cierra solo tras reconciliar |
 | 9 — Mobile y desktop | Mismo contrato, misma invalidación |
 | 10 — Rendimiento | Una query por servicio abierto; invalidación por prefijo, sin loops |
+| 11 — Crear borrador rápido | La fila se reconcilia antes de cerrar el popover y aparece en el calendario activo |
+| 12 — Crear servicio completo | La fila creada alimenta la cache canónica antes de cerrar el diálogo |
+| 13 — Crear en móvil para fecha futura | Abre Próximos; no envía a Hoy ni oculta el servicio recién creado |
 
 Typecheck (`tsgo --noEmit`) limpio. Suite completa: **514 tests en verde (45 archivos)**.
 
