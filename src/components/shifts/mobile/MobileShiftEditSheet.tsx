@@ -35,6 +35,8 @@ import {
 import { syncShiftDriverRoles, driverIdsFromAssignments } from "@/lib/shifts/driver-sync";
 import { notifyWarning, notifyError } from "@/lib/feedback/notify";
 import { updateShiftVerified } from "@/lib/shifts/update-shift";
+import { useQueryClient } from "@tanstack/react-query";
+import { reconcileServiceAfterSave } from "@/lib/shifts/service-state";
 
 import type { Shift, SelectOption, Employee, Assignment } from "@/components/shifts/types";
 import { ADMIN_LEX } from "@/lib/ox/lexicon";
@@ -76,6 +78,7 @@ export function MobileShiftEditSheet({
   const [form, setForm] = useState<ShiftFormState>(EMPTY_SHIFT_FORM_STATE);
   const [overnight, setOvernight] = useState(false);
   const [saving, setSaving] = useState(false);
+  const queryClient = useQueryClient();
   const [confirmClose, setConfirmClose] = useState(false);
 
   /**
@@ -198,10 +201,16 @@ export function MobileShiftEditSheet({
         });
       }
     }
+    // Fase 4 — no cerramos hasta que el estado visible coincide con la DB.
+    const canonical = await reconcileServiceAfterSave(
+      queryClient,
+      companyId ?? (shift as any).company_id ?? null,
+      shift.id,
+      savedRow ?? undefined,
+    );
     setSaving(false);
     toast.success("Turno actualizado");
-    // Devolvemos la fila releída del backend, no lo que creíamos haber enviado.
-    onSaved?.(savedRow ?? updates);
+    onSaved?.(canonical ?? savedRow ?? updates);
     onOpenChange(false);
   };
 

@@ -35,6 +35,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
+import { useServiceState } from "@/hooks/useServiceState";
 import { staffedAssignments } from "@/lib/shifts/assignment-coverage";
 import { CalendarX2 } from "lucide-react";
 import { CancelShiftDialog } from "@/components/shifts/CancelShiftDialog";
@@ -167,7 +168,7 @@ function initials(e: Employee): string {
 }
 
 export function MobileShiftOperationsSheet({
-  shift, open, onOpenChange, assignments, employees,
+  shift: shiftProp, open, onOpenChange, assignments, employees,
   clientName, locationName, meetingPoint, initialOpenTeamHub, onEdit,
 }: Props) {
   const navigate = useNavigate();
@@ -181,12 +182,23 @@ export function MobileShiftOperationsSheet({
 
   // Auto-open Manage Team hub when requested by deep-link intent.
   useEffect(() => {
-    if (open && initialOpenTeamHub && shift) {
+    if (open && initialOpenTeamHub && shiftProp) {
       setHubOpen(true);
     }
-  }, [open, initialOpenTeamHub, shift?.id]);
+  }, [open, initialOpenTeamHub, shiftProp?.id]);
   const { allRoles, canAccessAdminForCompany, user } = useAuth();
   const { selectedCompanyId } = useCompany();
+
+  // P0 SINGLE SERVICE STATE — la hoja no renderiza el snapshot de la lista:
+  // lee la versión canónica (fila completa, scoped al tenant) y solo usa la
+  // prop como semilla visual para no romper la continuidad al abrir.
+  const { service: canonicalShift } = useServiceState<Shift>({
+    companyId: selectedCompanyId,
+    shiftId: shiftProp?.id ?? null,
+    placeholder: shiftProp,
+    enabled: open,
+  });
+  const shift = (canonicalShift ?? shiftProp) as Shift | null;
 
   // Per-shift attendance + clock cache. Loaded when sheet opens.
   type AsgnExtra = {
