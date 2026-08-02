@@ -355,8 +355,32 @@ export default function ShiftOperations() {
       toast.error("Este turno no se puede editar");
       return;
     }
-    const saveResult = await updateShiftVerified(id, updates as any, selectedCompanyId ?? null);
-    if (!saveResult.ok) { toast.error(saveResult.message); return; }
+    // VWC — PATCH parcial + expected_version. Nunca snapshot completo.
+    const patch = buildPatch(oldShift, updates as Record<string, any>);
+    if (Object.keys(patch).length === 0) { toast.info("Sin cambios"); return; }
+    const saveResult = await versionedWrite({
+      entity: "scheduled_shifts",
+      id,
+      companyId: selectedCompanyId ?? null,
+      patch,
+      expectedVersion: rowVersion(readServiceRow(queryClient, selectedCompanyId, id)) ?? rowVersion(oldShift),
+      surface: "shift_operations",
+    });
+    if (saveResult.status === "conflict") {
+      setServiceConflict({
+        patch,
+        serverRow: saveResult.row,
+        actualVersion: saveResult.actualVersion,
+        expectedVersion: saveResult.expectedVersion,
+        updatedAt: saveResult.updatedAt,
+      });
+      return;
+    }
+    if (saveResult.status !== "applied") {
+      toast.error(saveResult.status === "noop" ? "Sin cambios" : saveResult.message);
+      return;
+    }
+
     if (selectedCompanyId && user) {
       await supabase.from("shift_timeline").insert({
         shift_id: id,
