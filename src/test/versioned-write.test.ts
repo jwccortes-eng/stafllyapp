@@ -82,6 +82,12 @@ const CRITICAL_TABLES: Record<string, string[]> = {
     "src/lib/timeclock/hours-approval.ts",
     "src/pages/admin/ImportTimeClock.tsx",
     "src/pages/admin/ImportWizard.tsx",
+    // Aprobación/rechazo por lote: compare-and-set sobre `status = pending`
+    // (Clase C). No edita horas, sólo la transición de estado.
+    "src/components/timeclock/TimesheetView.tsx",
+    // Fichaje del propio trabajador: creación y cierre de su entrada activa
+    // (Clase A/C). No es edición administrativa de horas.
+    "src/pages/portal/PortalClock.tsx",
   ],
   compensation_profiles: [],
   employee_financial_records: [
