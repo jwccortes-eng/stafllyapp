@@ -41,10 +41,13 @@ import {
 } from "@/lib/shifts/closeout-review-status";
 import { ShiftClosureCard } from "@/components/shifts/ShiftClosureCard";
 import { useQueryClient } from "@tanstack/react-query";
-import { updateShiftVerified } from "@/lib/shifts/update-shift";
+import { versionedWrite, buildPatch, rowVersion } from "@/lib/data/versioned-write";
+import { VersionConflictDialog, type VersionConflictInfo } from "@/components/data-integrity/VersionConflictDialog";
+import { SHIFT_FIELD_LABELS } from "@/lib/shifts/field-labels";
 import {
-  reconcileServiceAfterSave, subscribeToServiceChanges, writeServiceRow,
+  reconcileServiceAfterSave, subscribeToServiceChanges, writeServiceRow, readServiceRow,
 } from "@/lib/shifts/service-state";
+
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronDown, ClipboardCheck, Timer } from "lucide-react";
