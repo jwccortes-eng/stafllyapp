@@ -419,11 +419,30 @@ export default function ShiftOperations() {
   const handleDisableTransport = async () => {
     if (!shift) return;
     if (!window.confirm("Este turno dejará de pedir conductor. ¿Continuar?")) return;
-    const { error } = await supabase
-      .from("scheduled_shifts")
-      .update({ transportation_required: false } as any)
-      .eq("id", shift.id);
-    if (error) { toast.error(error.message); return; }
+    const result = await versionedWrite({
+      entity: "scheduled_shifts",
+      id: shift.id,
+      companyId: selectedCompanyId ?? (shift as any).company_id ?? null,
+      patch: { transportation_required: false },
+      expectedVersion:
+        rowVersion(readServiceRow(queryClient, selectedCompanyId, shift.id)) ?? rowVersion(shift as any),
+      surface: "shift_operations_transport",
+    });
+    if (result.status === "conflict") {
+      setServiceConflict({
+        patch: { transportation_required: false },
+        serverRow: result.row,
+        actualVersion: result.actualVersion,
+        expectedVersion: result.expectedVersion,
+        updatedAt: result.updatedAt,
+      });
+      return;
+    }
+    if (result.status !== "applied") {
+      toast.error(result.status === "noop" ? "Sin cambios" : result.message);
+      return;
+    }
+
     if (selectedCompanyId && user) {
       await supabase.from("shift_timeline").insert({
         shift_id: shift.id,
