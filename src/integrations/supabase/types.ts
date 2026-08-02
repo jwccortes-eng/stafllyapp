@@ -13600,6 +13600,8 @@ export type Database = {
           transportation_notes: string | null
           transportation_required: boolean
           updated_at: string
+          updated_by: string | null
+          version: number
         }
         Insert: {
           attendance_mode?: string
@@ -13650,6 +13652,8 @@ export type Database = {
           transportation_notes?: string | null
           transportation_required?: boolean
           updated_at?: string
+          updated_by?: string | null
+          version?: number
         }
         Update: {
           attendance_mode?: string
@@ -13700,6 +13704,8 @@ export type Database = {
           transportation_notes?: string | null
           transportation_required?: boolean
           updated_at?: string
+          updated_by?: string | null
+          version?: number
         }
         Relationships: [
           {
@@ -16196,6 +16202,54 @@ export type Database = {
         }
         Relationships: []
       }
+      versioned_write_audit: {
+        Row: {
+          actor_id: string | null
+          actual_version: number | null
+          company_id: string
+          conflict_type: string | null
+          created_at: string
+          entity: string
+          entity_id: string
+          expected_version: number | null
+          fields_attempted: string[]
+          id: string
+          intent_key: string | null
+          result: string
+          surface: string | null
+        }
+        Insert: {
+          actor_id?: string | null
+          actual_version?: number | null
+          company_id: string
+          conflict_type?: string | null
+          created_at?: string
+          entity: string
+          entity_id: string
+          expected_version?: number | null
+          fields_attempted?: string[]
+          id?: string
+          intent_key?: string | null
+          result: string
+          surface?: string | null
+        }
+        Update: {
+          actor_id?: string | null
+          actual_version?: number | null
+          company_id?: string
+          conflict_type?: string | null
+          created_at?: string
+          entity?: string
+          entity_id?: string
+          expected_version?: number | null
+          fields_attempted?: string[]
+          id?: string
+          intent_key?: string | null
+          result?: string
+          surface?: string | null
+        }
+        Relationships: []
+      }
       worker_client_preferences: {
         Row: {
           archived_at: string | null
@@ -17978,6 +18032,17 @@ export type Database = {
         Returns: boolean
       }
       verify_switch_pin: { Args: { _pin: string }; Returns: boolean }
+      versioned_update_shift: {
+        Args: {
+          p_company_id: string
+          p_expected_version: number
+          p_intent_key?: string
+          p_patch: Json
+          p_shift_id: string
+          p_surface?: string
+        }
+        Returns: Json
+      }
       worker_can_access_employee_doc_path: {
         Args: { _path: string }
         Returns: boolean
