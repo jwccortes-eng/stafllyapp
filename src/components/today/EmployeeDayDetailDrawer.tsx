@@ -16,6 +16,8 @@ import {
   VersionConflictDialog,
   type VersionConflictInfo,
 } from "@/components/data-integrity/VersionConflictDialog";
+import { TIME_ENTRY_FIELD_LABELS } from "@/lib/shifts/field-labels";
+
 
 import {
   Drawer, DrawerContent, DrawerHeader, DrawerTitle,
