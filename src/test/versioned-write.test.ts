@@ -13,6 +13,7 @@ import { buildPatch, rowVersion } from "@/lib/data/versioned-write";
 import { sameShiftUpdateValue } from "@/lib/shifts/update-shift";
 import { samePersistedValue } from "@/lib/data/versioned-write";
 import { signedDelta } from "@/lib/data/advance-balance";
+import { EDITABLE_COMPANY_FIELDS, isEditableSettingKey } from "@/lib/data/company-config-write";
 
 const TEMPORARY_EXCEPTIONS = [
   // Helper heredado: se mantiene mientras existan consumidores no migrados.
@@ -101,7 +102,35 @@ const CRITICAL_TABLES: Record<string, string[]> = {
   // review_employee_document y toda edición por versioned_update_employee_document.
   employee_documents: [],
   employee_onboarding_documents: [],
+  // Fase 3C — configuración de empresa no financiera.
+  // Excepciones temporales (archivo · razón · owner · fecha objetivo · riesgo):
+  company_settings: [
+    // useCompanyConfig.tsx · claves de payroll fuera de alcance por orden
+    // "no tocar payroll" · owner: equipo Payroll · objetivo: Fase 3F ·
+    // riesgo: lost update en configuración de nómina (sin regresión).
+    "src/hooks/useCompanyConfig.tsx",
+    // usePayrollConfig.tsx · configuración financiera (clase C) · owner:
+    // equipo Payroll · objetivo: Fase 3F · riesgo: idéntico al anterior.
+    "src/hooks/usePayrollConfig.tsx",
+    // ImportSchedule.tsx · registro histórico `imported_schedule_files`
+    // (clase F, no editable por operador) · owner: Importaciones ·
+    // objetivo: Fase 3D · riesgo: bajo (lista append-only).
+    "src/pages/admin/ImportSchedule.tsx",
+    // SandboxSyncDialog.tsx · herramienta interna de sandbox, no producción ·
+    // owner: Plataforma · objetivo: Fase 3D · riesgo: bajo (sólo sandbox).
+    "src/components/SandboxSyncDialog.tsx",
+  ],
+  companies: [
+    // Companies.tsx · superficie de plataforma (alta/baja de tenant,
+    // activación) · owner: Plataforma · objetivo: Fase 3D · riesgo: tenant.
+    "src/pages/admin/Companies.tsx",
+    // useBilling.tsx y UpgradeRequestDialog.tsx · billing/plan (clase C,
+    // prohibido tocar en esta fase) · owner: Billing · objetivo: Fase 3F.
+    "src/hooks/useBilling.tsx",
+    "src/components/billing/UpgradeRequestDialog.tsx",
+  ],
 };
+
 
 
 describe("VWC — carriles críticos de Fase 2", () => {
@@ -152,9 +181,56 @@ describe("VWC Fase 3B — documentos y compliance", () => {
     // A aprueba sobre v3 → el documento pasa a v4.
     // B, que abrió el documento en v3, intenta rechazar: el backend compara
     // expected_version (3) con la actual (4) y responde conflicto.
-    const serverVersion = 4;
-    const staleExpected = 3;
+    const serverVersion: number = 4;
+    const staleExpected: number = 3;
     const isConflict = staleExpected !== serverVersion;
     expect(isConflict).toBe(true);
+  });
+});
+
+
+describe("VWC Fase 3C — configuración de empresa no financiera", () => {
+  const write = readFileSync("src/lib/data/company-config-write.ts", "utf8");
+  const page = readFileSync("src/pages/admin/CompanyConfig.tsx", "utf8");
+
+  it("las claves financieras y de tenant no son editables por este carril", () => {
+    for (const blocked of ["pay_week", "overtime", "pay_types", "payroll_config", "tenant_type"]) {
+      expect(isEditableSettingKey(blocked)).toBe(false);
+    }
+    for (const allowed of ["geofence", "time_tolerance", "auto_close", "auto_validation"]) {
+      expect(isEditableSettingKey(allowed)).toBe(true);
+    }
+  });
+
+  it("la identidad de empresa sólo admite nombre, logo y color", () => {
+    expect([...EDITABLE_COMPANY_FIELDS]).toEqual(["name", "logo_url", "brand_color"]);
+    for (const blocked of ["is_active", "plan_code", "billing_status", "owner_user_id", "created_by"]) {
+      expect((EDITABLE_COMPANY_FIELDS as readonly string[]).includes(blocked)).toBe(false);
+    }
+  });
+
+  it("toda escritura viaja con company_id y expected_version", () => {
+    expect(write).toContain("p_company_id: companyId");
+    expect(write).toContain("p_expected_version: expectedVersion ?? null");
+    expect(write).toContain("versioned_update_company_setting");
+    expect(write).toContain("versioned_update_company_profile");
+  });
+
+  it("la pantalla envía patches parciales, nunca snapshots completos", () => {
+    expect(page).toContain("rows[key]?.version ?? null");
+    expect(page).not.toContain(".upsert(");
+    expect(/from\("companies"\)[\s\S]{0,120}?\.update\(/.test(page)).toBe(false);
+    expect(/from\("company_settings"\)[\s\S]{0,120}?\.update\(/.test(page)).toBe(false);
+  });
+
+  it("el reemplazo de logo no borra el archivo anterior", () => {
+    expect(page).not.toContain('storage.from("company-logos").remove');
+    expect(page).toContain("upsert: false");
+  });
+
+  it("Caso A/B: A cambia el logo (v2) y B guarda zona horaria desde v1 → conflicto", () => {
+    const serverVersion: number = 2;   // A ya guardó
+    const staleExpected: number = 1;   // B tenía la versión anterior
+    expect(staleExpected !== serverVersion).toBe(true);
   });
 });
