@@ -126,6 +126,7 @@ export default function DocumentsCenter() {
         out.push({
           id: `missing-${empId}-${label}`,
           rawId: "",
+          version: null,
           source: "admin_upload",
           employee_id: empId,
           company_id: selectedCompanyId ?? "",
@@ -505,6 +506,7 @@ export default function DocumentsCenter() {
                 reviewed_at: previewRow.reviewed_at,
                 rejection_reason: previewRow.rejection_reason ?? null,
                 expires_at: previewRow.expires_at,
+                version: previewRow.version,
               })}
               requiredCategories={requiredCategories}
               canReview={canReview}
@@ -671,6 +673,7 @@ function ExpirationCell({
         company_id: row.company_id,
         name: row.document_type,
         category: String(row.category),
+        version: row.version,
       },
       value || null,
     );
