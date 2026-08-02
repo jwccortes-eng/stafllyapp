@@ -102,69 +102,93 @@ export function EmployeeDayDetailDrawer({ employee, open, onOpenChange, now, onD
     setEditingEntryId(null);
   };
 
+  /**
+   * Carril 2 (PATCH parcial + expected_version). Sólo viajan los campos que el
+   * operador tocó y la versión que tenía a la vista. Si otra persona guardó
+   * antes, el servidor rechaza y mostramos el conflicto: nunca sobrescribimos horas.
+   */
   const saveEntry = async (entryId: string) => {
-    setSaving(true);
-    const today = format(new Date(), "yyyy-MM-dd");
+    const entry = allEntries.find((e) => e.id === entryId);
+    if (!entry) return;
 
-    // Capture old data for audit
-    const entry = allEntries.find(e => e.id === entryId);
-    const oldData = entry ? {
+    setSaving(true);
+
+    // La fecha base es la del propio fichaje, no "hoy": editar un fichaje de
+    // ayer no puede moverlo al día de hoy.
+    const baseDate = format(new Date(entry.clock_in), "yyyy-MM-dd");
+
+    const next: Record<string, any> = {
+      clock_in: `${baseDate}T${editClockIn}:00`,
+      break_minutes: parseInt(editBreak) || 0,
+      notes: editNotes.trim() || null,
+    };
+    if (editClockOut) next.clock_out = `${baseDate}T${editClockOut}:00`;
+
+    const oldData = {
       clock_in: entry.clock_in,
       clock_out: entry.clock_out,
       break_minutes: entry.break_minutes,
       notes: entry.notes,
-    } : null;
-
-    const updates: Record<string, any> = {
-      clock_in: `${today}T${editClockIn}:00`,
-      break_minutes: parseInt(editBreak) || 0,
-      notes: editNotes.trim() || null,
     };
 
-    if (editClockOut) {
-      updates.clock_out = `${today}T${editClockOut}:00`;
+    const patch = buildPatch(oldData, next);
+    if (Object.keys(patch).length === 0) {
+      toast.info("No hay cambios que guardar");
+      setEditingEntryId(null);
+      setSaving(false);
+      return;
     }
 
-    const { error } = await supabase
-      .from("time_entries")
-      .update(updates)
-      .eq("id", entryId);
+    const result = await versionedWrite({
+      entity: "time_entries",
+      id: entryId,
+      companyId: entry.company_id,
+      patch,
+      expectedVersion: rowVersion(entry),
+      surface: "today_view/employee_day_detail",
+    });
 
-    if (error) {
-      toast.error("Error al guardar: " + error.message);
-    } else {
+    if (result.status === "ok") {
       toast.success("Fichaje actualizado");
       setEditingEntryId(null);
       onDataChanged?.();
-
       logAudit({
         action: "update",
         entityType: "time_entry",
         entityId: entryId,
         details: { employee_name: `${employee.first_name} ${employee.last_name}`, source: "today_view" },
         oldData,
-        newData: updates,
+        newData: patch,
       });
+    } else if (result.status === "conflict") {
+      setHoursConflict(result.conflict);
+    } else {
+      toast.error(result.message);
     }
+
     setSaving(false);
   };
 
+  /** Salida forzada: PATCH de un solo campo, también versionado. */
   const forceClockOut = async (entryId: string) => {
+    const entry = allEntries.find((e) => e.id === entryId);
+    if (!entry) return;
+
     setForcingClockOut(entryId);
     const clockOutTime = new Date().toISOString();
-    const entry = allEntries.find(e => e.id === entryId);
 
-    const { error } = await supabase
-      .from("time_entries")
-      .update({ clock_out: clockOutTime })
-      .eq("id", entryId);
+    const result = await versionedWrite({
+      entity: "time_entries",
+      id: entryId,
+      companyId: entry.company_id,
+      patch: { clock_out: clockOutTime },
+      expectedVersion: rowVersion(entry),
+      surface: "today_view/force_clock_out",
+    });
 
-    if (error) {
-      toast.error("Error: " + error.message);
-    } else {
+    if (result.status === "ok") {
       toast.success("Salida forzada registrada");
       onDataChanged?.();
-
       logAudit({
         action: "update",
         entityType: "time_entry",
@@ -174,12 +198,18 @@ export function EmployeeDayDetailDrawer({ employee, open, onOpenChange, now, onD
           source: "today_view",
           forced_clock_out: true,
         },
-        oldData: entry ? { clock_in: entry.clock_in, clock_out: null } : null,
+        oldData: { clock_in: entry.clock_in, clock_out: null },
         newData: { clock_out: clockOutTime },
       });
+    } else if (result.status === "conflict") {
+      setHoursConflict(result.conflict);
+    } else {
+      toast.error(result.message);
     }
+
     setForcingClockOut(null);
   };
+
 
   return (
     <Drawer open={open} onOpenChange={(o) => { onOpenChange(o); if (!o) setEditingEntryId(null); }}>
