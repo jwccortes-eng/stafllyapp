@@ -18,12 +18,22 @@ export type ShiftUpdateResult =
   | { ok: false; reason: "error" | "no_rows" | "mismatch"; message: string; mismatched?: string[]; row?: undefined };
 
 
-function sameValue(a: any, b: any): boolean {
+function normalizeTime(value: string): string | null {
+  const match = value.match(/^(\d{2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?$/);
+  if (!match) return null;
+  return `${match[1]}:${match[2]}:${match[3] ?? "00"}`;
+}
+
+export function sameShiftUpdateValue(a: any, b: any): boolean {
   if (a === b) return true;
   if (a == null && b == null) return true;
   if (typeof a === "string" && typeof b === "string") {
-    // Horas: la base normaliza "08:00" → "08:00:00".
-    return a.slice(0, 5) === b.slice(0, 5) ? a.replace(/:00$/, "") === b.replace(/:00$/, "") || a === b : a === b;
+    // La base normaliza horas "08:00" → "08:00:00". Comparamos una forma
+    // canónica completa para no declarar un falso guardado parcial cuando un
+    // campo horario no modificado vuelve desde el formulario sin segundos.
+    const normalizedA = normalizeTime(a);
+    const normalizedB = normalizeTime(b);
+    if (normalizedA && normalizedB) return normalizedA === normalizedB;
   }
   return JSON.stringify(a) === JSON.stringify(b);
 }
@@ -50,7 +60,7 @@ export async function updateShiftVerified(
   }
 
   const mismatched = Object.keys(updates).filter(
-    (key) => !sameValue((data as any)[key], updates[key]),
+    (key) => !sameShiftUpdateValue((data as any)[key], updates[key]),
   );
   if (mismatched.length > 0) {
     return {
