@@ -24,7 +24,7 @@ import { toast } from "sonner";
 import { notifyActionRequired, notifyError, notifySuccess, notifyWarning } from "@/lib/feedback/notify";
 import { updateShiftVerified } from "@/lib/shifts/update-shift";
 import { useQueryClient } from "@tanstack/react-query";
-import { reconcileServiceAfterSave, subscribeToServiceChanges } from "@/lib/shifts/service-state";
+import { reconcileServiceAfterSave, subscribeToServiceChanges, type ServiceRow } from "@/lib/shifts/service-state";
 
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction, AlertDialogCancel } from "@/components/ui/alert-dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -1029,7 +1029,7 @@ function DesktopShifts() {
       published_at: isDraft ? null : new Date().toISOString(),
       published_by: isDraft ? null : user?.id ?? null,
     };
-    const { data: shift, error } = await supabase.from("scheduled_shifts").insert(insertData).select("id, shift_code").single();
+    const { data: shift, error } = await supabase.from("scheduled_shifts").insert(insertData).select("*").single();
 
     if (error) { toast.error(error.message); return null; }
 
@@ -1091,7 +1091,17 @@ function DesktopShifts() {
       }
     }
 
-    return shift;
+    if (!shift) return null;
+
+    // P0 — creación y edición comparten el mismo punto de compromiso visible.
+    // No devolvemos el control al formulario hasta que la fila creada esté en la
+    // cache canónica y todas las vistas derivadas hayan recibido la invalidación.
+    return await reconcileServiceAfterSave(
+      queryClient,
+      selectedCompanyId,
+      shift.id,
+      shift as ServiceRow,
+    );
   };
 
   // Validate fields required to publish a shift. Returns list of missing fields
@@ -1207,7 +1217,7 @@ function DesktopShifts() {
       status: "draft",
       publication_status: "draft",
       created_by: user?.id,
-    } as any).select("id, shift_code").single();
+    } as any).select("*").single();
 
     if (error) {
       console.error("[QuickCreate] insert failed:", error);
@@ -1215,9 +1225,11 @@ function DesktopShifts() {
       return;
     }
     // Title stays clean — `shift_code` is the single source of truth.
-    if (shift) await logShiftActivity("crear_turno", shift.id, null, { title: data.title, date: data.date, quick: true });
+    if (!shift) return;
+    await logShiftActivity("crear_turno", shift.id, null, { title: data.title, date: data.date, quick: true });
+    await reconcileServiceAfterSave(queryClient, selectedCompanyId, shift.id, shift as ServiceRow);
+    await loadData();
     toast.success("Turno borrador creado");
-    loadData();
   };
 
   const handleOpenFullWithPrefill = (data: { title: string; date: string; start_time: string; end_time: string; client_id: string; location_id: string; slots: number }) => {

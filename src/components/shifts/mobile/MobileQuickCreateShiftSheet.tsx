@@ -48,6 +48,8 @@ import type { Shift, Assignment, Employee, SelectOption } from "@/components/shi
 import { useCompany } from "@/hooks/useCompany";
 import { buildCreationConfirmation, type CreationConfirmation, type PersistedShiftFacts } from "@/lib/shifts/shift-ref";
 import { ADMIN_LEX } from "@/lib/ox/lexicon";
+import { useQueryClient } from "@tanstack/react-query";
+import { reconcileServiceAfterSave, type ServiceRow } from "@/lib/shifts/service-state";
 
 
 /**
@@ -82,7 +84,7 @@ interface Props {
   /** Turnos y asignaciones ya cargados: se usan para marcar ocupados ese día. */
   shifts?: Shift[];
   assignments?: Assignment[];
-  onCreated: (shiftId: string) => void;
+  onCreated: (shiftId: string, shiftDate: string) => void;
 }
 
 type StepKey = "operacion" | "cuando" | "equipo" | "extras" | "confirmar";
@@ -212,6 +214,7 @@ export function MobileQuickCreateShiftSheet({
   assignments = [],
   onCreated,
 }: Props) {
+  const queryClient = useQueryClient();
   const { user, role, hasModuleAccess } = useAuth();
   const canCreate = role === "owner" || role === "admin" || hasModuleAccess("shifts", "edit");
   const navigate = useNavigate();
@@ -571,7 +574,7 @@ export function MobileQuickCreateShiftSheet({
         const { data, error } = await supabase
           .from("scheduled_shifts")
           .insert(insertData)
-          .select("id, company_id, shift_ref, title, date, start_time, end_time, slots")
+          .select("*")
           .single();
         if (error) throw error;
         const row: any = data;
@@ -649,7 +652,24 @@ export function MobileQuickCreateShiftSheet({
         } as any);
       } catch { /* no bloqueante */ }
 
-      onCreated(shiftId);
+      // La confirmación no es el final del guardado: primero reconciliamos la
+      // misma fuente canónica que consumen detalle, listas y calendario.
+      await reconcileServiceAfterSave(
+        queryClient,
+        companyId,
+        shiftId,
+        persistedRef.current ? ({
+          id: shiftId,
+          company_id: persistedRef.current.companyId,
+          shift_ref: persistedRef.current.shiftRef,
+          title: persistedRef.current.title,
+          date: persistedRef.current.date,
+          start_time: persistedRef.current.startTime,
+          end_time: persistedRef.current.endTime,
+          slots: persistedRef.current.slots,
+        } as ServiceRow) : null,
+      );
+      onCreated(shiftId, date);
 
       if (summary.kind === "created_partial") {
         notifyWarning({

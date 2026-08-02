@@ -733,9 +733,9 @@ export default function MobileShiftsView() {
         defaultStartTime={shiftsConfig?.default_start_time ?? "09:00"}
         defaultEndTime={shiftsConfig?.default_end_time ?? "17:00"}
         defaultSlots={shiftsConfig?.default_slots ?? 1}
-        onCreated={() => {
+        onCreated={(_shiftId, shiftDate) => {
           setReloadKey(k => k + 1);
-          setTab("today");
+          setTab(shiftDate === todayStr ? "today" : "upcoming");
         }}
       />
     </div>
