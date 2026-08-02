@@ -210,7 +210,7 @@ describe("VWC Fase 3C — configuración de empresa no financiera", () => {
   });
 
   it("la pantalla envía patches parciales, nunca snapshots completos", () => {
-    expect(page).toContain("expectedVersion: rows[config.key]?.version");
+    expect(page).toContain("rows[key]?.version ?? null");
     expect(page).not.toContain(".upsert(");
     expect(/from\("companies"\)[\s\S]{0,120}?\.update\(/.test(page)).toBe(false);
     expect(/from\("company_settings"\)[\s\S]{0,120}?\.update\(/.test(page)).toBe(false);
