@@ -74,7 +74,7 @@ export function buildPatch(
 ): Record<string, any> {
   const patch: Record<string, any> = {};
   for (const key of Object.keys(next)) {
-    if (!sameShiftUpdateValue(current?.[key], next[key])) patch[key] = next[key];
+    if (!samePersistedValue(current?.[key], next[key])) patch[key] = next[key];
   }
   return patch;
 }
