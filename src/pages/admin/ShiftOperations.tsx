@@ -1042,6 +1042,28 @@ export default function ShiftOperations() {
         assignments={assignments as unknown as Assignment[]}
         onSave={handleEditSave}
       />
+
+      <VersionConflictDialog
+        open={!!serviceConflict}
+        conflict={serviceConflict}
+        entityLabel="este servicio"
+        fieldLabels={SHIFT_FIELD_LABELS}
+        onKeepMine={() => {
+          if (!serviceConflict || !shift) return;
+          const server = (serviceConflict.serverRow ?? shift) as any;
+          const patch = serviceConflict.patch;
+          setServiceConflict(null);
+          void handleEditSave(shift.id, patch, { ...server, version: serviceConflict.actualVersion });
+        }}
+        onReload={async () => {
+          if (!shift) return;
+          await reconcileServiceAfterSave(queryClient, selectedCompanyId, shift.id);
+          setServiceConflict(null);
+          loadAll({ background: true });
+        }}
+        onCancel={() => setServiceConflict(null)}
+      />
     </div>
   );
 }
+
