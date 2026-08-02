@@ -1259,9 +1259,9 @@ function DesktopShifts() {
     const patch: Record<string, any> = {};
     changes.forEach((c) => { patch[c.field] = (updates as any)[c.field]; });
 
-    const canonical = readServiceRow(queryClient, companyIdForWrite, shiftId);
+    const canonicalRow = readServiceRow(queryClient, companyIdForWrite, shiftId);
     const expectedVersion =
-      overrideVersion ?? rowVersion(canonical) ?? rowVersion(oldShift as any);
+      overrideVersion ?? rowVersion(canonicalRow) ?? rowVersion(oldShift as any);
 
     const saveResult = await versionedWrite({
       entity: "scheduled_shifts",
