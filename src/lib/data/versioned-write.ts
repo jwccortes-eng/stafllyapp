@@ -85,6 +85,27 @@ export function rowVersion(row: Record<string, any> | null | undefined): number 
   return typeof v === "number" ? v : null;
 }
 
+/**
+ * Comparación de evidencia tras releer la fila: tolerante a formatos de hora
+ * (`17:00` ≡ `17:00:00`) y a normalización de marcas temporales por Postgres
+ * (`2026-08-02T09:00:00` ≡ `2026-08-02T09:00:00+00:00`).
+ */
+export function samePersistedValue(persisted: any, sent: any): boolean {
+  if (sameShiftUpdateValue(persisted, sent)) return true;
+  if (typeof persisted === "string" && typeof sent === "string") {
+    const a = Date.parse(persisted);
+    const b = Date.parse(sent);
+    if (!Number.isNaN(a) && !Number.isNaN(b) && a === b) return true;
+  }
+  if (typeof persisted === "number" || typeof sent === "number") {
+    const a = Number(persisted);
+    const b = Number(sent);
+    if (!Number.isNaN(a) && !Number.isNaN(b) && a === b) return true;
+  }
+  return false;
+}
+
+
 export async function versionedWrite(input: VersionedWriteInput): Promise<VersionedWriteResult> {
   const { entity, id, companyId, patch, expectedVersion, surface, intentKey, reason } = input;
 
