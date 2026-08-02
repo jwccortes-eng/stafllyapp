@@ -82,11 +82,14 @@ function display(value: any): string {
 
 export function VersionConflictDialog({
   open, conflict, entityLabel = "este servicio", fieldLabels = {},
-  busy, onKeepMine, onReload, onCancel,
+  busy, kind = "service", onKeepMine, onReload, onCancel,
 }: Props) {
   const [showDiff, setShowDiff] = useState(false);
   const fields = Object.keys(conflict?.patch ?? {});
   const when = relativeTime(conflict?.updatedAt ?? null);
+  const copy = COPY[kind];
+  // Horas y dinero nunca ofrecen "guardar de todas formas" por defecto.
+  const allowKeepMine = kind === "service" && typeof onKeepMine === "function";
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v && !busy) onCancel(); }}>
@@ -94,13 +97,13 @@ export function VersionConflictDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-base">
             <AlertTriangle className="h-4 w-4 text-amber-500" />
-            {`Cambió ${entityLabel} mientras lo editabas`}
+            {copy.title(entityLabel)}
           </DialogTitle>
           <DialogDescription className="text-sm leading-snug">
-            Otra persona guardó una versión más reciente{when ? ` ${when}` : ""}. No guardamos nada
-            para no borrar su trabajo ni el tuyo.
+            {copy.body(when)}
           </DialogDescription>
         </DialogHeader>
+
 
         {showDiff && fields.length > 0 && (
           <div className="rounded-xl border border-border/60 divide-y divide-border/50 text-[12px] max-h-56 overflow-y-auto">
