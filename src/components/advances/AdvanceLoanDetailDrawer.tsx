@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -16,6 +16,9 @@ import {
   ArrowDownCircle, ArrowUpCircle, Loader2, Trash2, AlertTriangle,
   TrendingUp, TrendingDown, Ban, BookOpen,
 } from "lucide-react";
+import { applyAdvanceBalanceDelta, type AdvanceTransactionType } from "@/lib/data/advance-balance";
+import { rowVersion } from "@/lib/data/versioned-write";
+import { VersionConflictDialog, type VersionConflictInfo } from "@/components/data-integrity/VersionConflictDialog";
 
 interface Props {
   recordId: string;
@@ -108,6 +111,8 @@ export default function AdvanceLoanDetailDrawer({ recordId, open, onOpenChange, 
   const [dialogAmount, setDialogAmount] = useState("");
   const [dialogMethod, setDialogMethod] = useState("cash");
   const [dialogNote, setDialogNote] = useState("");
+  const [balanceConflict, setBalanceConflict] = useState<VersionConflictInfo | null>(null);
+  const intentKeyRef = useRef<string | null>(null);
 
   const fetchDetail = async () => {
     setLoading(true);
