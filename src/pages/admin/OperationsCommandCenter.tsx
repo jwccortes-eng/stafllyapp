@@ -36,6 +36,7 @@ import { AutoDispatchPanel } from "@/components/operations/AutoDispatchPanel";
 import { PostShiftRatingDialog, type PostShiftRatingMode } from "@/components/operations/PostShiftRatingDialog";
 import { FrontDeskWidget } from "@/components/front-desk/FrontDeskWidget";
 import { ADMIN_LEX } from "@/lib/ox/lexicon";
+import { subscribeToServiceChanges } from "@/lib/shifts/service-state";
 
 // ─── Types ───
 interface ShiftRow {
@@ -223,6 +224,14 @@ export default function OperationsCommandCenter() {
   }, [selectedCompanyId, dateStr, play]);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  // P0.1 — el tablero es una vista derivada del servicio canónico: se refresca
+  // cuando otra superficie reconcilia un servicio de esta empresa.
+  useEffect(() => {
+    return subscribeToServiceChanges(({ companyId }) => {
+      if (companyId === selectedCompanyId) void loadData();
+    });
+  }, [selectedCompanyId, loadData]);
 
   // ─── Realtime subscriptions ───
   useEffect(() => {
