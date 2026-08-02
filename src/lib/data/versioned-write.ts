@@ -142,7 +142,7 @@ export async function versionedWrite(input: VersionedWriteInput): Promise<Versio
         return { status: "error", reason: "error", message: "Se guardó pero no pudimos releer el registro." };
       }
       // Evidencia obligatoria: la fila persistida debe reflejar el patch.
-      const mismatched = fields.filter((key) => !sameShiftUpdateValue(row[key], patch[key]));
+      const mismatched = fields.filter((key) => !samePersistedValue(row[key], patch[key]));
       if (mismatched.length > 0) {
         return {
           status: "error",
