@@ -142,6 +142,8 @@ export default function ShiftOperations() {
   const shiftId = searchParams.get("id");
 
   const [shift, setShift] = useState<ShiftDetail | null>(null);
+  const [serviceConflict, setServiceConflict] = useState<VersionConflictInfo | null>(null);
+
   const [assignments, setAssignments] = useState<AssignmentDetail[]>([]);
   const [timeline, setTimeline] = useState<TimelineEvent[]>([]);
   const [notes, setNotes] = useState<ShiftNote[]>([]);
