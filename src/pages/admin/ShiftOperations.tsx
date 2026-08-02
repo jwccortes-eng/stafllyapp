@@ -41,10 +41,13 @@ import {
 } from "@/lib/shifts/closeout-review-status";
 import { ShiftClosureCard } from "@/components/shifts/ShiftClosureCard";
 import { useQueryClient } from "@tanstack/react-query";
-import { updateShiftVerified } from "@/lib/shifts/update-shift";
+import { versionedWrite, buildPatch, rowVersion } from "@/lib/data/versioned-write";
+import { VersionConflictDialog, type VersionConflictInfo } from "@/components/data-integrity/VersionConflictDialog";
+import { SHIFT_FIELD_LABELS } from "@/lib/shifts/field-labels";
 import {
-  reconcileServiceAfterSave, subscribeToServiceChanges, writeServiceRow,
+  reconcileServiceAfterSave, subscribeToServiceChanges, writeServiceRow, readServiceRow,
 } from "@/lib/shifts/service-state";
+
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronDown, ClipboardCheck, Timer } from "lucide-react";
@@ -139,6 +142,8 @@ export default function ShiftOperations() {
   const shiftId = searchParams.get("id");
 
   const [shift, setShift] = useState<ShiftDetail | null>(null);
+  const [serviceConflict, setServiceConflict] = useState<VersionConflictInfo | null>(null);
+
   const [assignments, setAssignments] = useState<AssignmentDetail[]>([]);
   const [timeline, setTimeline] = useState<TimelineEvent[]>([]);
   const [notes, setNotes] = useState<ShiftNote[]>([]);
@@ -355,8 +360,32 @@ export default function ShiftOperations() {
       toast.error("Este turno no se puede editar");
       return;
     }
-    const saveResult = await updateShiftVerified(id, updates as any, selectedCompanyId ?? null);
-    if (!saveResult.ok) { toast.error(saveResult.message); return; }
+    // VWC — PATCH parcial + expected_version. Nunca snapshot completo.
+    const patch = buildPatch(oldShift, updates as Record<string, any>);
+    if (Object.keys(patch).length === 0) { toast.info("Sin cambios"); return; }
+    const saveResult = await versionedWrite({
+      entity: "scheduled_shifts",
+      id,
+      companyId: selectedCompanyId ?? null,
+      patch,
+      expectedVersion: rowVersion(readServiceRow(queryClient, selectedCompanyId, id)) ?? rowVersion(oldShift),
+      surface: "shift_operations",
+    });
+    if (saveResult.status === "conflict") {
+      setServiceConflict({
+        patch,
+        serverRow: saveResult.row,
+        actualVersion: saveResult.actualVersion,
+        expectedVersion: saveResult.expectedVersion,
+        updatedAt: saveResult.updatedAt,
+      });
+      return;
+    }
+    if (saveResult.status !== "applied") {
+      toast.error(saveResult.status === "noop" ? "Sin cambios" : saveResult.message);
+      return;
+    }
+
     if (selectedCompanyId && user) {
       await supabase.from("shift_timeline").insert({
         shift_id: id,
@@ -390,11 +419,30 @@ export default function ShiftOperations() {
   const handleDisableTransport = async () => {
     if (!shift) return;
     if (!window.confirm("Este turno dejará de pedir conductor. ¿Continuar?")) return;
-    const { error } = await supabase
-      .from("scheduled_shifts")
-      .update({ transportation_required: false } as any)
-      .eq("id", shift.id);
-    if (error) { toast.error(error.message); return; }
+    const result = await versionedWrite({
+      entity: "scheduled_shifts",
+      id: shift.id,
+      companyId: selectedCompanyId ?? (shift as any).company_id ?? null,
+      patch: { transportation_required: false },
+      expectedVersion:
+        rowVersion(readServiceRow(queryClient, selectedCompanyId, shift.id)) ?? rowVersion(shift as any),
+      surface: "shift_operations_transport",
+    });
+    if (result.status === "conflict") {
+      setServiceConflict({
+        patch: { transportation_required: false },
+        serverRow: result.row,
+        actualVersion: result.actualVersion,
+        expectedVersion: result.expectedVersion,
+        updatedAt: result.updatedAt,
+      });
+      return;
+    }
+    if (result.status !== "applied") {
+      toast.error(result.status === "noop" ? "Sin cambios" : result.message);
+      return;
+    }
+
     if (selectedCompanyId && user) {
       await supabase.from("shift_timeline").insert({
         shift_id: shift.id,
@@ -1013,6 +1061,28 @@ export default function ShiftOperations() {
         assignments={assignments as unknown as Assignment[]}
         onSave={handleEditSave}
       />
+
+      <VersionConflictDialog
+        open={!!serviceConflict}
+        conflict={serviceConflict}
+        entityLabel="este servicio"
+        fieldLabels={SHIFT_FIELD_LABELS}
+        onKeepMine={() => {
+          if (!serviceConflict || !shift) return;
+          const server = (serviceConflict.serverRow ?? shift) as any;
+          const patch = serviceConflict.patch;
+          setServiceConflict(null);
+          void handleEditSave(shift.id, patch, { ...server, version: serviceConflict.actualVersion });
+        }}
+        onReload={async () => {
+          if (!shift) return;
+          await reconcileServiceAfterSave(queryClient, selectedCompanyId, shift.id);
+          setServiceConflict(null);
+          loadAll({ background: true });
+        }}
+        onCancel={() => setServiceConflict(null)}
+      />
     </div>
   );
 }
+

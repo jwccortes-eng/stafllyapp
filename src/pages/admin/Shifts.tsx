@@ -22,9 +22,12 @@ import { Checkbox } from "@/components/ui/checkbox";
 // Tabs removed — using custom view switcher
 import { toast } from "sonner";
 import { notifyActionRequired, notifyError, notifySuccess, notifyWarning } from "@/lib/feedback/notify";
-import { updateShiftVerified } from "@/lib/shifts/update-shift";
+import { versionedWrite, rowVersion } from "@/lib/data/versioned-write";
+import { VersionConflictDialog, type VersionConflictInfo } from "@/components/data-integrity/VersionConflictDialog";
+import { SHIFT_FIELD_LABELS } from "@/lib/shifts/field-labels";
 import { useQueryClient } from "@tanstack/react-query";
-import { reconcileServiceAfterSave, subscribeToServiceChanges, type ServiceRow } from "@/lib/shifts/service-state";
+import { reconcileServiceAfterSave, subscribeToServiceChanges, readServiceRow, type ServiceRow } from "@/lib/shifts/service-state";
+
 
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction, AlertDialogCancel } from "@/components/ui/alert-dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -471,6 +474,15 @@ function DesktopShifts() {
   const [selectedShift, setSelectedShift] = useState<Shift | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailInitialTab, setDetailInitialTab] = useState<string | undefined>(undefined);
+
+  // VWC — conflicto de versión al editar un servicio (UI única del ecosistema)
+  const [serviceConflict, setServiceConflict] = useState<{
+    info: VersionConflictInfo;
+    shiftId: string;
+    updates: Partial<Shift>;
+    oldShift: Shift;
+  } | null>(null);
+
 
   // Edit dialog
   const [editShift, setEditShift] = useState<Shift | null>(null);
@@ -1244,23 +1256,61 @@ function DesktopShifts() {
     setCreateOpen(true);
   };
 
-  const handleEditShift = async (shiftId: string, updates: Partial<Shift>, oldShift: Shift) => {
+  const handleEditShift = async (
+    shiftId: string,
+    updates: Partial<Shift>,
+    oldShift: Shift,
+    overrideVersion?: number | null,
+  ) => {
     if (oldShift.status === "locked") { toast.error("Este turno está bloqueado y no se puede editar"); return; }
     const changes = getChangedFields(oldShift, updates);
     if (changes.length === 0) { toast.info("Sin cambios"); return; }
 
-    // P0 — guardado verificado: sin fila devuelta no hay éxito que anunciar.
-    const saveResult = await updateShiftVerified(shiftId, updates as any, selectedCompanyId ?? (oldShift as any).company_id ?? null);
-    if (!saveResult.ok) {
+    const companyIdForWrite = selectedCompanyId ?? (oldShift as any).company_id ?? null;
+    // VWC — PATCH parcial: sólo los campos que realmente cambiaron.
+    const patch: Record<string, any> = {};
+    changes.forEach((c) => { patch[c.field] = (updates as any)[c.field]; });
+
+    const canonicalRow = readServiceRow(queryClient, companyIdForWrite, shiftId);
+    const expectedVersion =
+      overrideVersion ?? rowVersion(canonicalRow) ?? rowVersion(oldShift as any);
+
+    const saveResult = await versionedWrite({
+      entity: "scheduled_shifts",
+      id: shiftId,
+      companyId: companyIdForWrite,
+      patch,
+      expectedVersion,
+      surface: "desktop_shift_detail_dialog",
+    });
+
+    if (saveResult.status === "conflict") {
+      setServiceConflict({
+        info: {
+          patch,
+          serverRow: saveResult.row,
+          actualVersion: saveResult.actualVersion,
+          expectedVersion: saveResult.expectedVersion,
+          updatedAt: saveResult.updatedAt,
+        },
+        shiftId,
+        updates,
+        oldShift,
+      });
+      return;
+    }
+    if (saveResult.status !== "applied") {
       notifyError({
         key: "shift-update-desktop",
         title: "No pudimos guardar el turno",
-        fact: saveResult.message,
+        fact: saveResult.status === "noop" ? "No había cambios que aplicar." : saveResult.message,
         consequence: "El turno sigue como estaba. Revisa e inténtalo de nuevo.",
       });
       return;
     }
+    setServiceConflict(null);
     const savedShift = saveResult.row;
+
 
 
     // Log audit
@@ -2768,6 +2818,29 @@ function DesktopShifts() {
         onSave={handleEditShift}
         allowClaims={shiftsConfig.allow_claims}
       />
+
+      <VersionConflictDialog
+        open={!!serviceConflict}
+        conflict={serviceConflict?.info ?? null}
+        entityLabel="este servicio"
+        fieldLabels={SHIFT_FIELD_LABELS}
+        onKeepMine={() => {
+          if (!serviceConflict) return;
+          const { shiftId, updates, oldShift, info } = serviceConflict;
+          const serverRow = (info.serverRow ?? oldShift) as Shift;
+          setServiceConflict(null);
+          void handleEditShift(shiftId, updates, serverRow, info.actualVersion ?? null);
+        }}
+        onReload={async () => {
+          if (!serviceConflict) return;
+          const companyIdForRead = selectedCompanyId ?? (serviceConflict.oldShift as any).company_id ?? null;
+          await reconcileServiceAfterSave(queryClient, companyIdForRead, serviceConflict.shiftId);
+          setServiceConflict(null);
+          await loadData();
+        }}
+        onCancel={() => setServiceConflict(null)}
+      />
+
 
       {duplicateShift && selectedCompanyId && (
         <DuplicateShiftDialog
