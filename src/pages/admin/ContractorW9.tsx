@@ -141,8 +141,6 @@ export default function ContractorW9() {
     setSaving(true);
 
     const payload: any = {
-      company_id: companyId,
-      employee_id: formEmployeeId,
       legal_name: formLegalName.trim(),
       business_name: formBusinessName.trim() || null,
       tax_classification: formTaxClass,
@@ -159,18 +157,46 @@ export default function ContractorW9() {
     }
 
     if (editing) {
-      const { error } = await supabase.from("contractor_w9").update(payload).eq("id", editing.id);
-      if (error) {
-        toast({ title: "Error al actualizar", description: error.message, variant: "destructive" });
+      // VWC Fase 3A · carril 2: PATCH parcial + expected_version.
+      const patch = buildPatch(editing as any, payload);
+      const res = await versionedWrite({
+        entity: "contractor_w9",
+        id: editing.id,
+        companyId,
+        patch,
+        expectedVersion: editing.version ?? null,
+        surface: "admin/ContractorW9",
+      });
+      if (res.status === "conflict") {
+        toast({
+          title: "Otra persona actualizó este W-9",
+          description: "Recargamos la versión vigente. Revisa los datos antes de volver a guardar.",
+          variant: "destructive",
+        });
+      } else if (res.status === "error") {
+        toast({ title: "Error al actualizar", description: res.message, variant: "destructive" });
+      } else if (res.status === "noop") {
+        toast({ title: "Sin cambios que guardar" });
       } else {
         toast({ title: "W-9 actualizado" });
       }
     } else {
-      payload.status = "submitted";
-      payload.submitted_at = new Date().toISOString();
-      const { error } = await supabase.from("contractor_w9").insert(payload);
-      if (error) {
-        toast({ title: "Error al crear", description: error.message, variant: "destructive" });
+      // VWC Fase 3A · carril 1: alta idempotente vía RPC (nunca INSERT directo).
+      const { data, error } = await supabase.rpc("submit_contractor_w9", {
+        p_company_id: companyId!,
+        p_employee_id: formEmployeeId,
+        p_payload: payload,
+        p_expected_version: null,
+        p_surface: "admin/ContractorW9",
+        p_intent_key: `w9-admin-create-${formEmployeeId}-${crypto.randomUUID()}`,
+      });
+      const res = (data ?? {}) as Record<string, any>;
+      if (error || res.status !== "applied") {
+        toast({
+          title: "Error al crear",
+          description: error?.message || res.message || "No se pudo registrar el W-9.",
+          variant: "destructive",
+        });
       } else {
         toast({ title: "W-9 registrado" });
       }
@@ -181,15 +207,29 @@ export default function ContractorW9() {
     fetchData();
   }
 
-  async function handleApprove(id: string) {
-    await supabase.from("contractor_w9").update({
-      status: "approved",
-      reviewed_at: new Date().toISOString(),
-      reviewed_by: user?.id,
-    }).eq("id", id);
-    toast({ title: "W-9 aprobado" });
+  async function handleApprove(r: W9Record) {
+    // VWC Fase 3A · carril 3: transición de estado validada en servidor.
+    const { data, error } = await supabase.rpc("review_contractor_w9", {
+      p_w9_id: r.id,
+      p_company_id: companyId!,
+      p_decision: "approved",
+      p_expected_version: r.version ?? null,
+      p_reason: null,
+      p_surface: "admin/ContractorW9",
+    });
+    const res = (data ?? {}) as Record<string, any>;
+    if (error || (res.status !== "applied" && res.status !== "noop")) {
+      toast({
+        title: res.status === "conflict" ? "El W-9 cambió mientras revisabas" : "No se pudo aprobar",
+        description: error?.message || res.message || "Recargamos la versión vigente.",
+        variant: "destructive",
+      });
+    } else {
+      toast({ title: "W-9 aprobado" });
+    }
     fetchData();
   }
+
 
   async function handleViewPdf(r: W9Record) {
     if (!r.w9_file_url) {
