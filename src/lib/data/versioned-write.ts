@@ -131,15 +131,15 @@ export async function versionedWrite(input: VersionedWriteInput): Promise<Versio
         fields,
       };
     case "not_found":
-      return { status: "error", reason: "not_found", message: result.message ?? "El servicio no existe en esta empresa." };
+      return { status: "error", reason: "not_found", message: result.message ?? "El registro no existe en esta empresa." };
     case "denied":
-      return { status: "error", reason: "denied", message: result.message ?? "No tienes permiso para editar este servicio." };
+      return { status: "error", reason: "denied", message: result.message ?? "No tienes permiso para editar este registro." };
     case "invalid":
       return { status: "error", reason: "invalid", message: result.message ?? "Cambio no permitido." };
     case "applied": {
       const row = (result.row as Record<string, any>) ?? null;
       if (!row) {
-        return { status: "error", reason: "error", message: "El servicio se guardó pero no pudimos releerlo." };
+        return { status: "error", reason: "error", message: "Se guardó pero no pudimos releer el registro." };
       }
       // Evidencia obligatoria: la fila persistida debe reflejar el patch.
       const mismatched = fields.filter((key) => !sameShiftUpdateValue(row[key], patch[key]));
@@ -147,10 +147,11 @@ export async function versionedWrite(input: VersionedWriteInput): Promise<Versio
         return {
           status: "error",
           reason: "mismatch",
-          message: `El servicio se guardó parcialmente. Campos sin aplicar: ${mismatched.join(", ")}.`,
+          message: `Se guardó parcialmente. Campos sin aplicar: ${mismatched.join(", ")}.`,
           mismatched,
         };
       }
+
       return { status: "applied", row, version: rowVersion(row) };
     }
     default:
