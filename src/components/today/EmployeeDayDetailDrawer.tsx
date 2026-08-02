@@ -70,6 +70,8 @@ export function EmployeeDayDetailDrawer({ employee, open, onOpenChange, now, onD
   const [editBreak, setEditBreak] = useState("");
   const [editNotes, setEditNotes] = useState("");
   const [saving, setSaving] = useState(false);
+  const [hoursConflict, setHoursConflict] = useState<VersionConflictInfo | null>(null);
+
   const [forcingClockOut, setForcingClockOut] = useState<string | null>(null);
   const { logAudit } = useAuditLog();
 
