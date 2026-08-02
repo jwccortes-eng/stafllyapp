@@ -36,6 +36,7 @@ import { AutoDispatchPanel } from "@/components/operations/AutoDispatchPanel";
 import { PostShiftRatingDialog, type PostShiftRatingMode } from "@/components/operations/PostShiftRatingDialog";
 import { FrontDeskWidget } from "@/components/front-desk/FrontDeskWidget";
 import { ADMIN_LEX } from "@/lib/ox/lexicon";
+import { subscribeToServiceChanges } from "@/lib/shifts/service-state";
 
 // ─── Types ───
 interface ShiftRow {

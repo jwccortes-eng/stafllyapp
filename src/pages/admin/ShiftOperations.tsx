@@ -135,6 +135,7 @@ export default function ShiftOperations() {
   const location = useLocation();
   const { user, role } = useAuth();
   const { selectedCompanyId } = useCompany();
+  const queryClient = useQueryClient();
   const shiftId = searchParams.get("id");
 
   const [shift, setShift] = useState<ShiftDetail | null>(null);
@@ -226,6 +227,16 @@ export default function ShiftOperations() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shiftId, selectedCompanyId]);
+
+  // P0.1 — cualquier cambio del servicio en otra superficie refresca esta pantalla.
+  useEffect(() => {
+    return subscribeToServiceChanges(({ companyId, shiftId: changedId }) => {
+      if (companyId === selectedCompanyId && changedId === shiftId) {
+        void loadAll({ background: true });
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCompanyId, shiftId]);
 
   const loadAll = async (opts?: { background?: boolean }) => {
     if (!shiftId || !selectedCompanyId) return;
