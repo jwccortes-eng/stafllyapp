@@ -4,6 +4,7 @@ import {
   isNewerServiceRow,
   mergeServiceRow,
 } from "@/lib/shifts/service-state";
+import { sameShiftUpdateValue } from "@/lib/shifts/update-shift";
 
 describe("single service state", () => {
   it("namespaces the key by company and shift", () => {
@@ -59,5 +60,20 @@ describe("single service state", () => {
   it("keeps current when candidate is null", () => {
     const current = { id: "s1", title: "A" };
     expect(mergeServiceRow(current, null)).toEqual(current);
+  });
+});
+
+describe("verified service updates", () => {
+  it("accepts database time seconds as the same form time", () => {
+    expect(sameShiftUpdateValue("17:00:00", "17:00")).toBe(true);
+    expect(sameShiftUpdateValue("08:15:00", "08:15")).toBe(true);
+  });
+
+  it("still detects a real time mismatch", () => {
+    expect(sameShiftUpdateValue("08:16:00", "08:15")).toBe(false);
+  });
+
+  it("does not normalize ordinary text as a time", () => {
+    expect(sameShiftUpdateValue("Turno A", "Turno B")).toBe(false);
   });
 });
