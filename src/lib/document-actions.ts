@@ -22,6 +22,7 @@
  * onboarding) and detect that prefix in the UI. A real column is Phase 2.
  */
 import { supabase } from "@/integrations/supabase/client";
+import { versionedWrite } from "@/lib/data/versioned-write";
 
 export const REPLACEMENT_PREFIX = "[Replacement requested]";
 
@@ -158,7 +159,7 @@ export async function fetchUnifiedDocuments(
       .select("id, employee_id, company_id, name, file_url, file_size, category, created_at, review_status, reviewed_at, rejection_reason, expires_at, version")
       .eq("employee_id", employeeId).eq("company_id", companyId),
     (supabase.from("employee_onboarding_documents" as any) as any)
-      .select("id, employee_id, company_id, document_type, file_url, file_name, status, verified_at, notes, created_at")
+      .select("id, employee_id, company_id, document_type, file_url, file_name, status, verified_at, notes, created_at, version")
       .eq("employee_id", employeeId).eq("company_id", companyId),
   ]);
   const rows: UnifiedDocument[] = [
@@ -197,115 +198,80 @@ async function writeAuditLog(opts: {
   }
 }
 
-// ─── Approve ────────────────────────────────────────────────────────────────
-export async function approveDocument(doc: UnifiedDocument): Promise<{ error: string | null }> {
-  const { data: auth } = await supabase.auth.getUser();
-  const reviewerId = auth?.user?.id ?? null;
-  const now = new Date().toISOString();
+// ─── Carril 3 (VWC Fase 3B): transición de revisión ─────────────────────────
+/**
+ * Única vía para cambiar el estado de un documento. Nunca se hace `.update()`
+ * directo: la RPC valida permiso de empresa, exige la versión observada y
+ * registra auditoría. Si otra persona revisó antes, devolvemos `conflict` en
+ * vez de pisar su decisión.
+ */
+type DocumentDecision = "approved" | "rejected" | "replacement_requested" | "expired" | "pending";
 
-  if (doc.source === "employee_documents") {
-    const { error } = await (supabase.from("employee_documents" as any) as any)
-      .update({
-        review_status: "approved",
-        reviewed_at: now,
-        reviewed_by: reviewerId,
-        rejection_reason: null,
-      })
-      .eq("id", doc.raw_id);
-    if (error) return { error: error.message };
-  } else {
-    const { error } = await (supabase.from("employee_onboarding_documents" as any) as any)
-      .update({
-        status: "verified",
-        verified_at: now,
-        verified_by: reviewerId,
-        notes: null,
-      })
-      .eq("id", doc.raw_id);
-    if (error) return { error: error.message };
+async function reviewDocument(
+  doc: UnifiedDocument,
+  decision: DocumentDecision,
+  reason: string | null,
+  surface: string,
+): Promise<DocumentActionResult> {
+  const { data, error } = await (supabase.rpc as any)("review_employee_document", {
+    p_document_id: doc.raw_id,
+    p_source: doc.source,
+    p_company_id: doc.company_id,
+    p_decision: decision,
+    p_expected_version: doc.version ?? null,
+    p_reason: reason,
+    p_surface: surface,
+  });
+
+  if (error) return { error: error.message };
+  const res = (data ?? {}) as any;
+
+  if (res.status === "conflict") {
+    return {
+      error: "Otra persona revisó este documento mientras lo tenías abierto.",
+      conflict: {
+        expectedVersion: res.expected_version ?? null,
+        actualVersion: res.actual_version ?? null,
+        updatedAt: res.updated_at ?? null,
+        row: res.row ?? null,
+      },
+    };
   }
+  if (res.status === "applied" || res.status === "noop") return { error: null };
+  return { error: res.message ?? "No se pudo aplicar la revisión." };
+}
 
-  await writeAuditLog({ action: "document_approved", doc });
-  return { error: null };
+// ─── Approve ────────────────────────────────────────────────────────────────
+export async function approveDocument(doc: UnifiedDocument): Promise<DocumentActionResult> {
+  const result = await reviewDocument(doc, "approved", null, "documents:approve");
+  if (!result.error) await writeAuditLog({ action: "document_approved", doc });
+  return result;
 }
 
 // ─── Reject ─────────────────────────────────────────────────────────────────
 export async function rejectDocument(
   doc: UnifiedDocument,
   reason: string,
-): Promise<{ error: string | null }> {
+): Promise<DocumentActionResult> {
   const trimmed = reason.trim();
-  if (!trimmed) return { error: "Reason is required." };
-
-  const { data: auth } = await supabase.auth.getUser();
-  const reviewerId = auth?.user?.id ?? null;
-  const now = new Date().toISOString();
-
-  if (doc.source === "employee_documents") {
-    const { error } = await (supabase.from("employee_documents" as any) as any)
-      .update({
-        review_status: "rejected",
-        reviewed_at: now,
-        reviewed_by: reviewerId,
-        rejection_reason: trimmed,
-      })
-      .eq("id", doc.raw_id);
-    if (error) return { error: error.message };
-  } else {
-    const { error } = await (supabase.from("employee_onboarding_documents" as any) as any)
-      .update({
-        status: "rejected",
-        verified_at: now,
-        verified_by: reviewerId,
-        notes: trimmed,
-      })
-      .eq("id", doc.raw_id);
-    if (error) return { error: error.message };
-  }
-
-  await writeAuditLog({ action: "document_rejected", doc, reason: trimmed });
-  return { error: null };
+  if (!trimmed) return { error: "Se requiere un motivo." };
+  const result = await reviewDocument(doc, "rejected", trimmed, "documents:reject");
+  if (!result.error) await writeAuditLog({ action: "document_rejected", doc, reason: trimmed });
+  return result;
 }
 
 // ─── Request replacement ────────────────────────────────────────────────────
 export async function requestReplacement(
   doc: UnifiedDocument,
   reason: string,
-): Promise<{ error: string | null }> {
+): Promise<DocumentActionResult> {
   const trimmed = reason.trim();
-  if (!trimmed) return { error: "Reason is required." };
-
-  const tagged = `${REPLACEMENT_PREFIX} ${trimmed}`;
-  const { data: auth } = await supabase.auth.getUser();
-  const reviewerId = auth?.user?.id ?? null;
-  const now = new Date().toISOString();
-
-  if (doc.source === "employee_documents") {
-    // Stays in 'rejected' so the worker is prompted to re-upload, with a
-    // visible replacement marker in rejection_reason.
-    const { error } = await (supabase.from("employee_documents" as any) as any)
-      .update({
-        review_status: "rejected",
-        reviewed_at: now,
-        reviewed_by: reviewerId,
-        rejection_reason: tagged,
-      })
-      .eq("id", doc.raw_id);
-    if (error) return { error: error.message };
-  } else {
-    const { error } = await (supabase.from("employee_onboarding_documents" as any) as any)
-      .update({
-        status: "rejected",
-        verified_at: now,
-        verified_by: reviewerId,
-        notes: tagged,
-      })
-      .eq("id", doc.raw_id);
-    if (error) return { error: error.message };
+  if (!trimmed) return { error: "Se requiere un motivo." };
+  const result = await reviewDocument(doc, "replacement_requested", trimmed, "documents:replacement");
+  if (!result.error) {
+    await writeAuditLog({ action: "document_replacement_requested", doc, reason: trimmed });
   }
-
-  await writeAuditLog({ action: "document_replacement_requested", doc, reason: trimmed });
-  return { error: null };
+  return result;
 }
 
 // ─── Admin upload ───────────────────────────────────────────────────────────
@@ -376,17 +342,38 @@ export async function uploadAdminDocument(input: AdminUploadInput): Promise<{
  * Pass `null` (or empty string) to clear. v1 only supports employee_documents.
  */
 export async function updateDocumentExpiration(
-  doc: Pick<UnifiedDocument, "raw_id" | "source" | "employee_id" | "company_id" | "name" | "category">,
+  doc: Pick<UnifiedDocument, "raw_id" | "source" | "employee_id" | "company_id" | "name" | "category"> & {
+    version?: number | null;
+  },
   expiresAtIso: string | null,
-): Promise<{ error: string | null }> {
+): Promise<DocumentActionResult> {
   if (doc.source !== "employee_documents") {
-    return { error: "Expiration editing is only supported for admin documents in v1." };
+    return { error: "La edición de vencimiento sólo aplica a documentos administrados." };
   }
   const value = expiresAtIso && expiresAtIso.trim() ? expiresAtIso : null;
-  const { error } = await (supabase.from("employee_documents" as any) as any)
-    .update({ expires_at: value })
-    .eq("id", doc.raw_id);
-  if (error) return { error: error.message };
+
+  // Carril 2 (VWC): PATCH parcial + expected_version. Nunca `.update()` directo.
+  const result = await versionedWrite({
+    entity: "employee_documents",
+    id: doc.raw_id,
+    companyId: doc.company_id,
+    patch: { expires_at: value },
+    expectedVersion: doc.version ?? null,
+    surface: "documents:expiration",
+  });
+
+  if (result.status === "conflict") {
+    return {
+      error: "Otra persona actualizó este documento mientras lo editabas.",
+      conflict: {
+        expectedVersion: result.expectedVersion,
+        actualVersion: result.actualVersion,
+        updatedAt: result.updatedAt,
+        row: result.row,
+      },
+    };
+  }
+  if (result.status === "error") return { error: result.message };
 
   try {
     const { data: auth } = await supabase.auth.getUser();
