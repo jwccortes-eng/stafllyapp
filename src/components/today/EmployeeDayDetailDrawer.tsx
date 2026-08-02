@@ -481,6 +481,22 @@ export function EmployeeDayDetailDrawer({ employee, open, onOpenChange, now, onD
           </div>
         </div>
       </DrawerContent>
+
+      <VersionConflictDialog
+        open={!!hoursConflict}
+        conflict={hoursConflict}
+        kind="hours"
+        entityLabel="este fichaje"
+        fieldLabels={TIME_ENTRY_FIELD_LABELS}
+        busy={saving}
+        onReload={() => {
+          setHoursConflict(null);
+          setEditingEntryId(null);
+          onDataChanged?.();
+        }}
+        onCancel={() => setHoursConflict(null)}
+      />
     </Drawer>
+
   );
 }
