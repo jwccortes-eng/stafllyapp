@@ -33,6 +33,7 @@ interface W9Record {
   signed_at: string | null;
   submitted_at: string | null;
   w9_file_url: string | null;
+  version?: number | null;
   employee?: { first_name: string; last_name: string };
 }
 
