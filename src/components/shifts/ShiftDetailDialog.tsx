@@ -54,6 +54,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
+import { useServiceState } from "@/hooks/useServiceState";
 import { useDebugMode } from "@/hooks/useDebugMode";
 import { toast } from "sonner";
 import type { Shift, Assignment, Employee, SelectOption } from "./types";
@@ -179,7 +180,7 @@ function shiftStatusToTone(status: string): OpsStatusTone {
 }
 
 export function ShiftDetailDialog({
-  shift, open, onOpenChange, assignments, employees, locations, clients, allShifts = [],
+  shift: shiftProp, open, onOpenChange, assignments, employees, locations, clients, allShifts = [],
   canEdit, onAddEmployees, onRemoveAssignment, onEdit, onPublish, onSave, onRequestAction,
   onDuplicate, onDelete,
   availabilityConfigs = [], availabilityOverrides = [], onAddNewEmployee,
@@ -189,6 +190,17 @@ export function ShiftDetailDialog({
   const { user, canAccessAdminForCompany } = useAuth();
   const navigate = useNavigate();
   const { selectedCompanyId, selectedCompany } = useCompany();
+
+  // P0 SINGLE SERVICE STATE — el detalle no muestra el snapshot que la lista
+  // tenía al hacer clic: lee la versión canónica (fila completa por tenant).
+  const { service: canonicalShift } = useServiceState<Shift>({
+    companyId: selectedCompanyId,
+    shiftId: shiftProp?.id ?? null,
+    placeholder: shiftProp,
+    enabled: open,
+  });
+  const shift = (canonicalShift ?? shiftProp) as Shift | null;
+
   const [showAddPanel, setShowAddPanel] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
   const [tab, setTab] = useState(initialTab || "details");
