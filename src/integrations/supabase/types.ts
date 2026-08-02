@@ -2806,6 +2806,8 @@ export type Database = {
           tax_id_type: string | null
           tin_last4: string | null
           updated_at: string
+          updated_by: string | null
+          version: number
           w9_file_url: string | null
           zip_code: string | null
         }
@@ -2836,6 +2838,8 @@ export type Database = {
           tax_id_type?: string | null
           tin_last4?: string | null
           updated_at?: string
+          updated_by?: string | null
+          version?: number
           w9_file_url?: string | null
           zip_code?: string | null
         }
@@ -2866,6 +2870,8 @@ export type Database = {
           tax_id_type?: string | null
           tin_last4?: string | null
           updated_at?: string
+          updated_by?: string | null
+          version?: number
           w9_file_url?: string | null
           zip_code?: string | null
         }
@@ -17872,6 +17878,17 @@ export type Database = {
         }
         Returns: Json
       }
+      merge_employees_idempotent: {
+        Args: {
+          _confirm_master_name: string
+          _duplicate_ids: string[]
+          _intent_key?: string
+          _master_id: string
+          _reason?: string
+          _surface?: string
+        }
+        Returns: Json
+      }
       move_to_dlq: {
         Args: {
           dlq_name: string
@@ -17995,6 +18012,17 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      review_contractor_w9: {
+        Args: {
+          p_company_id: string
+          p_decision: string
+          p_expected_version?: number
+          p_reason?: string
+          p_surface?: string
+          p_w9_id: string
+        }
+        Returns: Json
+      }
       review_time_entry_correction: {
         Args: {
           p_decision: string
@@ -18083,6 +18111,17 @@ export type Database = {
         Args: { _company: string }
         Returns: boolean
       }
+      submit_contractor_w9: {
+        Args: {
+          p_company_id: string
+          p_employee_id: string
+          p_expected_version?: number
+          p_intent_key?: string
+          p_payload: Json
+          p_surface?: string
+        }
+        Returns: Json
+      }
       supersede_employee_invitations: {
         Args: {
           _company_id: string
@@ -18120,6 +18159,17 @@ export type Database = {
           p_profile_id: string
           p_reason?: string
           p_surface?: string
+        }
+        Returns: Json
+      }
+      versioned_update_contractor_w9: {
+        Args: {
+          p_company_id: string
+          p_expected_version: number
+          p_intent_key?: string
+          p_patch: Json
+          p_surface?: string
+          p_w9_id: string
         }
         Returns: Json
       }
