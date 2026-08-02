@@ -280,6 +280,7 @@ export default function CompensationValidation() {
         .select("employee_id, rate, concepts(name)")
         .in("employee_id", emptyProfileIds);
       let seeded = 0;
+      let skipped = 0;
       for (const eid of emptyProfileIds) {
         const empRates = (allRates ?? []).filter((r: any) => r.employee_id === eid);
         const hr = empRates.find((r: any) => r.concepts?.name === "Hourly Rate")?.rate ?? null;
@@ -287,19 +288,31 @@ export default function CompensationValidation() {
         if (!hr && !dr) continue;
         const profile = rows.find(r => r.employee_id === eid)?.profile;
         if (!profile) continue;
-        await supabase.from("compensation_profiles").update({
-          default_hourly_rate: hr,
-          default_daily_rate: dr,
-          default_half_day_rate: dr ? Math.round(dr * 0.625 * 100) / 100 : null,
-          payment_mode: (hr && dr ? "mixed" : dr ? "daily" : "hourly") as any,
-          rate_source: "imported" as any,
-          updated_by: user.id,
-        }).eq("id", profile.id);
+        const seedRes = await versionedWrite({
+          entity: "compensation_profiles",
+          id: profile.id,
+          companyId: selectedCompanyId,
+          patch: {
+            default_hourly_rate: hr,
+            default_daily_rate: dr,
+            default_half_day_rate: dr ? Math.round(dr * 0.625 * 100) / 100 : null,
+            payment_mode: (hr && dr ? "mixed" : dr ? "daily" : "hourly") as any,
+            rate_source: "imported" as any,
+          },
+          expectedVersion: rowVersion(profile as any),
+          surface: "compensation/validation_seed",
+          reason: "Siembra desde tarifas por concepto",
+        });
+        if (seedRes.status !== "applied") { skipped++; continue; }
         seeded++;
       }
       qc.invalidateQueries({ queryKey: ["comp-validation-profiles"] });
       qc.invalidateQueries({ queryKey: ["comp-recon-profiles"] });
-      toast.success(`${seeded} perfiles actualizados con datos existentes`);
+      toast.success(
+        skipped > 0
+          ? `${seeded} perfiles actualizados. ${skipped} sin aplicar: alguien más los cambió, recarga y reintenta.`
+          : `${seeded} perfiles actualizados con datos existentes`,
+      );
     } catch (err: any) {
       toast.error(err.message ?? "Error al sembrar datos");
     } finally {
@@ -339,14 +352,30 @@ export default function CompensationValidation() {
     if (!emp.profile || !user) return;
     const rate = emp.profile.inferred_hourly_rate ?? emp.profile.default_hourly_rate;
     if (!rate) { toast.error("No hay tarifa para confirmar"); return; }
-    await supabase.from("compensation_profiles").update({
-      default_hourly_rate: rate,
-      hourly_rate_override_manual: true,
-      hourly_rate_last_verified_at: new Date().toISOString(),
-      confirmed_by: user.id,
-      confirmed_at: new Date().toISOString(),
-      previous_inferred_rate: emp.profile.inferred_hourly_rate,
-    } as any).eq("id", emp.profile.id);
+    const confirmRes = await versionedWrite({
+      entity: "compensation_profiles",
+      id: emp.profile.id,
+      companyId: selectedCompanyId!,
+      patch: {
+        default_hourly_rate: rate,
+        hourly_rate_override_manual: true,
+        hourly_rate_last_verified_at: new Date().toISOString(),
+        confirmed_by: user.id,
+        confirmed_at: new Date().toISOString(),
+        previous_inferred_rate: emp.profile.inferred_hourly_rate,
+      },
+      expectedVersion: rowVersion(emp.profile as any),
+      surface: "compensation/validation_confirm",
+      reason: "Confirmación manual por admin",
+    });
+    if (confirmRes.status !== "applied") {
+      toast.error(
+        confirmRes.status === "conflict"
+          ? "Otra persona actualizó esta tarifa. Recarga para ver el valor vigente."
+          : confirmRes.message,
+      );
+      return;
+    }
     await supabase.from("compensation_change_log").insert({
       company_id: selectedCompanyId!,
       employee_id: emp.employee_id,
@@ -387,11 +416,27 @@ export default function CompensationValidation() {
     const conceptName = latest.concepts?.name ?? latest.note ?? "payroll";
     const matchCount = hits.filter((m: any) => m.rate === rate).length;
     const confidence = matchCount >= 3 ? "high" : matchCount >= 1 ? "medium" : "low";
-    await supabase.from("compensation_profiles").update({
-      inferred_hourly_rate: rate,
-      inferred_hourly_source: conceptName,
-      inferred_hourly_confidence: confidence,
-    } as any).eq("id", emp.profile.id);
+    const inferRes = await versionedWrite({
+      entity: "compensation_profiles",
+      id: emp.profile.id,
+      companyId: selectedCompanyId!,
+      patch: {
+        inferred_hourly_rate: rate,
+        inferred_hourly_source: conceptName,
+        inferred_hourly_confidence: confidence,
+      },
+      expectedVersion: rowVersion(emp.profile as any),
+      surface: "compensation/validation_infer",
+      reason: `Inferido desde "${conceptName}"`,
+    });
+    if (inferRes.status !== "applied") {
+      toast.error(
+        inferRes.status === "conflict"
+          ? "Otra persona actualizó esta tarifa. Recarga para ver el valor vigente."
+          : inferRes.message,
+      );
+      return;
+    }
     await supabase.from("hourly_rate_inference_evidence" as any).insert({
       company_id: selectedCompanyId!, employee_id: emp.employee_id,
       compensation_profile_id: emp.profile.id, inferred_rate: rate,

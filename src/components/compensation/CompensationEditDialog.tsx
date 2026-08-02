@@ -116,11 +116,28 @@ export default function CompensationEditDialog({ open, onOpenChange, employeeId,
       };
 
       if (profile) {
-        const { error } = await supabase
-          .from("compensation_profiles")
-          .update(updates)
-          .eq("id", profile.id);
-        if (error) throw error;
+        const { updated_by: _ignored, ...patch } = updates;
+        const res = await versionedWrite({
+          entity: "compensation_profiles",
+          id: profile.id,
+          companyId: selectedCompanyId,
+          patch,
+          expectedVersion: rowVersion(profile as any),
+          surface: "compensation/edit_dialog",
+          reason: "Edición manual de compensación",
+        });
+        if (res.status === "conflict") {
+          setConflict({
+            patch,
+            serverRow: res.row ?? null,
+            actualVersion: res.actualVersion ?? null,
+            expectedVersion: res.expectedVersion ?? null,
+            updatedAt: res.updatedAt ?? null,
+          });
+          setSaving(false);
+          return;
+        }
+        if (res.status === "error") throw new Error(res.message);
       } else {
         const { error } = await supabase
           .from("compensation_profiles")
