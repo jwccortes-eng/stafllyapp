@@ -246,11 +246,14 @@ export function useIdentityResolution() {
             .eq("company_id", companyId);
         } catch { /* non-fatal */ }
 
-        const { error } = await supabase.rpc("merge_employees", {
+        // VWC Fase 3A · carril 3: consolidación idempotente vía RPC endurecida.
+        const { error } = await supabase.rpc("merge_employees_idempotent", {
           _master_id: masterEmployeeId,
           _duplicate_ids: [employeeId],
           _confirm_master_name: confirmMasterName,
           _reason: note ?? "Identity resolution merge (Phase 2B)",
+          _intent_key: `merge-${masterEmployeeId}-${employeeId}`,
+          _surface: "employee/IdentityResolutionDrawer",
         });
         if (error) throw error;
         toast({ title: "Consolidación completada", description: "Registro fusionado en el master." });
