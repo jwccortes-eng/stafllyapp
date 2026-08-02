@@ -34,9 +34,12 @@ import {
 } from "@/components/shifts/ShiftFormFields";
 import { syncShiftDriverRoles, driverIdsFromAssignments } from "@/lib/shifts/driver-sync";
 import { notifyWarning, notifyError } from "@/lib/feedback/notify";
-import { updateShiftVerified } from "@/lib/shifts/update-shift";
+import { versionedWrite, rowVersion } from "@/lib/data/versioned-write";
+import { VersionConflictDialog, type VersionConflictInfo } from "@/components/data-integrity/VersionConflictDialog";
+import { SHIFT_FIELD_LABELS } from "@/lib/shifts/field-labels";
 import { useQueryClient } from "@tanstack/react-query";
-import { reconcileServiceAfterSave } from "@/lib/shifts/service-state";
+import { reconcileServiceAfterSave, readServiceRow } from "@/lib/shifts/service-state";
+
 
 import type { Shift, SelectOption, Employee, Assignment } from "@/components/shifts/types";
 import { ADMIN_LEX } from "@/lib/ox/lexicon";
