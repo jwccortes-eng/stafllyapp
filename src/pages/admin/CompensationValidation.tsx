@@ -369,11 +369,11 @@ export default function CompensationValidation() {
       surface: "compensation/validation_confirm",
       reason: "Confirmación manual por admin",
     });
-    if (confirmRes.status !== "applied") {
+    if (confirmRes.status !== "applied" && confirmRes.status !== "noop") {
       toast.error(
         confirmRes.status === "conflict"
           ? "Otra persona actualizó esta tarifa. Recarga para ver el valor vigente."
-          : confirmRes.message,
+          : confirmRes.status === "error" ? confirmRes.message : "No se pudo guardar.",
       );
       return;
     }
@@ -430,11 +430,11 @@ export default function CompensationValidation() {
       surface: "compensation/validation_infer",
       reason: `Inferido desde "${conceptName}"`,
     });
-    if (inferRes.status !== "applied") {
+    if (inferRes.status !== "applied" && inferRes.status !== "noop") {
       toast.error(
         inferRes.status === "conflict"
           ? "Otra persona actualizó esta tarifa. Recarga para ver el valor vigente."
-          : inferRes.message,
+          : inferRes.status === "error" ? inferRes.message : "No se pudo guardar.",
       );
       return;
     }
