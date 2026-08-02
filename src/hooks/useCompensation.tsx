@@ -4,6 +4,34 @@ import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { buildPatch, rowVersion, versionedWrite } from "@/lib/data/versioned-write";
+import type { VersionConflictInfo } from "@/components/data-integrity/VersionConflictDialog";
+
+/**
+ * Conflicto de compensación: se propaga al formulario para que muestre la UI
+ * única de conflicto. Dinero nunca se guarda "de todas formas".
+ */
+export class CompensationConflictError extends Error {
+  readonly conflict: VersionConflictInfo;
+  constructor(res: {
+    row?: Record<string, any> | null;
+    actualVersion?: number | null;
+    expectedVersion?: number | null;
+    updatedAt?: string | null;
+  }) {
+    super("La compensación cambió mientras la editabas");
+    this.name = "CompensationConflictError";
+    this.conflict = {
+      patch: {},
+      serverRow: res.row ?? null,
+      actualVersion: res.actualVersion ?? null,
+      expectedVersion: res.expectedVersion ?? null,
+      updatedAt: res.updatedAt ?? null,
+    };
+  }
+}
+
+
 
 /* ── Types ── */
 export type PaymentMode = "hourly" | "daily" | "mixed";
