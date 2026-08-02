@@ -475,6 +475,15 @@ function DesktopShifts() {
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailInitialTab, setDetailInitialTab] = useState<string | undefined>(undefined);
 
+  // VWC — conflicto de versión al editar un servicio (UI única del ecosistema)
+  const [serviceConflict, setServiceConflict] = useState<{
+    info: VersionConflictInfo;
+    shiftId: string;
+    updates: Partial<Shift>;
+    oldShift: Shift;
+  } | null>(null);
+
+
   // Edit dialog
   const [editShift, setEditShift] = useState<Shift | null>(null);
   const [editOpen, setEditOpen] = useState(false);
