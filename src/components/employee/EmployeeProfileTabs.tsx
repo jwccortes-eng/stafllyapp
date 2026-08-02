@@ -31,6 +31,7 @@ import {
   type UnifiedDocument,
 } from "@/lib/document-actions";
 import { DocumentReasonDialog } from "@/components/documents/DocumentReasonDialog";
+import VersionConflictDialog, { type VersionConflictInfo } from "@/components/data-integrity/VersionConflictDialog";
 import { DocumentUploadDialog } from "@/components/documents/DocumentUploadDialog";
 import { toNumOrNull } from "@/lib/numeric-input";
 import { toast } from "sonner";
@@ -467,6 +468,8 @@ function DocumentsTab({ employee, companyId }: { employee: EmployeeRecord; compa
     action: "reject" | "replacement"; doc: UnifiedDocument;
   } | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  // VWC Fase 3B: conflicto al revisar documentos.
+  const [docConflict, setDocConflict] = useState<VersionConflictInfo | null>(null);
   const { toast } = useToast();
 
   const fetchDocs = useCallback(async () => {
