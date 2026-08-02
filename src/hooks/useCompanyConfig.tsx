@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
-import { notify } from "@/lib/feedback/notify";
+import { notifyError, notifyWarning } from "@/lib/feedback/notify";
 import {
   isEditableSettingKey,
   versionedCompanySettingWrite,
@@ -102,12 +102,17 @@ export function useCompanyConfig<T extends object>(
     },
     onError: (err: any) => {
       if (err?.message === "conflict") {
-        notify.warning("Esta configuración cambió mientras la editabas", {
-          description: "Otra persona guardó una versión más reciente. No sobrescribimos nada: recarga y vuelve a aplicar tu cambio.",
+        notifyWarning({
+          title: "Esta configuración cambió mientras la editabas",
+          fact: "Otra persona guardó una versión más reciente.",
+          consequence: "No sobrescribimos nada: recarga y vuelve a aplicar tu cambio.",
         });
       } else {
-        notify.error("No pudimos guardar la configuración", {
-          description: err?.message ?? "Inténtalo otra vez.",
+        notifyError({
+          title: "No pudimos guardar la configuración",
+          fact: err?.message ?? "El servidor rechazó el cambio.",
+          consequence: "La configuración anterior sigue vigente.",
+          cause: err,
         });
       }
       queryClient.invalidateQueries({ queryKey });
