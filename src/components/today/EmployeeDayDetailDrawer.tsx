@@ -193,7 +193,7 @@ export function EmployeeDayDetailDrawer({ employee, open, onOpenChange, now, onD
       surface: "today_view/force_clock_out",
     });
 
-    if (result.status === "ok") {
+    if (result.status === "applied" || result.status === "noop") {
       toast.success("Salida forzada registrada");
       onDataChanged?.();
       logAudit({
@@ -209,10 +209,17 @@ export function EmployeeDayDetailDrawer({ employee, open, onOpenChange, now, onD
         newData: { clock_out: clockOutTime },
       });
     } else if (result.status === "conflict") {
-      setHoursConflict(result.conflict);
+      setHoursConflict({
+        patch: { clock_out: clockOutTime },
+        serverRow: result.row ?? null,
+        actualVersion: result.actualVersion ?? null,
+        expectedVersion: result.expectedVersion ?? null,
+        updatedAt: result.updatedAt ?? null,
+      });
     } else {
       toast.error(result.message);
     }
+
 
     setForcingClockOut(null);
   };
