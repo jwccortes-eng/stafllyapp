@@ -693,7 +693,16 @@ function DocumentsTab({ employee, companyId }: { employee: EmployeeRecord; compa
           onConfirm={handleReasonConfirm}
         />
       )}
+      <VersionConflictDialog
+        open={!!docConflict}
+        conflict={docConflict}
+        entityLabel="este documento"
+        kind="service"
+        onReload={() => { setDocConflict(null); fetchDocs(); }}
+        onCancel={() => setDocConflict(null)}
+      />
     </div>
+
   );
 }
 
