@@ -23,6 +23,7 @@ import {
   type UnifiedDocument,
 } from "@/lib/document-actions";
 import { DocumentReasonDialog } from "./DocumentReasonDialog";
+import VersionConflictDialog, { type VersionConflictInfo } from "@/components/data-integrity/VersionConflictDialog";
 import { isSentinelExpiration } from "@/lib/documents/expiration-display";
 
 interface Props {
@@ -42,6 +43,8 @@ export default function DocumentReviewActions({
   const [approving, setApproving] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [rejectOpen, setRejectOpen] = useState(false);
+  // VWC Fase 3B: conflicto de revisión (otra persona decidió antes).
+  const [conflict, setConflict] = useState<VersionConflictInfo | null>(null);
 
   const category = (doc?.category ?? "").toLowerCase();
   const isRequired = requiredCategories.map((c) => c.toLowerCase()).includes(category);
@@ -80,8 +83,18 @@ export default function DocumentReviewActions({
   const handleApprove = async () => {
     setConfirmOpen(false);
     setApproving(true);
-    const { error } = await approveDocument(doc);
+    const { error, conflict: c } = await approveDocument(doc);
     setApproving(false);
+    if (c) {
+      setConflict({
+        patch: { review_status: "approved" },
+        serverRow: c.row,
+        actualVersion: c.actualVersion,
+        expectedVersion: c.expectedVersion,
+        updatedAt: c.updatedAt,
+      });
+      return;
+    }
     if (error) {
       toast({
         title: "No se pudo aprobar",
@@ -100,7 +113,18 @@ export default function DocumentReviewActions({
   };
 
   const handleReject = async (reason: string) => {
-    const { error } = await rejectDocument(doc, reason);
+    const { error, conflict: c } = await rejectDocument(doc, reason);
+    if (c) {
+      setRejectOpen(false);
+      setConflict({
+        patch: { review_status: "rejected", rejection_reason: reason },
+        serverRow: c.row,
+        actualVersion: c.actualVersion,
+        expectedVersion: c.expectedVersion,
+        updatedAt: c.updatedAt,
+      });
+      return;
+    }
     if (error) {
       toast({ title: "No se pudo rechazar", description: error, variant: "destructive" });
       return;
@@ -112,6 +136,14 @@ export default function DocumentReviewActions({
 
   return (
     <div className="flex flex-col gap-2 rounded-md border bg-muted/20 p-3">
+      <VersionConflictDialog
+        open={!!conflict}
+        conflict={conflict}
+        entityLabel="este documento"
+        kind="service"
+        onReload={() => { setConflict(null); onChanged(); }}
+        onCancel={() => setConflict(null)}
+      />
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="text-[11px] text-muted-foreground leading-snug">
           {isRequired ? (
