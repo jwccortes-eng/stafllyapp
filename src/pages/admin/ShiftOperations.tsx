@@ -40,6 +40,11 @@ import {
   deriveCloseoutReviewStatus, presentCloseoutReviewStatus, closeoutBadgeClasses,
 } from "@/lib/shifts/closeout-review-status";
 import { ShiftClosureCard } from "@/components/shifts/ShiftClosureCard";
+import { useQueryClient } from "@tanstack/react-query";
+import { updateShiftVerified } from "@/lib/shifts/update-shift";
+import {
+  reconcileServiceAfterSave, subscribeToServiceChanges, writeServiceRow,
+} from "@/lib/shifts/service-state";
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronDown, ClipboardCheck, Timer } from "lucide-react";
@@ -232,7 +237,7 @@ export default function ShiftOperations() {
     else setLoading(true);
 
     const [shiftRes, assignRes, timelineRes, notesRes, empsRes, clientsRes, locsRes] = await Promise.all([
-      supabase.from("scheduled_shifts").select("*").eq("id", shiftId).single(),
+      supabase.from("scheduled_shifts").select("*").eq("id", shiftId).eq("company_id", selectedCompanyId).maybeSingle(),
       supabase.from("shift_assignments").select("id, employee_id, status, assignment_role, employees(first_name, last_name, phone_number, county, has_car, can_drive)").eq("shift_id", shiftId) as any,
       supabase.from("shift_timeline").select("*").eq("shift_id", shiftId).order("created_at", { ascending: false }),
       supabase.from("shift_notes").select("*").eq("shift_id", shiftId).order("created_at", { ascending: false }),
@@ -246,6 +251,9 @@ export default function ShiftOperations() {
 
     if (shiftRes.data) {
       const s = shiftRes.data as any;
+      // P0.1 — esta pantalla ya no es dueña del servicio: publica la fila en la
+      // fuente canónica y renderiza esa misma versión.
+      writeServiceRow(queryClient, selectedCompanyId, s);
       setShift(s);
       // Fetch client/location names
       if (s.client_id) {
@@ -336,8 +344,8 @@ export default function ShiftOperations() {
       toast.error("Este turno no se puede editar");
       return;
     }
-    const { error } = await supabase.from("scheduled_shifts").update(updates).eq("id", id);
-    if (error) { toast.error(error.message); return; }
+    const saveResult = await updateShiftVerified(id, updates as any, selectedCompanyId ?? null);
+    if (!saveResult.ok) { toast.error(saveResult.message); return; }
     if (selectedCompanyId && user) {
       await supabase.from("shift_timeline").insert({
         shift_id: id,
@@ -349,7 +357,8 @@ export default function ShiftOperations() {
       } as any);
     }
     toast.success("Turno actualizado");
-    loadAll();
+    await reconcileServiceAfterSave(queryClient, selectedCompanyId, id, saveResult.row as any);
+    loadAll({ background: true });
   };
   const totalAssigned = assignments.length;
   const confirmed = assignments.filter(a => a.status === "confirmed").length;
