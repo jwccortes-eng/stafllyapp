@@ -33,6 +33,7 @@ export const EDITABLE_SETTING_KEYS = [
   "notifications",
   "branding",
   "portal",
+  "auto_dispatch",
 ] as const;
 
 export type EditableSettingKey = (typeof EDITABLE_SETTING_KEYS)[number];
