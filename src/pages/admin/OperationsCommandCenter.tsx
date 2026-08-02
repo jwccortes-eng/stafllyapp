@@ -225,6 +225,14 @@ export default function OperationsCommandCenter() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
+  // P0.1 — el tablero es una vista derivada del servicio canónico: se refresca
+  // cuando otra superficie reconcilia un servicio de esta empresa.
+  useEffect(() => {
+    return subscribeToServiceChanges(({ companyId }) => {
+      if (companyId === selectedCompanyId) void loadData();
+    });
+  }, [selectedCompanyId, loadData]);
+
   // ─── Realtime subscriptions ───
   useEffect(() => {
     if (!selectedCompanyId) return;
