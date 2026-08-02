@@ -90,6 +90,7 @@ export default function EmployeeCompensationTab({
   const [changeOpen, setChangeOpen] = useState(false);
   const [inferring, setInferring] = useState(false);
   const [initializing, setInitializing] = useState(false);
+  const [compConflict, setCompConflict] = useState<VersionConflictInfo | null>(null);
   const qc = useQueryClient();
 
   const { data: profile, isLoading } = useQuery({
@@ -184,17 +185,34 @@ export default function EmployeeCompensationTab({
         confidence,
       } as any);
 
-      // Update profile
-      await supabase
-        .from("compensation_profiles")
-        .update({
+      // Escritura versionada: la inferencia nunca pisa una tarifa más reciente.
+      const inferRes = await versionedWrite({
+        entity: "compensation_profiles",
+        id: profile.id,
+        companyId,
+        patch: {
           inferred_hourly_rate: rate,
           inferred_hourly_source: conceptName,
           inferred_hourly_confidence: confidence,
           hourly_rate_last_verified_at: null,
           hourly_rate_override_manual: false,
-        } as any)
-        .eq("id", profile.id);
+        },
+        expectedVersion: rowVersion(profile as any),
+        surface: "compensation/infer_hourly",
+        reason: `Inferido desde ${matchCount} movimientos tipo "${conceptName}"`,
+      });
+      if (inferRes.status === "conflict") {
+        setCompConflict({
+          patch: { inferred_hourly_rate: rate },
+          serverRow: inferRes.row ?? null,
+          actualVersion: inferRes.actualVersion ?? null,
+          expectedVersion: inferRes.expectedVersion ?? null,
+          updatedAt: inferRes.updatedAt ?? null,
+        });
+        setInferring(false);
+        return;
+      }
+      if (inferRes.status === "error") throw new Error(inferRes.message);
 
       // Log change
       await supabase.from("compensation_change_log").insert({
@@ -228,17 +246,33 @@ export default function EmployeeCompensationTab({
 
     const prevInferred = profile.inferred_hourly_rate;
 
-    await supabase
-      .from("compensation_profiles")
-      .update({
+    const confirmRes = await versionedWrite({
+      entity: "compensation_profiles",
+      id: profile.id,
+      companyId,
+      patch: {
         default_hourly_rate: rate,
         hourly_rate_override_manual: true,
         hourly_rate_last_verified_at: new Date().toISOString(),
         confirmed_by: user.id,
         confirmed_at: new Date().toISOString(),
         previous_inferred_rate: prevInferred,
-      } as any)
-      .eq("id", profile.id);
+      },
+      expectedVersion: rowVersion(profile as any),
+      surface: "compensation/confirm_hourly_manual",
+      reason: "Confirmación manual por admin",
+    });
+    if (confirmRes.status === "conflict") {
+      setCompConflict({
+        patch: { default_hourly_rate: rate },
+        serverRow: confirmRes.row ?? null,
+        actualVersion: confirmRes.actualVersion ?? null,
+        expectedVersion: confirmRes.expectedVersion ?? null,
+        updatedAt: confirmRes.updatedAt ?? null,
+      });
+      return;
+    }
+    if (confirmRes.status === "error") { toast.error(confirmRes.message); return; }
 
     await supabase.from("compensation_change_log").insert({
       company_id: companyId,
