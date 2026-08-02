@@ -16,19 +16,25 @@
 import { supabase } from "@/integrations/supabase/client";
 import { sameShiftUpdateValue } from "@/lib/shifts/update-shift";
 
-export type VersionedEntity = "scheduled_shifts" | "time_entries" | "compensation_profiles";
+export type VersionedEntity =
+  | "scheduled_shifts"
+  | "time_entries"
+  | "compensation_profiles"
+  | "contractor_w9";
 
 /** RPC canónica por entidad. Ninguna superficie escribe la tabla directamente. */
 const ENTITY_RPC: Record<VersionedEntity, string> = {
   scheduled_shifts: "versioned_update_shift",
   time_entries: "versioned_update_time_entry",
   compensation_profiles: "versioned_update_compensation_profile",
+  contractor_w9: "versioned_update_contractor_w9",
 };
 
 const ENTITY_ID_PARAM: Record<VersionedEntity, string> = {
   scheduled_shifts: "p_shift_id",
   time_entries: "p_entry_id",
   compensation_profiles: "p_profile_id",
+  contractor_w9: "p_w9_id",
 };
 
 export interface VersionedWriteInput {
