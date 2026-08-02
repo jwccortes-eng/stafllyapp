@@ -37,6 +37,8 @@ const BUCKET = "employee-documents";
 export default function MyW9() {
   const { effectiveEmployeeId: employeeId } = useEffectiveEmployee();
   const { toast } = useToast();
+  /** Idempotencia: un doble toque en "Enviar" no crea dos W-9. */
+  const intentKeyRef = useRef<string | null>(null);
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
