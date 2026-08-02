@@ -18114,7 +18114,7 @@ export type Database = {
       versioned_update_compensation_profile: {
         Args: {
           p_company_id: string
-          p_expected_version: number
+          p_expected_version?: number
           p_intent_key?: string
           p_patch: Json
           p_profile_id: string
