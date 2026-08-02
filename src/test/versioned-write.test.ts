@@ -112,6 +112,13 @@ const CRITICAL_TABLES: Record<string, string[]> = {
     // usePayrollConfig.tsx · configuración financiera (clase C) · owner:
     // equipo Payroll · objetivo: Fase 3F · riesgo: idéntico al anterior.
     "src/hooks/usePayrollConfig.tsx",
+    // ImportSchedule.tsx · registro histórico `imported_schedule_files`
+    // (clase F, no editable por operador) · owner: Importaciones ·
+    // objetivo: Fase 3D · riesgo: bajo (lista append-only).
+    "src/pages/admin/ImportSchedule.tsx",
+    // SandboxSyncDialog.tsx · herramienta interna de sandbox, no producción ·
+    // owner: Plataforma · objetivo: Fase 3D · riesgo: bajo (sólo sandbox).
+    "src/components/SandboxSyncDialog.tsx",
   ],
   companies: [
     // Companies.tsx · superficie de plataforma (alta/baja de tenant,
