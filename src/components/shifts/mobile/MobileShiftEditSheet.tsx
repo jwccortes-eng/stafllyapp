@@ -139,6 +139,87 @@ export function MobileShiftEditSheet({
     else onOpenChange(false);
   };
 
+  /** Versión observable del servicio: siempre la canónica si existe. */
+  const currentVersion = (): number | null => {
+    const canonical = readServiceRow(queryClient, companyId ?? (shift as any)?.company_id, shift?.id);
+    return rowVersion(canonical) ?? rowVersion(shift as any);
+  };
+
+  /** Carril único VWC: PATCH parcial + expected_version. */
+  const commit = async (
+    patch: Record<string, any>,
+    expectedVersion: number | null,
+    driversChanged: boolean,
+    wantedDrivers: string[],
+  ) => {
+    setSaving(true);
+    let savedRow: Record<string, any> | null = null;
+
+    if (Object.keys(patch).length > 0) {
+      const result = await versionedWrite({
+        entity: "scheduled_shifts",
+        id: shift!.id,
+        companyId: companyId ?? (shift as any).company_id ?? null,
+        patch,
+        expectedVersion,
+        surface: "mobile_shift_edit_sheet",
+      });
+
+      if (result.status === "conflict") {
+        setSaving(false);
+        setConflict({
+          patch,
+          serverRow: result.row,
+          actualVersion: result.actualVersion,
+          expectedVersion: result.expectedVersion,
+          updatedAt: result.updatedAt,
+        });
+        setPendingDrivers(driversChanged ? wantedDrivers : null);
+        return;
+      }
+      if (result.status === "error") {
+        setSaving(false);
+        notifyError({
+          key: "shift-update-mobile",
+          title: "No pudimos guardar el turno",
+          fact: result.message,
+          consequence: "Tus cambios siguen aquí, sin aplicarse al turno.",
+        });
+        return; // mantenemos la hoja abierta con los cambios del operador
+      }
+      if (result.status === "applied") savedRow = result.row;
+    }
+
+    // Roles de conductor: sólo `assignment_role` + el campo legado.
+    // Nunca fichajes, horas ni payroll; nunca borra asignaciones.
+    if (driversChanged) {
+      try {
+        await syncShiftDriverRoles(shift!.id, wantedDrivers);
+      } catch (driverError) {
+        notifyWarning({
+          key: "shift-driver-sync-mobile",
+          title: "El turno se guardó, pero los conductores no",
+          fact: "No pudimos actualizar quién maneja en este turno.",
+          consequence: "El equipo verá los conductores anteriores hasta que lo reintentes.",
+          cause: driverError,
+        });
+      }
+    }
+    // Fase 4 — no cerramos hasta que el estado visible coincide con la DB.
+    const canonical = await reconcileServiceAfterSave(
+      queryClient,
+      companyId ?? (shift as any).company_id ?? null,
+      shift!.id,
+      savedRow ?? undefined,
+    );
+    setSaving(false);
+    setConflict(null);
+    setPendingDrivers(null);
+    toast.success("Turno actualizado");
+    onSaved?.(canonical ?? savedRow ?? patch);
+    onOpenChange(false);
+  };
+
   const handleSave = async () => {
     if (saving) return; // double-tap guard
     if (validationError) { toast.error(validationError); return; }
@@ -167,55 +248,9 @@ export function MobileShiftEditSheet({
       toast.info("Sin cambios"); onOpenChange(false); return;
     }
 
-    setSaving(true);
-    // UPDATE verificado por id — nunca un INSERT, company_id/tenant intactos.
-    let savedRow: Record<string, any> | null = null;
-    if (Object.keys(updates).length > 0) {
-      const result = await updateShiftVerified(
-        shift.id,
-        updates,
-        companyId ?? (shift as any).company_id ?? null,
-      );
-      if (!result.ok) {
-        setSaving(false);
-        notifyError({
-          key: "shift-update-mobile",
-          title: "No pudimos guardar el turno",
-          fact: result.message,
-          consequence: "Tus cambios siguen aquí, sin aplicarse al turno.",
-        });
-        return; // mantenemos la hoja abierta con los cambios del operador
-      }
-      savedRow = result.row;
-    }
-
-    // Roles de conductor: sólo `assignment_role` + el campo legado.
-    // Nunca fichajes, horas ni payroll; nunca borra asignaciones.
-    if (driversChanged) {
-      try {
-        await syncShiftDriverRoles(shift.id, wantedDrivers);
-      } catch (driverError) {
-        notifyWarning({
-          key: "shift-driver-sync-mobile",
-          title: "El turno se guardó, pero los conductores no",
-          fact: "No pudimos actualizar quién maneja en este turno.",
-          consequence: "El equipo verá los conductores anteriores hasta que lo reintentes.",
-          cause: driverError,
-        });
-      }
-    }
-    // Fase 4 — no cerramos hasta que el estado visible coincide con la DB.
-    const canonical = await reconcileServiceAfterSave(
-      queryClient,
-      companyId ?? (shift as any).company_id ?? null,
-      shift.id,
-      savedRow ?? undefined,
-    );
-    setSaving(false);
-    toast.success("Turno actualizado");
-    onSaved?.(canonical ?? savedRow ?? updates);
-    onOpenChange(false);
+    await commit(updates, currentVersion(), driversChanged, wantedDrivers);
   };
+
 
 
   return (
