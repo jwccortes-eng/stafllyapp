@@ -153,6 +153,8 @@ export default function MobileShiftsView() {
     const canonical = readServiceRow(queryClient, selectedCompanyId, snapshot.id);
     return { ...snapshot, ...(fromList ?? {}), ...(canonical ?? {}) } as Shift;
   };
+  const detailShiftLive = resolveLive(detailShift);
+  const editShiftLive = resolveLive(editShift);
 
   useEffect(() => {
     if (!selectedCompanyId) {
