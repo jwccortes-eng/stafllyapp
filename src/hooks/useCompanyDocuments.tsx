@@ -57,11 +57,11 @@ export function useCompanyDocuments({ companyId, employees }: Args): CompanyDocu
       const sb: any = supabase;
       const [adminRes, onbRes] = await Promise.all([
         sb.from("employee_documents")
-          .select("id, employee_id, company_id, name, file_url, file_type, file_size, category, created_at, review_status, reviewed_at, rejection_reason, expires_at")
+          .select("id, employee_id, company_id, name, file_url, file_type, file_size, category, created_at, review_status, reviewed_at, rejection_reason, expires_at, version")
           .eq("company_id", companyId)
           .order("created_at", { ascending: false }),
         sb.from("employee_onboarding_documents")
-          .select("id, employee_id, company_id, document_type, file_url, file_name, status, uploaded_at, verified_at, notes, created_at")
+          .select("id, employee_id, company_id, document_type, file_url, file_name, status, uploaded_at, verified_at, notes, created_at, version")
           .eq("company_id", companyId)
           .order("created_at", { ascending: false }),
       ]);
