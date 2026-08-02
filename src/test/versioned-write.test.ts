@@ -101,7 +101,28 @@ const CRITICAL_TABLES: Record<string, string[]> = {
   // review_employee_document y toda edición por versioned_update_employee_document.
   employee_documents: [],
   employee_onboarding_documents: [],
+  // Fase 3C — configuración de empresa no financiera.
+  // Excepciones temporales (archivo · razón · owner · fecha objetivo · riesgo):
+  company_settings: [
+    // useCompanyConfig.tsx · claves de payroll fuera de alcance por orden
+    // "no tocar payroll" · owner: equipo Payroll · objetivo: Fase 3F ·
+    // riesgo: lost update en configuración de nómina (sin regresión).
+    "src/hooks/useCompanyConfig.tsx",
+    // usePayrollConfig.tsx · configuración financiera (clase C) · owner:
+    // equipo Payroll · objetivo: Fase 3F · riesgo: idéntico al anterior.
+    "src/hooks/usePayrollConfig.tsx",
+  ],
+  companies: [
+    // Companies.tsx · superficie de plataforma (alta/baja de tenant,
+    // activación) · owner: Plataforma · objetivo: Fase 3D · riesgo: tenant.
+    "src/pages/admin/Companies.tsx",
+    // useBilling.tsx y UpgradeRequestDialog.tsx · billing/plan (clase C,
+    // prohibido tocar en esta fase) · owner: Billing · objetivo: Fase 3F.
+    "src/hooks/useBilling.tsx",
+    "src/components/billing/UpgradeRequestDialog.tsx",
+  ],
 };
+
 
 
 describe("VWC — carriles críticos de Fase 2", () => {
