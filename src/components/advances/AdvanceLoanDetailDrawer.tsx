@@ -292,12 +292,18 @@ export default function AdvanceLoanDetailDrawer({ recordId, open, onOpenChange, 
           break;
         }
       }
+    } catch (e: any) {
+      // Conflicto y errores ya comunicados dentro de addLedgerEntry.
+      if (e?.message !== "__conflict__" && e?.message !== "__handled__") {
+        toast.error(e?.message ?? "No se pudo aplicar el movimiento");
+      }
     } finally {
       resetDialog();
       fetchDetail();
       onUpdated();
       setActionLoading(false);
     }
+
   };
 
   const handleCancel = async () => {
