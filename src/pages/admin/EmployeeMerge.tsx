@@ -266,11 +266,14 @@ export default function EmployeeMerge() {
     if (!master || duplicateIds.size === 0) return;
     setMerging(true);
     try {
-      const { data, error } = await supabase.rpc("merge_employees", {
+      // VWC Fase 3A · carril 3: consolidación idempotente (doble clic = mismo resultado).
+      const { data, error } = await supabase.rpc("merge_employees_idempotent", {
         _master_id: master.id,
         _duplicate_ids: Array.from(duplicateIds),
         _confirm_master_name: confirmName,
         _reason: reason || null,
+        _intent_key: `merge-${master.id}-${Array.from(duplicateIds).sort().join("_")}`,
+        _surface: "admin/EmployeeMerge",
       });
       if (error) throw error;
 

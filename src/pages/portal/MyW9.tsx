@@ -8,7 +8,7 @@
  *    row (category='w9', review_status='pending'). Raw TIN is then discarded.
  *  - `contractor_w9` stores ONLY `tin_last4` + `tax_id_type` + masked metadata.
  */
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, FileText, CheckCircle2, ShieldCheck, Eye } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -37,6 +37,8 @@ const BUCKET = "employee-documents";
 export default function MyW9() {
   const { effectiveEmployeeId: employeeId } = useEffectiveEmployee();
   const { toast } = useToast();
+  /** Idempotencia: un doble toque en "Enviar" no crea dos W-9. */
+  const intentKeyRef = useRef<string | null>(null);
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
@@ -218,17 +220,35 @@ export default function MyW9() {
         w9_file_url: path,
       };
 
-      let w9Err: any = null;
-      if (existing) {
-        ({ error: w9Err } = await supabase.from("contractor_w9").update({
-          ...payload,
-          reviewed_at: null,
-          reviewed_by: null,
-        }).eq("id", existing.id));
-      } else {
-        ({ error: w9Err } = await supabase.from("contractor_w9").insert(payload));
+      // VWC Fase 3A · carril 1+3: envío idempotente y versionado del W-9.
+      if (!intentKeyRef.current) {
+        intentKeyRef.current = `w9-submit-${employeeId}-${crypto.randomUUID()}`;
       }
-      if (w9Err) throw w9Err;
+      const { data: rpcData, error: rpcErr } = await supabase.rpc("submit_contractor_w9", {
+        p_company_id: companyId,
+        p_employee_id: employeeId,
+        p_payload: payload,
+        p_expected_version: (existing as any)?.version ?? null,
+        p_surface: "portal/MyW9",
+        p_intent_key: intentKeyRef.current,
+      });
+      if (rpcErr) throw rpcErr;
+      const res = (rpcData ?? {}) as Record<string, any>;
+      if (res.status === "conflict") {
+        toast({
+          title: "Alguien actualizó tu W-9",
+          description: "Recargamos la versión más reciente. Revisa los datos y vuelve a enviarlo.",
+          variant: "destructive",
+        });
+        intentKeyRef.current = null;
+        await load();
+        return;
+      }
+      if (res.status !== "applied") {
+        throw new Error(res.message || "No se pudo enviar el W-9.");
+      }
+      intentKeyRef.current = null;
+
 
       // 5) Mirror into employee_documents so /app/documents lists it
       const { error: docErr } = await supabase.from("employee_documents").insert({

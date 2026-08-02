@@ -94,7 +94,11 @@ const CRITICAL_TABLES: Record<string, string[]> = {
     // Aprobación, pausa y cancelación: transiciones de estado, no saldos.
     "src/components/advances/AdvanceLoanDetailDrawer.tsx",
   ],
+  // Fase 3A — Bloque A: W-9 del trabajador. Sin excepciones: portal y admin
+  // escriben por RPC (submit_contractor_w9 / review_contractor_w9 / versioned_update).
+  contractor_w9: [],
 };
+
 
 describe("VWC — carriles críticos de Fase 2", () => {
   for (const [table, allowed] of Object.entries(CRITICAL_TABLES)) {
