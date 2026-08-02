@@ -33,6 +33,8 @@ import type { Shift, Assignment, Employee, SelectOption } from "@/components/shi
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { ADMIN_LEX } from "@/lib/ox/lexicon";
+import { useQueryClient } from "@tanstack/react-query";
+import { readServiceRow, subscribeToServiceChanges, writeServiceRow } from "@/lib/shifts/service-state";
 
 /**
  * MobileShiftsView — Phase 1
@@ -97,6 +99,7 @@ export default function MobileShiftsView() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { role, hasModuleAccess } = useAuth();
   const { selectedCompanyId, selectedCompany } = useCompany();
+  const queryClient = useQueryClient();
   const { config: shiftsConfig } = useShiftsConfig();
 
   // Permissions — same rule as desktop Shifts
@@ -140,6 +143,17 @@ export default function MobileShiftsView() {
 
   const [pendingRequests, setPendingRequests] = useState<PendingRequest[]>([]);
 
+  /**
+   * P0.1 — nunca renderizamos el snapshot congelado que se capturó al tocar la
+   * tarjeta. Resolvemos siempre la versión viva: cache canónica > lista > snapshot.
+   */
+  const resolveLive = (snapshot: Shift | null): Shift | null => {
+    if (!snapshot?.id) return snapshot;
+    const fromList = shifts.find((s) => s.id === snapshot.id) ?? null;
+    const canonical = readServiceRow(queryClient, selectedCompanyId, snapshot.id);
+    return { ...snapshot, ...(fromList ?? {}), ...(canonical ?? {}) } as Shift;
+  };
+
   useEffect(() => {
     if (!selectedCompanyId) {
       setShifts([]); setAssignments([]); setClients([]); setLocations([]); setEmployees([]);
@@ -154,7 +168,7 @@ export default function MobileShiftsView() {
       try {
         const [shiftsRes, clientsRes, locsRes, empsRes] = await Promise.all([
          supabase.from("scheduled_shifts")
-           .select("id,title,date,start_time,end_time,status,publication_status,slots,client_id,location_id,notes,claimable,shift_code,shift_ref,shift_number,created_at,updated_at,published_at,published_by,created_by,import_batch_id,reconciliation_hash")
+           .select("*")
             .eq("company_id", selectedCompanyId!)
             .is("deleted_at", null)
             .gte("date", dateRange.start)
@@ -229,6 +243,20 @@ export default function MobileShiftsView() {
     load();
     return () => { alive = false; };
   }, [selectedCompanyId, dateRange.start, dateRange.end, reloadKey]);
+
+  // P0.1 — la lista es una vista derivada: cuando el servicio canónico cambia
+  // en cualquier otra superficie, recargamos en lugar de conservar snapshots.
+  useEffect(() => {
+    return subscribeToServiceChanges(({ companyId }) => {
+      if (companyId === selectedCompanyId) setReloadKey((k) => k + 1);
+    });
+  }, [selectedCompanyId]);
+
+  // Semilla: las filas de la lista alimentan la cache canónica (con guardia de versión).
+  useEffect(() => {
+    if (!selectedCompanyId) return;
+    shifts.forEach((s) => writeServiceRow(queryClient, selectedCompanyId, s as any));
+  }, [shifts, selectedCompanyId, queryClient]);
 
   // Honor ?create=1 (TopBar quick action, deep links, etc.) on mobile too.
   useEffect(() => {
@@ -652,7 +680,7 @@ export default function MobileShiftsView() {
       {detailOpen && (
         <Suspense fallback={null}>
           <MobileShiftOperationsSheet
-            shift={detailShift}
+            shift={detailShiftLive}
             open={detailOpen}
             onOpenChange={(o) => {
               setDetailOpen(o);
@@ -660,8 +688,8 @@ export default function MobileShiftsView() {
             }}
             assignments={assignments}
             employees={employees}
-            clientName={detailShift?.client_id ? clientById.get(detailShift.client_id) ?? "—" : "—"}
-            locationName={detailShift?.location_id ? locationById.get(detailShift.location_id) ?? "" : ""}
+            clientName={detailShiftLive?.client_id ? clientById.get(detailShiftLive.client_id) ?? "—" : "—"}
+            locationName={detailShiftLive?.location_id ? locationById.get(detailShiftLive.location_id) ?? "" : ""}
             initialOpenTeamHub={detailManageTeam}
             onEdit={canEdit ? (s) => { setEditShift(s); setEditOpen(true); } : undefined}
           />
@@ -670,7 +698,7 @@ export default function MobileShiftsView() {
 
       {/* Edit existing shift — UPDATE only, keeps id/tenant/assignments intact */}
       <MobileShiftEditSheet
-        shift={editShift}
+        shift={editShiftLive}
         open={editOpen}
         onOpenChange={(o) => { setEditOpen(o); if (!o) setEditShift(null); }}
         companyId={selectedCompanyId}
