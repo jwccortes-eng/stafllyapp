@@ -315,7 +315,7 @@ export default function ContractorW9() {
                       )}
                       <Button variant="ghost" size="icon" onClick={() => openEdit(r)}><Eye className="h-4 w-4" /></Button>
                       {r.status === "submitted" && (
-                      <Button variant="ghost" size="icon" onClick={() => handleApprove(r.id)}>
+                      <Button variant="ghost" size="icon" onClick={() => handleApprove(r)}>
                           <CheckCircle className="h-4 w-4 text-primary" />
                         </Button>
                       )}
