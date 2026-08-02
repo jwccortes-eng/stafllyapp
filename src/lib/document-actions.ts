@@ -50,7 +50,22 @@ export interface UnifiedDocument {
   state: DocumentReviewState;
   reason: string | null;            // rejection_reason or notes (raw)
   replacement_reason: string | null; // text after prefix, when state === 'replacement_requested'
+  /** VWC Fase 3B: versión observada por el revisor. */
+  version: number | null;
 }
+
+/** Resultado canónico de una acción de documento (VWC Fase 3B). */
+export interface DocumentActionResult {
+  error: string | null;
+  /** Presente cuando otra persona cambió el documento antes que nosotros. */
+  conflict?: {
+    expectedVersion: number | null;
+    actualVersion: number | null;
+    updatedAt: string | null;
+    row: Record<string, any> | null;
+  };
+}
+
 
 const ONB_LABELS: Record<string, string> = {
   driver_license: "Driver's license",
