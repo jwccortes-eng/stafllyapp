@@ -18,8 +18,8 @@ import { CompensationHistoryDialog } from "@/components/compensation/Compensatio
 import CompensationEditDialog from "@/components/compensation/CompensationEditDialog";
 import CompensationReconciliation from "@/components/compensation/CompensationReconciliation";
 import { toast } from "sonner";
-import {
 import { rowVersion, versionedWrite } from "@/lib/data/versioned-write";
+import {
   Search, CheckCircle, AlertTriangle, ShieldAlert, Clock, DollarSign,
   Calculator, History, Pencil, Filter, ChevronDown, ChevronUp, Info, Wallet,
   Plus, Users, UserPlus, CalendarDays,
@@ -369,11 +369,11 @@ export default function CompensationValidation() {
       surface: "compensation/validation_confirm",
       reason: "Confirmación manual por admin",
     });
-    if (confirmRes.status !== "applied") {
+    if (confirmRes.status !== "applied" && confirmRes.status !== "noop") {
       toast.error(
         confirmRes.status === "conflict"
           ? "Otra persona actualizó esta tarifa. Recarga para ver el valor vigente."
-          : confirmRes.message,
+          : confirmRes.status === "error" ? confirmRes.message : "No se pudo guardar.",
       );
       return;
     }
@@ -430,11 +430,11 @@ export default function CompensationValidation() {
       surface: "compensation/validation_infer",
       reason: `Inferido desde "${conceptName}"`,
     });
-    if (inferRes.status !== "applied") {
+    if (inferRes.status !== "applied" && inferRes.status !== "noop") {
       toast.error(
         inferRes.status === "conflict"
           ? "Otra persona actualizó esta tarifa. Recarga para ver el valor vigente."
-          : inferRes.message,
+          : inferRes.status === "error" ? inferRes.message : "No se pudo guardar.",
       );
       return;
     }

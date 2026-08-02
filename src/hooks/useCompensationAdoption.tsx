@@ -242,11 +242,11 @@ export function useCompensationAdoption() {
             surface: "compensation/adoption_archive",
             reason: `Adoption review: ${p.reason}`,
           });
-          if (archiveRes.status !== "applied") {
+          if (archiveRes.status !== "applied" && archiveRes.status !== "noop") {
             throw new Error(
               archiveRes.status === "conflict"
                 ? "Otra persona actualizó esta compensación. Recarga y reintenta."
-                : archiveRes.message,
+                : archiveRes.status === "error" ? archiveRes.message : "No se pudo guardar.",
             );
           }
         }
