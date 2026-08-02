@@ -22,8 +22,12 @@ interface TimeEntry {
   break_minutes: number;
   status: string;
   notes: string | null;
+  /** Contrato VWC: versión observable y empresa dueña de la fila. */
+  version?: number | null;
+  company_id?: string | null;
   scheduled_shifts?: { id: string; title: string; start_time: string; end_time: string } | null;
 }
+
 
 interface ScheduledInfo {
   title: string;
