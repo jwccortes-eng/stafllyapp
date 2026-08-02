@@ -148,7 +148,7 @@ export function EmployeeDayDetailDrawer({ employee, open, onOpenChange, now, onD
       surface: "today_view/employee_day_detail",
     });
 
-    if (result.status === "ok") {
+    if (result.status === "applied" || result.status === "noop") {
       toast.success("Fichaje actualizado");
       setEditingEntryId(null);
       onDataChanged?.();
@@ -161,10 +161,17 @@ export function EmployeeDayDetailDrawer({ employee, open, onOpenChange, now, onD
         newData: patch,
       });
     } else if (result.status === "conflict") {
-      setHoursConflict(result.conflict);
+      setHoursConflict({
+        patch,
+        serverRow: result.row ?? null,
+        actualVersion: result.actualVersion ?? null,
+        expectedVersion: result.expectedVersion ?? null,
+        updatedAt: result.updatedAt ?? null,
+      });
     } else {
       toast.error(result.message);
     }
+
 
     setSaving(false);
   };
