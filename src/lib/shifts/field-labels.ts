@@ -18,6 +18,7 @@ export const COMPENSATION_FIELD_LABELS: Record<string, string> = {
   notes: "Notas",
 };
 
+export const SHIFT_FIELD_LABELS: Record<string, string> = {
 
   title: "Título",
   date: "Fecha",
