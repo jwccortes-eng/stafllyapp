@@ -86,9 +86,10 @@ export function rowVersion(row: Record<string, any> | null | undefined): number 
 }
 
 export async function versionedWrite(input: VersionedWriteInput): Promise<VersionedWriteResult> {
-  const { entity, id, companyId, patch, expectedVersion, surface, intentKey } = input;
+  const { entity, id, companyId, patch, expectedVersion, surface, intentKey, reason } = input;
 
-  if (entity !== "scheduled_shifts") {
+  const rpc = ENTITY_RPC[entity];
+  if (!rpc) {
     return { status: "error", reason: "invalid", message: `Entidad no soportada: ${entity}` };
   }
   if (!companyId) {
@@ -101,14 +102,18 @@ export async function versionedWrite(input: VersionedWriteInput): Promise<Versio
   const fields = Object.keys(patch ?? {});
   if (fields.length === 0) return { status: "noop" };
 
-  const { data, error } = await supabase.rpc("versioned_update_shift", {
-    p_shift_id: id,
+  const params: Record<string, any> = {
+    [ENTITY_ID_PARAM[entity]]: id,
     p_company_id: companyId,
-    p_patch: patch as any,
+    p_patch: patch,
     p_expected_version: expectedVersion ?? null,
     p_surface: surface ?? null,
     p_intent_key: intentKey ?? null,
-  } as any);
+  };
+  if (entity === "compensation_profiles") params.p_reason = reason ?? null;
+
+  const { data, error } = await supabase.rpc(rpc as any, params as any);
+
 
   if (error) return { status: "error", reason: "error", message: error.message };
 
