@@ -22,9 +22,12 @@ import { Checkbox } from "@/components/ui/checkbox";
 // Tabs removed — using custom view switcher
 import { toast } from "sonner";
 import { notifyActionRequired, notifyError, notifySuccess, notifyWarning } from "@/lib/feedback/notify";
-import { updateShiftVerified } from "@/lib/shifts/update-shift";
+import { versionedWrite, rowVersion } from "@/lib/data/versioned-write";
+import { VersionConflictDialog, type VersionConflictInfo } from "@/components/data-integrity/VersionConflictDialog";
+import { SHIFT_FIELD_LABELS } from "@/lib/shifts/field-labels";
 import { useQueryClient } from "@tanstack/react-query";
-import { reconcileServiceAfterSave, subscribeToServiceChanges, type ServiceRow } from "@/lib/shifts/service-state";
+import { reconcileServiceAfterSave, subscribeToServiceChanges, readServiceRow, type ServiceRow } from "@/lib/shifts/service-state";
+
 
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction, AlertDialogCancel } from "@/components/ui/alert-dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
