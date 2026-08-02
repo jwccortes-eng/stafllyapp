@@ -218,17 +218,35 @@ export default function MyW9() {
         w9_file_url: path,
       };
 
-      let w9Err: any = null;
-      if (existing) {
-        ({ error: w9Err } = await supabase.from("contractor_w9").update({
-          ...payload,
-          reviewed_at: null,
-          reviewed_by: null,
-        }).eq("id", existing.id));
-      } else {
-        ({ error: w9Err } = await supabase.from("contractor_w9").insert(payload));
+      // VWC Fase 3A · carril 1+3: envío idempotente y versionado del W-9.
+      if (!intentKeyRef.current) {
+        intentKeyRef.current = `w9-submit-${employeeId}-${crypto.randomUUID()}`;
       }
-      if (w9Err) throw w9Err;
+      const { data: rpcData, error: rpcErr } = await supabase.rpc("submit_contractor_w9", {
+        p_company_id: companyId,
+        p_employee_id: employeeId,
+        p_payload: payload,
+        p_expected_version: (existing as any)?.version ?? null,
+        p_surface: "portal/MyW9",
+        p_intent_key: intentKeyRef.current,
+      });
+      if (rpcErr) throw rpcErr;
+      const res = (rpcData ?? {}) as Record<string, any>;
+      if (res.status === "conflict") {
+        toast({
+          title: "Alguien actualizó tu W-9",
+          description: "Recargamos la versión más reciente. Revisa los datos y vuelve a enviarlo.",
+          variant: "destructive",
+        });
+        intentKeyRef.current = null;
+        await load();
+        return;
+      }
+      if (res.status !== "applied") {
+        throw new Error(res.message || "No se pudo enviar el W-9.");
+      }
+      intentKeyRef.current = null;
+
 
       // 5) Mirror into employee_documents so /app/documents lists it
       const { error: docErr } = await supabase.from("employee_documents").insert({
