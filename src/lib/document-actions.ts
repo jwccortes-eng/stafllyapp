@@ -81,6 +81,7 @@ export function fromEmployeeDocument(row: {
   file_url: string; file_size: number | null; category: string | null;
   created_at: string; review_status: string; reviewed_at: string | null;
   rejection_reason: string | null; expires_at?: string | null;
+  version?: number | null;
 }): UnifiedDocument {
   const reason = row.rejection_reason ?? null;
   const isReplacement = !!reason && reason.startsWith(REPLACEMENT_PREFIX);
@@ -105,6 +106,7 @@ export function fromEmployeeDocument(row: {
     replacement_reason: isReplacement
       ? reason!.slice(REPLACEMENT_PREFIX.length).trim()
       : null,
+    version: row.version ?? null,
   };
 }
 
@@ -113,7 +115,7 @@ export function fromOnboardingDocument(row: {
   id: string; employee_id: string; company_id: string;
   document_type: string; file_url: string; file_name: string | null;
   status: string; verified_at: string | null; notes: string | null;
-  created_at: string;
+  created_at: string; version?: number | null;
 }): UnifiedDocument {
   const reason = row.notes ?? null;
   const isReplacement = !!reason && reason.startsWith(REPLACEMENT_PREFIX);
@@ -142,6 +144,7 @@ export function fromOnboardingDocument(row: {
     replacement_reason: isReplacement
       ? reason!.slice(REPLACEMENT_PREFIX.length).trim()
       : null,
+    version: row.version ?? null,
   };
 }
 
