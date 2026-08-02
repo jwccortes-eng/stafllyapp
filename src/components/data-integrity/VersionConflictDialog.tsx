@@ -133,14 +133,22 @@ export function VersionConflictDialog({
               {showDiff ? "Ocultar cambios" : "Ver cambios"}
             </Button>
           )}
-          <Button className="w-full h-11 rounded-xl gap-2" onClick={onKeepMine} disabled={busy}>
-            <Save className="h-4 w-4" />
-            Conservar mis cambios
-          </Button>
-          <Button variant="outline" className="w-full h-11 rounded-xl gap-2" onClick={onReload} disabled={busy}>
+          {allowKeepMine && (
+            <Button className="w-full h-11 rounded-xl gap-2" onClick={onKeepMine} disabled={busy}>
+              <Save className="h-4 w-4" />
+              Conservar mis cambios
+            </Button>
+          )}
+          <Button
+            variant={allowKeepMine ? "outline" : "default"}
+            className="w-full h-11 rounded-xl gap-2"
+            onClick={onReload}
+            disabled={busy}
+          >
             <RefreshCw className="h-4 w-4" />
             Volver a editar con la versión nueva
           </Button>
+
           <Button variant="ghost" className="w-full h-11 rounded-xl gap-2" onClick={onCancel} disabled={busy}>
             <X className="h-4 w-4" />
             Cancelar
