@@ -23,7 +23,7 @@ export interface VersionConflictInfo {
 }
 
 /** Tipo de dato en conflicto: adapta el copy y las acciones permitidas. */
-export type ConflictKind = "service" | "hours" | "money";
+export type ConflictKind = "service" | "hours" | "money" | "config";
 
 interface Props {
   open: boolean;
@@ -59,6 +59,11 @@ const COPY: Record<ConflictKind, { title: (label: string) => string; body: (when
     body: (when) =>
       `Otra persona guardó una versión más reciente${when ? ` ${when}` : ""}. Ningún valor fue sobrescrito.`,
   },
+  config: {
+    title: () => "Esta configuración cambió mientras la editabas",
+    body: (when) =>
+      `Otra persona actualizó la configuración de la empresa${when ? ` ${when}` : ""}. No guardamos nada: recarga la versión y reaplica sólo tu cambio.`,
+  },
 };
 
 
@@ -89,7 +94,7 @@ export function VersionConflictDialog({
   const when = relativeTime(conflict?.updatedAt ?? null);
   const copy = COPY[kind];
   // Horas y dinero nunca ofrecen "guardar de todas formas" por defecto.
-  const allowKeepMine = kind === "service" && typeof onKeepMine === "function";
+  const allowKeepMine = (kind === "service" || kind === "config") && typeof onKeepMine === "function";
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v && !busy) onCancel(); }}>
