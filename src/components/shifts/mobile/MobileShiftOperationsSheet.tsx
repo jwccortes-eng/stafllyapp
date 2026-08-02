@@ -182,10 +182,10 @@ export function MobileShiftOperationsSheet({
 
   // Auto-open Manage Team hub when requested by deep-link intent.
   useEffect(() => {
-    if (open && initialOpenTeamHub && shift) {
+    if (open && initialOpenTeamHub && shiftProp) {
       setHubOpen(true);
     }
-  }, [open, initialOpenTeamHub, shift?.id]);
+  }, [open, initialOpenTeamHub, shiftProp?.id]);
   const { allRoles, canAccessAdminForCompany, user } = useAuth();
   const { selectedCompanyId } = useCompany();
 

@@ -19,7 +19,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
-export type ServiceRow = Record<string, any> & { id: string; updated_at?: string | null };
+export type ServiceRow = Record<string, any> & { id?: string; updated_at?: string | null };
 
 export const SERVICE_STATE_ROOT = "service-state" as const;
 
