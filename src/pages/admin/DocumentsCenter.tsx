@@ -525,6 +525,7 @@ export default function DocumentsCenter() {
               name: previewRow.document_type,
               category: String(previewRow.category),
               current_expires_at: previewRow.expires_at,
+              version: previewRow.version,
             }}
             onSaved={() => { void refresh(); }}
           />
