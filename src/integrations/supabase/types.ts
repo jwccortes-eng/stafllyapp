@@ -1896,6 +1896,7 @@ export type Database = {
           trial_ends_at: string | null
           updated_at: string
           upgrade_requested_at: string | null
+          version: number
         }
         Insert: {
           application_cover_url?: string | null
@@ -1930,6 +1931,7 @@ export type Database = {
           trial_ends_at?: string | null
           updated_at?: string
           upgrade_requested_at?: string | null
+          version?: number
         }
         Update: {
           application_cover_url?: string | null
@@ -1964,6 +1966,7 @@ export type Database = {
           trial_ends_at?: string | null
           updated_at?: string
           upgrade_requested_at?: string | null
+          version?: number
         }
         Relationships: []
       }
@@ -2232,6 +2235,7 @@ export type Database = {
           updated_at: string
           updated_by: string | null
           value: Json
+          version: number
         }
         Insert: {
           company_id: string
@@ -2240,6 +2244,7 @@ export type Database = {
           updated_at?: string
           updated_by?: string | null
           value?: Json
+          version?: number
         }
         Update: {
           company_id?: string
@@ -2248,6 +2253,7 @@ export type Database = {
           updated_at?: string
           updated_by?: string | null
           value?: Json
+          version?: number
         }
         Relationships: [
           {
@@ -18180,6 +18186,27 @@ export type Database = {
         Returns: boolean
       }
       verify_switch_pin: { Args: { _pin: string }; Returns: boolean }
+      versioned_update_company_profile: {
+        Args: {
+          p_company_id: string
+          p_expected_version?: number
+          p_intent_key?: string
+          p_patch: Json
+          p_surface?: string
+        }
+        Returns: Json
+      }
+      versioned_update_company_setting: {
+        Args: {
+          p_company_id: string
+          p_expected_version?: number
+          p_intent_key?: string
+          p_key: string
+          p_patch: Json
+          p_surface?: string
+        }
+        Returns: Json
+      }
       versioned_update_compensation_profile: {
         Args: {
           p_company_id: string
