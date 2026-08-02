@@ -334,14 +334,33 @@ export default function EmployeeCompensationTab({
       const hr = (rates ?? []).find((r: any) => r.concepts?.name === "Hourly Rate")?.rate ?? null;
       const dr = (rates ?? []).find((r: any) => r.concepts?.name === "Daily Pay")?.rate ?? null;
       if (!hr && !dr) { toast.info("No se encontraron tarifas en datos existentes"); setInitializing(false); return; }
-      await supabase.from("compensation_profiles").update({
-        default_hourly_rate: hr ?? profile.default_hourly_rate,
-        default_daily_rate: dr ?? profile.default_daily_rate,
-        default_half_day_rate: dr ? Math.round(dr * 0.625 * 100) / 100 : profile.default_half_day_rate,
-        payment_mode: (hr && dr ? "mixed" : dr ? "daily" : "hourly") as any,
-        rate_source: "imported" as any,
-        updated_by: user.id,
-      }).eq("id", profile.id);
+      const seedRes = await versionedWrite({
+        entity: "compensation_profiles",
+        id: profile.id,
+        companyId,
+        patch: {
+          default_hourly_rate: hr ?? profile.default_hourly_rate,
+          default_daily_rate: dr ?? profile.default_daily_rate,
+          default_half_day_rate: dr ? Math.round(dr * 0.625 * 100) / 100 : profile.default_half_day_rate,
+          payment_mode: (hr && dr ? "mixed" : dr ? "daily" : "hourly") as any,
+          rate_source: "imported" as any,
+        },
+        expectedVersion: rowVersion(profile as any),
+        surface: "compensation/seed_from_concepts",
+        reason: "Siembra desde tarifas por concepto",
+      });
+      if (seedRes.status === "conflict") {
+        setCompConflict({
+          patch: { default_hourly_rate: hr ?? profile.default_hourly_rate },
+          serverRow: seedRes.row ?? null,
+          actualVersion: seedRes.actualVersion ?? null,
+          expectedVersion: seedRes.expectedVersion ?? null,
+          updatedAt: seedRes.updatedAt ?? null,
+        });
+        setInitializing(false);
+        return;
+      }
+      if (seedRes.status === "error") throw new Error(seedRes.message);
       qc.invalidateQueries({ queryKey: ["comp-profile-single", employeeId] });
       toast.success(`Tarifas actualizadas: hourly $${hr ?? "—"}, daily $${dr ?? "—"}`);
     } catch (e: any) {
