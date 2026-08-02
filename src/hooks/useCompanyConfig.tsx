@@ -1,17 +1,26 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
-import { toast } from "sonner";
+import { notify } from "@/lib/feedback/notify";
+import {
+  isEditableSettingKey,
+  versionedCompanySettingWrite,
+} from "@/lib/data/company-config-write";
+import type { VersionConflictInfo } from "@/components/data-integrity/VersionConflictDialog";
 
 /**
- * Generic typed hook for reading/writing company-scoped configuration.
- * 
- * Stores config as JSON in company_settings table under a namespaced key.
- * Returns config merged with defaults so missing keys always have safe values.
- * 
- * Usage:
- *   const { config, updateConfig, loading } = useCompanyConfig<ShiftsConfig>("shifts_config", SHIFTS_DEFAULTS);
+ * Hook tipado para leer/escribir configuración de empresa.
+ *
+ * P0 — VWC Fase 3C: la escritura pasa por `versioned_update_company_setting`
+ * (PATCH parcial + `expected_version` + merge server-side + auditoría).
+ * Nunca se envía un snapshot completo del JSONB.
+ *
+ * EXCEPCIÓN TEMPORAL — claves financieras (`payroll_sequence`, `payroll_config`,
+ * `pay_week`, `overtime`, `pay_types`): quedan fuera del contrato por la orden
+ * "no tocar payroll". Owner: equipo Payroll. Objetivo de eliminación: Fase 3F.
+ * Riesgo aceptado: lost update en configuración de nómina (sin cambio respecto
+ * al comportamiento anterior).
  */
 export function useCompanyConfig<T extends object>(
   configKey: string,
@@ -20,6 +29,7 @@ export function useCompanyConfig<T extends object>(
   const { selectedCompanyId } = useCompany();
   const queryClient = useQueryClient();
   const queryKey = ["company_config", configKey, selectedCompanyId];
+  const [conflict, setConflict] = useState<VersionConflictInfo | null>(null);
 
   const { data: rawData, isLoading } = useQuery({
     queryKey,
@@ -27,12 +37,12 @@ export function useCompanyConfig<T extends object>(
       if (!selectedCompanyId) return null;
       const { data, error } = await supabase
         .from("company_settings")
-        .select("id, value")
+        .select("id, value, version")
         .eq("company_id", selectedCompanyId)
         .eq("key", configKey)
         .maybeSingle();
       if (error) throw error;
-      return data;
+      return data as { id: string; value: any; version: number } | null;
     },
     enabled: !!selectedCompanyId,
     staleTime: 60_000,
@@ -46,8 +56,32 @@ export function useCompanyConfig<T extends object>(
   const mutation = useMutation({
     mutationFn: async (partial: Partial<T>) => {
       if (!selectedCompanyId) throw new Error("No company selected");
-      const merged = { ...config, ...partial };
 
+      if (isEditableSettingKey(configKey)) {
+        const result = await versionedCompanySettingWrite({
+          companyId: selectedCompanyId,
+          key: configKey,
+          patch: partial as Record<string, any>,
+          expectedVersion: rawData?.version ?? null,
+          surface: `useCompanyConfig:${configKey}`,
+        });
+
+        if (result.status === "conflict") {
+          setConflict({
+            patch: partial as Record<string, any>,
+            serverRow: result.row,
+            actualVersion: result.actualVersion,
+            expectedVersion: result.expectedVersion,
+            updatedAt: result.updatedAt,
+          });
+          throw new Error("conflict");
+        }
+        if (result.status === "error") throw new Error(result.message);
+        return partial;
+      }
+
+      // Excepción temporal documentada arriba: configuración financiera.
+      const merged = { ...config, ...partial };
       if (rawData?.id) {
         const { error } = await supabase
           .from("company_settings")
@@ -64,20 +98,19 @@ export function useCompanyConfig<T extends object>(
           } as any);
         if (error) throw error;
       }
-      return merged;
+      return partial;
     },
-    onMutate: async (partial) => {
-      await queryClient.cancelQueries({ queryKey });
-      const previous = queryClient.getQueryData(queryKey);
-      queryClient.setQueryData(queryKey, (old: any) => ({
-        ...old,
-        value: { ...config, ...partial },
-      }));
-      return { previous };
-    },
-    onError: (_err, _vars, context) => {
-      if (context?.previous) queryClient.setQueryData(queryKey, context.previous);
-      toast.error("Failed to save setting");
+    onError: (err: any) => {
+      if (err?.message === "conflict") {
+        notify.warning("Esta configuración cambió mientras la editabas", {
+          description: "Otra persona guardó una versión más reciente. No sobrescribimos nada: recarga y vuelve a aplicar tu cambio.",
+        });
+      } else {
+        notify.error("No pudimos guardar la configuración", {
+          description: err?.message ?? "Inténtalo otra vez.",
+        });
+      }
+      queryClient.invalidateQueries({ queryKey });
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey });
@@ -94,5 +127,8 @@ export function useCompanyConfig<T extends object>(
     updateConfig,
     loading: isLoading,
     saving: mutation.isPending,
+    version: rawData?.version ?? null,
+    conflict,
+    clearConflict: useCallback(() => setConflict(null), []),
   };
 }
