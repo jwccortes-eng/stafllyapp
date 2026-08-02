@@ -152,9 +152,8 @@ describe("VWC Fase 3B — documentos y compliance", () => {
     // A aprueba sobre v3 → el documento pasa a v4.
     // B, que abrió el documento en v3, intenta rechazar: el backend compara
     // expected_version (3) con la actual (4) y responde conflicto.
-    const serverVersion = 4;
-    const staleExpected = 3;
+    const serverVersion: number = 4;
+    const staleExpected: number = 3;
     const isConflict = staleExpected !== serverVersion;
     expect(isConflict).toBe(true);
-  });
 });
