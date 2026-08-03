@@ -4,6 +4,7 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import { usePageView } from "@/hooks/useAuditLog";
 // AuditPanel available via dropdown in future iteration
 import { supabase } from "@/integrations/supabase/client";
+import { versionedAssignmentTransition } from "@/lib/data/assignment-write";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
 import { useEmployeeAvailability } from "@/hooks/useEmployeeAvailability";
