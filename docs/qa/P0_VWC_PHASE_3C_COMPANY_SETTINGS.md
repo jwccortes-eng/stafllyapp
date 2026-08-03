@@ -57,6 +57,39 @@ Superficie migrada: `/app/company-config` (`src/pages/admin/CompanyConfig.tsx`).
 
 Auditoría verificada en `versioned_write_audit` (`entity in ('company_settings','companies')`).
 
+## 4B. QA multi-tenant y A/B ejecutado sobre datos reales (2026-08-03)
+
+Empresas: **Quality Staff by Keury** (`0000…0001`) y **My Staff Solution LLC** (`37f92f75…`).
+Ejecutado invocando los RPC con la identidad real de cada operador (sin service_role),
+por lo que se validan permisos, whitelist y versión tal como los ve la app.
+
+| # | Caso | Sesión / actor | Resultado |
+|---|---|---|---|
+| 1 | Cambio de geocerca sólo en Quality Staff | A · owner de Quality Staff | `applied` v1→v2. My Staff **sin cambios** |
+| 2 | Cambio de geocerca sólo en My Staff | B · owner de My Staff | `applied` v3→v4. Quality Staff **sin cambios** (200 m vs 133 m, valores independientes) |
+| 3 | Admin **exclusivo** de My Staff intenta editar identidad de Quality Staff | B estricto | `denied` — «No tienes permiso para editar esta empresa» |
+| 4 | Mismo admin intenta editar `company_settings` de Quality Staff | B estricto | `denied` |
+| 5 | Clave de payroll `pay_week` desde este carril | B | `invalid` — clave fuera de whitelist |
+| 6 | Campo de tenant `is_active` en el patch de identidad | B | `invalid` — «Campos protegidos: is_active» |
+| 7 | **Conflicto A/B**: A guarda `brand_color` (v1→v2); B, con v1 a la vista, guarda `logo_url` | A owner / B admin | B recibe `conflict` `expected 1 → actual 2`. **El color de A permanece**; nada se sobrescribe |
+| 8 | B recarga la versión nueva y reaplica su logo | B | `applied` v2→v3 con **ambos cambios vivos** (`brand_color` de A + `logo_url` de B) |
+
+Aislamiento de estado y caché en cliente (verificado en código):
+- `useCompanyConfig` usa `queryKey = ["company_config", key, selectedCompanyId]` — no hay caché compartida entre tenants.
+- `CompanyConfig.tsx` descarta `drafts`, `rows` y `company` al cambiar de empresa (`useEffect` sobre `selectedCompanyId`).
+- Toda lectura filtra por `company_id`/`id` de la empresa activa y toda escritura viaja con `p_company_id`.
+- El branding se lee de la fila de la empresa activa; no existe estado global de marca compartido.
+
+Evidencia en `versioned_write_audit` (`surface like 'qa:3c%'`): 6 `applied` y 2 `conflict/stale_version`,
+todos con el `company_id` correcto. Los valores de prueba fueron revertidos al cierre
+(color, logo y geocerca originales en ambas empresas).
+
+**Cero impacto** en billing, payroll, permisos, roles, RLS, ownership, subscription,
+integraciones, secrets y activación de compañías: ninguna de esas columnas o claves
+está en la whitelist de los RPC y los intentos (casos 5 y 6) son rechazados server-side.
+No se modificó código ni esquema de esos dominios en esta fase.
+
+
 ## 5. Tests guardianes
 
 `src/test/versioned-write.test.ts` — 23/23 en verde. Nuevos:
