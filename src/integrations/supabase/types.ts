@@ -18225,6 +18225,7 @@ export type Database = {
           p_intent_key?: string
           p_reason?: string
           p_role?: string
+          p_status?: string
           p_surface?: string
           p_target_employee_id?: string
           p_transition: string
