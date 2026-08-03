@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { versionedAssignmentTransition, assignmentConflictCopy } from "@/lib/data/assignment-write";
 import { useEffectiveEmployee } from "@/hooks/useEffectiveEmployee";
 import {
   CalendarDays, Clock, MapPin, HandMetal, Loader2, Check, X, LogIn,
