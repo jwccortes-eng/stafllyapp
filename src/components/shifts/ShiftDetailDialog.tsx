@@ -52,6 +52,7 @@ import { es } from "date-fns/locale";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { versionedAssignmentTransition } from "@/lib/data/assignment-write";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
 import { useServiceState } from "@/hooks/useServiceState";
@@ -471,10 +472,28 @@ export function ShiftDetailDialog({
       toast.info("Todos los empleados ya están confirmados");
       return;
     }
+    let confirmed = 0;
+    let blocked = 0;
     for (const a of pendingAssignments) {
-      await supabase.from("shift_assignments").update({ status: "confirmed" } as any).eq("id", a.id);
+      // P0 — VWC Fase 3D: confirmar es transición de estado compartido.
+      const result = await versionedAssignmentTransition({
+        assignmentId: a.id,
+        companyId: (a as any).company_id ?? null,
+        transition: "confirm",
+        expectedStatus: a.status ?? null,
+        expectedVersion: typeof (a as any).version === "number" ? (a as any).version : null,
+        reason: "confirm_all",
+        surface: "shift_detail_dialog",
+      });
+      if (result.status === "applied") confirmed += 1;
+      else blocked += 1;
     }
-    toast.success(`${pendingAssignments.length} empleado(s) confirmados`);
+    if (confirmed > 0) toast.success(`${confirmed} empleado(s) confirmados`);
+    if (blocked > 0) {
+      toast.error("Algunos no se confirmaron", {
+        description: `${blocked} cambiaron de estado mientras mirabas. Recarga y vuelve a revisar.`,
+      });
+    }
     onRequestAction?.();
   };
 
