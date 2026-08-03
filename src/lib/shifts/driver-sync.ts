@@ -14,6 +14,7 @@
  */
 
 import { supabase } from "@/integrations/supabase/client";
+import { versionedAssignmentTransition, assignmentConflictCopy } from "@/lib/data/assignment-write";
 
 const ACTIVE_STATUSES = ["pending", "confirmed", "accepted", "review", "needs_reacceptance"];
 
