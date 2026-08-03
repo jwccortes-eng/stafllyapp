@@ -299,14 +299,14 @@ describe("VWC Fase 3D — asignaciones y estados compartidos", () => {
   });
 
   it("Caso ACCEPTED vs REMOVED: una aceptación vieja no revive un retiro nuevo", () => {
-    const serverStatus = "removed";
-    const workerExpected = "pending";
+    const serverStatus: string = "removed";
+    const workerExpected: string = "pending";
     expect(workerExpected !== serverStatus).toBe(true); // → conflict, no escritura
   });
 
   it("Caso REMOVED vs ACCEPTED: un retiro con versión vieja no revierte la aceptación", () => {
-    const serverVersion = 4;
-    const adminExpectedVersion = 2;
+    const serverVersion: number = 4;
+    const adminExpectedVersion: number = 2;
     expect(adminExpectedVersion !== serverVersion).toBe(true);
   });
 
