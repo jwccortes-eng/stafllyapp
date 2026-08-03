@@ -35,46 +35,50 @@ export async function syncShiftDriverRoles(
 
   const { data, error } = await supabase
     .from("shift_assignments")
-    .select("id, employee_id, assignment_role, status")
+    .select("id, employee_id, assignment_role, status, company_id, version")
     .eq("shift_id", shiftId)
     .in("status", ACTIVE_STATUSES);
   if (error) throw error;
 
-  const rows = data ?? [];
+  const rows = (data ?? []) as Array<any>;
   const promoted: string[] = [];
   const demoted: string[] = [];
 
+  // P0 — VWC Fase 3D: el rol de driver es estado compartido; cada cambio pasa
+  // por el carril único de transición (expected_status + expected_version).
   for (const row of rows) {
     const isDriver = row.assignment_role === "driver";
     const shouldBeDriver = wanted.includes(row.employee_id);
-    if (shouldBeDriver && !isDriver) promoted.push(row.id);
-    if (!shouldBeDriver && isDriver) demoted.push(row.id);
+    if (isDriver === shouldBeDriver) continue;
+
+    const result = await versionedAssignmentTransition({
+      assignmentId: row.id,
+      companyId: row.company_id,
+      transition: shouldBeDriver ? "set_role_driver" : "set_role_worker",
+      expectedStatus: row.status ?? null,
+      expectedVersion: typeof row.version === "number" ? row.version : null,
+      reason: shouldBeDriver ? "driver_promoted" : "driver_demoted",
+      surface: "driver_sync",
+    });
+    if (result.status !== "applied") {
+      throw new Error(
+        result.status === "conflict"
+          ? assignmentConflictCopy(result).fact
+          : result.message,
+      );
+    }
+    (shouldBeDriver ? promoted : demoted).push(row.id);
   }
 
-  if (promoted.length > 0) {
-    const { error: upErr } = await supabase
-      .from("shift_assignments")
-      .update({ assignment_role: "driver" })
-      .in("id", promoted);
-    if (upErr) throw upErr;
-  }
-  if (demoted.length > 0) {
-    const { error: downErr } = await supabase
-      .from("shift_assignments")
-      .update({ assignment_role: "worker" })
-      .in("id", demoted);
-    if (downErr) throw downErr;
-  }
-
-  const primaryDriverId = wanted[0] ?? null;
-  const { error: shiftErr } = await supabase
+  const { data: shiftRow } = await supabase
     .from("scheduled_shifts")
-    .update({ driver_employee_id: primaryDriverId })
-    .eq("id", shiftId);
-  if (shiftErr) throw shiftErr;
+    .select("driver_employee_id")
+    .eq("id", shiftId)
+    .maybeSingle();
 
-  return { promoted, demoted, primaryDriverId };
+  return { promoted, demoted, primaryDriverId: (shiftRow as any)?.driver_employee_id ?? null };
 }
+
 
 /** Drivers actuales de un turno, leyendo el modelo real + el campo legado. */
 export function driverIdsFromAssignments(
