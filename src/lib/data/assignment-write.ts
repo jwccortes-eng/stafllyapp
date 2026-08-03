@@ -20,6 +20,7 @@ export type AssignmentTransition =
   | "confirm"
   | "remove"
   | "replace"
+  | "set_role"
   | "set_role_driver"
   | "set_role_worker"
   | "set_captain";
@@ -35,6 +36,8 @@ export interface AssignmentTransitionInput {
   reason?: string | null;
   /** Reemplazo / destino. */
   targetEmployeeId?: string | null;
+  /** Rol destino para `set_role` (staff, driver, shift_admin, shift_lead, ...). */
+  role?: string | null;
   surface?: string;
   /** Idempotencia: doble toque no duplica la transición. */
   intentKey?: string;
@@ -106,6 +109,7 @@ export async function versionedAssignmentTransition(
     expectedVersion,
     reason,
     targetEmployeeId,
+    role,
     surface,
     intentKey,
   } = input;
@@ -126,6 +130,7 @@ export async function versionedAssignmentTransition(
     p_expected_version: expectedVersion ?? null,
     p_reason: reason ?? null,
     p_target_employee_id: targetEmployeeId ?? null,
+    p_role: role ?? null,
     p_surface: surface ?? null,
     p_intent_key: intentKey ?? null,
   } as any);
