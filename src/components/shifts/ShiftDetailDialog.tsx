@@ -514,10 +514,26 @@ export function ShiftDetailDialog({
 
   const handleChangeAssignmentStatus = async (assignmentId: string, newStatus: string) => {
     setUpdatingStatus(assignmentId);
-    const { error } = await supabase.from("shift_assignments")
-      .update({ status: newStatus } as any).eq("id", assignmentId);
-    if (error) toast.error(error.message);
-    else toast.success(`Estado actualizado a ${statusLabels[newStatus] || newStatus}`);
+    const current = (shiftAssignments as any[]).find(a => a.id === assignmentId);
+    const result = await versionedAssignmentTransition({
+      assignmentId,
+      companyId: current?.company_id ?? null,
+      transition: "set_status",
+      status: newStatus,
+      expectedStatus: current?.status ?? null,
+      expectedVersion: typeof current?.version === "number" ? current.version : null,
+      reason: "status_changed",
+      surface: "shift_detail_dialog",
+    });
+    if (result.status === "conflict") {
+      toast.error("Alguien más ya cambió esta asignación", {
+        description: `Ahora está en "${result.actualStatus ?? "otro estado"}". Recarga y vuelve a decidir.`,
+      });
+    } else if (result.status !== "applied") {
+      toast.error(result.message);
+    } else {
+      toast.success(`Estado actualizado a ${statusLabels[newStatus] || newStatus}`);
+    }
     setUpdatingStatus(null);
     onRequestAction?.();
   };

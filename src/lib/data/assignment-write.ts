@@ -20,6 +20,7 @@ export type AssignmentTransition =
   | "confirm"
   | "remove"
   | "replace"
+  | "set_status"
   | "set_role"
   | "set_role_driver"
   | "set_role_worker"
@@ -36,6 +37,8 @@ export interface AssignmentTransitionInput {
   reason?: string | null;
   /** Reemplazo / destino. */
   targetEmployeeId?: string | null;
+  /** Estado destino para `set_status` (pending, confirmed, review, rejected). */
+  status?: string | null;
   /** Rol destino para `set_role` (staff, driver, shift_admin, shift_lead, ...). */
   role?: string | null;
   surface?: string;
@@ -87,6 +90,7 @@ const MESSAGES: Record<string, string> = {
   assignment_inactive: "La persona ya no está activa en este servicio.",
   replacement_required: "Elige a quién entra como reemplazo.",
   invalid_input: "Falta información para aplicar el cambio.",
+  status_required: "Falta el estado destino.",
 };
 
 function humanize(reason: string | null | undefined): string {
@@ -110,6 +114,7 @@ export async function versionedAssignmentTransition(
     reason,
     targetEmployeeId,
     role,
+    status,
     surface,
     intentKey,
   } = input;
@@ -131,6 +136,7 @@ export async function versionedAssignmentTransition(
     p_reason: reason ?? null,
     p_target_employee_id: targetEmployeeId ?? null,
     p_role: role ?? null,
+    p_status: status ?? null,
     p_surface: surface ?? null,
     p_intent_key: intentKey ?? null,
   } as any);
