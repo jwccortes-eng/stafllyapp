@@ -1738,36 +1738,49 @@ function DesktopShifts() {
         return;
       }
 
-      const { error: delError } = await supabase.from("shift_assignments").delete().eq("id", assignmentId);
-      if (delError) {
+      // P0 — VWC Fase 3D: nunca borramos asignaciones. Primero se crea en destino
+      // (RPC idempotente) y sólo después se retira del origen por el carril único,
+      // para que un fallo nunca deje a la persona sin turno.
+      const source = (assignments as any[]).find(a => a.id === assignmentId);
+      const { error: insError } = await supabase.rpc("assign_worker_to_shift" as any, {
+        p_shift_id: targetShiftId,
+        p_employee_id: employeeId,
+        p_assignment_role: source?.assignment_role ?? "staff",
+        p_reason: "moved_from_other_shift",
+        p_source: "shifts_calendar",
+      } as any);
+      if (insError) {
         notifyError({
           key: "shift-reassign",
           title: "No pudimos mover al worker",
           fact: "Sigue asignado al turno original.",
           consequence: "No se creó ninguna asignación duplicada.",
-          cause: delError,
+          cause: insError,
         });
         return;
       }
-      const { error: insError } = await supabase.from("shift_assignments").insert({
-        company_id: selectedCompanyId!,
-        shift_id: targetShiftId,
-        employee_id: employeeId,
-        status: "pending",
-      } as any);
-      if (insError) {
-        // Estado parcial real: se quitó del origen pero no entró al destino.
-        // Es crítico y exige decisión humana, por eso no se auto-cierra.
+
+      const removal = await versionedAssignmentTransition({
+        assignmentId,
+        companyId: source?.company_id ?? selectedCompanyId,
+        transition: "remove",
+        expectedStatus: source?.status ?? null,
+        expectedVersion: typeof source?.version === "number" ? source.version : null,
+        reason: "moved_to_other_shift",
+        surface: "shifts_calendar",
+      });
+      if (removal.status !== "applied") {
+        // Estado parcial real: ya entró al destino pero sigue en el origen.
         notifyActionRequired({
           key: "shift-reassign",
-          title: "El worker quedó sin turno",
-          fact: "Se retiró del turno original pero no se pudo asignar al destino.",
-          consequence: "Asígnalo manualmente al turno correcto antes de continuar.",
-          cause: insError,
+          title: "Quedó asignado en dos turnos",
+          fact: "Entró al turno destino pero no pudimos retirarlo del original.",
+          consequence: "Retíralo manualmente del turno original antes de continuar.",
         });
         loadData();
         return;
       }
+
 
       notifySuccess({
         key: "shift-reassign",
