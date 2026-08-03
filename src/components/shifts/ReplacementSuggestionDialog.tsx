@@ -196,12 +196,13 @@ export function ReplacementSuggestionDialog({
   const assignEmployee = async (employeeId: string) => {
     setAssigning(employeeId);
     try {
-      const { error } = await supabase.from("shift_assignments").insert({
-        shift_id: shiftId,
-        employee_id: employeeId,
-        company_id: companyId,
-        status: "confirmed",
-        assignment_role: "worker",
+      // Alta idempotente y con validación de elegibilidad: sin inserts directos.
+      const { error } = await supabase.rpc("assign_worker_to_shift" as any, {
+        p_shift_id: shiftId,
+        p_employee_id: employeeId,
+        p_assignment_role: "staff",
+        p_reason: "replacement",
+        p_source: "replacement_dialog",
       } as any);
 
       if (error) throw error;

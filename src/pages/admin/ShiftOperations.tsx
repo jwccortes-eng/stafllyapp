@@ -52,6 +52,7 @@ import {
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronDown, ClipboardCheck, Timer } from "lucide-react";
 import { Link } from "react-router-dom";
+import { versionedAssignmentTransition, assignmentConflictCopy } from "@/lib/data/assignment-write";
 
 interface ShiftDetail {
   id: string;
@@ -254,7 +255,7 @@ export default function ShiftOperations() {
 
     const [shiftRes, assignRes, timelineRes, notesRes, empsRes, clientsRes, locsRes] = await Promise.all([
       supabase.from("scheduled_shifts").select("*").eq("id", shiftId).eq("company_id", selectedCompanyId).maybeSingle(),
-      supabase.from("shift_assignments").select("id, employee_id, status, assignment_role, employees(first_name, last_name, phone_number, county, has_car, can_drive)").eq("shift_id", shiftId) as any,
+      supabase.from("shift_assignments").select("id, employee_id, status, assignment_role, company_id, version, employees(first_name, last_name, phone_number, county, has_car, can_drive)").eq("shift_id", shiftId) as any,
       supabase.from("shift_timeline").select("*").eq("shift_id", shiftId).order("created_at", { ascending: false }),
       supabase.from("shift_notes").select("*").eq("shift_id", shiftId).order("created_at", { ascending: false }),
       supabase.from("employees").select("id, first_name, last_name, county, has_car, can_drive, phone_number").eq("company_id", selectedCompanyId).eq("is_active", true),
@@ -337,23 +338,42 @@ export default function ShiftOperations() {
   };
 
   const handleRoleChange = async (assignmentId: string, newRole: string) => {
-    const { error } = await supabase.from("shift_assignments").update({ assignment_role: newRole } as any).eq("id", assignmentId);
-    if (error) toast.error(error.message);
-    else {
-      toast.success("Rol actualizado");
-      if (shiftId && selectedCompanyId && user) {
-        await supabase.from("shift_timeline").insert({
-          shift_id: shiftId,
-          company_id: selectedCompanyId,
-          event_type: "role_changed",
-          description: `Rol cambiado a ${ROLE_LABELS[newRole]?.label ?? newRole}`,
-          actor_id: user.id,
-          metadata: { assignment_id: assignmentId, new_role: newRole },
-        } as any);
-      }
+    // P0 — VWC Fase 3D: el rol es estado compartido → carril único de transición.
+    const current = (assignments as any[]).find(a => a.id === assignmentId);
+    const result = await versionedAssignmentTransition({
+      assignmentId,
+      companyId: current?.company_id ?? selectedCompanyId,
+      transition: "set_role",
+      role: newRole,
+      expectedStatus: current?.status ?? null,
+      expectedVersion: typeof current?.version === "number" ? current.version : null,
+      reason: "role_changed",
+      surface: "shift_operations",
+    });
+    if (result.status === "conflict") {
+      const copy = assignmentConflictCopy(result);
+      toast.error(copy.title, { description: `${copy.fact} ${copy.action}` });
       loadAll();
+      return;
     }
+    if (result.status !== "applied") {
+      toast.error(result.message);
+      return;
+    }
+    toast.success("Rol actualizado");
+    if (shiftId && selectedCompanyId && user) {
+      await supabase.from("shift_timeline").insert({
+        shift_id: shiftId,
+        company_id: selectedCompanyId,
+        event_type: "role_changed",
+        description: `Rol cambiado a ${ROLE_LABELS[newRole]?.label ?? newRole}`,
+        actor_id: user.id,
+        metadata: { assignment_id: assignmentId, new_role: newRole },
+      } as any);
+    }
+    loadAll();
   };
+
 
   const handleEditSave = async (id: string, updates: any, oldShift: any) => {
     if (oldShift.status === "locked" || oldShift.status === "archived" || oldShift.status === "cancelled") {
@@ -643,11 +663,13 @@ export default function ShiftOperations() {
               shiftAreaHint={locationName || null}
               onAssign={async (employeeId) => {
                 if (!shiftId || !selectedCompanyId) return;
-                const { error } = await supabase.from("shift_assignments").insert({
-                  company_id: selectedCompanyId,
-                  shift_id: shiftId,
-                  employee_id: employeeId,
-                  status: "pending",
+                // Alta idempotente por RPC: nunca insertamos la tabla directo.
+                const { error } = await supabase.rpc("assign_worker_to_shift" as any, {
+                  p_shift_id: shiftId,
+                  p_employee_id: employeeId,
+                  p_assignment_role: "staff",
+                  p_reason: "manual_assign",
+                  p_source: "shift_operations",
                 } as any);
                 if (error) toast.error(error.message);
                 else { toast.success("Worker asignado"); loadAll(); }

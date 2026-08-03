@@ -14317,12 +14317,18 @@ export type Database = {
           last_notified_at: string | null
           rejected_at: string | null
           rejection_reason: string | null
+          removed_at: string | null
+          removed_by: string | null
+          replaced_by_assignment_id: string | null
           responded_at: string | null
           response_required: boolean
           response_status: string
           role_slot_id: string | null
           shift_id: string
           status: string
+          updated_at: string
+          updated_by: string | null
+          version: number
         }
         Insert: {
           accepted_at?: string | null
@@ -14341,12 +14347,18 @@ export type Database = {
           last_notified_at?: string | null
           rejected_at?: string | null
           rejection_reason?: string | null
+          removed_at?: string | null
+          removed_by?: string | null
+          replaced_by_assignment_id?: string | null
           responded_at?: string | null
           response_required?: boolean
           response_status?: string
           role_slot_id?: string | null
           shift_id: string
           status?: string
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
         }
         Update: {
           accepted_at?: string | null
@@ -14365,12 +14377,18 @@ export type Database = {
           last_notified_at?: string | null
           rejected_at?: string | null
           rejection_reason?: string | null
+          removed_at?: string | null
+          removed_by?: string | null
+          replaced_by_assignment_id?: string | null
           responded_at?: string | null
           response_required?: boolean
           response_status?: string
           role_slot_id?: string | null
           shift_id?: string
           status?: string
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
         }
         Relationships: [
           {
@@ -17520,12 +17538,18 @@ export type Database = {
           last_notified_at: string | null
           rejected_at: string | null
           rejection_reason: string | null
+          removed_at: string | null
+          removed_by: string | null
+          replaced_by_assignment_id: string | null
           responded_at: string | null
           response_required: boolean
           response_status: string
           role_slot_id: string | null
           shift_id: string
           status: string
+          updated_at: string
+          updated_by: string | null
+          version: number
         }
         SetofOptions: {
           from: "*"
@@ -18096,12 +18120,18 @@ export type Database = {
           last_notified_at: string | null
           rejected_at: string | null
           rejection_reason: string | null
+          removed_at: string | null
+          removed_by: string | null
+          replaced_by_assignment_id: string | null
           responded_at: string | null
           response_required: boolean
           response_status: string
           role_slot_id: string | null
           shift_id: string
           status: string
+          updated_at: string
+          updated_by: string | null
+          version: number
         }
         SetofOptions: {
           from: "*"
@@ -18186,6 +18216,22 @@ export type Database = {
         Returns: boolean
       }
       verify_switch_pin: { Args: { _pin: string }; Returns: boolean }
+      versioned_assignment_transition: {
+        Args: {
+          p_assignment_id: string
+          p_company_id: string
+          p_expected_status?: string
+          p_expected_version?: number
+          p_intent_key?: string
+          p_reason?: string
+          p_role?: string
+          p_status?: string
+          p_surface?: string
+          p_target_employee_id?: string
+          p_transition: string
+        }
+        Returns: Json
+      }
       versioned_update_company_profile: {
         Args: {
           p_company_id: string

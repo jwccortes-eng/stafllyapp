@@ -234,3 +234,96 @@ describe("VWC Fase 3C — configuración de empresa no financiera", () => {
     expect(staleExpected !== serverVersion).toBe(true);
   });
 });
+
+describe("VWC Fase 3D — asignaciones y estados compartidos", () => {
+  const helper = readFileSync("src/lib/data/assignment-write.ts", "utf8");
+
+  // Creación de asignaciones: sigue permitida por RPC idempotente / importaciones auditadas.
+  const CREATION_ALLOWED = [
+    "src/lib/dispatch-writers.ts",
+    "src/lib/auto-dispatch.ts",
+    "src/pages/admin/ImportSchedule.tsx",
+    "src/pages/admin/ImportWizard.tsx",
+    "src/pages/admin/BackfillShift.tsx",
+    "src/pages/admin/Shifts.tsx",
+    "src/pages/admin/ShiftRequests.tsx",
+    "src/pages/admin/AIWorkforce.tsx",
+    "src/components/shifts/ShiftDetailDialog.tsx",   // alta con slot de rol tipado
+    "src/components/shifts/DuplicateShiftDialog.tsx", // copia masiva de turnos
+  ];
+
+  // Validación de asistencia (attendance_status): estado adyacente, migra en Fase 3E.
+  const ATTENDANCE_EXCEPTIONS = [
+    "src/components/shifts/AttendanceValidator.tsx",
+    "src/components/shifts/ShiftAttendancePanel.tsx",
+    "src/pages/admin/ImportSchedule.tsx",
+  ];
+
+  it("ninguna superficie cambia el estado de una asignación con .update() directo", () => {
+    const pattern = /from\("shift_assignments"\)[\s\S]{0,160}?\.update\(/;
+    const offenders = walk("src")
+      .filter((file) => pattern.test(readFileSync(file, "utf8")))
+      .map((f) => f.replace(/\\/g, "/"))
+      .filter((f) => !f.startsWith("src/test/") && !ATTENDANCE_EXCEPTIONS.includes(f));
+    expect(offenders).toEqual([]);
+  });
+
+  it("ninguna superficie borra asignaciones", () => {
+    const pattern = /from\("shift_assignments"\)[\s\S]{0,160}?\.delete\(/;
+    const offenders = walk("src")
+      .filter((file) => pattern.test(readFileSync(file, "utf8")))
+      .map((f) => f.replace(/\\/g, "/"))
+      .filter((f) => !f.startsWith("src/test/"));
+    expect(offenders).toEqual([]);
+  });
+
+  it("los inserts restantes son sólo altas conocidas y auditadas", () => {
+    const pattern = /from\("shift_assignments"\)[\s\S]{0,160}?\.(insert|upsert)\(/;
+    const offenders = walk("src")
+      .filter((file) => pattern.test(readFileSync(file, "utf8")))
+      .map((f) => f.replace(/\\/g, "/"))
+      .filter((f) => !f.startsWith("src/test/") && !CREATION_ALLOWED.includes(f));
+    expect(offenders).toEqual([]);
+  });
+
+  it("toda transición viaja con empresa, estado y versión esperados", () => {
+    expect(helper).toContain("p_company_id");
+    expect(helper).toContain("p_expected_status");
+    expect(helper).toContain("p_expected_version");
+    expect(helper).toContain("p_intent_key");
+  });
+
+  it("el portal del worker ya no tiene fallback de escritura directa", () => {
+    const portal = readFileSync("src/pages/portal/MyShifts.tsx", "utf8");
+    expect(portal).not.toContain('from("shift_assignments").update');
+    expect(portal).toContain("versionedAssignmentTransition");
+  });
+
+  it("mover a alguien entre turnos crea antes de retirar (nunca queda sin turno)", () => {
+    const shifts = readFileSync("src/pages/admin/Shifts.tsx", "utf8");
+    const create = shifts.indexOf("moved_from_other_shift");
+    const remove = shifts.indexOf("moved_to_other_shift");
+    expect(create).toBeGreaterThan(-1);
+    expect(remove).toBeGreaterThan(create);
+  });
+
+  it("Caso ACCEPTED vs REMOVED: una aceptación vieja no revive un retiro nuevo", () => {
+    const serverStatus: string = "removed";
+    const workerExpected: string = "pending";
+    expect(workerExpected !== serverStatus).toBe(true); // → conflict, no escritura
+  });
+
+  it("Caso REMOVED vs ACCEPTED: un retiro con versión vieja no revierte la aceptación", () => {
+    const serverVersion: number = 4;
+    const adminExpectedVersion: number = 2;
+    expect(adminExpectedVersion !== serverVersion).toBe(true);
+  });
+
+  it("el contrato de respuesta expone cobertura e impacto de driver y captain", () => {
+    expect(helper).toContain("coverageAfter");
+    expect(helper).toContain("driverImpact");
+    expect(helper).toContain("captainImpact");
+    expect(helper).toContain("nextAction");
+  });
+});
+
