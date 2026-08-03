@@ -337,23 +337,42 @@ export default function ShiftOperations() {
   };
 
   const handleRoleChange = async (assignmentId: string, newRole: string) => {
-    const { error } = await supabase.from("shift_assignments").update({ assignment_role: newRole } as any).eq("id", assignmentId);
-    if (error) toast.error(error.message);
-    else {
-      toast.success("Rol actualizado");
-      if (shiftId && selectedCompanyId && user) {
-        await supabase.from("shift_timeline").insert({
-          shift_id: shiftId,
-          company_id: selectedCompanyId,
-          event_type: "role_changed",
-          description: `Rol cambiado a ${ROLE_LABELS[newRole]?.label ?? newRole}`,
-          actor_id: user.id,
-          metadata: { assignment_id: assignmentId, new_role: newRole },
-        } as any);
-      }
+    // P0 — VWC Fase 3D: el rol es estado compartido → carril único de transición.
+    const current = (assignments as any[]).find(a => a.id === assignmentId);
+    const result = await versionedAssignmentTransition({
+      assignmentId,
+      companyId: current?.company_id ?? selectedCompanyId,
+      transition: "set_role",
+      role: newRole,
+      expectedStatus: current?.status ?? null,
+      expectedVersion: typeof current?.version === "number" ? current.version : null,
+      reason: "role_changed",
+      surface: "shift_operations",
+    });
+    if (result.status === "conflict") {
+      const copy = assignmentConflictCopy(result);
+      toast.error(copy.title, { description: `${copy.fact} ${copy.action}` });
       loadAll();
+      return;
     }
+    if (result.status !== "applied") {
+      toast.error(result.message);
+      return;
+    }
+    toast.success("Rol actualizado");
+    if (shiftId && selectedCompanyId && user) {
+      await supabase.from("shift_timeline").insert({
+        shift_id: shiftId,
+        company_id: selectedCompanyId,
+        event_type: "role_changed",
+        description: `Rol cambiado a ${ROLE_LABELS[newRole]?.label ?? newRole}`,
+        actor_id: user.id,
+        metadata: { assignment_id: assignmentId, new_role: newRole },
+      } as any);
+    }
+    loadAll();
   };
+
 
   const handleEditSave = async (id: string, updates: any, oldShift: any) => {
     if (oldShift.status === "locked" || oldShift.status === "archived" || oldShift.status === "cancelled") {
