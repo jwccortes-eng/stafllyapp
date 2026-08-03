@@ -111,6 +111,26 @@ No se modificó código ni esquema de esos dominios en esta fase.
 | `src/pages/admin/Companies.tsx` | alta/baja y activación de tenant | Plataforma | 3D | Tenant |
 | `src/hooks/useBilling.tsx`, `src/components/billing/UpgradeRequestDialog.tsx` | billing/plan | Billing | 3F | Fuera de alcance por orden explícita |
 
-## 7. Siguiente bloque
+## 7. Consistencia entre superficies (refresh · desktop · móvil)
 
-Bloque D — Ubicaciones (`locations`, `locations_v2`) y superficies de plataforma.
+- `/app/company-config` es la **única** superficie de edición: móvil y escritorio renderizan
+  el mismo componente con el mismo carril de escritura (no hay editor móvil paralelo).
+- Tras guardar, la vista invalida su query y **relee del backend**; el valor mostrado es
+  siempre la fila persistida, no el borrador local. Un refresh devuelve exactamente el mismo
+  estado (comprobado en los casos 1, 2 y 8: las relecturas del RPC coinciden con la fila final).
+- El branding consumido por el resto de la app (cabeceras, `ContextSwitcher`) sale de la fila
+  de la empresa activa; no hay copia persistida en `localStorage` ni estado global de marca.
+- Nota: la verificación con navegador autenticado no pudo ejecutarse en este turno
+  (sesión de preview cerrada); la evidencia funcional es la ejecución de RPC con identidad
+  real más la auditoría, y la carga visual verificada en la corrida anterior de esta fase.
+
+## 8. Cierre
+
+**La configuración no financiera de empresa ya no permite sobrescrituras silenciosas ni
+contaminación entre tenants.**
+
+## 9. Siguiente bloque
+
+Bloque D — Ubicaciones (`locations`, `locations_v2`) y superficies de plataforma,
+precedido por el paso de consolidación del carril genérico (regla «VWC como infraestructura»).
+
