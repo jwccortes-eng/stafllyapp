@@ -52,6 +52,7 @@ import {
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronDown, ClipboardCheck, Timer } from "lucide-react";
 import { Link } from "react-router-dom";
+import { versionedAssignmentTransition, assignmentConflictCopy } from "@/lib/data/assignment-write";
 
 interface ShiftDetail {
   id: string;
@@ -662,11 +663,13 @@ export default function ShiftOperations() {
               shiftAreaHint={locationName || null}
               onAssign={async (employeeId) => {
                 if (!shiftId || !selectedCompanyId) return;
-                const { error } = await supabase.from("shift_assignments").insert({
-                  company_id: selectedCompanyId,
-                  shift_id: shiftId,
-                  employee_id: employeeId,
-                  status: "pending",
+                // Alta idempotente por RPC: nunca insertamos la tabla directo.
+                const { error } = await supabase.rpc("assign_worker_to_shift" as any, {
+                  p_shift_id: shiftId,
+                  p_employee_id: employeeId,
+                  p_assignment_role: "staff",
+                  p_reason: "manual_assign",
+                  p_source: "shift_operations",
                 } as any);
                 if (error) toast.error(error.message);
                 else { toast.success("Worker asignado"); loadAll(); }
