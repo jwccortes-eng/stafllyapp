@@ -87,16 +87,17 @@ cambio de grants.
 ## 5. Diff exacto propuesto y no aplicado
 
 El único cambio técnicamente compatible para las cuatro funciones afectadas
-sería convertir el argumento dentro del caller, por ejemplo:
+sería retirar el cast incompatible del literal interno, por ejemplo:
 
 ```diff
 - public.has_company_role(v_actor, p_company_id, 'admin'::app_role)
-+ public.has_company_role(v_actor, p_company_id, ('admin'::app_role)::text)
++ public.has_company_role(v_actor, p_company_id, 'admin')
 ```
 
-El mecanismo conserva la validación del literal por `public.app_role` y adapta
-explícitamente el valor al tercer argumento `text` del helper. No usa SQL
-dinámico ni acepta un rol proporcionado por el cliente.
+El literal no procede de parámetros ni del cliente: queda codificado dentro del
+caller y PostgreSQL lo resuelve contra el tercer argumento `text` de la única
+firma disponible. No usa SQL dinámico, no amplía los roles admitidos y replica
+el patrón canónico ya activo en los otros seis objetos inventariados.
 
 Este diff **no fue aplicado** porque el encargo exige una migración aprobada
 sobre diez callers, mientras el runtime demuestra que sólo cuatro necesitan
@@ -189,6 +190,10 @@ firma, denegaciones inesperadas, intentos cross-tenant y fallos de auditoría.
 4. No existen conexiones independientes para verificar staging y producción.
 5. No se puede satisfacer el criterio «diez callers corregidos» sin modificar
    seis funciones que no requieren corrección.
+6. Una revisión estática independiente corroboró los cuatro callers afectados:
+   Documentos y W-9. También confirmó que Configuración fue corregida por la
+   migración posterior `20260802024442`, mientras los cuatro helpers compartidos
+   nunca tuvieron el cast incompatible en el historial local inspeccionado.
 
 Para reanudar se necesita aprobar el inventario runtime corregido de cuatro
 callers, o aportar evidencia de otro entorno donde los diez cuerpos sigan el
