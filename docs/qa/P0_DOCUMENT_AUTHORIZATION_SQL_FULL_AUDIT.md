@@ -413,7 +413,311 @@ esta auditoría:
 7. Verificar que la remediación no amplíe privilegios ni cambie la semántica de
    `company_owner`, propietario global, manager o supervisor.
 
-## 10. Cierre
+## 10. Reproducción exacta y evidencia de ejecución
+
+### 10.1 Recorrido reproducido
+
+El recorrido autenticado observado fue:
+
+1. ruta `/app/documents`;
+2. apertura de un documento `employee_documents` pendiente;
+3. edición de `expires_at`;
+4. pulsación de **Guardar fecha de vencimiento**;
+5. respuesta de la RPC con
+   `function public.has_company_role(uuid, uuid, app_role) does not exist`;
+6. presentación del error de guardado;
+7. documento aún pendiente y sin cambio de metadata.
+
+Trazabilidad frontend exacta:
+
+| Dato | Evidencia |
+|---|---|
+| Ruta | `/app/documents` |
+| Pantalla | `src/pages/admin/DocumentsCenter.tsx` |
+| Componente | `ExpirationCell` (líneas 629–724) |
+| Acción | `ExpirationCell.handleSave` (líneas 667–689) |
+| Hook de carga | `useCompanyDocuments` |
+| Helper de escritura | `updateDocumentExpiration` (`src/lib/document-actions.ts`, líneas 344–398) |
+| Carril | `versionedWrite` |
+| RPC | `public.versioned_update_employee_document` |
+| Tabla objetivo | `public.employee_documents` |
+| Patch | `{ "expires_at": <date-or-null> }` |
+| Control VWC | `p_expected_version = row.version` |
+| Superficie | `documents:expiration` |
+| Respuesta | error SQL de resolución de función; no JSON VWC |
+
+El payload lógico enviado por el cliente contiene
+`p_document_id`, `p_company_id`, `p_patch`, `p_expected_version`, `p_surface`
+y `p_intent_key`. Los identificadores reales de usuario, empresa y documento
+se mantienen fuera de este documento; fueron tratados como evidencia sensible.
+
+### 10.2 Datos que no quedaron capturados de forma fiable
+
+No se conserva evidencia suficiente para publicar un timestamp exacto de la
+petición, SQLSTATE, rol PostgreSQL efectivo ni `search_path` de esa sesión. El
+mensaje completo disponible no incluye SQLSTATE. La función activa sí declara
+`SET search_path = public`, pero eso no equivale a afirmar el `search_path` de
+la conexión cliente. Estos campos quedan marcados **no verificados**, no
+inferidos.
+
+El entorno reproducido fue el backend activo enlazado al proyecto. No hay
+evidencia independiente que permita etiquetarlo simultáneamente como preview,
+staging y producción.
+
+## 11. Inventario de `app_role`
+
+| Atributo | Resultado verificado |
+|---|---|
+| Schema | `public` |
+| Tipo | enum `public.app_role` |
+| Valores activos | `admin`, `employee`, `developer`, `owner`, `manager`, `supervisor`, `founder` |
+| Duplicados homónimos | no observados en el backend consultado |
+| Movido de schema | sin evidencia |
+| Reemplazado por `text` | no; el enum sigue activo |
+| Callers con casts | existen callers `::app_role`, `::text` y literales no tipados |
+| Policies dependientes | existen policies con helpers de rol; las policies activas de documentos no usan la firma incompatible |
+
+Cronología verificable:
+
+1. el enum nació con `admin` y `employee`;
+2. migraciones posteriores añadieron `owner`, `manager`, `developer`,
+   `supervisor` y `founder`;
+3. esas ampliaciones no alteraron `has_company_role(uuid, uuid, text)`;
+4. no apareció una sobrecarga de `has_company_role` con `app_role`.
+
+La clasificación de hipótesis queda así:
+
+| Hipótesis | Veredicto |
+|---|---|
+| tipo inexistente | descartada |
+| tipo en otro schema | descartada; está en `public` |
+| helper con `text`, caller con enum | **confirmada** |
+| orden de argumentos | correcto; no causa el incidente |
+| sobrecarga ambigua | descartada; falta la sobrecarga enum |
+| `search_path` | no es causa: ambos objetos están cualificados o en `public` |
+| migración de compatibilidad faltante | no existe en el repositorio; no se puede calificar como “faltante” sin una decisión de contrato |
+| drift runtime/repositorio | descartado para las RPC afectadas en el backend activo |
+
+## 12. Auditoría completa de acciones de Documentos
+
+| Acción | Camino | Dependencia del helper | Momento del fallo | Efecto parcial / consistencia |
+|---|---|---|---|---|
+| Subir documento admin | storage + `INSERT employee_documents` | no por estas RPC | no afectada por este error | si falla el insert, intenta limpiar el blob; no se observó falso éxito |
+| Editar metadata | `versioned_update_employee_document` | `app_role` incompatible | antes de lock/update | cero write y cero auditoría VWC |
+| Guardar vencimiento | mismo RPC, patch `expires_at` | `app_role` incompatible | antes de lock/update | cero write; estado permanece igual |
+| Aprobar | `review_employee_document` | `app_role` incompatible | antes de lock/transición | cero transición y cero evento |
+| Rechazar | `review_employee_document` | `app_role` incompatible | antes de lock/transición | cero transición y cero evento |
+| Pedir corrección/reemplazo | `review_employee_document` | `app_role` incompatible | antes de lock/transición | cero transición y cero evento |
+| Reemplazar archivo | flujo de carga, separado de las dos RPC | no demostrado por este error | no clasificado como fallido | requiere QA posterior específico |
+| Historial | lectura | no | no afectado | lectura solamente |
+| Eliminar/archivar | no forma parte de estas dos RPC | no demostrado | no clasificado como fallido | fuera del incidente probado |
+| Exportar/abrir/descargar | lectura/URL firmada | no | no afectado | lectura solamente |
+| Asignar a persona | no pasa por la RPC de vencimiento | no demostrado | no clasificado como fallido | requiere auditoría separada si se modifica |
+
+La UI no presenta falso éxito en el caso reproducido: recibe `error`, muestra
+fallo y no ejecuta el `onSaved` de éxito. La auditoría VWC no se genera porque
+la excepción ocurre antes del primer insert de auditoría.
+
+## 13. Inventario de policies, triggers y funciones intermedias
+
+### 13.1 Objeto exacto que dispara el incidente
+
+No es una policy ni un trigger. Es la sentencia de autorización interna de la
+función `SECURITY DEFINER` `public.versioned_update_employee_document`, líneas
+249–251 de la migración `20260802021810_...`, que invoca tres veces:
+
+```sql
+public.has_company_role(v_actor, p_company_id, '<role>'::app_role)
+```
+
+`public.review_employee_document`, líneas 72–74 de esa misma migración,
+repite el defecto para transiciones.
+
+### 13.2 RLS de tablas de documentos
+
+Las policies activas de `employee_documents` y
+`employee_onboarding_documents` no contienen la llamada incompatible. Las
+policies activas encontradas que llaman `has_company_role` usan literals
+resolubles como `text`. Por tanto:
+
+- RLS sigue fail-closed;
+- no se observó bypass cross-tenant;
+- el fallo ocurre dentro de RPC `SECURITY DEFINER` antes del write;
+- los triggers de versionado y revisión no llegan a ejecutarse en este caso.
+
+### 13.3 Inventario funcional resumido
+
+| Objeto | Firma relevante | Seguridad | `search_path` | Estado |
+|---|---|---|---|---|
+| `has_company_role` | `(uuid, uuid, text) → boolean` | `SECURITY DEFINER` | `public` | activo |
+| `has_exact_company_role` | `(uuid, uuid, text)` | `SECURITY DEFINER` | contrato más estrecho | activo, no intercambiable |
+| `has_role` | `(uuid, app_role) → boolean` | helper de rol global | `public` | activo, ámbito distinto |
+| `versioned_update_employee_document` | `(uuid, uuid, jsonb, integer, text, text) → jsonb` | `SECURITY DEFINER` | `public` | activo, caller incompatible |
+| `review_employee_document` | `(uuid, text, uuid, text, integer, text, text) → jsonb` | `SECURITY DEFINER` | `public` | activo, caller incompatible |
+
+El helper de empresa tiene ejecución disponible para el rol autenticado y
+otros grants heredados observados. El owner exacto del objeto no se reproduce
+en este informe porque no quedó conservado como evidencia estable. No se debe
+deducir ni cambiar ownership a partir de esta auditoría.
+
+## 14. Radio de impacto por módulo
+
+| Módulo | Objeto/camino | Estado | Severidad | Tenant / integridad |
+|---|---|---|---|---|
+| Documentos | dos RPC indicadas | fallo confirmado | **CRÍTICO** | bloqueo fail-closed; sin corrupción observada |
+| Compliance | revisión de documentos compartida | fallo directo potencial/confirmado por camino | **ALTO** | impide transición; sin bypass |
+| Workers / W-9 | `submit_contractor_w9`, `review_contractor_w9` | riesgo activo por rama | **ALTO** | disponibilidad; no corrupción demostrada |
+| Configuración | dos RPC versionadas | riesgo activo | **ALTO** | escritura bloqueada; aislamiento no debilitado |
+| Servicios/cierre | cuatro helpers/wrappers enumerados en §6.2 | riesgo transitivo | **ALTO** | depende de rama y caller |
+| Assignments | sin caller incompatible directo demostrado | no confirmado | **BAJO** para este incidente | sin evidencia de impacto |
+| Invitations | sin caller incompatible demostrado | no confirmado | **BAJO** | sin evidencia |
+| `service_requests` | sin caller incompatible demostrado | no confirmado | **BAJO** | sin evidencia |
+| Validation | posible dependencia transitiva, no reproducida | riesgo potencial | **MEDIO** | fail-closed esperado |
+| Portal | W-9 y superficies que alcancen wrappers | riesgo potencial | **MEDIO/ALTO** | según operación |
+| Admin | Documentos y configuración | afectado | **CRÍTICO** en Documentos |
+| Edge functions | no se encontró caller directo que explique este caso | no confirmado | **BAJO** | sin evidencia |
+| Payroll / Time Clock | fuera del alcance y sin vínculo causal demostrado | no evaluado | no clasificado | no tocar |
+
+“Riesgo activo” no significa fallo reproducido en cada rama. Sólo Documentos
+tiene reproducción ligada al incidente reportado; el resto exige QA específico
+antes de afirmar impacto real.
+
+## 15. Diff por entorno
+
+| Entorno | `app_role` | `has_company_role` | RPC afectadas | Resultado |
+|---|---|---|---|---|
+| Repositorio/local estático | enum definido en migraciones | `(uuid,uuid,text)` | contienen `::app_role` | incompatibilidad demostrable por inspección |
+| Preview/backend activo | existe con valores inventariados | sólo `(uuid,uuid,text)` | activas con casts enum | **afectado y reproducido** |
+| Staging independiente | no accesible desde este proyecto | no verificado | no verificado | indeterminado |
+| Producción independiente | no accesible como base separada | no verificado | no verificado | indeterminado |
+
+El ledger del backend activo registra 428 migraciones hasta
+`20260803031549`; las migraciones relevantes figuran aplicadas. No existe base
+técnica para afirmar un diff “real” staging–producción sin conexiones
+independientes. Tampoco se encontró evidencia demostrable de hotfix manual no
+versionado. Las discrepancias menores de nombres temporales en migraciones
+antiguas no alteran las definiciones activas verificadas.
+
+## 16. Seguridad de una remediación futura
+
+Una corrección superficial puede ampliar privilegios si cambia semántica en
+vez de sólo alinear tipos. Debe preservarse:
+
+- `auth.uid()` como identidad del actor;
+- comprobación explícita de `p_company_id`;
+- filtro conjunto por `id` y `company_id`;
+- fail-closed ante ausencia de membresía;
+- diferencias entre rol global y rol por empresa;
+- semántica actual de `company_owner` y propietario global;
+- `SECURITY DEFINER` con `SET search_path` seguro;
+- grants mínimos de `EXECUTE`;
+- versión esperada, bloqueo de fila y auditoría transaccional.
+
+No debe sustituirse por `has_exact_company_role`, desactivar la autorización,
+confiar en el rol enviado por el cliente, conceder ejecución pública adicional,
+quitar el filtro tenant ni convertir todo el modelo de roles a `text` sin una
+decisión de dominio y pruebas de equivalencia.
+
+## 17. Causa raíz exacta
+
+**La migración `20260802021810_efb18f84-f84f-466d-bcfb-60d8bdcddd36.sql`
+desplegó `versioned_update_employee_document` y `review_employee_document` con
+llamadas explícitas a `public.has_company_role(uuid, uuid, public.app_role)`,
+pero el helper creado en `20260225015055_...` y redefinido en
+`20260318192629_...` conserva únicamente la firma
+`public.has_company_role(uuid, uuid, text)`; el backend activo no tiene una
+sobrecarga enum ni conversión implícita aplicable, por lo que PostgreSQL aborta
+la RPC antes de leer, bloquear, actualizar o auditar el documento.**
+
+## 18. Opciones de corrección — no implementadas
+
+### Opción A — Alinear callers al contrato canónico existente (recomendada)
+
+- **Cambio:** migración versionada que ajuste los callers activos
+  incompatibles para pasar el tipo contractual de rol de empresa, sin cambiar
+  lógica, roles admitidos ni firma pública del helper.
+- **Objetos:** primero las dos RPC de Documentos; el mismo bloque debe resolver
+  las demás funciones activas incompatibles o impedir que quede contrato mixto.
+- **Riesgo:** bajo/moderado si el cambio es exclusivamente de tipos y se compara
+  la semántica antes/después.
+- **RLS/multi-tenant:** sin cambio esperado; debe probarse explícitamente.
+- **Compatibilidad:** mantiene la firma histórica y los 53 callers compatibles.
+- **Downtime/datos:** no requiere migración de datos; normalmente sin downtime.
+- **Rollback:** restaurar las definiciones previas de las funciones desde una
+  migración inversa; las operaciones volverían a fallar cerradas.
+
+### Opción B — Sobrecarga temporal estricta
+
+- **Cambio:** sobrecarga enum que delegue explícitamente al contrato canónico,
+  sólo si hay callers externos imposibles de migrar en el mismo despliegue.
+- **Riesgo:** moderado; duplica superficie pública y puede perpetuar ambigüedad.
+- **RLS/multi-tenant:** debe demostrar equivalencia y conservar `auth.uid()`.
+- **Compatibilidad:** alta, pero crea deuda y exige fecha de retiro.
+- **Downtime/datos:** no requiere datos ni downtime.
+- **Rollback:** retirar la sobrecarga una vez migrados todos los callers.
+- **Recomendación:** no usar salvo incompatibilidad externa demostrada.
+
+### Opción C — Migración consolidada del contrato de autorización
+
+- **Cambio:** normalizar helper, wrappers, callers, grants y pruebas de catálogo
+  en una sola versión si una comparación independiente confirma drift amplio.
+- **Riesgo:** alto por radio de seguridad; requiere revisión formal.
+- **RLS/multi-tenant:** impacto potencial amplio.
+- **Compatibilidad:** debe mantener una ventana explícita o migración atómica.
+- **Downtime/datos:** no necesita datos; puede requerir ventana controlada.
+- **Rollback:** restauración coordinada de todas las definiciones y grants.
+
+**Recomendación:** Opción A, mediante una única migración revisada y atómica,
+después de inventariar todos los callers activos. No crear una función nueva ni
+hacer un cast rápido aislado en Documentos.
+
+## 19. Riesgos y plan de rollback
+
+Riesgos principales de una futura corrección:
+
+1. convertir un fallo cerrado en acceso cross-tenant;
+2. confundir rol global con membresía de empresa;
+3. cambiar la jerarquía efectiva de owner/admin/manager;
+4. dejar algunas funciones con el contrato antiguo y otras con uno nuevo;
+5. ampliar grants de ejecución;
+6. introducir `search_path` inseguro en `SECURITY DEFINER`;
+7. recuperar writes sin recuperar auditoría y control de versión.
+
+Rollback propuesto para el bloque futuro:
+
+1. conservar definiciones previas completas y grants;
+2. desplegar la corrección como una sola migración reversible;
+3. si falla autorización o aislamiento, restaurar cuerpos y grants previos;
+4. verificar que el sistema vuelve a fail-closed;
+5. no revertir datos porque la alineación de contrato no debe migrarlos;
+6. revisar auditoría para confirmar que no hubo writes cross-tenant durante la
+   ventana.
+
+## 20. Plan de QA posterior a aprobación
+
+Tras aprobar e implementar una corrección, ejecutar en desktop y móvil:
+
+1. admin guarda `expires_at`; persiste tras refresh;
+2. owner repite la operación;
+3. manager, si la política aprobada lo permite, repite;
+4. usuario sin permisos recibe denegación sin write;
+5. usuario de otra empresa recibe denegación sin existencia observable;
+6. aprobar documento pendiente;
+7. rechazar con motivo;
+8. pedir corrección/reemplazo;
+9. reemplazar documento conforme al flujo autorizado;
+10. conflicto A/B conserva el cambio ganador;
+11. auditoría VWC y evento de revisión se generan una sola vez;
+12. `activity_log` no se usa como única evidencia transaccional;
+13. RLS sigue activa y fail-closed;
+14. IDs cruzados documento/empresa devuelven `not_found` o denegación segura;
+15. descarga y URL firmada mantienen sus permisos;
+16. pruebas de catálogo validan firma de cada dependencia;
+17. pruebas autenticadas cubren ramas permitidas y denegadas;
+18. W-9, configuración y servicios/cierre se prueban por separado antes de
+    declarar cerrado el radio sistémico.
+
+## 21. Cierre
 
 **Diagnóstico final:** las escrituras y transiciones de Documentos fallan
 porque sus RPC llaman `has_company_role` con `app_role`, pero el backend sólo
@@ -423,3 +727,6 @@ de Documentos, por lo que el incidente tiene radio sistémico de autorización.
 **Confirmación obligatoria:** esta auditoría no implementó fixes, no cambió
 seguridad, no modificó datos y no alteró RLS, permisos, roles, funciones ni
 migraciones.
+
+**“No se realizó ninguna modificación de código, migración, RLS, función SQL ni
+dato de producción durante esta auditoría.”**
