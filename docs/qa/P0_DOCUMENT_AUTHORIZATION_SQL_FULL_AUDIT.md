@@ -141,6 +141,25 @@ La coexistencia de ambos contratos probablemente favoreció el uso mecánico de
 `::app_role` en callers de `has_company_role`, pero no los vuelve
 intercambiables.
 
+Los tipos TypeScript generados reflejan correctamente esta diferencia en el
+estado actual del repositorio: `_role: string` para `has_company_role` y
+`has_exact_company_role`, frente a `_role: app_role` para `has_role`. Por tanto,
+el snapshot de tipos del cliente no explica el error ni presenta drift en este
+punto; el defecto está en cuerpos SQL server-side.
+
+### 3.4 Diferencia con `has_exact_company_role`
+
+También existe `has_exact_company_role(uuid, uuid, text)`, creado como helper
+`SECURITY DEFINER` para evitar recursión en RLS de `company_users`. Su semántica
+es deliberadamente más estrecha:
+
+- exige una coincidencia exacta en `company_users.role`;
+- no trata `company_owner` como superrol;
+- no incorpora el bypass de propietario global.
+
+No puede sustituirse mecánicamente por `has_company_role`; hacerlo cambiaría
+límites de privilegio aunque ambas funciones compartan los tipos de entrada.
+
 ## 4. Arqueología de migraciones
 
 ### 4.1 Origen del helper
@@ -317,6 +336,10 @@ Los tests guardianes de VWC verifican PATCH, conflictos y ausencia de updates
 directos, pero no compilan/ejecutan cada rama de autorización con una sesión
 real ni validan las firmas de sus dependencias SQL.
 
+La búsqueda en `src/test`, `tests/e2e` y `scripts` no encontró referencias a
+`has_company_role`, `has_exact_company_role` o `has_role`: no existe cobertura
+automatizada directa del contrato de tipos ni de la semántica de estos helpers.
+
 ### 7.3 Factores contribuyentes
 
 1. `company_users.role` y `user_roles.role` representan ámbitos distintos.
@@ -327,6 +350,28 @@ real ni validan las firmas de sus dependencias SQL.
    o identidades que no reproduzcan cada comprobación de autorización activa.
 5. Los callers recientes copiaron el patrón correcto de `has_role` a un helper
    con firma diferente.
+
+### 7.4 Hallazgos secundarios del flujo de Documentos
+
+No explican el error SQL y no se corrigieron, pero quedan registrados para no
+perder evidencia:
+
+1. Los dos flujos de edición de vencimiento convierten un conflicto VWC en un
+   mensaje de error, pero no abren el diálogo canónico de reconciliación que sí
+   usan aprobar/rechazar. No hay falso éxito, pero la recuperación es manual.
+2. El log adicional de cliente en `activity_log` es best-effort y tiene catch
+   silencioso. La auditoría transaccional principal permanece en
+   `versioned_write_audit` y `document_review_events`; los reportes que dependan
+   sólo de `activity_log` podrían quedar incompletos.
+3. La subida administrativa usa un `INSERT` acotado directo. Es un carril de
+   creación, no una sobrescritura versionada, pero su auditoría no usa el mismo
+   formato VWC que edición y transición.
+4. El bloqueo de revisión de documentos W-9 se observó en la UI; la RPC genérica
+   de revisión de documentos no repite esa restricción por categoría. Esto es
+   un hallazgo de defensa en profundidad, no la causa del incidente actual.
+5. La RPC y el trigger de revisión comparten parte de la lógica de estado. Una
+   excepción del trigger puede propagarse como error SQL genérico en vez de una
+   respuesta canónica de negocio.
 
 ## 8. Evidencia de no mutación durante esta auditoría
 
