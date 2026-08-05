@@ -352,33 +352,15 @@ previos completos desde estas fuentes inmutables del repositorio:
 - Documentos: `supabase/migrations/20260802021810_efb18f84-f84f-466d-bcfb-60d8bdcddd36.sql`,
   líneas 30–208 y 213–299.
 
-El SQL listo para ejecutar es la concatenación, dentro de una única transacción,
-de esos cuatro `CREATE OR REPLACE FUNCTION` completos, seguida de estas
-restauraciones defensivas:
+El SQL listo para materializar es la concatenación, dentro de una única
+transacción, de esos cuatro `CREATE OR REPLACE FUNCTION` completos. Cada cuerpo
+fuente ya declara `SECURITY DEFINER` y `SET search_path = public`. No debe incluir
+`ALTER OWNER`, `GRANT`, `REVOKE` ni un `ALTER FUNCTION` separado: el rollback
+restaura exclusivamente los cuerpos previos y `CREATE OR REPLACE` conserva owner
+y ACL del objeto existente. Owner, ACL, seguridad y `search_path` deben
+compararse antes/después como aserciones de QA, no reescribirse.
 
-```sql
-ALTER FUNCTION public.submit_contractor_w9(uuid, uuid, jsonb, integer, text, text)
-  OWNER TO postgres;
-ALTER FUNCTION public.review_contractor_w9(uuid, uuid, text, integer, text, text)
-  OWNER TO postgres;
-ALTER FUNCTION public.review_employee_document(uuid, text, uuid, text, integer, text, text)
-  OWNER TO postgres;
-ALTER FUNCTION public.versioned_update_employee_document(uuid, uuid, jsonb, integer, text, text)
-  OWNER TO postgres;
-
-ALTER FUNCTION public.submit_contractor_w9(uuid, uuid, jsonb, integer, text, text)
-  SECURITY DEFINER SET search_path TO public;
-ALTER FUNCTION public.review_contractor_w9(uuid, uuid, text, integer, text, text)
-  SECURITY DEFINER SET search_path TO public;
-ALTER FUNCTION public.review_employee_document(uuid, text, uuid, text, integer, text, text)
-  SECURITY DEFINER SET search_path TO public;
-ALTER FUNCTION public.versioned_update_employee_document(uuid, uuid, jsonb, integer, text, text)
-  SECURITY DEFINER SET search_path TO public;
-```
-
-Los `CREATE OR REPLACE` preservan firmas y ACL; las sentencias defensivas fijan
-owner, seguridad y `search_path` al baseline. No se incluyen cambios de datos,
-grants, RLS, policies, enum ni helper canónico.
+No se incluyen cambios de datos, grants, RLS, policies, enum ni helper canónico.
 
 **Estado de prueba del rollback:** preparado y cotejado estáticamente contra los
 cuerpos activos, pero **no probado en un entorno seguro independiente** porque
@@ -409,3 +391,21 @@ El cierre solicitado sólo será posible después de disponer de un entorno segu
 resolver formalmente el inventario 4/10, aplicar una única migración atómica y
 producir evidencia autenticada de éxito autorizado, denegación, aislamiento de
 tenant, auditoría, rollback y regresión por entorno.
+
+## 16. Revisión independiente
+
+Una auditoría estática independiente posterior corroboró:
+
+- la firma local única `(uuid, uuid, text)` y ausencia de sobrecarga `app_role`;
+- los literals exactos y la clasificación runtime 4 incompatibles / 6 compatibles;
+- que Configuración tuvo versiones intermedias incompatibles en
+  `20260802023647` y `20260802023856`, reemplazadas por la versión compatible
+  `20260802024442`;
+- que los cuatro helpers compartidos nunca usaron el cast incompatible en el
+  historial local;
+- que el rollback no puede declararse probado sin staging aislado.
+
+La revisión señaló que owner y grants no pueden inferirse sólo del historial
+local. Esa incertidumbre quedó resuelta mediante consulta directa al catálogo
+activo: owner `postgres`, ACL detallada en §14.4, `SECURITY DEFINER` y
+`search_path=public` para los diez callers. No se realizó ninguna escritura.
