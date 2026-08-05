@@ -19,6 +19,11 @@ import {
 import { cn } from "@/lib/utils";
 import { format, parse } from "date-fns";
 import { es } from "date-fns/locale";
+import {
+  SERVICE_LOCATION_COPY,
+  focusServiceSection,
+  type ReadinessBlocker,
+} from "@/lib/shifts/service-publish-readiness";
 
 interface Props {
   // Identity
