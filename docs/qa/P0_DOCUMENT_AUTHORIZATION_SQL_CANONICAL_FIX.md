@@ -1,7 +1,7 @@
 # P0 — Corrección canónica de autorización SQL
 
 **Estado:** HALT seguro en precheck; migración no aplicada.  
-**Fecha del precheck:** 2026-08-04 UTC.  
+**Fecha del precheck final:** 2026-08-05 UTC.  
 **Entorno consultable:** backend activo enlazado al proyecto.  
 **Fuente obligatoria:** `docs/qa/P0_DOCUMENT_AUTHORIZATION_SQL_FULL_AUDIT.md`.
 
@@ -213,3 +213,199 @@ cuatro callers activos siguen incompatibles. El estado verificable es:
 > la remediación de los cuatro callers incompatibles fue detenida de forma
 > segura por drift material, sin ampliar privilegios, modificar RLS ni permitir
 > acceso cross-tenant.
+
+## 14. Precheck final solicitado (2026-08-05 UTC)
+
+### 14.1 Inventario exacto de literals por función
+
+Consulta de catálogo realizada contra los cuerpos activos mediante
+`pg_get_functiondef`. Los literals indicados son exactamente los pasados al
+tercer argumento de `public.has_company_role`.
+
+| Función | Literals exactos activos | Tipo efectivo | ¿Todos pertenecen a `app_role`? |
+|---|---|---|---|
+| `versioned_update_employee_document` | `'admin'::app_role`, `'owner'::app_role`, `'manager'::app_role` | `app_role` incompatible con la firma real | sí |
+| `review_employee_document` | `'admin'::app_role`, `'owner'::app_role`, `'manager'::app_role` | `app_role` incompatible con la firma real | sí |
+| `submit_contractor_w9` | `'admin'::app_role`, `'owner'::app_role` | `app_role` incompatible con la firma real | sí |
+| `review_contractor_w9` | `'admin'::app_role`, `'owner'::app_role` | `app_role` incompatible con la firma real | sí |
+| `versioned_update_company_setting` | `'admin'`, `'owner'` | literal desconocido resuelto como `text` | sí |
+| `versioned_update_company_profile` | `'admin'`, `'owner'` | literal desconocido resuelto como `text` | sí |
+| `can_manage_shift_company` | `'manager'`, `'supervisor'` | literal desconocido resuelto como `text` | sí |
+| `shift_closeout_can_admin` | `'admin'`, `'manager'`, `'owner'`, `'supervisor'` | literal desconocido resuelto como `text` | sí |
+| `shift_closeout_can_final_approve` | `'owner'`, `'admin'` | literal desconocido resuelto como `text` | sí |
+| `user_is_company_admin` | `'admin'` | literal desconocido resuelto como `text` | sí |
+
+Conjunto válido observado en `public.app_role`: `admin`, `employee`, `developer`,
+`owner`, `manager`, `supervisor`, `founder`. La unión de literals usada por los
+diez callers es `admin`, `owner`, `manager`, `supervisor`; es subconjunto estricto
+del enum. No hay un rol procedente de parámetros de cliente.
+
+Nota de precisión: `can_manage_shift_company` también llama a `has_role` con
+`developer`, `owner` y `founder`; esos casts son correctos porque esa función sí
+recibe `app_role` y quedan fuera del diff. Lo mismo aplica a los usos de
+`has_role` en otros callers.
+
+### 14.2 Firma real del backend activo
+
+Existe una única función:
+
+```sql
+public.has_company_role(_user_id uuid, _company_id uuid, _role text)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path TO 'public'
+```
+
+Owner: `postgres`. No existe `(uuid, uuid, app_role)`. El cuerpo exige coincidencia
+de `user_id` y `company_id`, acepta el rol solicitado o `company_owner`, y conserva
+el bypass global preexistente mediante `is_global_owner(_user_id)`.
+
+### 14.3 Diff de atributos: antes frente a después proyectado
+
+No existe un «después aplicado». El único después admisible, si se elimina el
+drift y se autoriza el inventario corregido de cuatro, debe ser:
+
+| Atributo | Antes activo | Después proyectado | Diff permitido |
+|---|---|---|---|
+| Seguridad, 10 callers | `SECURITY DEFINER` | `SECURITY DEFINER` | ninguno |
+| Owner, 10 callers | `postgres` | `postgres` | ninguno |
+| `search_path`, 10 callers | `public` | `public` | ninguno |
+| Retorno | 6 RPC `jsonb`; 4 helpers `boolean` | idéntico | ninguno |
+| Firma de cada caller | firma activa inventariada | idéntica | ninguno |
+| Firma de `has_company_role` | `(uuid, uuid, text)` | idéntica | ninguno |
+| Cuerpo, 4 afectados | literals con `::app_role` | mismos literals sin cast | retirar sólo el cast |
+| Cuerpo, 6 compatibles | literals `text` | idéntico | ninguno |
+
+Por tanto, el diff `SECURITY DEFINER / INVOKER` es **cero**: ningún objeto puede
+cambiar a INVOKER ni viceversa.
+
+### 14.4 Owner y grants antes/después
+
+Owner activo de los once objetos consultados (diez callers más helper canónico):
+`postgres`. Owner proyectado: `postgres`. Diff: ninguno.
+
+ACL activa y ACL proyectada, sin cambios:
+
+- `versioned_update_company_setting` y `versioned_update_company_profile`:
+  `postgres=X/postgres`, `anon=X/postgres`, `authenticated=X/postgres`,
+  `service_role=X/postgres` y rol de inspección enlazado `=X/postgres`; `PUBLIC`
+  permanece revocado.
+- Los otros ocho callers y `has_company_role`: ejecución explícita para
+  `postgres`, `anon`, `authenticated`, `service_role` y rol de inspección, más
+  ejecución heredada por `PUBLIC`, exactamente como está hoy.
+
+El fix futuro no debe emitir `GRANT`, `REVOKE`, `ALTER OWNER` ni cambiar la ACL.
+El precheck no interpreta estos grants históricos como autorización suficiente:
+los cuerpos siguen derivando identidad de `auth.uid()` y aplicando sus gates.
+
+### 14.5 RLS y policies
+
+Estado activo capturado antes de cualquier cambio:
+
+| Tabla de alcance | RLS | Policies |
+|---|---:|---:|
+| `companies` | habilitado | 2 |
+| `company_settings` | habilitado | 3 |
+| `contractor_w9` | habilitado | 5 |
+| `employee_documents` | habilitado | 4 |
+| `employee_onboarding_documents` | habilitado | 2 |
+| `scheduled_shifts` | habilitado | 7 |
+| `shift_assignments` | habilitado | 8 |
+
+Total: 31 policies. Huella ordenada de definiciones:
+`30122f95212df943dc4bb2d5aa631c68`. El fix proyectado no contiene DDL sobre
+tablas, RLS o policies. Resultado de este precheck: **cero cambios en RLS y cero
+cambios en policies**.
+
+### 14.6 Matriz esperada por función
+
+Estos son criterios de QA post-fix, no resultados ejecutados. En las cuatro
+funciones afectadas, el resultado activo actual sigue siendo error de resolución
+de firma antes de lock, escritura o auditoría cuando se alcanza el gate.
+
+| Función | Usuario autorizado, post-fix | Usuario sin permiso | Tenant incorrecto |
+|---|---|---|---|
+| `versioned_update_employee_document` | `applied`/`noop` según patch y versión; auditoría `applied` | `denied`, cero write | `denied` en gate o `not_found`; cero write |
+| `review_employee_document` | `applied`/`noop`; transición y auditoría correctas | `denied`, cero transición | `denied` en gate o `not_found`; cero transición |
+| `submit_contractor_w9` | trabajador dueño o admin/owner: `applied`; auditoría `applied` | `denied`, cero envío | `not_found` por empleado fuera de empresa, o `denied`; cero write |
+| `review_contractor_w9` | admin/owner: `applied`/`noop`; auditoría correcta | `denied`, cero transición | `denied` en gate o `not_found`; cero transición |
+| `versioned_update_company_setting` | `applied`/conflicto VWC legítimo | `denied`, cero write | `denied`; cero write |
+| `versioned_update_company_profile` | `applied`/conflicto VWC legítimo | `denied`, cero write | `denied`; cero write |
+| `can_manage_shift_company` | `true` | `false` | `false` |
+| `shift_closeout_can_admin` | `true` | `false` | `false` |
+| `shift_closeout_can_final_approve` | `true` | `false` | `false` |
+| `user_is_company_admin` | `true` | `false` | `false` |
+
+Para las RPC, un caso cross-tenant puede devolver `denied` antes de buscar la
+entidad o `not_found` tras un gate permitido por rol global; ambos son fail-closed
+si no existe mutación, no se retorna la fila ajena y no se registra `applied`.
+
+### 14.7 SQL de rollback preparado
+
+El rollback exacto de una futura corrección debe restaurar los cuatro cuerpos
+previos completos desde estas fuentes inmutables del repositorio:
+
+- W-9: `supabase/migrations/20260802021158_2f521744-97af-419c-829e-7f38c09a6735.sql`,
+  líneas 118–250 y 255–333.
+- Documentos: `supabase/migrations/20260802021810_efb18f84-f84f-466d-bcfb-60d8bdcddd36.sql`,
+  líneas 30–208 y 213–299.
+
+El SQL listo para ejecutar es la concatenación, dentro de una única transacción,
+de esos cuatro `CREATE OR REPLACE FUNCTION` completos, seguida de estas
+restauraciones defensivas:
+
+```sql
+ALTER FUNCTION public.submit_contractor_w9(uuid, uuid, jsonb, integer, text, text)
+  OWNER TO postgres;
+ALTER FUNCTION public.review_contractor_w9(uuid, uuid, text, integer, text, text)
+  OWNER TO postgres;
+ALTER FUNCTION public.review_employee_document(uuid, text, uuid, text, integer, text, text)
+  OWNER TO postgres;
+ALTER FUNCTION public.versioned_update_employee_document(uuid, uuid, jsonb, integer, text, text)
+  OWNER TO postgres;
+
+ALTER FUNCTION public.submit_contractor_w9(uuid, uuid, jsonb, integer, text, text)
+  SECURITY DEFINER SET search_path TO public;
+ALTER FUNCTION public.review_contractor_w9(uuid, uuid, text, integer, text, text)
+  SECURITY DEFINER SET search_path TO public;
+ALTER FUNCTION public.review_employee_document(uuid, text, uuid, text, integer, text, text)
+  SECURITY DEFINER SET search_path TO public;
+ALTER FUNCTION public.versioned_update_employee_document(uuid, uuid, jsonb, integer, text, text)
+  SECURITY DEFINER SET search_path TO public;
+```
+
+Los `CREATE OR REPLACE` preservan firmas y ACL; las sentencias defensivas fijan
+owner, seguridad y `search_path` al baseline. No se incluyen cambios de datos,
+grants, RLS, policies, enum ni helper canónico.
+
+**Estado de prueba del rollback:** preparado y cotejado estáticamente contra los
+cuerpos activos, pero **no probado en un entorno seguro independiente** porque
+este proyecto sólo expone el backend activo enlazado. Ejecutarlo allí, aun dentro
+de una transacción revertida, incumpliría el HALT y no sustituiría una prueba de
+staging. Por ello el requisito 9 no está satisfecho y bloquea la migración.
+
+### 14.8 Huellas de drift y decisión final
+
+- Ledger activo: 428 migraciones; última versión `20260803031549`.
+- Drift de ledger desde el precheck anterior: no.
+- Drift material del inventario: sí, sin resolver (4 incompatibles / 6 compatibles).
+- Migración de corrección aplicada: no.
+- QA mutante de los diez callers: no ejecutado.
+- QA completo de Documentos, W-9 y Configuración: no ejecutado.
+- Prueba de auditoría post-fix: no ejecutada.
+- Prueba de rollback en entorno seguro: no disponible.
+
+## 15. Criterio de cierre
+
+Este bloque permanece en **HALT**. No se emite ninguna afirmación de migración
+aplicada ni de guardado autorizado exitoso post-fix. La evidencia disponible sí
+confirma: denegación fail-closed de los cuatro callers afectados por error de
+firma, cero cambios persistentes, cero cambios cross-tenant, cero ampliación de
+privilegios y cero modificación de módulos dependientes durante el precheck.
+
+El cierre solicitado sólo será posible después de disponer de un entorno seguro,
+resolver formalmente el inventario 4/10, aplicar una única migración atómica y
+producir evidencia autenticada de éxito autorizado, denegación, aislamiento de
+tenant, auditoría, rollback y regresión por entorno.
