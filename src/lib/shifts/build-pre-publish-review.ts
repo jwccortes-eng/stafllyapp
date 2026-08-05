@@ -29,6 +29,8 @@ export interface BuildPrePublishInput {
   clientName: string | null;
   jobSiteLabel: string | null;
   meetingPointLabel: string | null;
+  /** Bloqueos canónicos de publicación (getServicePublishReadiness). */
+  blockers?: ReadinessBlocker[];
 }
 
 export function buildPrePublishReview(v: BuildPrePublishInput): PrePublishReviewData {
