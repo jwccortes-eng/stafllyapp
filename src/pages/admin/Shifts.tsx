@@ -73,6 +73,11 @@ import { CreateSessionRecoveryBanner } from "@/components/shifts/CreateSessionRe
 import { ShiftSummaryPanel } from "@/components/shifts/form/ShiftSummaryPanel";
 import { WorkspaceSummary } from "@/components/shifts/workspace/WorkspaceSummary";
 import { buildPrePublishReview } from "@/lib/shifts/build-pre-publish-review";
+import {
+  getServicePublishReadiness,
+  focusServiceSection,
+  type ServicePublishReadiness,
+} from "@/lib/shifts/service-publish-readiness";
 import { getShiftLocationStatus } from "@/lib/shifts/location-status";
 import { PrePublishDialog } from "@/components/shifts/workspace/PrePublishDialog";
 import { ExportConnecteamBulkDialog } from "@/components/shifts/integrations/ExportConnecteamBulkDialog";
