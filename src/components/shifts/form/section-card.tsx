@@ -10,6 +10,8 @@ import { memo } from "react";
 import { cn } from "@/lib/utils";
 
 interface SectionCardProps {
+  /** DOM id — usado como ancla de navegación al error. */
+  id?: string;
   icon?: any;
   title: string;
   subtitle?: string;
@@ -22,6 +24,7 @@ interface SectionCardProps {
 }
 
 function SectionCardImpl({
+  id,
   icon: Icon,
   title,
   subtitle,
@@ -33,6 +36,7 @@ function SectionCardImpl({
 }: SectionCardProps) {
   return (
     <div
+      id={id}
       className={cn(
         "rounded-2xl border bg-card overflow-hidden transition-colors",
         variant === "hero" && "border-primary/30 shadow-sm",
