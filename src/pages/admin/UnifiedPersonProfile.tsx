@@ -13,7 +13,7 @@
  *
  * Scope: zero schema changes, zero contract changes, zero payroll math touched.
  */
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { EMPLOYEE_COLUMNS_NO_FISCAL } from "@/lib/employee-columns";
