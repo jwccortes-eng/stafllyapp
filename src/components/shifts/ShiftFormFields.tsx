@@ -158,6 +158,7 @@ export interface ShiftFormSignals {
   adminMissing: boolean;
   adminInvalid: boolean;
   driverMissing: boolean;
+  /** Sin LUGAR DEL SERVICIO. El punto de encuentro nunca lo satisface. */
   noLocation: boolean;
   noTeam: boolean;
   conflictNames: string[];
@@ -166,6 +167,8 @@ export interface ShiftFormSignals {
   jobSiteLabel: string | null;
   meetingPointLabel: string | null;
   clientName: string | null;
+  /** Estado canónico de publicación — única fuente para todas las superficies. */
+  readiness: ReturnType<typeof getServicePublishReadiness>;
 }
 
 interface SignalsInput {
@@ -178,6 +181,10 @@ interface SignalsInput {
   clients: SelectOption[];
   locations: LocationOption[];
   showEmployeePicker: boolean;
+  /** Necesario para resolver nombres de lugares guardados (locations_v2). */
+  companyId?: string | null;
+  /** Reglas de publicación de la empresa. */
+  requirements?: ServiceRequirements;
 }
 
 export function useShiftFormSignals({
@@ -190,6 +197,8 @@ export function useShiftFormSignals({
   clients,
   locations,
   showEmployeePicker,
+  companyId = null,
+  requirements,
 }: SignalsInput): ShiftFormSignals {
   const slotsNum = parseInt(v.slots) || 0;
   const capacityNum = parseInt(v.carCapacity) || 5;
