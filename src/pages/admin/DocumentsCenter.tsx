@@ -223,12 +223,14 @@ export default function DocumentsCenter() {
 
   const [previewRow, setPreviewRow] = useState<UnifiedDocumentRow | null>(null);
   const [drawerRow, setDrawerRow] = useState<UnifiedDocumentRow | null>(null);
+  const employeeBeforePreviewRef = useRef<string | null>(employeeParam);
 
   const handleView = (row: UnifiedDocumentRow) => {
     if (!row.file_path) {
       toast({ title: "No file uploaded yet", description: "This is a missing-document placeholder." });
       return;
     }
+    employeeBeforePreviewRef.current = employeeParam;
     setPreviewRow(row);
     const sp = new URLSearchParams(searchParams);
     sp.set("document", row.id);
@@ -241,6 +243,8 @@ export default function DocumentsCenter() {
     setPreviewRow(null);
     const sp = new URLSearchParams(searchParams);
     sp.delete("document");
+    const priorEmployee = employeeBeforePreviewRef.current;
+    if (priorEmployee) sp.set("employee", priorEmployee); else sp.delete("employee");
     setSearchParams(sp, { replace: true });
   };
 
