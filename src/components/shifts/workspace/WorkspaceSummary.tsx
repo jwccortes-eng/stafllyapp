@@ -61,6 +61,8 @@ interface Props {
   payOverrideActive: boolean;
   // Edit-only: real publication_status from DB if present
   publicationStatus?: string | null;
+  /** Bloqueos canónicos de publicación. */
+  publishBlockers?: ReadinessBlocker[];
 }
 
 const TONE_BG: Record<PendingTone, string> = {
