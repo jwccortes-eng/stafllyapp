@@ -17,6 +17,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { SectionCard } from "./section-card";
 import { SmartLocationField } from "./SmartLocationField";
+import {
+  SERVICE_JOB_SITE_ANCHOR,
+  SERVICE_LOCATION_COPY,
+} from "@/lib/shifts/service-publish-readiness";
 import type { LocationOption } from "../ShiftFormFields";
 
 interface Props {
