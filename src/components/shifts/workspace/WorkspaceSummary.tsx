@@ -88,10 +88,11 @@ function WorkspaceSummaryImpl(p: Props) {
     assignedCount: p.assignedCount,
   });
 
+  const blockers = p.publishBlockers ?? [];
   const publish = describePublishState({
     publicationStatus: p.publicationStatus ?? null,
     claimable: p.claimable,
-    isReady: pending.isReady,
+    isReady: pending.isReady && blockers.length === 0,
   });
 
   const hasManualAddress = !!(p.jobSiteAddress && p.jobSiteAddress.trim());
