@@ -2977,6 +2977,26 @@ function DesktopShifts() {
           clientName: client?.name ?? null,
           jobSiteLabel: jobLoc?.name ?? s.job_site_address ?? null,
           meetingPointLabel: meetingLoc?.name ?? (s.meeting_point || null),
+          blockers: getServicePublishReadiness({
+            date: s.date ?? "",
+            startTime: s.start_time ?? "",
+            endTime: s.end_time ?? "",
+            title: s.title ?? "",
+            clientId: s.client_id ?? "",
+            locationId: s.location_id ?? "",
+            jobSiteLocationId: s.job_site_location_id ?? null,
+            jobSiteAddress: s.job_site_address ?? "",
+            meetingPoint: s.meeting_point ?? "",
+            meetingPointLocationId: s.meeting_point_location_id ?? null,
+            transportRequired: !!s.transportation_required,
+            assignedCount,
+            claimable: !!s.claimable,
+            requirements: {
+              requireClient: shiftsConfig.require_client,
+              requireLocation: shiftsConfig.require_location,
+              maxShiftHours: shiftsConfig.max_shift_hours,
+            },
+          }).blockers,
         });
         return (
           <PrePublishDialog
