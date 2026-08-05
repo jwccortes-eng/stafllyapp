@@ -196,9 +196,21 @@ function ShiftSummaryPanelImpl(p: Props) {
             </div>
           )}
           {p.noLocation && (
-            <div className="flex items-start gap-1.5 text-[11px] text-[hsl(var(--status-pending))]">
+            <div className="flex items-start gap-1.5 text-[11px] text-destructive">
               <AlertTriangle className="h-3 w-3 shrink-0 mt-0.5" />
-              <span>Sin <span className="font-semibold">Job Site</span> definido.</span>
+              <span className="min-w-0">
+                <span className="font-semibold">{SERVICE_LOCATION_COPY.jobSiteMissing}</span>.
+                {p.meetingPointLabel
+                  ? " El punto de encuentro no reemplaza el lugar donde se realizará el trabajo."
+                  : ""}
+                <button
+                  type="button"
+                  onClick={() => focusServiceSection("service-job-site-section")}
+                  className="ml-1 underline font-semibold hover:opacity-80"
+                >
+                  {SERVICE_LOCATION_COPY.jobSiteCta}
+                </button>
+              </span>
             </div>
           )}
           {p.noTeam && (
