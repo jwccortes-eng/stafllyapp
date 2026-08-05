@@ -30,6 +30,11 @@ import { ShiftSummaryPanel } from "./form/ShiftSummaryPanel";
 import { ShiftWorkspaceLayout } from "./workspace/ShiftWorkspaceLayout";
 import { QuickCreateWorkspace } from "./workspace/QuickCreateWorkspace";
 import { buildShiftDisplayName, isAutoDisplayName } from "@/lib/shifts/display-name";
+import { useLocationsV2 } from "@/hooks/useLocationsV2";
+import {
+  getServicePublishReadiness,
+  type ServiceRequirements,
+} from "@/lib/shifts/service-publish-readiness";
 
 // ────────────────────────────────────────────────────────────────────────────
 // Types
