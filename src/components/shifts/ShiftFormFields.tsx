@@ -299,21 +299,31 @@ export function useShiftFormSignals({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [assignedKey, v.date, v.startTime, v.endTime, currentShiftId, shifts, assignments, employees]);
 
+  const { data: savedLocationsV2 } = useLocationsV2(companyId);
+
   const jobSiteLabel = useMemo(() => {
     if (v.locationId) {
       const loc = locations.find((l) => l.id === v.locationId);
       if (loc) return loc.address || loc.name || null;
     }
-    // One-off free-text address takes precedence over premium FK because
-    // SingleLocationPicker selection is resolved elsewhere (jobSiteLocationId)
-    // and its label is rendered by the section directly.
+    if (v.jobSiteLocationId) {
+      const saved = (savedLocationsV2 ?? []).find((l) => l.id === v.jobSiteLocationId);
+      if (saved) return saved.name || saved.formatted_address || "Lugar guardado";
+      return "Lugar guardado";
+    }
     if (v.jobSiteAddress.trim()) return v.jobSiteAddress.trim();
     return null;
-  }, [v.locationId, v.jobSiteAddress, locations]);
+  }, [v.locationId, v.jobSiteLocationId, v.jobSiteAddress, locations, savedLocationsV2]);
 
   const meetingPointLabel = useMemo(() => {
-    return v.meetingPoint.trim() || null;
-  }, [v.meetingPoint]);
+    if (v.meetingPoint.trim()) return v.meetingPoint.trim();
+    if (v.meetingPointLocationId) {
+      const saved = (savedLocationsV2 ?? []).find((l) => l.id === v.meetingPointLocationId);
+      if (saved) return saved.name || saved.formatted_address || "Punto guardado";
+      return "Punto guardado";
+    }
+    return null;
+  }, [v.meetingPoint, v.meetingPointLocationId, savedLocationsV2]);
 
   const clientName = useMemo(() => {
     if (!v.clientId) return null;
@@ -342,6 +352,7 @@ export function useShiftFormSignals({
     jobSiteLabel,
     meetingPointLabel,
     clientName,
+    readiness,
   };
 }
 
