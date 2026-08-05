@@ -113,10 +113,10 @@ export default function UnifiedPersonProfile() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { role } = useAuth();
-  const { selectedCompanyId, selectedCompany } = useCompany();
+  const { selectedCompanyId, selectedCompany, loading: companyLoading } = useCompany();
   const lastCompanyIdRef = useRef<string | null>(selectedCompanyId);
   if (selectedCompanyId) lastCompanyIdRef.current = selectedCompanyId;
-  const stableCompanyId = selectedCompanyId ?? lastCompanyIdRef.current;
+  const stableCompanyId = selectedCompanyId ?? (companyLoading ? lastCompanyIdRef.current : null);
   const isPrivileged = role === "developer" || role === "owner" || role === "admin";
 
   const [employee, setEmployee] = useState<EmployeeRecord | null>(null);
