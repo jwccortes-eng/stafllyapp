@@ -257,9 +257,17 @@ function ShiftSummaryPanelImpl(p: Props) {
               <span>Override de pago: <span className="font-semibold">{p.payTypeLabel}</span>.</span>
             </div>
           )}
+          {blockers
+            .filter((b) => !["date", "job_site", "team", "driver", "shift_admin"].includes(b.key))
+            .map((b) => (
+              <div key={b.key} className="flex items-start gap-1.5 text-[11px] text-destructive">
+                <AlertTriangle className="h-3 w-3 shrink-0 mt-0.5" />
+                <span>{b.message}.</span>
+              </div>
+            ))}
           {allGood && (
             <div className="flex items-start gap-1.5 text-[11px] text-[hsl(142_76%_36%)] font-medium">
-              <CheckCircle2 className="h-3 w-3 shrink-0 mt-0.5" /> Todo en orden — listo para guardar.
+              <CheckCircle2 className="h-3 w-3 shrink-0 mt-0.5" /> Todo en orden — listo para publicar.
             </div>
           )}
         </div>
