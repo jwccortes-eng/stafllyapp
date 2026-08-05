@@ -642,3 +642,99 @@ Confirmación verificable actual:
 
 > Solo se modificaron los cuatro callers incompatibles confirmados. No se
 > tocaron los callers compatibles, RLS, grants, owner, roles ni datos.
+
+## 19. QA final solicitado — 2026-08-05 05:00 UTC
+
+### 19.1 Condiciones de ejecución
+
+El QA final comenzó con dos guardas obligatorias:
+
+- sesión administrada del preview: `signed_out`;
+- entorno seguro independiente para rollback: no disponible; sólo está enlazado
+  el backend activo.
+
+Por tanto, no se fabricaron credenciales, no se suplantaron identidades y no se
+ejecutó el rollback sobre el entorno activo. Conforme al criterio de cierre, el
+**Authenticated path permanece UNVERIFIED** y el bloque no puede declararse
+cerrado.
+
+### 19.2 Catálogo post-fix y atributos protegidos
+
+La migración `20260805045812_ac9b62ed-659d-4a7b-9fbc-35541000fc41` figura en el
+ledger activo. Una nueva lectura de `pg_proc` confirmó:
+
+| Caller | MD5 activo | Schema | Owner | Seguridad | `search_path` | Retorno |
+|---|---|---|---|---|---|---|
+| `versioned_update_employee_document` | `c688b184a805ec52bfd8a078c3422547` | `public` | `postgres` | DEFINER | `public` | `jsonb` |
+| `review_employee_document` | `d578874705aa00fca0d92317108a4bb2` | `public` | `postgres` | DEFINER | `public` | `jsonb` |
+| `submit_contractor_w9` | `4f2508951e9cf928f57e38b0c17b0a80` | `public` | `postgres` | DEFINER | `public` | `jsonb` |
+| `review_contractor_w9` | `248fe3e66756eb036c5530a3bdef4de7` | `public` | `postgres` | DEFINER | `public` | `jsonb` |
+
+Las firmas siguen siendo exactamente las registradas en §18.1 y la ACL de los
+cuatro continúa con huella `6f43507185d891bbb39a6636918e8fda`. Ninguno contiene
+ya una llamada `has_company_role(..., <literal>::app_role)`. El helper compartido
+permanece único con firma `(uuid, uuid, text)`, retorno `boolean`, owner
+`postgres`, `SECURITY DEFINER` y `search_path=public`.
+
+### 19.3 Seis callers compatibles
+
+El smoke estructural volvió a confirmar sin reemplazar ni ejecutar sus cuerpos:
+
+| Caller compatible | MD5 activo | Resultado |
+|---|---|---|
+| `versioned_update_company_setting` | `946f6cce6b21eb35cee193f52d837e32` | intacto |
+| `versioned_update_company_profile` | `bee3a8e324a1b5f1e70fe10c62569937` | intacto |
+| `can_manage_shift_company` | `95c2ed512b8dc6bb25342dd1ea5d5059` | intacto |
+| `shift_closeout_can_admin` | `3bf9dba60305bd0e7e75f1a4c30b39d1` | intacto |
+| `shift_closeout_can_final_approve` | `d1f770e230231481c68f7051988125f4` | intacto |
+| `user_is_company_admin` | `c8c5225ad1dff7cd71388e0c1605fb99` | intacto |
+
+Nota: los dos callers de Configuración contienen casts `::app_role` válidos en
+llamadas a otros helpers tipados; no pasan esos casts a `has_company_role`.
+No se realizó smoke mutante autenticado por ausencia de sesión.
+
+### 19.4 RLS, policies, auditoría y datos
+
+Las siete tablas de alcance conservan RLS habilitado y el mismo número de
+policies: `companies` 2, `company_settings` 3, `contractor_w9` 5,
+`employee_documents` 4, `employee_onboarding_documents` 2,
+`scheduled_shifts` 7 y `shift_assignments` 8. No se emitió DDL ni DML durante
+este QA. La superficie reservada `p0_auth_fix_qa%` mantiene **cero** filas en
+`versioned_write_audit`.
+
+El linter devuelve 156 advertencias históricas globales, incluyendo ejecución
+pública de funciones `SECURITY DEFINER`; no se corrigieron ni reclasificaron
+porque grants y seguridad están expresamente fuera de alcance. No se observó
+un cambio atribuible al fix mínimo.
+
+### 19.5 Matriz funcional final
+
+| Área | Autorizado | Sin rol | Otro tenant | Sin sesión |
+|---|---|---|---|---|
+| `versioned_update_employee_document` | **UNVERIFIED** | **UNVERIFIED** | **UNVERIFIED** | `denied`, verificado en §18.5 |
+| `review_employee_document` | **UNVERIFIED** | **UNVERIFIED** | **UNVERIFIED** | `denied`, verificado en §18.5 |
+| `submit_contractor_w9` | **UNVERIFIED** | **UNVERIFIED** | **UNVERIFIED** | `denied`, verificado en §18.5 |
+| `review_contractor_w9` | **UNVERIFIED** | **UNVERIFIED** | **UNVERIFIED** | `denied`, verificado en §18.5 |
+
+En consecuencia, guardado de `expires_at`, edición de metadata, approve, reject,
+correction, replacement, fila afectada, auditoría autorizada y persistencia tras
+refresh permanecen **UNVERIFIED**. Tampoco puede afirmarse cero acceso
+cross-company mediante evidencia E2E hasta probar al menos dos identidades de
+tenants distintos; la estructura SQL sigue aplicando `auth.uid()` y
+`id + company_id`, pero esa revisión estática no sustituye el escenario real.
+
+### 19.6 Rollback
+
+El rollback continúa preparado y cotejado estáticamente contra los cuatro MD5
+anteriores, pero **UNVERIFIED en ejecución**. No se aplicó sobre el backend
+activo porque el encargo prohíbe hacerlo en producción sin necesidad y no existe
+un staging independiente enlazado. Tampoco se ejecutó reapply ni smoke posterior.
+
+### 19.7 Decisión de cierre
+
+**NO CERRADO.** La corrección estructural de los cuatro callers y la invariancia
+de los seis compatibles están demostradas. Faltan sesión real con identidades
+autorizada, sin rol y cross-tenant, además de un entorno seguro para rollback.
+Por ello no se emite la confirmación final solicitada: afirmar QA autenticado,
+denegación con identidad, cero acceso cross-tenant y rollback probado sería
+incorrecto con la evidencia disponible.
