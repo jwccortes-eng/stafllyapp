@@ -162,7 +162,7 @@ export function normalizeDocuments({
       file_path: d.file_url ?? "",
       bucket: "employee-onboarding-documents",
       file_name: d.file_name ?? null,
-      file_type: (d as any).file_type ?? null,
+      file_type: null,
       created_at: d.created_at ?? d.uploaded_at ?? null,
       version: (d as any).version ?? null,
       reviewed_at: d.verified_at ?? null,

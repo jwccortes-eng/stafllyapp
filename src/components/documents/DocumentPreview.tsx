@@ -20,7 +20,6 @@ import {
   CalendarClock, ExternalLink, FileText, ImageIcon, Loader2,
   RefreshCw, ShieldAlert, User2,
 } from "lucide-react";
-import { toast } from "@/hooks/use-toast";
 import { resolveEmployeeDocumentUrl } from "@/lib/employee-documents";
 import { formatDateUS } from "@/lib/date-format";
 import {

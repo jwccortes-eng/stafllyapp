@@ -27,10 +27,11 @@ interface Props {
 export default function DocumentPreviewDialog({
   open, onOpenChange, item, actions, banner, side, title,
 }: Props) {
+  const initialDocumentId = item?.id ?? null;
   useEffect(() => {
-    const id = logMount("DocumentPreviewDialog", { documentId: item?.id ?? null });
+    const id = logMount("DocumentPreviewDialog", { documentId: initialDocumentId });
     return () => logUnmount("DocumentPreviewDialog", id);
-  }, []);
+  }, [initialDocumentId]);
 
   useEffect(() => {
     if (!open) return;

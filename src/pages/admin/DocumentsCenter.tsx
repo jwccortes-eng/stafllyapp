@@ -69,9 +69,10 @@ export default function DocumentsCenter() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState(() => searchParams.get("q") ?? "");
   const initialLoadComplete = useRef(false);
+  const initialDocumentId = useRef(searchParams.get("document"));
 
   useEffect(() => {
-    const id = logMount("DocumentsCenter", { documentId: searchParams.get("document") });
+    const id = logMount("DocumentsCenter", { documentId: initialDocumentId.current });
     return () => logUnmount("DocumentsCenter", id);
   }, []);
 
