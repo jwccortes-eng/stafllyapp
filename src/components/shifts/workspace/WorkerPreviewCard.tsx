@@ -96,23 +96,23 @@ function WorkerPreviewCardImpl(p: Props) {
             </div>
           )}
 
-          {/* Job site */}
+          {/* Lugar del servicio */}
           <div className="flex items-start gap-1.5 text-[11px] pt-1 border-t border-border/30">
             <MapPin className="h-3 w-3 text-muted-foreground shrink-0 mt-0.5" />
             <div className="min-w-0">
-              <div className="text-[10px] text-muted-foreground">Trabajo</div>
+              <div className="text-[10px] text-muted-foreground">Lugar del servicio</div>
               <div
                 className={cn(
                   "truncate text-foreground",
                   p.jobsiteMissing && "italic text-muted-foreground",
                 )}
               >
-                {p.jobSiteLabel || "Ubicación por confirmar"}
+                {p.jobSiteLabel || "Lugar del servicio por confirmar"}
               </div>
             </div>
           </div>
 
-          {/* Meeting point */}
+          {/* Punto de encuentro */}
           {(p.meetingPointLabel || p.meetingMissing) && (
             <div className="flex items-start gap-1.5 text-[11px]">
               <MapPin className="h-3 w-3 text-primary shrink-0 mt-0.5" />
