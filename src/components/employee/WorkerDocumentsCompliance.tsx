@@ -254,7 +254,9 @@ export default function WorkerDocumentsCompliance({ employee }: Props) {
         open={!!previewRow}
         onOpenChange={(o) => { if (!o) setPreviewRow(null); }}
         item={previewRow ? {
+          id: previewRow.id,
           file_path: previewRow.file_path,
+          file_type: previewRow.file_type,
           file_name: previewRow.file_name,
           document_type: previewRow.document_type,
           category: String(previewRow.category),

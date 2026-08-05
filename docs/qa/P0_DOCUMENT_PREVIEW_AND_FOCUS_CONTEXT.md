@@ -18,6 +18,8 @@ La selección vivía únicamente en `useState(previewRow)`. Durante una rehidrat
 
 Ahora `?document=ed-<id>&employee=<id>` es la identidad de navegación. El documento se vuelve a resolver exclusivamente dentro de las filas autorizadas y company-scoped; si no aparece, falla cerrado. Las revalidaciones con un usuario ya hidratado son background refresh y no desmontan el `Outlet`. El borrador no guardado de extracción permanece en memoria por `document_id`; nunca se persiste en storage.
 
+La auditoría independiente también encontró un vector en el perfil unificado: sus pestañas profundas estaban condicionadas directamente a `selectedCompanyId`, por lo que un `null` transitorio del proveedor desmontaba documentos y diálogos. El perfil conserva ahora el último `companyId` no nulo únicamente durante esa transición visual; las consultas y permisos siguen gobernados por el contexto y las políticas del backend.
+
 ## Instrumentación
 
 `DocumentsCenter`, `DocumentPreviewDialog`, `AuthProvider` y `CompanyProvider` emiten mount/unmount forense. La instrumentación existente registra `focus`, `blur`, `visibilitychange`, `pageshow`, `pagehide` y eventos de sesión sin tokens.
