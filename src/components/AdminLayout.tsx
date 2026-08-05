@@ -182,7 +182,9 @@ export default function AdminLayout() {
     companyReady,
   ]);
 
-  if (!authReady || !companyReady) {
+  // Revalidations after the shell is already hydrated are background work.
+  // Keeping the Outlet mounted preserves dialogs, drafts, filters and scroll.
+  if ((!authReady || !companyReady) && !user) {
     return <AdminLayoutFullScreenLoader authLoading={authLoading} companyLoading={companyLoading} />;
   }
 

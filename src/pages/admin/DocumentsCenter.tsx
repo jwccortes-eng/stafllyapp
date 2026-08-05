@@ -5,7 +5,7 @@
  * `useCompanyDocuments` hook. No writes. View opens via signed URL only.
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -49,6 +49,7 @@ import { useToast } from "@/hooks/use-toast";
 import { formatDateUS } from "@/lib/date-format";
 import { formatExpirationDisplay, isSentinelExpiration } from "@/lib/documents/expiration-display";
 import { cn } from "@/lib/utils";
+import { logMount, logUnmount } from "@/lib/ctx001-forensics";
 
 type FilterKey = "all" | "needs_review" | "missing" | "pending" | "expired" | "expiring_soon" | "missing_expiration" | "rejected" | "approved";
 
@@ -66,7 +67,13 @@ export default function DocumentsCenter() {
   const canReview = canAccessAdminForCompany(selectedCompanyId ?? null);
   const { toast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(() => searchParams.get("q") ?? "");
+  const initialLoadComplete = useRef(false);
+
+  useEffect(() => {
+    const id = logMount("DocumentsCenter", { documentId: searchParams.get("document") });
+    return () => logUnmount("DocumentsCenter", id);
+  }, []);
 
   const { data: requiredCategories = [] } = useQuery({
     queryKey: ["documents-center-required", selectedCompanyId],
@@ -138,6 +145,7 @@ export default function DocumentsCenter() {
           file_path: "",
           bucket: "unknown",
           file_name: null,
+          file_type: null,
           created_at: null,
           reviewed_at: null,
           rejection_reason: "Required document not yet uploaded.",
@@ -221,7 +229,34 @@ export default function DocumentsCenter() {
       return;
     }
     setPreviewRow(row);
+    const sp = new URLSearchParams(searchParams);
+    sp.set("document", row.id);
+    sp.set("employee", row.employee_id);
+    if (search.trim()) sp.set("q", search.trim()); else sp.delete("q");
+    setSearchParams(sp, { replace: true });
   };
+
+  const closePreview = () => {
+    setPreviewRow(null);
+    const sp = new URLSearchParams(searchParams);
+    sp.delete("document");
+    setSearchParams(sp, { replace: true });
+  };
+
+  // The URL owns the open-document identity. A background refresh may replace
+  // rows, but it must never clear the current review while data is in flight.
+  const documentParam = searchParams.get("document");
+  useEffect(() => {
+    if (loading) return;
+    initialLoadComplete.current = true;
+    if (!documentParam) {
+      setPreviewRow(null);
+      return;
+    }
+    const resolved = rows.find((row) => row.id === documentParam);
+    if (resolved) setPreviewRow(resolved);
+    else setPreviewRow(null); // fail closed when RLS/tenant scope did not return it
+  }, [documentParam, loading, rows]);
 
   const handleOpenInTab = async (row: UnifiedDocumentRow) => {
     if (!row.file_path) return;
@@ -359,7 +394,7 @@ export default function DocumentsCenter() {
             </TabsList>
           </Tabs>
 
-          {loading ? (
+          {loading && !initialLoadComplete.current && rows.length === 0 ? (
             <div className="text-sm text-muted-foreground py-10 text-center">Loading documents…</div>
           ) : filtered.length === 0 ? (
             <EmptyState
@@ -475,10 +510,11 @@ export default function DocumentsCenter() {
 
       <DocumentPreviewDialog
         open={!!previewRow}
-        onOpenChange={(o) => { if (!o) setPreviewRow(null); }}
+        onOpenChange={(o) => { if (!o) closePreview(); }}
         item={previewRow ? {
           file_path: previewRow.file_path,
-          file_type: undefined,
+          id: previewRow.id,
+          file_type: previewRow.file_type,
           file_name: previewRow.file_name,
           document_type: previewRow.document_type,
           category: String(previewRow.category),

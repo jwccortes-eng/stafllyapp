@@ -17,7 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  CalendarClock, ClipboardCopy, ExternalLink, FileText, ImageIcon, Loader2,
+  CalendarClock, ExternalLink, FileText, ImageIcon, Loader2,
   RefreshCw, ShieldAlert, User2,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
@@ -30,6 +30,7 @@ import {
 import { formatExpirationDisplay, isSentinelExpiration } from "@/lib/documents/expiration-display";
 
 export interface DocumentPreviewItem {
+  id?: string;
   file_path: string;          // storage path (or legacy URL — resolver handles it)
   file_type?: string | null;  // MIME type, optional
   file_name?: string | null;
@@ -56,11 +57,11 @@ const REVIEW_TONE: Record<string, string> = {
 };
 
 
-function inferKind(item: DocumentPreviewItem): "image" | "pdf" | "other" {
+export function inferDocumentPreviewKind(item: DocumentPreviewItem): "image" | "pdf" | "other" {
   const mime = (item.file_type ?? "").toLowerCase();
-  const name = (item.file_name ?? item.file_path ?? "").toLowerCase();
-  if (mime.startsWith("image/") || /\.(png|jpe?g|gif|webp|heic|bmp)$/.test(name)) return "image";
-  if (mime === "application/pdf" || /\.pdf$/.test(name)) return "pdf";
+  const name = (item.file_name ?? item.file_path ?? "").split("?")[0].toLowerCase();
+  if (mime.startsWith("image/") || /\.(png|jpe?g|gif|webp|bmp)$/.test(name)) return "image";
+  if (mime.includes("pdf") || /\.pdf$/.test(name)) return "pdf";
   return "other";
 }
 
@@ -68,19 +69,24 @@ export default function DocumentPreview({ item, actions, banner }: Props) {
   const [url, setUrl] = useState<string | null>(null);
   const [loadingUrl, setLoadingUrl] = useState(true);
   const [imgError, setImgError] = useState(false);
-  const kind = useMemo(() => inferKind(item), [item]);
+  const [embedError, setEmbedError] = useState(false);
+  const [renewal, setRenewal] = useState(0);
+  const kind = useMemo(() => inferDocumentPreviewKind(item), [item]);
 
   useEffect(() => {
     let cancelled = false;
     setLoadingUrl(true);
     setImgError(false);
+    setEmbedError(false);
     resolveEmployeeDocumentUrl(item.file_path).then((resolved) => {
       if (cancelled) return;
       setUrl(resolved);
       setLoadingUrl(false);
     });
     return () => { cancelled = true; };
-  }, [item.file_path]);
+  }, [item.file_path, renewal]);
+
+  const renewUrl = () => setRenewal((current) => current + 1);
 
   // Sentinel dates like 3000-01-01 mean "never expires" — never render 01/01/3000.
   const sentinelExp = isSentinelExpiration(item.expires_at ?? null);
@@ -183,21 +189,41 @@ export default function DocumentPreview({ item, actions, banner }: Props) {
               onError={() => setImgError(true)}
             />
           </div>
-        ) : kind === "pdf" ? (
-          <PdfFallbackCard url={url} />
+        ) : kind === "pdf" && !embedError ? (
+          <div className="relative min-h-[28rem] bg-background">
+            <iframe
+              src={url}
+              title={`Vista previa de ${item.file_name ?? "documento PDF"}`}
+              className="h-[60vh] min-h-[28rem] w-full border-0"
+              onError={() => setEmbedError(true)}
+            />
+          </div>
 
         ) : (
           <div className="flex flex-col items-center justify-center h-64 gap-3 p-4 text-center">
             {kind === "image" ? <ImageIcon className="h-8 w-8 text-muted-foreground" /> : <FileText className="h-8 w-8 text-muted-foreground" />}
-            <p className="text-xs text-muted-foreground">
-              Vista previa no disponible para este tipo de archivo.
-            </p>
+            <div className="space-y-1">
+              <p className="text-xs font-medium text-foreground">
+                {kind === "other" ? "Este formato no tiene visor integrado." : "El navegador no pudo mostrar la vista previa."}
+              </p>
+              <p className="text-[11px] text-muted-foreground">
+                {kind === "other"
+                  ? `Formato detectado: ${item.file_type || item.file_name?.split(".").pop()?.toUpperCase() || "desconocido"}.`
+                  : "El archivo sigue protegido y puede abrirse con su enlace temporal."}
+              </p>
+            </div>
             <Button asChild size="sm" variant="outline">
               <a href={url} target="_blank" rel="noopener noreferrer">
                 <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
                 Abrir archivo
               </a>
             </Button>
+            {kind !== "other" && (
+              <Button size="sm" variant="ghost" onClick={renewUrl}>
+                <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+                Renovar vista previa
+              </Button>
+            )}
           </div>
         )}
       </div>
@@ -225,64 +251,6 @@ export function DocumentPreviewSkeleton() {
       <Skeleton className="h-6 w-3/4" />
       <Skeleton className="h-4 w-1/2" />
       <Skeleton className="h-[60vh] w-full" />
-    </div>
-  );
-}
-
-function PdfFallbackCard({ url }: { url: string }) {
-  const [blocked, setBlocked] = useState(false);
-
-  const tryOpen = () => {
-    // Native click on the anchor is preferred; this button is a backup retry.
-    const w = window.open(url, "_blank", "noopener,noreferrer");
-    if (!w || w.closed || typeof w.closed === "undefined") {
-      setBlocked(true);
-    } else {
-      setBlocked(false);
-    }
-  };
-
-  const copyLink = async () => {
-    try {
-      await navigator.clipboard.writeText(url);
-      toast({ title: "Enlace seguro copiado", description: "Pégalo en una pestaña nueva para abrir el PDF." });
-    } catch {
-      toast({ title: "No se pudo copiar", description: "Selecciona y copia el enlace manualmente.", variant: "destructive" });
-    }
-  };
-
-  return (
-    <div className="flex flex-col items-center justify-center min-h-[16rem] gap-3 p-6 text-center">
-      <FileText className="h-10 w-10 text-muted-foreground" />
-      <div className="space-y-1 max-w-md">
-        <p className="text-sm font-medium text-foreground">
-          Vista previa PDF no disponible en este navegador.
-        </p>
-        <p className="text-xs text-muted-foreground">
-          Puedes abrirlo en una pestaña segura. Si tu navegador lo bloquea, copia el enlace temporal.
-        </p>
-      </div>
-      <div className="flex flex-wrap items-center justify-center gap-2">
-        <Button asChild size="sm" onClick={() => setBlocked(false)}>
-          <a href={url} target="_blank" rel="noopener noreferrer">
-            <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
-            Abrir PDF seguro
-          </a>
-        </Button>
-        <Button size="sm" variant="outline" onClick={copyLink}>
-          <ClipboardCopy className="h-3.5 w-3.5 mr-1.5" />
-          Copiar enlace seguro
-        </Button>
-        <Button size="sm" variant="ghost" onClick={tryOpen}>
-          <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
-          Reintentar abrir
-        </Button>
-      </div>
-      {blocked && (
-        <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2 py-1.5 max-w-md">
-          Tu navegador bloqueó la vista del PDF. Copia el enlace seguro o intenta abrirlo desde otra ventana.
-        </p>
-      )}
     </div>
   );
 }

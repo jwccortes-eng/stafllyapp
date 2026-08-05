@@ -5,8 +5,11 @@
  * No DB writes. Footer/banner slots are owned by parents.
  */
 
+import { useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import DocumentPreview, { type DocumentPreviewItem } from "./DocumentPreview";
+import { acquireDocDialogLock } from "@/lib/document-dialog-suspend";
+import { logMount, logUnmount } from "@/lib/ctx001-forensics";
 
 interface Props {
   open: boolean;
@@ -24,6 +27,16 @@ interface Props {
 export default function DocumentPreviewDialog({
   open, onOpenChange, item, actions, banner, side, title,
 }: Props) {
+  useEffect(() => {
+    const id = logMount("DocumentPreviewDialog", { documentId: item?.id ?? null });
+    return () => logUnmount("DocumentPreviewDialog", id);
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    return acquireDocDialogLock();
+  }, [open]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl w-[95vw] max-h-[95vh] overflow-y-auto p-4 sm:p-6">

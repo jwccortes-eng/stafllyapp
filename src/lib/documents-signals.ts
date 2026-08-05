@@ -47,6 +47,8 @@ export interface UnifiedDocumentRow {
   file_path: string;                // bucket path or legacy URL — caller resolves to signed URL
   bucket: "employee-documents" | "employee-onboarding-documents" | "unknown";
   file_name: string | null;
+  /** MIME persisted with the upload when the source table provides it. */
+  file_type: string | null;
   created_at: string | null;
   reviewed_at: string | null;
   rejection_reason: string | null;
@@ -129,6 +131,7 @@ export function normalizeDocuments({
       file_path: d.file_url ?? "",
       bucket: "employee-documents",
       file_name: d.name ?? null,
+      file_type: d.file_type ?? null,
       created_at: d.created_at ?? null,
       reviewed_at: d.reviewed_at ?? null,
       rejection_reason: d.rejection_reason ?? null,
@@ -159,6 +162,7 @@ export function normalizeDocuments({
       file_path: d.file_url ?? "",
       bucket: "employee-onboarding-documents",
       file_name: d.file_name ?? null,
+      file_type: (d as any).file_type ?? null,
       created_at: d.created_at ?? d.uploaded_at ?? null,
       version: (d as any).version ?? null,
       reviewed_at: d.verified_at ?? null,

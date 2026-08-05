@@ -15,7 +15,7 @@
  *  - The raw document number is never stored in component state.
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -53,23 +53,41 @@ interface Props {
   onSaved?: () => void;
 }
 
+interface ExtractionDraft {
+  fullName: string;
+  docType: string;
+  docNumberMasked: string | null;
+  issueDate: string;
+  expiration: string;
+  state: string;
+}
+
+const extractionDrafts = new Map<string, ExtractionDraft>();
+
 export default function AssistedExtractionPanel({ target, onSaved }: Props) {
   const { toast } = useToast();
   const blocked = !isExtractionAllowed(target.category);
   const editable = target.source === "employee_documents";
 
   // Field state — none of this is persisted in v1 except expiration.
-  const [fullName, setFullName] = useState("");
-  const [docType, setDocType] = useState("");
-  const [docNumberMasked, setDocNumberMasked] = useState<string | null>(null);
-  const [issueDate, setIssueDate] = useState("");
-  const [expiration, setExpiration] = useState(target.current_expires_at ?? "");
-  const [state, setState] = useState("");
+  const initialDraft = extractionDrafts.get(target.raw_id);
+  const [fullName, setFullName] = useState(initialDraft?.fullName ?? "");
+  const [docType, setDocType] = useState(initialDraft?.docType ?? "");
+  const [docNumberMasked, setDocNumberMasked] = useState<string | null>(initialDraft?.docNumberMasked ?? null);
+  const [issueDate, setIssueDate] = useState(initialDraft?.issueDate ?? "");
+  const [expiration, setExpiration] = useState(initialDraft?.expiration ?? target.current_expires_at ?? "");
+  const [state, setState] = useState(initialDraft?.state ?? "");
   const [confidence, setConfidence] = useState<string | null>(null);
   const [source, setSource] = useState<"manual" | "ai" | null>(null);
 
   const [aiLoading, setAiLoading] = useState(false);
   const [savingExp, setSavingExp] = useState(false);
+
+  useEffect(() => {
+    extractionDrafts.set(target.raw_id, {
+      fullName, docType, docNumberMasked, issueDate, expiration, state,
+    });
+  }, [target.raw_id, fullName, docType, docNumberMasked, issueDate, expiration, state]);
 
   const handleReadWithAI = async () => {
     if (blocked) return;
@@ -131,6 +149,7 @@ export default function AssistedExtractionPanel({ target, onSaved }: Props) {
       return;
     }
     toast({ title: "Fecha de vencimiento confirmada" });
+    extractionDrafts.delete(target.raw_id);
     onSaved?.();
   };
 
