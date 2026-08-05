@@ -244,12 +244,28 @@ export function useShiftFormSignals({
   const adminMissing = assignedCount > 0 && !v.shiftAdminId;
   const adminInvalid = !!v.shiftAdminId && assignedCount > 0 && !shiftAssignedIds.includes(v.shiftAdminId);
   const driverMissing = v.transportRequired && (v.driverIds?.length ?? 0) === 0 && !v.driverEmployeeId;
-  const noLocation =
-    !v.locationId &&
-    !v.meetingPoint.trim() &&
-    !v.meetingPointLocationId &&
-    !v.jobSiteLocationId &&
-    !v.jobSiteAddress.trim();
+  // P0 — LUGAR DEL SERVICIO ≠ PUNTO DE ENCUENTRO.
+  // El punto de encuentro no puede satisfacer el requisito de lugar del servicio.
+  const readiness = getServicePublishReadiness({
+    date: v.date,
+    startTime: v.startTime,
+    endTime: v.endTime,
+    title: v.title,
+    clientId: v.clientId,
+    locationId: v.locationId,
+    jobSiteLocationId: v.jobSiteLocationId,
+    jobSiteAddress: v.jobSiteAddress,
+    meetingPoint: v.meetingPoint,
+    meetingPointLocationId: v.meetingPointLocationId,
+    transportRequired: v.transportRequired,
+    driverIds: v.driverIds ?? [],
+    driverEmployeeId: v.driverEmployeeId,
+    shiftAdminId: v.shiftAdminId,
+    assignedCount,
+    claimable: v.claimable,
+    requirements,
+  });
+  const noLocation = !readiness.hasJobSite;
   const noTeam = showEmployeePicker && assignedCount === 0 && !v.claimable;
 
   const currentShiftId = mode === "edit" && shift ? shift.id : null;
