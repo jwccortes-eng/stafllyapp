@@ -508,3 +508,137 @@ La confirmación textual de cierre solicitada no se emite: sería falsa mientras
 cuatro callers sigan usando el tipo incompatible. El bloque permanece abierto y
 detenido hasta reconciliar formalmente el alcance activo de cuatro callers y
 disponer de un entorno seguro para validar rollback y QA autenticado.
+
+## 18. Fix mínimo autorizado de cuatro callers — 2026-08-05 04:58 UTC
+
+### 18.1 Resultado del precheck final activo
+
+El inventario activo se cerró antes de la escritura y coincidió exactamente con
+las cuatro definiciones aprobadas. La migración incorporó estas mismas
+precondiciones y habría abortado toda la transacción ante cualquier diferencia
+de firma, cuerpo, owner, ACL, seguridad o `search_path`.
+
+| Caller / firma | Módulo y acción protegida | Roles | Identidad y tenant check | Atributos precheck |
+|---|---|---|---|---|
+| `versioned_update_employee_document(uuid,uuid,jsonb,integer,text,text)` | Documentos: editar `name`, `category`, `expires_at` | `admin`, `owner`, `manager` | `v_actor := auth.uid()`; autorización por `p_company_id`; fila por `id + company_id` | owner `postgres`; `SECURITY DEFINER`; `search_path=public`; ACL `6f435071…`; cuerpo `edc073ec…` |
+| `review_employee_document(uuid,text,uuid,text,integer,text,text)` | Documentos: aprobar, rechazar, pedir corrección/reemplazo, expirar o volver a pendiente | `admin`, `owner`, `manager` | `v_actor := auth.uid()`; gate por `p_company_id`; ambos orígenes consultan `id + company_id` | owner `postgres`; `SECURITY DEFINER`; `search_path=public`; ACL `6f435071…`; cuerpo `4f0e9880…` |
+| `submit_contractor_w9(uuid,uuid,jsonb,integer,text,text)` | W-9: crear o reenviar formulario | trabajador dueño, `admin`, `owner` | `v_actor := auth.uid()`; empleado por `id + company_id`; formulario por `employee_id + company_id` | owner `postgres`; `SECURITY DEFINER`; `search_path=public`; ACL `6f435071…`; cuerpo `00e0270c…` |
+| `review_contractor_w9(uuid,uuid,text,integer,text,text)` | W-9: aprobar o rechazar | `admin`, `owner` | `v_actor := auth.uid()`; gate por `p_company_id`; formulario por `id + company_id` | owner `postgres`; `SECURITY DEFINER`; `search_path=public`; ACL `6f435071…`; cuerpo `f46c811a…` |
+
+Los grants efectivos eran idénticos para los cuatro: ejecución para `PUBLIC`,
+`postgres`, `anon`, `authenticated`, `service_role` y el rol de inspección del
+entorno. Se capturaron como ACL, no se reinterpretaron ni modificaron. Todos los
+cuerpos derivaban la identidad exclusivamente de `auth.uid()` y retornaban
+`denied` cuando era nula.
+
+### 18.2 Migración aplicada
+
+Migración única: `20260805045812_ac9b62ed-659d-4a7b-9fbc-35541000fc41`.
+
+Propiedades verificadas:
+
+- una transacción y un advisory lock de alcance específico;
+- precheck de la firma única `has_company_role(uuid,uuid,text)`;
+- guardas por firma, MD5 de cuerpo, owner, ACL, `SECURITY DEFINER` y
+  `search_path` para cada caller;
+- idempotencia: acepta el MD5 anterior o el canónico y sólo reemplaza el cuerpo
+  anterior;
+- postcondiciones dentro de la misma transacción;
+- cero DML, `GRANT`, `REVOKE`, `ALTER OWNER`, cambio de RLS, roles o enum;
+- cero referencia a los seis callers compatibles.
+
+### 18.3 Diff exacto
+
+No cambió ninguna sentencia salvo los argumentos literales de
+`has_company_role`:
+
+```diff
+- 'admin'::app_role
++ 'admin'
+- 'owner'::app_role
++ 'owner'
+- 'manager'::app_role
++ 'manager'
+```
+
+Aplicación por caller: tres retiros de cast en cada función de Documentos y dos
+en cada función W-9. Total: diez casts retirados. No cambió un literal, operador,
+orden de autorización, `auth.uid()`, tenant check, whitelist, transición, VWC o
+auditoría.
+
+MD5 post-migración:
+
+| Caller | MD5 canónico |
+|---|---|
+| `versioned_update_employee_document` | `c688b184a805ec52bfd8a078c3422547` |
+| `review_employee_document` | `d578874705aa00fca0d92317108a4bb2` |
+| `submit_contractor_w9` | `4f2508951e9cf928f57e38b0c17b0a80` |
+| `review_contractor_w9` | `248fe3e66756eb036c5530a3bdef4de7` |
+
+### 18.4 Objetos expresamente no modificados
+
+Los dos callers ya corregidos conservaron sus MD5:
+
+- `versioned_update_company_setting`: `946f6cce6b21eb35cee193f52d837e32`;
+- `versioned_update_company_profile`: `bee3a8e324a1b5f1e70fe10c62569937`.
+
+Los cuatro callers que nunca tuvieron el defecto también conservaron sus MD5:
+
+- `can_manage_shift_company`: `95c2ed512b8dc6bb25342dd1ea5d5059`;
+- `shift_closeout_can_admin`: `3bf9dba60305bd0e7e75f1a4c30b39d1`;
+- `shift_closeout_can_final_approve`: `d1f770e230231481c68f7051988125f4`;
+- `user_is_company_admin`: `c8c5225ad1dff7cd71388e0c1605fb99`.
+
+### 18.5 QA ejecutado y límites de evidencia
+
+**Catálogo y seguridad:** los cuatro cuerpos ya no contienen una llamada
+`has_company_role(..., ::app_role)`. Owner `postgres`, ACL, `SECURITY DEFINER` y
+`search_path=public` son idénticos antes/después. Las tablas
+`employee_documents`, `employee_onboarding_documents` y `contractor_w9`
+conservan RLS habilitado y sus huellas de 4, 2 y 5 policies, respectivamente.
+
+**Usuario sin sesión:** se invocaron los cuatro RPC mediante el rol público con
+identificadores nulos no existentes. Los cuatro devolvieron HTTP 200 con estado
+de negocio `denied` y mensaje de sesión no válida. No se produjo error de firma,
+mutación ni auditoría: `versioned_write_audit` registró cero filas con la
+superficie de QA.
+
+**Persistencia:** se verificaron conteos posteriores de 69 documentos, 0
+documentos de onboarding y 8 W-9, junto con cero filas de auditoría de la prueba
+denegada. Esto prueba ausencia de escritura para el caso sin sesión, no un
+guardado autorizado.
+
+**QA autenticado autorizado, usuario autenticado sin rol y cross-tenant:** no se
+pudo ejecutar porque la sesión de preview estaba cerrada (`signed_out`) y no se
+fabricaron credenciales ni identidades. Por la misma razón no se declaran
+validados todavía el guardado de vencimiento/metadata, las transiciones de
+Documentos ni el flujo W-9 completo. Configuración no pertenece a los cuatro
+callers y sus cuerpos permanecieron intactos.
+
+El linter global continúa reportando hallazgos históricos del proyecto. No se
+introdujo un nuevo helper ni se cambió el perfil de seguridad de estos cuatro
+objetos; corregir ACLs históricas quedó expresamente fuera de alcance.
+
+### 18.6 Rollback
+
+El rollback preparado restaura exclusivamente los cuatro cuerpos completos de
+`20260802021810` y `20260802021158` mediante `CREATE OR REPLACE FUNCTION`, sin
+`DROP`, DML, `GRANT`, `REVOKE`, `ALTER OWNER` ni cambios de RLS. Los MD5 de
+retorno esperados son `edc073ec…`, `4f0e9880…`, `00e0270c…` y `f46c811a…`.
+
+**No se declara probado:** este proyecto no expone un entorno seguro independiente
+y ejecutar rollback/reapply sobre el backend activo violaría el requisito de
+prueba aislada. La migración aplicada conserva las guardas necesarias para una
+reaplicación idempotente, pero eso no sustituye una prueba de rollback.
+
+### 18.7 Estado de cierre
+
+La parte estructural del fix mínimo está aplicada y verificada. El cierre P0
+completo permanece condicionado a una sesión autenticada para probar autorizado,
+denegado con identidad, cross-tenant, persistencia y auditoría, y a un entorno
+seguro para probar rollback.
+
+Confirmación verificable actual:
+
+> Solo se modificaron los cuatro callers incompatibles confirmados. No se
+> tocaron los callers compatibles, RLS, grants, owner, roles ni datos.
