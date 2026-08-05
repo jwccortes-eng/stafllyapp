@@ -47,16 +47,18 @@ function JobSiteSectionImpl({
 }: Props) {
   return (
     <SectionCard
+      id={SERVICE_JOB_SITE_ANCHOR}
       icon={MapPin}
-      title="Dirección del trabajo"
-      subtitle="Pega la dirección que te envió el cliente o busca en Google. Solo guárdala si la vas a reutilizar."
+      title={SERVICE_LOCATION_COPY.jobSite}
+      subtitle="Dónde se realizará el trabajo. Pega la dirección del cliente o búscala. Solo guárdala si la vas a reutilizar."
       variant="hero"
+      required
     >
       <SmartLocationField
         companyId={companyId}
         kind="job_site"
-        title="Dirección del trabajo"
-        helper="Para hoteles, playas, eventos privados o direcciones de WhatsApp."
+        title={SERVICE_LOCATION_COPY.jobSite}
+        helper="Para hoteles, playas, eventos privados o direcciones de WhatsApp. No es el punto de encuentro."
         freeTextValue={jobSiteAddress}
         savedLocationId={jobSiteLocationId}
         onFreeText={(text) => onChange({ jobSiteAddress: text })}
