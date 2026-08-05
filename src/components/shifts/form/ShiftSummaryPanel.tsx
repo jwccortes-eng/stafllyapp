@@ -19,6 +19,11 @@ import {
 import { cn } from "@/lib/utils";
 import { format, parse } from "date-fns";
 import { es } from "date-fns/locale";
+import {
+  SERVICE_LOCATION_COPY,
+  focusServiceSection,
+  type ReadinessBlocker,
+} from "@/lib/shifts/service-publish-readiness";
 
 interface Props {
   // Identity
@@ -50,6 +55,8 @@ interface Props {
   payOverrideActive: boolean;
   payTypeLabel: string;
   mode: "create" | "edit";
+  /** Estado canónico de publicación — evita “todo en orden” con bloqueos activos. */
+  publishBlockers?: ReadinessBlocker[];
 }
 
 function fmtDate(d: string): string {
@@ -62,7 +69,9 @@ function fmtDate(d: string): string {
 }
 
 function ShiftSummaryPanelImpl(p: Props) {
+  const blockers = p.publishBlockers ?? [];
   const allGood =
+    blockers.length === 0 &&
     !p.dateMissing &&
     !p.adminMissing &&
     !p.adminInvalid &&
@@ -110,7 +119,11 @@ function ShiftSummaryPanelImpl(p: Props) {
               </>
             }
           />
-          <Row icon={MapPin} label="Job Site" value={p.jobSiteLabel || "Sin definir"} />
+          <Row
+            icon={MapPin}
+            label={SERVICE_LOCATION_COPY.jobSite}
+            value={p.jobSiteLabel || "Sin definir"}
+          />
           <Row
             icon={Car}
             label="Transporte"
@@ -124,8 +137,12 @@ function ShiftSummaryPanelImpl(p: Props) {
               )
             }
           />
-          {p.transportRequired && (
-            <Row icon={MapPin} label="Meeting" value={p.meetingPointLabel || "Sin definir"} />
+          {(p.transportRequired || p.meetingPointLabel) && (
+            <Row
+              icon={MapPin}
+              label={SERVICE_LOCATION_COPY.meetingPoint}
+              value={p.meetingPointLabel || "Sin definir"}
+            />
           )}
         </div>
 
@@ -179,9 +196,21 @@ function ShiftSummaryPanelImpl(p: Props) {
             </div>
           )}
           {p.noLocation && (
-            <div className="flex items-start gap-1.5 text-[11px] text-[hsl(var(--status-pending))]">
+            <div className="flex items-start gap-1.5 text-[11px] text-destructive">
               <AlertTriangle className="h-3 w-3 shrink-0 mt-0.5" />
-              <span>Sin <span className="font-semibold">Job Site</span> definido.</span>
+              <span className="min-w-0">
+                <span className="font-semibold">{SERVICE_LOCATION_COPY.jobSiteMissing}</span>.
+                {p.meetingPointLabel
+                  ? " El punto de encuentro no reemplaza el lugar donde se realizará el trabajo."
+                  : ""}
+                <button
+                  type="button"
+                  onClick={() => focusServiceSection("service-job-site-section")}
+                  className="ml-1 underline font-semibold hover:opacity-80"
+                >
+                  {SERVICE_LOCATION_COPY.jobSiteCta}
+                </button>
+              </span>
             </div>
           )}
           {p.noTeam && (
@@ -228,9 +257,17 @@ function ShiftSummaryPanelImpl(p: Props) {
               <span>Override de pago: <span className="font-semibold">{p.payTypeLabel}</span>.</span>
             </div>
           )}
+          {blockers
+            .filter((b) => !["date", "job_site", "team", "driver", "shift_admin"].includes(b.key))
+            .map((b) => (
+              <div key={b.key} className="flex items-start gap-1.5 text-[11px] text-destructive">
+                <AlertTriangle className="h-3 w-3 shrink-0 mt-0.5" />
+                <span>{b.message}.</span>
+              </div>
+            ))}
           {allGood && (
             <div className="flex items-start gap-1.5 text-[11px] text-[hsl(142_76%_36%)] font-medium">
-              <CheckCircle2 className="h-3 w-3 shrink-0 mt-0.5" /> Todo en orden — listo para guardar.
+              <CheckCircle2 className="h-3 w-3 shrink-0 mt-0.5" /> Todo en orden — listo para publicar.
             </div>
           )}
         </div>

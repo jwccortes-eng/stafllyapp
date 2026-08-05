@@ -73,6 +73,11 @@ import { CreateSessionRecoveryBanner } from "@/components/shifts/CreateSessionRe
 import { ShiftSummaryPanel } from "@/components/shifts/form/ShiftSummaryPanel";
 import { WorkspaceSummary } from "@/components/shifts/workspace/WorkspaceSummary";
 import { buildPrePublishReview } from "@/lib/shifts/build-pre-publish-review";
+import {
+  getServicePublishReadiness,
+  focusServiceSection,
+  type ServicePublishReadiness,
+} from "@/lib/shifts/service-publish-readiness";
 import { getShiftLocationStatus } from "@/lib/shifts/location-status";
 import { PrePublishDialog } from "@/components/shifts/workspace/PrePublishDialog";
 import { ExportConnecteamBulkDialog } from "@/components/shifts/integrations/ExportConnecteamBulkDialog";
@@ -205,6 +210,7 @@ function CreateShiftDialogInline(props: {
       conflictNames={signals.conflictNames}
       payOverrideActive={signals.payOverrideActive}
       publicationStatus={null}
+      publishBlockers={signals.readiness.blockers}
     />
   );
 
@@ -227,6 +233,7 @@ function CreateShiftDialogInline(props: {
     clientName: signals.clientName,
     jobSiteLabel: signals.jobSiteLabel,
     meetingPointLabel: signals.meetingPointLabel,
+    blockers: signals.readiness.blockers,
   });
 
   return (
@@ -1117,28 +1124,35 @@ function DesktopShifts() {
     );
   };
 
-  // Validate fields required to publish a shift. Returns list of missing fields
-  // (empty when ok). Used both inline and by the publish flow.
-  const validateForPublish = (): string[] => {
-    const missing: string[] = [];
-    if (!date) missing.push("Fecha");
-    if (!startTime) missing.push("Hora de inicio");
-    if (!endTime) missing.push("Hora de fin");
-    if (!title.trim()) missing.push("Título");
-    if (shiftsConfig.require_client && !clientId) missing.push("Cliente");
-    if (shiftsConfig.require_location && !locationId) missing.push("Ubicación");
-    if (shiftsConfig.require_shift_admin && !shiftAdminId) missing.push("Shift admin");
-    if (transportRequired && driverIds.length === 0 && !driverEmployeeId) missing.push("Conductor (transporte requerido)");
-    if (selectedEmployees.length === 0 && !claimable) missing.push("Al menos 1 worker o marcar como reclamable");
-    if (startTime && endTime) {
-      const [sh, sm] = startTime.split(":").map(Number);
-      const [eh, em] = endTime.split(":").map(Number);
-      let durationMin = (eh * 60 + em) - (sh * 60 + sm);
-      if (durationMin < 0) durationMin += 24 * 60;
-      if (durationMin / 60 > shiftsConfig.max_shift_hours) missing.push(`Duración ≤ ${shiftsConfig.max_shift_hours}h`);
-    }
-    return missing;
-  };
+  // Validación canónica de publicación — misma función que alimenta panel
+  // lateral, confirmación y worker preview (getServicePublishReadiness).
+  const publishReadiness = (): ServicePublishReadiness =>
+    getServicePublishReadiness({
+      date,
+      startTime,
+      endTime,
+      title,
+      clientId,
+      locationId,
+      jobSiteLocationId,
+      jobSiteAddress,
+      meetingPoint,
+      meetingPointLocationId,
+      transportRequired,
+      driverIds,
+      driverEmployeeId,
+      shiftAdminId,
+      assignedCount: selectedEmployees.length,
+      claimable,
+      requirements: {
+        requireClient: shiftsConfig.require_client,
+        requireLocation: shiftsConfig.require_location,
+        requireShiftAdmin: shiftsConfig.require_shift_admin,
+        maxShiftHours: shiftsConfig.max_shift_hours,
+        requireTitle: true,
+      },
+    });
+
 
   // Save the current form as a draft. Almost no validations — only company + date.
   // Drafts can be incomplete; everything is allowed except a missing date (because
@@ -1174,12 +1188,26 @@ function DesktopShifts() {
   const handleCreate = async () => {
     if (!date || !selectedCompanyId) return;
 
-    // Strict validation only when publishing.
-    const missing = validateForPublish();
-    if (missing.length > 0) {
-      toast.error(`Pendiente antes de publicar: ${missing.join(", ")}`);
+    // Validación estricta solo al publicar — fuente canónica única.
+    const readiness = publishReadiness();
+    if (!readiness.canPublish) {
+      const first = readiness.blockers[0];
+      toast.error(first.message, {
+        description:
+          readiness.blockers.length > 1
+            ? `También falta: ${readiness.blockers.slice(1).map((b) => b.label).join(", ")}`
+            : undefined,
+        action: first.cta
+          ? {
+              label: first.cta.label,
+              onClick: () => focusServiceSection(first.cta!.anchorId),
+            }
+          : undefined,
+      });
+      if (first.cta) focusServiceSection(first.cta.anchorId);
       return;
     }
+
 
     setSaving(true);
 
@@ -2949,6 +2977,28 @@ function DesktopShifts() {
           clientName: client?.name ?? null,
           jobSiteLabel: jobLoc?.name ?? s.job_site_address ?? null,
           meetingPointLabel: meetingLoc?.name ?? (s.meeting_point || null),
+          blockers: getServicePublishReadiness({
+            date: s.date ?? "",
+            startTime: s.start_time ?? "",
+            endTime: s.end_time ?? "",
+            title: s.title ?? "",
+            clientId: s.client_id ?? "",
+            locationId: s.location_id ?? "",
+            jobSiteLocationId: s.job_site_location_id ?? null,
+            jobSiteAddress: s.job_site_address ?? "",
+            meetingPoint: s.meeting_point ?? "",
+            meetingPointLocationId: s.meeting_point_location_id ?? null,
+            transportRequired: !!s.transportation_required,
+            driverEmployeeId: s.driver_employee_id ?? null,
+            driverIds: Array.isArray(s.driver_ids) ? s.driver_ids : [],
+            assignedCount,
+            claimable: !!s.claimable,
+            requirements: {
+              requireClient: shiftsConfig.require_client,
+              requireLocation: shiftsConfig.require_location,
+              maxShiftHours: shiftsConfig.max_shift_hours,
+            },
+          }).blockers,
         });
         return (
           <PrePublishDialog

@@ -230,6 +230,7 @@ export function ShiftEditDialog({
       conflictNames={signals.conflictNames}
       payOverrideActive={signals.payOverrideActive}
       publicationStatus={(shift as any).publication_status ?? null}
+      publishBlockers={signals.readiness.blockers}
     />
   );
 

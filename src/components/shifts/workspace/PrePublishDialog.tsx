@@ -29,6 +29,11 @@ import { format, parse } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import type { PendingFlag } from "@/lib/shifts/pending-flags";
+import {
+  SERVICE_LOCATION_COPY,
+  focusServiceSection,
+  type ReadinessBlocker,
+} from "@/lib/shifts/service-publish-readiness";
 import { WorkerPreviewCard } from "./WorkerPreviewCard";
 
 export interface PrePublishReviewData {
@@ -50,6 +55,8 @@ export interface PrePublishReviewData {
   timeMissing: boolean;
   jobsiteMissing: boolean;
   meetingMissing: boolean;
+  /** Bloqueos canónicos: si existen, la publicación fallará. */
+  blockers?: ReadinessBlocker[];
 }
 
 interface Props {
@@ -77,12 +84,19 @@ function PrePublishDialogImpl({ open, onOpenChange, data, saving, onConfirm }: P
     if (open) setConfirmed(false);
   }, [open]);
 
+  const blockers = data.blockers ?? [];
+  const hasBlockers = blockers.length > 0;
+
   const pendingOnly = data.flags.filter(
     (f) => f.key !== "ready_to_publish" && f.key !== "publishable_with_pending",
   );
 
-  const ctaLabel = data.hasPending ? "Publicar con información pendiente" : "Publicar turno";
-  const ctaDisabled = !!saving || (data.hasPending && !confirmed);
+  const ctaLabel = hasBlockers
+    ? "No se puede publicar todavía"
+    : data.hasPending
+      ? "Publicar con información pendiente"
+      : "Publicar turno";
+  const ctaDisabled = !!saving || hasBlockers || (data.hasPending && !confirmed);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -128,13 +142,13 @@ function PrePublishDialogImpl({ open, onOpenChange, data, saving, onConfirm }: P
               />
               <SummaryRow
                 icon={MapPin}
-                label="Job site"
+                label={SERVICE_LOCATION_COPY.jobSite}
                 value={data.jobSiteLabel || "Pendiente"}
                 muted={data.jobsiteMissing}
               />
               <SummaryRow
                 icon={MapPin}
-                label="Punto de encuentro"
+                label={SERVICE_LOCATION_COPY.meetingPoint}
                 value={data.meetingPointLabel || "—"}
                 muted={data.meetingMissing}
               />
@@ -145,6 +159,37 @@ function PrePublishDialogImpl({ open, onOpenChange, data, saving, onConfirm }: P
               />
             </dl>
           </section>
+
+          {/* B0. Bloqueos reales de publicación */}
+          {hasBlockers && (
+            <section className="rounded-lg border border-destructive/40 bg-destructive/5 p-3 space-y-2">
+              <h4 className="text-xs font-semibold uppercase tracking-wider text-destructive">
+                No se puede publicar todavía
+              </h4>
+              <ul className="space-y-1.5">
+                {blockers.map((b) => (
+                  <li key={b.key} className="flex items-start gap-2 text-sm">
+                    <AlertCircle className="h-3.5 w-3.5 shrink-0 text-destructive mt-0.5" />
+                    <span className="min-w-0">
+                      {b.message}
+                      {b.cta && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onOpenChange(false);
+                            window.setTimeout(() => focusServiceSection(b.cta!.anchorId), 220);
+                          }}
+                          className="ml-2 underline font-semibold"
+                        >
+                          {b.cta.label}
+                        </button>
+                      )}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
 
           {/* B. Pending information */}
           {pendingOnly.length > 0 ? (
@@ -167,10 +212,12 @@ function PrePublishDialogImpl({ open, onOpenChange, data, saving, onConfirm }: P
               </ul>
             </section>
           ) : (
-            <section className="flex items-center gap-2 text-sm text-emerald-700 dark:text-emerald-400">
-              <CheckCircle2 className="h-4 w-4" />
-              <span>Toda la información operativa está completa.</span>
-            </section>
+            !hasBlockers && (
+              <section className="flex items-center gap-2 text-sm text-emerald-700 dark:text-emerald-400">
+                <CheckCircle2 className="h-4 w-4" />
+                <span>Toda la información operativa está completa.</span>
+              </section>
+            )
           )}
 
           {/* C. Worker preview */}

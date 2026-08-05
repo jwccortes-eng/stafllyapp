@@ -30,6 +30,11 @@ import { ShiftSummaryPanel } from "./form/ShiftSummaryPanel";
 import { ShiftWorkspaceLayout } from "./workspace/ShiftWorkspaceLayout";
 import { QuickCreateWorkspace } from "./workspace/QuickCreateWorkspace";
 import { buildShiftDisplayName, isAutoDisplayName } from "@/lib/shifts/display-name";
+import { useLocationsV2 } from "@/hooks/useLocationsV2";
+import {
+  getServicePublishReadiness,
+  type ServiceRequirements,
+} from "@/lib/shifts/service-publish-readiness";
 
 // ────────────────────────────────────────────────────────────────────────────
 // Types
@@ -153,6 +158,7 @@ export interface ShiftFormSignals {
   adminMissing: boolean;
   adminInvalid: boolean;
   driverMissing: boolean;
+  /** Sin LUGAR DEL SERVICIO. El punto de encuentro nunca lo satisface. */
   noLocation: boolean;
   noTeam: boolean;
   conflictNames: string[];
@@ -161,6 +167,8 @@ export interface ShiftFormSignals {
   jobSiteLabel: string | null;
   meetingPointLabel: string | null;
   clientName: string | null;
+  /** Estado canónico de publicación — única fuente para todas las superficies. */
+  readiness: ReturnType<typeof getServicePublishReadiness>;
 }
 
 interface SignalsInput {
@@ -173,6 +181,10 @@ interface SignalsInput {
   clients: SelectOption[];
   locations: LocationOption[];
   showEmployeePicker: boolean;
+  /** Necesario para resolver nombres de lugares guardados (locations_v2). */
+  companyId?: string | null;
+  /** Reglas de publicación de la empresa. */
+  requirements?: ServiceRequirements;
 }
 
 export function useShiftFormSignals({
@@ -185,6 +197,8 @@ export function useShiftFormSignals({
   clients,
   locations,
   showEmployeePicker,
+  companyId = null,
+  requirements,
 }: SignalsInput): ShiftFormSignals {
   const slotsNum = parseInt(v.slots) || 0;
   const capacityNum = parseInt(v.carCapacity) || 5;
@@ -230,12 +244,28 @@ export function useShiftFormSignals({
   const adminMissing = assignedCount > 0 && !v.shiftAdminId;
   const adminInvalid = !!v.shiftAdminId && assignedCount > 0 && !shiftAssignedIds.includes(v.shiftAdminId);
   const driverMissing = v.transportRequired && (v.driverIds?.length ?? 0) === 0 && !v.driverEmployeeId;
-  const noLocation =
-    !v.locationId &&
-    !v.meetingPoint.trim() &&
-    !v.meetingPointLocationId &&
-    !v.jobSiteLocationId &&
-    !v.jobSiteAddress.trim();
+  // P0 — LUGAR DEL SERVICIO ≠ PUNTO DE ENCUENTRO.
+  // El punto de encuentro no puede satisfacer el requisito de lugar del servicio.
+  const readiness = getServicePublishReadiness({
+    date: v.date,
+    startTime: v.startTime,
+    endTime: v.endTime,
+    title: v.title,
+    clientId: v.clientId,
+    locationId: v.locationId,
+    jobSiteLocationId: v.jobSiteLocationId,
+    jobSiteAddress: v.jobSiteAddress,
+    meetingPoint: v.meetingPoint,
+    meetingPointLocationId: v.meetingPointLocationId,
+    transportRequired: v.transportRequired,
+    driverIds: v.driverIds ?? [],
+    driverEmployeeId: v.driverEmployeeId,
+    shiftAdminId: v.shiftAdminId,
+    assignedCount,
+    claimable: v.claimable,
+    requirements,
+  });
+  const noLocation = !readiness.hasJobSite;
   const noTeam = showEmployeePicker && assignedCount === 0 && !v.claimable;
 
   const currentShiftId = mode === "edit" && shift ? shift.id : null;
@@ -269,21 +299,31 @@ export function useShiftFormSignals({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [assignedKey, v.date, v.startTime, v.endTime, currentShiftId, shifts, assignments, employees]);
 
+  const { data: savedLocationsV2 } = useLocationsV2(companyId);
+
   const jobSiteLabel = useMemo(() => {
     if (v.locationId) {
       const loc = locations.find((l) => l.id === v.locationId);
       if (loc) return loc.address || loc.name || null;
     }
-    // One-off free-text address takes precedence over premium FK because
-    // SingleLocationPicker selection is resolved elsewhere (jobSiteLocationId)
-    // and its label is rendered by the section directly.
+    if (v.jobSiteLocationId) {
+      const saved = (savedLocationsV2 ?? []).find((l) => l.id === v.jobSiteLocationId);
+      if (saved) return saved.name || saved.formatted_address || "Lugar guardado";
+      return "Lugar guardado";
+    }
     if (v.jobSiteAddress.trim()) return v.jobSiteAddress.trim();
     return null;
-  }, [v.locationId, v.jobSiteAddress, locations]);
+  }, [v.locationId, v.jobSiteLocationId, v.jobSiteAddress, locations, savedLocationsV2]);
 
   const meetingPointLabel = useMemo(() => {
-    return v.meetingPoint.trim() || null;
-  }, [v.meetingPoint]);
+    if (v.meetingPoint.trim()) return v.meetingPoint.trim();
+    if (v.meetingPointLocationId) {
+      const saved = (savedLocationsV2 ?? []).find((l) => l.id === v.meetingPointLocationId);
+      if (saved) return saved.name || saved.formatted_address || "Punto guardado";
+      return "Punto guardado";
+    }
+    return null;
+  }, [v.meetingPoint, v.meetingPointLocationId, savedLocationsV2]);
 
   const clientName = useMemo(() => {
     if (!v.clientId) return null;
@@ -312,6 +352,7 @@ export function useShiftFormSignals({
     jobSiteLabel,
     meetingPointLabel,
     clientName,
+    readiness,
   };
 }
 
@@ -436,6 +477,7 @@ export function ShiftFormFields({
       meetingPoint={v.meetingPoint}
       meetingPointLocationId={v.meetingPointLocationId}
       companyId={companyId}
+      jobSiteMissing={!signals.readiness.hasJobSite}
       onChange={handlePatch}
     />
   );

@@ -20,6 +20,7 @@ import {
   describePublishState,
   type PendingTone,
 } from "@/lib/shifts/pending-flags";
+import type { ReadinessBlocker } from "@/lib/shifts/service-publish-readiness";
 
 interface Props {
   mode: "create" | "edit";
@@ -60,6 +61,8 @@ interface Props {
   payOverrideActive: boolean;
   // Edit-only: real publication_status from DB if present
   publicationStatus?: string | null;
+  /** Bloqueos canónicos de publicación. */
+  publishBlockers?: ReadinessBlocker[];
 }
 
 const TONE_BG: Record<PendingTone, string> = {
@@ -85,10 +88,11 @@ function WorkspaceSummaryImpl(p: Props) {
     assignedCount: p.assignedCount,
   });
 
+  const blockers = p.publishBlockers ?? [];
   const publish = describePublishState({
     publicationStatus: p.publicationStatus ?? null,
     claimable: p.claimable,
-    isReady: pending.isReady,
+    isReady: pending.isReady && blockers.length === 0,
   });
 
   const hasManualAddress = !!(p.jobSiteAddress && p.jobSiteAddress.trim());
@@ -146,7 +150,9 @@ function WorkspaceSummaryImpl(p: Props) {
         conflictNames={p.conflictNames}
         payOverrideActive={p.payOverrideActive}
         payTypeLabel={p.payTypeLabel}
+        publishBlockers={blockers}
       />
+
 
       {/* 4) Worker preview */}
       <WorkerPreviewCard

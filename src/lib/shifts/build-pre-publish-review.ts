@@ -6,6 +6,7 @@
  */
 import { computeShiftPendingFlags } from "./pending-flags";
 import { buildShiftDisplayName } from "./display-name";
+import type { ReadinessBlocker } from "./service-publish-readiness";
 import type { PrePublishReviewData } from "@/components/shifts/workspace/PrePublishDialog";
 
 export interface BuildPrePublishInput {
@@ -28,6 +29,8 @@ export interface BuildPrePublishInput {
   clientName: string | null;
   jobSiteLabel: string | null;
   meetingPointLabel: string | null;
+  /** Bloqueos canónicos de publicación (getServicePublishReadiness). */
+  blockers?: ReadinessBlocker[];
 }
 
 export function buildPrePublishReview(v: BuildPrePublishInput): PrePublishReviewData {
@@ -79,5 +82,6 @@ export function buildPrePublishReview(v: BuildPrePublishInput): PrePublishReview
     timeMissing,
     jobsiteMissing,
     meetingMissing,
+    blockers: v.blockers ?? [],
   };
 }
