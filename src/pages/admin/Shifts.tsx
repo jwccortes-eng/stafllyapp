@@ -1119,28 +1119,35 @@ function DesktopShifts() {
     );
   };
 
-  // Validate fields required to publish a shift. Returns list of missing fields
-  // (empty when ok). Used both inline and by the publish flow.
-  const validateForPublish = (): string[] => {
-    const missing: string[] = [];
-    if (!date) missing.push("Fecha");
-    if (!startTime) missing.push("Hora de inicio");
-    if (!endTime) missing.push("Hora de fin");
-    if (!title.trim()) missing.push("Título");
-    if (shiftsConfig.require_client && !clientId) missing.push("Cliente");
-    if (shiftsConfig.require_location && !locationId) missing.push("Ubicación");
-    if (shiftsConfig.require_shift_admin && !shiftAdminId) missing.push("Shift admin");
-    if (transportRequired && driverIds.length === 0 && !driverEmployeeId) missing.push("Conductor (transporte requerido)");
-    if (selectedEmployees.length === 0 && !claimable) missing.push("Al menos 1 worker o marcar como reclamable");
-    if (startTime && endTime) {
-      const [sh, sm] = startTime.split(":").map(Number);
-      const [eh, em] = endTime.split(":").map(Number);
-      let durationMin = (eh * 60 + em) - (sh * 60 + sm);
-      if (durationMin < 0) durationMin += 24 * 60;
-      if (durationMin / 60 > shiftsConfig.max_shift_hours) missing.push(`Duración ≤ ${shiftsConfig.max_shift_hours}h`);
-    }
-    return missing;
-  };
+  // Validación canónica de publicación — misma función que alimenta panel
+  // lateral, confirmación y worker preview (getServicePublishReadiness).
+  const publishReadiness = (): ServicePublishReadiness =>
+    getServicePublishReadiness({
+      date,
+      startTime,
+      endTime,
+      title,
+      clientId,
+      locationId,
+      jobSiteLocationId,
+      jobSiteAddress,
+      meetingPoint,
+      meetingPointLocationId,
+      transportRequired,
+      driverIds,
+      driverEmployeeId,
+      shiftAdminId,
+      assignedCount: selectedEmployees.length,
+      claimable,
+      requirements: {
+        requireClient: shiftsConfig.require_client,
+        requireLocation: shiftsConfig.require_location,
+        requireShiftAdmin: shiftsConfig.require_shift_admin,
+        maxShiftHours: shiftsConfig.max_shift_hours,
+        requireTitle: true,
+      },
+    });
+
 
   // Save the current form as a draft. Almost no validations — only company + date.
   // Drafts can be incomplete; everything is allowed except a missing date (because
