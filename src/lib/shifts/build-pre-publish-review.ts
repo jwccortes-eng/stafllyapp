@@ -6,6 +6,7 @@
  */
 import { computeShiftPendingFlags } from "./pending-flags";
 import { buildShiftDisplayName } from "./display-name";
+import type { ReadinessBlocker } from "./service-publish-readiness";
 import type { PrePublishReviewData } from "@/components/shifts/workspace/PrePublishDialog";
 
 export interface BuildPrePublishInput {
