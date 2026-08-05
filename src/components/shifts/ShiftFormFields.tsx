@@ -477,6 +477,7 @@ export function ShiftFormFields({
       meetingPoint={v.meetingPoint}
       meetingPointLocationId={v.meetingPointLocationId}
       companyId={companyId}
+      jobSiteMissing={!signals.readiness.hasJobSite}
       onChange={handlePatch}
     />
   );
