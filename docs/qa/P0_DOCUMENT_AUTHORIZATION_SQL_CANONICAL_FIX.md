@@ -409,3 +409,102 @@ La revisión señaló que owner y grants no pueden inferirse sólo del historial
 local. Esa incertidumbre quedó resuelta mediante consulta directa al catálogo
 activo: owner `postgres`, ACL detallada en §14.4, `SECURITY DEFINER` y
 `search_path=public` para los diez callers. No se realizó ninguna escritura.
+
+## 17. Precheck de ejecución autorizado — 2026-08-05 04:52 UTC
+
+### 17.1 Resultado vinculante
+
+**HALT — no se aplicó migración.** La consulta nueva al catálogo activo confirma
+que persiste drift material respecto del inventario de diez callers de la fuente
+obligatoria `P0_DOCUMENT_AUTHORIZATION_SQL_FULL_AUDIT.md`:
+
+- cuatro callers conservan argumentos `app_role` incompatibles;
+- seis callers ya usan literales compatibles con `text`;
+- reemplazar los diez cuerpos no sería una corrección mínima y violaría la
+  condición expresa de no ejecutar ante cualquier diferencia relevante.
+
+No se ejecutaron DDL, `CREATE OR REPLACE FUNCTION`, cambios de datos ni QA
+mutante. Las fases 2 a 5 quedan bloqueadas por la fase 1.
+
+### 17.2 Contrato, atributos y versión observados nuevamente
+
+| Comprobación | Evidencia activa |
+|---|---|
+| Schema | `public` |
+| Firma única | `has_company_role(uuid, uuid, text)` |
+| Sobrecarga `app_role` | no existe |
+| Retorno / lenguaje | `boolean` / `sql` |
+| Volatilidad | `STABLE` |
+| Owner | `postgres` |
+| Seguridad | `SECURITY DEFINER` |
+| `search_path` | `public` |
+| ACL | `PUBLIC`, `postgres`, `anon`, `authenticated`, `service_role` y rol de inspección conservan ejecución; sin cambios |
+| Backend | PostgreSQL `17.6`, 64-bit, aarch64 |
+| Ledger | 428 migraciones; última versión `20260803031549` |
+
+El helper conserva exactamente la lógica existente: coincidencia de
+`user_id`, `company_id` y rol; reconocimiento de `company_owner`; y bypass
+global preexistente mediante `is_global_owner(_user_id)`. No se modificó esa
+semántica.
+
+### 17.3 Los diez callers y literales activos
+
+| Caller | Literales pasados a `has_company_role` | Estado |
+|---|---|---|
+| `versioned_update_employee_document` | `'admin'::app_role`, `'owner'::app_role`, `'manager'::app_role` | incompatible |
+| `review_employee_document` | `'admin'::app_role`, `'owner'::app_role`, `'manager'::app_role` | incompatible |
+| `submit_contractor_w9` | `'admin'::app_role`, `'owner'::app_role` | incompatible |
+| `review_contractor_w9` | `'admin'::app_role`, `'owner'::app_role` | incompatible |
+| `versioned_update_company_setting` | `'admin'`, `'owner'` | canónico `text` |
+| `versioned_update_company_profile` | `'admin'`, `'owner'` | canónico `text` |
+| `can_manage_shift_company` | `'manager'`, `'supervisor'` | canónico `text` |
+| `shift_closeout_can_admin` | `'admin'`, `'manager'`, `'owner'`, `'supervisor'` | canónico `text` |
+| `shift_closeout_can_final_approve` | `'owner'`, `'admin'` | canónico `text` |
+| `user_is_company_admin` | `'admin'` | canónico `text` |
+
+Los casts `::app_role` presentes en `can_manage_shift_company` y otros helpers
+compatibles pertenecen a llamadas distintas a `has_role(uuid, app_role)` y son
+correctos. No forman parte del diff. Todos los roles usados por los diez callers
+pertenecen al enum activo: `admin`, `employee`, `developer`, `owner`, `manager`,
+`supervisor`, `founder`.
+
+### 17.4 Drift corroborado contra historial
+
+El ledger confirma la migración `20260802024442`, que reemplazó los dos callers
+de Configuración con literales `text`. Sus cuerpos activos coinciden con esa
+versión. Los cuatro helpers compartidos también son compatibles. En cambio, los
+dos callers de Documentos y los dos de W-9 conservan los cuerpos incompatibles
+de `20260802021810` y `20260802021158`, respectivamente.
+
+Resultado: el inventario activo no coincide con la afirmación histórica de diez
+callers incompatibles. La diferencia es material y obliga al HALT.
+
+### 17.5 Seguridad y rollback
+
+- Owner, ACL, `SECURITY DEFINER` y `search_path` de los diez callers se
+  capturaron otra vez; no cambiaron durante este precheck.
+- Las siete tablas de alcance conservan RLS habilitado y 31 policies.
+- No se ejecutaron cambios de auth, roles, `app_role`, grants, policies, RLS,
+  auditoría, contratos frontend ni datos.
+- No se creó helper, overload, wrapper o bypass.
+- El rollback sigue preparado desde los cuatro cuerpos inmutables identificados
+  en §14.7, pero no puede declararse probado porque no existe un entorno seguro
+  independiente accesible. Probarlo contra el backend activo incumpliría el
+  propio HALT.
+
+### 17.6 QA no ejecutado por condición de parada
+
+No se ejecutaron guardados de Documentos, flujo W-9, Configuración, conflicto
+VWC ni pruebas mutantes de tenant. Sin migración no existe un estado post-fix
+válido que probar. La evidencia de seguridad de este precheck se limita a:
+
+- cero cambios persistentes;
+- cero ampliación de privilegios;
+- cero cambios de RLS, auth, grants, owner o `search_path`;
+- cero bypass nuevo y cero exposición cross-tenant introducida por esta
+  ejecución, porque no hubo ejecución de migración.
+
+La confirmación textual de cierre solicitada no se emite: sería falsa mientras
+cuatro callers sigan usando el tipo incompatible. El bloque permanece abierto y
+detenido hasta reconciliar formalmente el alcance activo de cuatro callers y
+disponer de un entorno seguro para validar rollback y QA autenticado.
