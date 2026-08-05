@@ -119,7 +119,11 @@ function ShiftSummaryPanelImpl(p: Props) {
               </>
             }
           />
-          <Row icon={MapPin} label="Job Site" value={p.jobSiteLabel || "Sin definir"} />
+          <Row
+            icon={MapPin}
+            label={SERVICE_LOCATION_COPY.jobSite}
+            value={p.jobSiteLabel || "Sin definir"}
+          />
           <Row
             icon={Car}
             label="Transporte"
@@ -133,8 +137,12 @@ function ShiftSummaryPanelImpl(p: Props) {
               )
             }
           />
-          {p.transportRequired && (
-            <Row icon={MapPin} label="Meeting" value={p.meetingPointLabel || "Sin definir"} />
+          {(p.transportRequired || p.meetingPointLabel) && (
+            <Row
+              icon={MapPin}
+              label={SERVICE_LOCATION_COPY.meetingPoint}
+              value={p.meetingPointLabel || "Sin definir"}
+            />
           )}
         </div>
 
