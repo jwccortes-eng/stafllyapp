@@ -150,7 +150,9 @@ function WorkspaceSummaryImpl(p: Props) {
         conflictNames={p.conflictNames}
         payOverrideActive={p.payOverrideActive}
         payTypeLabel={p.payTypeLabel}
+        publishBlockers={blockers}
       />
+
 
       {/* 4) Worker preview */}
       <WorkerPreviewCard
