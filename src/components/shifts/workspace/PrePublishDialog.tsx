@@ -84,12 +84,19 @@ function PrePublishDialogImpl({ open, onOpenChange, data, saving, onConfirm }: P
     if (open) setConfirmed(false);
   }, [open]);
 
+  const blockers = data.blockers ?? [];
+  const hasBlockers = blockers.length > 0;
+
   const pendingOnly = data.flags.filter(
     (f) => f.key !== "ready_to_publish" && f.key !== "publishable_with_pending",
   );
 
-  const ctaLabel = data.hasPending ? "Publicar con información pendiente" : "Publicar turno";
-  const ctaDisabled = !!saving || (data.hasPending && !confirmed);
+  const ctaLabel = hasBlockers
+    ? "No se puede publicar todavía"
+    : data.hasPending
+      ? "Publicar con información pendiente"
+      : "Publicar turno";
+  const ctaDisabled = !!saving || hasBlockers || (data.hasPending && !confirmed);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
