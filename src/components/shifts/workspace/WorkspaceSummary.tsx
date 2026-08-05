@@ -20,6 +20,7 @@ import {
   describePublishState,
   type PendingTone,
 } from "@/lib/shifts/pending-flags";
+import type { ReadinessBlocker } from "@/lib/shifts/service-publish-readiness";
 
 interface Props {
   mode: "create" | "edit";
