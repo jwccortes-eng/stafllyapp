@@ -29,6 +29,11 @@ import { format, parse } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import type { PendingFlag } from "@/lib/shifts/pending-flags";
+import {
+  SERVICE_LOCATION_COPY,
+  focusServiceSection,
+  type ReadinessBlocker,
+} from "@/lib/shifts/service-publish-readiness";
 import { WorkerPreviewCard } from "./WorkerPreviewCard";
 
 export interface PrePublishReviewData {
@@ -50,6 +55,8 @@ export interface PrePublishReviewData {
   timeMissing: boolean;
   jobsiteMissing: boolean;
   meetingMissing: boolean;
+  /** Bloqueos canónicos: si existen, la publicación fallará. */
+  blockers?: ReadinessBlocker[];
 }
 
 interface Props {
