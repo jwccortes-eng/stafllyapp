@@ -2989,6 +2989,8 @@ function DesktopShifts() {
             meetingPoint: s.meeting_point ?? "",
             meetingPointLocationId: s.meeting_point_location_id ?? null,
             transportRequired: !!s.transportation_required,
+            driverEmployeeId: s.driver_employee_id ?? null,
+            driverIds: Array.isArray(s.driver_ids) ? s.driver_ids : [],
             assignedCount,
             claimable: !!s.claimable,
             requirements: {
