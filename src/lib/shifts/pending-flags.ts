@@ -76,13 +76,13 @@ export function computeShiftPendingFlags(v: PendingInput): PendingResult {
   if (jobsiteMissing) {
     flags.push({
       key: "jobsite_missing",
-      label: "Pendiente: ubicación del trabajo",
-      tone: "warn",
+      label: "Pendiente: lugar del servicio",
+      tone: "urgent",
     });
   } else if (jobsiteUnsaved) {
     flags.push({
       key: "jobsite_unsaved",
-      label: "Dirección agregada; sin Job Site guardado · mapa/geofence no disponible",
+      label: "Dirección agregada; sin lugar guardado · mapa/geofence no disponible",
       tone: "info",
     });
   }
