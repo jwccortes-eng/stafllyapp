@@ -82,5 +82,6 @@ export function buildPrePublishReview(v: BuildPrePublishInput): PrePublishReview
     timeMissing,
     jobsiteMissing,
     meetingMissing,
+    blockers: v.blockers ?? [],
   };
 }
