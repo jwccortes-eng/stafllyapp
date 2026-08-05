@@ -55,6 +55,8 @@ interface Props {
   payOverrideActive: boolean;
   payTypeLabel: string;
   mode: "create" | "edit";
+  /** Estado canónico de publicación — evita “todo en orden” con bloqueos activos. */
+  publishBlockers?: ReadinessBlocker[];
 }
 
 function fmtDate(d: string): string {
