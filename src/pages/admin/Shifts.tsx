@@ -1183,12 +1183,26 @@ function DesktopShifts() {
   const handleCreate = async () => {
     if (!date || !selectedCompanyId) return;
 
-    // Strict validation only when publishing.
-    const missing = validateForPublish();
-    if (missing.length > 0) {
-      toast.error(`Pendiente antes de publicar: ${missing.join(", ")}`);
+    // Validación estricta solo al publicar — fuente canónica única.
+    const readiness = publishReadiness();
+    if (!readiness.canPublish) {
+      const first = readiness.blockers[0];
+      toast.error(first.message, {
+        description:
+          readiness.blockers.length > 1
+            ? `También falta: ${readiness.blockers.slice(1).map((b) => b.label).join(", ")}`
+            : undefined,
+        action: first.cta
+          ? {
+              label: first.cta.label,
+              onClick: () => focusServiceSection(first.cta!.anchorId),
+            }
+          : undefined,
+      });
+      if (first.cta) focusServiceSection(first.cta.anchorId);
       return;
     }
+
 
     setSaving(true);
 
