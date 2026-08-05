@@ -69,7 +69,9 @@ function fmtDate(d: string): string {
 }
 
 function ShiftSummaryPanelImpl(p: Props) {
+  const blockers = p.publishBlockers ?? [];
   const allGood =
+    blockers.length === 0 &&
     !p.dateMissing &&
     !p.adminMissing &&
     !p.adminInvalid &&
