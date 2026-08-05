@@ -13,7 +13,7 @@
  *
  * Scope: zero schema changes, zero contract changes, zero payroll math touched.
  */
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { EMPLOYEE_COLUMNS_NO_FISCAL } from "@/lib/employee-columns";
@@ -113,7 +113,10 @@ export default function UnifiedPersonProfile() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { role } = useAuth();
-  const { selectedCompanyId, selectedCompany } = useCompany();
+  const { selectedCompanyId, selectedCompany, loading: companyLoading } = useCompany();
+  const lastCompanyIdRef = useRef<string | null>(selectedCompanyId);
+  if (selectedCompanyId) lastCompanyIdRef.current = selectedCompanyId;
+  const stableCompanyId = selectedCompanyId ?? (companyLoading ? lastCompanyIdRef.current : null);
   const isPrivileged = role === "developer" || role === "owner" || role === "admin";
 
   const [employee, setEmployee] = useState<EmployeeRecord | null>(null);
@@ -1227,7 +1230,7 @@ export default function UnifiedPersonProfile() {
           Phase 1B 2026-06-18: collapsed by default to reduce profile
           saturation. All tabs/handlers preserved; no data hidden, just
           tucked behind one click. */}
-      {selectedCompanyId && (
+      {stableCompanyId && (
         <Collapsible defaultOpen={false}>
           <CollapsibleTrigger className="group inline-flex w-full items-center justify-between gap-2 rounded-md px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/80 hover:text-foreground transition-colors">
             <span className="inline-flex items-center gap-1.5">
@@ -1243,7 +1246,7 @@ export default function UnifiedPersonProfile() {
               <CardContent className="p-4">
                 <EmployeeProfileTabs
                   employee={employee}
-                  companyId={selectedCompanyId}
+                  companyId={stableCompanyId}
                   isEditing={isEditing}
                   form={form}
                   setForm={setForm}
