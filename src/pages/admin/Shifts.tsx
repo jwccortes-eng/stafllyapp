@@ -205,6 +205,7 @@ function CreateShiftDialogInline(props: {
       conflictNames={signals.conflictNames}
       payOverrideActive={signals.payOverrideActive}
       publicationStatus={null}
+      publishBlockers={signals.readiness.blockers}
     />
   );
 
@@ -227,6 +228,7 @@ function CreateShiftDialogInline(props: {
     clientName: signals.clientName,
     jobSiteLabel: signals.jobSiteLabel,
     meetingPointLabel: signals.meetingPointLabel,
+    blockers: signals.readiness.blockers,
   });
 
   return (
