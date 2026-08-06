@@ -132,7 +132,96 @@ const SHARED: CapabilityDefinition[] = [
     legacyModuleKey: "api-access",
     requiredConfig: ["api_key"],
   }),
+
+  /* ── Fase 3.1: capacidades críticas transversales ya existentes ── */
+  cap(
+    "shared.documents.storage",
+    "Documentos",
+    "Infraestructura documental transversal: carga, almacenamiento, metadata, vencimiento y vista previa.",
+    {
+      defaultState: true,
+      dependencies: ["shared.identity.employees"],
+      legacyGovernance: "code_and_rls",
+      legacySources: [
+        "ruta /app/documents (DocumentsCenter)",
+        "ruta /app/document-intake (DocumentIntakeCenter)",
+        "tablas employee_documents, employee_onboarding_documents, application_documents, document_intake_batches",
+        "storage buckets de documentos + RLS por company_id",
+      ],
+      requiredPermission: "miembro de la compañía; escritura restringida por RLS a admin/manager",
+      status: "active",
+      version: V31,
+      explanation:
+        "Permite gestión documental transversal (Stafly y Parceros). NO incluye por sí sola la lógica de cumplimiento: eso es stafly.compliance.*.",
+      audit: { addedIn: V31, owner: OWNER },
+    },
+  ),
+  cap(
+    "shared.documents.review",
+    "Revisión documental",
+    "Flujo de revisión: aprobación, rechazo, corrección solicitada y trazabilidad de la decisión.",
+    {
+      defaultState: true,
+      dependencies: ["shared.documents.storage", "shared.audit.trail"],
+      legacyGovernance: "code_and_rls",
+      legacySources: [
+        "document_review_events",
+        "RPC versionadas de revisión (VWC Fase 3B)",
+        "employee_documents.review_status",
+      ],
+      requiredPermission: "has_company_role(admin|manager|owner)",
+      status: "active",
+      version: V31,
+      explanation:
+        "Decide el estado de un documento. NO decide si una persona puede ser asignada: eso lo resuelve stafly.compliance.assignment_policy.",
+      audit: { addedIn: V31, owner: OWNER },
+    },
+  ),
+  cap(
+    "shared.audit.trail",
+    "Auditoría",
+    "Registro transversal e inmutable de eventos operativos, documentales y comerciales.",
+    {
+      defaultState: true,
+      dependencies: [],
+      legacyGovernance: "code_and_rls",
+      legacySources: [
+        "activity_log",
+        "document_review_events",
+        "compensation_change_log",
+        "company_lifecycle_events",
+        "payroll_consolidation_audit",
+        "invoice_activity_log",
+        "assignment_compliance_audit",
+        "auditoría de escrituras versionadas (VWC)",
+      ],
+      requiredPermission: "lectura restringida por RLS al tenant; escritura sólo por RPC/trigger",
+      status: "active",
+      version: V31,
+      explanation:
+        "Capacidad transversal: define el derecho a registrar y consultar historial. No mueve ni unifica tablas de historial.",
+      audit: { addedIn: V31, owner: OWNER },
+    },
+  ),
+  cap(
+    "shared.comms.notifications",
+    "Notificaciones",
+    "Entrega de notificaciones operativas a personas y administradores.",
+    {
+      defaultState: true,
+      dependencies: ["shared.identity.directory"],
+      legacyGovernance: "code_and_rls",
+      legacySources: ["notifications", "notification_preferences", "notification_templates"],
+      requiredPermission: "destinatario del evento o administrador de la compañía",
+      status: "active",
+      version: V31,
+      explanation:
+        "Separada de shared.comms.announcements: los anuncios son contenido publicado; las notificaciones son entrega de eventos.",
+      audit: { addedIn: V31, owner: OWNER },
+    },
+  ),
 ];
+
 
 /* ───────────────────────────── stafly.* ───────────────────────────── */
 /** Capacidades de operación de staffing (Quality Staff / Stafly). */
