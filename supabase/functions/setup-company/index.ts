@@ -134,7 +134,7 @@ Deno.serve(async (req) => {
         slug,
         invite_code: inviteCode,
         is_active: false,
-        status: "pending",
+        status: "needs_review",
         approval_state: "needs_review",
         access_state: "restricted",
         commercial_state: "manual",
