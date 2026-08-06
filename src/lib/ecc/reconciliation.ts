@@ -13,7 +13,11 @@ import type { EntitlementOverride } from "./overrides";
 
 /* ───────────────────── 4. Capacidades críticas ───────────────────── */
 
-/** Nombre operativo solicitado → capability canónica del catálogo (o null). */
+/**
+ * Nombre operativo solicitado → capability canónica del catálogo (o null).
+ * Fase 3.1: documentos, cumplimiento, portal y auditoría ya están representados.
+ * `shared.documents` vive una sola vez: no existe `stafly.documents`.
+ */
 export const CRITICAL_CAPABILITY_ALIASES: ReadonlyArray<{ alias: string; canonical: string | null; label: string }> =
   Object.freeze([
     { alias: "stafly.services", canonical: "stafly.ops.shifts", label: "Servicios" },
@@ -21,14 +25,26 @@ export const CRITICAL_CAPABILITY_ALIASES: ReadonlyArray<{ alias: string; canonic
     { alias: "stafly.team_hub", canonical: "stafly.ops.command_center", label: "Team Hub" },
     { alias: "stafly.time_clock", canonical: "stafly.ops.timeclock", label: "Reloj de asistencia" },
     { alias: "stafly.payroll_review", canonical: "stafly.payroll.reconciliation", label: "Revisión de nómina" },
-    { alias: "stafly.documents", canonical: null, label: "Documentos (Stafly)" },
-    { alias: "stafly.compliance", canonical: null, label: "Cumplimiento" },
-    { alias: "stafly.worker_portal", canonical: null, label: "Portal del trabajador" },
     { alias: "shared.identity", canonical: "shared.identity.directory", label: "Identidad" },
-    { alias: "shared.documents", canonical: null, label: "Documentos (compartido)" },
-    { alias: "shared.audit", canonical: null, label: "Auditoría" },
-    { alias: "shared.notifications", canonical: "shared.comms.announcements", label: "Notificaciones" },
+    { alias: "shared.documents", canonical: "shared.documents.storage", label: "Documentos" },
+    { alias: "shared.documents.review", canonical: "shared.documents.review", label: "Revisión documental" },
+    { alias: "shared.audit", canonical: "shared.audit.trail", label: "Auditoría" },
+    { alias: "shared.notifications", canonical: "shared.comms.notifications", label: "Notificaciones" },
+    { alias: "stafly.compliance", canonical: "stafly.compliance.requirements", label: "Cumplimiento" },
+    {
+      alias: "stafly.compliance.assignment_policy",
+      canonical: "stafly.compliance.assignment_policy",
+      label: "Política de asignación",
+    },
+    { alias: "stafly.worker_portal", canonical: "stafly.worker_portal.access", label: "Portal del trabajador" },
+    {
+      alias: "stafly.worker_portal.documents",
+      canonical: "stafly.worker_portal.documents",
+      label: "Documentos del trabajador",
+    },
+    { alias: "stafly.captain_room", canonical: "stafly.worker_portal.captain_room", label: "Sala del capitán" },
   ]);
+
 
 export const CRITICAL_CANONICAL_KEYS: ReadonlySet<string> = new Set(
   CRITICAL_CAPABILITY_ALIASES.map(a => a.canonical).filter((k): k is string => !!k),
