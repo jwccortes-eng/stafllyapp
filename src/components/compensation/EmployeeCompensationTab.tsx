@@ -438,7 +438,7 @@ export default function EmployeeCompensationTab({
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <SummaryItem label="Día completo" value={profile.default_daily_rate != null ? `$${profile.default_daily_rate}` : "—"} />
             <SummaryItem label="Medio día" value={profile.default_half_day_rate != null ? `$${profile.default_half_day_rate}` : "—"} />
-            <SummaryItem label="Hourly activo" value={hourly.rate != null ? `$${hourly.rate}/h` : "—"} highlight={hourly.source === "none"} />
+            <SummaryItem label="Hourly perfil (no paga)" value={hourly.rate != null ? `$${hourly.rate}/h` : "—"} highlight={hourly.source === "none"} />
             <SummaryItem label="Pay ride" value={profile.default_ride_rate_regular != null ? `$${profile.default_ride_rate_regular}` : "—"} />
           </div>
           <div className="mt-3 flex items-center gap-2 flex-wrap text-[10px] text-muted-foreground">
