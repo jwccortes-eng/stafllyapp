@@ -53,7 +53,34 @@ Deno.serve(async (req) => {
       );
     }
 
+    // SEGURIDAD (Fase 0): el caller debe ser miembro de la empresa que dice ser.
+    // Sin esta validación, cualquier usuario autenticado podía abrir un checkout
+    // atribuido a un companyId ajeno vía metadata.
+    const { data: membership, error: membershipError } = await supabase
+      .from("company_users")
+      .select("company_id")
+      .eq("company_id", companyId)
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (membershipError) {
+      console.error("[billing-checkout] Membership check failed:", membershipError.message);
+      return new Response(JSON.stringify({ error: "Forbidden" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (!membership) {
+      console.warn(`[billing-checkout] Forbidden: user=${user.id} not a member of company=${companyId}`);
+      return new Response(JSON.stringify({ error: "Forbidden" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
+
 
     // Find or create Stripe customer
     const customers = await stripe.customers.list({ email: user.email!, limit: 1 });
