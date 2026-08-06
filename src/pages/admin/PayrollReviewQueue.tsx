@@ -29,6 +29,8 @@ import { usePageView } from "@/hooks/useAuditLog";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { PageHeader } from "@/components/ui/page-header";
 import { PayrollSourceGuardrailBanner } from "@/components/payroll/PayrollSourceGuardrailBanner";
+import { PayrollMissingRateBanner } from "@/components/payroll/PayrollMissingRateBanner";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
