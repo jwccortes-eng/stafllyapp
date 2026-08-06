@@ -64,8 +64,10 @@ interface CompanyRecord {
   stripe_customer_id: string | null;
   stripe_subscription_id: string | null;
   current_period_end: string | null;
-  mrr: number;
   employee_count: number;
+  /** Fase 0 — verdad comercial y de acceso derivada de la fuente real. */
+  truth: CompanyTruth;
+
 }
 
 /**
