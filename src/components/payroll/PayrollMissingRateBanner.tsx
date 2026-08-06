@@ -46,6 +46,8 @@ export function PayrollMissingRateBanner({ companyId, periodId, periodStatus, cl
       let missing = 0;
       let legacy = 0;
       for (const r of latest) {
+        // Filas de alcance de periodo (sin trabajador) no cuentan por trabajador.
+        if (!r.employee_id) continue;
         if (seen.has(r.employee_id)) continue;
         seen.add(r.employee_id);
         if (r.result === "blocked_missing_rate") missing += 1;
