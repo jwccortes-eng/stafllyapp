@@ -638,42 +638,14 @@ export default function CompaniesPage() {
                             </div>
                           </TabsContent>
 
-                          {/* Billing */}
+                          {/* Verdad comercial (Fase 0 — solo lectura) */}
                           <TabsContent value="billing">
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-2">
-                              <div className="space-y-1">
-                                <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Plan actual</p>
-                                <Badge className={`${planDisplay.isLegacy ? "bg-amber-500/10 text-amber-700 dark:text-amber-400" : planOpt.color} border-0 font-bold`}>{planDisplay.label}</Badge>
-                              </div>
-                              <div className="space-y-1">
-                                <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Valor mensual</p>
-                                <p className="text-lg font-bold text-chart-1">${c.mrr}<span className="text-xs text-muted-foreground font-normal">/mes</span></p>
-                              </div>
-                              <div className="space-y-1">
-                                <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Estado</p>
-                                <p className="text-sm capitalize">{c.plan_status === "none" ? "Sin suscripción" : c.plan_status}</p>
-                              </div>
-                              <div className="space-y-1">
-                                <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Próximo cobro</p>
-                                <p className="text-sm">{fmtDate(c.current_period_end)}</p>
-                              </div>
-                              <div className="space-y-1">
-                                <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Stripe Customer</p>
-                                <p className="text-xs font-mono text-muted-foreground">{c.stripe_customer_id || "—"}</p>
-                              </div>
-                              <div className="space-y-1">
-                                <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Stripe Subscription</p>
-                                <p className="text-xs font-mono text-muted-foreground">{c.stripe_subscription_id || "—"}</p>
-                              </div>
-                              <div className="space-y-1">
-                                <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Valor cartera anual</p>
-                                <p className="text-lg font-bold">${c.mrr * 12}<span className="text-xs text-muted-foreground font-normal">/año</span></p>
-                              </div>
-                            </div>
+                            <CompanyTruthPanel truth={c.truth} />
                             <Button variant="outline" size="sm" className="mt-3 text-xs" onClick={() => openAssignPlan(c)}>
-                              <CreditCard className="h-3.5 w-3.5 mr-1.5" />Cambiar plan
+                              <CreditCard className="h-3.5 w-3.5 mr-1.5" />Cambiar plan comercial (legacy)
                             </Button>
                           </TabsContent>
+
 
                           {/* Modules */}
                           <TabsContent value="modules">
