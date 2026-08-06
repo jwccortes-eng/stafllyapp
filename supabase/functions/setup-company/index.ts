@@ -125,11 +125,27 @@ Deno.serve(async (req) => {
     const inviteCode = `${slug}-${Math.random().toString(36).slice(2, 6)}`.toUpperCase();
 
     // 1. Create company
+    // FASE 1 — el signup público NO activa una empresa: entra a revisión humana.
+    // approval_state = needs_review, acceso restringido, is_active = false.
     const { data: company, error: companyErr } = await adminClient
       .from("companies")
-      .insert({ name, slug, invite_code: inviteCode })
+      .insert({
+        name,
+        slug,
+        invite_code: inviteCode,
+        is_active: false,
+        status: "pending",
+        approval_state: "needs_review",
+        access_state: "restricted",
+        commercial_state: "manual",
+        submitted_at: new Date().toISOString(),
+        source: "public_signup",
+        created_by: user.id,
+        owner_user_id: user.id,
+      })
       .select("id")
       .single();
+
 
     if (companyErr || !company) {
       console.error("Create company error:", companyErr);
