@@ -298,6 +298,108 @@ const STAFLY: CapabilityDefinition[] = [
     tier: "addon",
     legacyModuleKey: "monetization",
   }),
+
+  /* ── Fase 3.1: cumplimiento y portal del trabajador ── */
+  cap(
+    "stafly.compliance.requirements",
+    "Cumplimiento",
+    "Requisitos por persona: documentos obligatorios, readiness, vencimientos y advertencias.",
+    {
+      defaultState: true,
+      dependencies: ["shared.documents.storage", "shared.identity.employees", "shared.audit.trail"],
+      legacyGovernance: "code_and_rls",
+      legacySources: [
+        "ruta /app/compliance-center (ComplianceCenter)",
+        "src/lib/compliance/rules-engine.ts + useWorkerCompliance",
+        "get_required_documents_for_company",
+        "get_employee_shift_readiness / compute_employee_profile_status",
+      ],
+      requiredPermission: "has_company_role(admin|manager|supervisor) para ver la vista de compañía",
+      status: "active",
+      version: V31,
+      explanation:
+        "Habilita la lógica de cumplimiento de Stafly. El ECC sólo habilita la capacidad: el resultado operativo lo siguen decidiendo las funciones existentes.",
+      audit: { addedIn: V31, owner: OWNER },
+    },
+  ),
+  cap(
+    "stafly.compliance.assignment_policy",
+    "Política de asignación",
+    "Bloqueos y advertencias de cumplimiento al asignar a una persona a un servicio.",
+    {
+      defaultState: true,
+      dependencies: ["stafly.compliance.requirements", "stafly.ops.shifts"],
+      legacyGovernance: "code_and_rls",
+      legacySources: [
+        "get_assignment_compliance_policy",
+        "get_employee_assignment_status / get_employees_assignment_status",
+        "has_active_assignment_override",
+        "assignment_compliance_audit",
+      ],
+      requiredPermission: "quien puede gestionar turnos (canManageShifts + RLS)",
+      status: "active",
+      version: V31,
+      explanation:
+        "No duplica get_employee_assignment_status: el ECC no reinterpreta cumplimiento, sólo declara que la compañía tiene la capacidad.",
+      audit: { addedIn: V31, owner: OWNER },
+    },
+  ),
+  cap(
+    "stafly.worker_portal.access",
+    "Portal del trabajador",
+    "Acceso del trabajador a su portal: inicio, perfil, turnos y aceptación/rechazo.",
+    {
+      defaultState: true,
+      dependencies: ["shared.identity.employees", "shared.comms.notifications"],
+      legacyGovernance: "portal_modules",
+      legacySources: [
+        "rutas /portal/* con PortalModuleGuard",
+        "employee_portal_modules (my_shifts, my_clock, my_payments, my_profile, my_availability)",
+        "usePortalModules / useEffectiveEmployee",
+      ],
+      requiredPermission: "persona autenticada vinculada al employee del tenant",
+      status: "active",
+      version: V31,
+      explanation:
+        "Acceso base del portal. Documentos, reloj y captain room son capacidades separadas para no volverlo monolítico.",
+      audit: { addedIn: V31, owner: OWNER },
+    },
+  ),
+  cap(
+    "stafly.worker_portal.documents",
+    "Documentos del trabajador",
+    "El trabajador consulta y carga sus propios documentos desde el portal.",
+    {
+      defaultState: true,
+      dependencies: ["stafly.worker_portal.access", "shared.documents.storage"],
+      legacyGovernance: "portal_modules",
+      legacySources: ["employee_portal_modules.my_documents / my_w9", "rutas /portal/documents y /portal/w9"],
+      requiredPermission: "la persona sólo ve sus propios documentos (RLS por employee_id)",
+      status: "active",
+      version: V31,
+      explanation:
+        "Superficie del portal sobre shared.documents.storage. No concede revisión: aprobar o rechazar es shared.documents.review.",
+      audit: { addedIn: V31, owner: OWNER },
+    },
+  ),
+  cap(
+    "stafly.worker_portal.captain_room",
+    "Sala del capitán",
+    "Vista de coordinación en sitio para la persona designada capitán del servicio.",
+    {
+      tier: "addon",
+      defaultState: true,
+      dependencies: ["stafly.worker_portal.access", "stafly.ops.shifts"],
+      legacyGovernance: "code_and_rls",
+      legacySources: ["ruta /portal/shift-captain (ShiftCaptainRoom)", "designación de capitán en scheduled_shifts"],
+      requiredPermission: "persona asignada como capitán del turno",
+      status: "active",
+      version: V31,
+      explanation: "Capacidad separada del portal base: no todas las compañías la operan.",
+      audit: { addedIn: V31, owner: OWNER },
+    },
+  ),
+
 ];
 
 /* ──────────────────────────── parceros.* ──────────────────────────── */
