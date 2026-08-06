@@ -19,6 +19,8 @@ import { toast } from "sonner";
 import { rowVersion, versionedWrite } from "@/lib/data/versioned-write";
 import { VersionConflictDialog, type VersionConflictInfo } from "@/components/data-integrity/VersionConflictDialog";
 import { COMPENSATION_FIELD_LABELS } from "@/lib/shifts/field-labels";
+import { PayrollRateTruthPanel } from "@/components/payroll/PayrollRateTruthPanel";
+
 
 /* ── Constants ── */
 const MODE_LABELS: Record<string, string> = { hourly: "Por hora", daily: "Por día", mixed: "Mixto" };
