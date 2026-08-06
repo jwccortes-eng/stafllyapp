@@ -42,6 +42,11 @@ import {
   type CompanyModuleFlag,
   type CompanyTruth,
 } from "@/lib/billing/company-truth";
+import { EccContractPanel } from "@/components/billing/EccContractPanel";
+import type { EccReadModelInput } from "@/lib/ecc/commercial-read-model";
+
+/** ECC Fase 1 — el input ya viene armado en fetchCompanies; aquí sólo se lee. */
+const buildEccInput = (c: CompanyRecord): EccReadModelInput => c.ecc;
 
 /** Tono visual por estado comercial (solo presentación). */
 const COMMERCIAL_TONE: Record<CompanyTruth["commercial"]["state"], string> = {
