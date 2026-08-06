@@ -43,6 +43,8 @@ import {
   type CompanyTruth,
 } from "@/lib/billing/company-truth";
 import { EccContractPanel } from "@/components/billing/EccContractPanel";
+import { EccPlanVersionPanel } from "@/components/billing/EccPlanVersionPanel";
+
 import type { EccReadModelInput } from "@/lib/ecc/commercial-read-model";
 
 /** ECC Fase 1 — el input ya viene armado en fetchCompanies; aquí sólo se lee. */
