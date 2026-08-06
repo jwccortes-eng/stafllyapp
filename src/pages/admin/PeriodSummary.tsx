@@ -403,13 +403,18 @@ function DesktopPeriodSummary() {
                         body: { company_id: selectedCompanyId, period_id: selectedPeriod },
                       });
                       if (error) throw error;
-                      if (data?.error) throw new Error(data.error);
+                      const outcome = describeConsolidation(data as ConsolidationOutcome);
+                      if (outcome.tone === "error") {
+                        throw new Error(outcome.description);
+                      }
                       toast({
-                        title: "Horas consolidadas",
-                        description: `${data.consolidated_employees ?? 0} empleado(s) actualizados. ${data.skipped_import_employees ?? 0} con import CSV preservados.`,
+                        title: outcome.title,
+                        description: outcome.description,
+                        variant: outcome.tone === "warning" ? "destructive" : undefined,
                       });
                       autoConsolidatedRef.current = null; // allow re-auto if user manually consolidates
                       // Reload without resetting period
+
                       setLoading(true);
                       const { data: basePays2 } = await supabase.from("period_base_pay").select("employee_id, base_total_pay, employees(first_name, last_name)").eq("period_id", selectedPeriod);
                       const { data: movements2 } = await supabase.from("movements").select("employee_id, total_value, concepts(category)").eq("period_id", selectedPeriod).eq("approval_status", "approved");
