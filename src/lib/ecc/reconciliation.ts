@@ -470,7 +470,7 @@ export function reconcileCompany(input: EccReadModelInput, at?: string): Company
   }
 
   /* Matriz crítica */
-  const criticalMatrix = CRITICAL_CAPABILITY_ALIASES.map(a => {
+  const criticalMatrix: CompanyReconciliation["criticalMatrix"] = CRITICAL_CAPABILITY_ALIASES.map(a => {
     if (!a.canonical) {
       return {
         alias: a.alias,
@@ -480,11 +480,29 @@ export function reconcileCompany(input: EccReadModelInput, at?: string): Company
         ecc: null,
         status: "missing_mapping",
         explained: false,
+        legacyGovernance: "desconocido",
+        legacySource: "rutas y RLS sin capability declarada",
+        eccSource: "—",
+        missingDependencies: [],
+        recommendedAction: "create_mapping" as ResolutionAction,
       };
     }
     const row = byCanonical.get(a.canonical);
     if (!row) {
-      return { alias: a.alias, label: a.label, canonical: a.canonical, legacy: null, ecc: null, status: "unknown", explained: false };
+      return {
+        alias: a.alias,
+        label: a.label,
+        canonical: a.canonical,
+        legacy: null,
+        ecc: null,
+        status: "unknown",
+        explained: false,
+        legacyGovernance: getCapability(a.canonical)?.legacyGovernance ?? "none",
+        legacySource: (getCapability(a.canonical)?.legacySources ?? []).join(" · ") || "—",
+        eccSource: "producto no contratado por esta compañía",
+        missingDependencies: getCapability(a.canonical)?.dependencies ?? [],
+        recommendedAction: "human_review" as ResolutionAction,
+      };
     }
     return {
       alias: a.alias,
@@ -494,8 +512,19 @@ export function reconcileCompany(input: EccReadModelInput, at?: string): Company
       ecc: row.ecc,
       status: row.status,
       explained: row.status === "match",
+      legacyGovernance: row.legacyGovernance,
+      legacySource: row.legacySource,
+      eccSource: row.eccReason,
+      missingDependencies: row.missingDependencies,
+      recommendedAction:
+        row.status === "match"
+          ? ("adopt_ecc" as ResolutionAction)
+          : row.missingDependencies.length > 0
+            ? ("create_mapping" as ResolutionAction)
+            : ("human_review" as ResolutionAction),
     };
   });
+
 
   for (const m of criticalMatrix) {
     if (m.canonical === null) {
