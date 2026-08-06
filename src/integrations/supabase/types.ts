@@ -1864,12 +1864,19 @@ export type Database = {
       }
       companies: {
         Row: {
+          access_state: string
+          access_state_changed_at: string | null
+          access_state_reason: string | null
           application_cover_url: string | null
           application_enabled: boolean
           application_intro: string | null
+          approval_state: string
+          approved_at: string | null
+          approved_by: string | null
           archived_at: string | null
           billing_status: string
           brand_color: string | null
+          commercial_state: string
           company_code: number | null
           created_at: string
           created_by: string | null
@@ -1889,22 +1896,31 @@ export type Database = {
           plan_activated_by: string | null
           plan_code: string
           plan_status: string
+          rejection_reason: string | null
           shift_ref_prefix: string | null
           slug: string
           source: string | null
           status: string
+          submitted_at: string | null
           trial_ends_at: string | null
           updated_at: string
           upgrade_requested_at: string | null
           version: number
         }
         Insert: {
+          access_state?: string
+          access_state_changed_at?: string | null
+          access_state_reason?: string | null
           application_cover_url?: string | null
           application_enabled?: boolean
           application_intro?: string | null
+          approval_state?: string
+          approved_at?: string | null
+          approved_by?: string | null
           archived_at?: string | null
           billing_status?: string
           brand_color?: string | null
+          commercial_state?: string
           company_code?: number | null
           created_at?: string
           created_by?: string | null
@@ -1924,22 +1940,31 @@ export type Database = {
           plan_activated_by?: string | null
           plan_code?: string
           plan_status?: string
+          rejection_reason?: string | null
           shift_ref_prefix?: string | null
           slug: string
           source?: string | null
           status?: string
+          submitted_at?: string | null
           trial_ends_at?: string | null
           updated_at?: string
           upgrade_requested_at?: string | null
           version?: number
         }
         Update: {
+          access_state?: string
+          access_state_changed_at?: string | null
+          access_state_reason?: string | null
           application_cover_url?: string | null
           application_enabled?: boolean
           application_intro?: string | null
+          approval_state?: string
+          approved_at?: string | null
+          approved_by?: string | null
           archived_at?: string | null
           billing_status?: string
           brand_color?: string | null
+          commercial_state?: string
           company_code?: number | null
           created_at?: string
           created_by?: string | null
@@ -1959,10 +1984,12 @@ export type Database = {
           plan_activated_by?: string | null
           plan_code?: string
           plan_status?: string
+          rejection_reason?: string | null
           shift_ref_prefix?: string | null
           slug?: string
           source?: string | null
           status?: string
+          submitted_at?: string | null
           trial_ends_at?: string | null
           updated_at?: string
           upgrade_requested_at?: string | null
@@ -2180,6 +2207,78 @@ export type Database = {
             foreignKeyName: "company_financial_policies_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: true
+            referencedRelation: "companies_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_lifecycle_events: {
+        Row: {
+          actor_id: string | null
+          company_id: string
+          company_version_after: number | null
+          company_version_before: number | null
+          created_at: string
+          from_access_state: string | null
+          from_approval_state: string | null
+          from_commercial_state: string | null
+          id: string
+          idempotency_key: string | null
+          next_action: string | null
+          reason: string | null
+          to_access_state: string | null
+          to_approval_state: string | null
+          to_commercial_state: string | null
+          transition: string
+        }
+        Insert: {
+          actor_id?: string | null
+          company_id: string
+          company_version_after?: number | null
+          company_version_before?: number | null
+          created_at?: string
+          from_access_state?: string | null
+          from_approval_state?: string | null
+          from_commercial_state?: string | null
+          id?: string
+          idempotency_key?: string | null
+          next_action?: string | null
+          reason?: string | null
+          to_access_state?: string | null
+          to_approval_state?: string | null
+          to_commercial_state?: string | null
+          transition: string
+        }
+        Update: {
+          actor_id?: string | null
+          company_id?: string
+          company_version_after?: number | null
+          company_version_before?: number | null
+          created_at?: string
+          from_access_state?: string | null
+          from_approval_state?: string | null
+          from_commercial_state?: string | null
+          id?: string
+          idempotency_key?: string | null
+          next_action?: string | null
+          reason?: string | null
+          to_access_state?: string | null
+          to_approval_state?: string | null
+          to_commercial_state?: string | null
+          transition?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_lifecycle_events_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_lifecycle_events_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
             referencedRelation: "companies_public"
             referencedColumns: ["id"]
           },
@@ -17782,6 +17881,19 @@ export type Database = {
       }
       ci_purge_expired_observations: { Args: never; Returns: Json }
       cleanup_expired_rate_limits: { Args: never; Returns: undefined }
+      company_lifecycle_transition: {
+        Args: {
+          p_company_id: string
+          p_expected_access_state?: string
+          p_expected_approval_state?: string
+          p_expected_version?: number
+          p_idempotency_key?: string
+          p_reason?: string
+          p_target_access_state?: string
+          p_transition: string
+        }
+        Returns: Json
+      }
       company_user_can_access_employee_doc_path: {
         Args: { _path: string }
         Returns: boolean
