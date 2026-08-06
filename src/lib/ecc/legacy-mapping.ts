@@ -258,6 +258,26 @@ function legacyModuleDecision(moduleKey: string, plan: PlanCode, input: EccReadM
   return planGrants || active;
 }
 
+/**
+ * Decisión legacy según cómo se gobierna la capacidad HOY:
+ *  - `company_modules`: plan tier OR override activo.
+ *  - `code_and_rls` / `portal_modules`: no existe gate comercial, la superficie
+ *    está disponible para toda compañía y el acceso lo acota rol + RLS.
+ *  - `none`: sin superficie legacy comparable.
+ */
+function resolveLegacyDecision(
+  governance: LegacyGovernance,
+  legacyKey: string | null,
+  plan: PlanCode,
+  input: EccReadModelInput,
+): boolean | null {
+  if (legacyKey) return legacyModuleDecision(legacyKey, plan, input);
+  if (governance === "code_and_rls" || governance === "portal_modules") return true;
+  return null;
+}
+
+
+
 export function buildShadowReport(input: EccReadModelInput, at?: string): ShadowReport {
   const mapping = mapLegacyCompanyToEcc(input, at);
   const ctx = buildResolutionContext(input, mapping);
