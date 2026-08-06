@@ -8,7 +8,7 @@
  * Propiedades exigidas al mapeo: idempotente, auditable, reversible,
  * tenant-safe y explicable.
  */
-import { LEGACY_MODULE_TO_CAPABILITY, getCapability } from "./capability-catalog";
+import { LEGACY_MODULE_TO_CAPABILITY, getCapability, type LegacyGovernance } from "./capability-catalog";
 import { LIMIT_KEYS, resolvePlanVersionAt, type PlanVersion } from "./plan-versions";
 import { buildOverride, type EntitlementOverride } from "./overrides";
 import {
