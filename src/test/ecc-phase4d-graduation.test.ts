@@ -273,7 +273,16 @@ describe("ECC Fase 4D · ECC estable en operación", () => {
   });
 
   it("QA15 · mismatch simulado genera incidente completo, no silencio", () => {
-    const drifted = stableRun({ input: qaTesting({ access_state: "suspended", status: "suspended" }) });
+    const drifted = runEccPilot(qaTesting(), {
+      usage,
+      at: AT,
+      userId: "owner",
+      companyVersion: 2,
+      currentVersion: 3,
+      latencyMs: 12,
+      runId: "mismatch",
+      registry: PILOT_REGISTRY_STABLE,
+    });
     const incidents = collectIncidents(drifted, AT);
     expect(incidents.length).toBeGreaterThan(0);
     for (const i of incidents) {
