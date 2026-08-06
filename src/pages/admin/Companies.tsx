@@ -23,7 +23,7 @@ import { Switch } from "@/components/ui/switch";
 import {
   Search, MoreHorizontal, Pencil, Building2, Plus, Users, LayoutGrid,
   FlaskConical, Copy, Check, CreditCard, ChevronDown, ChevronRight,
-  DollarSign, TrendingUp, Shield, UserCog, User, Crown, CircleDot,
+  AlertTriangle, Shield, UserCog, User, Crown, CircleDot,
   CopyPlus, Loader2, RefreshCcw,
 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
@@ -33,6 +33,33 @@ import { useCompany } from "@/hooks/useCompany";
 import CompanyUsersDialog from "@/components/CompanyUsersDialog";
 import CompanyModulesDialog from "@/components/CompanyModulesDialog";
 import SandboxSyncDialog from "@/components/SandboxSyncDialog";
+import { InsightCard } from "@/components/ocs";
+import { CompanyTruthPanel } from "@/components/billing/CompanyTruthPanel";
+import {
+  buildCompanyTruth,
+  summarizeTruth,
+  type CompanyModuleFlag,
+  type CompanyTruth,
+} from "@/lib/billing/company-truth";
+
+/** Tono visual por estado comercial (solo presentación). */
+const COMMERCIAL_TONE: Record<CompanyTruth["commercial"]["state"], string> = {
+  not_configured: "border-muted-foreground/30 text-muted-foreground",
+  manual: "border-primary/40 text-primary",
+  legacy_subscription: "border-amber-500/40 text-amber-600 dark:text-amber-400",
+  inconsistent: "border-destructive/50 text-destructive",
+};
+
+/** Filtros operativos del Command Center (Fase 0). */
+const TRUTH_FILTERS = [
+  { value: "all", label: "Todas" },
+  { value: "review", label: "Requiere revisión" },
+  { value: "no_billing", label: "Billing no conectado" },
+  { value: "legacy", label: "Subscription legacy" },
+  { value: "restricted", label: "Acceso restringido" },
+] as const;
+
+
 
 /* ── Types ── */
 interface CompanyUser {
