@@ -11,7 +11,7 @@ import {
   summarizeFleetReadiness,
 } from "@/lib/ecc/reconciliation";
 
-const AT = "2026-08-01T00:00:00.000Z";
+const AT = "2026-08-06T00:00:00.000Z";
 
 const base = (over: Partial<EccReadModelInput["company"]> = {}, rest: Partial<EccReadModelInput> = {}): EccReadModelInput => ({
   company: {

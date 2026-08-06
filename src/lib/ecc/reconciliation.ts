@@ -43,6 +43,7 @@ export const CRITICAL_CAPABILITY_ALIASES: ReadonlyArray<{ alias: string; canonic
       label: "Documentos del trabajador",
     },
     { alias: "stafly.captain_room", canonical: "stafly.worker_portal.captain_room", label: "Sala del capitán" },
+    { alias: "shared.invitations", canonical: "shared.invitations", label: "Invitaciones" },
   ]);
 
 

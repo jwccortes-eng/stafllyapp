@@ -45,6 +45,7 @@ import {
 import { EccContractPanel } from "@/components/billing/EccContractPanel";
 import { EccPlanVersionPanel } from "@/components/billing/EccPlanVersionPanel";
 import { EccReadinessPanel } from "@/components/billing/EccReadinessPanel";
+import { EccPilotPanel } from "@/components/billing/EccPilotPanel";
 
 
 import type { EccReadModelInput } from "@/lib/ecc/commercial-read-model";
@@ -806,6 +807,7 @@ export default function CompaniesPage() {
                               <EccContractPanel input={buildEccInput(c)} />
                               <EccPlanVersionPanel input={buildEccInput(c)} />
                               {role === "owner" && <EccReadinessPanel input={buildEccInput(c)} />}
+                              {role === "owner" && <EccPilotPanel input={buildEccInput(c)} />}
 
 
                               <CompanyTruthPanel truth={c.truth} />
