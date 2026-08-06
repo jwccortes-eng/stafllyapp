@@ -800,6 +800,8 @@ export default function CompaniesPage() {
                                 onChanged={fetchCompanies}
                               />
                               <EccContractPanel input={buildEccInput(c)} />
+                              <EccPlanVersionPanel input={buildEccInput(c)} />
+
                               <CompanyTruthPanel truth={c.truth} />
                             </div>
                             <Button variant="outline" size="sm" className="mt-3 text-xs" onClick={() => openAssignPlan(c)}>
