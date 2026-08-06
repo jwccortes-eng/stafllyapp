@@ -11,6 +11,59 @@ la ordena bajo una sola constitución.
 
 ---
 
+## Ley suprema del ecosistema
+
+> **Toda decisión de arquitectura debe responder:**
+>
+> **¿Fortalece un único ecosistema o crea otro silo?**
+>
+> **Si crea un silo, debe replantearse antes de implementarse.**
+
+Esta ley está por encima de cualquier sección de este documento, de cualquier
+roadmap, de cualquier urgencia comercial y de cualquier preferencia técnica.
+Ninguna excepción se aplica por omisión: una excepción requiere decisión formal
+registrada, con responsable, fecha y evidencia.
+
+---
+
+## Reglas no negociables
+
+Reglas absolutas. No admiten interpretación, atajo temporal ni excepción de
+sprint. Violar una es un defecto de arquitectura, no una decisión de producto.
+
+1. **Payroll nunca usa horas programadas.** Solo horas reales registradas.
+2. **Nunca activar compañías desde signup público.** La activación es decisión.
+3. **Nunca crear otra identidad.** Una persona = un Passport.
+4. **Nunca crear otro motor comercial.** ECC es el único.
+5. **Nunca escribir fuera del VWC** en entidades versionadas.
+6. **Nunca borrar historial financiero.** Se corrige con evidencia y auditoría.
+7. **Nunca romper el aislamiento multi-tenant.** `company_id` siempre presente.
+8. **Nunca mezclar SaaS Billing con Pay Rate.** Son dominios distintos.
+9. **Nunca ocultar la verdad operativa.** Faltante se muestra como faltante.
+
+---
+
+## Principio "representar la realidad"
+
+El sistema **siempre representa el estado real**. Nunca inventa estados, nunca
+maquilla inconsistencias, nunca oculta datos faltantes y nunca sustituye un
+dato ausente por un valor plausible.
+
+| Realidad | Representación obligatoria |
+|----------|----------------------------|
+| Payroll consolidado | "Preparado", nunca "trabajador pagado" |
+| Documento vencido | Sigue existiendo, visible y marcado como vencido |
+| Billing no configurado | Se muestra como no configurado, no como activo |
+| Servicio incompleto | Sigue siendo incompleto hasta que se complete |
+| Dato inexistente | Vacío explícito, nunca cero ni valor por defecto |
+| Decisión de acceso incierta | Fail closed y explicada, nunca permitida "por si acaso" |
+
+Una pantalla que tranquiliza al usuario ocultando un problema real es un
+defecto crítico, no una mejora de experiencia.
+
+---
+
+
 ## Sección 1 — Visión del ecosistema
 
 Parceros, Stafly Core, Quality Staff, My Staff, JKitchen Staff y cualquier
@@ -112,7 +165,45 @@ superficies es el vocabulario y la experiencia, no la verdad.
   alcance automáticamente a otras compañías.
 - **Dependencias:** envuelve a ECC; conserva Legacy como comparación.
 
+### Declaración de owners por pilar
+
+Cada pilar declara owner, responsabilidad, interfaces públicas, dependencias y
+qué **no** controla. Nadie escribe en un pilar del que no es owner: se consume
+por su interfaz pública.
+
+| Pilar | Owner | Responsabilidad | Interfaces públicas | Dependencias | Qué NO controla |
+|-------|-------|-----------------|---------------------|--------------|-----------------|
+| **Passport** | Identity | Persona única, historial verificable, reputación portable | Perfil público del worker, reputación agregada, resolución de identidad | Evidencia de operación y reviews | Turnos, pago, permisos, acceso comercial |
+| **VWC** | Plataforma de datos | Escritura versionada, detección de conflicto, auditoría | Helper único de escritura, RPCs de transición, diálogo de conflicto | Esquema versionado y `company_id` | Permisos de negocio, cálculo, transformación de datos |
+| **Payroll Snapshot** | Payroll | Tarifa canónica y bases congeladas por periodo | Resolución de tarifa, snapshots append-only del periodo | Horas reales, VWC | Ejecución bancaria, asistencia, accesos |
+| **Company Lifecycle** | Tenancy | Máquina de estados del tenant y su auditoría | Transición canónica, estado vigente, matriz por estado | VWC | Cobro, capacidades comerciales, borrado de datos |
+| **ECC** | Commercial | Catálogo, planes versionados, entitlements, explicación de acceso | Resolución de capacidad, catálogo, versiones de plan | Lifecycle | Cobro, identidad, RLS, reputación |
+| **ECC Stable Pilot** | Commercial + Operación | Adopción controlada, comparación dual, rollback | Modo por compañía, incidentes, señales de confianza | ECC, Legacy | Retiro de Legacy, gates globales, ampliación automática |
+
 ---
+
+## Sección 2.1 — Dominios del ecosistema
+
+Doce dominios. Todo dato, capacidad o pantalla pertenece exactamente a uno.
+Si no encuentra dueño, es una decisión de arquitectura, no una feature.
+
+| Dominio | Owner | Responsabilidad | Qué NO puede hacer |
+|---------|-------|-----------------|--------------------|
+| **Identity** | Identity | Auth, persona única, Passport, vínculo persona↔tenant | Crear otra identidad, decidir acceso comercial, calcular pago |
+| **Commercial** | Commercial | ECC, planes versionados, entitlements, Billing Truth | Cobrar por su cuenta, reemplazar RLS, tocar pay rate |
+| **Operations** | Operación | Servicios, turnos, asignaciones, asistencia, cierre | Calcular nómina, otorgar permisos, alterar historial consolidado |
+| **Payroll** | Payroll | Tarifa canónica, snapshots, consolidación, movimientos | Usar horas programadas, ejecutar pagos bancarios, editar asistencia |
+| **Documents** | Compliance | Documentos, vigencias, evidencia y trazabilidad | Ocultar vencidos, borrar evidencia, gobernar accesos |
+| **Community** | Parceros | Canales, contenido, embajadores, participación | Definir reputación oficial, otorgar capacidades, asignar turnos |
+| **Marketplace** | Parceros | Oportunidades, aplicación y matching público | Crear identidad propia, escribir payroll, gobernar tenants |
+| **Partners** | Commercial | Relación con clientes y aliados del ecosistema | Crear tenants activos, alterar payroll, saltar Lifecycle |
+| **Notifications** | Plataforma | Capa única de feedback y notificación multicanal | Ser fuente de verdad, decidir estados, silenciar errores |
+| **Analytics** | Operations Intelligence | Lectura agregada, métricas y señales operativas | Escribir datos operativos, inventar estados, sustituir auditoría |
+| **AI** | Plataforma | Asistencia explicable, sugerencias, resúmenes | Decidir sin humano, escribir sin VWC, inferir verdad faltante |
+| **Integration** | Plataforma | API pública, importaciones, exportaciones, webhooks | Crear motores paralelos, saltar RLS, escribir sin versionado |
+
+---
+
 
 ## Sección 3 — Principios obligatorios
 
@@ -261,24 +352,48 @@ motor, y una sola explicación posible para cada decisión del sistema.
 
 ---
 
-## Sección 7 — Roadmap por estado
+## Sección 7 — Roadmap por capa
 
-| Pilar / capacidad | Estado |
-|-------------------|--------|
+Las capas no se mezclan: una capacidad de producto nunca se aprueba antes que
+la infraestructura de la que depende.
+
+### 7.1 Infraestructura (integridad y verdad de datos)
+
+| Elemento | Estado |
+|----------|--------|
 | Versioned Write Contract (servicios, horas, compensación, documentos, configuración, asignaciones) | **Implementado** |
 | Payroll Snapshot (tarifa canónica + inmutabilidad de periodo) | **Implementado** |
+| Auditoría transversal de escritura y conflicto | **Implementado** |
+| Contrato único de eventos de dominio | **Pendiente** |
+| Unificación `shifts` / `scheduled_shifts` | **Pendiente** |
+
+### 7.2 Plataformas compartidas (motores del ecosistema)
+
+| Elemento | Estado |
+|----------|--------|
 | Company Lifecycle (estados, transición auditada, matriz de capacidades) | **Implementado** |
 | Company Billing Truth (realidad operativa sin suscripciones simuladas) | **Implementado** |
 | ECC — catálogo, planes versionados, entitlements, reconciliación | **Implementado** |
-| ECC — piloto real de una compañía con comparación dual | **Piloto** |
-| ECC — modo estable por compañía con Legacy en comparación | **Piloto** |
 | Passport como fuente canónica única de identidad/reputación | **Pendiente** |
 | Frontera formal de datos Stafly ↔ Parceros | **Pendiente** |
-| Retiro de Legacy en acceso | **Pendiente** |
-| Ampliación de ECC al resto de la flota | **Pendiente** |
-| Contrato único de eventos de dominio | **Pendiente** |
-| Unificación `shifts` / `scheduled_shifts` | **Pendiente** |
+
+### 7.3 Producto (superficies y capacidades)
+
+| Elemento | Estado |
+|----------|--------|
+| Superficies Admin / Worker / Cliente / Parceros sobre motores únicos | **Implementado** |
+| Capacidades nuevas declaradas en catálogo ECC antes de exponerse | **Vigente como regla** |
 | Ejecución bancaria de pago al trabajador | **Pendiente** |
+
+### 7.4 Operación (adopción y retiro controlado)
+
+| Elemento | Estado |
+|----------|--------|
+| ECC — piloto real de una compañía con comparación dual | **Piloto** |
+| ECC — modo estable por compañía con Legacy en comparación | **Piloto** |
+| Ampliación de ECC al resto de la flota | **Pendiente** |
+| Retiro de Legacy en acceso | **Pendiente** |
+
 
 ---
 
@@ -323,6 +438,48 @@ Ningún desarrollo se aprueba sin responder las once preguntas:
 Una sola respuesta problemática detiene el desarrollo hasta corregir el diseño.
 
 ---
+
+## Sección 10 — Glosario ejecutivo
+
+| Término | Significado en este ecosistema |
+|---------|-------------------------------|
+| **Passport** | Representación única y portable de una persona: identidad, historial verificable y reputación, válida en todo el ecosistema |
+| **Capability** | Unidad nombrada de lo que una compañía puede hacer (no una pantalla, no un botón) |
+| **Entitlement** | Resultado de evaluar si una compañía tiene una capability, con su motivo |
+| **Override** | Excepción explícita y auditada sobre un entitlement; nunca silenciosa ni permanente por defecto |
+| **Commercial Account** | Entidad comercial de la compañía: a qué plan pertenece y bajo qué condiciones opera |
+| **Plan Version** | Versión inmutable de un plan; cambiar un plan crea una versión nueva, nunca edita la anterior |
+| **Commercial State** | Situación comercial de la compañía (plan vigente, condiciones, verdad de billing) |
+| **Approval State** | Si la compañía fue aprobada por una decisión humana |
+| **Access State** | Qué puede hacer hoy la compañía = Lifecycle + Commercial State; nunca `is_active` |
+| **Snapshot** | Congelamiento append-only de valores de cálculo (tarifa, bases) de un periodo cerrado |
+| **Shadow Mode** | ECC resuelve y se compara contra Legacy sin gobernar el acceso |
+| **Pilot** | ECC gobierna el acceso de una compañía específica, con Legacy en comparación |
+| **Rollback** | Retorno inmediato a Legacy ante baja confianza, latencia degradada o incidente |
+| **VWC** | Versioned Write Contract: carril único de escritura versionada con auditoría |
+| **ECC** | Ecosystem Commercial Contract: motor único de verdad comercial y de acceso |
+| **Lifecycle** | Máquina de estados de la compañía, con transiciones explícitas y auditadas |
+
+---
+
+## Sección 11 — Validación del documento
+
+| Criterio | Resultado |
+|----------|-----------|
+| No crea silos | ✅ Toda pieza nueva se asigna a un dominio y owner existente |
+| No contradice ECC | ✅ ECC es el único motor comercial; no se define acceso fuera de él |
+| No contradice VWC | ✅ Toda escritura versionada pasa por el carril único |
+| No contradice Payroll Snapshot | ✅ Horas reales, snapshot inmutable, "preparado ≠ pagado" |
+| No contradice Company Lifecycle | ✅ Acceso = Lifecycle + Commercial State, nunca banderas sueltas |
+| Sirve para Parceros y Stafly | ✅ Ambas son superficies del mismo motor; el vocabulario cambia, la verdad no |
+| Mantenible por varios años | ✅ Estructura por pilares, dominios y capas; el roadmap cambia sin tocar la constitución |
+
+Este documento se actualiza cuando cambia una **regla**, no cuando cambia una
+pantalla. Los estados de roadmap se revisan por trimestre; la Ley Suprema, las
+reglas no negociables y los dominios solo cambian con decisión formal.
+
+---
+
 
 ## Riesgos de comprensión vigentes
 
