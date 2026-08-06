@@ -515,7 +515,7 @@ export default function CompaniesPage() {
               .map(t => `${t.name}: ${t.contradictions.find(x => x.severity === "alta")?.title ?? t.contradictions[0]?.title}`)
               .join(" · ")}
             impact="El plan visible, la subscription y el acceso no cuentan la misma historia. Revisar antes de conectar cualquier cobro."
-            mode="static"
+            mode="readonly"
           />
         </div>
       )}
