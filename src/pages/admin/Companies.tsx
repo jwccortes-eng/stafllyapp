@@ -95,7 +95,8 @@ interface CompanyRecord {
   employee_count: number;
   /** Fase 0 — verdad comercial y de acceso derivada de la fuente real. */
   truth: CompanyTruth;
-
+  /** ECC Fase 1 — entrada canónica del read model comercial (solo lectura). */
+  ecc: EccReadModelInput;
 }
 
 /**
