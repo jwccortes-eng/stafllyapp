@@ -16,12 +16,13 @@ import { LIMIT_KEYS } from "./plan-versions";
 
 /* ───────────────────── 3. Dual resolution ───────────────────── */
 
-export type PilotMode = "legacy_only" | "compare" | "ecc_pilot" | "rolled_back";
+export type PilotMode = "legacy_only" | "compare" | "ecc_pilot" | "ecc_stable" | "rolled_back";
 
 export const PILOT_MODE_LABEL: Record<PilotMode, string> = {
   legacy_only: "Sólo legacy",
   compare: "Comparación en sombra",
   ecc_pilot: "Piloto ECC",
+  ecc_stable: "ECC estable (Legacy en sombra)",
   rolled_back: "Revertido a legacy",
 };
 
@@ -81,8 +82,10 @@ export interface DualDecision {
  * Resolución dual. `ecc_pilot` sólo gobierna si la bandera está encendida Y la
  * decisión ECC es concluyente; en cualquier otro caso cae a legacy.
  */
+export const ECC_GOVERNING_MODES: ReadonlySet<PilotMode> = new Set<PilotMode>(["ecc_pilot", "ecc_stable"]);
+
 export function resolveDual(mode: PilotMode, enabled: boolean, legacy: boolean | null, ecc: boolean | null): DualDecision {
-  if (!enabled || mode !== "ecc_pilot") {
+  if (!enabled || !ECC_GOVERNING_MODES.has(mode)) {
     return {
       governedBy: "legacy",
       effective: legacy,
@@ -91,9 +94,22 @@ export function resolveDual(mode: PilotMode, enabled: boolean, legacy: boolean |
     };
   }
   if (ecc === null) {
-    return { governedBy: "legacy", effective: legacy, fallbackUsed: true, reason: "ECC no concluyente: fallback a legacy." };
+    return {
+      governedBy: "legacy",
+      effective: legacy,
+      fallbackUsed: true,
+      reason:
+        mode === "ecc_stable"
+          ? "ECC no concluyente en modo estable: se registra incidente y gobierna legacy (fallback nunca silencioso)."
+          : "ECC no concluyente: fallback a legacy.",
+    };
   }
-  return { governedBy: "ecc", effective: ecc, fallbackUsed: false, reason: "Piloto ECC activo para esta compañía." };
+  return {
+    governedBy: "ecc",
+    effective: ecc,
+    fallbackUsed: false,
+    reason: mode === "ecc_stable" ? "ECC estable gobierna esta compañía." : "Piloto ECC activo para esta compañía.",
+  };
 }
 
 /* ───────────────────── 4. Superficies del dry run ───────────────────── */

@@ -34,6 +34,7 @@ import {
   type PilotRollbackResult,
   type PilotSurface,
   type PilotUsageInput,
+  ECC_GOVERNING_MODES,
   type SurfaceDevice,
 } from "./pilot";
 
@@ -396,7 +397,7 @@ export function runEccPilot(input: EccReadModelInput, opts: EccPilotRunOptions =
     const slow = latencyMs > LATENCY_THRESHOLD_MS;
     const forceLegacy = confidence.level === "LOW" || slow || versionDrift;
     const dual = resolveDual(mode, enabled && !forceLegacy, legacy, ecc);
-    const fallback = dual.fallbackUsed || (enabled && mode === "ecc_pilot" && forceLegacy);
+    const fallback = dual.fallbackUsed || (enabled && ECC_GOVERNING_MODES.has(mode) && forceLegacy);
     const fallbackReason = !fallback
       ? null
       : versionDrift
@@ -479,7 +480,7 @@ export function runEccPilot(input: EccReadModelInput, opts: EccPilotRunOptions =
         ? "latency_threshold"
         : null;
 
-  const autoRollback = enabled && mode === "ecc_pilot" && trigger ? rollbackEccPilot(rec.companyId, trigger) : null;
+  const autoRollback = enabled && ECC_GOVERNING_MODES.has(mode) && trigger ? rollbackEccPilot(rec.companyId, trigger) : null;
   if (autoRollback) {
     alerts.push({
       code: "rollback_triggered",
