@@ -148,7 +148,7 @@ export default function CompaniesPage() {
   const fetchCompanies = async () => {
     const { data } = await supabase
       .from("companies")
-      .select("id, name, slug, is_active, is_sandbox, invite_code, company_code, created_at, logo_url, brand_color, application_enabled")
+      .select("id, name, slug, is_active, is_sandbox, invite_code, company_code, created_at, logo_url, brand_color, application_enabled, status, plan_code, plan_status, billing_status, paid_features_enabled, max_employees, max_admins")
       .order("company_code");
 
     if (!data) return;
@@ -185,8 +185,11 @@ export default function CompaniesPage() {
     const activeModMap: Record<string, number> = {};
     const totalModMap: Record<string, number> = {};
     const modNamesMap: Record<string, string[]> = {};
+    const modFlagsMap: Record<string, CompanyModuleFlag[]> = {};
     (modules ?? []).forEach(m => {
       totalModMap[m.company_id] = (totalModMap[m.company_id] || 0) + 1;
+      if (!modFlagsMap[m.company_id]) modFlagsMap[m.company_id] = [];
+      modFlagsMap[m.company_id].push({ module: m.module, is_active: !!m.is_active });
       if (m.is_active) {
         activeModMap[m.company_id] = (activeModMap[m.company_id] || 0) + 1;
         if (!modNamesMap[m.company_id]) modNamesMap[m.company_id] = [];
@@ -202,27 +205,53 @@ export default function CompaniesPage() {
       empCountMap[e.company_id] = (empCountMap[e.company_id] || 0) + 1;
     });
 
-    setCompanies(data.map(c => {
+    setCompanies((data as any[]).map(c => {
       const sub = subMap[c.id];
-      const plan = sub?.plan ?? "free";
-      const isActive = sub?.status === "active" || sub?.status === "trialing";
+      const userCount = cuByCompany[c.id]?.length ?? 0;
+      const employeeCount = empCountMap[c.id] || 0;
+
+      const truth = buildCompanyTruth({
+        id: c.id,
+        name: c.name,
+        is_active: c.is_active,
+        status: c.status ?? null,
+        plan_code: c.plan_code ?? null,
+        plan_status: c.plan_status ?? null,
+        billing_status: c.billing_status ?? null,
+        paid_features_enabled: !!c.paid_features_enabled,
+        max_employees: c.max_employees ?? null,
+        max_admins: c.max_admins ?? null,
+        modules: modFlagsMap[c.id] ?? [],
+        subscription: sub
+          ? {
+              plan: sub.plan ?? null,
+              status: sub.status ?? null,
+              stripe_customer_id: sub.stripe_customer_id ?? null,
+              stripe_subscription_id: sub.stripe_subscription_id ?? null,
+            }
+          : null,
+        user_count: userCount,
+        employee_count: employeeCount,
+      });
+
       return {
         ...c,
-        user_count: cuByCompany[c.id]?.length ?? 0,
+        user_count: userCount,
         users: cuByCompany[c.id] ?? [],
         active_modules: activeModMap[c.id] || 0,
         total_modules: totalModMap[c.id] || 0,
         module_names: modNamesMap[c.id] || [],
-        plan,
+        plan: c.plan_code ?? "free",
         plan_status: sub?.status ?? "none",
         stripe_customer_id: sub?.stripe_customer_id ?? null,
         stripe_subscription_id: sub?.stripe_subscription_id ?? null,
         current_period_end: sub?.current_period_end ?? null,
-        mrr: isActive ? (PLAN_PRICES[plan] ?? 0) : 0,
-        employee_count: empCountMap[c.id] || 0,
-      };
+        employee_count: employeeCount,
+        truth,
+      } as CompanyRecord;
     }));
   };
+
 
   useEffect(() => { fetchCompanies(); }, []);
 
