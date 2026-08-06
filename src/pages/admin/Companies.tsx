@@ -527,13 +527,14 @@ export default function CompaniesPage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input placeholder="Buscar empresa..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
         </div>
-        <div className="flex gap-1">
-          {[{ value: "all", label: "Todas" }, ...PLAN_OPTIONS.map(p => ({ value: p.value, label: p.label }))].map(f => (
+        <div className="flex flex-wrap gap-1">
+          {TRUTH_FILTERS.map(f => (
             <Button key={f.value} size="sm" variant={planFilter === f.value ? "default" : "outline"} onClick={() => setPlanFilter(f.value)} className="text-xs h-8">
               {f.label}
             </Button>
           ))}
         </div>
+
       </div>
 
       {/* Master table */}
