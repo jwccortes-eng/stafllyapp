@@ -747,7 +747,7 @@ export default function CompaniesPage() {
                             </div>
                           </TabsContent>
 
-                          {/* Verdad comercial (Fase 0) + ciclo de vida (Fase 1) */}
+                          {/* Verdad comercial (Fase 0) + ciclo de vida (Fase 1) + ECC (lectura) */}
                           <TabsContent value="billing">
                             <div className="space-y-4">
                               <CompanyLifecyclePanel
@@ -757,6 +757,7 @@ export default function CompaniesPage() {
                                 canDecide={role === "owner"}
                                 onChanged={fetchCompanies}
                               />
+                              <EccContractPanel input={buildEccInput(c)} />
                               <CompanyTruthPanel truth={c.truth} />
                             </div>
                             <Button variant="outline" size="sm" className="mt-3 text-xs" onClick={() => openAssignPlan(c)}>
