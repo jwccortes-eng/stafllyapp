@@ -189,7 +189,18 @@ export interface CompanyReconciliation {
     ecc: boolean | null;
     status: string;
     explained: boolean;
+    /** Cómo se gobierna hoy (gate comercial, código+RLS, portal). */
+    legacyGovernance: string;
+    /** Evidencia legacy consultada. */
+    legacySource: string;
+    /** Fuente canónica de la decisión ECC. */
+    eccSource: string;
+    /** Dependencias canónicas no satisfechas. */
+    missingDependencies: string[];
+    /** Acción recomendada para cerrar la diferencia. */
+    recommendedAction: ResolutionAction;
   }>;
+
   findings: ReconciliationFinding[];
   readiness: Readiness;
   readinessReasons: string[];
