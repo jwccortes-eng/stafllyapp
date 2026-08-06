@@ -29,6 +29,8 @@ import { usePageView } from "@/hooks/useAuditLog";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { PageHeader } from "@/components/ui/page-header";
 import { PayrollSourceGuardrailBanner } from "@/components/payroll/PayrollSourceGuardrailBanner";
+import { PayrollMissingRateBanner } from "@/components/payroll/PayrollMissingRateBanner";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -1034,6 +1036,14 @@ export default function PayrollReviewQueue() {
 
 
       <PayrollSourceGuardrailBanner />
+
+      {/* P0 Payroll rate truth — missing rate / legacy rate / locked period. */}
+      <PayrollMissingRateBanner
+        companyId={selectedCompanyId}
+        periodId={effectivePeriodId}
+        periodStatus={selectedPeriod?.status ?? null}
+      />
+
 
       {/* S16 — Period resolver banners (read-only, tenant-scoped). */}
       {resolvedFromUrl && (

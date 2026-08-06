@@ -10014,6 +10014,57 @@ export type Database = {
           },
         ]
       }
+      payroll_consolidation_audit: {
+        Row: {
+          actor_id: string | null
+          applied_rate: number | null
+          company_id: string
+          created_at: string
+          employee_id: string
+          fallback_used: boolean
+          id: string
+          is_legacy_source: boolean
+          period_id: string
+          period_status: string | null
+          rate_source: string | null
+          result: string
+          time_entry_ids: string[]
+          worked_hours: number | null
+        }
+        Insert: {
+          actor_id?: string | null
+          applied_rate?: number | null
+          company_id: string
+          created_at?: string
+          employee_id: string
+          fallback_used?: boolean
+          id?: string
+          is_legacy_source?: boolean
+          period_id: string
+          period_status?: string | null
+          rate_source?: string | null
+          result: string
+          time_entry_ids?: string[]
+          worked_hours?: number | null
+        }
+        Update: {
+          actor_id?: string | null
+          applied_rate?: number | null
+          company_id?: string
+          created_at?: string
+          employee_id?: string
+          fallback_used?: boolean
+          id?: string
+          is_legacy_source?: boolean
+          period_id?: string
+          period_status?: string | null
+          rate_source?: string | null
+          result?: string
+          time_entry_ids?: string[]
+          worked_hours?: number | null
+        }
+        Relationships: []
+      }
       payroll_import_batches: {
         Row: {
           company_id: string
@@ -18032,6 +18083,10 @@ export type Database = {
       reset_employee_access_pin: {
         Args: { _employee_id: string }
         Returns: string
+      }
+      resolve_payroll_hourly_rate: {
+        Args: { _company_id: string; _employee_id: string; _period_id: string }
+        Returns: Json
       }
       resolve_shift_request: {
         Args: {

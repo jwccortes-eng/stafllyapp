@@ -19,6 +19,8 @@ import { toast } from "sonner";
 import { rowVersion, versionedWrite } from "@/lib/data/versioned-write";
 import { VersionConflictDialog, type VersionConflictInfo } from "@/components/data-integrity/VersionConflictDialog";
 import { COMPENSATION_FIELD_LABELS } from "@/lib/shifts/field-labels";
+import { PayrollRateTruthPanel } from "@/components/payroll/PayrollRateTruthPanel";
+
 
 /* ── Constants ── */
 const MODE_LABELS: Record<string, string> = { hourly: "Por hora", daily: "Por día", mixed: "Mixto" };
@@ -438,7 +440,7 @@ export default function EmployeeCompensationTab({
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <SummaryItem label="Día completo" value={profile.default_daily_rate != null ? `$${profile.default_daily_rate}` : "—"} />
             <SummaryItem label="Medio día" value={profile.default_half_day_rate != null ? `$${profile.default_half_day_rate}` : "—"} />
-            <SummaryItem label="Hourly activo" value={hourly.rate != null ? `$${hourly.rate}/h` : "—"} highlight={hourly.source === "none"} />
+            <SummaryItem label="Hourly perfil (no paga)" value={hourly.rate != null ? `$${hourly.rate}/h` : "—"} highlight={hourly.source === "none"} />
             <SummaryItem label="Pay ride" value={profile.default_ride_rate_regular != null ? `$${profile.default_ride_rate_regular}` : "—"} />
           </div>
           <div className="mt-3 flex items-center gap-2 flex-wrap text-[10px] text-muted-foreground">
@@ -449,8 +451,15 @@ export default function EmployeeCompensationTab({
               <span>Verificado: {format(parseISO(profile.hourly_rate_last_verified_at), "dd MMM yyyy", { locale: es })}</span>
             )}
           </div>
+          <PayrollRateTruthPanel
+            className="mt-3"
+            companyId={companyId}
+            employeeId={employeeId}
+            profileRate={hourly.rate}
+          />
         </CardContent>
       </Card>
+
 
       {/* ── Detail Card ── */}
       <Card className="rounded-xl border-border/40">

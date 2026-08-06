@@ -26,6 +26,8 @@ import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { describeConsolidation, type ConsolidationOutcome } from "@/lib/payroll/rate-resolver";
+
 
 /**
  * Find the period that contains today (Wed–Tue cycle), or the most recent past period.
@@ -271,13 +273,21 @@ function DesktopPeriodSummary() {
               const { data, error } = await supabase.functions.invoke("payroll-consolidate", {
                 body: { company_id: selectedCompanyId, period_id: selectedPeriod },
               });
-              if (!error && !data?.error) {
-                sonnerToast.success("Horas consolidadas automáticamente", {
-                  description: `${data.consolidated_employees ?? 0} empleado(s) actualizados.`,
-                });
-                // Reload data without resetting selectedPeriod (avoids loop)
-                load();
+              if (!error) {
+                const outcome = describeConsolidation(data as ConsolidationOutcome);
+                if (outcome.tone === "success") {
+                  sonnerToast.success(outcome.title, { description: outcome.description });
+                } else if (outcome.tone === "warning") {
+                  sonnerToast.warning(outcome.title, { description: outcome.description });
+                } else {
+                  sonnerToast.error(outcome.title, { description: outcome.description });
+                }
+                if (outcome.tone !== "error") {
+                  // Reload data without resetting selectedPeriod (avoids loop)
+                  load();
+                }
               }
+
             } catch (err) {
               console.error("Auto-consolidation failed:", err);
             }
@@ -393,13 +403,18 @@ function DesktopPeriodSummary() {
                         body: { company_id: selectedCompanyId, period_id: selectedPeriod },
                       });
                       if (error) throw error;
-                      if (data?.error) throw new Error(data.error);
+                      const outcome = describeConsolidation(data as ConsolidationOutcome);
+                      if (outcome.tone === "error") {
+                        throw new Error(outcome.description);
+                      }
                       toast({
-                        title: "Horas consolidadas",
-                        description: `${data.consolidated_employees ?? 0} empleado(s) actualizados. ${data.skipped_import_employees ?? 0} con import CSV preservados.`,
+                        title: outcome.title,
+                        description: outcome.description,
+                        variant: outcome.tone === "warning" ? "destructive" : undefined,
                       });
                       autoConsolidatedRef.current = null; // allow re-auto if user manually consolidates
                       // Reload without resetting period
+
                       setLoading(true);
                       const { data: basePays2 } = await supabase.from("period_base_pay").select("employee_id, base_total_pay, employees(first_name, last_name)").eq("period_id", selectedPeriod);
                       const { data: movements2 } = await supabase.from("movements").select("employee_id, total_value, concepts(category)").eq("period_id", selectedPeriod).eq("approval_status", "approved");
