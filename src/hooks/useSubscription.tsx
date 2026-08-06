@@ -95,7 +95,7 @@ export type PremiumFeature = string;
  * Resolves the effective plan code, normalizing legacy values.
  * Treats paid_features_enabled as an enterprise indicator when plan_code is free/paid_manual.
  */
-function resolveEffectivePlan(raw: string | null, paidFeaturesEnabled: boolean): PlanCode {
+export function resolveEffectivePlan(raw: string | null, paidFeaturesEnabled: boolean): PlanCode {
   const code = (raw ?? "free") as string;
   if (code === "enterprise") return "enterprise";
   if (code === "paid_manual") {
