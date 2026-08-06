@@ -212,12 +212,19 @@ export type ShadowStatus = "match" | "mismatch" | "unknown" | "missing_mapping" 
 export interface ShadowCapabilityRow {
   capabilityKey: string;
   legacyModuleKey: string | null;
+  /** Cómo se gobierna hoy: gate comercial, código+RLS, portal o nada. */
+  legacyGovernance: LegacyGovernance;
+  /** Evidencia legible de la fuente legacy consultada. */
+  legacySource: string;
   legacy: boolean | null;
   ecc: boolean;
   status: ShadowStatus;
   detail: string;
   eccReason: string;
+  /** Dependencias canónicas no satisfechas (explican `dependency_missing`). */
+  missingDependencies: string[];
 }
+
 
 export interface ShadowLimitRow {
   limitKey: string;
