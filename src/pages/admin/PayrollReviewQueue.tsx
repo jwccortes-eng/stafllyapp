@@ -1035,6 +1035,14 @@ export default function PayrollReviewQueue() {
 
       <PayrollSourceGuardrailBanner />
 
+      {/* P0 Payroll rate truth — missing rate / legacy rate / locked period. */}
+      <PayrollMissingRateBanner
+        companyId={selectedCompanyId}
+        periodId={effectivePeriodId}
+        periodStatus={selectedPeriod?.status ?? null}
+      />
+
+
       {/* S16 — Period resolver banners (read-only, tenant-scoped). */}
       {resolvedFromUrl && (
         <Card className="border-primary/30 bg-primary/5">
