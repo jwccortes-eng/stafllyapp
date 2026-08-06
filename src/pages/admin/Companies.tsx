@@ -35,6 +35,7 @@ import CompanyModulesDialog from "@/components/CompanyModulesDialog";
 import SandboxSyncDialog from "@/components/SandboxSyncDialog";
 import { InsightCard } from "@/components/ocs";
 import { CompanyTruthPanel } from "@/components/billing/CompanyTruthPanel";
+import { CompanyLifecyclePanel } from "@/components/billing/CompanyLifecyclePanel";
 import {
   buildCompanyTruth,
   summarizeTruth,
@@ -175,7 +176,7 @@ export default function CompaniesPage() {
   const fetchCompanies = async () => {
     const { data } = await supabase
       .from("companies")
-      .select("id, name, slug, is_active, is_sandbox, invite_code, company_code, created_at, logo_url, brand_color, application_enabled, status, plan_code, plan_status, billing_status, paid_features_enabled, max_employees, max_admins")
+      .select("id, name, slug, is_active, is_sandbox, invite_code, company_code, created_at, logo_url, brand_color, application_enabled, status, approval_state, access_state, commercial_state, approved_at, rejection_reason, access_state_reason, version, plan_code, plan_status, billing_status, paid_features_enabled, max_employees, max_admins")
       .order("company_code");
 
     if (!data) return;
@@ -318,7 +319,7 @@ export default function CompaniesPage() {
     e.preventDefault();
     setLoading(true);
     const slug = formSlug || generateSlug(formName);
-    const { error } = await supabase.from("companies").insert({ name: formName.trim(), slug, is_active: true, application_enabled: true } as any);
+    const { error } = await supabase.from("companies").insert({ name: formName.trim(), slug, is_active: true, application_enabled: true, status: "active", approval_state: "approved", access_state: "active", approved_at: new Date().toISOString() } as any);
     if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
     else { toast({ title: "Empresa creada" }); setCreateOpen(false); setFormName(""); setFormSlug(""); fetchCompanies(); refetch(); }
     setLoading(false);
@@ -746,13 +747,23 @@ export default function CompaniesPage() {
                             </div>
                           </TabsContent>
 
-                          {/* Verdad comercial (Fase 0 — solo lectura) */}
+                          {/* Verdad comercial (Fase 0) + ciclo de vida (Fase 1) */}
                           <TabsContent value="billing">
-                            <CompanyTruthPanel truth={c.truth} />
+                            <div className="space-y-4">
+                              <CompanyLifecyclePanel
+                                companyId={c.id}
+                                companyName={c.name}
+                                row={c as unknown as Record<string, unknown>}
+                                canDecide={role === "owner"}
+                                onChanged={fetchCompanies}
+                              />
+                              <CompanyTruthPanel truth={c.truth} />
+                            </div>
                             <Button variant="outline" size="sm" className="mt-3 text-xs" onClick={() => openAssignPlan(c)}>
                               <CreditCard className="h-3.5 w-3.5 mr-1.5" />Cambiar plan comercial (legacy)
                             </Button>
                           </TabsContent>
+
 
 
                           {/* Modules */}
