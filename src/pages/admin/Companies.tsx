@@ -23,7 +23,7 @@ import { Switch } from "@/components/ui/switch";
 import {
   Search, MoreHorizontal, Pencil, Building2, Plus, Users, LayoutGrid,
   FlaskConical, Copy, Check, CreditCard, ChevronDown, ChevronRight,
-  DollarSign, TrendingUp, Shield, UserCog, User, Crown, CircleDot,
+  AlertTriangle, Shield, UserCog, User, Crown, CircleDot,
   CopyPlus, Loader2, RefreshCcw,
 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
@@ -33,6 +33,33 @@ import { useCompany } from "@/hooks/useCompany";
 import CompanyUsersDialog from "@/components/CompanyUsersDialog";
 import CompanyModulesDialog from "@/components/CompanyModulesDialog";
 import SandboxSyncDialog from "@/components/SandboxSyncDialog";
+import { InsightCard } from "@/components/ocs";
+import { CompanyTruthPanel } from "@/components/billing/CompanyTruthPanel";
+import {
+  buildCompanyTruth,
+  summarizeTruth,
+  type CompanyModuleFlag,
+  type CompanyTruth,
+} from "@/lib/billing/company-truth";
+
+/** Tono visual por estado comercial (solo presentación). */
+const COMMERCIAL_TONE: Record<CompanyTruth["commercial"]["state"], string> = {
+  not_configured: "border-muted-foreground/30 text-muted-foreground",
+  manual: "border-primary/40 text-primary",
+  legacy_subscription: "border-amber-500/40 text-amber-600 dark:text-amber-400",
+  inconsistent: "border-destructive/50 text-destructive",
+};
+
+/** Filtros operativos del Command Center (Fase 0). */
+const TRUTH_FILTERS = [
+  { value: "all", label: "Todas" },
+  { value: "review", label: "Requiere revisión" },
+  { value: "no_billing", label: "Billing no conectado" },
+  { value: "legacy", label: "Subscription legacy" },
+  { value: "restricted", label: "Acceso restringido" },
+] as const;
+
+
 
 /* ── Types ── */
 interface CompanyUser {
@@ -64,8 +91,10 @@ interface CompanyRecord {
   stripe_customer_id: string | null;
   stripe_subscription_id: string | null;
   current_period_end: string | null;
-  mrr: number;
   employee_count: number;
+  /** Fase 0 — verdad comercial y de acceso derivada de la fuente real. */
+  truth: CompanyTruth;
+
 }
 
 /**
@@ -146,7 +175,7 @@ export default function CompaniesPage() {
   const fetchCompanies = async () => {
     const { data } = await supabase
       .from("companies")
-      .select("id, name, slug, is_active, is_sandbox, invite_code, company_code, created_at, logo_url, brand_color, application_enabled")
+      .select("id, name, slug, is_active, is_sandbox, invite_code, company_code, created_at, logo_url, brand_color, application_enabled, status, plan_code, plan_status, billing_status, paid_features_enabled, max_employees, max_admins")
       .order("company_code");
 
     if (!data) return;
@@ -183,8 +212,11 @@ export default function CompaniesPage() {
     const activeModMap: Record<string, number> = {};
     const totalModMap: Record<string, number> = {};
     const modNamesMap: Record<string, string[]> = {};
+    const modFlagsMap: Record<string, CompanyModuleFlag[]> = {};
     (modules ?? []).forEach(m => {
       totalModMap[m.company_id] = (totalModMap[m.company_id] || 0) + 1;
+      if (!modFlagsMap[m.company_id]) modFlagsMap[m.company_id] = [];
+      modFlagsMap[m.company_id].push({ module: m.module, is_active: !!m.is_active });
       if (m.is_active) {
         activeModMap[m.company_id] = (activeModMap[m.company_id] || 0) + 1;
         if (!modNamesMap[m.company_id]) modNamesMap[m.company_id] = [];
@@ -200,46 +232,83 @@ export default function CompaniesPage() {
       empCountMap[e.company_id] = (empCountMap[e.company_id] || 0) + 1;
     });
 
-    setCompanies(data.map(c => {
+    setCompanies((data as any[]).map(c => {
       const sub = subMap[c.id];
-      const plan = sub?.plan ?? "free";
-      const isActive = sub?.status === "active" || sub?.status === "trialing";
+      const userCount = cuByCompany[c.id]?.length ?? 0;
+      const employeeCount = empCountMap[c.id] || 0;
+
+      const truth = buildCompanyTruth({
+        id: c.id,
+        name: c.name,
+        is_active: c.is_active,
+        status: c.status ?? null,
+        plan_code: c.plan_code ?? null,
+        plan_status: c.plan_status ?? null,
+        billing_status: c.billing_status ?? null,
+        paid_features_enabled: !!c.paid_features_enabled,
+        max_employees: c.max_employees ?? null,
+        max_admins: c.max_admins ?? null,
+        modules: modFlagsMap[c.id] ?? [],
+        subscription: sub
+          ? {
+              plan: sub.plan ?? null,
+              status: sub.status ?? null,
+              stripe_customer_id: sub.stripe_customer_id ?? null,
+              stripe_subscription_id: sub.stripe_subscription_id ?? null,
+            }
+          : null,
+        user_count: userCount,
+        employee_count: employeeCount,
+      });
+
       return {
         ...c,
-        user_count: cuByCompany[c.id]?.length ?? 0,
+        user_count: userCount,
         users: cuByCompany[c.id] ?? [],
         active_modules: activeModMap[c.id] || 0,
         total_modules: totalModMap[c.id] || 0,
         module_names: modNamesMap[c.id] || [],
-        plan,
+        plan: c.plan_code ?? "free",
         plan_status: sub?.status ?? "none",
         stripe_customer_id: sub?.stripe_customer_id ?? null,
         stripe_subscription_id: sub?.stripe_subscription_id ?? null,
         current_period_end: sub?.current_period_end ?? null,
-        mrr: isActive ? (PLAN_PRICES[plan] ?? 0) : 0,
-        employee_count: empCountMap[c.id] || 0,
-      };
+        employee_count: employeeCount,
+        truth,
+      } as CompanyRecord;
     }));
   };
 
+
   useEffect(() => { fetchCompanies(); }, []);
 
-  /* ── KPIs ── */
-  const kpis = useMemo(() => {
-    const totalMrr = companies.reduce((s, c) => s + c.mrr, 0);
-    const activeSubs = companies.filter(c => c.plan_status === "active" || c.plan_status === "trialing").length;
-    const totalEmployees = companies.reduce((s, c) => s + c.employee_count, 0);
-    const totalUsers = companies.reduce((s, c) => s + c.user_count, 0);
-    return { totalMrr, activeSubs, totalEmployees, totalUsers };
-  }, [companies]);
+  /* ── KPIs honestos (Fase 0) ── */
+  const kpis = useMemo(() => summarizeTruth(companies.map(c => c.truth)), [companies]);
+
+  const inconsistentCompanies = useMemo(
+    () => companies.map(c => c.truth).filter(t => t.commercial.state === "inconsistent"),
+    [companies],
+  );
 
   /* ── Filters ── */
   const filtered = useMemo(() => {
     let list = companies;
     if (search) list = list.filter(c => c.name.toLowerCase().includes(search.toLowerCase()));
-    if (planFilter !== "all") list = list.filter(c => c.plan === planFilter);
-    return list;
+    if (planFilter === "review") list = list.filter(c => c.truth.contradictions.some(x => x.severity === "alta"));
+    else if (planFilter === "no_billing") list = list.filter(c => c.truth.commercial.state === "not_configured");
+    else if (planFilter === "legacy") list = list.filter(c => c.truth.commercial.state === "legacy_subscription");
+    else if (planFilter === "restricted") list = list.filter(c => c.truth.access.state === "restricted");
+    else if (planFilter !== "all") list = list.filter(c => c.truth.effectivePlan === planFilter);
+    // Prioridad operativa: contradicciones graves primero.
+    return [...list].sort((a, b) => {
+      const score = (t: typeof a.truth) =>
+        (t.commercial.state === "inconsistent" ? 100 : 0) +
+        (t.access.state === "restricted" ? 20 : 0) +
+        t.contradictions.length;
+      return score(b.truth) - score(a.truth);
+    });
   }, [companies, search, planFilter]);
+
 
   /* ── Helpers ── */
   const generateSlug = (name: string) =>
@@ -405,29 +474,52 @@ export default function CompaniesPage() {
         }
       />
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+      {/* KPIs honestos — solo lo que la fuente real puede sostener */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
         <Card><CardContent className="flex items-center gap-3 p-4">
           <div className="p-2 rounded-lg bg-primary/10 text-primary"><Building2 className="h-5 w-5" /></div>
-          <div><p className="text-2xl font-bold">{companies.length}</p><p className="text-xs text-muted-foreground">Empresas</p></div>
+          <div><p className="text-2xl font-bold">{kpis.total}</p><p className="text-xs text-muted-foreground">Empresas</p></div>
+        </CardContent></Card>
+        <Card className={kpis.needsReview > 0 ? "border-destructive/40 bg-destructive/5" : ""}><CardContent className="flex items-center gap-3 p-4">
+          <div className="p-2 rounded-lg bg-destructive/10 text-destructive"><AlertTriangle className="h-5 w-5" /></div>
+          <div><p className="text-2xl font-bold">{kpis.needsReview}</p><p className="text-xs text-muted-foreground">Requiere revisión</p></div>
         </CardContent></Card>
         <Card><CardContent className="flex items-center gap-3 p-4">
-          <div className="p-2 rounded-lg bg-chart-1/10 text-chart-1"><TrendingUp className="h-5 w-5" /></div>
-          <div><p className="text-2xl font-bold">{kpis.activeSubs}</p><p className="text-xs text-muted-foreground">Suscripciones activas</p></div>
-        </CardContent></Card>
-        <Card className="border-primary/30 bg-primary/5"><CardContent className="flex items-center gap-3 p-4">
-          <div className="p-2 rounded-lg bg-primary/10 text-primary"><DollarSign className="h-5 w-5" /></div>
-          <div><p className="text-2xl font-bold text-primary">${kpis.totalMrr}</p><p className="text-xs text-muted-foreground">MRR mensual</p></div>
+          <div className="p-2 rounded-lg bg-muted text-muted-foreground"><CreditCard className="h-5 w-5" /></div>
+          <div><p className="text-2xl font-bold">{kpis.billingNotConfigured}</p><p className="text-xs text-muted-foreground">Billing no conectado</p></div>
         </CardContent></Card>
         <Card><CardContent className="flex items-center gap-3 p-4">
-          <div className="p-2 rounded-lg bg-chart-4/10 text-chart-4"><Users className="h-5 w-5" /></div>
-          <div><p className="text-2xl font-bold">{kpis.totalUsers}</p><p className="text-xs text-muted-foreground">Usuarios admin</p></div>
+          <div className="p-2 rounded-lg bg-chart-4/10 text-chart-4"><CircleDot className="h-5 w-5" /></div>
+          <div><p className="text-2xl font-bold">{kpis.legacySubscriptions}</p><p className="text-xs text-muted-foreground">Subscription legacy</p></div>
         </CardContent></Card>
         <Card><CardContent className="flex items-center gap-3 p-4">
-          <div className="p-2 rounded-lg bg-chart-2/10 text-chart-2"><User className="h-5 w-5" /></div>
-          <div><p className="text-2xl font-bold">{kpis.totalEmployees}</p><p className="text-xs text-muted-foreground">Empleados totales</p></div>
+          <div className="p-2 rounded-lg bg-chart-2/10 text-chart-2"><Shield className="h-5 w-5" /></div>
+          <div><p className="text-2xl font-bold">{kpis.restricted}</p><p className="text-xs text-muted-foreground">Acceso restringido</p></div>
         </CardContent></Card>
       </div>
+
+      <p className="text-xs text-muted-foreground mb-4">
+        El plan mostrado es el que gobierna el acceso (<span className="font-mono">companies.plan_code</span>).
+        Las suscripciones son registros legacy y no otorgan ni retiran módulos. Modelo de aprobación no implementado.
+      </p>
+
+      {/* Contradicciones — solo lectura, sin corrección automática */}
+      {inconsistentCompanies.length > 0 && (
+        <div className="mb-6">
+          <InsightCard
+            status="critical"
+            statusLabel="Configuración comercial inconsistente"
+            recommendation={`${inconsistentCompanies.length} empresa(s) con configuración comercial inconsistente`}
+            because={inconsistentCompanies
+              .slice(0, 4)
+              .map(t => `${t.name}: ${t.contradictions.find(x => x.severity === "alta")?.title ?? t.contradictions[0]?.title}`)
+              .join(" · ")}
+            impact="El plan visible, la subscription y el acceso no cuentan la misma historia. Revisar antes de conectar cualquier cobro."
+            mode="readonly"
+          />
+        </div>
+      )}
+
 
       {/* Filter bar */}
       <div className="flex flex-wrap gap-3 items-center mb-4">
@@ -435,13 +527,14 @@ export default function CompaniesPage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input placeholder="Buscar empresa..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
         </div>
-        <div className="flex gap-1">
-          {[{ value: "all", label: "Todas" }, ...PLAN_OPTIONS.map(p => ({ value: p.value, label: p.label }))].map(f => (
+        <div className="flex flex-wrap gap-1">
+          {TRUTH_FILTERS.map(f => (
             <Button key={f.value} size="sm" variant={planFilter === f.value ? "default" : "outline"} onClick={() => setPlanFilter(f.value)} className="text-xs h-8">
               {f.label}
             </Button>
           ))}
         </div>
+
       </div>
 
       {/* Master table */}
@@ -452,14 +545,14 @@ export default function CompaniesPage() {
               <TableHead className="w-10"></TableHead>
               <TableHead className="w-16">#ID</TableHead>
               <TableHead>Empresa</TableHead>
-              <TableHead>Plan</TableHead>
-              <TableHead>Estado suscripción</TableHead>
-              <TableHead>MRR</TableHead>
+              <TableHead>Plan efectivo</TableHead>
+              <TableHead>Subscription registrada</TableHead>
+              <TableHead>Estado comercial</TableHead>
+              <TableHead>Acceso</TableHead>
               <TableHead>Usuarios</TableHead>
               <TableHead>Empleados</TableHead>
               <TableHead>Módulos</TableHead>
-              <TableHead>Vence</TableHead>
-              <TableHead>Estado</TableHead>
+              <TableHead>Revisión</TableHead>
               <TableHead className="w-12"></TableHead>
             </TableRow>
           </TableHeader>
@@ -467,9 +560,8 @@ export default function CompaniesPage() {
             {filtered.length === 0 ? (
               <TableRow><TableCell colSpan={12} className="text-center text-muted-foreground py-8">No hay empresas</TableCell></TableRow>
             ) : filtered.map(c => {
-              const planOpt = PLAN_OPTIONS.find(p => p.value === c.plan) ?? PLAN_OPTIONS[0];
-              const planDisplay = getPlanDisplay(c.plan);
               const isExpanded = expandedId === c.id;
+
 
               return (
                 <>{/* Main row */}
@@ -501,17 +593,27 @@ export default function CompaniesPage() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge className={`text-[10px] font-bold ${planDisplay.isLegacy ? "bg-amber-500/10 text-amber-700 dark:text-amber-400" : planOpt.color} border-0`}>{planDisplay.label}</Badge>
+                    <Badge className="text-[10px] font-bold bg-primary/10 text-primary border-0">{c.truth.effectivePlanLabel}</Badge>
+                    <p className="text-[10px] text-muted-foreground mt-0.5 font-mono">{c.truth.rawPlanCode}</p>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline" className={`text-[10px] ${c.plan_status === "active" ? "border-chart-1/40 text-chart-1" : c.plan_status === "trialing" ? "border-chart-4/40 text-chart-4" : ""}`}>
-                      {c.plan_status === "active" ? "Activa" : c.plan_status === "trialing" ? "Trial" : c.plan_status === "canceled" ? "Cancelada" : "Sin plan"}
+                    {c.truth.subscription ? (
+                      <Badge variant="outline" className="text-[10px] border-amber-500/40 text-amber-600 dark:text-amber-400">
+                        {c.truth.subscription.plan ?? "—"} · {c.truth.subscription.status ?? "—"}
+                      </Badge>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">Sin subscription</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className={`text-[10px] ${COMMERCIAL_TONE[c.truth.commercial.state]}`}>
+                      {c.truth.commercial.label}
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <span className={`font-semibold text-sm ${c.mrr > 0 ? "text-chart-1" : "text-muted-foreground"}`}>
-                      ${c.mrr}
-                    </span>
+                    <Badge variant="outline" className={`text-[10px] ${c.truth.access.state === "active" ? "border-chart-1/40 text-chart-1" : "border-destructive/40 text-destructive"}`}>
+                      {c.truth.access.label}
+                    </Badge>
                   </TableCell>
                   <TableCell><Badge variant="outline">{c.user_count}</Badge></TableCell>
                   <TableCell><Badge variant="outline">{c.employee_count}</Badge></TableCell>
@@ -522,10 +624,16 @@ export default function CompaniesPage() {
                       </Badge>
                     ) : <span className="text-xs text-muted-foreground">—</span>}
                   </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">{fmtDate(c.current_period_end)}</TableCell>
                   <TableCell>
-                    <Badge variant={c.is_active ? "default" : "secondary"}>{c.is_active ? "Activa" : "Inactiva"}</Badge>
+                    {c.truth.contradictions.length === 0 ? (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    ) : (
+                      <Badge variant="outline" className={`text-[10px] ${c.truth.contradictions.some(x => x.severity === "alta") ? "border-destructive/50 text-destructive" : "border-amber-500/40 text-amber-600 dark:text-amber-400"}`}>
+                        <AlertTriangle className="h-3 w-3 mr-1" />{c.truth.contradictions.length}
+                      </Badge>
+                    )}
                   </TableCell>
+
                   <TableCell onClick={e => e.stopPropagation()}>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -638,42 +746,14 @@ export default function CompaniesPage() {
                             </div>
                           </TabsContent>
 
-                          {/* Billing */}
+                          {/* Verdad comercial (Fase 0 — solo lectura) */}
                           <TabsContent value="billing">
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-2">
-                              <div className="space-y-1">
-                                <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Plan actual</p>
-                                <Badge className={`${planDisplay.isLegacy ? "bg-amber-500/10 text-amber-700 dark:text-amber-400" : planOpt.color} border-0 font-bold`}>{planDisplay.label}</Badge>
-                              </div>
-                              <div className="space-y-1">
-                                <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Valor mensual</p>
-                                <p className="text-lg font-bold text-chart-1">${c.mrr}<span className="text-xs text-muted-foreground font-normal">/mes</span></p>
-                              </div>
-                              <div className="space-y-1">
-                                <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Estado</p>
-                                <p className="text-sm capitalize">{c.plan_status === "none" ? "Sin suscripción" : c.plan_status}</p>
-                              </div>
-                              <div className="space-y-1">
-                                <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Próximo cobro</p>
-                                <p className="text-sm">{fmtDate(c.current_period_end)}</p>
-                              </div>
-                              <div className="space-y-1">
-                                <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Stripe Customer</p>
-                                <p className="text-xs font-mono text-muted-foreground">{c.stripe_customer_id || "—"}</p>
-                              </div>
-                              <div className="space-y-1">
-                                <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Stripe Subscription</p>
-                                <p className="text-xs font-mono text-muted-foreground">{c.stripe_subscription_id || "—"}</p>
-                              </div>
-                              <div className="space-y-1">
-                                <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Valor cartera anual</p>
-                                <p className="text-lg font-bold">${c.mrr * 12}<span className="text-xs text-muted-foreground font-normal">/año</span></p>
-                              </div>
-                            </div>
+                            <CompanyTruthPanel truth={c.truth} />
                             <Button variant="outline" size="sm" className="mt-3 text-xs" onClick={() => openAssignPlan(c)}>
-                              <CreditCard className="h-3.5 w-3.5 mr-1.5" />Cambiar plan
+                              <CreditCard className="h-3.5 w-3.5 mr-1.5" />Cambiar plan comercial (legacy)
                             </Button>
                           </TabsContent>
+
 
                           {/* Modules */}
                           <TabsContent value="modules">
