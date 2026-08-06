@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertTriangle, CheckCircle2, Loader2, ShieldCheck } from "lucide-react";
-import { notify } from "@/lib/feedback/notify";
+import { notifyError, notifySuccess } from "@/lib/feedback/notify";
 import {
   ACCESS_DESCRIPTION,
   ACCESS_LABEL,
@@ -56,26 +56,30 @@ export function CompanyLifecyclePanel({ companyId, companyName, row, canDecide, 
     try {
       const result = await run();
       if (result.status === "conflict") {
-        notify.error({
+        notifyError({
           title: "La empresa cambió mientras decidías",
-          detail: `Estado actual: ${result.actualApprovalState ?? "?"} / ${result.actualAccessState ?? "?"}.`,
-          action: "Recarga la ficha y vuelve a intentarlo.",
+          fact: `Estado actual: ${result.actualApprovalState ?? "?"} / ${result.actualAccessState ?? "?"}.`,
+          consequence: "No se aplicó ninguna transición.",
+          action: { label: "Recargar ficha", onClick: onChanged },
         });
         onChanged();
         return;
       }
       if (result.status === "error") {
-        notify.error({
+        notifyError({
           title: "No se aplicó la transición",
-          detail: result.message,
-          action: result.reason === "denied" ? "Requiere un propietario global." : "Revisa los datos e intenta de nuevo.",
+          fact: result.message,
+          consequence:
+            result.reason === "denied"
+              ? "Esta decisión requiere un propietario global."
+              : "La empresa conserva su estado anterior.",
         });
         return;
       }
-      notify.success({
+      notifySuccess({
         title: result.status === "noop" ? "Sin cambios" : `${label} aplicado`,
-        detail: `${companyName}: aprobación ${APPROVAL_LABEL[result.approvalState]}, acceso ${ACCESS_LABEL[result.accessState]}.`,
-        action: result.nextAction ?? undefined,
+        fact: `${companyName}: aprobación ${APPROVAL_LABEL[result.approvalState]}, acceso ${ACCESS_LABEL[result.accessState]}.`,
+        consequence: result.nextAction ?? undefined,
       });
       setReason("");
       onChanged();
