@@ -85,9 +85,9 @@ describe("ECC Fase 2 · catálogo canónico", () => {
 });
 
 describe("ECC Fase 2 · plan versions inmutables", () => {
-  it("QA1 · un plan tiene dos versiones con checksum verificable", () => {
+  it("QA1 · un plan tiene versiones sucesivas con checksum verificable", () => {
     const versions = planVersionsFor("stafly.free");
-    expect(versions.map(v => v.version)).toEqual([1, 2]);
+    expect(versions.map(v => v.version)).toEqual([1, 2, 3]);
     expect(PLAN_VERSIONS.every(verifyPlanVersion)).toBe(true);
     expect(versions[0].checksum).not.toBe(versions[1].checksum);
   });
@@ -103,8 +103,8 @@ describe("ECC Fase 2 · plan versions inmutables", () => {
 
   it("QA3 · una company nueva recibe la versión vigente", () => {
     const access = getEffectiveCommercialAccess(ctxFor({ contract: { planKey: "stafly.free", product: "stafly" } }));
-    expect(access.planVersion?.version).toBe(2);
-    expect(latestPublishedVersion("stafly.free")?.version).toBe(2);
+    expect(access.planVersion?.version).toBe(3);
+    expect(latestPublishedVersion("stafly.free")?.version).toBe(3);
     expect(resolvePlanVersionAt("stafly.free", "2025-01-01")?.version).toBe(1);
   });
 
@@ -113,7 +113,7 @@ describe("ECC Fase 2 · plan versions inmutables", () => {
     expect(assertPlanVersionEditable(published).ok).toBe(false);
     const next = draftNextVersion("stafly.pro", { capabilities: ["shared.data.export"] }, {
       createdBy: "owner",
-      effectiveFrom: "2026-07-01",
+      effectiveFrom: "2026-09-01",
       note: "prueba",
     });
     expect(next.ok).toBe(true);

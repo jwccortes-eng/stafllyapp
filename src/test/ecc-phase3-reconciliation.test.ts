@@ -45,8 +45,10 @@ describe("ECC Fase 3 — reconciliación y readiness", () => {
     const rec = reconcileCompany(base(), AT);
     const mismatched = rec.criticalMatrix.filter(m => m.canonical && m.status !== "match");
     expect(mismatched).toHaveLength(0);
-    expect(rec.readiness).toBe("NOT_READY"); // por capacidades críticas aún sin catálogo
-    expect(rec.blockers.join(" ")).toContain("sin mapeo canónico");
+    // Fase 3.1: documentos, cumplimiento, portal y auditoría ya están mapeados.
+    expect(rec.criticalMatrix.every(m => !!m.canonical)).toBe(true);
+    expect(rec.readiness).not.toBe("BLOCKED");
+    expect(rec.criticalMatrix.every(m => !!m.legacySource)).toBe(true);
   });
 
   it("QA2 · company con override legacy queda inventariada y clasificada", () => {
@@ -75,9 +77,10 @@ describe("ECC Fase 3 — reconciliación y readiness", () => {
   it("QA4 · unknown mapping se clasifica como A y propone crear mapping", () => {
     const rec = reconcileCompany(base(), AT);
     const missing = rec.findings.filter(f => f.classification === "A");
-    expect(missing.length).toBeGreaterThan(0);
     for (const f of missing) expect(f.proposal).toBe("create_mapping");
     expect(missing.every(f => !!f.owner)).toBe(true);
+    // Ninguna capacidad crítica queda sin representación canónica.
+    expect(rec.criticalMatrix.filter(m => !m.canonical)).toHaveLength(0);
   });
 
   it("QA5 · plan contradictorio (paid_features sin plan_code) genera hallazgo de dato ambiguo", () => {
