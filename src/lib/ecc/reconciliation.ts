@@ -337,7 +337,7 @@ export function reconcileCompany(input: EccReadModelInput, at?: string): Company
   });
 
   /* Overrides */
-  const overrides: OverrideInventoryRow[] = shadow.access.overrides.map(o => {
+  const overrides: OverrideInventoryRow[] = shadow.access.overridesApplied.map(o => {
     const classification = classifyOverride(o);
     const blocksReadiness = classification === "desconocido";
     if (blocksReadiness) {
@@ -618,7 +618,7 @@ export function reconcileAccounts(companies: CompanyReconciliation[]): AccountRe
     });
     // Fuga cross-tenant: un override de scope company aplicado a otra company.
     const crossTenantLeak = list.some(c =>
-      c.overrides.some(o => o.scope === "company" && !c.shadow.access.overrides.some(x => x.id === o.id)),
+      c.overrides.some(o => o.scope === "company" && !c.shadow.access.overridesApplied.some(x => x.id === o.id)),
     );
     return {
       accountId,
