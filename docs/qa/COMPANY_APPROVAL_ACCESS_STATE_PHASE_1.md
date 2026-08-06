@@ -1,6 +1,6 @@
 # FASE 1 — COMPANY APPROVAL AND ACCESS STATE
 
-Estado: **IMPLEMENTADO**. QA estructural y de modelo **VERIFICADO**. QA end-to-end con sesión de propietario global **UNVERIFIED** (ver limitaciones).
+Estado: **IMPLEMENTADO**. QA estructural y de modelo **VERIFICADO**. QA end-to-end con sesión real de propietario global **VERIFICADO** en Fase 1.1 (ver sección 8); sólo la variante "admin de otro tenant" queda parcial por límites del entorno.
 
 ## 1. Separación de estados
 
