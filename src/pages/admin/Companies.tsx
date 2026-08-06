@@ -268,6 +268,41 @@ export default function CompaniesPage() {
         employee_count: employeeCount,
       });
 
+      // ECC Fase 1 — entrada canónica (solo lectura, aislada por company_id).
+      const ecc: EccReadModelInput = {
+        commercialAccount: null,
+        company: {
+          id: c.id,
+          name: c.name,
+          slug: c.slug ?? null,
+          is_active: c.is_active,
+          status: c.status ?? null,
+          approval_state: c.approval_state ?? null,
+          access_state: c.access_state ?? null,
+          commercial_state: c.commercial_state ?? null,
+          rejection_reason: c.rejection_reason ?? null,
+          access_state_reason: c.access_state_reason ?? null,
+          plan_code: c.plan_code ?? null,
+          plan_status: c.plan_status ?? null,
+          billing_status: c.billing_status ?? null,
+          paid_features_enabled: !!c.paid_features_enabled,
+          max_employees: c.max_employees ?? null,
+          max_admins: c.max_admins ?? null,
+          version: typeof c.version === "number" ? c.version : null,
+        },
+        modules: modFlagsMap[c.id] ?? [],
+        subscription: sub
+          ? {
+              plan: sub.plan ?? null,
+              status: sub.status ?? null,
+              stripe_customer_id: sub.stripe_customer_id ?? null,
+              stripe_subscription_id: sub.stripe_subscription_id ?? null,
+            }
+          : null,
+        userCount,
+        employeeCount,
+      };
+
       return {
         ...c,
         user_count: userCount,
@@ -282,6 +317,7 @@ export default function CompaniesPage() {
         current_period_end: sub?.current_period_end ?? null,
         employee_count: employeeCount,
         truth,
+        ecc,
       } as CompanyRecord;
     }));
   };
