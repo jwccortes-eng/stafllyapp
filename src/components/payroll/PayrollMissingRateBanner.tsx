@@ -18,7 +18,7 @@ interface Props {
 }
 
 interface AuditRow {
-  employee_id: string;
+  employee_id: string | null;
   result: string;
   is_legacy_source: boolean;
   created_at: string;
