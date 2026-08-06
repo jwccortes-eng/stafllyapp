@@ -452,14 +452,14 @@ export default function CompaniesPage() {
               <TableHead className="w-10"></TableHead>
               <TableHead className="w-16">#ID</TableHead>
               <TableHead>Empresa</TableHead>
-              <TableHead>Plan</TableHead>
-              <TableHead>Estado suscripción</TableHead>
-              <TableHead>MRR</TableHead>
+              <TableHead>Plan efectivo</TableHead>
+              <TableHead>Subscription registrada</TableHead>
+              <TableHead>Estado comercial</TableHead>
+              <TableHead>Acceso</TableHead>
               <TableHead>Usuarios</TableHead>
               <TableHead>Empleados</TableHead>
               <TableHead>Módulos</TableHead>
-              <TableHead>Vence</TableHead>
-              <TableHead>Estado</TableHead>
+              <TableHead>Revisión</TableHead>
               <TableHead className="w-12"></TableHead>
             </TableRow>
           </TableHeader>
@@ -467,9 +467,8 @@ export default function CompaniesPage() {
             {filtered.length === 0 ? (
               <TableRow><TableCell colSpan={12} className="text-center text-muted-foreground py-8">No hay empresas</TableCell></TableRow>
             ) : filtered.map(c => {
-              const planOpt = PLAN_OPTIONS.find(p => p.value === c.plan) ?? PLAN_OPTIONS[0];
-              const planDisplay = getPlanDisplay(c.plan);
               const isExpanded = expandedId === c.id;
+
 
               return (
                 <>{/* Main row */}
