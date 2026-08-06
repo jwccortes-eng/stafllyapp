@@ -501,17 +501,27 @@ export default function CompaniesPage() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge className={`text-[10px] font-bold ${planDisplay.isLegacy ? "bg-amber-500/10 text-amber-700 dark:text-amber-400" : planOpt.color} border-0`}>{planDisplay.label}</Badge>
+                    <Badge className="text-[10px] font-bold bg-primary/10 text-primary border-0">{c.truth.effectivePlanLabel}</Badge>
+                    <p className="text-[10px] text-muted-foreground mt-0.5 font-mono">{c.truth.rawPlanCode}</p>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline" className={`text-[10px] ${c.plan_status === "active" ? "border-chart-1/40 text-chart-1" : c.plan_status === "trialing" ? "border-chart-4/40 text-chart-4" : ""}`}>
-                      {c.plan_status === "active" ? "Activa" : c.plan_status === "trialing" ? "Trial" : c.plan_status === "canceled" ? "Cancelada" : "Sin plan"}
+                    {c.truth.subscription ? (
+                      <Badge variant="outline" className="text-[10px] border-amber-500/40 text-amber-600 dark:text-amber-400">
+                        {c.truth.subscription.plan ?? "—"} · {c.truth.subscription.status ?? "—"}
+                      </Badge>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">Sin subscription</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className={`text-[10px] ${COMMERCIAL_TONE[c.truth.commercial.state]}`}>
+                      {c.truth.commercial.label}
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <span className={`font-semibold text-sm ${c.mrr > 0 ? "text-chart-1" : "text-muted-foreground"}`}>
-                      ${c.mrr}
-                    </span>
+                    <Badge variant="outline" className={`text-[10px] ${c.truth.access.state === "active" ? "border-chart-1/40 text-chart-1" : "border-destructive/40 text-destructive"}`}>
+                      {c.truth.access.label}
+                    </Badge>
                   </TableCell>
                   <TableCell><Badge variant="outline">{c.user_count}</Badge></TableCell>
                   <TableCell><Badge variant="outline">{c.employee_count}</Badge></TableCell>
@@ -522,10 +532,16 @@ export default function CompaniesPage() {
                       </Badge>
                     ) : <span className="text-xs text-muted-foreground">—</span>}
                   </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">{fmtDate(c.current_period_end)}</TableCell>
                   <TableCell>
-                    <Badge variant={c.is_active ? "default" : "secondary"}>{c.is_active ? "Activa" : "Inactiva"}</Badge>
+                    {c.truth.contradictions.length === 0 ? (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    ) : (
+                      <Badge variant="outline" className={`text-[10px] ${c.truth.contradictions.some(x => x.severity === "alta") ? "border-destructive/50 text-destructive" : "border-amber-500/40 text-amber-600 dark:text-amber-400"}`}>
+                        <AlertTriangle className="h-3 w-3 mr-1" />{c.truth.contradictions.length}
+                      </Badge>
+                    )}
                   </TableCell>
+
                   <TableCell onClick={e => e.stopPropagation()}>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
