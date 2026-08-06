@@ -10020,7 +10020,7 @@ export type Database = {
           applied_rate: number | null
           company_id: string
           created_at: string
-          employee_id: string
+          employee_id: string | null
           fallback_used: boolean
           id: string
           is_legacy_source: boolean
@@ -10036,7 +10036,7 @@ export type Database = {
           applied_rate?: number | null
           company_id: string
           created_at?: string
-          employee_id: string
+          employee_id?: string | null
           fallback_used?: boolean
           id?: string
           is_legacy_source?: boolean
@@ -10052,7 +10052,7 @@ export type Database = {
           applied_rate?: number | null
           company_id?: string
           created_at?: string
-          employee_id?: string
+          employee_id?: string | null
           fallback_used?: boolean
           id?: string
           is_legacy_source?: boolean
