@@ -803,6 +803,8 @@ export default function CompaniesPage() {
                               />
                               <EccContractPanel input={buildEccInput(c)} />
                               <EccPlanVersionPanel input={buildEccInput(c)} />
+                              {role === "owner" && <EccReadinessPanel input={buildEccInput(c)} />}
+
 
                               <CompanyTruthPanel truth={c.truth} />
                             </div>
