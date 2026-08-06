@@ -271,13 +271,21 @@ function DesktopPeriodSummary() {
               const { data, error } = await supabase.functions.invoke("payroll-consolidate", {
                 body: { company_id: selectedCompanyId, period_id: selectedPeriod },
               });
-              if (!error && !data?.error) {
-                sonnerToast.success("Horas consolidadas automáticamente", {
-                  description: `${data.consolidated_employees ?? 0} empleado(s) actualizados.`,
-                });
-                // Reload data without resetting selectedPeriod (avoids loop)
-                load();
+              if (!error) {
+                const outcome = describeConsolidation(data as ConsolidationOutcome);
+                if (outcome.tone === "success") {
+                  sonnerToast.success(outcome.title, { description: outcome.description });
+                } else if (outcome.tone === "warning") {
+                  sonnerToast.warning(outcome.title, { description: outcome.description });
+                } else {
+                  sonnerToast.error(outcome.title, { description: outcome.description });
+                }
+                if (outcome.tone !== "error") {
+                  // Reload data without resetting selectedPeriod (avoids loop)
+                  load();
+                }
               }
+
             } catch (err) {
               console.error("Auto-consolidation failed:", err);
             }
