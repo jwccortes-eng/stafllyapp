@@ -163,6 +163,36 @@ const PRO_CAPS = [
 const ENTERPRISE_CAPS = [...PRO_CAPS];
 
 /**
+ * ECC Fase 3.1 — capacidades críticas que hoy NO tienen gate comercial:
+ * documentos, revisión documental, auditoría, notificaciones, cumplimiento y
+ * portal del trabajador existen para toda compañía y se gobiernan por rol/RLS.
+ * Se conceden en todos los planes para que el modelo canónico refleje la
+ * realidad y no invente restricciones nuevas.
+ */
+export const CRITICAL_31_CAPS = [
+  "shared.documents.storage",
+  "shared.documents.review",
+  "shared.audit.trail",
+  "shared.comms.notifications",
+  "stafly.compliance.requirements",
+  "stafly.compliance.assignment_policy",
+  "stafly.worker_portal.access",
+  "stafly.worker_portal.documents",
+  "stafly.worker_portal.captain_room",
+];
+
+/** Subconjunto transversal aplicable también a Parceros. */
+const SHARED_CRITICAL_31_CAPS = CRITICAL_31_CAPS.filter(k => k.startsWith("shared."));
+
+const FREE_CAPS_V3 = [...FREE_CAPS, ...CRITICAL_31_CAPS];
+const PRO_CAPS_V2 = [...PRO_CAPS, ...CRITICAL_31_CAPS];
+const ENTERPRISE_CAPS_V2 = [...ENTERPRISE_CAPS, ...CRITICAL_31_CAPS];
+
+/** Fecha de vigencia de las versiones creadas por la Fase 3.1. */
+const PHASE_31_EFFECTIVE_FROM = "2026-08-01";
+
+
+/**
  * Versiones publicadas. `v1` documenta el estado histórico; `v2` es la versión
  * vigente. Ninguna se edita: se agregan versiones nuevas al final.
  */
