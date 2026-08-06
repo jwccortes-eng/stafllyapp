@@ -405,29 +405,52 @@ export default function CompaniesPage() {
         }
       />
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+      {/* KPIs honestos — solo lo que la fuente real puede sostener */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
         <Card><CardContent className="flex items-center gap-3 p-4">
           <div className="p-2 rounded-lg bg-primary/10 text-primary"><Building2 className="h-5 w-5" /></div>
-          <div><p className="text-2xl font-bold">{companies.length}</p><p className="text-xs text-muted-foreground">Empresas</p></div>
+          <div><p className="text-2xl font-bold">{kpis.total}</p><p className="text-xs text-muted-foreground">Empresas</p></div>
+        </CardContent></Card>
+        <Card className={kpis.needsReview > 0 ? "border-destructive/40 bg-destructive/5" : ""}><CardContent className="flex items-center gap-3 p-4">
+          <div className="p-2 rounded-lg bg-destructive/10 text-destructive"><AlertTriangle className="h-5 w-5" /></div>
+          <div><p className="text-2xl font-bold">{kpis.needsReview}</p><p className="text-xs text-muted-foreground">Requiere revisión</p></div>
         </CardContent></Card>
         <Card><CardContent className="flex items-center gap-3 p-4">
-          <div className="p-2 rounded-lg bg-chart-1/10 text-chart-1"><TrendingUp className="h-5 w-5" /></div>
-          <div><p className="text-2xl font-bold">{kpis.activeSubs}</p><p className="text-xs text-muted-foreground">Suscripciones activas</p></div>
-        </CardContent></Card>
-        <Card className="border-primary/30 bg-primary/5"><CardContent className="flex items-center gap-3 p-4">
-          <div className="p-2 rounded-lg bg-primary/10 text-primary"><DollarSign className="h-5 w-5" /></div>
-          <div><p className="text-2xl font-bold text-primary">${kpis.totalMrr}</p><p className="text-xs text-muted-foreground">MRR mensual</p></div>
+          <div className="p-2 rounded-lg bg-muted text-muted-foreground"><CreditCard className="h-5 w-5" /></div>
+          <div><p className="text-2xl font-bold">{kpis.billingNotConfigured}</p><p className="text-xs text-muted-foreground">Billing no conectado</p></div>
         </CardContent></Card>
         <Card><CardContent className="flex items-center gap-3 p-4">
-          <div className="p-2 rounded-lg bg-chart-4/10 text-chart-4"><Users className="h-5 w-5" /></div>
-          <div><p className="text-2xl font-bold">{kpis.totalUsers}</p><p className="text-xs text-muted-foreground">Usuarios admin</p></div>
+          <div className="p-2 rounded-lg bg-chart-4/10 text-chart-4"><CircleDot className="h-5 w-5" /></div>
+          <div><p className="text-2xl font-bold">{kpis.legacySubscriptions}</p><p className="text-xs text-muted-foreground">Subscription legacy</p></div>
         </CardContent></Card>
         <Card><CardContent className="flex items-center gap-3 p-4">
-          <div className="p-2 rounded-lg bg-chart-2/10 text-chart-2"><User className="h-5 w-5" /></div>
-          <div><p className="text-2xl font-bold">{kpis.totalEmployees}</p><p className="text-xs text-muted-foreground">Empleados totales</p></div>
+          <div className="p-2 rounded-lg bg-chart-2/10 text-chart-2"><Shield className="h-5 w-5" /></div>
+          <div><p className="text-2xl font-bold">{kpis.restricted}</p><p className="text-xs text-muted-foreground">Acceso restringido</p></div>
         </CardContent></Card>
       </div>
+
+      <p className="text-xs text-muted-foreground mb-4">
+        El plan mostrado es el que gobierna el acceso (<span className="font-mono">companies.plan_code</span>).
+        Las suscripciones son registros legacy y no otorgan ni retiran módulos. Modelo de aprobación no implementado.
+      </p>
+
+      {/* Contradicciones — solo lectura, sin corrección automática */}
+      {inconsistentCompanies.length > 0 && (
+        <div className="mb-6">
+          <InsightCard
+            status="critical"
+            statusLabel="Configuración comercial inconsistente"
+            recommendation={`${inconsistentCompanies.length} empresa(s) con configuración comercial inconsistente`}
+            because={inconsistentCompanies
+              .slice(0, 4)
+              .map(t => `${t.name}: ${t.contradictions.find(x => x.severity === "alta")?.title ?? t.contradictions[0]?.title}`)
+              .join(" · ")}
+            impact="El plan visible, la subscription y el acceso no cuentan la misma historia. Revisar antes de conectar cualquier cobro."
+            mode="static"
+          />
+        </div>
+      )}
+
 
       {/* Filter bar */}
       <div className="flex flex-wrap gap-3 items-center mb-4">
