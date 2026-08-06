@@ -10233,6 +10233,147 @@ export type Database = {
           },
         ]
       }
+      payroll_period_rate_snapshots: {
+        Row: {
+          audit_reference: string | null
+          company_id: string
+          concept_id: string | null
+          concept_name: string | null
+          consolidation_version: number
+          created_at: string
+          currency: string
+          effective_date: string | null
+          effective_from: string | null
+          effective_to: string | null
+          employee_id: string
+          gross_base_amount: number
+          hours_source: string
+          id: string
+          is_legacy_source: boolean
+          overtime_hours: number
+          overtime_multiplier: number
+          overtime_threshold_hours: number
+          pay_rate: number
+          payroll_period_id: string
+          period_status_at_resolution: string | null
+          rate_by_work_date: Json
+          rate_changed_mid_period: boolean
+          rate_source: string
+          regular_hours: number
+          resolved_at: string
+          resolved_by: string | null
+          source_entity_id: string | null
+          source_version: string | null
+          time_entry_count: number
+          time_entry_ids: string[]
+          total_hours: number
+        }
+        Insert: {
+          audit_reference?: string | null
+          company_id: string
+          concept_id?: string | null
+          concept_name?: string | null
+          consolidation_version?: number
+          created_at?: string
+          currency?: string
+          effective_date?: string | null
+          effective_from?: string | null
+          effective_to?: string | null
+          employee_id: string
+          gross_base_amount?: number
+          hours_source?: string
+          id?: string
+          is_legacy_source?: boolean
+          overtime_hours?: number
+          overtime_multiplier?: number
+          overtime_threshold_hours?: number
+          pay_rate: number
+          payroll_period_id: string
+          period_status_at_resolution?: string | null
+          rate_by_work_date?: Json
+          rate_changed_mid_period?: boolean
+          rate_source: string
+          regular_hours?: number
+          resolved_at?: string
+          resolved_by?: string | null
+          source_entity_id?: string | null
+          source_version?: string | null
+          time_entry_count?: number
+          time_entry_ids?: string[]
+          total_hours?: number
+        }
+        Update: {
+          audit_reference?: string | null
+          company_id?: string
+          concept_id?: string | null
+          concept_name?: string | null
+          consolidation_version?: number
+          created_at?: string
+          currency?: string
+          effective_date?: string | null
+          effective_from?: string | null
+          effective_to?: string | null
+          employee_id?: string
+          gross_base_amount?: number
+          hours_source?: string
+          id?: string
+          is_legacy_source?: boolean
+          overtime_hours?: number
+          overtime_multiplier?: number
+          overtime_threshold_hours?: number
+          pay_rate?: number
+          payroll_period_id?: string
+          period_status_at_resolution?: string | null
+          rate_by_work_date?: Json
+          rate_changed_mid_period?: boolean
+          rate_source?: string
+          regular_hours?: number
+          resolved_at?: string
+          resolved_by?: string | null
+          source_entity_id?: string | null
+          source_version?: string | null
+          time_entry_count?: number
+          time_entry_ids?: string[]
+          total_hours?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payroll_period_rate_snapshots_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payroll_period_rate_snapshots_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payroll_period_rate_snapshots_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payroll_period_rate_snapshots_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payroll_period_rate_snapshots_payroll_period_id_fkey"
+            columns: ["payroll_period_id"]
+            isOneToOne: false
+            referencedRelation: "pay_periods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payroll_rate_snapshots: {
         Row: {
           company_id: string
@@ -18086,6 +18227,10 @@ export type Database = {
       }
       resolve_payroll_hourly_rate: {
         Args: { _company_id: string; _employee_id: string; _period_id: string }
+        Returns: Json
+      }
+      resolve_payroll_hourly_rate_at: {
+        Args: { _company_id: string; _employee_id: string; _work_date: string }
         Returns: Json
       }
       resolve_shift_request: {
