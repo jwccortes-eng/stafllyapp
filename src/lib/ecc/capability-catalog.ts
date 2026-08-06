@@ -18,6 +18,18 @@ export type EccProduct = (typeof ECC_PRODUCTS)[number];
 export type CapabilityType = "module" | "feature" | "integration" | "support";
 export type CapabilityTier = "core" | "addon" | "experimental";
 
+/**
+ * Cómo se gobierna HOY la capacidad en producción (fuente legacy real).
+ *  - `company_modules`: hay un gate real (`ModuleGate` + `useSubscription`).
+ *  - `code_and_rls`: no hay gate comercial; la ruta existe para toda compañía
+ *    y el aislamiento lo dan roles + RLS.
+ *  - `portal_modules`: gobernada por `employee_portal_modules` (por persona).
+ *  - `none`: todavía no existe superficie en producción.
+ */
+export type LegacyGovernance = "company_modules" | "code_and_rls" | "portal_modules" | "none";
+
+export type CapabilityStatus = "active" | "planned";
+
 export interface CapabilityDefinition {
   /** `<product>.<dominio>.<acción>` — inmutable una vez publicada. */
   key: string;
@@ -34,11 +46,26 @@ export interface CapabilityDefinition {
   requiredConfig: string[];
   /** Módulo legacy equivalente (`company_modules.module_key`), si existe. */
   legacyModuleKey: string | null;
+  /** Cómo se gobierna hoy realmente. */
+  legacyGovernance: LegacyGovernance;
+  /** Evidencia: rutas, tablas, hooks y políticas que la implementan hoy. */
+  legacySources: string[];
+  /** Permiso mínimo requerido en producción (no lo concede el ECC). */
+  requiredPermission: string;
+  /** Límites canónicos asociados (`shared.limit.*`). */
+  limitKeys: string[];
+  /** Estado de la capacidad en el catálogo. */
+  status: CapabilityStatus;
+  /** Versión del catálogo en la que quedó con esta forma. */
+  version: string;
+  /** Explicación operativa: qué incluye y qué NO incluye. */
+  explanation: string;
   audit: { addedIn: string; owner: string };
 }
 
 const OWNER = "ecc-core";
 const V2 = "ecc.phase-2";
+const V31 = "ecc.phase-3.1";
 
 function cap(
   key: string,
@@ -47,6 +74,7 @@ function cap(
   opts: Partial<Omit<CapabilityDefinition, "key" | "name" | "description" | "product">> = {},
 ): CapabilityDefinition {
   const product = key.split(".")[0] as EccProduct;
+  const legacyModuleKey = opts.legacyModuleKey ?? null;
   return {
     key,
     product,
@@ -57,10 +85,18 @@ function cap(
     dependencies: opts.dependencies ?? [],
     defaultState: opts.defaultState ?? false,
     requiredConfig: opts.requiredConfig ?? [],
-    legacyModuleKey: opts.legacyModuleKey ?? null,
+    legacyModuleKey,
+    legacyGovernance: opts.legacyGovernance ?? (legacyModuleKey ? "company_modules" : "none"),
+    legacySources: opts.legacySources ?? (legacyModuleKey ? [`company_modules.${legacyModuleKey}`] : []),
+    requiredPermission: opts.requiredPermission ?? "miembro de la compañía",
+    limitKeys: opts.limitKeys ?? [],
+    status: opts.status ?? "active",
+    version: opts.version ?? opts.audit?.addedIn ?? V2,
+    explanation: opts.explanation ?? description,
     audit: opts.audit ?? { addedIn: V2, owner: OWNER },
   };
 }
+
 
 /* ───────────────────────────── shared.* ───────────────────────────── */
 /** Capacidades comunes a todos los productos del ecosistema. */
