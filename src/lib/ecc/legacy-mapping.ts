@@ -75,11 +75,11 @@ export function mapLegacyCompanyToEcc(input: EccReadModelInput, at?: string): Le
 
   // company_modules → override de capability (nunca se toca la fuente).
   for (const m of input.modules ?? []) {
-    const capKey = LEGACY_MODULE_TO_CAPABILITY[m.module_key];
+    const capKey = LEGACY_MODULE_TO_CAPABILITY[m.module];
     if (!capKey) {
-      unmapped.push(m.module_key);
+      unmapped.push(m.module);
       entries.push({
-        source: `company_modules.${m.module_key}`,
+        source: `company_modules.${m.module}`,
         target: "—",
         action: "unmapped",
         detail: "Módulo legacy sin capacidad canónica equivalente. Requiere decisión de catálogo antes del cutover.",
@@ -90,7 +90,7 @@ export function mapLegacyCompanyToEcc(input: EccReadModelInput, at?: string): Le
     const grantedByPlan = (planVersion?.capabilities ?? []).includes(capKey);
     if (grantedByPlan === m.is_active) {
       entries.push({
-        source: `company_modules.${m.module_key}=${m.is_active}`,
+        source: `company_modules.${m.module}=${m.is_active}`,
         target: capKey,
         action: "mapped",
         detail: "Coincide con la versión de plan: no genera override.",
@@ -103,7 +103,7 @@ export function mapLegacyCompanyToEcc(input: EccReadModelInput, at?: string): Le
       target: { scope: "company", id: input.company.id },
       key: capKey,
       value: m.is_active,
-      reason: `Migración de company_modules.${m.module_key} (${m.is_active ? "activo" : "inactivo"}) fuera del plan ${planKey}.`,
+      reason: `Migración de company_modules.${m.module} (${m.is_active ? "activo" : "inactivo"}) fuera del plan ${planKey}.`,
       createdBy: "ecc-migration",
       approvedBy: "ecc-core",
       effectiveFrom: "2024-01-01",
@@ -112,16 +112,16 @@ export function mapLegacyCompanyToEcc(input: EccReadModelInput, at?: string): Le
     if (built.ok) {
       overrides.push(built.override);
       entries.push({
-        source: `company_modules.${m.module_key}=${m.is_active}`,
+        source: `company_modules.${m.module}=${m.is_active}`,
         target: capKey,
         action: "override_created",
         detail: `Diferencia contra el plan: se representa como override ${m.is_active ? "concesivo" : "restrictivo"}.`,
         reversible: true,
       });
     } else {
-      unmapped.push(m.module_key);
+      unmapped.push(m.module);
       entries.push({
-        source: `company_modules.${m.module_key}`,
+        source: `company_modules.${m.module}`,
         target: capKey,
         action: "unmapped",
         detail: `Override rechazado: ${built.error}`,
@@ -162,7 +162,7 @@ export function mapLegacyCompanyToEcc(input: EccReadModelInput, at?: string): Le
   // Subscriptions legacy → sólo referencia informativa (no gobiernan acceso).
   if (input.subscription) {
     entries.push({
-      source: `subscriptions.${input.subscription.plan_id ?? "?"}`,
+      source: `subscriptions.${input.subscription.plan ?? "?"}`,
       target: planVersion?.id ?? planKey,
       action: "informational",
       detail: "Suscripción legacy conservada como referencia: hoy no gobierna acceso ni cobro.",
@@ -246,7 +246,7 @@ function legacyModuleDecision(moduleKey: string, plan: PlanCode, input: EccReadM
   const TIERS: PlanCode[] = ["free", "paid_manual", "enterprise"];
   const required = MODULE_PLAN_MAP[moduleKey] ?? "free";
   const planGrants = TIERS.indexOf(plan) >= TIERS.indexOf(required);
-  const active = (input.modules ?? []).some(m => m.module_key === moduleKey && m.is_active);
+  const active = (input.modules ?? []).some(m => m.module === moduleKey && m.is_active);
   return planGrants || active;
 }
 
