@@ -11,6 +11,59 @@ la ordena bajo una sola constitución.
 
 ---
 
+## Ley suprema del ecosistema
+
+> **Toda decisión de arquitectura debe responder:**
+>
+> **¿Fortalece un único ecosistema o crea otro silo?**
+>
+> **Si crea un silo, debe replantearse antes de implementarse.**
+
+Esta ley está por encima de cualquier sección de este documento, de cualquier
+roadmap, de cualquier urgencia comercial y de cualquier preferencia técnica.
+Ninguna excepción se aplica por omisión: una excepción requiere decisión formal
+registrada, con responsable, fecha y evidencia.
+
+---
+
+## Reglas no negociables
+
+Reglas absolutas. No admiten interpretación, atajo temporal ni excepción de
+sprint. Violar una es un defecto de arquitectura, no una decisión de producto.
+
+1. **Payroll nunca usa horas programadas.** Solo horas reales registradas.
+2. **Nunca activar compañías desde signup público.** La activación es decisión.
+3. **Nunca crear otra identidad.** Una persona = un Passport.
+4. **Nunca crear otro motor comercial.** ECC es el único.
+5. **Nunca escribir fuera del VWC** en entidades versionadas.
+6. **Nunca borrar historial financiero.** Se corrige con evidencia y auditoría.
+7. **Nunca romper el aislamiento multi-tenant.** `company_id` siempre presente.
+8. **Nunca mezclar SaaS Billing con Pay Rate.** Son dominios distintos.
+9. **Nunca ocultar la verdad operativa.** Faltante se muestra como faltante.
+
+---
+
+## Principio "representar la realidad"
+
+El sistema **siempre representa el estado real**. Nunca inventa estados, nunca
+maquilla inconsistencias, nunca oculta datos faltantes y nunca sustituye un
+dato ausente por un valor plausible.
+
+| Realidad | Representación obligatoria |
+|----------|----------------------------|
+| Payroll consolidado | "Preparado", nunca "trabajador pagado" |
+| Documento vencido | Sigue existiendo, visible y marcado como vencido |
+| Billing no configurado | Se muestra como no configurado, no como activo |
+| Servicio incompleto | Sigue siendo incompleto hasta que se complete |
+| Dato inexistente | Vacío explícito, nunca cero ni valor por defecto |
+| Decisión de acceso incierta | Fail closed y explicada, nunca permitida "por si acaso" |
+
+Una pantalla que tranquiliza al usuario ocultando un problema real es un
+defecto crítico, no una mejora de experiencia.
+
+---
+
+
 ## Sección 1 — Visión del ecosistema
 
 Parceros, Stafly Core, Quality Staff, My Staff, JKitchen Staff y cualquier
@@ -261,24 +314,48 @@ motor, y una sola explicación posible para cada decisión del sistema.
 
 ---
 
-## Sección 7 — Roadmap por estado
+## Sección 7 — Roadmap por capa
 
-| Pilar / capacidad | Estado |
-|-------------------|--------|
+Las capas no se mezclan: una capacidad de producto nunca se aprueba antes que
+la infraestructura de la que depende.
+
+### 7.1 Infraestructura (integridad y verdad de datos)
+
+| Elemento | Estado |
+|----------|--------|
 | Versioned Write Contract (servicios, horas, compensación, documentos, configuración, asignaciones) | **Implementado** |
 | Payroll Snapshot (tarifa canónica + inmutabilidad de periodo) | **Implementado** |
+| Auditoría transversal de escritura y conflicto | **Implementado** |
+| Contrato único de eventos de dominio | **Pendiente** |
+| Unificación `shifts` / `scheduled_shifts` | **Pendiente** |
+
+### 7.2 Plataformas compartidas (motores del ecosistema)
+
+| Elemento | Estado |
+|----------|--------|
 | Company Lifecycle (estados, transición auditada, matriz de capacidades) | **Implementado** |
 | Company Billing Truth (realidad operativa sin suscripciones simuladas) | **Implementado** |
 | ECC — catálogo, planes versionados, entitlements, reconciliación | **Implementado** |
-| ECC — piloto real de una compañía con comparación dual | **Piloto** |
-| ECC — modo estable por compañía con Legacy en comparación | **Piloto** |
 | Passport como fuente canónica única de identidad/reputación | **Pendiente** |
 | Frontera formal de datos Stafly ↔ Parceros | **Pendiente** |
-| Retiro de Legacy en acceso | **Pendiente** |
-| Ampliación de ECC al resto de la flota | **Pendiente** |
-| Contrato único de eventos de dominio | **Pendiente** |
-| Unificación `shifts` / `scheduled_shifts` | **Pendiente** |
+
+### 7.3 Producto (superficies y capacidades)
+
+| Elemento | Estado |
+|----------|--------|
+| Superficies Admin / Worker / Cliente / Parceros sobre motores únicos | **Implementado** |
+| Capacidades nuevas declaradas en catálogo ECC antes de exponerse | **Vigente como regla** |
 | Ejecución bancaria de pago al trabajador | **Pendiente** |
+
+### 7.4 Operación (adopción y retiro controlado)
+
+| Elemento | Estado |
+|----------|--------|
+| ECC — piloto real de una compañía con comparación dual | **Piloto** |
+| ECC — modo estable por compañía con Legacy en comparación | **Piloto** |
+| Ampliación de ECC al resto de la flota | **Pendiente** |
+| Retiro de Legacy en acceso | **Pendiente** |
+
 
 ---
 
