@@ -449,8 +449,15 @@ export default function EmployeeCompensationTab({
               <span>Verificado: {format(parseISO(profile.hourly_rate_last_verified_at), "dd MMM yyyy", { locale: es })}</span>
             )}
           </div>
+          <PayrollRateTruthPanel
+            className="mt-3"
+            companyId={companyId}
+            employeeId={employeeId}
+            profileRate={hourly.rate}
+          />
         </CardContent>
       </Card>
+
 
       {/* ── Detail Card ── */}
       <Card className="rounded-xl border-border/40">
