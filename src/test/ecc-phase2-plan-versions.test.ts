@@ -249,7 +249,7 @@ describe("ECC Fase 2 · resolver explicable", () => {
 describe("ECC Fase 2 · multi-company y multi-product", () => {
   it("QA8 · overrides de otra company no se propagan", () => {
     const foreign = ovr({
-      kind: "capability", target: { scope: "company", id: "c2" }, key: "stafly.ops.chat" in {} ? "x" : "shared.comms.chat",
+      kind: "capability", target: { scope: "company", id: "c2" }, key: "shared.comms.chat",
       value: false, reason: "Restricción exclusiva de la otra compañía.", createdBy: "a", effectiveFrom: "2026-01-01",
     });
     const d = canUseCapability(ctxFor({ overrides: [foreign] }), "shared.comms.chat");
