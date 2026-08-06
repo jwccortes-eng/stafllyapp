@@ -71,19 +71,33 @@ export function EccReadinessPanel({ input }: { input: EccReadModelInput }) {
         <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Capacidades críticas</p>
         <div className="grid gap-1">
           {rec.criticalMatrix.map(m => (
-            <div key={m.alias} className="flex items-center gap-2 text-xs">
-              {m.explained ? (
-                <CheckCircle2 className="h-3 w-3 text-emerald-600 shrink-0" />
-              ) : (
-                <AlertTriangle className="h-3 w-3 text-amber-600 shrink-0" />
+            <div key={m.alias} className="rounded-md border border-border/60 px-2 py-1.5">
+              <div className="flex items-center gap-2 text-xs">
+                {m.explained ? (
+                  <CheckCircle2 className="h-3 w-3 text-emerald-600 shrink-0" />
+                ) : (
+                  <AlertTriangle className="h-3 w-3 text-amber-600 shrink-0" />
+                )}
+                <span className="flex-1 truncate">{m.label}</span>
+                <span className="text-muted-foreground">
+                  legacy {m.legacy === null ? "n/d" : m.legacy ? "sí" : "no"} · ECC {m.ecc === null ? "n/d" : m.ecc ? "sí" : "no"}
+                </span>
+                <Badge variant="outline" className="text-[10px]">{m.status}</Badge>
+              </div>
+              <p className="mt-0.5 pl-5 text-[10px] text-muted-foreground">
+                Gobierno hoy: {m.legacyGovernance} · Fuente: {m.legacySource}
+              </p>
+              {m.missingDependencies.length > 0 && (
+                <p className="pl-5 text-[10px] text-amber-600">
+                  Dependencias faltantes: {m.missingDependencies.join(", ")}
+                </p>
               )}
-              <span className="flex-1 truncate">{m.label}</span>
-              <span className="text-muted-foreground">
-                legacy {m.legacy === null ? "n/d" : m.legacy ? "sí" : "no"} · ECC {m.ecc === null ? "n/d" : m.ecc ? "sí" : "no"}
-              </span>
-              <Badge variant="outline" className="text-[10px]">{m.status}</Badge>
+              {!m.explained && (
+                <p className="pl-5 text-[10px] text-muted-foreground">Acción sugerida: {m.recommendedAction}</p>
+              )}
             </div>
           ))}
+
         </div>
       </div>
 
