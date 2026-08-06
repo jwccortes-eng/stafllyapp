@@ -119,7 +119,7 @@ export function mapLegacyCompanyToEcc(input: EccReadModelInput, at?: string): Le
         reversible: true,
       });
     } else {
-      overrides.push(built.override);
+      if (built.override) overrides.push(built.override);
       entries.push({
         source: `company_modules.${m.module}=${m.is_active}`,
         target: capKey,
@@ -155,7 +155,7 @@ export function mapLegacyCompanyToEcc(input: EccReadModelInput, at?: string): Le
       note: "Mapeo shadow Fase 2.",
     });
     if (built.ok) {
-      overrides.push(built.override);
+      if (built.override) overrides.push(built.override);
       entries.push({ source: `companies.${limitKey}=${value}`, target: limitKey, action: "override_created", detail: "Se representa como override de límite.", reversible: true });
     }
   }

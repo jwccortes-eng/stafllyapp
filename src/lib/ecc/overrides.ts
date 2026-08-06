@@ -140,8 +140,8 @@ export function revokeOverride(
   by: string,
   reason: string,
 ): { ok: boolean; revoked: EntitlementOverride | null; error: string | null } {
-  if (!original.revocable) return { ok: false, override: null, error: `El override ${original.id} no es revocable.` };
-  if (reason.trim().length < 10) return { ok: false, override: null, error: "La revocación requiere motivo explícito." };
+  if (!original.revocable) return { ok: false, revoked: null, error: `El override ${original.id} no es revocable.` };
+  if (reason.trim().length < 10) return { ok: false, revoked: null, error: "La revocación requiere motivo explícito." };
   return {
     ok: true,
     error: null,
