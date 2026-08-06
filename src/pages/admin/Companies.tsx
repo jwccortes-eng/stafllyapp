@@ -746,13 +746,23 @@ export default function CompaniesPage() {
                             </div>
                           </TabsContent>
 
-                          {/* Verdad comercial (Fase 0 — solo lectura) */}
+                          {/* Verdad comercial (Fase 0) + ciclo de vida (Fase 1) */}
                           <TabsContent value="billing">
-                            <CompanyTruthPanel truth={c.truth} />
+                            <div className="space-y-4">
+                              <CompanyLifecyclePanel
+                                companyId={c.id}
+                                companyName={c.name}
+                                row={c as unknown as Record<string, unknown>}
+                                canDecide={role === "owner"}
+                                onChanged={fetchCompanies}
+                              />
+                              <CompanyTruthPanel truth={c.truth} />
+                            </div>
                             <Button variant="outline" size="sm" className="mt-3 text-xs" onClick={() => openAssignPlan(c)}>
                               <CreditCard className="h-3.5 w-3.5 mr-1.5" />Cambiar plan comercial (legacy)
                             </Button>
                           </TabsContent>
+
 
 
                           {/* Modules */}
