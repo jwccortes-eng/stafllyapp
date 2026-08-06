@@ -42,6 +42,11 @@ import {
   type CompanyModuleFlag,
   type CompanyTruth,
 } from "@/lib/billing/company-truth";
+import { EccContractPanel } from "@/components/billing/EccContractPanel";
+import type { EccReadModelInput } from "@/lib/ecc/commercial-read-model";
+
+/** ECC Fase 1 — el input ya viene armado en fetchCompanies; aquí sólo se lee. */
+const buildEccInput = (c: CompanyRecord): EccReadModelInput => c.ecc;
 
 /** Tono visual por estado comercial (solo presentación). */
 const COMMERCIAL_TONE: Record<CompanyTruth["commercial"]["state"], string> = {
@@ -95,7 +100,8 @@ interface CompanyRecord {
   employee_count: number;
   /** Fase 0 — verdad comercial y de acceso derivada de la fuente real. */
   truth: CompanyTruth;
-
+  /** ECC Fase 1 — entrada canónica del read model comercial (solo lectura). */
+  ecc: EccReadModelInput;
 }
 
 /**
@@ -262,6 +268,41 @@ export default function CompaniesPage() {
         employee_count: employeeCount,
       });
 
+      // ECC Fase 1 — entrada canónica (solo lectura, aislada por company_id).
+      const ecc: EccReadModelInput = {
+        commercialAccount: null,
+        company: {
+          id: c.id,
+          name: c.name,
+          slug: c.slug ?? null,
+          is_active: c.is_active,
+          status: c.status ?? null,
+          approval_state: c.approval_state ?? null,
+          access_state: c.access_state ?? null,
+          commercial_state: c.commercial_state ?? null,
+          rejection_reason: c.rejection_reason ?? null,
+          access_state_reason: c.access_state_reason ?? null,
+          plan_code: c.plan_code ?? null,
+          plan_status: c.plan_status ?? null,
+          billing_status: c.billing_status ?? null,
+          paid_features_enabled: !!c.paid_features_enabled,
+          max_employees: c.max_employees ?? null,
+          max_admins: c.max_admins ?? null,
+          version: typeof c.version === "number" ? c.version : null,
+        },
+        modules: modFlagsMap[c.id] ?? [],
+        subscription: sub
+          ? {
+              plan: sub.plan ?? null,
+              status: sub.status ?? null,
+              stripe_customer_id: sub.stripe_customer_id ?? null,
+              stripe_subscription_id: sub.stripe_subscription_id ?? null,
+            }
+          : null,
+        userCount,
+        employeeCount,
+      };
+
       return {
         ...c,
         user_count: userCount,
@@ -276,6 +317,7 @@ export default function CompaniesPage() {
         current_period_end: sub?.current_period_end ?? null,
         employee_count: employeeCount,
         truth,
+        ecc,
       } as CompanyRecord;
     }));
   };
@@ -747,7 +789,7 @@ export default function CompaniesPage() {
                             </div>
                           </TabsContent>
 
-                          {/* Verdad comercial (Fase 0) + ciclo de vida (Fase 1) */}
+                          {/* Verdad comercial (Fase 0) + ciclo de vida (Fase 1) + ECC (lectura) */}
                           <TabsContent value="billing">
                             <div className="space-y-4">
                               <CompanyLifecyclePanel
@@ -757,6 +799,7 @@ export default function CompaniesPage() {
                                 canDecide={role === "owner"}
                                 onChanged={fetchCompanies}
                               />
+                              <EccContractPanel input={buildEccInput(c)} />
                               <CompanyTruthPanel truth={c.truth} />
                             </div>
                             <Button variant="outline" size="sm" className="mt-3 text-xs" onClick={() => openAssignPlan(c)}>
