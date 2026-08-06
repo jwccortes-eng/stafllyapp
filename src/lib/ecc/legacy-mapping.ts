@@ -109,16 +109,7 @@ export function mapLegacyCompanyToEcc(input: EccReadModelInput, at?: string): Le
       effectiveFrom: "2024-01-01",
       note: "Mapeo shadow Fase 2. No modifica company_modules.",
     });
-    if (built.ok) {
-      overrides.push(built.override);
-      entries.push({
-        source: `company_modules.${m.module}=${m.is_active}`,
-        target: capKey,
-        action: "override_created",
-        detail: `Diferencia contra el plan: se representa como override ${m.is_active ? "concesivo" : "restrictivo"}.`,
-        reversible: true,
-      });
-    } else {
+    if (!built.ok) {
       unmapped.push(m.module);
       entries.push({
         source: `company_modules.${m.module}`,
@@ -127,7 +118,17 @@ export function mapLegacyCompanyToEcc(input: EccReadModelInput, at?: string): Le
         detail: `Override rechazado: ${built.error}`,
         reversible: true,
       });
+    } else {
+      overrides.push(built.override);
+      entries.push({
+        source: `company_modules.${m.module}=${m.is_active}`,
+        target: capKey,
+        action: "override_created",
+        detail: `Diferencia contra el plan: se representa como override ${m.is_active ? "concesivo" : "restrictivo"}.`,
+        reversible: true,
+      });
     }
+
   }
 
   // Límites de columna → override de limit cuando difieren del plan.
