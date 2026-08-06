@@ -561,6 +561,7 @@ export function reconcileCompany(input: EccReadModelInput, at?: string): Company
   const criticalFindings = findings.filter(f => f.critical);
   const missingCriticalMapping = criticalMatrix.filter(m => !m.canonical || m.status === "unknown");
   const criticalMismatch = criticalMatrix.filter(m => m.canonical && m.status !== "match" && m.status !== "unknown");
+  const criticalDependencyGaps = criticalMatrix.filter(m => m.canonical && m.missingDependencies.length > 0);
   const unknownOverrides = overrides.filter(o => o.blocksReadiness);
   const limitMismatch = limits.filter(l => l.status !== "match");
   const overLimit = limits.filter(l => l.overLimitRisk);
@@ -570,11 +571,19 @@ export function reconcileCompany(input: EccReadModelInput, at?: string): Company
     readiness = "BLOCKED";
     if (shadow.access.planVersion === null) blockers.push("Sin versión de plan canónica vigente: datos insuficientes.");
     if (unknownOverrides.length > 0) blockers.push(`${unknownOverrides.length} override(s) sin clasificar.`);
-  } else if (contradictions.length > 0 || criticalMismatch.length > 0 || overLimit.length > 0) {
+  } else if (
+    contradictions.length > 0 ||
+    criticalMismatch.length > 0 ||
+    overLimit.length > 0 ||
+    criticalDependencyGaps.length > 0
+  ) {
     readiness = "NOT_READY";
     for (const x of contradictions) blockers.push(x);
     for (const m of criticalMismatch) blockers.push(`Capacidad crítica ${m.label}: ${m.status}.`);
+    for (const m of criticalDependencyGaps)
+      blockers.push(`Capacidad crítica ${m.label} con dependencia faltante: ${m.missingDependencies.join(", ")}.`);
     for (const l of overLimit) blockers.push(`Uso por encima del límite canónico en ${l.label}.`);
+
   } else if (missingCriticalMapping.length > 0) {
     readiness = "NOT_READY";
     blockers.push(
