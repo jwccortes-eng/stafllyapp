@@ -224,22 +224,33 @@ export default function CompaniesPage() {
 
   useEffect(() => { fetchCompanies(); }, []);
 
-  /* ── KPIs ── */
-  const kpis = useMemo(() => {
-    const totalMrr = companies.reduce((s, c) => s + c.mrr, 0);
-    const activeSubs = companies.filter(c => c.plan_status === "active" || c.plan_status === "trialing").length;
-    const totalEmployees = companies.reduce((s, c) => s + c.employee_count, 0);
-    const totalUsers = companies.reduce((s, c) => s + c.user_count, 0);
-    return { totalMrr, activeSubs, totalEmployees, totalUsers };
-  }, [companies]);
+  /* ── KPIs honestos (Fase 0) ── */
+  const kpis = useMemo(() => summarizeTruth(companies.map(c => c.truth)), [companies]);
+
+  const inconsistentCompanies = useMemo(
+    () => companies.map(c => c.truth).filter(t => t.commercial.state === "inconsistent"),
+    [companies],
+  );
 
   /* ── Filters ── */
   const filtered = useMemo(() => {
     let list = companies;
     if (search) list = list.filter(c => c.name.toLowerCase().includes(search.toLowerCase()));
-    if (planFilter !== "all") list = list.filter(c => c.plan === planFilter);
-    return list;
+    if (planFilter === "review") list = list.filter(c => c.truth.contradictions.some(x => x.severity === "alta"));
+    else if (planFilter === "no_billing") list = list.filter(c => c.truth.commercial.state === "not_configured");
+    else if (planFilter === "legacy") list = list.filter(c => c.truth.commercial.state === "legacy_subscription");
+    else if (planFilter === "restricted") list = list.filter(c => c.truth.access.state === "restricted");
+    else if (planFilter !== "all") list = list.filter(c => c.truth.effectivePlan === planFilter);
+    // Prioridad operativa: contradicciones graves primero.
+    return [...list].sort((a, b) => {
+      const score = (t: typeof a.truth) =>
+        (t.commercial.state === "inconsistent" ? 100 : 0) +
+        (t.access.state === "restricted" ? 20 : 0) +
+        t.contradictions.length;
+      return score(b.truth) - score(a.truth);
+    });
   }, [companies, search, planFilter]);
+
 
   /* ── Helpers ── */
   const generateSlug = (name: string) =>
