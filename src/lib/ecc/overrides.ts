@@ -57,24 +57,30 @@ export interface OverrideDraft {
  * Construye un override válido o explica por qué no lo es.
  * Idempotente: el `id` deriva del contenido, así que reintentar no duplica.
  */
-export function buildOverride(draft: OverrideDraft): { ok: true; override: EntitlementOverride } | { ok: false; error: string } {
+export interface OverrideBuildResult {
+  ok: boolean;
+  override: EntitlementOverride | null;
+  error: string | null;
+}
+
+export function buildOverride(draft: OverrideDraft): OverrideBuildResult {
   const reason = draft.reason?.trim() ?? "";
-  if (reason.length < 10) return { ok: false, error: "El motivo es obligatorio y debe ser explícito (mín. 10 caracteres)." };
-  if (!draft.createdBy) return { ok: false, error: "Falta createdBy." };
+  if (reason.length < 10) return { ok: false, override: null, error: "El motivo es obligatorio y debe ser explícito (mín. 10 caracteres)." };
+  if (!draft.createdBy) return { ok: false, override: null, error: "Falta createdBy." };
   if (draft.kind === "capability" && typeof draft.value !== "boolean") {
-    return { ok: false, error: "Un override de capability debe tener valor booleano." };
+    return { ok: false, override: null, error: "Un override de capability debe tener valor booleano." };
   }
   if (draft.kind === "limit" && typeof draft.value !== "number") {
-    return { ok: false, error: "Un override de límite debe tener valor numérico." };
+    return { ok: false, override: null, error: "Un override de límite debe tener valor numérico." };
   }
   if (draft.effectiveUntil && new Date(draft.effectiveUntil) <= new Date(draft.effectiveFrom)) {
-    return { ok: false, error: "effective_until debe ser posterior a effective_from." };
+    return { ok: false, override: null, error: "effective_until debe ser posterior a effective_from." };
   }
   const approvedBy = draft.approvedBy ?? null;
   if (isSensitiveOverride(draft)) {
-    if (!approvedBy) return { ok: false, error: `El override sobre ${draft.key} es sensible y requiere aprobación reforzada.` };
+    if (!approvedBy) return { ok: false, override: null, error: `El override sobre ${draft.key} es sensible y requiere aprobación reforzada.` };
     if (approvedBy === draft.createdBy) {
-      return { ok: false, error: "Un override sensible no puede ser aprobado por quien lo crea." };
+      return { ok: false, override: null, error: "Un override sensible no puede ser aprobado por quien lo crea." };
     }
   }
   const body = {
@@ -88,6 +94,7 @@ export function buildOverride(draft: OverrideDraft): { ok: true; override: Entit
   const checksum = eccChecksum(body);
   return {
     ok: true,
+    error: null,
     override: {
       id: `ovr:${draft.target.scope}:${draft.target.id}:${draft.key}:${checksum}`,
       ...body,
@@ -132,11 +139,12 @@ export function revokeOverride(
   original: EntitlementOverride,
   by: string,
   reason: string,
-): { ok: true; revoked: EntitlementOverride } | { ok: false; error: string } {
-  if (!original.revocable) return { ok: false, error: `El override ${original.id} no es revocable.` };
-  if (reason.trim().length < 10) return { ok: false, error: "La revocación requiere motivo explícito." };
+): { ok: boolean; revoked: EntitlementOverride | null; error: string | null } {
+  if (!original.revocable) return { ok: false, override: null, error: `El override ${original.id} no es revocable.` };
+  if (reason.trim().length < 10) return { ok: false, override: null, error: "La revocación requiere motivo explícito." };
   return {
     ok: true,
+    error: null,
     revoked: {
       ...original,
       revokedBy: by,
