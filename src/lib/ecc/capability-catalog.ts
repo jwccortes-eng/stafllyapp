@@ -66,6 +66,7 @@ export interface CapabilityDefinition {
 const OWNER = "ecc-core";
 const V2 = "ecc.phase-2";
 const V31 = "ecc.phase-3.1";
+const V4A1 = "ecc.phase-4a.1";
 
 function cap(
   key: string,
@@ -220,7 +221,40 @@ const SHARED: CapabilityDefinition[] = [
       audit: { addedIn: V31, owner: OWNER },
     },
   ),
+
+  /* ── Fase 4A.1: invitaciones como capacidad transversal única ── */
+  cap(
+    "shared.invitations",
+    "Invitaciones",
+    "Emitir, reenviar, revocar y auditar invitaciones de acceso al ecosistema.",
+    {
+      type: "feature",
+      tier: "core",
+      defaultState: true,
+      legacyModuleKey: "invite",
+      legacyGovernance: "company_modules",
+      legacySources: [
+        "company_modules.invite + plan_code",
+        "tabla employee_invitations",
+        "hook useEmployeeInvitations",
+        "ruta /accept-invite (AcceptInvite)",
+        "edge functions de envío de invitación + email_send_log",
+      ],
+      dependencies: ["shared.identity.directory", "shared.comms.notifications", "shared.audit.trail"],
+      requiredConfig: ["canal de entrega (email o enlace) configurado"],
+      requiredPermission:
+        "has_company_role(admin|manager|owner) para emitir; la persona invitada sólo canjea su propio token",
+      limitKeys: ["shared.limit.employees", "shared.limit.admins"],
+      status: "active",
+      version: V4A1,
+      explanation:
+        "Capacidad compartida por todo el ecosistema (administradores, workers, proveedores, partners y comunidad). Declara DISPONIBILIDAD COMERCIAL: no concede permisos administrativos ni sustituye a auth/RLS, que siguen decidiendo la autorización real. No se duplica en stafly.* ni parceros.*.",
+      audit: { addedIn: V4A1, owner: OWNER },
+    },
+  ),
 ];
+
+
 
 
 /* ───────────────────────────── stafly.* ───────────────────────────── */
@@ -504,7 +538,7 @@ export function validateCatalog(): string[] {
 }
 
 /** Dominios que jamás se duplican por producto (documentos, auditoría, identidad). */
-export const SHARED_ONLY_DOMAINS: ReadonlySet<string> = new Set(["documents", "audit", "identity"]);
+export const SHARED_ONLY_DOMAINS: ReadonlySet<string> = new Set(["documents", "audit", "identity", "invitations"]);
 
 /**
  * Capacidades críticas de Fase 3.1: deben estar representadas para que una
@@ -519,5 +553,6 @@ export const CRITICAL_CAPABILITY_KEYS: readonly string[] = Object.freeze([
   "stafly.compliance.assignment_policy",
   "stafly.worker_portal.access",
   "stafly.worker_portal.documents",
+  "shared.invitations",
 ]);
 

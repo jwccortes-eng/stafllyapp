@@ -87,7 +87,7 @@ describe("ECC Fase 2 · catálogo canónico", () => {
 describe("ECC Fase 2 · plan versions inmutables", () => {
   it("QA1 · un plan tiene versiones sucesivas con checksum verificable", () => {
     const versions = planVersionsFor("stafly.free");
-    expect(versions.map(v => v.version)).toEqual([1, 2, 3]);
+    expect(versions.map(v => v.version)).toEqual([1, 2, 3, 4]);
     expect(PLAN_VERSIONS.every(verifyPlanVersion)).toBe(true);
     expect(versions[0].checksum).not.toBe(versions[1].checksum);
   });
@@ -105,8 +105,8 @@ describe("ECC Fase 2 · plan versions inmutables", () => {
     const access = getEffectiveCommercialAccess(ctxFor({ contract: { planKey: "stafly.free", product: "stafly" } }));
     // La versión vigente depende de la fecha del contexto, no del último seed.
     expect(access.planVersion?.version).toBe(2);
-    expect(latestPublishedVersion("stafly.free")?.version).toBe(3);
-    expect(resolvePlanVersionAt("stafly.free", "2026-09-01")?.version).toBe(3);
+    expect(latestPublishedVersion("stafly.free")?.version).toBe(4);
+    expect(resolvePlanVersionAt("stafly.free", "2026-09-01")?.version).toBe(4);
     expect(resolvePlanVersionAt("stafly.free", "2025-01-01")?.version).toBe(1);
   });
 

@@ -191,12 +191,20 @@ const ENTERPRISE_CAPS_V2 = [...ENTERPRISE_CAPS, ...CRITICAL_31_CAPS];
 /** Fecha de vigencia de las versiones creadas por la Fase 3.1. */
 const PHASE_31_EFFECTIVE_FROM = "2026-08-01";
 
+/**
+ * ECC Fase 4A.1 — `shared.invitations`. La gestión de invitaciones ya existe
+ * hoy en todas las compañías (company_modules.invite + plan_code free), así que
+ * se declara en todos los planes: representar la realidad no crea restricciones.
+ */
+export const INVITATIONS_CAP = "shared.invitations";
+const PHASE_4A1_EFFECTIVE_FROM = "2026-08-06";
+
 
 /**
  * Versiones publicadas. `v1` documenta el estado histórico; `v2` es la versión
  * vigente. Ninguna se edita: se agregan versiones nuevas al final.
  */
-export const PLAN_VERSIONS: readonly PlanVersion[] = Object.freeze([
+const PLAN_VERSIONS_PHASE_31: readonly PlanVersion[] = Object.freeze([
   seed({
     planKey: "stafly.free",
     version: 1,
@@ -373,6 +381,102 @@ export const PLAN_VERSIONS: readonly PlanVersion[] = Object.freeze([
   }),
 ]);
 
+
+/* ── Fase 4A.1 · versiones nuevas: incorporan shared.invitations ── */
+const PHASE_4A1_VERSIONS: readonly PlanVersion[] = Object.freeze([
+  seed({
+    planKey: "stafly.free",
+    version: 4,
+    product: "stafly",
+    name: "Starter",
+    description: "Operación básica sin costo.",
+    currency: "USD",
+    billing: { cadence: "none", amount: 0, collection: "none" },
+    capabilities: [...FREE_CAPS_V3, INVITATIONS_CAP],
+    limits: [limit(LIMIT_KEYS.employees, 10), limit(LIMIT_KEYS.admins, 2, "hard", "warn")],
+    effectiveFrom: PHASE_4A1_EFFECTIVE_FROM,
+    effectiveUntil: null,
+    status: "published",
+    createdBy: "ecc-core",
+    approvedBy: "ecc-core",
+    audit: {
+      createdAt: "2026-08-06T00:00:00Z",
+      approvedAt: "2026-08-06T00:00:00Z",
+      note: "Fase 4A.1: se declara shared.invitations, que ya existe hoy vía company_modules.invite. No cambia acceso real.",
+    },
+  }),
+  seed({
+    planKey: "stafly.pro",
+    version: 3,
+    product: "stafly",
+    name: "Pro",
+    description: "Operación completa con nómina, asistencia y clientes.",
+    currency: "USD",
+    billing: { cadence: "monthly", amount: null, collection: "manual" },
+    capabilities: [...PRO_CAPS_V2, INVITATIONS_CAP],
+    limits: [limit(LIMIT_KEYS.employees, 999), limit(LIMIT_KEYS.admins, 10)],
+    effectiveFrom: PHASE_4A1_EFFECTIVE_FROM,
+    effectiveUntil: null,
+    status: "published",
+    createdBy: "ecc-core",
+    approvedBy: "ecc-core",
+    audit: { createdAt: "2026-08-06T00:00:00Z", approvedAt: "2026-08-06T00:00:00Z", note: "Fase 4A.1: shared.invitations declarada de forma canónica." },
+  }),
+  seed({
+    planKey: "stafly.enterprise",
+    version: 3,
+    product: "stafly",
+    name: "Enterprise",
+    description: "Acceso completo sin límites operativos.",
+    currency: "USD",
+    billing: { cadence: "custom", amount: null, collection: "manual" },
+    capabilities: [...ENTERPRISE_CAPS_V2, INVITATIONS_CAP],
+    limits: [
+      limit(LIMIT_KEYS.employees, Number.POSITIVE_INFINITY, "soft", "ignore"),
+      limit(LIMIT_KEYS.admins, Number.POSITIVE_INFINITY, "soft", "ignore"),
+    ],
+    effectiveFrom: PHASE_4A1_EFFECTIVE_FROM,
+    effectiveUntil: null,
+    status: "published",
+    createdBy: "ecc-core",
+    approvedBy: "ecc-core",
+    audit: { createdAt: "2026-08-06T00:00:00Z", approvedAt: "2026-08-06T00:00:00Z", note: "Fase 4A.1: shared.invitations declarada de forma canónica." },
+  }),
+  seed({
+    planKey: "parceros.talent_free",
+    version: 3,
+    product: "parceros",
+    name: "Parceros Talento",
+    description: "Pasaporte laboral y reputación para trabajadores.",
+    currency: "USD",
+    billing: { cadence: "none", amount: 0, collection: "none" },
+    capabilities: [
+      "parceros.passport.profile",
+      "parceros.reputation.reviews",
+      "shared.data.export",
+      ...SHARED_CRITICAL_31_CAPS,
+      INVITATIONS_CAP,
+    ],
+    limits: [],
+    effectiveFrom: PHASE_4A1_EFFECTIVE_FROM,
+    effectiveUntil: null,
+    status: "published",
+    createdBy: "ecc-core",
+    approvedBy: "ecc-core",
+    audit: {
+      createdAt: "2026-08-06T00:00:00Z",
+      approvedAt: "2026-08-06T00:00:00Z",
+      note: "Fase 4A.1: las invitaciones son transversales; una sola capability compartida para todo el ecosistema.",
+    },
+  }),
+]);
+
+export const PLAN_VERSIONS_ALL: readonly PlanVersion[] = Object.freeze([
+  ...PLAN_VERSIONS_PHASE_31,
+  ...PHASE_4A1_VERSIONS,
+]);
+
+export const PLAN_VERSIONS: readonly PlanVersion[] = PLAN_VERSIONS_ALL;
 
 export const PLAN_VERSION_BY_ID: ReadonlyMap<string, PlanVersion> = new Map(
   PLAN_VERSIONS.map(p => [p.id, p]),
