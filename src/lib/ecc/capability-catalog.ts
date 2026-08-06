@@ -484,5 +484,40 @@ export function validateCatalog(): string[] {
     if (prev) problems.push(`Módulo legacy ${c.legacyModuleKey} mapeado a ${prev} y ${c.key}`);
     legacySeen.set(c.legacyModuleKey, c.key);
   }
+  // Dominios reservados: si algo es compartido, vive una sola vez en shared.*
+  for (const c of CAPABILITY_CATALOG) {
+    const domain = c.key.split(".")[1];
+    if (c.product !== "shared" && SHARED_ONLY_DOMAINS.has(domain)) {
+      problems.push(`Dominio compartido duplicado por producto: ${c.key} debe vivir en shared.${domain}.*`);
+    }
+  }
+  // Una capacidad activa no puede depender de una capacidad sólo planificada.
+  for (const c of CAPABILITY_CATALOG) {
+    if (c.status !== "active") continue;
+    for (const dep of c.dependencies) {
+      if (CAPABILITY_BY_KEY.get(dep)?.status === "planned") {
+        problems.push(`${c.key} está activa pero depende de ${dep}, que sigue planificada.`);
+      }
+    }
+  }
   return problems;
 }
+
+/** Dominios que jamás se duplican por producto (documentos, auditoría, identidad). */
+export const SHARED_ONLY_DOMAINS: ReadonlySet<string> = new Set(["documents", "audit", "identity"]);
+
+/**
+ * Capacidades críticas de Fase 3.1: deben estar representadas para que una
+ * compañía pueda siquiera evaluarse como READY.
+ */
+export const CRITICAL_CAPABILITY_KEYS: readonly string[] = Object.freeze([
+  "shared.documents.storage",
+  "shared.documents.review",
+  "shared.audit.trail",
+  "shared.comms.notifications",
+  "stafly.compliance.requirements",
+  "stafly.compliance.assignment_policy",
+  "stafly.worker_portal.access",
+  "stafly.worker_portal.documents",
+]);
+
