@@ -279,7 +279,12 @@ export function buildShadowReport(input: EccReadModelInput, at?: string): Shadow
     const def = getCapability(capKey);
     const legacyKey = def?.legacyModuleKey ?? null;
     if (legacyKey) seenLegacy.add(legacyKey);
-    const legacy = legacyKey ? legacyModuleDecision(legacyKey, plan, input) : null;
+    const governance: LegacyGovernance = def?.legacyGovernance ?? "none";
+    const legacy = resolveLegacyDecision(governance, legacyKey, plan, input);
+    const legacySource = legacyKey
+      ? `company_modules.${legacyKey} + plan_code`
+      : (def?.legacySources ?? []).join(" · ") || "—";
+    const missingDependencies = decision.dependencies.filter(d => !d.satisfied).map(d => d.key);
     let status: ShadowStatus;
     let detail: string;
     if (legacy === null) {
@@ -289,10 +294,16 @@ export function buildShadowReport(input: EccReadModelInput, at?: string): Shadow
         : "Sin equivalente legacy ni concesión canónica.";
     } else if (legacy === decision.result) {
       status = "match";
-      detail = "Legacy y ECC coinciden.";
+      detail =
+        governance === "company_modules"
+          ? "Legacy y ECC coinciden."
+          : "Sin gate comercial hoy: la capacidad existe para toda compañía (rol + RLS) y el ECC la representa igual.";
     } else if (legacy && !decision.result) {
       status = "legacy_only";
-      detail = "Legacy concede acceso que la versión canónica no incluye.";
+      detail =
+        missingDependencies.length > 0
+          ? `Legacy concede acceso y el ECC la bloquea por dependencia faltante: ${missingDependencies.join(", ")}.`
+          : "Legacy concede acceso que la versión canónica no incluye.";
     } else {
       status = "mismatch";
       detail = "ECC concede lo que el gate legacy niega hoy.";
@@ -301,13 +312,17 @@ export function buildShadowReport(input: EccReadModelInput, at?: string): Shadow
     capabilities.push({
       capabilityKey: capKey,
       legacyModuleKey: legacyKey,
+      legacyGovernance: governance,
+      legacySource,
       legacy,
       ecc: decision.result,
       status,
       detail,
       eccReason: decision.reason,
+      missingDependencies,
     });
   }
+
 
   const missingMappings = [...mapping.unmapped];
   for (const legacyKey of Object.keys(MODULE_PLAN_MAP)) {
