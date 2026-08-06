@@ -103,8 +103,10 @@ describe("ECC Fase 2 · plan versions inmutables", () => {
 
   it("QA3 · una company nueva recibe la versión vigente", () => {
     const access = getEffectiveCommercialAccess(ctxFor({ contract: { planKey: "stafly.free", product: "stafly" } }));
-    expect(access.planVersion?.version).toBe(3);
+    // La versión vigente depende de la fecha del contexto, no del último seed.
+    expect(access.planVersion?.version).toBe(2);
     expect(latestPublishedVersion("stafly.free")?.version).toBe(3);
+    expect(resolvePlanVersionAt("stafly.free", "2026-09-01")?.version).toBe(3);
     expect(resolvePlanVersionAt("stafly.free", "2025-01-01")?.version).toBe(1);
   });
 
