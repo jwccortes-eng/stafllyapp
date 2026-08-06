@@ -15,6 +15,7 @@ import {
   fetchPayrollRateTruth,
   formatRate,
 } from "@/lib/payroll/rate-resolver";
+import { PayrollRateSnapshotCard } from "@/components/payroll/PayrollRateSnapshotCard";
 
 interface Props {
   companyId: string;
@@ -127,6 +128,13 @@ export function PayrollRateTruthPanel({
         <Info className="h-3 w-3 mt-0.5 shrink-0" />
         {BILL_RATE_LABEL} es un valor distinto y no afecta este monto.
       </p>
+
+      <PayrollRateSnapshotCard
+        companyId={companyId}
+        employeeId={employeeId}
+        periodId={effectivePeriodId}
+        periodStatus={truth.period_status}
+      />
     </div>
   );
 }
