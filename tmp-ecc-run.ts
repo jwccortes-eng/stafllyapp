@@ -1,4 +1,3 @@
-(globalThis as any).localStorage = { getItem: () => null, setItem: () => {}, removeItem: () => {} };
 import { reconcileCompany, summarizeFleetReadiness } from "@/lib/ecc/reconciliation";
 import { getCommercialContractReadModel } from "@/lib/ecc/commercial-read-model";
 import type { EccReadModelInput } from "@/lib/ecc/commercial-read-model";
