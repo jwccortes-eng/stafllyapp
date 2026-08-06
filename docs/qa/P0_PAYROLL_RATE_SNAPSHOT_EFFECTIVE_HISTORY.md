@@ -161,8 +161,112 @@ Lectura en cliente: `src/lib/payroll/rate-snapshot.ts` (`fetchLatestRateSnapshot
 | Multi-tenant aislado | ✅ | `company_id` obligatorio en políticas y predicados |
 | Paridad mobile/desktop | ✅ | superficie compartida `PayrollRateTruthPanel` → `PayrollRateSnapshotCard` |
 | Typecheck | ✅ | `tsgo --noEmit` sin errores |
-| Ejecución end-to-end de `consolidate_period_base_pay` en tenant real | ⚠️ **UNVERIFIED** | El rol del entorno de QA no puede ejecutar funciones ni escribir datos de producción; ejecutar la consolidación real habría modificado nómina viva, explícitamente prohibido |
-| Disparo del trigger de inmutabilidad con privilegio de escritura | ⚠️ **UNVERIFIED** | La denegación ocurrió antes por falta de grant; el trigger es la segunda barrera y no pudo ejercitarse sin un rol privilegiado |
+| Ejecución end-to-end de `consolidate_period_base_pay` | ✅ **VERIFICADO** (QA aislado, sección 10) | tenant sintético en transacción revertida |
+| Disparo del trigger de inmutabilidad con privilegio de escritura | ✅ **VERIFICADO** (QA aislado, sección 10) | `42501` con rol privilegiado del tooling |
+
+---
+
+## 10. QA aislado en vivo (2026-08-06)
+
+Entorno: **transacción controlada con `ROLLBACK` garantizado** sobre datos 100% sintéticos. No se usó ningún trabajador, periodo ni tarifa real; no se recalculó nómina histórica; no se desactivó ningún trigger; no se usó superusuario.
+
+### Datos sintéticos (IDs documentados, todos revertidos)
+
+| Entidad | ID |
+|---|---|
+| Empresa demo A | `aaaaaaaa-0000-4000-8000-000000000001` |
+| Empresa demo B | `bbbbbbbb-0000-4000-8000-000000000002` |
+| Worker sintético A / B | `aaaaaaaa-1111-…0001` / `bbbbbbbb-1111-…0002` |
+| Periodo `open` A / B | `aaaaaaaa-2222-…0001` / `bbbbbbbb-2222-…0002` |
+| Periodo `closed` / `paid` | `aaaaaaaa-2222-…0002` / `aaaaaaaa-2222-…0003` |
+| Concepto "Hourly Rate" A / B | `aaaaaaaa-3333-…0001` / `bbbbbbbb-3333-…0002` |
+| Tarifa efectiva conocida | A = **$20.00** desde `2026-08-01`; B = **$33.00** |
+| `time_entries` aprobados A | 2 × 8h reales (2026-08-03, 2026-08-04) = **16h** |
+
+### 10.1 Consolidación en vivo (periodo `open` A)
+
+`consolidate_period_base_pay` → `success: true`, `employees_consolidated: 1`, `rate_snapshots_created: 1`, `source: time_entries`.
+
+Snapshot resultante, campo por campo:
+
+| Campo | Valor |
+|---|---|
+| `company_id` / `employee_id` / `payroll_period_id` | A / worker A / periodo open A |
+| `time_entry_ids` / `time_entry_count` | 2 ids reales / `2` |
+| `hours_source` | `time_entries` (**no** scheduled) |
+| `total_hours` / `regular_hours` / `overtime_hours` | `16.00` / `16.00` / `0.00` |
+| `pay_rate` / `currency` | `20.00` / `USD` |
+| `rate_source` / `is_legacy_source` | `concept_employee_rate` / `false` |
+| `source_entity_id` / `source_version` | `6c996e23-…` / `2026-08-01` |
+| `effective_date` / `effective_from` / `effective_to` | `2026-08-15` / `2026-08-01` / `null` |
+| `overtime_multiplier` / `overtime_threshold_hours` | `1.5` / `40` |
+| `gross_base_amount` | `320.00` (= 16 × 20) |
+| `resolved_by` (actor) / `resolved_at` | actor de sistema / timestamp |
+| `consolidation_version` / `audit_reference` | `1` / `4cf1828d-…` |
+| `rate_by_work_date` | `[{2026-08-03, 20}, {2026-08-04, 20}]` |
+
+Verificación cruzada: suma de horas de los `time_entry_ids` = **16.00 h**, idéntica a `total_hours`; todos los ids caen dentro del periodo. `snapshots_con_rate_cero = 0` (ningún snapshot con `missing_rate`).
+
+### 10.2 Retry y doble submit
+
+3 corridas consecutivas sobre el mismo periodo:
+
+- `period_base_pay`: **1 fila** (sin duplicar, `ON CONFLICT`).
+- Snapshots: versiones `1, 2, 3`, todas con `rate 20.00`, `hours 16.00`, `gross 320.00`.
+
+Comportamiento correcto por diseño append-only: **no duplica pago ni sobrescribe historia**; cada corrida agrega una versión trazable. Observación abierta (no corregida en esta fase): un doble submit accidental infla el contador de versiones aunque el contenido sea idéntico; una deduplicación por hash de payload queda como mejora opcional.
+
+### 10.3 Cambio de tarifa posterior
+
+Tarifa sintética cambiada de `20.00` → `99.00`:
+
+- `resolve_payroll_hourly_rate_at(...,'2026-08-03')` devuelve **99.00** (resolución actual).
+- Snapshots v1/v2/v3 siguen en **20.00 / $320.00**.
+- `period_base_pay` del periodo original sigue en **$320.00 / 16.00 h**.
+
+Historia inmutable confirmada.
+
+### 10.4 Trigger de inmutabilidad
+
+Ejecutado con el **rol privilegiado controlado** del tooling (no superusuario, trigger activo):
+
+| Intento | Resultado |
+|---|---|
+| `UPDATE payroll_period_rate_snapshots` | `42501` — *append-only: UPDATE is not allowed (period …, employee …)* |
+| `DELETE payroll_period_rate_snapshots` | `42501` — *append-only: DELETE is not allowed (period …, employee …)* |
+| Estado posterior | 3 filas intactas, `pay_rate` = `20.00, 20.00, 20.00` — **cero cambios** |
+
+Barreras verificadas: `relrowsecurity = true`; `relacl` = `authenticated=r` (solo lectura), `service_role` completo, `anon` ausente; trigger `payroll_period_rate_snapshots_no_update` con `tgenabled = 'O'` (habilitado). El rol de aplicación (`authenticated`) no tiene siquiera privilegio de escritura, y el trigger bloquea incluso a roles con privilegio.
+
+### 10.5 CLOSED / PAID — defecto detectado y corregido
+
+**Hallazgo (defecto real):** al intentar consolidar un periodo `closed` o `paid`, la función fallaba con `23502 null value in column "employee_id" of relation "payroll_consolidation_audit"`. El fail-closed se mantenía (0 snapshots, 0 `period_base_pay`), pero **la auditoría del intento nunca se guardaba** y la UI recibía un error crudo en vez del mensaje controlado.
+
+**Corrección aplicada:** `payroll_consolidation_audit.employee_id` pasa a ser nullable (los registros de alcance de periodo, como `blocked_period_locked`, no corresponden a un trabajador). UI ajustada: `PayrollMissingRateBanner` ignora filas sin trabajador al contar por persona.
+
+**Reverificación aislada tras el fix:**
+
+| Periodo | Retorno | Auditoría | Snapshots | `period_base_pay` |
+|---|---|---|---|---|
+| `closed` | `success:false`, `error_code: period_locked`, mensaje controlado | `blocked_period_locked` (`employee = null`) | 0 | 0 |
+| `paid` | `success:false`, `error_code: period_locked`, mensaje controlado | `blocked_period_locked` (`employee = null`) | 0 | 0 |
+
+### 10.6 Multi-tenant
+
+| Verificación | Resultado |
+|---|---|
+| Consolidación empresa B | `success: true`, snapshot `rate 33.00`, `5.00 h`, `gross 165.00` |
+| Aislamiento de snapshots | Cada snapshot lleva su `company_id`; A y B no se mezclan |
+| Escritura cruzada (periodo de B con `company_id` de A) | Rechazada: `"Period not found or does not belong to company"`; `snapshots_de_B_bajo_company_A = 0` |
+| Lectura cruzada | RLS activa, políticas `period_rate_snapshots_select_admin` y `…_select_self`, ambas de solo lectura y con `company_id` |
+
+### 10.7 Limpieza y cero impacto
+
+Toda la prueba se ejecutó dentro de una transacción abortada deliberadamente (`RAISE EXCEPTION` final), lo que garantiza el rollback. Verificación posterior en la base:
+
+`payroll_period_rate_snapshots = 0`, `payroll_consolidation_audit = 0`, empresas demo = 0, periodos sintéticos = 0, `time_entries` sintéticos = 0, empleados sintéticos = 0, `period_base_pay` sintético = 0.
+
+No se borró auditoría de nómina real (no existía ninguna previa a esta prueba). No se tocó ningún periodo, tarifa, trabajador ni pago productivo. El único cambio permanente es la corrección de esquema del punto 10.5.
 
 ---
 
@@ -170,17 +274,20 @@ Lectura en cliente: `src/lib/payroll/rate-snapshot.ts` (`fetchLatestRateSnapshot
 
 | Criterio | Estado |
 |---|---|
-| Cada consolidación crea un snapshot verificable | ✅ implementado (ejecución en vivo UNVERIFIED) |
-| El snapshot usa horas reales de `time_entries` | ✅ |
-| Cambios futuros de tarifa no alteran historia | ✅ |
-| Periodos `closed` y `paid` inmutables | ✅ |
+| Cada consolidación crea un snapshot verificable | ✅ verificado en vivo (10.1) |
+| El snapshot usa horas reales de `time_entries` | ✅ verificado (16h reales = snapshot) |
+| Cambios futuros de tarifa no alteran historia | ✅ verificado (10.3) |
+| Periodos `closed` y `paid` inmutables | ✅ verificado tras el fix (10.5) |
+| Retry / doble submit idempotente | ✅ verificado (10.2) |
+| Trigger de inmutabilidad efectivo | ✅ verificado con rol privilegiado (10.4) |
+| Multi-tenant aislado | ✅ verificado (10.6) |
 | Missing rate nunca genera $0 | ✅ |
 | Fuente de tarifa explícita | ✅ |
 | Payroll reconstruible sin consultar tarifas actuales | ✅ |
-| Tests, typecheck y QA | ✅ typecheck y QA estructural; QA en vivo parcialmente UNVERIFIED |
+| Cero impacto en payroll real | ✅ verificado (10.7) |
 
 ---
 
 ## Confirmación
 
-**Cada pago consolidado conserva una fotografía inmutable de las horas reales, la tarifa aplicada, su origen y la regla utilizada; cambios futuros no alteran periodos históricos.**
+**Cada consolidación crea un snapshot histórico inmutable y el trigger bloquea cualquier modificación posterior, sin tocar nómina real.**
