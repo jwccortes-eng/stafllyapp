@@ -163,6 +163,36 @@ const PRO_CAPS = [
 const ENTERPRISE_CAPS = [...PRO_CAPS];
 
 /**
+ * ECC Fase 3.1 — capacidades críticas que hoy NO tienen gate comercial:
+ * documentos, revisión documental, auditoría, notificaciones, cumplimiento y
+ * portal del trabajador existen para toda compañía y se gobiernan por rol/RLS.
+ * Se conceden en todos los planes para que el modelo canónico refleje la
+ * realidad y no invente restricciones nuevas.
+ */
+export const CRITICAL_31_CAPS = [
+  "shared.documents.storage",
+  "shared.documents.review",
+  "shared.audit.trail",
+  "shared.comms.notifications",
+  "stafly.compliance.requirements",
+  "stafly.compliance.assignment_policy",
+  "stafly.worker_portal.access",
+  "stafly.worker_portal.documents",
+  "stafly.worker_portal.captain_room",
+];
+
+/** Subconjunto transversal aplicable también a Parceros. */
+const SHARED_CRITICAL_31_CAPS = CRITICAL_31_CAPS.filter(k => k.startsWith("shared."));
+
+const FREE_CAPS_V3 = [...FREE_CAPS, ...CRITICAL_31_CAPS];
+const PRO_CAPS_V2 = [...PRO_CAPS, ...CRITICAL_31_CAPS];
+const ENTERPRISE_CAPS_V2 = [...ENTERPRISE_CAPS, ...CRITICAL_31_CAPS];
+
+/** Fecha de vigencia de las versiones creadas por la Fase 3.1. */
+const PHASE_31_EFFECTIVE_FROM = "2026-08-01";
+
+
+/**
  * Versiones publicadas. `v1` documenta el estado histórico; `v2` es la versión
  * vigente. Ninguna se edita: se agregan versiones nuevas al final.
  */
@@ -195,8 +225,8 @@ export const PLAN_VERSIONS: readonly PlanVersion[] = Object.freeze([
     capabilities: FREE_CAPS,
     limits: [limit(LIMIT_KEYS.employees, 10), limit(LIMIT_KEYS.admins, 2, "hard", "warn")],
     effectiveFrom: "2026-01-01",
-    effectiveUntil: null,
-    status: "published",
+    effectiveUntil: PHASE_31_EFFECTIVE_FROM,
+    status: "deprecated",
     createdBy: "system",
     approvedBy: "ecc-core",
     audit: { createdAt: "2026-01-01T00:00:00Z", approvedAt: "2026-01-01T00:00:00Z", note: "Ajuste de política de exceso de administradores." },
@@ -212,8 +242,8 @@ export const PLAN_VERSIONS: readonly PlanVersion[] = Object.freeze([
     capabilities: PRO_CAPS,
     limits: [limit(LIMIT_KEYS.employees, 999), limit(LIMIT_KEYS.admins, 10)],
     effectiveFrom: "2024-01-01",
-    effectiveUntil: null,
-    status: "published",
+    effectiveUntil: PHASE_31_EFFECTIVE_FROM,
+    status: "deprecated",
     createdBy: "system",
     approvedBy: "ecc-core",
     audit: { createdAt: "2024-01-01T00:00:00Z", approvedAt: "2024-01-01T00:00:00Z", note: "Derivada de plan_code=paid_manual. Cobro manual, sin Stripe." },
@@ -232,8 +262,8 @@ export const PLAN_VERSIONS: readonly PlanVersion[] = Object.freeze([
       limit(LIMIT_KEYS.admins, Number.POSITIVE_INFINITY, "soft", "ignore"),
     ],
     effectiveFrom: "2024-01-01",
-    effectiveUntil: null,
-    status: "published",
+    effectiveUntil: PHASE_31_EFFECTIVE_FROM,
+    status: "deprecated",
     createdBy: "system",
     approvedBy: "ecc-core",
     audit: { createdAt: "2024-01-01T00:00:00Z", approvedAt: "2024-01-01T00:00:00Z", note: "Derivada de plan_code=enterprise / paid_features_enabled." },
@@ -249,13 +279,100 @@ export const PLAN_VERSIONS: readonly PlanVersion[] = Object.freeze([
     capabilities: ["parceros.passport.profile", "parceros.reputation.reviews", "shared.data.export"],
     limits: [],
     effectiveFrom: "2025-01-01",
-    effectiveUntil: null,
-    status: "published",
+    effectiveUntil: PHASE_31_EFFECTIVE_FROM,
+    status: "deprecated",
     createdBy: "system",
     approvedBy: "ecc-core",
     audit: { createdAt: "2025-01-01T00:00:00Z", approvedAt: "2025-01-01T00:00:00Z", note: "Producto separado: no hereda capacidades de Stafly." },
   }),
+
+  /* ── Fase 3.1 · versiones nuevas: representan capacidades ya existentes ── */
+  seed({
+    planKey: "stafly.free",
+    version: 3,
+    product: "stafly",
+    name: "Starter",
+    description: "Operación básica sin costo.",
+    currency: "USD",
+    billing: { cadence: "none", amount: 0, collection: "none" },
+    capabilities: FREE_CAPS_V3,
+    limits: [limit(LIMIT_KEYS.employees, 10), limit(LIMIT_KEYS.admins, 2, "hard", "warn")],
+    effectiveFrom: PHASE_31_EFFECTIVE_FROM,
+    effectiveUntil: null,
+    status: "published",
+    createdBy: "ecc-core",
+    approvedBy: "ecc-core",
+    audit: {
+      createdAt: "2026-08-01T00:00:00Z",
+      approvedAt: "2026-08-01T00:00:00Z",
+      note: "Fase 3.1: se declaran documentos, revisión, auditoría, notificaciones, cumplimiento y portal, que ya existen sin gate comercial. No cambia acceso real.",
+    },
+  }),
+  seed({
+    planKey: "stafly.pro",
+    version: 2,
+    product: "stafly",
+    name: "Pro",
+    description: "Operación completa con nómina, asistencia y clientes.",
+    currency: "USD",
+    billing: { cadence: "monthly", amount: null, collection: "manual" },
+    capabilities: PRO_CAPS_V2,
+    limits: [limit(LIMIT_KEYS.employees, 999), limit(LIMIT_KEYS.admins, 10)],
+    effectiveFrom: PHASE_31_EFFECTIVE_FROM,
+    effectiveUntil: null,
+    status: "published",
+    createdBy: "ecc-core",
+    approvedBy: "ecc-core",
+    audit: { createdAt: "2026-08-01T00:00:00Z", approvedAt: "2026-08-01T00:00:00Z", note: "Fase 3.1: capacidades críticas existentes declaradas de forma canónica." },
+  }),
+  seed({
+    planKey: "stafly.enterprise",
+    version: 2,
+    product: "stafly",
+    name: "Enterprise",
+    description: "Acceso completo sin límites operativos.",
+    currency: "USD",
+    billing: { cadence: "custom", amount: null, collection: "manual" },
+    capabilities: ENTERPRISE_CAPS_V2,
+    limits: [
+      limit(LIMIT_KEYS.employees, Number.POSITIVE_INFINITY, "soft", "ignore"),
+      limit(LIMIT_KEYS.admins, Number.POSITIVE_INFINITY, "soft", "ignore"),
+    ],
+    effectiveFrom: PHASE_31_EFFECTIVE_FROM,
+    effectiveUntil: null,
+    status: "published",
+    createdBy: "ecc-core",
+    approvedBy: "ecc-core",
+    audit: { createdAt: "2026-08-01T00:00:00Z", approvedAt: "2026-08-01T00:00:00Z", note: "Fase 3.1: capacidades críticas existentes declaradas de forma canónica." },
+  }),
+  seed({
+    planKey: "parceros.talent_free",
+    version: 2,
+    product: "parceros",
+    name: "Parceros Talento",
+    description: "Pasaporte laboral y reputación para trabajadores.",
+    currency: "USD",
+    billing: { cadence: "none", amount: 0, collection: "none" },
+    capabilities: [
+      "parceros.passport.profile",
+      "parceros.reputation.reviews",
+      "shared.data.export",
+      ...SHARED_CRITICAL_31_CAPS,
+    ],
+    limits: [],
+    effectiveFrom: PHASE_31_EFFECTIVE_FROM,
+    effectiveUntil: null,
+    status: "published",
+    createdBy: "ecc-core",
+    approvedBy: "ecc-core",
+    audit: {
+      createdAt: "2026-08-01T00:00:00Z",
+      approvedAt: "2026-08-01T00:00:00Z",
+      note: "Fase 3.1: documentos, auditoría y notificaciones son compartidos; Parceros no hereda capacidades stafly.*.",
+    },
+  }),
 ]);
+
 
 export const PLAN_VERSION_BY_ID: ReadonlyMap<string, PlanVersion> = new Map(
   PLAN_VERSIONS.map(p => [p.id, p]),

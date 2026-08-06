@@ -13,7 +13,11 @@ import type { EntitlementOverride } from "./overrides";
 
 /* ───────────────────── 4. Capacidades críticas ───────────────────── */
 
-/** Nombre operativo solicitado → capability canónica del catálogo (o null). */
+/**
+ * Nombre operativo solicitado → capability canónica del catálogo (o null).
+ * Fase 3.1: documentos, cumplimiento, portal y auditoría ya están representados.
+ * `shared.documents` vive una sola vez: no existe `stafly.documents`.
+ */
 export const CRITICAL_CAPABILITY_ALIASES: ReadonlyArray<{ alias: string; canonical: string | null; label: string }> =
   Object.freeze([
     { alias: "stafly.services", canonical: "stafly.ops.shifts", label: "Servicios" },
@@ -21,14 +25,26 @@ export const CRITICAL_CAPABILITY_ALIASES: ReadonlyArray<{ alias: string; canonic
     { alias: "stafly.team_hub", canonical: "stafly.ops.command_center", label: "Team Hub" },
     { alias: "stafly.time_clock", canonical: "stafly.ops.timeclock", label: "Reloj de asistencia" },
     { alias: "stafly.payroll_review", canonical: "stafly.payroll.reconciliation", label: "Revisión de nómina" },
-    { alias: "stafly.documents", canonical: null, label: "Documentos (Stafly)" },
-    { alias: "stafly.compliance", canonical: null, label: "Cumplimiento" },
-    { alias: "stafly.worker_portal", canonical: null, label: "Portal del trabajador" },
     { alias: "shared.identity", canonical: "shared.identity.directory", label: "Identidad" },
-    { alias: "shared.documents", canonical: null, label: "Documentos (compartido)" },
-    { alias: "shared.audit", canonical: null, label: "Auditoría" },
-    { alias: "shared.notifications", canonical: "shared.comms.announcements", label: "Notificaciones" },
+    { alias: "shared.documents", canonical: "shared.documents.storage", label: "Documentos" },
+    { alias: "shared.documents.review", canonical: "shared.documents.review", label: "Revisión documental" },
+    { alias: "shared.audit", canonical: "shared.audit.trail", label: "Auditoría" },
+    { alias: "shared.notifications", canonical: "shared.comms.notifications", label: "Notificaciones" },
+    { alias: "stafly.compliance", canonical: "stafly.compliance.requirements", label: "Cumplimiento" },
+    {
+      alias: "stafly.compliance.assignment_policy",
+      canonical: "stafly.compliance.assignment_policy",
+      label: "Política de asignación",
+    },
+    { alias: "stafly.worker_portal", canonical: "stafly.worker_portal.access", label: "Portal del trabajador" },
+    {
+      alias: "stafly.worker_portal.documents",
+      canonical: "stafly.worker_portal.documents",
+      label: "Documentos del trabajador",
+    },
+    { alias: "stafly.captain_room", canonical: "stafly.worker_portal.captain_room", label: "Sala del capitán" },
   ]);
+
 
 export const CRITICAL_CANONICAL_KEYS: ReadonlySet<string> = new Set(
   CRITICAL_CAPABILITY_ALIASES.map(a => a.canonical).filter((k): k is string => !!k),
@@ -173,7 +189,18 @@ export interface CompanyReconciliation {
     ecc: boolean | null;
     status: string;
     explained: boolean;
+    /** Cómo se gobierna hoy (gate comercial, código+RLS, portal). */
+    legacyGovernance: string;
+    /** Evidencia legacy consultada. */
+    legacySource: string;
+    /** Fuente canónica de la decisión ECC. */
+    eccSource: string;
+    /** Dependencias canónicas no satisfechas. */
+    missingDependencies: string[];
+    /** Acción recomendada para cerrar la diferencia. */
+    recommendedAction: ResolutionAction;
   }>;
+
   findings: ReconciliationFinding[];
   readiness: Readiness;
   readinessReasons: string[];
@@ -443,7 +470,7 @@ export function reconcileCompany(input: EccReadModelInput, at?: string): Company
   }
 
   /* Matriz crítica */
-  const criticalMatrix = CRITICAL_CAPABILITY_ALIASES.map(a => {
+  const criticalMatrix: CompanyReconciliation["criticalMatrix"] = CRITICAL_CAPABILITY_ALIASES.map(a => {
     if (!a.canonical) {
       return {
         alias: a.alias,
@@ -453,11 +480,29 @@ export function reconcileCompany(input: EccReadModelInput, at?: string): Company
         ecc: null,
         status: "missing_mapping",
         explained: false,
+        legacyGovernance: "desconocido",
+        legacySource: "rutas y RLS sin capability declarada",
+        eccSource: "—",
+        missingDependencies: [],
+        recommendedAction: "create_mapping" as ResolutionAction,
       };
     }
     const row = byCanonical.get(a.canonical);
     if (!row) {
-      return { alias: a.alias, label: a.label, canonical: a.canonical, legacy: null, ecc: null, status: "unknown", explained: false };
+      return {
+        alias: a.alias,
+        label: a.label,
+        canonical: a.canonical,
+        legacy: null,
+        ecc: null,
+        status: "unknown",
+        explained: false,
+        legacyGovernance: getCapability(a.canonical)?.legacyGovernance ?? "none",
+        legacySource: (getCapability(a.canonical)?.legacySources ?? []).join(" · ") || "—",
+        eccSource: "producto no contratado por esta compañía",
+        missingDependencies: getCapability(a.canonical)?.dependencies ?? [],
+        recommendedAction: "human_review" as ResolutionAction,
+      };
     }
     return {
       alias: a.alias,
@@ -467,8 +512,19 @@ export function reconcileCompany(input: EccReadModelInput, at?: string): Company
       ecc: row.ecc,
       status: row.status,
       explained: row.status === "match",
+      legacyGovernance: row.legacyGovernance,
+      legacySource: row.legacySource,
+      eccSource: row.eccReason,
+      missingDependencies: row.missingDependencies,
+      recommendedAction:
+        row.status === "match"
+          ? ("adopt_ecc" as ResolutionAction)
+          : row.missingDependencies.length > 0
+            ? ("create_mapping" as ResolutionAction)
+            : ("human_review" as ResolutionAction),
     };
   });
+
 
   for (const m of criticalMatrix) {
     if (m.canonical === null) {
@@ -505,6 +561,7 @@ export function reconcileCompany(input: EccReadModelInput, at?: string): Company
   const criticalFindings = findings.filter(f => f.critical);
   const missingCriticalMapping = criticalMatrix.filter(m => !m.canonical || m.status === "unknown");
   const criticalMismatch = criticalMatrix.filter(m => m.canonical && m.status !== "match" && m.status !== "unknown");
+  const criticalDependencyGaps = criticalMatrix.filter(m => m.canonical && m.missingDependencies.length > 0);
   const unknownOverrides = overrides.filter(o => o.blocksReadiness);
   const limitMismatch = limits.filter(l => l.status !== "match");
   const overLimit = limits.filter(l => l.overLimitRisk);
@@ -514,11 +571,19 @@ export function reconcileCompany(input: EccReadModelInput, at?: string): Company
     readiness = "BLOCKED";
     if (shadow.access.planVersion === null) blockers.push("Sin versión de plan canónica vigente: datos insuficientes.");
     if (unknownOverrides.length > 0) blockers.push(`${unknownOverrides.length} override(s) sin clasificar.`);
-  } else if (contradictions.length > 0 || criticalMismatch.length > 0 || overLimit.length > 0) {
+  } else if (
+    contradictions.length > 0 ||
+    criticalMismatch.length > 0 ||
+    overLimit.length > 0 ||
+    criticalDependencyGaps.length > 0
+  ) {
     readiness = "NOT_READY";
     for (const x of contradictions) blockers.push(x);
     for (const m of criticalMismatch) blockers.push(`Capacidad crítica ${m.label}: ${m.status}.`);
+    for (const m of criticalDependencyGaps)
+      blockers.push(`Capacidad crítica ${m.label} con dependencia faltante: ${m.missingDependencies.join(", ")}.`);
     for (const l of overLimit) blockers.push(`Uso por encima del límite canónico en ${l.label}.`);
+
   } else if (missingCriticalMapping.length > 0) {
     readiness = "NOT_READY";
     blockers.push(

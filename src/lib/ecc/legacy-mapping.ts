@@ -8,7 +8,7 @@
  * Propiedades exigidas al mapeo: idempotente, auditable, reversible,
  * tenant-safe y explicable.
  */
-import { LEGACY_MODULE_TO_CAPABILITY, getCapability } from "./capability-catalog";
+import { LEGACY_MODULE_TO_CAPABILITY, getCapability, type LegacyGovernance } from "./capability-catalog";
 import { LIMIT_KEYS, resolvePlanVersionAt, type PlanVersion } from "./plan-versions";
 import { buildOverride, type EntitlementOverride } from "./overrides";
 import {
@@ -212,12 +212,19 @@ export type ShadowStatus = "match" | "mismatch" | "unknown" | "missing_mapping" 
 export interface ShadowCapabilityRow {
   capabilityKey: string;
   legacyModuleKey: string | null;
+  /** Cómo se gobierna hoy: gate comercial, código+RLS, portal o nada. */
+  legacyGovernance: LegacyGovernance;
+  /** Evidencia legible de la fuente legacy consultada. */
+  legacySource: string;
   legacy: boolean | null;
   ecc: boolean;
   status: ShadowStatus;
   detail: string;
   eccReason: string;
+  /** Dependencias canónicas no satisfechas (explican `dependency_missing`). */
+  missingDependencies: string[];
 }
+
 
 export interface ShadowLimitRow {
   limitKey: string;
@@ -251,6 +258,26 @@ function legacyModuleDecision(moduleKey: string, plan: PlanCode, input: EccReadM
   return planGrants || active;
 }
 
+/**
+ * Decisión legacy según cómo se gobierna la capacidad HOY:
+ *  - `company_modules`: plan tier OR override activo.
+ *  - `code_and_rls` / `portal_modules`: no existe gate comercial, la superficie
+ *    está disponible para toda compañía y el acceso lo acota rol + RLS.
+ *  - `none`: sin superficie legacy comparable.
+ */
+function resolveLegacyDecision(
+  governance: LegacyGovernance,
+  legacyKey: string | null,
+  plan: PlanCode,
+  input: EccReadModelInput,
+): boolean | null {
+  if (legacyKey) return legacyModuleDecision(legacyKey, plan, input);
+  if (governance === "code_and_rls" || governance === "portal_modules") return true;
+  return null;
+}
+
+
+
 export function buildShadowReport(input: EccReadModelInput, at?: string): ShadowReport {
   const mapping = mapLegacyCompanyToEcc(input, at);
   const ctx = buildResolutionContext(input, mapping);
@@ -272,7 +299,12 @@ export function buildShadowReport(input: EccReadModelInput, at?: string): Shadow
     const def = getCapability(capKey);
     const legacyKey = def?.legacyModuleKey ?? null;
     if (legacyKey) seenLegacy.add(legacyKey);
-    const legacy = legacyKey ? legacyModuleDecision(legacyKey, plan, input) : null;
+    const governance: LegacyGovernance = def?.legacyGovernance ?? "none";
+    const legacy = resolveLegacyDecision(governance, legacyKey, plan, input);
+    const legacySource = legacyKey
+      ? `company_modules.${legacyKey} + plan_code`
+      : (def?.legacySources ?? []).join(" · ") || "—";
+    const missingDependencies = decision.dependencies.filter(d => !d.satisfied).map(d => d.key);
     let status: ShadowStatus;
     let detail: string;
     if (legacy === null) {
@@ -282,10 +314,16 @@ export function buildShadowReport(input: EccReadModelInput, at?: string): Shadow
         : "Sin equivalente legacy ni concesión canónica.";
     } else if (legacy === decision.result) {
       status = "match";
-      detail = "Legacy y ECC coinciden.";
+      detail =
+        governance === "company_modules"
+          ? "Legacy y ECC coinciden."
+          : "Sin gate comercial hoy: la capacidad existe para toda compañía (rol + RLS) y el ECC la representa igual.";
     } else if (legacy && !decision.result) {
       status = "legacy_only";
-      detail = "Legacy concede acceso que la versión canónica no incluye.";
+      detail =
+        missingDependencies.length > 0
+          ? `Legacy concede acceso y el ECC la bloquea por dependencia faltante: ${missingDependencies.join(", ")}.`
+          : "Legacy concede acceso que la versión canónica no incluye.";
     } else {
       status = "mismatch";
       detail = "ECC concede lo que el gate legacy niega hoy.";
@@ -294,13 +332,17 @@ export function buildShadowReport(input: EccReadModelInput, at?: string): Shadow
     capabilities.push({
       capabilityKey: capKey,
       legacyModuleKey: legacyKey,
+      legacyGovernance: governance,
+      legacySource,
       legacy,
       ecc: decision.result,
       status,
       detail,
       eccReason: decision.reason,
+      missingDependencies,
     });
   }
+
 
   const missingMappings = [...mapping.unmapped];
   for (const legacyKey of Object.keys(MODULE_PLAN_MAP)) {
