@@ -43,6 +43,8 @@ import {
   type CompanyTruth,
 } from "@/lib/billing/company-truth";
 import { EccContractPanel } from "@/components/billing/EccContractPanel";
+import { EccPlanVersionPanel } from "@/components/billing/EccPlanVersionPanel";
+
 import type { EccReadModelInput } from "@/lib/ecc/commercial-read-model";
 
 /** ECC Fase 1 — el input ya viene armado en fetchCompanies; aquí sólo se lee. */
@@ -800,6 +802,8 @@ export default function CompaniesPage() {
                                 onChanged={fetchCompanies}
                               />
                               <EccContractPanel input={buildEccInput(c)} />
+                              <EccPlanVersionPanel input={buildEccInput(c)} />
+
                               <CompanyTruthPanel truth={c.truth} />
                             </div>
                             <Button variant="outline" size="sm" className="mt-3 text-xs" onClick={() => openAssignPlan(c)}>
