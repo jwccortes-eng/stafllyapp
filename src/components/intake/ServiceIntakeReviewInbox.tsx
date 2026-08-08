@@ -110,6 +110,8 @@ export function ServiceIntakeReviewInbox({
   onCreateDrafts,
   isBusy,
   sourceLabel,
+  noticesByCandidate,
+  onViewDuplicate,
 }: ServiceIntakeReviewInboxProps) {
   const isMobile = useIsMobile();
   const [filter, setFilter] = useState<FilterKey>("all");
