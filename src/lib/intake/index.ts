@@ -1,0 +1,17 @@
+/**
+ * Smart Service Intake — carril canónico.
+ *
+ * import_batches → raw_schedule_import_rows → normalized_schedule_rows
+ *   → bandeja de revisión → scheduled_shifts (publication_status='draft')
+ *
+ * No hay modelo paralelo de jobs, ni segundo importador, ni segundo
+ * draft engine.
+ */
+
+export * from "./candidate";
+export * from "./entity-resolution";
+export * from "./duplicate";
+export * from "./extraction-contract";
+export * from "./batch";
+export * from "./create-draft-service";
+export * from "./schedule-adapter";
