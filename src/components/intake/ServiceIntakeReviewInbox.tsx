@@ -137,6 +137,29 @@ function StatusBadges({ c }: { c: ServiceCandidate }) {
   );
 }
 
+function ConfidenceRow({ levels }: { levels: Record<string, ConfidenceLevel> }) {
+  const entries = Object.entries(levels).filter(([field]) => FIELD_LABELS[field]);
+  if (entries.length === 0) return null;
+  return (
+    <div className="flex flex-wrap gap-1.5" aria-label="Confianza por campo">
+      {entries.map(([field, level]) => (
+        <span
+          key={field}
+          className={cn(
+            "rounded-full border px-2 py-0.5 text-[11px]",
+            level === "HIGH" && "border-primary/40 text-foreground",
+            level === "MEDIUM" && "border-border text-muted-foreground",
+            level === "LOW" && "border-destructive/40 text-destructive",
+            level === "MISSING" && "border-dashed border-border text-muted-foreground",
+          )}
+        >
+          {FIELD_LABELS[field]} · {LEVEL_LABELS[level]}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 export function ServiceIntakeReviewInbox({
   candidates,
   onPatch,
@@ -148,7 +171,11 @@ export function ServiceIntakeReviewInbox({
   sourceLabel,
   noticesByCandidate,
   onViewDuplicate,
+  confidenceByCandidate,
+  unresolvedElements,
+  onReviewSource,
 }: ServiceIntakeReviewInboxProps) {
+
   const isMobile = useIsMobile();
   const [filter, setFilter] = useState<FilterKey>("all");
   const [search, setSearch] = useState("");
