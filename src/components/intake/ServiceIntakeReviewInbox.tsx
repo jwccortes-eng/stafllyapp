@@ -289,6 +289,12 @@ export function ServiceIntakeReviewInbox({
           Confirmar lugar
         </Button>
       )}
+      {onReviewSource && (
+        <Button size="sm" variant="outline" onClick={() => onReviewSource(c.id)}>
+          Revisar fuente
+        </Button>
+      )}
+
       <Button
         size="sm"
         variant="secondary"
