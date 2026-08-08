@@ -17849,6 +17849,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      can_manage_service_intake_files: {
+        Args: { _company_id: string; _user_id: string }
+        Returns: boolean
+      }
       can_manage_shift_company: {
         Args: { _company_id: string }
         Returns: boolean
@@ -18146,6 +18150,7 @@ export type Database = {
         }
         Returns: string
       }
+      intake_file_company_id: { Args: { object_name: string }; Returns: string }
       internal_dual_write_pin_hash: {
         Args: { _employee_id: string; _pin: string }
         Returns: undefined

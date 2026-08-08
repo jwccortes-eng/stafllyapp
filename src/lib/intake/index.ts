@@ -17,4 +17,7 @@ export * from "./create-draft-service";
 export * from "./schedule-adapter";
 export * from "./text-parser";
 export * from "./text-intake";
+export * from "./visual-extraction";
+export * from "./visual-intake";
 export * from "./telemetry";
+

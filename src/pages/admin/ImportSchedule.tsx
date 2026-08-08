@@ -44,6 +44,8 @@ import {
 import { parseShiftNote } from "@/lib/import/note-parser";
 import { buildImportWarning, type ImportWarning } from "@/lib/import/import-warnings";
 import PastedTextIntakePanel from "@/components/intake/PastedTextIntakePanel";
+import VisualIntakePanel from "@/components/intake/VisualIntakePanel";
+
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const ACCEPTED_EXTENSIONS = ".xls,.xlsx,.csv";
@@ -2051,6 +2053,10 @@ export default function ImportSchedule() {
 
       {/* Fase 2 — canal de texto libre / WhatsApp pegado (mismo carril canónico) */}
       <PastedTextIntakePanel />
+
+      {/* Fase 3 — canal visual (imagen, captura, foto, PDF) en el mismo carril */}
+      <VisualIntakePanel />
+
 
 
       {/* Instructions */}

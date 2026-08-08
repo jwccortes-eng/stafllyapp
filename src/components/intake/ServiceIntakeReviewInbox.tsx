@@ -26,6 +26,8 @@ import {
 } from "@/components/ui/select";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { canCreateDraft, type ServiceCandidate } from "@/lib/intake/candidate";
+import type { ConfidenceLevel, UnresolvedElement } from "@/lib/intake/visual-extraction";
+
 import { cn } from "@/lib/utils";
 
 export interface ServiceIntakeReviewInboxProps {
@@ -45,7 +47,32 @@ export interface ServiceIntakeReviewInboxProps {
   noticesByCandidate?: Record<string, string[]>;
   /** Abrir el servicio existente con el que podría duplicarse. */
   onViewDuplicate?: (shiftId: string) => void;
+  /** Confianza por campo (HIGH/MEDIUM/LOW/MISSING) para orígenes visuales. */
+  confidenceByCandidate?: Record<string, Record<string, ConfidenceLevel>>;
+  /** Elementos detectados que necesitan revisión humana. Nunca se descartan. */
+  unresolvedElements?: UnresolvedElement[];
+  /** Ver la región de origen del candidato (fragmento visual o texto). */
+  onReviewSource?: (candidateId: string) => void;
 }
+
+const FIELD_LABELS: Record<string, string> = {
+  date: "Fecha",
+  venue: "Lugar",
+  service_type: "Servicio",
+  start_time: "Inicio",
+  end_time: "Fin",
+  client: "Cliente",
+  workers: "Personal",
+  location: "Dirección",
+};
+
+const LEVEL_LABELS: Record<ConfidenceLevel, string> = {
+  HIGH: "alta",
+  MEDIUM: "media",
+  LOW: "baja",
+  MISSING: "sin dato",
+};
+
 
 type FilterKey = "all" | "pending" | "needs_input" | "duplicates" | "accepted" | "created";
 
@@ -110,6 +137,29 @@ function StatusBadges({ c }: { c: ServiceCandidate }) {
   );
 }
 
+function ConfidenceRow({ levels }: { levels: Record<string, ConfidenceLevel> }) {
+  const entries = Object.entries(levels).filter(([field]) => FIELD_LABELS[field]);
+  if (entries.length === 0) return null;
+  return (
+    <div className="flex flex-wrap gap-1.5" aria-label="Confianza por campo">
+      {entries.map(([field, level]) => (
+        <span
+          key={field}
+          className={cn(
+            "rounded-full border px-2 py-0.5 text-[11px]",
+            level === "HIGH" && "border-primary/40 text-foreground",
+            level === "MEDIUM" && "border-border text-muted-foreground",
+            level === "LOW" && "border-destructive/40 text-destructive",
+            level === "MISSING" && "border-dashed border-border text-muted-foreground",
+          )}
+        >
+          {FIELD_LABELS[field]} · {LEVEL_LABELS[level]}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 export function ServiceIntakeReviewInbox({
   candidates,
   onPatch,
@@ -121,7 +171,11 @@ export function ServiceIntakeReviewInbox({
   sourceLabel,
   noticesByCandidate,
   onViewDuplicate,
+  confidenceByCandidate,
+  unresolvedElements,
+  onReviewSource,
 }: ServiceIntakeReviewInboxProps) {
+
   const isMobile = useIsMobile();
   const [filter, setFilter] = useState<FilterKey>("all");
   const [search, setSearch] = useState("");
@@ -235,6 +289,12 @@ export function ServiceIntakeReviewInbox({
           Confirmar lugar
         </Button>
       )}
+      {onReviewSource && (
+        <Button size="sm" variant="outline" onClick={() => onReviewSource(c.id)}>
+          Revisar fuente
+        </Button>
+      )}
+
       <Button
         size="sm"
         variant="secondary"
@@ -312,6 +372,10 @@ export function ServiceIntakeReviewInbox({
                   {confidenceLabel(c) ? ` · Confianza ${confidenceLabel(c)}` : ""}
                 </p>
                 <StatusBadges c={c} />
+                {confidenceByCandidate?.[c.id] && (
+                  <ConfidenceRow levels={confidenceByCandidate[c.id]} />
+                )}
+
                 {(noticesByCandidate?.[c.id]?.length ?? 0) > 0 && (
                   <ul className="space-y-1 rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
                     {noticesByCandidate![c.id].map((n, i) => (
@@ -336,6 +400,32 @@ export function ServiceIntakeReviewInbox({
           </Card>
         ))}
       </div>
+      {(unresolvedElements?.length ?? 0) > 0 && (
+        <div className="space-y-2 rounded-md border border-dashed border-border p-3">
+          <p className="text-sm font-medium">
+            Necesitan revisión ({unresolvedElements!.length})
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Detectamos estos elementos pero no pudimos convertirlos en un servicio. No se
+            descartaron: decides tú.
+          </p>
+          <ul className="space-y-2">
+            {unresolvedElements!.map((u) => (
+              <li key={u.id} className="rounded-md bg-muted/50 px-3 py-2 text-xs">
+                <p className="font-medium text-foreground">{u.detectedText}</p>
+                <p className="text-muted-foreground">{u.reason}</p>
+                {u.suggestion && <p className="text-muted-foreground">Sugerencia: {u.suggestion}</p>}
+                <p className="text-muted-foreground">
+                  {[u.fileName, u.region.page ? `página ${u.region.page}` : null, u.region.label]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
 
       <div className="sticky bottom-0 flex items-center justify-between gap-3 border-t border-border bg-background/95 py-3 backdrop-blur">
         <p className="text-xs text-muted-foreground">
