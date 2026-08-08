@@ -43,6 +43,7 @@ import {
 } from "@/lib/import/schedule-traceability";
 import { parseShiftNote } from "@/lib/import/note-parser";
 import { buildImportWarning, type ImportWarning } from "@/lib/import/import-warnings";
+import PastedTextIntakePanel from "@/components/intake/PastedTextIntakePanel";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const ACCEPTED_EXTENSIONS = ".xls,.xlsx,.csv";
