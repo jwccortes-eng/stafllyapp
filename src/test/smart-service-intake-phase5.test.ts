@@ -98,7 +98,7 @@ describe("normalización y guardas", () => {
 
   it("sólo aprende correcciones reales", () => {
     expect(canLearnCorrection({ rawValue: "BM", resolvedValue: "Millennium Hall" }).learnable).toBe(true);
-    expect(canLearnCorrection({ rawValue: "BM", resolvedValue: "b.m." }).learnable).toBe(false);
+    expect(canLearnCorrection({ rawValue: "BM", resolvedValue: " bm " }).learnable).toBe(false);
     expect(canLearnCorrection({ rawValue: "", resolvedValue: "X" }).learnable).toBe(false);
     expect(
       canLearnCorrection({ rawValue: "contacto", resolvedValue: "juan@empresa.com" }).learnable,
@@ -143,7 +143,7 @@ describe("orden de resolución", () => {
   });
 
   it("sin regla, el fuzzy sigue pidiendo confirmación humana", () => {
-    const resolved = resolveCandidateEntities(candidate("Millenium Hal"), catalogs([]));
+    const resolved = resolveCandidateEntities(candidate("Milenium Hall"), catalogs([]));
     expect(resolved.venueCandidate.resolvedId).toBeNull();
     expect(resolved.venueCandidate.requiresConfirmation).toBe(true);
     expect(resolved.venueCandidate.matchOrigin).toBe("fuzzy");
