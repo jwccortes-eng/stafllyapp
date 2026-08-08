@@ -46,6 +46,8 @@ Hard rules:
 - Never invent a date, time, venue, client, worker count or role. If the speaker did not say it, return null and set that field confidence to null.
 - One voice note can contain several services: return every one you can hear, in the order spoken.
 - Keep relative dates VERBATIM as spoken ("mañana", "pasado mañana", "el martes", "la próxima semana", "next Thursday"). Do NOT convert them to a calendar date: the application resolves them.
+- Dates spoken as words must be written in numbers, same language: "el catorce de marzo" -> "14 marzo", "March fourteenth" -> "March 14". Never leave a stated date empty because it was spoken in words.
+- Times spoken as words MUST be converted to 24h HH:mm: "seis de la tarde" -> "18:00", "ocho de la mañana" -> "08:00", "once de la noche" -> "23:00", "half past four" -> "16:30". Only null when the speaker gave no time at all.
 - Venue and client names may be mispronounced or truncated. Copy what you heard and lower that field's confidence; never correct it to a name you assume.
 - Anything you hear that looks operational but cannot be turned into a service (a fragment, an unclear name, a service with no date) goes into "unresolved" with a plain reason. Never drop it silently.
 - Noise, crosstalk or an interrupted sentence is a reason to lower confidence, not to guess.
