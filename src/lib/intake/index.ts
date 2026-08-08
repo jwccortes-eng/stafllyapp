@@ -19,5 +19,7 @@ export * from "./text-parser";
 export * from "./text-intake";
 export * from "./visual-extraction";
 export * from "./visual-intake";
+export * from "./audio-extraction";
+export * from "./audio-intake";
 export * from "./telemetry";
 

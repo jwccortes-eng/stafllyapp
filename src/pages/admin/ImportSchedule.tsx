@@ -45,6 +45,7 @@ import { parseShiftNote } from "@/lib/import/note-parser";
 import { buildImportWarning, type ImportWarning } from "@/lib/import/import-warnings";
 import PastedTextIntakePanel from "@/components/intake/PastedTextIntakePanel";
 import VisualIntakePanel from "@/components/intake/VisualIntakePanel";
+import AudioIntakePanel from "@/components/intake/AudioIntakePanel";
 
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -2056,6 +2057,9 @@ export default function ImportSchedule() {
 
       {/* Fase 3 — canal visual (imagen, captura, foto, PDF) en el mismo carril */}
       <VisualIntakePanel />
+
+      {/* Fase 4 — canal de audio (nota de voz) en el mismo carril */}
+      <AudioIntakePanel />
 
 
 
