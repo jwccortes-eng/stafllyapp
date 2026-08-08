@@ -15,19 +15,30 @@
 import { supabase } from "@/integrations/supabase/client";
 import { createServiceIntakeBatch, persistIntakeRawRows } from "./batch";
 import { recomputeCandidate, type IntakeSource, type ServiceCandidate } from "./candidate";
+import type { CandidateRef } from "./candidate";
 import { applyDuplicateVerdict, detectDuplicate, type ExistingServiceRow } from "./duplicate";
 import { resolveEntity, type CatalogEntry } from "./entity-resolution";
+import {
+  expandWithDictionary,
+  isApplicableRule,
+  lookupDictionary,
+  type DictionaryRule,
+  type DictionaryRuleType,
+} from "./dictionary";
+import { loadTenantDictionary } from "./dictionary-store";
 import { fingerprintText } from "./telemetry";
 import { parseTextToCandidates, type TextParseNotice } from "./text-parser";
 
 export interface IntakeCatalogs {
   clients: CatalogEntry[];
   venues: CatalogEntry[];
+  /** Fase 5 — memoria operativa de la compañía (correcciones humanas). */
+  dictionary: DictionaryRule[];
 }
 
 /** Catálogos del tenant autenticado. Nunca se cruzan compañías. */
 export async function loadIntakeCatalogs(companyId: string): Promise<IntakeCatalogs> {
-  const [clientsRes, venuesRes] = await Promise.all([
+  const [clientsRes, venuesRes, dictionary] = await Promise.all([
     supabase
       .from("clients")
       .select("id, name")
@@ -38,6 +49,7 @@ export async function loadIntakeCatalogs(companyId: string): Promise<IntakeCatal
       .select("id, name, formatted_address")
       .eq("company_id", companyId)
       .eq("is_active", true),
+    loadTenantDictionary(companyId),
   ]);
 
   const clients: CatalogEntry[] = (clientsRes.data ?? []).map((c: any) => ({
@@ -49,30 +61,120 @@ export async function loadIntakeCatalogs(companyId: string): Promise<IntakeCatal
     name: v.name ?? v.formatted_address ?? "",
     aliases: v.formatted_address && v.name ? [v.formatted_address] : undefined,
   }));
-  return { clients, venues };
+  return { clients, venues, dictionary };
 }
 
 /**
- * Resuelve venue y cliente reutilizando el resolver de Fase 1.
- * Nunca crea entidades; un match no exacto exige confirmación humana.
+ * Fase 5 — aplica el diccionario del tenant DESPUÉS del match canónico exacto
+ * y ANTES del resolver fuzzy. Una regla ambigua o de baja confianza nunca se
+ * aplica sola: el candidato vuelve a revisión humana.
+ */
+function applyDictionaryToRef(
+  raw: string,
+  ref: CandidateRef,
+  catalog: CatalogEntry[],
+  dictionary: DictionaryRule[] | undefined,
+  ruleTypes: DictionaryRuleType[],
+): CandidateRef {
+  // 1. El match canónico exacto manda siempre.
+  if (ref.resolvedId && !ref.requiresConfirmation) {
+    return { ...ref, matchOrigin: "exact" };
+  }
+
+  const lookup = lookupDictionary(raw, dictionary, ruleTypes);
+  if (!lookup) {
+    return { ...ref, matchOrigin: ref.suggestedId ? "fuzzy" : "none" };
+  }
+
+  // Conflicto conocido → jamás automático.
+  if (!isApplicableRule(lookup)) {
+    return {
+      ...ref,
+      requiresConfirmation: true,
+      dictionaryRuleId: lookup.rule.id,
+      matchOrigin: ref.suggestedId ? "fuzzy" : "none",
+    };
+  }
+
+  const rule = lookup.rule;
+  const entity = rule.resolvedEntityId
+    ? catalog.find((e) => e.id === rule.resolvedEntityId)
+    : catalog.find(
+        (e) => e.name.trim().toLowerCase() === rule.resolvedValue.trim().toLowerCase(),
+      );
+  if (!entity) {
+    // La regla apunta a algo que ya no existe en el catálogo: no se aplica.
+    return { ...ref, matchOrigin: ref.suggestedId ? "fuzzy" : "none" };
+  }
+
+  return {
+    raw,
+    resolvedId: entity.id,
+    suggestedId: entity.id,
+    suggestedLabel: entity.name,
+    confidence: rule.confidence,
+    requiresConfirmation: false,
+    dictionaryRuleId: rule.id,
+    matchOrigin: "dictionary",
+  };
+}
+
+/**
+ * Resuelve venue y cliente reutilizando el resolver de Fase 1 más el
+ * diccionario del tenant (Fase 5). Nunca crea entidades; un match no exacto
+ * y sin regla aprendida exige confirmación humana.
  */
 export function resolveCandidateEntities(
   candidate: ServiceCandidate,
   catalogs: IntakeCatalogs,
 ): ServiceCandidate {
   const raw = candidate.venueCandidate.raw || candidate.clientCandidate.raw;
-  if (!raw) return recomputeCandidate(candidate);
+  const dictionary = catalogs.dictionary ?? [];
 
-  const venueRef = resolveEntity(raw, catalogs.venues);
-  const clientRef = resolveEntity(raw, catalogs.clients);
+  // Expansión de texto libre (tipo de servicio y roles) por abreviaciones aprendidas.
+  const expandedType = expandWithDictionary(candidate.serviceType, dictionary, [
+    "service_type_alias",
+    "abbreviation",
+    "spelling_variant",
+  ]);
+  const expandedRoles = (candidate.roleCandidates ?? []).map(
+    (role) =>
+      expandWithDictionary(role, dictionary, ["role_alias", "abbreviation", "spelling_variant"])
+        .value ?? role,
+  );
+
+  if (!raw) {
+    return recomputeCandidate({
+      ...candidate,
+      serviceType: expandedType.value ?? candidate.serviceType,
+      roleCandidates: expandedRoles,
+    });
+  }
+
+  const venueRef = applyDictionaryToRef(
+    raw,
+    resolveEntity(raw, catalogs.venues),
+    catalogs.venues,
+    dictionary,
+    ["venue_alias", "abbreviation", "spelling_variant"],
+  );
+  const clientRef = applyDictionaryToRef(
+    raw,
+    resolveEntity(raw, catalogs.clients),
+    catalogs.clients,
+    dictionary,
+    ["client_alias", "abbreviation", "spelling_variant"],
+  );
 
   const next: ServiceCandidate = {
     ...candidate,
+    serviceType: expandedType.value ?? candidate.serviceType,
+    roleCandidates: expandedRoles,
     venueCandidate: { ...venueRef, raw },
     locationCandidate: {
       ...venueRef,
       raw,
-      // sólo se materializa como location si el humano confirmó
+      // sólo se materializa como location si el humano confirmó o hay regla aprendida
       resolvedId: venueRef.resolvedId,
     },
     clientCandidate:
@@ -87,6 +189,7 @@ export function resolveCandidateEntities(
   };
   return recomputeCandidate(next);
 }
+
 
 /** Servicios existentes del tenant en las fechas involucradas (para duplicados). */
 export async function loadExistingServices(
