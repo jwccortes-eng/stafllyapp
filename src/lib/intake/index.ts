@@ -15,3 +15,6 @@ export * from "./extraction-contract";
 export * from "./batch";
 export * from "./create-draft-service";
 export * from "./schedule-adapter";
+export * from "./text-parser";
+export * from "./text-intake";
+export * from "./telemetry";
