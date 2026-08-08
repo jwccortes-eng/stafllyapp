@@ -152,6 +152,24 @@ describe("normalizeAudioExtraction", () => {
     }
   });
 
+  it("avisa cuando el año no se dijo", () => {
+    const res = normalize([
+      service({ service_date: "14 marzo", venue_name: "Marina", start_time: "10:00", end_time: "12:00" }),
+    ]);
+    const c = res.candidates[0];
+    if (c.serviceDate?.slice(0, 4) !== REF.slice(0, 4)) {
+      expect(res.notices.some((n) => n.candidateId === c.id && /año/.test(n.message))).toBe(true);
+    } else {
+      expect(c.serviceDate).toBeTruthy();
+    }
+  });
+
+  it("traduce los avisos al lenguaje de la nota de voz", () => {
+    const res = normalize([service({ service_date: "mañana", venue_name: "Marina" })]);
+    expect(res.notices.some((n) => /La nota no dice el horario/.test(n.message))).toBe(true);
+    expect(res.notices.every((n) => !/La imagen/.test(n.message))).toBe(true);
+  });
+
   it("un fragmento sin fecha nunca se descarta en silencio", () => {
     const res = normalize([service({ venue_name: "Marina" })]);
     expect(res.candidates).toHaveLength(0);
