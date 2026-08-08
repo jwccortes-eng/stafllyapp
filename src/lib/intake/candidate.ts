@@ -57,6 +57,10 @@ export interface CandidateRef {
   confidence: number;
   /** true cuando requiere que un humano confirme antes de crear. */
   requiresConfirmation: boolean;
+  /** Regla del diccionario del tenant que resolvió este valor (Fase 5). */
+  dictionaryRuleId?: string | null;
+  /** Origen de la resolución, para explicar la decisión en la bandeja. */
+  matchOrigin?: "exact" | "dictionary" | "fuzzy" | "none";
 }
 
 export function emptyRef(raw = ""): CandidateRef {
@@ -67,8 +71,11 @@ export function emptyRef(raw = ""): CandidateRef {
     suggestedId: null,
     confidence: 0,
     requiresConfirmation: false,
+    dictionaryRuleId: null,
+    matchOrigin: "none",
   };
 }
+
 
 /** Campos obligatorios para poder crear un draft. */
 export const REQUIRED_CANDIDATE_FIELDS = [
