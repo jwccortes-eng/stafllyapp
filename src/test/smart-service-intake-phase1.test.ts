@@ -190,7 +190,7 @@ describe("helper canónico de creación de draft", () => {
             is: () => chain,
             maybeSingle: async () => {
               selectCall += 1;
-              if (selectCall === 1) {
+              if (selectCall % 2 === 1) {
                 return { data: handlers.existingId ? { id: handlers.existingId } : null };
               }
               return {
