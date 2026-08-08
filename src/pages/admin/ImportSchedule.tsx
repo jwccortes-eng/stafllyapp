@@ -45,6 +45,7 @@ import { parseShiftNote } from "@/lib/import/note-parser";
 import { buildImportWarning, type ImportWarning } from "@/lib/import/import-warnings";
 import PastedTextIntakePanel from "@/components/intake/PastedTextIntakePanel";
 import VisualIntakePanel from "@/components/intake/VisualIntakePanel";
+import AudioIntakePanel from "@/components/intake/AudioIntakePanel";
 
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
