@@ -35,7 +35,13 @@ import {
 import type { ConfidenceLevel } from "@/lib/intake/visual-extraction";
 import { cn } from "@/lib/utils";
 
-export function VisualIntakePanel() {
+/**
+ * UX Entry Pass — el mismo canal visual se presenta como "Imagen" o como "PDF".
+ * Es sólo copy y filtro de tipos de archivo: el extractor y el carril canónico
+ * son idénticos en ambos casos.
+ */
+export function VisualIntakePanel({ variant = "image" }: { variant?: "image" | "pdf" } = {}) {
+  const isPdf = variant === "pdf";
   const { selectedCompanyId } = useCompany();
   // Fase 5 — el diccionario del tenant sólo aprende de confirmaciones humanas.
   const { ask: askRemember, dialog: rememberDialog } = useRememberCorrection(
@@ -341,7 +347,7 @@ export function VisualIntakePanel() {
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-base">
           <ImagePlus className="h-4 w-4 text-primary" />
-          Subir imagen o PDF
+          {isPdf ? "Subir PDF" : "Subir imagen o foto"}
           <Badge variant="outline" className="ml-auto font-normal">
             No publica nada
           </Badge>
@@ -349,8 +355,9 @@ export function VisualIntakePanel() {
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm text-muted-foreground">
-          Sube una captura del calendario, una foto de la agenda, un flyer o un PDF. Leemos los
-          trabajos y te los mostramos para revisar. Nada se crea hasta que lo confirmes.
+          {isPdf
+            ? "Sube el PDF con la programación. Lo leemos página por página y te mostramos los servicios para revisar. Nada se crea hasta que lo confirmes."
+            : "Sube una captura del calendario, una foto de la agenda o un flyer. Leemos los servicios y te los mostramos para revisar. Nada se crea hasta que lo confirmes."}
         </p>
 
         <div
@@ -384,7 +391,7 @@ export function VisualIntakePanel() {
             <Button
               type="button"
               variant="outline"
-              className="min-h-11 sm:hidden"
+              className={cn("min-h-11 sm:hidden", isPdf && "hidden")}
               onClick={() => cameraRef.current?.click()}
             >
               Tomar foto
@@ -394,7 +401,7 @@ export function VisualIntakePanel() {
             ref={inputRef}
             type="file"
             multiple
-            accept="image/jpeg,image/jpg,image/png,image/webp,application/pdf"
+            accept={isPdf ? "application/pdf" : "image/jpeg,image/jpg,image/png,image/webp,application/pdf"}
             className="hidden"
             aria-label="Archivos con los trabajos"
             onChange={(e) => {
