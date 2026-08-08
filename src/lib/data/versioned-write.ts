@@ -21,7 +21,8 @@ export type VersionedEntity =
   | "time_entries"
   | "compensation_profiles"
   | "contractor_w9"
-  | "employee_documents";
+  | "employee_documents"
+  | "intake_dictionary_rules";
 
 /** RPC canónica por entidad. Ninguna superficie escribe la tabla directamente. */
 const ENTITY_RPC: Record<VersionedEntity, string> = {
@@ -30,6 +31,7 @@ const ENTITY_RPC: Record<VersionedEntity, string> = {
   compensation_profiles: "versioned_update_compensation_profile",
   contractor_w9: "versioned_update_contractor_w9",
   employee_documents: "versioned_update_employee_document",
+  intake_dictionary_rules: "versioned_update_intake_dictionary_rule",
 };
 
 const ENTITY_ID_PARAM: Record<VersionedEntity, string> = {
@@ -38,7 +40,9 @@ const ENTITY_ID_PARAM: Record<VersionedEntity, string> = {
   compensation_profiles: "p_profile_id",
   contractor_w9: "p_w9_id",
   employee_documents: "p_document_id",
+  intake_dictionary_rules: "p_rule_id",
 };
+
 
 export interface VersionedWriteInput {
   entity: VersionedEntity;
