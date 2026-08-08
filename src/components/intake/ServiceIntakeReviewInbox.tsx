@@ -372,6 +372,10 @@ export function ServiceIntakeReviewInbox({
                   {confidenceLabel(c) ? ` · Confianza ${confidenceLabel(c)}` : ""}
                 </p>
                 <StatusBadges c={c} />
+                {confidenceByCandidate?.[c.id] && (
+                  <ConfidenceRow levels={confidenceByCandidate[c.id]} />
+                )}
+
                 {(noticesByCandidate?.[c.id]?.length ?? 0) > 0 && (
                   <ul className="space-y-1 rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
                     {noticesByCandidate![c.id].map((n, i) => (
