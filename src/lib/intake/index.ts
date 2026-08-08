@@ -14,3 +14,4 @@ export * from "./duplicate";
 export * from "./extraction-contract";
 export * from "./batch";
 export * from "./create-draft-service";
+export * from "./schedule-adapter";
