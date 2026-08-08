@@ -42,9 +42,18 @@ export function resolveAudioDate(
   const text = String(raw ?? "").trim();
   if (!text) return { iso: null, confidence: 0, ambiguous: false, assumedYear: false };
 
+  /** El año sólo es un hecho si se dijo. */
+  const spokenYear = /\b(20\d{2})\b/.test(text);
+  const relative = /\b(hoy|ma[nñ]ana|pasado|semana|today|tomorrow|week)\b/i.test(text);
+
   const hit = resolveDateFromText(text, referenceDate);
   if (hit.iso) {
-    return { iso: hit.iso, confidence: hit.confidence, ambiguous: false, assumedYear: false };
+    return {
+      iso: hit.iso,
+      confidence: hit.confidence,
+      ambiguous: false,
+      assumedYear: !spokenYear && !relative && hit.iso.slice(0, 4) !== referenceDate.slice(0, 4),
+    };
   }
   if (hit.ambiguous) {
     return { iso: null, confidence: 0, ambiguous: true, assumedYear: false };
@@ -83,6 +92,7 @@ export function normalizeAudioExtraction(input: NormalizeAudioInput): NormalizeV
   const services = Array.isArray(input.extraction.services) ? input.extraction.services : [];
   const ambiguousBySpoken: string[] = [];
   const assumedYearSpoken: string[] = [];
+  const assumedYearDates = new Set<string>();
 
   const prepared: RawVisualService[] = services.map((service) => {
     const spoken = String(service.service_date ?? "").trim();
@@ -105,7 +115,10 @@ export function normalizeAudioExtraction(input: NormalizeAudioInput): NormalizeV
       };
     }
     if (!resolved.iso) return service;
-    if (resolved.assumedYear) assumedYearSpoken.push(spoken);
+    if (resolved.assumedYear) {
+      assumedYearSpoken.push(spoken);
+      assumedYearDates.add(resolved.iso);
+    }
 
     return {
       ...service,
@@ -148,6 +161,12 @@ export function normalizeAudioExtraction(input: NormalizeAudioInput): NormalizeV
     return { ...n, message };
   });
   for (const candidate of result.candidates) {
+    if (candidate.serviceDate && assumedYearDates.has(candidate.serviceDate)) {
+      notices.push({
+        candidateId: candidate.id,
+        message: "La nota no dijo el año. Confirma la fecha antes de crear el borrador.",
+      });
+    }
     if (!candidate.serviceDate) {
       notices.push({
         candidateId: candidate.id,
