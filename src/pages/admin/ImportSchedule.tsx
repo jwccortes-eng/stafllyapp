@@ -44,6 +44,8 @@ import {
 import { parseShiftNote } from "@/lib/import/note-parser";
 import { buildImportWarning, type ImportWarning } from "@/lib/import/import-warnings";
 import PastedTextIntakePanel from "@/components/intake/PastedTextIntakePanel";
+import VisualIntakePanel from "@/components/intake/VisualIntakePanel";
+
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const ACCEPTED_EXTENSIONS = ".xls,.xlsx,.csv";
