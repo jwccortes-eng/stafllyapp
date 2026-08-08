@@ -389,6 +389,12 @@ export default function ImportSchedule() {
   const [workbook, setWorkbook] = useState<SafeWorkbook | null>(null);
   const [sheets, setSheets] = useState<string[]>([]);
   const [selectedSheet, setSelectedSheet] = useState("");
+  // Móvil: el canal más rápido con una mano es la nota de voz. Escritorio: texto pegado.
+  const [source, setSource] = useState<IntakeSource>(() =>
+    typeof window !== "undefined" && window.matchMedia?.("(max-width: 640px)").matches
+      ? "audio"
+      : "text",
+  );
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [previewRows, setPreviewRows] = useState<Record<string, string>[]>([]);
   const [headers, setHeaders] = useState<string[]>([]);
