@@ -2048,6 +2048,10 @@ export default function ImportSchedule() {
         subtitle="Schedule Export de Connecteam → Turnos y asignaciones"
       />
 
+      {/* Fase 2 — canal de texto libre / WhatsApp pegado (mismo carril canónico) */}
+      <PastedTextIntakePanel />
+
+
       {/* Instructions */}
       <details className="rounded-2xl border bg-card group">
         <summary className="flex items-center gap-3 p-4 cursor-pointer text-sm font-medium text-foreground select-none">
