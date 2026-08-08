@@ -33,7 +33,7 @@ export interface IntakeCatalogs {
   clients: CatalogEntry[];
   venues: CatalogEntry[];
   /** Fase 5 — memoria operativa de la compañía (correcciones humanas). */
-  dictionary: DictionaryRule[];
+  dictionary?: DictionaryRule[];
 }
 
 /** Catálogos del tenant autenticado. Nunca se cruzan compañías. */
