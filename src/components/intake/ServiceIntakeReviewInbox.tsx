@@ -26,6 +26,8 @@ import {
 } from "@/components/ui/select";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { canCreateDraft, type ServiceCandidate } from "@/lib/intake/candidate";
+import type { ConfidenceLevel, UnresolvedElement } from "@/lib/intake/visual-extraction";
+
 import { cn } from "@/lib/utils";
 
 export interface ServiceIntakeReviewInboxProps {
