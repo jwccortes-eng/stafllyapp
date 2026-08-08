@@ -551,6 +551,9 @@ export function parseTextToCandidates(
   const source: IntakeSource = ctx.source ?? "pasted_text";
   const parsedSegments = segmentText(clean);
   let index = 0;
+  /** Venue heredado del fragmento anterior de la MISMA línea. */
+  let lastLine = -1;
+  let lastVenue = "";
 
   for (const seg of parsedSegments) {
     const date = resolveDateFromText(seg.text, ctx.referenceDate, { weekAnchor: seg.weekAnchor });
@@ -560,9 +563,16 @@ export function parseTextToCandidates(
 
     const consumed = [date.matched, times.matched, workers.matched, type.matched].filter(Boolean);
     const venueFromText = extractVenueText(seg.text, consumed);
-    const venueRaw = venueFromText || seg.contextVenue || "";
+    if (seg.lineNumber !== lastLine) {
+      lastLine = seg.lineNumber;
+      lastVenue = "";
+    }
+    const venueRaw = venueFromText || seg.contextVenue || lastVenue || "";
+    if (venueRaw) lastVenue = venueRaw;
 
-    const hasSignal = Boolean(date.iso || date.ambiguous || type.value || venueRaw);
+    // Un fragmento sólo es un trabajo si trae fecha (o fecha ambigua) o un
+    // tipo de servicio reconocible. Un texto suelto NO inventa un servicio.
+    const hasSignal = Boolean(date.iso || date.ambiguous || type.value);
     if (!hasSignal) {
       notices.push({
         candidateId: null,
