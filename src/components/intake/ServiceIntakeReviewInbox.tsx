@@ -400,6 +400,32 @@ export function ServiceIntakeReviewInbox({
           </Card>
         ))}
       </div>
+      {(unresolvedElements?.length ?? 0) > 0 && (
+        <div className="space-y-2 rounded-md border border-dashed border-border p-3">
+          <p className="text-sm font-medium">
+            Necesitan revisión ({unresolvedElements!.length})
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Detectamos estos elementos pero no pudimos convertirlos en un servicio. No se
+            descartaron: decides tú.
+          </p>
+          <ul className="space-y-2">
+            {unresolvedElements!.map((u) => (
+              <li key={u.id} className="rounded-md bg-muted/50 px-3 py-2 text-xs">
+                <p className="font-medium text-foreground">{u.detectedText}</p>
+                <p className="text-muted-foreground">{u.reason}</p>
+                {u.suggestion && <p className="text-muted-foreground">Sugerencia: {u.suggestion}</p>}
+                <p className="text-muted-foreground">
+                  {[u.fileName, u.region.page ? `página ${u.region.page}` : null, u.region.label]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
 
       <div className="sticky bottom-0 flex items-center justify-between gap-3 border-t border-border bg-background/95 py-3 backdrop-blur">
         <p className="text-xs text-muted-foreground">
