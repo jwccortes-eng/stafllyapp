@@ -2054,6 +2054,10 @@ export default function ImportSchedule() {
       {/* Fase 2 — canal de texto libre / WhatsApp pegado (mismo carril canónico) */}
       <PastedTextIntakePanel />
 
+      {/* Fase 3 — canal visual (imagen, captura, foto, PDF) en el mismo carril */}
+      <VisualIntakePanel />
+
+
 
       {/* Instructions */}
       <details className="rounded-2xl border bg-card group">
