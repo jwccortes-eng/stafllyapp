@@ -41,6 +41,10 @@ export interface ServiceIntakeReviewInboxProps {
   isBusy?: boolean;
   /** Etiqueta del origen, sólo informativa. */
   sourceLabel?: string;
+  /** Avisos por candidato (abreviación sugerida, fecha por confirmar…). */
+  noticesByCandidate?: Record<string, string[]>;
+  /** Abrir el servicio existente con el que podría duplicarse. */
+  onViewDuplicate?: (shiftId: string) => void;
 }
 
 type FilterKey = "all" | "pending" | "needs_input" | "duplicates" | "accepted" | "created";
