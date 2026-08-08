@@ -6343,6 +6343,137 @@ export type Database = {
           },
         ]
       }
+      intake_dictionary_events: {
+        Row: {
+          actor_id: string | null
+          company_id: string
+          created_at: string
+          event_type: string
+          id: string
+          metadata: Json
+          rule_id: string | null
+          source: string | null
+        }
+        Insert: {
+          actor_id?: string | null
+          company_id: string
+          created_at?: string
+          event_type: string
+          id?: string
+          metadata?: Json
+          rule_id?: string | null
+          source?: string | null
+        }
+        Update: {
+          actor_id?: string | null
+          company_id?: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          metadata?: Json
+          rule_id?: string | null
+          source?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "intake_dictionary_events_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "intake_dictionary_rules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      intake_dictionary_rules: {
+        Row: {
+          active: boolean
+          company_id: string
+          confidence: number
+          confirmed_at: string
+          confirmed_by: string | null
+          conflict_count: number
+          created_at: string
+          created_by: string | null
+          id: string
+          input_normalized: string
+          input_value: string
+          learned_from_source: string | null
+          notes: string | null
+          resolved_entity_id: string | null
+          resolved_entity_kind: string | null
+          resolved_value: string
+          rule_type: string
+          success_count: number
+          updated_at: string
+          updated_by: string | null
+          usage_count: number
+          version: number
+        }
+        Insert: {
+          active?: boolean
+          company_id: string
+          confidence?: number
+          confirmed_at?: string
+          confirmed_by?: string | null
+          conflict_count?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          input_normalized: string
+          input_value: string
+          learned_from_source?: string | null
+          notes?: string | null
+          resolved_entity_id?: string | null
+          resolved_entity_kind?: string | null
+          resolved_value: string
+          rule_type: string
+          success_count?: number
+          updated_at?: string
+          updated_by?: string | null
+          usage_count?: number
+          version?: number
+        }
+        Update: {
+          active?: boolean
+          company_id?: string
+          confidence?: number
+          confirmed_at?: string
+          confirmed_by?: string | null
+          conflict_count?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          input_normalized?: string
+          input_value?: string
+          learned_from_source?: string | null
+          notes?: string | null
+          resolved_entity_id?: string | null
+          resolved_entity_kind?: string | null
+          resolved_value?: string
+          rule_type?: string
+          success_count?: number
+          updated_at?: string
+          updated_by?: string | null
+          usage_count?: number
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "intake_dictionary_rules_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "intake_dictionary_rules_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       internal_messages: {
         Row: {
           company_id: string
@@ -18150,6 +18281,36 @@ export type Database = {
         }
         Returns: string
       }
+      intake_dictionary_is_sensitive: {
+        Args: { p_value: string }
+        Returns: boolean
+      }
+      intake_dictionary_normalize: {
+        Args: { p_value: string }
+        Returns: string
+      }
+      intake_dictionary_record_usage: {
+        Args: {
+          p_company_id: string
+          p_outcome: string
+          p_rule_id: string
+          p_source?: string
+        }
+        Returns: Json
+      }
+      intake_dictionary_upsert_rule: {
+        Args: {
+          p_company_id: string
+          p_input_value: string
+          p_resolved_entity_id?: string
+          p_resolved_entity_kind?: string
+          p_resolved_value: string
+          p_rule_type: string
+          p_source?: string
+          p_surface?: string
+        }
+        Returns: Json
+      }
       intake_file_company_id: { Args: { object_name: string }; Returns: string }
       internal_dual_write_pin_hash: {
         Args: { _employee_id: string; _pin: string }
@@ -18600,6 +18761,17 @@ export type Database = {
           p_expected_version: number
           p_intent_key?: string
           p_patch: Json
+          p_surface?: string
+        }
+        Returns: Json
+      }
+      versioned_update_intake_dictionary_rule: {
+        Args: {
+          p_company_id: string
+          p_expected_version: number
+          p_intent_key?: string
+          p_patch: Json
+          p_rule_id: string
           p_surface?: string
         }
         Returns: Json

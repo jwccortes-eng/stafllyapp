@@ -67,6 +67,7 @@ const ClientProfile = lazy(() => import("./pages/admin/ClientProfile"));
 const LocationProfile = lazy(() => import("./pages/admin/LocationProfile"));
 const Locations = lazy(() => import("./pages/admin/Locations"));
 const ImportSchedule = lazy(() => import("./pages/admin/ImportSchedule"));
+const CompanyDictionary = lazy(() => import("./pages/admin/CompanyDictionary"));
 const ImportReview = lazy(() => import("./pages/admin/ImportReview"));
 const BackfillShift = lazy(() => import("./pages/admin/BackfillShift"));
 const ImportTimeClock = lazy(() => import("./pages/admin/ImportTimeClock"));
@@ -355,6 +356,7 @@ function App() {
                 <Route path="locations/:locationId" element={<CompanyRequiredGuard><ModuleGate moduleKey="locations"><LocationProfile /></ModuleGate></CompanyRequiredGuard>} />
                 <Route path="shifts" element={<CompanyRequiredGuard><Shifts /></CompanyRequiredGuard>} />
                 <Route path="import-schedule" element={<CompanyRequiredGuard><ModuleGate moduleKey="import"><ImportSchedule /></ModuleGate></CompanyRequiredGuard>} />
+                <Route path="company-dictionary" element={<CompanyRequiredGuard><ModuleGate moduleKey="import"><CompanyDictionary /></ModuleGate></CompanyRequiredGuard>} />
                 <Route path="import-review" element={<CompanyRequiredGuard><ImportReview /></CompanyRequiredGuard>} />
                 <Route path="backfill-shift/:shiftCode" element={<CompanyRequiredGuard><BackfillShift /></CompanyRequiredGuard>} />
                 <Route path="import-timeclock" element={<CompanyRequiredGuard><ModuleGate moduleKey="import"><ImportTimeClock /></ModuleGate></CompanyRequiredGuard>} />

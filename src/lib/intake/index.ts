@@ -22,4 +22,6 @@ export * from "./visual-intake";
 export * from "./audio-extraction";
 export * from "./audio-intake";
 export * from "./telemetry";
+export * from "./dictionary";
+export * from "./dictionary-store";
 

@@ -22,6 +22,7 @@ import { useCompany } from "@/hooks/useCompany";
 import { useAuth } from "@/hooks/useAuth";
 import { notifyError, notifyInfo, notifySuccess, notifyWarning } from "@/lib/feedback/notify";
 import ServiceIntakeReviewInbox from "@/components/intake/ServiceIntakeReviewInbox";
+import { useRememberCorrection } from "@/components/intake/RememberCorrectionPrompt";
 import { confirmRef, recomputeCandidate, type ServiceCandidate } from "@/lib/intake";
 import { createDraftServicesFromCandidates, applyOutcome } from "@/lib/intake/create-draft-service";
 import { closeServiceIntakeBatch, summarizeCandidates } from "@/lib/intake/batch";
@@ -43,6 +44,11 @@ function formatSeconds(total: number): string {
 
 export function AudioIntakePanel() {
   const { selectedCompanyId } = useCompany();
+  // Fase 5 — el diccionario del tenant sólo aprende de confirmaciones humanas.
+  const { ask: askRemember, dialog: rememberDialog } = useRememberCorrection(
+    selectedCompanyId,
+    "voice_note",
+  );
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -233,26 +239,43 @@ export function AudioIntakePanel() {
     );
   }, []);
 
-  const handleConfirmMatch = useCallback((candidateId: string, field: "client" | "venue") => {
-    corrections.current += 1;
-    setCandidates((prev) =>
-      prev.map((c) => {
-        if (c.id !== candidateId) return c;
-        if (field === "client") {
-          const id = c.clientCandidate.suggestedId;
+  const handleConfirmMatch = useCallback(
+    (candidateId: string, field: "client" | "venue") => {
+      corrections.current += 1;
+      setCandidates((prev) =>
+        prev.map((c) => {
+          if (c.id !== candidateId) return c;
+          if (field === "client") {
+            const id = c.clientCandidate.suggestedId;
+            if (!id) return c;
+            askRemember({
+              ruleType: "client_alias",
+              rawValue: c.clientCandidate.raw,
+              resolvedValue: c.clientCandidate.suggestedLabel ?? "",
+              resolvedEntityId: id,
+              resolvedEntityKind: "client",
+            });
+            return recomputeCandidate({ ...c, clientCandidate: confirmRef(c.clientCandidate, id) });
+          }
+          const id = c.venueCandidate.suggestedId;
           if (!id) return c;
-          return recomputeCandidate({ ...c, clientCandidate: confirmRef(c.clientCandidate, id) });
-        }
-        const id = c.venueCandidate.suggestedId;
-        if (!id) return c;
-        return recomputeCandidate({
-          ...c,
-          venueCandidate: confirmRef(c.venueCandidate, id),
-          locationCandidate: confirmRef(c.locationCandidate, id),
-        });
-      }),
-    );
-  }, []);
+          askRemember({
+            ruleType: "venue_alias",
+            rawValue: c.venueCandidate.raw,
+            resolvedValue: c.venueCandidate.suggestedLabel ?? "",
+            resolvedEntityId: id,
+            resolvedEntityKind: "location",
+          });
+          return recomputeCandidate({
+            ...c,
+            venueCandidate: confirmRef(c.venueCandidate, id),
+            locationCandidate: confirmRef(c.locationCandidate, id),
+          });
+        }),
+      );
+    },
+    [askRemember],
+  );
 
   const setStatus = useCallback(
     (ids: string[], reviewStatus: ServiceCandidate["reviewStatus"]) => {
@@ -512,6 +535,7 @@ export function AudioIntakePanel() {
           </>
         )}
       </CardContent>
+      {rememberDialog}
     </Card>
   );
 }

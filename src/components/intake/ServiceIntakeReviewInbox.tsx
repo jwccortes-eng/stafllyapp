@@ -133,7 +133,19 @@ function StatusBadges({ c }: { c: ServiceCandidate }) {
           Posible lugar: {c.venueCandidate.suggestedLabel}
         </Badge>
       )}
+      {/* Fase 5 — transparencia: se resolvió con una corrección aprendida antes. */}
+      {c.venueCandidate.matchOrigin === "dictionary" && (
+        <Badge variant="secondary">
+          Aprendido: {c.venueCandidate.suggestedLabel}
+        </Badge>
+      )}
+      {c.clientCandidate.matchOrigin === "dictionary" && (
+        <Badge variant="secondary">
+          Aprendido: {c.clientCandidate.suggestedLabel}
+        </Badge>
+      )}
     </div>
+
   );
 }
 
