@@ -4,15 +4,15 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, ChevronDown, Trash2, Info, Lock, CalendarDays, Users, MapPin, Building2, Download, ArrowRight, AlertTriangle } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, ChevronDown, Trash2, Info, Lock, CalendarDays, Users, MapPin, Building2, Download, ArrowRight, AlertTriangle, BookOpen, MessageSquareText, ImagePlus, FileText, Mic } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { notifyActionRequired, notifyError, notifyInfo, notifySuccess, notifyWarning } from "@/lib/feedback/notify";
 import { getUserFriendlyError } from "@/lib/error-helpers";
 import { safeRead, safeSheetToJson, getSheetNames, getSheet } from "@/lib/safe-xlsx";
 import type { SafeWorkbook } from "@/lib/safe-xlsx";
 import { useCompany } from "@/hooks/useCompany";
-import { PageHeader } from "@/components/ui/page-header";
+import { OperationalScreenHeader } from "@/components/stafly-ui/OperationalScreenHeader";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format, parse } from "date-fns";
@@ -47,6 +47,17 @@ import PastedTextIntakePanel from "@/components/intake/PastedTextIntakePanel";
 import VisualIntakePanel from "@/components/intake/VisualIntakePanel";
 import AudioIntakePanel from "@/components/intake/AudioIntakePanel";
 
+
+type IntakeSource = "text" | "image" | "pdf" | "audio" | "excel";
+
+/** Mobile-first: primero los canales que un coordinador usa con una mano. */
+const SOURCE_OPTIONS: { key: IntakeSource; label: string; icon: any }[] = [
+  { key: "audio", label: "Audio", icon: Mic },
+  { key: "image", label: "Imagen", icon: ImagePlus },
+  { key: "text", label: "Texto", icon: MessageSquareText },
+  { key: "pdf", label: "PDF", icon: FileText },
+  { key: "excel", label: "Excel / CSV", icon: FileSpreadsheet },
+];
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const ACCEPTED_EXTENSIONS = ".xls,.xlsx,.csv";
@@ -378,6 +389,12 @@ export default function ImportSchedule() {
   const [workbook, setWorkbook] = useState<SafeWorkbook | null>(null);
   const [sheets, setSheets] = useState<string[]>([]);
   const [selectedSheet, setSelectedSheet] = useState("");
+  // Móvil: el canal más rápido con una mano es la nota de voz. Escritorio: texto pegado.
+  const [source, setSource] = useState<IntakeSource>(() =>
+    typeof window !== "undefined" && window.matchMedia?.("(max-width: 640px)").matches
+      ? "audio"
+      : "text",
+  );
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [previewRows, setPreviewRows] = useState<Record<string, string>[]>([]);
   const [headers, setHeaders] = useState<string[]>([]);
@@ -2046,23 +2063,56 @@ export default function ImportSchedule() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        variant="3"
-        title="Importar Turnos Programados"
-        subtitle="Schedule Export de Connecteam → Turnos y asignaciones"
+      <OperationalScreenHeader
+        title="Importar servicios"
+        context="Convierte mensajes, imágenes, PDFs, notas de voz y archivos en borradores listos para revisar."
+        action={
+          <Button asChild variant="outline" className="min-h-11">
+            <Link to="/app/company-dictionary">
+              <BookOpen className="h-4 w-4" />
+              Diccionario de la empresa
+            </Link>
+          </Button>
+        }
       />
 
-      {/* Fase 2 — canal de texto libre / WhatsApp pegado (mismo carril canónico) */}
-      <PastedTextIntakePanel />
+      <div>
+        <h2 className="text-base font-semibold text-foreground">Trae tus trabajos a Stafly</h2>
+        <p className="text-sm text-muted-foreground">
+          Elige cómo te llegó la información. Todo pasa por la misma revisión antes de crear borradores.
+        </p>
+      </div>
 
-      {/* Fase 3 — canal visual (imagen, captura, foto, PDF) en el mismo carril */}
-      <VisualIntakePanel />
+      {/* Selector único de fuente — todas las opciones usan el mismo carril canónico. */}
+      <nav aria-label="Fuente de los servicios" className="flex flex-wrap gap-2">
+        {SOURCE_OPTIONS.map((opt) => {
+          const active = source === opt.key;
+          return (
+            <button
+              key={opt.key}
+              type="button"
+              onClick={() => setSource(opt.key)}
+              aria-pressed={active}
+              className={`flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl border px-4 text-sm font-medium transition-colors sm:flex-none ${
+                active
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-border bg-card text-foreground hover:bg-muted"
+              }`}
+            >
+              <opt.icon className="h-4 w-4" />
+              {opt.label}
+            </button>
+          );
+        })}
+      </nav>
 
-      {/* Fase 4 — canal de audio (nota de voz) en el mismo carril */}
-      <AudioIntakePanel />
+      {source === "text" && <PastedTextIntakePanel />}
+      {source === "image" && <VisualIntakePanel variant="image" />}
+      {source === "pdf" && <VisualIntakePanel key="pdf" variant="pdf" />}
+      {source === "audio" && <AudioIntakePanel />}
 
-
-
+      {source === "excel" && (
+      <>
       {/* Instructions */}
       <details className="rounded-2xl border bg-card group">
         <summary className="flex items-center gap-3 p-4 cursor-pointer text-sm font-medium text-foreground select-none">
@@ -3131,6 +3181,19 @@ export default function ImportSchedule() {
           </Button>
         </div>
       )}
+      </>
+      )}
+
+      {/* El diccionario es configuración del intake, no navegación principal. */}
+      <div className="rounded-xl border border-dashed border-border p-4">
+        <p className="text-sm font-medium text-foreground">Diccionario de la empresa</p>
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          Los nombres y abreviaciones que corriges se recuerdan aquí y se reutilizan en todas las fuentes.
+        </p>
+        <Button asChild variant="outline" size="sm" className="mt-3 min-h-11">
+          <Link to="/app/company-dictionary">Abrir diccionario</Link>
+        </Button>
+      </div>
     </div>
   );
 }

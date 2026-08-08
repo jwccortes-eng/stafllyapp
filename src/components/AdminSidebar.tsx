@@ -10,7 +10,7 @@ import {
   Inbox, Wrench, Lock, Sparkles, ClipboardList, Receipt, Brain,
   Map as MapIcon, ContactRound, Award, GitCompareArrows,
   FileText, Bell, UserPlus, Star, ArrowLeftRight, Globe, ShieldCheck,
-  Monitor, Radio, UserPlus2, Banknote, Scale, FileSearch, ScanEye, Radar,
+  Monitor, Radio, UserPlus2, Banknote, Scale, FileSearch, ScanEye, Radar, Upload,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
@@ -46,6 +46,7 @@ const LINK_I18N_KEY: Record<string, string> = {
   "Command Center": "sidebar.link.command_center",
   "Today's Operations": "sidebar.link.todays_operations",
   "Shifts": "sidebar.link.shifts",
+  "Import Services": "sidebar.link.import_services",
   "Attendance": "sidebar.link.attendance",
   "Time Clock": "sidebar.link.time_clock",
   "Live Map": "sidebar.link.live_map",
@@ -106,6 +107,8 @@ const COMPANY_LINKS: LinkDef[] = [
   { to: "/app", icon: LayoutDashboard, label: "Home", module: null, end: true, section: "Daily Operations" },
   { to: "/app/command-center", icon: Radio, label: "Command Center", module: null, section: "Daily Operations" },
   { to: "/app/shifts", icon: CalendarDays, label: "Shifts", module: "shifts", section: "Daily Operations" },
+  // UX Entry Pass — Smart Service Intake vive en la ruta canónica /app/import-schedule.
+  { to: "/app/import-schedule", icon: Upload, label: "Import Services", module: "import", section: "Daily Operations" },
   { to: "/app/attendance", icon: ShieldCheck, label: "Attendance", module: null, section: "Daily Operations" },
   { to: "/app/timeclock", icon: Clock, label: "Time Clock", module: "shifts", section: "Daily Operations" },
   { to: "/app/live-map", icon: MapIcon, label: "Live Map", module: null, section: "Daily Operations" },

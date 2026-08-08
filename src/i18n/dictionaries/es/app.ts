@@ -56,6 +56,7 @@ const es_app = {
   "sidebar.link.command_center": "Centro de operaciones",
   "sidebar.link.todays_operations": "Operación de hoy",
   "sidebar.link.shifts": "Servicios",
+  "sidebar.link.import_services": "Importar servicios",
   "sidebar.link.attendance": "Asistencia",
   "sidebar.link.time_clock": "Reloj de tiempo",
   "sidebar.link.live_map": "Mapa en vivo",
