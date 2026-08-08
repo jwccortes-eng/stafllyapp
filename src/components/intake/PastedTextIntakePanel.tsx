@@ -337,6 +337,7 @@ export function PastedTextIntakePanel() {
           />
         )}
       </CardContent>
+      {rememberDialog}
     </Card>
   );
 }

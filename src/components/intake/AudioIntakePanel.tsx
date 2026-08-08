@@ -535,6 +535,7 @@ export function AudioIntakePanel() {
           </>
         )}
       </CardContent>
+      {rememberDialog}
     </Card>
   );
 }
