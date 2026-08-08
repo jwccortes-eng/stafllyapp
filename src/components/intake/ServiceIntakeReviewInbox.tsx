@@ -75,6 +75,15 @@ function matchesFilter(c: ServiceCandidate, filter: FilterKey): boolean {
   }
 }
 
+function confidenceLabel(c: ServiceCandidate): string {
+  const values = Object.values(c.confidenceByField ?? {});
+  if (values.length === 0) return "";
+  const avg = values.reduce((a, b) => a + b, 0) / values.length;
+  if (avg >= 0.85) return "alta";
+  if (avg >= 0.6) return "media";
+  return "baja";
+}
+
 function StatusBadges({ c }: { c: ServiceCandidate }) {
   return (
     <div className="flex flex-wrap gap-1.5">
