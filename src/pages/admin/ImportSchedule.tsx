@@ -2057,6 +2057,9 @@ export default function ImportSchedule() {
       {/* Fase 3 — canal visual (imagen, captura, foto, PDF) en el mismo carril */}
       <VisualIntakePanel />
 
+      {/* Fase 4 — canal de audio (nota de voz) en el mismo carril */}
+      <AudioIntakePanel />
+
 
 
       {/* Instructions */}
