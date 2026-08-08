@@ -94,7 +94,7 @@ export function useRememberCorrection(
       } else {
         notifyInfo({
           title: "No guardamos la corrección",
-          fact: result.message,
+          fact: "message" in result ? result.message : "Cambio no permitido.",
           consequence: "El servicio que estás revisando no se vio afectado.",
         });
       }
