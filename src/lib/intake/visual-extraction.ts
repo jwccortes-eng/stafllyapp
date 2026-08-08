@@ -303,10 +303,13 @@ export function normalizeVisualExtraction(
         id: `${prefix}-unresolved-service-${index + 1}`,
         detectedText:
           cleanText(service.source_excerpt) ??
-          [service.service_date, service.venue_name, service.service_type]
-            .filter(Boolean)
-            .join(" · ") ||
-          "Bloque detectado sin datos suficientes",
+          (cleanText(
+            [service.service_date, service.venue_name, service.service_type]
+              .filter(Boolean)
+              .join(" · "),
+          ) ??
+            "Bloque detectado sin datos suficientes"),
+
         reason: cleanText(service.service_date)
           ? "No identificamos lugar, cliente ni tipo de servicio."
           : "No identificamos una fecha en este bloque.",
