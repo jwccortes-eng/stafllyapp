@@ -45,7 +45,32 @@ export interface ServiceIntakeReviewInboxProps {
   noticesByCandidate?: Record<string, string[]>;
   /** Abrir el servicio existente con el que podría duplicarse. */
   onViewDuplicate?: (shiftId: string) => void;
+  /** Confianza por campo (HIGH/MEDIUM/LOW/MISSING) para orígenes visuales. */
+  confidenceByCandidate?: Record<string, Record<string, ConfidenceLevel>>;
+  /** Elementos detectados que necesitan revisión humana. Nunca se descartan. */
+  unresolvedElements?: UnresolvedElement[];
+  /** Ver la región de origen del candidato (fragmento visual o texto). */
+  onReviewSource?: (candidateId: string) => void;
 }
+
+const FIELD_LABELS: Record<string, string> = {
+  date: "Fecha",
+  venue: "Lugar",
+  service_type: "Servicio",
+  start_time: "Inicio",
+  end_time: "Fin",
+  client: "Cliente",
+  workers: "Personal",
+  location: "Dirección",
+};
+
+const LEVEL_LABELS: Record<ConfidenceLevel, string> = {
+  HIGH: "alta",
+  MEDIUM: "media",
+  LOW: "baja",
+  MISSING: "sin dato",
+};
+
 
 type FilterKey = "all" | "pending" | "needs_input" | "duplicates" | "accepted" | "created";
 
