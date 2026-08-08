@@ -41,6 +41,10 @@ export interface ServiceIntakeReviewInboxProps {
   isBusy?: boolean;
   /** Etiqueta del origen, sólo informativa. */
   sourceLabel?: string;
+  /** Avisos por candidato (abreviación sugerida, fecha por confirmar…). */
+  noticesByCandidate?: Record<string, string[]>;
+  /** Abrir el servicio existente con el que podría duplicarse. */
+  onViewDuplicate?: (shiftId: string) => void;
 }
 
 type FilterKey = "all" | "pending" | "needs_input" | "duplicates" | "accepted" | "created";
@@ -69,6 +73,15 @@ function matchesFilter(c: ServiceCandidate, filter: FilterKey): boolean {
     default:
       return true;
   }
+}
+
+function confidenceLabel(c: ServiceCandidate): string {
+  const values = Object.values(c.confidenceByField ?? {});
+  if (values.length === 0) return "";
+  const avg = values.reduce((a, b) => a + b, 0) / values.length;
+  if (avg >= 0.85) return "alta";
+  if (avg >= 0.6) return "media";
+  return "baja";
 }
 
 function StatusBadges({ c }: { c: ServiceCandidate }) {
@@ -106,6 +119,8 @@ export function ServiceIntakeReviewInbox({
   onCreateDrafts,
   isBusy,
   sourceLabel,
+  noticesByCandidate,
+  onViewDuplicate,
 }: ServiceIntakeReviewInboxProps) {
   const isMobile = useIsMobile();
   const [filter, setFilter] = useState<FilterKey>("all");
@@ -284,13 +299,36 @@ export function ServiceIntakeReviewInbox({
               <div className="min-w-0 flex-1 space-y-2">
                 <div className="flex flex-wrap items-baseline gap-x-2">
                   <p className="truncate text-sm font-medium">
-                    {c.clientCandidate.raw || "Cliente sin identificar"}
+                    {c.venueCandidate.raw || c.clientCandidate.raw || "Lugar sin identificar"}
                   </p>
                   <span className="text-xs text-muted-foreground">
-                    {c.venueCandidate.raw || "Lugar sin identificar"}
+                    {c.serviceType || "Servicio sin tipo"}
                   </span>
                 </div>
+                <p className="text-xs text-muted-foreground">
+                  {c.serviceDate ?? "Fecha por confirmar"} ·{" "}
+                  {c.startTime ? `${c.startTime}${c.endTime ? `–${c.endTime}` : ""}` : "Hora por confirmar"}{" "}
+                  · {c.requestedWorkers ? `${c.requestedWorkers} personas` : "Personal por confirmar"}
+                  {confidenceLabel(c) ? ` · Confianza ${confidenceLabel(c)}` : ""}
+                </p>
                 <StatusBadges c={c} />
+                {(noticesByCandidate?.[c.id]?.length ?? 0) > 0 && (
+                  <ul className="space-y-1 rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
+                    {noticesByCandidate![c.id].map((n, i) => (
+                      <li key={i}>{n}</li>
+                    ))}
+                  </ul>
+                )}
+                {c.duplicateStatus !== "no_match" && c.duplicateShiftId && onViewDuplicate && (
+                  <Button
+                    size="sm"
+                    variant="link"
+                    className="h-auto p-0 text-xs"
+                    onClick={() => onViewDuplicate(c.duplicateShiftId!)}
+                  >
+                    Ver posible duplicado
+                  </Button>
+                )}
                 {rowEditor(c)}
                 {actions(c)}
               </div>

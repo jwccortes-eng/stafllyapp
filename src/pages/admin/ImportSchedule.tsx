@@ -43,6 +43,7 @@ import {
 } from "@/lib/import/schedule-traceability";
 import { parseShiftNote } from "@/lib/import/note-parser";
 import { buildImportWarning, type ImportWarning } from "@/lib/import/import-warnings";
+import PastedTextIntakePanel from "@/components/intake/PastedTextIntakePanel";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const ACCEPTED_EXTENSIONS = ".xls,.xlsx,.csv";
@@ -2047,6 +2048,10 @@ export default function ImportSchedule() {
         title="Importar Turnos Programados"
         subtitle="Schedule Export de Connecteam → Turnos y asignaciones"
       />
+
+      {/* Fase 2 — canal de texto libre / WhatsApp pegado (mismo carril canónico) */}
+      <PastedTextIntakePanel />
+
 
       {/* Instructions */}
       <details className="rounded-2xl border bg-card group">
