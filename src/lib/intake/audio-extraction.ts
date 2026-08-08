@@ -134,7 +134,19 @@ export function normalizeAudioExtraction(input: NormalizeAudioInput): NormalizeV
     idPrefix: input.idPrefix ?? "aud",
   });
 
-  const notices = [...result.notices];
+  // El aviso es el mismo hecho operativo; sólo cambia el lenguaje de la fuente.
+  const AUDIO_WORDING: Array<[RegExp, string]> = [
+    [/La imagen no muestra el año\./, "La nota no dice el año."],
+    [/La imagen no muestra horario\./, "La nota no dice el horario."],
+    [/La imagen no indica cuántas personas hacen falta\./, "La nota no dice cuántas personas hacen falta."],
+  ];
+  const notices = result.notices.map((n) => {
+    let message = n.message;
+    for (const [pattern, replacement] of AUDIO_WORDING) {
+      message = message.replace(pattern, replacement);
+    }
+    return { ...n, message };
+  });
   for (const candidate of result.candidates) {
     if (!candidate.serviceDate) {
       notices.push({
