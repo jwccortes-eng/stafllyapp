@@ -2076,6 +2076,13 @@ export default function ImportSchedule() {
         }
       />
 
+      <div>
+        <h2 className="text-base font-semibold text-foreground">Trae tus trabajos a Stafly</h2>
+        <p className="text-sm text-muted-foreground">
+          Elige cómo te llegó la información. Todo pasa por la misma revisión antes de crear borradores.
+        </p>
+      </div>
+
       {/* Selector único de fuente — todas las opciones usan el mismo carril canónico. */}
       <nav aria-label="Fuente de los servicios" className="flex flex-wrap gap-2">
         {SOURCE_OPTIONS.map((opt) => {
