@@ -290,13 +290,36 @@ export function ServiceIntakeReviewInbox({
               <div className="min-w-0 flex-1 space-y-2">
                 <div className="flex flex-wrap items-baseline gap-x-2">
                   <p className="truncate text-sm font-medium">
-                    {c.clientCandidate.raw || "Cliente sin identificar"}
+                    {c.venueCandidate.raw || c.clientCandidate.raw || "Lugar sin identificar"}
                   </p>
                   <span className="text-xs text-muted-foreground">
-                    {c.venueCandidate.raw || "Lugar sin identificar"}
+                    {c.serviceType || "Servicio sin tipo"}
                   </span>
                 </div>
+                <p className="text-xs text-muted-foreground">
+                  {c.serviceDate ?? "Fecha por confirmar"} ·{" "}
+                  {c.startTime ? `${c.startTime}${c.endTime ? `–${c.endTime}` : ""}` : "Hora por confirmar"}{" "}
+                  · {c.requestedWorkers ? `${c.requestedWorkers} personas` : "Personal por confirmar"}
+                  {confidenceLabel(c) ? ` · Confianza ${confidenceLabel(c)}` : ""}
+                </p>
                 <StatusBadges c={c} />
+                {(noticesByCandidate?.[c.id]?.length ?? 0) > 0 && (
+                  <ul className="space-y-1 rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
+                    {noticesByCandidate![c.id].map((n, i) => (
+                      <li key={i}>{n}</li>
+                    ))}
+                  </ul>
+                )}
+                {c.duplicateStatus !== "no_match" && c.duplicateShiftId && onViewDuplicate && (
+                  <Button
+                    size="sm"
+                    variant="link"
+                    className="h-auto p-0 text-xs"
+                    onClick={() => onViewDuplicate(c.duplicateShiftId!)}
+                  >
+                    Ver posible duplicado
+                  </Button>
+                )}
                 {rowEditor(c)}
                 {actions(c)}
               </div>
