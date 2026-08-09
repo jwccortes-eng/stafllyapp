@@ -33,7 +33,7 @@ describe("entity-linking", () => {
   });
 
   it("recomienda pero exige confirmación ante un typo", () => {
-    const d = buildEntityResolution("venue", "Millenium Hal", VENUES);
+    const d = buildEntityResolution("venue", "Millenium Hall", VENUES);
     expect(d.status).toBe("suggested");
     expect(d.requiresHumanConfirmation).toBe(true);
     expect(d.best?.id).toBe("v1");
