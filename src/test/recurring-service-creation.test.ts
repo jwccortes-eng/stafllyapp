@@ -252,7 +252,7 @@ describe("QK-001592 — caso maestro de recurrencia real", () => {
       transportNotes: null,
       driverIds: [],
       clockMethod: "mobile" as const,
-      attendanceMode: "clock",
+      attendanceMode: "clock" as const,
       meetingTime: "15:45",
       employeeIds: [...QK_001592_EMPLOYEE_IDS],
       publicationIntent: "publish_base" as const,
