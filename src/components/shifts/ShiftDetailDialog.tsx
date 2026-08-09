@@ -1707,7 +1707,6 @@ export function ShiftDetailDialog({
       employees={employees}
       clients={clients}
       locations={locations}
-      isAdmin={isAdminForTenant}
       selectedCompanyId={selectedCompanyId ?? null}
       shiftCompanyId={(shift as any)?.company_id ?? selectedCompanyId ?? null}
     />

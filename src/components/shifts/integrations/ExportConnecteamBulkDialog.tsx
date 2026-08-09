@@ -19,6 +19,7 @@ import {
 import { downloadCsv } from "@/lib/import-review/csv-export";
 import type { Shift, Assignment, Employee, SelectOption } from "@/components/shifts/types";
 import { ADMIN_LEX } from "@/lib/ox/lexicon";
+import { useCanExportConnecteam, EXPORT_PERMISSION_DENIED_COPY } from "@/lib/integrations/connecteam-export-permission";
 
 interface Props {
   open: boolean;
@@ -29,7 +30,6 @@ interface Props {
   clients: SelectOption[];
   locations: SelectOption[];
   categories?: SelectOption[];
-  isAdmin: boolean;
   selectedCompanyId: string | null;
   defaultTimezone?: string;
 }
@@ -44,8 +44,10 @@ interface Row {
 
 export function ExportConnecteamBulkDialog({
   open, onOpenChange, shifts, assignments, employees, clients, locations, categories,
-  isAdmin, selectedCompanyId, defaultTimezone,
+  selectedCompanyId, defaultTimezone,
 }: Props) {
+  // Canonical, tenant-aware authorization — same policy on every entry point.
+  const canExport = useCanExportConnecteam();
   const buildCtx = useMemo(() => ({
     clients, locations, employees, assignments, categories, defaultTimezone,
   }), [clients, locations, employees, assignments, categories, defaultTimezone]);
@@ -53,7 +55,7 @@ export function ExportConnecteamBulkDialog({
   const rows: Row[] = useMemo(() => {
     return shifts.map((shift) => {
       const validation = validateShiftForExport(shift, buildCtx, {
-        isAdmin,
+        isAdmin: canExport,
         selectedCompanyId,
         shiftCompanyId: (shift as any).company_id ?? null,
       });
@@ -63,7 +65,7 @@ export function ExportConnecteamBulkDialog({
       const openSlots = Math.max(0, capacity - assigned);
       return { shift, validation, row, assigned, openSlots };
     });
-  }, [shifts, buildCtx, isAdmin, selectedCompanyId, assignments]);
+  }, [shifts, buildCtx, canExport, selectedCompanyId, assignments]);
 
   const summary = useMemo(() => {
     const total = rows.length;
@@ -82,6 +84,10 @@ export function ExportConnecteamBulkDialog({
   );
 
   const handleDownload = () => {
+    if (!canExport) {
+      toast.error(EXPORT_PERMISSION_DENIED_COPY);
+      return;
+    }
     const exportable = rows.filter(r => r.validation.status !== "blocked");
     if (exportable.length === 0) {
       toast.error("No hay turnos exportables. Revisa los bloqueos.");
@@ -94,7 +100,7 @@ export function ExportConnecteamBulkDialog({
     onOpenChange(false);
   };
 
-  const canDownload = summary.exportable > 0;
+  const canDownload = canExport && summary.exportable > 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -112,6 +118,16 @@ export function ExportConnecteamBulkDialog({
 
         <ScrollArea className="flex-1 min-h-0">
           <div className="p-5 space-y-4">
+            {!canExport && (
+              <div className="rounded-xl border border-destructive/30 bg-destructive/5 px-3.5 py-3 text-xs text-destructive flex items-start gap-2">
+                <ShieldX className="h-4 w-4 mt-0.5 shrink-0" />
+                <div>
+                  <p className="font-semibold">Sin permiso para exportar</p>
+                  <p className="mt-0.5 opacity-90">{EXPORT_PERMISSION_DENIED_COPY}</p>
+                </div>
+              </div>
+            )}
+
             {/* Summary */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               <SummaryTile label="Turnos" value={summary.total} />
@@ -210,7 +226,7 @@ export function ExportConnecteamBulkDialog({
             onClick={handleDownload}
             disabled={!canDownload}
             className="gap-1.5"
-            title={!canDownload ? "No hay turnos exportables" : undefined}
+            title={!canExport ? EXPORT_PERMISSION_DENIED_COPY : !canDownload ? "No hay turnos exportables" : undefined}
           >
             <Download className="h-3.5 w-3.5" />
             Descargar CSV ({summary.exportable})
