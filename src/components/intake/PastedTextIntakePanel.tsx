@@ -350,6 +350,8 @@ export function PastedTextIntakePanel() {
 
         {candidates.length > 0 && (
           <ServiceIntakeReviewInbox
+            companyId={selectedCompanyId}
+            intakeSource="pasted_text"
             candidates={candidates}
             sourceLabel="texto pegado"
             noticesByCandidate={noticesByCandidate}
