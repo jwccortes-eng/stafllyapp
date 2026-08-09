@@ -169,8 +169,22 @@ export async function runVisualIntake(input: VisualIntakeInput): Promise<VisualI
       })),
     },
   });
-  if (error) throw error;
+  if (error) {
+    // El cuerpo del error trae el motivo real (créditos, límite, rechazo).
+    let detail = "";
+    try {
+      const ctx = (error as { context?: Response }).context;
+      if (ctx && typeof ctx.json === "function") {
+        const body = await ctx.clone().json();
+        detail = String(body?.error ?? "");
+      }
+    } catch {
+      /* noop */
+    }
+    throw new Error(detail || (error as Error).message || "El análisis visual no se completó");
+  }
   if ((data as any)?.error) throw new Error(String((data as any).error));
+
 
   const results: Array<{
     file_name?: string;
