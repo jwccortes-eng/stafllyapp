@@ -12,6 +12,8 @@ import { useConnecteamMapping } from "@/hooks/useConnecteamMapping";
 import {
   CONNECTEAM_MAPPING_COPY,
   mappingKey,
+  mostReusableSubject,
+  suggestJobFromSubject,
   type MappingSubject,
 } from "@/lib/integrations/connecteam-mapping";
 
@@ -21,6 +23,8 @@ interface Props {
   onOpenChange: (o: boolean) => void;
   /** Sujetos disponibles del servicio: venue → cliente → título. */
   subjects: MappingSubject[];
+  /** Cuántos servicios de esta vista reutilizarán el destino al guardarlo. */
+  impactCount?: number;
 }
 
 const KIND_LABEL: Record<MappingSubject["kind"], string> = {
@@ -36,7 +40,7 @@ const KIND_LABEL: Record<MappingSubject["kind"], string> = {
  * No crea Jobs en Connecteam: solo declara a qué Job existente pertenece este
  * cliente/venue en la cuenta de ESTA compañía.
  */
-export function ConnecteamMappingSheet({ open, onOpenChange, subjects }: Props) {
+export function ConnecteamMappingSheet({ open, onOpenChange, subjects, impactCount }: Props) {
   const { mapping, jobs, subItemsFor, saveMapping, saving } = useConnecteamMapping();
 
   const [subjectKey, setSubjectKey] = useState<string>("");
@@ -48,15 +52,28 @@ export function ConnecteamMappingSheet({ open, onOpenChange, subjects }: Props) 
     [subjects, subjectKey],
   );
 
+  /** Selecciona un sujeto y carga su destino ya declarado (si existe). */
+  const selectSubject = (s: MappingSubject) => {
+    setSubjectKey(`${s.kind}:${s.id}`);
+    const existing = mapping.entries[mappingKey(s.kind, s.id)];
+    setJob(existing?.job ?? "");
+    setSubItem(existing?.subItem ?? "");
+  };
+
   useEffect(() => {
     if (!open) return;
-    const first = subjects[0];
+    // Por defecto, el sujeto MÁS REUTILIZABLE (cliente), no el más específico.
+    const first = mostReusableSubject(subjects);
     setSubjectKey(first ? `${first.kind}:${first.id}` : "");
     const existing = first ? mapping.entries[mappingKey(first.kind, first.id)] : undefined;
     setJob(existing?.job ?? "");
     setSubItem(existing?.subItem ?? "");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, subjects]);
+
+  const suggestion = suggestJobFromSubject(subject);
+  const showSuggestion = !!suggestion && suggestion !== job.trim().toUpperCase();
+
 
 
   const handleSave = () => {
