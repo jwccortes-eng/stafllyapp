@@ -37,10 +37,26 @@ import {
 
 export type JobConfidence = "exact" | "inferred" | "fallback" | "missing";
 
+/** Cómo se resolvió el destino. Explicable, nunca un booleano. */
+export type DestinationSource =
+  | "explicit_mapping"
+  | "explicit_hint"
+  | "legacy_rule"
+  | "raw_fallback"
+  | "unresolved";
+
 export interface JobAndSubItem {
   job: string;
   subItem: string;
   confidence: JobConfidence;
+  /** Origen canónico y explicable de la decisión de destino. */
+  destinationSource: DestinationSource;
+  /** Explicación legible de por qué se resolvió así. */
+  reason: string;
+  /** Scope del mapping explícito usado (`client` / `location` / `title`). */
+  mappingScope?: "client" | "location" | "title";
+  /** true cuando NO se usó mapping explícito para ESTE destino. */
+  fallbackUsed: boolean;
   source: {
     job: "mapping" | "hint" | "location" | "client" | "category" | "none";
     subItem: "mapping" | "compat_rule" | "category" | "none";
@@ -59,8 +75,12 @@ export interface ResolveOptions {
    */
   enableBetaCompatMapping?: boolean;
   /**
-   * Modo estricto: sin mapping declarado no hay Job. Se activa solo cuando la
-   * compañía ya declaró al menos un destino (o cuando el caller lo fuerza).
+   * Modo estricto OPT-IN, por llamada. Semántica acotada: "para esta
+   * resolución, solo acepta un destino declarado explícitamente".
+   *
+   * NO se deriva del estado de la compañía. Declarar el destino de Imperial
+   * NUNCA debe apagar las reglas legacy/fallback válidas de Millennium o
+   * Eminence: la resolución es POR DESTINO, no por flag global de compañía.
    */
   strict?: boolean;
 }
@@ -68,6 +88,7 @@ export interface ResolveOptions {
 const DEFAULT_RESOLVE_OPTIONS: Required<Pick<ResolveOptions, "enableBetaCompatMapping">> = {
   enableBetaCompatMapping: true,
 };
+
 
 
 // ── Helpers ────────────────────────────────────────────────────────────────
