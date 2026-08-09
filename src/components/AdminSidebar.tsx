@@ -98,84 +98,78 @@ interface LinkDef {
   roles?: string[];
 }
 
-/* ── Company-scoped links — English Demo Pass (visible labels EN; internal keys preserved) ── */
+/* ── Company-scoped links.
+ * UX PASS (App Shell): agrupación semántica en 5 grupos operativos en español.
+ * Sólo cambian los grupos y su orden: rutas, módulos y roles quedan intactos. */
 const COMPANY_LINKS: LinkDef[] = [
-  // A) DAILY OPERATIONS — Command Center is canonical; /app/ops-center kept as
-  // visually-secondary legacy entry at the bottom of the group (route untouched,
-  // bookmarks still work).
-  { to: "/app/ops", icon: Radar, label: "Ops Cockpit", module: null, section: "Daily Operations" },
-  { to: "/app", icon: LayoutDashboard, label: "Home", module: null, end: true, section: "Daily Operations" },
-  { to: "/app/command-center", icon: Radio, label: "Command Center", module: null, section: "Daily Operations" },
-  { to: "/app/shifts", icon: CalendarDays, label: "Shifts", module: "shifts", section: "Daily Operations" },
+  // A) OPERACIÓN — el día a día
+  { to: "/app/ops", icon: Radar, label: "Ops Cockpit", module: null, section: "Operación" },
+  { to: "/app", icon: LayoutDashboard, label: "Home", module: null, end: true, section: "Operación" },
+  { to: "/app/command-center", icon: Radio, label: "Command Center", module: null, section: "Operación" },
+  { to: "/app/shifts", icon: CalendarDays, label: "Shifts", module: "shifts", section: "Operación" },
   // UX Entry Pass — Smart Service Intake vive en la ruta canónica /app/import-schedule.
-  { to: "/app/import-schedule", icon: Upload, label: "Import Services", module: "import", section: "Daily Operations" },
-  { to: "/app/attendance", icon: ShieldCheck, label: "Attendance", module: null, section: "Daily Operations" },
-  { to: "/app/timeclock", icon: Clock, label: "Time Clock", module: "shifts", section: "Daily Operations" },
-  { to: "/app/live-map", icon: MapIcon, label: "Live Map", module: null, section: "Daily Operations" },
-  { to: "/app/front-desk", icon: ContactRound, label: "Front Desk", module: null, section: "Daily Operations" },
-  // S3: "Today's Operations (legacy)" link removed from sidebar to reduce nav noise.
-  // Route `/app/ops-center` REMAINS mounted (see App.tsx) so bookmarks and the
-  // CommandCenterHub "Vista completa" deep link keep working.
+  { to: "/app/import-schedule", icon: Upload, label: "Import Services", module: "import", section: "Operación" },
+  { to: "/app/timeclock", icon: Clock, label: "Time Clock", module: "shifts", section: "Operación" },
+  { to: "/app/attendance", icon: ShieldCheck, label: "Attendance", module: null, section: "Operación" },
+  { to: "/app/live-map", icon: MapIcon, label: "Live Map", module: null, section: "Operación" },
+  { to: "/app/front-desk", icon: ContactRound, label: "Front Desk", module: null, section: "Operación" },
 
-  // B) TEAM
-  { to: "/app/employees", icon: Users, label: "Team", module: "employees", section: "Team" },
-  { to: "/app/documents", icon: FileText, label: "Documents", module: null, section: "Team", badge: "documents_review" },
-  { to: "/app/document-intake", icon: Inbox, label: "Document Inbox", module: null, section: "Team" },
-  { to: "/app/compliance-center", icon: ShieldCheck, label: "Compliance", module: null, section: "Team" },
-  { to: "/app/applications", icon: UserPlus2, label: "Applications", module: null, section: "Team" },
-  { to: "/app/referrals", icon: UserPlus2, label: "Referrals", module: null, section: "Team" },
-  { to: "/app/invite", icon: UserPlus, label: "Invitations", module: null, section: "Team" },
-  { to: "/app/requests", icon: Inbox, label: "Requests", module: null, section: "Team", badge: "tickets" },
+  // B) PERSONAS
+  { to: "/app/employees", icon: Users, label: "Team", module: "employees", section: "Personas" },
+  { to: "/app/documents", icon: FileText, label: "Documents", module: null, section: "Personas", badge: "documents_review" },
+  { to: "/app/document-intake", icon: Inbox, label: "Document Inbox", module: null, section: "Personas" },
+  { to: "/app/compliance-center", icon: ShieldCheck, label: "Compliance", module: null, section: "Personas" },
+  { to: "/app/applications", icon: UserPlus2, label: "Applications", module: null, section: "Personas" },
+  { to: "/app/referrals", icon: UserPlus2, label: "Referrals", module: null, section: "Personas" },
+  { to: "/app/invite", icon: UserPlus, label: "Invitations", module: null, section: "Personas" },
+  { to: "/app/requests", icon: Inbox, label: "Requests", module: null, section: "Personas", badge: "tickets" },
 
-  // C) CLIENTS & LOCATIONS
-  { to: "/app/clients", icon: Building2, label: "Clients", module: "clients", section: "Clients & Locations" },
-  { to: "/app/locations", icon: MapPin, label: "Locations", module: "locations", section: "Clients & Locations" },
-  { to: "/app/service-requests", icon: ClipboardList, label: "Service Requests", module: null, section: "Clients & Locations" },
-  { to: "/app/invoicing/clients", icon: Receipt, label: "Billing Clients", module: "tenant_invoicing", section: "Clients & Locations" },
-  { to: "/app/invoicing/service-blocks", icon: ClipboardList, label: "Service Blocks", module: "tenant_invoicing", section: "Clients & Locations" },
+  // C) CLIENTES
+  { to: "/app/clients", icon: Building2, label: "Clients", module: "clients", section: "Clientes" },
+  { to: "/app/locations", icon: MapPin, label: "Locations", module: "locations", section: "Clientes" },
+  { to: "/app/service-requests", icon: ClipboardList, label: "Service Requests", module: null, section: "Clientes" },
+  { to: "/app/invoicing/clients", icon: Receipt, label: "Billing Clients", module: "tenant_invoicing", section: "Clientes" },
+  { to: "/app/invoicing/service-blocks", icon: ClipboardList, label: "Service Blocks", module: "tenant_invoicing", section: "Clientes" },
 
-  // D) PAYROLL & FINANCE
-  { to: "/app/payroll-review-queue", icon: ScanEye, label: "Validation Center", module: null, section: "Payroll & Finance", roles: ["developer", "owner", "company_owner", "admin"] },
-  { to: "/app/periods", icon: CalendarDays, label: "Periods", module: "periods", section: "Payroll & Finance" },
-  { to: "/app/compensation-validation", icon: DollarSign, label: "Compensation", module: null, section: "Payroll & Finance" },
-  { to: "/app/movements", icon: DollarSign, label: "Adjustments", module: "movements", section: "Payroll & Finance" },
-  { to: "/app/advances-loans", icon: Banknote, label: "Advances", module: null, section: "Payroll & Finance" },
-  { to: "/app/concepts", icon: Tags, label: "Concepts", module: "concepts", section: "Payroll & Finance" },
-  { to: "/app/payroll-reconciliation", icon: GitCompareArrows, label: "Reconciliation", module: null, section: "Payroll & Finance" },
-  { to: "/app/weekly-payroll-reconciliation", icon: Scale, label: "Weekly Recon.", module: null, section: "Payroll & Finance" },
-  { to: "/app/invoicing/invoices", icon: FileText, label: "Invoices", module: "tenant_invoicing", section: "Payroll & Finance" },
+  // D) PAYROLL
+  { to: "/app/payroll-review-queue", icon: ScanEye, label: "Validation Center", module: null, section: "Payroll", roles: ["developer", "owner", "company_owner", "admin"] },
+  { to: "/app/periods", icon: CalendarDays, label: "Periods", module: "periods", section: "Payroll" },
+  { to: "/app/compensation-validation", icon: DollarSign, label: "Compensation", module: null, section: "Payroll" },
+  { to: "/app/movements", icon: DollarSign, label: "Adjustments", module: "movements", section: "Payroll" },
+  { to: "/app/advances-loans", icon: Banknote, label: "Advances", module: null, section: "Payroll" },
+  { to: "/app/concepts", icon: Tags, label: "Concepts", module: "concepts", section: "Payroll" },
+  { to: "/app/payroll-reconciliation", icon: GitCompareArrows, label: "Reconciliation", module: null, section: "Payroll" },
+  { to: "/app/weekly-payroll-reconciliation", icon: Scale, label: "Weekly Recon.", module: null, section: "Payroll" },
+  { to: "/app/invoicing/invoices", icon: FileText, label: "Invoices", module: "tenant_invoicing", section: "Payroll" },
+  { to: "/app/summary", icon: FileSpreadsheet, label: "Payroll Reports", module: "summary", section: "Payroll" },
+  { to: "/app/import-review", icon: FileSearch, label: "Import History", module: null, section: "Payroll", roles: ["developer", "owner", "company_owner", "admin"] },
 
-  // E) REPORTS — folded into Payroll & Finance to remove the orphan 2-link group.
-  { to: "/app/summary", icon: FileSpreadsheet, label: "Payroll Reports", module: "summary", section: "Payroll & Finance" },
-  { to: "/app/import-review", icon: FileSearch, label: "Import History", module: null, section: "Payroll & Finance", roles: ["developer", "owner", "company_owner", "admin"] },
-
-  // F) COMMUNICATION
-  { to: "/app/announcements", icon: Megaphone, label: "Announcements", module: "announcements", section: "Communication" },
-  { to: "/app/chat", icon: MessageCircle, label: "Messages", module: null, section: "Communication" },
-  { to: "/app/notifications", icon: Bell, label: "Notifications", module: null, section: "Communication" },
-  { to: "/app/quality", icon: Star, label: "Reviews", module: null, section: "Communication" },
-
-  // G) SETTINGS
-  { to: "/app/payroll-settings", icon: Settings2, label: "Payroll Settings", module: null, section: "Settings" },
-  { to: "/app/kiosk", icon: Monitor, label: "Kiosk", module: null, section: "Settings" },
-  { to: "/app/admin", icon: Wrench, label: "Administration", module: null, section: "Settings", roles: ["developer", "owner", "company_owner"] },
-  { to: "/app/migration", icon: ArrowLeftRight, label: "Migration (internal)", module: null, section: "Settings", roles: ["developer", "owner"] },
+  // E) EMPRESA — comunicación + configuración (grupos huérfanos consolidados)
+  { to: "/app/announcements", icon: Megaphone, label: "Announcements", module: "announcements", section: "Empresa" },
+  { to: "/app/chat", icon: MessageCircle, label: "Messages", module: null, section: "Empresa" },
+  { to: "/app/notifications", icon: Bell, label: "Notifications", module: null, section: "Empresa" },
+  { to: "/app/quality", icon: Star, label: "Reviews", module: null, section: "Empresa" },
+  { to: "/app/payroll-settings", icon: Settings2, label: "Payroll Settings", module: null, section: "Empresa" },
+  { to: "/app/kiosk", icon: Monitor, label: "Kiosk", module: null, section: "Empresa" },
+  { to: "/app/admin", icon: Wrench, label: "Administration", module: null, section: "Empresa", roles: ["developer", "owner", "company_owner"] },
+  { to: "/app/migration", icon: ArrowLeftRight, label: "Migration (internal)", module: null, section: "Empresa", roles: ["developer", "owner"] },
 ];
 
 /* ── Global/Platform-level links (developer/owner only).
  * Notifications + Administration intentionally NOT duplicated here — they live
- * in the Company sidebar (Communication / Settings) and reuse the same routes. */
+ * in the Company sidebar (Comunicación / Empresa) and reuse the same routes. */
 const GLOBAL_LINKS: LinkDef[] = [
-  { to: "/app", icon: LayoutDashboard, label: "Global Panel", module: null, end: true, section: "Platform" },
-  { to: "/app/companies", icon: Building2, label: "Companies", module: null, section: "Platform" },
-  { to: "/app/directory", icon: Users, label: "Directory", module: null, section: "Platform" },
-  { to: "/app/activity", icon: FileText, label: "Activity", module: null, section: "Platform" },
-  { to: "/app/billing", icon: Receipt, label: "Billing", module: null, section: "Settings" },
-  { to: "/app/system-health", icon: BarChart3, label: "System Health", module: null, section: "Settings" },
+  { to: "/app", icon: LayoutDashboard, label: "Global Panel", module: null, end: true, section: "Plataforma" },
+  { to: "/app/companies", icon: Building2, label: "Companies", module: null, section: "Plataforma" },
+  { to: "/app/directory", icon: Users, label: "Directory", module: null, section: "Plataforma" },
+  { to: "/app/activity", icon: FileText, label: "Activity", module: null, section: "Plataforma" },
+  { to: "/app/billing", icon: Receipt, label: "Billing", module: null, section: "Empresa" },
+  { to: "/app/system-health", icon: BarChart3, label: "System Health", module: null, section: "Empresa" },
 ];
 
-const COMPANY_SECTION_ORDER = ["Daily Operations", "Team", "Clients & Locations", "Payroll & Finance", "Communication", "Settings"];
-const GLOBAL_SECTION_ORDER = ["Platform", "Settings"];
+const COMPANY_SECTION_ORDER = ["Operación", "Personas", "Clientes", "Payroll", "Empresa"];
+const GLOBAL_SECTION_ORDER = ["Plataforma", "Empresa"];
+
 
 
 export default function AdminSidebar() {
