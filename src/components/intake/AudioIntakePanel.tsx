@@ -540,6 +540,8 @@ export function AudioIntakePanel() {
               .
             </p>
             <ServiceIntakeReviewInbox
+            companyId={selectedCompanyId}
+            intakeSource="voice_note"
               candidates={candidates}
               sourceLabel="nota de voz"
               noticesByCandidate={noticesByCandidate}

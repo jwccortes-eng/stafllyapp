@@ -513,6 +513,8 @@ export function VisualIntakePanel({ variant = "image" }: { variant?: "image" | "
               .
             </p>
             <ServiceIntakeReviewInbox
+            companyId={selectedCompanyId}
+            intakeSource="image"
               candidates={candidates}
               sourceLabel={result.source === "pdf" ? "PDF" : "imagen"}
               noticesByCandidate={noticesByCandidate}
