@@ -63,10 +63,12 @@ import { EmployeeCombobox } from "@/components/shifts/EmployeeCombobox";
 import { ShiftRepeatSection, DEFAULT_REPEAT, computeRepeatDates, type RepeatConfig } from "@/components/shifts/ShiftRepeatSection";
 import {
   newRecurrenceIntentId,
+  freezeRecurrenceSubmit,
   planRecurrenceOccurrences,
   summarizeSeries,
   seriesResultMessage,
   type OccurrenceOutcome,
+  type RecurrenceSubmitSnapshot,
 } from "@/lib/shifts/recurrence";
 import { QuickCreatePopover } from "@/components/shifts/QuickCreatePopover";
 import { QuickAddInviteWizard } from "@/components/employee/QuickAddInviteWizard";
@@ -841,6 +843,7 @@ function DesktopShifts() {
     transportRequired, carCapacity, transportNotes, driverEmployeeId, driverIds,
     selectedEmployees,
     meetingPointLocationId, jobSiteLocationId, jobSiteAddress,
+    repeatConfig,
   }), [
     title, date, startTime, endTime, slots,
     clientId, locationId, notes, claimable,
@@ -850,6 +853,7 @@ function DesktopShifts() {
     transportRequired, carCapacity, transportNotes, driverEmployeeId, driverIds,
     selectedEmployees,
     meetingPointLocationId, jobSiteLocationId, jobSiteAddress,
+    repeatConfig,
   ]);
 
   /**
@@ -878,6 +882,9 @@ function DesktopShifts() {
         ...d,
         selectedEmployees: Array.isArray(d.selectedEmployees) ? d.selectedEmployees : [],
         driverIds: Array.isArray(d.driverIds) ? d.driverIds : [],
+        repeatConfig: d.repeatConfig && typeof d.repeatConfig === "object"
+          ? { ...DEFAULT_REPEAT, ...d.repeatConfig, selectedDays: Array.isArray(d.repeatConfig.selectedDays) ? d.repeatConfig.selectedDays : [] }
+          : DEFAULT_REPEAT,
       } as typeof createFormSnapshot;
     },
   });
@@ -898,6 +905,7 @@ function DesktopShifts() {
     setMeetingPointLocationId(d.meetingPointLocationId);
     setJobSiteLocationId(d.jobSiteLocationId);
     setJobSiteAddress(d.jobSiteAddress ?? "");
+    setRepeatConfig(d.repeatConfig ?? DEFAULT_REPEAT);
   };
 
 

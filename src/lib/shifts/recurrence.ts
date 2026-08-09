@@ -27,6 +27,38 @@ export interface RecurrenceOccurrencePlan {
   sourceRef: string;
 }
 
+export interface RecurrenceSubmitSnapshot {
+  intentId: string;
+  baseDate: string;
+  enabled: boolean;
+  mode: "weekdays" | "range" | "next_n";
+  selectedDays: number[];
+  rangeStart: string;
+  rangeEnd: string;
+  nextNDays: number;
+  copyAssignments: boolean;
+  occurrences: RecurrenceOccurrencePlan[];
+}
+
+/**
+ * Foto inmutable tomada al pulsar Guardar/Publicar. Evita que una recuperación
+ * local o los diálogos intermedios degraden una serie a una sola fecha.
+ */
+export function freezeRecurrenceSubmit(input: {
+  intentId: string;
+  baseDate: string;
+  repeatDates: string[];
+  config: Omit<RecurrenceSubmitSnapshot, "intentId" | "baseDate" | "occurrences">;
+}): RecurrenceSubmitSnapshot {
+  return {
+    intentId: input.intentId,
+    baseDate: input.baseDate,
+    ...input.config,
+    selectedDays: [...input.config.selectedDays],
+    occurrences: planRecurrenceOccurrences(input.baseDate, input.repeatDates, input.intentId),
+  };
+}
+
 /** Identidad estable de UNA intención de recurrencia (un submit del operador). */
 export function newRecurrenceIntentId(): string {
   const g = globalThis as { crypto?: { randomUUID?: () => string } };
@@ -91,6 +123,7 @@ export interface OccurrenceOutcome {
   workersRequested: number;
   workersCopied: number;
   error: string | null;
+  sourceRef?: string | null;
 }
 
 export interface SeriesSummary {
