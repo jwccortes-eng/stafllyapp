@@ -144,7 +144,14 @@ export function ConnecteamMappingSheet({ open, onOpenChange, subjects, impactCou
                 );
               })}
             </div>
+            {typeof impactCount === "number" && impactCount > 0 && (
+              <p className="text-[11px] text-muted-foreground">
+                Se reutilizará en {impactCount} servicio{impactCount === 1 ? "" : "s"} de esta vista
+                y en los próximos del mismo cliente o lugar.
+              </p>
+            )}
           </div>
+
 
           <div className="space-y-1.5">
             <Label htmlFor="ct-job" className="text-xs">Job de Connecteam</Label>
