@@ -45,7 +45,10 @@ Hard rules:
 - Anything you detect but cannot convert confidently goes into "unresolved" with a plain reason. Never drop it silently.
 - Copy dates exactly as shown; do not guess a year that is not printed.
 - Report per-field confidence between 0 and 1 (1 = printed clearly, 0.6 = readable but inferred from layout, 0.3 = blurry or ambiguous).
+- A single-shift screenshot ("Shift details", "Start / End / Job / Address / Users") IS one service: return it even when the job or client is unclear. A date plus a time range, or a date plus a job, is already enough to return a service.
+- If the source states a repetition rule ("Every day for 4 times", "cada día por 4 veces"), copy that phrase verbatim into notes. Do NOT expand it into several services.
 - Answer only with the structured object.`;
+
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
