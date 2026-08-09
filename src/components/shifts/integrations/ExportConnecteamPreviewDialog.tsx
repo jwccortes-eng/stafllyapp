@@ -19,6 +19,9 @@ import { downloadCsv } from "@/lib/import-review/csv-export";
 import type { Shift, Assignment, Employee, SelectOption } from "@/components/shifts/types";
 import { useCanExportConnecteam, EXPORT_PERMISSION_DENIED_COPY } from "@/lib/integrations/connecteam-export-permission";
 import { ExportStateBadges } from "./ExportStateBadges";
+import { ConnecteamMappingSheet } from "./ConnecteamMappingSheet";
+import { useConnecteamMapping } from "@/hooks/useConnecteamMapping";
+import { connecteamSubjectsForShift } from "@/lib/integrations/connecteam-compat";
 
 interface Props {
   open: boolean;
