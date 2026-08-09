@@ -547,6 +547,9 @@ function DesktopShifts() {
   const [jobSiteLocationId, setJobSiteLocationId] = useState<string | null>(null);
   const [jobSiteAddress, setJobSiteAddress] = useState<string>("");
   const [repeatConfig, setRepeatConfig] = useState<RepeatConfig>(DEFAULT_REPEAT);
+  // Identidad estable de la intención de recurrencia: sobrevive al retry del
+  // mismo formulario y se limpia al resetear. Sin ella, doble tap duplicaría.
+  const recurrenceIntentRef = useRef<string | null>(null);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   // Phase 2C-A — Emergency Worker create flow (admin-only). Owned here so
   // roster refresh + pre-select can be applied for both entry points
