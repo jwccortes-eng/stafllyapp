@@ -3286,6 +3286,26 @@ function DesktopShifts() {
         locations={locations}
         selectedCompanyId={selectedCompanyId}
       />
+
+      {/* P0 FINAL — vista previa obligatoria antes de crear cualquier Servicio */}
+      <SeriesPreviewDialog
+        open={!!seriesPreview}
+        onOpenChange={(o) => { if (!o && !seriesPreviewSubmitting) setSeriesPreview(null); }}
+        preview={seriesPreview?.preview ?? null}
+        routeLabel={seriesPreview?.routeLabel ?? ""}
+        confirmLabel={seriesPreview?.confirmLabel}
+        submitting={seriesPreviewSubmitting}
+        onConfirm={async () => {
+          if (!seriesPreview) return;
+          setSeriesPreviewSubmitting(true);
+          try {
+            await seriesPreview.run();
+            setSeriesPreview(null);
+          } finally {
+            setSeriesPreviewSubmitting(false);
+          }
+        }}
+      />
     </div>
   );
 }
