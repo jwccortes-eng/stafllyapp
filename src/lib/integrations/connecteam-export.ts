@@ -291,16 +291,28 @@ export function buildConnecteamRow(
   // Users: empty by default in v1.1 (Connecteam needs exact identifiers).
   const usersValue = opts.includeUsers ? userNames.join("; ") : "";
 
-  // Note: notes + special_instructions + `Ref: <shift_code>` (never Stafly UUID).
+  // Identificador humano del servicio: `shift_ref` (QK-001578) es la referencia
+  // canónica visible; `shift_code` solo como fallback histórico. NUNCA el UUID.
+  const humanRef = nonEmpty(s.shift_ref) || nonEmpty(s.shift_code) || "";
+
+  // Note: notes + special_instructions + `Ref: <referencia>` (never Stafly UUID).
   const noteParts: string[] = [];
   if (s.notes && s.notes.trim()) noteParts.push(s.notes.trim());
   if (s.special_instructions && s.special_instructions.trim()) {
     noteParts.push(s.special_instructions.trim());
   }
-  if (s.shift_code && s.shift_code.trim()) {
-    noteParts.push(`Ref: ${s.shift_code.trim()}`);
+  if (humanRef) {
+    noteParts.push(`Ref: ${humanRef}`);
   }
   const note = noteParts.join(" · ");
+
+  // Shift title: `QK-001578 · Luminance`. Hace cada fila única y trazable en
+  // Connecteam (dos servicios del mismo día con el mismo nombre dejan de ser
+  // indistinguibles). El código legado sigue viajando solo en Note.
+  const rawTitle = (s.title ?? "").trim();
+  const shiftTitle = nonEmpty(s.shift_ref)
+    ? [nonEmpty(s.shift_ref), rawTitle].filter(Boolean).join(" · ")
+    : rawTitle;
 
   const row: ConnecteamRow = {
     "Date": fmtDate(s.date),
@@ -309,7 +321,8 @@ export function buildConnecteamRow(
     "Timezone": resolveTimezone(s, ctx),
     "Unpaid break": "",
     "Paid break": "",
-    "Shift title": (s.title ?? "").trim(),
+    "Shift title": shiftTitle,
+
     "Job": compat.job,
     "Sub item": compat.subItem,
     "Address": addr.value,
@@ -441,6 +454,20 @@ export function validateShiftForExport(
   if (!shift.end_time) {
     warnings.push({ code: "missing_end", severity: "block", message: "Falta la hora de fin." });
   }
+  // BLOQUEO — duración cero. Connecteam DESCARTA en silencio las filas cuyo
+  // End es igual al Start (el turno no dura nada). Es la causa real de que un
+  // CSV con 3 filas importe menos turnos de los seleccionados.
+  if (
+    shift.start_time && shift.end_time &&
+    fmtTime(shift.start_time) === fmtTime(shift.end_time)
+  ) {
+    warnings.push({
+      code: "zero_duration",
+      severity: "block",
+      message: `Inicio y fin son la misma hora (${fmtTime(shift.start_time)}). Connecteam descarta estas filas: corrige la hora de fin.`,
+    });
+  }
+
   if (!nonEmpty(shift.title)) {
     warnings.push({ code: "missing_title", severity: "block", message: "Falta el título del turno." });
   }
@@ -548,4 +575,35 @@ export function bulkExportFilename(today: Date = new Date()): string {
   const m = String(today.getMonth() + 1).padStart(2, "0");
   const d = String(today.getDate()).padStart(2, "0");
   return `stafly-connecteam-shifts-${y}-${m}-${d}.csv`;
+}
+
+// ── Colisiones de filas (Connecteam fusiona duplicados) ────────────────────
+
+/**
+ * Firma de una fila tal y como Connecteam la interpreta: fecha + horas +
+ * título + Job + Sub item. Dos filas con la misma firma se importan como un
+ * único turno, aunque en Stafly sean dos servicios distintos.
+ */
+export function connecteamRowSignature(row: ConnecteamRow): string {
+  return [
+    row.Date, row.Start, row.End, row["Shift title"], row.Job, row["Sub item"],
+  ].join("|").toLowerCase();
+}
+
+/** Firmas repetidas dentro de una exportación en bloque. Vacío = sin colisión. */
+export function findDuplicateRowSignatures(rows: ConnecteamRow[]): string[] {
+  const seen = new Map<string, number>();
+  for (const r of rows) {
+    const sig = connecteamRowSignature(r);
+    seen.set(sig, (seen.get(sig) ?? 0) + 1);
+  }
+  return [...seen.entries()].filter(([, n]) => n > 1).map(([sig]) => sig);
+}
+
+/** Nº de filas de datos de un CSV serializado (excluye el encabezado). */
+export function countCsvDataRows(csv: string): number {
+  const body = csv.replace(/^\uFEFF/, "").trim();
+  if (!body) return 0;
+  const lines = body.split(/\r?\n/);
+  return Math.max(0, lines.length - 1);
 }

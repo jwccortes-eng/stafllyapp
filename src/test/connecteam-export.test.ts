@@ -366,8 +366,12 @@ describe("connecteam-export: safety boundary", () => {
       "CSV_UTF8_BOM",
       "buildConnecteamRow",
       "bulkExportFilename",
+      "connecteamRowSignature",
+      "countCsvDataRows",
       "effectiveAssignmentsForExport",
       "exportFilename",
+      "findDuplicateRowSignatures",
+
       "resolveAddress",
       "resolveJob",
       "serializeConnecteamCsv",

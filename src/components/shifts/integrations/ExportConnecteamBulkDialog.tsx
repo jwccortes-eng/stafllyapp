@@ -13,6 +13,9 @@ import {
   effectiveAssignmentsForExport,
   bulkExportFilename,
   CSV_UTF8_BOM,
+  countCsvDataRows,
+  findDuplicateRowSignatures,
+
   type ValidationResult,
   type ConnecteamRow,
 } from "@/lib/integrations/connecteam-export";
@@ -88,6 +91,12 @@ export function ExportConnecteamBulkDialog({
     [rows],
   );
 
+  // Colisiones: filas que Connecteam vería como el MISMO turno y fusionaría.
+  const duplicateCount = useMemo(() => {
+    const exportable = rows.filter(r => r.validation.status !== "blocked");
+    return findDuplicateRowSignatures(exportable.map(r => r.row)).length;
+  }, [rows]);
+
   const handleDownload = () => {
     if (!canExport) {
       toast.error(EXPORT_PERMISSION_DENIED_COPY);
@@ -100,10 +109,15 @@ export function ExportConnecteamBulkDialog({
     }
     const csvBody = serializeConnecteamCsv(exportable.map(r => r.row));
     const csv = CSV_UTF8_BOM + csvBody;
+    const dataRows = countCsvDataRows(csv);
     downloadCsv(bulkExportFilename(), csv);
-    toast.success(`CSV descargado — ${exportable.length} turno${exportable.length === 1 ? "" : "s"}.`);
+    toast.success(
+      `CSV descargado — ${dataRows} fila${dataRows === 1 ? "" : "s"} para ${exportable.length} ${ADMIN_LEX.EntityPlural.toLowerCase()}.`,
+      { description: "Una fila por servicio. Verifica el mismo número en el Overview de Connecteam." },
+    );
     onOpenChange(false);
   };
+
 
   const canDownload = canExport && summary.exportable > 0;
 
@@ -199,10 +213,27 @@ export function ExportConnecteamBulkDialog({
               </div>
             )}
 
+            {duplicateCount > 0 && (
+              <div className="rounded-xl border border-warning/30 bg-warning/5 px-3.5 py-3 text-xs text-warning flex items-start gap-2">
+                <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                <div>
+                  <p className="font-semibold">
+                    {duplicateCount} combinación{duplicateCount === 1 ? "" : "es"} de filas idénticas
+                  </p>
+                  <p className="mt-0.5 opacity-90">
+                    Connecteam fusiona filas con la misma fecha, horario, título y Job:
+                    importaría menos turnos de los que estás exportando. Diferencia el título
+                    o el horario antes de importar.
+                  </p>
+                </div>
+              </div>
+            )}
+
             <p className="text-[11px] text-muted-foreground">
-              Exportar un borrador genera solo el CSV: no lo publica, no notifica a nadie
-              y no cambia asignaciones, horas ni payroll.
+              El CSV genera una fila por servicio exportable. Exportar un borrador genera solo
+              el CSV: no lo publica, no notifica a nadie y no cambia asignaciones, horas ni payroll.
             </p>
+
 
 
             {/* Warnings list — top 20 shifts with issues */}
