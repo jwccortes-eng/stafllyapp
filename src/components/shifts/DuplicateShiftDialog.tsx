@@ -241,36 +241,25 @@ export function DuplicateShiftDialog({
       assignments_to_insert_count: copyWorkers ? workersToCopy.length : 0,
     });
 
-    // 1) Insert shift as draft/draft. publication_status defaults to 'draft'.
-    const insertPayload: Record<string, any> = {
-      company_id: companyId,
-      title: shift.title,
+    // P0 FINAL — snapshot canónico congelado ANTES de escribir. Duplicar usa el
+    // mismo contrato que Crear, Publicar, Copiar semana y Editar → Repetir.
+    const snapshot = snapshotFromServiceRow(shift, {
+      companyId,
+      employeeIds: copyWorkers ? workersToCopy.map((a) => a.employee_id) : [],
+      publicationIntent: "draft",
+      include: { client: copyClient, notes: copyNotes, roles: copyRoles },
+    });
+    const intent = buildSeriesIntentFromSnapshot({ snapshot, baseDate: dateStr });
+    const sourceRef = intent.recurrence.occurrences[0]?.sourceRef ?? null;
+    const insertPayload = buildCanonicalServiceInsert({
+      snapshot,
       date: dateStr,
-      start_time: shift.start_time,
-      end_time: shift.end_time,
-      slots: shift.slots ?? 1,
-      client_id: copyClient ? (shift.client_id || null) : null,
-      location_id: copyClient ? (shift.location_id || null) : null,
-      meeting_point_location_id: copyClient ? (shift.meeting_point_location_id || null) : null,
-      job_site_location_id: copyClient ? (shift.job_site_location_id || null) : null,
-      meeting_point: copyNotes ? (shift.meeting_point || null) : null,
-      special_instructions: copyNotes ? (shift.special_instructions || null) : null,
-      notes: copyNotes ? (shift.notes || null) : null,
-      pay_type: shift.pay_type || "hourly",
-      day_type: shift.day_type || "full_day",
-      pay_override: shift.pay_override ?? false,
-      attendance_mode: shift.attendance_mode || null,
-      clock_method: shift.clock_method || "both",
-      transportation_required: shift.transportation_required ?? false,
-      car_capacity: shift.car_capacity ?? 5,
-      transportation_notes: shift.transportation_notes || null,
-      shift_admin_id: copyRoles ? (shift.shift_admin_id || null) : null,
-      claimable: shift.claimable ?? false,
+      sourceRef,
+      createdBy: userId,
       // Explicitly draft. Never auto-publish.
-      status: "draft",
-      publication_status: "draft",
-      created_by: userId,
-    };
+      draft: true,
+    });
+
 
     const { data: created, error: insertErr } = await supabase
       .from("scheduled_shifts")
