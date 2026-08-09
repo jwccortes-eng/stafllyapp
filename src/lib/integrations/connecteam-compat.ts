@@ -308,15 +308,34 @@ export function resolveConnecteamJobAndSubItem(
 ): JobAndSubItem {
   const opts = { ...DEFAULT_RESOLVE_OPTIONS, ...options };
   const warnings: ExportWarning[] = [];
+  const mapping: ConnecteamMappingConfig | null = ctx.mapping ?? null;
+  const strict = options.strict ?? hasAnyMapping(mapping);
 
-  // 1) Explicit hint always wins.
+  // 0) Mapping declarado por la compañía — fuente canónica.
+  const subjects = connecteamSubjectsForShift(shift, ctx);
+  const found = lookupMapping(mapping, subjects);
+  if (found) {
+    return {
+      job: found.entry.job,
+      subItem: found.entry.subItem ?? "",
+      confidence: "exact",
+      source: {
+        job: "mapping",
+        subItem: found.entry.subItem ? "mapping" : "none",
+        mappingKey: `${found.subject.kind}:${found.subject.id}`,
+      },
+      warnings,
+    };
+  }
+
+  // 1) Hint explícito (`connecteam_job_name`).
   const fb = resolveFallback(shift, ctx);
   if (fb.confidence === "exact") {
     return { ...fb, confidence: "exact", warnings };
   }
 
-  // 2) Beta compatibility rules.
-  if (opts.enableBetaCompatMapping) {
+  // 2) Reglas legacy — solo mientras la compañía no declaró su mapping.
+  if (!strict && opts.enableBetaCompatMapping) {
     const sig = buildSignals(shift, ctx);
     for (const rule of BETA_COMPAT_RULES) {
       if (matchClause(rule.when, sig)) {
@@ -336,8 +355,9 @@ export function resolveConnecteamJobAndSubItem(
     }
   }
 
-  // 3) Naked fallback.
-  if (fb.confidence === "fallback") {
+  // 3) Fallback crudo — legacy. En modo estricto NO se emite: Connecteam lo
+  //    mostraría como "Select" y la fila quedaría fuera del reporting.
+  if (!strict && fb.confidence === "fallback") {
     warnings.push({
       code: "job_fallback",
       severity: "warn",
@@ -346,11 +366,34 @@ export function resolveConnecteamJobAndSubItem(
     return { ...fb, confidence: "fallback", warnings };
   }
 
-  // 4) Missing.
+  // 4) Sin destino → bloquea con motivo explícito y accionable.
   warnings.push({
-    code: "missing_job_context",
+    code: "missing_job_mapping",
     severity: "block",
-    message: "Sin Job posible — agrega cliente, ubicación o categoría.",
+    message: subjects.length
+      ? "Falta configurar destino Connecteam (Job/Sub item) para este cliente o lugar."
+      : "Sin Job posible — confirma el cliente o el lugar del servicio y configura su destino Connecteam.",
   });
-  return { ...fb, confidence: "missing", warnings };
+  return {
+    job: "",
+    subItem: "",
+    confidence: "missing",
+    source: { job: "none", subItem: "none" },
+    warnings,
+  };
+}
+
+/** Sujetos de mapping (venue → cliente → título) de un servicio. */
+export function connecteamSubjectsForShift(shift: Shift, ctx: BuildContext) {
+  const client = ctx.clients.find(c => c.id === shift.client_id);
+  const location = ctx.locations.find(l => l.id === shift.location_id);
+  return candidateSubjects({
+    locationId: shift.location_id ?? null,
+    locationName: location?.name ?? null,
+    clientId: shift.client_id ?? null,
+    clientName: client?.name ?? null,
+    title: shift.title ?? null,
+  });
+}
+
 }
