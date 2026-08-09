@@ -158,7 +158,21 @@ export function ConnecteamMappingSheet({ open, onOpenChange, subjects, impactCou
             <datalist id="ct-known-jobs">
               {jobs.map(j => <option key={j} value={j} />)}
             </datalist>
+            {showSuggestion && (
+              <button
+                type="button"
+                onClick={() => setJob(suggestion)}
+                className="text-[11px] text-primary underline underline-offset-2 min-h-[32px]"
+              >
+                Sugerencia: usar “{suggestion}”
+              </button>
+            )}
+            <p className="text-[11px] text-muted-foreground">
+              Stafly no adivina el destino: la sugerencia es solo el nombre del cliente o lugar.
+              Confirma que coincide exacto con tu catálogo de Connecteam.
+            </p>
           </div>
+
 
           <div className="space-y-1.5">
             <Label htmlFor="ct-subitem" className="text-xs">Sub item (opcional)</Label>
