@@ -26,3 +26,10 @@ Reglas no negociables:
   inferencias: se eliminan en `stripSensitiveAttributes`.
 
 Doc: `docs/architecture/ECOSYSTEM_LEARNING_DECISION_MEMORY_V1.md`.
+
+Fase 1B (persistencia real): la memoria vive en la tabla `eldm_signals`
+(idempotente por `(company_id, source_reference)`, invalidación vía
+`superseded_by`, RLS por compañía). Todo el I/O está en `src/lib/eldm-store/` y
+la traducción de eventos en `src/lib/eldm-adapters/`. Prohibido meter I/O dentro
+de `src/lib/eldm`. Dominios conectados: intake/entity resolution, assignments y
+worker response/outcome. Doc: `docs/qa/ELDM_PHASE_1B_REAL_SIGNAL_LOOP.md`.
