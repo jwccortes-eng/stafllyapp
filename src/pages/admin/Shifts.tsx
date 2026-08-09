@@ -451,6 +451,8 @@ function DesktopShifts() {
   const employees = employeeRoster.employees;
   const [createOpen, setCreateOpen] = useState(false);
   const [bulkExportConnecteamOpen, setBulkExportConnecteamOpen] = useState(false);
+  // P0 — Creación masiva de Servicios (vista operativa nativa, no importador).
+  const [bulkCreateOpen, setBulkCreateOpen] = useState(false);
 
   // Open create dialog when navigated with ?create=1
   useEffect(() => {
