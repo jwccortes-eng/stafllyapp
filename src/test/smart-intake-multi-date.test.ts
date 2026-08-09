@@ -2,8 +2,8 @@
  * P0 — Smart Intake Multi-Date Expansion.
  *
  * Regresión del caso real: un encabezado de venue seguido de dos listas de
- * días (con cambio de mes) debe producir un candidato por día, heredando el
- * contexto común, sin inventar hora exacta ni cantidad de personal.
+ * días (con cambio de mes) debe detectar un servicio real por día, heredando
+ * el contexto común, sin inventar hora final ni cantidad de personal.
  */
 import { describe, expect, it } from "vitest";
 import { parseTextToCandidates } from "@/lib/intake/text-parser";
@@ -68,7 +68,7 @@ describe("expandDateList", () => {
 describe("caso real Imperial", () => {
   const res = parseTextToCandidates(REAL_INPUT, ctx);
 
-  it("produce exactamente 9 candidatos con las 9 fechas", () => {
+  it("detecta exactamente los 9 servicios reales con sus 9 fechas", () => {
     expect(res.candidates).toHaveLength(9);
     expect(res.candidates.map((c) => c.serviceDate)).toEqual(EXPECTED);
   });
@@ -99,7 +99,7 @@ describe("caso real Imperial", () => {
     expect(res.candidates.every((c) => c.createdShiftId === null)).toBe(true);
   });
 
-  it("reintentar produce exactamente los mismos candidatos, sin duplicados", () => {
+  it("reintentar reconoce exactamente los mismos 9 servicios, sin duplicados", () => {
     const again = parseTextToCandidates(REAL_INPUT, ctx);
     expect(again.candidates.map((c) => c.serviceDate)).toEqual(EXPECTED);
     expect(new Set(again.candidates.map((c) => c.serviceDate)).size).toBe(9);
