@@ -59,13 +59,14 @@ const millenniumWithVenue = shift({
 const imperial = shift({ id: "s3", client_id: IMPERIAL_ID, title: "Meseros" });
 
 describe("Connecteam destination mapping — Millennium vs Imperial", () => {
-  it("ANTES: Millennium bloqueado, Job y Sub item vacíos", () => {
+  it("Millennium sin mapping explícito: el mapping de Imperial NO lo bloquea", () => {
     const r = resolveConnecteamJobAndSubItem(millenniumNoVenue, ctx(baseMapping));
-    expect(r.confidence).toBe("missing");
-    expect(r.job).toBe("");
-    expect(r.subItem).toBe("");
-    expect(r.warnings.some((w) => w.code === "missing_job_mapping")).toBe(true);
+    expect(r.destinationSource).toBe("raw_fallback");
+    expect(r.fallbackUsed).toBe(true);
+    expect(r.warnings.some((w) => w.severity === "block")).toBe(false);
+    expect(r.reason).toMatch(/Sin mapping explícito/);
   });
+
 
   it("ANTES: Imperial resuelve por el mapping de cliente ya declarado", () => {
     const r = resolveConnecteamJobAndSubItem(imperial, ctx(baseMapping));
