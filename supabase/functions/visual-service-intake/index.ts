@@ -252,8 +252,11 @@ Deno.serve(async (req) => {
           storage_path: storagePath,
           error: "unparseable_extraction",
           error_detail: text.slice(0, 200),
+          // Texto crudo para la capa de recuperación estructural del cliente.
+          raw_text: text.slice(0, 4000),
         });
         continue;
+
       }
 
       extractions.push({
