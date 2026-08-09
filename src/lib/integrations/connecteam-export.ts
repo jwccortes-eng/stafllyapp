@@ -454,6 +454,20 @@ export function validateShiftForExport(
   if (!shift.end_time) {
     warnings.push({ code: "missing_end", severity: "block", message: "Falta la hora de fin." });
   }
+  // BLOQUEO — duración cero. Connecteam DESCARTA en silencio las filas cuyo
+  // End es igual al Start (el turno no dura nada). Es la causa real de que un
+  // CSV con 3 filas importe menos turnos de los seleccionados.
+  if (
+    shift.start_time && shift.end_time &&
+    fmtTime(shift.start_time) === fmtTime(shift.end_time)
+  ) {
+    warnings.push({
+      code: "zero_duration",
+      severity: "block",
+      message: `Inicio y fin son la misma hora (${fmtTime(shift.start_time)}). Connecteam descarta estas filas: corrige la hora de fin.`,
+    });
+  }
+
   if (!nonEmpty(shift.title)) {
     warnings.push({ code: "missing_title", severity: "block", message: "Falta el título del turno." });
   }
