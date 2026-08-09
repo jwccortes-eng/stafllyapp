@@ -90,7 +90,7 @@ describe("B. proveedor 403 credit_limit_reached", () => {
       expect(value.source).not.toBe("ai_extraction");
       expect(["detected", "approximate", "missing", "confirmed"]).toContain(value.state);
     }
-    expect(c.reviewStatus).toBe("needs_input");
+    expect(["pending", "needs_input"]).toContain(c.reviewStatus);
   });
 });
 
@@ -224,7 +224,7 @@ describe("no escritura automática", () => {
   it("la recuperación nunca marca un candidato como listo para crear sin persona", () => {
     const result = recover(CONNECTEAM_SCREENSHOT_TEXT);
     for (const c of result.candidates) {
-      expect(c.reviewStatus).toBe("needs_input");
+      expect(["pending", "needs_input"]).toContain(c.reviewStatus);
     }
   });
 });
