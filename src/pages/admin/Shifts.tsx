@@ -61,6 +61,13 @@ import { CrossCompanyShiftHint } from "@/components/shifts/CrossCompanyShiftHint
 import { WeeklySummaryBar } from "@/components/shifts/WeeklySummaryBar";
 import { EmployeeCombobox } from "@/components/shifts/EmployeeCombobox";
 import { ShiftRepeatSection, DEFAULT_REPEAT, computeRepeatDates, type RepeatConfig } from "@/components/shifts/ShiftRepeatSection";
+import {
+  newRecurrenceIntentId,
+  planRecurrenceOccurrences,
+  summarizeSeries,
+  seriesResultMessage,
+  type OccurrenceOutcome,
+} from "@/lib/shifts/recurrence";
 import { QuickCreatePopover } from "@/components/shifts/QuickCreatePopover";
 import { QuickAddInviteWizard } from "@/components/employee/QuickAddInviteWizard";
 import EmergencyWorkerDialog, { type EmergencyWorkerCreated } from "@/components/employee/EmergencyWorkerDialog";
@@ -540,6 +547,9 @@ function DesktopShifts() {
   const [jobSiteLocationId, setJobSiteLocationId] = useState<string | null>(null);
   const [jobSiteAddress, setJobSiteAddress] = useState<string>("");
   const [repeatConfig, setRepeatConfig] = useState<RepeatConfig>(DEFAULT_REPEAT);
+  // Identidad estable de la intención de recurrencia: sobrevive al retry del
+  // mismo formulario y se limpia al resetear. Sin ella, doble tap duplicaría.
+  const recurrenceIntentRef = useRef<string | null>(null);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   // Phase 2C-A — Emergency Worker create flow (admin-only). Owned here so
   // roster refresh + pre-select can be applied for both entry points
@@ -817,6 +827,7 @@ function DesktopShifts() {
     setMeetingPointLocationId(null); setJobSiteLocationId(null); setJobSiteAddress("");
     setNewLocationName(""); setNewLocationAddress(""); setShowAddLocation(false);
     setRepeatConfig(DEFAULT_REPEAT);
+    recurrenceIntentRef.current = null;
   };
 
   // ── S3 — Local autosave for the create-shift form (NO DB writes) ──
@@ -1007,13 +1018,32 @@ function DesktopShifts() {
   // - `publishNow=false` ⇒ it's a draft: publication_status='draft',
   //   no notifications, assignments flagged as draft reservations.
   // - `publishNow=true`  ⇒ regular published shift, assignments are real.
+  //
+  // P0 recurrencia: `opts.employeeIds` evita depender del estado de React
+  // (los setters son asíncronos y dejaban el equipo obsoleto dentro del bucle)
+  // y `opts.sourceRef` da idempotencia estable por ocurrencia.
   const createSingleShift = async (
     shiftDate: string,
     skipNotifications = false,
     forceDraft = false,
     publishNow = true,
+    opts?: { employeeIds?: string[]; sourceRef?: string | null; onAssignError?: (e: unknown) => void },
   ) => {
     if (!selectedCompanyId) return null;
+    const employeeIds = opts?.employeeIds ?? selectedEmployees;
+    const sourceRef = opts?.sourceRef ?? null;
+
+    // Idempotencia: doble tap o retry del mismo submit reutiliza la fila.
+    if (sourceRef) {
+      const existing = await supabase
+        .from("scheduled_shifts")
+        .select("*")
+        .eq("company_id", selectedCompanyId)
+        .eq("reconciliation_hash", sourceRef)
+        .is("deleted_at", null)
+        .maybeSingle();
+      if (existing.data?.id) return existing.data as any;
+    }
     const isDraft = !publishNow || forceDraft;
     // Legacy `status` column retained: drafts also flow through the legacy
     // 'draft' value so existing UI/filters that look at status keep working.
@@ -1043,6 +1073,8 @@ function DesktopShifts() {
       meeting_point_location_id: meetingPointLocationId || null,
       job_site_location_id: jobSiteLocationId || null,
       job_site_address: jobSiteAddress.trim() || null,
+      // Trazabilidad de serie: todas las ocurrencias comparten el mismo intent.
+      ...(sourceRef ? { reconciliation_hash: sourceRef } : {}),
       // New lifecycle column — single source of truth for draft visibility.
       publication_status: isDraft ? "draft" : "published",
       published_at: isDraft ? null : new Date().toISOString(),
@@ -1050,10 +1082,25 @@ function DesktopShifts() {
     };
     const { data: shift, error } = await supabase.from("scheduled_shifts").insert(insertData).select("*").single();
 
-    if (error) { toast.error(error.message); return null; }
+    if (error) {
+      if (sourceRef) {
+        // Carrera: otro intento pudo insertar la misma ocurrencia.
+        const retry = await supabase
+          .from("scheduled_shifts")
+          .select("*")
+          .eq("company_id", selectedCompanyId)
+          .eq("reconciliation_hash", sourceRef)
+          .is("deleted_at", null)
+          .maybeSingle();
+        if (retry.data?.id) return retry.data as any;
+      }
+      if (opts?.onAssignError) throw error;
+      toast.error(error.message);
+      return null;
+    }
 
-    if (selectedEmployees.length > 0 && shift) {
-      const assigns = selectedEmployees.map(eid => ({
+    if (employeeIds.length > 0 && shift) {
+      const assigns = employeeIds.map(eid => ({
         company_id: selectedCompanyId, shift_id: shift.id, employee_id: eid, status: "pending",
         // P0.3 — multi-driver: el rol vive en la asignación, no en el turno.
         assignment_role: driverIds.includes(eid) ? "driver" : "worker",
@@ -1065,7 +1112,10 @@ function DesktopShifts() {
       // Sin CTA de reintento: repetir el insert podría duplicar asignaciones.
       const { error: assignError } = await supabase.from("shift_assignments").insert(assigns as any);
       if (assignError) {
-        notifyWarning({
+        // En una serie, el Servicio NUNCA se borra porque el equipo falle:
+        // el caller reporta la ocurrencia afectada y permite reintentar.
+        if (opts?.onAssignError) opts.onAssignError(assignError);
+        else notifyWarning({
           key: "shift-create-assign",
           title: "El turno se creó, pero sin equipo",
           fact: `No pudimos asignar ${assigns.length} worker(s).`,
@@ -1172,15 +1222,126 @@ function DesktopShifts() {
     }
     setDraftSaving(true);
     try {
-      const baseShift = await createSingleShift(date, /* skipNotifications */ true, /* forceDraft */ true, /* publishNow */ false);
-      if (!baseShift) return;
-      toast.success("Borrador guardado");
+      // P0 recurrencia: guardar borrador también respeta la serie configurada.
+      // Antes la recurrencia sólo se aplicaba al publicar, así que un borrador
+      // recurrente creaba UNA sola ocurrencia (caso QK-001590).
+      const outcomes = await createServiceSeries({ publishBase: false });
+      const summary = summarizeSeries(outcomes);
+      if (summary.created + summary.reused === 0) return;
+      reportSeriesOutcome(outcomes, summary, /* publishedBase */ false);
       createSession.endSession(); // P0.4 — borrador en BD guardado → sesión local limpia
       setCreateOpen(false);
       resetForm();
       loadData();
     } finally {
       setDraftSaving(false);
+    }
+  };
+
+  /**
+   * P0 — RECURRING SERVICE CREATION.
+   *
+   * Crea la serie completa como Servicios independientes. Garantías:
+   *  - la ocurrencia origen y las repeticiones usan el MISMO camino de escritura;
+   *  - cada ocurrencia lleva su propia referencia estable → retry/doble tap
+   *    reutilizan la fila en vez de duplicarla;
+   *  - copiar workers es opcional y NUNCA condiciona la creación del Servicio;
+   *  - un fallo de assignment no borra ni aborta el resto de la serie.
+   */
+  const createServiceSeries = async (
+    opts: { publishBase: boolean },
+  ): Promise<OccurrenceOutcome[]> => {
+    if (!selectedCompanyId || !date) return [];
+
+    if (!recurrenceIntentRef.current) recurrenceIntentRef.current = newRecurrenceIntentId();
+    const intentId = recurrenceIntentRef.current;
+
+    const repeatDates = repeatConfig.enabled ? computeRepeatDates(date, repeatConfig) : [];
+    const plan = planRecurrenceOccurrences(date, repeatDates, intentId);
+    const isSeries = plan.length > 1;
+
+    // Copiar workers es una decisión explícita. Fuera de la serie se mantiene
+    // el comportamiento actual (el equipo elegido va al turno creado).
+    const baseEmployees = [...selectedEmployees];
+    const copyWorkers = !isSeries || repeatConfig.copyAssignments;
+
+    const outcomes: OccurrenceOutcome[] = [];
+    for (const occ of plan) {
+      const employeeIds = occ.isBase || copyWorkers ? baseEmployees : [];
+      let workersCopied = employeeIds.length;
+      let assignError: unknown = null;
+      try {
+        const shift = await createSingleShift(
+          occ.date,
+          /* skipNotifications */ !occ.isBase || isSeries || !opts.publishBase,
+          /* forceDraft */ !(occ.isBase && opts.publishBase),
+          /* publishNow */ occ.isBase && opts.publishBase,
+          {
+            employeeIds,
+            // Sólo las series necesitan clave de idempotencia: un Servicio
+            // suelto conserva exactamente el comportamiento anterior.
+            sourceRef: isSeries ? occ.sourceRef : null,
+            onAssignError: (e) => { assignError = e; workersCopied = 0; },
+          },
+        );
+        outcomes.push({
+          date: occ.date,
+          isBase: occ.isBase,
+          status: shift ? "created" : "failed",
+          shiftId: shift?.id ?? null,
+          ref: (shift as any)?.shift_ref ?? null,
+          workersRequested: employeeIds.length,
+          workersCopied: shift ? workersCopied : 0,
+          error: assignError ? String((assignError as any)?.message ?? assignError) : null,
+        });
+      } catch (e) {
+        outcomes.push({
+          date: occ.date,
+          isBase: occ.isBase,
+          status: "failed",
+          shiftId: null,
+          ref: null,
+          workersRequested: employeeIds.length,
+          workersCopied: 0,
+          error: String((e as any)?.message ?? e),
+        });
+      }
+    }
+    return outcomes;
+  };
+
+  /** Feedback único de la serie: qué se creó, qué falló y qué hacer. */
+  const reportSeriesOutcome = (
+    outcomes: OccurrenceOutcome[],
+    summary: ReturnType<typeof summarizeSeries>,
+    publishedBase: boolean,
+  ) => {
+    const persisted = summary.created + summary.reused;
+    if (summary.total === 1) {
+      toast.success(publishedBase ? "Turno publicado" : "Borrador guardado");
+    } else {
+      toast.success(seriesResultMessage(summary), {
+        description: publishedBase
+          ? "La fecha original queda publicada; las repeticiones quedan en borrador para revisarlas."
+          : "Todas las ocurrencias quedan en borrador, cada una con su propia referencia.",
+      });
+    }
+    if (summary.failed > 0) {
+      const failedDates = outcomes.filter((o) => o.status === "failed").map((o) => o.date).join(", ");
+      notifyWarning({
+        key: "shift-series-failed",
+        title: "Algunas fechas de la serie no se crearon",
+        fact: `No pudimos crear: ${failedDates}.`,
+        consequence: "Los Servicios ya creados se conservan. Vuelve a guardar para completar sólo las fechas faltantes.",
+      });
+    }
+    if (summary.workerFailures > 0) {
+      notifyWarning({
+        key: "shift-series-workers",
+        title: "Los Servicios se crearon, pero falta equipo",
+        fact: `${summary.workerFailures} fecha(s) quedaron sin trabajadores copiados.`,
+        consequence: "Abre cada Servicio y asigna el equipo para no duplicar asignaciones.",
+      });
     }
   };
 
@@ -1209,32 +1370,16 @@ function DesktopShifts() {
 
 
     setSaving(true);
-
-    const repeatDates = computeRepeatDates(date, repeatConfig);
-    const isRepeating = repeatConfig.enabled && repeatDates.length > 0;
-
-    // Base shift = published. Repeated shifts inherit the original behavior:
-    // they are created as drafts so the operator reviews them before publishing.
-    const baseShift = await createSingleShift(date, isRepeating, false, true);
-    if (!baseShift) { setSaving(false); return; }
-
-    if (isRepeating) {
-      const copyAssign = repeatConfig.copyAssignments;
-      const savedEmployees = [...selectedEmployees];
-      if (!copyAssign) setSelectedEmployees([]);
-
-      for (const repeatDate of repeatDates) {
-        await createSingleShift(repeatDate, true, true, false);
-      }
-
-      if (!copyAssign) setSelectedEmployees(savedEmployees);
-      toast.success(`${repeatDates.length + 1} turnos creados (${repeatDates.length} repetidos en borrador)`);
-    } else {
-      toast.success("Turno publicado");
+    try {
+      const outcomes = await createServiceSeries({ publishBase: true });
+      const summary = summarizeSeries(outcomes);
+      if (summary.created + summary.reused === 0) { setSaving(false); return; }
+      reportSeriesOutcome(outcomes, summary, /* publishedBase */ true);
+      createSession.endSession(); // P0.4 — turno creado → sesión, storage y timers limpios
+      setCreateOpen(false); resetForm(); loadData();
+    } finally {
+      setSaving(false);
     }
-
-    createSession.endSession(); // P0.4 — turno creado → sesión, storage y timers limpios
-    setSaving(false); setCreateOpen(false); resetForm(); loadData();
   };
 
   // Quick create: minimal shift from popover
