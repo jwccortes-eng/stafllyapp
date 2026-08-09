@@ -216,6 +216,7 @@ export async function runVisualIntake(input: VisualIntakeInput): Promise<VisualI
   let pageCount = 0;
   let extractionFailures = 0;
   const failures: VisualExtractionFailure[] = [];
+  const recoveryTexts: string[] = [];
 
   results.forEach((entry, index) => {
     if (entry.error || !entry.extraction) {
@@ -226,11 +227,13 @@ export async function runVisualIntake(input: VisualIntakeInput): Promise<VisualI
         code,
         detail: (entry as { error_detail?: string }).error_detail ?? null,
       });
+      if (entry.raw_text) recoveryTexts.push(entry.raw_text);
       warnings.push(
         `${entry.file_name ?? "Un archivo"}: ${describeVisualFailure(code)}.`,
       );
       return;
     }
+
 
     const normalized = normalizeVisualExtraction({
       extraction: entry.extraction,
