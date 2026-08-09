@@ -442,6 +442,33 @@ interface Segment {
   lineNumber: number;
   contextVenue: string | null;
   weekAnchor: boolean;
+  /** Bloque al que pertenece: cambia con cada cabecera de venue/cliente. */
+  blockIndex: number;
+  /**
+   * `service` = fragmento que puede volverse candidato.
+   * `context` = línea de contexto común (hora aproximada, personal pendiente)
+   * que se hereda por los candidatos del MISMO bloque.
+   */
+  kind: "service" | "context";
+}
+
+const TIME_SIGNAL = /\b\d{1,2}\s*(am|pm)\b|\b\d{1,2}:\d{2}\b/i;
+const PENDING_SIGNAL =
+  /(pendiente|pendientes|por confirmar|to be confirmed|tbd|sin definir|no definid)/i;
+
+function hasTimeSignal(s: string): boolean {
+  return TIME_SIGNAL.test(stripAccents(s.toLowerCase()));
+}
+
+/** Cabecera suelta sin dos puntos: "Imperial". Nunca contiene datos. */
+function isBareHeader(line: string): boolean {
+  const t = stripAccents(line.toLowerCase());
+  if (hasDateSignal(line) || hasTimeSignal(line)) return false;
+  if (/\d/.test(t)) return false;
+  if (WORKER_NOUNS.test(t) || PENDING_SIGNAL.test(t)) return false;
+  if (resolveServiceTypeFromText(line).value) return false;
+  const words = t.split(/\s+/).filter(Boolean);
+  return words.length > 0 && words.length <= 6;
 }
 
 /** Divide el texto limpio en fragmentos, uno por posible servicio. */
@@ -450,6 +477,7 @@ export function segmentText(clean: string): Segment[] {
   const segments: Segment[] = [];
   let contextVenue: string | null = null;
   let weekAnchor = false;
+  let blockIndex = 0;
 
   lines.forEach((line, index) => {
     if (!line) return;
@@ -462,11 +490,33 @@ export function segmentText(clean: string): Segment[] {
         weekAnchor = true;
       } else if (!hasDateSignal(label)) {
         contextVenue = label;
+        blockIndex += 1;
       }
       return;
     }
     if (WEEK_ANCHORS.test(stripAccents(line.toLowerCase())) && !hasDateSignal(line)) {
       weekAnchor = true;
+      return;
+    }
+
+    // Cabecera suelta en su propia línea: "Imperial".
+    if (isBareHeader(line)) {
+      contextVenue = line;
+      blockIndex += 1;
+      return;
+    }
+
+    // Línea de contexto común del bloque: "sin hora definida pero aprox 5pm",
+    // "cantidad de meseros pendientes".
+    if (!hasDateSignal(line) && (hasTimeSignal(line) || WORKER_NOUNS.test(stripAccents(line.toLowerCase())))) {
+      segments.push({
+        text: line,
+        lineNumber: index + 1,
+        contextVenue,
+        weekAnchor,
+        blockIndex,
+        kind: "context",
+      });
       return;
     }
 
@@ -477,6 +527,7 @@ export function segmentText(clean: string): Segment[] {
     if (inline && !hasDateSignal(inline[1])) {
       localVenue = inline[1].trim();
       contextVenue = localVenue;
+      blockIndex += 1;
       body = inline[2].trim();
     }
 
@@ -494,9 +545,15 @@ export function segmentText(clean: string): Segment[] {
         lineNumber: index + 1,
         contextVenue: localVenue,
         weekAnchor,
+        blockIndex,
+        kind: "service",
       });
     });
   });
+
+  return segments;
+}
+
 
   return segments;
 }
