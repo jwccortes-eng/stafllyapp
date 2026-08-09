@@ -588,6 +588,14 @@ export function ServiceIntakeReviewInbox({
       )}
 
       <div className="sticky bottom-0 -mx-4 border-t border-border bg-background/95 px-4 pt-3 pb-[calc(env(safe-area-inset-bottom)+5rem)] backdrop-blur sm:mx-0 sm:px-0 sm:pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
+        <p className="pb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          Vamos a
+        </p>
+        <p className="pb-2 text-xs text-muted-foreground">
+          + Crear {creatableSelected.length}{" "}
+          {creatableSelected.length === 1 ? "servicio en borrador" : "servicios en borrador"} · no
+          se publica, no se asigna, no se notifica
+        </p>
         <p className="pb-2 text-xs text-muted-foreground">
           {creatableSelected.length} seleccionados · {counts.needsReview} necesitan revisión
           {counts.created > 0 ? ` · ${counts.created} ya creados` : ""}
@@ -610,6 +618,7 @@ export function ServiceIntakeReviewInbox({
           kind={resolving.kind}
           companyId={companyId}
           source={intakeSource}
+          linkedClientId={candidates.find((c) => c.id === resolving.id)?.clientCandidate.resolvedId ?? null}
           raw={
             resolving.kind === "client"
               ? candidates.find((c) => c.id === resolving.id)?.clientCandidate.raw ?? ""

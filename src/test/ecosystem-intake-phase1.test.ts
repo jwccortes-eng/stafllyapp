@@ -73,7 +73,7 @@ describe("entity-linking", () => {
     };
     const d = decisionFromRef("venue", ref, VENUES);
     expect(d.status).toBe("linked");
-    expect(d.explanation).toContain("ya aprendió");
+    expect(d.explanation).toContain("Alias confirmado previamente");
   });
 
   it("ordena las recomendaciones por score y limita a 3", () => {

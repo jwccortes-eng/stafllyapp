@@ -240,7 +240,7 @@ export function decisionFromRef(
       canCreateNew: false,
       explanation:
         ref.matchOrigin === "dictionary"
-          ? `Esta empresa ya aprendió que “${ref.raw}” es el ${label} ${name}.`
+          ? `Alias confirmado previamente por esta empresa: “${ref.raw}” es el ${label} ${name}.`
           : `“${ref.raw}” está vinculado al ${label} ${name}.`,
     };
   }
@@ -253,4 +253,63 @@ export function pendingResolutions(
   decisions: EntityResolutionDecision[],
 ): EntityResolutionDecision[] {
   return decisions.filter((d) => d.requiresHumanConfirmation);
+}
+
+/* ------------------------------------------------------------------ *
+ * Plan de creación — "VAMOS A" (Fase 1.1)
+ *
+ * Lo que se muestra ANTES de confirmar debe ser exactamente lo que se
+ * ejecuta después. Nada extra, nada omitido en silencio.
+ * ------------------------------------------------------------------ */
+
+export type CreationPlanAction =
+  | { verb: "link"; kind: IntakeEntityKind | "service"; label: string }
+  | { verb: "create"; kind: IntakeEntityKind | "service"; label: string };
+
+export interface CreationPlanInput {
+  client?: { mode: "link" | "create" | "none"; label: string };
+  venue?: { mode: "link" | "create" | "none"; label: string };
+  contact?: { mode: "link" | "create" | "none"; label: string };
+  /** Se creará el Servicio draft al final del plan. */
+  createDraftService?: boolean;
+}
+
+/** Construye el plan explícito de lo que se va a ejecutar. */
+export function buildCreationPlan(input: CreationPlanInput): CreationPlanAction[] {
+  const plan: CreationPlanAction[] = [];
+  const push = (kind: IntakeEntityKind, entry?: { mode: string; label: string }) => {
+    if (!entry || entry.mode === "none") return;
+    plan.push({
+      verb: entry.mode === "create" ? "create" : "link",
+      kind,
+      label: entry.label,
+    } as CreationPlanAction);
+  };
+  push("client", input.client);
+  push("venue", input.venue);
+  push("contact", input.contact);
+  if (input.createDraftService) {
+    plan.push({ verb: "create", kind: "service", label: "Servicio en borrador" });
+  }
+  return plan;
+}
+
+/** Texto humano de cada acción del plan. */
+export function describePlanAction(action: CreationPlanAction): string {
+  const noun = action.kind === "service" ? "servicio" : KIND_LABEL[action.kind];
+  return action.verb === "link"
+    ? `Vincular ${noun} existente: ${action.label}`
+    : `Crear ${noun}: ${action.label}`;
+}
+
+/** Comparación estricta plan mostrado vs plan ejecutado. */
+export function planMatchesExecution(
+  planned: CreationPlanAction[],
+  executed: CreationPlanAction[],
+): boolean {
+  if (planned.length !== executed.length) return false;
+  return planned.every((a, i) => {
+    const b = executed[i];
+    return a.verb === b.verb && a.kind === b.kind && a.label === b.label;
+  });
 }
