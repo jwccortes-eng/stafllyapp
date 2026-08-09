@@ -114,6 +114,51 @@ export function generateOccurrences(intent: SeriesIntent): Array<{
   }));
 }
 
+/** Único traductor de una verdad confirmada a una fila de Servicio. */
+export function buildCanonicalServiceInsert(input: {
+  snapshot: SeriesServiceSnapshot;
+  date: string;
+  sourceRef?: string | null;
+  createdBy?: string | null;
+  draft: boolean;
+}): Record<string, unknown> {
+  const { snapshot, date, sourceRef = null, createdBy = null, draft } = input;
+  return {
+    company_id: snapshot.companyId,
+    title: snapshot.title,
+    date,
+    start_time: snapshot.startTime,
+    end_time: snapshot.endTime,
+    slots: snapshot.requestedHeadcount,
+    client_id: snapshot.clientId,
+    location_id: snapshot.locationId,
+    notes: snapshot.notes,
+    claimable: snapshot.claimable,
+    meeting_point: snapshot.meetingPoint,
+    special_instructions: snapshot.specialInstructions,
+    created_by: createdBy,
+    pay_type: snapshot.payType,
+    day_type: snapshot.payType === "daily" ? snapshot.dayType : "full_day",
+    pay_override: snapshot.payOverride,
+    shift_admin_id: snapshot.shiftAdminId,
+    transportation_required: snapshot.transportRequired,
+    car_capacity: snapshot.carCapacity,
+    transportation_notes: snapshot.transportNotes,
+    driver_employee_id: snapshot.driverIds[0] ?? null,
+    clock_method: snapshot.clockMethod,
+    attendance_mode: snapshot.attendanceMode,
+    meeting_time: snapshot.meetingTime,
+    meeting_point_location_id: snapshot.meetingPointLocationId,
+    job_site_location_id: snapshot.jobSiteLocationId,
+    job_site_address: snapshot.jobSiteAddress,
+    ...(sourceRef ? { reconciliation_hash: sourceRef } : {}),
+    status: draft ? "draft" : "published",
+    publication_status: draft ? "draft" : "published",
+    published_at: draft ? null : new Date().toISOString(),
+    published_by: draft ? null : createdBy,
+  };
+}
+
 /**
  * Foto inmutable tomada al pulsar Guardar/Publicar. Evita que una recuperación
  * local o los diálogos intermedios degraden una serie a una sola fecha.

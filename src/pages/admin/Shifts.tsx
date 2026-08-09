@@ -64,6 +64,7 @@ import { ShiftRepeatSection, DEFAULT_REPEAT, computeRepeatDates, type RepeatConf
 import {
   newRecurrenceIntentId,
   buildSeriesIntent,
+  buildCanonicalServiceInsert,
   freezeRecurrenceSubmit,
   generateOccurrences,
   planRecurrenceOccurrences,
@@ -1067,40 +1068,14 @@ function DesktopShifts() {
     // Legacy `status` column retained: drafts also flow through the legacy
     // 'draft' value so existing UI/filters that look at status keep working.
     const initialStatus = isDraft ? "draft" : ((!forceDraft && shiftsConfig.auto_publish) ? "published" : "draft");
-    const insertData: any = {
-      company_id: snapshot.companyId,
-      title: snapshot.title,
-      date: shiftDate, start_time: snapshot.startTime, end_time: snapshot.endTime,
-      slots: snapshot.requestedHeadcount,
-      client_id: snapshot.clientId,
-      location_id: snapshot.locationId,
-      notes: snapshot.notes,
-      claimable: snapshot.claimable,
-      meeting_point: snapshot.meetingPoint,
-      special_instructions: snapshot.specialInstructions,
-      created_by: user?.id,
-      pay_type: snapshot.payType,
-      day_type: snapshot.payType === "daily" ? snapshot.dayType : "full_day",
-      pay_override: snapshot.payOverride,
-      shift_admin_id: snapshot.shiftAdminId,
-      transportation_required: snapshot.transportRequired,
-      car_capacity: snapshot.carCapacity,
-      transportation_notes: snapshot.transportNotes,
-      driver_employee_id: snapshot.driverIds[0] ?? null,
-      clock_method: snapshot.clockMethod,
-      attendance_mode: snapshot.attendanceMode,
-      meeting_time: snapshot.meetingTime,
-      status: initialStatus,
-      meeting_point_location_id: snapshot.meetingPointLocationId,
-      job_site_location_id: snapshot.jobSiteLocationId,
-      job_site_address: snapshot.jobSiteAddress,
-      // Trazabilidad de serie: todas las ocurrencias comparten el mismo intent.
-      ...(sourceRef ? { reconciliation_hash: sourceRef } : {}),
-      // New lifecycle column — single source of truth for draft visibility.
-      publication_status: isDraft ? "draft" : "published",
-      published_at: isDraft ? null : new Date().toISOString(),
-      published_by: isDraft ? null : user?.id ?? null,
-    };
+    const insertData: any = buildCanonicalServiceInsert({
+      snapshot,
+      date: shiftDate,
+      sourceRef,
+      createdBy: user?.id ?? null,
+      draft: isDraft,
+    });
+    insertData.status = initialStatus;
     const { data: shift, error } = await supabase.from("scheduled_shifts").insert(insertData).select("*").single();
 
     if (error) {
@@ -1461,21 +1436,18 @@ function DesktopShifts() {
       toast.error("Selecciona una empresa antes de crear un turno");
       return;
     }
-    const { data: shift, error } = await supabase.from("scheduled_shifts").insert({
-      company_id: selectedCompanyId,
-      title: data.title,
-      date: data.date,
-      start_time: data.start_time,
-      end_time: data.end_time,
-      slots: data.slots,
-      client_id: data.client_id || null,
-      location_id: data.location_id || null,
-      // Borrador real: status + publication_status alineados para que el turno
-      // NO aparezca al worker hasta que el admin lo publique desde el editor.
-      status: "draft",
-      publication_status: "draft",
-      created_by: user?.id,
-    } as any).select("*").single();
+    const quickSnapshot: SeriesServiceSnapshot = {
+      companyId: selectedCompanyId, clientId: data.client_id || null, locationId: data.location_id || null,
+      jobSiteLocationId: null, jobSiteAddress: null, meetingPoint: null, meetingPointLocationId: null,
+      title: data.title, startTime: data.start_time, endTime: data.end_time, requestedHeadcount: data.slots,
+      notes: null, specialInstructions: null, claimable: false, payType: "hourly", dayType: "full_day",
+      payOverride: false, shiftAdminId: null, transportRequired: false, carCapacity: 0,
+      transportNotes: null, driverIds: [], clockMethod: "mobile", attendanceMode: "standard",
+      meetingTime: null, employeeIds: [], publicationIntent: "draft",
+    };
+    const { data: shift, error } = await supabase.from("scheduled_shifts").insert(
+      buildCanonicalServiceInsert({ snapshot: quickSnapshot, date: data.date, createdBy: user?.id ?? null, draft: true }) as any,
+    ).select("*").single();
 
     if (error) {
       console.error("[QuickCreate] insert failed:", error);
