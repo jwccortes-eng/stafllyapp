@@ -19,6 +19,13 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { buildCanonicalServiceInsert } from "@/lib/shifts/recurrence";
+import {
+  snapshotFromServiceRow,
+  buildSeriesIntentFromSnapshot,
+  verifySeriesIntegrity,
+  describeSeriesVerification,
+} from "@/lib/shifts/series-engine";
 
 /**
  * DuplicateShiftDialog — Phase 1 Quick Win #2.
