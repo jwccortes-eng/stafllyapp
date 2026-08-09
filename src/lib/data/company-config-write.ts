@@ -34,6 +34,8 @@ export const EDITABLE_SETTING_KEYS = [
   "branding",
   "portal",
   "auto_dispatch",
+  "connecteam_mapping",
+
 ] as const;
 
 export type EditableSettingKey = (typeof EDITABLE_SETTING_KEYS)[number];
