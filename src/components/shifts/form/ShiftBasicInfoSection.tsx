@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { SmartDateInput } from "@/components/ui/smart-date-input";
 import { SectionCard } from "./section-card";
 import { PremiumClientSelector } from "../workspace/PremiumClientSelector";
+import { SERVICE_CLIENT_ANCHOR } from "@/lib/shifts/service-operational-readiness";
 import type { SelectOption } from "../types";
 
 interface Props {
@@ -46,7 +47,12 @@ function ShiftBasicInfoSectionImpl({
   onQuickAddClient,
 }: Props) {
   return (
-    <SectionCard icon={Hash} title="Información principal" subtitle="Lo esencial del turno: qué, quién y cuándo.">
+    <SectionCard
+      id={SERVICE_CLIENT_ANCHOR}
+      icon={Hash}
+      title="Información principal"
+      subtitle="Lo esencial del turno: qué, quién y cuándo."
+    >
       {mode === "create" && (
         <p className="text-[10px] text-muted-foreground/70 -mt-1">
           El código de turno (#0001) se asigna automáticamente. El nombre se genera desde cliente, tipo y hora — puedes añadir una etiqueta interna en Detalles adicionales.

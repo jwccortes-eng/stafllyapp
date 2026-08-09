@@ -160,7 +160,10 @@ function WorkspaceSummaryImpl(p: Props) {
         </div>
       </div>
 
-      {/* 3) Existing ops summary (unchanged) */}
+      {/* 3) Publicar ≠ Exportar a Connecteam */}
+      <ServiceReadinessCard readiness={operational} />
+
+      {/* 4) Existing ops summary (unchanged) */}
       <ShiftSummaryPanel
         mode={p.mode}
         title={p.title}
