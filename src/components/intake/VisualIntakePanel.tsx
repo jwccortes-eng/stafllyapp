@@ -181,38 +181,15 @@ export function VisualIntakePanel({ variant = "image" }: { variant?: "image" | "
         }),
       );
 
-      if (run.candidates.length === 0 && run.analysisIncomplete) {
-        // Un fallo técnico NUNCA se traduce en "no hay servicios".
-        notifyError({
-          title: "No pudimos completar el análisis",
-          fact:
-            run.failures[0]?.code === "unparseable_extraction"
-              ? "La respuesta del análisis llegó incompleta."
-              : "El análisis de la imagen no terminó.",
-          consequence: "No se creó nada. Puedes reintentar o pegar el texto del turno.",
-        });
-      } else if (run.candidates.length === 0) {
-        notifyWarning({
-          title: "No encontramos servicios",
-          fact: "El archivo no muestra fechas ni eventos que podamos leer.",
-          consequence: "No se creó nada. Prueba con una imagen más nítida o pega el texto.",
-        });
-      } else if (run.analysisIncomplete) {
-        notifyWarning({
-          title: "Encontré un posible turno, pero necesito que revises algunos datos",
-          fact: `${run.candidates.length} servicio(s) detectado(s); ${run.extractionFailures} archivo(s) no se pudieron analizar.`,
-          consequence: "Revisa lo detectado: nada se crea sin tu aprobación.",
-        });
-      } else {
-        notifyInfo({
-          title: `${run.candidates.length} servicios detectados`,
-          fact:
-            run.unresolved.length > 0
-              ? `${run.unresolved.length} elementos necesitan tu revisión.`
-              : "Todos los bloques se interpretaron.",
-          consequence: "Revisa y confirma: nada se crea sin tu aprobación.",
-        });
-      }
+      // Tres resultados distintos, tres mensajes distintos.
+      const copy = describeOutcome(run.outcome, {
+        candidateCount: run.candidates.length,
+        failureKind: run.failureKind ?? "unknown",
+      });
+      const notify =
+        copy.tone === "error" ? notifyError : copy.tone === "warning" ? notifyWarning : notifyInfo;
+      notify({ title: copy.title, fact: copy.fact, consequence: copy.consequence });
+
 
     } catch (error) {
       notifyError({
