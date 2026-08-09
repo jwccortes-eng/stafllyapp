@@ -555,8 +555,6 @@ export function segmentText(clean: string): Segment[] {
 }
 
 
-  return segments;
-}
 
 /* -------------------------------------------------------------------------
  * 6. Parser principal
