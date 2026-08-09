@@ -3290,6 +3290,17 @@ function DesktopShifts() {
         );
       })()}
 
+      <BulkServiceCreationDialog
+        open={bulkCreateOpen}
+        onOpenChange={setBulkCreateOpen}
+        companyId={selectedCompanyId}
+        userId={user?.id ?? null}
+        clients={clients}
+        locations={locations}
+        referenceDate={dateRange.from}
+        onCreated={refreshShifts}
+      />
+
       <ExportConnecteamBulkDialog
         open={bulkExportConnecteamOpen}
         onOpenChange={setBulkExportConnecteamOpen}
