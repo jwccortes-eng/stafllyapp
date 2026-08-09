@@ -1,4 +1,17 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { useAuditLog } from "@/hooks/useAuditLog";
+import {
+  needsProvisionalEnd,
+  resolveProvisionalEnd,
+  withProvisionalEnd,
+  provisionalNote,
+  buildProvisionalTrace,
+  PROVISIONAL_COPY,
+  type ProvisionalEndDecision,
+} from "@/lib/integrations/connecteam-provisional";
+import { ProvisionalEndPanel } from "./ProvisionalEndPanel";
+
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
