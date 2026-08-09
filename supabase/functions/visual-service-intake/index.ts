@@ -143,57 +143,113 @@ Deno.serve(async (req) => {
           : { type: "input_image", image_url: dataUrl },
       ];
 
-      const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/responses", {
-        method: "POST",
-        headers: {
-          "Lovable-API-Key": LOVABLE_API_KEY,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: MODEL,
-          input: [
-            { role: "system", content: [{ type: "input_text", text: SYSTEM_PROMPT }] },
-            { role: "user", content },
-          ],
-          text: {
-            format: {
-              type: "json_schema",
-              name: "visual_service_extraction",
-              strict: false,
-              schema: SERVICE_EXTRACTION_SCHEMA,
-            },
+      const callModel = async (strictSchema: boolean) =>
+        await fetch("https://ai.gateway.lovable.dev/v1/responses", {
+          method: "POST",
+          headers: {
+            "Lovable-API-Key": LOVABLE_API_KEY,
+            "Content-Type": "application/json",
           },
-        }),
-      });
+          body: JSON.stringify({
+            model: MODEL,
+            input: [
+              { role: "system", content: [{ type: "input_text", text: SYSTEM_PROMPT }] },
+              { role: "user", content },
+            ],
+            text: strictSchema
+              ? {
+                  format: {
+                    type: "json_schema",
+                    name: "visual_service_extraction",
+                    strict: false,
+                    schema: SERVICE_EXTRACTION_SCHEMA,
+                  },
+                }
+              : { format: { type: "json_object" } },
+          }),
+        });
 
-      if (aiResp.status === 429) return json(429, { error: "Demasiadas solicitudes, intenta más tarde." });
-      if (aiResp.status === 402) {
-        return json(402, { error: "Sin créditos de IA. Recarga tu workspace para continuar." });
+      let aiResp = await callModel(true);
+
+      // Fallos de plataforma: NUNCA se traducen en "0 servicios".
+      if (aiResp.status === 429) {
+        return json(429, {
+          error: "Demasiadas solicitudes, intenta más tarde.",
+          code: "rate_limited",
+        });
       }
+      if (aiResp.status === 402) {
+        return json(402, {
+          error: "Sin créditos de IA. Recarga tu workspace para continuar.",
+          code: "credits_exhausted",
+        });
+      }
+      if (aiResp.status === 403) {
+        const detail = await aiResp.text();
+        console.error("AI gateway 403", detail.slice(0, 500));
+        return json(402, {
+          error: /credit/i.test(detail)
+            ? "El workspace alcanzó su límite de créditos de IA. Ajusta el límite para volver a analizar."
+            : "El servicio de análisis rechazó la solicitud.",
+          code: /credit/i.test(detail) ? "credit_limit_reached" : "ai_forbidden",
+        });
+      }
+
+      // Reintento único ante rechazo de esquema / error transitorio del modelo.
+      if (!aiResp.ok && (aiResp.status === 400 || aiResp.status >= 500)) {
+        const firstDetail = await aiResp.text();
+        console.warn("AI gateway retry after", aiResp.status, firstDetail.slice(0, 300));
+        aiResp = await callModel(false);
+      }
+
       if (!aiResp.ok) {
         const t = await aiResp.text();
         console.error("AI gateway error", aiResp.status, t.slice(0, 500));
-        extractions.push({ file_name: fileName, storage_path: storagePath, error: "ai_error" });
+        extractions.push({
+          file_name: fileName,
+          storage_path: storagePath,
+          error: "ai_error",
+          error_status: aiResp.status,
+          error_detail: t.slice(0, 300),
+        });
         continue;
       }
 
-      const aiJson = await aiResp.json();
-      let text = typeof aiJson?.output_text === "string" ? aiJson.output_text : "";
-      if (!text && Array.isArray(aiJson?.output)) {
-        for (const item of aiJson.output) {
-          for (const part of item?.content ?? []) {
-            if (typeof part?.text === "string") text += part.text;
+      const readText = (payload: any): string => {
+        let out = typeof payload?.output_text === "string" ? payload.output_text : "";
+        if (!out && Array.isArray(payload?.output)) {
+          for (const item of payload.output) {
+            for (const part of item?.content ?? []) {
+              if (typeof part?.text === "string") out += part.text;
+            }
           }
         }
-      }
+        return out;
+      };
+
+      const aiJson = await aiResp.json();
+      const text = readText(aiJson);
       let extraction: any = null;
       try {
         extraction = JSON.parse(text);
       } catch {
-        console.error("visual extraction parse failed", text.slice(0, 300));
+        const fenced = /\{[\s\S]*\}/.exec(text);
+        if (fenced) {
+          try {
+            extraction = JSON.parse(fenced[0]);
+          } catch {
+            /* noop */
+          }
+        }
       }
       if (!extraction || typeof extraction !== "object") {
-        extractions.push({ file_name: fileName, storage_path: storagePath, error: "unparseable_extraction" });
+        console.error("visual extraction parse failed", text.slice(0, 300));
+        extractions.push({
+          file_name: fileName,
+          storage_path: storagePath,
+          error: "unparseable_extraction",
+          error_detail: text.slice(0, 200),
+        });
         continue;
       }
 
@@ -204,6 +260,7 @@ Deno.serve(async (req) => {
         extraction,
       });
     }
+
 
     return json(200, {
       extractions,
