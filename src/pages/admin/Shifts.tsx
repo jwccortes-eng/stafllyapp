@@ -75,6 +75,16 @@ import {
   type SeriesIntent,
   type SeriesServiceSnapshot,
 } from "@/lib/shifts/recurrence";
+import {
+  snapshotFromServiceRow,
+  buildSeriesIntentFromSnapshot,
+  buildSeriesPreview,
+  verifySeriesIntegrity,
+  describeSeriesVerification,
+  type SeriesPreview,
+  type PersistedOccurrence,
+} from "@/lib/shifts/series-engine";
+import { SeriesPreviewDialog } from "@/components/shifts/series/SeriesPreviewDialog";
 import { QuickCreatePopover } from "@/components/shifts/QuickCreatePopover";
 import { QuickAddInviteWizard } from "@/components/employee/QuickAddInviteWizard";
 import EmergencyWorkerDialog, { type EmergencyWorkerCreated } from "@/components/employee/EmergencyWorkerDialog";
