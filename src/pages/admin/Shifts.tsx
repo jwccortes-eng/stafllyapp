@@ -426,7 +426,6 @@ function DesktopShifts() {
   const employees = employeeRoster.employees;
   const [createOpen, setCreateOpen] = useState(false);
   const [bulkExportConnecteamOpen, setBulkExportConnecteamOpen] = useState(false);
-  const isAdminForCompany = role === "owner" || role === "admin";
 
   // Open create dialog when navigated with ?create=1
   useEffect(() => {
@@ -3029,7 +3028,6 @@ function DesktopShifts() {
         employees={employees}
         clients={clients}
         locations={locations}
-        isAdmin={isAdminForCompany}
         selectedCompanyId={selectedCompanyId}
       />
     </div>

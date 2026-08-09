@@ -17,6 +17,7 @@ import {
 } from "@/lib/integrations/connecteam-export";
 import { downloadCsv } from "@/lib/import-review/csv-export";
 import type { Shift, Assignment, Employee, SelectOption } from "@/components/shifts/types";
+import { useCanExportConnecteam, EXPORT_PERMISSION_DENIED_COPY } from "@/lib/integrations/connecteam-export-permission";
 
 interface Props {
   open: boolean;
@@ -27,7 +28,6 @@ interface Props {
   clients: SelectOption[];
   locations: SelectOption[];
   categories?: SelectOption[];
-  isAdmin: boolean;
   selectedCompanyId: string | null;
   shiftCompanyId?: string | null;
   defaultTimezone?: string;
@@ -41,23 +41,25 @@ const STATUS_META: Record<ValidationResult["status"], { label: string; tone: str
 
 export function ExportConnecteamPreviewDialog({
   open, onOpenChange, shift, assignments, employees, clients, locations, categories,
-  isAdmin, selectedCompanyId, shiftCompanyId, defaultTimezone,
+  selectedCompanyId, shiftCompanyId, defaultTimezone,
 }: Props) {
+  // Canonical, tenant-aware authorization — same policy on every entry point.
+  const canExport = useCanExportConnecteam();
   const buildCtx = useMemo(() => ({
     clients, locations, employees, assignments, categories, defaultTimezone,
   }), [clients, locations, employees, assignments, categories, defaultTimezone]);
 
   const validation: ValidationResult | null = useMemo(() => {
     if (!shift) return null;
-    return validateShiftForExport(shift, buildCtx, { isAdmin, selectedCompanyId, shiftCompanyId });
-  }, [shift, buildCtx, isAdmin, selectedCompanyId, shiftCompanyId]);
+    return validateShiftForExport(shift, buildCtx, { isAdmin: canExport, selectedCompanyId, shiftCompanyId });
+  }, [shift, buildCtx, canExport, selectedCompanyId, shiftCompanyId]);
 
   const row: ConnecteamRow | null = useMemo(() => {
     if (!shift) return null;
     return buildConnecteamRow(shift, buildCtx);
   }, [shift, buildCtx]);
 
-  const canDownload = validation?.status !== "blocked";
+  const canDownload = canExport && validation?.status !== "blocked";
 
   const handleDownload = () => {
     if (!shift || !row || !canDownload) return;
@@ -88,6 +90,16 @@ export function ExportConnecteamPreviewDialog({
 
         <ScrollArea className="flex-1 min-h-0">
           <div className="p-5 space-y-4">
+            {!canExport && (
+              <div className="rounded-xl border border-destructive/30 bg-destructive/5 px-3.5 py-3 text-xs text-destructive flex items-start gap-2">
+                <ShieldX className="h-4 w-4 mt-0.5 shrink-0" />
+                <div>
+                  <p className="font-semibold">Sin permiso para exportar</p>
+                  <p className="mt-0.5 opacity-90">{EXPORT_PERMISSION_DENIED_COPY}</p>
+                </div>
+              </div>
+            )}
+
             {/* Status banner */}
             {meta && Icon && (
               <div className={cn("rounded-xl border px-3.5 py-2.5 flex items-start gap-2.5", meta.tone)}>

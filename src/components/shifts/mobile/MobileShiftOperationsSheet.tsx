@@ -1309,7 +1309,6 @@ export function MobileShiftOperationsSheet({
       employees={employees}
       clients={shift?.client_id ? [{ id: shift.client_id, name: clientName && clientName !== "—" ? clientName : "" }] : []}
       locations={shift?.location_id ? [{ id: shift.location_id, name: locationName || "" }] : []}
-      isAdmin={canValidate}
       selectedCompanyId={selectedCompanyId ?? null}
       shiftCompanyId={(shift as any)?.company_id ?? selectedCompanyId ?? null}
     />
